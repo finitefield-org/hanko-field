@@ -57,7 +57,9 @@ func resetCheckoutProgress(sess *mw.SessionData) {
 		len(sess.Checkout.Addresses) == 0 {
 		return
 	}
+	addresses := sess.Checkout.Addresses
 	sess.CartID = ""
 	sess.Checkout = mw.CheckoutState{}
+	sess.Checkout.Addresses = addresses
 	sess.MarkDirty()
 }
