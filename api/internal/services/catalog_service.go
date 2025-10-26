@@ -868,6 +868,8 @@ func (s *catalogService) UpsertProduct(ctx context.Context, cmd UpsertProductCom
 	if err := s.validateProductInput(ctx, product); err != nil {
 		return Product{}, fmt.Errorf("%w: %s", ErrCatalogInvalidInput, err)
 	}
+	product.PriceTiers = normalizeProductPriceTiers(product.PriceTiers)
+	product.Inventory = normalizeProductInventorySettings(product.Inventory)
 
 	var existing Product
 	current, err := s.repo.GetProduct(ctx, product.ID)
@@ -904,7 +906,7 @@ func (s *catalogService) UpsertProduct(ctx context.Context, cmd UpsertProductCom
 	}
 	saved := Product(savedDomain)
 
-	if err := s.configureProductInventory(ctx, saved); err != nil {
+	if err := s.configureProductInventory(ctx, existing, saved); err != nil {
 		return Product{}, err
 	}
 
@@ -1102,14 +1104,7 @@ func normalizeProduct(product Product) Product {
 	product.CompatibleTemplateIDs = normalizeStringList(product.CompatibleTemplateIDs)
 	product.ImagePaths = normalizeStringList(product.ImagePaths)
 	product.SizesMm = normalizeSizeList(product.SizesMm)
-	product.PriceTiers = normalizeProductPriceTiers(product.PriceTiers)
 	product.Variants = normalizeProductVariants(product.Variants)
-	if product.Inventory.InitialStock < 0 {
-		product.Inventory.InitialStock = 0
-	}
-	if product.Inventory.SafetyStock < 0 {
-		product.Inventory.SafetyStock = 0
-	}
 	return product
 }
 
@@ -1186,6 +1181,16 @@ func normalizeProductVariants(variants []ProductVariant) []ProductVariant {
 		return nil
 	}
 	return normalized
+}
+
+func normalizeProductInventorySettings(inventory ProductInventorySettings) ProductInventorySettings {
+	if inventory.InitialStock < 0 {
+		inventory.InitialStock = 0
+	}
+	if inventory.SafetyStock < 0 {
+		inventory.SafetyStock = 0
+	}
+	return inventory
 }
 
 func normalizeStringList(values []string) []string {
@@ -1408,26 +1413,28 @@ func (s *catalogService) ensureProductSKUUnique(ctx context.Context, candidate P
 	return nil
 }
 
-func (s *catalogService) configureProductInventory(ctx context.Context, product Product) error {
+func (s *catalogService) configureProductInventory(ctx context.Context, before Product, after Product) error {
 	if s.inventory == nil {
 		return nil
 	}
-	sku := strings.TrimSpace(product.SKU)
+	sku := strings.TrimSpace(after.SKU)
 	if sku == "" {
 		return nil
 	}
-	if product.Inventory.SafetyStock == 0 && product.Inventory.InitialStock == 0 {
+	needsSafety := before.Inventory.SafetyStock != after.Inventory.SafetyStock
+	needsInitial := after.Inventory.InitialStock > 0 && before.Inventory.InitialStock != after.Inventory.InitialStock
+	if !needsSafety && !needsInitial {
 		return nil
 	}
 	var initial *int
-	if product.Inventory.InitialStock > 0 {
-		value := product.Inventory.InitialStock
+	if needsInitial {
+		value := after.Inventory.InitialStock
 		initial = &value
 	}
 	_, err := s.inventory.ConfigureSafetyStock(ctx, ConfigureSafetyStockCommand{
 		SKU:           sku,
-		ProductRef:    productTargetRef(product.ID),
-		SafetyStock:   product.Inventory.SafetyStock,
+		ProductRef:    productTargetRef(after.ID),
+		SafetyStock:   after.Inventory.SafetyStock,
 		InitialOnHand: initial,
 	})
 	return err

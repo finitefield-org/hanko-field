@@ -619,6 +619,147 @@ func TestCatalogServiceUpsertProductConfiguresInventory(t *testing.T) {
 	}
 }
 
+func TestCatalogServiceUpsertProductRejectsNegativeInventory(t *testing.T) {
+	repo := &stubCatalogRepository{
+		materialGet: domain.Material{MaterialSummary: domain.MaterialSummary{ID: "mat_wood"}},
+	}
+	svc, err := NewCatalogService(CatalogServiceDeps{Catalog: repo})
+	if err != nil {
+		t.Fatalf("new catalog service: %v", err)
+	}
+	product := Product{
+		ProductSummary: domain.ProductSummary{
+			ID:                "prod_neg",
+			SKU:               "SKU-NEG",
+			Name:              "Negative Inventory",
+			Shape:             "round",
+			SizesMm:           []int{25},
+			DefaultMaterialID: "mat_wood",
+			MaterialIDs:       []string{"mat_wood"},
+			BasePrice:         4100,
+			Currency:          "JPY",
+			InventoryStatus:   "inventory",
+			IsPublished:       true,
+		},
+		Inventory: ProductInventorySettings{SafetyStock: -5},
+	}
+	if _, err := svc.UpsertProduct(context.Background(), UpsertProductCommand{
+		Product: product,
+		ActorID: "admin",
+	}); err == nil || !errors.Is(err, ErrCatalogInvalidInput) {
+		t.Fatalf("expected invalid input error for negative safety stock, got %v", err)
+	}
+}
+
+func TestCatalogServiceUpsertProductRejectsInvalidPriceTiers(t *testing.T) {
+	repo := &stubCatalogRepository{
+		materialGet: domain.Material{MaterialSummary: domain.MaterialSummary{ID: "mat_wood"}},
+	}
+	svc, err := NewCatalogService(CatalogServiceDeps{Catalog: repo})
+	if err != nil {
+		t.Fatalf("new catalog service: %v", err)
+	}
+	product := Product{
+		ProductSummary: domain.ProductSummary{
+			ID:                "prod_tier",
+			SKU:               "SKU-TIER",
+			Name:              "Invalid Tier",
+			Shape:             "round",
+			SizesMm:           []int{25},
+			DefaultMaterialID: "mat_wood",
+			MaterialIDs:       []string{"mat_wood"},
+			BasePrice:         4300,
+			Currency:          "JPY",
+			InventoryStatus:   "inventory",
+			IsPublished:       true,
+		},
+		PriceTiers: []ProductPriceTier{
+			{MinQuantity: 0, UnitPrice: 4000},
+		},
+	}
+	if _, err := svc.UpsertProduct(context.Background(), UpsertProductCommand{
+		Product: product,
+		ActorID: "admin",
+	}); err == nil || !errors.Is(err, ErrCatalogInvalidInput) {
+		t.Fatalf("expected invalid input error for bad price tier, got %v", err)
+	}
+}
+
+func TestCatalogServiceUpsertProductClearsSafetyStock(t *testing.T) {
+	repo := &stubCatalogRepository{
+		materialGet: domain.Material{MaterialSummary: domain.MaterialSummary{ID: "mat_wood"}},
+		productGet: domain.Product{
+			ProductSummary: domain.ProductSummary{
+				ID:                "prod_safe",
+				SKU:               "SKU-SAFE",
+				Name:              "Safe Product",
+				Shape:             "round",
+				SizesMm:           []int{20},
+				DefaultMaterialID: "mat_wood",
+				MaterialIDs:       []string{"mat_wood"},
+				BasePrice:         4800,
+				Currency:          "JPY",
+				InventoryStatus:   "inventory",
+			},
+			Inventory: domain.ProductInventorySettings{SafetyStock: 5},
+		},
+		productUpsertResp: domain.Product{
+			ProductSummary: domain.ProductSummary{
+				ID:                "prod_safe",
+				SKU:               "SKU-SAFE",
+				Name:              "Safe Product",
+				Shape:             "round",
+				SizesMm:           []int{20},
+				DefaultMaterialID: "mat_wood",
+				MaterialIDs:       []string{"mat_wood"},
+				BasePrice:         4800,
+				Currency:          "JPY",
+				InventoryStatus:   "inventory",
+			},
+			Inventory: domain.ProductInventorySettings{SafetyStock: 0},
+		},
+	}
+	inventory := &stubInventorySafetyService{}
+	svc, err := NewCatalogService(CatalogServiceDeps{
+		Catalog:   repo,
+		Inventory: inventory,
+	})
+	if err != nil {
+		t.Fatalf("new catalog service: %v", err)
+	}
+	product := Product{
+		ProductSummary: domain.ProductSummary{
+			ID:                "prod_safe",
+			SKU:               "SKU-SAFE",
+			Name:              "Safe Product",
+			Shape:             "round",
+			SizesMm:           []int{20},
+			DefaultMaterialID: "mat_wood",
+			MaterialIDs:       []string{"mat_wood"},
+			BasePrice:         4800,
+			Currency:          "JPY",
+			InventoryStatus:   "inventory",
+			IsPublished:       true,
+		},
+		Inventory: ProductInventorySettings{SafetyStock: 0},
+	}
+	if _, err := svc.UpsertProduct(context.Background(), UpsertProductCommand{
+		Product: product,
+		ActorID: "admin",
+	}); err != nil {
+		t.Fatalf("upsert product: %v", err)
+	}
+	if inventory.configureCmd.SKU != "SKU-SAFE" {
+		t.Fatalf("expected configure sku SKU-SAFE got %s", inventory.configureCmd.SKU)
+	}
+	if inventory.configureCmd.SafetyStock != 0 {
+		t.Fatalf("expected safety stock 0 got %d", inventory.configureCmd.SafetyStock)
+	}
+	if inventory.configureCmd.InitialOnHand != nil {
+		t.Fatalf("expected initial stock pointer nil got %#v", inventory.configureCmd.InitialOnHand)
+	}
+}
+
 func TestCatalogServiceUpsertProductSKUConflict(t *testing.T) {
 	repo := &stubCatalogRepository{
 		materialGet:         domain.Material{MaterialSummary: domain.MaterialSummary{ID: "mat_brass"}},
