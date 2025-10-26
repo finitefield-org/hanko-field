@@ -902,6 +902,8 @@ func main() {
 	r.Get("/checkout/payment", CheckoutPaymentHandler)
 	r.MethodFunc(http.MethodPost, "/checkout/payment/session", CheckoutPaymentSessionHandler)
 	r.MethodFunc(http.MethodPost, "/checkout/payment/confirm", CheckoutPaymentConfirmHandler)
+	r.Get("/checkout/review", CheckoutReviewHandler)
+	r.MethodFunc(http.MethodPost, "/checkout/review/submit", CheckoutReviewSubmitHandler)
 	r.Get("/account", AccountHandler)
 	// Fragment endpoints (htmx)
 	r.Get("/frags/compare/sku-table", CompareSKUTableFrag)

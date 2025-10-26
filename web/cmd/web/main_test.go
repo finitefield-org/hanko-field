@@ -157,6 +157,23 @@ func TestDesignPreviewFragmentPushesQuery(t *testing.T) {
 	}
 }
 
+func TestCheckoutReviewPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/checkout/review", CheckoutReviewHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/checkout/review", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "checkout-review-root") {
+		t.Fatalf("expected checkout review root id in body; body=%s", body)
+	}
+}
+
 func TestHTMXPostRequiresCSRF(t *testing.T) {
 	srv := newTestRouter(t, func(r chi.Router) {
 		r.Post("/echo", func(w http.ResponseWriter, r *http.Request) {
