@@ -1,6 +1,5 @@
+import 'package:app/core/domain/entities/design.dart';
 import 'package:flutter/foundation.dart';
-
-import 'design.dart';
 
 enum CatalogMaterialType { horn, wood, titanium, acrylic }
 
@@ -383,7 +382,7 @@ class CatalogProduct {
       stockSafety,
       Object.hashAll(photos),
       shipping,
-      attributes == null ? null : Object.hashAll(attributes!.entries),
+      if (attributes == null) null else Object.hashAll(attributes!.entries),
       isActive,
       createdAt,
       updatedAt,
@@ -692,7 +691,7 @@ class CatalogFont {
       Object.hashAll(unicodeRanges),
       metrics,
       Object.hashAll(opentypeFeatures),
-      files == null ? null : Object.hashAll(files!.entries),
+      if (files == null) null else Object.hashAll(files!.entries),
       previewUrl,
       sampleText,
       sort,

@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
+import 'package:flutter/material.dart';
 
 enum AppButtonVariant { primary, secondary, ghost }
 
@@ -106,7 +105,7 @@ class AppButton extends StatelessWidget {
       AppButtonSize.large => 52.0,
     };
 
-    final shape = RoundedRectangleBorder(borderRadius: AppTokens.radiusM);
+    const shape = RoundedRectangleBorder(borderRadius: AppTokens.radiusM);
 
     return switch (variant) {
       AppButtonVariant.primary => FilledButton.styleFrom(

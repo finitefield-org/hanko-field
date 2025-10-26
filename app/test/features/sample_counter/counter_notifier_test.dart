@@ -1,8 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:app/features/sample_counter/application/providers.dart';
 import 'package:app/features/sample_counter/domain/counter_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _FakeRepo implements CounterRepository {
   _FakeRepo(this._value);

@@ -23,6 +23,13 @@ enum CacheBucket {
       staleGrace: Duration(days: 3),
     ),
   ),
+  featureFlags(
+    boxName: 'cache.feature_flags',
+    policy: CachePolicy(
+      timeToLive: Duration(hours: 6),
+      staleGrace: Duration(days: 2),
+    ),
+  ),
   notifications(
     boxName: 'cache.notifications',
     policy: CachePolicy(

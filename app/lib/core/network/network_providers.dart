@@ -1,4 +1,5 @@
 import 'package:app/core/app/app_flavor.dart';
+import 'package:app/core/app_state/app_locale.dart';
 import 'package:app/core/network/connectivity_service.dart';
 import 'package:app/core/network/interceptors/auth_interceptor.dart';
 import 'package:app/core/network/interceptors/connectivity_interceptor.dart';
@@ -28,7 +29,13 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 final networkConfigProvider = Provider<NetworkConfig>((ref) {
   final appConfig = ref.watch(appConfigProvider);
-  final localeTag = PlatformDispatcher.instance.locale.toLanguageTag();
+  final localeTag = ref
+      .watch(appLocaleProvider)
+      .when(
+        data: (state) => state.locale.toLanguageTag(),
+        loading: () => PlatformDispatcher.instance.locale.toLanguageTag(),
+        error: (_, __) => PlatformDispatcher.instance.locale.toLanguageTag(),
+      );
   final platform = _platformName();
 
   return NetworkConfig(

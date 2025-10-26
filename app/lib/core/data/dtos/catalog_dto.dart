@@ -936,9 +936,7 @@ class CatalogFontDto {
       'version': version,
       'designClass': designClass,
       'glyphCoverage': glyphCoverage,
-      'unicodeRanges': unicodeRanges
-          ?.map((CatalogUnicodeRangeDto e) => e.toJson())
-          .toList(),
+      'unicodeRanges': unicodeRanges?.map((e) => e.toJson()).toList(),
       'metrics': metrics?.toJson(),
       'opentype': opentypeFeatures == null
           ? null
@@ -967,10 +965,7 @@ class CatalogFontDto {
       designClass: designClass,
       glyphCoverage: glyphCoverage ?? const [],
       unicodeRanges:
-          unicodeRanges
-              ?.map((CatalogUnicodeRangeDto e) => e.toDomain())
-              .toList() ??
-          const [],
+          unicodeRanges?.map((e) => e.toDomain()).toList() ?? const [],
       metrics: metrics?.toDomain(),
       opentypeFeatures: opentypeFeatures ?? const [],
       files: files == null ? null : Map<String, String>.from(files!),

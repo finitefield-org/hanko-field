@@ -1,6 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:app/features/sample_counter/application/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CounterNotifier extends AsyncNotifier<int> {
   @override

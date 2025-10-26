@@ -239,11 +239,10 @@ class GuideArticleDto {
           ? null
           : (json['translations'] as Map<String, dynamic>).entries
                 .map(
-                  (MapEntry<String, dynamic> entry) =>
-                      GuideTranslationDto.fromJson(<String, dynamic>{
-                        'locale': entry.key,
-                        ...entry.value as Map<String, dynamic>,
-                      }),
+                  (entry) => GuideTranslationDto.fromJson(<String, dynamic>{
+                    'locale': entry.key,
+                    ...entry.value as Map<String, dynamic>,
+                  }),
                 )
                 .toList(),
       isPublic: json['isPublic'] as bool? ?? true,
@@ -336,9 +335,7 @@ class GuideArticleDto {
       readingTimeMinutes: readingTimeMinutes,
       author: author?.toDomain(),
       sources: sources ?? const [],
-      translations:
-          translations?.map((GuideTranslationDto e) => e.toDomain()).toList() ??
-          const [],
+      translations: translations?.map((e) => e.toDomain()).toList() ?? const [],
       isPublic: isPublic,
       publishAt: publishAt == null ? null : DateTime.parse(publishAt!),
       version: version,
@@ -424,7 +421,7 @@ class ContentPageTranslationDto {
       'locale': locale,
       'title': title,
       'body': body,
-      'blocks': blocks?.map((ContentBlockDto e) => e.toJson()).toList(),
+      'blocks': blocks?.map((e) => e.toJson()).toList(),
       'seo': seo?.toJson(),
     };
   }
@@ -434,8 +431,7 @@ class ContentPageTranslationDto {
       locale: locale,
       title: title,
       body: body,
-      blocks:
-          blocks?.map((ContentBlockDto e) => e.toDomain()).toList() ?? const [],
+      blocks: blocks?.map((e) => e.toDomain()).toList() ?? const [],
       seo: seo?.toDomain(),
     );
   }
@@ -467,7 +463,7 @@ class ContentPageDto {
           ? null
           : (json['translations'] as Map<String, dynamic>).entries
                 .map(
-                  (MapEntry<String, dynamic> entry) =>
+                  (entry) =>
                       ContentPageTranslationDto.fromJson(<String, dynamic>{
                         'locale': entry.key,
                         ...entry.value as Map<String, dynamic>,
@@ -524,9 +520,7 @@ class ContentPageDto {
               translation.locale: <String, dynamic>{
                 'title': translation.title,
                 'body': translation.body,
-                'blocks': translation.blocks
-                    ?.map((ContentBlockDto e) => e.toJson())
-                    .toList(),
+                'blocks': translation.blocks?.map((e) => e.toJson()).toList(),
                 'seo': translation.seo?.toJson(),
               },
           };
@@ -552,11 +546,7 @@ class ContentPageDto {
       slug: slug,
       type: _parsePageType(type),
       tags: tags ?? const [],
-      translations:
-          translations
-              ?.map((ContentPageTranslationDto e) => e.toDomain())
-              .toList() ??
-          const [],
+      translations: translations?.map((e) => e.toDomain()).toList() ?? const [],
       navOrder: navOrder,
       isPublic: isPublic,
       publishAt: publishAt == null ? null : DateTime.parse(publishAt!),

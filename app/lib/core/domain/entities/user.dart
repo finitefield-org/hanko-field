@@ -120,7 +120,7 @@ class UserProfile {
       persona,
       preferredLanguage,
       country,
-      onboarding == null ? null : Object.hashAll(onboarding!.entries),
+      if (onboarding == null) null else Object.hashAll(onboarding!.entries),
       marketingOptIn,
       role,
       isActive,

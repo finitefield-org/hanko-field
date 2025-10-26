@@ -1,9 +1,9 @@
 import 'dart:io';
 
+import 'package:app/core/storage/local_cache_store.dart';
 import 'package:app/core/storage/offline_cache_repository.dart'
     show OfflineCacheRepository, OnboardingStep;
 import 'package:app/core/storage/onboarding_local_data_source.dart';
-import 'package:app/core/storage/local_cache_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart' as hive;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,7 +40,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  OnboardingLocalDataSource _buildDataSource() {
+  OnboardingLocalDataSource buildDataSource() {
     return OnboardingLocalDataSource(
       preferences: prefs,
       cacheRepository: cacheRepository,
@@ -48,7 +48,7 @@ void main() {
   }
 
   test('returns initial flags when nothing persisted', () async {
-    final dataSource = _buildDataSource();
+    final dataSource = buildDataSource();
     final flags = await dataSource.load();
     expect(flags.isCompleted, isFalse);
     expect(
@@ -58,7 +58,7 @@ void main() {
   });
 
   test('updates steps and mirrors to cache', () async {
-    final dataSource = _buildDataSource();
+    final dataSource = buildDataSource();
     await dataSource.updateStep(OnboardingStep.locale);
 
     final raw = prefs.getString('onboarding.flags');
@@ -70,7 +70,7 @@ void main() {
   });
 
   test('reset clears preferences and seeds cache with defaults', () async {
-    final dataSource = _buildDataSource();
+    final dataSource = buildDataSource();
     await dataSource.updateStep(OnboardingStep.persona);
 
     await dataSource.reset();

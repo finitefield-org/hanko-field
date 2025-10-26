@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_button.dart';
+import 'package:flutter/material.dart';
 
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
@@ -72,7 +71,6 @@ class AppEmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(AppTokens.spaceXL),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: children,
       ),

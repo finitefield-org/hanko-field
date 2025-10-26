@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
+import 'package:flutter/material.dart';
 
 enum AppCardVariant { elevated, outlined, filled }
 
@@ -32,10 +31,10 @@ class AppCard extends StatelessWidget {
         switch (variant) {
           AppCardVariant.elevated => scheme.surface,
           AppCardVariant.outlined => scheme.surface,
-          AppCardVariant.filled => scheme.surfaceVariant,
+          AppCardVariant.filled => scheme.surfaceContainerHighest,
         };
 
-    final radius = AppTokens.radiusL;
+    const radius = AppTokens.radiusL;
     final border = switch (variant) {
       AppCardVariant.outlined => Border.all(
         color: borderColor ?? scheme.outlineVariant,
@@ -46,7 +45,7 @@ class AppCard extends StatelessWidget {
     final shadows = variant == AppCardVariant.elevated
         ? [
             BoxShadow(
-              color: scheme.shadow.withOpacity(0.08),
+              color: scheme.shadow.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -104,7 +103,6 @@ class AppListTile extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(AppTokens.spaceL),
       variant: AppCardVariant.outlined,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (leading != null)
             Padding(

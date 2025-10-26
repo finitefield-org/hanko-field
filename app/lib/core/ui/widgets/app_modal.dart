@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_button.dart';
+import 'package:flutter/material.dart';
 
 class AppModalAction {
   const AppModalAction({
@@ -33,7 +32,7 @@ class AppModal extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceXL),
-      shape: RoundedRectangleBorder(borderRadius: AppTokens.radiusL),
+      shape: const RoundedRectangleBorder(borderRadius: AppTokens.radiusL),
       child: Padding(
         padding: const EdgeInsets.all(AppTokens.spaceXL),
         child: Column(

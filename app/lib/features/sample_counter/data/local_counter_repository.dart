@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:app/core/storage/cache_bucket.dart';
 import 'package:app/core/storage/local_cache_store.dart';
 
-import '../domain/counter_repository.dart';
+import 'package:app/features/sample_counter/domain/counter_repository.dart';
 
 class LocalCounterRepository implements CounterRepository {
   LocalCounterRepository(this._store);

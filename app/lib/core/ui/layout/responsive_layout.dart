@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
+import 'package:flutter/material.dart';
 
 class AppBreakpoints {
   static const double mobile = 0;

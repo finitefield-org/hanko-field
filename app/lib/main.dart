@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:app/core/app/app_flavor.dart';
+import 'package:app/core/app_state/app_locale.dart';
+import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/firebase/firebase_providers.dart';
 import 'package:app/core/monitoring/analytics_controller.dart';
 import 'package:app/core/monitoring/analytics_events.dart';
@@ -56,6 +58,8 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(appConfigProvider);
     final routerDelegate = ref.watch(appRouterDelegateProvider);
+    final localeValue = ref.watch(appLocaleProvider);
+    final resolvedLocale = localeValue.asData?.value.locale;
     // Kick off Firebase initialization once. UI does not block on it.
     ref.listen<AsyncValue<void>>(firebaseInitializedProvider, (_, __) {});
     ref.listen<AsyncValue<AnalyticsState>>(analyticsControllerProvider, (
@@ -79,7 +83,17 @@ class App extends ConsumerWidget {
         );
       }
     });
+    ref.listen<AsyncValue<UserSessionState>>(userSessionProvider, (
+      previous,
+      next,
+    ) {
+      final analytics = ref.read(analyticsControllerProvider.notifier);
+      next.whenData((session) {
+        unawaited(analytics.setUserId(session.identity?.uid));
+      });
+    });
     return MaterialApp.router(
+      locale: resolvedLocale,
       routerDelegate: routerDelegate,
       routeInformationParser: const AppRouteInformationParser(),
       title: config.displayName,

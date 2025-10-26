@@ -1,13 +1,9 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
+import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppTokens.brandSeed,
-      brightness: Brightness.light,
-    );
+    final scheme = ColorScheme.fromSeed(seedColor: AppTokens.brandSeed);
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
@@ -22,7 +18,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: AppTokens.radiusM),
+          shape: const RoundedRectangleBorder(borderRadius: AppTokens.radiusM),
           padding: const EdgeInsets.symmetric(
             horizontal: AppTokens.spaceL,
             vertical: AppTokens.spaceS,
@@ -51,7 +47,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: AppTokens.radiusM),
+          shape: const RoundedRectangleBorder(borderRadius: AppTokens.radiusM),
           padding: const EdgeInsets.symmetric(
             horizontal: AppTokens.spaceL,
             vertical: AppTokens.spaceS,

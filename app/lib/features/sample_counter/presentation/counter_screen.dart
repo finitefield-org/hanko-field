@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/ui.dart';
-import 'package:app/l10n/gen/app_localizations.dart';
-
 import 'package:app/features/sample_counter/application/providers.dart';
+import 'package:app/l10n/gen/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CounterScreen extends ConsumerWidget {
   const CounterScreen({super.key});

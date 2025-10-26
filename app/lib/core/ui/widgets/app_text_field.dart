@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
+import 'package:flutter/material.dart';
 
 enum AppValidationState { info, success, warning, error }
 
@@ -130,7 +129,7 @@ class AppTextField extends StatelessWidget {
           horizontal: AppTokens.spaceL,
           vertical: AppTokens.spaceM,
         ),
-        border: OutlineInputBorder(borderRadius: AppTokens.radiusM),
+        border: const OutlineInputBorder(borderRadius: AppTokens.radiusM),
       ),
     );
 

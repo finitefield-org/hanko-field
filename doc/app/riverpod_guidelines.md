@@ -65,6 +65,24 @@ final c = ProviderContainer(overrides: [
 addTearDown(c.dispose);
 ```
 
+### Global app state overrides
+Widget tests that render shells or flows with navigation need deterministic
+session/locale/feature flag state. Override the app-level providers declared in
+`lib/core/app_state/` so the UI can rely on predictable globals:
+
+```dart
+final container = ProviderContainer(overrides: [
+  userSessionProvider.overrideWith(() => FakeUserSessionNotifier.loggedIn()),
+  appLocaleProvider.overrideWith(() => FakeAppLocaleNotifier(const Locale('ja'))),
+  featureFlagsProvider.overrideWith(() => FakeFeatureFlagsNotifier.allEnabled()),
+]);
+addTearDown(container.dispose);
+```
+
+Each fake notifier extends `AsyncNotifier` and returns an `AsyncData` for the
+desired domain model, mirroring the production implementations in
+`user_session.dart`, `app_locale.dart`, and `feature_flags.dart`.
+
 ## Async State & Errors
 - IO flows use `AsyncNotifier<T>` and `AsyncValue<T>` in UI via `when`/`maybeWhen`.
 - Set `state = const AsyncLoading()` before long ops; on success `state = AsyncData(value)`; on failure `state = AsyncError(e, st)`.
@@ -97,4 +115,3 @@ Retry & Refresh
 ## References & Examples
 - Sample module: `lib/features/sample_counter/` demonstrates repository DI, `AsyncNotifier`, overrides in tests.
 - App-level routing state: `lib/core/routing/` shows `NotifierProvider` for app state and manual listen in router delegate.
-

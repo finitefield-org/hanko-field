@@ -223,10 +223,13 @@ class OrderLineItem {
       id,
       productRef,
       designRef,
-      designSnapshot == null ? null : Object.hashAll(designSnapshot!.entries),
+      if (designSnapshot == null)
+        null
+      else
+        Object.hashAll(designSnapshot!.entries),
       sku,
       name,
-      options == null ? null : Object.hashAll(options!.entries),
+      if (options == null) null else Object.hashAll(options!.entries),
       quantity,
       unitPrice,
       total,
@@ -803,7 +806,7 @@ class OrderPayment {
       method,
       billingAddress,
       error,
-      raw == null ? null : Object.hashAll(raw!.entries),
+      if (raw == null) null else Object.hashAll(raw!.entries),
       idempotencyKey,
       createdAt,
       updatedAt,
@@ -1063,7 +1066,7 @@ class Order {
       contact,
       fulfillment,
       production,
-      notes == null ? null : Object.hashAll(notes!.entries),
+      if (notes == null) null else Object.hashAll(notes!.entries),
       flags,
       audit,
       createdAt,
@@ -1074,7 +1077,7 @@ class Order {
       deliveredAt,
       canceledAt,
       cancelReason,
-      metadata == null ? null : Object.hashAll(metadata!.entries),
+      if (metadata == null) null else Object.hashAll(metadata!.entries),
     ]);
   }
 }

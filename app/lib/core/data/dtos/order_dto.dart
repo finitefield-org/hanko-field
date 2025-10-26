@@ -889,7 +889,7 @@ class OrderShipmentDto {
       'eta': eta,
       'labelUrl': labelUrl,
       'documents': documents,
-      'events': events?.map((OrderShipmentEventDto e) => e.toJson()).toList(),
+      'events': events?.map((e) => e.toJson()).toList(),
       'updatedAt': updatedAt,
     };
   }
@@ -906,7 +906,7 @@ class OrderShipmentDto {
       labelUrl: labelUrl,
       documents: documents ?? const [],
       events:
-          events?.map((OrderShipmentEventDto e) => e.toDomain()).toList() ??
+          events?.map((e) => e.toDomain()).toList() ??
           const <OrderShipmentEvent>[],
       updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt!),
     );
@@ -1468,7 +1468,7 @@ class OrderDto {
       'currency': currency,
       'totals': totals.toJson(),
       'promotion': promotion?.toJson(),
-      'lineItems': lineItems.map((OrderLineItemDto e) => e.toJson()).toList(),
+      'lineItems': lineItems.map((e) => e.toJson()).toList(),
       'shippingAddress': shippingAddress?.toJson(),
       'billingAddress': billingAddress?.toJson(),
       'contact': contact?.toJson(),
@@ -1499,7 +1499,7 @@ class OrderDto {
       currency: currency,
       totals: totals.toDomain(),
       promotion: promotion?.toDomain(),
-      lineItems: lineItems.map((OrderLineItemDto e) => e.toDomain()).toList(),
+      lineItems: lineItems.map((e) => e.toDomain()).toList(),
       shippingAddress: shippingAddress?.toDomain(),
       billingAddress: billingAddress?.toDomain(),
       contact: contact?.toDomain(),

@@ -44,7 +44,7 @@ class AppFirebase {
     // Remote Config defaults and config settings (fast dev, slower prod)
     final rc = FirebaseRemoteConfig.instance;
     final minInterval = switch (flavor) {
-      AppFlavor.dev => const Duration(seconds: 0),
+      AppFlavor.dev => const Duration(),
       AppFlavor.stg => const Duration(seconds: 30),
       AppFlavor.prod => const Duration(hours: 12),
     };

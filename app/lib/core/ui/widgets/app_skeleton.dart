@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_card.dart';
+import 'package:flutter/material.dart';
 
 class AppShimmer extends StatefulWidget {
   const AppShimmer({super.key, required this.child, this.duration});
@@ -34,7 +33,7 @@ class _AppShimmerState extends State<AppShimmer>
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.surfaceVariant;
+    final baseColor = Theme.of(context).colorScheme.surfaceContainerHighest;
     final highlight = Theme.of(context).colorScheme.surface;
 
     return AnimatedBuilder(
@@ -43,12 +42,10 @@ class _AppShimmerState extends State<AppShimmer>
         return ShaderMask(
           shaderCallback: (rect) {
             final gradient = LinearGradient(
-              begin: const Alignment(-1, 0),
-              end: const Alignment(1, 0),
               colors: [
-                baseColor.withOpacity(0.25),
-                highlight.withOpacity(0.6),
-                baseColor.withOpacity(0.25),
+                baseColor.withValues(alpha: 0.25),
+                highlight.withValues(alpha: 0.6),
+                baseColor.withValues(alpha: 0.25),
               ],
               stops: const [0.1, 0.5, 0.9],
               transform: _SlidingGradientTransform(
@@ -93,13 +90,13 @@ class AppSkeletonBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ?? AppTokens.radiusM;
-    final color = Theme.of(context).colorScheme.surfaceVariant;
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
     return AppShimmer(
       child: Container(
         width: width ?? double.infinity,
         height: height,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           borderRadius: radius,
         ),
       ),
@@ -124,21 +121,20 @@ class AppListSkeleton extends StatelessWidget {
         for (int index = 0; index < items; index++)
           Padding(
             padding: EdgeInsets.only(bottom: index == items - 1 ? 0 : spacing),
-            child: AppCard(
+            child: const AppCard(
               variant: AppCardVariant.filled,
-              padding: const EdgeInsets.all(AppTokens.spaceL),
               child: Row(
                 children: [
-                  const AppSkeletonBlock(
+                  AppSkeletonBlock(
                     height: 48,
                     width: 48,
                     borderRadius: AppTokens.radiusL,
                   ),
-                  const SizedBox(width: AppTokens.spaceL),
+                  SizedBox(width: AppTokens.spaceL),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         FractionallySizedBox(
                           widthFactor: 0.7,
                           child: AppSkeletonBlock(height: 12),
