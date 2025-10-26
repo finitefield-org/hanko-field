@@ -122,12 +122,12 @@ void main() {
     expect(state.profile, profile);
     expect(state.identity?.uid, 'user-123');
     expect(state.idToken, 'token-1');
-    verify(() => repository.fetchCurrentUser()).called(1);
-    verify(
+    verifyInOrder([
       () => tokenStorage.saveTokens(
         accessToken: 'token-1',
         refreshToken: 'refresh-1',
       ),
-    ).called(1);
+      () => repository.fetchCurrentUser(),
+    ]);
   });
 }

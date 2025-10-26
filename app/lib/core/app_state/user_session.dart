@@ -249,7 +249,6 @@ class UserSessionNotifier extends AsyncNotifier<UserSessionState> {
   }
 
   Future<UserSessionState> _buildAuthenticatedState(User user) async {
-    final profile = await _repository.fetchCurrentUser();
     final identity = SessionIdentity.fromFirebaseUser(user);
     final idToken = await _requireIdToken(user);
     final refreshToken = user.refreshToken;
@@ -258,6 +257,8 @@ class UserSessionNotifier extends AsyncNotifier<UserSessionState> {
       accessToken: idToken,
       refreshToken: refreshToken,
     );
+
+    final profile = await _repository.fetchCurrentUser();
 
     return UserSessionState.authenticated(
       identity: identity,
