@@ -21,11 +21,11 @@
       </p>
     </div>
     {{ if $view.Steps }}
-      <ol class="grid gap-3 md:grid-cols-4" aria-label="{{ if eq $.Lang "ja" }}進捗状況{{ else }}Checkout progress{{ end }}">
+      <ol class="grid gap-3 md:grid-cols-5" aria-label="{{ if eq $.Lang "ja" }}進捗状況{{ else }}Checkout progress{{ end }}">
         {{ range $view.Steps }}
           <li class="flex items-center gap-3 rounded-xl border px-3 py-2 text-sm {{ if .Active }}border-indigo-200 bg-indigo-50 text-indigo-700{{ else if .Completed }}border-emerald-200 bg-emerald-50 text-emerald-700{{ else }}border-gray-200 bg-gray-50 text-gray-500{{ end }}">
             <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs font-semibold {{ if .Active }}bg-indigo-600 text-white{{ else if .Completed }}bg-emerald-500 text-white{{ else }}bg-gray-200 text-gray-600{{ end }}">
-              {{ if eq .Key "cart" }}1{{ else if eq .Key "shipping" }}2{{ else if eq .Key "payment" }}3{{ else }}4{{ end }}
+              {{ .Position }}
             </span>
             <div>
               <p class="font-semibold">{{ .Label }}</p>

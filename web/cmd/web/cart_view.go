@@ -36,6 +36,7 @@ type CheckoutStep struct {
 	Href        string
 	Active      bool
 	Completed   bool
+	Position    int
 }
 
 // CartAlert renders contextual notices above the table.
@@ -417,20 +418,23 @@ func cartSteps(lang, active string) []CheckoutStep {
 		"shipping": {"配送", "Shipping"},
 		"payment":  {"支払い", "Payment"},
 		"review":   {"確認", "Review"},
+		"complete": {"完了", "Complete"},
 	}
 	descJa := map[string]string{
 		"cart":     "内容を確認し、数量やメモを調整。",
 		"shipping": "配送先と請求先を指定。",
 		"payment":  "安全な決済情報を入力。",
 		"review":   "刻印プレビューを最終確認。",
+		"complete": "出荷状況と共有オプションを確認。",
 	}
 	descEn := map[string]string{
 		"cart":     "Review quantities and engraving notes.",
 		"shipping": "Confirm fulfillment and billing addresses.",
 		"payment":  "Enter payment securely.",
 		"review":   "Approve proof before engraving.",
+		"complete": "Track fulfillment and share updates.",
 	}
-	order := []string{"cart", "shipping", "payment", "review"}
+	order := []string{"cart", "shipping", "payment", "review", "complete"}
 	steps := make([]CheckoutStep, 0, len(order))
 	for i, key := range order {
 		lbl := labels[key][1]
@@ -448,6 +452,7 @@ func cartSteps(lang, active string) []CheckoutStep {
 			Href:        stepHrefFor(key),
 			Active:      key == active,
 			Completed:   i < indexOf(order, active),
+			Position:    i + 1,
 		})
 	}
 	return steps
@@ -463,6 +468,8 @@ func stepHrefFor(key string) string {
 		return "/checkout/payment"
 	case "review":
 		return "/checkout/review"
+	case "complete":
+		return "/checkout/complete"
 	default:
 		return "/cart"
 	}

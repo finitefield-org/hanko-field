@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -77,15 +78,17 @@ func CheckoutReviewSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Trigger", string(raw))
 	}
 
-	title := i18nOrDefault(lang, "checkout.review.submit.success", "Order queued for engraving")
-	body := i18nOrDefault(lang, "checkout.review.submit.success.body", "We’ll email confirmation and share the tracking page shortly.")
-
+	completeURL := "/checkout/complete"
+	if orderID != "" {
+		completeURL = fmt.Sprintf("%s?order=%s", completeURL, url.QueryEscape(orderID))
+	}
 	if r.Header.Get("HX-Request") != "true" {
-		http.Redirect(w, r, "/checkout/review?status=placed", http.StatusSeeOther)
+		http.Redirect(w, r, completeURL, http.StatusSeeOther)
 		return
 	}
 
-	renderCheckoutReviewStatus(w, r, lang, "success", title, body, http.StatusOK)
+	w.Header().Set("HX-Redirect", completeURL)
+	w.WriteHeader(http.StatusOK)
 }
 
 func renderCheckoutReviewStatus(w http.ResponseWriter, r *http.Request, lang, tone, title, body string, code int) {
