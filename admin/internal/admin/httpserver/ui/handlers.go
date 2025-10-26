@@ -9,6 +9,7 @@ import (
 
 	"github.com/a-h/templ"
 
+	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	admindashboard "finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
@@ -23,6 +24,7 @@ import (
 
 // Dependencies collects external services required by the UI handlers.
 type Dependencies struct {
+	CatalogService       admincatalog.Service
 	DashboardService     admindashboard.Service
 	ProfileService       profile.Service
 	SearchService        adminsearch.Service
@@ -34,6 +36,7 @@ type Dependencies struct {
 
 // Handlers exposes HTTP handlers for admin UI pages and fragments.
 type Handlers struct {
+	catalog       admincatalog.Service
 	dashboard     admindashboard.Service
 	profile       profile.Service
 	search        adminsearch.Service
@@ -73,7 +76,12 @@ func NewHandlers(deps Dependencies) *Handlers {
 	if productionService == nil {
 		productionService = adminproduction.NewStaticService()
 	}
+	catalogService := deps.CatalogService
+	if catalogService == nil {
+		catalogService = admincatalog.NewStaticService()
+	}
 	return &Handlers{
+		catalog:       catalogService,
 		dashboard:     dashboardService,
 		profile:       profileService,
 		search:        searchService,

@@ -1,0 +1,56 @@
+package catalog
+
+import (
+	"context"
+	"testing"
+)
+
+func TestStaticServiceFiltersByStatus(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind:     KindTemplates,
+		Statuses: []Status{StatusDraft},
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 draft template, got %d", len(result.Items))
+	}
+	if result.Items[0].ID != "tmpl-minimal-stamp" {
+		t.Fatalf("unexpected item ID: %s", result.Items[0].ID)
+	}
+}
+
+func TestStaticServiceSelectsDefaultDetail(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind: KindFonts,
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if result.SelectedDetail == nil {
+		t.Fatal("expected default selected detail")
+	}
+	if result.SelectedDetail.Item.ID != result.SelectedID {
+		t.Fatalf("detail/item mismatch: %s vs %s", result.SelectedDetail.Item.ID, result.SelectedID)
+	}
+}
+
+func TestStaticServiceTagFiltering(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind: KindMaterials,
+		Tags: []string{"metallic"},
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 metallic material, got %d", len(result.Items))
+	}
+	if result.Items[0].ID != "mat-metallic-gold" {
+		t.Fatalf("unexpected material ID: %s", result.Items[0].ID)
+	}
+}

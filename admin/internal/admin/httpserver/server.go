@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
@@ -29,6 +30,7 @@ type Config struct {
 	BasePath             string
 	LoginPath            string
 	Authenticator        custommw.Authenticator
+	CatalogService       admincatalog.Service
 	DashboardService     dashboard.Service
 	ProfileService       profile.Service
 	SearchService        search.Service
@@ -98,6 +100,7 @@ func New(cfg Config) *http.Server {
 	}
 
 	uiHandlers := ui.NewHandlers(ui.Dependencies{
+		CatalogService:       cfg.CatalogService,
 		DashboardService:     cfg.DashboardService,
 		ProfileService:       cfg.ProfileService,
 		SearchService:        cfg.SearchService,
@@ -225,6 +228,12 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				pr.Post("/qc/orders/{orderID}/decision", uiHandlers.ProductionQCDecision)
 				RegisterFragment(pr, "/qc/orders/{orderID}/modal/rework", uiHandlers.ProductionQCReworkModal)
 				pr.Post("/qc/orders/{orderID}/rework", uiHandlers.ProductionQCSubmitRework)
+			})
+			protected.Route("/catalog", func(cr chi.Router) {
+				cr.Get("/", uiHandlers.CatalogRootRedirect)
+				cr.Get("/{kind}", uiHandlers.CatalogPage)
+				RegisterFragment(cr, "/{kind}/table", uiHandlers.CatalogTable)
+				RegisterFragment(cr, "/{kind}/cards", uiHandlers.CatalogCards)
 			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)

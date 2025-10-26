@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 
+	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/httpserver"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
@@ -33,6 +34,7 @@ func main() {
 		Address:           getEnv("ADMIN_HTTP_ADDR", ":8080"),
 		BasePath:          getEnv("ADMIN_BASE_PATH", "/admin"),
 		Authenticator:     buildAuthenticator(rootCtx),
+		CatalogService:    buildCatalogService(),
 		ProfileService:    buildProfileService(),
 		SearchService:     buildSearchService(),
 		OrdersService:     buildOrdersService(),
@@ -202,6 +204,10 @@ func buildSearchService() search.Service {
 
 func buildOrdersService() adminorders.Service {
 	return adminorders.NewStaticService()
+}
+
+func buildCatalogService() admincatalog.Service {
+	return admincatalog.NewStaticService()
 }
 
 func buildProductionService() adminproduction.Service {

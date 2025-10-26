@@ -1,0 +1,459 @@
+package catalog
+
+import (
+	"fmt"
+	"strings"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-catalog-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<p class="text-sm font-semibold uppercase tracking-wide text-slate-500">カタログ / { data.KindLabel }</p>
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+					if data.Summary.LastUpdated != "" {
+						<p class="text-xs text-slate-400">最終更新 { data.Summary.LastUpdated }</p>
+					}
+				</div>
+				<div class="flex flex-1 flex-wrap gap-3 lg:flex-none">
+					@summaryChip("総数", data.Summary.TotalLabel, "bg-slate-50 text-slate-900")
+					@summaryChip("公開中", data.Summary.PublishedLabel, "bg-emerald-50 text-emerald-600")
+					@summaryChip("下書き / レビュー", fmt.Sprintf("%s / %s", data.Summary.DraftLabel, data.Summary.ReviewLabel), "bg-amber-50 text-amber-700")
+				</div>
+				<div class="flex items-center gap-3">
+					@components.ButtonWith("アセットを作成", components.ButtonOptions{
+						Variant: "primary",
+						Href:    data.CreateURL,
+					})
+				</div>
+			</div>
+		<div class="mt-6">
+			@components.UnderlineTabs(components.UnderlineTabsProps{Tabs: data.Tabs})
+		</div>
+		</section>
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+			<section class="space-y-4">
+				@filterToolbar(data)
+				@viewToggle(data.ViewToggle)
+				@catalogView(data)
+				@bulkBar(data.Bulk)
+			</section>
+			<aside id="catalog-drawer" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+				@Drawer(data.Drawer)
+			</aside>
+		</div>
+	</div>
+}
+
+templ summaryChip(label, value, classes string) {
+	<div class={ helpers.ClassList("flex min-w-[140px] flex-col gap-1 rounded-xl px-4 py-3 text-sm shadow-sm", classes) }>
+		<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ label }</p>
+		<p class="text-lg font-semibold">{ value }</p>
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h2 class="text-sm font-semibold text-slate-700">フィルター</h2>
+			<div class="text-xs text-slate-400" id="catalog-loading">待機中</div>
+		</div>
+		<form
+			class="mt-4 space-y-4"
+			method="get"
+			hx-get={ filterEndpoint(data) }
+			hx-target="#catalog-view"
+			hx-swap="outerHTML"
+			hx-indicator="#catalog-loading"
+			hx-push-url={ data.PageURL }
+		>
+			<input type="hidden" name="view" value={ data.ViewToggle.Active } />
+			<div class="flex flex-wrap gap-2" role="group" aria-label="ステータス">
+				for _, option := range data.Filters.Statuses {
+					<label class={ statusFilterClass(option.Active, option.Tone) }>
+						<input type="checkbox" name="status" value={ option.Value } class="sr-only" checked?={ option.Active } />
+						<span class="text-xs font-semibold">
+							{ option.Label }
+							if option.Count > 0 {
+								<span class="ml-1 text-[11px] text-slate-400">({ option.Count })</span>
+							}
+						</span>
+					</label>
+				}
+			</div>
+
+			<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+				<div class="flex flex-col gap-1">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="catalog-owner">担当者</label>
+					<select id="catalog-owner" name="owner" class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
+						<option value="">すべて</option>
+						for _, option := range data.Filters.Owners {
+							<option value={ option.Value } selected?={ option.Active }>
+								{ option.Label }
+								if option.Count > 0 {
+									{ fmt.Sprintf(" (%d)", option.Count) }
+								}
+							</option>
+						}
+					</select>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="catalog-tags">タグ</label>
+					<select
+						id="catalog-tags"
+						name="tag"
+						multiple
+						class="min-h-[72px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					>
+						for _, option := range data.Filters.Tags {
+							<option value={ option.Value } selected?={ option.Active }>{ option.Label }</option>
+						}
+					</select>
+					<p class="text-xs text-slate-400">Ctrl/Cmdクリックで複数選択</p>
+				</div>
+				<div class="flex flex-col gap-1">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="catalog-updated">更新タイミング</label>
+					<select id="catalog-updated" name="updated" class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
+						<option value="">指定なし</option>
+						for _, option := range data.Filters.Updated {
+							<option value={ option.Value } selected?={ option.Active }>{ option.Label }</option>
+						}
+					</select>
+				</div>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-3">
+				<div class="flex flex-1 items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 focus-within:ring-2 focus-within:ring-brand-200">
+					<span class="text-slate-400">🔍</span>
+					<input
+						type="search"
+						name="q"
+						value={ data.Query.Search }
+						placeholder="テンプレート名、ID、タグで検索"
+						class="flex-1 border-none p-0 text-sm text-slate-900 focus:outline-none"
+					/>
+				</div>
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+			<a href={ helpers.BuildURL(data.PagePath, "") } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+		</div>
+	</form>
+	</section>
+}
+
+templ viewToggle(toggle ViewToggle) {
+	<div class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+		<div>
+			<p class="text-sm font-semibold text-slate-700">表示モード</p>
+			<p class="text-xs text-slate-400">一覧 or カードビュー</p>
+		</div>
+		<div class="flex gap-2">
+			for _, option := range toggle.Options {
+				<button
+					type="button"
+					class={ viewToggleClass(option.Active) }
+					hx-get={ option.Endpoint }
+					hx-target="#catalog-view"
+					hx-swap="outerHTML"
+					hx-push-url={ option.PushURL }
+					data-view-toggle={ option.Value }
+				>
+					<span>{ option.Icon }</span>
+					<span>{ option.Label }</span>
+				</button>
+			}
+		</div>
+	</div>
+}
+
+templ catalogView(data PageData) {
+	if data.ViewToggle.Active == "cards" {
+		@CardsSection(data.Cards)
+	} else {
+		@TableSection(data.Table)
+	}
+}
+
+templ TableSection(data TableData) {
+	<div
+		id="catalog-view"
+		class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+		hx-target="this"
+		hx-swap="outerHTML"
+	>
+		if len(data.Rows) == 0 {
+			<div class="px-6 py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
+		} else {
+			<table class="min-w-full divide-y divide-slate-200">
+				<thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+					<tr>
+						<th scope="col" class="px-4 py-3 text-left">アセット</th>
+						<th scope="col" class="px-4 py-3 text-left">担当</th>
+						<th scope="col" class="px-4 py-3 text-left">更新</th>
+						<th scope="col" class="px-4 py-3 text-left">利用状況</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200 text-sm text-slate-700">
+					for _, row := range data.Rows {
+						<tr
+						class={ rowClass(row.Selected) }
+						hx-get={ helpers.BuildURL(data.FragmentPath, helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+						hx-target="#catalog-view"
+						hx-swap="outerHTML"
+						hx-push-url={ helpers.BuildURL(data.PagePath, helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+						role="button"
+						tabindex="0"
+						>
+							<td class="px-4 py-4">
+								<div class="flex gap-4">
+									if row.PreviewURL != "" {
+										<img src={ row.PreviewURL } alt={ row.PreviewAlt } class="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-200" />
+									}
+									<div class="space-y-1">
+										<div class="flex items-center gap-2">
+											<p class="font-semibold text-slate-900">{ row.Name }</p>
+											if row.Badge != "" {
+												@components.Badge(row.Badge, row.BadgeTone)
+											}
+										</div>
+										<p class="text-xs text-slate-500">{ row.Identifier }</p>
+										<p class="text-xs text-slate-500">{ row.Description }</p>
+										<div class="flex flex-wrap gap-1 text-[11px] text-slate-500">
+											for _, tag := range row.Tags {
+												<span class="rounded-full bg-slate-100 px-2 py-0.5">{ tag }</span>
+											}
+										</div>
+									</div>
+								</div>
+							</td>
+							<td class="px-4 py-4">
+								<div class="flex items-center gap-2">
+									<div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{ row.OwnerInitials }</div>
+									<div>
+										<p class="font-medium">{ row.Owner }</p>
+										<p class="text-xs text-slate-500">{ row.StatusLabel }</p>
+									</div>
+								</div>
+							</td>
+							<td class="px-4 py-4">
+								<p class="font-medium text-slate-900">{ row.UpdatedLabel }</p>
+								<p class="text-xs text-slate-500">{ row.UpdatedRelative }</p>
+							</td>
+							<td class="px-4 py-4">
+								<p class="font-medium text-slate-900">{ row.UsageLabel }</p>
+								<div class="flex flex-wrap gap-2 text-xs text-slate-500">
+									for _, metric := range row.Metrics {
+										<span>{ metric.Icon } { metric.Label }: { metric.Value }</span>
+									}
+								</div>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+	<div id="catalog-drawer" hx-swap-oob="true">
+		@Drawer(data.Drawer)
+	</div>
+}
+
+templ CardsSection(data CardsData) {
+	<div
+		id="catalog-view"
+		class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+		hx-target="this"
+		hx-swap="outerHTML"
+	>
+		if len(data.Cards) == 0 {
+			<div class="py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
+		} else {
+			<div class="grid gap-4 md:grid-cols-2">
+				for _, card := range data.Cards {
+					<article
+					class={ cardClass(card.Selected) }
+					hx-get={ helpers.BuildURL(data.FragmentPath, helpers.SetRawQuery(data.RawQuery, "selected", card.ID)) }
+					hx-target="#catalog-view"
+					hx-swap="outerHTML"
+					hx-push-url={ helpers.BuildURL(data.PagePath, helpers.SetRawQuery(data.RawQuery, "selected", card.ID)) }
+				>
+						<div class="flex items-center justify-between gap-3">
+							<div>
+								<h3 class="text-base font-semibold text-slate-900">{ card.Title }</h3>
+								<p class="text-xs text-slate-500">{ card.Subtitle }</p>
+							</div>
+							@components.Badge(card.StatusLabel, card.StatusTone)
+						</div>
+						if card.PreviewURL != "" {
+							<img src={ card.PreviewURL } alt={ card.PreviewAlt } class="mt-3 h-32 w-full rounded-xl object-cover ring-1 ring-slate-200" />
+						}
+						<p class="mt-3 text-sm text-slate-600">{ card.UsageLabel }</p>
+						<div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+							for _, metric := range card.Metrics {
+								<span>{ metric.Icon } { metric.Label }: { metric.Value }</span>
+							}
+						</div>
+						<div class="mt-3 flex flex-wrap gap-1 text-[11px] text-slate-500">
+							for _, tag := range card.Tags {
+								<span class="rounded-full bg-slate-100 px-2 py-0.5">{ tag }</span>
+							}
+						</div>
+					</article>
+				}
+			</div>
+		}
+	</div>
+	<div id="catalog-drawer" hx-swap-oob="true">
+		@Drawer(data.Drawer)
+	</div>
+}
+
+templ Drawer(data DrawerData) {
+	if data.Empty {
+		<div class="space-y-2 text-sm text-slate-500">
+			<h2 class="text-base font-semibold text-slate-900">詳細</h2>
+			<p>アセットを選択するとここに詳細が表示されます。</p>
+		</div>
+		return
+	}
+	<div class="space-y-4">
+		<div class="space-y-2">
+			<div class="flex items-center gap-2">
+				<h2 class="text-lg font-semibold text-slate-900">{ data.Title }</h2>
+				@components.Badge(data.StatusLabel, data.StatusTone)
+			</div>
+			<p class="text-xs uppercase tracking-wide text-slate-400">{ data.KindLabel }</p>
+			<p class="text-sm text-slate-600">{ data.Description }</p>
+			<p class="text-xs text-slate-400">更新 { data.UpdatedLabel }</p>
+		</div>
+		if data.PreviewURL != "" {
+			<img src={ data.PreviewURL } alt={ data.PreviewAlt } class="w-full rounded-xl object-cover ring-1 ring-slate-200" />
+		}
+		<div class="rounded-xl bg-slate-50 p-3 text-sm">
+			<p class="font-semibold text-slate-800">担当者</p>
+			<p class="text-slate-600">{ data.Owner.Name }</p>
+			<p class="text-xs text-slate-400">{ data.Owner.Email }</p>
+		</div>
+		if len(data.Usage) > 0 {
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">利用状況</p>
+				<ul class="mt-2 space-y-1 text-sm text-slate-600">
+					for _, metric := range data.Usage {
+						<li>{ metric.Icon } { metric.Label }: { metric.Value }</li>
+					}
+				</ul>
+			</div>
+		}
+		if len(data.Metadata) > 0 {
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">メタデータ</p>
+				<dl class="mt-2 space-y-1 text-sm text-slate-600">
+					for _, item := range data.Metadata {
+						<div class="flex justify-between gap-3">
+							<dt class="text-slate-500">{ item.Icon } { item.Key }</dt>
+							<dd class="font-medium text-slate-900">{ item.Value }</dd>
+						</div>
+					}
+				</dl>
+			</div>
+		}
+		if len(data.Dependencies) > 0 {
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">依存関係</p>
+				<div class="mt-2 space-y-2">
+					for _, dep := range data.Dependencies {
+						<div class="flex flex-col rounded-xl border border-slate-200 px-3 py-2">
+							<p class="font-semibold text-slate-800">{ dep.Label }</p>
+							<p class="text-xs text-slate-500">{ dep.Kind } / { dep.Status }</p>
+						</div>
+					}
+				</div>
+			</div>
+		}
+		if len(data.Audit) > 0 {
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">更新履歴</p>
+				<ul class="mt-2 space-y-2 text-xs text-slate-500">
+					for _, entry := range data.Audit {
+						<li>
+							<p class="font-semibold text-slate-700">{ entry.Actor }</p>
+							<p>{ entry.Timestamp } / { entry.Action } ({ entry.Channel })</p>
+						</li>
+					}
+				</ul>
+			</div>
+		}
+		if len(data.Tags) > 0 {
+			<div class="flex flex-wrap gap-1 text-[11px] text-slate-500">
+				for _, tag := range data.Tags {
+					<span class="rounded-full bg-slate-100 px-2 py-0.5">{ tag }</span>
+				}
+			</div>
+		}
+	</div>
+}
+
+templ bulkBar(data BulkBarData) {
+	if !data.Visible {
+		return
+	}
+	<div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+		<p class="font-medium text-slate-700">{ data.Summary }</p>
+		<div class="flex flex-wrap gap-2">
+			for _, action := range data.Actions {
+				<button type="button" class={ helpers.ButtonClass(action.Tone, "sm", false, action.Disabled) } disabled?={ action.Disabled }>
+					{ action.Label }
+				</button>
+			}
+		</div>
+	</div>
+}
+
+func viewToggleClass(active bool) string {
+	base := "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium shadow-sm transition"
+	if active {
+		return base + " bg-slate-900 text-white"
+	}
+	return base + " bg-slate-100 text-slate-600 hover:bg-slate-200"
+}
+
+func statusFilterClass(active bool, tone string) string {
+	class := "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition"
+	if active {
+		return class + " border-brand-500 bg-brand-50 text-brand-700"
+	}
+	return class + " border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300"
+}
+
+func rowClass(selected bool) string {
+	base := "cursor-pointer transition hover:bg-slate-50 focus-within:bg-slate-50"
+	if selected {
+		return base + " bg-brand-50"
+	}
+	return base
+}
+
+func cardClass(selected bool) string {
+	base := "rounded-2xl border px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+	if selected {
+		return base + " border-brand-400 bg-brand-50"
+	}
+	return base + " border-slate-200 bg-white"
+}
+
+func filterEndpoint(data PageData) string {
+	if strings.TrimSpace(data.ViewToggle.Active) == "cards" {
+		return helpers.BuildURL(data.CardsEndpoint, data.Cards.RawQuery)
+	}
+	return helpers.BuildURL(data.TableEndpoint, data.Table.RawQuery)
+}
