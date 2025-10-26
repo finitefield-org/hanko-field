@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -97,6 +98,202 @@ func (h *Handlers) ProductionWorkOrderPage(w http.ResponseWriter, r *http.Reques
 	data := productiontpl.BuildWorkOrderPage(basePath, workOrder)
 
 	templ.Handler(productiontpl.WorkOrder(data)).ServeHTTP(w, r)
+}
+
+// ProductionQCPage renders the QC worklist page.
+func (h *Handlers) ProductionQCPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	query := buildProductionQCQuery(r)
+	result, err := h.production.QCOverview(ctx, user.Token, query)
+	errMsg := ""
+	if err != nil {
+		log.Printf("production: fetch qc overview failed: %v", err)
+		errMsg = "QCキューの取得に失敗しました。時間を置いて再度お試しください。"
+		result = adminproduction.QCResult{}
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	data := productiontpl.BuildQCPageData(basePath, result, errMsg)
+	templ.Handler(productiontpl.QCPage(data)).ServeHTTP(w, r)
+}
+
+// ProductionQCDrawer renders the QC drawer fragment.
+func (h *Handlers) ProductionQCDrawer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	query := buildProductionQCQuery(r)
+	query.Selected = orderID
+
+	result, err := h.production.QCOverview(ctx, user.Token, query)
+	if err != nil {
+		if errors.Is(err, adminproduction.ErrQueueNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("production: fetch qc drawer failed: %v", err)
+		http.Error(w, "QCデータの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+	if result.Drawer.Empty || result.Drawer.Item.ID == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	drawer := productiontpl.BuildQCDrawer(basePath, result.Drawer, query)
+	templ.Handler(productiontpl.QCDrawer(drawer)).ServeHTTP(w, r)
+}
+
+// ProductionQCDecision handles pass/fail submissions.
+func (h *Handlers) ProductionQCDecision(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "リクエストの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	outcome := strings.TrimSpace(r.FormValue("outcome"))
+	if outcome == "" {
+		http.Error(w, "結果を選択してください。", http.StatusBadRequest)
+		return
+	}
+
+	req := adminproduction.QCDecisionRequest{
+		Outcome:     adminproduction.QCDecisionOutcome(outcome),
+		Note:        strings.TrimSpace(r.FormValue("note")),
+		ReasonCode:  strings.TrimSpace(r.FormValue("reason_code")),
+		Attachments: parseAttachmentValues(r.Form["attachments"]),
+	}
+
+	result, err := h.production.RecordQCDecision(ctx, user.Token, orderID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, adminproduction.ErrQCItemNotFound):
+			http.NotFound(w, r)
+		case errors.Is(err, adminproduction.ErrQCInvalidAction):
+			http.Error(w, "このステータスでは実行できません。", http.StatusBadRequest)
+		default:
+			log.Printf("production: record qc decision failed: %v", err)
+			http.Error(w, "QCの更新に失敗しました。", http.StatusBadGateway)
+		}
+		return
+	}
+
+	triggerToast(w, result.Message, "success")
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ProductionQCReworkModal renders the rework modal.
+func (h *Handlers) ProductionQCReworkModal(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	query := buildProductionQCQuery(r)
+	query.Selected = orderID
+
+	result, err := h.production.QCOverview(ctx, user.Token, query)
+	if err != nil {
+		log.Printf("production: fetch qc modal failed: %v", err)
+		http.Error(w, "再作業データの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+	if result.Drawer.Empty || result.Drawer.Item.ID == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	modal := productiontpl.BuildQCReworkModal(basePath, orderID, result.Drawer, query)
+	templ.Handler(productiontpl.QCReworkModal(modal)).ServeHTTP(w, r)
+}
+
+// ProductionQCSubmitRework handles rework submissions from the modal.
+func (h *Handlers) ProductionQCSubmitRework(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "リクエストの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	req := adminproduction.QCReworkRequest{
+		RouteID:   strings.TrimSpace(r.FormValue("route_id")),
+		IssueCode: strings.TrimSpace(r.FormValue("issue_code")),
+		Note:      strings.TrimSpace(r.FormValue("note")),
+	}
+	if req.RouteID == "" {
+		http.Error(w, "差し戻し先を選択してください。", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.production.TriggerRework(ctx, user.Token, orderID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, adminproduction.ErrQCItemNotFound):
+			http.NotFound(w, r)
+		case errors.Is(err, adminproduction.ErrQCInvalidAction):
+			http.Error(w, "再作業を起票できません。", http.StatusBadRequest)
+		default:
+			log.Printf("production: trigger rework failed: %v", err)
+			http.Error(w, "再作業の登録に失敗しました。", http.StatusBadGateway)
+		}
+		return
+	}
+
+	triggerToast(w, result.Message, "warning")
+	w.Header().Set("HX-Refresh", "true")
+	fmt.Fprint(w, `<div id="modal" class="modal hidden" hx-swap-oob="true" aria-hidden="true" data-modal-open="false" data-modal-state="closed"></div>`)
 }
 
 // OrdersProductionEvent handles drag-and-drop submissions from the kanban board.
@@ -197,6 +394,35 @@ func canonicalProductionURL(basePath string, req productionBoardRequest) string 
 
 func rebuildRawQuery(values url.Values) string {
 	return values.Encode()
+}
+
+func buildProductionQCQuery(r *http.Request) adminproduction.QCQuery {
+	values := r.URL.Query()
+	return adminproduction.QCQuery{
+		QueueID:     strings.TrimSpace(values.Get("queue")),
+		ProductLine: strings.TrimSpace(values.Get("product_line")),
+		IssueType:   strings.TrimSpace(values.Get("issue_type")),
+		Assignee:    strings.TrimSpace(values.Get("assignee")),
+		Status:      strings.TrimSpace(values.Get("status")),
+		Selected:    strings.TrimSpace(values.Get("selected")),
+	}
+}
+
+func parseAttachmentValues(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	attachments := make([]string, 0, len(values))
+	for _, raw := range values {
+		for _, chunk := range strings.Split(raw, "\n") {
+			trimmed := strings.TrimSpace(chunk)
+			if trimmed == "" {
+				continue
+			}
+			attachments = append(attachments, trimmed)
+		}
+	}
+	return attachments
 }
 
 func isValidStage(stage string) bool {

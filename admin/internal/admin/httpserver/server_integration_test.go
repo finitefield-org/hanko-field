@@ -826,14 +826,20 @@ func sampleBoardResult() adminproduction.BoardResult {
 }
 
 type productionStub struct {
-	boardResult  adminproduction.BoardResult
-	boardErr     error
-	appendResult adminproduction.AppendEventResult
-	appendErr    error
-	lastOrderID  string
-	appendCalls  []adminproduction.AppendEventRequest
-	workOrder    adminproduction.WorkOrder
-	workErr      error
+	boardResult   adminproduction.BoardResult
+	boardErr      error
+	appendResult  adminproduction.AppendEventResult
+	appendErr     error
+	lastOrderID   string
+	appendCalls   []adminproduction.AppendEventRequest
+	workOrder     adminproduction.WorkOrder
+	workErr       error
+	qcResult      adminproduction.QCResult
+	qcErr         error
+	qcDecision    adminproduction.QCDecisionResult
+	qcDecisionErr error
+	qcRework      adminproduction.QCReworkResult
+	qcReworkErr   error
 }
 
 func (s *productionStub) Board(ctx context.Context, token string, query adminproduction.BoardQuery) (adminproduction.BoardResult, error) {
@@ -883,6 +889,35 @@ func (s *productionStub) WorkOrder(ctx context.Context, token, orderID string) (
 			Customer:    "テスト顧客",
 		},
 	}, nil
+}
+
+func (s *productionStub) QCOverview(ctx context.Context, token string, query adminproduction.QCQuery) (adminproduction.QCResult, error) {
+	if s.qcErr != nil {
+		return adminproduction.QCResult{}, s.qcErr
+	}
+	return s.qcResult, nil
+}
+
+func (s *productionStub) RecordQCDecision(ctx context.Context, token, orderID string, req adminproduction.QCDecisionRequest) (adminproduction.QCDecisionResult, error) {
+	if s.qcDecisionErr != nil {
+		return adminproduction.QCDecisionResult{}, s.qcDecisionErr
+	}
+	result := s.qcDecision
+	if result.Item.ID == "" {
+		result.Item.ID = orderID
+	}
+	return result, nil
+}
+
+func (s *productionStub) TriggerRework(ctx context.Context, token, orderID string, req adminproduction.QCReworkRequest) (adminproduction.QCReworkResult, error) {
+	if s.qcReworkErr != nil {
+		return adminproduction.QCReworkResult{}, s.qcReworkErr
+	}
+	result := s.qcRework
+	if result.Item.ID == "" {
+		result.Item.ID = orderID
+	}
+	return result, nil
 }
 
 type dashboardStub struct {

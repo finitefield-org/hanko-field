@@ -14,6 +14,12 @@ type Service interface {
 	AppendEvent(ctx context.Context, token, orderID string, req AppendEventRequest) (AppendEventResult, error)
 	// WorkOrder returns a detailed production brief for the specified order.
 	WorkOrder(ctx context.Context, token, orderID string) (WorkOrder, error)
+	// QCOverview returns the QC worklist and associated metrics.
+	QCOverview(ctx context.Context, token string, query QCQuery) (QCResult, error)
+	// RecordQCDecision captures pass/fail outcomes for the specified QC item.
+	RecordQCDecision(ctx context.Context, token, orderID string, req QCDecisionRequest) (QCDecisionResult, error)
+	// TriggerRework routes a failed QC item back to the requested stage with metadata.
+	TriggerRework(ctx context.Context, token, orderID string, req QCReworkRequest) (QCReworkResult, error)
 }
 
 var (
@@ -25,6 +31,10 @@ var (
 	ErrStageInvalid = errors.New("production stage is invalid")
 	// ErrWorkOrderNotFound indicates no work order data exists for the id.
 	ErrWorkOrderNotFound = errors.New("work order not found")
+	// ErrQCItemNotFound indicates the requested QC record does not exist.
+	ErrQCItemNotFound = errors.New("qc item not found")
+	// ErrQCInvalidAction indicates the requested QC transition is not allowed.
+	ErrQCInvalidAction = errors.New("qc action invalid for current state")
 )
 
 // Stage represents a workflow step on the production board.
@@ -216,6 +226,195 @@ type DrawerCard struct {
 type DrawerDetail struct {
 	Label string
 	Value string
+}
+
+// QCStatus represents the current state of a QC inspection.
+type QCStatus string
+
+const (
+	// QCStatusPending indicates the item awaits QC processing.
+	QCStatusPending QCStatus = "pending"
+	// QCStatusFailed indicates QC recorded a failure awaiting rework routing.
+	QCStatusFailed QCStatus = "failed"
+	// QCStatusComplete indicates the QC item has been cleared or routed out.
+	QCStatusComplete QCStatus = "complete"
+)
+
+// QCDecisionOutcome enumerates QC decision types.
+type QCDecisionOutcome string
+
+const (
+	// QCDecisionPass marks the inspection as passed.
+	QCDecisionPass QCDecisionOutcome = "pass"
+	// QCDecisionFail marks the inspection as failed.
+	QCDecisionFail QCDecisionOutcome = "fail"
+)
+
+// QCQuery captures filters applied to the QC worklist.
+type QCQuery struct {
+	QueueID     string
+	ProductLine string
+	IssueType   string
+	Assignee    string
+	Status      string
+	Selected    string
+}
+
+// QCResult describes the QC page payload rendered for the UI.
+type QCResult struct {
+	Queue       Queue
+	Queues      []QueueOption
+	Alert       string
+	Summary     []QCSummary
+	Performance []QCSummary
+	Filters     QCFilters
+	Items       []QCItem
+	Drawer      QCInspector
+	SelectedID  string
+	GeneratedAt time.Time
+}
+
+// QCSummary models KPI chips rendered on the QC page.
+type QCSummary struct {
+	Label   string
+	Value   string
+	Delta   string
+	Tone    string
+	Icon    string
+	SubText string
+}
+
+// QCFilters enumerates available filter facets on the QC page.
+type QCFilters struct {
+	ProductLines []FilterOption
+	IssueTypes   []FilterOption
+	Assignees    []FilterOption
+	Statuses     []FilterOption
+	Query        QCQuery
+}
+
+// QCItem models a QC worklist row.
+type QCItem struct {
+	ID            string
+	OrderNumber   string
+	Customer      string
+	ProductLine   string
+	ItemType      string
+	Stage         Stage
+	StageLabel    string
+	StageTone     string
+	Assigned      string
+	Workstation   string
+	PriorityLabel string
+	PriorityTone  string
+	SLA           string
+	SLATone       string
+	AgingLabel    string
+	AgingTone     string
+	Flags         []CardFlag
+	IssueHint     string
+	QueueID       string
+	PreviewURL    string
+	Status        QCStatus
+	StatusLabel   string
+	StatusTone    string
+}
+
+// QCInspector powers the action drawer for the QC page.
+type QCInspector struct {
+	Empty        bool
+	Item         QCItemDetail
+	Checklist    []QCChecklistItem
+	Issues       []QCIssueRecord
+	Attachments  []QCAttachment
+	Reasons      []QCReason
+	ReworkRoutes []QCReworkRoute
+	Notes        []string
+}
+
+// QCItemDetail summarises the selected QC item.
+type QCItemDetail struct {
+	ID            string
+	OrderNumber   string
+	Customer      string
+	ProductLine   string
+	PriorityLabel string
+	PriorityTone  string
+	StageLabel    string
+	StageTone     string
+	Assigned      string
+	DueLabel      string
+	DueTone       string
+	PreviewURL    string
+}
+
+// QCChecklistItem renders QC checklist rows.
+type QCChecklistItem struct {
+	ID          string
+	Label       string
+	Description string
+	Required    bool
+	Status      string
+}
+
+// QCIssueRecord tracks prior QC failures.
+type QCIssueRecord struct {
+	ID        string
+	Category  string
+	Summary   string
+	Actor     string
+	Tone      string
+	CreatedAt time.Time
+}
+
+// QCAttachment lists reference assets for the QC drawer.
+type QCAttachment struct {
+	ID    string
+	URL   string
+	Label string
+	Kind  string
+}
+
+// QCReason enumerates fail reasons selectable by QC operators.
+type QCReason struct {
+	Code     string
+	Label    string
+	Category string
+}
+
+// QCReworkRoute describes routing destinations for failed items.
+type QCReworkRoute struct {
+	ID          string
+	Label       string
+	Description string
+	Stage       Stage
+}
+
+// QCDecisionRequest captures QC pass/fail submissions.
+type QCDecisionRequest struct {
+	Outcome     QCDecisionOutcome
+	Note        string
+	ReasonCode  string
+	Attachments []string
+}
+
+// QCDecisionResult reports the outcome of a QC decision action.
+type QCDecisionResult struct {
+	Item    QCItem
+	Message string
+}
+
+// QCReworkRequest captures rework routing submissions.
+type QCReworkRequest struct {
+	RouteID   string
+	IssueCode string
+	Note      string
+}
+
+// QCReworkResult reports the outcome of a rework action.
+type QCReworkResult struct {
+	Item    QCItem
+	Message string
 }
 
 // WorkOrder aggregates the contextual data rendered in the work order view.

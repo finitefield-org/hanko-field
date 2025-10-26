@@ -17,11 +17,27 @@ type StaticService struct {
 	workorders   map[string]WorkOrder
 	laneDefs     []laneDefinition
 	defaultQueue string
+	qcReasons    []QCReason
+	qcRoutes     []QCReworkRoute
 }
 
 type cardRecord struct {
-	card     Card
-	timeline []ProductionEvent
+	card       Card
+	timeline   []ProductionEvent
+	inspection *qcInspectionRecord
+}
+
+type qcInspectionRecord struct {
+	Status      QCStatus
+	Checklist   []QCChecklistItem
+	Issues      []QCIssueRecord
+	Attachments []QCAttachment
+	Notes       []string
+	IssueType   string
+	IssueHint   string
+	SLALabel    string
+	SLATone     string
+	ReceivedAt  time.Time
 }
 
 type counter map[string]int
@@ -152,6 +168,193 @@ func (s *StaticService) WorkOrder(_ context.Context, _ string, orderID string) (
 	return cloneWorkOrder(work), nil
 }
 
+// QCOverview implements Service.
+func (s *StaticService) QCOverview(_ context.Context, _ string, query QCQuery) (QCResult, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	queueID := strings.TrimSpace(query.QueueID)
+	if queueID == "" {
+		queueID = s.defaultQueue
+	}
+
+	queue, ok := s.queues[queueID]
+	if !ok {
+		return QCResult{}, ErrQueueNotFound
+	}
+
+	all := s.qcRecords(queueID)
+	filtered := filterQCRecords(all, query)
+	items := s.buildQCItems(filtered)
+	selectedID, drawer := s.buildQCDrawer(filtered, query.Selected)
+
+	result := QCResult{
+		Queue:       queue,
+		Queues:      s.queueOptions(queueID),
+		Alert:       s.qcAlert(queueID),
+		Summary:     s.qcSummary(all),
+		Performance: s.qcPerformance(all),
+		Filters:     s.qcFilters(all, query),
+		Items:       items,
+		Drawer:      drawer,
+		SelectedID:  selectedID,
+		GeneratedAt: time.Now(),
+	}
+	return result, nil
+}
+
+// RecordQCDecision implements Service.
+func (s *StaticService) RecordQCDecision(_ context.Context, _ string, orderID string, req QCDecisionRequest) (QCDecisionResult, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return QCDecisionResult{}, ErrQCItemNotFound
+	}
+
+	outcome := QCDecisionOutcome(strings.TrimSpace(string(req.Outcome)))
+	if outcome != QCDecisionPass && outcome != QCDecisionFail {
+		return QCDecisionResult{}, ErrQCInvalidAction
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.cards[orderID]
+	if !ok || record.inspection == nil {
+		return QCDecisionResult{}, ErrQCItemNotFound
+	}
+
+	inspection := record.inspection
+	now := time.Now()
+	if added := buildQCAttachments(req.Attachments, record.card.ID, now); len(added) > 0 {
+		inspection.Attachments = append(added, inspection.Attachments...)
+	}
+	switch outcome {
+	case QCDecisionPass:
+		if inspection.Status == QCStatusComplete {
+			return QCDecisionResult{}, ErrQCInvalidAction
+		}
+		inspection.Status = QCStatusComplete
+		event := ProductionEvent{
+			ID:          fmt.Sprintf("qc-pass-%s-%d", record.card.ID, now.UnixNano()),
+			Stage:       StageQC,
+			StageLabel:  StageLabel(StageQC),
+			Type:        "qc.pass",
+			Description: "QC合格",
+			Actor:       "QCオペレーター",
+			OccurredAt:  now,
+			Note:        strings.TrimSpace(req.Note),
+			Tone:        "success",
+		}
+		s.prependTimeline(record, event)
+		record.card.Stage = StagePacked
+		record.card.DueLabel = "梱包へ引き渡し"
+		record.card.DueTone = "success"
+		record.card.Flags = removeFlag(record.card.Flags, "QC再検")
+		return QCDecisionResult{
+			Item:    s.qcItemFromRecord(record),
+			Message: fmt.Sprintf("注文 #%s をQC合格として登録しました。", record.card.OrderNumber),
+		}, nil
+	case QCDecisionFail:
+		if inspection.Status == QCStatusFailed {
+			return QCDecisionResult{}, ErrQCInvalidAction
+		}
+		inspection.Status = QCStatusFailed
+		reasonLabel := s.reasonLabel(req.ReasonCode)
+		if reasonLabel == "" {
+			reasonLabel = "その他"
+		}
+		inspection.IssueType = reasonLabel
+		note := strings.TrimSpace(req.Note)
+		summary := reasonLabel
+		if note != "" {
+			summary = fmt.Sprintf("%s / %s", reasonLabel, note)
+		}
+		issue := QCIssueRecord{
+			ID:        fmt.Sprintf("qc-issue-%s-%d", record.card.ID, now.UnixNano()),
+			Category:  reasonLabel,
+			Summary:   summary,
+			Actor:     "QCオペレーター",
+			Tone:      "danger",
+			CreatedAt: now,
+		}
+		inspection.Issues = append([]QCIssueRecord{issue}, inspection.Issues...)
+		if note != "" {
+			inspection.Notes = append([]string{note}, inspection.Notes...)
+		}
+		record.card.Flags = appendFlag(record.card.Flags, CardFlag{Label: "QC再検", Tone: "warning", Icon: "🧪"})
+		event := ProductionEvent{
+			ID:          fmt.Sprintf("qc-fail-%s-%d", record.card.ID, now.UnixNano()),
+			Stage:       StageQC,
+			StageLabel:  StageLabel(StageQC),
+			Type:        "qc.fail",
+			Description: fmt.Sprintf("QC再検 (%s)", reasonLabel),
+			Actor:       "QCオペレーター",
+			OccurredAt:  now,
+			Note:        note,
+			Tone:        "danger",
+		}
+		s.prependTimeline(record, event)
+		return QCDecisionResult{
+			Item:    s.qcItemFromRecord(record),
+			Message: fmt.Sprintf("注文 #%s をQC再検として登録しました。", record.card.OrderNumber),
+		}, nil
+	default:
+		return QCDecisionResult{}, ErrQCInvalidAction
+	}
+}
+
+// TriggerRework implements Service.
+func (s *StaticService) TriggerRework(_ context.Context, _ string, orderID string, req QCReworkRequest) (QCReworkResult, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return QCReworkResult{}, ErrQCItemNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	record, ok := s.cards[orderID]
+	if !ok || record.inspection == nil {
+		return QCReworkResult{}, ErrQCItemNotFound
+	}
+	inspection := record.inspection
+	if inspection.Status != QCStatusFailed {
+		return QCReworkResult{}, ErrQCInvalidAction
+	}
+
+	route, ok := s.findReworkRoute(strings.TrimSpace(req.RouteID))
+	if !ok {
+		return QCReworkResult{}, ErrQCInvalidAction
+	}
+	inspection.Status = QCStatusComplete
+
+	now := time.Now()
+	reasonLabel := s.reasonLabel(req.IssueCode)
+	event := ProductionEvent{
+		ID:          fmt.Sprintf("qc-rework-%s-%d", record.card.ID, now.UnixNano()),
+		Stage:       route.Stage,
+		StageLabel:  StageLabel(route.Stage),
+		Type:        "qc.rework",
+		Description: fmt.Sprintf("再作業: %s", route.Label),
+		Actor:       "QCオペレーター",
+		OccurredAt:  now,
+		Note:        strings.TrimSpace(req.Note),
+		Tone:        "warning",
+	}
+	if reasonLabel != "" {
+		event.Description = fmt.Sprintf("%s (%s)", event.Description, reasonLabel)
+	}
+	s.prependTimeline(record, event)
+	record.card.Stage = route.Stage
+	record.card.Workstation = strings.ToUpper(fmt.Sprintf("%s-RET", string(route.Stage)))
+	record.card.Flags = appendFlag(record.card.Flags, CardFlag{Label: "再作業", Tone: "danger", Icon: "♻"})
+
+	return QCReworkResult{
+		Item:    s.qcItemFromRecord(record),
+		Message: fmt.Sprintf("注文 #%s を%sへ差し戻しました。", record.card.OrderNumber, route.Label),
+	}, nil
+}
+
 func (s *StaticService) seed() {
 	now := time.Now()
 
@@ -180,6 +383,16 @@ func (s *StaticService) seed() {
 		Notes:         []string{"彫金士3名常駐", "QC 兼任体制"},
 	}
 	s.defaultQueue = "atelier-aoyama"
+	s.qcReasons = []QCReason{
+		{Code: "engrave_mismatch", Label: "刻印内容差異", Category: "刻印"},
+		{Code: "finish_scratch", Label: "表面キズ", Category: "仕上げ"},
+		{Code: "stone_loose", Label: "石のぐらつき", Category: "石留め"},
+		{Code: "pack_issue", Label: "付属品不足", Category: "梱包"},
+	}
+	s.qcRoutes = []QCReworkRoute{
+		{ID: "rework-engraving", Label: "刻印ラインに差し戻し", Description: "刻印内容/フォントの修正を依頼します。", Stage: StageEngraving},
+		{ID: "rework-polishing", Label: "研磨ラインに差し戻し", Description: "表面キズ/仕上げ調整を再作業します。", Stage: StagePolishing},
+	}
 
 	cards := []*cardRecord{
 		newCardRecord(Card{
@@ -264,7 +477,7 @@ func (s *StaticService) seed() {
 			{ID: "evt-1041-1", Stage: StageEngraving, StageLabel: StageLabel(StageEngraving), Type: "engraving.complete", Description: "刻印完了", Actor: "北原 悠", OccurredAt: now.Add(-15 * time.Hour)},
 			{ID: "evt-1041-2", Stage: StagePolishing, StageLabel: StageLabel(StagePolishing), Type: "polishing.start", Description: "研磨開始", Actor: "原田 琴", Station: "POL-01", OccurredAt: now.Add(-4 * time.Hour)},
 		}),
-		newCardRecord(Card{
+		newQCRecord(Card{
 			ID:            "order-1033",
 			OrderNumber:   "1033",
 			Stage:         StageQC,
@@ -291,6 +504,105 @@ func (s *StaticService) seed() {
 		}, []ProductionEvent{
 			{ID: "evt-1033-1", Stage: StagePolishing, StageLabel: StageLabel(StagePolishing), Type: "polishing.complete", Description: "研磨完了", Actor: "土屋 凛", OccurredAt: now.Add(-8 * time.Hour)},
 			{ID: "evt-1033-2", Stage: StageQC, StageLabel: StageLabel(StageQC), Type: "qc.start", Description: "検品中", Actor: "宮川 光", Station: "QC-02", OccurredAt: now.Add(-1 * time.Hour)},
+		}, qcInspectionRecord{
+			Status: QCStatusPending,
+			Checklist: []QCChecklistItem{
+				{ID: "dim", Label: "寸法/ゲージ", Description: "±0.02mm 以内", Required: true, Status: "in_progress"},
+				{ID: "finish", Label: "仕上げ面", Description: "内側キズ無し", Required: true, Status: "pending"},
+				{ID: "engrave", Label: "刻印整合", Description: "指定フォント/位置", Required: true, Status: "warning"},
+			},
+			Issues: []QCIssueRecord{
+				{ID: "issue-1033-1", Category: "刻印", Summary: "先週フォント差異で再検", Actor: "宮川 光", Tone: "warning", CreatedAt: now.Add(-72 * time.Hour)},
+			},
+			Attachments: []QCAttachment{
+				{ID: "pair-front", URL: "/public/static/previews/pair.png", Label: "正面", Kind: "photo"},
+			},
+			Notes:      []string{"内側刻印の太さを再確認"},
+			IssueType:  "刻印",
+			IssueHint:  "刻印線の太さ/深さを重点確認",
+			SLALabel:   "SLA 30分",
+			SLATone:    "warning",
+			ReceivedAt: now.Add(-90 * time.Minute),
+		}),
+		newQCRecord(Card{
+			ID:            "order-1090",
+			OrderNumber:   "1090",
+			Stage:         StageQC,
+			Priority:      PriorityRush,
+			PriorityLabel: "特急",
+			PriorityTone:  "warning",
+			Customer:      "小林 咲",
+			ProductLine:   "Brilliant",
+			Design:        "ダイヤエタニティ",
+			PreviewURL:    "/public/static/previews/eternity.png",
+			PreviewAlt:    "Diamond Eternity",
+			QueueID:       "atelier-aoyama",
+			QueueName:     "青山アトリエ",
+			Workstation:   "QC-01",
+			Assignees:     []Assignee{{Name: "田村 結衣", Initials: "YT", Role: "QC"}},
+			Flags:         []CardFlag{{Label: "VIP", Tone: "info", Icon: "👑"}},
+			DueAt:         now.Add(4 * time.Hour),
+			DueLabel:      "残り4時間",
+			DueTone:       "warning",
+			Notes:         []string{"石座の段差を要確認"},
+			AgingHours:    12,
+		}, []ProductionEvent{
+			{ID: "evt-1090-1", Stage: StagePolishing, StageLabel: StageLabel(StagePolishing), Type: "polishing.complete", Description: "研磨完了", Actor: "佐藤 佑", OccurredAt: now.Add(-3 * time.Hour)},
+			{ID: "evt-1090-2", Stage: StageQC, StageLabel: StageLabel(StageQC), Type: "qc.start", Description: "検品中", Actor: "田村 結衣", Station: "QC-01", OccurredAt: now.Add(-40 * time.Minute)},
+		}, qcInspectionRecord{
+			Status: QCStatusPending,
+			Checklist: []QCChecklistItem{
+				{ID: "stone", Label: "石留め", Description: "ぐらつき/欠けなし", Required: true, Status: "pending"},
+				{ID: "surface", Label: "鏡面仕上げ", Description: "肉眼キズなし", Required: true, Status: "pending"},
+			},
+			Attachments: []QCAttachment{
+				{ID: "macro", URL: "/public/static/previews/eternity.png", Label: "マクロ", Kind: "photo"},
+			},
+			Notes:      []string{"VIPオーダーにつき撮影必須"},
+			IssueType:  "石留め",
+			IssueHint:  "石の段差/浮きを撮影で確認",
+			SLALabel:   "SLA 20分",
+			SLATone:    "info",
+			ReceivedAt: now.Add(-40 * time.Minute),
+		}),
+		newQCRecord(Card{
+			ID:            "order-1092",
+			OrderNumber:   "1092",
+			Stage:         StageQC,
+			Priority:      PriorityNormal,
+			PriorityLabel: "通常",
+			PriorityTone:  "info",
+			Customer:      "志村 蒼",
+			ProductLine:   "Signet",
+			Design:        "K18 サインリング",
+			PreviewURL:    "/public/static/previews/signet.png",
+			PreviewAlt:    "Signet Ring",
+			QueueID:       "atelier-kyoto",
+			QueueName:     "京都スタジオ",
+			Workstation:   "QC-03",
+			Assignees:     []Assignee{{Name: "松永 遥", Initials: "HM", Role: "QC/梱包"}},
+			DueAt:         now.Add(9 * time.Hour),
+			DueLabel:      "残り9時間",
+			Notes:         []string{"手彫り部分の墨入れ乾燥済"},
+			AgingHours:    5,
+		}, []ProductionEvent{
+			{ID: "evt-1092-1", Stage: StagePolishing, StageLabel: StageLabel(StagePolishing), Type: "polishing.complete", Description: "研磨完了", Actor: "辻村 慎", OccurredAt: now.Add(-5 * time.Hour)},
+			{ID: "evt-1092-2", Stage: StageQC, StageLabel: StageLabel(StageQC), Type: "qc.start", Description: "検品中", Actor: "松永 遥", Station: "QC-03", OccurredAt: now.Add(-2 * time.Hour)},
+		}, qcInspectionRecord{
+			Status: QCStatusFailed,
+			Checklist: []QCChecklistItem{
+				{ID: "color", Label: "色味/仕上げ", Description: "酸洗いムラなし", Required: true, Status: "pass"},
+				{ID: "engrave", Label: "手彫り", Description: "かすれ/欠けなし", Required: true, Status: "fail"},
+			},
+			Issues: []QCIssueRecord{
+				{ID: "issue-1092-1", Category: "刻印", Summary: "手彫りラインの欠け", Actor: "松永 遥", Tone: "danger", CreatedAt: now.Add(-20 * time.Minute)},
+			},
+			Notes:      []string{"再彫り手配待ち"},
+			IssueType:  "刻印",
+			IssueHint:  "筆致の欠けあり。手彫り工房へ差し戻し予定。",
+			SLALabel:   "SLA 45分",
+			SLATone:    "danger",
+			ReceivedAt: now.Add(-2 * time.Hour),
 		}),
 		newCardRecord(Card{
 			ID:            "order-1025",
@@ -593,6 +905,12 @@ func newCardRecord(card Card, timeline []ProductionEvent) *cardRecord {
 	return &cardRecord{card: card, timeline: timeline}
 }
 
+func newQCRecord(card Card, timeline []ProductionEvent, inspection qcInspectionRecord) *cardRecord {
+	record := newCardRecord(card, timeline)
+	record.inspection = &inspection
+	return record
+}
+
 func cloneCard(card Card) Card {
 	clone := card
 	clone.Assignees = cloneAssignees(card.Assignees)
@@ -864,4 +1182,380 @@ func coalesce(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func (s *StaticService) qcRecords(queueID string) []*cardRecord {
+	records := make([]*cardRecord, 0, len(s.cards))
+	for _, record := range s.cards {
+		if record.card.QueueID != queueID || record.inspection == nil {
+			continue
+		}
+		if record.inspection.Status == QCStatusComplete {
+			continue
+		}
+		records = append(records, record)
+	}
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].inspection.ReceivedAt.Before(records[j].inspection.ReceivedAt)
+	})
+	return records
+}
+
+func filterQCRecords(records []*cardRecord, query QCQuery) []*cardRecord {
+	var filtered []*cardRecord
+	statusFilter := strings.TrimSpace(query.Status)
+	for _, record := range records {
+		inspection := record.inspection
+		if inspection == nil {
+			continue
+		}
+		if query.ProductLine != "" && !strings.EqualFold(record.card.ProductLine, query.ProductLine) {
+			continue
+		}
+		if query.IssueType != "" && !strings.EqualFold(inspection.IssueType, query.IssueType) {
+			continue
+		}
+		if query.Assignee != "" && !strings.EqualFold(qcAssignee(record), query.Assignee) {
+			continue
+		}
+		if statusFilter != "" && string(inspection.Status) != statusFilter {
+			continue
+		}
+		filtered = append(filtered, record)
+	}
+	return filtered
+}
+
+func (s *StaticService) buildQCItems(records []*cardRecord) []QCItem {
+	items := make([]QCItem, 0, len(records))
+	for _, record := range records {
+		items = append(items, s.qcItemFromRecord(record))
+	}
+	return items
+}
+
+func (s *StaticService) buildQCDrawer(records []*cardRecord, selected string) (string, QCInspector) {
+	if len(records) == 0 {
+		return "", QCInspector{Empty: true, Reasons: cloneReasons(s.qcReasons), ReworkRoutes: cloneRoutes(s.qcRoutes)}
+	}
+
+	var target *cardRecord
+	if selected != "" {
+		for _, record := range records {
+			if record.card.ID == selected {
+				target = record
+				break
+			}
+		}
+	}
+	if target == nil {
+		target = records[0]
+	}
+	if target.inspection == nil {
+		return "", QCInspector{Empty: true, Reasons: cloneReasons(s.qcReasons), ReworkRoutes: cloneRoutes(s.qcRoutes)}
+	}
+
+	card := target.card
+	inspection := target.inspection
+	drawer := QCInspector{
+		Item: QCItemDetail{
+			ID:            card.ID,
+			OrderNumber:   card.OrderNumber,
+			Customer:      card.Customer,
+			ProductLine:   card.ProductLine,
+			PriorityLabel: card.PriorityLabel,
+			PriorityTone:  card.PriorityTone,
+			StageLabel:    StageLabel(card.Stage),
+			StageTone:     stageBadgeTone(card.Stage),
+			Assigned:      qcAssignee(target),
+			DueLabel:      card.DueLabel,
+			DueTone:       card.DueTone,
+			PreviewURL:    card.PreviewURL,
+		},
+		Checklist:    cloneChecklist(inspection.Checklist),
+		Issues:       cloneIssues(inspection.Issues),
+		Attachments:  cloneAttachments(inspection.Attachments),
+		Reasons:      cloneReasons(s.qcReasons),
+		ReworkRoutes: cloneRoutes(s.qcRoutes),
+		Notes:        append([]string(nil), inspection.Notes...),
+	}
+	return card.ID, drawer
+}
+
+func (s *StaticService) qcAlert(queueID string) string {
+	if queueID == "atelier-aoyama" {
+		return "QC-02 カメラ調整中。写真検品はQC-01へ振り替えてください。"
+	}
+	return "QCライン稼働率 78%。遅延は発生していません。"
+}
+
+func (s *StaticService) qcSummary(records []*cardRecord) []QCSummary {
+	total := len(records)
+	failed := 0
+	for _, record := range records {
+		if record.inspection != nil && record.inspection.Status == QCStatusFailed {
+			failed++
+		}
+	}
+	return []QCSummary{
+		{Label: "待機中", Value: fmt.Sprintf("%d件", total), Icon: "🧪", Tone: "info", SubText: "QCキュー全体"},
+		{Label: "要再検", Value: fmt.Sprintf("%d件", failed), Icon: "⚠", Tone: "warning", SubText: "再作業手配待ち"},
+		{Label: "平均滞留", Value: "22分", Icon: "⏱", Tone: "success", SubText: "SLA 30分以内"},
+	}
+}
+
+func (s *StaticService) qcPerformance(records []*cardRecord) []QCSummary {
+	return []QCSummary{
+		{Label: "合格率", Value: "94%", Delta: "+2pt vs 昨日", Tone: "success"},
+		{Label: "再作業比率", Value: "8%", Delta: "-1pt vs 週間", Tone: "warning"},
+		{Label: "平均ハンドルタイム", Value: "18分", Delta: "-3分 vs 週間", Tone: "info"},
+	}
+}
+
+func (s *StaticService) qcFilters(records []*cardRecord, query QCQuery) QCFilters {
+	productMap := make(map[string]FilterOption)
+	issueMap := make(map[string]FilterOption)
+	assigneeMap := make(map[string]FilterOption)
+	statusMap := make(map[string]FilterOption)
+
+	for _, record := range records {
+		card := record.card
+		inspection := record.inspection
+		if inspection == nil {
+			continue
+		}
+		addFilterOption(productMap, card.ProductLine, card.ProductLine)
+		addFilterOption(issueMap, inspection.IssueType, inspection.IssueType)
+		addFilterOption(assigneeMap, qcAssignee(record), qcAssignee(record))
+		statusLabel := statusLabel(inspection.Status)
+		addFilterOption(statusMap, string(inspection.Status), statusLabel)
+	}
+
+	return QCFilters{
+		ProductLines: filterOptionMapToSlice(productMap, query.ProductLine),
+		IssueTypes:   filterOptionMapToSlice(issueMap, query.IssueType),
+		Assignees:    filterOptionMapToSlice(assigneeMap, query.Assignee),
+		Statuses:     filterOptionMapToSlice(statusMap, query.Status),
+		Query:        query,
+	}
+}
+
+func (s *StaticService) qcItemFromRecord(record *cardRecord) QCItem {
+	card := record.card
+	inspection := record.inspection
+	item := QCItem{
+		ID:            card.ID,
+		OrderNumber:   card.OrderNumber,
+		Customer:      card.Customer,
+		ProductLine:   card.ProductLine,
+		ItemType:      card.Design,
+		Stage:         card.Stage,
+		StageLabel:    StageLabel(card.Stage),
+		StageTone:     stageBadgeTone(card.Stage),
+		Assigned:      qcAssignee(record),
+		Workstation:   card.Workstation,
+		PriorityLabel: card.PriorityLabel,
+		PriorityTone:  card.PriorityTone,
+		Flags:         cloneFlags(card.Flags),
+		IssueHint:     inspection.IssueHint,
+		QueueID:       card.QueueID,
+		PreviewURL:    card.PreviewURL,
+		Status:        inspection.Status,
+		StatusLabel:   statusLabel(inspection.Status),
+		StatusTone:    statusTone(inspection.Status),
+	}
+	if inspection.SLALabel != "" {
+		item.SLA = inspection.SLALabel
+		item.SLATone = inspection.SLATone
+	} else {
+		item.SLA = card.DueLabel
+		item.SLATone = card.DueTone
+	}
+	item.AgingLabel = card.DueLabel
+	item.AgingTone = card.DueTone
+	return item
+}
+
+func statusLabel(status QCStatus) string {
+	switch status {
+	case QCStatusPending:
+		return "待機中"
+	case QCStatusFailed:
+		return "要再検"
+	case QCStatusComplete:
+		return "処理済"
+	default:
+		return string(status)
+	}
+}
+
+func statusTone(status QCStatus) string {
+	switch status {
+	case QCStatusPending:
+		return "info"
+	case QCStatusFailed:
+		return "warning"
+	case QCStatusComplete:
+		return "success"
+	default:
+		return "default"
+	}
+}
+
+func stageBadgeTone(stage Stage) string {
+	switch stage {
+	case StageQC:
+		return "info"
+	case StagePolishing:
+		return "warning"
+	case StageEngraving:
+		return "info"
+	case StagePacked:
+		return "success"
+	default:
+		return "info"
+	}
+}
+
+func qcAssignee(record *cardRecord) string {
+	if len(record.card.Assignees) > 0 {
+		return record.card.Assignees[0].Name
+	}
+	return record.card.Workstation
+}
+
+func (s *StaticService) findReworkRoute(id string) (QCReworkRoute, bool) {
+	for _, route := range s.qcRoutes {
+		if route.ID == id {
+			return route, true
+		}
+	}
+	return QCReworkRoute{}, false
+}
+
+func (s *StaticService) reasonLabel(code string) string {
+	for _, reason := range s.qcReasons {
+		if reason.Code == code {
+			return reason.Label
+		}
+	}
+	return ""
+}
+
+func (s *StaticService) prependTimeline(record *cardRecord, event ProductionEvent) {
+	record.timeline = append([]ProductionEvent{event}, record.timeline...)
+	record.card.LastEvent = event
+	record.card.Timeline = append([]ProductionEvent(nil), record.timeline...)
+}
+
+func appendFlag(flags []CardFlag, flag CardFlag) []CardFlag {
+	flag.Label = strings.TrimSpace(flag.Label)
+	if flag.Label == "" {
+		return flags
+	}
+	for _, existing := range flags {
+		if existing.Label == flag.Label {
+			return flags
+		}
+	}
+	return append(flags, flag)
+}
+
+func removeFlag(flags []CardFlag, label string) []CardFlag {
+	if label == "" || len(flags) == 0 {
+		return flags
+	}
+	result := make([]CardFlag, 0, len(flags))
+	for _, flag := range flags {
+		if flag.Label == label {
+			continue
+		}
+		result = append(result, flag)
+	}
+	return result
+}
+
+func cloneChecklist(items []QCChecklistItem) []QCChecklistItem {
+	out := make([]QCChecklistItem, len(items))
+	copy(out, items)
+	return out
+}
+
+func cloneIssues(items []QCIssueRecord) []QCIssueRecord {
+	out := make([]QCIssueRecord, len(items))
+	copy(out, items)
+	return out
+}
+
+func cloneAttachments(items []QCAttachment) []QCAttachment {
+	out := make([]QCAttachment, len(items))
+	copy(out, items)
+	return out
+}
+
+func buildQCAttachments(values []string, cardID string, now time.Time) []QCAttachment {
+	var attachments []QCAttachment
+	for _, raw := range values {
+		if strings.TrimSpace(raw) == "" {
+			continue
+		}
+		chunks := strings.Split(raw, "\n")
+		for _, chunk := range chunks {
+			url := strings.TrimSpace(chunk)
+			if url == "" {
+				continue
+			}
+			attachments = append(attachments, QCAttachment{
+				ID:    fmt.Sprintf("attach-%s-%d", cardID, now.UnixNano()),
+				URL:   url,
+				Label: "参考画像",
+				Kind:  "photo",
+			})
+		}
+	}
+	return attachments
+}
+
+func cloneReasons(items []QCReason) []QCReason {
+	out := make([]QCReason, len(items))
+	copy(out, items)
+	return out
+}
+
+func cloneRoutes(items []QCReworkRoute) []QCReworkRoute {
+	out := make([]QCReworkRoute, len(items))
+	copy(out, items)
+	return out
+}
+
+func addFilterOption(store map[string]FilterOption, value, label string) {
+	key := strings.ToLower(strings.TrimSpace(value))
+	if key == "" {
+		key = strings.ToLower(strings.TrimSpace(label))
+	}
+	option, ok := store[key]
+	if !ok {
+		option = FilterOption{Value: strings.TrimSpace(value)}
+		if option.Value == "" {
+			option.Value = strings.TrimSpace(label)
+		}
+		option.Label = strings.TrimSpace(label)
+	}
+	option.Count++
+	store[key] = option
+}
+
+func filterOptionMapToSlice(store map[string]FilterOption, active string) []FilterOption {
+	if len(store) == 0 {
+		return nil
+	}
+	options := make([]FilterOption, 0, len(store))
+	for _, option := range store {
+		option.Active = strings.EqualFold(option.Value, active)
+		options = append(options, option)
+	}
+	sort.Slice(options, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(options[i].Label), strings.ToLower(options[j].Label)) < 0
+	})
+	return options
 }
