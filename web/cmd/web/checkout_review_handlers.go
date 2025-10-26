@@ -17,6 +17,13 @@ func CheckoutReviewHandler(w http.ResponseWriter, r *http.Request) {
 	lang := mw.Lang(r)
 	sess := mw.GetSession(r)
 	view := buildCheckoutReviewView(lang, r.URL.Query(), sess)
+	if strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("status")), "placed") {
+		view.Submit = CheckoutReviewSubmitState{
+			Placed: true,
+			Title:  i18nOrDefault(lang, "checkout.review.submit.success", "Order queued for engraving"),
+			Body:   i18nOrDefault(lang, "checkout.review.submit.success.body", "We’ll email confirmation and share the tracking page shortly."),
+		}
+	}
 
 	title := i18nOrDefault(lang, "checkout.review.title", "Checkout · Review & confirm")
 	desc := i18nOrDefault(lang, "checkout.review.desc", "Confirm engraving details, fulfillment, and payment before placing the order.")

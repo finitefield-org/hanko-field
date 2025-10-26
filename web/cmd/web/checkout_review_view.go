@@ -27,6 +27,7 @@ type CheckoutReviewView struct {
 	BackURL     string
 	SubmitURL   string
 	LastUpdated time.Time
+	Submit      CheckoutReviewSubmitState
 }
 
 // CheckoutReviewSnapshot highlights the lead design or cart hero.
@@ -89,6 +90,13 @@ type CheckoutReviewLoyalty struct {
 	Detail   string
 	CTALabel string
 	CTAHref  string
+}
+
+// CheckoutReviewSubmitState keeps track of placed/idle CTA state.
+type CheckoutReviewSubmitState struct {
+	Placed bool
+	Title  string
+	Body   string
 }
 
 func buildCheckoutReviewView(lang string, q url.Values, sess *mw.SessionData) CheckoutReviewView {
@@ -202,7 +210,7 @@ func buildCheckoutReviewSnapshot(lang string, items []CartItem) CheckoutReviewSn
 	first := items[0]
 	meta := []string{
 		fmt.Sprintf("SKU %s · %s", first.SKU, first.Shape),
-		fmt.Sprintf("%dmm · %s", first.Quantity, first.Material),
+		fmt.Sprintf("%s · %s", first.Size, first.Material),
 	}
 	if first.ETA != "" {
 		meta = append(meta, first.ETA)
