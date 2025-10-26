@@ -151,7 +151,7 @@ func (h *Handlers) ProductionQCDrawer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "QCデータの取得に失敗しました。", http.StatusBadGateway)
 		return
 	}
-	if result.Drawer.Empty || result.Drawer.Item.ID == "" {
+	if result.Drawer.Empty || result.Drawer.Item.ID == "" || result.Drawer.Item.ID != orderID {
 		http.NotFound(w, r)
 		return
 	}
@@ -237,7 +237,7 @@ func (h *Handlers) ProductionQCReworkModal(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "再作業データの取得に失敗しました。", http.StatusBadGateway)
 		return
 	}
-	if result.Drawer.Empty || result.Drawer.Item.ID == "" {
+	if result.Drawer.Empty || result.Drawer.Item.ID == "" || result.Drawer.Item.ID != orderID {
 		http.NotFound(w, r)
 		return
 	}
