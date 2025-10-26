@@ -203,6 +203,17 @@ func WithAdminRoutes(reg RouteRegistrar) Option {
 	}
 }
 
+// CombineRouteRegistrars merges multiple registrars into one, preserving order.
+func CombineRouteRegistrars(regs ...RouteRegistrar) RouteRegistrar {
+	return func(r chi.Router) {
+		for _, reg := range regs {
+			if reg != nil {
+				reg(r)
+			}
+		}
+	}
+}
+
 // WithWebhookRoutes configures the registrar responsible for webhook endpoints.
 func WithWebhookRoutes(reg RouteRegistrar) Option {
 	return func(cfg *routerConfig) {
