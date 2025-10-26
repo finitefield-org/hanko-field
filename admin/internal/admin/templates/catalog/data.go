@@ -111,6 +111,7 @@ type TableData struct {
 	ViewParam    string
 	Drawer       DrawerData
 	PagePath     string
+	View         ViewToggle
 }
 
 // TableRow is a row in the catalog data table.
@@ -151,6 +152,7 @@ type CardsData struct {
 	SelectedID   string
 	Drawer       DrawerData
 	PagePath     string
+	View         ViewToggle
 }
 
 // CardView is a single card entry.
@@ -237,10 +239,10 @@ type BulkActionView struct {
 
 func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult) PageData {
 	pagePath := joinBase(basePath, fmt.Sprintf("/catalog/%s", kind))
-	drawer := DrawerPayload(result.SelectedDetail)
-	table := TablePayload(basePath, pagePath, kind, state, result, drawer)
-	cards := CardsPayload(basePath, pagePath, kind, state, result, drawer)
 	viewToggle := buildViewToggle(basePath, pagePath, kind, state)
+	drawer := DrawerPayload(result.SelectedDetail)
+	table := TablePayload(basePath, pagePath, kind, state, result, drawer, viewToggle)
+	cards := CardsPayload(basePath, pagePath, kind, state, result, drawer, viewToggle)
 	activeView := viewToggle.Active
 	pageURL := helpers.BuildURL(pagePath, ensureQueryView(state.RawQuery, activeView))
 	return PageData{
@@ -269,7 +271,7 @@ func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, re
 }
 
 // TablePayload prepares the table fragment data.
-func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData) TableData {
+func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData, view ViewToggle) TableData {
 	rows := make([]TableRow, 0, len(result.Items))
 	for _, item := range result.Items {
 		rows = append(rows, toTableRow(item, result.SelectedID))
@@ -284,11 +286,12 @@ func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 		ViewParam:    "table",
 		Drawer:       drawer,
 		PagePath:     pagePath,
+		View:         view,
 	}
 }
 
 // CardsPayload prepares the card fragment data.
-func CardsPayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData) CardsData {
+func CardsPayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData, view ViewToggle) CardsData {
 	cards := make([]CardView, 0, len(result.Items))
 	for _, item := range result.Items {
 		cards = append(cards, toCardView(item, result.SelectedID))
@@ -301,6 +304,7 @@ func CardsPayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 		SelectedID:   result.SelectedID,
 		Drawer:       drawer,
 		PagePath:     pagePath,
+		View:         view,
 	}
 }
 

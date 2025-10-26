@@ -45,7 +45,7 @@ templ pageBody(data PageData) {
 		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
 			<section class="space-y-4">
 				@filterToolbar(data)
-				@viewToggle(data.ViewToggle)
+			@viewToggle(data.ViewToggle, false)
 				@catalogView(data)
 				@bulkBar(data.Bulk)
 			</section>
@@ -76,9 +76,9 @@ templ filterToolbar(data PageData) {
 			hx-target="#catalog-view"
 			hx-swap="outerHTML"
 			hx-indicator="#catalog-loading"
-			hx-push-url={ data.PageURL }
+			hx-push-url="true"
 		>
-			<input type="hidden" name="view" value={ data.ViewToggle.Active } />
+			<input type="hidden" id="catalog-view-field" name="view" value={ data.ViewToggle.Active } />
 			<div class="flex flex-wrap gap-2" role="group" aria-label="ステータス">
 				for _, option := range data.Filters.Statuses {
 					<label class={ statusFilterClass(option.Active, option.Tone) }>
@@ -151,11 +151,15 @@ templ filterToolbar(data PageData) {
 	</section>
 }
 
-templ viewToggle(toggle ViewToggle) {
-	<div class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-		<div>
-			<p class="text-sm font-semibold text-slate-700">表示モード</p>
-			<p class="text-xs text-slate-400">一覧 or カードビュー</p>
+	templ viewToggle(toggle ViewToggle, swap bool) {
+		<div
+			id="catalog-view-toggle"
+			class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+			hx-swap-oob?={ swap }
+		>
+			<div>
+				<p class="text-sm font-semibold text-slate-700">表示モード</p>
+				<p class="text-xs text-slate-400">一覧 or カードビュー</p>
 		</div>
 		<div class="flex gap-2">
 			for _, option := range toggle.Options {
@@ -266,6 +270,8 @@ templ TableSection(data TableData) {
 	<div id="catalog-drawer" hx-swap-oob="true">
 		@Drawer(data.Drawer)
 	</div>
+	@viewToggle(data.View, true)
+	<input type="hidden" id="catalog-view-field" name="view" value={ data.View.Active } hx-swap-oob="true" />
 }
 
 templ CardsSection(data CardsData) {
@@ -316,6 +322,8 @@ templ CardsSection(data CardsData) {
 	<div id="catalog-drawer" hx-swap-oob="true">
 		@Drawer(data.Drawer)
 	</div>
+	@viewToggle(data.View, true)
+	<input type="hidden" id="catalog-view-field" name="view" value={ data.View.Active } hx-swap-oob="true" />
 }
 
 templ Drawer(data DrawerData) {

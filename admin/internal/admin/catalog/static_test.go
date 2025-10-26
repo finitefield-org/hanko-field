@@ -54,3 +54,22 @@ func TestStaticServiceTagFiltering(t *testing.T) {
 		t.Fatalf("unexpected material ID: %s", result.Items[0].ID)
 	}
 }
+
+func TestStaticServiceUpdatedRangeFiltering(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind:         KindTemplates,
+		UpdatedRange: "24h",
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("expected 2 templates updated within 24h, got %d", len(result.Items))
+	}
+	for _, item := range result.Items {
+		if item.ID == "tmpl-minimal-stamp" {
+			t.Fatalf("unexpected draft template included: %s", item.ID)
+		}
+	}
+}

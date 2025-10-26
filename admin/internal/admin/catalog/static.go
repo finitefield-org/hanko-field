@@ -8,6 +8,7 @@ import (
 )
 
 type staticService struct {
+	now            time.Time
 	assets         map[Kind][]catalogAsset
 	lookup         map[Kind]map[string]catalogAsset
 	updatedPresets []UpdatedRange
@@ -22,6 +23,7 @@ type catalogAsset struct {
 func NewStaticService() Service {
 	now := time.Date(2024, time.March, 18, 12, 0, 0, 0, time.UTC)
 	service := &staticService{
+		now: now,
 		assets: map[Kind][]catalogAsset{
 			KindTemplates: buildTemplateAssets(now),
 			KindFonts:     buildFontAssets(now),
@@ -55,7 +57,7 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 
 	view := NormalizeViewMode(string(query.View))
 	assets := s.assets[kind]
-	filtered := filterAssets(assets, query)
+	filtered := filterAssets(assets, query, s.now)
 
 	items := make([]Item, 0, len(filtered))
 	for _, asset := range filtered {
@@ -102,7 +104,7 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 	}, nil
 }
 
-func filterAssets(assets []catalogAsset, query ListQuery) []catalogAsset {
+func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []catalogAsset {
 	if len(assets) == 0 {
 		return nil
 	}
@@ -117,11 +119,16 @@ func filterAssets(assets []catalogAsset, query ListQuery) []catalogAsset {
 	owner := strings.ToLower(strings.TrimSpace(query.Owner))
 
 	result := make([]catalogAsset, 0, len(assets))
+	updatedPreset := strings.TrimSpace(query.UpdatedRange)
 	for _, asset := range assets {
 		if len(statusFilter) > 0 {
 			if _, ok := statusFilter[asset.item.Status]; !ok {
 				continue
 			}
+		}
+
+		if updatedPreset != "" && !matchesUpdatedRange(updatedPreset, asset.item.UpdatedAt, refTime) {
+			continue
 		}
 
 		if owner != "" && owner != strings.ToLower(asset.item.Owner.Name) {
@@ -179,6 +186,29 @@ func normalizeStrings(values []string) map[string]struct{} {
 		result[value] = struct{}{}
 	}
 	return result
+}
+
+var updatedRangeDurations = map[string]time.Duration{
+	"24h": 24 * time.Hour,
+	"3d":  72 * time.Hour,
+	"7d":  7 * 24 * time.Hour,
+	"30d": 30 * 24 * time.Hour,
+}
+
+func matchesUpdatedRange(preset string, updatedAt, ref time.Time) bool {
+	preset = strings.TrimSpace(preset)
+	if preset == "" {
+		return true
+	}
+	if updatedAt.IsZero() || ref.IsZero() {
+		return false
+	}
+	duration, ok := updatedRangeDurations[preset]
+	if !ok {
+		return true
+	}
+	cutoff := ref.Add(-duration)
+	return !updatedAt.Before(cutoff)
 }
 
 func buildSummary(kind Kind, assets []catalogAsset) Summary {
