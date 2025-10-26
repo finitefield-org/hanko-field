@@ -220,6 +220,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise asset repository", zap.Error(err))
 	}
+	contentRepo, err := firestoreRepo.NewContentRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise content repository", zap.Error(err))
+	}
 
 	if strings.TrimSpace(cfg.PSP.StripeAPIKey) == "" {
 		logger.Fatal("stripe api key is required for payment method management")
@@ -362,6 +366,14 @@ func main() {
 	}
 	nameMappingHandlers := handlers.NewNameMappingHandlers(authenticator, nameMappingService)
 
+	contentService, err := services.NewContentService(services.ContentServiceDeps{
+		Repository: contentRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise content service", zap.Error(err))
+	}
+
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
 	designService, err := services.NewDesignService(services.DesignServiceDeps{
@@ -406,10 +418,12 @@ func main() {
 	opts = append(opts, handlers.WithAdditionalRoutes(cartHandlers.RegisterStandaloneRoutes))
 	opts = append(opts, handlers.WithAdditionalRoutes(assetHandlers.Routes))
 	opts = append(opts, handlers.WithAdditionalRoutes(checkoutHandlers.Routes))
-	publicHandlers := handlers.NewPublicHandlers()
+	publicHandlers := handlers.NewPublicHandlers(
+		handlers.WithPublicContentService(contentService),
+	)
 	opts = append(opts, handlers.WithPublicRoutes(publicHandlers.Routes))
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
-	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, nil)
+	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
 	opts = append(opts, handlers.WithAdminRoutes(
 		handlers.CombineRouteRegistrars(
 			adminCatalogHandlers.Routes,
