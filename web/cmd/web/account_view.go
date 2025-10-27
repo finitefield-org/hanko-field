@@ -1,11 +1,8 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/url"
-	"sort"
 	"strings"
 	"time"
 
@@ -300,7 +297,7 @@ func buildAccountProfileFormView(lang string, profile mw.SessionProfile, input *
 		Languages:    accountLanguageOptions(lang),
 		Countries:    accountCountryOptions(lang),
 		DialCodes:    accountDialCodeOptions(lang),
-		InitialState: hashProfileFormState(values),
+		InitialState: serializeProfileFormState(values),
 	}
 }
 
@@ -386,21 +383,18 @@ func applyAccountProfileInput(sess *mw.SessionData, input accountProfileFormInpu
 	sess.MarkDirty()
 }
 
-func hashProfileFormState(values map[string]string) string {
-	keys := make([]string, 0, len(values))
-	for k := range values {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+func serializeProfileFormState(values map[string]string) string {
+	keys := []string{"display_name", "email", "phone", "phone_country", "lang", "country"}
 	var builder strings.Builder
-	for _, k := range keys {
+	for i, k := range keys {
+		if i > 0 {
+			builder.WriteByte('&')
+		}
 		builder.WriteString(k)
-		builder.WriteString("=")
+		builder.WriteByte('=')
 		builder.WriteString(values[k])
-		builder.WriteRune(';')
 	}
-	sum := sha256.Sum256([]byte(builder.String()))
-	return hex.EncodeToString(sum[:])
+	return builder.String()
 }
 
 func accountLanguageLabel(code, lang string) string {
