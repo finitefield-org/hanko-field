@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -705,6 +706,7 @@ func setupStaticTestRouter(t *testing.T) http.Handler {
 	return newTestRouter(t, func(r chi.Router) {
 		r.Get("/content/{slug}", ContentPageHandler)
 		r.Get("/legal/{slug}", LegalPageHandler)
+		r.MethodFunc(http.MethodPost, "/legal/{slug}/feedback", LegalFeedbackHandler)
 		r.Get("/status", StatusHandler)
 	})
 }
@@ -786,6 +788,69 @@ func TestLegalPageVersionFooter(t *testing.T) {
 	srv.ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusNotModified {
 		t.Fatalf("expected 304 for matching ETag, got %d", rec2.Code)
+	}
+}
+
+func TestLegalPageHistoryAndLocaleSwitcher(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Revision history") {
+		t.Fatalf("expected revision history table, got %s", body)
+	}
+	if !strings.Contains(body, "Download 2024.10 PDF") {
+		t.Fatalf("expected historical download link, got %s", body)
+	}
+	if !strings.Contains(body, "Available languages") {
+		t.Fatalf("expected locale switcher, got %s", body)
+	}
+	if !strings.Contains(body, `hx-target="#content-page"`) {
+		t.Fatalf("expected htmx enabled locale links, got %s", body)
+	}
+}
+
+func TestLegalFeedbackHandlerHTMX(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	getReq := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	getReq.Header.Set("Accept-Language", "en")
+	getRec := httptest.NewRecorder()
+	srv.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 bootstrap, got %d; body=%s", getRec.Code, getRec.Body.String())
+	}
+	var csrfToken, sessionCookie string
+	for _, c := range getRec.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfToken = c.Value
+		}
+		if c.Name == "HANKO_WEB_SESSION" {
+			sessionCookie = c.Value
+		}
+	}
+	if csrfToken == "" || sessionCookie == "" {
+		t.Fatalf("expected csrf and session cookies, got csrf=%q session=%q", csrfToken, sessionCookie)
+	}
+
+	form := strings.NewReader("helpful=yes&notes=thanks")
+	req := httptest.NewRequest(http.MethodPost, "/legal/privacy-policy/feedback", form)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	req.Header.Set("Cookie", fmt.Sprintf("csrf_token=%s; HANKO_WEB_SESSION=%s", csrfToken, sessionCookie))
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	if body := rec.Body.String(); !strings.Contains(body, "Thanks for your feedback.") {
+		t.Fatalf("expected thank-you snippet, got %s", body)
 	}
 }
 

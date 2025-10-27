@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +36,20 @@ type ContentPage struct {
 	Icon          string
 	Banner        *ContentBanner
 	SEO           ContentSEO
+}
+
+// ContentHistoryEntry represents a localized historical snapshot of a content page.
+type ContentHistoryEntry struct {
+	Kind          string
+	Slug          string
+	Lang          string
+	Version       string
+	Summary       string
+	EffectiveDate time.Time
+	UpdatedAt     time.Time
+	DownloadLabel string
+	DownloadURL   string
+	SourceURL     string
 }
 
 // ContentSEO holds optional metadata overrides for static pages.
@@ -95,11 +110,22 @@ var (
 	}{
 		items: map[string]contentCacheEntry{},
 	}
+	contentHistoryCache = struct {
+		mu    sync.RWMutex
+		items map[string]contentHistoryCacheEntry
+	}{
+		items: map[string]contentHistoryCacheEntry{},
+	}
 	contentCacheTTL = time.Minute * 5
 )
 
 type contentCacheEntry struct {
 	page    ContentPage
+	expires time.Time
+}
+
+type contentHistoryCacheEntry struct {
+	entries []ContentHistoryEntry
 	expires time.Time
 }
 
@@ -155,6 +181,83 @@ func (c *Client) GetContentPage(ctx context.Context, kind, slug, lang string) (C
 	}
 	storeContent(cacheKey, page)
 	return cloneContentPage(page), nil
+}
+
+// GetContentHistory returns localized history entries for a content page.
+func (c *Client) GetContentHistory(ctx context.Context, kind, slug, lang string) ([]ContentHistoryEntry, error) {
+	_ = ctx
+	kind = strings.TrimSpace(strings.ToLower(kind))
+	if kind == "" {
+		kind = "content"
+	}
+	slug = sanitizeSlug(slug)
+	if slug == "" {
+		return nil, ErrNotFound
+	}
+	lang = normalizeLang(lang)
+
+	cacheKey := strings.Join([]string{kind, slug, lang}, "|")
+	if entries, ok := cachedContentHistory(cacheKey); ok {
+		return cloneContentHistory(entries), nil
+	}
+
+	entries, err := c.fetchContentHistory(ctx, kind, slug, lang)
+	if err != nil {
+		return nil, err
+	}
+	storeContentHistory(cacheKey, entries)
+	return cloneContentHistory(entries), nil
+}
+
+func (c *Client) fetchContentHistory(ctx context.Context, kind, slug, lang string) ([]ContentHistoryEntry, error) {
+	_ = ctx
+	// Remote history fetch is not yet supported; fall back to local definitions.
+	return fallbackContentHistory(c.ContentDir(), kind, slug, lang)
+}
+
+// AvailableContentLocales lists locales that have a page for the given kind/slug.
+func (c *Client) AvailableContentLocales(kind, slug string) []string {
+	kind = strings.TrimSpace(strings.ToLower(kind))
+	if kind == "" {
+		kind = "content"
+	}
+	slug = sanitizeSlug(slug)
+	if slug == "" {
+		return nil
+	}
+	root := filepath.Join(c.ContentDir(), kind)
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		lang := normalizeLang(entry.Name())
+		file := filepath.Join(root, entry.Name(), slug+".md")
+		if _, err := os.Stat(file); err == nil {
+			seen[lang] = struct{}{}
+		}
+	}
+	if len(seen) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(seen))
+	for lang := range seen {
+		out = append(out, lang)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i] == "ja" && out[j] != "ja" {
+			return true
+		}
+		if out[j] == "ja" && out[i] != "ja" {
+			return false
+		}
+		return out[i] < out[j]
+	})
+	return out
 }
 
 func (c *Client) fetchContentPage(ctx context.Context, kind, slug, lang string) (ContentPage, error) {
@@ -294,6 +397,93 @@ func fallbackContentPage(contentDir, kind, slug, lang string) (ContentPage, erro
 		return ContentPage{}, err
 	}
 	return ContentPage{}, ErrNotFound
+}
+
+func fallbackContentHistory(contentDir, kind, slug, lang string) ([]ContentHistoryEntry, error) {
+	if strings.TrimSpace(contentDir) == "" {
+		contentDir = defaultContentDir
+	}
+	lang = normalizeLang(lang)
+	order := []string{lang}
+	if lang != "en" {
+		order = append(order, "en")
+	}
+	if lang != "ja" {
+		order = append(order, "ja")
+	}
+	for _, candidate := range order {
+		entries, err := readContentHistory(contentDir, kind, slug, candidate)
+		if err == nil {
+			return entries, nil
+		}
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, ErrNotFound) {
+			continue
+		}
+		return nil, err
+	}
+	return []ContentHistoryEntry{}, nil
+}
+
+func readContentHistory(contentDir, kind, slug, lang string) ([]ContentHistoryEntry, error) {
+	if slug == "" {
+		return nil, ErrNotFound
+	}
+	dir := filepath.Join(contentDir, kind, "history", lang)
+	file := filepath.Join(dir, slug+".yaml")
+	data, err := os.ReadFile(file)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	var raw []struct {
+		Version       string `yaml:"version"`
+		Summary       string `yaml:"summary"`
+		EffectiveDate string `yaml:"effective_date"`
+		UpdatedAt     string `yaml:"updated_at"`
+		DownloadLabel string `yaml:"download_label"`
+		DownloadURL   string `yaml:"download_url"`
+		SourceURL     string `yaml:"source_url"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("cms: parse history %s: %w", file, err)
+	}
+	entries := make([]ContentHistoryEntry, 0, len(raw))
+	for _, item := range raw {
+		entry := ContentHistoryEntry{
+			Kind:          kind,
+			Slug:          slug,
+			Lang:          normalizeLang(lang),
+			Version:       strings.TrimSpace(item.Version),
+			Summary:       strings.TrimSpace(item.Summary),
+			EffectiveDate: parseContentDate(item.EffectiveDate),
+			UpdatedAt:     parseContentDate(item.UpdatedAt),
+			DownloadLabel: strings.TrimSpace(item.DownloadLabel),
+			DownloadURL:   strings.TrimSpace(item.DownloadURL),
+			SourceURL:     strings.TrimSpace(item.SourceURL),
+		}
+		entries = append(entries, entry)
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		a := entries[i]
+		b := entries[j]
+		switch {
+		case !a.EffectiveDate.IsZero() && !b.EffectiveDate.IsZero():
+			if !a.EffectiveDate.Equal(b.EffectiveDate) {
+				return a.EffectiveDate.After(b.EffectiveDate)
+			}
+		case !a.EffectiveDate.IsZero():
+			return true
+		case !b.EffectiveDate.IsZero():
+			return false
+		}
+		if a.Version != "" && b.Version != "" && a.Version != b.Version {
+			return strings.Compare(a.Version, b.Version) > 0
+		}
+		return strings.Compare(a.Summary, b.Summary) < 0
+	})
+	return entries, nil
 }
 
 func readContentMarkdown(contentDir, kind, slug, lang string) (ContentPage, error) {
@@ -456,6 +646,27 @@ func storeContent(key string, page ContentPage) {
 	contentCache.items[key] = entry
 }
 
+func cachedContentHistory(key string) ([]ContentHistoryEntry, bool) {
+	now := time.Now()
+	contentHistoryCache.mu.RLock()
+	entry, ok := contentHistoryCache.items[key]
+	contentHistoryCache.mu.RUnlock()
+	if !ok || now.After(entry.expires) {
+		return nil, false
+	}
+	return cloneContentHistory(entry.entries), true
+}
+
+func storeContentHistory(key string, entries []ContentHistoryEntry) {
+	contentHistoryCache.mu.Lock()
+	defer contentHistoryCache.mu.Unlock()
+	entry := contentHistoryCacheEntry{
+		entries: cloneContentHistory(entries),
+		expires: time.Now().Add(contentCacheTTL),
+	}
+	contentHistoryCache.items[key] = entry
+}
+
 func cloneContentPage(src ContentPage) ContentPage {
 	cp := src
 	if src.Banner != nil {
@@ -463,6 +674,15 @@ func cloneContentPage(src ContentPage) ContentPage {
 		cp.Banner = &b
 	}
 	return cp
+}
+
+func cloneContentHistory(src []ContentHistoryEntry) []ContentHistoryEntry {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]ContentHistoryEntry, len(src))
+	copy(out, src)
+	return out
 }
 
 func firstNonEmpty(values ...string) string {

@@ -887,6 +887,7 @@ func main() {
 	r.Get("/guides/{slug}", GuideDetailHandler)
 	r.Get("/content/{slug}", ContentPageHandler)
 	r.Get("/legal/{slug}", LegalPageHandler)
+	r.MethodFunc(http.MethodPost, "/legal/{slug}/feedback", LegalFeedbackHandler)
 	r.Get("/support", SupportHandler)
 	r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
 	r.Get("/status", StatusHandler)
@@ -2910,7 +2911,7 @@ func renderMarkdownContent(markdown string) (string, []TOCEntry, error) {
 	return out.String(), headings, nil
 }
 
-func buildContentPageView(lang string, page cms.ContentPage, body template.HTML, toc []TOCEntry, fallbackSummary, defaultIcon string) ContentPageViewModel {
+func buildContentPageView(lang string, page cms.ContentPage, body template.HTML, toc []TOCEntry, fallbackSummary, defaultIcon string, extras ContentPageExtras) ContentPageViewModel {
 	header := ContentHeaderView{
 		Icon:    valueOr(page.Icon, defaultIcon),
 		Title:   page.Title,
@@ -2941,13 +2942,30 @@ func buildContentPageView(lang string, page cms.ContentPage, body template.HTML,
 		}
 	}
 
-	return ContentPageViewModel{
+	vm := ContentPageViewModel{
+		Kind:    page.Kind,
+		Slug:    page.Slug,
 		Header:  header,
 		Banner:  banner,
 		Body:    body,
 		TOC:     toc,
 		Version: version,
 	}
+	if len(extras.Locales) > 0 {
+		vm.Locales = make([]ContentLocaleOption, len(extras.Locales))
+		copy(vm.Locales, extras.Locales)
+	}
+	if len(extras.History) > 0 {
+		vm.History = make([]ContentHistoryRow, len(extras.History))
+		copy(vm.History, extras.History)
+	}
+	if extras.Feedback != nil {
+		vm.Feedback = extras.Feedback
+	}
+	if extras.Footer != nil {
+		vm.Footer = extras.Footer
+	}
+	return vm
 }
 
 func buildContentBanner(lang string, banner *cms.ContentBanner) *AlertBannerView {
@@ -3028,6 +3046,185 @@ func valueOr(value, fallback string) string {
 	return fallback
 }
 
+func buildLocaleOptions(r *http.Request, currentLang string, locales []string) []ContentLocaleOption {
+	clean := make([]string, 0, len(locales)+1)
+	seen := map[string]struct{}{}
+	for _, loc := range locales {
+		loc = strings.TrimSpace(loc)
+		if loc == "" {
+			continue
+		}
+		ll := strings.ToLower(loc)
+		if _, ok := seen[ll]; ok {
+			continue
+		}
+		seen[ll] = struct{}{}
+		clean = append(clean, ll)
+	}
+	currentLang = strings.ToLower(strings.TrimSpace(currentLang))
+	if currentLang == "" {
+		currentLang = "ja"
+	}
+	if _, ok := seen[currentLang]; !ok {
+		clean = append(clean, currentLang)
+	}
+	sort.SliceStable(clean, func(i, j int) bool {
+		if clean[i] == currentLang && clean[j] != currentLang {
+			return true
+		}
+		if clean[j] == currentLang && clean[i] != currentLang {
+			return false
+		}
+		return clean[i] < clean[j]
+	})
+	if len(clean) <= 1 {
+		return nil
+	}
+	opts := make([]ContentLocaleOption, 0, len(clean))
+	for _, loc := range clean {
+		opts = append(opts, ContentLocaleOption{
+			Lang:   loc,
+			Label:  localeDisplayLabel(currentLang, loc),
+			Href:   localeToggleURL(r, loc),
+			Active: loc == currentLang,
+		})
+	}
+	return opts
+}
+
+func localeToggleURL(r *http.Request, targetLang string) string {
+	values := url.Values{}
+	for key, vals := range r.URL.Query() {
+		for _, v := range vals {
+			values.Add(key, v)
+		}
+	}
+	if targetLang == "" {
+		values.Del("hl")
+	} else {
+		values.Set("hl", targetLang)
+	}
+	raw := values.Encode()
+	if raw != "" {
+		return r.URL.Path + "?" + raw
+	}
+	return r.URL.Path
+}
+
+func localeDisplayLabel(currentLang, targetLang string) string {
+	key := "nav.lang." + targetLang
+	fallback := strings.ToUpper(targetLang)
+	return i18nOrDefault(currentLang, key, fallback)
+}
+
+func buildLocaleAlternates(r *http.Request, locales []string) []struct{ Href, Hreflang string } {
+	base := siteBaseURL(r)
+	path := r.URL.Path
+	if i18nBundle == nil {
+		return []struct{ Href, Hreflang string }{{Href: base + path, Hreflang: "x-default"}}
+	}
+	list := make([]string, 0, len(locales))
+	seen := map[string]struct{}{}
+	for _, loc := range locales {
+		loc = strings.ToLower(strings.TrimSpace(loc))
+		if loc == "" {
+			continue
+		}
+		if _, ok := seen[loc]; ok {
+			continue
+		}
+		seen[loc] = struct{}{}
+		list = append(list, loc)
+	}
+	if len(list) == 0 {
+		list = i18nBundle.Supported()
+	}
+	sort.Strings(list)
+	out := make([]struct{ Href, Hreflang string }, 0, len(list)+1)
+	for _, loc := range list {
+		href := localeToggleURL(r, loc)
+		out = append(out, struct{ Href, Hreflang string }{
+			Href:     base + href,
+			Hreflang: loc,
+		})
+	}
+	out = append(out, struct{ Href, Hreflang string }{Href: base + path, Hreflang: "x-default"})
+	return out
+}
+
+func buildContentHistoryRows(lang string, entries []cms.ContentHistoryEntry) []ContentHistoryRow {
+	if len(entries) == 0 {
+		return nil
+	}
+	rows := make([]ContentHistoryRow, 0, len(entries))
+	for _, entry := range entries {
+		row := ContentHistoryRow{
+			Version:       entry.Version,
+			Summary:       entry.Summary,
+			DownloadLabel: entry.DownloadLabel,
+			DownloadURL:   entry.DownloadURL,
+		}
+		if val, iso := displayDate(entry.EffectiveDate, lang); val != "" {
+			row.Effective = val
+			row.EffectiveISO = iso
+		}
+		if val, iso := displayDate(entry.UpdatedAt, lang); val != "" {
+			row.Updated = val
+			row.UpdatedISO = iso
+		}
+		if strings.TrimSpace(row.DownloadLabel) == "" {
+			row.DownloadLabel = i18nOrDefault(lang, "legal.history.download", "Download PDF")
+		}
+		if strings.TrimSpace(row.Summary) == "" {
+			row.Summary = i18nOrDefault(lang, "legal.history.no_summary", "See the archived PDF for details.")
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func buildLegalFeedbackView(lang, slug string) *ContentFeedbackView {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return nil
+	}
+	action := fmt.Sprintf("/legal/%s/feedback", slug)
+	options := []ContentFeedbackOption{
+		{Value: "yes", Label: i18nOrDefault(lang, "legal.feedback.yes", "Yes")},
+		{Value: "no", Label: i18nOrDefault(lang, "legal.feedback.no", "No")},
+	}
+	return &ContentFeedbackView{
+		Action:      action,
+		Method:      http.MethodPost,
+		Question:    i18nOrDefault(lang, "legal.feedback.question", "Was this page helpful?"),
+		Options:     options,
+		SubmitLabel: i18nOrDefault(lang, "legal.feedback.submit", "Send"),
+		Assurance:   i18nOrDefault(lang, "legal.feedback.assurance", "Your response helps us improve our legal documentation."),
+		Slug:        slug,
+	}
+}
+
+func buildLegalFooterView(lang string) *LegalFooterView {
+	contacts := []LegalFooterContact{
+		{
+			Label: i18nOrDefault(lang, "legal.footer.contact.privacy", "Privacy inquiries"),
+			Value: "privacy@hanko-field.jp",
+			Href:  "mailto:privacy@hanko-field.jp",
+		},
+		{
+			Label: i18nOrDefault(lang, "legal.footer.contact.compliance", "Compliance office"),
+			Value: "compliance@hanko-field.jp",
+			Href:  "mailto:compliance@hanko-field.jp",
+		},
+	}
+	return &LegalFooterView{
+		Title:    i18nOrDefault(lang, "legal.footer.title", "Need compliance support?"),
+		Summary:  i18nOrDefault(lang, "legal.footer.summary", "Our compliance team can help with filings, vendor questionnaires, and contract reviews."),
+		Contacts: contacts,
+		Note:     i18nOrDefault(lang, "legal.footer.note", "We respond to legal and compliance requests within one business day."),
+	}
+}
+
 func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName, defaultIcon, summaryKey, summaryFallback string) {
 	if cmsClient == nil {
 		http.Error(w, "content unavailable", http.StatusServiceUnavailable)
@@ -3086,7 +3283,6 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
-	vm.SEO.Alternates = buildAlternates(r)
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
 	if page.SEO.Title != "" {
@@ -3111,8 +3307,23 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	}
 	vm.SEO.Twitter.Card = "summary_large_image"
 
+	locales := cmsClient.AvailableContentLocales(kind, slug)
+	extras := ContentPageExtras{}
+	extras.Locales = buildLocaleOptions(r, lang, locales)
+	vm.SEO.Alternates = buildLocaleAlternates(r, locales)
+
+	if kind == "legal" {
+		if entries, histErr := cmsClient.GetContentHistory(ctx, kind, slug, lang); histErr != nil {
+			log.Printf("legal: history %s: %v", slug, histErr)
+		} else if len(entries) > 0 {
+			extras.History = buildContentHistoryRows(lang, entries)
+		}
+		extras.Feedback = buildLegalFeedbackView(lang, slug)
+		extras.Footer = buildLegalFooterView(lang)
+	}
+
 	defaultSummary := i18nOrDefault(lang, summaryKey, summaryFallback)
-	view := buildContentPageView(lang, page, body, toc, defaultSummary, defaultIcon)
+	view := buildContentPageView(lang, page, body, toc, defaultSummary, defaultIcon, extras)
 	vm.Content = view
 	renderPage(w, r, templateName, vm)
 }
@@ -3123,6 +3334,46 @@ func ContentPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func LegalPageHandler(w http.ResponseWriter, r *http.Request) {
 	serveStaticPage(w, r, "legal", "legal", "scale", "legal.default_summary", "Policies, terms of service, and compliance information.")
+}
+
+func LegalFeedbackHandler(w http.ResponseWriter, r *http.Request) {
+	lang := mw.Lang(r)
+	slug := strings.TrimSpace(chi.URLParam(r, "slug"))
+	if slug == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	helpful := strings.TrimSpace(r.FormValue("helpful"))
+	if helpful == "" {
+		http.Error(w, "missing selection", http.StatusBadRequest)
+		return
+	}
+	notes := strings.TrimSpace(r.FormValue("notes"))
+	if len(notes) > 500 {
+		notes = notes[:500]
+	}
+	log.Printf("legal feedback: slug=%s helpful=%s notes=%q", slug, helpful, notes)
+	message := i18nOrDefault(lang, "legal.feedback.thanks", "Thanks for your feedback.")
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusAccepted)
+		snippet := fmt.Sprintf(`<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">%s</div>`, template.HTMLEscapeString(message))
+		if _, err := w.Write([]byte(snippet)); err != nil {
+			log.Printf("legal feedback: write response: %v", err)
+		}
+		return
+	}
+	redirectURL := fmt.Sprintf("/legal/%s", slug)
+	if lang != "" {
+		q := url.Values{}
+		q.Set("hl", lang)
+		redirectURL = redirectURL + "?" + q.Encode()
+	}
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -3717,12 +3968,71 @@ type AlertBannerView struct {
 	Text       string
 }
 
+type ContentLocaleOption struct {
+	Lang   string
+	Label  string
+	Href   string
+	Active bool
+}
+
+type ContentHistoryRow struct {
+	Version       string
+	Summary       string
+	Effective     string
+	EffectiveISO  string
+	Updated       string
+	UpdatedISO    string
+	DownloadLabel string
+	DownloadURL   string
+}
+
+type ContentFeedbackOption struct {
+	Value string
+	Label string
+}
+
+type ContentFeedbackView struct {
+	Action      string
+	Method      string
+	Question    string
+	Options     []ContentFeedbackOption
+	SubmitLabel string
+	Assurance   string
+	Slug        string
+}
+
+type LegalFooterContact struct {
+	Label string
+	Value string
+	Href  string
+}
+
+type LegalFooterView struct {
+	Title    string
+	Summary  string
+	Contacts []LegalFooterContact
+	Note     string
+}
+
+type ContentPageExtras struct {
+	Locales  []ContentLocaleOption
+	History  []ContentHistoryRow
+	Feedback *ContentFeedbackView
+	Footer   *LegalFooterView
+}
+
 type ContentPageViewModel struct {
-	Header  ContentHeaderView
-	Banner  *AlertBannerView
-	Body    template.HTML
-	TOC     []TOCEntry
-	Version *ContentVersionView
+	Kind     string
+	Slug     string
+	Header   ContentHeaderView
+	Banner   *AlertBannerView
+	Body     template.HTML
+	TOC      []TOCEntry
+	Version  *ContentVersionView
+	Locales  []ContentLocaleOption
+	History  []ContentHistoryRow
+	Feedback *ContentFeedbackView
+	Footer   *LegalFooterView
 }
 
 type StatusOverviewView struct {
