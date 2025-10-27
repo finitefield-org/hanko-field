@@ -57,7 +57,7 @@
 - [x] [Develop catalog overview page with tabs for templates, fonts, materials, and products (`/admin/catalog/{kind}`).](doc/admin/tasks/037-develop-catalog-overview-page-with-tabs-for-templates-fonts-materials-and-products-admin-c.md)
 - [x] [Implement table fragments (`/admin/catalog/{kind}/table`) with filter/sort controls and pagination.](doc/admin/tasks/038-implement-table-fragments-admin-catalog-kind-table-with-filter-sort-controls-and-paginatio.md)
 - [x] [Build CRUD modals (`/admin/catalog/{kind}/modal/{new|edit|delete}`) connecting to `POST/PUT/DELETE /admin/catalog/{kind}` endpoints.](doc/admin/tasks/039-build-crud-modals-admin-catalog-kind-modal-new-edit-delete-connecting-to-post-put-delete-a.md)
-- [ ] [Support asset uploads (preview images, SVGs) via integration with assets signed URL workflow inside modals.](doc/admin/tasks/040-support-asset-uploads-preview-images-svgs-via-integration-with-assets-signed-url-workflow-.md)
+- [x] [Support asset uploads (preview images, SVGs) via integration with assets signed URL workflow inside modals.](doc/admin/tasks/040-support-asset-uploads-preview-images-svgs-via-integration-with-assets-signed-url-workflow-.md)
 - [ ] [Add versioning/publish status indicators and scheduled publish support where applicable.](doc/admin/tasks/041-add-versioning-publish-status-indicators-and-scheduled-publish-support-where-applicable.md)
 
 ## 7. CMS (Guides & Pages)

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
@@ -30,6 +31,7 @@ type Config struct {
 	BasePath             string
 	LoginPath            string
 	Authenticator        custommw.Authenticator
+	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
 	DashboardService     dashboard.Service
 	ProfileService       profile.Service
@@ -100,6 +102,7 @@ func New(cfg Config) *http.Server {
 	}
 
 	uiHandlers := ui.NewHandlers(ui.Dependencies{
+		AssetsService:        cfg.AssetsService,
 		CatalogService:       cfg.CatalogService,
 		DashboardService:     cfg.DashboardService,
 		ProfileService:       cfg.ProfileService,
@@ -184,6 +187,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				pr.Post("/api-keys/{keyID}/revoke", uiHandlers.RevokeAPIKey)
 				pr.Post("/sessions/{sessionID}/revoke", uiHandlers.RevokeSession)
 			})
+			protected.Post("/assets/signed-upload", uiHandlers.AssetsSignedUpload)
 			protected.Get("/logout", authHandlers.Logout)
 			protected.Post("/logout", authHandlers.Logout)
 			protected.Route("/search", func(sr chi.Router) {

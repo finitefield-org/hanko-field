@@ -2084,6 +2084,354 @@ const initGlobalSearchInteractions = () => {
   }
 };
 
+const ASSET_UPLOAD_SELECTOR = "[data-asset-upload]";
+
+const getCSRFToken = () => {
+  const tokenEl = document.querySelector('meta[name="csrf-token"]');
+  return tokenEl && typeof tokenEl.content === "string" ? tokenEl.content : "";
+};
+
+const formatBytes = (value) => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  const precision = unit === 0 ? 0 : unit === 1 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[unit]}`;
+};
+
+const showAssetToast = (message, tone = "danger") => {
+  const toast = window.hankoAdmin && window.hankoAdmin.toast;
+  if (toast && typeof toast.show === "function") {
+    toast.show({ message, tone, duration: 5000 });
+  } else {
+    console.warn(message);
+  }
+};
+
+const readDatasetBool = (value) => value === "true";
+
+const parseAcceptList = (accept) => {
+  if (typeof accept !== "string" || accept.trim() === "") {
+    return [];
+  }
+  return accept.split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean);
+};
+
+const matchesAccept = (file, acceptList) => {
+  if (!acceptList || acceptList.length === 0) {
+    return true;
+  }
+  const fileType = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  const extension = (() => {
+    const name = typeof file.name === "string" ? file.name : "";
+    const index = name.lastIndexOf(".");
+    if (index === -1) {
+      return "";
+    }
+    return name.slice(index).toLowerCase();
+  })();
+  return acceptList.some((accept) => {
+    if (accept.endsWith("/*")) {
+      const prefix = accept.slice(0, accept.indexOf("/"));
+      return fileType.startsWith(`${prefix}/`);
+    }
+    if (accept.startsWith(".")) {
+      return accept === extension;
+    }
+    if (fileType) {
+      return accept === fileType;
+    }
+    return false;
+  });
+};
+
+const deriveKind = (root, file) => {
+  if (root && typeof root.dataset.kind === "string" && root.dataset.kind.trim() !== "") {
+    return root.dataset.kind.trim();
+  }
+  if (file && typeof file.type === "string" && file.type.includes("/")) {
+    return file.type.split("/")[1] || "other";
+  }
+  const name = typeof file.name === "string" ? file.name : "";
+  const index = name.lastIndexOf(".");
+  if (index !== -1) {
+    return name.slice(index + 1).toLowerCase();
+  }
+  return "other";
+};
+
+const deriveMimeType = (file) => {
+  if (file && typeof file.type === "string" && file.type.trim() !== "") {
+    return file.type;
+  }
+  const name = typeof file.name === "string" ? file.name.toLowerCase() : "";
+  if (name.endsWith(".svg")) {
+    return "image/svg+xml";
+  }
+  if (name.endsWith(".png")) {
+    return "image/png";
+  }
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (name.endsWith(".webp")) {
+    return "image/webp";
+  }
+  return "application/octet-stream";
+};
+
+const setAssetUploading = (root, uploading) => {
+  const fields = getAssetFields(root);
+  const selectButton = fields.selectButton;
+  const removeButton = fields.removeButton;
+  if (selectButton instanceof HTMLButtonElement) {
+    selectButton.dataset.loading = uploading ? "true" : "false";
+    selectButton.disabled = uploading;
+    selectButton.setAttribute("aria-busy", uploading ? "true" : "false");
+  }
+  if (removeButton instanceof HTMLButtonElement) {
+    removeButton.disabled = uploading;
+  }
+  root.dataset.uploading = uploading ? "true" : "false";
+};
+
+const getAssetFields = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return {};
+  }
+  return {
+    id: root.querySelector("[data-asset-upload-field='id']"),
+    url: root.querySelector("[data-asset-upload-field='url']"),
+    name: root.querySelector("[data-asset-upload-field='name']"),
+    preview: root.querySelector("[data-asset-upload-preview]"),
+    filename: root.querySelector("[data-asset-upload-filename]"),
+    input: root.querySelector("[data-asset-upload-input]"),
+    selectButton: root.querySelector("[data-asset-upload-action='select']"),
+    removeButton: root.querySelector("[data-asset-upload-action='remove']"),
+  };
+};
+
+const prunePreviewObjectURL = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+  const url = root.dataset.previewObjectUrl;
+  if (url) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      // ignore
+    }
+    delete root.dataset.previewObjectUrl;
+  }
+};
+
+const updateAssetPreview = (root, state) => {
+  const preview = root.querySelector("[data-asset-upload-preview]");
+  if (!(preview instanceof HTMLElement)) {
+    return;
+  }
+  prunePreviewObjectURL(root);
+  const displayPreview = readDatasetBool(root.dataset.previewEnabled || "false");
+  preview.innerHTML = "";
+  if (state.hasAsset && displayPreview && state.previewURL) {
+    const img = document.createElement("img");
+    img.src = state.previewURL;
+    img.alt = state.alt || "プレビュー";
+    img.className = "h-full w-full rounded-lg object-cover";
+    preview.appendChild(img);
+    if (state.objectURL) {
+      root.dataset.previewObjectUrl = state.objectURL;
+    }
+    return;
+  }
+  const placeholder = document.createElement("div");
+  placeholder.className = displayPreview
+    ? "flex h-full w-full items-center justify-center text-[11px] text-slate-400"
+    : "flex h-full w-full items-center justify-center text-[11px] text-slate-500";
+  placeholder.textContent = state.hasAsset
+    ? state.fileName || root.dataset.labelReplace || "選択済み"
+    : root.dataset.labelEmpty || "未設定";
+  preview.appendChild(placeholder);
+};
+
+const updateAssetButtonLabels = (root, hasAsset) => {
+  const { selectButton, removeButton } = getAssetFields(root);
+  if (selectButton instanceof HTMLButtonElement) {
+    selectButton.textContent = hasAsset
+      ? (root.dataset.labelReplace || "ファイルを変更")
+      : (root.dataset.labelUpload || "ファイルをアップロード");
+  }
+  if (removeButton instanceof HTMLButtonElement) {
+    removeButton.hidden = !hasAsset;
+  }
+};
+
+const setAssetState = (root, state) => {
+  const fields = getAssetFields(root);
+  const hasAsset = Boolean(state.hasAsset);
+  if (fields.id instanceof HTMLInputElement) {
+    fields.id.value = state.assetId || "";
+  }
+  if (fields.url instanceof HTMLInputElement) {
+    fields.url.value = state.url || "";
+  }
+  if (fields.name instanceof HTMLInputElement) {
+    fields.name.value = state.fileName || "";
+  }
+  if (fields.filename instanceof HTMLElement) {
+    fields.filename.textContent = hasAsset
+      ? state.fileName || state.url || root.dataset.labelReplace || "選択済み"
+      : root.dataset.labelEmpty || "未設定";
+  }
+  root.dataset.hasValue = hasAsset ? "true" : "false";
+  updateAssetButtonLabels(root, hasAsset);
+  updateAssetPreview(root, state);
+};
+
+const resetAssetState = (root) => {
+  prunePreviewObjectURL(root);
+  setAssetState(root, { hasAsset: false, assetId: "", url: "", fileName: "" });
+};
+
+const validateAssetFile = (root, file) => {
+  if (!file) {
+    return "ファイルが選択されていません。";
+  }
+  const maxSize = Number.parseInt(root.dataset.maxSize || "", 10);
+  if (Number.isFinite(maxSize) && maxSize > 0 && file.size > maxSize) {
+    return `ファイルサイズが大きすぎます。最大 ${formatBytes(maxSize)} までです。`;
+  }
+  const accepts = parseAcceptList(root.dataset.accept || "");
+  if (accepts.length > 0 && !matchesAccept(file, accepts)) {
+    return "許可されていないファイル形式です。";
+  }
+  return "";
+};
+
+const requestSignedUpload = async (root, file) => {
+  const endpoint = typeof root.dataset.uploadEndpoint === "string" && root.dataset.uploadEndpoint.trim() !== ""
+    ? root.dataset.uploadEndpoint
+    : "/admin/assets/signed-upload";
+  const payload = {
+    purpose: typeof root.dataset.purpose === "string" && root.dataset.purpose.trim() !== "" ? root.dataset.purpose.trim() : "preview",
+    kind: deriveKind(root, file),
+    mimeType: deriveMimeType(file),
+    fileName: file.name,
+    size: file.size,
+  };
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": getCSRFToken(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "署名付きURLの取得に失敗しました。");
+  }
+  return await response.json();
+};
+
+const uploadViaSignedURL = async (info, file) => {
+  if (!info || typeof info.uploadUrl !== "string" || info.uploadUrl.trim() === "") {
+    throw new Error("アップロード先URLが無効です。");
+  }
+  const method = typeof info.method === "string" && info.method.trim() !== "" ? info.method : "PUT";
+  const headers = new Headers(info.headers || {});
+  if (!headers.has("Content-Type") && file && file.type) {
+    headers.set("Content-Type", file.type);
+  }
+  const response = await fetch(info.uploadUrl, {
+    method,
+    headers,
+    body: file,
+  });
+  if (!response.ok) {
+    throw new Error(`アップロードリクエストが失敗しました。(HTTP ${response.status})`);
+  }
+  return true;
+};
+
+const handleAssetFileSelection = async (root, file) => {
+  const errorMessage = validateAssetFile(root, file);
+  if (errorMessage) {
+    showAssetToast(errorMessage, "danger");
+    return;
+  }
+  setAssetUploading(root, true);
+  try {
+    const signed = await requestSignedUpload(root, file);
+    await uploadViaSignedURL(signed, file);
+    const publicUrl = typeof signed.publicUrl === "string" ? signed.publicUrl.trim() : "";
+    let previewURL = publicUrl;
+    let objectURL;
+    if (!previewURL && readDatasetBool(root.dataset.previewEnabled || "false") && typeof URL.createObjectURL === "function") {
+      objectURL = URL.createObjectURL(file);
+      previewURL = objectURL;
+    }
+    setAssetState(root, {
+      hasAsset: true,
+      assetId: signed.assetId || "",
+      url: publicUrl || signed.assetId || "",
+      fileName: file.name,
+      previewURL,
+      objectURL,
+    });
+  } catch (error) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : "ファイルのアップロードに失敗しました。";
+    showAssetToast(message, "danger");
+  } finally {
+    setAssetUploading(root, false);
+  }
+};
+
+const initAssetUploads = (scope) => {
+  const context = scope instanceof Element ? scope : document;
+  context.querySelectorAll(ASSET_UPLOAD_SELECTOR).forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.assetUploadInit === "true") {
+      return;
+    }
+    root.dataset.assetUploadInit = "true";
+    const fields = getAssetFields(root);
+    if (fields.selectButton instanceof HTMLButtonElement && fields.input instanceof HTMLInputElement) {
+      fields.selectButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (root.dataset.uploading === "true") {
+          return;
+        }
+        fields.input.click();
+      });
+      fields.input.addEventListener("change", () => {
+        const file = fields.input.files && fields.input.files[0];
+        if (file) {
+          handleAssetFileSelection(root, file).catch((error) => console.error(error));
+        }
+        fields.input.value = "";
+      });
+    }
+    if (fields.removeButton instanceof HTMLButtonElement) {
+      fields.removeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (root.dataset.uploading === "true") {
+          return;
+        }
+        resetAssetState(root);
+      });
+    }
+  });
+};
+
 // Utility initialisers for the orders index interactions.
 const initOrdersFilter = () => {
   const form = document.getElementById("orders-filter");
@@ -2267,6 +2615,7 @@ window.hankoAdmin = window.hankoAdmin || {
     initUserMenu();
     initGlobalSearchInteractions();
     initOrdersInteractions(document);
+    initAssetUploads(document);
 
     if (window.htmx) {
       document.body.addEventListener("htmx:afterSwap", (event) => {
@@ -2276,6 +2625,7 @@ window.hankoAdmin = window.hankoAdmin || {
         initOrdersInteractions(event.target);
         initShipmentsModule();
         initProductionKanban();
+        initAssetUploads(event.target);
       });
     }
 

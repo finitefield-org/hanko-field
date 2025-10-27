@@ -9,18 +9,25 @@ import (
 func TestCatalogValuesFromDetailUsesProperties(t *testing.T) {
 	detail := admincatalog.ItemDetail{
 		Item: admincatalog.Item{
-			Name:         "Premium Kit",
-			Identifier:   "PRD-PREMIUM",
-			Status:       admincatalog.StatusPublished,
-			Category:     "seasonal_bundle",
-			PrimaryColor: "#FF0000",
+			Name:            "Premium Kit",
+			Identifier:      "PRD-PREMIUM",
+			Status:          admincatalog.StatusPublished,
+			Category:        "seasonal_bundle",
+			PrimaryColor:    "#FF0000",
+			PreviewAssetID:  "asset-preview-001",
+			PreviewFileName: "preview.png",
 		},
 		Description: "Seasonal bundle product.",
 		Owner: admincatalog.OwnerInfo{
 			Name:  "Kana Fujii",
 			Email: "kana@example.com",
 		},
-		PreviewURL: "https://cdn.example.com/preview.png",
+		PreviewURL:      "https://cdn.example.com/preview.png",
+		PreviewAssetID:  "asset-preview-001",
+		PreviewFileName: "preview.png",
+		SVGPath:         "designs/sample.svg",
+		SVGAssetID:      "asset-svg-001",
+		SVGFileName:     "sample.svg",
 		Properties: map[string]string{
 			"price":      "6200",
 			"leadTime":   "3",
@@ -46,6 +53,12 @@ func TestCatalogValuesFromDetailUsesProperties(t *testing.T) {
 	}
 	if got := values["productSKU"]; got != "PRD-PREMIUM-SKU" {
 		t.Fatalf("productSKU not rehydrated, got %q", got)
+	}
+	if got := values["previewAssetID"]; got != "asset-preview-001" {
+		t.Fatalf("previewAssetID not rehydrated, got %q", got)
+	}
+	if got := values["svgAssetID"]; got != "asset-svg-001" {
+		t.Fatalf("svgAssetID not rehydrated, got %q", got)
 	}
 }
 

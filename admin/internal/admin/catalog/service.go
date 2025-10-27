@@ -164,33 +164,37 @@ type ListResult struct {
 
 // AssetInput captures freeform catalog data submitted via admin forms.
 type AssetInput struct {
-	Kind         Kind
-	ID           string
-	Version      string
-	Name         string
-	Identifier   string
-	Description  string
-	Status       Status
-	Category     string
-	Tags         []string
-	TemplateID   string
-	SVGPath      string
-	PreviewURL   string
-	PreviewAlt   string
-	FontFamily   string
-	FontWeights  []string
-	License      string
-	MaterialSKU  string
-	Color        string
-	Inventory    int
-	ProductSKU   string
-	PriceMinor   int64
-	Currency     string
-	LeadTimeDays int
-	PhotoURLs    []string
-	PrimaryColor string
-	OwnerName    string
-	OwnerEmail   string
+	Kind            Kind
+	ID              string
+	Version         string
+	Name            string
+	Identifier      string
+	Description     string
+	Status          Status
+	Category        string
+	Tags            []string
+	TemplateID      string
+	SVGPath         string
+	SVGAssetID      string
+	SVGFileName     string
+	PreviewURL      string
+	PreviewAssetID  string
+	PreviewFileName string
+	PreviewAlt      string
+	FontFamily      string
+	FontWeights     []string
+	License         string
+	MaterialSKU     string
+	Color           string
+	Inventory       int
+	ProductSKU      string
+	PriceMinor      int64
+	Currency        string
+	LeadTimeDays    int
+	PhotoURLs       []string
+	PrimaryColor    string
+	OwnerName       string
+	OwnerEmail      string
 }
 
 // DeleteRequest wraps metadata required to delete a catalog asset.
@@ -211,30 +215,32 @@ type Pagination struct {
 
 // Item describes a summarized catalog asset as shown in tables or cards.
 type Item struct {
-	ID            string
-	Name          string
-	Identifier    string
-	Kind          Kind
-	Category      string
-	CategoryLabel string
-	Status        Status
-	StatusLabel   string
-	StatusTone    string
-	Description   string
-	Owner         OwnerInfo
-	UpdatedAt     time.Time
-	Version       string
-	UsageCount    int
-	UsageLabel    string
-	Tags          []string
-	PreviewURL    string
-	PreviewAlt    string
-	Channels      []string
-	Format        string
-	Metrics       []ItemMetric
-	Badge         string
-	BadgeTone     string
-	PrimaryColor  string
+	ID              string
+	Name            string
+	Identifier      string
+	Kind            Kind
+	Category        string
+	CategoryLabel   string
+	Status          Status
+	StatusLabel     string
+	StatusTone      string
+	Description     string
+	Owner           OwnerInfo
+	UpdatedAt       time.Time
+	Version         string
+	UsageCount      int
+	UsageLabel      string
+	Tags            []string
+	PreviewURL      string
+	PreviewAssetID  string
+	PreviewFileName string
+	PreviewAlt      string
+	Channels        []string
+	Format          string
+	Metrics         []ItemMetric
+	Badge           string
+	BadgeTone       string
+	PrimaryColor    string
 }
 
 // OwnerInfo identifies the staff member responsible for an asset.
@@ -253,18 +259,23 @@ type ItemMetric struct {
 
 // ItemDetail extends Item with preview, dependency, and audit metadata.
 type ItemDetail struct {
-	Item         Item
-	PreviewURL   string
-	PreviewAlt   string
-	Description  string
-	Owner        OwnerInfo
-	Usage        []UsageMetric
-	Metadata     []MetadataEntry
-	Properties   map[string]string
-	Dependencies []Dependency
-	AuditTrail   []AuditEntry
-	Tags         []string
-	UpdatedAt    time.Time
+	Item            Item
+	PreviewURL      string
+	PreviewAssetID  string
+	PreviewFileName string
+	PreviewAlt      string
+	SVGPath         string
+	SVGAssetID      string
+	SVGFileName     string
+	Description     string
+	Owner           OwnerInfo
+	Usage           []UsageMetric
+	Metadata        []MetadataEntry
+	Properties      map[string]string
+	Dependencies    []Dependency
+	AuditTrail      []AuditEntry
+	Tags            []string
+	UpdatedAt       time.Time
 }
 
 // UsageMetric summarises usage across channels or personas.

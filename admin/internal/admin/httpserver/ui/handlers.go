@@ -9,6 +9,7 @@ import (
 
 	"github.com/a-h/templ"
 
+	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	admindashboard "finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
@@ -24,6 +25,7 @@ import (
 
 // Dependencies collects external services required by the UI handlers.
 type Dependencies struct {
+	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
 	DashboardService     admindashboard.Service
 	ProfileService       profile.Service
@@ -36,6 +38,7 @@ type Dependencies struct {
 
 // Handlers exposes HTTP handlers for admin UI pages and fragments.
 type Handlers struct {
+	assets        adminassets.Service
 	catalog       admincatalog.Service
 	dashboard     admindashboard.Service
 	profile       profile.Service
@@ -48,6 +51,10 @@ type Handlers struct {
 
 // NewHandlers wires the UI handler set.
 func NewHandlers(deps Dependencies) *Handlers {
+	assetsService := deps.AssetsService
+	if assetsService == nil {
+		assetsService = adminassets.NewStaticService("https://uploads.example.com", "https://cdn.example.com/assets")
+	}
 	profileService := deps.ProfileService
 	if profileService == nil {
 		profileService = profile.NewStaticService(nil)
@@ -81,6 +88,7 @@ func NewHandlers(deps Dependencies) *Handlers {
 		catalogService = admincatalog.NewStaticService()
 	}
 	return &Handlers{
+		assets:        assetsService,
 		catalog:       catalogService,
 		dashboard:     dashboardService,
 		profile:       profileService,

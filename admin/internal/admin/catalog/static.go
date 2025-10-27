@@ -742,6 +742,8 @@ func buildAssetFromInput(existing catalogAsset, input AssetInput, updatedAt time
 	item.Version = strings.TrimSpace(input.Version)
 	item.UsageLabel = usageLabelForStatus(item.Status)
 	item.PreviewURL = coalesce(input.PreviewURL, item.PreviewURL, defaultPreviewFor(item.Kind))
+	item.PreviewAssetID = coalesce(input.PreviewAssetID, item.PreviewAssetID)
+	item.PreviewFileName = coalesce(input.PreviewFileName, item.PreviewFileName)
 	item.PreviewAlt = coalesce(input.PreviewAlt, item.PreviewAlt, item.Name)
 	item.PrimaryColor = coalesce(input.PrimaryColor, item.PrimaryColor, "#0F172A")
 	item.Metrics = buildItemMetrics(item.Kind, input)
@@ -751,7 +753,12 @@ func buildAssetFromInput(existing catalogAsset, input AssetInput, updatedAt time
 	detail.Owner = item.Owner
 	detail.Tags = item.Tags
 	detail.PreviewURL = item.PreviewURL
+	detail.PreviewAssetID = item.PreviewAssetID
+	detail.PreviewFileName = item.PreviewFileName
 	detail.PreviewAlt = item.PreviewAlt
+	detail.SVGPath = coalesce(input.SVGPath, detail.SVGPath)
+	detail.SVGAssetID = coalesce(input.SVGAssetID, detail.SVGAssetID)
+	detail.SVGFileName = coalesce(input.SVGFileName, detail.SVGFileName)
 	detail.Metadata = buildMetadataEntries(item.Kind, input)
 	detail.UpdatedAt = updatedAt
 	detail.Properties = mergeProperties(detail.Properties, propertiesFromInput(input))
@@ -920,33 +927,37 @@ func buildMetadataEntries(kind Kind, input AssetInput) []MetadataEntry {
 
 func propertiesFromInput(input AssetInput) map[string]string {
 	values := map[string]string{
-		"id":           input.ID,
-		"kind":         string(input.Kind),
-		"version":      input.Version,
-		"name":         input.Name,
-		"identifier":   input.Identifier,
-		"description":  input.Description,
-		"status":       string(input.Status),
-		"category":     input.Category,
-		"templateID":   input.TemplateID,
-		"svgPath":      input.SVGPath,
-		"previewURL":   input.PreviewURL,
-		"previewAlt":   input.PreviewAlt,
-		"fontFamily":   input.FontFamily,
-		"fontWeights":  strings.Join(input.FontWeights, ", "),
-		"license":      input.License,
-		"materialSKU":  input.MaterialSKU,
-		"color":        input.Color,
-		"inventory":    strconv.Itoa(input.Inventory),
-		"productSKU":   input.ProductSKU,
-		"price":        strconv.FormatInt(input.PriceMinor, 10),
-		"currency":     input.Currency,
-		"leadTime":     strconv.Itoa(input.LeadTimeDays),
-		"photoURLs":    strings.Join(input.PhotoURLs, "\n"),
-		"primaryColor": input.PrimaryColor,
-		"ownerName":    input.OwnerName,
-		"ownerEmail":   input.OwnerEmail,
-		"tags":         strings.Join(input.Tags, ", "),
+		"id":              input.ID,
+		"kind":            string(input.Kind),
+		"version":         input.Version,
+		"name":            input.Name,
+		"identifier":      input.Identifier,
+		"description":     input.Description,
+		"status":          string(input.Status),
+		"category":        input.Category,
+		"templateID":      input.TemplateID,
+		"svgPath":         input.SVGPath,
+		"svgAssetID":      input.SVGAssetID,
+		"svgFileName":     input.SVGFileName,
+		"previewURL":      input.PreviewURL,
+		"previewAssetID":  input.PreviewAssetID,
+		"previewFileName": input.PreviewFileName,
+		"previewAlt":      input.PreviewAlt,
+		"fontFamily":      input.FontFamily,
+		"fontWeights":     strings.Join(input.FontWeights, ", "),
+		"license":         input.License,
+		"materialSKU":     input.MaterialSKU,
+		"color":           input.Color,
+		"inventory":       strconv.Itoa(input.Inventory),
+		"productSKU":      input.ProductSKU,
+		"price":           strconv.FormatInt(input.PriceMinor, 10),
+		"currency":        input.Currency,
+		"leadTime":        strconv.Itoa(input.LeadTimeDays),
+		"photoURLs":       strings.Join(input.PhotoURLs, "\n"),
+		"primaryColor":    input.PrimaryColor,
+		"ownerName":       input.OwnerName,
+		"ownerEmail":      input.OwnerEmail,
+		"tags":            strings.Join(input.Tags, ", "),
 	}
 	for key, value := range values {
 		values[key] = cleanPropertyValue(key, value)

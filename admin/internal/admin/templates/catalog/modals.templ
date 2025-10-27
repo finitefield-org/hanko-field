@@ -1,7 +1,10 @@
 package catalog
 
 import (
-	"strings"
+    "fmt"
+    "path"
+    "strconv"
+    "strings"
 
 	templpkg "github.com/a-h/templ"
 
@@ -123,6 +126,8 @@ templ catalogInputControl(field ModalFieldData) {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
+	case "asset":
+		@catalogAssetUpload(field)
 	default:
 		<input
 			name={ field.Name }
@@ -139,6 +144,68 @@ templ catalogInputControl(field ModalFieldData) {
 			}
 		/>
 	}
+}
+
+templ catalogAssetUpload(field ModalFieldData) {
+	{{ asset := field.Asset }}
+	if asset == nil {
+		<div class="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">アップロード設定が見つかりません。</div>
+		return
+	}
+	{{ hasAsset := assetHasValue(asset) }}
+	<div
+		class="space-y-3"
+		data-asset-upload
+		data-has-value={ boolString(hasAsset) }
+		data-label-empty={ asset.EmptyLabel }
+		data-label-upload={ asset.UploadLabel }
+		data-label-replace={ asset.ReplaceLabel }
+		data-label-remove={ asset.RemoveLabel }
+		data-upload-endpoint={ helpers.BasePath(ctx) + "/assets/signed-upload" }
+		if asset.Purpose != "" {
+			data-purpose={ asset.Purpose }
+		}
+		if asset.Kind != "" {
+			data-kind={ asset.Kind }
+		}
+		if asset.Accept != "" {
+			data-accept={ asset.Accept }
+		}
+		if asset.MaxSizeBytes > 0 {
+			data-max-size={ strconv.FormatInt(asset.MaxSizeBytes, 10) }
+		}
+		data-preview-enabled={ boolString(asset.DisplayPreview) }
+	>
+		<input type="hidden" name={ asset.AssetIDName } value={ asset.AssetID } data-asset-upload-field="id" />
+		<input type="hidden" name={ field.Name } value={ asset.URLFieldValue } data-asset-upload-field="url" />
+		if asset.FileNameName != "" {
+			<input type="hidden" name={ asset.FileNameName } value={ asset.FileName } data-asset-upload-field="name" />
+		}
+		<div class="flex items-start gap-4">
+			<div class={ assetPreviewClass(asset.DisplayPreview, hasAsset) } data-asset-upload-preview>
+				if asset.DisplayPreview {
+					if hasAsset && asset.AssetURL != "" {
+						<img src={ asset.AssetURL } alt={ coalesceLabel(field.Label, "プレビュー") } class="h-full w-full rounded-lg object-cover" />
+					} else {
+						<div class="flex h-full w-full items-center justify-center text-[11px] text-slate-400">{ asset.EmptyLabel }</div>
+					}
+				} else {
+					<div class="flex h-full w-full items-center justify-center text-[11px] text-slate-500" data-asset-upload-placeholder>{ assetFileLabel(asset, hasAsset) }</div>
+				}
+			</div>
+			<div class="flex flex-1 flex-col gap-2">
+				<div class="flex flex-wrap items-center gap-2">
+					<button type="button" class={ helpers.ButtonClass("secondary", "sm", false, false) } data-asset-upload-action="select">{ assetTriggerLabel(asset, hasAsset) }</button>
+					<button type="button" class={ helpers.ButtonClass("ghost", "sm", false, false) } data-asset-upload-action="remove" hidden?={ !hasAsset }>{ asset.RemoveLabel }</button>
+				</div>
+				<input type="file" class="hidden" accept={ asset.Accept } data-asset-upload-input />
+				<p class="text-xs text-slate-500" data-asset-upload-filename>{ assetFileLabel(asset, hasAsset) }</p>
+				if asset.MaxSizeBytes > 0 {
+					<p class="text-[11px] text-slate-400">最大 { formatFileSize(asset.MaxSizeBytes) }</p>
+				}
+			</div>
+		</div>
+	</div>
 }
 
 templ DeleteModal(data DeleteModalData) {
@@ -203,6 +270,96 @@ func modalMethodAttrs(method string, action string) templpkg.Attributes {
 	default:
 		return templpkg.Attributes{"hx-post": action}
 	}
+}
+
+func assetHasValue(asset *ModalAssetField) bool {
+	if asset == nil {
+		return false
+	}
+	if strings.TrimSpace(asset.AssetID) != "" {
+		return true
+	}
+	if strings.TrimSpace(asset.URLFieldValue) != "" {
+		return true
+	}
+	if strings.TrimSpace(asset.AssetURL) != "" {
+		return true
+	}
+	return false
+}
+
+func boolString(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
+}
+
+func assetPreviewClass(displayPreview bool, hasAsset bool) string {
+	classes := []string{"relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-400"}
+	if !hasAsset {
+		classes = append(classes, "border-dashed")
+	} else {
+		classes = append(classes, "border-solid")
+	}
+	if displayPreview {
+		classes = append(classes, "bg-white")
+	}
+	return helpers.ClassList(classes...)
+}
+
+func coalesceLabel(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func assetFileLabel(asset *ModalAssetField, hasAsset bool) string {
+	if asset == nil {
+		return ""
+	}
+	if hasAsset {
+		if name := strings.TrimSpace(asset.FileName); name != "" {
+			return name
+		}
+		if url := strings.TrimSpace(asset.AssetURL); url != "" {
+			return path.Base(url)
+		}
+		if id := strings.TrimSpace(asset.AssetID); id != "" {
+			return id
+		}
+	}
+	return coalesceLabel(asset.EmptyLabel, "未設定")
+}
+
+func assetTriggerLabel(asset *ModalAssetField, hasAsset bool) string {
+	if asset == nil {
+		return "アップロード"
+	}
+	if hasAsset {
+		return coalesceLabel(asset.ReplaceLabel, asset.UploadLabel, "ファイルを変更")
+	}
+	return coalesceLabel(asset.UploadLabel, "ファイルをアップロード")
+}
+
+func formatFileSize(size int64) string {
+	if size <= 0 {
+		return ""
+	}
+	const (
+		kilobyte = 1024
+		megabyte = 1024 * kilobyte
+	)
+	if size >= megabyte {
+		return fmt.Sprintf("%.1f MB", float64(size)/float64(megabyte))
+	}
+	if size >= kilobyte {
+		return fmt.Sprintf("%.0f KB", float64(size)/float64(kilobyte))
+	}
+	return fmt.Sprintf("%d B", size)
 }
 
 func fieldContainerClass(full bool) string {

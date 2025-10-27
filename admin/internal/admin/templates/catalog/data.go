@@ -316,6 +316,27 @@ type ModalFieldData struct {
 	Suffix       string
 	Autocomplete string
 	Error        string
+	Asset        *ModalAssetField
+}
+
+// ModalAssetField configures the asset upload widget rendered inside a modal.
+type ModalAssetField struct {
+	Purpose        string
+	Kind           string
+	Accept         string
+	MaxSizeBytes   int64
+	AssetIDName    string
+	AssetID        string
+	AssetURL       string
+	FileName       string
+	FileNameName   string
+	URLFieldName   string
+	URLFieldValue  string
+	DisplayPreview bool
+	UploadLabel    string
+	ReplaceLabel   string
+	RemoveLabel    string
+	EmptyLabel     string
 }
 
 // ModalOptionData is a selectable option for dropdown fields.

@@ -512,8 +512,14 @@ func parseCatalogForm(kind admincatalog.Kind, form url.Values, requireVersion bo
 	input.Category = read("category")
 	input.Tags = catalogSplitCSV(read("tags"))
 	input.PreviewURL = read("previewURL")
+	input.PreviewAssetID = read("previewAssetID")
+	input.PreviewFileName = read("previewFileName")
 	if input.PreviewURL == "" {
-		errs["previewURL"] = "必須です。"
+		if input.PreviewAssetID != "" {
+			input.PreviewURL = input.PreviewAssetID
+		} else {
+			errs["previewURL"] = "必須です。"
+		}
 	}
 	input.PrimaryColor = read("primaryColor")
 	input.OwnerName = read("ownerName")
@@ -526,6 +532,11 @@ func parseCatalogForm(kind admincatalog.Kind, form url.Values, requireVersion bo
 	}
 	input.TemplateID = read("templateID")
 	input.SVGPath = read("svgPath")
+	input.SVGAssetID = read("svgAssetID")
+	input.SVGFileName = read("svgFileName")
+	if input.SVGPath == "" && input.SVGAssetID != "" {
+		input.SVGPath = input.SVGAssetID
+	}
 	input.FontFamily = read("fontFamily")
 	input.FontWeights = catalogSplitCSV(read("fontWeights"))
 	input.License = read("license")

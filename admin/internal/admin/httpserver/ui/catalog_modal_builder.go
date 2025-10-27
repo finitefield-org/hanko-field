@@ -32,11 +32,27 @@ type modalFieldSpec struct {
 	Suffix       string
 	Autocomplete string
 	Options      []modalOptionSpec
+	Asset        *assetFieldSpec
 }
 
 type modalOptionSpec struct {
 	Value string
 	Label string
+}
+
+type assetFieldSpec struct {
+	Purpose        string
+	Kind           string
+	Accept         string
+	MaxSize        int64
+	AssetIDField   string
+	URLField       string
+	FileNameField  string
+	DisplayPreview bool
+	UploadLabel    string
+	ReplaceLabel   string
+	RemoveLabel    string
+	EmptyLabel     string
 }
 
 func buildCatalogUpsertModal(kind admincatalog.Kind, mode catalogModalMode, values map[string]string, fieldErrors map[string]string, generalErr string, actionURL, method, csrf string) catalogtpl.ModalFormData {
@@ -108,30 +124,34 @@ func buildCatalogDeleteModal(kind admincatalog.Kind, detail admincatalog.ItemDet
 
 func defaultCatalogValues(kind admincatalog.Kind) map[string]string {
 	values := map[string]string{
-		"name":         "",
-		"identifier":   "",
-		"description":  "",
-		"status":       string(admincatalog.StatusDraft),
-		"category":     defaultCategoryForKind(kind),
-		"tags":         "",
-		"previewURL":   samplePreviewForKind(kind),
-		"primaryColor": "#0F172A",
-		"ownerName":    "Akari Sato",
-		"ownerEmail":   "akari.sato@example.com",
-		"templateID":   "TMP-NEW",
-		"svgPath":      "/designs/templates/sample.svg",
-		"fontFamily":   "Hanko Sans",
-		"fontWeights":  "400,700",
-		"license":      "商用",
-		"materialSKU":  "MAT-NEW",
-		"color":        "ナチュラル",
-		"inventory":    "500",
-		"productSKU":   "PRD-NEW",
-		"price":        "1980",
-		"currency":     "JPY",
-		"leadTime":     "5",
-		"photoURLs":    "https://cdn.example.com/catalog/preview.png\nhttps://cdn.example.com/catalog/preview-alt.png",
-		"version":      "v1",
+		"name":            "",
+		"identifier":      "",
+		"description":     "",
+		"status":          string(admincatalog.StatusDraft),
+		"category":        defaultCategoryForKind(kind),
+		"tags":            "",
+		"previewURL":      samplePreviewForKind(kind),
+		"previewAssetID":  "",
+		"previewFileName": "",
+		"primaryColor":    "#0F172A",
+		"ownerName":       "Akari Sato",
+		"ownerEmail":      "akari.sato@example.com",
+		"templateID":      "TMP-NEW",
+		"svgPath":         "/designs/templates/sample.svg",
+		"svgAssetID":      "",
+		"svgFileName":     "",
+		"fontFamily":      "Hanko Sans",
+		"fontWeights":     "400,700",
+		"license":         "商用",
+		"materialSKU":     "MAT-NEW",
+		"color":           "ナチュラル",
+		"inventory":       "500",
+		"productSKU":      "PRD-NEW",
+		"price":           "1980",
+		"currency":        "JPY",
+		"leadTime":        "5",
+		"photoURLs":       "https://cdn.example.com/catalog/preview.png\nhttps://cdn.example.com/catalog/preview-alt.png",
+		"version":         "v1",
 	}
 	switch kind {
 	case admincatalog.KindFonts:
@@ -186,6 +206,8 @@ func catalogValuesFromDetail(kind admincatalog.Kind, detail admincatalog.ItemDet
 	assign("category", detail.Item.Category)
 	assign("tags", strings.Join(detail.Tags, ", "))
 	assign("previewURL", detail.PreviewURL)
+	assign("previewAssetID", detail.PreviewAssetID)
+	assign("previewFileName", detail.PreviewFileName)
 	assign("primaryColor", detail.Item.PrimaryColor)
 	assign("ownerName", detail.Owner.Name)
 	assign("ownerEmail", detail.Owner.Email)
@@ -193,6 +215,9 @@ func catalogValuesFromDetail(kind admincatalog.Kind, detail admincatalog.ItemDet
 	assign("templateID", detail.Item.Identifier)
 	assign("materialSKU", detail.Item.Identifier)
 	assign("productSKU", detail.Item.Identifier)
+	assign("svgPath", detail.SVGPath)
+	assign("svgAssetID", detail.SVGAssetID)
+	assign("svgFileName", detail.SVGFileName)
 
 	if len(detail.Properties) > 0 {
 		for key, value := range detail.Properties {
@@ -339,6 +364,28 @@ func buildModalSections(kind admincatalog.Kind, values map[string]string, fieldE
 			}
 			field.Options = options
 		}
+		if spec.Asset != nil {
+			assetIDField := firstNonEmpty(spec.Asset.AssetIDField, spec.Name)
+			assetID := strings.TrimSpace(values[assetIDField])
+			field.Asset = &catalogtpl.ModalAssetField{
+				Purpose:        spec.Asset.Purpose,
+				Kind:           spec.Asset.Kind,
+				Accept:         spec.Asset.Accept,
+				MaxSizeBytes:   spec.Asset.MaxSize,
+				AssetIDName:    assetIDField,
+				AssetID:        assetID,
+				AssetURL:       strings.TrimSpace(values[spec.Asset.URLField]),
+				FileName:       strings.TrimSpace(values[spec.Asset.FileNameField]),
+				FileNameName:   spec.Asset.FileNameField,
+				URLFieldName:   spec.Asset.URLField,
+				URLFieldValue:  strings.TrimSpace(values[spec.Asset.URLField]),
+				DisplayPreview: spec.Asset.DisplayPreview,
+				UploadLabel:    firstNonEmpty(spec.Asset.UploadLabel, "ファイルを選択"),
+				ReplaceLabel:   firstNonEmpty(spec.Asset.ReplaceLabel, "別のファイルを選択"),
+				RemoveLabel:    firstNonEmpty(spec.Asset.RemoveLabel, "削除"),
+				EmptyLabel:     firstNonEmpty(spec.Asset.EmptyLabel, "未設定"),
+			}
+		}
 		sections[section] = append(sections[section], field)
 	}
 	result := make([]catalogtpl.ModalSectionData, 0, len(order))
@@ -351,6 +398,15 @@ func buildModalSections(kind admincatalog.Kind, values map[string]string, fieldE
 	return result
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
 func catalogFieldSpecs(kind admincatalog.Kind) []modalFieldSpec {
 	base := []modalFieldSpec{
 		{Name: "name", Label: "名称", Type: "text", Section: "基本情報", Placeholder: "例: プレミアム年賀状", Required: true, FullWidth: true},
@@ -359,7 +415,29 @@ func catalogFieldSpecs(kind admincatalog.Kind) []modalFieldSpec {
 		{Name: "category", Label: "カテゴリ", Type: "select", Section: "基本情報", Options: categoryOptions(kind)},
 		{Name: "tags", Label: "タグ", Type: "text", Section: "基本情報", Hint: "カンマ区切りで指定", FullWidth: true},
 		{Name: "description", Label: "説明", Type: "textarea", Section: "基本情報", Rows: 3, Required: true, FullWidth: true},
-		{Name: "previewURL", Label: "プレビューURL", Type: "url", Section: "基本情報", Required: true, FullWidth: true},
+		{
+			Name:      "previewURL",
+			Label:     "プレビュー画像",
+			Type:      "asset",
+			Section:   "基本情報",
+			Required:  true,
+			FullWidth: true,
+			Hint:      "PNG/JPG/WebP 最大5MB",
+			Asset: &assetFieldSpec{
+				Purpose:        "preview",
+				Kind:           "png",
+				Accept:         "image/png,image/jpeg,image/webp",
+				MaxSize:        5 * 1024 * 1024,
+				AssetIDField:   "previewAssetID",
+				URLField:       "previewURL",
+				FileNameField:  "previewFileName",
+				DisplayPreview: true,
+				UploadLabel:    "画像をアップロード",
+				ReplaceLabel:   "画像を変更",
+				RemoveLabel:    "画像を削除",
+				EmptyLabel:     "未設定",
+			},
+		},
 		{Name: "primaryColor", Label: "ブランドカラー", Type: "text", Section: "基本情報", Placeholder: "#0F172A"},
 		{Name: "ownerName", Label: "担当者", Type: "text", Section: "基本情報", Required: true},
 		{Name: "ownerEmail", Label: "担当者メール", Type: "email", Section: "基本情報", Placeholder: "ops@example.com"},
@@ -388,7 +466,29 @@ func catalogFieldSpecs(kind admincatalog.Kind) []modalFieldSpec {
 	default:
 		base = append(base,
 			modalFieldSpec{Name: "templateID", Label: "テンプレートID", Type: "text", Section: "テンプレート情報", Required: true},
-			modalFieldSpec{Name: "svgPath", Label: "SVGパス", Type: "text", Section: "テンプレート情報", Required: true, FullWidth: true},
+			modalFieldSpec{
+				Name:      "svgPath",
+				Label:     "SVG デザイン",
+				Type:      "asset",
+				Section:   "テンプレート情報",
+				Required:  true,
+				FullWidth: true,
+				Hint:      "SVG 最大2MB",
+				Asset: &assetFieldSpec{
+					Purpose:        "design-master",
+					Kind:           "svg",
+					Accept:         "image/svg+xml",
+					MaxSize:        2 * 1024 * 1024,
+					AssetIDField:   "svgAssetID",
+					URLField:       "svgPath",
+					FileNameField:  "svgFileName",
+					DisplayPreview: false,
+					UploadLabel:    "SVGをアップロード",
+					ReplaceLabel:   "SVGを変更",
+					RemoveLabel:    "SVGを削除",
+					EmptyLabel:     "未設定",
+				},
+			},
 		)
 	}
 	return base
@@ -427,6 +527,8 @@ func resetPlaceholderValues(values map[string]string) {
 	for _, key := range []string{
 		"templateID",
 		"svgPath",
+		"svgAssetID",
+		"svgFileName",
 		"fontFamily",
 		"fontWeights",
 		"license",
@@ -437,6 +539,8 @@ func resetPlaceholderValues(values map[string]string) {
 		"price",
 		"leadTime",
 		"photoURLs",
+		"previewAssetID",
+		"previewFileName",
 	} {
 		values[key] = ""
 	}
