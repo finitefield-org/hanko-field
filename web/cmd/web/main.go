@@ -887,6 +887,8 @@ func main() {
 	r.Get("/guides/{slug}", GuideDetailHandler)
 	r.Get("/content/{slug}", ContentPageHandler)
 	r.Get("/legal/{slug}", LegalPageHandler)
+	r.Get("/support", SupportHandler)
+	r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
 	r.Get("/status", StatusHandler)
 	r.Get("/cart", CartHandler)
 	r.Get("/cart/table", CartTableFrag)

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -261,6 +263,122 @@ func TestHTMXPostRequiresCSRF(t *testing.T) {
 	}
 	if strings.TrimSpace(rec3.Body.String()) != "ok" {
 		t.Fatalf("expected body ok, got %q", rec3.Body.String())
+	}
+}
+
+func TestSupportPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/support", SupportHandler)
+		r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/support", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="support-form"`) {
+		t.Fatalf("expected support form markup in body; body=%s", body)
+	}
+	if !strings.Contains(body, "Contact support") {
+		t.Fatalf("expected localized header in body; body=%s", body)
+	}
+}
+
+func TestSupportFormValidationAndSuccess(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/support", SupportHandler)
+		r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
+	})
+
+	// Bootstrap session + CSRF token
+	getReq := httptest.NewRequest(http.MethodGet, "/support", nil)
+	getReq.Header.Set("Accept-Language", "en")
+	getRec := httptest.NewRecorder()
+	srv.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("GET /support expected 200, got %d; body=%s", getRec.Code, getRec.Body.String())
+	}
+	var csrfCookie, sessCookie string
+	for _, c := range getRec.Result().Cookies() {
+		switch c.Name {
+		case "csrf_token":
+			csrfCookie = c.Value
+		case "HANKO_WEB_SESSION":
+			sessCookie = c.Value
+		}
+	}
+	if csrfCookie == "" || sessCookie == "" {
+		t.Fatalf("expected csrf_token and session cookies from GET /support; cookies=%v", getRec.Result().Cookies())
+	}
+
+	// Invalid submission (missing required fields) should 422 with error copy
+	var invalidBody bytes.Buffer
+	invalidWriter := multipart.NewWriter(&invalidBody)
+	if err := invalidWriter.WriteField("name", "Test User"); err != nil {
+		t.Fatalf("write field: %v", err)
+	}
+	if err := invalidWriter.WriteField("email", ""); err != nil {
+		t.Fatalf("write field: %v", err)
+	}
+	if err := invalidWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	invalidReq := httptest.NewRequest(http.MethodPost, "/support", &invalidBody)
+	invalidReq.Header.Set("Content-Type", invalidWriter.FormDataContentType())
+	invalidReq.Header.Set("HX-Request", "true")
+	invalidReq.Header.Set("X-CSRF-Token", csrfCookie)
+	invalidReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	invalidReq.Header.Set("Accept-Language", "en")
+	invalidRec := httptest.NewRecorder()
+	srv.ServeHTTP(invalidRec, invalidReq)
+	if invalidRec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for invalid support submission, got %d; body=%s", invalidRec.Code, invalidRec.Body.String())
+	}
+	invalidBodyStr := invalidRec.Body.String()
+	if !strings.Contains(invalidBodyStr, "Please review the highlighted fields.") {
+		t.Fatalf("expected validation alert in response; body=%s", invalidBodyStr)
+	}
+
+	// Successful submission should return 202 with ticket acknowledgement
+	var okBody bytes.Buffer
+	okWriter := multipart.NewWriter(&okBody)
+	fields := map[string]string{
+		"name":     "Support Tester",
+		"email":    "support.tester@example.com",
+		"company":  "Acme Inc.",
+		"order":    "ORD-2048",
+		"topic":    "orders",
+		"priority": "normal",
+		"message":  "We need help adjusting the engraving timeline before shipment.",
+	}
+	for k, v := range fields {
+		if err := okWriter.WriteField(k, v); err != nil {
+			t.Fatalf("write field %s: %v", k, err)
+		}
+	}
+	if err := okWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	okReq := httptest.NewRequest(http.MethodPost, "/support", &okBody)
+	okReq.Header.Set("Content-Type", okWriter.FormDataContentType())
+	okReq.Header.Set("HX-Request", "true")
+	okReq.Header.Set("X-CSRF-Token", csrfCookie)
+	okReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	okReq.Header.Set("Accept-Language", "en")
+	okRec := httptest.NewRecorder()
+	srv.ServeHTTP(okRec, okReq)
+	if okRec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202 for valid support submission, got %d; body=%s", okRec.Code, okRec.Body.String())
+	}
+	bodyStr := okRec.Body.String()
+	if !strings.Contains(bodyStr, "Ticket") {
+		t.Fatalf("expected ticket acknowledgement in body; body=%s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, "SUP-") {
+		t.Fatalf("expected generated ticket id in response; body=%s", bodyStr)
 	}
 }
 

@@ -1,0 +1,297 @@
+{{ define "content" }}
+{{ $view := $.Support }}
+<section class="py-12">
+  <div class="mx-auto w-full max-w-6xl space-y-10 px-4">
+    <header class="space-y-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">{{ $view.Header.Eyebrow }}</p>
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div class="flex items-start gap-4">
+          {{ if $view.Header.Icon }}
+            <span class="inline-flex h-12 w-12 flex-none items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+              {{ template "icon" (dict "Name" $view.Header.Icon "Class" "h-6 w-6") }}
+            </span>
+          {{ end }}
+          <div class="space-y-2">
+            <h1 class="text-3xl font-semibold text-gray-900 md:text-4xl">{{ $view.Header.Title }}</h1>
+            {{ if $view.Header.Summary }}
+              <p class="max-w-2xl text-base text-gray-600 md:text-lg">{{ $view.Header.Summary }}</p>
+            {{ end }}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
+      <div class="space-y-8">
+        <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <form id="support-form"
+                class="space-y-6"
+                hx-post="/support"
+                hx-target="body"
+                hx-select="body"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+                enctype="multipart/form-data"
+                method="post">
+            {{ if $view.Form.Alert }}
+              {{ template "c_inline_alert" (dict "Tone" $view.Form.Alert.Tone "Title" $view.Form.Alert.Title "Body" $view.Form.Alert.Body) }}
+            {{ end }}
+
+            {{ if $view.Form.Ticket }}
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <p class="font-semibold">{{ tlang $.Lang "support.form.ticket_id" }} <span class="ml-1 font-mono text-base">{{ $view.Form.Ticket.ID }}</span></p>
+                {{ if $view.Form.Ticket.Created }}
+                  <p class="mt-1">{{ tlang $.Lang "support.form.ticket_created" }} <time datetime="{{ $view.Form.Ticket.CreatedISO }}">{{ $view.Form.Ticket.Created }}</time></p>
+                {{ end }}
+                {{ if $view.Form.Ticket.FollowUp }}
+                  <p class="mt-2 leading-snug">{{ $view.Form.Ticket.FollowUp }}</p>
+                {{ end }}
+              </div>
+            {{ end }}
+
+            <div class="grid gap-4 md:grid-cols-2">
+              {{ template "c_input" (dict
+                "Name" "name"
+                "Label" (tlang $.Lang "support.form.name")
+                "Value" (index $view.Form.Values "name")
+                "Required" true
+                "Invalid" (index $view.Form.Errors "name")
+                "Error" (index $view.Form.Errors "name")
+              ) }}
+              {{ template "c_input" (dict
+                "Name" "email"
+                "Label" (tlang $.Lang "support.form.email")
+                "Type" "email"
+                "Value" (index $view.Form.Values "email")
+                "Required" true
+                "Invalid" (index $view.Form.Errors "email")
+                "Error" (index $view.Form.Errors "email")
+              ) }}
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              {{ template "c_input" (dict
+                "Name" "company"
+                "Label" (tlang $.Lang "support.form.company")
+                "Value" (index $view.Form.Values "company")
+                "Help" (tlang $.Lang "support.form.company_help")
+                "Invalid" (index $view.Form.Errors "company")
+                "Error" (index $view.Form.Errors "company")
+              ) }}
+              {{ template "c_input" (dict
+                "Name" "order"
+                "Label" (tlang $.Lang "support.form.order")
+                "Value" (index $view.Form.Values "order")
+                "Placeholder" (tlang $.Lang "support.form.order_placeholder")
+                "Help" (tlang $.Lang "support.form.order_help")
+                "Invalid" (index $view.Form.Errors "order")
+                "Error" (index $view.Form.Errors "order")
+              ) }}
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              {{ $topicErr := index $view.Form.Errors "topic" }}
+              <div>
+                <label for="support-topic" class="block text-sm font-medium text-gray-700">{{ tlang $.Lang "support.form.topic" }}</label>
+                <select id="support-topic"
+                        name="topic"
+                        class="mt-1 block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 {{ if $topicErr }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}">
+                  {{ range $opt := $view.Form.Topics }}
+                    <option value="{{ $opt.Value }}" {{ if $opt.Selected }}selected{{ end }}>{{ $opt.OptionLabel }}</option>
+                  {{ end }}
+                </select>
+                {{ if $topicErr }}<p class="mt-1 text-xs text-red-600">{{ $topicErr }}</p>{{ else }}<p class="mt-1 text-xs text-gray-500">{{ tlang $.Lang "support.form.topic_help" }}</p>{{ end }}
+              </div>
+
+              {{ $priorityErr := index $view.Form.Errors "priority" }}
+              <div>
+                <label for="support-priority" class="block text-sm font-medium text-gray-700">{{ tlang $.Lang "support.form.priority" }}</label>
+                <select id="support-priority"
+                        name="priority"
+                        class="mt-1 block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 {{ if $priorityErr }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}">
+                  {{ range $opt := $view.Form.Priorities }}
+                    <option value="{{ $opt.Value }}" {{ if $opt.Selected }}selected{{ end }}>{{ $opt.OptionLabel }}</option>
+                  {{ end }}
+                </select>
+                {{ if $priorityErr }}<p class="mt-1 text-xs text-red-600">{{ $priorityErr }}</p>{{ else }}<p class="mt-1 text-xs text-gray-500">{{ tlang $.Lang "support.form.priority_help" }}</p>{{ end }}
+              </div>
+            </div>
+
+            {{ template "c_textarea" (dict
+              "Name" "message"
+              "Label" (tlang $.Lang "support.form.message")
+              "Rows" 6
+              "Value" (index $view.Form.Values "message")
+              "Placeholder" (tlang $.Lang "support.form.message_placeholder")
+              "Required" true
+              "Help" (tlang $.Lang "support.form.message_help")
+              "Invalid" (index $view.Form.Errors "message")
+              "Error" (index $view.Form.Errors "message")
+            ) }}
+
+            {{ $attachmentErr := index $view.Form.Errors "attachments" }}
+            <div>
+              <label for="support-attachments" class="block text-sm font-medium text-gray-700">{{ tlang $.Lang "support.form.attachments" }}</label>
+              <input id="support-attachments" name="attachments" type="file" class="sr-only" multiple>
+              <label for="support-attachments" class="mt-1 flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed {{ if $attachmentErr }}border-red-300 bg-red-50{{ else }}border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50{{ end }} px-4 py-8 text-center transition">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-indigo-500 shadow-sm">
+                  {{ template "icon" (dict "Name" "arrow-up-tray" "Class" "h-6 w-6") }}
+                </span>
+                <div class="space-y-1">
+                  <p class="text-sm font-medium text-gray-900">{{ tlang $.Lang "support.form.attachments_label" }}</p>
+                  <p class="text-xs text-gray-500">{{ $view.Form.AttachmentSummary }}</p>
+                  <p class="text-xs text-gray-400">{{ $view.Form.AttachmentHint }}</p>
+                </div>
+              </label>
+              {{ if $attachmentErr }}<p class="mt-2 text-xs text-red-600">{{ $attachmentErr }}</p>{{ end }}
+              {{ if $view.Form.AttachmentNames }}
+                <ul class="mt-2 space-y-1 text-xs text-gray-600" id="support-attachments-list">
+                  {{ range $name := $view.Form.AttachmentNames }}<li>• {{ $name }}</li>{{ end }}
+                </ul>
+              {{ else }}
+                <ul class="mt-2 hidden space-y-1 text-xs text-gray-600" id="support-attachments-list"></ul>
+              {{ end }}
+            </div>
+
+            <div class="flex flex-col gap-3 border-t border-gray-100 pt-4 md:flex-row md:items-center md:justify-between">
+              <p class="text-xs text-gray-500">{{ tlang $.Lang "support.form.disclaimer" }}</p>
+              <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 text-base font-semibold text-white hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">{{ $view.Form.SubmitLabel }}</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">{{ tlang $.Lang "support.faq.title" }}</h2>
+              <p class="text-sm text-gray-500">{{ tlang $.Lang "support.faq.subtitle" }}</p>
+            </div>
+          </div>
+          <div class="space-y-3">
+            {{ range $item := $view.FAQ }}
+              <details class="group rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                <summary class="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-gray-800">
+                  <span>{{ $item.Question }}</span>
+                  <span class="flex-none text-gray-400 group-open:hidden">
+                    {{ template "icon" (dict "Name" "plus-small" "Class" "h-5 w-5") }}
+                  </span>
+                  <span class="flex-none text-gray-400 hidden group-open:inline-flex">
+                    {{ template "icon" (dict "Name" "minus" "Class" "h-5 w-5") }}
+                  </span>
+                </summary>
+                <div class="mt-3 space-y-3 text-sm text-gray-600">
+                  <p>{{ $item.Answer }}</p>
+                  {{ if $item.Href }}
+                    <a href="{{ $item.Href }}" class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+                      {{ tlang $.Lang "support.faq.link" }}
+                      {{ template "icon" (dict "Name" "chevron-right" "Class" "h-4 w-4") }}
+                    </a>
+                  {{ end }}
+                </div>
+              </details>
+            {{ end }}
+          </div>
+        </section>
+      </div>
+
+      <aside class="space-y-6">
+        <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 class="text-base font-semibold text-gray-900">{{ tlang $.Lang "support.channels.title" }}</h2>
+          <p class="text-sm text-gray-500">{{ tlang $.Lang "support.channels.subtitle" }}</p>
+          <div class="space-y-4">
+            {{ range $card := $view.Channels }}
+              <article class="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
+                <div class="flex items-start gap-3">
+                  <span class="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white text-indigo-500 shadow">
+                    {{ template "icon" (dict "Name" $card.Icon "Class" "h-5 w-5") }}
+                  </span>
+                  <div class="space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900">{{ $card.Title }}</h3>
+                    <p class="text-xs text-gray-500">{{ $card.Meta }}</p>
+                    <p class="text-sm text-gray-600">{{ $card.Description }}</p>
+                    <a href="{{ $card.CTA.Href }}" class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-500" {{ if $card.CTA.External }}target="_blank" rel="noopener noreferrer"{{ end }}>
+                      {{ $card.CTA.Label }}
+                      {{ template "icon" (dict "Name" "chevron-right" "Class" "h-4 w-4") }}
+                    </a>
+                  </div>
+                </div>
+              </article>
+            {{ end }}
+          </div>
+        </section>
+
+        <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">{{ $view.Timeline.Title }}</h2>
+            <p class="text-sm text-gray-500">{{ $view.Timeline.Subtitle }}</p>
+          </div>
+          <ol class="space-y-3">
+            {{ range $entry := $view.Timeline.Entries }}
+              {{ $status := $entry.Status }}
+              {{ $baseClasses := "rounded-xl border p-4 text-sm" }}
+              {{ if eq $status "complete" }}
+                {{ $baseClasses = printf "%s %s" $baseClasses "border-emerald-200 bg-emerald-50 text-emerald-900" }}
+              {{ else if eq $status "current" }}
+                {{ $baseClasses = printf "%s %s" $baseClasses "border-indigo-200 bg-indigo-50 text-indigo-900" }}
+              {{ else }}
+                {{ $baseClasses = printf "%s %s" $baseClasses "border-gray-200 bg-gray-50 text-gray-700" }}
+              {{ end }}
+              <li class="{{ $baseClasses }}">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="font-semibold">{{ $entry.Title }}</p>
+                    <p class="mt-1 text-xs">{{ $entry.Description }}</p>
+                  </div>
+                  {{ if $entry.Duration }}
+                    <span class="inline-flex flex-none items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow">{{ $entry.Duration }}</span>
+                  {{ end }}
+                </div>
+                {{ if $entry.StatusLabel }}
+                  <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $entry.StatusLabel }}</p>
+                {{ end }}
+              </li>
+            {{ end }}
+          </ol>
+        </section>
+
+        <section class="rounded-2xl border border-indigo-200 bg-indigo-600 p-6 text-white shadow-md">
+          <div class="flex items-start gap-3">
+            <span class="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-indigo-500">
+              {{ template "icon" (dict "Name" $view.Callout.Icon "Class" "h-5 w-5 text-white") }}
+            </span>
+            <div class="space-y-2">
+              <h2 class="text-lg font-semibold">{{ $view.Callout.Title }}</h2>
+              <p class="text-sm text-indigo-100">{{ $view.Callout.Body }}</p>
+              <a href="{{ $view.Callout.CTA.Href }}" class="inline-flex items-center gap-1 text-sm font-semibold text-white underline decoration-2 decoration-white/60 hover:decoration-white" {{ if $view.Callout.CTA.External }}target="_blank" rel="noopener noreferrer"{{ end }}>
+                {{ $view.Callout.CTA.Label }}
+                {{ template "icon" (dict "Name" "chevron-right" "Class" "h-4 w-4") }}
+              </a>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var input = document.getElementById('support-attachments');
+  var list = document.getElementById('support-attachments-list');
+  if (!input || !list) { return; }
+  input.addEventListener('change', function(){
+    while (list.firstChild) { list.removeChild(list.firstChild); }
+    if (!input.files || !input.files.length) {
+      list.classList.add('hidden');
+      return;
+    }
+    for (var i = 0; i < input.files.length; i++) {
+      var li = document.createElement('li');
+      li.textContent = '• ' + input.files[i].name;
+      list.appendChild(li);
+    }
+    list.classList.remove('hidden');
+  });
+})();
+</script>
+{{ end }}

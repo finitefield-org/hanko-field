@@ -32,4 +32,5 @@ type PageData struct {
 	Checkout       any
 	Account        any
 	AccountOrder   any
+	Support        any
 }

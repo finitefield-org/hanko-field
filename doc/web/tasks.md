@@ -55,7 +55,7 @@
 - [x] [Build security/linked accounts page (`/account/security`) covering auth providers and 2FA prompts.](doc/web/tasks/040-build-security-linked-accounts-page-account-security-covering-auth-providers-and-2fa-promp.md)
 
 ## 7. Support & Legal
-- [ ] [Build support page (`/support`) with contact form, FAQ links, and response handling.](doc/web/tasks/041-build-support-page-support-with-contact-form-faq-links-and-response-handling.md)
+- [x] [Build support page (`/support`) with contact form, FAQ links, and response handling.](doc/web/tasks/041-build-support-page-support-with-contact-form-faq-links-and-response-handling.md)
 - [ ] [Implement legal content pages (`/legal/{slug}`) with markdown rendering, localization, and version tracking.](doc/web/tasks/042-implement-legal-content-pages-legal-slug-with-markdown-rendering-localization-and-version-.md)
 - [ ] [Build status page (`/status`) displaying system health and incident history.](doc/web/tasks/043-build-status-page-status-displaying-system-health-and-incident-history.md)
 
