@@ -60,6 +60,13 @@ class SplashController extends AsyncNotifier<SplashRouteState> {
 
   Future<VersionGateStatus> _evaluateVersionGate() async {
     final config = ref.read(firebaseRemoteConfigProvider);
+    try {
+      await config.fetchAndActivate();
+    } catch (error, stackTrace) {
+      // 強制アップデートチェックは確実に実行したいが、ネットワーク失敗時は
+      // 手元のキャッシュ値で続行し、例外はグローバルエラー処理に伝える。
+      Zone.current.handleUncaughtError(error, stackTrace);
+    }
     final current = ref.read(appVersionProvider);
     final minimum = AppVersion.parse(
       config.getString('minimum_supported_version'),
