@@ -12,6 +12,7 @@ import (
 
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
+	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	"finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
@@ -33,6 +34,7 @@ type Config struct {
 	Authenticator        custommw.Authenticator
 	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
+	ContentService       admincontent.Service
 	DashboardService     dashboard.Service
 	ProfileService       profile.Service
 	SearchService        search.Service
@@ -104,6 +106,7 @@ func New(cfg Config) *http.Server {
 	uiHandlers := ui.NewHandlers(ui.Dependencies{
 		AssetsService:        cfg.AssetsService,
 		CatalogService:       cfg.CatalogService,
+		ContentService:       cfg.ContentService,
 		DashboardService:     cfg.DashboardService,
 		ProfileService:       cfg.ProfileService,
 		SearchService:        cfg.SearchService,
