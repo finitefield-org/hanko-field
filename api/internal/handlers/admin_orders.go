@@ -216,6 +216,7 @@ const (
 var adminOrderWorkflowTransitions = map[services.OrderStatus]services.OrderStatus{
 	services.OrderStatus(domain.OrderStatusPaid):         services.OrderStatus(domain.OrderStatusInProduction),
 	services.OrderStatus(domain.OrderStatusInProduction): services.OrderStatus(domain.OrderStatusShipped),
+	services.OrderStatus(domain.OrderStatusReadyToShip):  services.OrderStatus(domain.OrderStatusShipped),
 	services.OrderStatus(domain.OrderStatusShipped):      services.OrderStatus(domain.OrderStatusDelivered),
 	services.OrderStatus(domain.OrderStatusDelivered):    services.OrderStatus(domain.OrderStatusCompleted),
 }

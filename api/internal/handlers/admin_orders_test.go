@@ -411,6 +411,47 @@ func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
 	}
 }
 
+func TestAdminOrderHandlers_UpdateOrderStatus_AllowsReadyToShipToShipped(t *testing.T) {
+	var capturedCmd services.OrderStatusTransitionCommand
+	service := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:     orderID,
+				Status: domain.OrderStatusReadyToShip,
+			}, nil
+		},
+		transitionFn: func(ctx context.Context, cmd services.OrderStatusTransitionCommand) (services.Order, error) {
+			capturedCmd = cmd
+			return services.Order{
+				ID:     cmd.OrderID,
+				Status: domain.OrderStatusShipped,
+			}, nil
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, service, nil)
+
+	body := `{"target_status":"shipped"}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord_ready:status", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_ready")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateOrderStatus(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if capturedCmd.TargetStatus != services.OrderStatus(domain.OrderStatusShipped) {
+		t.Fatalf("expected target shipped, got %s", capturedCmd.TargetStatus)
+	}
+	if capturedCmd.ExpectedStatus == nil || *capturedCmd.ExpectedStatus != services.OrderStatus(domain.OrderStatusReadyToShip) {
+		t.Fatalf("expected expected status ready_to_ship, got %#v", capturedCmd.ExpectedStatus)
+	}
+}
+
 func TestAdminOrderHandlers_UpdateOrderStatus_RejectsOutOfSequenceTransition(t *testing.T) {
 	service := &stubOrderService{
 		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
