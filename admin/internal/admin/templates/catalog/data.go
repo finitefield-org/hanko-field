@@ -40,6 +40,7 @@ type PageData struct {
 // QueryState mirrors query parameters from the HTTP request.
 type QueryState struct {
 	Status   []string
+	Category string
 	Owner    string
 	Tags     []string
 	Updated  string
@@ -47,6 +48,11 @@ type QueryState struct {
 	View     string
 	Selected string
 	RawQuery string
+	Page     int
+	PageSize int
+	Sort     string
+	SortKey  string
+	SortDir  string
 }
 
 // SummaryData renders KPI chips for the current selection.
@@ -60,10 +66,11 @@ type SummaryData struct {
 
 // FilterData hosts filter controls.
 type FilterData struct {
-	Statuses []StatusFilter
-	Owners   []SelectOption
-	Tags     []SelectOption
-	Updated  []SelectOption
+	Statuses   []StatusFilter
+	Categories []SelectOption
+	Owners     []SelectOption
+	Tags       []SelectOption
+	Updated    []SelectOption
 }
 
 // StatusFilter models the status chip group.
@@ -104,6 +111,7 @@ type ViewOption struct {
 type TableData struct {
 	FragmentPath string
 	RawQuery     string
+	FilterQuery  string
 	Rows         []TableRow
 	EmptyMessage string
 	KindLabel    string
@@ -112,6 +120,8 @@ type TableData struct {
 	Drawer       DrawerData
 	PagePath     string
 	View         ViewToggle
+	Pagination   TablePagination
+	Sort         SortState
 }
 
 // TableRow is a row in the catalog data table.
@@ -134,6 +144,11 @@ type TableRow struct {
 	Badge           string
 	BadgeTone       string
 	Selected        bool
+	Version         string
+	CategoryLabel   string
+	CategoryValue   string
+	EditURL         string
+	DeleteURL       string
 }
 
 // RowMetric highlights per-row stats.
@@ -147,12 +162,38 @@ type RowMetric struct {
 type CardsData struct {
 	FragmentPath string
 	RawQuery     string
+	FilterQuery  string
 	Cards        []CardView
 	EmptyMessage string
 	SelectedID   string
 	Drawer       DrawerData
 	PagePath     string
 	View         ViewToggle
+}
+
+// TablePagination exposes pagination metadata for catalog listings.
+type TablePagination struct {
+	Page     int
+	PageSize int
+	Total    int
+	TotalPtr *int
+	Next     *int
+	Prev     *int
+}
+
+// SortState configures sortable headers for the catalog table.
+type SortState struct {
+	Active        string
+	BasePath      string
+	FragmentPath  string
+	RawQuery      string
+	FragmentQuery string
+	Param         string
+	ResetPage     bool
+	PageParam     string
+	HxTarget      string
+	HxSwap        string
+	HxPushURL     bool
 }
 
 // CardView is a single card entry.
@@ -274,11 +315,20 @@ func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, re
 func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData, view ViewToggle) TableData {
 	rows := make([]TableRow, 0, len(result.Items))
 	for _, item := range result.Items {
-		rows = append(rows, toTableRow(item, result.SelectedID))
+		rows = append(rows, toTableRow(basePath, kind, item, result.SelectedID))
 	}
+	rawQuery := ensureQueryView(state.RawQuery, "table")
+	filterQuery := stripQueryParams(rawQuery, "page")
+	pagination := toTablePagination(result.Pagination)
+	sortValue := strings.TrimSpace(state.Sort)
+	if sortValue == "" {
+		sortValue = "-updated_at"
+	}
+	fragmentPath := joinBase(basePath, fmt.Sprintf("/catalog/%s/table", kind))
 	return TableData{
-		FragmentPath: joinBase(basePath, fmt.Sprintf("/catalog/%s/table", kind)),
-		RawQuery:     ensureQueryView(state.RawQuery, "table"),
+		FragmentPath: fragmentPath,
+		RawQuery:     rawQuery,
+		FilterQuery:  filterQuery,
 		Rows:         rows,
 		EmptyMessage: result.EmptyMessage,
 		KindLabel:    kind.Label(),
@@ -287,6 +337,20 @@ func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 		Drawer:       drawer,
 		PagePath:     pagePath,
 		View:         view,
+		Pagination:   pagination,
+		Sort: SortState{
+			Active:        sortValue,
+			BasePath:      pagePath,
+			FragmentPath:  fragmentPath,
+			RawQuery:      filterQuery,
+			FragmentQuery: rawQuery,
+			Param:         "sort",
+			ResetPage:     true,
+			PageParam:     "page",
+			HxTarget:      "#catalog-view",
+			HxSwap:        "outerHTML",
+			HxPushURL:     true,
+		},
 	}
 }
 
@@ -296,9 +360,11 @@ func CardsPayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 	for _, item := range result.Items {
 		cards = append(cards, toCardView(item, result.SelectedID))
 	}
+	rawQuery := ensureQueryView(state.RawQuery, "cards")
 	return CardsData{
 		FragmentPath: joinBase(basePath, fmt.Sprintf("/catalog/%s/cards", kind)),
-		RawQuery:     ensureQueryView(state.RawQuery, "cards"),
+		RawQuery:     rawQuery,
+		FilterQuery:  stripQueryParams(rawQuery, "page"),
 		Cards:        cards,
 		EmptyMessage: result.EmptyMessage,
 		SelectedID:   result.SelectedID,
@@ -368,7 +434,7 @@ func DrawerPayload(detail *admincatalog.ItemDetail) DrawerData {
 	}
 }
 
-func toTableRow(item admincatalog.Item, selected string) TableRow {
+func toTableRow(basePath string, kind admincatalog.Kind, item admincatalog.Item, selected string) TableRow {
 	metrics := make([]RowMetric, 0, len(item.Metrics))
 	for _, metric := range item.Metrics {
 		metrics = append(metrics, RowMetric{
@@ -377,6 +443,8 @@ func toTableRow(item admincatalog.Item, selected string) TableRow {
 			Icon:  metric.Icon,
 		})
 	}
+	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, item.ID))
+	deleteURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/delete", kind, item.ID))
 
 	return TableRow{
 		ID:              item.ID,
@@ -397,6 +465,11 @@ func toTableRow(item admincatalog.Item, selected string) TableRow {
 		Badge:           item.Badge,
 		BadgeTone:       item.BadgeTone,
 		Selected:        item.ID == selected && selected != "",
+		Version:         item.Version,
+		CategoryLabel:   item.CategoryLabel,
+		CategoryValue:   item.Category,
+		EditURL:         editURL,
+		DeleteURL:       deleteURL,
 	}
 }
 
@@ -421,6 +494,22 @@ func toCardView(item admincatalog.Item, selected string) CardView {
 		Selected:   item.ID == selected && selected != "",
 		Badge:      item.Badge,
 		BadgeTone:  item.BadgeTone,
+	}
+}
+
+func toTablePagination(p admincatalog.Pagination) TablePagination {
+	var totalPtr *int
+	if p.TotalItems >= 0 {
+		value := p.TotalItems
+		totalPtr = &value
+	}
+	return TablePagination{
+		Page:     p.Page,
+		PageSize: p.PageSize,
+		Total:    p.TotalItems,
+		TotalPtr: totalPtr,
+		Next:     p.NextPage,
+		Prev:     p.PrevPage,
 	}
 }
 
@@ -478,6 +567,16 @@ func buildFilterData(filters admincatalog.FilterSummary, state QueryState) Filte
 		})
 	}
 
+	categoryOptions := make([]SelectOption, 0, len(filters.Categories))
+	for _, option := range filters.Categories {
+		categoryOptions = append(categoryOptions, SelectOption{
+			Value:  option.Value,
+			Label:  option.Label,
+			Count:  option.Count,
+			Active: option.Active,
+		})
+	}
+
 	ownerOptions := make([]SelectOption, 0, len(filters.Owners))
 	for _, option := range filters.Owners {
 		ownerOptions = append(ownerOptions, SelectOption{
@@ -509,10 +608,11 @@ func buildFilterData(filters admincatalog.FilterSummary, state QueryState) Filte
 	}
 
 	return FilterData{
-		Statuses: statusFilters,
-		Owners:   ownerOptions,
-		Tags:     tagOptions,
-		Updated:  updatedOptions,
+		Statuses:   statusFilters,
+		Categories: categoryOptions,
+		Owners:     ownerOptions,
+		Tags:       tagOptions,
+		Updated:    updatedOptions,
 	}
 }
 
@@ -594,6 +694,14 @@ func toneForStatus(value string) string {
 func ensureQueryView(rawQuery, view string) string {
 	query := helpers.SetRawQuery(rawQuery, "view", view)
 	return query
+}
+
+func stripQueryParams(rawQuery string, keys ...string) string {
+	clean := rawQuery
+	for _, key := range keys {
+		clean = helpers.DelRawQuery(clean, key)
+	}
+	return clean
 }
 
 func breadcrumbItems(basePath string, kind admincatalog.Kind) []partials.Breadcrumb {

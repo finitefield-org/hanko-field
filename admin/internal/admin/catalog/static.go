@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	defaultCatalogPageSize = 10
+	maxCatalogPageSize     = 50
+)
+
 type staticService struct {
 	now            time.Time
 	assets         map[Kind][]catalogAsset
@@ -58,9 +63,13 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 	view := NormalizeViewMode(string(query.View))
 	assets := s.assets[kind]
 	filtered := filterAssets(assets, query, s.now)
+	sortAssets(filtered, query)
+	page := normalizePage(query.Page)
+	pageSize := normalizePageSize(query.PageSize)
+	paged, pagination := paginateAssets(filtered, page, pageSize)
 
 	items := make([]Item, 0, len(filtered))
-	for _, asset := range filtered {
+	for _, asset := range paged {
 		items = append(items, asset.item)
 	}
 
@@ -73,9 +82,9 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 			selectedDetail = &copyDetail
 		}
 	}
-	if selectedDetail == nil && len(filtered) > 0 {
-		selectedID = filtered[0].item.ID
-		copyDetail := filtered[0].detail
+	if selectedDetail == nil && len(paged) > 0 {
+		selectedID = paged[0].item.ID
+		copyDetail := paged[0].detail
 		selectedDetail = &copyDetail
 	}
 
@@ -101,6 +110,7 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 		SelectedID:     selectedID,
 		SelectedDetail: selectedDetail,
 		EmptyMessage:   emptyMsg,
+		Pagination:     pagination,
 	}, nil
 }
 
@@ -115,6 +125,7 @@ func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []c
 	}
 
 	tagFilter := normalizeStrings(query.Tags)
+	category := strings.ToLower(strings.TrimSpace(query.Category))
 	search := strings.ToLower(strings.TrimSpace(query.Search))
 	owner := strings.ToLower(strings.TrimSpace(query.Owner))
 
@@ -128,6 +139,10 @@ func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []c
 		}
 
 		if updatedPreset != "" && !matchesUpdatedRange(updatedPreset, asset.item.UpdatedAt, refTime) {
+			continue
+		}
+
+		if category != "" && strings.ToLower(strings.TrimSpace(asset.item.Category)) != category {
 			continue
 		}
 
@@ -148,6 +163,106 @@ func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []c
 		result = append(result, asset)
 	}
 	return result
+}
+
+func sortAssets(assets []catalogAsset, query ListQuery) {
+	if len(assets) <= 1 {
+		return
+	}
+	key := strings.ToLower(strings.TrimSpace(query.SortKey))
+	if key == "" {
+		key = "updated_at"
+	}
+	direction := query.SortDirection
+	if direction != SortDirectionAsc {
+		direction = SortDirectionDesc
+	}
+
+	sort.SliceStable(assets, func(i, j int) bool {
+		a := assets[i].item
+		b := assets[j].item
+		var less bool
+		switch key {
+		case "name":
+			less = strings.ToLower(a.Name) < strings.ToLower(b.Name)
+		case "status":
+			less = strings.ToLower(a.StatusLabel) < strings.ToLower(b.StatusLabel)
+		case "owner":
+			less = strings.ToLower(a.Owner.Name) < strings.ToLower(b.Owner.Name)
+		default:
+			less = a.UpdatedAt.Before(b.UpdatedAt)
+		}
+
+		if direction == SortDirectionDesc {
+			return !less
+		}
+		return less
+	})
+}
+
+func normalizePage(page int) int {
+	if page <= 0 {
+		return 1
+	}
+	return page
+}
+
+func normalizePageSize(size int) int {
+	if size <= 0 {
+		return defaultCatalogPageSize
+	}
+	if size > maxCatalogPageSize {
+		return maxCatalogPageSize
+	}
+	return size
+}
+
+func paginateAssets(assets []catalogAsset, page, size int) ([]catalogAsset, Pagination) {
+	total := len(assets)
+	if size <= 0 {
+		size = defaultCatalogPageSize
+	}
+	if page <= 0 {
+		page = 1
+	}
+	maxPage := 1
+	if total > 0 {
+		maxPage = (total + size - 1) / size
+		if page > maxPage {
+			page = maxPage
+		}
+	} else {
+		page = 1
+	}
+
+	start := (page - 1) * size
+	if start > total {
+		start = total
+	}
+	end := start + size
+	if end > total {
+		end = total
+	}
+
+	var slice []catalogAsset
+	if start < end {
+		slice = assets[start:end]
+	}
+
+	pagination := Pagination{
+		Page:       page,
+		PageSize:   size,
+		TotalItems: total,
+	}
+	if page < maxPage {
+		next := page + 1
+		pagination.NextPage = &next
+	}
+	if page > 1 && total > 0 {
+		prev := page - 1
+		pagination.PrevPage = &prev
+	}
+	return slice, pagination
 }
 
 func matchesSearch(item Item, query string) bool {
@@ -239,10 +354,46 @@ func buildSummary(kind Kind, assets []catalogAsset) Summary {
 func (s *staticService) buildFilters(kind Kind, assets []catalogAsset, query ListQuery) FilterSummary {
 	filter := FilterSummary{}
 	filter.Statuses = buildStatusOptions(assets, query.Statuses)
+	filter.Categories = buildCategoryOptions(assets, query.Category)
 	filter.Owners = buildOwnerOptions(assets, query.Owner)
 	filter.Tags = buildTagOptions(assets, query.Tags)
 	filter.UpdatedRanges = markActiveRanges(s.updatedPresets, query.UpdatedRange)
 	return filter
+}
+
+func buildCategoryOptions(assets []catalogAsset, active string) []FilterOption {
+	counts := map[string]int{}
+	labels := map[string]string{}
+	for _, asset := range assets {
+		key := strings.ToLower(strings.TrimSpace(asset.item.Category))
+		if key == "" {
+			continue
+		}
+		counts[key]++
+		label := asset.item.CategoryLabel
+		if label == "" {
+			label = strings.Title(key)
+		}
+		labels[key] = label
+	}
+
+	keys := make([]string, 0, len(labels))
+	for key := range labels {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	activeKey := strings.ToLower(strings.TrimSpace(active))
+	result := make([]FilterOption, 0, len(keys))
+	for _, key := range keys {
+		result = append(result, FilterOption{
+			Value:  key,
+			Label:  labels[key],
+			Count:  counts[key],
+			Active: key == activeKey && activeKey != "",
+		})
+	}
+	return result
 }
 
 func buildStatusOptions(assets []catalogAsset, active []Status) []FilterOption {
@@ -396,14 +547,16 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 	return []catalogAsset{
 		makeCatalogAsset(
 			Item{
-				ID:          "tmpl-2024-fuji",
-				Name:        "2024年 年賀状（富士）",
-				Identifier:  "TMP-2024-FUJI",
-				Kind:        KindTemplates,
-				Status:      StatusPublished,
-				StatusLabel: "公開中",
-				StatusTone:  "success",
-				Description: "富士山と朝日の伝統的な構図に、箔押しテクスチャを合わせた人気テンプレート。",
+				ID:            "tmpl-2024-fuji",
+				Name:          "2024年 年賀状（富士）",
+				Identifier:    "TMP-2024-FUJI",
+				Kind:          KindTemplates,
+				Category:      "seasonal",
+				CategoryLabel: "季節・年賀状",
+				Status:        StatusPublished,
+				StatusLabel:   "公開中",
+				StatusTone:    "success",
+				Description:   "富士山と朝日の伝統的な構図に、箔押しテクスチャを合わせた人気テンプレート。",
 				Owner: OwnerInfo{
 					Name:  "Akari Sato",
 					Email: "akari.sato@example.com",
@@ -450,14 +603,16 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "tmpl-minimal-stamp",
-				Name:        "ミニマル判子フレーム",
-				Identifier:  "TMP-MINIMAL-STAMP",
-				Kind:        KindTemplates,
-				Status:      StatusDraft,
-				StatusLabel: "下書き",
-				StatusTone:  "warning",
-				Description: "シンプルな三日月判子をアクセントにしたミニマルデザイン。法人挨拶状に最適。",
+				ID:            "tmpl-minimal-stamp",
+				Name:          "ミニマル判子フレーム",
+				Identifier:    "TMP-MINIMAL-STAMP",
+				Kind:          KindTemplates,
+				Category:      "business",
+				CategoryLabel: "法人向け",
+				Status:        StatusDraft,
+				StatusLabel:   "下書き",
+				StatusTone:    "warning",
+				Description:   "シンプルな三日月判子をアクセントにしたミニマルデザイン。法人挨拶状に最適。",
 				Owner: OwnerInfo{
 					Name:  "Nobu Kato",
 					Email: "nobu.kato@example.com",
@@ -497,14 +652,16 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "tmpl-collage-story",
-				Name:        "写真コラージュ・ストーリー",
-				Identifier:  "TMP-COLLAGE-STORY",
-				Kind:        KindTemplates,
-				Status:      StatusInReview,
-				StatusLabel: "レビュー中",
-				StatusTone:  "info",
-				Description: "最大 6 枚の写真を柔軟にレイアウトできるファミリー向けテンプレート。",
+				ID:            "tmpl-collage-story",
+				Name:          "写真コラージュ・ストーリー",
+				Identifier:    "TMP-COLLAGE-STORY",
+				Kind:          KindTemplates,
+				Category:      "family",
+				CategoryLabel: "ファミリー",
+				Status:        StatusInReview,
+				StatusLabel:   "レビュー中",
+				StatusTone:    "info",
+				Description:   "最大 6 枚の写真を柔軟にレイアウトできるファミリー向けテンプレート。",
 				Owner: OwnerInfo{
 					Name:  "Akari Sato",
 					Email: "akari.sato@example.com",
@@ -550,14 +707,16 @@ func buildFontAssets(now time.Time) []catalogAsset {
 	return []catalogAsset{
 		makeCatalogAsset(
 			Item{
-				ID:          "font-hanko-serif",
-				Name:        "Hanko Serif JP",
-				Identifier:  "FNT-HANKO-SERIF",
-				Kind:        KindFonts,
-				Status:      StatusPublished,
-				StatusLabel: "公開中",
-				StatusTone:  "success",
-				Description: "判子のエッジをモチーフにしたセリフ体。小サイズでも可読性を維持。",
+				ID:            "font-hanko-serif",
+				Name:          "Hanko Serif JP",
+				Identifier:    "FNT-HANKO-SERIF",
+				Kind:          KindFonts,
+				Category:      "serif",
+				CategoryLabel: "セリフ",
+				Status:        StatusPublished,
+				StatusLabel:   "公開中",
+				StatusTone:    "success",
+				Description:   "判子のエッジをモチーフにしたセリフ体。小サイズでも可読性を維持。",
 				Owner: OwnerInfo{
 					Name:  "Mika Ito",
 					Email: "mika.ito@example.com",
@@ -590,14 +749,16 @@ func buildFontAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "font-brushwave",
-				Name:        "Brush Wave",
-				Identifier:  "FNT-BRUSH-WAVE",
-				Kind:        KindFonts,
-				Status:      StatusPublished,
-				StatusLabel: "公開中",
-				StatusTone:  "success",
-				Description: "毛筆の揺らぎを活かした手書き風フォント。賀詞に人気。",
+				ID:            "font-brushwave",
+				Name:          "Brush Wave",
+				Identifier:    "FNT-BRUSH-WAVE",
+				Kind:          KindFonts,
+				Category:      "brush",
+				CategoryLabel: "筆記体",
+				Status:        StatusPublished,
+				StatusLabel:   "公開中",
+				StatusTone:    "success",
+				Description:   "毛筆の揺らぎを活かした手書き風フォント。賀詞に人気。",
 				Owner: OwnerInfo{
 					Name:  "Mika Ito",
 					Email: "mika.ito@example.com",
@@ -661,14 +822,16 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 	return []catalogAsset{
 		makeCatalogAsset(
 			Item{
-				ID:          "mat-washi-pearl",
-				Name:        "和紙パール 0.26mm",
-				Identifier:  "MAT-WASHI-PEARL",
-				Kind:        KindMaterials,
-				Status:      StatusPublished,
-				StatusLabel: "供給中",
-				StatusTone:  "success",
-				Description: "細かなパール粒子を含んだ和紙。高級感と発色を両立。",
+				ID:            "mat-washi-pearl",
+				Name:          "和紙パール 0.26mm",
+				Identifier:    "MAT-WASHI-PEARL",
+				Kind:          KindMaterials,
+				Category:      "premium",
+				CategoryLabel: "プレミアム素材",
+				Status:        StatusPublished,
+				StatusLabel:   "供給中",
+				StatusTone:    "success",
+				Description:   "細かなパール粒子を含んだ和紙。高級感と発色を両立。",
 				Owner: OwnerInfo{
 					Name:  "Hiro Tanaka",
 					Email: "hiro.tanaka@example.com",
@@ -698,14 +861,16 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "mat-recycled-kraft",
-				Name:        "再生クラフト 0.18mm",
-				Identifier:  "MAT-RECYCLE-KRAFT",
-				Kind:        KindMaterials,
-				Status:      StatusDraft,
-				StatusLabel: "テスト中",
-				StatusTone:  "warning",
-				Description: "100%再生紙のクラフト。温かみとエコ訴求向き。",
+				ID:            "mat-recycled-kraft",
+				Name:          "再生クラフト 0.18mm",
+				Identifier:    "MAT-RECYCLE-KRAFT",
+				Kind:          KindMaterials,
+				Category:      "sustainable",
+				CategoryLabel: "サステナブル",
+				Status:        StatusDraft,
+				StatusLabel:   "テスト中",
+				StatusTone:    "warning",
+				Description:   "100%再生紙のクラフト。温かみとエコ訴求向き。",
 				Owner: OwnerInfo{
 					Name:  "Hiro Tanaka",
 					Email: "hiro.tanaka@example.com",
@@ -731,14 +896,16 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "mat-metallic-gold",
-				Name:        "メタリックゴールドフィルム",
-				Identifier:  "MAT-METALLIC-GOLD",
-				Kind:        KindMaterials,
-				Status:      StatusPublished,
-				StatusLabel: "供給中",
-				StatusTone:  "success",
-				Description: "鏡面ゴールドのフィルム。箔押し圧を強めることで発色が安定。",
+				ID:            "mat-metallic-gold",
+				Name:          "メタリックゴールドフィルム",
+				Identifier:    "MAT-METALLIC-GOLD",
+				Kind:          KindMaterials,
+				Category:      "specialty",
+				CategoryLabel: "特殊加工",
+				Status:        StatusPublished,
+				StatusLabel:   "供給中",
+				StatusTone:    "success",
+				Description:   "鏡面ゴールドのフィルム。箔押し圧を強めることで発色が安定。",
 				Owner: OwnerInfo{
 					Name:  "Hiro Tanaka",
 					Email: "hiro.tanaka@example.com",
@@ -772,14 +939,16 @@ func buildProductAssets(now time.Time) []catalogAsset {
 	return []catalogAsset{
 		makeCatalogAsset(
 			Item{
-				ID:          "prd-nenga-kit",
-				Name:        "年賀状プレミアムセット",
-				Identifier:  "PRD-NENGA-PREMIUM",
-				Kind:        KindProducts,
-				Status:      StatusPublished,
-				StatusLabel: "販売中",
-				StatusTone:  "success",
-				Description: "テンプレ + 素材 + 投函代行を含む人気セット。平均単価 ¥4,980。",
+				ID:            "prd-nenga-kit",
+				Name:          "年賀状プレミアムセット",
+				Identifier:    "PRD-NENGA-PREMIUM",
+				Kind:          KindProducts,
+				Category:      "seasonal_bundle",
+				CategoryLabel: "季節ギフト",
+				Status:        StatusPublished,
+				StatusLabel:   "販売中",
+				StatusTone:    "success",
+				Description:   "テンプレ + 素材 + 投函代行を含む人気セット。平均単価 ¥4,980。",
 				Owner: OwnerInfo{
 					Name:  "Kana Fujii",
 					Email: "kana.fujii@example.com",
@@ -813,14 +982,16 @@ func buildProductAssets(now time.Time) []catalogAsset {
 		),
 		makeCatalogAsset(
 			Item{
-				ID:          "prd-engraved-stamp",
-				Name:        "真鍮製はんこ + 桐箱",
-				Identifier:  "PRD-ENGRAVED-STAMP",
-				Kind:        KindProducts,
-				Status:      StatusInReview,
-				StatusLabel: "準備中",
-				StatusTone:  "info",
-				Description: "真鍮の印鑑と桐箱のセット。発送リードタイム 7 日。",
+				ID:            "prd-engraved-stamp",
+				Name:          "真鍮製はんこ + 桐箱",
+				Identifier:    "PRD-ENGRAVED-STAMP",
+				Kind:          KindProducts,
+				Category:      "engraving",
+				CategoryLabel: "名入れ商品",
+				Status:        StatusInReview,
+				StatusLabel:   "準備中",
+				StatusTone:    "info",
+				Description:   "真鍮の印鑑と桐箱のセット。発送リードタイム 7 日。",
 				Owner: OwnerInfo{
 					Name:  "Kana Fujii",
 					Email: "kana.fujii@example.com",

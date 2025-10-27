@@ -73,3 +73,43 @@ func TestStaticServiceUpdatedRangeFiltering(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticServiceCategoryFiltering(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind:     KindTemplates,
+		Category: "business",
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 business template, got %d", len(result.Items))
+	}
+	if result.Items[0].ID != "tmpl-minimal-stamp" {
+		t.Fatalf("unexpected template ID: %s", result.Items[0].ID)
+	}
+}
+
+func TestStaticServicePagination(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind:          KindTemplates,
+		Page:          2,
+		PageSize:      1,
+		SortKey:       "updated_at",
+		SortDirection: SortDirectionDesc,
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if result.Pagination.Page != 2 {
+		t.Fatalf("expected page 2, got %d", result.Pagination.Page)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item on page 2, got %d", len(result.Items))
+	}
+	if result.Items[0].ID != "tmpl-collage-story" {
+		t.Fatalf("unexpected template on page 2: %s", result.Items[0].ID)
+	}
+}

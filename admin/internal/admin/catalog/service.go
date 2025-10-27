@@ -78,6 +78,16 @@ const (
 	ViewModeCards ViewMode = "cards"
 )
 
+// SortDirection controls ordering for sortable fields.
+type SortDirection string
+
+const (
+	// SortDirectionAsc sorts ascending.
+	SortDirectionAsc SortDirection = "asc"
+	// SortDirectionDesc sorts descending.
+	SortDirectionDesc SortDirection = "desc"
+)
+
 // NormalizeViewMode defaults to the table view when the input is empty or unknown.
 func NormalizeViewMode(value string) ViewMode {
 	switch strings.ToLower(strings.TrimSpace(value)) {
@@ -90,14 +100,19 @@ func NormalizeViewMode(value string) ViewMode {
 
 // ListQuery captures filter arguments for listing catalog assets.
 type ListQuery struct {
-	Kind         Kind
-	Statuses     []Status
-	Owner        string
-	Tags         []string
-	UpdatedRange string
-	Search       string
-	View         ViewMode
-	SelectedID   string
+	Kind          Kind
+	Statuses      []Status
+	Category      string
+	Owner         string
+	Tags          []string
+	UpdatedRange  string
+	Search        string
+	View          ViewMode
+	SelectedID    string
+	Page          int
+	PageSize      int
+	SortKey       string
+	SortDirection SortDirection
 }
 
 // ListResult wraps the filtered asset listing and supporting metadata.
@@ -111,32 +126,44 @@ type ListResult struct {
 	SelectedID     string
 	SelectedDetail *ItemDetail
 	EmptyMessage   string
+	Pagination     Pagination
+}
+
+// Pagination describes paging metadata for catalog listings.
+type Pagination struct {
+	Page       int
+	PageSize   int
+	TotalItems int
+	NextPage   *int
+	PrevPage   *int
 }
 
 // Item describes a summarized catalog asset as shown in tables or cards.
 type Item struct {
-	ID           string
-	Name         string
-	Identifier   string
-	Kind         Kind
-	Status       Status
-	StatusLabel  string
-	StatusTone   string
-	Description  string
-	Owner        OwnerInfo
-	UpdatedAt    time.Time
-	Version      string
-	UsageCount   int
-	UsageLabel   string
-	Tags         []string
-	PreviewURL   string
-	PreviewAlt   string
-	Channels     []string
-	Format       string
-	Metrics      []ItemMetric
-	Badge        string
-	BadgeTone    string
-	PrimaryColor string
+	ID            string
+	Name          string
+	Identifier    string
+	Kind          Kind
+	Category      string
+	CategoryLabel string
+	Status        Status
+	StatusLabel   string
+	StatusTone    string
+	Description   string
+	Owner         OwnerInfo
+	UpdatedAt     time.Time
+	Version       string
+	UsageCount    int
+	UsageLabel    string
+	Tags          []string
+	PreviewURL    string
+	PreviewAlt    string
+	Channels      []string
+	Format        string
+	Metrics       []ItemMetric
+	Badge         string
+	BadgeTone     string
+	PrimaryColor  string
 }
 
 // OwnerInfo identifies the staff member responsible for an asset.
@@ -228,6 +255,7 @@ type BulkAction struct {
 // FilterSummary enumerates filter controls for the listing UI.
 type FilterSummary struct {
 	Statuses      []FilterOption
+	Categories    []FilterOption
 	Owners        []FilterOption
 	Tags          []FilterOption
 	UpdatedRanges []UpdatedRange
