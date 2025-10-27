@@ -193,6 +193,119 @@ func TestPromotionService_CreatePromotion_InvalidInput(t *testing.T) {
 	}
 }
 
+func TestPromotionService_ValidatePromotionDefinition_Success(t *testing.T) {
+	repo := &stubPromotionRepository{}
+	svc, err := NewPromotionService(PromotionServiceDeps{Promotions: repo})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	now := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
+	result, err := svc.ValidatePromotionDefinition(context.Background(), Promotion{
+		Code:         "spring",
+		Kind:         "percent",
+		Value:        10,
+		StartsAt:     now,
+		EndsAt:       now.Add(24 * time.Hour),
+		LimitPerUser: 1,
+		EligibleAudiences: []string{
+			" vip ", "vip",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ValidatePromotionDefinition returned error: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("expected validation to succeed, got %#v", result.Checks)
+	}
+	if len(result.Checks) == 0 {
+		t.Fatalf("expected validation checks to be returned")
+	}
+	for _, check := range result.Checks {
+		if !check.Passed {
+			t.Fatalf("expected all checks to pass, got %#v", result.Checks)
+		}
+	}
+	if result.Normalized.Code != "SPRING" {
+		t.Fatalf("expected normalized code to be uppercased, got %s", result.Normalized.Code)
+	}
+	if len(result.Normalized.EligibleAudiences) != 1 || result.Normalized.EligibleAudiences[0] != "vip" {
+		t.Fatalf("expected audiences to be normalized, got %#v", result.Normalized.EligibleAudiences)
+	}
+}
+
+func TestPromotionService_ValidatePromotionDefinition_IssuesReported(t *testing.T) {
+	repo := &stubPromotionRepository{}
+	svc, err := NewPromotionService(PromotionServiceDeps{Promotions: repo})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	audiences := make([]string, maxPromotionAudienceEntries+1)
+	for i := range audiences {
+		audiences[i] = fmt.Sprintf("group-%d", i)
+	}
+	maxStack := 2
+	result, err := svc.ValidatePromotionDefinition(context.Background(), Promotion{
+		Code:              "bad code",
+		Kind:              "fixed",
+		Value:             0,
+		Currency:          "",
+		LimitPerUser:      0,
+		UsageLimit:        -1,
+		UsageCount:        5,
+		StartsAt:          time.Time{},
+		EndsAt:            time.Time{},
+		EligibleAudiences: audiences,
+		Stacking: PromotionStacking{
+			Combinable: false,
+			MaxStack:   &maxStack,
+		},
+		Conditions: PromotionConditions{
+			MinSubtotal: int64Ptr(-1),
+			CountryIn:   []string{"ZZ"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ValidatePromotionDefinition returned error: %v", err)
+	}
+	if result.Valid {
+		t.Fatalf("expected validation to fail")
+	}
+
+	var scheduleCheck, structureCheck, limitsCheck, stackingCheck, audienceCheck *PromotionValidationCheck
+	for idx := range result.Checks {
+		check := &result.Checks[idx]
+		switch check.Constraint {
+		case PromotionConstraintSchedule:
+			scheduleCheck = check
+		case PromotionConstraintStructure:
+			structureCheck = check
+		case PromotionConstraintLimits:
+			limitsCheck = check
+		case PromotionConstraintStacking:
+			stackingCheck = check
+		case PromotionConstraintAudience:
+			audienceCheck = check
+		}
+	}
+	if scheduleCheck == nil || scheduleCheck.Passed {
+		t.Fatalf("expected schedule check to fail: %#v", result.Checks)
+	}
+	if structureCheck == nil || structureCheck.Passed {
+		t.Fatalf("expected structure check to fail: %#v", result.Checks)
+	}
+	if limitsCheck == nil || limitsCheck.Passed {
+		t.Fatalf("expected limits check to fail: %#v", result.Checks)
+	}
+	if stackingCheck == nil || stackingCheck.Passed {
+		t.Fatalf("expected stacking check to fail: %#v", result.Checks)
+	}
+	if audienceCheck == nil || audienceCheck.Passed {
+		t.Fatalf("expected audience check to fail: %#v", result.Checks)
+	}
+}
+
 func TestPromotionService_UpdatePromotion_ImmutableWithoutOverride(t *testing.T) {
 	now := time.Date(2024, time.May, 2, 8, 0, 0, 0, time.UTC)
 	repo := &stubPromotionRepository{
@@ -627,6 +740,10 @@ func (s *stubPromotionRepository) List(ctx context.Context, filter repositories.
 		return s.listFn(ctx, filter)
 	}
 	return domain.CursorPage[domain.Promotion]{}, nil
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
 }
 
 type stubPromotionRepoError struct {

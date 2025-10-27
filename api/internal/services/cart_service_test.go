@@ -1171,6 +1171,10 @@ func (s *stubPromotionService) ValidatePromotion(ctx context.Context, cmd Valida
 	return PromotionValidationResult{}, nil
 }
 
+func (s *stubPromotionService) ValidatePromotionDefinition(context.Context, Promotion) (PromotionDefinitionValidationResult, error) {
+	return PromotionDefinitionValidationResult{}, nil
+}
+
 func (s *stubPromotionService) ListPromotions(context.Context, PromotionListFilter) (domain.CursorPage[Promotion], error) {
 	return domain.CursorPage[Promotion]{}, errors.New("not implemented")
 }

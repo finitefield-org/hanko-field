@@ -43,6 +43,7 @@ func (h *AdminPromotionHandlers) Routes(r chi.Router) {
 	if h.authn != nil {
 		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
 	}
+	r.Post("/promotions:validate", h.validatePromotion)
 	r.Route("/promotions", func(rt chi.Router) {
 		rt.Get("/", h.listPromotions)
 		rt.Get("/{promotionID}/usages", h.listPromotionUsage)
@@ -196,6 +197,36 @@ func (h *AdminPromotionHandlers) listPromotionUsage(w http.ResponseWriter, r *ht
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
+func (h *AdminPromotionHandlers) validatePromotion(w http.ResponseWriter, r *http.Request) {
+	if h.promotions == nil {
+		httpx.WriteError(r.Context(), w, httpx.NewError("service_unavailable", "promotion service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+	identity, ok := auth.IdentityFromContext(r.Context())
+	uid := ""
+	if ok && identity != nil {
+		uid = strings.TrimSpace(identity.UID)
+	}
+	if uid == "" {
+		httpx.WriteError(r.Context(), w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	promotion, _, _, err := decodeAdminPromotionRequest(r, "", true)
+	if err != nil {
+		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	}
+
+	result, err := h.promotions.ValidatePromotionDefinition(r.Context(), promotion)
+	if err != nil {
+		writeAdminPromotionError(r.Context(), w, err, "validate")
+		return
+	}
+
+	writeJSONResponse(w, http.StatusOK, newPromotionValidationResponse(result))
+}
+
 func (h *AdminPromotionHandlers) createPromotion(w http.ResponseWriter, r *http.Request) {
 	if h.promotions == nil {
 		httpx.WriteError(r.Context(), w, httpx.NewError("service_unavailable", "promotion service unavailable", http.StatusServiceUnavailable))
@@ -207,7 +238,7 @@ func (h *AdminPromotionHandlers) createPromotion(w http.ResponseWriter, r *http.
 		return
 	}
 
-	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, "")
+	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, "", false)
 	if err != nil {
 		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
 		return
@@ -246,7 +277,7 @@ func (h *AdminPromotionHandlers) updatePromotion(w http.ResponseWriter, r *http.
 		return
 	}
 
-	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, promotionID)
+	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, promotionID, false)
 	if err != nil {
 		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
 		return
@@ -293,7 +324,7 @@ func (h *AdminPromotionHandlers) deletePromotion(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.Promotion, bool, bool, error) {
+func decodeAdminPromotionRequest(r *http.Request, overrideID string, allowIncomplete bool) (services.Promotion, bool, bool, error) {
 	if r.Body == nil {
 		return services.Promotion{}, false, false, errors.New("request body is required")
 	}
@@ -308,13 +339,26 @@ func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.P
 		return services.Promotion{}, false, false, fmt.Errorf("invalid json: %w", err)
 	}
 
-	startsAt, err := parseTimestamp(payload.StartsAt, "startsAt")
-	if err != nil {
-		return services.Promotion{}, false, false, err
+	var (
+		startsAt time.Time
+		endsAt   time.Time
+		err      error
+	)
+	if strings.TrimSpace(payload.StartsAt) != "" {
+		startsAt, err = parseTimestamp(payload.StartsAt, "startsAt")
+		if err != nil {
+			return services.Promotion{}, false, false, err
+		}
+	} else if !allowIncomplete {
+		return services.Promotion{}, false, false, fmt.Errorf("startsAt is required")
 	}
-	endsAt, err := parseTimestamp(payload.EndsAt, "endsAt")
-	if err != nil {
-		return services.Promotion{}, false, false, err
+	if strings.TrimSpace(payload.EndsAt) != "" {
+		endsAt, err = parseTimestamp(payload.EndsAt, "endsAt")
+		if err != nil {
+			return services.Promotion{}, false, false, err
+		}
+	} else if !allowIncomplete {
+		return services.Promotion{}, false, false, fmt.Errorf("endsAt is required")
 	}
 
 	promotion := services.Promotion{
@@ -478,6 +522,18 @@ type promotionListResponse struct {
 	NextPageToken string                   `json:"nextPageToken,omitempty"`
 }
 
+type promotionValidationResponse struct {
+	Valid      bool                               `json:"valid"`
+	Checks     []promotionValidationCheckResponse `json:"checks"`
+	Normalized adminPromotionResponse             `json:"normalized"`
+}
+
+type promotionValidationCheckResponse struct {
+	Constraint string   `json:"constraint"`
+	Passed     bool     `json:"passed"`
+	Issues     []string `json:"issues,omitempty"`
+}
+
 type promotionUsageListResponse struct {
 	Items         []promotionUsageResponse `json:"items"`
 	NextPageToken string                   `json:"nextPageToken,omitempty"`
@@ -585,6 +641,27 @@ func newAdminPromotionResponse(promotion services.Promotion) adminPromotionRespo
 		UpdatedAt: formatPromotionTimestamp(promotion.UpdatedAt),
 	}
 	return response
+}
+
+func newPromotionValidationResponse(result services.PromotionDefinitionValidationResult) promotionValidationResponse {
+	checks := make([]promotionValidationCheckResponse, 0, len(result.Checks))
+	for _, check := range result.Checks {
+		var issues []string
+		if len(check.Issues) > 0 {
+			issues = make([]string, len(check.Issues))
+			copy(issues, check.Issues)
+		}
+		checks = append(checks, promotionValidationCheckResponse{
+			Constraint: string(check.Constraint),
+			Passed:     check.Passed,
+			Issues:     issues,
+		})
+	}
+	return promotionValidationResponse{
+		Valid:      result.Valid,
+		Checks:     checks,
+		Normalized: newAdminPromotionResponse(result.Normalized),
+	}
 }
 
 func newPromotionUsageResponse(record services.PromotionUsageRecord) promotionUsageResponse {

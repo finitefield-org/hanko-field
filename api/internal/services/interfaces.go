@@ -95,6 +95,32 @@ type (
 	NameMappingStatus         = domain.NameMappingStatus
 )
 
+// PromotionConstraint identifies a validation group evaluated for promotion definitions.
+type PromotionConstraint string
+
+const (
+	PromotionConstraintStructure  PromotionConstraint = "structure"
+	PromotionConstraintSchedule   PromotionConstraint = "schedule"
+	PromotionConstraintLimits     PromotionConstraint = "usage_limits"
+	PromotionConstraintConditions PromotionConstraint = "conditions"
+	PromotionConstraintAudience   PromotionConstraint = "audience"
+	PromotionConstraintStacking   PromotionConstraint = "stacking"
+)
+
+// PromotionValidationCheck captures the outcome of a single validation group.
+type PromotionValidationCheck struct {
+	Constraint PromotionConstraint
+	Passed     bool
+	Issues     []string
+}
+
+// PromotionDefinitionValidationResult stores dry-run validation details for a promotion definition.
+type PromotionDefinitionValidationResult struct {
+	Valid      bool
+	Checks     []PromotionValidationCheck
+	Normalized Promotion
+}
+
 // PromotionUsageUser captures the minimal user metadata surfaced alongside usage aggregates.
 type PromotionUsageUser struct {
 	ID          string
@@ -232,6 +258,7 @@ type CounterService interface {
 type PromotionService interface {
 	GetPublicPromotion(ctx context.Context, code string) (PromotionPublic, error)
 	ValidatePromotion(ctx context.Context, cmd ValidatePromotionCommand) (PromotionValidationResult, error)
+	ValidatePromotionDefinition(ctx context.Context, promotion Promotion) (PromotionDefinitionValidationResult, error)
 	ListPromotions(ctx context.Context, filter PromotionListFilter) (domain.CursorPage[Promotion], error)
 	CreatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	UpdatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)

@@ -139,6 +139,26 @@ func (s *promotionService) ValidatePromotion(context.Context, ValidatePromotionC
 	return PromotionValidationResult{}, ErrPromotionOperationUnsupported
 }
 
+func (s *promotionService) ValidatePromotionDefinition(ctx context.Context, promotion Promotion) (PromotionDefinitionValidationResult, error) {
+	normalized := normalizePromotion(promotion)
+	issues := collectPromotionValidationIssues(promotion, normalized)
+	checks := buildPromotionValidationChecks(issues)
+
+	valid := true
+	for _, check := range checks {
+		if !check.Passed {
+			valid = false
+			break
+		}
+	}
+
+	return PromotionDefinitionValidationResult{
+		Valid:      valid,
+		Checks:     checks,
+		Normalized: normalized,
+	}, nil
+}
+
 func (s *promotionService) ListPromotions(ctx context.Context, filter PromotionListFilter) (domain.CursorPage[Promotion], error) {
 	if s == nil || s.repo == nil {
 		return domain.CursorPage[Promotion]{}, ErrPromotionRepositoryMissing
@@ -635,96 +655,18 @@ func normalizeMap(in map[string]any) map[string]any {
 	return result
 }
 
+var promotionValidationOrder = []PromotionConstraint{
+	PromotionConstraintStructure,
+	PromotionConstraintSchedule,
+	PromotionConstraintLimits,
+	PromotionConstraintConditions,
+	PromotionConstraintAudience,
+	PromotionConstraintStacking,
+}
+
 func validatePromotionInput(p Promotion) error {
-	var problems []string
-
-	if p.Code == "" {
-		problems = append(problems, "code is required")
-	} else if len(p.Code) < promotionCodeMinLength || len(p.Code) > promotionCodeMaxLength || !promotionCodePattern.MatchString(p.Code) {
-		problems = append(problems, "code must be 3-64 characters [A-Z0-9_-]")
-	}
-
-	switch p.Kind {
-	case promotionKindPercent, promotionKindFixed:
-	default:
-		problems = append(problems, "kind must be percent or fixed")
-	}
-
-	if p.Value <= 0 {
-		problems = append(problems, "value must be greater than zero")
-	} else if p.Kind == promotionKindPercent && p.Value > 100 {
-		problems = append(problems, "percent discounts cannot exceed 100")
-	}
-
-	if p.Kind == promotionKindFixed {
-		if p.Currency == "" || !currencyCodePattern.MatchString(p.Currency) {
-			problems = append(problems, "currency must be ISO-4217 for fixed discounts")
-		}
-	} else if p.Currency != "" {
-		problems = append(problems, "do not supply currency for percent discounts")
-	}
-
-	if p.StartsAt.IsZero() {
-		problems = append(problems, "startsAt is required")
-	}
-	if p.EndsAt.IsZero() {
-		problems = append(problems, "endsAt is required")
-	} else if !p.StartsAt.IsZero() && !p.EndsAt.After(p.StartsAt) {
-		problems = append(problems, "endsAt must be after startsAt")
-	}
-
-	if p.LimitPerUser < 1 {
-		problems = append(problems, "limitPerUser must be at least 1")
-	}
-	if p.UsageLimit < 0 {
-		problems = append(problems, "usageLimit cannot be negative")
-	}
-	if p.UsageLimit > 0 && p.UsageCount > p.UsageLimit {
-		problems = append(problems, "usageCount exceeds usageLimit")
-	}
-
-	if p.Conditions.MinSubtotal != nil && *p.Conditions.MinSubtotal < 0 {
-		problems = append(problems, "conditions.minSubtotal cannot be negative")
-	}
-	if p.Conditions.SizeMMBetween != nil {
-		min := p.Conditions.SizeMMBetween.Min
-		max := p.Conditions.SizeMMBetween.Max
-		if min != nil && *min < 0 {
-			problems = append(problems, "conditions.sizeMmBetween.min cannot be negative")
-		}
-		if max != nil && *max < 0 {
-			problems = append(problems, "conditions.sizeMmBetween.max cannot be negative")
-		}
-		if min != nil && max != nil && *max < *min {
-			problems = append(problems, "conditions.sizeMmBetween.max must be >= min")
-		}
-	}
-	for _, country := range p.Conditions.CountryIn {
-		if !countryCodePattern.MatchString(country) {
-			problems = append(problems, fmt.Sprintf("invalid country code %s", country))
-		}
-	}
-	for _, currency := range p.Conditions.CurrencyIn {
-		if !currencyCodePattern.MatchString(currency) {
-			problems = append(problems, fmt.Sprintf("invalid currency code %s", currency))
-		}
-	}
-	for _, shape := range p.Conditions.ShapeIn {
-		if _, ok := allowedPromotionShapes[strings.ToLower(shape)]; !ok {
-			problems = append(problems, fmt.Sprintf("invalid shape %s", shape))
-		}
-	}
-	for _, ref := range p.Conditions.ProductRefsIn {
-		if !productReferencePattern.MatchString(ref) {
-			problems = append(problems, fmt.Sprintf("invalid product reference %s", ref))
-		}
-	}
-	for _, ref := range p.Conditions.MaterialRefsIn {
-		if !materialReferencePtrn.MatchString(ref) {
-			problems = append(problems, fmt.Sprintf("invalid material reference %s", ref))
-		}
-	}
-
+	issues := collectPromotionValidationIssues(p, p)
+	problems := flattenPromotionIssues(issues)
 	if len(problems) > 0 {
 		return fmt.Errorf("%w: %s", ErrPromotionInvalidInput, strings.Join(problems, "; "))
 	}
@@ -819,4 +761,185 @@ func translatePromotionRepoError(err error) error {
 		}
 	}
 	return err
+}
+
+func collectPromotionValidationIssues(raw Promotion, normalized Promotion) map[PromotionConstraint][]string {
+	issues := make(map[PromotionConstraint][]string)
+	add := func(constraint PromotionConstraint, message string) {
+		message = strings.TrimSpace(message)
+		if message == "" {
+			return
+		}
+		issues[constraint] = append(issues[constraint], message)
+	}
+
+	if normalized.Code == "" {
+		add(PromotionConstraintStructure, "code is required")
+	} else if len(normalized.Code) < promotionCodeMinLength || len(normalized.Code) > promotionCodeMaxLength || !promotionCodePattern.MatchString(normalized.Code) {
+		add(PromotionConstraintStructure, "code must be 3-64 characters [A-Z0-9_-]")
+	}
+
+	switch normalized.Kind {
+	case promotionKindPercent, promotionKindFixed:
+	default:
+		add(PromotionConstraintStructure, "kind must be percent or fixed")
+	}
+
+	if normalized.Value <= 0 {
+		add(PromotionConstraintStructure, "value must be greater than zero")
+	} else if normalized.Kind == promotionKindPercent && normalized.Value > 100 {
+		add(PromotionConstraintStructure, "percent discounts cannot exceed 100")
+	}
+
+	if normalized.Kind == promotionKindFixed {
+		if normalized.Currency == "" || !currencyCodePattern.MatchString(normalized.Currency) {
+			add(PromotionConstraintStructure, "currency must be ISO-4217 for fixed discounts")
+		}
+	} else if normalized.Currency != "" {
+		add(PromotionConstraintStructure, "do not supply currency for percent discounts")
+	}
+
+	if normalized.StartsAt.IsZero() {
+		add(PromotionConstraintSchedule, "startsAt is required")
+	}
+	if normalized.EndsAt.IsZero() {
+		add(PromotionConstraintSchedule, "endsAt is required")
+	} else if !normalized.StartsAt.IsZero() && !normalized.EndsAt.After(normalized.StartsAt) {
+		add(PromotionConstraintSchedule, "endsAt must be after startsAt")
+	}
+
+	if normalized.LimitPerUser < 1 {
+		add(PromotionConstraintLimits, "limitPerUser must be at least 1")
+	}
+	if normalized.UsageLimit < 0 {
+		add(PromotionConstraintLimits, "usageLimit cannot be negative")
+	}
+	if normalized.UsageLimit > 0 && normalized.UsageCount > normalized.UsageLimit {
+		add(PromotionConstraintLimits, "usageCount exceeds usageLimit")
+	}
+
+	if raw.Stacking.MaxStack != nil {
+		value := *raw.Stacking.MaxStack
+		if value <= 0 {
+			add(PromotionConstraintStacking, "stacking.maxStack must be greater than zero when provided")
+		}
+		if !normalized.Stacking.Combinable && value > 0 {
+			add(PromotionConstraintStacking, "stacking.maxStack is ignored when combinable is false")
+		}
+	}
+
+	if normalized.Conditions.MinSubtotal != nil && *normalized.Conditions.MinSubtotal < 0 {
+		add(PromotionConstraintConditions, "conditions.minSubtotal cannot be negative")
+	}
+	if normalized.Conditions.SizeMMBetween != nil {
+		min := normalized.Conditions.SizeMMBetween.Min
+		max := normalized.Conditions.SizeMMBetween.Max
+		if min != nil && *min < 0 {
+			add(PromotionConstraintConditions, "conditions.sizeMmBetween.min cannot be negative")
+		}
+		if max != nil && *max < 0 {
+			add(PromotionConstraintConditions, "conditions.sizeMmBetween.max cannot be negative")
+		}
+		if min != nil && max != nil && *max < *min {
+			add(PromotionConstraintConditions, "conditions.sizeMmBetween.max must be >= min")
+		}
+	}
+	for _, country := range normalized.Conditions.CountryIn {
+		if !countryCodePattern.MatchString(country) {
+			add(PromotionConstraintConditions, fmt.Sprintf("invalid country code %s", country))
+		}
+	}
+	for _, currency := range normalized.Conditions.CurrencyIn {
+		if !currencyCodePattern.MatchString(currency) {
+			add(PromotionConstraintConditions, fmt.Sprintf("invalid currency code %s", currency))
+		}
+	}
+	for _, shape := range normalized.Conditions.ShapeIn {
+		if _, ok := allowedPromotionShapes[strings.ToLower(shape)]; !ok {
+			add(PromotionConstraintConditions, fmt.Sprintf("invalid shape %s", shape))
+		}
+	}
+	for _, ref := range normalized.Conditions.ProductRefsIn {
+		if !productReferencePattern.MatchString(ref) {
+			add(PromotionConstraintConditions, fmt.Sprintf("invalid product reference %s", ref))
+		}
+	}
+	for _, ref := range normalized.Conditions.MaterialRefsIn {
+		if !materialReferencePtrn.MatchString(ref) {
+			add(PromotionConstraintConditions, fmt.Sprintf("invalid material reference %s", ref))
+		}
+	}
+
+	if len(raw.EligibleAudiences) > maxPromotionAudienceEntries {
+		add(PromotionConstraintAudience, fmt.Sprintf("eligibleAudiences limited to %d entries", maxPromotionAudienceEntries))
+	}
+
+	return issues
+}
+
+func flattenPromotionIssues(issues map[PromotionConstraint][]string) []string {
+	if len(issues) == 0 {
+		return nil
+	}
+	var problems []string
+	seen := make(map[PromotionConstraint]struct{}, len(promotionValidationOrder))
+
+	for _, constraint := range promotionValidationOrder {
+		if msgs := issues[constraint]; len(msgs) > 0 {
+			problems = append(problems, msgs...)
+		}
+		seen[constraint] = struct{}{}
+	}
+
+	var extras []PromotionConstraint
+	for constraint, msgs := range issues {
+		if _, ok := seen[constraint]; ok || len(msgs) == 0 {
+			continue
+		}
+		extras = append(extras, constraint)
+	}
+	sort.Slice(extras, func(i, j int) bool { return extras[i] < extras[j] })
+	for _, constraint := range extras {
+		problems = append(problems, issues[constraint]...)
+	}
+	return problems
+}
+
+func buildPromotionValidationChecks(issues map[PromotionConstraint][]string) []PromotionValidationCheck {
+	checks := make([]PromotionValidationCheck, 0, len(promotionValidationOrder)+len(issues))
+	seen := make(map[PromotionConstraint]struct{}, len(promotionValidationOrder))
+
+	for _, constraint := range promotionValidationOrder {
+		messages := cloneStringSlice(issues[constraint])
+		check := PromotionValidationCheck{
+			Constraint: constraint,
+			Passed:     len(messages) == 0,
+		}
+		if len(messages) > 0 {
+			check.Issues = messages
+		}
+		checks = append(checks, check)
+		seen[constraint] = struct{}{}
+	}
+
+	var extras []PromotionConstraint
+	for constraint, messages := range issues {
+		if len(messages) == 0 {
+			continue
+		}
+		if _, ok := seen[constraint]; ok {
+			continue
+		}
+		extras = append(extras, constraint)
+	}
+	sort.Slice(extras, func(i, j int) bool { return extras[i] < extras[j] })
+	for _, constraint := range extras {
+		messages := cloneStringSlice(issues[constraint])
+		checks = append(checks, PromotionValidationCheck{
+			Constraint: constraint,
+			Passed:     len(messages) == 0,
+			Issues:     messages,
+		})
+	}
+	return checks
 }

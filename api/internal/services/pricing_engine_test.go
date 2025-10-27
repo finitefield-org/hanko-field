@@ -345,6 +345,10 @@ func (f *fakePromotionService) ValidatePromotion(ctx context.Context, cmd Valida
 	return PromotionValidationResult{Code: cmd.Code, Eligible: false}, nil
 }
 
+func (f *fakePromotionService) ValidatePromotionDefinition(context.Context, Promotion) (PromotionDefinitionValidationResult, error) {
+	panic("unexpected call")
+}
+
 func (f *fakePromotionService) ListPromotions(context.Context, PromotionListFilter) (domain.CursorPage[Promotion], error) {
 	panic("unexpected call")
 }

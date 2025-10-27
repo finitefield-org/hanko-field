@@ -1665,6 +1665,10 @@ func (s *stubPromotionService) ValidatePromotion(context.Context, services.Valid
 	return services.PromotionValidationResult{}, errors.New("not implemented")
 }
 
+func (s *stubPromotionService) ValidatePromotionDefinition(context.Context, services.Promotion) (services.PromotionDefinitionValidationResult, error) {
+	return services.PromotionDefinitionValidationResult{}, errors.New("not implemented")
+}
+
 func (s *stubPromotionService) ListPromotions(context.Context, services.PromotionListFilter) (domain.CursorPage[services.Promotion], error) {
 	return domain.CursorPage[services.Promotion]{}, errors.New("not implemented")
 }

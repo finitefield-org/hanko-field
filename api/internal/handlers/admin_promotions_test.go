@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -213,6 +214,82 @@ func TestAdminPromotionHandlers_ListPromotionUsage_Unauthenticated(t *testing.T)
 	}
 }
 
+func TestAdminPromotionHandlers_ValidatePromotion_ReturnsChecks(t *testing.T) {
+	var captured services.Promotion
+	service := &stubPromotionAdminService{
+		validateDefinitionFn: func(ctx context.Context, promotion services.Promotion) (services.PromotionDefinitionValidationResult, error) {
+			captured = promotion
+			return services.PromotionDefinitionValidationResult{
+				Valid: false,
+				Checks: []services.PromotionValidationCheck{
+					{Constraint: services.PromotionConstraintStructure, Passed: true},
+					{Constraint: services.PromotionConstraintSchedule, Passed: false, Issues: []string{"startsAt is required"}},
+				},
+				Normalized: services.Promotion{
+					Code:         "SPRING",
+					Kind:         "percent",
+					Value:        10,
+					LimitPerUser: 1,
+				},
+			}, nil
+		},
+	}
+	handler := NewAdminPromotionHandlers(nil, service)
+
+	body := `{"code":"spring","kind":"percent","value":10,"limitPerUser":1}`
+	req := httptest.NewRequest(http.MethodPost, "/promotions:validate", strings.NewReader(body))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin"}))
+	rec := httptest.NewRecorder()
+
+	handler.validatePromotion(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if captured.Code != "spring" {
+		t.Fatalf("expected raw promotion code to remain unnormalized, got %s", captured.Code)
+	}
+
+	var response struct {
+		Valid  bool `json:"valid"`
+		Checks []struct {
+			Constraint string   `json:"constraint"`
+			Passed     bool     `json:"passed"`
+			Issues     []string `json:"issues"`
+		} `json:"checks"`
+		Normalized struct {
+			Code string `json:"code"`
+		} `json:"normalized"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if response.Valid {
+		t.Fatalf("expected validation to be false")
+	}
+	if len(response.Checks) == 0 {
+		t.Fatalf("expected checks to be returned")
+	}
+	foundSchedule := false
+	for _, check := range response.Checks {
+		if check.Constraint == "schedule" {
+			foundSchedule = true
+			if check.Passed {
+				t.Fatalf("expected schedule check to fail")
+			}
+			if len(check.Issues) != 1 || check.Issues[0] != "startsAt is required" {
+				t.Fatalf("unexpected issues for schedule: %#v", check.Issues)
+			}
+		}
+	}
+	if !foundSchedule {
+		t.Fatalf("expected schedule check in response: %#v", response.Checks)
+	}
+	if response.Normalized.Code != "SPRING" {
+		t.Fatalf("expected normalized promotion code to be uppercased, got %s", response.Normalized.Code)
+	}
+}
+
 func TestAdminPromotionHandlers_UpdatePromotion_AllowOverride(t *testing.T) {
 	var received services.UpsertPromotionCommand
 	service := &stubPromotionAdminService{
@@ -296,11 +373,12 @@ func TestAdminPromotionHandlers_DeletePromotion_MapsErrors(t *testing.T) {
 }
 
 type stubPromotionAdminService struct {
-	listFn   func(context.Context, services.PromotionListFilter) (services.PromotionPage, error)
-	createFn func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
-	updateFn func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
-	deleteFn func(context.Context, string, string) error
-	usageFn  func(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error)
+	listFn               func(context.Context, services.PromotionListFilter) (services.PromotionPage, error)
+	createFn             func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
+	updateFn             func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
+	deleteFn             func(context.Context, string, string) error
+	usageFn              func(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error)
+	validateDefinitionFn func(context.Context, services.Promotion) (services.PromotionDefinitionValidationResult, error)
 }
 
 func (s *stubPromotionAdminService) GetPublicPromotion(context.Context, string) (services.PromotionPublic, error) {
@@ -309,6 +387,13 @@ func (s *stubPromotionAdminService) GetPublicPromotion(context.Context, string) 
 
 func (s *stubPromotionAdminService) ValidatePromotion(context.Context, services.ValidatePromotionCommand) (services.PromotionValidationResult, error) {
 	return services.PromotionValidationResult{}, services.ErrPromotionOperationUnsupported
+}
+
+func (s *stubPromotionAdminService) ValidatePromotionDefinition(ctx context.Context, promotion services.Promotion) (services.PromotionDefinitionValidationResult, error) {
+	if s.validateDefinitionFn != nil {
+		return s.validateDefinitionFn(ctx, promotion)
+	}
+	return services.PromotionDefinitionValidationResult{}, nil
 }
 
 func (s *stubPromotionAdminService) ListPromotions(ctx context.Context, filter services.PromotionListFilter) (services.PromotionPage, error) {
