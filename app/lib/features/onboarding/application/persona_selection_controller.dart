@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/data/repositories/api_user_repository.dart';
 import 'package:app/core/domain/entities/user.dart';
+import 'package:app/core/preferences/pref_keys.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/core/storage/storage_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -56,8 +58,6 @@ class PersonaSelectionState {
 }
 
 class PersonaSelectionController extends AsyncNotifier<PersonaSelectionState> {
-  static const _prefsKey = 'user.persona.selection';
-
   static const List<PersonaOption> _personaOptions = [
     PersonaOption(
       persona: UserPersona.japanese,
@@ -81,7 +81,7 @@ class PersonaSelectionController extends AsyncNotifier<PersonaSelectionState> {
     _preferences = prefs;
 
     final session = await ref.watch(userSessionProvider.future);
-    final stored = prefs.getString(_prefsKey);
+    final stored = prefs.getString(prefKeyUserPersonaSelection);
 
     UserPersona? resolved;
     if (session.status == UserSessionStatus.authenticated &&
@@ -136,6 +136,7 @@ class PersonaSelectionController extends AsyncNotifier<PersonaSelectionState> {
           isSaving: false,
         ),
       );
+      ref.invalidate(experienceGateProvider);
     } catch (error) {
       if (ref.mounted) {
         state = AsyncData(current.copyWith(isSaving: false));
@@ -146,7 +147,10 @@ class PersonaSelectionController extends AsyncNotifier<PersonaSelectionState> {
 
   Future<void> _persistLocal(UserPersona persona) async {
     final prefs = await _ensurePreferences();
-    final success = await prefs.setString(_prefsKey, persona.name);
+    final success = await prefs.setString(
+      prefKeyUserPersonaSelection,
+      persona.name,
+    );
     if (!success) {
       throw StateError('Failed to persist persona preference locally.');
     }

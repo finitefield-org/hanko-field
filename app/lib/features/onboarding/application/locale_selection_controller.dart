@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:app/core/app_state/app_locale.dart';
+import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/data/repositories/api_user_repository.dart';
 import 'package:app/core/domain/entities/user.dart';
@@ -169,6 +170,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
           isSaving: false,
         ),
       );
+      ref.invalidate(experienceGateProvider);
     } catch (error) {
       if (ref.mounted) {
         state = AsyncData(current.copyWith(isSaving: false));
@@ -205,6 +207,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
           isSaving: false,
         ),
       );
+      ref.invalidate(experienceGateProvider);
     } catch (error) {
       if (ref.mounted) {
         state = AsyncData(current.copyWith(isSaving: false));

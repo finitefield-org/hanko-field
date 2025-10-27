@@ -1,3 +1,4 @@
+import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/routing/app_route_configuration.dart';
 import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/routing/app_tab.dart';
@@ -54,19 +55,36 @@ class _TabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final experienceAsync = ref.watch(experienceGateProvider);
+    final experience = experienceAsync.asData?.value;
+
     switch (tab) {
       case AppTab.creation:
-        final stages = [
-          ['new'],
-          ['input'],
-          ['style'],
-          ['editor'],
-          ['preview'],
+        final stages =
+            experience?.creationStages ??
+            const [
+              ['new'],
+              ['input'],
+              ['style'],
+              ['editor'],
+              ['preview'],
+            ];
+        final subtitle = _composeSubtitle(
+          'ディープリンクから該当ステップに遷移できます',
+          experience?.creationSubtitle,
+        );
+        final chips = <String>[
+          if (experience != null) ...[
+            'ペルソナ: ${experience.personaLabel}',
+            '言語: ${experience.locale.toLanguageTag()}',
+            if (experience.showKanjiAssist) '漢字マッピング優先' else '国内チェックリスト',
+          ],
         ];
         return _buildList(
           context,
           title: tab.headline,
-          subtitle: 'ディープリンクから該当ステップに遷移できます',
+          subtitle: subtitle,
+          chips: chips,
           children: [
             for (final stage in stages)
               ListTile(
@@ -77,10 +95,21 @@ class _TabBody extends StatelessWidget {
           ],
         );
       case AppTab.shop:
+        final subtitle = _composeSubtitle(
+          '素材・商品詳細を Tab スタックで保持',
+          experience?.shopSubtitle,
+        );
+        final chips = <String>[
+          if (experience != null) ...[
+            '通貨: ${experience.currencySymbol} ${experience.currencyCode}',
+            if (experience.isDomestic) '国内配送' else '国際配送',
+          ],
+        ];
         return _buildList(
           context,
           title: tab.headline,
-          subtitle: '素材・商品詳細を Tab スタックで保持',
+          subtitle: subtitle,
+          chips: chips,
           children: [
             ListTile(
               leading: const Icon(Icons.category_outlined),
@@ -105,11 +134,19 @@ class _TabBody extends StatelessWidget {
           ],
         );
       case AppTab.orders:
+        final subtitle = _composeSubtitle(
+          '同じタブ内で注文詳細をスタック',
+          experience?.ordersSubtitle,
+        );
+        final chips = <String>[
+          if (experience != null) '地域: ${experience.regionLabel}',
+        ];
         final orders = ['HF-202401', 'HF-202402', 'HF-202403'];
         return _buildList(
           context,
           title: tab.headline,
-          subtitle: '同じタブ内で注文詳細をスタック',
+          subtitle: subtitle,
+          chips: chips,
           children: [
             for (final orderId in orders)
               ListTile(
@@ -130,11 +167,19 @@ class _TabBody extends StatelessWidget {
           ],
         );
       case AppTab.library:
+        final subtitle = _composeSubtitle(
+          '保存済み印鑑の詳細',
+          experience?.librarySubtitle,
+        );
+        final chips = <String>[
+          if (experience != null) 'ペルソナ: ${experience.personaLabel}',
+        ];
         final designs = ['JP-INK-01', 'JP-INK-02'];
         return _buildList(
           context,
           title: tab.headline,
-          subtitle: '保存済み印鑑の詳細',
+          subtitle: subtitle,
+          chips: chips,
           children: [
             for (final designId in designs)
               ListTile(
@@ -156,6 +201,17 @@ class _TabBody extends StatelessWidget {
           ],
         );
       case AppTab.profile:
+        final subtitle = _composeSubtitle(
+          '設定ページも Deep Link へ対応',
+          experience?.profileSubtitle,
+        );
+        final chips = <String>[
+          if (experience != null) ...[
+            '言語: ${experience.locale.toLanguageTag()}',
+            '地域: ${experience.regionLabel}',
+            'ペルソナ: ${experience.personaLabel}',
+          ],
+        ];
         final sections = [
           ['addresses'],
           ['payments'],
@@ -165,7 +221,8 @@ class _TabBody extends StatelessWidget {
         return _buildList(
           context,
           title: tab.headline,
-          subtitle: '設定ページも Deep Link へ対応',
+          subtitle: subtitle,
+          chips: chips,
           children: [
             for (final section in sections)
               ListTile(
@@ -183,6 +240,7 @@ class _TabBody extends StatelessWidget {
     required String title,
     required String subtitle,
     required List<Widget> children,
+    List<String> chips = const [],
   }) {
     final theme = Theme.of(context);
     return ListView(
@@ -190,11 +248,35 @@ class _TabBody extends StatelessWidget {
       children: [
         ListTile(
           title: Text(title, style: theme.textTheme.titleLarge),
-          subtitle: Text(subtitle),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(subtitle),
+              if (chips.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [for (final chip in chips) Chip(label: Text(chip))],
+                ),
+              ],
+            ],
+          ),
+          isThreeLine: chips.isNotEmpty,
         ),
         ...children,
       ],
     );
+  }
+
+  String _composeSubtitle(String base, String? gatingDescription) {
+    if (gatingDescription == null || gatingDescription.isEmpty) {
+      return base;
+    }
+    if (gatingDescription == base) {
+      return base;
+    }
+    return '$base\n$gatingDescription';
   }
 
   void _push(WidgetRef ref, IndependentRoute route) {

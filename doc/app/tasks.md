@@ -28,7 +28,7 @@
 - [x] [Build onboarding/tutorial screens (`/onboarding`) with skipping, progress indicator, and analytics events.](doc/app/tasks/019-build-onboarding-tutorial-screens-onboarding-with-skipping-progress-indicator-and-analytic.md)
 - [x] [Implement locale selection (`/locale`) and persona selection (`/persona`) storing preferences locally and server-side.](doc/app/tasks/020-implement-locale-selection-locale-and-persona-selection-persona-storing-preferences-locall.md)
 - [x] [Build authentication flow (`/auth`) supporting Apple Sign-In, Google, Email, and guest mode; handle link with Firebase Auth.](doc/app/tasks/021-build-authentication-flow-auth-supporting-apple-sign-in-google-email-and-guest-mode-handle.md)
-- [ ] [Implement language/region and persona gating to drive downstream UI states.](doc/app/tasks/022-implement-language-region-and-persona-gating-to-drive-downstream-ui-states.md)
+- [x] [Implement language/region and persona gating to drive downstream UI states.](doc/app/tasks/022-implement-language-region-and-persona-gating-to-drive-downstream-ui-states.md)
 
 ## 4. Home & Discovery
 - [ ] [Implement home screen (`/home`) showing featured items, recent designs, and recommended templates using async providers.](doc/app/tasks/023-implement-home-screen-home-showing-featured-items-recent-designs-and-recommended-templates.md)
