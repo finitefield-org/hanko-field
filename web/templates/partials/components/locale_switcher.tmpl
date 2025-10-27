@@ -9,6 +9,8 @@
       <a href="{{ .Href }}"
          hx-get="{{ .Href }}"
          hx-target="#content-page"
+         hx-select="#content-page"
+         hx-swap="outerHTML"
          hx-push-url="true"
          class="px-3 py-1.5 text-sm font-medium transition {{ if .Active }}bg-indigo-600 text-white shadow-inner{{ else }}text-gray-600 hover:bg-gray-100{{ end }}">
         {{ .Label }}
