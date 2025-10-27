@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:app/core/app_state/user_session.dart';
+import 'package:app/core/routing/app_route_information_parser.dart';
+import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/ui/widgets/app_help_overlay.dart';
 import 'package:app/features/auth/application/auth_controller.dart';
 import 'package:app/features/auth/application/auth_state.dart';
@@ -26,6 +29,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   late final FocusNode _passwordFocusNode;
+  bool _handledAuthSuccess = false;
 
   @override
   void initState() {
@@ -50,6 +54,55 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final colorScheme = theme.colorScheme;
     final authState = ref.watch(authControllerProvider);
     final controller = ref.read(authControllerProvider.notifier);
+
+    ref.listen<AsyncValue<UserSessionState>>(userSessionProvider, (
+      previous,
+      next,
+    ) {
+      final session = next.asData?.value;
+      final wasAuthenticated =
+          previous?.asData?.value.status == UserSessionStatus.authenticated;
+      if (session == null ||
+          session.status != UserSessionStatus.authenticated ||
+          wasAuthenticated ||
+          _handledAuthSuccess) {
+        return;
+      }
+      _handledAuthSuccess = true;
+
+      widget.onStatusRefresh?.call();
+
+      final nextPath = widget.nextPath;
+      if (nextPath != null && nextPath.isNotEmpty) {
+        final targetLocation = nextPath.startsWith('/')
+            ? nextPath
+            : '/$nextPath';
+        final navigator = Navigator.of(context);
+        unawaited(() async {
+          const parser = AppRouteInformationParser();
+          try {
+            final route = await parser.parseRouteInformation(
+              RouteInformation(uri: Uri.parse(targetLocation)),
+            );
+            if (!mounted) {
+              return;
+            }
+            ref.read(appStateProvider.notifier).applyDeepLink(route);
+          } catch (_) {
+            if (!mounted) {
+              return;
+            }
+            if (navigator.canPop()) {
+              navigator.pop();
+            }
+          }
+        }());
+      } else {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      }
+    });
 
     if (_emailController.text != authState.email) {
       _emailController.value = _emailController.value.copyWith(
