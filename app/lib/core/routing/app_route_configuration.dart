@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
+import 'package:app/features/navigation/presentation/app_bar_destinations.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:flutter/material.dart';
 
@@ -189,4 +190,38 @@ class ProfileSectionRoute implements IndependentRoute {
 
   @override
   String toString() => 'ProfileSectionRoute(${sectionSegments.join('/')})';
+}
+
+/// グローバル通知スタック
+class NotificationsRoute implements IndependentRoute {
+  const NotificationsRoute();
+
+  @override
+  Widget get page => const NotificationInboxPage();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'notifications-$index';
+
+  @override
+  List<String> get pathSegments => const ['notifications'];
+
+  @override
+  String toString() => 'NotificationsRoute()';
+}
+
+/// グローバル検索スタック
+class GlobalSearchRoute implements IndependentRoute {
+  const GlobalSearchRoute();
+
+  @override
+  Widget get page => const GlobalSearchPage();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'search-$index';
+
+  @override
+  List<String> get pathSegments => const ['search'];
+
+  @override
+  String toString() => 'GlobalSearchRoute()';
 }

@@ -1,6 +1,8 @@
 import 'package:app/core/routing/app_route_configuration.dart';
 import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/routing/app_tab.dart';
+import 'package:app/core/ui/widgets/app_help_overlay.dart';
+import 'package:app/core/ui/widgets/app_top_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,25 +15,15 @@ class AppTabRootPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tab.label),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-            tooltip: 'お知らせ',
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-            tooltip: '検索',
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () {},
-            tooltip: 'ヘルプ',
-          ),
-        ],
+      appBar: AppTopAppBar(
+        title: tab.label,
+        helpContextLabel: tab.headline,
+        onNotificationsTap: () => ref
+            .read(appStateProvider.notifier)
+            .push(const NotificationsRoute()),
+        onSearchTap: () =>
+            ref.read(appStateProvider.notifier).push(const GlobalSearchRoute()),
+        onHelpTap: () => showHelpOverlay(context, contextLabel: tab.headline),
       ),
       body: _TabBody(tab: tab, ref: ref),
     );

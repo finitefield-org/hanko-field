@@ -67,7 +67,8 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     }
     return [
       for (final segments in routes)
-        if (segments.isNotEmpty) CreationStageRoute(segments),
+        if (segments.isNotEmpty)
+          _specialRouteFromSegments(segments) ?? CreationStageRoute(segments),
     ];
   }
 
@@ -77,6 +78,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     }
     final result = <IndependentRoute>[];
     for (final segments in routes) {
+      final special = _specialRouteFromSegments(segments);
+      if (special != null) {
+        result.add(special);
+        continue;
+      }
       if (segments.length < 2) {
         continue;
       }
@@ -99,6 +105,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     }
     final result = <IndependentRoute>[];
     for (final segments in routes) {
+      final special = _specialRouteFromSegments(segments);
+      if (special != null) {
+        result.add(special);
+        continue;
+      }
       if (segments.isEmpty) {
         continue;
       }
@@ -120,6 +131,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     }
     final result = <IndependentRoute>[];
     for (final segments in routes) {
+      final special = _specialRouteFromSegments(segments);
+      if (special != null) {
+        result.add(special);
+        continue;
+      }
       if (segments.isEmpty) {
         continue;
       }
@@ -141,7 +157,8 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     }
     return [
       for (final segments in routes)
-        if (segments.isNotEmpty) ProfileSectionRoute(segments),
+        if (segments.isNotEmpty)
+          _specialRouteFromSegments(segments) ?? ProfileSectionRoute(segments),
     ];
   }
 
@@ -168,5 +185,19 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
       result.add(List.unmodifiable(current));
     }
     return result;
+  }
+
+  IndependentRoute? _specialRouteFromSegments(List<String> segments) {
+    if (segments.isEmpty) {
+      return null;
+    }
+    final key = segments.first;
+    switch (key) {
+      case 'notifications':
+        return const NotificationsRoute();
+      case 'search':
+        return const GlobalSearchRoute();
+    }
+    return null;
   }
 }
