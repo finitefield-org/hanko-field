@@ -1,7 +1,9 @@
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/core/storage/storage_providers.dart';
 import 'package:app/features/onboarding/application/onboarding_tutorial_controller.dart';
+import 'package:app/features/onboarding/presentation/locale_selection_screen.dart';
 import 'package:app/features/onboarding/presentation/onboarding_tutorial_screen.dart';
+import 'package:app/features/onboarding/presentation/persona_selection_screen.dart';
 import 'package:app/features/splash/domain/startup_decision.dart';
 import 'package:clock/clock.dart' as clock_package;
 import 'package:flutter/material.dart';
@@ -46,7 +48,7 @@ class AppUpdateRequiredScreen extends StatelessWidget {
   }
 }
 
-class OnboardingRequiredScreen extends ConsumerWidget {
+class OnboardingRequiredScreen extends ConsumerStatefulWidget {
   const OnboardingRequiredScreen({
     required this.flags,
     required this.onCompleted,
@@ -57,45 +59,292 @@ class OnboardingRequiredScreen extends ConsumerWidget {
   final VoidCallback onCompleted;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pendingSteps = flags.stepCompletion.entries
+  ConsumerState<OnboardingRequiredScreen> createState() =>
+      _OnboardingRequiredScreenState();
+}
+
+class _OnboardingRequiredScreenState
+    extends ConsumerState<OnboardingRequiredScreen> {
+  late OnboardingFlags _flags = widget.flags;
+  bool _busy = false;
+
+  @override
+  void didUpdateWidget(covariant OnboardingRequiredScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.flags != widget.flags) {
+      _flags = widget.flags;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final pendingSteps = _flags.stepCompletion.entries
         .where((entry) => entry.value == false)
-        .map((entry) => entry.key.name)
-        .join(', ');
+        .map(
+          (entry) => switch (entry.key) {
+            OnboardingStep.tutorial => 'チュートリアル',
+            OnboardingStep.locale => '言語・地域',
+            OnboardingStep.persona => '利用スタイル',
+            OnboardingStep.notifications => '通知設定',
+          },
+        )
+        .toList();
     final subtitle = pendingSteps.isEmpty
         ? '初期設定を完了してください。'
-        : '未完了のステップ: $pendingSteps';
-    return _BlockingLayout(
-      icon: Icons.auto_stories_outlined,
-      title: '初回セットアップ',
-      description: subtitle,
-      primaryLabel: 'チュートリアルを開始',
-      primaryAction: () => _launchTutorial(context, ref),
-      secondaryLabel: 'デバッグ: 完了にする',
-      secondaryAction: () async {
-        await _markAllCompleted(ref);
-        onCompleted();
-      },
+        : '未完了のステップ: ${pendingSteps.join('、')}';
+
+    final tutorialDone =
+        _flags.stepCompletion[OnboardingStep.tutorial] ?? false;
+    final localeDone = _flags.stepCompletion[OnboardingStep.locale] ?? false;
+    final personaDone = _flags.stepCompletion[OnboardingStep.persona] ?? false;
+    final notificationsDone =
+        _flags.stepCompletion[OnboardingStep.notifications] ?? false;
+
+    return Scaffold(
+      backgroundColor: colorScheme.surfaceContainer,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.auto_stories_outlined,
+                size: 64,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '初回セットアップ',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _OnboardingStepCard(
+                icon: Icons.menu_book_outlined,
+                title: 'チュートリアル',
+                description: 'アプリの流れを3ステップで紹介します。',
+                completed: tutorialDone,
+                busy: _busy,
+                onPressed: tutorialDone ? null : _handleTutorial,
+                actionLabel: '開始する',
+              ),
+              const SizedBox(height: 16),
+              _OnboardingStepCard(
+                icon: Icons.language_outlined,
+                title: '言語と地域',
+                description: '価格・ガイド・表記を選んだ言語に最適化します。',
+                completed: localeDone,
+                busy: _busy,
+                onPressed: localeDone ? null : _handleLocale,
+                actionLabel: '言語を選ぶ',
+              ),
+              const SizedBox(height: 16),
+              _OnboardingStepCard(
+                icon: Icons.person_outline,
+                title: '利用スタイル',
+                description: '日本のお客様/海外のお客様向けに導線を切り替えます。',
+                completed: personaDone,
+                busy: _busy,
+                onPressed: personaDone ? null : _handlePersona,
+                actionLabel: 'スタイルを選ぶ',
+              ),
+              const SizedBox(height: 16),
+              _OnboardingStepCard(
+                icon: Icons.notifications_active_outlined,
+                title: '通知設定',
+                description: '最新情報や出荷状況のお知らせを受け取れます。（後で変更可能）',
+                completed: notificationsDone,
+                busy: _busy,
+                onPressed: notificationsDone ? null : _handleNotifications,
+                secondaryAction: true,
+                actionLabel: '後で設定',
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: _busy ? null : _handleCompleteForDebug,
+                child: const Text('デバッグ: 全ステップ完了にする'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Future<void> _launchTutorial(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleTutorial() async {
+    setState(() => _busy = true);
     ref.invalidate(onboardingTutorialControllerProvider);
     final result = await Navigator.of(context).push<OnboardingTutorialOutcome>(
       MaterialPageRoute(builder: (_) => const OnboardingTutorialScreen()),
     );
-    if (result != null) {
-      onCompleted();
+    if (result != null && mounted) {
+      await _refreshFlags();
+    }
+    if (mounted) {
+      setState(() => _busy = false);
     }
   }
 
-  Future<void> _markAllCompleted(WidgetRef ref) async {
+  Future<void> _handleLocale() async {
+    setState(() => _busy = true);
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const LocaleSelectionScreen()),
+    );
+    if (result == true && mounted) {
+      await _refreshFlags();
+    }
+    if (mounted) {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handlePersona() async {
+    setState(() => _busy = true);
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PersonaSelectionScreen()),
+    );
+    if (result == true && mounted) {
+      await _refreshFlags();
+    }
+    if (mounted) {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handleNotifications() async {
+    setState(() => _busy = true);
+    final dataSource = await ref.read(onboardingLocalDataSourceProvider.future);
+    await dataSource.updateStep(OnboardingStep.notifications);
+    if (mounted) {
+      await _refreshFlags();
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handleCompleteForDebug() async {
+    setState(() => _busy = true);
     final dataSource = await ref.read(onboardingLocalDataSourceProvider.future);
     final completed = OnboardingFlags(
       steps: {for (final step in OnboardingStep.values) step: true},
       updatedAt: clock_package.clock.now(),
     );
     await dataSource.replace(completed);
+    if (mounted) {
+      await _refreshFlags();
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _refreshFlags() async {
+    final dataSource = await ref.read(onboardingLocalDataSourceProvider.future);
+    final latest = await dataSource.load();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _flags = latest;
+    });
+    widget.onCompleted();
+  }
+}
+
+class _OnboardingStepCard extends StatelessWidget {
+  const _OnboardingStepCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.completed,
+    required this.busy,
+    this.onPressed,
+    this.secondaryAction = false,
+    this.actionLabel,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool completed;
+  final bool busy;
+  final VoidCallback? onPressed;
+  final bool secondaryAction;
+  final String? actionLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: completed ? 3 : 0,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (completed)
+                  Chip(
+                    label: const Text('完了'),
+                    avatar: const Icon(Icons.check, size: 16),
+                    labelStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    backgroundColor: colorScheme.primaryContainer,
+                    elevation: 0,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (!completed)
+              Align(
+                alignment: Alignment.centerRight,
+                child: secondaryAction
+                    ? OutlinedButton(
+                        onPressed: busy ? null : onPressed,
+                        child: Text(actionLabel ?? '後で設定'),
+                      )
+                    : FilledButton(
+                        onPressed: busy ? null : onPressed,
+                        child: Text(actionLabel ?? '進む'),
+                      ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
