@@ -12,6 +12,7 @@ import 'package:app/core/routing/app_route_information_parser.dart';
 import 'package:app/core/routing/app_router_delegate.dart';
 import 'package:app/core/storage/storage_providers.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/features/splash/presentation/splash_gate.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,6 +103,9 @@ class App extends ConsumerWidget {
       darkTheme: AppTheme.dark(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) {
+        return SplashGate(child: child ?? const SizedBox.shrink());
+      },
     );
   }
 }

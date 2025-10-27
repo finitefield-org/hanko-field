@@ -24,7 +24,7 @@
 - [x] [Create notification bell UI, search entry points, and help overlays accessible from top app bar.](doc/app/tasks/017-create-notification-bell-ui-search-entry-points-and-help-overlays-accessible-from-top-app-.md)
 
 ## 3. Onboarding & Auth Flow
-- [ ] [Implement splash screen logic (`/splash`) checking auth state, app version, feature flags.](doc/app/tasks/018-implement-splash-screen-logic-splash-checking-auth-state-app-version-feature-flags.md)
+- [x] [Implement splash screen logic (`/splash`) checking auth state, app version, feature flags.](doc/app/tasks/018-implement-splash-screen-logic-splash-checking-auth-state-app-version-feature-flags.md)
 - [ ] [Build onboarding/tutorial screens (`/onboarding`) with skipping, progress indicator, and analytics events.](doc/app/tasks/019-build-onboarding-tutorial-screens-onboarding-with-skipping-progress-indicator-and-analytic.md)
 - [ ] [Implement locale selection (`/locale`) and persona selection (`/persona`) storing preferences locally and server-side.](doc/app/tasks/020-implement-locale-selection-locale-and-persona-selection-persona-storing-preferences-locall.md)
 - [ ] [Build authentication flow (`/auth`) supporting Apple Sign-In, Google, Email, and guest mode; handle link with Firebase Auth.](doc/app/tasks/021-build-authentication-flow-auth-supporting-apple-sign-in-google-email-and-guest-mode-handle.md)

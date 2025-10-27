@@ -57,6 +57,8 @@ class AppFirebase {
     await rc.setDefaults(const {
       'feature_sample_counter': true,
       'welcome_title': 'Hanko Field',
+      'minimum_supported_version': '1.0.0',
+      'latest_available_version': '1.0.0',
     });
 
     _initialized = true;

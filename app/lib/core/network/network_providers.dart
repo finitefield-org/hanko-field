@@ -1,4 +1,5 @@
 import 'package:app/core/app/app_flavor.dart';
+import 'package:app/core/app/app_version.dart';
 import 'package:app/core/app_state/app_locale.dart';
 import 'package:app/core/network/connectivity_service.dart';
 import 'package:app/core/network/interceptors/auth_interceptor.dart';
@@ -14,11 +15,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 
-const _appVersion = String.fromEnvironment(
-  'APP_VERSION',
-  defaultValue: '1.0.0',
-);
-
 final networkLoggerProvider = Provider<Logger>((ref) {
   return Logger('network');
 });
@@ -29,6 +25,7 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 final networkConfigProvider = Provider<NetworkConfig>((ref) {
   final appConfig = ref.watch(appConfigProvider);
+  final appVersion = ref.watch(appVersionProvider);
   final localeTag = ref
       .watch(appLocaleProvider)
       .when(
@@ -40,7 +37,8 @@ final networkConfigProvider = Provider<NetworkConfig>((ref) {
 
   return NetworkConfig(
     baseUrl: appConfig.baseUrl,
-    userAgent: 'HankoField/${appConfig.displayName}; v=$_appVersion; $platform',
+    userAgent:
+        'HankoField/${appConfig.displayName}; v=${appVersion.raw}; $platform',
     localeTag: localeTag,
   );
 });
