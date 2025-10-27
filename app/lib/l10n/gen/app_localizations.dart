@@ -121,6 +121,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Count: {value}'**
   String countLabel(int value);
+
+  /// Title shown on the onboarding tutorial app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Hanko Field'**
+  String get onboardingAppBarTitle;
+
+  /// CTA to skip the onboarding tutorial
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkip;
+
+  /// CTA to go back to the previous onboarding slide
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get onboardingBack;
+
+  /// CTA to move to the next onboarding slide
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// CTA when finishing the onboarding tutorial
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get onboardingGetStarted;
+
+  /// Label describing current step out of total steps
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String onboardingProgressLabel(int current, int total);
+
+  /// Title for the first onboarding slide about creating designs
+  ///
+  /// In en, this message translates to:
+  /// **'Craft your personal seal'**
+  String get onboardingSlideCraftTitle;
+
+  /// Body copy describing the creation tools available in the app
+  ///
+  /// In en, this message translates to:
+  /// **'Create beautiful hanko impressions with guided tools and templates tailored to your needs.'**
+  String get onboardingSlideCraftBody;
+
+  /// Title for the second onboarding slide about support and guides
+  ///
+  /// In en, this message translates to:
+  /// **'Expert support at every step'**
+  String get onboardingSlideSupportTitle;
+
+  /// Body copy describing assistance and order tracking
+  ///
+  /// In en, this message translates to:
+  /// **'Track orders, access guides, and chat with us whenever you need help.'**
+  String get onboardingSlideSupportBody;
+
+  /// Title for the third onboarding slide about trust and security
+  ///
+  /// In en, this message translates to:
+  /// **'Secure and ready for business'**
+  String get onboardingSlideTrustTitle;
+
+  /// Body copy describing security and reliability benefits
+  ///
+  /// In en, this message translates to:
+  /// **'Your data stays protected while you manage signatures, deliveries, and records with confidence.'**
+  String get onboardingSlideTrustBody;
 }
 
 class _AppLocalizationsDelegate

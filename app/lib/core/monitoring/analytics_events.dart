@@ -106,3 +106,100 @@ class ScreenViewAnalyticsEvent {
     }
   }
 }
+
+class OnboardingTutorialStepViewedEvent extends AnalyticsEvent {
+  const OnboardingTutorialStepViewedEvent({
+    required this.stepIndex,
+    required this.totalSteps,
+  });
+
+  final int stepIndex;
+  final int totalSteps;
+
+  @override
+  String get name => 'onboarding_tutorial_step_viewed';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'step_index': stepIndex,
+    'total_steps': totalSteps,
+  };
+
+  @override
+  void validate() {
+    if (totalSteps <= 0) {
+      throw ArgumentError.value(
+        totalSteps,
+        'totalSteps',
+        'Total steps must be positive.',
+      );
+    }
+    if (stepIndex <= 0 || stepIndex > totalSteps) {
+      throw ArgumentError.value(
+        stepIndex,
+        'stepIndex',
+        'Step index must be within 1..$totalSteps.',
+      );
+    }
+  }
+}
+
+class OnboardingTutorialCompletedEvent extends AnalyticsEvent {
+  const OnboardingTutorialCompletedEvent({required this.totalSteps});
+
+  final int totalSteps;
+
+  @override
+  String get name => 'onboarding_tutorial_completed';
+
+  @override
+  AnalyticsParameters toParameters() => {'total_steps': totalSteps};
+
+  @override
+  void validate() {
+    if (totalSteps <= 0) {
+      throw ArgumentError.value(
+        totalSteps,
+        'totalSteps',
+        'Total steps must be positive.',
+      );
+    }
+  }
+}
+
+class OnboardingTutorialSkippedEvent extends AnalyticsEvent {
+  const OnboardingTutorialSkippedEvent({
+    required this.skippedAtStep,
+    required this.totalSteps,
+  });
+
+  final int skippedAtStep;
+  final int totalSteps;
+
+  @override
+  String get name => 'onboarding_tutorial_skipped';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'skipped_at_step': skippedAtStep,
+    'total_steps': totalSteps,
+  };
+
+  @override
+  void validate() {
+    if (totalSteps <= 0) {
+      throw ArgumentError.value(
+        totalSteps,
+        'totalSteps',
+        'Total steps must be positive.',
+      );
+    }
+    if (skippedAtStep <= 0 || skippedAtStep > totalSteps) {
+      throw ArgumentError.value(
+        skippedAtStep,
+        'skippedAtStep',
+        'Skipped step must be within 1..$totalSteps.',
+      );
+    }
+  }
+}

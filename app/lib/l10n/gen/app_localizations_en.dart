@@ -21,4 +21,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String countLabel(int value) {
     return 'Count: $value';
   }
+
+  @override
+  String get onboardingAppBarTitle => 'Welcome to Hanko Field';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingBack => 'Back';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String onboardingProgressLabel(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get onboardingSlideCraftTitle => 'Craft your personal seal';
+
+  @override
+  String get onboardingSlideCraftBody =>
+      'Create beautiful hanko impressions with guided tools and templates tailored to your needs.';
+
+  @override
+  String get onboardingSlideSupportTitle => 'Expert support at every step';
+
+  @override
+  String get onboardingSlideSupportBody =>
+      'Track orders, access guides, and chat with us whenever you need help.';
+
+  @override
+  String get onboardingSlideTrustTitle => 'Secure and ready for business';
+
+  @override
+  String get onboardingSlideTrustBody =>
+      'Your data stays protected while you manage signatures, deliveries, and records with confidence.';
 }

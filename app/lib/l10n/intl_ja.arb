@@ -3,6 +3,17 @@
   "appTitle": "ハンコフィールド",
   "counterScreenTitle": "サンプルカウンター",
   "increment": "インクリメント",
-  "countLabel": "カウント: {value}"
+  "countLabel": "カウント: {value}",
+  "onboardingAppBarTitle": "ようこそ Hanko Field へ",
+  "onboardingSkip": "スキップ",
+  "onboardingBack": "戻る",
+  "onboardingNext": "次へ",
+  "onboardingGetStarted": "はじめる",
+  "onboardingProgressLabel": "ステップ {current}/{total}",
+  "onboardingSlideCraftTitle": "あなただけの印影を作成",
+  "onboardingSlideCraftBody": "テンプレートとガイドで、用途に合った美しい印影を簡単にデザインできます。",
+  "onboardingSlideSupportTitle": "いつでもサポート",
+  "onboardingSlideSupportBody": "注文状況の確認やガイドの閲覧、困ったときのチャットもアプリからすぐに利用できます。",
+  "onboardingSlideTrustTitle": "安心のセキュリティ",
+  "onboardingSlideTrustBody": "データを安全に保ちながら、署名・配送・履歴管理を安心して進められます。"
 }
-

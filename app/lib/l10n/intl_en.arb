@@ -21,6 +21,69 @@
     "placeholders": {
       "value": { "type": "int" }
     }
+  },
+
+  "onboardingAppBarTitle": "Welcome to Hanko Field",
+  "@onboardingAppBarTitle": {
+    "description": "Title shown on the onboarding tutorial app bar"
+  },
+
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {
+    "description": "CTA to skip the onboarding tutorial"
+  },
+
+  "onboardingBack": "Back",
+  "@onboardingBack": {
+    "description": "CTA to go back to the previous onboarding slide"
+  },
+
+  "onboardingNext": "Next",
+  "@onboardingNext": {
+    "description": "CTA to move to the next onboarding slide"
+  },
+
+  "onboardingGetStarted": "Get started",
+  "@onboardingGetStarted": {
+    "description": "CTA when finishing the onboarding tutorial"
+  },
+
+  "onboardingProgressLabel": "{current} of {total}",
+  "@onboardingProgressLabel": {
+    "description": "Label describing current step out of total steps",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "onboardingSlideCraftTitle": "Craft your personal seal",
+  "@onboardingSlideCraftTitle": {
+    "description": "Title for the first onboarding slide about creating designs"
+  },
+
+  "onboardingSlideCraftBody": "Create beautiful hanko impressions with guided tools and templates tailored to your needs.",
+  "@onboardingSlideCraftBody": {
+    "description": "Body copy describing the creation tools available in the app"
+  },
+
+  "onboardingSlideSupportTitle": "Expert support at every step",
+  "@onboardingSlideSupportTitle": {
+    "description": "Title for the second onboarding slide about support and guides"
+  },
+
+  "onboardingSlideSupportBody": "Track orders, access guides, and chat with us whenever you need help.",
+  "@onboardingSlideSupportBody": {
+    "description": "Body copy describing assistance and order tracking"
+  },
+
+  "onboardingSlideTrustTitle": "Secure and ready for business",
+  "@onboardingSlideTrustTitle": {
+    "description": "Title for the third onboarding slide about trust and security"
+  },
+
+  "onboardingSlideTrustBody": "Your data stays protected while you manage signatures, deliveries, and records with confidence.",
+  "@onboardingSlideTrustBody": {
+    "description": "Body copy describing security and reliability benefits"
   }
 }
-

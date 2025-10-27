@@ -1,5 +1,7 @@
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/core/storage/storage_providers.dart';
+import 'package:app/features/onboarding/application/onboarding_tutorial_controller.dart';
+import 'package:app/features/onboarding/presentation/onboarding_tutorial_screen.dart';
 import 'package:app/features/splash/domain/startup_decision.dart';
 import 'package:clock/clock.dart' as clock_package;
 import 'package:flutter/material.dart';
@@ -68,7 +70,7 @@ class OnboardingRequiredScreen extends ConsumerWidget {
       title: '初回セットアップ',
       description: subtitle,
       primaryLabel: 'チュートリアルを開始',
-      primaryAction: () => _showComingSoon(context),
+      primaryAction: () => _launchTutorial(context, ref),
       secondaryLabel: 'デバッグ: 完了にする',
       secondaryAction: () async {
         await _markAllCompleted(ref);
@@ -77,10 +79,14 @@ class OnboardingRequiredScreen extends ConsumerWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('オンボーディング画面は後続タスクで実装されます。')));
+  Future<void> _launchTutorial(BuildContext context, WidgetRef ref) async {
+    ref.invalidate(onboardingTutorialControllerProvider);
+    final result = await Navigator.of(context).push<OnboardingTutorialOutcome>(
+      MaterialPageRoute(builder: (_) => const OnboardingTutorialScreen()),
+    );
+    if (result != null) {
+      onCompleted();
+    }
   }
 
   Future<void> _markAllCompleted(WidgetRef ref) async {
