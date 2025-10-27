@@ -78,6 +78,60 @@ void main() {
       },
     );
 
+    test('persists coerced locale when system locale unsupported', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final onboarding = TestOnboardingLocalDataSource(preferences: prefs);
+      const initialLocaleState = AppLocaleState(
+        locale: Locale('fr', 'FR'),
+        systemLocale: Locale('fr', 'FR'),
+        source: AppLocaleSource.system,
+      );
+      late TestAppLocaleNotifier appLocaleNotifier;
+      final fakeRepository = FakeUserRepository();
+      late FakeUserSessionNotifier fakeSession;
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWith((ref) async => prefs),
+          onboardingLocalDataSourceProvider.overrideWith(
+            (ref) async => onboarding,
+          ),
+          appLocaleProvider.overrideWith(() {
+            appLocaleNotifier = TestAppLocaleNotifier(
+              initialState: initialLocaleState,
+            );
+            return appLocaleNotifier;
+          }),
+          userSessionProvider.overrideWith(() {
+            fakeSession = FakeUserSessionNotifier(
+              UserSessionState.unauthenticated(),
+            );
+            return fakeSession;
+          }),
+          userRepositoryProvider.overrideWithValue(fakeRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final controller = container.read(
+        localeSelectionControllerProvider.notifier,
+      );
+      final state = await container.read(
+        localeSelectionControllerProvider.future,
+      );
+      expect(state.selectedLocale.languageCode, isNot('fr'));
+
+      await controller.saveSelection(force: true);
+
+      expect(appLocaleNotifier.setLocaleCalls, isNotEmpty);
+      expect(
+        appLocaleNotifier.setLocaleCalls.last.toLanguageTag(),
+        equals(state.selectedLocale.toLanguageTag()),
+      );
+      expect(onboarding.flags.stepCompletion[OnboardingStep.locale], isTrue);
+    });
+
     test(
       'forces confirmation without changes and keeps locale intact',
       () async {

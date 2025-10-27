@@ -37,6 +37,7 @@ class LocaleSelectionState {
     required this.selectedLocale,
     required this.systemLocale,
     required this.initialSource,
+    this.requiresPersistence = false,
     this.isSaving = false,
   });
 
@@ -45,9 +46,11 @@ class LocaleSelectionState {
   final Locale selectedLocale;
   final Locale systemLocale;
   final AppLocaleSource initialSource;
+  final bool requiresPersistence;
   final bool isSaving;
 
   bool get hasPendingChanges =>
+      requiresPersistence ||
       selectedLocale.toLanguageTag() != initialLocale.toLanguageTag();
 
   bool get isUsingSystemLocale =>
@@ -61,6 +64,7 @@ class LocaleSelectionState {
     Locale? selectedLocale,
     Locale? systemLocale,
     AppLocaleSource? initialSource,
+    bool? requiresPersistence,
     bool? isSaving,
   }) {
     return LocaleSelectionState(
@@ -69,6 +73,7 @@ class LocaleSelectionState {
       selectedLocale: selectedLocale ?? this.selectedLocale,
       systemLocale: systemLocale ?? this.systemLocale,
       initialSource: initialSource ?? this.initialSource,
+      requiresPersistence: requiresPersistence ?? this.requiresPersistence,
       isSaving: isSaving ?? this.isSaving,
     );
   }
@@ -98,6 +103,9 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
     final systemLocale = localeState.systemLocale;
     final initialLocale = _coerceToSupported(localeState.locale);
     final selectedLocale = initialLocale;
+    final coercedFromSystem =
+        localeState.source == AppLocaleSource.system &&
+        initialLocale.toLanguageTag() != systemLocale.toLanguageTag();
 
     return LocaleSelectionState(
       availableLocales: _supportedLocaleOptions,
@@ -105,6 +113,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
       selectedLocale: selectedLocale,
       systemLocale: systemLocale,
       initialSource: localeState.source,
+      requiresPersistence: coercedFromSystem,
     );
   }
 
@@ -117,7 +126,9 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
     if (current.selectedLocale.toLanguageTag() == coerced.toLanguageTag()) {
       return;
     }
-    state = AsyncData(current.copyWith(selectedLocale: coerced));
+    state = AsyncData(
+      current.copyWith(selectedLocale: coerced, requiresPersistence: false),
+    );
   }
 
   Future<void> saveSelection({bool force = false}) async {
@@ -154,6 +165,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
           initialLocale: nextInitialLocale,
           initialSource: nextSource,
           selectedLocale: current.selectedLocale,
+          requiresPersistence: false,
           isSaving: false,
         ),
       );
@@ -189,6 +201,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
           initialLocale: normalizedSystem,
           selectedLocale: normalizedSystem,
           initialSource: AppLocaleSource.system,
+          requiresPersistence: false,
           isSaving: false,
         ),
       );
