@@ -816,7 +816,8 @@ func formatTimePtr(ts *time.Time) string {
 	if value.IsZero() {
 		return ""
 	}
-	return helpers.Date(value, "2006-01-02 15:04 MST")
+	local := toTokyo(value)
+	return helpers.Date(local, "2006-01-02 15:04 MST")
 }
 
 func scheduleDescriptors(ts *time.Time) (string, string) {
@@ -827,7 +828,8 @@ func scheduleDescriptors(ts *time.Time) (string, string) {
 	if value.IsZero() {
 		return "", ""
 	}
-	return helpers.Date(value, "2006-01-02 15:04 MST"), helpers.Relative(value)
+	local := toTokyo(value)
+	return helpers.Date(local, "2006-01-02 15:04 MST"), helpers.Relative(local)
 }
 
 func firstNonEmpty(values ...string) string {
@@ -852,6 +854,14 @@ func toneForStatus(value string) string {
 	default:
 		return "success"
 	}
+}
+
+func toTokyo(t time.Time) time.Time {
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		loc = time.FixedZone("JST", 9*60*60)
+	}
+	return t.In(loc)
 }
 
 func ensureQueryView(rawQuery, view string) string {
