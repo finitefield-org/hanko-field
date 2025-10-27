@@ -110,7 +110,7 @@ func buildAccountView(lang string, sess *mw.SessionData) AccountView {
 	view := AccountView{
 		Lang:        lang,
 		User:        accountUserFromProfile(profile, lang),
-		NavItems:    accountNavItems(lang),
+		NavItems:    accountNavItems(lang, "profile"),
 		ProfileForm: buildAccountProfileFormView(lang, profile, nil, nil),
 		Preferences: accountPreferenceToggles(lang),
 		Sessions:    accountSessions(lang),
@@ -165,19 +165,21 @@ func accountUserFromProfile(profile mw.SessionProfile, lang string) AccountUser 
 	}
 }
 
-func accountNavItems(lang string) []AccountNavItem {
+func accountNavItems(lang, active string) []AccountNavItem {
 	items := []AccountNavItem{
 		{Key: "overview", Label: i18nOrDefault(lang, "account.nav.overview", "Overview"), Description: i18nOrDefault(lang, "account.nav.overview.desc", "Activity highlights and alerts"), Icon: "chart-pie", Href: "/account"},
 		{Key: "profile", Label: i18nOrDefault(lang, "account.nav.profile", "Profile"), Description: i18nOrDefault(lang, "account.nav.profile.desc", "Identity and locale preferences"), Icon: "user-circle", Href: "/account"},
+		{Key: "addresses", Label: i18nOrDefault(lang, "account.nav.addresses", "Addresses"), Description: i18nOrDefault(lang, "account.nav.addresses.desc", "Shipping, billing, and pickup locations"), Icon: "map-pin", Href: "/account/addresses"},
 		{Key: "library", Label: i18nOrDefault(lang, "account.nav.library", "Library"), Description: i18nOrDefault(lang, "account.nav.library.desc", "Saved seals and approvals"), Icon: "document-duplicate", Href: "/account/library", Badge: i18nOrDefault(lang, "account.nav.beta", "Beta")},
 		{Key: "security", Label: i18nOrDefault(lang, "account.nav.security", "Security"), Description: i18nOrDefault(lang, "account.nav.security.desc", "Sessions, devices, and 2FA"), Icon: "shield-check", Href: "/account/security"},
 		{Key: "billing", Label: i18nOrDefault(lang, "account.nav.billing", "Billing"), Description: i18nOrDefault(lang, "account.nav.billing.desc", "Invoices and usage"), Icon: "credit-card", Href: "/account/billing"},
 		{Key: "notifications", Label: i18nOrDefault(lang, "account.nav.notifications", "Notifications"), Description: i18nOrDefault(lang, "account.nav.notifications.desc", "Communication settings"), Icon: "bell-alert", Href: "/account/notifications"},
 	}
+	if active == "" {
+		active = "profile"
+	}
 	for i := range items {
-		if items[i].Key == "profile" {
-			items[i].Active = true
-		}
+		items[i].Active = items[i].Key == active
 	}
 	return items
 }

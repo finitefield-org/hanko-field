@@ -396,3 +396,30 @@ func renderCheckoutActionError(w http.ResponseWriter, r *http.Request, lang, msg
 	}
 	http.Redirect(w, r, "/checkout/address?status=missing_selection", http.StatusSeeOther)
 }
+
+func deleteSessionAddress(sess *mw.SessionData, id string) bool {
+	if sess == nil || id == "" {
+		return false
+	}
+	removed := false
+	filtered := make([]mw.SessionAddress, 0, len(sess.Checkout.Addresses))
+	for _, addr := range sess.Checkout.Addresses {
+		if addr.ID == id {
+			removed = true
+			continue
+		}
+		filtered = append(filtered, addr)
+	}
+	if !removed {
+		return false
+	}
+	sess.Checkout.Addresses = filtered
+	if sess.Checkout.ShippingAddressID == id {
+		sess.Checkout.ShippingAddressID = ""
+	}
+	if sess.Checkout.BillingAddressID == id {
+		sess.Checkout.BillingAddressID = ""
+	}
+	sess.MarkDirty()
+	return true
+}
