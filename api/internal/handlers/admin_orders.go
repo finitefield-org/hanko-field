@@ -1,0 +1,393 @@
+package handlers
+
+import (
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	domain "github.com/hanko-field/api/internal/domain"
+	"github.com/hanko-field/api/internal/platform/auth"
+	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/services"
+)
+
+const (
+	defaultAdminOrderPageSize = 50
+	maxAdminOrderPageSize     = 200
+)
+
+// AdminOrderHandlers exposes order list endpoints for operations dashboards.
+type AdminOrderHandlers struct {
+	authn  *auth.Authenticator
+	orders services.OrderService
+}
+
+// NewAdminOrderHandlers constructs the admin order handler set.
+func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService) *AdminOrderHandlers {
+	return &AdminOrderHandlers{
+		authn:  authn,
+		orders: orders,
+	}
+}
+
+// Routes registers admin order endpoints under the provided router.
+func (h *AdminOrderHandlers) Routes(r chi.Router) {
+	if r == nil {
+		return
+	}
+	if h.authn != nil {
+		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+	}
+	r.Get("/orders", h.listOrders)
+}
+
+func (h *AdminOrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.orders == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	query := r.URL.Query()
+	rawQuery := map[string][]string(query)
+	pageSize := defaultAdminOrderPageSize
+	if sizeRaw := strings.TrimSpace(firstNonEmpty(query.Get("page_size"), query.Get("pageSize"))); sizeRaw != "" {
+		size, err := strconv.Atoi(sizeRaw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_page_size", "page_size must be an integer", http.StatusBadRequest))
+			return
+		}
+		switch {
+		case size <= 0:
+			pageSize = defaultAdminOrderPageSize
+		case size > maxAdminOrderPageSize:
+			pageSize = maxAdminOrderPageSize
+		default:
+			pageSize = size
+		}
+	}
+
+	filter := services.OrderListFilter{
+		Status:           collectAdminOrderFilters(rawQuery, "status"),
+		PaymentStatuses:  collectAdminOrderFilters(rawQuery, "payment_status", "paymentStatus"),
+		ProductionQueues: collectAdminOrderFilters(rawQuery, "queue", "production_queue", "productionQueue"),
+		Channels:         collectAdminOrderFilters(rawQuery, "channel", "sales_channel", "salesChannel"),
+		CustomerEmail:    strings.TrimSpace(firstNonEmpty(query.Get("customer_email"), query.Get("customerEmail"))),
+		PromotionCode:    strings.TrimSpace(firstNonEmpty(query.Get("promotion_code"), query.Get("promotionCode"))),
+		Pagination: services.Pagination{
+			PageSize:  pageSize,
+			PageToken: strings.TrimSpace(firstNonEmpty(query.Get("page_token"), query.Get("pageToken"))),
+		},
+	}
+
+	var dateRange domain.RangeQuery[time.Time]
+	hasRange := false
+	if raw := strings.TrimSpace(firstNonEmpty(query.Get("created_after"), query.Get("since"))); raw != "" {
+		ts, err := parseTimeParam(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_created_after", "created_after must be a valid RFC3339 timestamp", http.StatusBadRequest))
+			return
+		}
+		dateRange.From = &ts
+		hasRange = true
+	}
+	if raw := strings.TrimSpace(firstNonEmpty(query.Get("created_before"), query.Get("until"))); raw != "" {
+		ts, err := parseTimeParam(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_created_before", "created_before must be a valid RFC3339 timestamp", http.StatusBadRequest))
+			return
+		}
+		dateRange.To = &ts
+		hasRange = true
+	}
+	if hasRange {
+		filter.DateRange = dateRange
+	}
+
+	sortValue := strings.TrimSpace(query.Get("sort"))
+	if sortValue == "" {
+		filter.SortBy = services.OrderSortCreatedAt
+	} else {
+		if sortField, ok := parseAdminOrderSort(sortValue); ok {
+			filter.SortBy = sortField
+		} else {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_sort", "sort must be created_at, updated_at, or placed_at", http.StatusBadRequest))
+			return
+		}
+	}
+
+	orderValue := strings.TrimSpace(query.Get("order"))
+	switch strings.ToLower(orderValue) {
+	case "", "desc", "descending":
+		filter.SortOrder = services.SortDesc
+	case "asc", "ascending":
+		filter.SortOrder = services.SortAsc
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_order", "order must be asc or desc", http.StatusBadRequest))
+		return
+	}
+
+	page, err := h.orders.ListOrders(ctx, filter)
+	if err != nil {
+		writeOrderError(ctx, w, err)
+		return
+	}
+
+	items := make([]adminOrderSummary, 0, len(page.Items))
+	for _, order := range page.Items {
+		items = append(items, buildAdminOrderSummary(order))
+	}
+
+	response := adminOrderListResponse{
+		Items:         items,
+		NextPageToken: strings.TrimSpace(page.NextPageToken),
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func parseAdminOrderSort(raw string) (services.OrderSort, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(raw))
+	normalized = strings.ReplaceAll(normalized, "_", "")
+	normalized = strings.ReplaceAll(normalized, "-", "")
+
+	switch normalized {
+	case "", "created", "createdat":
+		return services.OrderSortCreatedAt, true
+	case "updated", "updatedat":
+		return services.OrderSortUpdatedAt, true
+	case "placed", "placedat":
+		return services.OrderSortPlacedAt, true
+	default:
+		return "", false
+	}
+}
+
+type adminOrderListResponse struct {
+	Items         []adminOrderSummary `json:"items"`
+	NextPageToken string              `json:"next_page_token,omitempty"`
+}
+
+type adminOrderSummary struct {
+	ID               string   `json:"id"`
+	OrderNumber      string   `json:"order_number"`
+	Status           string   `json:"status"`
+	PaymentStatus    string   `json:"payment_status,omitempty"`
+	Currency         string   `json:"currency"`
+	Total            int64    `json:"total"`
+	CustomerEmail    string   `json:"customer_email,omitempty"`
+	PromotionCode    string   `json:"promotion_code,omitempty"`
+	Channel          string   `json:"channel,omitempty"`
+	ProductionQueue  string   `json:"production_queue,omitempty"`
+	ProductionStage  string   `json:"production_stage,omitempty"`
+	LastEventType    string   `json:"last_event_type,omitempty"`
+	LastEventAt      string   `json:"last_event_at,omitempty"`
+	OutstandingTasks []string `json:"outstanding_tasks,omitempty"`
+	OnHold           bool     `json:"on_hold,omitempty"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at,omitempty"`
+	PlacedAt         string   `json:"placed_at,omitempty"`
+	PaidAt           string   `json:"paid_at,omitempty"`
+}
+
+func buildAdminOrderSummary(order services.Order) adminOrderSummary {
+	queueRef := ""
+	if order.Production.QueueRef != nil {
+		queueRef = strings.TrimSpace(*order.Production.QueueRef)
+	}
+
+	summary := adminOrderSummary{
+		ID:               strings.TrimSpace(order.ID),
+		OrderNumber:      strings.TrimSpace(order.OrderNumber),
+		Status:           strings.TrimSpace(string(order.Status)),
+		PaymentStatus:    strings.TrimSpace(extractOrderPaymentStatus(order)),
+		Currency:         strings.TrimSpace(order.Currency),
+		Total:            order.Totals.Total,
+		CustomerEmail:    extractOrderCustomerEmail(order),
+		PromotionCode:    extractOrderPromotionCode(order),
+		Channel:          extractOrderChannel(order),
+		ProductionQueue:  queueRef,
+		ProductionStage:  extractOrderProductionStage(order),
+		LastEventType:    strings.TrimSpace(order.Production.LastEventType),
+		LastEventAt:      formatTime(pointerTime(order.Production.LastEventAt)),
+		OutstandingTasks: extractOrderOutstandingTasks(order),
+		OnHold:           order.Production.OnHold,
+		CreatedAt:        formatTime(order.CreatedAt),
+		UpdatedAt:        formatTime(order.UpdatedAt),
+		PlacedAt:         formatTime(pointerTime(order.PlacedAt)),
+		PaidAt:           formatTime(pointerTime(order.PaidAt)),
+	}
+
+	if len(summary.OutstandingTasks) > 1 {
+		sort.Strings(summary.OutstandingTasks)
+	}
+
+	return summary
+}
+
+func extractOrderCustomerEmail(order services.Order) string {
+	if order.Contact != nil {
+		if email := strings.TrimSpace(order.Contact.Email); email != "" {
+			return email
+		}
+	}
+	if email := stringFromMap(order.Metadata, "customerEmail", "customer_email", "email"); email != "" {
+		return email
+	}
+	if email := stringFromMap(order.Notes, "customerEmail", "customer_email"); email != "" {
+		return email
+	}
+	return ""
+}
+
+func extractOrderPromotionCode(order services.Order) string {
+	if order.Promotion != nil {
+		if code := strings.TrimSpace(order.Promotion.Code); code != "" {
+			return code
+		}
+	}
+	return stringFromMap(order.Metadata, "promotionCode", "promotion_code", "promo", "promoCode")
+}
+
+func extractOrderChannel(order services.Order) string {
+	if channel := stringFromMap(order.Metadata, "channel", "orderChannel", "salesChannel"); channel != "" {
+		return channel
+	}
+	if ops := mapFromAny(order.Metadata["operations"]); ops != nil {
+		if channel := stringFromMap(ops, "channel", "queue"); channel != "" {
+			return channel
+		}
+	}
+	return ""
+}
+
+func extractOrderProductionStage(order services.Order) string {
+	if stage := stringFromMap(order.Metadata, "productionStage", "production_stage", "stage"); stage != "" {
+		return stage
+	}
+	if stage := strings.TrimSpace(order.Production.LastEventType); stage != "" {
+		return stage
+	}
+	return strings.TrimSpace(string(order.Status))
+}
+
+func extractOrderOutstandingTasks(order services.Order) []string {
+	if tasks := normalizeStringSlice(stringSliceFromAny(order.Metadata["outstandingTasks"])); len(tasks) > 0 {
+		return tasks
+	}
+	if tasks := normalizeStringSlice(stringSliceFromAny(order.Metadata["outstanding_tasks"])); len(tasks) > 0 {
+		return tasks
+	}
+	if ops := mapFromAny(order.Metadata["operations"]); ops != nil {
+		if tasks := normalizeStringSlice(stringSliceFromAny(ops["outstandingTasks"])); len(tasks) > 0 {
+			return tasks
+		}
+		if tasks := normalizeStringSlice(stringSliceFromAny(ops["outstanding_tasks"])); len(tasks) > 0 {
+			return tasks
+		}
+	}
+	if len(order.Notes) > 0 {
+		if tasks := normalizeStringSlice(stringSliceFromAny(order.Notes["outstandingTasks"])); len(tasks) > 0 {
+			return tasks
+		}
+		if tasks := normalizeStringSlice(stringSliceFromAny(order.Notes["outstanding_tasks"])); len(tasks) > 0 {
+			return tasks
+		}
+	}
+	return nil
+}
+
+func extractOrderPaymentStatus(order services.Order) string {
+	if status := stringFromMap(order.Metadata, "paymentStatus", "payment_status", "paymentState"); status != "" {
+		return status
+	}
+	if payment := mapFromAny(order.Metadata["payment"]); payment != nil {
+		if status := stringFromMap(payment, "status", "state"); status != "" {
+			return status
+		}
+	}
+	if len(order.Payments) > 0 {
+		latest := order.Payments[0]
+		for _, payment := range order.Payments[1:] {
+			if payment.CreatedAt.After(latest.CreatedAt) {
+				latest = payment
+			}
+		}
+		if status := strings.TrimSpace(latest.Status); status != "" {
+			return status
+		}
+	}
+	if order.PaidAt != nil && !order.PaidAt.IsZero() {
+		return "paid"
+	}
+	switch order.Status {
+	case domain.OrderStatusPendingPayment:
+		return "pending"
+	case domain.OrderStatusCanceled:
+		return "canceled"
+	default:
+		return ""
+	}
+}
+
+func collectAdminOrderFilters(values map[string][]string, keys ...string) []string {
+	if len(keys) == 0 || len(values) == 0 {
+		return nil
+	}
+	combined := make([]string, 0)
+	for _, key := range keys {
+		if entries, ok := values[key]; ok {
+			combined = append(combined, entries...)
+		}
+	}
+	return collectQueryValues(combined)
+}
+
+func stringFromMap(data map[string]any, keys ...string) string {
+	if len(data) == 0 {
+		return ""
+	}
+	for _, key := range keys {
+		if value, ok := data[key]; ok {
+			if str := stringify(value); str != "" {
+				return str
+			}
+		}
+	}
+	return ""
+}
+
+func normalizeStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}

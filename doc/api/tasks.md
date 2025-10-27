@@ -107,7 +107,7 @@
 - [x] [076 Implement promotion validate endpoint enabling dry-run eligibility checks.](./tasks/076-implement-promotion-validate-endpoint-enabling-dry-run-eligibility-checks.md)
 
 ### 6.3 Orders / Payments / Inventory Operations
-- [ ] [077 Implement admin order listing endpoint with status/date filters for operations dashboards.](./tasks/077-implement-admin-order-listing-endpoint-with-status-date-filters-for-operations-d.md)
+- [x] [077 Implement admin order listing endpoint with status/date filters for operations dashboards.](./tasks/077-implement-admin-order-listing-endpoint-with-status-date-filters-for-operations-d.md)
 - [ ] [078 Implement order status transition endpoint enforcing workflow (`paid → in_production → shipped → delivered`) with audit log.](./tasks/078-implement-order-status-transition-endpoint-enforcing-workflow-paid-in-production.md)
 - [ ] [079 Implement manual payment capture and refund endpoints integrating PSP APIs.](./tasks/079-implement-manual-payment-capture-and-refund-endpoints-integrating-psp-apis.md)
 - [ ] [080 Implement shipment creation endpoint generating labels via carrier integrations and storing tracking info.](./tasks/080-implement-shipment-creation-endpoint-generating-labels-via-carrier-integrations-.md)

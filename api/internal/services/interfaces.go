@@ -35,6 +35,7 @@ type (
 	OrderLineItem             = domain.OrderLineItem
 	OrderProductionEvent      = domain.OrderProductionEvent
 	OrderProductionQC         = domain.OrderProductionQC
+	OrderSort                 = repositories.OrderSort
 	OrderStatus               = domain.OrderStatus
 	OrderContact              = domain.OrderContact
 	OrderFulfillment          = domain.OrderFulfillment
@@ -150,6 +151,10 @@ const (
 const (
 	SortAsc  = domain.SortAsc
 	SortDesc = domain.SortDesc
+
+	OrderSortCreatedAt = repositories.OrderSortCreatedAt
+	OrderSortUpdatedAt = repositories.OrderSortUpdatedAt
+	OrderSortPlacedAt  = repositories.OrderSortPlacedAt
 
 	DesignTypeTyped    = domain.DesignTypeTyped
 	DesignTypeUploaded = domain.DesignTypeUploaded

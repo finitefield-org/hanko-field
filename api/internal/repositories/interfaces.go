@@ -183,6 +183,18 @@ type OrderRepository interface {
 	List(ctx context.Context, filter OrderListFilter) (domain.CursorPage[domain.Order], error)
 }
 
+// OrderSort enumerates supported sort fields for admin and user order listings.
+type OrderSort string
+
+const (
+	// OrderSortCreatedAt orders results by creation timestamp (newest first by default).
+	OrderSortCreatedAt OrderSort = "createdAt"
+	// OrderSortUpdatedAt orders results by last update timestamp.
+	OrderSortUpdatedAt OrderSort = "updatedAt"
+	// OrderSortPlacedAt orders results by placed timestamp (checkout completion).
+	OrderSortPlacedAt OrderSort = "placedAt"
+)
+
 // OrderPaymentRepository stores payment records underneath an order document.
 type OrderPaymentRepository interface {
 	Insert(ctx context.Context, payment domain.Payment) error
@@ -379,10 +391,17 @@ type AISuggestionListFilter struct {
 }
 
 type OrderListFilter struct {
-	UserID     string
-	Status     []string
-	DateRange  domain.RangeQuery[time.Time]
-	Pagination domain.Pagination
+	UserID           string
+	Status           []string
+	PaymentStatuses  []string
+	ProductionQueues []string
+	Channels         []string
+	CustomerEmail    string
+	PromotionCode    string
+	DateRange        domain.RangeQuery[time.Time]
+	SortBy           OrderSort
+	SortOrder        domain.SortOrder
+	Pagination       domain.Pagination
 }
 
 type PromotionListFilter struct {
