@@ -1,0 +1,236 @@
+{{ define "content" }}
+{{ $view := $.AccountOrder }}
+{{ $header := $view.Header }}
+<section class="py-8">
+  <div class="space-y-8">
+    <header class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-500" aria-label="{{ if eq $.Lang "ja" }}パンくずリスト{{ else }}Breadcrumb{{ end }}">
+        {{ range $i, $crumb := $.Breadcrumbs }}
+          {{ if $i }}<span aria-hidden="true" class="text-gray-300">/</span>{{ end }}
+          {{ if $crumb.Active }}
+            <span class="font-medium text-gray-700">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</span>
+          {{ else }}
+            <a href="{{ $crumb.Href }}" class="hover:text-indigo-600 hover:underline">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</a>
+          {{ end }}
+        {{ end }}
+      </nav>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ tlang $.Lang "account.order.header.eyebrow" }}</p>
+          <h1 class="text-3xl font-bold text-gray-900 tracking-tight">#{{ $header.Number }}</h1>
+          <p class="text-sm text-gray-600">
+            {{ if eq $.Lang "ja" }}
+              注文の進行状況、支払い、トラッキング、請求書を一か所で確認します。
+            {{ else }}
+              Review production progress, payments, tracking, and documents in one place.
+            {{ end }}
+          </p>
+        </div>
+        <div class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:gap-5">
+          <div>
+            {{ $stateClass := "bg-slate-100 text-slate-700" }}
+            {{ if eq $header.StatusTone "success" }}{{ $stateClass = "bg-emerald-100 text-emerald-700" }}{{ else if eq $header.StatusTone "danger" }}{{ $stateClass = "bg-rose-100 text-rose-700" }}{{ else if eq $header.StatusTone "info" }}{{ $stateClass = "bg-sky-100 text-sky-700" }}{{ else if eq $header.StatusTone "indigo" }}{{ $stateClass = "bg-indigo-100 text-indigo-700" }}{{ end }}
+            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $stateClass }}">{{ $header.StatusLabel }}</span>
+            <p class="mt-2 text-xs text-gray-500">
+              {{ if eq $.Lang "ja" }}
+                最終更新: {{ fmtDate $view.LastSynced $.Lang }}
+              {{ else }}
+                Last updated {{ fmtDate $view.LastSynced $.Lang }}
+              {{ end }}
+            </p>
+          </div>
+          <a href="{{ $header.SupportCTA.Href }}"
+             class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500">
+            {{ $header.SupportCTA.Label }}
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside class="space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="space-y-3">
+          {{ range $item := $view.NavItems }}
+            <a href="{{ $item.Href }}"
+               class="block rounded-2xl border px-4 py-3 text-sm transition {{ if $item.Active }}border-indigo-200 bg-indigo-50 text-indigo-800{{ else }}border-gray-100 hover:border-indigo-200{{ end }}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold">{{ $item.Label }}</span>
+                {{ if $item.Badge }}<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $item.Badge }}</span>{{ end }}
+              </div>
+              <p class="mt-1 text-xs text-gray-500">{{ $item.Description }}</p>
+            </a>
+          {{ end }}
+        </div>
+        <div class="rounded-2xl border border-dashed border-gray-200 p-4 text-xs text-gray-500">
+          <p class="font-semibold text-gray-700">{{ tlang $.Lang "account.help.title" }}</p>
+          <p class="mt-1">{{ tlang $.Lang "account.help.body" }}</p>
+          <a href="/guides" class="mt-2 inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-500">
+            {{ tlang $.Lang "account.help.cta" }}
+            {{ template "icon" (dict "Name" "arrow-top-right-on-square" "Class" "h-4 w-4") }}
+          </a>
+        </div>
+      </aside>
+
+      <div class="space-y-6">
+        <section class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}注文サマリー{{ else }}Order summary{{ end }}</p>
+              <h2 class="text-2xl font-semibold text-gray-900">{{ $header.PrimaryItem }}</h2>
+              <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-600">
+                  {{ template "icon" (dict "Name" "calendar" "Class" "h-4 w-4") }}
+                  {{ tlang $.Lang "account.orders.table.placed" }}: {{ fmtDate $header.PlacedAt $.Lang }}
+                </span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-600">
+                  {{ template "icon" (dict "Name" "banknotes" "Class" "h-4 w-4") }}
+                  {{ fmtMoney $header.Total $header.Currency $.Lang }}
+                </span>
+              </div>
+            </div>
+            <div class="grid gap-3 text-sm text-gray-700 sm:grid-cols-3">
+              {{ range $meta := $header.Meta }}
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500">{{ $meta.Label }}</p>
+                  <p class="mt-1 font-semibold text-gray-900">{{ $meta.Value }}</p>
+                </div>
+              {{ end }}
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <h3 class="text-sm font-semibold text-gray-800">{{ if eq $.Lang "ja" }}進捗ステップ{{ else }}Progress steps{{ end }}</h3>
+            <div class="grid gap-4 md:grid-cols-3 lg:grid-cols-6" role="list">
+              {{ range $step := $header.Steps }}
+                {{ $bubble := "bg-gray-100 text-gray-600 border-gray-200" }}
+                {{ $badge := "bg-gray-100 text-gray-600" }}
+                {{ $bar := "bg-gray-200" }}
+                {{ if eq $step.State "complete" }}{{ $bubble = "bg-emerald-100 text-emerald-700 border-emerald-200" }}{{ $badge = "bg-emerald-600 text-white" }}{{ $bar = "bg-emerald-400" }}{{ else if eq $step.State "current" }}{{ $bubble = "bg-indigo-100 text-indigo-700 border-indigo-200" }}{{ $badge = "bg-indigo-600 text-white" }}{{ $bar = "bg-indigo-400" }}{{ else if eq $step.State "blocked" }}{{ $bubble = "bg-rose-100 text-rose-700 border-rose-200" }}{{ $badge = "bg-rose-600 text-white" }}{{ $bar = "bg-rose-400" }}{{ end }}
+                <article class="relative flex flex-col gap-3 rounded-2xl border {{ $bubble }} p-4" role="listitem">
+                  <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                    <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full {{ $badge }}">
+                      {{ template "icon" (dict "Name" "check" "Class" "h-3 w-3") }}
+                    </span>
+                    <span>{{ $step.Label }}</span>
+                  </div>
+                  <p class="text-xs text-gray-600">{{ $step.Note }}</p>
+                  <p class="text-xs font-medium text-gray-500">{{ fmtDate $step.Timestamp $.Lang }}</p>
+                  <div class="absolute inset-x-4 bottom-1 h-1 rounded-full {{ $bar }}"></div>
+                </article>
+              {{ end }}
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}タブ{{ else }}Tabs{{ end }}</p>
+              <h2 class="text-xl font-semibold text-gray-900">{{ if eq $.Lang "ja" }}注文の詳細ビュー{{ else }}Order detail views{{ end }}</h2>
+            </div>
+            <div class="text-xs text-gray-500">
+              {{ if eq $.Lang "ja" }}アクティブタブ:{{ else }}Active tab:{{ end }} <span data-order-active-label>{{ range $tab := $view.Tabs }}{{ if $tab.Active }}{{ $tab.Label }}{{ end }}{{ end }}</span>
+            </div>
+          </header>
+
+          <div data-order-tabs class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2" data-active-tab="{{ $view.ActiveTab }}">
+            {{ range $tab := $view.Tabs }}
+              {{ $isActive := $tab.Active }}
+              <button
+                type="button"
+                role="tab"
+                data-order-tab="{{ $tab.Key }}"
+                aria-selected="{{ if $isActive }}true{{ else }}false{{ end }}"
+                class="rounded-t-xl border-b-2 px-4 py-2 text-sm font-semibold transition {{ if $isActive }}border-indigo-500 bg-indigo-50 text-indigo-600{{ else }}border-transparent text-gray-600 hover:text-gray-900{{ end }}"
+                hx-get="{{ $tab.Href }}"
+                hx-target="#account-order-tab-panel"
+                hx-trigger="click"
+                hx-swap="innerHTML">
+                <span>{{ $tab.Label }}</span>
+              </button>
+            {{ end }}
+          </div>
+
+          <div id="account-order-tab-panel" role="tabpanel" class="rounded-2xl border border-gray-100 bg-gray-50">
+            {{ if eq $view.ActiveTab "payments" }}
+              {{ slot "frag_account_order_payments" $view.Payments }}
+            {{ else if eq $view.ActiveTab "production" }}
+              {{ slot "frag_account_order_production" $view.Production }}
+            {{ else if eq $view.ActiveTab "tracking" }}
+              {{ slot "frag_account_order_tracking" $view.Tracking }}
+            {{ else if eq $view.ActiveTab "invoice" }}
+              {{ slot "frag_account_order_invoice" $view.Invoice }}
+            {{ else }}
+              {{ slot "frag_account_order_summary" $view.Summary }}
+            {{ end }}
+          </div>
+        </section>
+
+        <p class="text-xs text-gray-400">{{ if eq $.Lang "ja" }}最終同期{{ else }}Last synced{{ end }} · {{ fmtDate $view.LastSynced $.Lang }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  if (window.__accountOrderDetailInit) { return; }
+  window.__accountOrderDetailInit = true;
+
+  var tabsEl = document.querySelector('[data-order-tabs]');
+  var panel = document.getElementById('account-order-tab-panel');
+  var activeLabelEl = document.querySelector('[data-order-active-label]');
+
+  function updateActiveLabel(label){
+    if (!activeLabelEl) { return; }
+    if (typeof label === 'string' && label.trim() !== '') {
+      activeLabelEl.textContent = label;
+    }
+  }
+
+  function applyActiveState(activeKey){
+    if (!tabsEl) { return; }
+    if (!activeKey) { activeKey = 'summary'; }
+    tabsEl.setAttribute('data-active-tab', activeKey);
+    Array.prototype.forEach.call(tabsEl.querySelectorAll('[data-order-tab]'), function(btn){
+      var key = btn.getAttribute('data-order-tab');
+      var isActive = key === activeKey;
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      btn.classList.toggle('border-indigo-500', isActive);
+      btn.classList.toggle('bg-indigo-50', isActive);
+      btn.classList.toggle('text-indigo-600', isActive);
+      btn.classList.toggle('border-transparent', !isActive);
+      btn.classList.toggle('text-gray-600', !isActive);
+    });
+    var activeBtn = tabsEl.querySelector('[data-order-tab="'+activeKey+'"]');
+    if (activeBtn) {
+      updateActiveLabel(activeBtn.textContent || activeBtn.innerText || '');
+    }
+  }
+
+  if (tabsEl) {
+    tabsEl.addEventListener('click', function(event){
+      var btn = event.target.closest('[data-order-tab]');
+      if (!btn) { return; }
+      var key = btn.getAttribute('data-order-tab');
+      applyActiveState(key);
+    });
+  }
+
+  document.body.addEventListener('account-order:tab-changed', function(event){
+    var detail = event.detail || {};
+    var tab = detail.tab || 'summary';
+    applyActiveState(tab);
+  });
+
+  document.addEventListener('htmx:afterSwap', function(event){
+    if (!panel) { return; }
+    if (event.target === panel) {
+      window.dispatchEvent(new CustomEvent('account-order:tab-rendered', {detail: {panel: panel}}));
+    }
+  });
+
+  applyActiveState(tabsEl ? tabsEl.getAttribute('data-active-tab') : 'summary');
+})();
+</script>
+{{ end }}

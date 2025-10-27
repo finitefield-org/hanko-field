@@ -31,4 +31,5 @@ type PageData struct {
 	Cart           any
 	Checkout       any
 	Account        any
+	AccountOrder   any
 }

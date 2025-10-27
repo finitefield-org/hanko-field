@@ -910,6 +910,8 @@ func main() {
 	r.MethodFunc(http.MethodPost, "/account/profile/form", AccountProfileFormHandler)
 	r.Get("/account/orders", AccountOrdersHandler)
 	r.Get("/account/orders/table", AccountOrdersTableHandler)
+	r.Get("/account/orders/{orderID}", AccountOrderDetailHandler)
+	r.Get("/account/orders/{orderID}/tabs/{tab}", AccountOrderDetailTabHandler)
 	r.Get("/account/addresses", AccountAddressesHandler)
 	r.Get("/account/addresses/table", AccountAddressTableHandler)
 	r.Get("/account/addresses/modal", AccountAddressModalHandler)
