@@ -52,7 +52,7 @@
 - [x] [Implement orders list (`/account/orders`) with filterable table fragment and pagination.](doc/web/tasks/037-implement-orders-list-account-orders-with-filterable-table-fragment-and-pagination.md)
 - [x] [Build order detail (`/account/orders/{orderId}`) with tabbed fragments for summary, payments, production, tracking, invoice.](doc/web/tasks/038-build-order-detail-account-orders-orderid-with-tabbed-fragments-for-summary-payments-produ.md)
 - [x] [Implement library (`/account/library`) with design list fragment, filters, and actions (duplicate/export/share).](doc/web/tasks/039-implement-library-account-library-with-design-list-fragment-filters-and-actions-duplicate-.md)
-- [ ] [Build security/linked accounts page (`/account/security`) covering auth providers and 2FA prompts.](doc/web/tasks/040-build-security-linked-accounts-page-account-security-covering-auth-providers-and-2fa-promp.md)
+- [x] [Build security/linked accounts page (`/account/security`) covering auth providers and 2FA prompts.](doc/web/tasks/040-build-security-linked-accounts-page-account-security-covering-auth-providers-and-2fa-promp.md)
 
 ## 7. Support & Legal
 - [ ] [Build support page (`/support`) with contact form, FAQ links, and response handling.](doc/web/tasks/041-build-support-page-support-with-contact-form-faq-links-and-response-handling.md)

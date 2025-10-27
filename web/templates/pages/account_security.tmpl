@@ -312,18 +312,16 @@
       openModal(id);
       return;
     }
-    var toastBtn = e.target.closest('[data-security-toast]');
-    if (toastBtn){
-      var msg = toastBtn.getAttribute('data-security-toast');
-      if (msg){ pushToast(msg); }
-      e.preventDefault();
-      return;
-    }
-    var confirmBtn = e.target.closest('[data-security-confirm]');
-    if (confirmBtn){
-      var confirmMsg = confirmBtn.getAttribute('data-security-confirm');
-      if (confirmMsg){ pushToast(confirmMsg); }
-      e.preventDefault();
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(e){
+    var detail = e.detail || {};
+    if (!detail.successful) { return; }
+    var elt = detail.elt;
+    if (!elt) { return; }
+    var msg = elt.getAttribute('data-security-success');
+    if (msg) { pushToast(msg); }
+    if (elt.hasAttribute('data-security-close-modal')) {
       closeModal();
     }
   });
@@ -359,8 +357,14 @@
   <div class="flex w-full flex-wrap items-center justify-end gap-3">
     <button type="button" class="inline-flex items-center justify-center rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" data-modal-close>{{ if eq .Lang "ja" }}キャンセル{{ else }}Cancel{{ end }}</button>
     {{ if $modal.ConfirmLabel }}
-      <button type="button" class="{{ $modal.ConfirmClasses }}" data-security-confirm="{{ $modal.SuccessMessage }}">
-        {{ if $modal.ConfirmHref }}{{ $modal.ConfirmLabel }}{{ else }}{{ $modal.ConfirmLabel }}{{ end }}
+      <button type="button"
+              class="{{ $modal.ConfirmClasses }}"
+              {{ if and $modal.ConfirmHref (eq $modal.ConfirmMethod "POST") }}hx-post="{{ $modal.ConfirmHref }}"{{ else if and $modal.ConfirmHref (eq $modal.ConfirmMethod "DELETE") }}hx-delete="{{ $modal.ConfirmHref }}"{{ else if and $modal.ConfirmHref (eq $modal.ConfirmMethod "PUT") }}hx-put="{{ $modal.ConfirmHref }}"{{ else if and $modal.ConfirmHref (eq $modal.ConfirmMethod "PATCH") }}hx-patch="{{ $modal.ConfirmHref }}"{{ end }}
+              {{ if $modal.ConfirmHXTarget }}hx-target="{{ $modal.ConfirmHXTarget }}"{{ end }}
+              {{ if $modal.ConfirmHXSwap }}hx-swap="{{ $modal.ConfirmHXSwap }}"{{ end }}
+              {{ if $modal.SuccessMessage }}data-security-success="{{ $modal.SuccessMessage }}"{{ end }}
+              data-security-close-modal>
+        {{ $modal.ConfirmLabel }}
       </button>
     {{ end }}
   </div>
@@ -380,7 +384,12 @@
         <span>{{ $action.Label }}</span>
       </a>
     {{ else }}
-      <button type="button" class="{{ $action.Classes }}" {{ if $action.SuccessMessage }}data-security-toast="{{ $action.SuccessMessage }}"{{ end }}>
+      <button type="button"
+              class="{{ $action.Classes }}"
+              {{ if and $action.Href (eq $action.Method "POST") }}hx-post="{{ $action.Href }}"{{ else if and $action.Href (eq $action.Method "DELETE") }}hx-delete="{{ $action.Href }}"{{ else if and $action.Href (eq $action.Method "PUT") }}hx-put="{{ $action.Href }}"{{ else if and $action.Href (eq $action.Method "PATCH") }}hx-patch="{{ $action.Href }}"{{ end }}
+              {{ if $action.HXTarget }}hx-target="{{ $action.HXTarget }}"{{ end }}
+              {{ if $action.HXSwap }}hx-swap="{{ $action.HXSwap }}"{{ end }}
+              {{ if $action.SuccessMessage }}data-security-success="{{ $action.SuccessMessage }}"{{ end }}>
         {{ if $action.Icon }}{{ template "icon" (dict "Name" $action.Icon "Class" "h-4 w-4") }}{{ end }}
         <span>{{ $action.Label }}</span>
       </button>
