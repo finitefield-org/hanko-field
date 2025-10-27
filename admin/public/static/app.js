@@ -480,6 +480,288 @@ const initNotificationsSelection = () => {
   }
 };
 
+const initGuidesModule = () => {
+  const root = document.querySelector("[data-guides-root]");
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+
+  const state = root.__guidesState || { bulk: new Set(), fragmentQuery: "", bound: false };
+  if (!(state.bulk instanceof Set)) {
+    state.bulk = new Set();
+  }
+  root.__guidesState = state;
+
+  const filterForm = root.querySelector("#guides-filter");
+
+  const getTable = (scope) => {
+    if (!scope) {
+      return null;
+    }
+    if (scope.matches && scope.matches("#guides-table")) {
+      return scope;
+    }
+    return scope.querySelector?.("#guides-table") || null;
+  };
+
+  const updateSelectedInputs = (value) => {
+    const val = typeof value === "string" ? value : "";
+    root.querySelectorAll("[data-guides-selected]").forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        input.value = val;
+      }
+    });
+  };
+
+  const updateFragmentQuery = (table) => {
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const raw = table.getAttribute("data-fragment-query") || "";
+    table.dataset.fragmentQuery = raw;
+    state.fragmentQuery = raw;
+  };
+
+  const collectFilterValues = () => {
+    const payload = {};
+    if (filterForm instanceof HTMLFormElement) {
+      const formData = new FormData(filterForm);
+      formData.forEach((value, key) => {
+        const stringValue = String(value);
+        if (Object.prototype.hasOwnProperty.call(payload, key)) {
+          if (Array.isArray(payload[key])) {
+            payload[key].push(stringValue);
+          } else {
+            payload[key] = [payload[key], stringValue];
+          }
+        } else {
+          payload[key] = stringValue;
+        }
+      });
+    }
+    return payload;
+  };
+
+  const updateSelectAllState = () => {
+    const allToggle = root.querySelector("[data-guides-select-all]");
+    if (!(allToggle instanceof HTMLInputElement)) {
+      return;
+    }
+    const checkboxes = Array.from(root.querySelectorAll("[data-guide-select]"));
+    if (checkboxes.length === 0) {
+      allToggle.checked = false;
+      allToggle.indeterminate = false;
+      return;
+    }
+    const checkedCount = checkboxes.reduce((count, checkbox) => {
+      if (checkbox instanceof HTMLInputElement && checkbox.checked) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+    allToggle.checked = checkedCount === checkboxes.length;
+    allToggle.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+  };
+
+  const updateBulkUI = () => {
+    const bulkArea = root.querySelector("[data-guides-bulk]");
+    if (!(bulkArea instanceof HTMLElement)) {
+      return;
+    }
+    const count = state.bulk.size;
+    bulkArea.hidden = count === 0;
+    bulkArea.dataset.selectedCount = String(count);
+    const toolbar = bulkArea.querySelector("[data-guides-bulk-toolbar]");
+    if (toolbar instanceof HTMLElement) {
+      toolbar.dataset.selectedCount = String(count);
+      const badge = toolbar.querySelector("[data-bulk-count]");
+      if (badge instanceof HTMLElement) {
+        badge.textContent = String(count);
+      }
+      const message = toolbar.querySelector("[data-bulk-message]");
+      if (message instanceof HTMLElement) {
+        message.textContent = count > 0 ? `${count} 件選択中` : "項目を選択してください";
+      }
+      const totalLabel = toolbar.querySelector("[data-bulk-total]");
+      if (totalLabel instanceof HTMLElement) {
+        const total = Number(toolbar.dataset.totalCount || totalLabel.dataset.totalCount || 0);
+        if (total > 0) {
+          totalLabel.textContent = `全 ${total} 件`;
+        }
+      }
+      toolbar.querySelectorAll("[data-guides-bulk-action]").forEach((button) => {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = count === 0;
+          button.classList.toggle("opacity-60", count === 0);
+          button.classList.toggle("pointer-events-none", count === 0);
+        }
+      });
+    }
+    const idsField = root.querySelector("#guides-bulk-form input[name='ids']");
+    if (idsField instanceof HTMLInputElement) {
+      idsField.value = count > 0 ? Array.from(state.bulk).join(",") : "";
+    }
+    updateSelectAllState();
+  };
+
+  const clearBulkSelection = () => {
+    state.bulk.clear();
+    root.querySelectorAll("[data-guide-select]").forEach((checkbox) => {
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = false;
+      }
+    });
+    const allToggle = root.querySelector("[data-guides-select-all]");
+    if (allToggle instanceof HTMLInputElement) {
+      allToggle.checked = false;
+      allToggle.indeterminate = false;
+    }
+    updateBulkUI();
+  };
+
+  const requestSelection = (guideId) => {
+    if (typeof window.htmx === "undefined") {
+      return;
+    }
+    const table = getTable(root);
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const path = table.getAttribute("data-fragment-path") || "";
+    if (!path) {
+      return;
+    }
+    const params = new URLSearchParams(state.fragmentQuery || table.getAttribute("data-fragment-query") || "");
+    if (guideId) {
+      params.set("selected", guideId);
+    } else {
+      params.delete("selected");
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${path}?${queryString}` : path;
+    window.htmx.ajax("GET", url, {
+      target: "#guides-table",
+      swap: "outerHTML",
+    });
+  };
+
+  const handleRowClick = (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const interactive = event.target.closest("a, button, input, textarea, select, label, [role='button']");
+    if (interactive) {
+      return;
+    }
+    const row = event.target.closest("[data-guide-row]");
+    if (!(row instanceof HTMLElement)) {
+      return;
+    }
+    const id = row.getAttribute("data-guide-id");
+    if (!id) {
+      return;
+    }
+    event.preventDefault();
+    updateSelectedInputs(id);
+    requestSelection(id);
+  };
+
+  const handleBulkClick = (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const clearButton = event.target.closest("[data-guides-clear-selection]");
+    if (clearButton instanceof HTMLElement) {
+      event.preventDefault();
+      clearBulkSelection();
+      return;
+    }
+    const actionButton = event.target.closest("[data-guides-bulk-action]");
+    if (!(actionButton instanceof HTMLElement)) {
+      return;
+    }
+    const url = actionButton.getAttribute("data-action-url");
+    if (!url || state.bulk.size === 0 || typeof window.htmx === "undefined") {
+      return;
+    }
+    event.preventDefault();
+    const values = collectFilterValues();
+    values.ids = Array.from(state.bulk).join(",");
+    const csrfField = root.querySelector("#guides-bulk-form input[name='csrf_token']");
+    if (csrfField instanceof HTMLInputElement && csrfField.value) {
+      values.csrf_token = csrfField.value;
+    }
+    window.htmx.ajax("POST", url, {
+      target: "#guides-table",
+      swap: "outerHTML",
+      values,
+    });
+  };
+
+  const handleChange = (event) => {
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (event.target.matches("[data-guides-select-all]")) {
+      const checked = event.target.checked;
+      root.querySelectorAll("[data-guide-select]").forEach((checkbox) => {
+        if (checkbox instanceof HTMLInputElement) {
+          checkbox.checked = checked;
+          const id = checkbox.value || "";
+          if (checked && id) {
+            state.bulk.add(id);
+          } else if (!checked && id) {
+            state.bulk.delete(id);
+          }
+        }
+      });
+      updateBulkUI();
+      return;
+    }
+    if (event.target.matches("[data-guide-select]")) {
+      const id = event.target.value || "";
+      if (!id) {
+        return;
+      }
+      if (event.target.checked) {
+        state.bulk.add(id);
+      } else {
+        state.bulk.delete(id);
+      }
+      updateBulkUI();
+    }
+  };
+
+  const applyTableState = (scope) => {
+    const table = getTable(scope);
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const selectedRow = table.querySelector("[data-guide-row][data-selected='true']");
+    const selectedId = selectedRow instanceof HTMLElement ? selectedRow.getAttribute("data-guide-id") || "" : "";
+    updateSelectedInputs(selectedId);
+    updateFragmentQuery(table);
+    clearBulkSelection();
+  };
+
+  if (!state.bound) {
+    root.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.closest("[data-guides-bulk]")) {
+        handleBulkClick(event);
+        return;
+      }
+      handleRowClick(event);
+    });
+    root.addEventListener("change", handleChange);
+    state.bound = true;
+  }
+
+  applyTableState(root);
+};
+
 const initShipmentsModule = () => {
   const root = document.querySelector("[data-shipments-root]");
   if (!(root instanceof HTMLElement)) {
@@ -2607,6 +2889,7 @@ window.hankoAdmin = window.hankoAdmin || {
     initSearchShortcut(modalRoot);
     initNotificationsBadge();
     initNotificationsSelection();
+    initGuidesModule();
     initShipmentsModule();
     initProductionKanban();
     initDashboardRefresh();
@@ -2623,6 +2906,7 @@ window.hankoAdmin = window.hankoAdmin || {
           return;
         }
         initOrdersInteractions(event.target);
+        initGuidesModule();
         initShipmentsModule();
         initProductionKanban();
         initAssetUploads(event.target);

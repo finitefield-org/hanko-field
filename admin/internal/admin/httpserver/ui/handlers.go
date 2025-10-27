@@ -11,6 +11,7 @@ import (
 
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
+	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	admindashboard "finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
@@ -27,6 +28,7 @@ import (
 type Dependencies struct {
 	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
+	ContentService       admincontent.Service
 	DashboardService     admindashboard.Service
 	ProfileService       profile.Service
 	SearchService        adminsearch.Service
@@ -40,6 +42,7 @@ type Dependencies struct {
 type Handlers struct {
 	assets        adminassets.Service
 	catalog       admincatalog.Service
+	content       admincontent.Service
 	dashboard     admindashboard.Service
 	profile       profile.Service
 	search        adminsearch.Service
@@ -87,9 +90,14 @@ func NewHandlers(deps Dependencies) *Handlers {
 	if catalogService == nil {
 		catalogService = admincatalog.NewStaticService()
 	}
+	contentService := deps.ContentService
+	if contentService == nil {
+		contentService = admincontent.NewStaticService()
+	}
 	return &Handlers{
 		assets:        assetsService,
 		catalog:       catalogService,
+		content:       contentService,
 		dashboard:     dashboardService,
 		profile:       profileService,
 		search:        searchService,

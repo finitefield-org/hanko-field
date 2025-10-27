@@ -246,6 +246,17 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				cr.Delete("/{kind}/{itemID}", uiHandlers.CatalogDelete)
 				cr.Post("/{kind}/{itemID}/schedule/cancel", uiHandlers.CatalogCancelSchedule)
 			})
+			protected.Route("/content", func(cr chi.Router) {
+				cr.Get("/guides", uiHandlers.GuidesPage)
+				RegisterFragment(cr, "/guides/table", uiHandlers.GuidesTable)
+				cr.Post("/guides/{guideID}:publish", uiHandlers.GuidesPublish)
+				cr.Post("/guides/{guideID}:unpublish", uiHandlers.GuidesUnpublish)
+				cr.Post("/guides/{guideID}:schedule", uiHandlers.GuidesSchedule)
+				cr.Post("/guides/{guideID}:unschedule", uiHandlers.GuidesUnschedule)
+				cr.Post("/guides/bulk:publish", uiHandlers.GuidesBulkPublish)
+				cr.Post("/guides/bulk:unschedule", uiHandlers.GuidesBulkUnschedule)
+				cr.Post("/guides/bulk:archive", uiHandlers.GuidesBulkArchive)
+			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
 			// Future admin routes will be registered here.

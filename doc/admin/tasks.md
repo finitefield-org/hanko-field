@@ -61,7 +61,7 @@
 - [x] [Add versioning/publish status indicators and scheduled publish support where applicable.](doc/admin/tasks/041-add-versioning-publish-status-indicators-and-scheduled-publish-support-where-applicable.md)
 
 ## 7. CMS (Guides & Pages)
-- [ ] [Implement guides page (`/admin/content/guides`) with table fragment, draft/publish toggles, and scheduled publish UI.](doc/admin/tasks/042-implement-guides-page-admin-content-guides-with-table-fragment-draft-publish-toggles-and-s.md)
+- [x] [Implement guides page (`/admin/content/guides`) with table fragment, draft/publish toggles, and scheduled publish UI.](doc/admin/tasks/042-implement-guides-page-admin-content-guides-with-table-fragment-draft-publish-toggles-and-s.md)
 - [ ] [Build guide preview route (`/admin/content/guides/{id}/preview?lang=`) with localization selector.](doc/admin/tasks/043-build-guide-preview-route-admin-content-guides-id-preview-lang-with-localization-selector.md)
 - [ ] [Implement edit modal or two-pane editor with live preview using htmx for partial refresh.](doc/admin/tasks/044-implement-edit-modal-or-two-pane-editor-with-live-preview-using-htmx-for-partial-refresh.md)
 - [ ] [Implement pages management (`/admin/content/pages`) with block-based editor, preview, and publish scheduling.](doc/admin/tasks/045-implement-pages-management-admin-content-pages-with-block-based-editor-preview-and-publish.md)
