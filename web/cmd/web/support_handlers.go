@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/mail"
 	"path/filepath"
@@ -36,6 +37,12 @@ func SupportSubmitHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "form parse error", http.StatusBadRequest)
 			return
 		}
+	} else if r.MultipartForm != nil {
+		defer func() {
+			if err := r.MultipartForm.RemoveAll(); err != nil {
+				log.Printf("support: cleanup multipart form: %v", err)
+			}
+		}()
 	}
 
 	input := SupportFormInput{
