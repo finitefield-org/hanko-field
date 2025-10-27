@@ -82,11 +82,11 @@ func (r *PromotionUsageRepository) ListUsage(ctx context.Context, query reposito
 	if token := strings.TrimSpace(query.Pagination.PageToken); token != "" {
 		value, docID, err := decodePromotionUsageToken(token)
 		if err != nil {
-			return domain.CursorPage[domain.PromotionUsage]{}, fmt.Errorf("promotion usage repository: invalid page token: %w", err)
+			return domain.CursorPage[domain.PromotionUsage]{}, fmt.Errorf("%w: %s", repositories.ErrPromotionUsageInvalidPageToken, err.Error())
 		}
 		startAfter, err := usageStartAfter(sortField, value, docID)
 		if err != nil {
-			return domain.CursorPage[domain.PromotionUsage]{}, fmt.Errorf("promotion usage repository: invalid page token: %w", err)
+			return domain.CursorPage[domain.PromotionUsage]{}, fmt.Errorf("%w: %s", repositories.ErrPromotionUsageInvalidPageToken, err.Error())
 		}
 		if len(startAfter) > 0 {
 			fsQuery = fsQuery.StartAfter(startAfter...)

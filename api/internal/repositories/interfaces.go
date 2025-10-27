@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	domain "github.com/hanko-field/api/internal/domain"
@@ -228,6 +229,8 @@ type PromotionUsageRepository interface {
 	RemoveUsage(ctx context.Context, promoID string, userID string) error
 	ListUsage(ctx context.Context, query PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error)
 }
+
+var ErrPromotionUsageInvalidPageToken = errors.New("promotion usage repository: invalid page token")
 
 // PromotionUsageListQuery filters and paginates per-user usage aggregates.
 type PromotionUsageListQuery struct {

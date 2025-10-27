@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -505,6 +506,30 @@ func TestPromotionService_ListPromotionUsage_EnrichesUsers(t *testing.T) {
 	}
 	if strings.TrimSpace(record.Usage.Notes) != "Flagged" {
 		t.Fatalf("expected notes trimmed, got %q", record.Usage.Notes)
+	}
+}
+
+func TestPromotionService_ListPromotionUsage_InvalidToken(t *testing.T) {
+	usageRepo := &stubPromotionUsageRepository{
+		listFn: func(ctx context.Context, query repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error) {
+			return domain.CursorPage[domain.PromotionUsage]{}, fmt.Errorf("%w", repositories.ErrPromotionUsageInvalidPageToken)
+		},
+	}
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: &stubPromotionRepository{},
+		Usage:      usageRepo,
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	_, err = svc.ListPromotionUsage(context.Background(), PromotionUsageFilter{PromotionID: "promo"})
+	if err == nil {
+		t.Fatalf("expected error for invalid token")
+	}
+	if !errors.Is(err, ErrPromotionInvalidInput) {
+		t.Fatalf("expected ErrPromotionInvalidInput, got %v", err)
 	}
 }
 

@@ -334,6 +334,9 @@ func (s *promotionService) ListPromotionUsage(ctx context.Context, filter Promot
 
 	page, err := s.usageRepo.ListUsage(ctx, repoFilter)
 	if err != nil {
+		if errors.Is(err, repositories.ErrPromotionUsageInvalidPageToken) {
+			return PromotionUsagePage{}, fmt.Errorf("%w: invalid page token", ErrPromotionInvalidInput)
+		}
 		return PromotionUsagePage{}, translatePromotionRepoError(err)
 	}
 
