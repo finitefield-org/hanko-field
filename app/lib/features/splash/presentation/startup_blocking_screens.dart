@@ -1,5 +1,7 @@
+import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/core/storage/storage_providers.dart';
+import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/onboarding/application/onboarding_tutorial_controller.dart';
 import 'package:app/features/onboarding/presentation/locale_selection_screen.dart';
 import 'package:app/features/onboarding/presentation/onboarding_tutorial_screen.dart';
@@ -348,31 +350,25 @@ class _OnboardingStepCard extends StatelessWidget {
   }
 }
 
-class AuthRequiredScreen extends StatelessWidget {
+class AuthRequiredScreen extends ConsumerWidget {
   const AuthRequiredScreen({required this.onRetry, this.onBypass, super.key});
 
   final VoidCallback onRetry;
   final VoidCallback? onBypass;
 
   @override
-  Widget build(BuildContext context) {
-    return _BlockingLayout(
-      icon: Icons.login,
-      title: 'サインインが必要です',
-      description: 'Apple/Google/Email 認証フローは後続タスクで追加されます。',
-      primaryLabel: 'ログインに進む',
-      primaryAction: () => _showPlaceholder(context),
-      secondaryLabel: 'ステータス再取得',
-      secondaryAction: onRetry,
-      tertiaryLabel: onBypass == null ? null : 'デバッグ: スキップ',
-      tertiaryAction: onBypass,
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<AsyncValue<UserSessionState>>(userSessionProvider, (
+      previous,
+      next,
+    ) {
+      if (next.hasValue &&
+          next.value?.status == UserSessionStatus.authenticated) {
+        onRetry();
+      }
+    });
 
-  void _showPlaceholder(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('認証フローは Task 021 で実装予定です。')));
+    return AuthScreen(onStatusRefresh: onRetry, onBypass: onBypass);
   }
 }
 

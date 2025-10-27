@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
+import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/navigation/presentation/app_bar_destinations.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,10 @@ sealed class IndependentRoute {
   List<String> get pathSegments;
   Widget get page;
   Object stackKey(AppTab tab, int index);
+}
+
+mixin StandaloneLocationRoute on IndependentRoute {
+  String get standaloneLocation;
 }
 
 /// ルーターが復元するルート情報
@@ -49,6 +54,10 @@ class TabRoute implements AppRoute {
 
   @override
   String get location {
+    if (_stack.length == 1 && _stack.first is StandaloneLocationRoute) {
+      final standalone = _stack.first as StandaloneLocationRoute;
+      return '/${standalone.standaloneLocation}';
+    }
     final segments = <String>[currentTab.pathSegment];
     for (final route in _stack) {
       final routeSegments = route.pathSegments;
@@ -224,4 +233,37 @@ class GlobalSearchRoute implements IndependentRoute {
 
   @override
   String toString() => 'GlobalSearchRoute()';
+}
+
+class AuthFlowRoute implements IndependentRoute, StandaloneLocationRoute {
+  const AuthFlowRoute({this.nextPath});
+
+  final String? nextPath;
+
+  @override
+  Widget get page => AuthScreen(nextPath: nextPath);
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'auth-${nextPath ?? 'root'}-$index';
+
+  @override
+  List<String> get pathSegments {
+    if (nextPath == null || nextPath!.isEmpty) {
+      return const ['auth'];
+    }
+    final encoded = Uri.encodeComponent(nextPath!);
+    return ['auth', 'redirect', encoded];
+  }
+
+  @override
+  String get standaloneLocation {
+    if (nextPath == null || nextPath!.isEmpty) {
+      return 'auth';
+    }
+    final uri = Uri(path: 'auth', queryParameters: {'next': nextPath});
+    return uri.toString();
+  }
+
+  @override
+  String toString() => 'AuthFlowRoute(nextPath: $nextPath)';
 }

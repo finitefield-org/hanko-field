@@ -14,6 +14,17 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     if (uri.pathSegments.isEmpty) {
       return const TabRoute(currentTab: kDefaultAppTab);
     }
+    if (uri.pathSegments.first == 'auth') {
+      final next = uri.queryParameters['next'];
+      return TabRoute(
+        currentTab: kDefaultAppTab,
+        stack: [
+          AuthFlowRoute(
+            nextPath: (next != null && next.isNotEmpty) ? next : null,
+          ),
+        ],
+      );
+    }
     final firstSegment = uri.pathSegments.first;
     final remaining = uri.pathSegments.skip(1).toList();
     final routeSegments = _extractRouteSegments(remaining);
@@ -197,6 +208,12 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
         return const NotificationsRoute();
       case 'search':
         return const GlobalSearchRoute();
+      case 'auth':
+        if (segments.length >= 3 && segments[1] == 'redirect') {
+          final decoded = Uri.decodeComponent(segments[2]);
+          return AuthFlowRoute(nextPath: decoded);
+        }
+        return const AuthFlowRoute();
     }
     return null;
   }
