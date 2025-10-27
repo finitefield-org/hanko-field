@@ -235,6 +235,22 @@ func (r *ContentRepository) GetPage(ctx context.Context, slug string, locale str
 	return docs[0].Data.toDomain(docs[0].ID), nil
 }
 
+// GetPageByID fetches a content page document by its identifier.
+func (r *ContentRepository) GetPageByID(ctx context.Context, pageID string) (domain.ContentPage, error) {
+	if r == nil || r.pages == nil {
+		return domain.ContentPage{}, errors.New("content repository not initialised")
+	}
+	id := strings.TrimSpace(pageID)
+	if id == "" {
+		return domain.ContentPage{}, errors.New("content repository: page id is required")
+	}
+	doc, err := r.pages.Get(ctx, id)
+	if err != nil {
+		return domain.ContentPage{}, err
+	}
+	return doc.Data.toDomain(doc.ID), nil
+}
+
 func (r *ContentRepository) UpsertPage(ctx context.Context, page domain.ContentPage) (domain.ContentPage, error) {
 	if r == nil || r.pages == nil {
 		return domain.ContentPage{}, errors.New("content repository not initialised")
@@ -384,40 +400,43 @@ func (d contentGuideDocument) toDomain(id string) domain.ContentGuide {
 }
 
 type contentPageDocument struct {
-	Slug        string            `firestore:"slug"`
-	Locale      string            `firestore:"locale"`
-	Title       string            `firestore:"title"`
-	BodyHTML    string            `firestore:"bodyHtml"`
-	SEO         map[string]string `firestore:"seo"`
-	Status      string            `firestore:"status"`
-	IsPublished bool              `firestore:"isPublished"`
-	UpdatedAt   time.Time         `firestore:"updatedAt"`
+	Slug         string            `firestore:"slug"`
+	Locale       string            `firestore:"locale"`
+	Title        string            `firestore:"title"`
+	BodyHTML     string            `firestore:"bodyHtml"`
+	SEO          map[string]string `firestore:"seo"`
+	Status       string            `firestore:"status"`
+	IsPublished  bool              `firestore:"isPublished"`
+	PreviewToken string            `firestore:"previewToken"`
+	UpdatedAt    time.Time         `firestore:"updatedAt"`
 }
 
 func newContentPageDocument(page domain.ContentPage) contentPageDocument {
 	return contentPageDocument{
-		Slug:        strings.TrimSpace(page.Slug),
-		Locale:      strings.TrimSpace(page.Locale),
-		Title:       page.Title,
-		BodyHTML:    page.BodyHTML,
-		SEO:         copyStringMap(page.SEO),
-		Status:      strings.TrimSpace(page.Status),
-		IsPublished: page.IsPublished,
-		UpdatedAt:   page.UpdatedAt.UTC(),
+		Slug:         strings.TrimSpace(page.Slug),
+		Locale:       strings.TrimSpace(page.Locale),
+		Title:        page.Title,
+		BodyHTML:     page.BodyHTML,
+		SEO:          copyStringMap(page.SEO),
+		Status:       strings.TrimSpace(page.Status),
+		IsPublished:  page.IsPublished,
+		PreviewToken: strings.TrimSpace(page.PreviewToken),
+		UpdatedAt:    page.UpdatedAt.UTC(),
 	}
 }
 
 func (d contentPageDocument) toDomain(id string) domain.ContentPage {
 	return domain.ContentPage{
-		ID:          strings.TrimSpace(id),
-		Slug:        strings.TrimSpace(d.Slug),
-		Locale:      strings.TrimSpace(d.Locale),
-		Title:       d.Title,
-		BodyHTML:    d.BodyHTML,
-		SEO:         copyStringMap(d.SEO),
-		Status:      strings.TrimSpace(d.Status),
-		IsPublished: d.IsPublished,
-		UpdatedAt:   d.UpdatedAt.UTC(),
+		ID:           strings.TrimSpace(id),
+		Slug:         strings.TrimSpace(d.Slug),
+		Locale:       strings.TrimSpace(d.Locale),
+		Title:        d.Title,
+		BodyHTML:     d.BodyHTML,
+		SEO:          copyStringMap(d.SEO),
+		Status:       strings.TrimSpace(d.Status),
+		IsPublished:  d.IsPublished,
+		PreviewToken: strings.TrimSpace(d.PreviewToken),
+		UpdatedAt:    d.UpdatedAt.UTC(),
 	}
 }
 

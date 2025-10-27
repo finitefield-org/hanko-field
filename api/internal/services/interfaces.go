@@ -252,6 +252,7 @@ type ContentService interface {
 	DeleteGuide(ctx context.Context, guideID string) error
 	GetPage(ctx context.Context, slug string, locale string) (ContentPage, error)
 	UpsertPage(ctx context.Context, cmd UpsertContentPageCommand) (ContentPage, error)
+	DeletePage(ctx context.Context, cmd DeleteContentPageCommand) error
 }
 
 // CatalogService manages templates, fonts, materials, and products for admin-facing operations.
@@ -850,7 +851,13 @@ type UpsertContentGuideCommand struct {
 }
 
 type UpsertContentPageCommand struct {
-	Page    ContentPage
+	Page                   ContentPage
+	ActorID                string
+	RegeneratePreviewToken bool
+}
+
+type DeleteContentPageCommand struct {
+	PageID  string
 	ActorID string
 }
 

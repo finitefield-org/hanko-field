@@ -1361,12 +1361,13 @@ func TestPublicHandlers_GetPage_ReturnsNotFoundForUnpublished(t *testing.T) {
 
 	stub := &stubContentService{
 		pageDetail: services.ContentPage{
-			ID:          "page_1",
-			Slug:        "about",
-			Locale:      "ja",
-			Title:       "About",
-			Status:      "draft",
-			IsPublished: false,
+			ID:           "page_1",
+			Slug:         "about",
+			Locale:       "ja",
+			Title:        "About",
+			Status:       "draft",
+			IsPublished:  false,
+			PreviewToken: "token-123",
 		},
 	}
 
@@ -1381,6 +1382,40 @@ func TestPublicHandlers_GetPage_ReturnsNotFoundForUnpublished(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 got %d", rec.Code)
+	}
+}
+
+func TestPublicHandlers_GetPage_AllowsPreviewToken(t *testing.T) {
+	t.Helper()
+
+	stub := &stubContentService{
+		pageDetail: services.ContentPage{
+			ID:           "page_2",
+			Slug:         "about",
+			Locale:       "ja",
+			Title:        "About Preview",
+			BodyHTML:     "<p>draft</p>",
+			Status:       "draft",
+			IsPublished:  false,
+			PreviewToken: "token-abc",
+		},
+	}
+
+	handler := NewPublicHandlers(WithPublicContentService(stub))
+	router := chi.NewRouter()
+	router.Route("/", handler.Routes)
+
+	req := httptest.NewRequest(http.MethodGet, "/content/pages/about?preview_token=token-abc", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", rec.Code)
+	}
+
+	if cache := rec.Header().Get("Cache-Control"); cache != "no-store" {
+		t.Fatalf("expected no-store cache control, got %q", cache)
 	}
 }
 
@@ -1437,6 +1472,10 @@ func (s *stubContentService) GetPage(_ context.Context, slug string, locale stri
 
 func (s *stubContentService) UpsertPage(context.Context, services.UpsertContentPageCommand) (services.ContentPage, error) {
 	return services.ContentPage{}, errors.New("not implemented")
+}
+
+func (s *stubContentService) DeletePage(context.Context, services.DeleteContentPageCommand) error {
+	return errors.New("not implemented")
 }
 
 type stubCatalogService struct {

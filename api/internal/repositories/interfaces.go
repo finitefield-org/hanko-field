@@ -312,6 +312,7 @@ type ContentRepository interface {
 	GetGuide(ctx context.Context, guideID string) (domain.ContentGuide, error)
 
 	GetPage(ctx context.Context, slug string, locale string) (domain.ContentPage, error)
+	GetPageByID(ctx context.Context, pageID string) (domain.ContentPage, error)
 	UpsertPage(ctx context.Context, page domain.ContentPage) (domain.ContentPage, error)
 	DeletePage(ctx context.Context, pageID string) error
 }

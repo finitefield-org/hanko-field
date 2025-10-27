@@ -99,7 +99,7 @@
 - [x] [070 Implement admin CRUD for materials capturing stock and supplier info.](./tasks/070-implement-admin-crud-for-materials-capturing-stock-and-supplier-info.md)
 - [x] [071 Implement admin CRUD for products including SKU configuration and price tiers.](./tasks/071-implement-admin-crud-for-products-including-sku-configuration-and-price-tiers.md)
 - [x] [072 Implement admin CRUD for content guides including localization and category tagging.](./tasks/072-implement-admin-crud-for-content-guides-including-localization-and-category-tagg.md)
-- [ ] [073 Implement admin CRUD for content pages with draft/publish states.](./tasks/073-implement-admin-crud-for-content-pages-with-draft-publish-states.md)
+- [x] [073 Implement admin CRUD for content pages with draft/publish states.](./tasks/073-implement-admin-crud-for-content-pages-with-draft-publish-states.md)
 
 ### 6.2 Promotions
 - [ ] [074 Implement promotions list/create/update/delete endpoints with validation rules and schedule handling.](./tasks/074-implement-promotions-list-create-update-delete-endpoints-with-validation-rules-a.md)

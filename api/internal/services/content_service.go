@@ -2,9 +2,14 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/oklog/ulid/v2"
 
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/textutil"
@@ -17,21 +22,49 @@ const (
 	maxGuidePageSize     = 60
 )
 
+// ContentCacheInvalidator purges CDN/cache entries for content pages.
+type ContentCacheInvalidator interface {
+	InvalidatePages(ctx context.Context, pages []ContentCacheKey) error
+}
+
+// ContentCacheKey identifies cache entries for invalidation.
+type ContentCacheKey struct {
+	Slug   string
+	Locale string
+}
+
 // ContentServiceDeps groups constructor parameters for the content service.
 type ContentServiceDeps struct {
-	Repository    repositories.ContentRepository
-	Clock         func() time.Time
-	DefaultLocale string
+	Repository            repositories.ContentRepository
+	Clock                 func() time.Time
+	DefaultLocale         string
+	Audit                 AuditLogService
+	Cache                 ContentCacheInvalidator
+	IDGenerator           func() string
+	PreviewTokenGenerator func() (string, error)
 }
 
 type contentService struct {
 	repo          repositories.ContentRepository
 	clock         func() time.Time
 	defaultLocale string
+	audit         AuditLogService
+	cache         ContentCacheInvalidator
+	idGen         func() string
+	tokenGen      func() (string, error)
 }
 
 // ErrContentRepositoryMissing signals that the content repository dependency is absent.
 var ErrContentRepositoryMissing = errors.New("content service: content repository is not configured")
+
+// ErrContentPageInvalid indicates invalid page payload supplied.
+var ErrContentPageInvalid = errors.New("content service: invalid page input")
+
+// ErrContentPageConflict indicates slug + locale already exists.
+var ErrContentPageConflict = errors.New("content service: page conflict")
+
+// ErrContentPageNotFound indicates the referenced page does not exist.
+var ErrContentPageNotFound = errors.New("content service: page not found")
 
 // NewContentService constructs the content service with the supplied dependencies.
 func NewContentService(deps ContentServiceDeps) (ContentService, error) {
@@ -46,10 +79,22 @@ func NewContentService(deps ContentServiceDeps) (ContentService, error) {
 	if defaultLocale == "" {
 		defaultLocale = defaultContentLocale
 	}
+	idGen := deps.IDGenerator
+	if idGen == nil {
+		idGen = func() string { return ulid.Make().String() }
+	}
+	tokenGen := deps.PreviewTokenGenerator
+	if tokenGen == nil {
+		tokenGen = generatePreviewToken
+	}
 	return &contentService{
 		repo:          deps.Repository,
 		clock:         func() time.Time { return clock().UTC() },
 		defaultLocale: normalizeLocaleValue(defaultLocale),
+		audit:         deps.Audit,
+		cache:         deps.Cache,
+		idGen:         idGen,
+		tokenGen:      tokenGen,
 	}, nil
 }
 
@@ -224,27 +269,116 @@ func (s *contentService) UpsertPage(ctx context.Context, cmd UpsertContentPageCo
 	if s.repo == nil {
 		return ContentPage{}, ErrContentRepositoryMissing
 	}
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return ContentPage{}, fmt.Errorf("%w: actor id is required", ErrContentPageInvalid)
+	}
+
 	page := cmd.Page
 	page.ID = strings.TrimSpace(page.ID)
 	page.Slug = strings.TrimSpace(page.Slug)
+	if page.Slug == "" {
+		return ContentPage{}, fmt.Errorf("%w: slug is required", ErrContentPageInvalid)
+	}
 	page.Locale = normalizeLocaleValue(page.Locale)
 	if page.Locale == "" {
 		page.Locale = s.defaultLocale
 	}
 	page.Title = strings.TrimSpace(page.Title)
-	page.Status = strings.TrimSpace(page.Status)
+	if page.Title == "" {
+		return ContentPage{}, fmt.Errorf("%w: title is required", ErrContentPageInvalid)
+	}
 	page.BodyHTML = strings.TrimSpace(page.BodyHTML)
+	status, err := normalizePageStatus(strings.TrimSpace(page.Status))
+	if err != nil {
+		return ContentPage{}, err
+	}
+	page.Status = status
+	page.IsPublished = strings.EqualFold(status, "published")
 	page.SEO = textutil.NormalizeStringMap(page.SEO)
-	updated := s.clock().UTC()
-	page.UpdatedAt = updated
+	page.UpdatedAt = s.clock().UTC()
+
+	var existing domain.ContentPage
+	if page.ID != "" {
+		existing, err = s.repo.GetPageByID(ctx, page.ID)
+		if err != nil {
+			if isRepositoryNotFound(err) {
+				return ContentPage{}, ErrContentPageNotFound
+			}
+			return ContentPage{}, err
+		}
+	} else {
+		page.ID = s.idGen()
+	}
+
+	if err := s.ensureUniquePage(ctx, page.Slug, page.Locale, page.ID); err != nil {
+		return ContentPage{}, err
+	}
+
+	page.PreviewToken = strings.TrimSpace(existing.PreviewToken)
+	if !page.IsPublished {
+		needsToken := cmd.RegeneratePreviewToken || existing.PreviewToken == "" || existing.IsPublished || existing.ID == ""
+		if needsToken {
+			token, tokenErr := s.tokenGen()
+			if tokenErr != nil {
+				return ContentPage{}, fmt.Errorf("content service: generate preview token: %w", tokenErr)
+			}
+			page.PreviewToken = token
+		}
+	} else if existing.ID == "" {
+		page.PreviewToken = ""
+	}
 
 	domainPage := normalizeContentPage(domain.ContentPage(page), page.Locale, s.defaultLocale)
-
 	saved, err := s.repo.UpsertPage(ctx, domainPage)
 	if err != nil {
 		return ContentPage{}, err
 	}
-	return ContentPage(normalizeContentPage(saved, page.Locale, s.defaultLocale)), nil
+
+	normalized := ContentPage(normalizeContentPage(saved, page.Locale, s.defaultLocale))
+
+	action := "content.page.create"
+	if strings.TrimSpace(existing.ID) != "" {
+		action = "content.page.update"
+	}
+	s.recordPageAudit(ctx, action, existing, domain.ContentPage(normalized), actorID)
+
+	if existing.IsPublished != normalized.IsPublished {
+		s.invalidatePages(ctx, []ContentCacheKey{{
+			Slug:   normalized.Slug,
+			Locale: normalized.Locale,
+		}})
+	}
+
+	return normalized, nil
+}
+
+func (s *contentService) DeletePage(ctx context.Context, cmd DeleteContentPageCommand) error {
+	if s.repo == nil {
+		return ErrContentRepositoryMissing
+	}
+	pageID := strings.TrimSpace(cmd.PageID)
+	if pageID == "" {
+		return fmt.Errorf("%w: page id is required", ErrContentPageInvalid)
+	}
+	existing, err := s.repo.GetPageByID(ctx, pageID)
+	if err != nil {
+		if isRepositoryNotFound(err) {
+			return ErrContentPageNotFound
+		}
+		return err
+	}
+	if err := s.repo.DeletePage(ctx, pageID); err != nil {
+		return err
+	}
+	s.recordPageAudit(ctx, "content.page.delete", existing, domain.ContentPage{}, strings.TrimSpace(cmd.ActorID))
+	if existing.IsPublished {
+		s.invalidatePages(ctx, []ContentCacheKey{{
+			Slug:   strings.TrimSpace(existing.Slug),
+			Locale: normalizeLocaleValue(existing.Locale),
+		}})
+	}
+	return nil
 }
 
 func normalizeContentGuide(guide domain.ContentGuide, requestedLocale, fallbackLocale, defaultLocale string) domain.ContentGuide {
@@ -290,6 +424,7 @@ func normalizeContentGuide(guide domain.ContentGuide, requestedLocale, fallbackL
 
 func normalizeContentPage(page domain.ContentPage, requestedLocale, defaultLocale string) domain.ContentPage {
 	page.Slug = strings.TrimSpace(page.Slug)
+	page.PreviewToken = strings.TrimSpace(page.PreviewToken)
 
 	requestedLocale = normalizeLocaleValue(requestedLocale)
 	defaultLocale = normalizeLocaleValue(defaultLocale)
@@ -318,6 +453,142 @@ func normalizeContentPage(page domain.ContentPage, requestedLocale, defaultLocal
 	}
 
 	return page
+}
+
+func (s *contentService) ensureUniquePage(ctx context.Context, slug, locale, pageID string) error {
+	existing, err := s.repo.GetPage(ctx, slug, locale)
+	if err != nil {
+		if isRepositoryNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if strings.EqualFold(strings.TrimSpace(existing.ID), strings.TrimSpace(pageID)) {
+		return nil
+	}
+	return ErrContentPageConflict
+}
+
+func (s *contentService) recordPageAudit(ctx context.Context, action string, before, after domain.ContentPage, actorID string) {
+	if s.audit == nil {
+		return
+	}
+	actorID = strings.TrimSpace(actorID)
+	targetID := pickFirstNonEmptyString(after.ID, before.ID)
+	metadata := map[string]any{
+		"pageId":      targetID,
+		"slug":        pickFirstNonEmptyString(after.Slug, before.Slug),
+		"locale":      pickFirstNonEmptyString(after.Locale, before.Locale, s.defaultLocale),
+		"status":      pickFirstNonEmptyString(after.Status, before.Status),
+		"isPublished": after.IsPublished || (!after.IsPublished && before.IsPublished),
+	}
+	if metadata["pageId"] == "" {
+		delete(metadata, "pageId")
+	}
+
+	s.audit.Record(ctx, AuditLogRecord{
+		Actor:      actorID,
+		ActorType:  "staff",
+		Action:     action,
+		TargetRef:  pageTargetRef(targetID),
+		Severity:   "info",
+		OccurredAt: s.clock(),
+		Metadata:   metadata,
+		Diff:       buildPageDiff(before, after),
+	})
+}
+
+func (s *contentService) invalidatePages(ctx context.Context, pages []ContentCacheKey) {
+	if s.cache == nil || len(pages) == 0 {
+		return
+	}
+	_ = s.cache.InvalidatePages(ctx, pages)
+}
+
+func buildPageDiff(before, after domain.ContentPage) map[string]AuditLogDiff {
+	diff := make(map[string]AuditLogDiff)
+	add := func(field, beforeVal, afterVal string) {
+		if beforeVal == afterVal {
+			return
+		}
+		diff[field] = AuditLogDiff{Before: beforeVal, After: afterVal}
+	}
+
+	add("slug", strings.TrimSpace(before.Slug), strings.TrimSpace(after.Slug))
+	add("locale", normalizeLocaleValue(before.Locale), normalizeLocaleValue(after.Locale))
+	add("title", strings.TrimSpace(before.Title), strings.TrimSpace(after.Title))
+	add("status", strings.TrimSpace(before.Status), strings.TrimSpace(after.Status))
+
+	if strings.TrimSpace(before.BodyHTML) != strings.TrimSpace(after.BodyHTML) {
+		diff["body_html"] = AuditLogDiff{Before: strings.TrimSpace(before.BodyHTML), After: strings.TrimSpace(after.BodyHTML)}
+	}
+	if !mapsEqualStringMap(before.SEO, after.SEO) {
+		diff["seo"] = AuditLogDiff{Before: textutil.NormalizeStringMap(before.SEO), After: textutil.NormalizeStringMap(after.SEO)}
+	}
+	if before.IsPublished != after.IsPublished {
+		diff["is_published"] = AuditLogDiff{Before: before.IsPublished, After: after.IsPublished}
+	}
+
+	if len(diff) == 0 {
+		return nil
+	}
+	return diff
+}
+
+func mapsEqualStringMap(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, val := range a {
+		if strings.TrimSpace(val) != strings.TrimSpace(b[key]) {
+			return false
+		}
+	}
+	for key, val := range b {
+		if strings.TrimSpace(val) != strings.TrimSpace(a[key]) {
+			return false
+		}
+	}
+	return true
+}
+
+func pickFirstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func pageTargetRef(pageID string) string {
+	trimmed := strings.TrimSpace(pageID)
+	if trimmed == "" {
+		return ""
+	}
+	return fmt.Sprintf("/content/pages/%s", trimmed)
+}
+
+func normalizePageStatus(status string) (string, error) {
+	trimmed := strings.ToLower(strings.TrimSpace(status))
+	if trimmed == "" {
+		return "draft", nil
+	}
+	switch trimmed {
+	case "draft", "published", "archived":
+		return trimmed, nil
+	default:
+		return "", fmt.Errorf("%w: unsupported status %q", ErrContentPageInvalid, status)
+	}
+}
+
+func generatePreviewToken() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
 }
 
 func normalizeLocalePointer(value *string) string {

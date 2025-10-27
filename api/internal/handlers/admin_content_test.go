@@ -199,12 +199,142 @@ func TestAdminContentHandlers_InvalidPayload(t *testing.T) {
 	}
 }
 
+func TestAdminContentHandlers_CreatePage(t *testing.T) {
+	t.Helper()
+
+	updatedAt := time.Date(2024, time.March, 2, 8, 0, 0, 0, time.UTC)
+	svc := &adminStubContentService{
+		pageUpsertResp: services.ContentPage{
+			ID:           "page_001",
+			Slug:         "company",
+			Locale:       "ja",
+			Title:        "Company",
+			BodyHTML:     "<p>clean</p>",
+			Status:       "draft",
+			IsPublished:  false,
+			PreviewToken: "token-123",
+			UpdatedAt:    updatedAt,
+		},
+	}
+	handler := NewAdminContentHandlers(nil, svc)
+	router := chi.NewRouter()
+	handler.Routes(router)
+
+	payload := map[string]any{
+		"id":                       "override",
+		"slug":                     " company ",
+		"locale":                   "JA",
+		"title":                    " Company ",
+		"body_html":                "<script>alert(1)</script><p>clean</p>",
+		"seo":                      map[string]string{"title": " About "},
+		"status":                   " Draft ",
+		"regenerate_preview_token": true,
+	}
+	body, _ := json.Marshal(payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/content/pages", bytes.NewReader(body))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusCreated {
+		t.Fatalf("expected 201 got %d", resp.Code)
+	}
+	if svc.pageUpsertCmd.ActorID != "admin" {
+		t.Fatalf("expected actor admin, got %s", svc.pageUpsertCmd.ActorID)
+	}
+	if svc.pageUpsertCmd.Page.Slug != "company" {
+		t.Fatalf("expected trimmed slug, got %q", svc.pageUpsertCmd.Page.Slug)
+	}
+	if svc.pageUpsertCmd.Page.Locale != "ja" {
+		t.Fatalf("expected normalized locale ja, got %q", svc.pageUpsertCmd.Page.Locale)
+	}
+	if svc.pageUpsertCmd.Page.BodyHTML != "<p>clean</p>" {
+		t.Fatalf("expected sanitized body html, got %q", svc.pageUpsertCmd.Page.BodyHTML)
+	}
+	if !svc.pageUpsertCmd.RegeneratePreviewToken {
+		t.Fatalf("expected regenerate preview token flag")
+	}
+
+	var parsed adminContentPageResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if parsed.ID != "page_001" {
+		t.Fatalf("expected id page_001, got %s", parsed.ID)
+	}
+	if parsed.PreviewToken != "token-123" {
+		t.Fatalf("expected preview token token-123, got %s", parsed.PreviewToken)
+	}
+	if parsed.UpdatedAt == "" {
+		t.Fatalf("expected updated_at populated")
+	}
+}
+
+func TestAdminContentHandlers_UpdatePageUsesPathID(t *testing.T) {
+	svc := &adminStubContentService{}
+	handler := NewAdminContentHandlers(nil, svc)
+	router := chi.NewRouter()
+	handler.Routes(router)
+
+	body := map[string]any{
+		"id":        "body-id",
+		"slug":      "company",
+		"locale":    "ja",
+		"title":     "Company",
+		"body_html": "<p>clean</p>",
+	}
+	payload, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPut, "/content/pages/page-param", bytes.NewReader(payload))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "staff", Roles: []string{auth.RoleAdmin}}))
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", resp.Code)
+	}
+	if svc.pageUpsertCmd.Page.ID != "page-param" {
+		t.Fatalf("expected path id override, got %q", svc.pageUpsertCmd.Page.ID)
+	}
+}
+
+func TestAdminContentHandlers_DeletePageCallsService(t *testing.T) {
+	svc := &adminStubContentService{}
+	handler := NewAdminContentHandlers(nil, svc)
+	router := chi.NewRouter()
+	handler.Routes(router)
+
+	req := httptest.NewRequest(http.MethodDelete, "/content/pages/page-del", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 got %d", resp.Code)
+	}
+	if svc.pageDeleteCmd.PageID != "page-del" {
+		t.Fatalf("expected delete page id page-del, got %q", svc.pageDeleteCmd.PageID)
+	}
+	if svc.pageDeleteCmd.ActorID != "admin" {
+		t.Fatalf("expected actor admin, got %q", svc.pageDeleteCmd.ActorID)
+	}
+}
+
 type adminStubContentService struct {
-	upsertCmd  services.UpsertContentGuideCommand
-	upsertResp services.ContentGuide
-	upsertErr  error
-	deleteID   string
-	deleteErr  error
+	upsertCmd      services.UpsertContentGuideCommand
+	upsertResp     services.ContentGuide
+	upsertErr      error
+	deleteID       string
+	deleteErr      error
+	pageUpsertCmd  services.UpsertContentPageCommand
+	pageUpsertResp services.ContentPage
+	pageUpsertErr  error
+	pageDeleteCmd  services.DeleteContentPageCommand
+	pageDeleteErr  error
 }
 
 func (s *adminStubContentService) ListGuides(context.Context, services.ContentGuideFilter) (domain.CursorPage[services.ContentGuide], error) {
@@ -239,6 +369,18 @@ func (s *adminStubContentService) GetPage(context.Context, string, string) (serv
 	return services.ContentPage{}, errors.New("not implemented")
 }
 
-func (s *adminStubContentService) UpsertPage(context.Context, services.UpsertContentPageCommand) (services.ContentPage, error) {
-	return services.ContentPage{}, errors.New("not implemented")
+func (s *adminStubContentService) UpsertPage(_ context.Context, cmd services.UpsertContentPageCommand) (services.ContentPage, error) {
+	s.pageUpsertCmd = cmd
+	if s.pageUpsertErr != nil {
+		return services.ContentPage{}, s.pageUpsertErr
+	}
+	if s.pageUpsertResp.ID == "" {
+		return cmd.Page, nil
+	}
+	return s.pageUpsertResp, nil
+}
+
+func (s *adminStubContentService) DeletePage(_ context.Context, cmd services.DeleteContentPageCommand) error {
+	s.pageDeleteCmd = cmd
+	return s.pageDeleteErr
 }

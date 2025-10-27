@@ -638,6 +638,7 @@ func (h *PublicHandlers) getPage(w http.ResponseWriter, r *http.Request) {
 	if locale == "" {
 		locale = defaultPageLocale
 	}
+	previewToken := strings.TrimSpace(r.URL.Query().Get("preview_token"))
 
 	page, err := h.content.GetPage(r.Context(), slug, locale)
 	if err != nil {
@@ -645,22 +646,28 @@ func (h *PublicHandlers) getPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	matchedPreview := previewToken != "" && previewToken == strings.TrimSpace(page.PreviewToken)
 	if !page.IsPublished {
-		httpx.WriteError(r.Context(), w, httpx.NewError("page_not_found", "page not found", http.StatusNotFound))
-		return
-	}
-
-	payload := buildContentPagePayload(page)
-
-	w.Header().Set("Cache-Control", pageCacheControl)
-	if etag := computePageETag(page, slug); etag != "" {
-		w.Header().Set("ETag", etag)
-		if matchesETag(r, etag) {
-			w.WriteHeader(http.StatusNotModified)
+		if !matchedPreview {
+			httpx.WriteError(r.Context(), w, httpx.NewError("page_not_found", "page not found", http.StatusNotFound))
 			return
 		}
 	}
 
+	payload := buildContentPagePayload(page)
+
+	if matchedPreview && !page.IsPublished {
+		w.Header().Set("Cache-Control", "no-store")
+	} else {
+		w.Header().Set("Cache-Control", pageCacheControl)
+		if etag := computePageETag(page, slug); etag != "" {
+			w.Header().Set("ETag", etag)
+			if matchesETag(r, etag) {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, payload)
 }
 
@@ -1294,6 +1301,15 @@ func writeContentError(ctx context.Context, w http.ResponseWriter, err error, re
 	switch {
 	case errors.Is(err, services.ErrContentRepositoryMissing):
 		httpx.WriteError(ctx, w, httpx.NewError("content_unavailable", "content service is unavailable", http.StatusServiceUnavailable))
+		return
+	case errors.Is(err, services.ErrContentPageInvalid):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	case errors.Is(err, services.ErrContentPageConflict):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_conflict", resource), fmt.Sprintf("%s already exists", resource), http.StatusConflict))
+		return
+	case errors.Is(err, services.ErrContentPageNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_not_found", resource), fmt.Sprintf("%s not found", resource), http.StatusNotFound))
 		return
 	}
 
