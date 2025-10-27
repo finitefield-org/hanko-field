@@ -103,7 +103,7 @@
 
 ### 6.2 Promotions
 - [x] [074 Implement promotions list/create/update/delete endpoints with validation rules and schedule handling.](./tasks/074-implement-promotions-list-create-update-delete-endpoints-with-validation-rules-a.md)
-- [ ] [075 Implement promotion usage retrieval endpoint aggregating counts per user.](./tasks/075-implement-promotion-usage-retrieval-endpoint-aggregating-counts-per-user.md)
+- [x] [075 Implement promotion usage retrieval endpoint aggregating counts per user.](./tasks/075-implement-promotion-usage-retrieval-endpoint-aggregating-counts-per-user.md)
 - [ ] [076 Implement promotion validate endpoint enabling dry-run eligibility checks.](./tasks/076-implement-promotion-validate-endpoint-enabling-dry-run-eligibility-checks.md)
 
 ### 6.3 Orders / Payments / Inventory Operations

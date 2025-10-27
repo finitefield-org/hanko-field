@@ -226,8 +226,27 @@ type PromotionRepository interface {
 type PromotionUsageRepository interface {
 	IncrementUsage(ctx context.Context, promoID string, userID string, now time.Time) (domain.PromotionUsage, error)
 	RemoveUsage(ctx context.Context, promoID string, userID string) error
-	ListUsage(ctx context.Context, promoID string, pager domain.Pagination) (domain.CursorPage[domain.PromotionUsage], error)
+	ListUsage(ctx context.Context, query PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error)
 }
+
+// PromotionUsageListQuery filters and paginates per-user usage aggregates.
+type PromotionUsageListQuery struct {
+	PromotionID string
+	MinTimes    int
+	Pagination  domain.Pagination
+	SortBy      PromotionUsageSort
+	SortDesc    bool
+}
+
+// PromotionUsageSort enumerates supported sort fields.
+type PromotionUsageSort string
+
+const (
+	// PromotionUsageSortLastUsed orders usage records by most recent application.
+	PromotionUsageSortLastUsed PromotionUsageSort = "lastUsedAt"
+	// PromotionUsageSortTimes orders usage records by total usage count.
+	PromotionUsageSortTimes PromotionUsageSort = "times"
+)
 
 // UserRepository stores user profiles and supports masking/deactivation flows.
 type UserRepository interface {

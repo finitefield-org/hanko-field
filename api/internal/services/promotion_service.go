@@ -19,6 +19,9 @@ import (
 const (
 	defaultPromotionPageSize        = 25
 	maxPromotionPageSize            = 100
+	defaultPromotionUsagePageSize   = 50
+	maxPromotionUsagePageSize       = 200
+	defaultUsageLookupInterval      = 75 * time.Millisecond
 	maxPromotionAudienceEntries     = 20
 	maxPromotionConditionEntries    = 50
 	promotionCodeMinLength          = 3
@@ -47,17 +50,23 @@ var (
 
 // PromotionServiceDeps bundles dependencies required to construct a PromotionService implementation.
 type PromotionServiceDeps struct {
-	Promotions  repositories.PromotionRepository
-	Audit       AuditLogService
-	Clock       func() time.Time
-	IDGenerator func() string
+	Promotions         repositories.PromotionRepository
+	Usage              repositories.PromotionUsageRepository
+	Users              UserService
+	Audit              AuditLogService
+	Clock              func() time.Time
+	IDGenerator        func() string
+	UserLookupInterval time.Duration
 }
 
 type promotionService struct {
-	repo  repositories.PromotionRepository
-	audit AuditLogService
-	clock func() time.Time
-	idGen func() string
+	repo               repositories.PromotionRepository
+	usageRepo          repositories.PromotionUsageRepository
+	users              UserService
+	audit              AuditLogService
+	clock              func() time.Time
+	idGen              func() string
+	userLookupInterval time.Duration
 }
 
 // NewPromotionService wires a PromotionService backed by the provided repositories.
@@ -73,11 +82,18 @@ func NewPromotionService(deps PromotionServiceDeps) (PromotionService, error) {
 	if idGen == nil {
 		idGen = func() string { return ulid.Make().String() }
 	}
+	interval := deps.UserLookupInterval
+	if interval < 0 {
+		interval = 0
+	}
 	return &promotionService{
-		repo:  deps.Promotions,
-		audit: deps.Audit,
-		clock: func() time.Time { return clock().UTC() },
-		idGen: idGen,
+		repo:               deps.Promotions,
+		usageRepo:          deps.Usage,
+		users:              deps.Users,
+		audit:              deps.Audit,
+		clock:              func() time.Time { return clock().UTC() },
+		idGen:              idGen,
+		userLookupInterval: interval,
 	}, nil
 }
 
@@ -268,8 +284,108 @@ func (s *promotionService) DeletePromotion(ctx context.Context, promoID string, 
 	return nil
 }
 
-func (s *promotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error) {
-	return domain.CursorPage[PromotionUsage]{}, ErrPromotionOperationUnsupported
+func (s *promotionService) ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (PromotionUsagePage, error) {
+	if s == nil || s.usageRepo == nil {
+		return PromotionUsagePage{}, ErrPromotionOperationUnsupported
+	}
+	promoID := strings.TrimSpace(filter.PromotionID)
+	if promoID == "" {
+		return PromotionUsagePage{}, fmt.Errorf("%w: promotion id is required", ErrPromotionInvalidInput)
+	}
+
+	pageSize := filter.Pagination.PageSize
+	switch {
+	case pageSize <= 0:
+		pageSize = defaultPromotionUsagePageSize
+	case pageSize > maxPromotionUsagePageSize:
+		pageSize = maxPromotionUsagePageSize
+	}
+
+	sortField := filter.SortBy
+	if sortField == "" {
+		sortField = PromotionUsageSortLastUsed
+	}
+	switch sortField {
+	case PromotionUsageSortLastUsed, PromotionUsageSortTimes:
+	default:
+		return PromotionUsagePage{}, fmt.Errorf("%w: unsupported sort field %q", ErrPromotionInvalidInput, sortField)
+	}
+
+	sortOrder := filter.SortOrder
+	if sortOrder != domain.SortAsc {
+		sortOrder = domain.SortDesc
+	}
+
+	minTimes := filter.MinTimes
+	if minTimes < 0 {
+		minTimes = 0
+	}
+
+	repoFilter := repositories.PromotionUsageListQuery{
+		PromotionID: promoID,
+		MinTimes:    minTimes,
+		Pagination: domain.Pagination{
+			PageSize:  pageSize,
+			PageToken: strings.TrimSpace(filter.Pagination.PageToken),
+		},
+		SortBy:   repositories.PromotionUsageSort(sortField),
+		SortDesc: sortOrder != domain.SortAsc,
+	}
+
+	page, err := s.usageRepo.ListUsage(ctx, repoFilter)
+	if err != nil {
+		return PromotionUsagePage{}, translatePromotionRepoError(err)
+	}
+
+	items := make([]PromotionUsageRecord, 0, len(page.Items))
+	var (
+		ticker   *time.Ticker
+		throttle <-chan time.Time
+	)
+	if s.users != nil {
+		if interval := s.promotionsUserLookupInterval(); interval > 0 {
+			ticker = time.NewTicker(interval)
+			throttle = ticker.C
+			defer ticker.Stop()
+		}
+	}
+
+	for idx, usage := range page.Items {
+		normalized := normalizePromotionUsage(usage)
+		record := PromotionUsageRecord{
+			Usage: normalized,
+			User: PromotionUsageUser{
+				ID: normalized.UserID,
+			},
+		}
+		if s.users != nil {
+			if idx > 0 && throttle != nil {
+				select {
+				case <-ctx.Done():
+					return PromotionUsagePage{}, ctx.Err()
+				case <-throttle:
+				}
+			}
+			profile, err := s.users.GetByUID(ctx, normalized.UserID)
+			if err != nil {
+				if !isPromotionRepoNotFound(err) {
+					return PromotionUsagePage{}, err
+				}
+			} else {
+				record.User.Email = strings.TrimSpace(profile.Email)
+				record.User.DisplayName = strings.TrimSpace(profile.DisplayName)
+				if record.User.ID == "" {
+					record.User.ID = strings.TrimSpace(profile.ID)
+				}
+			}
+		}
+		items = append(items, record)
+	}
+
+	return PromotionUsagePage{
+		Items:         items,
+		NextPageToken: page.NextPageToken,
+	}, nil
 }
 
 func (s *promotionService) recordPromotionAudit(ctx context.Context, action string, actorID string, occurred time.Time, before, after Promotion) {
@@ -304,6 +420,38 @@ func (s *promotionService) recordPromotionAudit(ctx context.Context, action stri
 	s.audit.Record(ctx, record)
 }
 
+func (s *promotionService) promotionsUserLookupInterval() time.Duration {
+	if s == nil {
+		return 0
+	}
+	interval := s.userLookupInterval
+	if interval <= 0 {
+		return defaultUsageLookupInterval
+	}
+	return interval
+}
+
+func normalizePromotionUsage(usage domain.PromotionUsage) PromotionUsage {
+	normalized := PromotionUsage{
+		UserID:    strings.TrimSpace(usage.UserID),
+		Times:     usage.Times,
+		OrderRefs: cloneStringSlice(usage.OrderRefs),
+		Blocked:   usage.Blocked,
+		Notes:     strings.TrimSpace(usage.Notes),
+	}
+	if normalized.Times < 0 {
+		normalized.Times = 0
+	}
+	if !usage.LastUsed.IsZero() {
+		normalized.LastUsed = usage.LastUsed.UTC()
+	}
+	if usage.FirstUsed != nil && !usage.FirstUsed.IsZero() {
+		first := usage.FirstUsed.UTC()
+		normalized.FirstUsed = &first
+	}
+	return normalized
+}
+
 func cloneStringSlice(in []string) []string {
 	if len(in) == 0 {
 		return nil
@@ -313,6 +461,17 @@ func cloneStringSlice(in []string) []string {
 		out[i] = strings.TrimSpace(item)
 	}
 	return out
+}
+
+func isPromotionRepoNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var repoErr repositories.RepositoryError
+	if errors.As(err, &repoErr) {
+		return repoErr.IsNotFound()
+	}
+	return false
 }
 
 func normalizePromotion(p Promotion) Promotion {

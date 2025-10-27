@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,6 +45,7 @@ func (h *AdminPromotionHandlers) Routes(r chi.Router) {
 	}
 	r.Route("/promotions", func(rt chi.Router) {
 		rt.Get("/", h.listPromotions)
+		rt.Get("/{promotionID}/usages", h.listPromotionUsage)
 		rt.Post("/", h.createPromotion)
 		rt.Put("/{promotionID}", h.updatePromotion)
 		rt.Delete("/{promotionID}", h.deletePromotion)
@@ -91,6 +93,103 @@ func (h *AdminPromotionHandlers) listPromotions(w http.ResponseWriter, r *http.R
 		items = append(items, newAdminPromotionResponse(promo))
 	}
 	response := promotionListResponse{
+		Items:         items,
+		NextPageToken: page.NextPageToken,
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *AdminPromotionHandlers) listPromotionUsage(w http.ResponseWriter, r *http.Request) {
+	if h.promotions == nil {
+		httpx.WriteError(r.Context(), w, httpx.NewError("service_unavailable", "promotion service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+	identity, ok := auth.IdentityFromContext(r.Context())
+	uid := ""
+	if ok && identity != nil {
+		uid = strings.TrimSpace(identity.UID)
+	}
+	if uid == "" {
+		httpx.WriteError(r.Context(), w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	promotionID := strings.TrimSpace(chi.URLParam(r, "promotionID"))
+	if promotionID == "" {
+		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", "promotion id is required", http.StatusBadRequest))
+		return
+	}
+
+	query := r.URL.Query()
+	filter := services.PromotionUsageFilter{
+		PromotionID: promotionID,
+		Pagination: services.Pagination{
+			PageToken: strings.TrimSpace(query.Get("pageToken")),
+		},
+		SortBy:    services.PromotionUsageSortLastUsed,
+		SortOrder: services.SortDesc,
+	}
+
+	if sizeStr := strings.TrimSpace(query.Get("pageSize")); sizeStr != "" {
+		size, err := strconv.Atoi(sizeStr)
+		if err != nil || size < 0 {
+			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_page_size", "pageSize must be a non-negative integer", http.StatusBadRequest))
+			return
+		}
+		filter.Pagination.PageSize = size
+	}
+	if minStr := strings.TrimSpace(query.Get("minUsage")); minStr != "" {
+		min, err := strconv.Atoi(minStr)
+		if err != nil {
+			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_min_usage", "minUsage must be numeric", http.StatusBadRequest))
+			return
+		}
+		filter.MinTimes = min
+	}
+	if sortParam := strings.ToLower(strings.TrimSpace(query.Get("sort"))); sortParam != "" {
+		switch sortParam {
+		case "lastused", "lastusedat", "last_used":
+			filter.SortBy = services.PromotionUsageSortLastUsed
+		case "times", "usage", "count":
+			filter.SortBy = services.PromotionUsageSortTimes
+		default:
+			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_sort", "sort must be one of lastUsedAt or times", http.StatusBadRequest))
+			return
+		}
+	}
+	if orderParam := strings.ToLower(strings.TrimSpace(query.Get("order"))); orderParam != "" {
+		switch orderParam {
+		case "asc", "ascending":
+			filter.SortOrder = services.SortAsc
+		case "desc", "descending":
+			filter.SortOrder = services.SortDesc
+		default:
+			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_order", "order must be asc or desc", http.StatusBadRequest))
+			return
+		}
+	}
+
+	page, err := h.promotions.ListPromotionUsage(r.Context(), filter)
+	if err != nil {
+		writeAdminPromotionError(r.Context(), w, err, "list_usage")
+		return
+	}
+
+	if format := strings.ToLower(strings.TrimSpace(query.Get("format"))); format == "csv" {
+		if page.NextPageToken != "" {
+			w.Header().Set("X-Next-Page-Token", page.NextPageToken)
+		}
+		if err := writePromotionUsageCSV(w, promotionID, page); err != nil {
+			httpx.WriteError(r.Context(), w, httpx.NewError("export_failed", "failed to render csv export", http.StatusInternalServerError))
+		}
+		return
+	}
+
+	items := make([]promotionUsageResponse, 0, len(page.Items))
+	for _, record := range page.Items {
+		items = append(items, newPromotionUsageResponse(record))
+	}
+	response := promotionUsageListResponse{
 		Items:         items,
 		NextPageToken: page.NextPageToken,
 	}
@@ -324,6 +423,8 @@ func writeAdminPromotionError(ctx context.Context, w http.ResponseWriter, err er
 		httpx.WriteError(ctx, w, httpx.NewError("promotion_locked", err.Error(), http.StatusConflict))
 	case errors.Is(err, services.ErrPromotionRepositoryMissing):
 		httpx.WriteError(ctx, w, httpx.NewError("promotions_unavailable", "promotion service unavailable", http.StatusServiceUnavailable))
+	case errors.Is(err, services.ErrPromotionOperationUnsupported):
+		httpx.WriteError(ctx, w, httpx.NewError("promotion_operation_unsupported", "promotion operation unavailable", http.StatusNotImplemented))
 	default:
 		httpx.WriteError(ctx, w, httpx.NewError("promotion_"+action+"_failed", "failed to "+action+" promotion", http.StatusInternalServerError))
 	}
@@ -375,6 +476,27 @@ type promotionConditionsPayload struct {
 type promotionListResponse struct {
 	Items         []adminPromotionResponse `json:"items"`
 	NextPageToken string                   `json:"nextPageToken,omitempty"`
+}
+
+type promotionUsageListResponse struct {
+	Items         []promotionUsageResponse `json:"items"`
+	NextPageToken string                   `json:"nextPageToken,omitempty"`
+}
+
+type promotionUsageResponse struct {
+	User        promotionUsageUserResponse `json:"user"`
+	Times       int                        `json:"times"`
+	LastUsedAt  string                     `json:"lastUsedAt,omitempty"`
+	FirstUsedAt string                     `json:"firstUsedAt,omitempty"`
+	OrderRefs   []string                   `json:"orderRefs,omitempty"`
+	Blocked     bool                       `json:"blocked,omitempty"`
+	Notes       string                     `json:"notes,omitempty"`
+}
+
+type promotionUsageUserResponse struct {
+	ID          string `json:"id"`
+	Email       string `json:"email,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
 }
 
 type adminPromotionResponse struct {
@@ -463,6 +585,70 @@ func newAdminPromotionResponse(promotion services.Promotion) adminPromotionRespo
 		UpdatedAt: formatPromotionTimestamp(promotion.UpdatedAt),
 	}
 	return response
+}
+
+func newPromotionUsageResponse(record services.PromotionUsageRecord) promotionUsageResponse {
+	resp := promotionUsageResponse{
+		User: promotionUsageUserResponse{
+			ID:          strings.TrimSpace(record.User.ID),
+			Email:       strings.TrimSpace(record.User.Email),
+			DisplayName: strings.TrimSpace(record.User.DisplayName),
+		},
+		Times:     record.Usage.Times,
+		OrderRefs: cloneStringSlice(record.Usage.OrderRefs),
+		Blocked:   record.Usage.Blocked,
+		Notes:     strings.TrimSpace(record.Usage.Notes),
+	}
+	if !record.Usage.LastUsed.IsZero() {
+		resp.LastUsedAt = formatPromotionTimestamp(record.Usage.LastUsed)
+	}
+	if record.Usage.FirstUsed != nil {
+		first := record.Usage.FirstUsed.UTC()
+		if !first.IsZero() {
+			resp.FirstUsedAt = formatPromotionTimestamp(first)
+		}
+	}
+	if len(resp.OrderRefs) == 0 {
+		resp.OrderRefs = nil
+	}
+	return resp
+}
+
+func writePromotionUsageCSV(w http.ResponseWriter, promotionID string, page services.PromotionUsagePage) error {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if promotionID != "" {
+		filename := fmt.Sprintf("promotion-%s-usage.csv", promotionID)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	}
+
+	writer := csv.NewWriter(w)
+	header := []string{"uid", "email", "displayName", "times", "lastUsedAt", "firstUsedAt", "blocked", "orderRefs", "notes"}
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	for _, record := range page.Items {
+		usage := newPromotionUsageResponse(record)
+		orderRefs := strings.Join(usage.OrderRefs, ";")
+		row := []string{
+			usage.User.ID,
+			usage.User.Email,
+			usage.User.DisplayName,
+			strconv.Itoa(usage.Times),
+			usage.LastUsedAt,
+			usage.FirstUsedAt,
+			strconv.FormatBool(record.Usage.Blocked),
+			orderRefs,
+			usage.Notes,
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+
+	writer.Flush()
+	return writer.Error()
 }
 
 func (r adminPromotionResponse) withOverride(allow bool) adminPromotionResponse {

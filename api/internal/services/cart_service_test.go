@@ -1187,8 +1187,8 @@ func (s *stubPromotionService) DeletePromotion(context.Context, string, string) 
 	return errors.New("not implemented")
 }
 
-func (s *stubPromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error) {
-	return domain.CursorPage[PromotionUsage]{}, errors.New("not implemented")
+func (s *stubPromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (PromotionUsagePage, error) {
+	return PromotionUsagePage{}, errors.New("not implemented")
 }
 
 type repositoryErrorStub struct {

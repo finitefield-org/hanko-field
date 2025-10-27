@@ -228,6 +228,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise promotion repository", zap.Error(err))
 	}
+	promotionUsageRepo, err := firestoreRepo.NewPromotionUsageRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise promotion usage repository", zap.Error(err))
+	}
 
 	if strings.TrimSpace(cfg.PSP.StripeAPIKey) == "" {
 		logger.Fatal("stripe api key is required for payment method management")
@@ -378,8 +382,11 @@ func main() {
 		logger.Fatal("failed to initialise content service", zap.Error(err))
 	}
 	promotionService, err := services.NewPromotionService(services.PromotionServiceDeps{
-		Promotions: promotionRepo,
-		Clock:      time.Now,
+		Promotions:         promotionRepo,
+		Usage:              promotionUsageRepo,
+		Users:              userService,
+		Clock:              time.Now,
+		UserLookupInterval: 50 * time.Millisecond,
 	})
 	if err != nil {
 		logger.Fatal("failed to initialise promotion service", zap.Error(err))

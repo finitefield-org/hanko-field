@@ -120,9 +120,12 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 
 	if promotionsRepo := reg.Promotions(); promotionsRepo != nil {
 		promotionSvc, err := services.NewPromotionService(services.PromotionServiceDeps{
-			Promotions: promotionsRepo,
-			Audit:      svc.Audit,
-			Clock:      time.Now,
+			Promotions:         promotionsRepo,
+			Usage:              reg.PromotionUsage(),
+			Users:              svc.Users,
+			Audit:              svc.Audit,
+			Clock:              time.Now,
+			UserLookupInterval: 50 * time.Millisecond,
 		})
 		if err != nil {
 			return Services{}, fmt.Errorf("build promotion service: %w", err)

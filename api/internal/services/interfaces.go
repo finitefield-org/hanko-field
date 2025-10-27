@@ -54,7 +54,6 @@ type (
 	PromotionValidationResult = domain.PromotionValidationResult
 	PromotionPublic           = domain.PromotionPublic
 	PromotionPage             = domain.CursorPage[Promotion]
-	PromotionUsagePage        = domain.CursorPage[PromotionUsage]
 	RegistrabilityCheckResult = domain.RegistrabilityCheckResult
 	Address                   = domain.Address
 	UserProfile               = domain.UserProfile
@@ -96,7 +95,36 @@ type (
 	NameMappingStatus         = domain.NameMappingStatus
 )
 
+// PromotionUsageUser captures the minimal user metadata surfaced alongside usage aggregates.
+type PromotionUsageUser struct {
+	ID          string
+	Email       string
+	DisplayName string
+}
+
+// PromotionUsageRecord joins per-user usage aggregates with user metadata.
+type PromotionUsageRecord struct {
+	Usage PromotionUsage
+	User  PromotionUsageUser
+}
+
+// PromotionUsagePage provides pagination metadata for promotion usage listings.
+type PromotionUsagePage = domain.CursorPage[PromotionUsageRecord]
+
+// PromotionUsageSort enumerates supported sort fields for usage listings.
+type PromotionUsageSort string
+
 const (
+	// PromotionUsageSortLastUsed sorts usage records by last-used timestamp (newest first by default).
+	PromotionUsageSortLastUsed PromotionUsageSort = "lastUsedAt"
+	// PromotionUsageSortTimes sorts usage records by usage count (highest first by default).
+	PromotionUsageSortTimes PromotionUsageSort = "times"
+)
+
+const (
+	SortAsc  = domain.SortAsc
+	SortDesc = domain.SortDesc
+
 	DesignTypeTyped    = domain.DesignTypeTyped
 	DesignTypeUploaded = domain.DesignTypeUploaded
 	DesignTypeLogo     = domain.DesignTypeLogo
@@ -208,7 +236,7 @@ type PromotionService interface {
 	CreatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	UpdatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	DeletePromotion(ctx context.Context, promoID string, actorID string) error
-	ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error)
+	ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (PromotionUsagePage, error)
 }
 
 // UserService manages profile, address, payment method, and favorite surfaces.
@@ -701,6 +729,9 @@ type UpsertPromotionCommand struct {
 type PromotionUsageFilter struct {
 	PromotionID string
 	Pagination  Pagination
+	MinTimes    int
+	SortBy      PromotionUsageSort
+	SortOrder   SortOrder
 }
 
 type UpdateProfileCommand struct {

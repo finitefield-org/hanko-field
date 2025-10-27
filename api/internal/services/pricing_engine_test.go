@@ -361,7 +361,7 @@ func (f *fakePromotionService) DeletePromotion(context.Context, string, string) 
 	panic("unexpected call")
 }
 
-func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error) {
+func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (PromotionUsagePage, error) {
 	panic("unexpected call")
 }
 

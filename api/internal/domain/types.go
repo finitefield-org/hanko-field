@@ -611,11 +611,14 @@ type FavoriteDesign struct {
 	AddedAt  time.Time
 }
 
-// PromotionUsage aggregates per-user promotion usage metrics.
 type PromotionUsage struct {
-	UserID   string
-	Times    int
-	LastUsed time.Time
+	UserID    string
+	Times     int
+	LastUsed  time.Time
+	FirstUsed *time.Time
+	OrderRefs []string
+	Blocked   bool
+	Notes     string
 }
 
 // PaymentMethod stores PSP-backed payment references without sensitive card data.

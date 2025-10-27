@@ -97,6 +97,122 @@ func TestAdminPromotionHandlers_ListPromotions_FilterMapping(t *testing.T) {
 	}
 }
 
+func TestAdminPromotionHandlers_ListPromotionUsage_MapsFilters(t *testing.T) {
+	var captured services.PromotionUsageFilter
+	service := &stubPromotionAdminService{
+		usageFn: func(ctx context.Context, filter services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+			captured = filter
+			return services.PromotionUsagePage{}, nil
+		},
+	}
+	handler := NewAdminPromotionHandlers(nil, service)
+
+	req := httptest.NewRequest(http.MethodGet, "/promotions/promo-1/usages?pageSize=10&pageToken=%20token%20&minUsage=3&sort=times&order=asc", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin"}))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("promotionID", " promo-1 ")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	handler.listPromotionUsage(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if captured.PromotionID != "promo-1" {
+		t.Fatalf("expected promotion id trimmed, got %q", captured.PromotionID)
+	}
+	if captured.Pagination.PageSize != 10 {
+		t.Fatalf("expected page size propagated, got %d", captured.Pagination.PageSize)
+	}
+	if captured.Pagination.PageToken != "token" {
+		t.Fatalf("expected page token trimmed, got %q", captured.Pagination.PageToken)
+	}
+	if captured.MinTimes != 3 {
+		t.Fatalf("expected min usage parsed, got %d", captured.MinTimes)
+	}
+	if captured.SortBy != services.PromotionUsageSortTimes {
+		t.Fatalf("expected sort mapped to times, got %q", captured.SortBy)
+	}
+	if captured.SortOrder != services.SortAsc {
+		t.Fatalf("expected sort order asc, got %v", captured.SortOrder)
+	}
+}
+
+func TestAdminPromotionHandlers_ListPromotionUsage_AsCSV(t *testing.T) {
+	usageTime := time.Date(2024, time.June, 1, 10, 0, 0, 0, time.UTC)
+	firstUsed := usageTime.Add(-24 * time.Hour)
+	service := &stubPromotionAdminService{
+		usageFn: func(ctx context.Context, filter services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+			return services.PromotionUsagePage{
+				Items: []services.PromotionUsageRecord{{
+					Usage: services.PromotionUsage{
+						UserID:    "user-1",
+						Times:     2,
+						LastUsed:  usageTime,
+						FirstUsed: &firstUsed,
+						OrderRefs: []string{"/orders/abc"},
+						Notes:     "checked",
+					},
+					User: services.PromotionUsageUser{
+						ID:          "user-1",
+						Email:       "user-1@example.com",
+						DisplayName: "Tester",
+					},
+				}},
+				NextPageToken: "next-token",
+			}, nil
+		},
+	}
+	handler := NewAdminPromotionHandlers(nil, service)
+
+	req := httptest.NewRequest(http.MethodGet, "/promotions/promo-99/usages?format=csv", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin"}))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("promotionID", "promo-99")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	handler.listPromotionUsage(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "text/csv") {
+		t.Fatalf("expected csv content type, got %q", got)
+	}
+	if rec.Header().Get("X-Next-Page-Token") != "next-token" {
+		t.Fatalf("expected next page token header")
+	}
+	body := strings.TrimSpace(rec.Body.String())
+	lines := strings.Split(body, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected header and one row, got %d lines: %v", len(lines), lines)
+	}
+	expectedHeader := "uid,email,displayName,times,lastUsedAt,firstUsedAt,blocked,orderRefs,notes"
+	if lines[0] != expectedHeader {
+		t.Fatalf("unexpected csv header %q", lines[0])
+	}
+	if !strings.Contains(lines[1], "user-1@example.com") {
+		t.Fatalf("expected csv row to include user email, got %q", lines[1])
+	}
+}
+
+func TestAdminPromotionHandlers_ListPromotionUsage_Unauthenticated(t *testing.T) {
+	handler := NewAdminPromotionHandlers(nil, &stubPromotionAdminService{})
+	req := httptest.NewRequest(http.MethodGet, "/promotions/promo-1/usages", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("promotionID", "promo-1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	handler.listPromotionUsage(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 unauthenticated, got %d", rec.Code)
+	}
+}
+
 func TestAdminPromotionHandlers_UpdatePromotion_AllowOverride(t *testing.T) {
 	var received services.UpsertPromotionCommand
 	service := &stubPromotionAdminService{
@@ -184,6 +300,7 @@ type stubPromotionAdminService struct {
 	createFn func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
 	updateFn func(context.Context, services.UpsertPromotionCommand) (services.Promotion, error)
 	deleteFn func(context.Context, string, string) error
+	usageFn  func(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error)
 }
 
 func (s *stubPromotionAdminService) GetPublicPromotion(context.Context, string) (services.PromotionPublic, error) {
@@ -222,6 +339,9 @@ func (s *stubPromotionAdminService) DeletePromotion(ctx context.Context, promoti
 	return nil
 }
 
-func (s *stubPromotionAdminService) ListPromotionUsage(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+func (s *stubPromotionAdminService) ListPromotionUsage(ctx context.Context, filter services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+	if s.usageFn != nil {
+		return s.usageFn(ctx, filter)
+	}
 	return services.PromotionUsagePage{}, services.ErrPromotionOperationUnsupported
 }

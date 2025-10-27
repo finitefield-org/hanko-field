@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -385,6 +386,128 @@ func TestPromotionService_ListPromotions_NormalizesFilters(t *testing.T) {
 	}
 }
 
+func TestPromotionService_ListPromotionUsage_NormalizesFilter(t *testing.T) {
+	var captured repositories.PromotionUsageListQuery
+	usageRepo := &stubPromotionUsageRepository{
+		listFn: func(ctx context.Context, query repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error) {
+			captured = query
+			return domain.CursorPage[domain.PromotionUsage]{}, nil
+		},
+	}
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: &stubPromotionRepository{},
+		Usage:      usageRepo,
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	_, err = svc.ListPromotionUsage(context.Background(), PromotionUsageFilter{
+		PromotionID: " promo-usage ",
+		MinTimes:    -5,
+		Pagination: Pagination{
+			PageSize:  9999,
+			PageToken: " token ",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ListPromotionUsage returned error: %v", err)
+	}
+	if captured.PromotionID != "promo-usage" {
+		t.Fatalf("expected promotion id to trim, got %q", captured.PromotionID)
+	}
+	if captured.MinTimes != 0 {
+		t.Fatalf("expected min times to clamp to zero, got %d", captured.MinTimes)
+	}
+	if captured.Pagination.PageSize != maxPromotionUsagePageSize {
+		t.Fatalf("expected page size to clamp to %d, got %d", maxPromotionUsagePageSize, captured.Pagination.PageSize)
+	}
+	if captured.Pagination.PageToken != "token" {
+		t.Fatalf("expected page token trimmed, got %q", captured.Pagination.PageToken)
+	}
+	if captured.SortBy != repositories.PromotionUsageSortLastUsed {
+		t.Fatalf("expected default sort by lastUsedAt, got %q", captured.SortBy)
+	}
+	if !captured.SortDesc {
+		t.Fatalf("expected default sort order descending")
+	}
+}
+
+func TestPromotionService_ListPromotionUsage_EnrichesUsers(t *testing.T) {
+	lastUsed := time.Date(2024, time.May, 1, 12, 30, 0, 0, time.FixedZone("JST", 9*60*60))
+	firstUsed := lastUsed.Add(-48 * time.Hour)
+	usageRepo := &stubPromotionUsageRepository{
+		listFn: func(ctx context.Context, query repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error) {
+			return domain.CursorPage[domain.PromotionUsage]{
+				Items: []domain.PromotionUsage{{
+					UserID:    " user-123 ",
+					Times:     3,
+					LastUsed:  lastUsed,
+					FirstUsed: &firstUsed,
+					OrderRefs: []string{" /orders/abc123 "},
+					Blocked:   true,
+					Notes:     " Flagged ",
+				}},
+			}, nil
+		},
+	}
+	userSvc := &stubUserService{
+		getFn: func(ctx context.Context, userID string) (UserProfile, error) {
+			return UserProfile{
+				ID:          userID,
+				Email:       userID + "@example.com",
+				DisplayName: "Promotion Tester",
+			}, nil
+		},
+	}
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions:         &stubPromotionRepository{},
+		Usage:              usageRepo,
+		Users:              userSvc,
+		UserLookupInterval: time.Nanosecond,
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	page, err := svc.ListPromotionUsage(context.Background(), PromotionUsageFilter{PromotionID: "promo1"})
+	if err != nil {
+		t.Fatalf("ListPromotionUsage returned error: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected one usage record, got %d", len(page.Items))
+	}
+	record := page.Items[0]
+	if record.User.Email != "user-123@example.com" {
+		t.Fatalf("expected email enrichment, got %q", record.User.Email)
+	}
+	if record.User.DisplayName != "Promotion Tester" {
+		t.Fatalf("expected display name enrichment")
+	}
+	if record.Usage.UserID != "user-123" {
+		t.Fatalf("expected user id trimmed, got %q", record.Usage.UserID)
+	}
+	if record.Usage.Times != 3 {
+		t.Fatalf("expected usage times 3, got %d", record.Usage.Times)
+	}
+	if !record.Usage.LastUsed.Equal(lastUsed.UTC()) {
+		t.Fatalf("expected last used normalized to UTC, got %s", record.Usage.LastUsed)
+	}
+	if record.Usage.FirstUsed == nil || !record.Usage.FirstUsed.Equal(firstUsed.UTC()) {
+		t.Fatalf("expected first used pointer normalized to UTC")
+	}
+	if len(record.Usage.OrderRefs) != 1 || record.Usage.OrderRefs[0] != "/orders/abc123" {
+		t.Fatalf("expected order refs trimmed, got %v", record.Usage.OrderRefs)
+	}
+	if !record.Usage.Blocked {
+		t.Fatalf("expected blocked flag to propagate")
+	}
+	if strings.TrimSpace(record.Usage.Notes) != "Flagged" {
+		t.Fatalf("expected notes trimmed, got %q", record.Usage.Notes)
+	}
+}
+
 func TestPromotionService_DeletePromotion_RequiresActor(t *testing.T) {
 	repo := &stubPromotionRepository{}
 	svc, err := NewPromotionService(PromotionServiceDeps{Promotions: repo})
@@ -505,4 +628,82 @@ func (s *promotionAuditLogStub) Record(_ context.Context, record AuditLogRecord)
 
 func (s *promotionAuditLogStub) List(context.Context, AuditLogFilter) (domain.CursorPage[domain.AuditLogEntry], error) {
 	return domain.CursorPage[domain.AuditLogEntry]{}, nil
+}
+
+type stubPromotionUsageRepository struct {
+	listFn func(context.Context, repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error)
+}
+
+func (s *stubPromotionUsageRepository) IncrementUsage(context.Context, string, string, time.Time) (domain.PromotionUsage, error) {
+	return domain.PromotionUsage{}, nil
+}
+
+func (s *stubPromotionUsageRepository) RemoveUsage(context.Context, string, string) error {
+	return nil
+}
+
+func (s *stubPromotionUsageRepository) ListUsage(ctx context.Context, query repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, query)
+	}
+	return domain.CursorPage[domain.PromotionUsage]{}, nil
+}
+
+type stubUserService struct {
+	getFn func(context.Context, string) (UserProfile, error)
+}
+
+func (s *stubUserService) GetProfile(ctx context.Context, userID string) (UserProfile, error) {
+	return s.GetByUID(ctx, userID)
+}
+
+func (s *stubUserService) GetByUID(ctx context.Context, userID string) (UserProfile, error) {
+	if s.getFn != nil {
+		return s.getFn(ctx, strings.TrimSpace(userID))
+	}
+	return UserProfile{}, nil
+}
+
+func (s *stubUserService) UpdateProfile(context.Context, UpdateProfileCommand) (UserProfile, error) {
+	return UserProfile{}, nil
+}
+
+func (s *stubUserService) MaskProfile(context.Context, MaskProfileCommand) (UserProfile, error) {
+	return UserProfile{}, nil
+}
+
+func (s *stubUserService) SetUserActive(context.Context, SetUserActiveCommand) (UserProfile, error) {
+	return UserProfile{}, nil
+}
+
+func (s *stubUserService) ListAddresses(context.Context, string) ([]Address, error) {
+	return nil, nil
+}
+
+func (s *stubUserService) UpsertAddress(context.Context, UpsertAddressCommand) (Address, error) {
+	return Address{}, nil
+}
+
+func (s *stubUserService) DeleteAddress(context.Context, DeleteAddressCommand) error {
+	return nil
+}
+
+func (s *stubUserService) ListPaymentMethods(context.Context, string) ([]PaymentMethod, error) {
+	return nil, nil
+}
+
+func (s *stubUserService) AddPaymentMethod(context.Context, AddPaymentMethodCommand) (PaymentMethod, error) {
+	return PaymentMethod{}, nil
+}
+
+func (s *stubUserService) RemovePaymentMethod(context.Context, RemovePaymentMethodCommand) error {
+	return nil
+}
+
+func (s *stubUserService) ListFavorites(context.Context, string, Pagination) (domain.CursorPage[FavoriteDesign], error) {
+	return domain.CursorPage[FavoriteDesign]{}, nil
+}
+
+func (s *stubUserService) ToggleFavorite(context.Context, ToggleFavoriteCommand) error {
+	return nil
 }
