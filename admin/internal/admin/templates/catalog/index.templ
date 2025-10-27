@@ -46,7 +46,9 @@ templ pageBody(data PageData) {
 
 		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
 			<section class="space-y-4">
-				@filterToolbar(data)
+				<div id="catalog-filter-toolbar">
+					@filterToolbar(data)
+				</div>
 			@viewToggle(data.ViewToggle, false)
 				@catalogView(data)
 				@bulkBar(data.Bulk)
@@ -391,6 +393,13 @@ templ TableSection(data TableData) {
 	<input type="hidden" id="catalog-view-field" name="view" value={ data.View.Active } hx-swap-oob="true" />
 }
 
+templ TableFragment(data PageData) {
+	@TableSection(data.Table)
+	<div id="catalog-filter-toolbar" hx-swap-oob="true">
+		@filterToolbar(data)
+	</div>
+}
+
 templ CardsSection(data CardsData) {
 	<div
 		id="catalog-view"
@@ -441,6 +450,13 @@ templ CardsSection(data CardsData) {
 	</div>
 	@viewToggle(data.View, true)
 	<input type="hidden" id="catalog-view-field" name="view" value={ data.View.Active } hx-swap-oob="true" />
+}
+
+templ CardsFragment(data PageData) {
+	@CardsSection(data.Cards)
+	<div id="catalog-filter-toolbar" hx-swap-oob="true">
+		@filterToolbar(data)
+	</div>
 }
 
 templ Drawer(data DrawerData) {

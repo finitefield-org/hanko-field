@@ -82,9 +82,9 @@ func renderCatalogFragment(w http.ResponseWriter, r *http.Request, h *Handlers, 
 	data := catalogtpl.BuildPageData(custommw.BasePathFromContext(ctx), assetKind, state, result)
 	switch kind {
 	case fragmentCards:
-		templ.Handler(catalogtpl.CardsSection(data.Cards)).ServeHTTP(w, r)
+		templ.Handler(catalogtpl.CardsFragment(data)).ServeHTTP(w, r)
 	default:
-		templ.Handler(catalogtpl.TableSection(data.Table)).ServeHTTP(w, r)
+		templ.Handler(catalogtpl.TableFragment(data)).ServeHTTP(w, r)
 	}
 }
 

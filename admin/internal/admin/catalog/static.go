@@ -181,23 +181,31 @@ func sortAssets(assets []catalogAsset, query ListQuery) {
 	sort.SliceStable(assets, func(i, j int) bool {
 		a := assets[i].item
 		b := assets[j].item
-		var less bool
-		switch key {
-		case "name":
-			less = strings.ToLower(a.Name) < strings.ToLower(b.Name)
-		case "status":
-			less = strings.ToLower(a.StatusLabel) < strings.ToLower(b.StatusLabel)
-		case "owner":
-			less = strings.ToLower(a.Owner.Name) < strings.ToLower(b.Owner.Name)
-		default:
-			less = a.UpdatedAt.Before(b.UpdatedAt)
-		}
-
+		cmp := compareCatalogItems(a, b, key)
 		if direction == SortDirectionDesc {
-			return !less
+			return cmp > 0
 		}
-		return less
+		return cmp < 0
 	})
+}
+
+func compareCatalogItems(a, b Item, key string) int {
+	switch key {
+	case "name":
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	case "status":
+		return strings.Compare(strings.ToLower(a.StatusLabel), strings.ToLower(b.StatusLabel))
+	case "owner":
+		return strings.Compare(strings.ToLower(a.Owner.Name), strings.ToLower(b.Owner.Name))
+	default:
+		if a.UpdatedAt.Equal(b.UpdatedAt) {
+			return 0
+		}
+		if a.UpdatedAt.Before(b.UpdatedAt) {
+			return -1
+		}
+		return 1
+	}
 }
 
 func normalizePage(page int) int {
