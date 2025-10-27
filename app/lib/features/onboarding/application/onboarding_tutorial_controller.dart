@@ -73,7 +73,10 @@ class OnboardingTutorialController extends Notifier<OnboardingTutorialState> {
       final dataSource = await ref.read(
         onboardingLocalDataSourceProvider.future,
       );
-      await dataSource.updateStep(OnboardingStep.tutorial);
+      final completedFlags = OnboardingFlags(
+        steps: {for (final step in OnboardingStep.values) step: true},
+      );
+      await dataSource.replace(completedFlags);
 
       await _syncRemoteOnboardingFlag();
 
@@ -111,10 +114,16 @@ class OnboardingTutorialController extends Notifier<OnboardingTutorialState> {
       final onboardingData = Map<String, dynamic>.from(
         profile.onboarding ?? const <String, dynamic>{},
       );
-      if (onboardingData['tutorial'] == true) {
+      const onboardingKeys = ['tutorial', 'locale', 'persona', 'notifications'];
+      final alreadyComplete = onboardingKeys.every(
+        (key) => onboardingData[key] == true,
+      );
+      if (alreadyComplete) {
         return;
       }
-      onboardingData['tutorial'] = true;
+      for (final key in onboardingKeys) {
+        onboardingData[key] = true;
+      }
 
       final repository = ref.read(userRepositoryProvider);
       await repository.updateProfile(
