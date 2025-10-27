@@ -913,6 +913,7 @@ func main() {
 	r.Get("/account", AccountHandler)
 	r.MethodFunc(http.MethodGet, "/account/profile/form", AccountProfileFormHandler)
 	r.MethodFunc(http.MethodPost, "/account/profile/form", AccountProfileFormHandler)
+	r.Get("/account/security", AccountSecurityHandler)
 	r.Get("/account/library", AccountLibraryHandler)
 	r.Get("/account/library/table", AccountLibraryTableHandler)
 	r.Get("/account/library/drawer", AccountLibraryDrawerHandler)
