@@ -229,6 +229,51 @@ func (s *staticService) DeleteAsset(ctx context.Context, token string, req Delet
 	return nil
 }
 
+func (s *staticService) CancelSchedule(ctx context.Context, token string, req ScheduleRequest) (ItemDetail, error) {
+	kind := NormalizeKind(string(req.Kind))
+	id := strings.TrimSpace(req.ID)
+	if id == "" {
+		return ItemDetail{}, ErrItemNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	bucket, ok := s.lookup[kind]
+	if !ok {
+		return ItemDetail{}, ErrItemNotFound
+	}
+	asset, exists := bucket[id]
+	if !exists {
+		return ItemDetail{}, ErrItemNotFound
+	}
+	if strings.TrimSpace(req.Version) != "" && strings.TrimSpace(asset.item.Version) != "" && strings.TrimSpace(req.Version) != strings.TrimSpace(asset.item.Version) {
+		return ItemDetail{}, ErrVersionConflict
+	}
+
+	asset.item.ScheduledPublishAt = nil
+	asset.detail.ScheduledPublishAt = nil
+	if asset.item.Status == StatusScheduled {
+		asset.item.Status = StatusDraft
+		asset.item.StatusLabel = statusLabel(asset.item.Status)
+		asset.item.StatusTone = statusTone(asset.item.Status)
+		asset.item.UsageLabel = usageLabelForStatus(asset.item.Status)
+		asset.detail.Item = asset.item
+	}
+
+	bucket[id] = asset
+	list := s.assets[kind]
+	for i := range list {
+		if list[i].item.ID == id {
+			list[i] = asset
+			break
+		}
+	}
+	s.assets[kind] = list
+
+	return cloneItemDetail(asset), nil
+}
+
 func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []catalogAsset {
 	if len(assets) == 0 {
 		return nil
@@ -338,6 +383,10 @@ func normalizePageSize(size int) int {
 		return maxCatalogPageSize
 	}
 	return size
+}
+
+func timePtr(t time.Time) *time.Time {
+	return &t
 }
 
 func paginateAssets(assets []catalogAsset, page, size int) ([]catalogAsset, Pagination) {
@@ -459,6 +508,8 @@ func buildSummary(kind Kind, assets []catalogAsset) Summary {
 		switch asset.item.Status {
 		case StatusPublished:
 			summary.Published++
+		case StatusScheduled:
+			summary.Scheduled++
 		case StatusDraft:
 			summary.Drafts++
 		case StatusArchived:
@@ -530,7 +581,7 @@ func buildStatusOptions(assets []catalogAsset, active []Status) []FilterOption {
 		activeSet[s] = struct{}{}
 	}
 
-	statuses := []Status{StatusPublished, StatusDraft, StatusInReview, StatusArchived}
+	statuses := []Status{StatusPublished, StatusScheduled, StatusDraft, StatusInReview, StatusArchived}
 	result := make([]FilterOption, 0, len(statuses))
 	for _, status := range statuses {
 		result = append(result, FilterOption{
@@ -681,6 +732,15 @@ func (s *staticService) nextAssetID(kind Kind) string {
 func cloneItemDetail(asset catalogAsset) ItemDetail {
 	detail := asset.detail
 	detail.Item = asset.item
+	if asset.item.ScheduledPublishAt != nil {
+		ts := *asset.item.ScheduledPublishAt
+		detail.Item.ScheduledPublishAt = &ts
+	}
+	if asset.item.LastPublishedAt != nil {
+		ts := *asset.item.LastPublishedAt
+		detail.Item.LastPublishedAt = &ts
+	}
+	detail.Item.LastPublishedBy = asset.item.LastPublishedBy
 	if len(detail.Tags) > 0 {
 		tags := make([]string, len(detail.Tags))
 		copy(tags, detail.Tags)
@@ -713,6 +773,15 @@ func cloneItemDetail(asset catalogAsset) ItemDetail {
 		copy(audit, detail.AuditTrail)
 		detail.AuditTrail = audit
 	}
+	if detail.ScheduledPublishAt != nil {
+		ts := *detail.ScheduledPublishAt
+		detail.ScheduledPublishAt = &ts
+	}
+	if detail.LastPublishedAt != nil {
+		ts := *detail.LastPublishedAt
+		detail.LastPublishedAt = &ts
+	}
+	detail.LastPublishedBy = asset.detail.LastPublishedBy
 	return detail
 }
 
@@ -747,6 +816,18 @@ func buildAssetFromInput(existing catalogAsset, input AssetInput, updatedAt time
 	item.PreviewAlt = coalesce(input.PreviewAlt, item.PreviewAlt, item.Name)
 	item.PrimaryColor = coalesce(input.PrimaryColor, item.PrimaryColor, "#0F172A")
 	item.Metrics = buildItemMetrics(item.Kind, input)
+	if input.ScheduledPublishAt != nil {
+		scheduled := input.ScheduledPublishAt.UTC()
+		item.ScheduledPublishAt = &scheduled
+		detail.ScheduledPublishAt = &scheduled
+	} else {
+		item.ScheduledPublishAt = nil
+		detail.ScheduledPublishAt = nil
+	}
+	detail.LastPublishedAt = existing.detail.LastPublishedAt
+	detail.LastPublishedBy = existing.detail.LastPublishedBy
+	item.LastPublishedAt = existing.item.LastPublishedAt
+	item.LastPublishedBy = existing.item.LastPublishedBy
 
 	detail.Item = item
 	detail.Description = item.Description
@@ -790,6 +871,8 @@ func usageLabelForStatus(status Status) string {
 	switch status {
 	case StatusPublished:
 		return "公開中"
+	case StatusScheduled:
+		return "公開予定"
 	case StatusInReview:
 		return "レビュー中"
 	case StatusArchived:
@@ -958,6 +1041,12 @@ func propertiesFromInput(input AssetInput) map[string]string {
 		"ownerName":       input.OwnerName,
 		"ownerEmail":      input.OwnerEmail,
 		"tags":            strings.Join(input.Tags, ", "),
+		"scheduledPublishAt": func() string {
+			if input.ScheduledPublishAt == nil {
+				return ""
+			}
+			return input.ScheduledPublishAt.UTC().Format(time.RFC3339)
+		}(),
 	}
 	for key, value := range values {
 		values[key] = cleanPropertyValue(key, value)
@@ -1026,16 +1115,18 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					Name:  "Akari Sato",
 					Email: "akari.sato@example.com",
 				},
-				UpdatedAt:    base.Add(-4 * time.Hour),
-				Version:      "v12",
-				UsageCount:   4821,
-				UsageLabel:   "4,821件の注文",
-				Tags:         []string{"newyear", "featured", "2024"},
-				PreviewURL:   "/public/static/placeholders/catalog-template-fuji.png",
-				PreviewAlt:   "富士山テンプレート",
-				Channels:     []string{"アプリ", "Web"},
-				Format:       "148x100mm",
-				PrimaryColor: "#F97316",
+				UpdatedAt:       base.Add(-4 * time.Hour),
+				Version:         "v12",
+				UsageCount:      4821,
+				UsageLabel:      "4,821件の注文",
+				Tags:            []string{"newyear", "featured", "2024"},
+				PreviewURL:      "/public/static/placeholders/catalog-template-fuji.png",
+				PreviewAlt:      "富士山テンプレート",
+				Channels:        []string{"アプリ", "Web"},
+				Format:          "148x100mm",
+				PrimaryColor:    "#F97316",
+				LastPublishedAt: timePtr(base.Add(-5 * time.Hour)),
+				LastPublishedBy: "Akari Sato",
 				Metrics: []ItemMetric{
 					{Label: "CVR", Value: "3.2%", Icon: "📈"},
 					{Label: "保存", Value: "1,204", Icon: "⭐"},
@@ -1065,6 +1156,8 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 						{Timestamp: base.Add(-4 * time.Hour), Actor: "Akari Sato", Action: "配色を更新", Channel: "web"},
 						{Timestamp: base.Add(-26 * time.Hour), Actor: "Nobu Kato", Action: "レビュー承認", Channel: "mobile"},
 					},
+					LastPublishedAt: timePtr(base.Add(-5 * time.Hour)),
+					LastPublishedBy: "Akari Sato",
 				},
 				map[string]string{
 					"templateID": "TMP-2024-FUJI",
@@ -1089,16 +1182,17 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					Name:  "Nobu Kato",
 					Email: "nobu.kato@example.com",
 				},
-				UpdatedAt:    base.Add(-30 * time.Hour),
-				Version:      "v3",
-				UsageCount:   0,
-				UsageLabel:   "未公開",
-				Tags:         []string{"b2b", "minimal", "draft"},
-				PreviewURL:   "/public/static/placeholders/catalog-template-stamp.png",
-				PreviewAlt:   "ミニマルテンプレート",
-				Channels:     []string{"Web"},
-				Format:       "210x148mm",
-				PrimaryColor: "#0F172A",
+				UpdatedAt:          base.Add(-30 * time.Hour),
+				Version:            "v4",
+				UsageCount:         0,
+				UsageLabel:         "未公開",
+				Tags:               []string{"b2b", "minimal", "draft"},
+				PreviewURL:         "/public/static/placeholders/catalog-template-stamp.png",
+				PreviewAlt:         "ミニマルテンプレート",
+				Channels:           []string{"Web"},
+				Format:             "210x148mm",
+				PrimaryColor:       "#0F172A",
+				ScheduledPublishAt: timePtr(base.Add(14 * time.Hour)),
 				Metrics: []ItemMetric{
 					{Label: "想定単価", Value: "¥1,280", Icon: "💰"},
 				},
@@ -1119,8 +1213,11 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					},
 					AuditTrail: []AuditEntry{
 						{Timestamp: base.Add(-30 * time.Hour), Actor: "Nobu Kato", Action: "下書きを保存", Channel: "web"},
+						{Timestamp: base.Add(-12 * time.Hour), Actor: "Akari Sato", Action: "公開予約を設定", Channel: "web"},
 					},
-					Tags: []string{"b2b", "minimal"},
+					Tags:               []string{"b2b", "minimal"},
+					ScheduledPublishAt: timePtr(base.Add(14 * time.Hour)),
+					LastPublishedBy:    "Akari Sato",
 				},
 				map[string]string{
 					"templateID": "TMP-MINIMAL-STAMP",
@@ -1137,24 +1234,25 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 				Kind:          KindTemplates,
 				Category:      "family",
 				CategoryLabel: "ファミリー",
-				Status:        StatusInReview,
-				StatusLabel:   "レビュー中",
-				StatusTone:    "info",
+				Status:        StatusScheduled,
+				StatusLabel:   statusLabel(StatusScheduled),
+				StatusTone:    statusTone(StatusScheduled),
 				Description:   "最大 6 枚の写真を柔軟にレイアウトできるファミリー向けテンプレート。",
 				Owner: OwnerInfo{
 					Name:  "Akari Sato",
 					Email: "akari.sato@example.com",
 				},
-				UpdatedAt:    base.Add(-12 * time.Hour),
-				Version:      "v5",
-				UsageCount:   240,
-				UsageLabel:   "テスト利用 240 件",
-				Tags:         []string{"family", "photo", "beta"},
-				PreviewURL:   "/public/static/placeholders/catalog-template-collage.png",
-				PreviewAlt:   "コラージュテンプレート",
-				Channels:     []string{"iOS", "Android"},
-				Format:       "148x100mm",
-				PrimaryColor: "#0EA5E9",
+				UpdatedAt:          base.Add(-12 * time.Hour),
+				Version:            "v5",
+				UsageCount:         240,
+				UsageLabel:         "テスト利用 240 件",
+				Tags:               []string{"family", "photo", "beta"},
+				PreviewURL:         "/public/static/placeholders/catalog-template-collage.png",
+				PreviewAlt:         "コラージュテンプレート",
+				Channels:           []string{"iOS", "Android"},
+				Format:             "148x100mm",
+				PrimaryColor:       "#0EA5E9",
+				ScheduledPublishAt: timePtr(base.Add(6 * time.Hour)),
 				Metrics: []ItemMetric{
 					{Label: "保存率", Value: "62%", Icon: "💾"},
 					{Label: "レビュー", Value: "⭐4.6", Icon: "💬"},
@@ -1177,7 +1275,9 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					},
 					AuditTrail: []AuditEntry{
 						{Timestamp: base.Add(-12 * time.Hour), Actor: "QA Bot", Action: "UI自動テスト", Channel: "ci"},
+						{Timestamp: base.Add(-2 * time.Hour), Actor: "Nobu Kato", Action: "公開予約を設定", Channel: "web"},
 					},
+					ScheduledPublishAt: timePtr(base.Add(6 * time.Hour)),
 				},
 				map[string]string{
 					"templateID": "TMP-COLLAGE-STORY",

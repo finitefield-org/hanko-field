@@ -113,3 +113,24 @@ func TestStaticServicePagination(t *testing.T) {
 		t.Fatalf("unexpected template on page 2: %s", result.Items[0].ID)
 	}
 }
+
+func TestStaticServiceScheduledStatus(t *testing.T) {
+	svc := NewStaticService()
+	result, err := svc.ListAssets(context.Background(), "", ListQuery{
+		Kind:     KindTemplates,
+		Statuses: []Status{StatusScheduled},
+	})
+	if err != nil {
+		t.Fatalf("ListAssets returned error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 scheduled template, got %d", len(result.Items))
+	}
+	item := result.Items[0]
+	if item.ID != "tmpl-collage-story" {
+		t.Fatalf("unexpected scheduled template ID: %s", item.ID)
+	}
+	if item.ScheduledPublishAt == nil {
+		t.Fatal("expected scheduled publish time to be set")
+	}
+}

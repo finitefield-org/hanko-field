@@ -1834,6 +1834,8 @@ func inputType(value string) string {
 		return "email"
 	case "url":
 		return "url"
+	case "datetime", "datetime-local":
+		return "datetime-local"
 	default:
 		return "text"
 	}

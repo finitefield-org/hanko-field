@@ -20,6 +20,9 @@ type Service interface {
 
 	// DeleteAsset archives or removes a catalog asset.
 	DeleteAsset(ctx context.Context, token string, req DeleteRequest) error
+
+	// CancelSchedule clears any scheduled publish setting for a catalog asset.
+	CancelSchedule(ctx context.Context, token string, req ScheduleRequest) (ItemDetail, error)
 }
 
 var (
@@ -79,6 +82,8 @@ const (
 	StatusDraft Status = "draft"
 	// StatusInReview indicates the asset awaits approval.
 	StatusInReview Status = "in_review"
+	// StatusScheduled indicates the asset has a scheduled publish.
+	StatusScheduled Status = "scheduled"
 	// StatusPublished indicates the asset is live.
 	StatusPublished Status = "published"
 	// StatusArchived indicates the asset is archived.
@@ -92,6 +97,8 @@ func ParseStatus(value string) (Status, bool) {
 		return StatusDraft, true
 	case string(StatusInReview):
 		return StatusInReview, true
+	case string(StatusScheduled):
+		return StatusScheduled, true
 	case string(StatusPublished):
 		return StatusPublished, true
 	case string(StatusArchived):
@@ -164,41 +171,49 @@ type ListResult struct {
 
 // AssetInput captures freeform catalog data submitted via admin forms.
 type AssetInput struct {
-	Kind            Kind
-	ID              string
-	Version         string
-	Name            string
-	Identifier      string
-	Description     string
-	Status          Status
-	Category        string
-	Tags            []string
-	TemplateID      string
-	SVGPath         string
-	SVGAssetID      string
-	SVGFileName     string
-	PreviewURL      string
-	PreviewAssetID  string
-	PreviewFileName string
-	PreviewAlt      string
-	FontFamily      string
-	FontWeights     []string
-	License         string
-	MaterialSKU     string
-	Color           string
-	Inventory       int
-	ProductSKU      string
-	PriceMinor      int64
-	Currency        string
-	LeadTimeDays    int
-	PhotoURLs       []string
-	PrimaryColor    string
-	OwnerName       string
-	OwnerEmail      string
+	Kind               Kind
+	ID                 string
+	Version            string
+	Name               string
+	Identifier         string
+	Description        string
+	Status             Status
+	Category           string
+	Tags               []string
+	TemplateID         string
+	SVGPath            string
+	SVGAssetID         string
+	SVGFileName        string
+	PreviewURL         string
+	PreviewAssetID     string
+	PreviewFileName    string
+	PreviewAlt         string
+	FontFamily         string
+	FontWeights        []string
+	License            string
+	MaterialSKU        string
+	Color              string
+	Inventory          int
+	ProductSKU         string
+	PriceMinor         int64
+	Currency           string
+	LeadTimeDays       int
+	PhotoURLs          []string
+	PrimaryColor       string
+	OwnerName          string
+	OwnerEmail         string
+	ScheduledPublishAt *time.Time
 }
 
 // DeleteRequest wraps metadata required to delete a catalog asset.
 type DeleteRequest struct {
+	Kind    Kind
+	ID      string
+	Version string
+}
+
+// ScheduleRequest represents a request to modify scheduled publish state.
+type ScheduleRequest struct {
 	Kind    Kind
 	ID      string
 	Version string
@@ -215,32 +230,35 @@ type Pagination struct {
 
 // Item describes a summarized catalog asset as shown in tables or cards.
 type Item struct {
-	ID              string
-	Name            string
-	Identifier      string
-	Kind            Kind
-	Category        string
-	CategoryLabel   string
-	Status          Status
-	StatusLabel     string
-	StatusTone      string
-	Description     string
-	Owner           OwnerInfo
-	UpdatedAt       time.Time
-	Version         string
-	UsageCount      int
-	UsageLabel      string
-	Tags            []string
-	PreviewURL      string
-	PreviewAssetID  string
-	PreviewFileName string
-	PreviewAlt      string
-	Channels        []string
-	Format          string
-	Metrics         []ItemMetric
-	Badge           string
-	BadgeTone       string
-	PrimaryColor    string
+	ID                 string
+	Name               string
+	Identifier         string
+	Kind               Kind
+	Category           string
+	CategoryLabel      string
+	Status             Status
+	StatusLabel        string
+	StatusTone         string
+	Description        string
+	Owner              OwnerInfo
+	UpdatedAt          time.Time
+	Version            string
+	UsageCount         int
+	UsageLabel         string
+	Tags               []string
+	PreviewURL         string
+	PreviewAssetID     string
+	PreviewFileName    string
+	PreviewAlt         string
+	Channels           []string
+	Format             string
+	Metrics            []ItemMetric
+	Badge              string
+	BadgeTone          string
+	PrimaryColor       string
+	ScheduledPublishAt *time.Time
+	LastPublishedAt    *time.Time
+	LastPublishedBy    string
 }
 
 // OwnerInfo identifies the staff member responsible for an asset.
@@ -259,23 +277,26 @@ type ItemMetric struct {
 
 // ItemDetail extends Item with preview, dependency, and audit metadata.
 type ItemDetail struct {
-	Item            Item
-	PreviewURL      string
-	PreviewAssetID  string
-	PreviewFileName string
-	PreviewAlt      string
-	SVGPath         string
-	SVGAssetID      string
-	SVGFileName     string
-	Description     string
-	Owner           OwnerInfo
-	Usage           []UsageMetric
-	Metadata        []MetadataEntry
-	Properties      map[string]string
-	Dependencies    []Dependency
-	AuditTrail      []AuditEntry
-	Tags            []string
-	UpdatedAt       time.Time
+	Item               Item
+	PreviewURL         string
+	PreviewAssetID     string
+	PreviewFileName    string
+	PreviewAlt         string
+	SVGPath            string
+	SVGAssetID         string
+	SVGFileName        string
+	Description        string
+	Owner              OwnerInfo
+	Usage              []UsageMetric
+	Metadata           []MetadataEntry
+	Properties         map[string]string
+	Dependencies       []Dependency
+	AuditTrail         []AuditEntry
+	Tags               []string
+	UpdatedAt          time.Time
+	ScheduledPublishAt *time.Time
+	LastPublishedAt    *time.Time
+	LastPublishedBy    string
 }
 
 // UsageMetric summarises usage across channels or personas.
@@ -313,6 +334,7 @@ type AuditEntry struct {
 type Summary struct {
 	Total        int
 	Published    int
+	Scheduled    int
 	Drafts       int
 	Archived     int
 	InReview     int
@@ -362,6 +384,8 @@ type UpdatedRange struct {
 
 func statusLabel(status Status) string {
 	switch status {
+	case StatusScheduled:
+		return "公開予約"
 	case StatusPublished:
 		return "公開中"
 	case StatusInReview:
@@ -377,6 +401,8 @@ func statusLabel(status Status) string {
 
 func statusTone(status Status) string {
 	switch status {
+	case StatusScheduled:
+		return "info"
 	case StatusPublished:
 		return "success"
 	case StatusInReview:

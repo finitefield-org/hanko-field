@@ -3,6 +3,7 @@ package catalog
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 
@@ -59,6 +60,7 @@ type QueryState struct {
 type SummaryData struct {
 	TotalLabel     string
 	PublishedLabel string
+	ScheduledLabel string
 	DraftLabel     string
 	ReviewLabel    string
 	LastUpdated    string
@@ -126,29 +128,31 @@ type TableData struct {
 
 // TableRow is a row in the catalog data table.
 type TableRow struct {
-	ID              string
-	Name            string
-	Identifier      string
-	Description     string
-	StatusLabel     string
-	StatusTone      string
-	Owner           string
-	OwnerInitials   string
-	UpdatedLabel    string
-	UpdatedRelative string
-	UsageLabel      string
-	Tags            []string
-	Metrics         []RowMetric
-	PreviewURL      string
-	PreviewAlt      string
-	Badge           string
-	BadgeTone       string
-	Selected        bool
-	Version         string
-	CategoryLabel   string
-	CategoryValue   string
-	EditURL         string
-	DeleteURL       string
+	ID               string
+	Name             string
+	Identifier       string
+	Description      string
+	StatusLabel      string
+	StatusTone       string
+	Owner            string
+	OwnerInitials    string
+	UpdatedLabel     string
+	UpdatedRelative  string
+	UsageLabel       string
+	Tags             []string
+	Metrics          []RowMetric
+	PreviewURL       string
+	PreviewAlt       string
+	Badge            string
+	BadgeTone        string
+	Selected         bool
+	Version          string
+	ScheduleLabel    string
+	ScheduleRelative string
+	CategoryLabel    string
+	CategoryValue    string
+	EditURL          string
+	DeleteURL        string
 }
 
 // RowMetric highlights per-row stats.
@@ -198,38 +202,49 @@ type SortState struct {
 
 // CardView is a single card entry.
 type CardView struct {
-	ID          string
-	Title       string
-	Subtitle    string
-	StatusLabel string
-	StatusTone  string
-	UsageLabel  string
-	Tags        []string
-	Metrics     []RowMetric
-	PreviewURL  string
-	PreviewAlt  string
-	Selected    bool
-	Badge       string
-	BadgeTone   string
+	ID               string
+	Title            string
+	Subtitle         string
+	StatusLabel      string
+	StatusTone       string
+	UsageLabel       string
+	Tags             []string
+	Metrics          []RowMetric
+	PreviewURL       string
+	PreviewAlt       string
+	Selected         bool
+	Badge            string
+	BadgeTone        string
+	Version          string
+	ScheduleLabel    string
+	ScheduleRelative string
 }
 
 // DrawerData powers the metadata rail/drawer.
 type DrawerData struct {
-	Empty        bool
-	Title        string
-	StatusLabel  string
-	StatusTone   string
-	KindLabel    string
-	Description  string
-	Owner        DrawerOwner
-	PreviewURL   string
-	PreviewAlt   string
-	Usage        []RowMetric
-	Metadata     []MetadataView
-	Dependencies []DependencyView
-	Audit        []AuditEntryView
-	Tags         []string
-	UpdatedLabel string
+	ID                 string
+	Kind               admincatalog.Kind
+	Empty              bool
+	Title              string
+	StatusLabel        string
+	StatusTone         string
+	KindLabel          string
+	Description        string
+	Owner              DrawerOwner
+	PreviewURL         string
+	PreviewAlt         string
+	Usage              []RowMetric
+	Metadata           []MetadataView
+	Dependencies       []DependencyView
+	Audit              []AuditEntryView
+	Tags               []string
+	UpdatedLabel       string
+	Version            string
+	LastPublishedLabel string
+	LastPublishedBy    string
+	ScheduleLabel      string
+	ScheduleRelative   string
+	HasSchedule        bool
 }
 
 // DrawerOwner summarises owner info.
@@ -509,22 +524,35 @@ func DrawerPayload(detail *admincatalog.ItemDetail) DrawerData {
 		})
 	}
 
+	version := strings.TrimSpace(detail.Item.Version)
+	lastPublishedLabel := formatTimePtr(detail.LastPublishedAt)
+	lastPublishedBy := firstNonEmpty(detail.LastPublishedBy, detail.Item.LastPublishedBy, detail.Owner.Name)
+	scheduleLabel, scheduleRelative := scheduleDescriptors(detail.ScheduledPublishAt)
+
 	return DrawerData{
-		Empty:        false,
-		Title:        detail.Item.Name,
-		StatusLabel:  detail.Item.StatusLabel,
-		StatusTone:   detail.Item.StatusTone,
-		KindLabel:    detail.Item.Kind.Label(),
-		Description:  detail.Description,
-		Owner:        owner,
-		PreviewURL:   detail.PreviewURL,
-		PreviewAlt:   detail.PreviewAlt,
-		Usage:        usage,
-		Metadata:     metadata,
-		Dependencies: dependencies,
-		Audit:        audit,
-		Tags:         detail.Tags,
-		UpdatedLabel: helpers.Date(detail.UpdatedAt, "2006-01-02 15:04"),
+		ID:                 detail.Item.ID,
+		Kind:               detail.Item.Kind,
+		Empty:              false,
+		Title:              detail.Item.Name,
+		StatusLabel:        detail.Item.StatusLabel,
+		StatusTone:         detail.Item.StatusTone,
+		KindLabel:          detail.Item.Kind.Label(),
+		Description:        detail.Description,
+		Owner:              owner,
+		PreviewURL:         detail.PreviewURL,
+		PreviewAlt:         detail.PreviewAlt,
+		Usage:              usage,
+		Metadata:           metadata,
+		Dependencies:       dependencies,
+		Audit:              audit,
+		Tags:               detail.Tags,
+		UpdatedLabel:       helpers.Date(detail.UpdatedAt, "2006-01-02 15:04"),
+		Version:            version,
+		LastPublishedLabel: lastPublishedLabel,
+		LastPublishedBy:    lastPublishedBy,
+		ScheduleLabel:      scheduleLabel,
+		ScheduleRelative:   scheduleRelative,
+		HasSchedule:        scheduleLabel != "",
 	}
 }
 
@@ -539,35 +567,39 @@ func toTableRow(basePath string, kind admincatalog.Kind, item admincatalog.Item,
 	}
 	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/edit", kind, item.ID))
 	deleteURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/delete", kind, item.ID))
+	scheduleLabel, scheduleRelative := scheduleDescriptors(item.ScheduledPublishAt)
 
 	return TableRow{
-		ID:              item.ID,
-		Name:            item.Name,
-		Identifier:      item.Identifier,
-		Description:     item.Description,
-		StatusLabel:     item.StatusLabel,
-		StatusTone:      item.StatusTone,
-		Owner:           item.Owner.Name,
-		OwnerInitials:   initials(item.Owner.Name),
-		UpdatedLabel:    helpers.Date(item.UpdatedAt, "2006-01-02 15:04"),
-		UpdatedRelative: helpers.Relative(item.UpdatedAt),
-		UsageLabel:      item.UsageLabel,
-		Tags:            item.Tags,
-		Metrics:         metrics,
-		PreviewURL:      item.PreviewURL,
-		PreviewAlt:      item.PreviewAlt,
-		Badge:           item.Badge,
-		BadgeTone:       item.BadgeTone,
-		Selected:        item.ID == selected && selected != "",
-		Version:         item.Version,
-		CategoryLabel:   item.CategoryLabel,
-		CategoryValue:   item.Category,
-		EditURL:         editURL,
-		DeleteURL:       deleteURL,
+		ID:               item.ID,
+		Name:             item.Name,
+		Identifier:       item.Identifier,
+		Description:      item.Description,
+		StatusLabel:      item.StatusLabel,
+		StatusTone:       item.StatusTone,
+		Owner:            item.Owner.Name,
+		OwnerInitials:    initials(item.Owner.Name),
+		UpdatedLabel:     helpers.Date(item.UpdatedAt, "2006-01-02 15:04"),
+		UpdatedRelative:  helpers.Relative(item.UpdatedAt),
+		UsageLabel:       item.UsageLabel,
+		Tags:             item.Tags,
+		Metrics:          metrics,
+		PreviewURL:       item.PreviewURL,
+		PreviewAlt:       item.PreviewAlt,
+		Badge:            item.Badge,
+		BadgeTone:        item.BadgeTone,
+		Selected:         item.ID == selected && selected != "",
+		Version:          item.Version,
+		ScheduleLabel:    scheduleLabel,
+		ScheduleRelative: scheduleRelative,
+		CategoryLabel:    item.CategoryLabel,
+		CategoryValue:    item.Category,
+		EditURL:          editURL,
+		DeleteURL:        deleteURL,
 	}
 }
 
 func toCardView(item admincatalog.Item, selected string) CardView {
+	scheduleLabel, scheduleRelative := scheduleDescriptors(item.ScheduledPublishAt)
 	return CardView{
 		ID:          item.ID,
 		Title:       item.Name,
@@ -583,11 +615,14 @@ func toCardView(item admincatalog.Item, selected string) CardView {
 			}
 			return rows
 		}(),
-		PreviewURL: item.PreviewURL,
-		PreviewAlt: item.PreviewAlt,
-		Selected:   item.ID == selected && selected != "",
-		Badge:      item.Badge,
-		BadgeTone:  item.BadgeTone,
+		PreviewURL:       item.PreviewURL,
+		PreviewAlt:       item.PreviewAlt,
+		Selected:         item.ID == selected && selected != "",
+		Badge:            item.Badge,
+		BadgeTone:        item.BadgeTone,
+		Version:          item.Version,
+		ScheduleLabel:    scheduleLabel,
+		ScheduleRelative: scheduleRelative,
 	}
 }
 
@@ -643,6 +678,7 @@ func buildSummaryData(summary admincatalog.Summary) SummaryData {
 	return SummaryData{
 		TotalLabel:     fmt.Sprintf("%d 件", summary.Total),
 		PublishedLabel: fmt.Sprintf("公開中 %d", summary.Published),
+		ScheduledLabel: fmt.Sprintf("公開予約 %d", summary.Scheduled),
 		DraftLabel:     fmt.Sprintf("下書き %d", summary.Drafts),
 		ReviewLabel:    fmt.Sprintf("レビュー中 %d", summary.InReview),
 		LastUpdated:    lastUpdated,
@@ -772,10 +808,43 @@ func initials(name string) string {
 	return strings.ToUpper(string([]rune(parts[0])[0])) + strings.ToUpper(string([]rune(parts[len(parts)-1])[0]))
 }
 
+func formatTimePtr(ts *time.Time) string {
+	if ts == nil {
+		return ""
+	}
+	value := *ts
+	if value.IsZero() {
+		return ""
+	}
+	return helpers.Date(value, "2006-01-02 15:04 MST")
+}
+
+func scheduleDescriptors(ts *time.Time) (string, string) {
+	if ts == nil {
+		return "", ""
+	}
+	value := *ts
+	if value.IsZero() {
+		return "", ""
+	}
+	return helpers.Date(value, "2006-01-02 15:04 MST"), helpers.Relative(value)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
 func toneForStatus(value string) string {
 	switch value {
 	case string(admincatalog.StatusDraft):
 		return "warning"
+	case string(admincatalog.StatusScheduled):
+		return "info"
 	case string(admincatalog.StatusInReview):
 		return "info"
 	case string(admincatalog.StatusArchived):

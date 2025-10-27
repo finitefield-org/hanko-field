@@ -244,6 +244,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				cr.Post("/{kind}", uiHandlers.CatalogCreate)
 				cr.Put("/{kind}/{itemID}", uiHandlers.CatalogUpdate)
 				cr.Delete("/{kind}/{itemID}", uiHandlers.CatalogDelete)
+				cr.Post("/{kind}/{itemID}/schedule/cancel", uiHandlers.CatalogCancelSchedule)
 			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)

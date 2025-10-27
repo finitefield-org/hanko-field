@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 	"unicode"
 
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
@@ -124,34 +125,35 @@ func buildCatalogDeleteModal(kind admincatalog.Kind, detail admincatalog.ItemDet
 
 func defaultCatalogValues(kind admincatalog.Kind) map[string]string {
 	values := map[string]string{
-		"name":            "",
-		"identifier":      "",
-		"description":     "",
-		"status":          string(admincatalog.StatusDraft),
-		"category":        defaultCategoryForKind(kind),
-		"tags":            "",
-		"previewURL":      samplePreviewForKind(kind),
-		"previewAssetID":  "",
-		"previewFileName": "",
-		"primaryColor":    "#0F172A",
-		"ownerName":       "Akari Sato",
-		"ownerEmail":      "akari.sato@example.com",
-		"templateID":      "TMP-NEW",
-		"svgPath":         "/designs/templates/sample.svg",
-		"svgAssetID":      "",
-		"svgFileName":     "",
-		"fontFamily":      "Hanko Sans",
-		"fontWeights":     "400,700",
-		"license":         "商用",
-		"materialSKU":     "MAT-NEW",
-		"color":           "ナチュラル",
-		"inventory":       "500",
-		"productSKU":      "PRD-NEW",
-		"price":           "1980",
-		"currency":        "JPY",
-		"leadTime":        "5",
-		"photoURLs":       "https://cdn.example.com/catalog/preview.png\nhttps://cdn.example.com/catalog/preview-alt.png",
-		"version":         "v1",
+		"name":               "",
+		"identifier":         "",
+		"description":        "",
+		"status":             string(admincatalog.StatusDraft),
+		"category":           defaultCategoryForKind(kind),
+		"tags":               "",
+		"previewURL":         samplePreviewForKind(kind),
+		"previewAssetID":     "",
+		"previewFileName":    "",
+		"primaryColor":       "#0F172A",
+		"ownerName":          "Akari Sato",
+		"ownerEmail":         "akari.sato@example.com",
+		"templateID":         "TMP-NEW",
+		"svgPath":            "/designs/templates/sample.svg",
+		"svgAssetID":         "",
+		"svgFileName":        "",
+		"fontFamily":         "Hanko Sans",
+		"fontWeights":        "400,700",
+		"license":            "商用",
+		"materialSKU":        "MAT-NEW",
+		"color":              "ナチュラル",
+		"inventory":          "500",
+		"productSKU":         "PRD-NEW",
+		"price":              "1980",
+		"currency":           "JPY",
+		"leadTime":           "5",
+		"photoURLs":          "https://cdn.example.com/catalog/preview.png\nhttps://cdn.example.com/catalog/preview-alt.png",
+		"version":            "v1",
+		"scheduledPublishAt": "",
 	}
 	switch kind {
 	case admincatalog.KindFonts:
@@ -212,6 +214,7 @@ func catalogValuesFromDetail(kind admincatalog.Kind, detail admincatalog.ItemDet
 	assign("ownerName", detail.Owner.Name)
 	assign("ownerEmail", detail.Owner.Email)
 	assign("version", detail.Item.Version)
+	assign("scheduledPublishAt", formatScheduleInput(detail.ScheduledPublishAt))
 	assign("templateID", detail.Item.Identifier)
 	assign("materialSKU", detail.Item.Identifier)
 	assign("productSKU", detail.Item.Identifier)
@@ -441,6 +444,7 @@ func catalogFieldSpecs(kind admincatalog.Kind) []modalFieldSpec {
 		{Name: "primaryColor", Label: "ブランドカラー", Type: "text", Section: "基本情報", Placeholder: "#0F172A"},
 		{Name: "ownerName", Label: "担当者", Type: "text", Section: "基本情報", Required: true},
 		{Name: "ownerEmail", Label: "担当者メール", Type: "email", Section: "基本情報", Placeholder: "ops@example.com"},
+		{Name: "scheduledPublishAt", Label: "公開予約日時", Type: "datetime", Section: "公開設定", Hint: "例: 2024-03-21 09:00", FullWidth: true},
 	}
 	switch kind {
 	case admincatalog.KindFonts:
@@ -498,6 +502,7 @@ func statusOptions() []modalOptionSpec {
 	return []modalOptionSpec{
 		{Value: string(admincatalog.StatusDraft), Label: "下書き"},
 		{Value: string(admincatalog.StatusInReview), Label: "レビュー"},
+		{Value: string(admincatalog.StatusScheduled), Label: "公開予約"},
 		{Value: string(admincatalog.StatusPublished), Label: "公開"},
 		{Value: string(admincatalog.StatusArchived), Label: "アーカイブ"},
 	}
@@ -541,6 +546,7 @@ func resetPlaceholderValues(values map[string]string) {
 		"photoURLs",
 		"previewAssetID",
 		"previewFileName",
+		"scheduledPublishAt",
 	} {
 		values[key] = ""
 	}
@@ -553,6 +559,18 @@ func normalizeCatalogFormValue(key, value string) string {
 	default:
 		return strings.TrimSpace(value)
 	}
+}
+
+func formatScheduleInput(ts *time.Time) string {
+	if ts == nil {
+		return ""
+	}
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		loc = time.Local
+	}
+	value := ts.In(loc)
+	return value.Format("2006-01-02T15:04")
 }
 
 func metadataValue(entries []admincatalog.MetadataEntry, contains string) string {

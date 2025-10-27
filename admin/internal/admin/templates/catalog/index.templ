@@ -30,6 +30,7 @@ templ pageBody(data PageData) {
 				<div class="flex flex-1 flex-wrap gap-3 lg:flex-none">
 					@summaryChip("総数", data.Summary.TotalLabel, "bg-slate-50 text-slate-900")
 					@summaryChip("公開中", data.Summary.PublishedLabel, "bg-emerald-50 text-emerald-600")
+					@summaryChip("公開予約", data.Summary.ScheduledLabel, "bg-sky-50 text-sky-600")
 					@summaryChip("下書き / レビュー", fmt.Sprintf("%s / %s", data.Summary.DraftLabel, data.Summary.ReviewLabel), "bg-amber-50 text-amber-700")
 				</div>
 			<div class="flex items-center gap-3">
@@ -313,6 +314,15 @@ templ TableSection(data TableData) {
 											<p class="text-[11px] uppercase tracking-wide text-slate-400">{ row.CategoryLabel }</p>
 										}
 										<p class="text-xs text-slate-500">{ row.Description }</p>
+										if row.ScheduleLabel != "" {
+											<p class="flex items-center gap-1 text-xs text-slate-500">
+												<span>🗓</span>
+												<span>{ row.ScheduleLabel }</span>
+												if row.ScheduleRelative != "" {
+													<span class="text-[11px] text-slate-400">({ row.ScheduleRelative })</span>
+												}
+											</p>
+										}
 										<div class="flex flex-wrap gap-1 text-[11px] text-slate-500">
 											for _, tag := range row.Tags {
 												<span class="rounded-full bg-slate-100 px-2 py-0.5">{ tag }</span>
@@ -430,9 +440,26 @@ templ CardsSection(data CardsData) {
 					hx-push-url={ helpers.BuildURL(data.PagePath, helpers.SetRawQuery(data.RawQuery, "selected", card.ID)) }
 				>
 						<div class="flex items-center justify-between gap-3">
-							<div>
-								<h3 class="text-base font-semibold text-slate-900">{ card.Title }</h3>
+							<div class="space-y-1">
+								<div class="flex flex-wrap items-center gap-1">
+									<h3 class="text-base font-semibold text-slate-900">{ card.Title }</h3>
+									if card.Version != "" {
+										<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{ card.Version }</span>
+									}
+								</div>
 								<p class="text-xs text-slate-500">{ card.Subtitle }</p>
+								if card.ScheduleLabel != "" {
+									<p class="flex items-center gap-1 text-xs text-slate-500">
+										<span>🗓</span>
+										<span>{ card.ScheduleLabel }</span>
+										if card.ScheduleRelative != "" {
+											<span class="text-[11px] text-slate-400">({ card.ScheduleRelative })</span>
+										}
+									</p>
+								}
+								if card.Badge != "" {
+									@components.Badge(card.Badge, card.BadgeTone)
+								}
 							</div>
 							@components.Badge(card.StatusLabel, card.StatusTone)
 						</div>
@@ -482,6 +509,9 @@ templ Drawer(data DrawerData) {
 			<div class="flex items-center gap-2">
 				<h2 class="text-lg font-semibold text-slate-900">{ data.Title }</h2>
 				@components.Badge(data.StatusLabel, data.StatusTone)
+				if data.Version != "" {
+					<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{ data.Version }</span>
+				}
 			</div>
 			<p class="text-xs uppercase tracking-wide text-slate-400">{ data.KindLabel }</p>
 			<p class="text-sm text-slate-600">{ data.Description }</p>
@@ -495,6 +525,41 @@ templ Drawer(data DrawerData) {
 			<p class="text-slate-600">{ data.Owner.Name }</p>
 			<p class="text-xs text-slate-400">{ data.Owner.Email }</p>
 		</div>
+		if data.LastPublishedLabel != "" || data.HasSchedule {
+			<div class="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">公開情報</p>
+				if data.LastPublishedLabel != "" {
+					<p class="text-slate-600">最終公開 { data.LastPublishedLabel }
+						if data.LastPublishedBy != "" {
+							<span class="text-xs text-slate-400"> / { data.LastPublishedBy }</span>
+						}
+					</p>
+				}
+				if data.HasSchedule {
+					<div class="flex flex-col gap-2">
+						<p class="text-slate-600">公開予約 { data.ScheduleLabel }
+							if data.ScheduleRelative != "" {
+								<span class="text-xs text-slate-400">({ data.ScheduleRelative })</span>
+							}
+						</p>
+					<button
+						type="button"
+						class={ helpers.ButtonClass("ghost", "xs", false, false) }
+						hx-post={ fmt.Sprintf("%s/catalog/%s/%s/schedule/cancel", helpers.BasePath(ctx), data.Kind, data.ID) }
+						hx-target="#catalog-view"
+						hx-swap="outerHTML"
+						hx-indicator="#catalog-loading"
+						data-confirm="公開予約を取り消しますか？"
+						if data.Version != "" {
+							hx-vals={ fmt.Sprintf("{\"version\":\"%s\"}", data.Version) }
+						}
+					>
+						予約を取消
+					</button>
+					</div>
+				}
+			</div>
+		}
 		if len(data.Usage) > 0 {
 			<div>
 				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">利用状況</p>

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -268,6 +269,37 @@ func (h *Handlers) CatalogDelete(w http.ResponseWriter, r *http.Request) {
 	triggerCatalogRefresh(w, "アセットを削除しました。", "info")
 }
 
+// CatalogCancelSchedule clears any scheduled publish for an asset.
+func (h *Handlers) CatalogCancelSchedule(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "リクエストの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	kind := catalogKindFromRequest(r)
+	itemID := catalogItemID(r)
+	if itemID == "" {
+		http.Error(w, "アセットIDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	version := strings.TrimSpace(r.FormValue("version"))
+	req := admincatalog.ScheduleRequest{Kind: kind, ID: itemID, Version: version}
+	if _, err := h.catalog.CancelSchedule(ctx, user.Token, req); err != nil {
+		h.handleCancelScheduleError(w, r, kind, itemID, err)
+		return
+	}
+
+	triggerCatalogRefresh(w, "公開予約を取り消しました。", "info")
+}
+
 func parseCatalogRequest(r *http.Request) (admincatalog.Kind, catalogtpl.QueryState, admincatalog.ListQuery) {
 	params := r.URL.Query()
 	kind := admincatalog.NormalizeKind(chi.URLParam(r, "kind"))
@@ -330,6 +362,8 @@ func toCatalogStatuses(values []string) []admincatalog.Status {
 			set = append(set, admincatalog.StatusDraft)
 		case string(admincatalog.StatusInReview):
 			set = append(set, admincatalog.StatusInReview)
+		case string(admincatalog.StatusScheduled):
+			set = append(set, admincatalog.StatusScheduled)
 		case string(admincatalog.StatusArchived):
 			set = append(set, admincatalog.StatusArchived)
 		case string(admincatalog.StatusPublished):
@@ -364,6 +398,24 @@ func parseCatalogPageSize(raw string) int {
 		return catalogMaxPageSize
 	}
 	return size
+}
+
+func parseCatalogSchedule(value string) (*time.Time, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil, nil
+	}
+	layouts := []string{"2006-01-02T15:04", time.RFC3339, "2006-01-02 15:04"}
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		loc = time.Local
+	}
+	for _, layout := range layouts {
+		if ts, parseErr := time.ParseInLocation(layout, trimmed, loc); parseErr == nil {
+			return &ts, nil
+		}
+	}
+	return nil, fmt.Errorf("invalid schedule timestamp")
 }
 
 func parseCatalogSort(raw string) (string, admincatalog.SortDirection, string) {
@@ -468,6 +520,18 @@ func (h *Handlers) handleCatalogDeleteError(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (h *Handlers) handleCancelScheduleError(w http.ResponseWriter, r *http.Request, kind admincatalog.Kind, itemID string, err error) {
+	switch {
+	case errors.Is(err, admincatalog.ErrItemNotFound):
+		http.Error(w, "指定されたアセットが見つかりません。", http.StatusNotFound)
+	case errors.Is(err, admincatalog.ErrVersionConflict):
+		http.Error(w, "最新の情報を取得してから再度お試しください。", http.StatusConflict)
+	default:
+		log.Printf("catalog: cancel schedule failed: %v", err)
+		http.Error(w, "公開予約の取消に失敗しました。", http.StatusBadGateway)
+	}
+}
+
 func triggerCatalogRefresh(w http.ResponseWriter, message, tone string) {
 	payload := map[string]any{
 		"toast": map[string]string{
@@ -529,6 +593,14 @@ func parseCatalogForm(kind admincatalog.Kind, form url.Values, requireVersion bo
 	input.OwnerEmail = read("ownerEmail")
 	if input.OwnerEmail != "" && !strings.Contains(input.OwnerEmail, "@") {
 		errs["ownerEmail"] = "メールアドレス形式で入力してください。"
+	}
+	if raw := read("scheduledPublishAt"); raw != "" {
+		scheduled, err := parseCatalogSchedule(raw)
+		if err != nil {
+			errs["scheduledPublishAt"] = "日時の形式が正しくありません。"
+		} else {
+			input.ScheduledPublishAt = scheduled
+		}
 	}
 	input.TemplateID = read("templateID")
 	input.SVGPath = read("svgPath")
