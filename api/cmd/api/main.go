@@ -408,7 +408,8 @@ func main() {
 	}
 	designHandlers := handlers.NewDesignHandlers(authenticator, designService)
 	reviewHandlers := handlers.NewReviewHandlers(authenticator, nil)
-	orderHandlers := handlers.NewOrderHandlers(authenticator, nil)
+	var orderService services.OrderService
+	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
 
 	projectID := traceProjectID(cfg)
 	middlewares := []func(http.Handler) http.Handler{
@@ -444,14 +445,19 @@ func main() {
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
 	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
 	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, promotionService)
-	adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, nil)
+
+	adminRegistrars := []handlers.RouteRegistrar{
+		adminCatalogHandlers.Routes,
+		adminContentHandlers.Routes,
+		adminPromotionHandlers.Routes,
+	}
+	if orderService != nil {
+		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService)
+		adminRegistrars = append(adminRegistrars, adminOrderHandlers.Routes)
+	}
+
 	opts = append(opts, handlers.WithAdminRoutes(
-		handlers.CombineRouteRegistrars(
-			adminCatalogHandlers.Routes,
-			adminContentHandlers.Routes,
-			adminPromotionHandlers.Routes,
-			adminOrderHandlers.Routes,
-		),
+		handlers.CombineRouteRegistrars(adminRegistrars...),
 	))
 	if oidcMiddleware != nil {
 		opts = append(opts, handlers.WithInternalMiddlewares(oidcMiddleware))
