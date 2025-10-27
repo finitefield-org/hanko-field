@@ -217,6 +217,7 @@ type PromotionRepository interface {
 	Insert(ctx context.Context, promotion domain.Promotion) error
 	Update(ctx context.Context, promotion domain.Promotion) error
 	Delete(ctx context.Context, promotionID string) error
+	Get(ctx context.Context, promotionID string) (domain.Promotion, error)
 	FindByCode(ctx context.Context, code string) (domain.Promotion, error)
 	List(ctx context.Context, filter PromotionListFilter) (domain.CursorPage[domain.Promotion], error)
 }
@@ -364,6 +365,8 @@ type OrderListFilter struct {
 
 type PromotionListFilter struct {
 	Status     []string
+	Kinds      []string
+	ActiveOn   *time.Time
 	Pagination domain.Pagination
 }
 

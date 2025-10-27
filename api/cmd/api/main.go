@@ -424,10 +424,12 @@ func main() {
 	opts = append(opts, handlers.WithPublicRoutes(publicHandlers.Routes))
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
 	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
+	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, nil)
 	opts = append(opts, handlers.WithAdminRoutes(
 		handlers.CombineRouteRegistrars(
 			adminCatalogHandlers.Routes,
 			adminContentHandlers.Routes,
+			adminPromotionHandlers.Routes,
 		),
 	))
 	if oidcMiddleware != nil {

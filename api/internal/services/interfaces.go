@@ -48,8 +48,13 @@ type (
 	ReviewReply               = domain.ReviewReply
 	ReviewStatus              = domain.ReviewStatus
 	Promotion                 = domain.Promotion
+	PromotionStacking         = domain.PromotionStacking
+	PromotionConditions       = domain.PromotionConditions
+	PromotionSizeRange        = domain.PromotionSizeRange
 	PromotionValidationResult = domain.PromotionValidationResult
 	PromotionPublic           = domain.PromotionPublic
+	PromotionPage             = domain.CursorPage[Promotion]
+	PromotionUsagePage        = domain.CursorPage[PromotionUsage]
 	RegistrabilityCheckResult = domain.RegistrabilityCheckResult
 	Address                   = domain.Address
 	UserProfile               = domain.UserProfile
@@ -202,7 +207,7 @@ type PromotionService interface {
 	ListPromotions(ctx context.Context, filter PromotionListFilter) (domain.CursorPage[Promotion], error)
 	CreatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	UpdatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
-	DeletePromotion(ctx context.Context, promoID string) error
+	DeletePromotion(ctx context.Context, promoID string, actorID string) error
 	ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error)
 }
 
@@ -681,12 +686,15 @@ type ValidatePromotionCommand struct {
 
 type PromotionListFilter struct {
 	Status     []string
+	Kinds      []string
+	ActiveOn   *time.Time
 	Pagination Pagination
 }
 
 type UpsertPromotionCommand struct {
-	Promotion Promotion
-	ActorID   string
+	Promotion             Promotion
+	ActorID               string
+	AllowImmutableUpdates bool
 }
 
 type PromotionUsageFilter struct {

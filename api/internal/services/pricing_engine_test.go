@@ -357,7 +357,7 @@ func (f *fakePromotionService) UpdatePromotion(context.Context, UpsertPromotionC
 	panic("unexpected call")
 }
 
-func (f *fakePromotionService) DeletePromotion(context.Context, string) error {
+func (f *fakePromotionService) DeletePromotion(context.Context, string, string) error {
 	panic("unexpected call")
 }
 

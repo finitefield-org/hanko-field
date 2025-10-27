@@ -1183,7 +1183,7 @@ func (s *stubPromotionService) UpdatePromotion(context.Context, UpsertPromotionC
 	return Promotion{}, errors.New("not implemented")
 }
 
-func (s *stubPromotionService) DeletePromotion(context.Context, string) error {
+func (s *stubPromotionService) DeletePromotion(context.Context, string, string) error {
 	return errors.New("not implemented")
 }
 

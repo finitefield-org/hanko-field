@@ -102,7 +102,7 @@
 - [x] [073 Implement admin CRUD for content pages with draft/publish states.](./tasks/073-implement-admin-crud-for-content-pages-with-draft-publish-states.md)
 
 ### 6.2 Promotions
-- [ ] [074 Implement promotions list/create/update/delete endpoints with validation rules and schedule handling.](./tasks/074-implement-promotions-list-create-update-delete-endpoints-with-validation-rules-a.md)
+- [x] [074 Implement promotions list/create/update/delete endpoints with validation rules and schedule handling.](./tasks/074-implement-promotions-list-create-update-delete-endpoints-with-validation-rules-a.md)
 - [ ] [075 Implement promotion usage retrieval endpoint aggregating counts per user.](./tasks/075-implement-promotion-usage-retrieval-endpoint-aggregating-counts-per-user.md)
 - [ ] [076 Implement promotion validate endpoint enabling dry-run eligibility checks.](./tasks/076-implement-promotion-validate-endpoint-enabling-dry-run-eligibility-checks.md)
 

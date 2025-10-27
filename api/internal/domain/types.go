@@ -476,13 +476,49 @@ type Promotion struct {
 	Description       string
 	DescriptionPublic string
 	Status            string
+	Kind              string
+	Value             float64
+	Currency          string
+	IsActive          bool
 	StartsAt          time.Time
 	EndsAt            time.Time
-	UsageLimit        *int
+	UsageLimit        int
+	UsageCount        int
+	LimitPerUser      int
+	Notes             string
+	Stacking          PromotionStacking
+	Conditions        PromotionConditions
 	Metadata          map[string]any
 	EligibleAudiences []string
 	InternalOnly      bool
 	RequiresAuth      bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// PromotionStacking stores coupon stacking behavior flags.
+type PromotionStacking struct {
+	Combinable    bool
+	WithSalePrice bool
+	MaxStack      *int
+}
+
+// PromotionConditions stores rule constraints that determine eligibility.
+type PromotionConditions struct {
+	MinSubtotal     *int64
+	CountryIn       []string
+	CurrencyIn      []string
+	ShapeIn         []string
+	SizeMMBetween   *PromotionSizeRange
+	ProductRefsIn   []string
+	MaterialRefsIn  []string
+	NewCustomerOnly *bool
+}
+
+// PromotionSizeRange defines size boundaries used by promotion conditions.
+type PromotionSizeRange struct {
+	Min *float64
+	Max *float64
 }
 
 // PromotionValidationResult is returned when a promotion is evaluated for a cart or order.
