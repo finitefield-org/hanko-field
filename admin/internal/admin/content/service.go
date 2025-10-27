@@ -32,6 +32,10 @@ type Service interface {
 	BulkUnschedule(ctx context.Context, token string, guideIDs []string) ([]Guide, error)
 	// PreviewGuide returns a localized preview payload for the requested guide.
 	PreviewGuide(ctx context.Context, token string, guideID string, locale string) (GuidePreview, error)
+	// EditorGuide returns the data required to render the guide editor experience.
+	EditorGuide(ctx context.Context, token string, guideID string) (GuideEditor, error)
+	// PreviewDraft renders a preview for the supplied draft values without persisting changes.
+	PreviewDraft(ctx context.Context, token string, guideID string, draft GuideDraftInput) (GuidePreview, error)
 }
 
 // GuideStatus enumerates the lifecycle states for guides.
@@ -154,11 +158,45 @@ type GuidePreviewFeedback struct {
 	CommentPlaceholder string
 }
 
+// GuideDraft represents the editable fields for a localized guide.
+type GuideDraft struct {
+	Locale       string
+	Title        string
+	Summary      string
+	HeroImageURL string
+	BodyHTML     string
+	Persona      string
+	Category     string
+	Tags         []string
+	LastSavedAt  time.Time
+	LastSavedBy  string
+}
+
+// GuideEditor bundles guide data and supporting metadata for the editor UI.
+type GuideEditor struct {
+	Guide   Guide
+	Draft   GuideDraft
+	Locales []GuideLocale
+}
+
+// GuideDraftInput captures unsaved form values used to generate live previews.
+type GuideDraftInput struct {
+	Locale       string
+	Title        string
+	Summary      string
+	HeroImageURL string
+	BodyHTML     string
+	Persona      string
+	Category     string
+	Tags         []string
+}
+
 // StaticService is an in-memory implementation of the Service interface suitable for local development.
 type StaticService struct {
 	mu       sync.RWMutex
 	guides   []Guide
 	previews map[string]previewEntry
+	drafts   map[string]GuideDraft
 }
 
 type previewEntry struct {
@@ -387,9 +425,35 @@ func NewStaticService() *StaticService {
 		},
 	}
 
+	drafts := make(map[string]GuideDraft, len(guides))
+	for _, guide := range guides {
+		entry := previews[previewKey(guide.Slug, guide.Locale)]
+		body := strings.TrimSpace(entry.BodyHTML)
+		if body == "" {
+			body = defaultPreviewBody(guide)
+		}
+		hero := strings.TrimSpace(entry.HeroImageURL)
+		if hero == "" {
+			hero = guide.HeroImageURL
+		}
+		drafts[guide.ID] = GuideDraft{
+			Locale:       guide.Locale,
+			Title:        guide.Title,
+			Summary:      guide.Summary,
+			HeroImageURL: hero,
+			BodyHTML:     body,
+			Persona:      guide.Persona,
+			Category:     guide.Category,
+			Tags:         append([]string(nil), guide.Tags...),
+			LastSavedAt:  guide.UpdatedAt,
+			LastSavedBy:  guide.UpdatedBy,
+		}
+	}
+
 	return &StaticService{
 		guides:   guides,
 		previews: previews,
+		drafts:   drafts,
 	}
 }
 
@@ -598,6 +662,143 @@ func (s *StaticService) PreviewGuide(_ context.Context, _ string, guideID string
 	if len(notes) == 0 && strings.TrimSpace(active.LastChangeNote) != "" {
 		notes = []string{active.LastChangeNote}
 	}
+
+	shareURL := strings.TrimSpace(entry.ShareURL)
+	if shareURL == "" {
+		shareURL = fmt.Sprintf("https://preview.hanko.example/guides/%s?lang=%s&token=draft", active.Slug, active.Locale)
+	}
+
+	externalURL := strings.TrimSpace(entry.ExternalURL)
+	if externalURL == "" {
+		externalURL = fmt.Sprintf("https://www.hanko.example/guides/%s?lang=%s", active.Slug, active.Locale)
+	}
+
+	feedback := GuidePreviewFeedback{
+		ApproveURL:         fmt.Sprintf("https://api.hanko.example/admin/content/guides/%s:approve", active.ID),
+		RequestChangesURL:  fmt.Sprintf("https://api.hanko.example/admin/content/guides/%s:request-changes", active.ID),
+		CommentPlaceholder: "レビューメモを残してください…",
+	}
+
+	return GuidePreview{
+		Guide:       active,
+		Locales:     locales,
+		ShareURL:    shareURL,
+		ExternalURL: externalURL,
+		Content: GuidePreviewContent{
+			HeroImageURL: hero,
+			BodyHTML:     body,
+		},
+		Notes:    notes,
+		Feedback: feedback,
+	}, nil
+}
+
+// EditorGuide implements Service.
+func (s *StaticService) EditorGuide(_ context.Context, _ string, guideID string) (GuideEditor, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	idx := s.indexOfLocked(guideID)
+	if idx < 0 {
+		return GuideEditor{}, ErrGuideNotFound
+	}
+
+	guide := cloneGuide(s.guides[idx])
+	draft, ok := s.drafts[guide.ID]
+	if !ok {
+		entry := s.previews[previewKey(guide.Slug, guide.Locale)]
+		body := strings.TrimSpace(entry.BodyHTML)
+		if body == "" {
+			body = defaultPreviewBody(guide)
+		}
+		hero := strings.TrimSpace(entry.HeroImageURL)
+		if hero == "" {
+			hero = guide.HeroImageURL
+		}
+		draft = GuideDraft{
+			Locale:       guide.Locale,
+			Title:        guide.Title,
+			Summary:      guide.Summary,
+			HeroImageURL: hero,
+			BodyHTML:     body,
+			Persona:      guide.Persona,
+			Category:     guide.Category,
+			Tags:         append([]string(nil), guide.Tags...),
+			LastSavedAt:  guide.UpdatedAt,
+			LastSavedBy:  guide.UpdatedBy,
+		}
+	}
+	locales := s.localesForSlug(guide.Slug, guide.Locale)
+
+	return GuideEditor{
+		Guide:   guide,
+		Draft:   draft,
+		Locales: locales,
+	}, nil
+}
+
+// PreviewDraft implements Service.
+func (s *StaticService) PreviewDraft(_ context.Context, _ string, guideID string, draft GuideDraftInput) (GuidePreview, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	idx := s.indexOfLocked(guideID)
+	if idx < 0 {
+		return GuidePreview{}, ErrGuideNotFound
+	}
+
+	active := cloneGuide(s.guides[idx])
+	requestedLocale := strings.TrimSpace(draft.Locale)
+	if requestedLocale != "" && !strings.EqualFold(requestedLocale, active.Locale) {
+		for _, candidate := range s.guides {
+			if candidate.Slug == active.Slug && strings.EqualFold(candidate.Locale, requestedLocale) {
+				active = cloneGuide(candidate)
+				break
+			}
+		}
+	}
+
+	if val := strings.TrimSpace(draft.Title); val != "" {
+		active.Title = val
+	}
+	if val := strings.TrimSpace(draft.Summary); val != "" {
+		active.Summary = val
+	}
+	if val := strings.TrimSpace(draft.Persona); val != "" {
+		active.Persona = val
+	}
+	if val := strings.TrimSpace(draft.Category); val != "" {
+		active.Category = val
+	}
+	if val := strings.TrimSpace(draft.HeroImageURL); val != "" {
+		active.HeroImageURL = val
+	}
+	if len(draft.Tags) > 0 {
+		active.Tags = append([]string(nil), draft.Tags...)
+	}
+
+	locales := s.localesForSlug(active.Slug, active.Locale)
+
+	entry := s.previews[previewKey(active.Slug, active.Locale)]
+
+	hero := strings.TrimSpace(draft.HeroImageURL)
+	if hero == "" {
+		hero = strings.TrimSpace(entry.HeroImageURL)
+	}
+	if hero == "" {
+		hero = active.HeroImageURL
+	}
+
+	body := strings.TrimSpace(draft.BodyHTML)
+	if body == "" {
+		body = strings.TrimSpace(entry.BodyHTML)
+	}
+	if body == "" {
+		body = defaultPreviewBody(active)
+	}
+
+	notes := append([]string(nil), entry.Notes...)
+	notes = append(notes, "ライブプレビュー: 未保存の変更が表示されています。")
 
 	shareURL := strings.TrimSpace(entry.ShareURL)
 	if shareURL == "" {

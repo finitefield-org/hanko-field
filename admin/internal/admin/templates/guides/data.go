@@ -307,6 +307,46 @@ type PreviewFeedbackData struct {
 	CommentPlaceholder string
 }
 
+// EditorPageData drives the two-pane editor experience.
+type EditorPageData struct {
+	Title           string
+	Description     string
+	Breadcrumbs     []partials.Breadcrumb
+	StatusLabel     string
+	StatusTone      string
+	LastSavedLabel  string
+	LastSavedExact  string
+	LastSavedBy     string
+	BackURL         string
+	PreviewEndpoint string
+	PreviewPageURL  string
+	PreviewTarget   string
+	FormID          string
+	Form            EditorFormData
+	Preview         EditorPreviewData
+	LocaleOptions   []PreviewLocaleOption
+}
+
+// EditorFormData represents the editable fields within the form pane.
+type EditorFormData struct {
+	GuideID      string
+	Locale       string
+	Title        string
+	Summary      string
+	HeroImageURL string
+	BodyHTML     string
+	Persona      string
+	Category     string
+	TagsValue    string
+	CSRFToken    string
+}
+
+// EditorPreviewData powers the live preview pane.
+type EditorPreviewData struct {
+	FragmentID string
+	Preview    PreviewPageData
+}
+
 // BuildPageData assembles page payload.
 func BuildPageData(basePath string, state QueryState, feed admincontent.GuideFeed, selected []string, csrfToken string) PageData {
 	table := TablePayload(basePath, state, feed, selected)
@@ -408,6 +448,64 @@ func BuildPreviewPageData(basePath string, preview admincontent.GuidePreview) Pr
 		Viewer:      viewer,
 		Sidebar:     sidebar,
 		Feedback:    feedback,
+	}
+}
+
+// BuildEditorPageData assembles the payload for the guide editor experience.
+func BuildEditorPageData(basePath string, editor admincontent.GuideEditor, preview admincontent.GuidePreview, csrfToken string) EditorPageData {
+	title := fmt.Sprintf("ガイド編集 - %s", editor.Guide.Title)
+	description := "ライブプレビューを確認しながらガイドの本文や概要を編集します。"
+
+	lastSavedLabel := "未保存"
+	lastSavedExact := ""
+	if !editor.Draft.LastSavedAt.IsZero() {
+		lastSavedLabel = helpers.Relative(editor.Draft.LastSavedAt)
+		lastSavedExact = helpers.Date(editor.Draft.LastSavedAt, "2006-01-02 15:04")
+	}
+
+	formID := "guide-editor-form"
+	previewTarget := "#guide-editor-preview"
+
+	return EditorPageData{
+		Title:       title,
+		Description: description,
+		Breadcrumbs: []partials.Breadcrumb{
+			{Label: "コンテンツ"},
+			{Label: "ガイド", Href: joinBase(basePath, "/content/guides")},
+			{Label: editor.Guide.Title},
+		},
+		StatusLabel:     editor.Guide.StatusLabel,
+		StatusTone:      editor.Guide.StatusTone,
+		LastSavedLabel:  lastSavedLabel,
+		LastSavedExact:  lastSavedExact,
+		LastSavedBy:     coalesce(editor.Draft.LastSavedBy, editor.Guide.UpdatedBy),
+		BackURL:         joinBase(basePath, "/content/guides"),
+		PreviewEndpoint: joinBase(basePath, fmt.Sprintf("/content/guides/%s/edit/preview", editor.Guide.ID)),
+		PreviewPageURL:  joinBase(basePath, fmt.Sprintf("/content/guides/%s/preview", editor.Guide.ID)),
+		PreviewTarget:   previewTarget,
+		FormID:          formID,
+		Form: EditorFormData{
+			GuideID:      editor.Guide.ID,
+			Locale:       editor.Draft.Locale,
+			Title:        editor.Draft.Title,
+			Summary:      editor.Draft.Summary,
+			HeroImageURL: editor.Draft.HeroImageURL,
+			BodyHTML:     editor.Draft.BodyHTML,
+			Persona:      editor.Draft.Persona,
+			Category:     editor.Draft.Category,
+			TagsValue:    joinTags(editor.Draft.Tags),
+			CSRFToken:    csrfToken,
+		},
+		Preview:       BuildEditorPreviewData(basePath, preview),
+		LocaleOptions: buildPreviewLocaleOptions(basePath, editor.Guide.ID, preview.Locales),
+	}
+}
+
+// BuildEditorPreviewData assembles the preview fragment payload.
+func BuildEditorPreviewData(basePath string, preview admincontent.GuidePreview) EditorPreviewData {
+	return EditorPreviewData{
+		FragmentID: "guide-editor-preview",
+		Preview:    BuildPreviewPageData(basePath, preview),
 	}
 }
 
@@ -921,6 +1019,19 @@ func timestampOrPlaceholder(ts *time.Time) string {
 		return "—"
 	}
 	return helpers.Date(ts.In(time.Local), "2006-01-02 15:04")
+}
+
+func joinTags(tags []string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	clean := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		if trimmed := strings.TrimSpace(tag); trimmed != "" {
+			clean = append(clean, trimmed)
+		}
+	}
+	return strings.Join(clean, ", ")
 }
 
 func cloneStrings(values []string) []string {

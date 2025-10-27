@@ -72,6 +72,103 @@ func (h *Handlers) GuidesPreview(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(guidestpl.PreviewPage(data)).ServeHTTP(w, r)
 }
 
+// GuidesEdit renders the two-pane editor for a guide.
+func (h *Handlers) GuidesEdit(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	guideID := strings.TrimSpace(chi.URLParam(r, "guideID"))
+	if guideID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	editor, err := h.content.EditorGuide(ctx, user.Token, guideID)
+	if err != nil {
+		if errors.Is(err, admincontent.ErrGuideNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("guides: editor payload failed: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	draftInput := admincontent.GuideDraftInput{
+		Locale:       editor.Draft.Locale,
+		Title:        editor.Draft.Title,
+		Summary:      editor.Draft.Summary,
+		HeroImageURL: editor.Draft.HeroImageURL,
+		BodyHTML:     editor.Draft.BodyHTML,
+		Persona:      editor.Draft.Persona,
+		Category:     editor.Draft.Category,
+		Tags:         cloneStrings(editor.Draft.Tags),
+	}
+
+	preview, err := h.content.PreviewDraft(ctx, user.Token, guideID, draftInput)
+	if err != nil {
+		log.Printf("guides: editor preview bootstrap failed: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	csrfToken := custommw.CSRFTokenFromContext(ctx)
+	payload := guidestpl.BuildEditorPageData(custommw.BasePathFromContext(ctx), editor, preview, csrfToken)
+
+	templ.Handler(guidestpl.EditorPage(payload)).ServeHTTP(w, r)
+}
+
+// GuidesEditPreview handles live preview refreshes from the editor form.
+func (h *Handlers) GuidesEditPreview(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	guideID := strings.TrimSpace(chi.URLParam(r, "guideID"))
+	if guideID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	input := admincontent.GuideDraftInput{
+		Locale:       strings.TrimSpace(r.FormValue("locale")),
+		Title:        strings.TrimSpace(r.FormValue("title")),
+		Summary:      strings.TrimSpace(r.FormValue("summary")),
+		HeroImageURL: strings.TrimSpace(r.FormValue("hero_image")),
+		BodyHTML:     strings.TrimSpace(r.FormValue("body")),
+		Persona:      strings.TrimSpace(r.FormValue("persona")),
+		Category:     strings.TrimSpace(r.FormValue("category")),
+		Tags:         splitTags(r.FormValue("tags")),
+	}
+
+	preview, err := h.content.PreviewDraft(ctx, user.Token, guideID, input)
+	if err != nil {
+		if errors.Is(err, admincontent.ErrGuideNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("guides: live preview failed: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	data := guidestpl.BuildEditorPreviewData(custommw.BasePathFromContext(ctx), preview)
+
+	templ.Handler(guidestpl.EditorPreview(data)).ServeHTTP(w, r)
+}
+
 // GuidesTable renders the table fragment for htmx updates.
 func (h *Handlers) GuidesTable(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -248,6 +345,29 @@ func (h *Handlers) renderGuidesFragment(w http.ResponseWriter, r *http.Request, 
 	}
 
 	templ.Handler(guidestpl.TableFragment(fragment)).ServeHTTP(w, r)
+}
+
+func splitTags(raw string) []string {
+	values := strings.Split(raw, ",")
+	results := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			results = append(results, trimmed)
+		}
+	}
+	if len(results) == 0 {
+		return nil
+	}
+	return results
+}
+
+func cloneStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	dup := make([]string, len(values))
+	copy(dup, values)
+	return dup
 }
 
 type guidesRequest struct {

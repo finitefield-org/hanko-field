@@ -252,6 +252,8 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			protected.Route("/content", func(cr chi.Router) {
 				cr.Get("/guides", uiHandlers.GuidesPage)
 				cr.Get("/guides/{guideID}/preview", uiHandlers.GuidesPreview)
+				cr.Get("/guides/{guideID}/edit", uiHandlers.GuidesEdit)
+				cr.With(custommw.RequireHTMX()).Post("/guides/{guideID}/edit/preview", uiHandlers.GuidesEditPreview)
 				RegisterFragment(cr, "/guides/table", uiHandlers.GuidesTable)
 				cr.Post("/guides/{guideID}:publish", uiHandlers.GuidesPublish)
 				cr.Post("/guides/{guideID}:unpublish", uiHandlers.GuidesUnpublish)
