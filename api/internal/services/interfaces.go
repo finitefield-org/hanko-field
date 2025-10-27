@@ -665,17 +665,23 @@ type PaymentWebhookCommand struct {
 }
 
 type PaymentManualCaptureCommand struct {
-	OrderID   string
-	PaymentID string
-	ActorID   string
+	OrderID        string
+	PaymentID      string
+	ActorID        string
+	Amount         *int64
+	Reason         string
+	IdempotencyKey string
+	Metadata       map[string]string
 }
 
 type PaymentManualRefundCommand struct {
-	OrderID   string
-	PaymentID string
-	ActorID   string
-	Amount    *int64
-	Reason    string
+	OrderID        string
+	PaymentID      string
+	ActorID        string
+	Amount         *int64
+	Reason         string
+	IdempotencyKey string
+	Metadata       map[string]string
 }
 
 type CreateShipmentCommand struct {

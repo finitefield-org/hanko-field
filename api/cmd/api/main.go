@@ -452,7 +452,7 @@ func main() {
 		adminPromotionHandlers.Routes,
 	}
 	if orderService != nil {
-		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, nil)
+		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, nil, nil)
 		adminRegistrars = append(adminRegistrars, adminOrderHandlers.Routes)
 	}
 

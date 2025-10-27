@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,7 +24,7 @@ func TestAdminOrderHandlers_ListOrders_MapsFilters(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders?status=paid,in_production&payment_status=captured,pending&paymentStatus=refunded&queue=queue-a&production_queue=queue-b&channel=dashboard&sales_channel=app&customer_email=%20ops@example.com%20&promotion_code=%20SPRING%20&page_size=150&page_token=%20token123%20&order=asc&sort=updated_at&since=2024-01-01T00:00:00Z&until=2024-02-01T00:00:00Z", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
@@ -142,7 +143,7 @@ func TestAdminOrderHandlers_ListOrders_ReturnsOperationalFields(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
@@ -258,7 +259,7 @@ func TestAdminOrderHandlers_ListOrders_RequiresPrivilegedRole(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	cases := []struct {
 		name         string
@@ -343,7 +344,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
 		},
 	}
 	audit := &captureAuditLogService{}
-	handler := NewAdminOrderHandlers(nil, service, audit)
+	handler := NewAdminOrderHandlers(nil, service, nil, audit)
 
 	body := `{"target_status":"in_production","reason":" expedite ","metadata":{"queue":"laser","notify":true}}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_123:status", strings.NewReader(body))
@@ -428,7 +429,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_AllowsReadyToShipToShipped(t *test
 			}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	body := `{"target_status":"shipped"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_ready:status", strings.NewReader(body))
@@ -465,7 +466,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_RejectsOutOfSequenceTransition(t *
 			return services.Order{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	body := `{"target_status":"shipped"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_200:status", strings.NewReader(body))
@@ -496,7 +497,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_ExpectedStatusMismatch(t *testing.
 			return services.Order{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	body := `{"target_status":"in_production","expected_status":"in_production"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_300:status", strings.NewReader(body))
@@ -526,7 +527,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_ServiceConflict(t *testing.T) {
 			return services.Order{}, services.ErrOrderConflict
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil)
 
 	body := `{"target_status":"delivered"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_400:status", strings.NewReader(body))
@@ -544,6 +545,167 @@ func TestAdminOrderHandlers_UpdateOrderStatus_ServiceConflict(t *testing.T) {
 	}
 }
 
+func TestAdminOrderHandlers_ManualCapturePayment_Success(t *testing.T) {
+	now := time.Date(2024, 4, 10, 15, 30, 0, 0, time.UTC)
+	captureAt := now.Add(-2 * time.Minute)
+
+	var capturedCmd services.PaymentManualCaptureCommand
+	paymentSvc := &stubPaymentService{
+		captureFn: func(ctx context.Context, cmd services.PaymentManualCaptureCommand) (services.Payment, error) {
+			capturedCmd = cmd
+			return services.Payment{
+				ID:         "pay_123",
+				OrderID:    "ord_900",
+				Provider:   "stripe",
+				IntentID:   "pi_abc",
+				Status:     "succeeded",
+				Amount:     1500,
+				Currency:   "jpy",
+				Captured:   true,
+				CapturedAt: &captureAt,
+				CreatedAt:  now.Add(-10 * time.Minute),
+				UpdatedAt:  now,
+			}, nil
+		},
+	}
+
+	orderSvc := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID: orderID,
+				Metadata: map[string]any{
+					"payment": map[string]any{
+						"status":         "succeeded",
+						"capturedAmount": 1500,
+						"refundedAmount": 0,
+						"balanceDue":     500,
+						"updatedAt":      now,
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := NewAdminOrderHandlers(nil, orderSvc, paymentSvc, nil)
+
+	body := `{"payment_id":" pay_123 ","amount":1500,"reason":" partial ","idempotency_key":" key-1 ","metadata":{"note":" expedite "}}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_900/payments:manual-capture", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_900")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "staff-1", Roles: []string{auth.RoleStaff}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.manualCapturePayment(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	var resp struct {
+		Payment struct {
+			ID            string `json:"id"`
+			Provider      string `json:"provider"`
+			Currency      string `json:"currency"`
+			Captured      bool   `json:"captured"`
+			CapturedAt    string `json:"captured_at"`
+			TransactionID string `json:"transaction_id"`
+		} `json:"payment"`
+		PaymentSummary struct {
+			Status         string `json:"status"`
+			CapturedAmount int64  `json:"captured_amount"`
+			BalanceDue     int64  `json:"balance_due"`
+			UpdatedAt      string `json:"updated_at"`
+		} `json:"payment_summary"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp.Payment.ID != "pay_123" {
+		t.Fatalf("expected payment id pay_123, got %q", resp.Payment.ID)
+	}
+	if resp.Payment.Provider != "stripe" {
+		t.Fatalf("expected provider stripe, got %q", resp.Payment.Provider)
+	}
+	if resp.Payment.Currency != "JPY" {
+		t.Fatalf("expected currency JPY, got %q", resp.Payment.Currency)
+	}
+	if !resp.Payment.Captured {
+		t.Fatalf("expected captured true")
+	}
+	if resp.Payment.TransactionID != "pi_abc" {
+		t.Fatalf("expected transaction id pi_abc, got %q", resp.Payment.TransactionID)
+	}
+	if resp.Payment.CapturedAt == "" {
+		t.Fatalf("expected captured_at to be populated")
+	}
+
+	if resp.PaymentSummary.Status != "succeeded" {
+		t.Fatalf("expected summary status succeeded, got %q", resp.PaymentSummary.Status)
+	}
+	if resp.PaymentSummary.CapturedAmount != 1500 {
+		t.Fatalf("expected captured amount 1500, got %d", resp.PaymentSummary.CapturedAmount)
+	}
+	if resp.PaymentSummary.BalanceDue != 500 {
+		t.Fatalf("expected balance due 500, got %d", resp.PaymentSummary.BalanceDue)
+	}
+	if resp.PaymentSummary.UpdatedAt == "" {
+		t.Fatalf("expected updatedAt string")
+	}
+
+	if capturedCmd.OrderID != "ord_900" {
+		t.Fatalf("expected command order ord_900, got %q", capturedCmd.OrderID)
+	}
+	if capturedCmd.PaymentID != "pay_123" {
+		t.Fatalf("expected command payment id pay_123, got %q", capturedCmd.PaymentID)
+	}
+	if capturedCmd.Amount == nil || *capturedCmd.Amount != 1500 {
+		t.Fatalf("expected command amount 1500, got %#v", capturedCmd.Amount)
+	}
+	if capturedCmd.Reason != "partial" {
+		t.Fatalf("expected trimmed reason partial, got %q", capturedCmd.Reason)
+	}
+	if capturedCmd.IdempotencyKey != "key-1" {
+		t.Fatalf("expected idempotency key key-1, got %q", capturedCmd.IdempotencyKey)
+	}
+	if capturedCmd.Metadata == nil || capturedCmd.Metadata["note"] != "expedite" {
+		t.Fatalf("expected sanitized metadata, got %#v", capturedCmd.Metadata)
+	}
+	if capturedCmd.ActorID != "staff-1" {
+		t.Fatalf("expected actor id staff-1, got %q", capturedCmd.ActorID)
+	}
+}
+
+func TestAdminOrderHandlers_ManualRefundPayment_ServiceError(t *testing.T) {
+	paymentSvc := &stubPaymentService{
+		refundFn: func(ctx context.Context, cmd services.PaymentManualRefundCommand) (services.Payment, error) {
+			if cmd.PaymentID != "pay_777" {
+				t.Fatalf("expected payment id pay_777, got %q", cmd.PaymentID)
+			}
+			return services.Payment{}, services.ErrPaymentInvalidState
+		},
+	}
+
+	handler := NewAdminOrderHandlers(nil, &stubOrderService{}, paymentSvc, nil)
+
+	body := `{"payment_id":"pay_777"}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_777/payments:refund", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_777")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "admin-1", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.manualRefundPayment(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
 type captureAuditLogService struct {
 	records []services.AuditLogRecord
 }
@@ -554,4 +716,39 @@ func (c *captureAuditLogService) Record(_ context.Context, record services.Audit
 
 func (c *captureAuditLogService) List(context.Context, services.AuditLogFilter) (domain.CursorPage[domain.AuditLogEntry], error) {
 	return domain.CursorPage[domain.AuditLogEntry]{}, nil
+}
+
+type stubPaymentService struct {
+	webhookFn func(context.Context, services.PaymentWebhookCommand) error
+	captureFn func(context.Context, services.PaymentManualCaptureCommand) (services.Payment, error)
+	refundFn  func(context.Context, services.PaymentManualRefundCommand) (services.Payment, error)
+	listFn    func(context.Context, string) ([]services.Payment, error)
+}
+
+func (s *stubPaymentService) RecordWebhookEvent(ctx context.Context, cmd services.PaymentWebhookCommand) error {
+	if s.webhookFn != nil {
+		return s.webhookFn(ctx, cmd)
+	}
+	return errors.New("not implemented")
+}
+
+func (s *stubPaymentService) ManualCapture(ctx context.Context, cmd services.PaymentManualCaptureCommand) (services.Payment, error) {
+	if s.captureFn != nil {
+		return s.captureFn(ctx, cmd)
+	}
+	return services.Payment{}, errors.New("not implemented")
+}
+
+func (s *stubPaymentService) ManualRefund(ctx context.Context, cmd services.PaymentManualRefundCommand) (services.Payment, error) {
+	if s.refundFn != nil {
+		return s.refundFn(ctx, cmd)
+	}
+	return services.Payment{}, errors.New("not implemented")
+}
+
+func (s *stubPaymentService) ListPayments(ctx context.Context, orderID string) ([]services.Payment, error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, orderID)
+	}
+	return nil, nil
 }

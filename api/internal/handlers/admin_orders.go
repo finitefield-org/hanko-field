@@ -25,17 +25,19 @@ const (
 
 // AdminOrderHandlers exposes order list endpoints for operations dashboards.
 type AdminOrderHandlers struct {
-	authn  *auth.Authenticator
-	orders services.OrderService
-	audit  services.AuditLogService
+	authn    *auth.Authenticator
+	orders   services.OrderService
+	payments services.PaymentService
+	audit    services.AuditLogService
 }
 
 // NewAdminOrderHandlers constructs the admin order handler set.
-func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService, audit services.AuditLogService) *AdminOrderHandlers {
+func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService, payments services.PaymentService, audit services.AuditLogService) *AdminOrderHandlers {
 	return &AdminOrderHandlers{
-		authn:  authn,
-		orders: orders,
-		audit:  audit,
+		authn:    authn,
+		orders:   orders,
+		payments: payments,
+		audit:    audit,
 	}
 }
 
@@ -49,6 +51,8 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	}
 	r.Get("/orders", h.listOrders)
 	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
+	r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
+	r.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
 }
 
 func (h *AdminOrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +215,7 @@ type adminOrderSummary struct {
 
 const (
 	maxAdminOrderStatusBodySize = 4 * 1024
+	maxAdminPaymentBodySize     = 8 * 1024
 )
 
 var adminOrderWorkflowTransitions = map[services.OrderStatus]services.OrderStatus{
@@ -359,6 +364,260 @@ func (h *AdminOrderHandlers) updateOrderStatus(w http.ResponseWriter, r *http.Re
 		Order: buildAdminOrderSummary(updated),
 	}
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+type adminPaymentActionRequest struct {
+	PaymentID      string            `json:"payment_id"`
+	Amount         *int64            `json:"amount"`
+	Reason         string            `json:"reason"`
+	IdempotencyKey string            `json:"idempotency_key"`
+	Metadata       map[string]string `json:"metadata"`
+}
+
+type adminPaymentActionResponse struct {
+	Payment        adminPaymentPayload         `json:"payment"`
+	PaymentSummary *adminPaymentSummaryPayload `json:"payment_summary,omitempty"`
+}
+
+type adminPaymentPayload struct {
+	ID             string `json:"id"`
+	Provider       string `json:"provider"`
+	Status         string `json:"status"`
+	Amount         int64  `json:"amount"`
+	Currency       string `json:"currency"`
+	TransactionID  string `json:"transaction_id,omitempty"`
+	Captured       bool   `json:"captured"`
+	CapturedAt     string `json:"captured_at,omitempty"`
+	RefundedAt     string `json:"refunded_at,omitempty"`
+	RefundedAmount int64  `json:"refunded_amount"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at,omitempty"`
+}
+
+type adminPaymentSummaryPayload struct {
+	Status         string `json:"status"`
+	CapturedAmount int64  `json:"captured_amount"`
+	RefundedAmount int64  `json:"refunded_amount"`
+	BalanceDue     int64  `json:"balance_due"`
+	UpdatedAt      string `json:"updated_at,omitempty"`
+}
+
+func (h *AdminOrderHandlers) manualCapturePayment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.payments == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("payment_service_unavailable", "payment service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "order id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminPaymentBodySize)
+	if err != nil {
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload adminPaymentActionRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+		return
+	}
+
+	paymentID := strings.TrimSpace(payload.PaymentID)
+	if paymentID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "payment_id is required", http.StatusBadRequest))
+		return
+	}
+
+	if payload.Amount != nil && *payload.Amount <= 0 {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "amount must be positive", http.StatusBadRequest))
+		return
+	}
+
+	cmd := services.PaymentManualCaptureCommand{
+		OrderID:        orderID,
+		PaymentID:      paymentID,
+		ActorID:        strings.TrimSpace(identity.UID),
+		Amount:         payload.Amount,
+		Reason:         strings.TrimSpace(payload.Reason),
+		IdempotencyKey: strings.TrimSpace(payload.IdempotencyKey),
+		Metadata:       sanitizeStringMap(payload.Metadata),
+	}
+
+	payment, err := h.payments.ManualCapture(ctx, cmd)
+	if err != nil {
+		writePaymentError(ctx, w, err)
+		return
+	}
+
+	response := adminPaymentActionResponse{
+		Payment: buildAdminPaymentPayload(payment),
+	}
+	if summary := h.lookupPaymentSummary(ctx, orderID); summary != nil {
+		response.PaymentSummary = summary
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *AdminOrderHandlers) manualRefundPayment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.payments == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("payment_service_unavailable", "payment service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "order id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminPaymentBodySize)
+	if err != nil {
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload adminPaymentActionRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+		return
+	}
+
+	paymentID := strings.TrimSpace(payload.PaymentID)
+	if paymentID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "payment_id is required", http.StatusBadRequest))
+		return
+	}
+	if payload.Amount != nil && *payload.Amount <= 0 {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "amount must be positive", http.StatusBadRequest))
+		return
+	}
+
+	cmd := services.PaymentManualRefundCommand{
+		OrderID:        orderID,
+		PaymentID:      paymentID,
+		ActorID:        strings.TrimSpace(identity.UID),
+		Amount:         payload.Amount,
+		Reason:         strings.TrimSpace(payload.Reason),
+		IdempotencyKey: strings.TrimSpace(payload.IdempotencyKey),
+		Metadata:       sanitizeStringMap(payload.Metadata),
+	}
+
+	payment, err := h.payments.ManualRefund(ctx, cmd)
+	if err != nil {
+		writePaymentError(ctx, w, err)
+		return
+	}
+
+	response := adminPaymentActionResponse{
+		Payment: buildAdminPaymentPayload(payment),
+	}
+	if summary := h.lookupPaymentSummary(ctx, orderID); summary != nil {
+		response.PaymentSummary = summary
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *AdminOrderHandlers) lookupPaymentSummary(ctx context.Context, orderID string) *adminPaymentSummaryPayload {
+	if h.orders == nil {
+		return nil
+	}
+	order, err := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{})
+	if err != nil {
+		return nil
+	}
+	return buildAdminPaymentSummary(order)
+}
+
+func buildAdminPaymentPayload(payment services.Payment) adminPaymentPayload {
+	payload := adminPaymentPayload{
+		ID:             strings.TrimSpace(payment.ID),
+		Provider:       strings.TrimSpace(payment.Provider),
+		Status:         strings.TrimSpace(payment.Status),
+		Amount:         payment.Amount,
+		Currency:       strings.ToUpper(strings.TrimSpace(payment.Currency)),
+		TransactionID:  strings.TrimSpace(payment.IntentID),
+		Captured:       payment.Captured,
+		RefundedAmount: extractRefundedAmount(payment),
+		CreatedAt:      formatTime(payment.CreatedAt),
+		UpdatedAt:      formatTime(payment.UpdatedAt),
+	}
+	if payment.CapturedAt != nil {
+		payload.CapturedAt = formatTime(pointerTime(payment.CapturedAt))
+	}
+	if payment.RefundedAt != nil {
+		payload.RefundedAt = formatTime(pointerTime(payment.RefundedAt))
+	}
+	return payload
+}
+
+func buildAdminPaymentSummary(order services.Order) *adminPaymentSummaryPayload {
+	root := mapFromAny(order.Metadata["payment"])
+	if root == nil {
+		return nil
+	}
+	summary := &adminPaymentSummaryPayload{
+		Status:         strings.TrimSpace(stringify(valueFromMap(root, "status"))),
+		CapturedAmount: intFromAny(valueFromMap(root, "capturedAmount", "captured_amount")),
+		RefundedAmount: intFromAny(valueFromMap(root, "refundedAmount", "refunded_amount")),
+		BalanceDue:     intFromAny(valueFromMap(root, "balanceDue", "balance_due")),
+	}
+	if updated := valueFromMap(root, "updatedAt", "updated_at"); updated != nil {
+		switch v := updated.(type) {
+		case time.Time:
+			summary.UpdatedAt = formatTime(v)
+		case *time.Time:
+			if v != nil {
+				summary.UpdatedAt = formatTime(pointerTime(v))
+			}
+		default:
+			if ts := stringify(v); ts != "" {
+				summary.UpdatedAt = ts
+			}
+		}
+	}
+	return summary
 }
 
 func buildAdminOrderSummary(order services.Order) adminOrderSummary {
@@ -549,6 +808,56 @@ func normalizeStringSlice(values []string) []string {
 		return nil
 	}
 	return out
+}
+
+func valueFromMap(data map[string]any, keys ...string) any {
+	if len(data) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		if value, ok := data[key]; ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func sanitizeStringMap(input map[string]string) map[string]string {
+	if len(input) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(input))
+	for k, v := range input {
+		key := strings.TrimSpace(k)
+		if key == "" {
+			continue
+		}
+		result[key] = strings.TrimSpace(v)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func writePaymentError(ctx context.Context, w http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	switch {
+	case errors.Is(err, services.ErrPaymentInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+	case errors.Is(err, services.ErrPaymentNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("payment_not_found", "payment not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrPaymentInvalidState):
+		httpx.WriteError(ctx, w, httpx.NewError("payment_invalid_state", err.Error(), http.StatusConflict))
+	case errors.Is(err, services.ErrPaymentConflict):
+		httpx.WriteError(ctx, w, httpx.NewError("payment_conflict", err.Error(), http.StatusConflict))
+	case errors.Is(err, services.ErrPaymentUnavailable):
+		httpx.WriteError(ctx, w, httpx.NewError("payment_service_unavailable", "payment service unavailable", http.StatusServiceUnavailable))
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("payment_error", "failed to process payment request", http.StatusInternalServerError))
+	}
 }
 
 func (h *AdminOrderHandlers) recordOrderStatusAudit(ctx context.Context, identity *auth.Identity, orderID string, before services.OrderStatus, after services.OrderStatus, reason string, metadata map[string]any) {
