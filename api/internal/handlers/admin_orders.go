@@ -51,8 +51,10 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	}
 	r.Get("/orders", h.listOrders)
 	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
-	r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
-	r.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
+	if h.payments != nil {
+		r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
+		r.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
+	}
 }
 
 func (h *AdminOrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) {
