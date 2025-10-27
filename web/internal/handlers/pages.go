@@ -30,4 +30,5 @@ type PageData struct {
 	DesignVersions any
 	Cart           any
 	Checkout       any
+	Account        any
 }

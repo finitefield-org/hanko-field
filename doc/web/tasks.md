@@ -47,7 +47,7 @@
 - [x] [Build completion page (`/checkout/complete`) displaying order number, next steps, and share options.](doc/web/tasks/034-build-completion-page-checkout-complete-displaying-order-number-next-steps-and-share-optio.md)
 
 ## 6. Account & Library
-- [ ] [Implement account profile page (`/account`) with profile form fragment and update flow.](doc/web/tasks/035-implement-account-profile-page-account-with-profile-form-fragment-and-update-flow.md)
+- [x] [Implement account profile page (`/account`) with profile form fragment and update flow.](doc/web/tasks/035-implement-account-profile-page-account-with-profile-form-fragment-and-update-flow.md)
 - [ ] [Build addresses management (`/account/addresses`) with table fragment and edit modal.](doc/web/tasks/036-build-addresses-management-account-addresses-with-table-fragment-and-edit-modal.md)
 - [ ] [Implement orders list (`/account/orders`) with filterable table fragment and pagination.](doc/web/tasks/037-implement-orders-list-account-orders-with-filterable-table-fragment-and-pagination.md)
 - [ ] [Build order detail (`/account/orders/{orderId}`) with tabbed fragments for summary, payments, production, tracking, invoice.](doc/web/tasks/038-build-order-detail-account-orders-orderid-with-tabbed-fragments-for-summary-payments-produ.md)

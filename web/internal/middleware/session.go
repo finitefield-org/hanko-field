@@ -17,14 +17,15 @@ import (
 const sessionCookieName = "HANKO_WEB_SESSION"
 
 type SessionData struct {
-	ID        string        `json:"id"`
-	UserID    string        `json:"uid,omitempty"`
-	Locale    string        `json:"locale,omitempty"`
-	CartID    string        `json:"cart,omitempty"`
-	Checkout  CheckoutState `json:"checkout,omitempty"`
-	CSRFToken string        `json:"csrf,omitempty"`
-	CreatedAt time.Time     `json:"createdAt"`
-	UpdatedAt time.Time     `json:"updatedAt"`
+	ID        string         `json:"id"`
+	UserID    string         `json:"uid,omitempty"`
+	Locale    string         `json:"locale,omitempty"`
+	CartID    string         `json:"cart,omitempty"`
+	Checkout  CheckoutState  `json:"checkout,omitempty"`
+	Profile   SessionProfile `json:"profile,omitempty"`
+	CSRFToken string         `json:"csrf,omitempty"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
 	// internal dirty flag; not serialized
 	dirty bool `json:"-"`
 }
@@ -55,6 +56,17 @@ type SessionAddress struct {
 	Kind       string    `json:"kind,omitempty"`
 	Notes      string    `json:"notes,omitempty"`
 	CreatedAt  time.Time `json:"createdAt,omitempty"`
+}
+
+// SessionProfile stores basic account profile preferences per session.
+type SessionProfile struct {
+	DisplayName  string `json:"name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Phone        string `json:"phone,omitempty"`
+	PhoneCountry string `json:"phoneCountry,omitempty"`
+	Language     string `json:"language,omitempty"`
+	Country      string `json:"country,omitempty"`
+	AvatarURL    string `json:"avatar,omitempty"`
 }
 
 var sessionSignKey []byte

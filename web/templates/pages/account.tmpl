@@ -1,8 +1,286 @@
 {{ define "content" }}
-<section class="py-6">
-  <h1 class="text-2xl font-bold">{{ tlang $.Lang "nav.account" }}</h1>
-  <p class="mt-2 text-gray-600">Coming soon.</p>
-  <div class="mt-4 text-sm text-gray-500">Path: {{ $.Path }}</div>
-</section>
-{{ end }}
+{{ $account := $.Account }}
+<section class="py-8">
+  <div class="space-y-8">
+    <header class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-500" aria-label="{{ if eq $.Lang "ja" }}パンくずリスト{{ else }}Breadcrumb{{ end }}">
+        {{ range $i, $crumb := $.Breadcrumbs }}
+          {{ if $i }}<span aria-hidden="true" class="text-gray-300">/</span>{{ end }}
+          {{ if $crumb.Active }}
+            <span class="font-medium text-gray-700">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</span>
+          {{ else }}
+            <a href="{{ $crumb.Href }}" class="hover:text-indigo-600 hover:underline">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</a>
+          {{ end }}
+        {{ end }}
+      </nav>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ tlang $.Lang "account.page.eyebrow" }}</p>
+          <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ tlang $.Lang "nav.account" }}</h1>
+          <p class="text-sm text-gray-600">{{ tlang $.Lang "account.page.subtitle" }}</p>
+        </div>
+        <div class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:gap-5">
+          <div class="flex items-center gap-3">
+            <img src="{{ $account.User.AvatarURL }}" alt="{{ $account.User.DisplayName }}" class="h-14 w-14 rounded-full border border-gray-200 object-cover">
+            <div>
+              <p class="text-base font-semibold text-gray-900">{{ $account.User.DisplayName }}</p>
+              <p class="text-xs text-gray-500">{{ $account.User.Email }}</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-3 text-xs">
+            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">{{ $account.User.Plan }}</span>
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">{{ $account.User.Role }}</span>
+          </div>
+        </div>
+      </div>
+    </header>
 
+    <div class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside class="space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="space-y-3">
+          {{ range $item := $account.NavItems }}
+            <a href="{{ $item.Href }}"
+               class="block rounded-2xl border px-4 py-3 text-sm transition {{ if $item.Active }}border-indigo-200 bg-indigo-50 text-indigo-800{{ else }}border-gray-100 hover:border-indigo-200{{ end }}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold">{{ $item.Label }}</span>
+                {{ if $item.Badge }}<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $item.Badge }}</span>{{ end }}
+              </div>
+              <p class="mt-1 text-xs text-gray-500">{{ $item.Description }}</p>
+            </a>
+          {{ end }}
+        </div>
+        <div class="rounded-2xl border border-dashed border-gray-200 p-4 text-xs text-gray-500">
+          <p class="font-semibold text-gray-700">{{ tlang $.Lang "account.help.title" }}</p>
+          <p class="mt-1">{{ tlang $.Lang "account.help.body" }}</p>
+          <a href="/guides" class="mt-2 inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-500">
+            {{ tlang $.Lang "account.help.cta" }}
+            {{ template "icon" (dict "Name" "arrow-top-right-on-square" "Class" "h-4 w-4") }}
+          </a>
+        </div>
+      </aside>
+
+      <div class="space-y-6">
+        <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div id="account-profile-form-shell">
+            {{ slot "frag_account_profile_form" $account.ProfileForm }}
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "account.security.badge" }}</p>
+              <h2 class="text-xl font-semibold text-gray-900">{{ tlang $.Lang "account.security.heading" }}</h2>
+            </div>
+            <a href="{{ $account.Security.ActionHref }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:border-indigo-300">
+              {{ $account.Security.ActionText }}
+              {{ template "icon" (dict "Name" "arrow-up-right" "Class" "h-4 w-4") }}
+            </a>
+          </div>
+          {{ template "c_inline_alert" (dict "Tone" $account.Security.Tone "Title" $account.Security.Title "Body" $account.Security.Body "Icon" "lock-closed") }}
+        </section>
+
+        <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+          <header class="flex flex-col gap-1">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "account.prefs.heading" }}</p>
+            <h2 class="text-xl font-semibold text-gray-900">{{ tlang $.Lang "account.prefs.title" }}</h2>
+            <p class="text-sm text-gray-600">{{ tlang $.Lang "account.prefs.subtitle" }}</p>
+          </header>
+          <ul class="divide-y divide-gray-100">
+            {{ range $pref := $account.Preferences }}
+              <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium text-gray-900">{{ $pref.Label }}</p>
+                    {{ if $pref.Required }}<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ tlang $.Lang "account.prefs.required" }}</span>{{ end }}
+                  </div>
+                  <p class="text-sm text-gray-500">{{ $pref.Description }}</p>
+                </div>
+                <button type="button"
+                        class="relative inline-flex h-7 w-14 flex-none items-center rounded-full transition data-[checked=true]:bg-indigo-600 data-[checked=false]:bg-gray-300"
+                        role="switch"
+                        aria-checked="{{ if $pref.Enabled }}true{{ else }}false{{ end }}"
+                        {{ if $pref.Required }}disabled{{ end }}
+                        data-account-switch
+                        data-checked="{{ if $pref.Enabled }}true{{ else }}false{{ end }}">
+                  <span class="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-white/40 transition opacity-0 data-[checked=true]:opacity-100"></span>
+                  <span class="ml-1 inline-block h-5 w-5 rounded-full bg-white shadow transition data-[checked=true]:translate-x-7 data-[checked=false]:translate-x-0"></span>
+                </button>
+              </li>
+            {{ end }}
+          </ul>
+        </section>
+
+        <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+          <header class="flex flex-col gap-1">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "account.sessions.badge" }}</p>
+            <h2 class="text-xl font-semibold text-gray-900">{{ tlang $.Lang "account.sessions.title" }}</h2>
+            <p class="text-sm text-gray-600">{{ tlang $.Lang "account.sessions.subtitle" }}</p>
+          </header>
+          <div class="overflow-hidden rounded-2xl border border-gray-100">
+            <table class="min-w-full divide-y divide-gray-100 text-sm">
+              <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th scope="col" class="px-4 py-3">{{ tlang $.Lang "account.sessions.device" }}</th>
+                  <th scope="col" class="px-4 py-3">{{ tlang $.Lang "account.sessions.location" }}</th>
+                  <th scope="col" class="px-4 py-3">{{ tlang $.Lang "account.sessions.active" }}</th>
+                  <th scope="col" class="px-4 py-3 text-right">{{ tlang $.Lang "account.sessions.actions" }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                {{ range $session := $account.Sessions }}
+                  <tr class="{{ if $session.Current }}bg-indigo-50/40{{ else }}bg-white{{ end }}">
+                    <td class="px-4 py-4">
+                      <p class="font-medium text-gray-900">{{ $session.Device }}</p>
+                      <p class="text-xs text-gray-500">{{ $session.Platform }} · {{ $session.IP }}</p>
+                    </td>
+                    <td class="px-4 py-4 text-gray-700">{{ $session.Location }}</td>
+                    <td class="px-4 py-4 text-gray-700">{{ $session.LastActive }}</td>
+                    <td class="px-4 py-4 text-right">
+                      {{ if $session.Current }}
+                        <span class="text-xs font-semibold text-emerald-600">{{ tlang $.Lang "account.sessions.current" }}</span>
+                      {{ else }}
+                        <button type="button" class="inline-flex items-center gap-1 rounded-full border border-rose-100 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+                          {{ tlang $.Lang "account.sessions.revoke" }}
+                          {{ template "icon" (dict "Name" "x-mark" "Class" "h-3.5 w-3.5") }}
+                        </button>
+                      {{ end }}
+                    </td>
+                  </tr>
+                {{ end }}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-500">{{ tlang $.Lang "account.sessions.footer" }}</p>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="account-action-bar" data-account-action-bar class="pointer-events-none fixed inset-x-0 bottom-6 z-30 flex justify-center px-4 opacity-0 transition">
+  <div class="flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-2xl">
+    <div class="text-sm font-medium text-gray-800">{{ tlang $.Lang "account.action.unsaved" }}</div>
+    <div class="flex flex-wrap gap-3">
+      <button type="button" id="account-discard-btn" class="inline-flex h-10 items-center justify-center rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-700 hover:border-gray-300">
+        {{ tlang $.Lang "account.action.discard" }}
+      </button>
+      <button type="submit"
+              id="account-save-btn"
+              form="{{ $account.ProfileForm.FormID }}"
+              class="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:pointer-events-none disabled:opacity-50"
+              disabled>
+        {{ tlang $.Lang "account.action.save" }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="account-toast" class="pointer-events-none fixed inset-x-0 top-6 z-40 mx-auto hidden max-w-md rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-2xl transition duration-200"></div>
+
+<script>
+(function(){
+  function serializeProfile(form){
+    var data = new FormData(form);
+    var keys = ['display_name','email','phone','phone_country','lang','country'];
+    return keys.map(function(key){ return key + '=' + (data.get(key) || ''); }).join('&');
+  }
+
+  function toggleActionBar(active){
+    var bar = document.getElementById('account-action-bar');
+    if (!bar) { return; }
+    if (active) {
+      bar.classList.remove('opacity-0');
+      bar.classList.remove('pointer-events-none');
+    } else {
+      bar.classList.add('opacity-0');
+      bar.classList.add('pointer-events-none');
+    }
+  }
+
+  function initAccountProfile(scope){
+    var container = scope && scope.querySelector ? scope : document;
+    var form = container.querySelector('[data-account-profile-form]');
+    if (!form || form.__profileReady) { return; }
+    form.__profileReady = true;
+    var initial = form.getAttribute('data-initial-state') || serializeProfile(form);
+    var saveBtn = document.getElementById('account-save-btn');
+    var discardBtn = document.getElementById('account-discard-btn');
+
+    function updateState(){
+      var dirty = serializeProfile(form) !== initial;
+      toggleActionBar(dirty);
+      if (saveBtn) { saveBtn.disabled = !dirty; }
+    }
+
+    form.addEventListener('input', updateState);
+    form.addEventListener('change', updateState);
+
+    form.addEventListener('htmx:afterRequest', function(evt){
+      if (evt.detail && evt.detail.successful) {
+        initial = form.getAttribute('data-initial-state') || serializeProfile(form);
+        updateState();
+      }
+    });
+
+    if (discardBtn) {
+      discardBtn.addEventListener('click', function(){
+        form.reset();
+        initial = form.getAttribute('data-initial-state') || serializeProfile(form);
+        updateState();
+      });
+    }
+
+    updateState();
+  }
+
+  function initSwitches(scope){
+    var root = scope && scope.querySelectorAll ? scope : document;
+    root.querySelectorAll('[data-account-switch]').forEach(function(btn){
+      if (btn.__switchReady) { return; }
+      btn.__switchReady = true;
+      btn.addEventListener('click', function(){
+        if (btn.disabled) { return; }
+        var current = btn.getAttribute('data-checked') === 'true';
+        btn.setAttribute('data-checked', (!current).toString());
+        btn.setAttribute('aria-checked', (!current).toString());
+      });
+    });
+  }
+
+  function showToast(detail){
+    var toast = document.getElementById('account-toast');
+    if (!toast) { return; }
+    toast.textContent = detail && detail.message ? detail.message : '{{ tlang $.Lang "account.profile.toast" }}';
+    toast.classList.remove('hidden');
+    toast.classList.remove('opacity-0');
+    clearTimeout(toast.__hideTimer);
+    toast.__hideTimer = setTimeout(function(){
+      toast.classList.add('opacity-0');
+      setTimeout(function(){ toast.classList.add('hidden'); }, 220);
+    }, 2400);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    initAccountProfile(document);
+    initSwitches(document);
+  });
+
+  document.addEventListener('htmx:afterSwap', function(evt){
+    if (evt.target && evt.target.id === 'account-profile-form-shell') {
+      initAccountProfile(evt.target);
+    }
+  });
+
+  document.body.addEventListener('account:profile:saved', function(evt){
+    showToast(evt.detail || {});
+    var shell = document.getElementById('account-profile-form-shell');
+    if (shell) {
+      shell.querySelectorAll('[data-account-profile-form]').forEach(function(form){
+        form.setAttribute('data-initial-state', serializeProfile(form));
+      });
+    }
+  });
+})();
+</script>
+{{ end }}

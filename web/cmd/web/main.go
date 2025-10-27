@@ -906,6 +906,8 @@ func main() {
 	r.MethodFunc(http.MethodPost, "/checkout/review/submit", CheckoutReviewSubmitHandler)
 	r.Get("/checkout/complete", CheckoutCompleteHandler)
 	r.Get("/account", AccountHandler)
+	r.MethodFunc(http.MethodGet, "/account/profile/form", AccountProfileFormHandler)
+	r.MethodFunc(http.MethodPost, "/account/profile/form", AccountProfileFormHandler)
 	// Fragment endpoints (htmx)
 	r.Get("/frags/compare/sku-table", CompareSKUTableFrag)
 	r.Get("/frags/guides/latest", LatestGuidesFrag)
@@ -3412,20 +3414,6 @@ func statusImpactVariant(impact string) (badge, text string) {
 	default:
 		return "bg-slate-100 text-slate-800", "text-slate-900"
 	}
-}
-
-func AccountHandler(w http.ResponseWriter, r *http.Request) {
-	lang := mw.Lang(r)
-	vm := handlersPkg.PageData{Title: "Account", Lang: lang}
-	vm.Path = r.URL.Path
-	vm.Nav = nav.Build(vm.Path)
-	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
-	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
-	vm.SEO.Canonical = absoluteURL(r)
-	vm.SEO.OG.URL = vm.SEO.Canonical
-	vm.SEO.OG.SiteName = i18nOrDefault(lang, "brand.name", "Hanko Field")
-	vm.SEO.Alternates = buildAlternates(r)
-	renderPage(w, r, "account", vm)
 }
 
 // DemoModalHandler returns a demo modal fragment for HTMX insertion.
