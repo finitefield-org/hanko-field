@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode"
 
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	catalogtpl "finitefield.org/hanko-admin/internal/admin/templates/catalog"
@@ -173,20 +174,109 @@ func samplePreviewForKind(kind admincatalog.Kind) string {
 
 func catalogValuesFromDetail(kind admincatalog.Kind, detail admincatalog.ItemDetail) map[string]string {
 	values := defaultCatalogValues(kind)
-	values["name"] = detail.Item.Name
-	values["identifier"] = detail.Item.Identifier
-	values["description"] = detail.Description
-	values["status"] = string(detail.Item.Status)
-	values["category"] = detail.Item.Category
-	values["tags"] = strings.Join(detail.Tags, ", ")
-	values["ownerName"] = detail.Owner.Name
-	values["ownerEmail"] = detail.Owner.Email
-	values["previewURL"] = detail.PreviewURL
-	values["primaryColor"] = detail.Item.PrimaryColor
-	values["version"] = detail.Item.Version
-	values["templateID"] = detail.Item.Identifier
-	values["materialSKU"] = detail.Item.Identifier
-	values["productSKU"] = detail.Item.Identifier
+	resetPlaceholderValues(values)
+	assign := func(key, value string) {
+		values[key] = normalizeCatalogFormValue(key, value)
+	}
+
+	assign("name", detail.Item.Name)
+	assign("identifier", detail.Item.Identifier)
+	assign("description", detail.Description)
+	assign("status", string(detail.Item.Status))
+	assign("category", detail.Item.Category)
+	assign("tags", strings.Join(detail.Tags, ", "))
+	assign("previewURL", detail.PreviewURL)
+	assign("primaryColor", detail.Item.PrimaryColor)
+	assign("ownerName", detail.Owner.Name)
+	assign("ownerEmail", detail.Owner.Email)
+	assign("version", detail.Item.Version)
+	assign("templateID", detail.Item.Identifier)
+	assign("materialSKU", detail.Item.Identifier)
+	assign("productSKU", detail.Item.Identifier)
+
+	if len(detail.Properties) > 0 {
+		for key, value := range detail.Properties {
+			assign(key, value)
+		}
+	}
+
+	if strings.TrimSpace(values["photoURLs"]) == "" {
+		assign("photoURLs", detail.PreviewURL)
+		if strings.TrimSpace(values["photoURLs"]) == "" {
+			assign("photoURLs", metadataValue(detail.Metadata, "プレビュー"))
+		}
+	}
+
+	switch kind {
+	case admincatalog.KindTemplates:
+		if strings.TrimSpace(values["svgPath"]) == "" {
+			if v := metadataValue(detail.Metadata, "SVG"); strings.TrimSpace(v) != "" && strings.TrimSpace(v) != "未設定" {
+				assign("svgPath", v)
+			}
+		}
+	case admincatalog.KindFonts:
+		if strings.TrimSpace(values["fontFamily"]) == "" {
+			assign("fontFamily", detail.Item.Name)
+		}
+		if strings.TrimSpace(values["fontWeights"]) == "" {
+			if metric := metricValue(detail.Item.Metrics, "ウェイト"); metric != "" {
+				if csv := canonicalCSVList(metric); csv != "" {
+					assign("fontWeights", csv)
+				}
+			}
+		}
+		if strings.TrimSpace(values["license"]) == "" {
+			assign("license", metadataValue(detail.Metadata, "ライセンス"))
+		}
+	case admincatalog.KindMaterials:
+		if strings.TrimSpace(values["materialSKU"]) == "" {
+			assign("materialSKU", metadataValue(detail.Metadata, "SKU"))
+		}
+		if strings.TrimSpace(values["color"]) == "" {
+			assign("color", metadataValue(detail.Metadata, "カラー"))
+		}
+		if strings.TrimSpace(values["inventory"]) == "" {
+			if meta := metadataValue(detail.Metadata, "在庫"); meta != "" {
+				if digits := extractDigits(meta); digits != "" {
+					assign("inventory", digits)
+				}
+			} else if metric := metricValue(detail.Item.Metrics, "在庫"); metric != "" {
+				if digits := extractDigits(metric); digits != "" {
+					assign("inventory", digits)
+				}
+			}
+		}
+	case admincatalog.KindProducts:
+		if strings.TrimSpace(values["productSKU"]) == "" {
+			assign("productSKU", metadataValue(detail.Metadata, "SKU"))
+		}
+		if strings.TrimSpace(values["price"]) == "" {
+			if metric := metricValue(detail.Item.Metrics, "単価"); metric != "" {
+				if digits := extractDigits(metric); digits != "" {
+					assign("price", digits)
+				}
+			} else if meta := metadataValue(detail.Metadata, "価格"); meta != "" {
+				if digits := extractDigits(meta); digits != "" {
+					assign("price", digits)
+				}
+			}
+		}
+		if strings.TrimSpace(values["leadTime"]) == "" {
+			if metric := metricValue(detail.Item.Metrics, "リードタイム"); metric != "" {
+				if digits := extractDigits(metric); digits != "" {
+					assign("leadTime", digits)
+				}
+			} else if meta := metadataValue(detail.Metadata, "リードタイム"); meta != "" {
+				if digits := extractDigits(meta); digits != "" {
+					assign("leadTime", digits)
+				}
+			}
+		}
+		if strings.TrimSpace(values["photoURLs"]) == "" {
+			assign("photoURLs", metadataValue(detail.Metadata, "プレビュー"))
+		}
+	}
+
 	return values
 }
 
@@ -331,4 +421,85 @@ func currencyOptions() []modalOptionSpec {
 		{Value: "JPY", Label: "JPY"},
 		{Value: "USD", Label: "USD"},
 	}
+}
+
+func resetPlaceholderValues(values map[string]string) {
+	for _, key := range []string{
+		"templateID",
+		"svgPath",
+		"fontFamily",
+		"fontWeights",
+		"license",
+		"materialSKU",
+		"color",
+		"inventory",
+		"productSKU",
+		"price",
+		"leadTime",
+		"photoURLs",
+	} {
+		values[key] = ""
+	}
+}
+
+func normalizeCatalogFormValue(key, value string) string {
+	switch key {
+	case "photoURLs", "description":
+		return strings.TrimRight(value, "\r\n ")
+	default:
+		return strings.TrimSpace(value)
+	}
+}
+
+func metadataValue(entries []admincatalog.MetadataEntry, contains string) string {
+	needle := strings.ToLower(strings.TrimSpace(contains))
+	if needle == "" {
+		return ""
+	}
+	for _, entry := range entries {
+		if strings.Contains(strings.ToLower(entry.Key), needle) {
+			return strings.TrimSpace(entry.Value)
+		}
+	}
+	return ""
+}
+
+func metricValue(metrics []admincatalog.ItemMetric, contains string) string {
+	needle := strings.ToLower(strings.TrimSpace(contains))
+	if needle == "" {
+		return ""
+	}
+	for _, metric := range metrics {
+		if strings.Contains(strings.ToLower(metric.Label), needle) {
+			return strings.TrimSpace(metric.Value)
+		}
+	}
+	return ""
+}
+
+func extractDigits(value string) string {
+	var builder strings.Builder
+	for _, r := range value {
+		if unicode.IsDigit(r) {
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
+}
+
+func canonicalCSVList(value string) string {
+	fields := strings.FieldsFunc(value, func(r rune) bool {
+		return r == ',' || r == '、'
+	})
+	cleaned := make([]string, 0, len(fields))
+	for _, field := range fields {
+		trimmed := strings.TrimSpace(field)
+		if trimmed != "" {
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+	if len(cleaned) == 0 {
+		return ""
+	}
+	return strings.Join(cleaned, ", ")
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -648,7 +649,19 @@ func makeCatalogAsset(item Item, detail ItemDetail) catalogAsset {
 	if detail.UpdatedAt.IsZero() {
 		detail.UpdatedAt = item.UpdatedAt
 	}
+	if len(detail.Properties) > 0 {
+		// ensure values are normalised consistently
+		detail.Properties = mergeProperties(nil, detail.Properties)
+	}
 	return catalogAsset{item: item, detail: detail}
+}
+
+func withProperties(detail ItemDetail, props map[string]string) ItemDetail {
+	if len(props) == 0 {
+		return detail
+	}
+	detail.Properties = mergeProperties(detail.Properties, props)
+	return detail
 }
 
 func (s *staticService) nextAssetID(kind Kind) string {
@@ -677,6 +690,13 @@ func cloneItemDetail(asset catalogAsset) ItemDetail {
 		entries := make([]MetadataEntry, len(detail.Metadata))
 		copy(entries, detail.Metadata)
 		detail.Metadata = entries
+	}
+	if detail.Properties != nil {
+		props := make(map[string]string, len(detail.Properties))
+		for key, value := range detail.Properties {
+			props[key] = value
+		}
+		detail.Properties = props
 	}
 	if len(detail.Usage) > 0 {
 		usage := make([]UsageMetric, len(detail.Usage))
@@ -734,6 +754,7 @@ func buildAssetFromInput(existing catalogAsset, input AssetInput, updatedAt time
 	detail.PreviewAlt = item.PreviewAlt
 	detail.Metadata = buildMetadataEntries(item.Kind, input)
 	detail.UpdatedAt = updatedAt
+	detail.Properties = mergeProperties(detail.Properties, propertiesFromInput(input))
 
 	return catalogAsset{item: item, detail: detail}
 }
@@ -897,6 +918,68 @@ func buildMetadataEntries(kind Kind, input AssetInput) []MetadataEntry {
 	return entries
 }
 
+func propertiesFromInput(input AssetInput) map[string]string {
+	values := map[string]string{
+		"id":           input.ID,
+		"kind":         string(input.Kind),
+		"version":      input.Version,
+		"name":         input.Name,
+		"identifier":   input.Identifier,
+		"description":  input.Description,
+		"status":       string(input.Status),
+		"category":     input.Category,
+		"templateID":   input.TemplateID,
+		"svgPath":      input.SVGPath,
+		"previewURL":   input.PreviewURL,
+		"previewAlt":   input.PreviewAlt,
+		"fontFamily":   input.FontFamily,
+		"fontWeights":  strings.Join(input.FontWeights, ", "),
+		"license":      input.License,
+		"materialSKU":  input.MaterialSKU,
+		"color":        input.Color,
+		"inventory":    strconv.Itoa(input.Inventory),
+		"productSKU":   input.ProductSKU,
+		"price":        strconv.FormatInt(input.PriceMinor, 10),
+		"currency":     input.Currency,
+		"leadTime":     strconv.Itoa(input.LeadTimeDays),
+		"photoURLs":    strings.Join(input.PhotoURLs, "\n"),
+		"primaryColor": input.PrimaryColor,
+		"ownerName":    input.OwnerName,
+		"ownerEmail":   input.OwnerEmail,
+		"tags":         strings.Join(input.Tags, ", "),
+	}
+	for key, value := range values {
+		values[key] = cleanPropertyValue(key, value)
+	}
+	return values
+}
+
+func mergeProperties(existing, updates map[string]string) map[string]string {
+	if len(existing) == 0 && len(updates) == 0 {
+		return nil
+	}
+	merged := make(map[string]string, len(existing)+len(updates))
+	for key, value := range existing {
+		merged[key] = cleanPropertyValue(key, value)
+	}
+	for key, value := range updates {
+		merged[key] = cleanPropertyValue(key, value)
+	}
+	if len(merged) == 0 {
+		return nil
+	}
+	return merged
+}
+
+func cleanPropertyValue(key, value string) string {
+	switch key {
+	case "photoURLs", "description":
+		return strings.TrimRight(value, "\r\n ")
+	default:
+		return strings.TrimSpace(value)
+	}
+}
+
 func formatYen(v int64) string {
 	if v <= 0 {
 		return "¥0"
@@ -949,28 +1032,35 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 				Badge:     "キャンペーン",
 				BadgeTone: "info",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-template-fuji.png",
-				PreviewAlt:  "富士山テンプレート",
-				Description: "年末年始のトップセラー。メインの背景イラストはベクター化されているため、箔や特色にも対応可能です。",
-				Usage: []UsageMetric{
-					{Label: "今週", Value: "912 件", Icon: "🗓"},
-					{Label: "リピート率", Value: "28%", Icon: "🔁"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-template-fuji.png",
+					PreviewAlt:  "富士山テンプレート",
+					Description: "年末年始のトップセラー。メインの背景イラストはベクター化されているため、箔や特色にも対応可能です。",
+					Usage: []UsageMetric{
+						{Label: "今週", Value: "912 件", Icon: "🗓"},
+						{Label: "リピート率", Value: "28%", Icon: "🔁"},
+					},
+					Metadata: []MetadataEntry{
+						{Key: "カテゴリ", Value: "年賀状 > プレミアム", Icon: "🏷"},
+						{Key: "チャネル", Value: "iOS / Web", Icon: "🌐"},
+						{Key: "最終更新", Value: base.Add(-4 * time.Hour).Format("2006-01-02 15:04"), Icon: "⏱"},
+					},
+					Dependencies: []Dependency{
+						{Label: "フォント: Hanko Serif", Kind: "font", Status: "承認済み", Tone: "success"},
+						{Label: "素材: 和紙パール", Kind: "material", Status: "在庫 64%", Tone: "warning"},
+					},
+					AuditTrail: []AuditEntry{
+						{Timestamp: base.Add(-4 * time.Hour), Actor: "Akari Sato", Action: "配色を更新", Channel: "web"},
+						{Timestamp: base.Add(-26 * time.Hour), Actor: "Nobu Kato", Action: "レビュー承認", Channel: "mobile"},
+					},
 				},
-				Metadata: []MetadataEntry{
-					{Key: "カテゴリ", Value: "年賀状 > プレミアム", Icon: "🏷"},
-					{Key: "チャネル", Value: "iOS / Web", Icon: "🌐"},
-					{Key: "最終更新", Value: base.Add(-4 * time.Hour).Format("2006-01-02 15:04"), Icon: "⏱"},
+				map[string]string{
+					"templateID": "TMP-2024-FUJI",
+					"svgPath":    "/designs/templates/2024-fuji.svg",
+					"photoURLs":  "/public/static/placeholders/catalog-template-fuji.png",
 				},
-				Dependencies: []Dependency{
-					{Label: "フォント: Hanko Serif", Kind: "font", Status: "承認済み", Tone: "success"},
-					{Label: "素材: 和紙パール", Kind: "material", Status: "在庫 64%", Tone: "warning"},
-				},
-				AuditTrail: []AuditEntry{
-					{Timestamp: base.Add(-4 * time.Hour), Actor: "Akari Sato", Action: "配色を更新", Channel: "web"},
-					{Timestamp: base.Add(-26 * time.Hour), Actor: "Nobu Kato", Action: "レビュー承認", Channel: "mobile"},
-				},
-			},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1002,24 +1092,31 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					{Label: "想定単価", Value: "¥1,280", Icon: "💰"},
 				},
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-template-stamp.png",
-				Description: "法人用テンプレート。ロゴ差し替えと箔押し指定に対応予定。",
-				Usage: []UsageMetric{
-					{Label: "カスタマイズ", Value: "12 件", Icon: "✏️"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-template-stamp.png",
+					Description: "法人用テンプレート。ロゴ差し替えと箔押し指定に対応予定。",
+					Usage: []UsageMetric{
+						{Label: "カスタマイズ", Value: "12 件", Icon: "✏️"},
+					},
+					Metadata: []MetadataEntry{
+						{Key: "対象", Value: "B2B", Icon: "🏢"},
+						{Key: "最終更新", Value: base.Add(-30 * time.Hour).Format("2006-01-02 15:04"), Icon: "⏱"},
+					},
+					Dependencies: []Dependency{
+						{Label: "フォント: Maru Gothic", Kind: "font", Status: "レビュー待ち", Tone: "info"},
+					},
+					AuditTrail: []AuditEntry{
+						{Timestamp: base.Add(-30 * time.Hour), Actor: "Nobu Kato", Action: "下書きを保存", Channel: "web"},
+					},
+					Tags: []string{"b2b", "minimal"},
 				},
-				Metadata: []MetadataEntry{
-					{Key: "対象", Value: "B2B", Icon: "🏢"},
-					{Key: "最終更新", Value: base.Add(-30 * time.Hour).Format("2006-01-02 15:04"), Icon: "⏱"},
+				map[string]string{
+					"templateID": "TMP-MINIMAL-STAMP",
+					"svgPath":    "/designs/templates/minimal-stamp.svg",
+					"photoURLs":  "/public/static/placeholders/catalog-template-stamp.png",
 				},
-				Dependencies: []Dependency{
-					{Label: "フォント: Maru Gothic", Kind: "font", Status: "レビュー待ち", Tone: "info"},
-				},
-				AuditTrail: []AuditEntry{
-					{Timestamp: base.Add(-30 * time.Hour), Actor: "Nobu Kato", Action: "下書きを保存", Channel: "web"},
-				},
-				Tags: []string{"b2b", "minimal"},
-			},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1052,24 +1149,31 @@ func buildTemplateAssets(now time.Time) []catalogAsset {
 					{Label: "レビュー", Value: "⭐4.6", Icon: "💬"},
 				},
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-template-collage.png",
-				Description: "写真アップロードを前提とした UI 変更を伴うテンプレート。利用ログは計測済み。",
-				Usage: []UsageMetric{
-					{Label: "ベータ", Value: "240 件", Icon: "🧪"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-template-collage.png",
+					Description: "写真アップロードを前提とした UI 変更を伴うテンプレート。利用ログは計測済み。",
+					Usage: []UsageMetric{
+						{Label: "ベータ", Value: "240 件", Icon: "🧪"},
+					},
+					Metadata: []MetadataEntry{
+						{Key: "チャネル", Value: "Mobile", Icon: "📱"},
+						{Key: "承認ステータス", Value: "QA中", Icon: "🧪"},
+					},
+					Dependencies: []Dependency{
+						{Label: "素材: リネンホワイト", Kind: "material", Status: "在庫良好", Tone: "success"},
+						{Label: "フォント: Rounded Sans", Kind: "font", Status: "公開中", Tone: "success"},
+					},
+					AuditTrail: []AuditEntry{
+						{Timestamp: base.Add(-12 * time.Hour), Actor: "QA Bot", Action: "UI自動テスト", Channel: "ci"},
+					},
 				},
-				Metadata: []MetadataEntry{
-					{Key: "チャネル", Value: "Mobile", Icon: "📱"},
-					{Key: "承認ステータス", Value: "QA中", Icon: "🧪"},
+				map[string]string{
+					"templateID": "TMP-COLLAGE-STORY",
+					"svgPath":    "/designs/templates/collage-story.svg",
+					"photoURLs":  "/public/static/placeholders/catalog-template-collage.png",
 				},
-				Dependencies: []Dependency{
-					{Label: "素材: リネンホワイト", Kind: "material", Status: "在庫良好", Tone: "success"},
-					{Label: "フォント: Rounded Sans", Kind: "font", Status: "公開中", Tone: "success"},
-				},
-				AuditTrail: []AuditEntry{
-					{Timestamp: base.Add(-12 * time.Hour), Actor: "QA Bot", Action: "UI自動テスト", Channel: "ci"},
-				},
-			},
+			),
 		),
 	}
 }
@@ -1103,20 +1207,28 @@ func buildFontAssets(now time.Time) []catalogAsset {
 				Format:       "OTF",
 				PrimaryColor: "#F97316",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-font-serif.png",
-				Description: "本文・見出し兼用のブランドフォント。可変版も準備中。",
-				Metadata: []MetadataEntry{
-					{Key: "フォーマット", Value: "OTF / WOFF2", Icon: "📦"},
-					{Key: "ライセンス", Value: "商用 / Web", Icon: "⚖️"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-font-serif.png",
+					Description: "本文・見出し兼用のブランドフォント。可変版も準備中。",
+					Metadata: []MetadataEntry{
+						{Key: "フォーマット", Value: "OTF / WOFF2", Icon: "📦"},
+						{Key: "ライセンス", Value: "商用 / Web", Icon: "⚖️"},
+					},
+					Usage: []UsageMetric{
+						{Label: "テンプレ適用", Value: "58%", Icon: "🧩"},
+					},
+					Dependencies: []Dependency{
+						{Label: "Renderer pipeline", Kind: "service", Status: "v2.3", Tone: "info"},
+					},
 				},
-				Usage: []UsageMetric{
-					{Label: "テンプレ適用", Value: "58%", Icon: "🧩"},
+				map[string]string{
+					"fontFamily":  "Hanko Serif JP",
+					"fontWeights": "400,700",
+					"license":     "商用 / Web",
+					"photoURLs":   "/public/static/placeholders/catalog-font-serif.png",
 				},
-				Dependencies: []Dependency{
-					{Label: "Renderer pipeline", Kind: "service", Status: "v2.3", Tone: "info"},
-				},
-			},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1145,13 +1257,21 @@ func buildFontAssets(now time.Time) []catalogAsset {
 				Format:       "TTF",
 				PrimaryColor: "#A855F7",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-font-brush.png",
-				Description: "濃淡を保持したSVGグリフを同梱。Web Canvas で最適化済み。",
-				Dependencies: []Dependency{
-					{Label: "OpenType Layout", Kind: "feature", Status: "完成", Tone: "success"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-font-brush.png",
+					Description: "濃淡を保持したSVGグリフを同梱。Web Canvas で最適化済み。",
+					Dependencies: []Dependency{
+						{Label: "OpenType Layout", Kind: "feature", Status: "完成", Tone: "success"},
+					},
 				},
-			},
+				map[string]string{
+					"fontFamily":  "Brush Wave",
+					"fontWeights": "300,600",
+					"license":     "商用 / App",
+					"photoURLs":   "/public/static/placeholders/catalog-font-brush.png",
+				},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1178,13 +1298,21 @@ func buildFontAssets(now time.Time) []catalogAsset {
 				Format:       "OTF",
 				PrimaryColor: "#475569",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-font-slab.png",
-				Description: "旧バッチとの互換性を保つためアーカイブ。依存テンプレートの移行完了後に削除予定。",
-				Dependencies: []Dependency{
-					{Label: "テンプレ: TMP-LEGACY-01", Kind: "template", Status: "移行中", Tone: "warning"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-font-slab.png",
+					Description: "旧バッチとの互換性を保つためアーカイブ。依存テンプレートの移行完了後に削除予定。",
+					Dependencies: []Dependency{
+						{Label: "テンプレ: TMP-LEGACY-01", Kind: "template", Status: "移行中", Tone: "warning"},
+					},
 				},
-			},
+				map[string]string{
+					"fontFamily":  "Classic Slab",
+					"fontWeights": "400",
+					"license":     "社内限定",
+					"photoURLs":   "/public/static/placeholders/catalog-font-slab.png",
+				},
+			),
 		),
 	}
 }
@@ -1218,17 +1346,25 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 				Format:       "Sheet",
 				PrimaryColor: "#60A5FA",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-material-washi.png",
-				Description: "富士和紙工房からの限定ロット。吸湿による伸縮があるため、保管環境注意。",
-				Metadata: []MetadataEntry{
-					{Key: "坪量", Value: "216 g/m²", Icon: "⚖️"},
-					{Key: "在庫", Value: "4,600枚", Icon: "📦"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-material-washi.png",
+					Description: "富士和紙工房からの限定ロット。吸湿による伸縮があるため、保管環境注意。",
+					Metadata: []MetadataEntry{
+						{Key: "坪量", Value: "216 g/m²", Icon: "⚖️"},
+						{Key: "在庫", Value: "4,600枚", Icon: "📦"},
+					},
+					Dependencies: []Dependency{
+						{Label: "仕入れ: FW-PEARL-24-03", Kind: "PO", Status: "入庫済み", Tone: "success"},
+					},
 				},
-				Dependencies: []Dependency{
-					{Label: "仕入れ: FW-PEARL-24-03", Kind: "PO", Status: "入庫済み", Tone: "success"},
+				map[string]string{
+					"materialSKU": "MAT-WASHI-PEARL",
+					"color":       "パールホワイト",
+					"inventory":   "4600",
+					"photoURLs":   "/public/static/placeholders/catalog-material-washi.png",
 				},
-			},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1257,13 +1393,21 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 				Format:       "Roll",
 				PrimaryColor: "#B45309",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-material-kraft.png",
-				Description: "オンデマンド印刷での乾燥テスト中。表面コーティングを追加予定。",
-				Dependencies: []Dependency{
-					{Label: "印刷ラインB", Kind: "line", Status: "調整中", Tone: "info"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-material-kraft.png",
+					Description: "オンデマンド印刷での乾燥テスト中。表面コーティングを追加予定。",
+					Dependencies: []Dependency{
+						{Label: "印刷ラインB", Kind: "line", Status: "調整中", Tone: "info"},
+					},
 				},
-			},
+				map[string]string{
+					"materialSKU": "MAT-RECYCLE-KRAFT",
+					"color":       "ブラウン",
+					"inventory":   "1200",
+					"photoURLs":   "/public/static/placeholders/catalog-material-kraft.png",
+				},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1292,16 +1436,24 @@ func buildMaterialAssets(now time.Time) []catalogAsset {
 				Format:       "Roll",
 				PrimaryColor: "#FACC15",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-material-metallic.png",
-				Description: "華やかなゴールド加工用フィルム。粘着層が厚いため低温保管が必須。",
-				Metadata: []MetadataEntry{
-					{Key: "推奨温度", Value: "18℃", Icon: "🌡"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-material-metallic.png",
+					Description: "華やかなゴールド加工用フィルム。粘着層が厚いため低温保管が必須。",
+					Metadata: []MetadataEntry{
+						{Key: "推奨温度", Value: "18℃", Icon: "🌡"},
+					},
+					Dependencies: []Dependency{
+						{Label: "サプライヤー: TK Metals", Kind: "vendor", Status: "契約更新", Tone: "warning"},
+					},
 				},
-				Dependencies: []Dependency{
-					{Label: "サプライヤー: TK Metals", Kind: "vendor", Status: "契約更新", Tone: "warning"},
+				map[string]string{
+					"materialSKU": "MAT-METALLIC-GOLD",
+					"color":       "ゴールド",
+					"inventory":   "3200",
+					"photoURLs":   "/public/static/placeholders/catalog-material-metallic.png",
 				},
-			},
+			),
 		),
 	}
 }
@@ -1335,21 +1487,30 @@ func buildProductAssets(now time.Time) []catalogAsset {
 				Format:       "Bundle",
 				PrimaryColor: "#EF4444",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-product-kit.png",
-				Description: "テンプレート3種 + プレミアム素材 + 投函代行クレジットを含むセット。オプションにフォント追加を予定。",
-				Usage: []UsageMetric{
-					{Label: "平均単価", Value: "¥5,420", Icon: "💴"},
-					{Label: "粗利", Value: "48%", Icon: "📊"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-product-kit.png",
+					Description: "テンプレート3種 + プレミアム素材 + 投函代行クレジットを含むセット。オプションにフォント追加を予定。",
+					Usage: []UsageMetric{
+						{Label: "平均単価", Value: "¥5,420", Icon: "💴"},
+						{Label: "粗利", Value: "48%", Icon: "📊"},
+					},
+					Dependencies: []Dependency{
+						{Label: "素材: 和紙パール", Kind: "material", Status: "供給中", Tone: "success"},
+						{Label: "テンプレ: TMP-2024-FUJI", Kind: "template", Status: "公開中", Tone: "success"},
+					},
+					AuditTrail: []AuditEntry{
+						{Timestamp: now.Add(-10 * time.Hour), Actor: "Kana Fujii", Action: "価格を更新 (¥4,980→¥5,200)", Channel: "web"},
+					},
 				},
-				Dependencies: []Dependency{
-					{Label: "素材: 和紙パール", Kind: "material", Status: "供給中", Tone: "success"},
-					{Label: "テンプレ: TMP-2024-FUJI", Kind: "template", Status: "公開中", Tone: "success"},
+				map[string]string{
+					"productSKU": "PRD-NENGA-PREMIUM",
+					"price":      "5200",
+					"currency":   "JPY",
+					"leadTime":   "5",
+					"photoURLs":  "/public/static/placeholders/catalog-product-kit.png",
 				},
-				AuditTrail: []AuditEntry{
-					{Timestamp: now.Add(-10 * time.Hour), Actor: "Kana Fujii", Action: "価格を更新 (¥4,980→¥5,200)", Channel: "web"},
-				},
-			},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1378,14 +1539,23 @@ func buildProductAssets(now time.Time) []catalogAsset {
 				Format:       "Bundle",
 				PrimaryColor: "#F59E0B",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-product-stamp.png",
-				Description: "ギフト需要向け。刻印 API の検証が完了次第ローンチ予定。",
-				Dependencies: []Dependency{
-					{Label: "刻印API", Kind: "service", Status: "QA中", Tone: "info"},
-					{Label: "素材: 真鍮ロッド", Kind: "material", Status: "在庫要補充", Tone: "warning"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-product-stamp.png",
+					Description: "ギフト需要向け。刻印 API の検証が完了次第ローンチ予定。",
+					Dependencies: []Dependency{
+						{Label: "刻印API", Kind: "service", Status: "QA中", Tone: "info"},
+						{Label: "素材: 真鍮ロッド", Kind: "material", Status: "在庫要補充", Tone: "warning"},
+					},
 				},
-			},
+				map[string]string{
+					"productSKU": "PRD-ENGRAVED-STAMP",
+					"price":      "7800",
+					"currency":   "JPY",
+					"leadTime":   "7",
+					"photoURLs":  "/public/static/placeholders/catalog-product-stamp.png",
+				},
+			),
 		),
 		makeCatalogAsset(
 			Item{
@@ -1412,13 +1582,22 @@ func buildProductAssets(now time.Time) []catalogAsset {
 				Format:       "Bundle",
 				PrimaryColor: "#7C3AED",
 			},
-			ItemDetail{
-				PreviewURL:  "/public/static/placeholders/catalog-product-gift.png",
-				Description: "撮影中のためダミー画像。SKU 構成と在庫引当ルールを検討中。",
-				Dependencies: []Dependency{
-					{Label: "木工パートナー", Kind: "vendor", Status: "契約交渉", Tone: "warning"},
+			withProperties(
+				ItemDetail{
+					PreviewURL:  "/public/static/placeholders/catalog-product-gift.png",
+					Description: "撮影中のためダミー画像。SKU 構成と在庫引当ルールを検討中。",
+					Dependencies: []Dependency{
+						{Label: "木工パートナー", Kind: "vendor", Status: "契約交渉", Tone: "warning"},
+					},
 				},
-			},
+				map[string]string{
+					"productSKU": "PRD-PREMIUM-GIFT",
+					"price":      "9800",
+					"currency":   "JPY",
+					"leadTime":   "6",
+					"photoURLs":  "/public/static/placeholders/catalog-product-gift.png",
+				},
+			),
 		),
 	}
 }

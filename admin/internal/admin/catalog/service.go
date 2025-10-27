@@ -260,6 +260,7 @@ type ItemDetail struct {
 	Owner        OwnerInfo
 	Usage        []UsageMetric
 	Metadata     []MetadataEntry
+	Properties   map[string]string
 	Dependencies []Dependency
 	AuditTrail   []AuditEntry
 	Tags         []string
