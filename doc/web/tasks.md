@@ -49,7 +49,7 @@
 ## 6. Account & Library
 - [x] [Implement account profile page (`/account`) with profile form fragment and update flow.](doc/web/tasks/035-implement-account-profile-page-account-with-profile-form-fragment-and-update-flow.md)
 - [x] [Build addresses management (`/account/addresses`) with table fragment and edit modal.](doc/web/tasks/036-build-addresses-management-account-addresses-with-table-fragment-and-edit-modal.md)
-- [ ] [Implement orders list (`/account/orders`) with filterable table fragment and pagination.](doc/web/tasks/037-implement-orders-list-account-orders-with-filterable-table-fragment-and-pagination.md)
+- [x] [Implement orders list (`/account/orders`) with filterable table fragment and pagination.](doc/web/tasks/037-implement-orders-list-account-orders-with-filterable-table-fragment-and-pagination.md)
 - [ ] [Build order detail (`/account/orders/{orderId}`) with tabbed fragments for summary, payments, production, tracking, invoice.](doc/web/tasks/038-build-order-detail-account-orders-orderid-with-tabbed-fragments-for-summary-payments-produ.md)
 - [ ] [Implement library (`/account/library`) with design list fragment, filters, and actions (duplicate/export/share).](doc/web/tasks/039-implement-library-account-library-with-design-list-fragment-filters-and-actions-duplicate-.md)
 - [ ] [Build security/linked accounts page (`/account/security`) covering auth providers and 2FA prompts.](doc/web/tasks/040-build-security-linked-accounts-page-account-security-covering-auth-providers-and-2fa-promp.md)

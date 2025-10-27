@@ -908,6 +908,8 @@ func main() {
 	r.Get("/account", AccountHandler)
 	r.MethodFunc(http.MethodGet, "/account/profile/form", AccountProfileFormHandler)
 	r.MethodFunc(http.MethodPost, "/account/profile/form", AccountProfileFormHandler)
+	r.Get("/account/orders", AccountOrdersHandler)
+	r.Get("/account/orders/table", AccountOrdersTableHandler)
 	r.Get("/account/addresses", AccountAddressesHandler)
 	r.Get("/account/addresses/table", AccountAddressTableHandler)
 	r.Get("/account/addresses/modal", AccountAddressModalHandler)

@@ -1,0 +1,85 @@
+{{ define "frag_account_orders_table" }}
+{{ $view := . }}
+<div id="account-orders-table-shell"
+     class="space-y-4"
+     data-current-page="{{ $view.Page }}"
+     data-total-count="{{ $view.Total }}"
+     data-showing="{{ $view.Showing }}">
+  {{ if $view.Rows }}
+    <div class="overflow-hidden rounded-2xl border border-gray-100">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $view.Lang "account.orders.table.number" }}</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $view.Lang "account.orders.table.placed" }}</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $view.Lang "account.orders.table.total" }}</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $view.Lang "account.orders.table.status" }}</th>
+            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $view.Lang "account.orders.table.actions" }}</th>
+          </tr>
+        </thead>
+        <tbody id="account-orders-table-rows" class="divide-y divide-gray-100 bg-white">
+          {{ range $order := $view.Rows }}
+            {{ $tone := $order.StatusTone }}
+            {{ $badge := "bg-slate-100 text-slate-700" }}
+            {{ if eq $tone "success" }}{{ $badge = "bg-emerald-100 text-emerald-700" }}{{ else if eq $tone "danger" }}{{ $badge = "bg-rose-100 text-rose-700" }}{{ else if eq $tone "info" }}{{ $badge = "bg-sky-100 text-sky-700" }}{{ else if eq $tone "indigo" }}{{ $badge = "bg-indigo-100 text-indigo-700" }}{{ end }}
+            <tr class="align-top text-sm text-gray-900 hover:bg-gray-50 transition">
+              <td class="px-4 py-4">
+                <div class="space-y-1">
+                  <a href="{{ $order.DetailURL }}" class="text-sm font-semibold text-indigo-700 hover:text-indigo-600 hover:underline">{{ $order.Number }}</a>
+                  <p class="text-xs text-gray-500">{{ $order.Summary }}</p>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-700">
+                <div class="space-y-1">
+                  <p>{{ fmtDate $order.PlacedAt $view.Lang }}</p>
+                  <p class="text-xs text-gray-400">{{ $order.PlacedAt.Format "2006-01-02 15:04" }}</p>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-sm font-semibold text-gray-900">
+                {{ fmtMoney $order.Total $order.Currency $view.Lang }}
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-700">
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $badge }}">{{ $order.StatusLabel }}</span>
+              </td>
+              <td class="px-4 py-4 text-right">
+                <a href="{{ $order.DetailURL }}" class="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-indigo-300 hover:text-indigo-600">
+                  {{ tlang $view.Lang "account.orders.table.view" }}
+                  {{ template "icon" (dict "Name" "arrow-right" "Class" "h-4 w-4") }}
+                </a>
+              </td>
+            </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+      <span>{{ tlang $view.Lang "account.orders.pager.showing" }} {{ $view.Showing }} {{ tlang $view.Lang "account.orders.pager.of" }} {{ $view.Total }} {{ tlang $view.Lang "account.orders.pager.orders" }}</span>
+      {{ if $view.HasMore }}
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50"
+                data-orders-load-more="{{ $view.NextPage }}">
+          {{ tlang $view.Lang "account.orders.pager.load_more" }}
+          {{ template "icon" (dict "Name" "arrow-down" "Class" "h-4 w-4") }}
+        </button>
+      {{ else }}
+        <span class="text-xs text-gray-400">{{ tlang $view.Lang "account.orders.pager.no_more" }}</span>
+      {{ end }}
+    </div>
+  {{ else }}
+    <div class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
+      <div class="rounded-full bg-indigo-100 p-3 text-indigo-600">
+        {{ template "icon" (dict "Name" "shopping-bag" "Class" "h-6 w-6") }}
+      </div>
+      <div class="space-y-1">
+        <p class="text-lg font-semibold text-gray-900">{{ $view.EmptyTitle }}</p>
+        <p class="text-sm text-gray-600">{{ $view.EmptyBody }}</p>
+      </div>
+      <a href="{{ $view.EmptyActionHref }}"
+         class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500">
+        {{ $view.EmptyActionLabel }}
+      </a>
+    </div>
+  {{ end }}
+  <p class="text-xs text-gray-400">{{ tlang $view.Lang "account.orders.updated" }} · {{ fmtDate $view.LastUpdated $view.Lang }}</p>
+</div>
+{{ end }}
