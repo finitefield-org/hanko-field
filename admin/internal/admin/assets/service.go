@@ -100,10 +100,7 @@ func (s *staticService) RequestSignedUpload(_ context.Context, _ string, input S
 
 func inferKind(mimeType, fileName string) string {
 	if mimeType != "" {
-		if parts, _, _ := strings.Cut(mimeType, "/"); parts == "image" {
-			return "png"
-		}
-		switch mimeType {
+		switch strings.ToLower(mimeType) {
 		case "image/svg+xml":
 			return "svg"
 		case "image/png":
@@ -112,6 +109,10 @@ func inferKind(mimeType, fileName string) string {
 			return "jpg"
 		case "image/webp":
 			return "webp"
+		default:
+			if main, sub, found := strings.Cut(strings.ToLower(mimeType), "/"); found && main == "image" && sub != "" {
+				return sub
+			}
 		}
 	}
 	if ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileName), ".")); ext != "" {
