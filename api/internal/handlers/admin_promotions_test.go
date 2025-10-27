@@ -48,6 +48,9 @@ func TestAdminPromotionHandlers_CreatePromotion_CallsService(t *testing.T) {
 	if received.ActorID != "admin" {
 		t.Fatalf("expected actor id to be propagated")
 	}
+	if received.UsageLimitSet {
+		t.Fatalf("expected usage limit to remain unset when field omitted")
+	}
 }
 
 func TestAdminPromotionHandlers_CreatePromotion_InvalidPayload(t *testing.T) {
@@ -119,6 +122,40 @@ func TestAdminPromotionHandlers_UpdatePromotion_AllowOverride(t *testing.T) {
 	}
 	if !received.AllowImmutableUpdates {
 		t.Fatalf("expected allow override flag to propagate")
+	}
+	if received.UsageLimitSet {
+		t.Fatalf("expected usage limit unset when field omitted")
+	}
+}
+
+func TestAdminPromotionHandlers_UpdatePromotion_UsageLimitProvided(t *testing.T) {
+	var received services.UpsertPromotionCommand
+	service := &stubPromotionAdminService{
+		updateFn: func(ctx context.Context, cmd services.UpsertPromotionCommand) (services.Promotion, error) {
+			received = cmd
+			return cmd.Promotion, nil
+		},
+	}
+	handler := NewAdminPromotionHandlers(nil, service)
+
+	body := `{"code":"CLEAR","kind":"percent","value":5,"startsAt":"2024-01-01T00:00:00Z","endsAt":"2024-02-01T00:00:00Z","limitPerUser":1,"usageLimit":0}`
+	req := httptest.NewRequest(http.MethodPut, "/promotions/promo2", strings.NewReader(body))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin"}))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("promotionID", "promo2")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rec := httptest.NewRecorder()
+
+	handler.updatePromotion(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if !received.UsageLimitSet {
+		t.Fatalf("expected usage limit flag to be set when field provided")
+	}
+	if received.Promotion.UsageLimit != 0 {
+		t.Fatalf("expected usage limit to propagate value, got %d", received.Promotion.UsageLimit)
 	}
 }
 

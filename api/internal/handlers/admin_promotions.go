@@ -108,15 +108,16 @@ func (h *AdminPromotionHandlers) createPromotion(w http.ResponseWriter, r *http.
 		return
 	}
 
-	promotion, allowOverride, err := decodeAdminPromotionRequest(r, "")
+	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, "")
 	if err != nil {
 		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
 		return
 	}
 
 	created, err := h.promotions.CreatePromotion(r.Context(), services.UpsertPromotionCommand{
-		Promotion: promotion,
-		ActorID:   identity.UID,
+		Promotion:     promotion,
+		ActorID:       identity.UID,
+		UsageLimitSet: usageLimitSet,
 	})
 	if err != nil {
 		writeAdminPromotionError(r.Context(), w, err, "create")
@@ -146,7 +147,7 @@ func (h *AdminPromotionHandlers) updatePromotion(w http.ResponseWriter, r *http.
 		return
 	}
 
-	promotion, allowOverride, err := decodeAdminPromotionRequest(r, promotionID)
+	promotion, allowOverride, usageLimitSet, err := decodeAdminPromotionRequest(r, promotionID)
 	if err != nil {
 		httpx.WriteError(r.Context(), w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
 		return
@@ -156,6 +157,7 @@ func (h *AdminPromotionHandlers) updatePromotion(w http.ResponseWriter, r *http.
 		Promotion:             promotion,
 		ActorID:               uid,
 		AllowImmutableUpdates: allowOverride,
+		UsageLimitSet:         usageLimitSet,
 	})
 	if err != nil {
 		writeAdminPromotionError(r.Context(), w, err, "update")
@@ -192,9 +194,9 @@ func (h *AdminPromotionHandlers) deletePromotion(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.Promotion, bool, error) {
+func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.Promotion, bool, bool, error) {
 	if r.Body == nil {
-		return services.Promotion{}, false, errors.New("request body is required")
+		return services.Promotion{}, false, false, errors.New("request body is required")
 	}
 	defer r.Body.Close()
 
@@ -204,16 +206,16 @@ func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.P
 
 	var payload adminPromotionRequest
 	if err := decoder.Decode(&payload); err != nil {
-		return services.Promotion{}, false, fmt.Errorf("invalid json: %w", err)
+		return services.Promotion{}, false, false, fmt.Errorf("invalid json: %w", err)
 	}
 
 	startsAt, err := parseTimestamp(payload.StartsAt, "startsAt")
 	if err != nil {
-		return services.Promotion{}, false, err
+		return services.Promotion{}, false, false, err
 	}
 	endsAt, err := parseTimestamp(payload.EndsAt, "endsAt")
 	if err != nil {
-		return services.Promotion{}, false, err
+		return services.Promotion{}, false, false, err
 	}
 
 	promotion := services.Promotion{
@@ -262,7 +264,8 @@ func decodeAdminPromotionRequest(r *http.Request, overrideID string) (services.P
 	if overrideID != "" {
 		promotion.ID = overrideID
 	}
-	return promotion, payload.AllowImmutableUpdates, nil
+	usageLimitSet := payload.UsageLimit != nil
+	return promotion, payload.AllowImmutableUpdates, usageLimitSet, nil
 }
 
 func parseTimestamp(value string, field string) (time.Time, error) {

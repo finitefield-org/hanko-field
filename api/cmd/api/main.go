@@ -224,6 +224,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise content repository", zap.Error(err))
 	}
+	promotionRepo, err := firestoreRepo.NewPromotionRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise promotion repository", zap.Error(err))
+	}
 
 	if strings.TrimSpace(cfg.PSP.StripeAPIKey) == "" {
 		logger.Fatal("stripe api key is required for payment method management")
@@ -373,6 +377,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise content service", zap.Error(err))
 	}
+	promotionService, err := services.NewPromotionService(services.PromotionServiceDeps{
+		Promotions: promotionRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise promotion service", zap.Error(err))
+	}
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
@@ -420,11 +431,12 @@ func main() {
 	opts = append(opts, handlers.WithAdditionalRoutes(checkoutHandlers.Routes))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
+		handlers.WithPublicPromotionService(promotionService),
 	)
 	opts = append(opts, handlers.WithPublicRoutes(publicHandlers.Routes))
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
 	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
-	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, nil)
+	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, promotionService)
 	opts = append(opts, handlers.WithAdminRoutes(
 		handlers.CombineRouteRegistrars(
 			adminCatalogHandlers.Routes,

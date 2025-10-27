@@ -219,7 +219,7 @@ func (s *promotionService) UpdatePromotion(ctx context.Context, cmd UpsertPromot
 	if updated.UsageCount == 0 {
 		updated.UsageCount = existing.UsageCount
 	}
-	if updated.UsageLimit == 0 {
+	if !cmd.UsageLimitSet {
 		updated.UsageLimit = existing.UsageLimit
 	}
 	if updated.LimitPerUser == 0 {

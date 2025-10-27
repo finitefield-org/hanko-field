@@ -695,6 +695,7 @@ type UpsertPromotionCommand struct {
 	Promotion             Promotion
 	ActorID               string
 	AllowImmutableUpdates bool
+	UsageLimitSet         bool
 }
 
 type PromotionUsageFilter struct {

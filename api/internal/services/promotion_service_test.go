@@ -289,6 +289,62 @@ func TestPromotionService_UpdatePromotion_AllowsOverride(t *testing.T) {
 	}
 }
 
+func TestPromotionService_UpdatePromotion_CanClearUsageLimit(t *testing.T) {
+	now := time.Date(2024, time.May, 2, 8, 0, 0, 0, time.UTC)
+	var updated domain.Promotion
+	repo := &stubPromotionRepository{
+		getFn: func(context.Context, string) (domain.Promotion, error) {
+			return domain.Promotion{
+				ID:           "promo1",
+				Code:         "LOCKED",
+				Kind:         "percent",
+				Value:        10,
+				LimitPerUser: 1,
+				StartsAt:     now.Add(-time.Hour),
+				EndsAt:       now.Add(time.Hour),
+				UsageLimit:   25,
+			}, nil
+		},
+		updateFn: func(_ context.Context, promo domain.Promotion) error {
+			updated = promo
+			return nil
+		},
+	}
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: repo,
+		Clock: func() time.Time {
+			return now
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	result, err := svc.UpdatePromotion(context.Background(), UpsertPromotionCommand{
+		ActorID:       "staff",
+		UsageLimitSet: true,
+		Promotion: Promotion{
+			ID:           "promo1",
+			Code:         "LOCKED",
+			Kind:         "percent",
+			Value:        10,
+			LimitPerUser: 1,
+			StartsAt:     now.Add(-time.Hour),
+			EndsAt:       now.Add(time.Hour),
+			UsageLimit:   0,
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpdatePromotion returned error: %v", err)
+	}
+	if result.UsageLimit != 0 {
+		t.Fatalf("expected usage limit to clear, got %d", result.UsageLimit)
+	}
+	if updated.UsageLimit != 0 {
+		t.Fatalf("expected repository update to receive cleared usage limit")
+	}
+}
+
 func TestPromotionService_ListPromotions_NormalizesFilters(t *testing.T) {
 	var captured repositories.PromotionListFilter
 	repo := &stubPromotionRepository{
