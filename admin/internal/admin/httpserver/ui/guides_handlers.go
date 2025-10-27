@@ -348,15 +348,15 @@ func (h *Handlers) renderGuidesFragment(w http.ResponseWriter, r *http.Request, 
 }
 
 func splitTags(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{}
+	}
 	values := strings.Split(raw, ",")
 	results := make([]string, 0, len(values))
 	for _, value := range values {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {
 			results = append(results, trimmed)
 		}
-	}
-	if len(results) == 0 {
-		return nil
 	}
 	return results
 }

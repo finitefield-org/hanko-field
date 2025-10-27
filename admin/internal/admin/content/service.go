@@ -761,20 +761,16 @@ func (s *StaticService) PreviewDraft(_ context.Context, _ string, guideID string
 	if val := strings.TrimSpace(draft.Title); val != "" {
 		active.Title = val
 	}
-	if val := strings.TrimSpace(draft.Summary); val != "" {
-		active.Summary = val
-	}
-	if val := strings.TrimSpace(draft.Persona); val != "" {
-		active.Persona = val
-	}
-	if val := strings.TrimSpace(draft.Category); val != "" {
-		active.Category = val
-	}
-	if val := strings.TrimSpace(draft.HeroImageURL); val != "" {
-		active.HeroImageURL = val
-	}
-	if len(draft.Tags) > 0 {
-		active.Tags = append([]string(nil), draft.Tags...)
+	active.Summary = strings.TrimSpace(draft.Summary)
+	active.Persona = strings.TrimSpace(draft.Persona)
+	active.Category = strings.TrimSpace(draft.Category)
+	active.HeroImageURL = strings.TrimSpace(draft.HeroImageURL)
+	if draft.Tags != nil {
+		if len(draft.Tags) == 0 {
+			active.Tags = nil
+		} else {
+			active.Tags = append([]string(nil), draft.Tags...)
+		}
 	}
 
 	locales := s.localesForSlug(active.Slug, active.Locale)
