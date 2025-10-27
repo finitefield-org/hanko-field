@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"slices"
 	"sort"
 	"strings"
@@ -223,6 +224,89 @@ func FragmentPayload(table TableData, summary SummaryData, bulk BulkData, drawer
 	}
 }
 
+// PreviewPageData captures the data required to render the preview experience.
+type PreviewPageData struct {
+	PageTitle   string
+	Breadcrumbs []partials.Breadcrumb
+	Header      PreviewHeaderData
+	Viewer      PreviewContentData
+	Sidebar     PreviewSidebarData
+	Feedback    PreviewFeedbackData
+}
+
+// PreviewHeaderData powers the sticky preview header.
+type PreviewHeaderData struct {
+	Title           string
+	Subtitle        string
+	StatusLabel     string
+	StatusTone      string
+	LocaleOptions   []PreviewLocaleOption
+	UpdatedRelative string
+	UpdatedAt       string
+	ShareURL        string
+	ExternalURL     string
+}
+
+// PreviewLocaleOption renders the locale segmented control.
+type PreviewLocaleOption struct {
+	Value  string
+	Label  string
+	URL    string
+	Active bool
+}
+
+// PreviewContentData mirrors the device frame.
+type PreviewContentData struct {
+	HeroImageURL string
+	Body         templ.Component
+	DeviceModes  []PreviewDeviceMode
+	Language     string
+}
+
+// PreviewDeviceMode represents an available viewport.
+type PreviewDeviceMode struct {
+	ID     string
+	Label  string
+	Active bool
+}
+
+// PreviewSidebarData surfaces metadata and notes.
+type PreviewSidebarData struct {
+	Summary         string
+	PersonaLabel    string
+	CategoryLabel   string
+	LocaleLabel     string
+	Author          string
+	ReadingTime     string
+	WordCount       int
+	PublishedLabel  string
+	ScheduleLabel   string
+	UpdatedLabel    string
+	UpdatedRelative string
+	UpdatedAt       string
+	UpdatedDisplay  string
+	Tags            []string
+	Notes           []string
+	Upcoming        []PreviewTimelineItem
+}
+
+// PreviewTimelineItem renders upcoming change entries.
+type PreviewTimelineItem struct {
+	Title       string
+	Description string
+	OccursLabel string
+	Relative    string
+	Tone        string
+	Icon        string
+}
+
+// PreviewFeedbackData configures the action bar.
+type PreviewFeedbackData struct {
+	ApproveURL         string
+	RequestChangesURL  string
+	CommentPlaceholder string
+}
+
 // BuildPageData assembles page payload.
 func BuildPageData(basePath string, state QueryState, feed admincontent.GuideFeed, selected []string, csrfToken string) PageData {
 	table := TablePayload(basePath, state, feed, selected)
@@ -244,6 +328,86 @@ func BuildPageData(basePath string, state QueryState, feed admincontent.GuideFee
 		TableEndpoint: joinBase(basePath, "/content/guides/table"),
 		CSRFToken:     csrfToken,
 		ResetURL:      joinBase(basePath, "/content/guides"),
+	}
+}
+
+// BuildPreviewPageData assembles the guide preview payload.
+func BuildPreviewPageData(basePath string, preview admincontent.GuidePreview) PreviewPageData {
+	guide := preview.Guide
+
+	breadcrumbs := []partials.Breadcrumb{
+		{Label: "コンテンツ"},
+		{Label: "ガイド", Href: joinBase(basePath, "/content/guides")},
+		{Label: guide.Title},
+	}
+
+	header := PreviewHeaderData{
+		Title:           guide.Title,
+		Subtitle:        guide.Summary,
+		StatusLabel:     guide.StatusLabel,
+		StatusTone:      guide.StatusTone,
+		LocaleOptions:   buildPreviewLocaleOptions(basePath, guide.ID, preview.Locales),
+		UpdatedRelative: helpers.Relative(guide.UpdatedAt),
+		UpdatedAt:       helpers.Date(guide.UpdatedAt, "2006-01-02 15:04"),
+		ShareURL:        preview.ShareURL,
+		ExternalURL:     preview.ExternalURL,
+	}
+
+	bodyHTML := strings.TrimSpace(preview.Content.BodyHTML)
+	if bodyHTML == "" {
+		bodyHTML = "<p>プレビューを生成できませんでした。</p>"
+	}
+
+	viewer := PreviewContentData{
+		HeroImageURL: coalesce(preview.Content.HeroImageURL, guide.HeroImageURL),
+		Body:         htmlComponent(bodyHTML),
+		DeviceModes:  defaultPreviewDeviceModes(),
+		Language:     localeLabel(guide.Locale),
+	}
+
+	notes := cloneStrings(preview.Notes)
+	if len(notes) == 0 && strings.TrimSpace(guide.LastChangeNote) != "" {
+		notes = []string{guide.LastChangeNote}
+	}
+
+	sidebar := PreviewSidebarData{
+		Summary:         guide.Summary,
+		PersonaLabel:    personaLabel(guide.Persona),
+		CategoryLabel:   categoryLabel(guide.Category),
+		LocaleLabel:     localeLabel(guide.Locale),
+		Author:          guide.Author,
+		ReadingTime:     firstNonEmpty(guide.ReadingTime, estimateReadingFallback(guide.WordCount)),
+		WordCount:       guide.WordCount,
+		PublishedLabel:  timestampOrPlaceholder(guide.PublishedAt),
+		ScheduleLabel:   timestampOrPlaceholder(guide.ScheduledAt),
+		UpdatedLabel:    "最終更新",
+		UpdatedRelative: helpers.Relative(guide.UpdatedAt),
+		UpdatedAt:       helpers.Date(guide.UpdatedAt, "2006-01-02 15:04"),
+		Tags:            cloneStrings(guide.Tags),
+		Notes:           notes,
+		Upcoming:        buildPreviewTimeline(guide.Upcoming),
+	}
+
+	if sidebar.UpdatedAt != "" {
+		sidebar.UpdatedDisplay = sidebar.UpdatedAt
+		if sidebar.UpdatedRelative != "" {
+			sidebar.UpdatedDisplay = fmt.Sprintf("%s（%s）", sidebar.UpdatedAt, sidebar.UpdatedRelative)
+		}
+	}
+
+	feedback := PreviewFeedbackData{
+		ApproveURL:         preview.Feedback.ApproveURL,
+		RequestChangesURL:  preview.Feedback.RequestChangesURL,
+		CommentPlaceholder: firstNonEmpty(preview.Feedback.CommentPlaceholder, "フィードバックを入力…"),
+	}
+
+	return PreviewPageData{
+		PageTitle:   fmt.Sprintf("%s プレビュー", guide.Title),
+		Breadcrumbs: breadcrumbs,
+		Header:      header,
+		Viewer:      viewer,
+		Sidebar:     sidebar,
+		Feedback:    feedback,
 	}
 }
 
@@ -454,7 +618,7 @@ func toTableRow(basePath string, guide admincontent.Guide) TableRow {
 		UnpublishURL:    joinBase(basePath, fmt.Sprintf("/content/guides/%s:unpublish", guide.ID)),
 		ScheduleURL:     joinBase(basePath, fmt.Sprintf("/content/guides/%s:schedule", guide.ID)),
 		UnscheduleURL:   joinBase(basePath, fmt.Sprintf("/content/guides/%s:unschedule", guide.ID)),
-		PreviewURL:      joinBase(basePath, fmt.Sprintf("/content/guides/%s/preview", guide.ID)),
+		PreviewURL:      buildPreviewLocaleURL(basePath, guide.ID, guide.Locale),
 		EditURL:         joinBase(basePath, fmt.Sprintf("/content/guides/%s/edit", guide.ID)),
 		ViewURL:         joinBase("/", fmt.Sprintf("/guides/%s", guide.Slug)),
 		Attributes:      attrs,
@@ -688,6 +852,104 @@ func encodeDrawerPayload(guide admincontent.Guide) string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func buildPreviewLocaleOptions(basePath string, guideID string, locales []admincontent.GuideLocale) []PreviewLocaleOption {
+	if len(locales) == 0 {
+		return nil
+	}
+	options := make([]PreviewLocaleOption, 0, len(locales))
+	for _, locale := range locales {
+		options = append(options, PreviewLocaleOption{
+			Value:  locale.Locale,
+			Label:  locale.Label,
+			URL:    buildPreviewLocaleURL(basePath, guideID, locale.Locale),
+			Active: locale.Active,
+		})
+	}
+	return options
+}
+
+func buildPreviewLocaleURL(basePath string, guideID string, locale string) string {
+	path := fmt.Sprintf("/content/guides/%s/preview", guideID)
+	trimmed := strings.TrimSpace(locale)
+	if trimmed != "" {
+		path = fmt.Sprintf("%s?lang=%s", path, url.QueryEscape(trimmed))
+	}
+	return joinBase(basePath, path)
+}
+
+func defaultPreviewDeviceModes() []PreviewDeviceMode {
+	return []PreviewDeviceMode{
+		{ID: "desktop", Label: "Desktop", Active: true},
+		{ID: "tablet", Label: "Tablet", Active: false},
+		{ID: "mobile", Label: "Mobile", Active: false},
+	}
+}
+
+func buildPreviewTimeline(changes []admincontent.GuideChange) []PreviewTimelineItem {
+	if len(changes) == 0 {
+		return nil
+	}
+	result := make([]PreviewTimelineItem, 0, len(changes))
+	for _, change := range changes {
+		result = append(result, PreviewTimelineItem{
+			Title:       change.Title,
+			Description: change.Description,
+			OccursLabel: helpers.Date(change.OccursAt, "2006-01-02 15:04"),
+			Relative:    helpers.Relative(change.OccursAt),
+			Tone:        change.Tone,
+			Icon:        change.Icon,
+		})
+	}
+	return result
+}
+
+func estimateReadingFallback(wordCount int) string {
+	if wordCount <= 0 {
+		return ""
+	}
+	minutes := wordCount / 280
+	if minutes < 1 {
+		minutes = 1
+	}
+	return fmt.Sprintf("%d分想定", minutes)
+}
+
+func timestampOrPlaceholder(ts *time.Time) string {
+	if ts == nil || ts.IsZero() {
+		return "—"
+	}
+	return helpers.Date(ts.In(time.Local), "2006-01-02 15:04")
+}
+
+func cloneStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	dup := make([]string, len(values))
+	copy(dup, values)
+	return dup
+}
+
+func firstNonEmpty(values ...string) string {
+	return coalesce(values...)
+}
+
+func coalesce(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func htmlComponent(value string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, value)
+		return err
+	})
 }
 
 func totalStatus(counts map[admincontent.GuideStatus]int) int {

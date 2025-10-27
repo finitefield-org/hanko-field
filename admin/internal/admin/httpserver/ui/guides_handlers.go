@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,6 +38,38 @@ func (h *Handlers) GuidesPage(w http.ResponseWriter, r *http.Request) {
 	page := guidestpl.BuildPageData(custommw.BasePathFromContext(ctx), params.state, feed, params.state.Selected, csrfToken)
 
 	templ.Handler(guidestpl.Index(page)).ServeHTTP(w, r)
+}
+
+// GuidesPreview renders the localized preview page for a guide.
+func (h *Handlers) GuidesPreview(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	guideID := strings.TrimSpace(chi.URLParam(r, "guideID"))
+	if guideID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	locale := strings.TrimSpace(r.URL.Query().Get("lang"))
+
+	preview, err := h.content.PreviewGuide(ctx, user.Token, guideID, locale)
+	if err != nil {
+		if errors.Is(err, admincontent.ErrGuideNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("guides: preview failed: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	data := guidestpl.BuildPreviewPageData(custommw.BasePathFromContext(ctx), preview)
+	templ.Handler(guidestpl.PreviewPage(data)).ServeHTTP(w, r)
 }
 
 // GuidesTable renders the table fragment for htmx updates.
