@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 )
@@ -10,7 +11,23 @@ import (
 type Service interface {
 	// ListAssets returns catalog assets filtered by the provided query arguments.
 	ListAssets(ctx context.Context, token string, query ListQuery) (ListResult, error)
+
+	// GetAsset returns a single catalog asset with extended metadata.
+	GetAsset(ctx context.Context, token string, kind Kind, id string) (ItemDetail, error)
+
+	// SaveAsset creates or updates a catalog asset based on the supplied payload.
+	SaveAsset(ctx context.Context, token string, input AssetInput) (ItemDetail, error)
+
+	// DeleteAsset archives or removes a catalog asset.
+	DeleteAsset(ctx context.Context, token string, req DeleteRequest) error
 }
+
+var (
+	// ErrItemNotFound indicates that the requested catalog asset does not exist.
+	ErrItemNotFound = errors.New("catalog: item not found")
+	// ErrVersionConflict indicates optimistic locking detected conflicting edits.
+	ErrVersionConflict = errors.New("catalog: version conflict")
+)
 
 // Kind enumerates high-level catalog groupings.
 type Kind string
@@ -67,6 +84,22 @@ const (
 	// StatusArchived indicates the asset is archived.
 	StatusArchived Status = "archived"
 )
+
+// ParseStatus converts a raw string into a Status value.
+func ParseStatus(value string) (Status, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case string(StatusDraft):
+		return StatusDraft, true
+	case string(StatusInReview):
+		return StatusInReview, true
+	case string(StatusPublished):
+		return StatusPublished, true
+	case string(StatusArchived):
+		return StatusArchived, true
+	default:
+		return "", false
+	}
+}
 
 // ViewMode controls how assets are rendered in the UI.
 type ViewMode string
@@ -127,6 +160,44 @@ type ListResult struct {
 	SelectedDetail *ItemDetail
 	EmptyMessage   string
 	Pagination     Pagination
+}
+
+// AssetInput captures freeform catalog data submitted via admin forms.
+type AssetInput struct {
+	Kind         Kind
+	ID           string
+	Version      string
+	Name         string
+	Identifier   string
+	Description  string
+	Status       Status
+	Category     string
+	Tags         []string
+	TemplateID   string
+	SVGPath      string
+	PreviewURL   string
+	PreviewAlt   string
+	FontFamily   string
+	FontWeights  []string
+	License      string
+	MaterialSKU  string
+	Color        string
+	Inventory    int
+	ProductSKU   string
+	PriceMinor   int64
+	Currency     string
+	LeadTimeDays int
+	PhotoURLs    []string
+	PrimaryColor string
+	OwnerName    string
+	OwnerEmail   string
+}
+
+// DeleteRequest wraps metadata required to delete a catalog asset.
+type DeleteRequest struct {
+	Kind    Kind
+	ID      string
+	Version string
 }
 
 // Pagination describes paging metadata for catalog listings.
@@ -275,4 +346,34 @@ type UpdatedRange struct {
 	Label  string
 	Hint   string
 	Active bool
+}
+
+func statusLabel(status Status) string {
+	switch status {
+	case StatusPublished:
+		return "公開中"
+	case StatusInReview:
+		return "レビュー中"
+	case StatusArchived:
+		return "アーカイブ"
+	case StatusDraft:
+		fallthrough
+	default:
+		return "下書き"
+	}
+}
+
+func statusTone(status Status) string {
+	switch status {
+	case StatusPublished:
+		return "success"
+	case StatusInReview:
+		return "info"
+	case StatusArchived:
+		return "muted"
+	case StatusDraft:
+		fallthrough
+	default:
+		return "warning"
+	}
 }

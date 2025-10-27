@@ -32,12 +32,16 @@ templ pageBody(data PageData) {
 					@summaryChip("公開中", data.Summary.PublishedLabel, "bg-emerald-50 text-emerald-600")
 					@summaryChip("下書き / レビュー", fmt.Sprintf("%s / %s", data.Summary.DraftLabel, data.Summary.ReviewLabel), "bg-amber-50 text-amber-700")
 				</div>
-				<div class="flex items-center gap-3">
-					@components.ButtonWith("アセットを作成", components.ButtonOptions{
-						Variant: "primary",
-						Href:    data.CreateURL,
-					})
-				</div>
+			<div class="flex items-center gap-3">
+				@components.ButtonWith("アセットを作成", components.ButtonOptions{
+					Variant: "primary",
+					Attrs: templpkg.Attributes{
+						"hx-get":   data.CreateURL,
+						"hx-target": "#modal",
+						"hx-swap":  "innerHTML",
+					},
+				})
+			</div>
 			</div>
 		<div class="mt-6">
 			@components.UnderlineTabs(components.UnderlineTabsProps{Tabs: data.Tabs})
@@ -212,6 +216,9 @@ templ TableSection(data TableData) {
 		class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
 		hx-target="this"
 		hx-swap="outerHTML"
+		hx-get={ helpers.BuildURL(data.FragmentPath, data.RawQuery) }
+		hx-trigger="refresh from:body"
+		hx-indicator="#catalog-loading"
 	>
 		if len(data.Rows) == 0 {
 			<div class="px-6 py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
@@ -406,6 +413,9 @@ templ CardsSection(data CardsData) {
 		class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
 		hx-target="this"
 		hx-swap="outerHTML"
+		hx-get={ helpers.BuildURL(data.FragmentPath, data.RawQuery) }
+		hx-trigger="refresh from:body"
+		hx-indicator="#catalog-loading"
 	>
 		if len(data.Cards) == 0 {
 			<div class="py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>

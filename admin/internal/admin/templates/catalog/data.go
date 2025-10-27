@@ -276,6 +276,79 @@ type BulkActionView struct {
 	Disabled    bool
 }
 
+// ModalFormData represents the catalog CRUD modal payload.
+type ModalFormData struct {
+	Title        string
+	Description  string
+	Kind         admincatalog.Kind
+	KindLabel    string
+	Mode         string
+	ActionURL    string
+	Method       string
+	SubmitLabel  string
+	SubmitTone   string
+	HiddenFields []ModalHiddenField
+	Sections     []ModalSectionData
+	Error        string
+}
+
+// ModalSectionData groups related form fields.
+type ModalSectionData struct {
+	Title       string
+	Description string
+	Fields      []ModalFieldData
+}
+
+// ModalFieldData represents a single input within the modal form.
+type ModalFieldData struct {
+	Name         string
+	Label        string
+	Type         string
+	Value        string
+	Placeholder  string
+	Hint         string
+	Required     bool
+	FullWidth    bool
+	Options      []ModalOptionData
+	Rows         int
+	InputMode    string
+	Prefix       string
+	Suffix       string
+	Autocomplete string
+	Error        string
+}
+
+// ModalOptionData is a selectable option for dropdown fields.
+type ModalOptionData struct {
+	Value    string
+	Label    string
+	Selected bool
+}
+
+// ModalHiddenField is a hidden input rendered within the modal form.
+type ModalHiddenField struct {
+	Name  string
+	Value string
+}
+
+// DeleteModalData powers the delete confirmation modal.
+type DeleteModalData struct {
+	Title          string
+	Description    string
+	KindLabel      string
+	ItemName       string
+	ItemIdentifier string
+	ActionURL      string
+	Method         string
+	SubmitLabel    string
+	SubmitTone     string
+	HiddenFields   []ModalHiddenField
+	Metadata       []MetadataView
+	Dependencies   []DependencyView
+	Warning        string
+	Error          string
+}
+
 // BuildPageData composes the server-rendered payload.
 
 func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult) PageData {
@@ -304,7 +377,7 @@ func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, re
 		TableEndpoint:  table.FragmentPath,
 		CardsEndpoint:  cards.FragmentPath,
 		DrawerEndpoint: joinBase(basePath, fmt.Sprintf("/catalog/%s/drawer", kind)),
-		CreateURL:      joinBase(basePath, fmt.Sprintf("/catalog/%s/new", kind)),
+		CreateURL:      joinBase(basePath, fmt.Sprintf("/catalog/%s/modal/new", kind)),
 		EmptyMessage:   result.EmptyMessage,
 		PagePath:       pagePath,
 		PageURL:        pageURL,
@@ -443,8 +516,8 @@ func toTableRow(basePath string, kind admincatalog.Kind, item admincatalog.Item,
 			Icon:  metric.Icon,
 		})
 	}
-	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, item.ID))
-	deleteURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/delete", kind, item.ID))
+	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/edit", kind, item.ID))
+	deleteURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/delete", kind, item.ID))
 
 	return TableRow{
 		ID:              item.ID,

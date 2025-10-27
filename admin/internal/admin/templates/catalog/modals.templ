@@ -1,0 +1,247 @@
+package catalog
+
+import (
+	"strings"
+
+	templpkg "github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+const modalInputClass = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+
+templ UpsertModal(data ModalFormData) {
+	@layouts.Modal(data.Title, upsertModalBody(data))
+}
+
+templ upsertModalBody(data ModalFormData) {
+	<form
+		class="space-y-6 text-sm text-slate-700"
+		hx-target="#modal"
+		hx-swap="innerHTML"
+		{ modalMethodAttrs(data.Method, data.ActionURL)... }
+	>
+		for _, hidden := range data.HiddenFields {
+			<input type="hidden" name={ hidden.Name } value={ hidden.Value } />
+		}
+		if data.Description != "" {
+			<p class="text-sm text-slate-600">{ data.Description }</p>
+		}
+		if data.Error != "" {
+			<div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{ data.Error }</div>
+		}
+		for _, section := range data.Sections {
+			@catalogFormSection(section)
+		}
+		<div class="flex flex-col gap-2 pt-2">
+			<button type="submit" class={ helpers.ButtonClass(modalTone(data.SubmitTone), "md", true, false) }>{ data.SubmitLabel }</button>
+			<p class="text-xs text-slate-500">送信後に一覧が自動更新されます。</p>
+		</div>
+	</form>
+}
+
+templ catalogFormSection(section ModalSectionData) {
+	<section class="space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-xs">
+		<div>
+			<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ section.Title }</p>
+			if section.Description != "" {
+				<p class="text-xs text-slate-500">{ section.Description }</p>
+			}
+		</div>
+		<div class="grid gap-4 md:grid-cols-2">
+			for _, field := range section.Fields {
+				<div class={ fieldContainerClass(field.FullWidth) }>
+					@catalogFormField(field)
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ catalogFormField(field ModalFieldData) {
+	<label class="flex flex-col gap-1 text-sm text-slate-600">
+		<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+			{ field.Label }
+			if field.Required {
+				<span class="ml-1 text-rose-500">*</span>
+			}
+		</span>
+		@catalogInputField(field)
+	</label>
+	if field.Hint != "" {
+		<p class="text-xs text-slate-500">{ field.Hint }</p>
+	}
+	if field.Error != "" {
+		<p class="text-xs text-rose-600">{ field.Error }</p>
+	}
+}
+
+templ catalogInputField(field ModalFieldData) {
+	if field.Prefix != "" || field.Suffix != "" {
+		<div class="flex items-center gap-2">
+			if field.Prefix != "" {
+				<span class="text-xs text-slate-500">{ field.Prefix }</span>
+			}
+			@catalogInputControl(field)
+			if field.Suffix != "" {
+				<span class="text-xs text-slate-500">{ field.Suffix }</span>
+			}
+		</div>
+		return
+	}
+	@catalogInputControl(field)
+}
+
+templ catalogInputControl(field ModalFieldData) {
+	switch field.Type {
+	case "textarea":
+		<textarea
+			name={ field.Name }
+			class={ modalInputClass }
+			rows={ textareaRows(field.Rows) }
+			placeholder={ field.Placeholder }
+			required?={ field.Required }
+			if field.Autocomplete != "" {
+				autocomplete={ field.Autocomplete }
+			}
+			if field.InputMode != "" {
+				inputmode={ field.InputMode }
+			}
+		>{ field.Value }</textarea>
+	case "select":
+		<select
+			name={ field.Name }
+			class={ modalInputClass }
+			required?={ field.Required }
+		>
+			if !field.Required {
+				<option value="">選択してください</option>
+			}
+			for _, option := range field.Options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+	default:
+		<input
+			name={ field.Name }
+			class={ modalInputClass }
+			type={ inputType(field.Type) }
+			value={ field.Value }
+			placeholder={ field.Placeholder }
+			required?={ field.Required }
+			if field.Autocomplete != "" {
+				autocomplete={ field.Autocomplete }
+			}
+			if field.InputMode != "" {
+				inputmode={ field.InputMode }
+			}
+		/>
+	}
+}
+
+templ DeleteModal(data DeleteModalData) {
+	@layouts.Modal(data.Title, deleteModalBody(data))
+}
+
+templ deleteModalBody(data DeleteModalData) {
+	<form
+		class="space-y-6 text-sm text-slate-700"
+		hx-target="#modal"
+		hx-swap="innerHTML"
+		{ modalMethodAttrs(data.Method, data.ActionURL)... }
+	>
+		for _, hidden := range data.HiddenFields {
+			<input type="hidden" name={ hidden.Name } value={ hidden.Value } />
+		}
+		<p class="text-sm text-slate-600">{ data.Description }</p>
+		<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+			<p class="text-xs text-slate-500">{ data.KindLabel } · { data.ItemIdentifier }</p>
+			<p class="text-base font-semibold text-slate-900">{ data.ItemName }</p>
+		</div>
+		if len(data.Metadata) > 0 {
+			<div class="grid gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm text-slate-600">
+				for _, meta := range data.Metadata {
+					<div class="flex items-center justify-between gap-2">
+						<span class="text-xs text-slate-500">{ meta.Key }</span>
+						<span class="font-medium text-slate-900">{ meta.Value }</span>
+					</div>
+				}
+			</div>
+		}
+		if len(data.Dependencies) > 0 {
+			<div class="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+				<p class="text-xs font-semibold uppercase tracking-wide text-amber-700">依存関係</p>
+				for _, dep := range data.Dependencies {
+					<div class="flex items-center justify-between text-sm">
+						<span>{ dep.Label }</span>
+						@components.Badge(dep.Status, dep.Tone)
+					</div>
+				}
+			</div>
+		}
+		<div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+			{ coalesceWarning(data.Warning) }
+		</div>
+		if data.Error != "" {
+			<div class="rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-rose-700">{ data.Error }</div>
+		}
+		<div class="flex flex-col gap-3 pt-2">
+			<button type="submit" class={ helpers.ButtonClass(modalTone(data.SubmitTone), "md", true, false) }>{ data.SubmitLabel }</button>
+			<button type="button" class={ helpers.ButtonClass("ghost", "md", true, false) } data-modal-close>キャンセル</button>
+		</div>
+	</form>
+}
+
+func modalMethodAttrs(method string, action string) templpkg.Attributes {
+	switch strings.ToUpper(strings.TrimSpace(method)) {
+	case "PUT":
+		return templpkg.Attributes{"hx-put": action}
+	case "DELETE":
+		return templpkg.Attributes{"hx-delete": action}
+	default:
+		return templpkg.Attributes{"hx-post": action}
+	}
+}
+
+func fieldContainerClass(full bool) string {
+	if full {
+		return "md:col-span-2"
+	}
+	return ""
+}
+
+func textareaRows(rows int) int {
+	if rows <= 0 {
+		return 3
+	}
+	return rows
+}
+
+func inputType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "number":
+		return "number"
+	case "email":
+		return "email"
+	case "url":
+		return "url"
+	default:
+		return "text"
+	}
+}
+
+func modalTone(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "primary"
+	}
+	return strings.TrimSpace(value)
+}
+
+func coalesceWarning(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "この操作は取り消せません。関連するテンプレートや商品に影響する可能性があります。"
+	}
+	return value
+}

@@ -2,8 +2,11 @@ package catalog
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -13,7 +16,9 @@ const (
 )
 
 type staticService struct {
+	mu             sync.RWMutex
 	now            time.Time
+	rand           *rand.Rand
 	assets         map[Kind][]catalogAsset
 	lookup         map[Kind]map[string]catalogAsset
 	updatedPresets []UpdatedRange
@@ -28,7 +33,8 @@ type catalogAsset struct {
 func NewStaticService() Service {
 	now := time.Date(2024, time.March, 18, 12, 0, 0, 0, time.UTC)
 	service := &staticService{
-		now: now,
+		now:  now,
+		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		assets: map[Kind][]catalogAsset{
 			KindTemplates: buildTemplateAssets(now),
 			KindFonts:     buildFontAssets(now),
@@ -55,6 +61,9 @@ func NewStaticService() Service {
 }
 
 func (s *staticService) ListAssets(ctx context.Context, token string, query ListQuery) (ListResult, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	kind := query.Kind
 	if kind == "" {
 		kind = KindTemplates
@@ -112,6 +121,111 @@ func (s *staticService) ListAssets(ctx context.Context, token string, query List
 		EmptyMessage:   emptyMsg,
 		Pagination:     pagination,
 	}, nil
+}
+
+func (s *staticService) GetAsset(ctx context.Context, token string, kind Kind, id string) (ItemDetail, error) {
+	k := NormalizeKind(string(kind))
+	assetID := strings.TrimSpace(id)
+	if assetID == "" {
+		return ItemDetail{}, ErrItemNotFound
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if bucket, ok := s.lookup[k]; ok {
+		if asset, exists := bucket[assetID]; exists {
+			return cloneItemDetail(asset), nil
+		}
+	}
+	return ItemDetail{}, ErrItemNotFound
+}
+
+func (s *staticService) SaveAsset(ctx context.Context, token string, input AssetInput) (ItemDetail, error) {
+	kind := NormalizeKind(string(input.Kind))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now().UTC()
+	if strings.TrimSpace(input.Version) == "" {
+		input.Version = "v1"
+	}
+	if strings.TrimSpace(input.ID) == "" {
+		input.ID = s.nextAssetID(kind)
+	}
+	if strings.TrimSpace(input.Identifier) == "" {
+		input.Identifier = strings.ToUpper(input.ID)
+	}
+	if input.Status == "" {
+		input.Status = StatusDraft
+	}
+	if input.PreviewAlt == "" {
+		input.PreviewAlt = input.Name
+	}
+
+	asset := catalogAsset{}
+	if bucket, ok := s.lookup[kind]; ok {
+		if existing, exists := bucket[input.ID]; exists {
+			if strings.TrimSpace(existing.item.Version) != "" && strings.TrimSpace(input.Version) != "" && strings.TrimSpace(existing.item.Version) != strings.TrimSpace(input.Version) {
+				return ItemDetail{}, ErrVersionConflict
+			}
+			asset = existing
+		}
+	}
+
+	updated := buildAssetFromInput(asset, input, now)
+	if s.assets[kind] == nil {
+		s.assets[kind] = []catalogAsset{}
+	}
+	if s.lookup[kind] == nil {
+		s.lookup[kind] = map[string]catalogAsset{}
+	}
+
+	if _, exists := s.lookup[kind][updated.item.ID]; exists {
+		for i := range s.assets[kind] {
+			if s.assets[kind][i].item.ID == updated.item.ID {
+				s.assets[kind][i] = updated
+				break
+			}
+		}
+	} else {
+		s.assets[kind] = append([]catalogAsset{updated}, s.assets[kind]...)
+	}
+	s.lookup[kind][updated.item.ID] = updated
+
+	return cloneItemDetail(updated), nil
+}
+
+func (s *staticService) DeleteAsset(ctx context.Context, token string, req DeleteRequest) error {
+	kind := NormalizeKind(string(req.Kind))
+	id := strings.TrimSpace(req.ID)
+	if id == "" {
+		return ErrItemNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	bucket, ok := s.lookup[kind]
+	if !ok {
+		return ErrItemNotFound
+	}
+	asset, exists := bucket[id]
+	if !exists {
+		return ErrItemNotFound
+	}
+	if strings.TrimSpace(req.Version) != "" && strings.TrimSpace(asset.item.Version) != "" && strings.TrimSpace(req.Version) != strings.TrimSpace(asset.item.Version) {
+		return ErrVersionConflict
+	}
+	delete(bucket, id)
+	list := s.assets[kind]
+	for i := range list {
+		if list[i].item.ID == id {
+			s.assets[kind] = append(list[:i], list[i+1:]...)
+			break
+		}
+	}
+	return nil
 }
 
 func filterAssets(assets []catalogAsset, query ListQuery, refTime time.Time) []catalogAsset {
@@ -428,19 +542,6 @@ func buildStatusOptions(assets []catalogAsset, active []Status) []FilterOption {
 	return result
 }
 
-func statusLabel(status Status) string {
-	switch status {
-	case StatusDraft:
-		return "下書き"
-	case StatusInReview:
-		return "レビュー中"
-	case StatusArchived:
-		return "アーカイブ"
-	default:
-		return "公開中"
-	}
-}
-
 func hasStatus(set map[Status]struct{}, status Status) bool {
 	_, ok := set[status]
 	return ok
@@ -548,6 +649,268 @@ func makeCatalogAsset(item Item, detail ItemDetail) catalogAsset {
 		detail.UpdatedAt = item.UpdatedAt
 	}
 	return catalogAsset{item: item, detail: detail}
+}
+
+func (s *staticService) nextAssetID(kind Kind) string {
+	prefix := map[Kind]string{
+		KindFonts:     "font",
+		KindMaterials: "mat",
+		KindProducts:  "prd",
+		KindTemplates: "tmpl",
+	}
+	label, ok := prefix[kind]
+	if !ok {
+		label = "cat"
+	}
+	return fmt.Sprintf("%s-%06d", label, s.rand.Intn(900000)+100000)
+}
+
+func cloneItemDetail(asset catalogAsset) ItemDetail {
+	detail := asset.detail
+	detail.Item = asset.item
+	if len(detail.Tags) > 0 {
+		tags := make([]string, len(detail.Tags))
+		copy(tags, detail.Tags)
+		detail.Tags = tags
+	}
+	if len(detail.Metadata) > 0 {
+		entries := make([]MetadataEntry, len(detail.Metadata))
+		copy(entries, detail.Metadata)
+		detail.Metadata = entries
+	}
+	if len(detail.Usage) > 0 {
+		usage := make([]UsageMetric, len(detail.Usage))
+		copy(usage, detail.Usage)
+		detail.Usage = usage
+	}
+	if len(detail.Dependencies) > 0 {
+		deps := make([]Dependency, len(detail.Dependencies))
+		copy(deps, detail.Dependencies)
+		detail.Dependencies = deps
+	}
+	if len(detail.AuditTrail) > 0 {
+		audit := make([]AuditEntry, len(detail.AuditTrail))
+		copy(audit, detail.AuditTrail)
+		detail.AuditTrail = audit
+	}
+	return detail
+}
+
+func buildAssetFromInput(existing catalogAsset, input AssetInput, updatedAt time.Time) catalogAsset {
+	item := existing.item
+	detail := existing.detail
+
+	item.ID = strings.TrimSpace(input.ID)
+	item.Kind = NormalizeKind(string(input.Kind))
+	item.Name = strings.TrimSpace(input.Name)
+	if item.Name == "" {
+		item.Name = "未設定アセット"
+	}
+	item.Identifier = strings.TrimSpace(input.Identifier)
+	item.Description = strings.TrimSpace(input.Description)
+	item.Status = input.Status
+	item.StatusLabel = statusLabel(item.Status)
+	item.StatusTone = statusTone(item.Status)
+	item.Category = strings.TrimSpace(input.Category)
+	item.CategoryLabel = categoryLabelFor(item.Kind, item.Category)
+	item.Tags = sanitizeTags(input.Tags)
+	item.Owner = OwnerInfo{
+		Name:  coalesce(input.OwnerName, item.Owner.Name, "Catalog Ops"),
+		Email: coalesce(input.OwnerEmail, item.Owner.Email, "ops@hanko.example.com"),
+	}
+	item.UpdatedAt = updatedAt
+	item.Version = strings.TrimSpace(input.Version)
+	item.UsageLabel = usageLabelForStatus(item.Status)
+	item.PreviewURL = coalesce(input.PreviewURL, item.PreviewURL, defaultPreviewFor(item.Kind))
+	item.PreviewAlt = coalesce(input.PreviewAlt, item.PreviewAlt, item.Name)
+	item.PrimaryColor = coalesce(input.PrimaryColor, item.PrimaryColor, "#0F172A")
+	item.Metrics = buildItemMetrics(item.Kind, input)
+
+	detail.Item = item
+	detail.Description = item.Description
+	detail.Owner = item.Owner
+	detail.Tags = item.Tags
+	detail.PreviewURL = item.PreviewURL
+	detail.PreviewAlt = item.PreviewAlt
+	detail.Metadata = buildMetadataEntries(item.Kind, input)
+	detail.UpdatedAt = updatedAt
+
+	return catalogAsset{item: item, detail: detail}
+}
+
+func sanitizeTags(tags []string) []string {
+	if len(tags) == 0 {
+		return nil
+	}
+	set := make([]string, 0, len(tags))
+	seen := map[string]struct{}{}
+	for _, tag := range tags {
+		value := strings.TrimSpace(tag)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		set = append(set, value)
+	}
+	return set
+}
+
+func usageLabelForStatus(status Status) string {
+	switch status {
+	case StatusPublished:
+		return "公開中"
+	case StatusInReview:
+		return "レビュー中"
+	case StatusArchived:
+		return "アーカイブ済み"
+	default:
+		return "下書き"
+	}
+}
+
+func coalesce(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func defaultPreviewFor(kind Kind) string {
+	switch kind {
+	case KindFonts:
+		return "/public/static/placeholders/catalog-font-serif.png"
+	case KindMaterials:
+		return "/public/static/placeholders/catalog-material-washi.png"
+	case KindProducts:
+		return "/public/static/placeholders/catalog-product-kit.png"
+	default:
+		return "/public/static/placeholders/catalog-template-fuji.png"
+	}
+}
+
+func categoryLabelFor(kind Kind, category string) string {
+	value := strings.TrimSpace(category)
+	if value == "" {
+		return "未分類"
+	}
+	lookup := map[Kind]map[string]string{
+		KindTemplates: {
+			"seasonal":        "季節・年賀状",
+			"business":        "法人向け",
+			"family":          "ファミリー",
+			"seasonal_bundle": "季節ギフト",
+		},
+		KindFonts: {
+			"serif":  "セリフ",
+			"sans":   "サンセリフ",
+			"script": "スクリプト",
+		},
+		KindMaterials: {
+			"textured": "テクスチャ",
+			"gloss":    "グロス",
+			"matte":    "マット",
+		},
+		KindProducts: {
+			"engraving":       "名入れ商品",
+			"seasonal_bundle": "季節ギフト",
+			"cards":           "カード",
+		},
+	}
+	if labels, ok := lookup[kind]; ok {
+		if label, ok := labels[value]; ok {
+			return label
+		}
+	}
+	return strings.ToUpper(value[:1]) + value[1:]
+}
+
+func buildItemMetrics(kind Kind, input AssetInput) []ItemMetric {
+	switch kind {
+	case KindFonts:
+		return []ItemMetric{
+			{Label: "ウェイト", Value: strings.Join(sanitizeTags(input.FontWeights), ", "), Icon: "⚖️"},
+			{Label: "ライセンス", Value: coalesce(input.License, "商用"), Icon: "⚖️"},
+		}
+	case KindMaterials:
+		inv := ""
+		if input.Inventory > 0 {
+			inv = fmt.Sprintf("%d 枚", input.Inventory)
+		}
+		return []ItemMetric{
+			{Label: "SKU", Value: coalesce(input.MaterialSKU, input.Identifier), Icon: "🏷"},
+			{Label: "在庫", Value: inv, Icon: "📦"},
+		}
+	case KindProducts:
+		price := ""
+		if input.PriceMinor > 0 {
+			price = formatYen(input.PriceMinor)
+		}
+		lead := ""
+		if input.LeadTimeDays > 0 {
+			lead = fmt.Sprintf("%d 日", input.LeadTimeDays)
+		}
+		return []ItemMetric{
+			{Label: "単価", Value: price, Icon: "💴"},
+			{Label: "リードタイム", Value: lead, Icon: "⏱"},
+		}
+	default:
+		return []ItemMetric{
+			{Label: "テンプレID", Value: coalesce(input.TemplateID, input.Identifier), Icon: "🆔"},
+			{Label: "SVG", Value: coalesce(input.SVGPath, "未設定"), Icon: "🧩"},
+		}
+	}
+}
+
+func buildMetadataEntries(kind Kind, input AssetInput) []MetadataEntry {
+	entries := []MetadataEntry{}
+	switch kind {
+	case KindFonts:
+		entries = append(entries,
+			MetadataEntry{Key: "ファミリー", Value: coalesce(input.FontFamily, input.Name), Icon: "🔤"},
+			MetadataEntry{Key: "ライセンス", Value: coalesce(input.License, "商用"), Icon: "⚖️"},
+		)
+	case KindMaterials:
+		entries = append(entries,
+			MetadataEntry{Key: "SKU", Value: coalesce(input.MaterialSKU, input.Identifier), Icon: "🏷"},
+			MetadataEntry{Key: "カラー", Value: coalesce(input.Color, input.PrimaryColor), Icon: "🎨"},
+		)
+	case KindProducts:
+		entries = append(entries,
+			MetadataEntry{Key: "SKU", Value: coalesce(input.ProductSKU, input.Identifier), Icon: "🏷"},
+			MetadataEntry{Key: "価格", Value: formatYen(input.PriceMinor), Icon: "💴"},
+			MetadataEntry{Key: "リードタイム", Value: fmt.Sprintf("%d 日", input.LeadTimeDays), Icon: "⏱"},
+		)
+	default:
+		entries = append(entries,
+			MetadataEntry{Key: "テンプレID", Value: coalesce(input.TemplateID, input.Identifier), Icon: "🆔"},
+			MetadataEntry{Key: "SVG パス", Value: coalesce(input.SVGPath, "未設定"), Icon: "🧩"},
+		)
+	}
+	if len(input.PhotoURLs) > 0 {
+		entries = append(entries, MetadataEntry{Key: "プレビュー", Value: input.PhotoURLs[0], Icon: "🖼"})
+	}
+	return entries
+}
+
+func formatYen(v int64) string {
+	if v <= 0 {
+		return "¥0"
+	}
+	s := fmt.Sprintf("%d", v)
+	var builder strings.Builder
+	mod := len(s) % 3
+	for i, r := range s {
+		if i != 0 && (i-mod)%3 == 0 {
+			builder.WriteRune(',')
+		}
+		builder.WriteRune(r)
+	}
+	return "¥" + builder.String()
 }
 
 func buildTemplateAssets(now time.Time) []catalogAsset {
