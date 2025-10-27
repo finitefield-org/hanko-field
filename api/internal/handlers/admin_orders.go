@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -23,13 +27,15 @@ const (
 type AdminOrderHandlers struct {
 	authn  *auth.Authenticator
 	orders services.OrderService
+	audit  services.AuditLogService
 }
 
 // NewAdminOrderHandlers constructs the admin order handler set.
-func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService) *AdminOrderHandlers {
+func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService, audit services.AuditLogService) *AdminOrderHandlers {
 	return &AdminOrderHandlers{
 		authn:  authn,
 		orders: orders,
+		audit:  audit,
 	}
 }
 
@@ -42,6 +48,7 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
 	}
 	r.Get("/orders", h.listOrders)
+	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
 }
 
 func (h *AdminOrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +207,157 @@ type adminOrderSummary struct {
 	UpdatedAt        string   `json:"updated_at,omitempty"`
 	PlacedAt         string   `json:"placed_at,omitempty"`
 	PaidAt           string   `json:"paid_at,omitempty"`
+}
+
+const (
+	maxAdminOrderStatusBodySize = 4 * 1024
+)
+
+var adminOrderWorkflowTransitions = map[services.OrderStatus]services.OrderStatus{
+	services.OrderStatus(domain.OrderStatusPaid):         services.OrderStatus(domain.OrderStatusInProduction),
+	services.OrderStatus(domain.OrderStatusInProduction): services.OrderStatus(domain.OrderStatusShipped),
+	services.OrderStatus(domain.OrderStatusShipped):      services.OrderStatus(domain.OrderStatusDelivered),
+	services.OrderStatus(domain.OrderStatusDelivered):    services.OrderStatus(domain.OrderStatusCompleted),
+}
+
+var adminAllowedTargetStatuses = map[services.OrderStatus]struct{}{
+	services.OrderStatus(domain.OrderStatusInProduction): {},
+	services.OrderStatus(domain.OrderStatusShipped):      {},
+	services.OrderStatus(domain.OrderStatusDelivered):    {},
+	services.OrderStatus(domain.OrderStatusCompleted):    {},
+}
+
+type adminOrderStatusRequest struct {
+	TargetStatus   string         `json:"target_status"`
+	ExpectedStatus string         `json:"expected_status"`
+	Reason         string         `json:"reason"`
+	Metadata       map[string]any `json:"metadata"`
+}
+
+type adminOrderStatusResponse struct {
+	Order adminOrderSummary `json:"order"`
+}
+
+func (h *AdminOrderHandlers) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.orders == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "order id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminOrderStatusBodySize)
+	if err != nil {
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload adminOrderStatusRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+		return
+	}
+
+	targetRaw := strings.TrimSpace(payload.TargetStatus)
+	if targetRaw == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "target_status is required", http.StatusBadRequest))
+		return
+	}
+	targetStatus, ok := parseOrderStatus(targetRaw)
+	if !ok {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "target_status must be a valid order status", http.StatusBadRequest))
+		return
+	}
+	if _, allowed := adminAllowedTargetStatuses[targetStatus]; !allowed {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "target_status must be in_production, shipped, delivered, or completed", http.StatusBadRequest))
+		return
+	}
+
+	order, err := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{})
+	if err != nil {
+		writeOrderError(ctx, w, err)
+		return
+	}
+
+	currentStatus, parsed := parseOrderStatus(string(order.Status))
+	if !parsed {
+		currentStatus = services.OrderStatus(domain.OrderStatus(strings.TrimSpace(strings.ToLower(string(order.Status)))))
+	}
+
+	if currentStatus == targetStatus {
+		httpx.WriteError(ctx, w, httpx.NewError("order_invalid_state", "order already in requested status", http.StatusConflict))
+		return
+	}
+
+	nextStatus, ok := adminOrderWorkflowTransitions[currentStatus]
+	if !ok {
+		httpx.WriteError(ctx, w, httpx.NewError("order_invalid_state", fmt.Sprintf("status %s cannot transition via workflow", currentStatus), http.StatusConflict))
+		return
+	}
+	if targetStatus != nextStatus {
+		httpx.WriteError(ctx, w, httpx.NewError("order_invalid_state", fmt.Sprintf("status %s cannot transition to %s", currentStatus, targetStatus), http.StatusConflict))
+		return
+	}
+
+	expectedStatus := currentStatus
+	if trimmed := strings.TrimSpace(payload.ExpectedStatus); trimmed != "" {
+		expectedParsed, ok := parseOrderStatus(trimmed)
+		if !ok {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "expected_status must be a valid order status", http.StatusBadRequest))
+			return
+		}
+		if expectedParsed != currentStatus {
+			httpx.WriteError(ctx, w, httpx.NewError("order_conflict", fmt.Sprintf("expected status %q but was %q", trimmed, order.Status), http.StatusConflict))
+			return
+		}
+		expectedStatus = expectedParsed
+	}
+
+	reason := strings.TrimSpace(payload.Reason)
+
+	cmd := services.OrderStatusTransitionCommand{
+		OrderID:        orderID,
+		TargetStatus:   targetStatus,
+		ActorID:        strings.TrimSpace(identity.UID),
+		Reason:         reason,
+		ExpectedStatus: &expectedStatus,
+		Metadata:       cloneMap(payload.Metadata),
+	}
+
+	updated, err := h.orders.TransitionStatus(ctx, cmd)
+	if err != nil {
+		writeOrderError(ctx, w, err)
+		return
+	}
+
+	h.recordOrderStatusAudit(ctx, identity, orderID, currentStatus, updated.Status, reason, payload.Metadata)
+
+	response := adminOrderStatusResponse{
+		Order: buildAdminOrderSummary(updated),
+	}
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func buildAdminOrderSummary(order services.Order) adminOrderSummary {
@@ -390,4 +548,69 @@ func normalizeStringSlice(values []string) []string {
 		return nil
 	}
 	return out
+}
+
+func (h *AdminOrderHandlers) recordOrderStatusAudit(ctx context.Context, identity *auth.Identity, orderID string, before services.OrderStatus, after services.OrderStatus, reason string, metadata map[string]any) {
+	if h.audit == nil {
+		return
+	}
+
+	trimmedOrderID := strings.TrimSpace(orderID)
+	actorID := ""
+	if identity != nil {
+		actorID = strings.TrimSpace(identity.UID)
+	}
+
+	record := services.AuditLogRecord{
+		Actor:      actorID,
+		ActorType:  adminOrderActorType(identity),
+		Action:     "order.status.transition",
+		TargetRef:  fmt.Sprintf("/orders/%s", trimmedOrderID),
+		OccurredAt: time.Now().UTC(),
+		Diff: map[string]services.AuditLogDiff{
+			"status": {
+				Before: string(before),
+				After:  string(after),
+			},
+		},
+		Metadata: map[string]any{
+			"fromStatus": string(before),
+			"toStatus":   string(after),
+		},
+	}
+
+	if reason != "" {
+		record.Metadata["reason"] = reason
+	}
+
+	if len(metadata) > 0 {
+		for key, value := range cloneMap(metadata) {
+			if record.Metadata == nil {
+				record.Metadata = map[string]any{}
+			}
+			if _, exists := record.Metadata[key]; exists {
+				continue
+			}
+			record.Metadata[key] = value
+		}
+	}
+
+	h.audit.Record(ctx, record)
+}
+
+func adminOrderActorType(identity *auth.Identity) string {
+	if identity == nil {
+		return "staff"
+	}
+	switch {
+	case identity.HasRole(auth.RoleAdmin):
+		return "admin"
+	case identity.HasRole(auth.RoleStaff):
+		return "staff"
+	default:
+		if len(identity.Roles) > 0 {
+			return strings.TrimSpace(identity.Roles[0])
+		}
+		return "staff"
+	}
 }

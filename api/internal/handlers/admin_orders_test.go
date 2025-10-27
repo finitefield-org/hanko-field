@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/auth"
 	"github.com/hanko-field/api/internal/services"
@@ -21,7 +23,7 @@ func TestAdminOrderHandlers_ListOrders_MapsFilters(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service)
+	handler := NewAdminOrderHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders?status=paid,in_production&payment_status=captured,pending&paymentStatus=refunded&queue=queue-a&production_queue=queue-b&channel=dashboard&sales_channel=app&customer_email=%20ops@example.com%20&promotion_code=%20SPRING%20&page_size=150&page_token=%20token123%20&order=asc&sort=updated_at&since=2024-01-01T00:00:00Z&until=2024-02-01T00:00:00Z", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
@@ -140,7 +142,7 @@ func TestAdminOrderHandlers_ListOrders_ReturnsOperationalFields(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service)
+	handler := NewAdminOrderHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
@@ -256,7 +258,7 @@ func TestAdminOrderHandlers_ListOrders_RequiresPrivilegedRole(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service)
+	handler := NewAdminOrderHandlers(nil, service, nil)
 
 	cases := []struct {
 		name         string
@@ -306,4 +308,209 @@ func TestAdminOrderHandlers_ListOrders_RequiresPrivilegedRole(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
+	var capturedCmd services.OrderStatusTransitionCommand
+	now := time.Date(2024, 6, 10, 9, 0, 0, 0, time.UTC)
+	service := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:          orderID,
+				OrderNumber: "HF-2024-00010",
+				Status:      domain.OrderStatusPaid,
+				Currency:    "jpy",
+				Totals: services.OrderTotals{
+					Total: 2500,
+				},
+				CreatedAt: now.Add(-1 * time.Hour),
+				UpdatedAt: now.Add(-30 * time.Minute),
+			}, nil
+		},
+		transitionFn: func(ctx context.Context, cmd services.OrderStatusTransitionCommand) (services.Order, error) {
+			capturedCmd = cmd
+			return services.Order{
+				ID:          cmd.OrderID,
+				OrderNumber: "HF-2024-00010",
+				Status:      domain.OrderStatusInProduction,
+				Currency:    "jpy",
+				Totals: services.OrderTotals{
+					Total: 2500,
+				},
+				CreatedAt: now.Add(-1 * time.Hour),
+				UpdatedAt: now,
+			}, nil
+		},
+	}
+	audit := &captureAuditLogService{}
+	handler := NewAdminOrderHandlers(nil, service, audit)
+
+	body := `{"target_status":"in_production","reason":" expedite ","metadata":{"queue":"laser","notify":true}}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord_123:status", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_123")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "staff-42", Roles: []string{auth.RoleStaff}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateOrderStatus(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	var resp adminOrderStatusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Order.Status != "in_production" {
+		t.Fatalf("expected summary status in_production, got %q", resp.Order.Status)
+	}
+
+	if capturedCmd.OrderID != "ord_123" {
+		t.Fatalf("expected order id ord_123, got %q", capturedCmd.OrderID)
+	}
+	if capturedCmd.TargetStatus != services.OrderStatus(domain.OrderStatusInProduction) {
+		t.Fatalf("expected target status in_production, got %q", capturedCmd.TargetStatus)
+	}
+	if capturedCmd.ExpectedStatus == nil || *capturedCmd.ExpectedStatus != services.OrderStatus(domain.OrderStatusPaid) {
+		t.Fatalf("expected expected status pointer to paid, got %#v", capturedCmd.ExpectedStatus)
+	}
+	if capturedCmd.Reason != "expedite" {
+		t.Fatalf("expected trimmed reason expedite, got %q", capturedCmd.Reason)
+	}
+	if capturedCmd.Metadata == nil || capturedCmd.Metadata["queue"] != "laser" || capturedCmd.Metadata["notify"] != true {
+		t.Fatalf("expected metadata preserved, got %#v", capturedCmd.Metadata)
+	}
+
+	if len(audit.records) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(audit.records))
+	}
+	record := audit.records[0]
+	if record.Actor != "staff-42" {
+		t.Fatalf("expected audit actor staff-42, got %q", record.Actor)
+	}
+	if record.ActorType != "staff" {
+		t.Fatalf("expected actor type staff, got %q", record.ActorType)
+	}
+	if record.Action != "order.status.transition" {
+		t.Fatalf("expected audit action order.status.transition, got %q", record.Action)
+	}
+	if record.TargetRef != "/orders/ord_123" {
+		t.Fatalf("expected target ref /orders/ord_123, got %q", record.TargetRef)
+	}
+	if record.Diff["status"].Before != "paid" || record.Diff["status"].After != "in_production" {
+		t.Fatalf("expected diff recorded, got %#v", record.Diff["status"])
+	}
+	if record.Metadata["reason"] != "expedite" {
+		t.Fatalf("expected reason metadata, got %#v", record.Metadata["reason"])
+	}
+	if record.Metadata["queue"] != "laser" || record.Metadata["notify"] != true {
+		t.Fatalf("expected metadata merged, got %#v", record.Metadata)
+	}
+}
+
+func TestAdminOrderHandlers_UpdateOrderStatus_RejectsOutOfSequenceTransition(t *testing.T) {
+	service := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:     orderID,
+				Status: domain.OrderStatusPaid,
+			}, nil
+		},
+		transitionFn: func(ctx context.Context, cmd services.OrderStatusTransitionCommand) (services.Order, error) {
+			t.Fatalf("expected transition not to be called")
+			return services.Order{}, nil
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, service, nil)
+
+	body := `{"target_status":"shipped"}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord_200:status", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_200")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateOrderStatus(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
+func TestAdminOrderHandlers_UpdateOrderStatus_ExpectedStatusMismatch(t *testing.T) {
+	service := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:     orderID,
+				Status: domain.OrderStatusPaid,
+			}, nil
+		},
+		transitionFn: func(ctx context.Context, cmd services.OrderStatusTransitionCommand) (services.Order, error) {
+			t.Fatalf("expected transition not to be called")
+			return services.Order{}, nil
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, service, nil)
+
+	body := `{"target_status":"in_production","expected_status":"in_production"}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord_300:status", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_300")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "staff", Roles: []string{auth.RoleStaff}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateOrderStatus(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
+func TestAdminOrderHandlers_UpdateOrderStatus_ServiceConflict(t *testing.T) {
+	service := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:     orderID,
+				Status: domain.OrderStatusShipped,
+			}, nil
+		},
+		transitionFn: func(ctx context.Context, cmd services.OrderStatusTransitionCommand) (services.Order, error) {
+			return services.Order{}, services.ErrOrderConflict
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, service, nil)
+
+	body := `{"target_status":"delivered"}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord_400:status", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_400")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateOrderStatus(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
+type captureAuditLogService struct {
+	records []services.AuditLogRecord
+}
+
+func (c *captureAuditLogService) Record(_ context.Context, record services.AuditLogRecord) {
+	c.records = append(c.records, record)
+}
+
+func (c *captureAuditLogService) List(context.Context, services.AuditLogFilter) (domain.CursorPage[domain.AuditLogEntry], error) {
+	return domain.CursorPage[domain.AuditLogEntry]{}, nil
 }
