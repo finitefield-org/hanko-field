@@ -72,18 +72,11 @@ class AppTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ...trailingActions,
     ];
 
-    final appBar = AppBar(
+    return AppBar(
       title: Text(title),
       centerTitle: centerTitle,
       leading: leading,
       actions: actions,
-    );
-
-    return _AppBarShortcuts(
-      onNotificationsTap: onNotificationsTap,
-      onSearchTap: onSearchTap,
-      onHelpTap: showHelpAction ? resolvedHelpTap : null,
-      child: appBar,
     );
   }
 }
@@ -171,8 +164,9 @@ class _TopBarIconButton extends StatelessWidget {
   }
 }
 
-class _AppBarShortcuts extends StatelessWidget {
-  const _AppBarShortcuts({
+class AppShortcutRegistrar extends StatelessWidget {
+  const AppShortcutRegistrar({
+    super.key,
     required this.child,
     this.onNotificationsTap,
     this.onSearchTap,
@@ -227,7 +221,12 @@ class _AppBarShortcuts extends StatelessWidget {
       shortcuts: shortcuts,
       child: Actions(
         actions: actions,
-        child: Focus(canRequestFocus: true, child: child),
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          descendantsAreFocusable: true,
+          child: child,
+        ),
       ),
     );
   }

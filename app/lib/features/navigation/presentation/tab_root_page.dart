@@ -14,18 +14,34 @@ class AppTabRootPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppTopAppBar(
-        title: tab.label,
-        helpContextLabel: tab.headline,
-        onNotificationsTap: () => ref
-            .read(appStateProvider.notifier)
-            .push(const NotificationsRoute()),
-        onSearchTap: () =>
-            ref.read(appStateProvider.notifier).push(const GlobalSearchRoute()),
-        onHelpTap: () => showHelpOverlay(context, contextLabel: tab.headline),
+    final notifier = ref.read(appStateProvider.notifier);
+
+    void openNotifications() {
+      notifier.push(const NotificationsRoute());
+    }
+
+    void openSearch() {
+      notifier.push(const GlobalSearchRoute());
+    }
+
+    void openHelp() {
+      showHelpOverlay(context, contextLabel: tab.headline);
+    }
+
+    return AppShortcutRegistrar(
+      onNotificationsTap: openNotifications,
+      onSearchTap: openSearch,
+      onHelpTap: openHelp,
+      child: Scaffold(
+        appBar: AppTopAppBar(
+          title: tab.label,
+          helpContextLabel: tab.headline,
+          onNotificationsTap: openNotifications,
+          onSearchTap: openSearch,
+          onHelpTap: openHelp,
+        ),
+        body: _TabBody(tab: tab, ref: ref),
       ),
-      body: _TabBody(tab: tab, ref: ref),
     );
   }
 }
