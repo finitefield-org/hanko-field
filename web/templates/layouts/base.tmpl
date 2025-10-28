@@ -206,6 +206,7 @@
         var lastFocus = null;
         var debounceTimer = null;
         var pendingRequest = null;
+        var overlayLockedBody = false;
 
         function loadHistory(){
           try {
@@ -240,7 +241,12 @@
         function openOverlay(){
           overlay.classList.remove('hidden');
           overlay.setAttribute('aria-hidden', 'false');
-          document.body.classList.add('overflow-hidden');
+          if (!document.body.classList.contains('overflow-hidden')) {
+            document.body.classList.add('overflow-hidden');
+            overlayLockedBody = true;
+          } else {
+            overlayLockedBody = false;
+          }
           lastFocus = document.activeElement;
           setTimeout(function(){
             if (input && input.focus) {
@@ -256,7 +262,10 @@
         function closeOverlay(){
           overlay.classList.add('hidden');
           overlay.setAttribute('aria-hidden', 'true');
-          document.body.classList.remove('overflow-hidden');
+          if (overlayLockedBody) {
+            document.body.classList.remove('overflow-hidden');
+            overlayLockedBody = false;
+          }
           if (lastFocus && lastFocus.focus) {
             try { lastFocus.focus(); } catch(_) {}
           }
