@@ -227,4 +227,104 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get designNewPermissionDenied =>
       'Storage access is required to continue with this mode.';
+
+  @override
+  String get designInputTitle => 'Enter your name';
+
+  @override
+  String get designInputSubtitle =>
+      'Provide the surname and given name that will appear on your seal. We\'ll preview it as you type.';
+
+  @override
+  String get designInputPreviewTitle => 'Live preview';
+
+  @override
+  String get designInputPreviewCaption =>
+      'Preview updates with your selected style later in the flow.';
+
+  @override
+  String get designInputPlaceholderPrimary => 'Sample Name';
+
+  @override
+  String get designInputSectionPrimary => 'Name (kanji or romaji)';
+
+  @override
+  String get designInputSectionReading => 'Reading / pronunciation';
+
+  @override
+  String get designInputSurnameLabel => 'Surname';
+
+  @override
+  String get designInputGivenNameLabel => 'Given name';
+
+  @override
+  String get designInputSurnameHelper =>
+      'Full-width characters, up to 6 letters.';
+
+  @override
+  String get designInputGivenNameHelper =>
+      'Full-width characters, up to 6 letters.';
+
+  @override
+  String get designInputSurnameReadingLabel => 'Surname reading';
+
+  @override
+  String get designInputGivenNameReadingLabel => 'Given name reading';
+
+  @override
+  String get designInputReadingHelper => 'Use Hiragana or Katakana (optional).';
+
+  @override
+  String get designInputContinue => 'Choose style';
+
+  @override
+  String get designInputSuggestionHeader => 'Quick fill';
+
+  @override
+  String get designInputSuggestionProfile => 'Use profile name';
+
+  @override
+  String get designInputSuggestionIdentity => 'Use account name';
+
+  @override
+  String get designInputSuggestionFallback => 'Suggested name';
+
+  @override
+  String get designInputKanjiMappingTitle => 'Need kanji ideas?';
+
+  @override
+  String get designInputKanjiMappingDescription =>
+      'Find culturally appropriate kanji variants and meanings for foreign names.';
+
+  @override
+  String get designInputKanjiMappingCta => 'Open mapper';
+
+  @override
+  String get designInputErrorEmptySurname => 'Enter your surname.';
+
+  @override
+  String get designInputErrorEmptyGiven => 'Enter your given name.';
+
+  @override
+  String get designInputErrorInvalidKanji =>
+      'Use full-width characters for your seal.';
+
+  @override
+  String get designInputErrorTooLongKanji =>
+      'Keep the name within 6 full-width characters.';
+
+  @override
+  String get designInputErrorTooLongLatin =>
+      'Keep the name within 20 characters.';
+
+  @override
+  String get designInputErrorInvalidKana =>
+      'Use Hiragana, Katakana, or prolonged sound marks.';
+
+  @override
+  String get designInputErrorTooLongKana =>
+      'Keep the reading within 20 characters.';
+
+  @override
+  String get designInputValidationFailed => 'Check the highlighted fields.';
 }

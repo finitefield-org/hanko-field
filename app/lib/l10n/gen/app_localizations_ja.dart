@@ -219,4 +219,94 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get designNewPermissionDenied =>
       'Storage access is required to continue with this mode.';
+
+  @override
+  String get designInputTitle => 'お名前を入力';
+
+  @override
+  String get designInputSubtitle => '印影に刻む姓と名を入力してください。入力内容に合わせてプレビューが更新されます。';
+
+  @override
+  String get designInputPreviewTitle => 'ライブプレビュー';
+
+  @override
+  String get designInputPreviewCaption => '書体やレイアウトは次のステップで調整できます。';
+
+  @override
+  String get designInputPlaceholderPrimary => '山田太郎';
+
+  @override
+  String get designInputSectionPrimary => '氏名（漢字またはローマ字）';
+
+  @override
+  String get designInputSectionReading => 'よみがな / 発音';
+
+  @override
+  String get designInputSurnameLabel => '姓';
+
+  @override
+  String get designInputGivenNameLabel => '名';
+
+  @override
+  String get designInputSurnameHelper => '全角6文字まで入力できます。';
+
+  @override
+  String get designInputGivenNameHelper => '全角6文字まで入力できます。';
+
+  @override
+  String get designInputSurnameReadingLabel => '姓（ふりがな）';
+
+  @override
+  String get designInputGivenNameReadingLabel => '名（ふりがな）';
+
+  @override
+  String get designInputReadingHelper => 'ひらがな・カタカナで入力してください（任意）。';
+
+  @override
+  String get designInputContinue => '書体を選ぶ';
+
+  @override
+  String get designInputSuggestionHeader => 'プロフィールから補完';
+
+  @override
+  String get designInputSuggestionProfile => 'プロフィール名を使用';
+
+  @override
+  String get designInputSuggestionIdentity => 'アカウント名を使用';
+
+  @override
+  String get designInputSuggestionFallback => '名前を挿入';
+
+  @override
+  String get designInputKanjiMappingTitle => '漢字の候補を探していますか？';
+
+  @override
+  String get designInputKanjiMappingDescription => '外国人の方向けに、意味付きの漢字候補を検索できます。';
+
+  @override
+  String get designInputKanjiMappingCta => '漢字マップを開く';
+
+  @override
+  String get designInputErrorEmptySurname => '姓を入力してください。';
+
+  @override
+  String get designInputErrorEmptyGiven => '名を入力してください。';
+
+  @override
+  String get designInputErrorInvalidKanji => '全角の漢字・かなで入力してください。';
+
+  @override
+  String get designInputErrorTooLongKanji => '全角6文字以内で入力してください。';
+
+  @override
+  String get designInputErrorTooLongLatin => '20文字以内で入力してください。';
+
+  @override
+  String get designInputErrorInvalidKana => 'ひらがな・カタカナ・長音符のみ使用できます。';
+
+  @override
+  String get designInputErrorTooLongKana => '20文字以内で入力してください。';
+
+  @override
+  String get designInputValidationFailed => '入力内容を確認してください。';
 }

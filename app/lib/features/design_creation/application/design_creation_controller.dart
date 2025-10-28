@@ -29,6 +29,14 @@ class DesignCreationController extends Notifier<DesignCreationState> {
     state = state.copyWith(selectedFilter: filter, resetFilter: filter == null);
   }
 
+  void setNameDraft(DesignNameDraft draft) {
+    state = state.copyWith(
+      selectedMode: state.selectedMode ?? DesignSourceType.typed,
+      nameDraft: draft,
+      pendingInput: draft.toDesignInput(),
+    );
+  }
+
   Future<bool> ensureStoragePermission() async {
     if (state.selectedMode == DesignSourceType.typed) {
       return true;

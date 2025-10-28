@@ -337,4 +337,154 @@
 , "@designNewPermissionDenied": {
   "description": "Snackbar message shown when storage permission is missing"
 }
+
+, "designInputTitle": "Enter your name"
+, "@designInputTitle": {
+  "description": "Title for the name input screen"
+}
+
+, "designInputSubtitle": "Provide the surname and given name that will appear on your seal. We'll preview it as you type."
+, "@designInputSubtitle": {
+  "description": "Subtitle explaining the purpose of the name input screen"
+}
+
+, "designInputPreviewTitle": "Live preview"
+, "@designInputPreviewTitle": {
+  "description": "Title for the preview card showing entered name"
+}
+
+, "designInputPreviewCaption": "Preview updates with your selected style later in the flow."
+, "@designInputPreviewCaption": {
+  "description": "Caption that explains the preview behaviour"
+}
+
+, "designInputPlaceholderPrimary": "Sample Name"
+, "@designInputPlaceholderPrimary": {
+  "description": "Placeholder text when no name has been entered yet"
+}
+
+, "designInputSectionPrimary": "Name (kanji or romaji)"
+, "@designInputSectionPrimary": {
+  "description": "Section header for the primary name fields"
+}
+
+, "designInputSectionReading": "Reading / pronunciation"
+, "@designInputSectionReading": {
+  "description": "Section header for pronunciation fields"
+}
+
+, "designInputSurnameLabel": "Surname"
+, "@designInputSurnameLabel": {
+  "description": "Label for the surname text field"
+}
+
+, "designInputGivenNameLabel": "Given name"
+, "@designInputGivenNameLabel": {
+  "description": "Label for the given name text field"
+}
+
+, "designInputSurnameHelper": "Full-width characters, up to 6 letters."
+, "@designInputSurnameHelper": {
+  "description": "Helper text guiding surname input"
+}
+
+, "designInputGivenNameHelper": "Full-width characters, up to 6 letters."
+, "@designInputGivenNameHelper": {
+  "description": "Helper text guiding given name input"
+}
+
+, "designInputSurnameReadingLabel": "Surname reading"
+, "@designInputSurnameReadingLabel": {
+  "description": "Label for the surname reading text field"
+}
+
+, "designInputGivenNameReadingLabel": "Given name reading"
+, "@designInputGivenNameReadingLabel": {
+  "description": "Label for the given name reading text field"
+}
+
+, "designInputReadingHelper": "Use Hiragana or Katakana (optional)."
+, "@designInputReadingHelper": {
+  "description": "Helper text for pronunciation fields"
+}
+
+, "designInputContinue": "Choose style"
+, "@designInputContinue": {
+  "description": "Primary action label to proceed from the name input screen"
+}
+
+, "designInputSuggestionHeader": "Quick fill"
+, "@designInputSuggestionHeader": {
+  "description": "Header for suggestion chips sourced from the profile"
+}
+
+, "designInputSuggestionProfile": "Use profile name"
+, "@designInputSuggestionProfile": {
+  "description": "Label for profile-based name suggestion"
+}
+
+, "designInputSuggestionIdentity": "Use account name"
+, "@designInputSuggestionIdentity": {
+  "description": "Label for identity-based name suggestion"
+}
+
+, "designInputSuggestionFallback": "Suggested name"
+, "@designInputSuggestionFallback": {
+  "description": "Fallback label when no specific suggestion label applies"
+}
+
+, "designInputKanjiMappingTitle": "Need kanji ideas?"
+, "@designInputKanjiMappingTitle": {
+  "description": "Title for the kanji mapping helper card"
+}
+
+, "designInputKanjiMappingDescription": "Find culturally appropriate kanji variants and meanings for foreign names."
+, "@designInputKanjiMappingDescription": {
+  "description": "Description for the kanji mapping helper card"
+}
+
+, "designInputKanjiMappingCta": "Open mapper"
+, "@designInputKanjiMappingCta": {
+  "description": "Call-to-action for the kanji mapping helper card"
+}
+
+, "designInputErrorEmptySurname": "Enter your surname."
+, "@designInputErrorEmptySurname": {
+  "description": "Validation error shown when surname field is empty"
+}
+
+, "designInputErrorEmptyGiven": "Enter your given name."
+, "@designInputErrorEmptyGiven": {
+  "description": "Validation error shown when given name field is empty"
+}
+
+, "designInputErrorInvalidKanji": "Use full-width characters for your seal."
+, "@designInputErrorInvalidKanji": {
+  "description": "Validation error when half-width characters are used in kanji fields"
+}
+
+, "designInputErrorTooLongKanji": "Keep the name within 6 full-width characters."
+, "@designInputErrorTooLongKanji": {
+  "description": "Validation error when kanji input exceeds limit"
+}
+
+, "designInputErrorTooLongLatin": "Keep the name within 20 characters."
+, "@designInputErrorTooLongLatin": {
+  "description": "Validation error when latin input exceeds limit"
+}
+
+, "designInputErrorInvalidKana": "Use Hiragana, Katakana, or prolonged sound marks."
+, "@designInputErrorInvalidKana": {
+  "description": "Validation error when kana field contains invalid characters"
+}
+
+, "designInputErrorTooLongKana": "Keep the reading within 20 characters."
+, "@designInputErrorTooLongKana": {
+  "description": "Validation error when kana input exceeds limit"
+}
+
+, "designInputValidationFailed": "Check the highlighted fields."
+, "@designInputValidationFailed": {
+  "description": "Snackbar message shown when validation fails on submit"
+}
 }

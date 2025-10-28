@@ -487,6 +487,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Storage access is required to continue with this mode.'**
   String get designNewPermissionDenied;
+
+  /// Title for the name input screen
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your name'**
+  String get designInputTitle;
+
+  /// Subtitle explaining the purpose of the name input screen
+  ///
+  /// In en, this message translates to:
+  /// **'Provide the surname and given name that will appear on your seal. We\'ll preview it as you type.'**
+  String get designInputSubtitle;
+
+  /// Title for the preview card showing entered name
+  ///
+  /// In en, this message translates to:
+  /// **'Live preview'**
+  String get designInputPreviewTitle;
+
+  /// Caption that explains the preview behaviour
+  ///
+  /// In en, this message translates to:
+  /// **'Preview updates with your selected style later in the flow.'**
+  String get designInputPreviewCaption;
+
+  /// Placeholder text when no name has been entered yet
+  ///
+  /// In en, this message translates to:
+  /// **'Sample Name'**
+  String get designInputPlaceholderPrimary;
+
+  /// Section header for the primary name fields
+  ///
+  /// In en, this message translates to:
+  /// **'Name (kanji or romaji)'**
+  String get designInputSectionPrimary;
+
+  /// Section header for pronunciation fields
+  ///
+  /// In en, this message translates to:
+  /// **'Reading / pronunciation'**
+  String get designInputSectionReading;
+
+  /// Label for the surname text field
+  ///
+  /// In en, this message translates to:
+  /// **'Surname'**
+  String get designInputSurnameLabel;
+
+  /// Label for the given name text field
+  ///
+  /// In en, this message translates to:
+  /// **'Given name'**
+  String get designInputGivenNameLabel;
+
+  /// Helper text guiding surname input
+  ///
+  /// In en, this message translates to:
+  /// **'Full-width characters, up to 6 letters.'**
+  String get designInputSurnameHelper;
+
+  /// Helper text guiding given name input
+  ///
+  /// In en, this message translates to:
+  /// **'Full-width characters, up to 6 letters.'**
+  String get designInputGivenNameHelper;
+
+  /// Label for the surname reading text field
+  ///
+  /// In en, this message translates to:
+  /// **'Surname reading'**
+  String get designInputSurnameReadingLabel;
+
+  /// Label for the given name reading text field
+  ///
+  /// In en, this message translates to:
+  /// **'Given name reading'**
+  String get designInputGivenNameReadingLabel;
+
+  /// Helper text for pronunciation fields
+  ///
+  /// In en, this message translates to:
+  /// **'Use Hiragana or Katakana (optional).'**
+  String get designInputReadingHelper;
+
+  /// Primary action label to proceed from the name input screen
+  ///
+  /// In en, this message translates to:
+  /// **'Choose style'**
+  String get designInputContinue;
+
+  /// Header for suggestion chips sourced from the profile
+  ///
+  /// In en, this message translates to:
+  /// **'Quick fill'**
+  String get designInputSuggestionHeader;
+
+  /// Label for profile-based name suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Use profile name'**
+  String get designInputSuggestionProfile;
+
+  /// Label for identity-based name suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Use account name'**
+  String get designInputSuggestionIdentity;
+
+  /// Fallback label when no specific suggestion label applies
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested name'**
+  String get designInputSuggestionFallback;
+
+  /// Title for the kanji mapping helper card
+  ///
+  /// In en, this message translates to:
+  /// **'Need kanji ideas?'**
+  String get designInputKanjiMappingTitle;
+
+  /// Description for the kanji mapping helper card
+  ///
+  /// In en, this message translates to:
+  /// **'Find culturally appropriate kanji variants and meanings for foreign names.'**
+  String get designInputKanjiMappingDescription;
+
+  /// Call-to-action for the kanji mapping helper card
+  ///
+  /// In en, this message translates to:
+  /// **'Open mapper'**
+  String get designInputKanjiMappingCta;
+
+  /// Validation error shown when surname field is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your surname.'**
+  String get designInputErrorEmptySurname;
+
+  /// Validation error shown when given name field is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your given name.'**
+  String get designInputErrorEmptyGiven;
+
+  /// Validation error when half-width characters are used in kanji fields
+  ///
+  /// In en, this message translates to:
+  /// **'Use full-width characters for your seal.'**
+  String get designInputErrorInvalidKanji;
+
+  /// Validation error when kanji input exceeds limit
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the name within 6 full-width characters.'**
+  String get designInputErrorTooLongKanji;
+
+  /// Validation error when latin input exceeds limit
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the name within 20 characters.'**
+  String get designInputErrorTooLongLatin;
+
+  /// Validation error when kana field contains invalid characters
+  ///
+  /// In en, this message translates to:
+  /// **'Use Hiragana, Katakana, or prolonged sound marks.'**
+  String get designInputErrorInvalidKana;
+
+  /// Validation error when kana input exceeds limit
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the reading within 20 characters.'**
+  String get designInputErrorTooLongKana;
+
+  /// Snackbar message shown when validation fails on submit
+  ///
+  /// In en, this message translates to:
+  /// **'Check the highlighted fields.'**
+  String get designInputValidationFailed;
 }
 
 class _AppLocalizationsDelegate
