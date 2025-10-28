@@ -182,13 +182,33 @@ class NotificationsListController
     state = AsyncValue.data(current.copyWith(pendingUpdates: inFlight));
     try {
       final updated = await _repository.updateReadState(id: id, read: read);
-      final items = current.items
-          .map((item) => item.id == id ? updated : item)
-          .toList(growable: false);
-      final unreadCount = items.where((item) => !item.read).length;
+      final baseItems = current.items;
+      List<AppNotification> nextItems;
+      if (current.filter.unreadOnly) {
+        if (updated.read) {
+          nextItems = [
+            for (final item in baseItems)
+              if (item.id != id) item,
+          ];
+        } else {
+          final temp = [
+            for (final item in baseItems)
+              if (item.id != id) item,
+          ];
+          temp.add(updated);
+          temp.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          nextItems = temp;
+        }
+      } else {
+        nextItems = [
+          for (final item in baseItems)
+            if (item.id == id) updated else item,
+        ];
+      }
+      final unreadCount = nextItems.where((item) => !item.read).length;
       final pending = {...inFlight}..remove(id);
       final nextState = current.copyWith(
-        items: List.unmodifiable(items),
+        items: List.unmodifiable(nextItems),
         unreadCount: unreadCount,
         pendingUpdates: pending,
       );
@@ -213,8 +233,11 @@ class NotificationsListController
       final cleared = [
         for (final item in current.items) item.copyWith(read: true),
       ];
+      final items = current.filter.unreadOnly
+          ? const <AppNotification>[]
+          : cleared;
       final next = current.copyWith(
-        items: List.unmodifiable(cleared),
+        items: List.unmodifiable(items),
         unreadCount: 0,
         isRefreshing: false,
       );
