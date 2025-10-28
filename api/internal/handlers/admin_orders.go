@@ -42,6 +42,15 @@ type adminCreateShipmentRequest struct {
 	Items              []adminShipmentItemRequest `json:"items"`
 }
 
+type adminUpdateShipmentRequest struct {
+	Status                string  `json:"status"`
+	ExpectedDelivery      *string `json:"expected_delivery"`
+	ClearExpectedDelivery bool    `json:"clear_expected_delivery"`
+	Notes                 *string `json:"notes"`
+	TrackingCode          *string `json:"tracking_code"`
+	IfUnmodifiedSince     *string `json:"if_unmodified_since"`
+}
+
 type adminShipmentPackage struct {
 	Length float64 `json:"length"`
 	Width  float64 `json:"width"`
@@ -78,6 +87,7 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
 	if h.shipments != nil {
 		r.Post("/orders/{orderID}/shipments", h.createShipment)
+		r.Put("/orders/{orderID}/shipments/{shipmentID}", h.updateShipment)
 	}
 	if h.payments != nil {
 		r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
@@ -478,6 +488,138 @@ func (h *AdminOrderHandlers) createShipment(w http.ResponseWriter, r *http.Reque
 		Shipment: buildOrderShipmentDetail(shipment),
 	}
 	writeJSONResponse(w, http.StatusCreated, response)
+}
+
+func (h *AdminOrderHandlers) updateShipment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.shipments == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("shipment_service_unavailable", "shipment service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_order_id", "order id is required", http.StatusBadRequest))
+		return
+	}
+	shipmentID := strings.TrimSpace(chi.URLParam(r, "shipmentID"))
+	if shipmentID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_shipment_id", "shipment id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminShipmentBodySize)
+	if err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	}
+
+	var payload adminUpdateShipmentRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON payload", http.StatusBadRequest))
+		return
+	}
+
+	status := strings.TrimSpace(payload.Status)
+	if status == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_status", "status is required", http.StatusBadRequest))
+		return
+	}
+
+	var expectedDelivery *time.Time
+	if payload.ExpectedDelivery != nil {
+		trimmed := strings.TrimSpace(*payload.ExpectedDelivery)
+		if trimmed != "" {
+			parsed, parseErr := time.Parse(time.RFC3339, trimmed)
+			if parseErr != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_expected_delivery", "expected_delivery must be RFC3339", http.StatusBadRequest))
+				return
+			}
+			t := parsed.UTC()
+			expectedDelivery = &t
+		}
+	}
+	if payload.ClearExpectedDelivery && expectedDelivery != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_expected_delivery", "cannot set and clear expected delivery simultaneously", http.StatusBadRequest))
+		return
+	}
+
+	var ifUnmodifiedSince *time.Time
+	if payload.IfUnmodifiedSince != nil {
+		trimmed := strings.TrimSpace(*payload.IfUnmodifiedSince)
+		if trimmed != "" {
+			parsed, parseErr := time.Parse(time.RFC3339, trimmed)
+			if parseErr != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_if_unmodified_since", "if_unmodified_since must be RFC3339", http.StatusBadRequest))
+				return
+			}
+			t := parsed.UTC()
+			ifUnmodifiedSince = &t
+		}
+	}
+
+	var trackingPtr *string
+	if payload.TrackingCode != nil {
+		value := strings.TrimSpace(*payload.TrackingCode)
+		trackingPtr = &value
+	}
+
+	var notesPtr *string
+	if payload.Notes != nil {
+		value := strings.TrimSpace(*payload.Notes)
+		notesPtr = &value
+	}
+
+	var previousShipment *services.Shipment
+	if h.orders != nil {
+		order, getErr := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{IncludeShipments: true})
+		if getErr == nil {
+			for idx := range order.Shipments {
+				if strings.EqualFold(strings.TrimSpace(order.Shipments[idx].ID), shipmentID) {
+					s := order.Shipments[idx]
+					previousShipment = &s
+					break
+				}
+			}
+		}
+	}
+
+	cmd := services.UpdateShipmentCommand{
+		OrderID:               orderID,
+		ShipmentID:            shipmentID,
+		Status:                status,
+		TrackingCode:          trackingPtr,
+		ExpectedDelivery:      expectedDelivery,
+		ClearExpectedDelivery: payload.ClearExpectedDelivery,
+		Notes:                 notesPtr,
+		IfUnmodifiedSince:     ifUnmodifiedSince,
+		ActorID:               identity.UID,
+	}
+
+	shipment, err := h.shipments.UpdateShipmentStatus(ctx, cmd)
+	if err != nil {
+		writeShipmentError(ctx, w, err)
+		return
+	}
+
+	h.recordShipmentAudit(ctx, identity, orderID, previousShipment, shipment)
+
+	response := struct {
+		Shipment orderShipmentPayload `json:"shipment"`
+	}{
+		Shipment: buildOrderShipmentDetail(shipment),
+	}
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 type adminPaymentActionRequest struct {
@@ -1017,6 +1159,79 @@ func (h *AdminOrderHandlers) recordOrderStatusAudit(ctx context.Context, identit
 			}
 			record.Metadata[key] = value
 		}
+	}
+
+	h.audit.Record(ctx, record)
+}
+
+func (h *AdminOrderHandlers) recordShipmentAudit(ctx context.Context, identity *auth.Identity, orderID string, before *services.Shipment, after services.Shipment) {
+	if h.audit == nil {
+		return
+	}
+
+	trimmedOrderID := strings.TrimSpace(orderID)
+	trimmedShipmentID := strings.TrimSpace(after.ID)
+	actorID := ""
+	if identity != nil {
+		actorID = strings.TrimSpace(identity.UID)
+	}
+
+	previousStatus := ""
+	previousTracking := ""
+	previousETA := ""
+	previousNote := ""
+	if before != nil {
+		previousStatus = strings.TrimSpace(before.Status)
+		previousTracking = strings.TrimSpace(before.TrackingCode)
+		previousETA = formatTime(pointerTime(before.ETA))
+		previousNote = strings.TrimSpace(before.Notes)
+	}
+
+	currentStatus := strings.TrimSpace(after.Status)
+	currentTracking := strings.TrimSpace(after.TrackingCode)
+	currentETA := formatTime(pointerTime(after.ETA))
+	currentNote := strings.TrimSpace(after.Notes)
+
+	diff := make(map[string]services.AuditLogDiff)
+	if previousStatus != currentStatus {
+		diff["status"] = services.AuditLogDiff{Before: previousStatus, After: currentStatus}
+	}
+	if previousTracking != currentTracking {
+		diff["tracking_code"] = services.AuditLogDiff{Before: previousTracking, After: currentTracking}
+	}
+	if previousETA != currentETA {
+		diff["expected_delivery"] = services.AuditLogDiff{Before: previousETA, After: currentETA}
+	}
+	if previousNote != currentNote {
+		diff["note"] = services.AuditLogDiff{Before: previousNote, After: currentNote}
+	}
+
+	if len(diff) == 0 {
+		return
+	}
+
+	metadata := map[string]any{
+		"shipmentId": trimmedShipmentID,
+		"status":     currentStatus,
+	}
+	if currentTracking != "" {
+		metadata["trackingNumber"] = currentTracking
+	}
+	if currentETA != "" {
+		metadata["expectedDelivery"] = currentETA
+	}
+	if currentNote != "" {
+		metadata["note"] = currentNote
+	}
+
+	record := services.AuditLogRecord{
+		Actor:      actorID,
+		ActorType:  adminOrderActorType(identity),
+		Action:     "order.shipment.update",
+		TargetRef:  fmt.Sprintf("/orders/%s/shipments/%s", trimmedOrderID, trimmedShipmentID),
+		OccurredAt: time.Now().UTC(),
+		Metadata:   metadata,
+		Diff:       diff,
 	}
 
 	h.audit.Record(ctx, record)

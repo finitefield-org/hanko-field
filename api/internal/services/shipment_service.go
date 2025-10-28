@@ -28,6 +28,19 @@ var (
 	ErrShipmentConflict = errors.New("shipment: conflict")
 )
 
+var validShipmentStatuses = map[string]struct{}{
+	"label_created":     {},
+	"picked_up":         {},
+	"in_transit":        {},
+	"arrived_hub":       {},
+	"customs_clearance": {},
+	"out_for_delivery":  {},
+	"delivered":         {},
+	"exception":         {},
+	"return_to_sender":  {},
+	"cancelled":         {},
+}
+
 // ShippingLabelProvider generates carrier labels and tracking numbers for shipments.
 type ShippingLabelProvider interface {
 	CreateShippingLabel(ctx context.Context, req ShippingLabelRequest) (ShippingLabel, error)
@@ -284,7 +297,186 @@ func (s *shipmentService) CreateShipment(ctx context.Context, cmd CreateShipment
 }
 
 func (s *shipmentService) UpdateShipmentStatus(ctx context.Context, cmd UpdateShipmentCommand) (Shipment, error) {
-	return Shipment{}, errors.New("shipment: update status not implemented")
+	orderID := strings.TrimSpace(cmd.OrderID)
+	shipmentID := strings.TrimSpace(cmd.ShipmentID)
+	status := strings.ToLower(strings.TrimSpace(cmd.Status))
+	actor := strings.TrimSpace(cmd.ActorID)
+
+	if orderID == "" {
+		return Shipment{}, fmt.Errorf("%w: order id is required", ErrShipmentInvalidInput)
+	}
+	if shipmentID == "" {
+		return Shipment{}, fmt.Errorf("%w: shipment id is required", ErrShipmentInvalidInput)
+	}
+	if status == "" {
+		return Shipment{}, fmt.Errorf("%w: status is required", ErrShipmentInvalidInput)
+	}
+	if _, ok := validShipmentStatuses[status]; !ok {
+		return Shipment{}, fmt.Errorf("%w: status %q is not supported", ErrShipmentInvalidInput, status)
+	}
+
+	var (
+		updated             Shipment
+		previous            Shipment
+		orderNumber         string
+		notifyDelivered     bool
+		notifyCanceled      bool
+		orderStatusChanged  bool
+		prevOrderStatus     domain.OrderStatus
+		metadataStatusEvent = status
+	)
+
+	now := s.now()
+
+	err := s.runInTx(ctx, func(txCtx context.Context) error {
+		order, err := s.orders.FindByID(txCtx, orderID)
+		if err != nil {
+			return s.mapOrderError(err)
+		}
+
+		orderNumber = strings.TrimSpace(order.OrderNumber)
+		prevOrderStatus = order.Status
+
+		shipments, err := s.shipments.List(txCtx, orderID)
+		if err != nil {
+			return s.mapShipmentError(err)
+		}
+
+		idx := -1
+		for i := range shipments {
+			if strings.EqualFold(strings.TrimSpace(shipments[i].ID), shipmentID) {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return ErrShipmentNotFound
+		}
+
+		target := shipments[idx]
+		previous = target
+
+		if cmd.IfUnmodifiedSince != nil {
+			expected := cmd.IfUnmodifiedSince.UTC()
+			current := target.UpdatedAt.UTC()
+			if !current.Equal(expected) {
+				return fmt.Errorf("%w: shipment updated at %s differs from expected %s", ErrShipmentConflict, current.Format(time.RFC3339Nano), expected.Format(time.RFC3339Nano))
+			}
+		}
+
+		trackingCode := target.TrackingCode
+		if cmd.TrackingCode != nil {
+			trackingCode = strings.TrimSpace(*cmd.TrackingCode)
+		}
+
+		var eta *time.Time
+		switch {
+		case cmd.ClearExpectedDelivery:
+			eta = nil
+		case cmd.ExpectedDelivery != nil:
+			value := cmd.ExpectedDelivery.UTC()
+			eta = &value
+		default:
+			if target.ETA != nil {
+				value := target.ETA.UTC()
+				eta = &value
+			}
+		}
+
+		note := target.Notes
+		if cmd.Notes != nil {
+			note = strings.TrimSpace(*cmd.Notes)
+		}
+
+		target.Status = status
+		target.TrackingCode = trackingCode
+		target.ETA = eta
+		target.Notes = note
+		target.UpdatedAt = now
+
+		details := map[string]any{
+			"source": "manual_update",
+			"status": status,
+		}
+		if actor != "" {
+			details["actor"] = actor
+		}
+		if previous.Status != status {
+			details["previousStatus"] = previous.Status
+		}
+		if trackingCode != "" {
+			details["trackingNumber"] = trackingCode
+		}
+		if eta != nil {
+			details["expectedDelivery"] = eta
+		} else if cmd.ClearExpectedDelivery && previous.ETA != nil {
+			details["expectedDeliveryCleared"] = true
+		}
+		if cmd.Notes != nil {
+			if note != "" {
+				details["note"] = note
+			} else {
+				details["noteCleared"] = true
+			}
+		} else if note != "" {
+			details["note"] = note
+		}
+
+		target.Events = append(target.Events, ShipmentEvent{
+			Status:     metadataStatusEvent,
+			OccurredAt: now,
+			Details:    details,
+		})
+
+		shipments[idx] = target
+
+		if err := s.shipments.Update(txCtx, domain.Shipment(target)); err != nil {
+			return s.mapShipmentError(err)
+		}
+
+		if previous.Status != status {
+			switch status {
+			case "delivered":
+				notifyDelivered = true
+				if s.areAllShipmentsDelivered(shipments) && canTransition(order.Status, domain.OrderStatusDelivered) {
+					order.Status = domain.OrderStatusDelivered
+					order.UpdatedAt = now
+					if order.DeliveredAt == nil {
+						order.DeliveredAt = &now
+					}
+					if actor != "" {
+						ref := actor
+						order.Audit.UpdatedBy = &ref
+					}
+					if err := s.orders.Update(txCtx, order); err != nil {
+						return s.mapOrderError(err)
+					}
+					orderStatusChanged = true
+				}
+			case "cancelled":
+				notifyCanceled = true
+			}
+		}
+
+		updated = target
+		return nil
+	})
+	if err != nil {
+		return Shipment{}, err
+	}
+
+	s.publishShipmentUpdated(ctx, orderID, orderNumber, previous, updated, actor, now)
+	if orderStatusChanged {
+		s.publishOrderStatusChange(ctx, orderID, orderNumber, prevOrderStatus, domain.OrderStatusDelivered, actor, now)
+	}
+	if notifyDelivered {
+		s.publishShipmentNotification(ctx, orderID, orderNumber, updated, actor, now, orderEventShipmentDelivered)
+	}
+	if notifyCanceled {
+		s.publishShipmentNotification(ctx, orderID, orderNumber, updated, actor, now, orderEventShipmentCanceled)
+	}
+
+	return updated, nil
 }
 
 func (s *shipmentService) ListShipments(ctx context.Context, orderID string) ([]Shipment, error) {
@@ -364,6 +556,18 @@ func (s *shipmentService) computeRemaining(lines []OrderLineItem, shipments []Sh
 	return remaining
 }
 
+func (s *shipmentService) areAllShipmentsDelivered(shipments []Shipment) bool {
+	if len(shipments) == 0 {
+		return false
+	}
+	for _, shipment := range shipments {
+		if strings.ToLower(strings.TrimSpace(shipment.Status)) != "delivered" {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *shipmentService) publishShipmentCreated(ctx context.Context, orderID, orderNumber string, shipment Shipment, actor string) {
 	if s.events == nil {
 		return
@@ -384,6 +588,63 @@ func (s *shipmentService) publishShipmentCreated(ctx context.Context, orderID, o
 		OrderNumber: orderNumber,
 		ActorID:     actor,
 		OccurredAt:  shipment.CreatedAt,
+		Metadata:    meta,
+	})
+}
+
+func (s *shipmentService) publishShipmentUpdated(ctx context.Context, orderID, orderNumber string, previous, updated Shipment, actor string, occurredAt time.Time) {
+	if s.events == nil {
+		return
+	}
+	meta := map[string]any{
+		"shipmentId": updated.ID,
+		"status":     updated.Status,
+	}
+	if previous.Status != updated.Status {
+		meta["previousStatus"] = previous.Status
+	}
+	if updated.TrackingCode != "" {
+		meta["trackingNumber"] = updated.TrackingCode
+	}
+	if updated.ETA != nil {
+		meta["expectedDelivery"] = updated.ETA
+	}
+	if updated.Notes != "" {
+		meta["note"] = updated.Notes
+	}
+	s.publishOrderEvent(ctx, OrderEvent{
+		Type:        orderEventShipmentUpdated,
+		OrderID:     orderID,
+		OrderNumber: orderNumber,
+		ActorID:     actor,
+		OccurredAt:  occurredAt,
+		Metadata:    meta,
+	})
+}
+
+func (s *shipmentService) publishShipmentNotification(ctx context.Context, orderID, orderNumber string, shipment Shipment, actor string, occurredAt time.Time, eventType string) {
+	if s.events == nil {
+		return
+	}
+	meta := map[string]any{
+		"shipmentId": shipment.ID,
+		"status":     shipment.Status,
+	}
+	if shipment.TrackingCode != "" {
+		meta["trackingNumber"] = shipment.TrackingCode
+	}
+	if shipment.ETA != nil {
+		meta["expectedDelivery"] = shipment.ETA
+	}
+	if shipment.Notes != "" {
+		meta["note"] = shipment.Notes
+	}
+	s.publishOrderEvent(ctx, OrderEvent{
+		Type:        eventType,
+		OrderID:     orderID,
+		OrderNumber: orderNumber,
+		ActorID:     actor,
+		OccurredAt:  occurredAt,
 		Metadata:    meta,
 	})
 }

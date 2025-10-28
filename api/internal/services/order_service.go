@@ -21,6 +21,9 @@ const (
 	orderEventProductionAppended = "order.production.event.appended"
 	orderEventInvoiceRequested   = "order.invoice.requested"
 	orderEventShipmentCreated    = "order.shipment.created"
+	orderEventShipmentUpdated    = "order.shipment.updated"
+	orderEventShipmentDelivered  = "order.shipment.delivered"
+	orderEventShipmentCanceled   = "order.shipment.canceled"
 
 	orderIDPrefix           = "ord_"
 	productionEventIDPrefix = "ope_"

@@ -190,6 +190,166 @@ func TestShipmentService_CreateShipmentLabelFailure(t *testing.T) {
 	}
 }
 
+func TestShipmentService_UpdateShipmentStatus_AppendsEventAndPublishesNotifications(t *testing.T) {
+	now := time.Date(2024, 10, 7, 15, 30, 0, 0, time.UTC)
+	updatedAt := now.Add(-2 * time.Hour)
+	order := domain.Order{
+		ID:          "ord_upd",
+		OrderNumber: "HF-2024-000030",
+		Status:      domain.OrderStatusShipped,
+		Audit:       domain.OrderAudit{},
+	}
+	shipment := domain.Shipment{
+		ID:           "shp_001",
+		OrderID:      order.ID,
+		Carrier:      "YAMATO",
+		TrackingCode: "OLD-TRK",
+		Status:       "in_transit",
+		UpdatedAt:    updatedAt,
+		CreatedAt:    now.Add(-24 * time.Hour),
+		Events: []domain.ShipmentEvent{{
+			Status:     "in_transit",
+			OccurredAt: now.Add(-3 * time.Hour),
+		}},
+	}
+
+	orderRepo := &shipmentTestOrderRepo{order: order}
+	shipmentRepo := &shipmentTestShipmentRepo{existing: []domain.Shipment{shipment}}
+	events := &shipmentTestEventPublisher{}
+
+	service, err := NewShipmentService(ShipmentServiceDeps{
+		Orders:    orderRepo,
+		Shipments: shipmentRepo,
+		Clock:     func() time.Time { return now },
+		Events:    events,
+	})
+	if err != nil {
+		t.Fatalf("NewShipmentService() error = %v", err)
+	}
+
+	eta := now.Add(48 * time.Hour)
+	ifUnmodified := updatedAt.UTC()
+	tracking := "NEW-TRK"
+	note := "Carrier confirmed delivery"
+
+	result, err := service.UpdateShipmentStatus(context.Background(), UpdateShipmentCommand{
+		OrderID:               order.ID,
+		ShipmentID:            shipment.ID,
+		Status:                "delivered",
+		TrackingCode:          &tracking,
+		ExpectedDelivery:      &eta,
+		Notes:                 &note,
+		IfUnmodifiedSince:     &ifUnmodified,
+		ActorID:               "staff-007",
+		ClearExpectedDelivery: false,
+	})
+	if err != nil {
+		t.Fatalf("UpdateShipmentStatus() error = %v", err)
+	}
+
+	if result.Status != "delivered" {
+		t.Fatalf("expected status delivered, got %s", result.Status)
+	}
+	if result.TrackingCode != tracking {
+		t.Fatalf("expected tracking updated to %s", tracking)
+	}
+	if result.ETA == nil || !result.ETA.Equal(eta.UTC()) {
+		t.Fatalf("expected eta updated to %s", eta.Format(time.RFC3339))
+	}
+	if strings.TrimSpace(result.Notes) != note {
+		t.Fatalf("expected notes to be set")
+	}
+	if len(result.Events) == 0 {
+		t.Fatalf("expected manual event appended")
+	}
+	latest := result.Events[len(result.Events)-1]
+	if latest.Status != "delivered" {
+		t.Fatalf("expected latest event status delivered, got %s", latest.Status)
+	}
+	if latest.OccurredAt != now {
+		t.Fatalf("expected event timestamp to match now")
+	}
+	if source := latest.Details["source"]; source != "manual_update" {
+		t.Fatalf("expected manual update source, got %#v", source)
+	}
+	if latest.Details["note"] != note {
+		t.Fatalf("expected note in event details")
+	}
+
+	if len(shipmentRepo.updated) != 1 {
+		t.Fatalf("expected shipment repository update")
+	}
+	if orderRepo.updated == nil || orderRepo.updated.Status != domain.OrderStatusDelivered {
+		t.Fatalf("expected order status transitioned to delivered")
+	}
+
+	if len(events.events) < 2 {
+		t.Fatalf("expected shipment events to be published")
+	}
+
+	var hasUpdated, hasDelivered, hasStatusChange bool
+	for _, evt := range events.events {
+		switch evt.Type {
+		case orderEventShipmentUpdated:
+			hasUpdated = true
+		case orderEventShipmentDelivered:
+			hasDelivered = true
+		case orderEventStatusChanged:
+			hasStatusChange = true
+		}
+	}
+	if !hasUpdated {
+		t.Fatalf("expected order.shipment.updated event")
+	}
+	if !hasDelivered {
+		t.Fatalf("expected order.shipment.delivered event")
+	}
+	if !hasStatusChange {
+		t.Fatalf("expected order.status.changed event")
+	}
+}
+
+func TestShipmentService_UpdateShipmentStatus_ConflictsOnStaleVersion(t *testing.T) {
+	now := time.Date(2024, 10, 8, 8, 0, 0, 0, time.UTC)
+	order := domain.Order{ID: "ord_conflict", OrderNumber: "HF-2024-000040", Status: domain.OrderStatusShipped}
+	shipment := domain.Shipment{
+		ID:        "shp_conflict",
+		OrderID:   order.ID,
+		Carrier:   "JPPOST",
+		Status:    "in_transit",
+		UpdatedAt: now.Add(-30 * time.Minute),
+		CreatedAt: now.Add(-24 * time.Hour),
+	}
+
+	orderRepo := &shipmentTestOrderRepo{order: order}
+	shipmentRepo := &shipmentTestShipmentRepo{existing: []domain.Shipment{shipment}}
+
+	service, err := NewShipmentService(ShipmentServiceDeps{
+		Orders:    orderRepo,
+		Shipments: shipmentRepo,
+		Clock:     func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewShipmentService() error = %v", err)
+	}
+
+	ifUnmodified := now.Add(-10 * time.Minute).UTC()
+
+	_, err = service.UpdateShipmentStatus(context.Background(), UpdateShipmentCommand{
+		OrderID:           order.ID,
+		ShipmentID:        shipment.ID,
+		Status:            "exception",
+		IfUnmodifiedSince: &ifUnmodified,
+		ActorID:           "staff-008",
+	})
+	if err == nil || !errors.Is(err, ErrShipmentConflict) {
+		t.Fatalf("expected ErrShipmentConflict, got %v", err)
+	}
+	if len(shipmentRepo.updated) != 0 {
+		t.Fatalf("expected no shipment updates on conflict")
+	}
+}
+
 type shipmentTestOrderRepo struct {
 	order   domain.Order
 	updated *domain.Order
@@ -219,6 +379,7 @@ func (r *shipmentTestOrderRepo) List(ctx context.Context, filter repositories.Or
 type shipmentTestShipmentRepo struct {
 	existing []domain.Shipment
 	inserted []domain.Shipment
+	updated  []domain.Shipment
 }
 
 func (r *shipmentTestShipmentRepo) Insert(ctx context.Context, shipment domain.Shipment) error {
@@ -227,6 +388,14 @@ func (r *shipmentTestShipmentRepo) Insert(ctx context.Context, shipment domain.S
 }
 
 func (r *shipmentTestShipmentRepo) Update(ctx context.Context, shipment domain.Shipment) error {
+	cloned := shipment
+	r.updated = append(r.updated, cloned)
+	for i := range r.existing {
+		if strings.EqualFold(r.existing[i].ID, shipment.ID) {
+			r.existing[i] = cloned
+			break
+		}
+	}
 	return nil
 }
 

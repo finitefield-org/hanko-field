@@ -503,6 +503,147 @@ func TestAdminOrderHandlers_CreateShipment_MapsServiceErrors(t *testing.T) {
 	}
 }
 
+func TestAdminOrderHandlers_UpdateShipment_Success(t *testing.T) {
+	ifUnmodified := time.Date(2024, 10, 9, 6, 0, 0, 0, time.UTC)
+	oldETA := time.Date(2024, 10, 10, 12, 0, 0, 0, time.UTC)
+	newETA := time.Date(2024, 10, 12, 9, 30, 0, 0, time.UTC)
+
+	orders := &stubOrderService{
+		getFn: func(ctx context.Context, orderID string, opts services.OrderReadOptions) (services.Order, error) {
+			if orderID != "ord-1" {
+				t.Fatalf("expected order id ord-1, got %s", orderID)
+			}
+			if !opts.IncludeShipments {
+				t.Fatalf("expected shipments to be requested")
+			}
+			return services.Order{
+				ID: orderID,
+				Shipments: []services.Shipment{
+					{
+						ID:           "shp-55",
+						OrderID:      orderID,
+						Status:       "in_transit",
+						TrackingCode: "OLD-TRK",
+						ETA:          &oldETA,
+						Notes:        "Call carrier",
+					},
+				},
+			}, nil
+		},
+	}
+
+	shipments := &stubShipmentService{
+		updateFn: func(ctx context.Context, cmd services.UpdateShipmentCommand) (services.Shipment, error) {
+			if cmd.OrderID != "ord-1" {
+				t.Fatalf("expected order id ord-1, got %s", cmd.OrderID)
+			}
+			if cmd.ShipmentID != "shp-55" {
+				t.Fatalf("expected shipment id shp-55, got %s", cmd.ShipmentID)
+			}
+			if cmd.Status != "delivered" {
+				t.Fatalf("expected status delivered, got %s", cmd.Status)
+			}
+			if cmd.TrackingCode == nil || *cmd.TrackingCode != "NEW-TRK" {
+				t.Fatalf("expected tracking code NEW-TRK, got %#v", cmd.TrackingCode)
+			}
+			if cmd.ExpectedDelivery == nil || !cmd.ExpectedDelivery.Equal(newETA) {
+				t.Fatalf("expected expected delivery %v, got %#v", newETA, cmd.ExpectedDelivery)
+			}
+			if cmd.IfUnmodifiedSince == nil || !cmd.IfUnmodifiedSince.Equal(ifUnmodified) {
+				t.Fatalf("expected if_unmodified_since %v, got %#v", ifUnmodified, cmd.IfUnmodifiedSince)
+			}
+			if cmd.Notes == nil || *cmd.Notes != "Customer confirmed receipt" {
+				t.Fatalf("expected note to be trimmed, got %#v", cmd.Notes)
+			}
+			if cmd.ActorID != "ops" {
+				t.Fatalf("expected actor ops, got %s", cmd.ActorID)
+			}
+
+			return services.Shipment{
+				ID:           cmd.ShipmentID,
+				OrderID:      cmd.OrderID,
+				Status:       "delivered",
+				TrackingCode: "NEW-TRK",
+				ETA:          &newETA,
+				Notes:        "Customer confirmed receipt",
+				CreatedAt:    time.Date(2024, 10, 1, 0, 0, 0, 0, time.UTC),
+				UpdatedAt:    time.Date(2024, 10, 9, 8, 0, 0, 0, time.UTC),
+				Events: []services.ShipmentEvent{
+					{Status: "delivered", OccurredAt: time.Date(2024, 10, 9, 8, 0, 0, 0, time.UTC)},
+				},
+			}, nil
+		},
+	}
+
+	audit := &captureAuditLogService{}
+	handler := NewAdminOrderHandlers(nil, orders, shipments, nil, audit)
+
+	body := `{
+		"status": " delivered ",
+		"expected_delivery": "2024-10-12T09:30:00Z",
+		"notes": " Customer confirmed receipt ",
+		"tracking_code": " NEW-TRK ",
+		"if_unmodified_since": "2024-10-09T06:00:00Z"
+	}`
+	req := httptest.NewRequest(http.MethodPut, "/orders/ord-1/shipments/shp-55", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord-1")
+	routeCtx.URLParams.Add("shipmentID", "shp-55")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.updateShipment(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	if shipments.updateCaptured == nil {
+		t.Fatalf("expected update command to be captured")
+	}
+
+	var resp struct {
+		Shipment orderShipmentPayload `json:"shipment"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Shipment.Status != "delivered" {
+		t.Fatalf("expected response status delivered, got %s", resp.Shipment.Status)
+	}
+	if resp.Shipment.ExpectedAt != "2024-10-12T09:30:00Z" {
+		t.Fatalf("expected expected_delivery in response, got %s", resp.Shipment.ExpectedAt)
+	}
+	if resp.Shipment.Notes != "Customer confirmed receipt" {
+		t.Fatalf("expected notes trimmed, got %q", resp.Shipment.Notes)
+	}
+
+	if len(audit.records) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(audit.records))
+	}
+	record := audit.records[0]
+	if record.Action != "order.shipment.update" {
+		t.Fatalf("expected audit action order.shipment.update, got %s", record.Action)
+	}
+	if record.TargetRef != "/orders/ord-1/shipments/shp-55" {
+		t.Fatalf("unexpected target ref %s", record.TargetRef)
+	}
+	if diff := record.Diff["status"]; diff.After != "delivered" || diff.Before != "in_transit" {
+		t.Fatalf("unexpected status diff %#v", diff)
+	}
+	if diff := record.Diff["tracking_code"]; diff.After != "NEW-TRK" || diff.Before != "OLD-TRK" {
+		t.Fatalf("unexpected tracking diff %#v", diff)
+	}
+	if diff := record.Diff["expected_delivery"]; diff.After != "2024-10-12T09:30:00Z" || diff.Before != "2024-10-10T12:00:00Z" {
+		t.Fatalf("unexpected expected delivery diff %#v", diff)
+	}
+	if diff := record.Diff["note"]; diff.After != "Customer confirmed receipt" || diff.Before != "Call carrier" {
+		t.Fatalf("unexpected note diff %#v", diff)
+	}
+}
+
 func TestAdminOrderHandlers_UpdateOrderStatus_AllowsReadyToShipToShipped(t *testing.T) {
 	var capturedCmd services.OrderStatusTransitionCommand
 	service := &stubOrderService{
@@ -845,9 +986,11 @@ func (s *stubPaymentService) ListPayments(ctx context.Context, orderID string) (
 }
 
 type stubShipmentService struct {
-	captured *services.CreateShipmentCommand
-	createFn func(context.Context, services.CreateShipmentCommand) (services.Shipment, error)
-	err      error
+	captured       *services.CreateShipmentCommand
+	createFn       func(context.Context, services.CreateShipmentCommand) (services.Shipment, error)
+	updateCaptured *services.UpdateShipmentCommand
+	updateFn       func(context.Context, services.UpdateShipmentCommand) (services.Shipment, error)
+	err            error
 }
 
 func (s *stubShipmentService) CreateShipment(ctx context.Context, cmd services.CreateShipmentCommand) (services.Shipment, error) {
@@ -862,7 +1005,15 @@ func (s *stubShipmentService) CreateShipment(ctx context.Context, cmd services.C
 	return services.Shipment{}, nil
 }
 
-func (s *stubShipmentService) UpdateShipmentStatus(context.Context, services.UpdateShipmentCommand) (services.Shipment, error) {
+func (s *stubShipmentService) UpdateShipmentStatus(ctx context.Context, cmd services.UpdateShipmentCommand) (services.Shipment, error) {
+	cloned := cmd
+	s.updateCaptured = &cloned
+	if s.err != nil {
+		return services.Shipment{}, s.err
+	}
+	if s.updateFn != nil {
+		return s.updateFn(ctx, cmd)
+	}
 	return services.Shipment{}, nil
 }
 

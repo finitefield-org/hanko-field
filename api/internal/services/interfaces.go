@@ -705,11 +705,15 @@ type ShipmentPackage struct {
 }
 
 type UpdateShipmentCommand struct {
-	OrderID      string
-	ShipmentID   string
-	Status       string
-	TrackingCode *string
-	ActorID      string
+	OrderID               string
+	ShipmentID            string
+	Status                string
+	TrackingCode          *string
+	ExpectedDelivery      *time.Time
+	ClearExpectedDelivery bool
+	Notes                 *string
+	IfUnmodifiedSince     *time.Time
+	ActorID               string
 }
 
 type ShipmentEventCommand struct {

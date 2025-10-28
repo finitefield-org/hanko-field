@@ -426,6 +426,7 @@ type Shipment struct {
 	Documents    []string
 	Items        []ShipmentItem
 	Events       []ShipmentEvent
+	Notes        string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

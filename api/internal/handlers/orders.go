@@ -854,6 +854,8 @@ type orderShipmentPayload struct {
 	Carrier      string                   `json:"carrier"`
 	TrackingCode string                   `json:"tracking_code,omitempty"`
 	Status       string                   `json:"status"`
+	ExpectedAt   string                   `json:"expected_delivery,omitempty"`
+	Notes        string                   `json:"notes,omitempty"`
 	Events       []orderShipmentEventData `json:"events,omitempty"`
 	CreatedAt    string                   `json:"created_at"`
 	UpdatedAt    string                   `json:"updated_at,omitempty"`
@@ -1104,6 +1106,8 @@ func buildOrderShipmentDetail(shipment services.Shipment) orderShipmentPayload {
 		Carrier:      strings.TrimSpace(shipment.Carrier),
 		TrackingCode: strings.TrimSpace(shipment.TrackingCode),
 		Status:       strings.TrimSpace(shipment.Status),
+		ExpectedAt:   formatTime(pointerTime(shipment.ETA)),
+		Notes:        strings.TrimSpace(shipment.Notes),
 		CreatedAt:    formatTime(shipment.CreatedAt),
 		UpdatedAt:    formatTime(shipment.UpdatedAt),
 	}
