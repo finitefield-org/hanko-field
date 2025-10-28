@@ -61,7 +61,7 @@
 
 ## 8. Notifications, Search, and Utilities
 - [x] [Implement notification dropdown/list accessible from header with htmx refresh.](doc/web/tasks/044-implement-notification-dropdown-list-accessible-from-header-with-htmx-refresh.md)
-- [ ] [Build global search overlay integrating products, templates, guides (fragments for results).](doc/web/tasks/045-build-global-search-overlay-integrating-products-templates-guides-fragments-for-results.md)
+- [x] [Build global search overlay integrating products, templates, guides (fragments for results).](doc/web/tasks/045-build-global-search-overlay-integrating-products-templates-guides-fragments-for-results.md)
 - [ ] [Implement cookie consent, feature flags, and A/B testing hooks if required.](doc/web/tasks/046-implement-cookie-consent-feature-flags-and-a-b-testing-hooks-if-required.md)
 - [ ] [Provide offline/error pages and progressive enhancement fallbacks.](doc/web/tasks/047-provide-offline-error-pages-and-progressive-enhancement-fallbacks.md)
 

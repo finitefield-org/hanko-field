@@ -935,6 +935,7 @@ func main() {
 	r.Get("/frags/compare/sku-table", CompareSKUTableFrag)
 	r.Get("/frags/guides/latest", LatestGuidesFrag)
 	r.Get("/frags/notifications/list", NotificationsShellFrag)
+	r.Get("/frags/search/results", SearchResultsFrag)
 	// Modal demo fragment (htmx)
 	r.Get("/modals/demo", DemoModalHandler)
 	r.MethodFunc(http.MethodPost, "/notifications/{notificationID}:read", NotificationMarkReadHandler)

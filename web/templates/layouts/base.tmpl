@@ -27,6 +27,12 @@
           {{ end }}
         </nav>
         <div class="flex items-center gap-3">
+          <button type="button" class="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-indigo-200 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40 md:inline-flex" data-search-open aria-label="{{ tlang $.Lang "nav.search" }}">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-3.5-3.5"></path>
+            </svg>
+          </button>
           <div class="hidden md:block">
             {{ template "component_notifications_shell" .Notifications }}
           </div>
@@ -50,6 +56,13 @@
           {{ range .Nav }}
           <a href="{{ .Href }}" class="block py-2 text-sm hover:underline {{ if .Active }}text-indigo-600 font-medium underline{{ end }}">{{ tlang $.Lang .LabelKey }}</a>
           {{ end }}
+          <button type="button" class="inline-flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-600 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-search-open>
+            <svg class="h-4 w-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-3.5-3.5"></path>
+            </svg>
+            <span>{{ tlang $.Lang "nav.search" }}</span>
+          </button>
           <div class="pt-2 flex items-center gap-3">
             <a href="/notifications" class="inline-flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100" aria-label="{{ tlang $.Lang "nav.notifications" }}">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -109,6 +122,7 @@
     </footer>
     <!-- Modal mount point (for HTMX swaps or client JS) -->
     <div id="modal-root" class="relative z-50"></div>
+    {{ template "component_search_overlay" . }}
     <script src="/assets/js/htmx.min.js"></script>
     <script>
       (function(){
@@ -162,6 +176,389 @@
             if (expanded) { closeMenu(); } else { openMenu(); }
           });
         }
+      })();
+    </script>
+    <script>
+      (function(){
+        var doc = document;
+        var overlay = doc.querySelector('[data-search-overlay]');
+        if (!overlay) { return; }
+        var input = overlay.querySelector('[data-search-input]');
+        var resultsTarget = overlay.querySelector('[data-search-results-target]');
+        var tabs = overlay.querySelectorAll('[data-search-tab]');
+        var openButtons = doc.querySelectorAll('[data-search-open]');
+        var closeButtons = overlay.querySelectorAll('[data-search-close]');
+        var dismiss = overlay.querySelector('[data-search-dismiss]');
+        var historyList = overlay.querySelector('[data-search-history]');
+        var historyEmpty = overlay.querySelector('[data-search-history-empty]');
+        var historyClear = overlay.querySelector('[data-search-history-clear]');
+        var pinsList = overlay.querySelector('[data-search-pins]');
+        var pinsEmpty = overlay.querySelector('[data-search-pins-empty]');
+        var addPinLabel = overlay.getAttribute('data-pin-label-add') || 'Pin result';
+        var removePinLabel = overlay.getAttribute('data-pin-label-remove') || 'Unpin result';
+        var historyKey = 'hanko.field.search.history';
+        var pinsKey = 'hanko.field.search.pins';
+        var state = {
+          source: 'products',
+          history: loadHistory(),
+          pins: loadPins()
+        };
+        var lastFocus = null;
+        var debounceTimer = null;
+        var pendingRequest = null;
+
+        function loadHistory(){
+          try {
+            var raw = JSON.parse(localStorage.getItem(historyKey) || '[]');
+            if (Array.isArray(raw)) {
+              return raw.filter(function(item){ return typeof item === 'string' && item.trim() !== ''; });
+            }
+          } catch (_) {}
+          return [];
+        }
+
+        function loadPins(){
+          try {
+            var raw = JSON.parse(localStorage.getItem(pinsKey) || '[]');
+            if (Array.isArray(raw)) {
+              return raw.filter(function(item){
+                return item && typeof item.href === 'string';
+              });
+            }
+          } catch (_) {}
+          return [];
+        }
+
+        function saveHistory(){
+          try { localStorage.setItem(historyKey, JSON.stringify(state.history.slice(0, 8))); } catch(_) {}
+        }
+
+        function savePins(){
+          try { localStorage.setItem(pinsKey, JSON.stringify(state.pins.slice(0, 8))); } catch(_) {}
+        }
+
+        function openOverlay(){
+          overlay.classList.remove('hidden');
+          overlay.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('overflow-hidden');
+          lastFocus = document.activeElement;
+          setTimeout(function(){
+            if (input && input.focus) {
+              input.focus();
+              input.select();
+            }
+          }, 10);
+          updateHistoryUI();
+          updatePinsUI();
+          fetchResults();
+        }
+
+        function closeOverlay(){
+          overlay.classList.add('hidden');
+          overlay.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('overflow-hidden');
+          if (lastFocus && lastFocus.focus) {
+            try { lastFocus.focus(); } catch(_) {}
+          }
+        }
+
+        function setSource(source){
+          var src = String(source || 'products').toLowerCase();
+          if (state.source === src) { return; }
+          state.source = src;
+          tabs.forEach(function(tab){
+            var active = tab.getAttribute('data-source') === state.source;
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.classList.toggle('border-indigo-200', active);
+            tab.classList.toggle('bg-indigo-50', active);
+            tab.classList.toggle('text-indigo-600', active);
+            tab.classList.toggle('border-transparent', !active);
+            tab.classList.toggle('text-gray-500', !active);
+          });
+          fetchResults();
+        }
+
+        function fetchResults(){
+          if (!resultsTarget || typeof htmx === 'undefined' || !htmx.ajax) { return; }
+          var params = new URLSearchParams();
+          params.set('source', state.source);
+          if (input && input.value.trim() !== '') {
+            params.set('q', input.value.trim());
+          }
+          if (pendingRequest && typeof pendingRequest.abort === 'function') {
+            pendingRequest.abort();
+          }
+          pendingRequest = htmx.ajax('GET', '/frags/search/results?' + params.toString(), {
+            target: resultsTarget,
+            swap: 'innerHTML'
+          });
+        }
+
+        function getResultNodes(){
+          return Array.prototype.slice.call(overlay.querySelectorAll('[data-search-result]'));
+        }
+
+        function focusResult(index){
+          var results = getResultNodes();
+          if (!results.length) { return; }
+          if (index < 0) { index = results.length - 1; }
+          if (index >= results.length) { index = 0; }
+          overlay.setAttribute('data-active-index', String(index));
+          results[index].focus();
+        }
+
+        function focusRelative(step){
+          var results = getResultNodes();
+          if (!results.length) { return; }
+          var idx = parseInt(overlay.getAttribute('data-active-index') || '-1', 10);
+          if (isNaN(idx)) { idx = step > 0 ? -1 : 0; }
+          focusResult(idx + step);
+        }
+
+        function addHistoryItem(query){
+          var q = query.trim();
+          if (!q) { return; }
+          state.history = state.history.filter(function(item){ return item.toLowerCase() !== q.toLowerCase(); });
+          state.history.unshift(q);
+          if (state.history.length > 8) {
+            state.history = state.history.slice(0, 8);
+          }
+          saveHistory();
+          updateHistoryUI();
+        }
+
+        function updateHistoryUI(){
+          if (!historyList) { return; }
+          historyList.querySelectorAll('[data-history-item]').forEach(function(item){ item.remove(); });
+          if (!state.history.length) {
+            if (historyEmpty) { historyEmpty.hidden = false; }
+            if (historyClear) { historyClear.hidden = true; }
+            return;
+          }
+          if (historyEmpty) { historyEmpty.hidden = true; }
+          if (historyClear) { historyClear.hidden = false; }
+          state.history.forEach(function(term){
+            var li = document.createElement('li');
+            li.setAttribute('data-history-item', '');
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'flex w-full items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600 transition hover:border-indigo-200 hover:text-indigo-600 focus:outline-none focus:ring focus:ring-indigo-500/30';
+            btn.textContent = term;
+            btn.addEventListener('click', function(){
+              if (input) {
+                input.value = term;
+              }
+              fetchResults();
+            });
+            li.appendChild(btn);
+            historyList.appendChild(li);
+          });
+        }
+
+        function isPinned(href){
+          return state.pins.some(function(item){ return item && item.href === href; });
+        }
+
+        function setPinState(btn, pinned){
+          if (!btn) { return; }
+          if (pinned) {
+            btn.setAttribute('aria-pressed', 'true');
+            btn.setAttribute('aria-label', removePinLabel);
+            btn.classList.add('border-indigo-200', 'bg-indigo-50', 'text-indigo-600');
+          } else {
+            btn.setAttribute('aria-pressed', 'false');
+            btn.setAttribute('aria-label', addPinLabel);
+            btn.classList.remove('border-indigo-200', 'bg-indigo-50', 'text-indigo-600');
+          }
+        }
+
+        function updatePinsUI(){
+          if (!pinsList) { return; }
+          pinsList.querySelectorAll('[data-pin-item]').forEach(function(item){ item.remove(); });
+          if (!state.pins.length) {
+            if (pinsEmpty) { pinsEmpty.hidden = false; }
+            return;
+          }
+          if (pinsEmpty) { pinsEmpty.hidden = true; }
+          state.pins.forEach(function(pin){
+            var li = document.createElement('li');
+            li.setAttribute('data-pin-item', '');
+            var wrapper = document.createElement('div');
+            wrapper.className = 'flex items-center justify-between rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm';
+            var anchor = document.createElement('a');
+            anchor.href = pin.href;
+            anchor.className = 'flex-1 truncate text-sm font-medium text-indigo-600 hover:underline';
+            anchor.textContent = pin.label || pin.href;
+            wrapper.appendChild(anchor);
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition hover:border-rose-200 hover:text-rose-500 focus:outline-none focus:ring focus:ring-rose-400/30';
+            removeBtn.setAttribute('aria-label', removePinLabel);
+            removeBtn.innerHTML = '<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 2a2 2 0 00-2 2v1.586a1 1 0 01-.293.707L2.414 7.586A2 2 0 004.828 11L5 10.828V14l4-2 4 2v-3.172l.172.172A2 2 0 0017.586 7.586l-1.293-1.293A1 1 0 0116 5.586V4a2 2 0 00-2-2H6z"/></svg>';
+            removeBtn.addEventListener('click', function(e){
+              e.preventDefault();
+              state.pins = state.pins.filter(function(item){ return item.href !== pin.href; });
+              savePins();
+              updatePinsUI();
+            });
+            wrapper.appendChild(removeBtn);
+            if (pin.detail) {
+              var detail = document.createElement('p');
+              detail.className = 'mt-1 text-xs text-gray-500';
+              detail.textContent = pin.detail;
+              var detailWrap = document.createElement('div');
+              detailWrap.appendChild(wrapper);
+              detailWrap.appendChild(detail);
+              li.appendChild(detailWrap);
+            } else {
+              li.appendChild(wrapper);
+            }
+            pinsList.appendChild(li);
+          });
+        }
+
+        function togglePin(e){
+          e.preventDefault();
+          e.stopPropagation();
+          var btn = e.currentTarget;
+          var href = btn.getAttribute('data-pin-href');
+          if (!href) { return; }
+          var pinned = isPinned(href);
+          if (pinned) {
+            state.pins = state.pins.filter(function(item){ return item.href !== href; });
+          } else {
+            var label = btn.getAttribute('data-pin-label') || href;
+            var detail = btn.getAttribute('data-pin-detail') || '';
+            state.pins = state.pins.filter(function(item){ return item.href !== href; });
+            state.pins.unshift({ href: href, label: label, detail: detail });
+            if (state.pins.length > 8) {
+              state.pins = state.pins.slice(0, 8);
+            }
+          }
+          savePins();
+          setPinState(btn, !pinned);
+          updatePinsUI();
+        }
+
+        openButtons.forEach(function(btn){
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            openOverlay();
+          });
+        });
+        closeButtons.forEach(function(btn){
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            closeOverlay();
+          });
+        });
+        if (dismiss) {
+          dismiss.addEventListener('click', function(e){
+            if (e.target === dismiss) {
+              e.preventDefault();
+              closeOverlay();
+            }
+          });
+        }
+
+        if (historyClear) {
+          historyClear.addEventListener('click', function(e){
+            e.preventDefault();
+            state.history = [];
+            saveHistory();
+            updateHistoryUI();
+          });
+        }
+
+        tabs.forEach(function(tab){
+          tab.addEventListener('click', function(){
+            setSource(tab.getAttribute('data-source'));
+          });
+        });
+
+        if (input) {
+          input.addEventListener('input', function(){
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchResults, 220);
+          });
+          input.addEventListener('keydown', function(e){
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              focusResult(0);
+            }
+          });
+        }
+
+        overlay.addEventListener('keydown', function(e){
+          if (overlay.classList.contains('hidden')) { return; }
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusRelative(1);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusRelative(-1);
+          } else if (e.key === 'Enter' && document.activeElement && document.activeElement.matches('[data-history-item] button')) {
+            e.preventDefault();
+            document.activeElement.click();
+          }
+        });
+
+        overlay.addEventListener('click', function(e){
+          if (e.target.closest('[data-search-pin]')) { return; }
+          if (e.target.closest('[data-search-result]')) {
+            closeOverlay();
+          }
+        });
+
+        doc.addEventListener('keydown', function(e){
+          if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            if (overlay.classList.contains('hidden')) {
+              openOverlay();
+            } else {
+              closeOverlay();
+            }
+          } else if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
+            if (e.target && overlay.contains(e.target)) {
+              e.preventDefault();
+              closeOverlay();
+            }
+          }
+        });
+
+        doc.addEventListener('htmx:afterSwap', function(e){
+          if (!resultsTarget) { return; }
+          if (e.target !== resultsTarget && !resultsTarget.contains(e.target)) { return; }
+          var fragment = resultsTarget.querySelector('[data-search-results]');
+          if (fragment) {
+            var count = parseInt(fragment.getAttribute('data-count') || '0', 10);
+            tabs.forEach(function(tab){
+              var badge = tab.querySelector('[data-tab-count]');
+              if (!badge) { return; }
+              if (tab.getAttribute('data-source') === state.source) {
+                if (count > 0) {
+                  badge.textContent = String(count);
+                  badge.classList.remove('hidden');
+                } else {
+                  badge.classList.add('hidden');
+                }
+              }
+            });
+          }
+          resultsTarget.querySelectorAll('[data-search-pin]').forEach(function(btn){
+            btn.removeEventListener('click', togglePin);
+            btn.addEventListener('click', togglePin);
+            var href = btn.getAttribute('data-pin-href');
+            setPinState(btn, isPinned(href));
+          });
+          if (input && input.value.trim()) {
+            addHistoryItem(input.value.trim());
+          }
+          overlay.removeAttribute('data-active-index');
+        });
+
+        updateHistoryUI();
+        updatePinsUI();
       })();
     </script>
     <script>
