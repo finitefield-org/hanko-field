@@ -288,6 +288,7 @@ type adminOrderStatusResponse struct {
 
 type adminProductionEventRequest struct {
 	Stage       string   `json:"stage"`
+	Type        string   `json:"type"`
 	Status      string   `json:"status"`
 	Notes       string   `json:"notes"`
 	Operator    string   `json:"operator"`
@@ -485,6 +486,9 @@ func (h *AdminOrderHandlers) appendProductionEvent(w http.ResponseWriter, r *htt
 	}
 
 	stage := normalizeProductionStage(payload.Stage)
+	if stage == "" {
+		stage = normalizeProductionStage(payload.Type)
+	}
 	if stage == "" {
 		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "stage is required", http.StatusBadRequest))
 		return

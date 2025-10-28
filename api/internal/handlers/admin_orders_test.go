@@ -437,7 +437,7 @@ func TestAdminOrderHandlers_AppendProductionEvent_Success(t *testing.T) {
 	handler := NewAdminOrderHandlers(nil, orders, nil, nil, audit)
 
 	body := `{
-		"stage": " QC ",
+		"type": " QC ",
 		"status": " Fail ",
 		"notes": "  <b>Edge</b> chipped ",
 		"operator": " ops-123 ",
@@ -552,7 +552,7 @@ func TestAdminOrderHandlers_AppendProductionEvent_StageRequired(t *testing.T) {
 	}
 	handler := NewAdminOrderHandlers(nil, orders, nil, nil, nil)
 
-	body := `{"stage":"   ","status":"pass"}`
+	body := `{"type":"   ","status":"pass"}`
 	req := httptest.NewRequest(http.MethodPost, "/orders/ord_001/production-events", strings.NewReader(body))
 	routeCtx := chi.NewRouteContext()
 	routeCtx.URLParams.Add("orderID", "ord_001")
