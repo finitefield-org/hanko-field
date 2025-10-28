@@ -56,6 +56,20 @@ func TestAdminInventoryHandlers_ListLowStock_ServiceUnavailable(t *testing.T) {
 	}
 }
 
+func TestAdminInventoryHandlers_ListLowStock_CatalogUnavailable(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, &stubOrderService{})
+
+	req := httptest.NewRequest(http.MethodGet, "/stock/low", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.listLowStock(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when catalog missing, got %d", rec.Code)
+	}
+}
+
 func TestAdminInventoryHandlers_ListLowStock_AggregatesSupplierAndVelocity(t *testing.T) {
 	now := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
 	var capturedFilter services.InventoryLowStockFilter
@@ -139,11 +153,12 @@ func TestAdminInventoryHandlers_ListLowStock_AggregatesSupplierAndVelocity(t *te
 		},
 	}
 
-	handler := NewAdminInventoryHandlers(nil, inventory, catalog, order)
+	handler := NewAdminInventoryHandlers(nil, inventory, catalog, order, WithAdminInventoryConfig(AdminInventoryConfig{
+		VelocityLookbackDays: 14,
+		OrderPageSize:        100,
+		MaxOrderPages:        3,
+	}))
 	handler.now = func() time.Time { return now }
-	handler.velocityLookbackDays = 14
-	handler.orderPageSize = 100
-	handler.maxOrderPages = 3
 
 	req := httptest.NewRequest(http.MethodGet, "/stock/low?threshold=5&page_size=120&page_token=%20tok%20", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
@@ -195,6 +210,37 @@ func TestAdminInventoryHandlers_ListLowStock_AggregatesSupplierAndVelocity(t *te
 	expectedDepletion := now.Add(9 * 24 * time.Hour)
 	if item.ProjectedDepletionDate.Sub(expectedDepletion) > time.Minute || item.ProjectedDepletionDate.Sub(expectedDepletion) < -time.Minute {
 		t.Fatalf("expected depletion around %v got %v", expectedDepletion, item.ProjectedDepletionDate)
+	}
+}
+
+func TestAdminInventoryHandlers_WithConfigZeroValuesFallback(t *testing.T) {
+	now := time.Date(2024, 6, 10, 9, 0, 0, 0, time.UTC)
+	var captured services.OrderListFilter
+	orderSvc := &stubOrderService{
+		listFn: func(ctx context.Context, filter services.OrderListFilter) (domain.CursorPage[services.Order], error) {
+			captured = filter
+			return domain.CursorPage[services.Order]{}, nil
+		},
+	}
+
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, &inventoryCatalogStub{}, orderSvc)
+	handler.velocityLookbackDays = 0
+	handler.orderPageSize = 0
+	handler.maxOrderPages = 0
+
+	_, err := handler.computeSalesVelocity(context.Background(), now, map[string]struct{}{"SKU-1": {}})
+	if err != nil {
+		t.Fatalf("compute velocity: %v", err)
+	}
+	if captured.Pagination.PageSize != defaultLowStockOrderPageSize {
+		t.Fatalf("expected default page size %d, got %d", defaultLowStockOrderPageSize, captured.Pagination.PageSize)
+	}
+	if captured.DateRange.From == nil {
+		t.Fatalf("expected lookback start to be set")
+	}
+	expectedFrom := now.Add(-time.Duration(defaultVelocityLookback) * 24 * time.Hour)
+	if delta := captured.DateRange.From.Sub(expectedFrom); delta > time.Second || delta < -time.Second {
+		t.Fatalf("expected default lookback start near %v got %v", expectedFrom, captured.DateRange.From)
 	}
 }
 

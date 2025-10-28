@@ -60,45 +60,57 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg.Idempotency.CleanupBatchSize != defaultIdempotencyBatchSize {
 		t.Errorf("unexpected default cleanup batch size: %d", cfg.Idempotency.CleanupBatchSize)
 	}
+	if cfg.Inventory.LowStockVelocityLookbackDays != defaultInventoryLowStockLookbackDays {
+		t.Errorf("unexpected default inventory lookback: %d", cfg.Inventory.LowStockVelocityLookbackDays)
+	}
+	if cfg.Inventory.LowStockOrderPageSize != defaultInventoryLowStockOrderPage {
+		t.Errorf("unexpected default inventory order page size: %d", cfg.Inventory.LowStockOrderPageSize)
+	}
+	if cfg.Inventory.LowStockMaxOrderPages != defaultInventoryLowStockMaxPages {
+		t.Errorf("unexpected default inventory max order pages: %d", cfg.Inventory.LowStockMaxOrderPages)
+	}
 }
 
 func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	env := map[string]string{
-		"API_SERVER_PORT":                    "9090",
-		"API_SERVER_READ_TIMEOUT":            "20s",
-		"API_SERVER_WRITE_TIMEOUT":           "25s",
-		"API_SERVER_IDLE_TIMEOUT":            "2m",
-		"API_FIREBASE_PROJECT_ID":            "hf-prod",
-		"API_FIRESTORE_PROJECT_ID":           "hf-fire",
-		"API_STORAGE_ASSETS_BUCKET":          "assets-prod",
-		"API_STORAGE_LOGS_BUCKET":            "logs-prod",
-		"API_STORAGE_EXPORTS_BUCKET":         "exports-prod",
-		"API_STORAGE_SIGNER_KEY":             "secret://storage/signer",
-		"API_PSP_STRIPE_API_KEY":             "secret://stripe/api",
-		"API_PSP_STRIPE_WEBHOOK_SECRET":      "secret://stripe/webhook",
-		"API_PSP_PAYPAL_CLIENT_ID":           "paypal-client",
-		"API_PSP_PAYPAL_SECRET":              "secret://paypal/secret",
-		"API_AI_SUGGESTION_ENDPOINT":         "https://ai.example.com",
-		"API_AI_AUTH_TOKEN":                  "secret://ai/token",
-		"API_WEBHOOK_SIGNING_SECRET":         "secret://webhook/secret",
-		"API_WEBHOOK_ALLOWED_HOSTS":          "https://example.com, https://foo.bar",
-		"API_RATELIMIT_DEFAULT_PER_MIN":      "150",
-		"API_RATELIMIT_AUTH_PER_MIN":         "300",
-		"API_RATELIMIT_WEBHOOK_BURST":        "80",
-		"API_FEATURE_AISUGGESTIONS":          "true",
-		"API_FEATURE_PROMOTIONS":             "false",
-		"API_SECURITY_ENVIRONMENT":           "prod",
-		"API_SECURITY_OIDC_AUDIENCE":         "https://service.example.com",
-		"API_SECURITY_OIDC_ISSUERS":          "https://accounts.google.com, https://cloud.google.com/iap",
-		"API_SECURITY_OIDC_JWKS_URL":         "https://example.com/jwks.json",
-		"API_SECURITY_HMAC_SECRETS":          "payments/stripe=secret://hmac/stripe,shipping=shipping-secret",
-		"API_SECURITY_HMAC_HEADER_SIGNATURE": "X-Custom-Signature",
-		"API_SECURITY_HMAC_CLOCK_SKEW":       "3m",
-		"API_SECURITY_HMAC_NONCE_TTL":        "10m",
-		"API_IDEMPOTENCY_HEADER":             "X-Idem-Key",
-		"API_IDEMPOTENCY_TTL":                "48h",
-		"API_IDEMPOTENCY_CLEANUP_INTERVAL":   "30m",
-		"API_IDEMPOTENCY_CLEANUP_BATCH":      "500",
+		"API_SERVER_PORT":                         "9090",
+		"API_SERVER_READ_TIMEOUT":                 "20s",
+		"API_SERVER_WRITE_TIMEOUT":                "25s",
+		"API_SERVER_IDLE_TIMEOUT":                 "2m",
+		"API_FIREBASE_PROJECT_ID":                 "hf-prod",
+		"API_FIRESTORE_PROJECT_ID":                "hf-fire",
+		"API_STORAGE_ASSETS_BUCKET":               "assets-prod",
+		"API_STORAGE_LOGS_BUCKET":                 "logs-prod",
+		"API_STORAGE_EXPORTS_BUCKET":              "exports-prod",
+		"API_STORAGE_SIGNER_KEY":                  "secret://storage/signer",
+		"API_PSP_STRIPE_API_KEY":                  "secret://stripe/api",
+		"API_PSP_STRIPE_WEBHOOK_SECRET":           "secret://stripe/webhook",
+		"API_PSP_PAYPAL_CLIENT_ID":                "paypal-client",
+		"API_PSP_PAYPAL_SECRET":                   "secret://paypal/secret",
+		"API_AI_SUGGESTION_ENDPOINT":              "https://ai.example.com",
+		"API_AI_AUTH_TOKEN":                       "secret://ai/token",
+		"API_WEBHOOK_SIGNING_SECRET":              "secret://webhook/secret",
+		"API_WEBHOOK_ALLOWED_HOSTS":               "https://example.com, https://foo.bar",
+		"API_RATELIMIT_DEFAULT_PER_MIN":           "150",
+		"API_RATELIMIT_AUTH_PER_MIN":              "300",
+		"API_RATELIMIT_WEBHOOK_BURST":             "80",
+		"API_FEATURE_AISUGGESTIONS":               "true",
+		"API_FEATURE_PROMOTIONS":                  "false",
+		"API_SECURITY_ENVIRONMENT":                "prod",
+		"API_SECURITY_OIDC_AUDIENCE":              "https://service.example.com",
+		"API_SECURITY_OIDC_ISSUERS":               "https://accounts.google.com, https://cloud.google.com/iap",
+		"API_SECURITY_OIDC_JWKS_URL":              "https://example.com/jwks.json",
+		"API_SECURITY_HMAC_SECRETS":               "payments/stripe=secret://hmac/stripe,shipping=shipping-secret",
+		"API_SECURITY_HMAC_HEADER_SIGNATURE":      "X-Custom-Signature",
+		"API_SECURITY_HMAC_CLOCK_SKEW":            "3m",
+		"API_SECURITY_HMAC_NONCE_TTL":             "10m",
+		"API_IDEMPOTENCY_HEADER":                  "X-Idem-Key",
+		"API_IDEMPOTENCY_TTL":                     "48h",
+		"API_IDEMPOTENCY_CLEANUP_INTERVAL":        "30m",
+		"API_IDEMPOTENCY_CLEANUP_BATCH":           "500",
+		"API_INVENTORY_LOW_STOCK_LOOKBACK_DAYS":   "21",
+		"API_INVENTORY_LOW_STOCK_ORDER_PAGE_SIZE": "250",
+		"API_INVENTORY_LOW_STOCK_MAX_ORDER_PAGES": "10",
 	}
 
 	secrets := map[string]string{
@@ -182,6 +194,15 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	}
 	if cfg.Idempotency.CleanupBatchSize != 500 {
 		t.Errorf("unexpected cleanup batch size %d", cfg.Idempotency.CleanupBatchSize)
+	}
+	if cfg.Inventory.LowStockVelocityLookbackDays != 21 {
+		t.Errorf("unexpected inventory lookback %d", cfg.Inventory.LowStockVelocityLookbackDays)
+	}
+	if cfg.Inventory.LowStockOrderPageSize != 250 {
+		t.Errorf("unexpected inventory order page size %d", cfg.Inventory.LowStockOrderPageSize)
+	}
+	if cfg.Inventory.LowStockMaxOrderPages != 10 {
+		t.Errorf("unexpected inventory max order pages %d", cfg.Inventory.LowStockMaxOrderPages)
 	}
 }
 

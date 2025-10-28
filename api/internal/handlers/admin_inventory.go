@@ -39,8 +39,33 @@ type AdminInventoryHandlers struct {
 	maxOrderPages        int
 }
 
+// AdminInventoryConfig controls behaviour of admin inventory handlers.
+type AdminInventoryConfig struct {
+	VelocityLookbackDays int
+	OrderPageSize        int
+	MaxOrderPages        int
+}
+
+// AdminInventoryOption customises handler behaviour.
+type AdminInventoryOption func(*AdminInventoryHandlers)
+
+// WithAdminInventoryConfig applies configuration values when constructing handlers.
+func WithAdminInventoryConfig(cfg AdminInventoryConfig) AdminInventoryOption {
+	return func(h *AdminInventoryHandlers) {
+		if cfg.VelocityLookbackDays > 0 {
+			h.velocityLookbackDays = cfg.VelocityLookbackDays
+		}
+		if cfg.OrderPageSize > 0 {
+			h.orderPageSize = cfg.OrderPageSize
+		}
+		if cfg.MaxOrderPages > 0 {
+			h.maxOrderPages = cfg.MaxOrderPages
+		}
+	}
+}
+
 // NewAdminInventoryHandlers constructs admin inventory handlers.
-func NewAdminInventoryHandlers(authn *auth.Authenticator, inventory services.InventoryService, catalog services.CatalogService, orders services.OrderService) *AdminInventoryHandlers {
+func NewAdminInventoryHandlers(authn *auth.Authenticator, inventory services.InventoryService, catalog services.CatalogService, orders services.OrderService, opts ...AdminInventoryOption) *AdminInventoryHandlers {
 	handler := &AdminInventoryHandlers{
 		authn:     authn,
 		inventory: inventory,
@@ -52,6 +77,11 @@ func NewAdminInventoryHandlers(authn *auth.Authenticator, inventory services.Inv
 		velocityLookbackDays: defaultVelocityLookback,
 		orderPageSize:        defaultLowStockOrderPageSize,
 		maxOrderPages:        maxVelocityPages,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(handler)
+		}
 	}
 	return handler
 }
@@ -83,6 +113,11 @@ func (h *AdminInventoryHandlers) listLowStock(w http.ResponseWriter, r *http.Req
 	}
 	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
 		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	if h.catalog == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("catalog_service_unavailable", "catalog service unavailable", http.StatusServiceUnavailable))
 		return
 	}
 
@@ -193,11 +228,24 @@ func (h *AdminInventoryHandlers) listLowStock(w http.ResponseWriter, r *http.Req
 
 func (h *AdminInventoryHandlers) computeSalesVelocity(ctx context.Context, now time.Time, skus map[string]struct{}) (map[string]float64, error) {
 	result := make(map[string]float64, len(skus))
-	if h.orders == nil || len(skus) == 0 || h.velocityLookbackDays <= 0 {
+	if h.orders == nil || len(skus) == 0 {
 		return result, nil
 	}
 
-	lookbackStart := now.Add(-time.Duration(h.velocityLookbackDays) * 24 * time.Hour)
+	lookbackDays := h.velocityLookbackDays
+	if lookbackDays <= 0 {
+		lookbackDays = defaultVelocityLookback
+	}
+	orderPageSize := h.orderPageSize
+	if orderPageSize <= 0 {
+		orderPageSize = defaultLowStockOrderPageSize
+	}
+	maxOrderPages := h.maxOrderPages
+	if maxOrderPages <= 0 {
+		maxOrderPages = maxVelocityPages
+	}
+
+	lookbackStart := now.Add(-time.Duration(lookbackDays) * 24 * time.Hour)
 	filter := services.OrderListFilter{
 		Status: []string{
 			string(domain.OrderStatusPaid),
@@ -209,7 +257,7 @@ func (h *AdminInventoryHandlers) computeSalesVelocity(ctx context.Context, now t
 		},
 		DateRange: domain.RangeQuery[time.Time]{From: &lookbackStart},
 		Pagination: services.Pagination{
-			PageSize: h.orderPageSize,
+			PageSize: orderPageSize,
 		},
 		SortBy:    services.OrderSortCreatedAt,
 		SortOrder: services.SortDesc,
@@ -237,12 +285,12 @@ func (h *AdminInventoryHandlers) computeSalesVelocity(ctx context.Context, now t
 		}
 		pageToken = strings.TrimSpace(page.NextPageToken)
 		pagesRead++
-		if pageToken == "" || pagesRead >= h.maxOrderPages {
+		if pageToken == "" || pagesRead >= maxOrderPages {
 			break
 		}
 	}
 
-	days := float64(h.velocityLookbackDays)
+	days := float64(lookbackDays)
 	if days <= 0 {
 		return result, nil
 	}

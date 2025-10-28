@@ -448,7 +448,11 @@ func main() {
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
 	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
 	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, promotionService)
-	adminInventoryHandlers := handlers.NewAdminInventoryHandlers(authenticator, inventoryService, nil, orderService)
+	adminInventoryHandlers := handlers.NewAdminInventoryHandlers(authenticator, inventoryService, nil, orderService, handlers.WithAdminInventoryConfig(handlers.AdminInventoryConfig{
+		VelocityLookbackDays: cfg.Inventory.LowStockVelocityLookbackDays,
+		OrderPageSize:        cfg.Inventory.LowStockOrderPageSize,
+		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
+	}))
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,

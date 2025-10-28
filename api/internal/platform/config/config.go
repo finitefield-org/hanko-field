@@ -52,6 +52,7 @@ type Config struct {
 	Features    FeatureFlags
 	Security    SecurityConfig
 	Idempotency IdempotencyConfig
+	Inventory   InventoryConfig
 }
 
 // ServerConfig configures HTTP server parameters.
@@ -147,6 +148,19 @@ type IdempotencyConfig struct {
 	CleanupInterval  time.Duration
 	CleanupBatchSize int
 }
+
+// InventoryConfig controls admin inventory endpoint behaviour.
+type InventoryConfig struct {
+	LowStockVelocityLookbackDays int
+	LowStockOrderPageSize        int
+	LowStockMaxOrderPages        int
+}
+
+const (
+	defaultInventoryLowStockLookbackDays = 14
+	defaultInventoryLowStockOrderPage    = 200
+	defaultInventoryLowStockMaxPages     = 20
+)
 
 // SecretResolver resolves references to external secrets (e.g. Secret Manager URIs).
 type SecretResolver interface {
@@ -467,6 +481,11 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 			TTL:              durationWithDefault(lookup, "API_IDEMPOTENCY_TTL", defaultIdempotencyTTL),
 			CleanupInterval:  durationWithDefault(lookup, "API_IDEMPOTENCY_CLEANUP_INTERVAL", defaultIdempotencyInterval),
 			CleanupBatchSize: intWithDefault(lookup, "API_IDEMPOTENCY_CLEANUP_BATCH", defaultIdempotencyBatchSize),
+		},
+		Inventory: InventoryConfig{
+			LowStockVelocityLookbackDays: intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_LOOKBACK_DAYS", defaultInventoryLowStockLookbackDays),
+			LowStockOrderPageSize:        intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_ORDER_PAGE_SIZE", defaultInventoryLowStockOrderPage),
+			LowStockMaxOrderPages:        intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_MAX_ORDER_PAGES", defaultInventoryLowStockMaxPages),
 		},
 	}
 
