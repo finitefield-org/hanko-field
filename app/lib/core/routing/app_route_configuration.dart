@@ -4,6 +4,7 @@ import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/navigation/presentation/app_bar_destinations.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
+import 'package:app/features/search/presentation/global_search_page.dart';
 import 'package:flutter/material.dart';
 
 /// スタックの境界を表すパスセグメント

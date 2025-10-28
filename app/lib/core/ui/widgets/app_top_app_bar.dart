@@ -8,6 +8,7 @@ class AppTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const AppTopAppBar({
     super.key,
     required this.title,
+    this.customTitle,
     this.leading,
     this.centerTitle,
     this.showNotificationAction = true,
@@ -21,6 +22,7 @@ class AppTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
   });
 
   final String title;
+  final Widget? customTitle;
   final Widget? leading;
   final bool? centerTitle;
   final bool showNotificationAction;
@@ -73,7 +75,7 @@ class AppTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      title: Text(title),
+      title: customTitle ?? Text(title),
       centerTitle: centerTitle,
       leading: leading,
       actions: actions,
