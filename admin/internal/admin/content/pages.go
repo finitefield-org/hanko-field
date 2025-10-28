@@ -675,18 +675,21 @@ func findDef(defs []pageTreeNodeDef, id string) pageTreeNodeDef {
 	return pageTreeNodeDef{}
 }
 
-func markSelected(nodes []PageNode, activeID string) {
+func markSelected(nodes []PageNode, activeID string) bool {
+	found := false
 	for i := range nodes {
-		if nodes[i].ID == activeID || nodes[i].Slug == activeID {
-			nodes[i].Selected = true
-		}
+		selected := nodes[i].ID == activeID || nodes[i].Slug == activeID
 		if len(nodes[i].Children) > 0 {
-			markSelected(nodes[i].Children, activeID)
-			if nodes[i].Children[0].Selected {
-				nodes[i].Selected = true
+			if markSelected(nodes[i].Children, activeID) {
+				selected = true
 			}
 		}
+		nodes[i].Selected = selected
+		if selected {
+			found = true
+		}
 	}
+	return found
 }
 
 func findFirstPageNode(nodes []PageNode) string {
