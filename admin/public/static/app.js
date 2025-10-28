@@ -2890,31 +2890,28 @@ const applyPromotionConditions = (form, state) => {
     if (!(target instanceof HTMLElement)) {
       return;
     }
+
     const key = target.getAttribute(PROMOTION_CONDITION_KEY_ATTR) || "";
     if (key === "") {
       return;
     }
+
     const rawValues = target.getAttribute(PROMOTION_CONDITION_VALUE_ATTR) || "";
     const values = rawValues
       .split(",")
       .map((value) => value.trim())
       .filter((value) => value !== "");
     const current = (state[key] || "").trim();
-    let matches = values.length === 0 || values.includes(current);
 
-    if (key === PROMOTION_CONDITION_SHIPPING_OPTION) {
-      const discountType = (state[PROMOTION_CONDITION_DISCOUNT] || "").trim();
-      if (discountType !== PROMOTION_TYPE_SHIPPING) {
-        matches = false;
-      }
-    }
+    let matches = values.length === 0 ? true : values.includes(current);
 
-    if (key === PROMOTION_CONDITION_DISCOUNT && values.length > 0) {
-      matches = values.includes(current);
-    }
-
-    if (target.getAttribute(PROMOTION_HIDE_MISSING_ATTR) === "true" && current === "") {
+    if (matches && target.getAttribute(PROMOTION_HIDE_MISSING_ATTR) === "true" && current === "") {
       matches = false;
+    }
+
+    if (matches && key === PROMOTION_CONDITION_SHIPPING_OPTION) {
+      const discountType = (state[PROMOTION_CONDITION_DISCOUNT] || "").trim();
+      matches = discountType === PROMOTION_TYPE_SHIPPING;
     }
 
     togglePromotionConditionTarget(target, matches);
@@ -2963,9 +2960,6 @@ const initPromotionForm = (form) => {
     if (element instanceof HTMLInputElement && element.type !== "radio") {
       element.addEventListener("input", handler);
     }
-    if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
-      element.addEventListener("input", handler);
-    }
   });
 
   updateState();
@@ -3004,9 +2998,8 @@ const refreshPromotionTable = (promotionID) => {
   } else {
     url.searchParams.delete("selected");
   }
-  const relative = `${url.pathname}${url.search}`;
-  table.setAttribute("hx-get", relative);
-  window.htmx.ajax("GET", url.toString(), { target: "#promotions-table", swap: "outerHTML" });
+  const requestURL = `${url.pathname}${url.search}`;
+  window.htmx.ajax("GET", requestURL, { target: "#promotions-table", swap: "outerHTML" });
 };
 
 const refreshPromotionDrawer = (promotionID) => {
