@@ -1,0 +1,154 @@
+{{ define "content" }}
+{{ $view := . }}
+<section class="mx-auto max-w-5xl space-y-10">
+  <article class="overflow-hidden rounded-3xl border border-amber-100 bg-white shadow-lg">
+    <div class="grid gap-10 p-8 lg:grid-cols-[minmax(0,3fr),minmax(0,2fr)] lg:p-12">
+      <div class="space-y-6">
+        <div class="flex items-center gap-4">
+          <span class="inline-flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+            {{ template "icon" (dict "Name" "wrench-screwdriver" "Class" "h-6 w-6") }}
+          </span>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-500">{{ tlang $.Lang "maintenance.badge" }}</p>
+            <h1 class="mt-1 text-2xl font-semibold text-gray-900">{{ if $view.HeroHeading }}{{ $view.HeroHeading }}{{ else }}{{ tlang $.Lang "maintenance.title" }}{{ end }}</h1>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed text-gray-600">{{ if $view.HeroMessage }}{{ $view.HeroMessage }}{{ else }}{{ tlang $.Lang "maintenance.subtitle" }}{{ end }}</p>
+        <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-6">
+          <h2 class="text-sm font-semibold uppercase tracking-[0.3em] text-amber-500">{{ if $view.Countdown.Heading }}{{ $view.Countdown.Heading }}{{ else }}{{ tlang $.Lang "maintenance.countdown.title" }}{{ end }}</h2>
+          <p class="mt-1 text-sm text-amber-700">{{ if $view.Countdown.Description }}{{ $view.Countdown.Description }}{{ else }}{{ tlang $.Lang "maintenance.countdown.subtitle" }}{{ end }}</p>
+          <div class="mt-6 flex flex-wrap gap-4" data-maintenance-countdown data-resume-at="{{ $view.Countdown.ResumesAtISO }}">
+            {{ range $i, $_ := (seq 4) }}
+              <div class="flex flex-col items-center justify-center rounded-2xl border border-white/60 bg-white/90 px-6 py-4 shadow-sm">
+                <span class="text-3xl font-semibold text-amber-600" data-countdown-value>00</span>
+                <span class="mt-1 text-xs font-semibold uppercase tracking-[0.3em] text-amber-500" data-countdown-label></span>
+              </div>
+            {{ end }}
+          </div>
+          {{ if $view.Countdown.ResumesAt }}
+            <p class="mt-4 text-xs text-amber-700">
+              {{ tlang $.Lang "maintenance.countdown.resume" }}
+              <time datetime="{{ $view.Countdown.ResumesAtISO }}">{{ $view.Countdown.ResumesAt }}</time>
+            </p>
+          {{ end }}
+        </div>
+        {{ if $view.StatusCTA.Href }}
+          <div>
+            <a href="{{ $view.StatusCTA.Href }}" class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/50">
+              {{ if $view.StatusCTA.Icon }}{{ template "icon" (dict "Name" $view.StatusCTA.Icon "Class" "h-4 w-4") }}{{ else }}{{ template "icon" (dict "Name" "status-online" "Class" "h-4 w-4") }}{{ end }}
+              <span>{{ if $view.StatusCTA.Label }}{{ $view.StatusCTA.Label }}{{ else }}{{ tlang $.Lang "maintenance.status.cta" }}{{ end }}</span>
+            </a>
+          </div>
+        {{ end }}
+      </div>
+      <div class="rounded-3xl border border-gray-200 bg-gray-50/80 p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">{{ tlang $.Lang "maintenance.notify.title" }}</h2>
+        <p class="mt-2 text-sm text-gray-600">{{ tlang $.Lang "maintenance.notify.subtitle" }}</p>
+        <form method="{{ if $view.NotifyForm.Method }}{{ $view.NotifyForm.Method }}{{ else }}post{{ end }}" action="{{ if $view.NotifyForm.Action }}{{ $view.NotifyForm.Action }}{{ else }}/maintenance/notify{{ end }}" class="mt-6 space-y-4" data-maintenance-notify>
+          <label class="block text-sm font-medium text-gray-700">{{ tlang $.Lang "maintenance.notify.email" }}
+            <input type="email" name="email" value="{{ $view.NotifyForm.Value }}" placeholder="{{ if $view.NotifyForm.Placeholder }}{{ $view.NotifyForm.Placeholder }}{{ else }}{{ tlang $.Lang "maintenance.notify.placeholder" }}{{ end }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring focus:ring-indigo-200" required>
+          </label>
+          <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/50">
+            {{ template "icon" (dict "Name" "envelope-open" "Class" "h-4 w-4") }}
+            <span>{{ if $view.NotifyForm.SubmitLabel }}{{ $view.NotifyForm.SubmitLabel }}{{ else }}{{ tlang $.Lang "maintenance.notify.submit" }}{{ end }}</span>
+          </button>
+          <p class="text-xs text-gray-500">{{ if $view.NotifyForm.Disclaimer }}{{ $view.NotifyForm.Disclaimer }}{{ else }}{{ tlang $.Lang "maintenance.notify.disclaimer" }}{{ end }}</p>
+          {{ if $view.NotifyForm.Success }}
+            <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{{ tlang $.Lang "maintenance.notify.success" }}</p>
+          {{ else if $view.NotifyForm.Error }}
+            <p class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">{{ $view.NotifyForm.Error }}</p>
+          {{ end }}
+        </form>
+        {{ if $view.Resources }}
+          <div class="mt-6 space-y-3">
+            {{ range $res := $view.Resources }}
+              <a href="{{ $res.Href }}" class="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition hover:border-indigo-200 hover:bg-white/90">
+                <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
+                  {{ template "icon" (dict "Name" (or $res.Icon "document-text") "Class" "h-4 w-4") }}
+                </span>
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">{{ $res.Label }}</p>
+                  {{ if $res.Description }}<p class="text-xs text-gray-500">{{ $res.Description }}</p>{{ end }}
+                </div>
+              </a>
+            {{ end }}
+          </div>
+        {{ end }}
+      </div>
+    </div>
+  </article>
+
+  <section class="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+    <header class="space-y-2">
+      <h2 class="text-lg font-semibold text-gray-900">{{ tlang $.Lang "maintenance.timeline.title" }}</h2>
+      <p class="text-sm text-gray-500">{{ tlang $.Lang "maintenance.timeline.subtitle" }}</p>
+    </header>
+    <div class="mt-6 space-y-4">
+      <article class="flex flex-col gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white text-indigo-500 shadow">{{ template "icon" (dict "Name" "clock" "Class" "h-4 w-4") }}</span>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ tlang $.Lang "maintenance.timeline.window" }}</p>
+            <p class="text-xs text-gray-500">{{ $view.Countdown.ResumesAt }}</p>
+          </div>
+        </div>
+        <p class="text-xs leading-relaxed text-gray-500">{{ tlang $.Lang "maintenance.timeline.window.body" }}</p>
+      </article>
+      <article class="flex flex-col gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white text-indigo-500 shadow">{{ template "icon" (dict "Name" "shield-check" "Class" "h-4 w-4") }}</span>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ tlang $.Lang "maintenance.timeline.scope" }}</p>
+            <p class="text-xs text-gray-500">{{ tlang $.Lang "maintenance.timeline.scope.caption" }}</p>
+          </div>
+        </div>
+        <p class="text-xs leading-relaxed text-gray-500">{{ tlang $.Lang "maintenance.timeline.scope.body" }}</p>
+      </article>
+      <article class="flex flex-col gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white text-indigo-500 shadow">{{ template "icon" (dict "Name" "chat-bubble-left-right" "Class" "h-4 w-4") }}</span>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ tlang $.Lang "maintenance.timeline.updates" }}</p>
+            <p class="text-xs text-gray-500">{{ tlang $.Lang "maintenance.timeline.updates.caption" }}</p>
+          </div>
+        </div>
+        <p class="text-xs leading-relaxed text-gray-500">{{ tlang $.Lang "maintenance.timeline.updates.body" }}</p>
+      </article>
+    </div>
+  </section>
+</section>
+
+<script>
+(function(){
+  var box = document.querySelector('[data-maintenance-countdown]');
+  if (!box) { return; }
+  var target = box.getAttribute('data-resume-at');
+  if (!target) { return; }
+  var labels = [{{ printf "%q" (tlang $.Lang "maintenance.countdown.days") }}, {{ printf "%q" (tlang $.Lang "maintenance.countdown.hours") }}, {{ printf "%q" (tlang $.Lang "maintenance.countdown.minutes") }}, {{ printf "%q" (tlang $.Lang "maintenance.countdown.seconds") }}];
+  var nodes = box.querySelectorAll('[data-countdown-value]');
+  var labelNodes = box.querySelectorAll('[data-countdown-label]');
+  labelNodes.forEach(function(node, idx){
+    node.textContent = labels[idx] || '';
+  });
+  function update(){
+    var end = new Date(target);
+    if (!isFinite(end)) { return; }
+    var diff = Math.max(0, end.getTime() - Date.now());
+    var sec = Math.floor(diff / 1000);
+    var days = Math.floor(sec / 86400);
+    sec -= days * 86400;
+    var hrs = Math.floor(sec / 3600);
+    sec -= hrs * 3600;
+    var mins = Math.floor(sec / 60);
+    sec -= mins * 60;
+    var values = [days, hrs, mins, sec];
+    nodes.forEach(function(node, idx){
+      var val = values[idx] || 0;
+      node.textContent = String(val).padStart(2, '0');
+    });
+  }
+  update();
+  setInterval(update, 1000);
+})();
+</script>
+{{ end }}

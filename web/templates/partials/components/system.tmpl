@@ -1,0 +1,91 @@
+{{ define "component_toast_host" }}
+<div id="toast-host" class="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-3 px-4 sm:items-end sm:px-6" aria-live="polite" aria-atomic="false"></div>
+{{ end }}
+
+{{ define "component_telemetry_beacon" }}
+<script>
+(function(){
+  var cfg = {
+    endpoint: {{ printf "%q" .Telemetry.Endpoint }},
+    requestId: {{ printf "%q" .Telemetry.RequestID }},
+    release: {{ printf "%q" .Telemetry.Release }}
+  };
+  if (!cfg.endpoint) { return; }
+  var queue = [];
+  var flushing = false;
+
+  function send(event){
+    if (!event || !cfg.endpoint) { return; }
+    var payload = {
+      event: event.event || 'unknown',
+      ts: Date.now(),
+      path: event.path || window.location.pathname,
+      requestId: cfg.requestId || '',
+      release: cfg.release || '',
+      meta: event.meta || {}
+    };
+    try {
+      var body = JSON.stringify(payload);
+      if (navigator.sendBeacon && navigator.onLine) {
+        if (navigator.sendBeacon(cfg.endpoint, body)) {
+          return true;
+        }
+      }
+      if (!navigator.onLine) {
+        throw new Error('offline');
+      }
+      return fetch(cfg.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        keepalive: true,
+        credentials: 'omit',
+        cache: 'no-store'
+      }).then(function(){ return true; }).catch(function(){ queue.push(event); return false; });
+    } catch (_) {
+      queue.push(event);
+      return false;
+    }
+  }
+
+  function flush(){
+    if (flushing) { return; }
+    if (!navigator.onLine || !queue.length) { return; }
+    flushing = true;
+    var pending = queue.slice();
+    queue.length = 0;
+    pending.forEach(function(evt){
+      try {
+        if (!send(evt)) {
+          queue.push(evt);
+        }
+      } catch(_) {}
+    });
+    flushing = false;
+  }
+
+  window.hankoTelemetry = {
+    record: function(event, meta){
+      if (!event) { return; }
+      var payload = { event: event, meta: meta || {}, path: window.location.pathname };
+      var result = send(payload);
+      if (result && typeof result.then === 'function') {
+        result.catch(function(){ queue.push(payload); });
+      }
+    },
+    queueLength: function(){ return queue.length; },
+    flush: flush
+  };
+
+  window.addEventListener('online', flush);
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    send({ event: 'offline', meta: { state: 'offline' }, path: window.location.pathname });
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') {
+      flush();
+    }
+  });
+})();
+</script>
+{{ end }}

@@ -40,6 +40,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+const telemetryEndpoint = "/telemetry/events"
+
 var (
 	templatesDir = "templates"
 	publicDir    = "public"
@@ -51,6 +53,7 @@ var (
 	// per-page cache in production to avoid reparse on each request
 	pageTmplCache = map[string]*template.Template{}
 	pageTmplMu    sync.RWMutex
+	appRelease    = "dev"
 )
 
 var (
@@ -765,6 +768,10 @@ func main() {
 	templatesDir = tmplPath
 	publicDir = pubPath
 
+	if v := strings.TrimSpace(os.Getenv("HANKO_WEB_RELEASE")); v != "" {
+		appRelease = v
+	}
+
 	// Dev mode: prefer HANKO_WEB_DEV, fallback to DEV
 	devMode = os.Getenv("HANKO_WEB_DEV") != "" || os.Getenv("DEV") != ""
 
@@ -821,7 +828,7 @@ func main() {
 	r.Use(mw.CSRF)
 	r.Use(mw.VaryLocale)
 	r.Use(mw.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(mw.Recoverer(handleRecoveredPanic))
 	r.Use(middleware.Compress(5))
 	r.Use(middleware.Timeout(30 * time.Second))
 
@@ -892,6 +899,9 @@ func main() {
 	r.Get("/support", SupportHandler)
 	r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
 	r.Get("/status", StatusHandler)
+	r.Get("/offline", OfflineHandler)
+	r.Get("/maintenance", MaintenanceHandler)
+	r.MethodFunc(http.MethodPost, "/maintenance/notify", MaintenanceNotifyHandler)
 	r.Get("/notifications", NotificationsPageHandler)
 	r.Get("/cart", CartHandler)
 	r.Get("/cart/table", CartTableFrag)
@@ -939,6 +949,7 @@ func main() {
 	// Modal demo fragment (htmx)
 	r.Get("/modals/demo", DemoModalHandler)
 	r.MethodFunc(http.MethodPost, "/notifications/{notificationID}:read", NotificationMarkReadHandler)
+	r.MethodFunc(http.MethodPost, telemetryEndpoint, TelemetryEventHandler)
 
 	srv := &http.Server{
 		Addr:              addr,
@@ -1125,6 +1136,7 @@ func render(w http.ResponseWriter, r *http.Request, data any) {
 
 func withLayoutNotifications(r *http.Request, data any) any {
 	lang := mw.Lang(r)
+	telemetry := buildTelemetryConfig(r)
 	switch v := data.(type) {
 	case handlersPkg.PageData:
 		if v.Lang != "" {
@@ -1133,9 +1145,11 @@ func withLayoutNotifications(r *http.Request, data any) any {
 		return struct {
 			handlersPkg.PageData
 			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
 		}{
 			PageData:      v,
 			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
 		}
 	case *handlersPkg.PageData:
 		if v.Lang != "" {
@@ -1146,9 +1160,11 @@ func withLayoutNotifications(r *http.Request, data any) any {
 		return &struct {
 			*handlersPkg.PageData
 			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
 		}{
 			PageData:      v,
 			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
 		}
 	case handlersPkg.HomeData:
 		if v.Lang != "" {
@@ -1157,9 +1173,11 @@ func withLayoutNotifications(r *http.Request, data any) any {
 		return struct {
 			handlersPkg.HomeData
 			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
 		}{
 			HomeData:      v,
 			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
 		}
 	case *handlersPkg.HomeData:
 		if v.Lang != "" {
@@ -1170,13 +1188,110 @@ func withLayoutNotifications(r *http.Request, data any) any {
 		return &struct {
 			*handlersPkg.HomeData
 			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
 		}{
 			HomeData:      v,
 			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
+		}
+	case handlersPkg.ErrorPageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		}
+		return struct {
+			handlersPkg.ErrorPageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			ErrorPageData: v,
+			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
+		}
+	case *handlersPkg.ErrorPageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		} else {
+			v.Lang = lang
+		}
+		return &struct {
+			*handlersPkg.ErrorPageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			ErrorPageData: v,
+			Notifications: buildNotificationBellView(r, lang, false),
+			Telemetry:     telemetry,
+		}
+	case handlersPkg.OfflinePageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		}
+		return struct {
+			handlersPkg.OfflinePageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			OfflinePageData: v,
+			Notifications:   buildNotificationBellView(r, lang, false),
+			Telemetry:       telemetry,
+		}
+	case *handlersPkg.OfflinePageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		} else {
+			v.Lang = lang
+		}
+		return &struct {
+			*handlersPkg.OfflinePageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			OfflinePageData: v,
+			Notifications:   buildNotificationBellView(r, lang, false),
+			Telemetry:       telemetry,
+		}
+	case handlersPkg.MaintenancePageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		}
+		return struct {
+			handlersPkg.MaintenancePageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			MaintenancePageData: v,
+			Notifications:       buildNotificationBellView(r, lang, false),
+			Telemetry:           telemetry,
+		}
+	case *handlersPkg.MaintenancePageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		} else {
+			v.Lang = lang
+		}
+		return &struct {
+			*handlersPkg.MaintenancePageData
+			Notifications NotificationBellView
+			Telemetry     handlersPkg.TelemetryConfig
+		}{
+			MaintenancePageData: v,
+			Notifications:       buildNotificationBellView(r, lang, false),
+			Telemetry:           telemetry,
 		}
 	default:
 		return data
 	}
+}
+
+func buildTelemetryConfig(r *http.Request) handlersPkg.TelemetryConfig {
+	cfg := handlersPkg.TelemetryConfig{
+		Endpoint: telemetryEndpoint,
+		Release:  appRelease,
+	}
+	if id, ok := mw.RequestID(r.Context()); ok && id != "" {
+		cfg.RequestID = id
+	}
+	return cfg
 }
 
 // renderPage executes the base layout with page-specific content definitions.
@@ -1215,6 +1330,288 @@ func renderPage(w http.ResponseWriter, r *http.Request, page string, data any) {
 		http.Error(w, fmt.Sprintf("template exec error: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func newSystemPageData(r *http.Request, lang, title, desc string) handlersPkg.PageData {
+	pd := handlersPkg.PageData{
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+	}
+	pd.SEO.Title = title
+	pd.SEO.Description = desc
+	pd.SEO.Canonical = absoluteURL(r)
+	pd.SEO.Robots = "noindex, nofollow"
+	pd.SEO.Alternates = buildAlternates(r)
+	return pd
+}
+
+func renderErrorPage(w http.ResponseWriter, r *http.Request, status int, vm handlersPkg.ErrorPageData) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	renderPage(w, r, "error", vm)
+}
+
+func renderOfflinePage(w http.ResponseWriter, r *http.Request, vm handlersPkg.OfflinePageData) {
+	w.Header().Set("Cache-Control", "no-store")
+	renderPage(w, r, "offline", vm)
+}
+
+func renderMaintenancePage(w http.ResponseWriter, r *http.Request, status int, vm handlersPkg.MaintenancePageData) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	renderPage(w, r, "maintenance", vm)
+}
+
+func handleRecoveredPanic(w http.ResponseWriter, r *http.Request, err error) {
+	renderServerError(w, r, err)
+}
+
+func renderServerError(w http.ResponseWriter, r *http.Request, cause error) {
+	if cause != nil {
+		log.Printf("server error: %v", cause)
+	}
+	lang := mw.Lang(r)
+	title := i18nOrDefault(lang, "errors.500.title", "We hit a snag")
+	desc := i18nOrDefault(lang, "errors.500.description", "Something went wrong on our side.")
+	page := newSystemPageData(r, lang, title, desc)
+	diagnostics := []handlersPkg.ErrorDiagnostic{
+		{Label: i18nOrDefault(lang, "errors.diagnostics.request", "Requested path"), Value: r.URL.String()},
+		{Label: i18nOrDefault(lang, "errors.diagnostics.method", "HTTP method"), Value: r.Method},
+	}
+	if rid, ok := mw.RequestID(r.Context()); ok && rid != "" {
+		diagnostics = append(diagnostics, handlersPkg.ErrorDiagnostic{
+			Label: i18nOrDefault(lang, "errors.diagnostics.request_id", "Request ID"),
+			Value: rid,
+		})
+	}
+	if cause != nil && cause.Error() != "" {
+		diagnostics = append(diagnostics, handlersPkg.ErrorDiagnostic{
+			Label: i18nOrDefault(lang, "errors.diagnostics.error", "Error detail"),
+			Value: cause.Error(),
+		})
+	}
+	vm := handlersPkg.ErrorPageData{
+		PageData:     page,
+		StatusCode:   http.StatusInternalServerError,
+		ErrorCode:    "500",
+		Heading:      title,
+		Message:      i18nOrDefault(lang, "errors.500.body", "Please retry in a moment. If the issue persists, reach out to support."),
+		RetryAction:  handlersPkg.LinkAction{Href: r.URL.Path, Label: i18nOrDefault(lang, "errors.retry", "Try again"), Icon: "arrow-path", Kind: "primary"},
+		SupportLinks: []handlersPkg.LinkAction{{Href: "/status", Label: i18nOrDefault(lang, "errors.status.link", "View system status")}, {Href: "/support", Label: i18nOrDefault(lang, "errors.support.link", "Contact support")}},
+		Diagnostics:  diagnostics,
+	}
+	renderErrorPage(w, r, http.StatusInternalServerError, vm)
+}
+
+func renderNotFound(w http.ResponseWriter, r *http.Request) {
+	lang := mw.Lang(r)
+	title := i18nOrDefault(lang, "errors.404.title", "Page not found")
+	desc := i18nOrDefault(lang, "errors.404.description", "The page may have moved or no longer exists.")
+	page := newSystemPageData(r, lang, title, desc)
+	vm := handlersPkg.ErrorPageData{
+		PageData:     page,
+		StatusCode:   http.StatusNotFound,
+		ErrorCode:    "404",
+		Heading:      title,
+		Message:      i18nOrDefault(lang, "errors.404.body", "Double-check the URL or head back to the home page."),
+		RetryAction:  handlersPkg.LinkAction{Href: "/", Label: i18nOrDefault(lang, "errors.home", "Go home"), Icon: "arrow-uturn-left", Kind: "primary"},
+		SupportLinks: []handlersPkg.LinkAction{{Href: "/status", Label: i18nOrDefault(lang, "errors.status.link", "View system status")}, {Href: "/support", Label: i18nOrDefault(lang, "errors.support.link", "Contact support")}},
+		Diagnostics: []handlersPkg.ErrorDiagnostic{
+			{Label: i18nOrDefault(lang, "errors.diagnostics.request", "Requested path"), Value: r.URL.String()},
+		},
+	}
+	if rid, ok := mw.RequestID(r.Context()); ok && rid != "" {
+		vm.Diagnostics = append(vm.Diagnostics, handlersPkg.ErrorDiagnostic{
+			Label: i18nOrDefault(lang, "errors.diagnostics.request_id", "Request ID"),
+			Value: rid,
+		})
+	}
+	renderErrorPage(w, r, http.StatusNotFound, vm)
+}
+
+func OfflineHandler(w http.ResponseWriter, r *http.Request) {
+	lang := mw.Lang(r)
+	title := i18nOrDefault(lang, "offline.title", "You’re offline")
+	desc := i18nOrDefault(lang, "offline.seo.description", "Review cached content and retry once you’re back online.")
+	page := newSystemPageData(r, lang, title, desc)
+	next := strings.TrimSpace(r.URL.Query().Get("next"))
+	if next == "" {
+		if ref := strings.TrimSpace(r.Referer()); ref != "" {
+			if u, err := url.Parse(ref); err == nil {
+				if u.Path != "" {
+					next = u.Path
+					if u.RawQuery != "" {
+						next = next + "?" + u.RawQuery
+					}
+				}
+			}
+		}
+		if next == "" {
+			next = "/"
+		}
+	}
+	vm := handlersPkg.OfflinePageData{
+		PageData:    page,
+		Heading:     title,
+		Message:     i18nOrDefault(lang, "offline.subtitle", "We’ll keep your recent activity handy until the connection returns."),
+		RetryAction: handlersPkg.LinkAction{Href: next, Label: i18nOrDefault(lang, "offline.retry", "Try again"), Icon: "arrow-path", Kind: "primary"},
+		SupportLink: handlersPkg.LinkAction{Href: "/support", Label: i18nOrDefault(lang, "offline.support", "Contact support")},
+		CachedItems: offlineCachedItems(lang),
+	}
+	renderOfflinePage(w, r, vm)
+}
+
+func offlineCachedItems(lang string) []handlersPkg.OfflineCachedItem {
+	now := time.Now()
+	items := []struct {
+		Href     string
+		TitleKey string
+		DescKey  string
+		DefaultT string
+		DefaultD string
+		Minutes  int
+	}{
+		{Href: "/shop", TitleKey: "offline.cached.shop.title", DescKey: "offline.cached.shop.desc", DefaultT: "Shop catalogue", DefaultD: "Browse materials, shapes, and pricing while offline.", Minutes: 12},
+		{Href: "/templates", TitleKey: "offline.cached.templates.title", DescKey: "offline.cached.templates.desc", DefaultT: "Templates", DefaultD: "Review stamp templates and usage tips.", Minutes: 25},
+		{Href: "/account/library", TitleKey: "offline.cached.library.title", DescKey: "offline.cached.library.desc", DefaultT: "Saved designs", DefaultD: "Access saved stamp designs and drafts.", Minutes: 38},
+	}
+	out := make([]handlersPkg.OfflineCachedItem, 0, len(items))
+	for _, it := range items {
+		label := i18nOrDefault(lang, it.TitleKey, it.DefaultT)
+		desc := i18nOrDefault(lang, it.DescKey, it.DefaultD)
+		updatedTime := now.Add(-time.Duration(it.Minutes) * time.Minute)
+		out = append(out, handlersPkg.OfflineCachedItem{
+			Title:       label,
+			Description: desc,
+			Href:        it.Href,
+			Updated:     formatRelativeMinutes(lang, it.Minutes),
+			UpdatedISO:  updatedTime.UTC().Format(time.RFC3339),
+		})
+	}
+	return out
+}
+
+func formatRelativeMinutes(lang string, minutes int) string {
+	if minutes <= 0 {
+		return i18nOrDefault(lang, "offline.cached.updated.now", "Just now")
+	}
+	return fmt.Sprintf(i18nOrDefault(lang, "offline.cached.updated.minutes", "Updated %d minutes ago"), minutes)
+}
+
+func MaintenanceHandler(w http.ResponseWriter, r *http.Request) {
+	lang := mw.Lang(r)
+	vm := buildMaintenanceView(r, lang)
+	renderMaintenancePage(w, r, http.StatusServiceUnavailable, vm)
+}
+
+func MaintenanceNotifyHandler(w http.ResponseWriter, r *http.Request) {
+	lang := mw.Lang(r)
+	if err := r.ParseForm(); err != nil {
+		renderServerError(w, r, fmt.Errorf("maintenance notify parse: %w", err))
+		return
+	}
+	email := strings.TrimSpace(r.FormValue("email"))
+	vm := buildMaintenanceView(r, lang)
+	vm.NotifyForm.Value = email
+	if email == "" || !strings.Contains(email, "@") {
+		vm.NotifyForm.Error = i18nOrDefault(lang, "maintenance.notify.error", "Please enter a valid email address.")
+		renderMaintenancePage(w, r, http.StatusBadRequest, vm)
+		return
+	}
+	log.Printf("maintenance notify signup: email=%s", email)
+	vm.NotifyForm.Success = true
+	renderMaintenancePage(w, r, http.StatusAccepted, vm)
+}
+
+func buildMaintenanceView(r *http.Request, lang string) handlersPkg.MaintenancePageData {
+	title := i18nOrDefault(lang, "maintenance.title", "Scheduled maintenance in progress")
+	desc := i18nOrDefault(lang, "maintenance.description", "We’re upgrading core stamping services and will be back shortly.")
+	page := newSystemPageData(r, lang, title, desc)
+	resumeAt := time.Now().Add(45 * time.Minute)
+	resumeDisplay := fmt.Sprintf("%s %s", format.FmtDate(resumeAt.In(jstLocation), lang), resumeAt.In(jstLocation).Format("15:04"))
+	vm := handlersPkg.MaintenancePageData{
+		PageData:    page,
+		HeroHeading: title,
+		HeroMessage: i18nOrDefault(lang, "maintenance.subtitle", "Checkout and design previews are temporarily paused while we deploy improvements."),
+		Countdown: handlersPkg.MaintenanceCountdown{
+			Heading:        i18nOrDefault(lang, "maintenance.countdown.title", "Estimated time remaining"),
+			Description:    i18nOrDefault(lang, "maintenance.countdown.subtitle", "We’ll resume service automatically once tasks complete."),
+			ResumesAt:      resumeDisplay,
+			ResumesAtISO:   resumeAt.UTC().Format(time.RFC3339),
+			CountdownLabel: i18nOrDefault(lang, "maintenance.countdown.label", "Time remaining"),
+		},
+		StatusCTA: handlersPkg.LinkAction{
+			Href:  "/status",
+			Label: i18nOrDefault(lang, "maintenance.status.link", "View full status page"),
+			Icon:  "status-online",
+			Kind:  "primary",
+		},
+		NotifyForm: handlersPkg.MaintenanceNotifyForm{
+			Action:      "/maintenance/notify",
+			Method:      http.MethodPost,
+			Placeholder: i18nOrDefault(lang, "maintenance.notify.placeholder", "you@example.com"),
+			SubmitLabel: i18nOrDefault(lang, "maintenance.notify.submit", "Notify me when we’re back"),
+			Disclaimer:  i18nOrDefault(lang, "maintenance.notify.disclaimer", "We’ll only use your email for maintenance updates."),
+		},
+		Resources: []handlersPkg.LinkAction{
+			{Href: "/status", Label: i18nOrDefault(lang, "maintenance.resources.status", "System status history"), Description: i18nOrDefault(lang, "maintenance.resources.status.desc", "Review past incidents and uptime metrics."), Icon: "clock"},
+			{Href: "/guides/operations/maintenance-playbook", Label: i18nOrDefault(lang, "maintenance.resources.playbook", "Maintenance playbook"), Description: i18nOrDefault(lang, "maintenance.resources.playbook.desc", "Understand our rollout and rollback procedures.")},
+			{Href: "/support", Label: i18nOrDefault(lang, "maintenance.resources.contact", "Contact support"), Description: i18nOrDefault(lang, "maintenance.resources.contact.desc", "Chat with us if you have urgent stamping needs."), Icon: "chat-bubble-left-right"},
+		},
+	}
+	return vm
+}
+
+type telemetryPayload struct {
+	Event     string         `json:"event"`
+	Path      string         `json:"path,omitempty"`
+	RequestID string         `json:"requestId,omitempty"`
+	Release   string         `json:"release,omitempty"`
+	Meta      map[string]any `json:"meta,omitempty"`
+	Timestamp int64          `json:"ts,omitempty"`
+}
+
+func TelemetryEventHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	defer r.Body.Close()
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	var payload telemetryPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	if payload.Event == "" {
+		http.Error(w, "missing event", http.StatusBadRequest)
+		return
+	}
+	if payload.Path == "" {
+		payload.Path = r.URL.Query().Get("path")
+		if payload.Path == "" {
+			payload.Path = "/"
+		}
+	}
+	if payload.RequestID == "" {
+		if rid, ok := mw.RequestID(r.Context()); ok && rid != "" {
+			payload.RequestID = rid
+		}
+	}
+	if payload.Release == "" {
+		payload.Release = appRelease
+	}
+	log.Printf("telemetry event: event=%s path=%s req_id=%s release=%s meta=%v", payload.Event, payload.Path, payload.RequestID, payload.Release, payload.Meta)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write([]byte(`{"status":"accepted"}`))
 }
 
 // HomeHandler renders the landing page.
@@ -1491,7 +1888,7 @@ func ProductDetailHandler(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	detail, ok := productDetailFor(lang, productID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 
@@ -1563,7 +1960,7 @@ func ProductGalleryFrag(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	detail, ok := productDetailFor(lang, productID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	activeID := strings.TrimSpace(r.URL.Query().Get("media"))
@@ -1589,7 +1986,7 @@ func ProductGalleryModalFrag(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	detail, ok := productDetailFor(lang, productID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	mediaID := strings.TrimSpace(r.URL.Query().Get("media"))
@@ -1602,7 +1999,7 @@ func ProductGalleryModalFrag(w http.ResponseWriter, r *http.Request) {
 		ok = true
 	}
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	props := map[string]any{
@@ -1618,7 +2015,7 @@ func ProductReviewsSnippetFrag(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	detail, ok := productDetailFor(lang, productID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	props := map[string]any{
@@ -1636,7 +2033,7 @@ func ProductTabFrag(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	detail, ok := productDetailFor(lang, productID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	tab := strings.ToLower(strings.TrimSpace(chi.URLParam(r, "tab")))
@@ -2125,7 +2522,7 @@ func TemplateDetailHandler(w http.ResponseWriter, r *http.Request) {
 	templateID := chi.URLParam(r, "templateID")
 	detail, ok := templateDetailFor(lang, templateID)
 	if !ok {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 
@@ -2276,7 +2673,7 @@ func GuideDetailHandler(w http.ResponseWriter, r *http.Request) {
 	lang := mw.Lang(r)
 	slug := strings.TrimSpace(chi.URLParam(r, "slug"))
 	if slug == "" {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 
@@ -2286,7 +2683,7 @@ func GuideDetailHandler(w http.ResponseWriter, r *http.Request) {
 	guide, err := cmsClient.GetGuide(ctx, slug, lang)
 	if err != nil {
 		if errors.Is(err, cms.ErrNotFound) {
-			http.NotFound(w, r)
+			renderNotFound(w, r)
 			return
 		}
 		log.Printf("guides: detail: %v", err)
@@ -3306,7 +3703,7 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	lang := mw.Lang(r)
 	slug := strings.TrimSpace(chi.URLParam(r, "slug"))
 	if slug == "" {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 
@@ -3316,7 +3713,7 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	page, err := cmsClient.GetContentPage(ctx, kind, slug, lang)
 	if err != nil {
 		if errors.Is(err, cms.ErrNotFound) {
-			http.NotFound(w, r)
+			renderNotFound(w, r)
 			return
 		}
 		log.Printf("%s: fetch %s: %v", kind, slug, err)
@@ -3414,7 +3811,7 @@ func LegalFeedbackHandler(w http.ResponseWriter, r *http.Request) {
 	lang := mw.Lang(r)
 	slug := strings.TrimSpace(chi.URLParam(r, "slug"))
 	if slug == "" {
-		http.NotFound(w, r)
+		renderNotFound(w, r)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
