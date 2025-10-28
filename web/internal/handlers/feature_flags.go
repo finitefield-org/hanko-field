@@ -156,19 +156,26 @@ func LoadFeatureFlags() FeatureFlags {
 }
 
 func fetchFeatureFlags() (FeatureFlags, error) {
-	var errs []string
+	var (
+		errs      []string
+		remoteErr error
+	)
 
 	if remoteURL := strings.TrimSpace(os.Getenv("HANKO_WEB_REMOTE_CONFIG_URL")); remoteURL != "" {
 		ff, err := loadRemoteFeatureFlags(remoteURL)
 		if err == nil {
 			return ff, nil
 		}
+		remoteErr = err
 		errs = append(errs, fmt.Sprintf("remote: %v", err))
 	}
 
 	if raw := strings.TrimSpace(os.Getenv("HANKO_WEB_FEATURE_FLAGS")); raw != "" {
 		ff, err := parseFeatureFlags([]byte(raw))
 		if err == nil {
+			if remoteErr != nil {
+				log.Printf("featureflags: remote fetch failed (%v); using env fallback", remoteErr)
+			}
 			ff.Source = "env"
 			return ff, nil
 		}
@@ -178,6 +185,9 @@ func fetchFeatureFlags() (FeatureFlags, error) {
 	ff := defaultFeatureFlags()
 	if len(errs) > 0 {
 		return ff, errors.New(strings.Join(errs, "; "))
+	}
+	if remoteErr != nil {
+		log.Printf("featureflags: remote fetch failed (%v); falling back to defaults", remoteErr)
 	}
 	return ff, nil
 }
@@ -228,6 +238,7 @@ func parseFeatureFlags(raw []byte) (FeatureFlags, error) {
 	}
 	var rawMap map[string]any
 	if err := json.Unmarshal(raw, &rawMap); err != nil {
+		log.Printf("featureflags: parse raw metadata: %v", err)
 		rawMap = map[string]any{}
 	}
 	ff := FeatureFlags{

@@ -134,6 +134,9 @@
   resetBtn && resetBtn.addEventListener('click', function(){
     if (analyticsInput) { analyticsInput.checked = false; }
     if (marketingInput) { marketingInput.checked = false; }
+    commit({ analytics: false, marketing: false });
+    applyState({ analytics: false, marketing: false });
+    hideBanner();
   });
 
   manageToggle && manageToggle.addEventListener('click', function(){
