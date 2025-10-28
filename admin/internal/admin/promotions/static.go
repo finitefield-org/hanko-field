@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -13,7 +14,13 @@ type StaticService struct {
 	mu         sync.RWMutex
 	promotions []Promotion
 	details    map[string]PromotionDetail
+	nextID     int
 }
+
+const (
+	shippingOptionFree = "free"
+	shippingOptionFlat = "flat"
+)
 
 // NewStaticService builds a StaticService with representative promotions.
 func NewStaticService() *StaticService {
@@ -47,18 +54,21 @@ func NewStaticService() *StaticService {
 	}
 
 	segmentVIP := Segment{
+		Key:         "vip_retention",
 		Name:        "既存顧客 (VIP)",
 		Description: "昨年度の購入回数が3回以上でLTV上位20%の顧客",
 		Preview:     []string{"LTV上位20%", "年間購入回数3回以上", "メールサブスク登録済み"},
 		Audience:    1280,
 	}
 	segmentRing := Segment{
+		Key:         "ring_intent",
 		Name:        "リング検討中ユーザー",
 		Description: "過去30日以内にリングカテゴリを3回以上閲覧している未購入ユーザー",
 		Preview:     []string{"カテゴリ: リング", "閲覧3回以上", "未購入"},
 		Audience:    2543,
 	}
 	segmentApp := Segment{
+		Key:         "app_members",
 		Name:        "アプリ限定会員",
 		Description: "アプリ経由で登録し、Push通知許諾済みの会員",
 		Preview:     []string{"Push許諾済み", "アプリ登録", "カスタム刻印希望"},
@@ -152,6 +162,7 @@ func NewStaticService() *StaticService {
 			"operations.saito",
 			now.Add(-3*time.Hour),
 			Segment{
+				Key:         "express_delivery",
 				Name:        "即納希望ユーザー",
 				Description: "最短納期フィルタを使用し、過去にお急ぎ配送オプションを選択した顧客",
 				Preview:     []string{"お急ぎ配送選択経験", "納期フィルタ適用"},
@@ -180,6 +191,7 @@ func NewStaticService() *StaticService {
 			"marketing.miyamoto",
 			lastWeek.Add(-6*time.Hour),
 			Segment{
+				Key:         "seasonal_inventory",
 				Name:        "シーズン品在庫調整",
 				Description: "冬物カテゴリを過去3ヶ月以内に購入した顧客",
 				Preview:     []string{"冬物購入履歴あり", "VIP対象外"},
@@ -192,6 +204,52 @@ func NewStaticService() *StaticService {
 			},
 		),
 	}
+
+	promotions[0].Version = "v5"
+	promotions[0].DiscountPercent = 15
+	promotions[0].DiscountCurrency = "JPY"
+	promotions[0].EligibilityRules = []string{"loyal_members"}
+	promotions[0].MinOrderAmountMinor = 15000
+	promotions[0].UsageLimitTotal = 1500
+	promotions[0].UsageLimitPerCustomer = 1
+	promotions[0].BudgetMinor = 8000000
+
+	promotions[1].Version = "v3"
+	promotions[1].BundleBuyQty = 2
+	promotions[1].BundleGetQty = 1
+	promotions[1].BundleDiscountPercent = 100
+	promotions[1].EligibilityRules = []string{"app_push"}
+	promotions[1].MinOrderAmountMinor = 20000
+	promotions[1].UsageLimitTotal = 500
+	promotions[1].UsageLimitPerCustomer = 1
+	promotions[1].BudgetMinor = 6000000
+
+	promotions[2].Version = "v4"
+	promotions[2].DiscountPercent = 20
+	promotions[2].DiscountCurrency = "JPY"
+	promotions[2].EligibilityRules = []string{"app_push", "loyal_members"}
+	promotions[2].MinOrderAmountMinor = 0
+	promotions[2].UsageLimitTotal = 2000
+	promotions[2].UsageLimitPerCustomer = 2
+	promotions[2].BudgetMinor = 4500000
+
+	promotions[3].Version = "v2"
+	promotions[3].ShippingOption = shippingOptionFree
+	promotions[3].ShippingCurrency = "JPY"
+	promotions[3].EligibilityRules = []string{"expedited"}
+	promotions[3].MinOrderAmountMinor = 10000
+	promotions[3].UsageLimitTotal = 1200
+	promotions[3].UsageLimitPerCustomer = 3
+	promotions[3].BudgetMinor = 3000000
+
+	promotions[4].Version = "v6"
+	promotions[4].DiscountAmountMinor = 5000
+	promotions[4].DiscountCurrency = "JPY"
+	promotions[4].EligibilityRules = []string{"new_customers"}
+	promotions[4].MinOrderAmountMinor = 12000
+	promotions[4].UsageLimitTotal = 2500
+	promotions[4].UsageLimitPerCustomer = 1
+	promotions[4].BudgetMinor = 9000000
 
 	detail := func(p Promotion, benefits []Benefit, log []AuditLogEntry) PromotionDetail {
 		usage := []UsageSlice{
@@ -271,6 +329,7 @@ func NewStaticService() *StaticService {
 	return &StaticService{
 		promotions: promotions,
 		details:    details,
+		nextID:     len(promotions),
 	}
 }
 
@@ -430,6 +489,376 @@ func (s *StaticService) BulkStatus(_ context.Context, _ string, req BulkStatusRe
 		Action:      action,
 		AffectedIDs: ids,
 	}, nil
+}
+
+// Create persists a new promotion in the static catalogue.
+func (s *StaticService) Create(_ context.Context, _ string, input PromotionInput) (Promotion, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.validatePromotionInput(input, ""); err != nil {
+		return Promotion{}, err
+	}
+
+	s.nextID++
+	id := fmt.Sprintf("promo-generated-%d", s.nextID)
+	promo := Promotion{
+		ID:              id,
+		Code:            strings.TrimSpace(input.Code),
+		Name:            strings.TrimSpace(input.Name),
+		Description:     strings.TrimSpace(input.Description),
+		Status:          input.Status,
+		StatusLabel:     statusLabelValue(input.Status),
+		StatusTone:      statusToneValue(input.Status),
+		Type:            input.Type,
+		TypeLabel:       typeLabelValue(input.Type),
+		Channels:        copyChannels(input.Channels),
+		StartAt:         copyTimePtr(&input.StartAt),
+		EndAt:           copyTimePtr(input.EndAt),
+		UsageCount:      0,
+		RedemptionCount: 0,
+		LastModifiedAt:  time.Now(),
+		CreatedBy:       "marketing.auto",
+		Segment:         segmentFromKey(input.SegmentKey),
+		Metrics: PromotionMetrics{
+			AttributedRevenueMinor: 0,
+			ConversionRate:         0,
+			RetentionLift:          0,
+		},
+		Version:               newPromotionVersion(),
+		DiscountPercent:       input.DiscountPercent,
+		DiscountAmountMinor:   input.DiscountAmountMinor,
+		DiscountCurrency:      coalesceCurrency(input.DiscountCurrency),
+		BundleBuyQty:          input.BundleBuyQty,
+		BundleGetQty:          input.BundleGetQty,
+		BundleDiscountPercent: input.BundleDiscountPercent,
+		ShippingOption:        strings.TrimSpace(input.ShippingOption),
+		ShippingAmountMinor:   input.ShippingAmountMinor,
+		ShippingCurrency:      coalesceCurrency(input.ShippingCurrency),
+		EligibilityRules:      append([]string(nil), input.EligibilityRules...),
+		MinOrderAmountMinor:   input.MinOrderAmountMinor,
+		UsageLimitTotal:       input.UsageLimitTotal,
+		UsageLimitPerCustomer: input.UsageLimitPerCustomer,
+		BudgetMinor:           input.BudgetMinor,
+	}
+	if strings.TrimSpace(promo.Description) == "" {
+		promo.Description = promo.Name + " のプロモーション"
+	}
+	if promo.ShippingOption == "" {
+		promo.ShippingOption = shippingOptionFree
+	}
+
+	s.promotions = append([]Promotion{promo}, s.promotions...)
+	s.details[promo.ID] = buildDetailForPromotion(promo)
+
+	return promo, nil
+}
+
+// Update mutates an existing promotion.
+func (s *StaticService) Update(_ context.Context, _ string, promotionID string, input PromotionInput) (Promotion, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	promotionID = strings.TrimSpace(promotionID)
+	if promotionID == "" {
+		return Promotion{}, ErrPromotionNotFound
+	}
+
+	index := -1
+	for i, candidate := range s.promotions {
+		if candidate.ID == promotionID {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return Promotion{}, ErrPromotionNotFound
+	}
+
+	existing := s.promotions[index]
+	if strings.TrimSpace(existing.Version) != "" && strings.TrimSpace(input.Version) != "" && !strings.EqualFold(existing.Version, input.Version) {
+		return Promotion{}, &PromotionValidationError{
+			Message: "最新の情報を取得してから再度お試しください。",
+			FieldErrors: map[string]string{
+				"version": "他のユーザーにより更新されています。",
+			},
+		}
+	}
+
+	if err := s.validatePromotionInput(input, promotionID); err != nil {
+		return Promotion{}, err
+	}
+
+	updated := applyPromotionInput(existing, input)
+	updated.Version = newPromotionVersion()
+	updated.LastModifiedAt = time.Now()
+
+	s.promotions[index] = updated
+
+	detail := s.details[promotionID]
+	detail.Promotion = updated
+	detail.LastEdited = updated.LastModifiedAt
+	detail.LastEditor = "marketing.auto"
+	detail.Targeting = buildTargetingForSegment(updated.Segment, updated.EligibilityRules)
+	detail.AuditLog = append([]AuditLogEntry{{
+		Timestamp: updated.LastModifiedAt,
+		Actor:     detail.LastEditor,
+		Action:    "更新",
+		Summary:   "プロモーションを更新しました。",
+	}}, detail.AuditLog...)
+	s.details[promotionID] = detail
+
+	return updated, nil
+}
+
+func (s *StaticService) validatePromotionInput(input PromotionInput, ignoreID string) *PromotionValidationError {
+	fieldErrors := make(map[string]string)
+	code := strings.TrimSpace(input.Code)
+	if code == "" {
+		fieldErrors["code"] = "コードを入力してください。"
+	} else {
+		for _, promo := range s.promotions {
+			if promo.ID == ignoreID {
+				continue
+			}
+			if strings.EqualFold(promo.Code, code) {
+				fieldErrors["code"] = "このコードは既に使用されています。"
+				break
+			}
+		}
+	}
+	if input.StartAt.IsZero() {
+		fieldErrors["startDate"] = "開始日時を指定してください。"
+	}
+	if input.EndAt != nil && !input.StartAt.IsZero() && !input.EndAt.After(input.StartAt) {
+		fieldErrors["endDate"] = "終了日時は開始より後に設定してください。"
+	}
+	if len(input.Channels) == 0 {
+		fieldErrors["channels"] = "チャネルを選択してください。"
+	}
+	if strings.TrimSpace(input.SegmentKey) == "" {
+		fieldErrors["segment"] = "対象セグメントを選択してください。"
+	}
+	if len(fieldErrors) > 0 {
+		return &PromotionValidationError{Message: "入力内容を確認してください。", FieldErrors: fieldErrors}
+	}
+	return nil
+}
+
+func applyPromotionInput(base Promotion, input PromotionInput) Promotion {
+	updated := base
+	updated.Name = strings.TrimSpace(input.Name)
+	if desc := strings.TrimSpace(input.Description); desc != "" {
+		updated.Description = desc
+	}
+	updated.Code = strings.TrimSpace(input.Code)
+	updated.Status = input.Status
+	updated.StatusLabel = statusLabelValue(input.Status)
+	updated.StatusTone = statusToneValue(input.Status)
+	updated.Type = input.Type
+	updated.TypeLabel = typeLabelValue(input.Type)
+	updated.Channels = copyChannels(input.Channels)
+	updated.StartAt = copyTimePtr(&input.StartAt)
+	updated.EndAt = copyTimePtr(input.EndAt)
+	updated.DiscountPercent = input.DiscountPercent
+	updated.DiscountAmountMinor = input.DiscountAmountMinor
+	updated.DiscountCurrency = coalesceCurrency(input.DiscountCurrency)
+	updated.BundleBuyQty = input.BundleBuyQty
+	updated.BundleGetQty = input.BundleGetQty
+	updated.BundleDiscountPercent = input.BundleDiscountPercent
+	updated.ShippingOption = strings.TrimSpace(input.ShippingOption)
+	if updated.ShippingOption == "" {
+		updated.ShippingOption = shippingOptionFree
+	}
+	updated.ShippingAmountMinor = input.ShippingAmountMinor
+	updated.ShippingCurrency = coalesceCurrency(input.ShippingCurrency)
+	updated.EligibilityRules = append([]string(nil), input.EligibilityRules...)
+	updated.MinOrderAmountMinor = input.MinOrderAmountMinor
+	updated.UsageLimitTotal = input.UsageLimitTotal
+	updated.UsageLimitPerCustomer = input.UsageLimitPerCustomer
+	updated.BudgetMinor = input.BudgetMinor
+	updated.Segment = segmentFromKey(input.SegmentKey)
+	return updated
+}
+
+func copyChannels(channels []Channel) []Channel {
+	if len(channels) == 0 {
+		return nil
+	}
+	cpy := make([]Channel, len(channels))
+	copy(cpy, channels)
+	return cpy
+}
+
+func buildDetailForPromotion(p Promotion) PromotionDetail {
+	usage := []UsageSlice{
+		{Label: "新規顧客", Value: "--"},
+		{Label: "既存顧客", Value: "--"},
+	}
+	return PromotionDetail{
+		Promotion:   p,
+		Targeting:   buildTargetingForSegment(p.Segment, p.EligibilityRules),
+		Benefits:    nil,
+		AuditLog:    []AuditLogEntry{{Timestamp: p.LastModifiedAt, Actor: p.CreatedBy, Action: "作成", Summary: "プロモーションを作成しました。"}},
+		LastEditor:  p.CreatedBy,
+		LastEdited:  p.LastModifiedAt,
+		UsageSlices: usage,
+	}
+}
+
+func buildTargetingForSegment(seg Segment, eligibility []string) []TargetingRule {
+	rules := []TargetingRule{
+		{Label: "セグメント", Value: seg.Name, Icon: "🎯"},
+	}
+	if len(seg.Preview) > 0 {
+		rules = append(rules, TargetingRule{Label: "特性", Value: strings.Join(seg.Preview, ", "), Icon: "🧭"})
+	}
+	if len(eligibility) > 0 {
+		labels := make([]string, 0, len(eligibility))
+		for _, rule := range eligibility {
+			labels = append(labels, eligibilityDisplay(rule))
+		}
+		rules = append(rules, TargetingRule{Label: "追加条件", Value: strings.Join(labels, ", "), Icon: "🧩"})
+	}
+	return rules
+}
+
+func eligibilityDisplay(value string) string {
+	switch strings.TrimSpace(value) {
+	case "app_push":
+		return "アプリ通知許諾"
+	case "loyal_members":
+		return "ロイヤル会員"
+	case "new_customers":
+		return "新規顧客"
+	case "expedited":
+		return "お急ぎ配送利用"
+	default:
+		return value
+	}
+}
+
+func statusLabelValue(status Status) string {
+	switch status {
+	case StatusActive:
+		return "アクティブ"
+	case StatusScheduled:
+		return "公開予定"
+	case StatusPaused:
+		return "一時停止"
+	case StatusDraft:
+		return "下書き"
+	case StatusExpired:
+		return "終了"
+	default:
+		return string(status)
+	}
+}
+
+func statusToneValue(status Status) string {
+	switch status {
+	case StatusActive:
+		return "success"
+	case StatusScheduled:
+		return "info"
+	case StatusPaused:
+		return "warning"
+	case StatusDraft, StatusExpired:
+		return "muted"
+	default:
+		return "info"
+	}
+}
+
+func typeLabelValue(kind Type) string {
+	switch kind {
+	case TypePercentage:
+		return "割引(%)"
+	case TypeFixedAmount:
+		return "固定額割引"
+	case TypeBundle:
+		return "セット/バンドル"
+	case TypeShipping:
+		return "配送特典"
+	default:
+		return string(kind)
+	}
+}
+
+func segmentFromKey(key string) Segment {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "vip_retention":
+		return Segment{
+			Key:         "vip_retention",
+			Name:        "既存顧客 (VIP)",
+			Description: "昨年度の購入回数が3回以上でLTV上位20%の顧客",
+			Preview:     []string{"LTV上位20%", "年間購入3回以上"},
+			Audience:    1280,
+		}
+	case "ring_intent":
+		return Segment{
+			Key:         "ring_intent",
+			Name:        "リング検討中ユーザー",
+			Description: "リングカテゴリを頻繁に閲覧しているユーザー",
+			Preview:     []string{"リング閲覧3回以上", "未購入"},
+			Audience:    2543,
+		}
+	case "app_members":
+		return Segment{
+			Key:         "app_members",
+			Name:        "アプリ限定会員",
+			Description: "アプリ登録済みでPush通知許諾済みの会員",
+			Preview:     []string{"Push許諾", "アプリ登録"},
+			Audience:    980,
+		}
+	case "express_delivery":
+		return Segment{
+			Key:         "express_delivery",
+			Name:        "即納希望ユーザー",
+			Description: "お急ぎ配送を選択した経験がある顧客",
+			Preview:     []string{"お急ぎ配送", "納期短縮"},
+			Audience:    1954,
+		}
+	case "seasonal_inventory":
+		return Segment{
+			Key:         "seasonal_inventory",
+			Name:        "シーズン品在庫調整",
+			Description: "季節商品を購入した実績のある顧客",
+			Preview:     []string{"冬物購入", "VIP除外"},
+			Audience:    1680,
+		}
+	case "new_customers":
+		return Segment{
+			Key:         "new_customers",
+			Name:        "新規顧客",
+			Description: "初回購入見込みの顧客",
+			Preview:     []string{"初回", "未購入"},
+			Audience:    2100,
+		}
+	default:
+		clean := strings.TrimSpace(key)
+		if clean == "" {
+			clean = "カスタムセグメント"
+		}
+		return Segment{
+			Key:         key,
+			Name:        clean,
+			Description: "カスタムセグメント",
+			Preview:     []string{clean},
+			Audience:    800,
+		}
+	}
+}
+
+func coalesceCurrency(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "JPY"
+	}
+	return strings.TrimSpace(strings.ToUpper(value))
+}
+
+func newPromotionVersion() string {
+	return fmt.Sprintf("v%s", time.Now().Format("20060102150405"))
 }
 
 func (s *StaticService) buildFilterSummary(filtered []Promotion) FilterSummary {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
@@ -64,6 +65,9 @@ func (h *Handlers) PromotionsPage(w http.ResponseWriter, r *http.Request) {
 		} else if !errors.Is(derr, adminpromotions.ErrPromotionNotFound) {
 			log.Printf("promotions: detail failed: %v", derr)
 		}
+	}
+	if drawer.ID != "" {
+		drawer.EditURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/edit?promotionID=%s", url.QueryEscape(drawer.ID)))
 	}
 
 	toolbar := promotionsToolbarProps(basePath, 0, result.Pagination.TotalItems)
@@ -135,6 +139,8 @@ func (h *Handlers) PromotionsDrawer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := promotionstpl.DrawerPayload(detail)
+	basePath := custommw.BasePathFromContext(ctx)
+	payload.EditURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/edit?promotionID=%s", url.QueryEscape(detail.Promotion.ID)))
 	templ.Handler(promotionstpl.Drawer(payload)).ServeHTTP(w, r)
 }
 
@@ -187,6 +193,177 @@ func (h *Handlers) PromotionsBulkStatus(w http.ResponseWriter, r *http.Request) 
 		w.Header().Set("HX-Trigger", string(data))
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// PromotionsNewModal renders the create modal for promotions.
+func (h *Handlers) PromotionsNewModal(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	_, ok := custommw.UserFromContext(ctx)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	state := defaultPromotionFormState()
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	basePath := custommw.BasePathFromContext(ctx)
+	action := joinBasePath(basePath, "/promotions")
+	data := buildPromotionModal(promotionModalModeNew, state, nil, "", action, http.MethodPost, csrf)
+
+	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+}
+
+// PromotionsEditModal renders the edit modal for a promotion.
+func (h *Handlers) PromotionsEditModal(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	promotionID := strings.TrimSpace(r.URL.Query().Get("promotionID"))
+	if promotionID == "" {
+		http.Error(w, "promotionID is required", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.promotions.Detail(ctx, user.Token, promotionID)
+	if err != nil {
+		if errors.Is(err, adminpromotions.ErrPromotionNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		log.Printf("promotions: detail fetch for edit failed: %v", err)
+		http.Error(w, "プロモーションの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	state := promotionValuesFromDetail(detail)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	basePath := custommw.BasePathFromContext(ctx)
+	action := joinBasePath(basePath, fmt.Sprintf("/promotions/%s", url.PathEscape(promotionID)))
+	data := buildPromotionModal(promotionModalModeEdit, state, nil, "", action, http.MethodPut, csrf)
+
+	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+}
+
+// PromotionsCreate handles creation submissions.
+func (h *Handlers) PromotionsCreate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "フォームの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	input, state, fieldErrors := parsePromotionForm(r.PostForm, false)
+	if len(fieldErrors) > 0 {
+		reRenderPromotionModal(w, r, promotionModalModeNew, state, fieldErrors, "入力内容を確認してください。", http.MethodPost, "")
+		return
+	}
+
+	created, err := h.promotions.Create(ctx, user.Token, input)
+	if err != nil {
+		handlePromotionMutationError(w, r, promotionModalModeNew, "", input, state, err)
+		return
+	}
+
+	triggerPromotionsRefresh(w, fmt.Sprintf("プロモーション「%s」を作成しました。", strings.TrimSpace(input.Name)), "success", created.ID)
+}
+
+// PromotionsUpdate handles update submissions.
+func (h *Handlers) PromotionsUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	promotionID := strings.TrimSpace(chi.URLParam(r, "promotionID"))
+	if promotionID == "" {
+		http.Error(w, "promotionID is required", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "フォームの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	input, state, fieldErrors := parsePromotionForm(r.PostForm, true)
+	if len(fieldErrors) > 0 {
+		reRenderPromotionModal(w, r, promotionModalModeEdit, state, fieldErrors, "入力内容を確認してください。", http.MethodPut, promotionID)
+		return
+	}
+
+	updated, err := h.promotions.Update(ctx, user.Token, promotionID, input)
+	if err != nil {
+		handlePromotionMutationError(w, r, promotionModalModeEdit, promotionID, input, state, err)
+		return
+	}
+
+	triggerPromotionsRefresh(w, fmt.Sprintf("プロモーション「%s」を更新しました。", strings.TrimSpace(input.Name)), "success", updated.ID)
+}
+
+func reRenderPromotionModal(w http.ResponseWriter, r *http.Request, mode promotionModalMode, state promotionFormState, fieldErrors map[string]string, generalErr string, method string, promotionID string) {
+	ctx := r.Context()
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	basePath := custommw.BasePathFromContext(ctx)
+	action := joinBasePath(basePath, "/promotions")
+	if mode == promotionModalModeEdit && strings.TrimSpace(promotionID) != "" {
+		action = joinBasePath(basePath, fmt.Sprintf("/promotions/%s", url.PathEscape(strings.TrimSpace(promotionID))))
+	}
+	data := buildPromotionModal(mode, state, fieldErrors, generalErr, action, method, csrf)
+	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+}
+
+func handlePromotionMutationError(w http.ResponseWriter, r *http.Request, mode promotionModalMode, promotionID string, input adminpromotions.PromotionInput, state promotionFormState, err error) {
+	var valErr *adminpromotions.PromotionValidationError
+	if errors.As(err, &valErr) && valErr != nil {
+		msg := strings.TrimSpace(valErr.Message)
+		if msg == "" {
+			msg = "入力内容を確認してください。"
+		}
+		reRenderPromotionModal(w, r, mode, state, valErr.FieldErrors, msg, methodForMode(mode), promotionID)
+		return
+	}
+	log.Printf("promotions: %s mutation failed: %v", mode, err)
+	message := "保存に失敗しました。時間を置いて再度お試しください。"
+	if mode == promotionModalModeEdit {
+		message = "更新に失敗しました。時間を置いて再度お試しください。"
+	}
+	reRenderPromotionModal(w, r, mode, state, nil, message, methodForMode(mode), promotionID)
+}
+
+func triggerPromotionsRefresh(w http.ResponseWriter, message, tone, promotionID string) {
+	payload := map[string]any{
+		"toast": map[string]string{
+			"message": strings.TrimSpace(message),
+			"tone":    strings.TrimSpace(tone),
+		},
+		"modal:close": true,
+	}
+	if id := strings.TrimSpace(promotionID); id != "" {
+		payload["promotions:select"] = map[string]string{"id": id}
+	}
+	if data, err := json.Marshal(payload); err == nil {
+		w.Header().Set("HX-Trigger", string(data))
+	} else {
+		log.Printf("promotions: failed to marshal HX-Trigger payload: %v", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func methodForMode(mode promotionModalMode) string {
+	if mode == promotionModalModeEdit {
+		return http.MethodPut
+	}
+	return http.MethodPost
 }
 
 func buildPromotionsRequest(r *http.Request) promotionsRequest {

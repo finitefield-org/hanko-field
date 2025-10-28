@@ -23,7 +23,18 @@ templ Drawer(data DrawerData) {
 					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ data.TypeLabel }</p>
 					<h2 class="mt-1 text-lg font-semibold text-slate-900">{ data.Title }</h2>
 				</div>
-				<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
+				<div class="flex flex-col items-end gap-2">
+					<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
+					if data.EditURL != "" {
+						<button
+							type="button"
+							class={ helpers.ButtonClass("secondary", "sm", false, false) }
+							hx-get={ data.EditURL }
+							hx-target="#modal"
+							hx-swap="innerHTML"
+						>編集</button>
+					}
+				</div>
 			</div>
 			<div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
 				<span>{ data.Schedule }</span>

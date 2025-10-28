@@ -2818,6 +2818,231 @@ const initOrdersInteractions = (scope) => {
   initOrdersTable(scope);
 };
 
+const PROMOTION_CONDITION_SOURCE_ATTR = "data-promotion-condition-source";
+const PROMOTION_CONDITION_KEY_ATTR = "data-promotion-condition-key";
+const PROMOTION_CONDITION_VALUE_ATTR = "data-promotion-condition-value";
+const PROMOTION_HIDE_MISSING_ATTR = "data-promotion-hide-missing";
+const PROMOTION_CONDITION_DISCOUNT = "discount-type";
+const PROMOTION_CONDITION_SHIPPING_OPTION = "shipping-option";
+const PROMOTION_TYPE_SHIPPING = "shipping";
+
+const togglePromotionConditionTarget = (element, show) => {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+  if (show) {
+    element.classList.remove("hidden");
+    element.removeAttribute("hidden");
+    element.setAttribute("aria-hidden", "false");
+  } else {
+    element.classList.add("hidden");
+    element.setAttribute("hidden", "true");
+    element.setAttribute("aria-hidden", "true");
+  }
+  element.querySelectorAll("input, select, textarea").forEach((control) => {
+    if (
+      !(control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+    if (show) {
+      if (control.dataset.promotionDisabled === "true") {
+        control.disabled = false;
+        delete control.dataset.promotionDisabled;
+      }
+      return;
+    }
+    if (!control.disabled) {
+      control.dataset.promotionDisabled = "true";
+      control.disabled = true;
+    }
+  });
+};
+
+const readPromotionSourceValue = (form, element) => {
+  if (!(element instanceof HTMLElement)) {
+    return "";
+  }
+  if (element instanceof HTMLInputElement) {
+    if (element.type === "radio") {
+      const group = form.querySelectorAll(`input[name='${element.name}']`);
+      for (const radio of group) {
+        if (radio instanceof HTMLInputElement && radio.checked) {
+          return radio.value ?? "";
+        }
+      }
+      return "";
+    }
+    if (element.type === "checkbox") {
+      return element.checked ? element.value ?? "on" : "";
+    }
+    return element.value ?? "";
+  }
+  if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+    return element.value ?? "";
+  }
+  return element.getAttribute("value") || "";
+};
+
+const applyPromotionConditions = (form, state) => {
+  const targets = form.querySelectorAll(`[${PROMOTION_CONDITION_KEY_ATTR}]`);
+  targets.forEach((target) => {
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const key = target.getAttribute(PROMOTION_CONDITION_KEY_ATTR) || "";
+    if (key === "") {
+      return;
+    }
+    const rawValues = target.getAttribute(PROMOTION_CONDITION_VALUE_ATTR) || "";
+    const values = rawValues
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value !== "");
+    const current = (state[key] || "").trim();
+    let matches = values.length === 0 || values.includes(current);
+
+    if (key === PROMOTION_CONDITION_SHIPPING_OPTION) {
+      const discountType = (state[PROMOTION_CONDITION_DISCOUNT] || "").trim();
+      if (discountType !== PROMOTION_TYPE_SHIPPING) {
+        matches = false;
+      }
+    }
+
+    if (key === PROMOTION_CONDITION_DISCOUNT && values.length > 0) {
+      matches = values.includes(current);
+    }
+
+    if (target.getAttribute(PROMOTION_HIDE_MISSING_ATTR) === "true" && current === "") {
+      matches = false;
+    }
+
+    togglePromotionConditionTarget(target, matches);
+  });
+};
+
+const initPromotionForm = (form) => {
+  if (!(form instanceof HTMLFormElement)) {
+    return;
+  }
+  if (form.dataset.promotionsFormInit === "true") {
+    return;
+  }
+  form.dataset.promotionsFormInit = "true";
+
+  const state = {};
+  const sources = Array.from(form.querySelectorAll(`[${PROMOTION_CONDITION_SOURCE_ATTR}]`));
+
+  const updateState = () => {
+    sources.forEach((element) => {
+      if (!(element instanceof HTMLElement)) {
+        return;
+      }
+      const key = element.getAttribute(PROMOTION_CONDITION_SOURCE_ATTR) || "";
+      if (key === "") {
+        return;
+      }
+      state[key] = readPromotionSourceValue(form, element);
+    });
+    applyPromotionConditions(form, state);
+  };
+
+  sources.forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const key = element.getAttribute(PROMOTION_CONDITION_SOURCE_ATTR) || "";
+    if (key === "") {
+      return;
+    }
+    const handler = () => {
+      state[key] = readPromotionSourceValue(form, element);
+      applyPromotionConditions(form, state);
+    };
+    element.addEventListener("change", handler);
+    if (element instanceof HTMLInputElement && element.type !== "radio") {
+      element.addEventListener("input", handler);
+    }
+    if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+      element.addEventListener("input", handler);
+    }
+  });
+
+  updateState();
+};
+
+const initPromotionForms = (scope) => {
+  const root = scope instanceof Element ? scope : document;
+  root.querySelectorAll("[data-promotion-form]").forEach((form) => initPromotionForm(form));
+};
+
+const updatePromotionSelectedInputs = (promotionID) => {
+  const value = typeof promotionID === "string" ? promotionID : "";
+  document.querySelectorAll("[data-promotions-selected]").forEach((input) => {
+    if (input instanceof HTMLInputElement) {
+      input.value = value;
+    }
+  });
+};
+
+const refreshPromotionTable = (promotionID) => {
+  if (typeof window.htmx === "undefined") {
+    return;
+  }
+  const table = document.getElementById("promotions-table");
+  if (!(table instanceof HTMLElement)) {
+    return;
+  }
+  const base = table.getAttribute("hx-get") || "";
+  if (base === "") {
+    window.htmx.trigger(table, "refresh");
+    return;
+  }
+  const url = new URL(base, window.location.origin);
+  if (promotionID && promotionID.trim() !== "") {
+    url.searchParams.set("selected", promotionID.trim());
+  } else {
+    url.searchParams.delete("selected");
+  }
+  const relative = `${url.pathname}${url.search}`;
+  table.setAttribute("hx-get", relative);
+  window.htmx.ajax("GET", url.toString(), { target: "#promotions-table", swap: "outerHTML" });
+};
+
+const refreshPromotionDrawer = (promotionID) => {
+  if (typeof window.htmx === "undefined") {
+    return;
+  }
+  const container = document.querySelector("[data-promotions-drawer-container]");
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+  const endpoint = container.getAttribute("data-promotions-drawer-endpoint") || "";
+  if (endpoint === "" || !promotionID || promotionID.trim() === "") {
+    return;
+  }
+  const url = new URL(endpoint, window.location.origin);
+  url.searchParams.set("promotionID", promotionID.trim());
+  window.htmx.ajax("GET", url.toString(), { target: "#promotions-drawer", swap: "innerHTML" });
+};
+
+const initPromotionEvents = (() => {
+  let bound = false;
+  return () => {
+    if (bound) {
+      return;
+    }
+    bound = true;
+    document.body.addEventListener("promotions:select", (event) => {
+      const detail = event instanceof CustomEvent ? event.detail || {} : {};
+      const promotionID = typeof detail.id === "string" ? detail.id.trim() : "";
+      updatePromotionSelectedInputs(promotionID);
+      refreshPromotionTable(promotionID);
+      refreshPromotionDrawer(promotionID);
+    });
+  };
+})();
+
 const initPromotionsTable = (scope) => {
   const container = scope instanceof Element ? scope : document;
   const fragment = container.querySelector("[data-promotions-table-fragment]");
@@ -2907,7 +3132,9 @@ const initPromotionsTable = (scope) => {
 };
 
 const initPromotionsModule = (scope) => {
-  initPromotionsTable(scope);
+	initPromotionsTable(scope);
+	initPromotionForms(scope);
+	initPromotionEvents();
 };
 
 // Expose a hook for future htmx/alpine wiring without blocking initial scaffold.

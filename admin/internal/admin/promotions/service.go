@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,12 @@ type Service interface {
 
 	// BulkStatus applies the requested bulk action to a collection of promotions.
 	BulkStatus(ctx context.Context, token string, req BulkStatusRequest) (BulkStatusResult, error)
+
+	// Create registers a new promotion using the provided configuration.
+	Create(ctx context.Context, token string, input PromotionInput) (Promotion, error)
+
+	// Update modifies an existing promotion.
+	Update(ctx context.Context, token, promotionID string, input PromotionInput) (Promotion, error)
 }
 
 // Status represents the lifecycle state of a promotion.
@@ -141,24 +148,39 @@ type SchedulePreset struct {
 
 // Promotion is the core list row model.
 type Promotion struct {
-	ID              string
-	Code            string
-	Name            string
-	Description     string
-	Status          Status
-	StatusLabel     string
-	StatusTone      string
-	Type            Type
-	TypeLabel       string
-	Channels        []Channel
-	StartAt         *time.Time
-	EndAt           *time.Time
-	UsageCount      int
-	RedemptionCount int
-	LastModifiedAt  time.Time
-	CreatedBy       string
-	Segment         Segment
-	Metrics         PromotionMetrics
+	ID                    string
+	Code                  string
+	Name                  string
+	Description           string
+	Status                Status
+	StatusLabel           string
+	StatusTone            string
+	Type                  Type
+	TypeLabel             string
+	Channels              []Channel
+	StartAt               *time.Time
+	EndAt                 *time.Time
+	UsageCount            int
+	RedemptionCount       int
+	LastModifiedAt        time.Time
+	CreatedBy             string
+	Segment               Segment
+	Metrics               PromotionMetrics
+	Version               string
+	DiscountPercent       float64
+	DiscountAmountMinor   int64
+	DiscountCurrency      string
+	BundleBuyQty          int
+	BundleGetQty          int
+	BundleDiscountPercent float64
+	ShippingOption        string
+	ShippingAmountMinor   int64
+	ShippingCurrency      string
+	EligibilityRules      []string
+	MinOrderAmountMinor   int64
+	UsageLimitTotal       int
+	UsageLimitPerCustomer int
+	BudgetMinor           int64
 }
 
 // PromotionMetrics exposes supplemental stats for the table tooltip or drawer.
@@ -170,6 +192,7 @@ type PromotionMetrics struct {
 
 // Segment summarises targeting information.
 type Segment struct {
+	Key         string
 	Name        string
 	Description string
 	Preview     []string
@@ -185,6 +208,52 @@ type PromotionDetail struct {
 	LastEditor  string
 	LastEdited  time.Time
 	UsageSlices []UsageSlice
+}
+
+// PromotionInput captures the configuration submitted from the admin UI when creating or updating a promotion.
+type PromotionInput struct {
+	Name                  string
+	Code                  string
+	Description           string
+	Status                Status
+	Type                  Type
+	Channels              []Channel
+	SegmentKey            string
+	EligibilityRules      []string
+	DiscountPercent       float64
+	DiscountAmountMinor   int64
+	DiscountCurrency      string
+	BundleBuyQty          int
+	BundleGetQty          int
+	BundleDiscountPercent float64
+	ShippingOption        string
+	ShippingAmountMinor   int64
+	ShippingCurrency      string
+	MinOrderAmountMinor   int64
+	UsageLimitTotal       int
+	UsageLimitPerCustomer int
+	BudgetMinor           int64
+	StartAt               time.Time
+	EndAt                 *time.Time
+	Version               string
+}
+
+// PromotionValidationError indicates validation issues for promotion create/update operations.
+type PromotionValidationError struct {
+	Message     string
+	FieldErrors map[string]string
+}
+
+// Error implements error.
+func (e *PromotionValidationError) Error() string {
+	if e == nil {
+		return "invalid promotion input"
+	}
+	msg := strings.TrimSpace(e.Message)
+	if msg == "" {
+		return "invalid promotion input"
+	}
+	return msg
 }
 
 // TargetingRule describes a single audience rule.

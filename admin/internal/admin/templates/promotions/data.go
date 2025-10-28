@@ -25,6 +25,8 @@ type PageData struct {
 	ResetURL           string
 	BulkEndpoint       string
 	DrawerEndpoint     string
+	NewModalURL        string
+	EditModalURL       string
 	Query              QueryState
 	Filters            Filters
 	Metrics            []MetricChip
@@ -161,6 +163,7 @@ type DrawerData struct {
 	AuditLog           []AuditItem
 	Usage              []DrawerItem
 	Metrics            []RowMetric
+	EditURL            string
 }
 
 // DrawerItem is a labeled value row in the drawer.
@@ -189,6 +192,8 @@ func BuildPageData(basePath string, state QueryState, result adminpromotions.Lis
 		ResetURL:           joinBase(basePath, "/promotions"),
 		BulkEndpoint:       joinBase(basePath, "/promotions/bulk/status"),
 		DrawerEndpoint:     joinBase(basePath, "/promotions/drawer"),
+		NewModalURL:        joinBase(basePath, "/promotions/modal/new"),
+		EditModalURL:       joinBase(basePath, "/promotions/modal/edit"),
 		Query:              state,
 		Filters:            buildFilters(state, result.Filters),
 		Metrics:            metricChips(result.Summary),
@@ -739,4 +744,68 @@ func parseIntDefault(raw string, def int) int {
 		return def
 	}
 	return value
+}
+
+// ModalData represents the promotion create/edit modal payload.
+type ModalData struct {
+	Title        string
+	Description  string
+	Mode         string
+	ActionURL    string
+	Method       string
+	SubmitLabel  string
+	SubmitTone   string
+	HiddenFields []ModalHiddenField
+	Sections     []ModalSection
+	Error        string
+	Conditions   map[string]string
+}
+
+// ModalHiddenField captures hidden inputs rendered in the modal form.
+type ModalHiddenField struct {
+	Name  string
+	Value string
+}
+
+// ModalSection groups related fields and supports conditional display.
+type ModalSection struct {
+	ID              string
+	Title           string
+	Description     string
+	Fields          []ModalField
+	ConditionKey    string
+	ConditionValue  string
+	HideWhenMissing bool
+}
+
+// ModalField describes a single form control inside the modal.
+type ModalField struct {
+	Name           string
+	Label          string
+	Type           string
+	Value          string
+	Placeholder    string
+	Hint           string
+	Required       bool
+	FullWidth      bool
+	Options        []ModalOption
+	Rows           int
+	Attributes     templ.Attributes
+	Error          string
+	Prefix         string
+	Suffix         string
+	Step           string
+	Min            string
+	Max            string
+	ConditionKey   string
+	ConditionValue string
+	Multiple       bool
+}
+
+// ModalOption represents a selectable option for dropdowns, radios, or checkboxes.
+type ModalOption struct {
+	Value       string
+	Label       string
+	Selected    bool
+	Description string
 }

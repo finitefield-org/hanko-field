@@ -3,6 +3,8 @@ package promotions
 import (
 	"strconv"
 
+	templpkg "github.com/a-h/templ"
+
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
@@ -20,24 +22,36 @@ templ pageBody(data PageData) {
 					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
 					<p class="text-sm text-slate-600">{ data.Description }</p>
 				</div>
-				if len(data.Metrics) > 0 {
-					<div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
-						for _, metric := range data.Metrics {
-							<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
-								<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-									if metric.Icon != "" {
-										<span aria-hidden="true">{ metric.Icon }</span>
+				<div class="flex flex-col items-stretch gap-3 lg:items-end">
+					if len(data.Metrics) > 0 {
+						<div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
+							for _, metric := range data.Metrics {
+								<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
+									<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+										if metric.Icon != "" {
+											<span aria-hidden="true">{ metric.Icon }</span>
+										}
+										{ metric.Label }
+									</div>
+									<div class="text-xl font-semibold text-slate-900">{ metric.Value }</div>
+									if metric.SubText != "" {
+										<p class="text-xs text-slate-500">{ metric.SubText }</p>
 									}
-									{ metric.Label }
-								</div>
-								<div class="text-xl font-semibold text-slate-900">{ metric.Value }</div>
-								if metric.SubText != "" {
-									<p class="text-xs text-slate-500">{ metric.SubText }</p>
-								}
 							</div>
 						}
 					</div>
-				}
+					}
+					<div class="flex justify-end">
+						@components.ButtonWith("プロモーションを作成", components.ButtonOptions{
+							Variant: "primary",
+							Attrs: templpkg.Attributes{
+								"hx-get":   data.NewModalURL,
+								"hx-target": "#modal",
+								"hx-swap":  "innerHTML",
+							},
+						})
+					</div>
+				</div>
 			</div>
 			<div class="mt-6 border-t border-slate-200 pt-4">
 				@filterToolbar(data)
@@ -55,12 +69,21 @@ templ pageBody(data PageData) {
 					data-promotions-table
 					hx-target="this"
 					hx-swap="outerHTML"
+					hx-trigger="refresh from:body"
+					hx-get={ helpers.BuildURL(data.Table.FragmentPath, data.Table.RawQuery) }
 				>
 					@Table(data.Table)
 				</div>
 			</section>
 			<aside class="hidden xl:block">
-				<div class="sticky top-20 space-y-4">
+				<div
+					class="sticky top-20 space-y-4"
+					id="promotions-drawer"
+					data-promotions-drawer-container
+					data-promotions-drawer-endpoint={ data.DrawerEndpoint }
+					hx-target="this"
+					hx-swap="innerHTML"
+				>
 					@Drawer(data.Drawer)
 				</div>
 			</aside>
