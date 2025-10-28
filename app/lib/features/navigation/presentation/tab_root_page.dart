@@ -4,6 +4,8 @@ import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/core/ui/widgets/app_help_overlay.dart';
 import 'package:app/core/ui/widgets/app_top_app_bar.dart';
+import 'package:app/features/home/presentation/home_screen.dart';
+import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,6 +18,7 @@ class AppTabRootPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(appStateProvider.notifier);
+    final l10n = AppLocalizations.of(context);
 
     void openNotifications() {
       notifier.push(const NotificationsRoute());
@@ -35,7 +38,8 @@ class AppTabRootPage extends ConsumerWidget {
       onHelpTap: openHelp,
       child: Scaffold(
         appBar: AppTopAppBar(
-          title: tab.label,
+          title: tab == AppTab.creation ? l10n.homeAppBarTitle : tab.label,
+          centerTitle: tab == AppTab.creation ? true : null,
           helpContextLabel: tab.headline,
           onNotificationsTap: openNotifications,
           onSearchTap: openSearch,
@@ -55,45 +59,14 @@ class _TabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (tab == AppTab.creation) {
+      return const HomeScreen();
+    }
+
     final experienceAsync = ref.watch(experienceGateProvider);
     final experience = experienceAsync.asData?.value;
 
     switch (tab) {
-      case AppTab.creation:
-        final stages =
-            experience?.creationStages ??
-            const [
-              ['new'],
-              ['input'],
-              ['style'],
-              ['editor'],
-              ['preview'],
-            ];
-        final subtitle = _composeSubtitle(
-          'ディープリンクから該当ステップに遷移できます',
-          experience?.creationSubtitle,
-        );
-        final chips = <String>[
-          if (experience != null) ...[
-            'ペルソナ: ${experience.personaLabel}',
-            '言語: ${experience.locale.toLanguageTag()}',
-            if (experience.showKanjiAssist) '漢字マッピング優先' else '国内チェックリスト',
-          ],
-        ];
-        return _buildList(
-          context,
-          title: tab.headline,
-          subtitle: subtitle,
-          chips: chips,
-          children: [
-            for (final stage in stages)
-              ListTile(
-                leading: const Icon(Icons.tune),
-                title: Text('ステップ / ${stage.join(' / ')}'),
-                onTap: () => _push(ref, CreationStageRoute(stage)),
-              ),
-          ],
-        );
       case AppTab.shop:
         final subtitle = _composeSubtitle(
           '素材・商品詳細を Tab スタックで保持',
@@ -232,6 +205,8 @@ class _TabBody extends StatelessWidget {
               ),
           ],
         );
+      case AppTab.creation:
+        return const SizedBox.shrink();
     }
   }
 

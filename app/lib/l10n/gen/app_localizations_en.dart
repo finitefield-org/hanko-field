@@ -62,4 +62,98 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingSlideTrustBody =>
       'Your data stays protected while you manage signatures, deliveries, and records with confidence.';
+
+  @override
+  String get homeAppBarTitle => 'Home';
+
+  @override
+  String get homeFeaturedSectionTitle => 'Featured campaigns';
+
+  @override
+  String get homeFeaturedSectionSubtitleDefault =>
+      'Curated highlights picked for your workspace.';
+
+  @override
+  String homeFeaturedSectionSubtitle(String persona) {
+    return 'Recommended for $persona';
+  }
+
+  @override
+  String get homeFeaturedEmptyMessage =>
+      'No featured items available right now.';
+
+  @override
+  String get homeLoadErrorMessage => 'We couldn\'t load this section.';
+
+  @override
+  String get homeRetryButtonLabel => 'Retry';
+
+  @override
+  String get homeRecentDesignsTitle => 'Recent designs';
+
+  @override
+  String get homeRecentDesignsSubtitle =>
+      'Resume where you left off or review recent exports.';
+
+  @override
+  String get homeRecentDesignsEmptyTitle => 'No recent designs yet';
+
+  @override
+  String get homeRecentDesignsEmptyMessage =>
+      'Start a new seal design to see your drafts and history here.';
+
+  @override
+  String get homeRecentDesignsEmptyCta => 'Start a design';
+
+  @override
+  String get homeTemplateRecommendationsTitle => 'Recommended templates';
+
+  @override
+  String get homeTemplateRecommendationsSubtitle =>
+      'Tailored layouts and writing styles based on your preferences.';
+
+  @override
+  String get homeTemplateRecommendationsEmpty =>
+      'No template recommendations at the moment.';
+
+  @override
+  String get homeDesignStatusDraft => 'Draft';
+
+  @override
+  String get homeDesignStatusReady => 'Ready';
+
+  @override
+  String get homeDesignStatusOrdered => 'Ordered';
+
+  @override
+  String get homeDesignStatusLocked => 'Locked';
+
+  @override
+  String homeUpdatedOn(String date) {
+    return 'Updated on $date';
+  }
+
+  @override
+  String get homeWritingStyleTensho => 'Tensho';
+
+  @override
+  String get homeWritingStyleReisho => 'Reisho';
+
+  @override
+  String get homeWritingStyleKaisho => 'Kaisho';
+
+  @override
+  String get homeWritingStyleGyosho => 'Gyosho';
+
+  @override
+  String get homeWritingStyleKoentai => 'Koentai';
+
+  @override
+  String get homeWritingStyleCustom => 'Custom';
+
+  @override
+  String get homeShapeRound => 'Round';
+
+  @override
+  String get homeShapeSquare => 'Square';
 }

@@ -203,3 +203,76 @@ class OnboardingTutorialSkippedEvent extends AnalyticsEvent {
     }
   }
 }
+
+class HomeSectionInteractionEvent extends AnalyticsEvent {
+  const HomeSectionInteractionEvent({
+    required this.section,
+    required this.itemId,
+    this.action = 'tap',
+    this.position,
+  });
+
+  final String section;
+  final String itemId;
+  final String action;
+  final int? position;
+
+  @override
+  String get name => 'home_section_interaction';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'section': section,
+    'item_id': itemId,
+    'action': action,
+    if (position != null) 'position': position!,
+  };
+
+  @override
+  void validate() {
+    if (section.isEmpty || section.length > 32) {
+      throw ArgumentError.value(
+        section,
+        'section',
+        'Section must be 1-32 characters.',
+      );
+    }
+    if (itemId.isEmpty || itemId.length > 64) {
+      throw ArgumentError.value(
+        itemId,
+        'itemId',
+        'Item id must be 1-64 characters.',
+      );
+    }
+    if (action.isEmpty || action.length > 24) {
+      throw ArgumentError.value(
+        action,
+        'action',
+        'Action must be 1-24 characters.',
+      );
+    }
+  }
+}
+
+class HomeFeedRefreshedEvent extends AnalyticsEvent {
+  const HomeFeedRefreshedEvent({required this.sectionCount});
+
+  final int sectionCount;
+
+  @override
+  String get name => 'home_feed_refreshed';
+
+  @override
+  AnalyticsParameters toParameters() => {'section_count': sectionCount};
+
+  @override
+  void validate() {
+    if (sectionCount < 0) {
+      throw ArgumentError.value(
+        sectionCount,
+        'sectionCount',
+        'Section count cannot be negative.',
+      );
+    }
+  }
+}

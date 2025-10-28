@@ -86,4 +86,150 @@
   "@onboardingSlideTrustBody": {
     "description": "Body copy describing security and reliability benefits"
   }
+
+, "homeAppBarTitle": "Home"
+, "@homeAppBarTitle": {
+  "description": "Title for the home tab app bar"
+}
+
+, "homeFeaturedSectionTitle": "Featured campaigns"
+, "@homeFeaturedSectionTitle": {
+  "description": "Heading for the featured carousel on the home screen"
+}
+
+, "homeFeaturedSectionSubtitleDefault": "Curated highlights picked for your workspace."
+, "@homeFeaturedSectionSubtitleDefault": {
+  "description": "Default subtitle shown under the featured section heading"
+}
+
+, "homeFeaturedSectionSubtitle": "Recommended for {persona}"
+, "@homeFeaturedSectionSubtitle": {
+  "description": "Subtitle when personalising the featured section",
+  "placeholders": {
+    "persona": { "type": "String" }
+  }
+}
+
+, "homeFeaturedEmptyMessage": "No featured items available right now."
+, "@homeFeaturedEmptyMessage": {
+  "description": "Message shown when there are no featured items"
+}
+
+, "homeLoadErrorMessage": "We couldn't load this section."
+, "@homeLoadErrorMessage": {
+  "description": "Generic load error message used across sections"
+}
+
+, "homeRetryButtonLabel": "Retry"
+, "@homeRetryButtonLabel": {
+  "description": "Label for retry buttons on the home screen"
+}
+
+, "homeRecentDesignsTitle": "Recent designs"
+, "@homeRecentDesignsTitle": {
+  "description": "Heading for the recent designs section"
+}
+
+, "homeRecentDesignsSubtitle": "Resume where you left off or review recent exports."
+, "@homeRecentDesignsSubtitle": {
+  "description": "Subtitle explaining the recent designs section"
+}
+
+, "homeRecentDesignsEmptyTitle": "No recent designs yet"
+, "@homeRecentDesignsEmptyTitle": {
+  "description": "Headline for the empty state when no designs are available"
+}
+
+, "homeRecentDesignsEmptyMessage": "Start a new seal design to see your drafts and history here."
+, "@homeRecentDesignsEmptyMessage": {
+  "description": "Body text for the empty recent designs area"
+}
+
+, "homeRecentDesignsEmptyCta": "Start a design"
+, "@homeRecentDesignsEmptyCta": {
+  "description": "Primary CTA for creating a new design from the empty state"
+}
+
+, "homeTemplateRecommendationsTitle": "Recommended templates"
+, "@homeTemplateRecommendationsTitle": {
+  "description": "Heading for the recommended templates carousel"
+}
+
+, "homeTemplateRecommendationsSubtitle": "Tailored layouts and writing styles based on your preferences."
+, "@homeTemplateRecommendationsSubtitle": {
+  "description": "Subtitle describing the recommended templates section"
+}
+
+, "homeTemplateRecommendationsEmpty": "No template recommendations at the moment."
+, "@homeTemplateRecommendationsEmpty": {
+  "description": "Message when template recommendations are unavailable"
+}
+
+, "homeDesignStatusDraft": "Draft"
+, "@homeDesignStatusDraft": {
+  "description": "Design status badge for draft"
+}
+
+, "homeDesignStatusReady": "Ready"
+, "@homeDesignStatusReady": {
+  "description": "Design status badge for ready designs"
+}
+
+, "homeDesignStatusOrdered": "Ordered"
+, "@homeDesignStatusOrdered": {
+  "description": "Design status badge for ordered designs"
+}
+
+, "homeDesignStatusLocked": "Locked"
+, "@homeDesignStatusLocked": {
+  "description": "Design status badge for locked designs"
+}
+
+, "homeUpdatedOn": "Updated on {date}"
+, "@homeUpdatedOn": {
+  "description": "Label describing when a design was last updated",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
+
+, "homeWritingStyleTensho": "Tensho"
+, "@homeWritingStyleTensho": {
+  "description": "Label for the Tensho writing style chip"
+}
+
+, "homeWritingStyleReisho": "Reisho"
+, "@homeWritingStyleReisho": {
+  "description": "Label for the Reisho writing style chip"
+}
+
+, "homeWritingStyleKaisho": "Kaisho"
+, "@homeWritingStyleKaisho": {
+  "description": "Label for the Kaisho writing style chip"
+}
+
+, "homeWritingStyleGyosho": "Gyosho"
+, "@homeWritingStyleGyosho": {
+  "description": "Label for the Gyosho writing style chip"
+}
+
+, "homeWritingStyleKoentai": "Koentai"
+, "@homeWritingStyleKoentai": {
+  "description": "Label for the Koentai writing style chip"
+}
+
+, "homeWritingStyleCustom": "Custom"
+, "@homeWritingStyleCustom": {
+  "description": "Label for custom writing style chip"
+}
+
+, "homeShapeRound": "Round"
+, "@homeShapeRound": {
+  "description": "Label for round shape chip"
+}
+
+, "homeShapeSquare": "Square"
+, "@homeShapeSquare": {
+  "description": "Label for square shape chip"
+}
 }

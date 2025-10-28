@@ -193,6 +193,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your data stays protected while you manage signatures, deliveries, and records with confidence.'**
   String get onboardingSlideTrustBody;
+
+  /// Title for the home tab app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get homeAppBarTitle;
+
+  /// Heading for the featured carousel on the home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Featured campaigns'**
+  String get homeFeaturedSectionTitle;
+
+  /// Default subtitle shown under the featured section heading
+  ///
+  /// In en, this message translates to:
+  /// **'Curated highlights picked for your workspace.'**
+  String get homeFeaturedSectionSubtitleDefault;
+
+  /// Subtitle when personalising the featured section
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended for {persona}'**
+  String homeFeaturedSectionSubtitle(String persona);
+
+  /// Message shown when there are no featured items
+  ///
+  /// In en, this message translates to:
+  /// **'No featured items available right now.'**
+  String get homeFeaturedEmptyMessage;
+
+  /// Generic load error message used across sections
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load this section.'**
+  String get homeLoadErrorMessage;
+
+  /// Label for retry buttons on the home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get homeRetryButtonLabel;
+
+  /// Heading for the recent designs section
+  ///
+  /// In en, this message translates to:
+  /// **'Recent designs'**
+  String get homeRecentDesignsTitle;
+
+  /// Subtitle explaining the recent designs section
+  ///
+  /// In en, this message translates to:
+  /// **'Resume where you left off or review recent exports.'**
+  String get homeRecentDesignsSubtitle;
+
+  /// Headline for the empty state when no designs are available
+  ///
+  /// In en, this message translates to:
+  /// **'No recent designs yet'**
+  String get homeRecentDesignsEmptyTitle;
+
+  /// Body text for the empty recent designs area
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new seal design to see your drafts and history here.'**
+  String get homeRecentDesignsEmptyMessage;
+
+  /// Primary CTA for creating a new design from the empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Start a design'**
+  String get homeRecentDesignsEmptyCta;
+
+  /// Heading for the recommended templates carousel
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended templates'**
+  String get homeTemplateRecommendationsTitle;
+
+  /// Subtitle describing the recommended templates section
+  ///
+  /// In en, this message translates to:
+  /// **'Tailored layouts and writing styles based on your preferences.'**
+  String get homeTemplateRecommendationsSubtitle;
+
+  /// Message when template recommendations are unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'No template recommendations at the moment.'**
+  String get homeTemplateRecommendationsEmpty;
+
+  /// Design status badge for draft
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get homeDesignStatusDraft;
+
+  /// Design status badge for ready designs
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get homeDesignStatusReady;
+
+  /// Design status badge for ordered designs
+  ///
+  /// In en, this message translates to:
+  /// **'Ordered'**
+  String get homeDesignStatusOrdered;
+
+  /// Design status badge for locked designs
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get homeDesignStatusLocked;
+
+  /// Label describing when a design was last updated
+  ///
+  /// In en, this message translates to:
+  /// **'Updated on {date}'**
+  String homeUpdatedOn(String date);
+
+  /// Label for the Tensho writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Tensho'**
+  String get homeWritingStyleTensho;
+
+  /// Label for the Reisho writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Reisho'**
+  String get homeWritingStyleReisho;
+
+  /// Label for the Kaisho writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Kaisho'**
+  String get homeWritingStyleKaisho;
+
+  /// Label for the Gyosho writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Gyosho'**
+  String get homeWritingStyleGyosho;
+
+  /// Label for the Koentai writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Koentai'**
+  String get homeWritingStyleKoentai;
+
+  /// Label for custom writing style chip
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get homeWritingStyleCustom;
+
+  /// Label for round shape chip
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get homeShapeRound;
+
+  /// Label for square shape chip
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get homeShapeSquare;
 }
 
 class _AppLocalizationsDelegate
