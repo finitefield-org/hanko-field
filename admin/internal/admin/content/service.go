@@ -16,6 +16,9 @@ var ErrNotConfigured = errors.New("content service not configured")
 // ErrGuideNotFound signals that the requested guide could not be located.
 var ErrGuideNotFound = errors.New("guide not found")
 
+// ErrPageNotFound signals that the requested page could not be located.
+var ErrPageNotFound = errors.New("page not found")
+
 // Service exposes CMS guide management capabilities.
 type Service interface {
 	// ListGuides returns guides matching the supplied query.
@@ -36,6 +39,20 @@ type Service interface {
 	EditorGuide(ctx context.Context, token string, guideID string) (GuideEditor, error)
 	// PreviewDraft renders a preview for the supplied draft values without persisting changes.
 	PreviewDraft(ctx context.Context, token string, guideID string, draft GuideDraftInput) (GuidePreview, error)
+	// ListPages returns the content page hierarchy matching the supplied query.
+	ListPages(ctx context.Context, token string, query PageQuery) (PageTree, error)
+	// PageEditor returns the data required to render the page editor workspace.
+	PageEditor(ctx context.Context, token string, pageID string) (PageEditor, error)
+	// PagePreview returns a localized preview payload for the requested page.
+	PagePreview(ctx context.Context, token string, pageID string, locale string) (PagePreview, error)
+	// PagePreviewDraft renders a preview using unsaved page draft values.
+	PagePreviewDraft(ctx context.Context, token string, pageID string, draft PageDraftInput) (PagePreview, error)
+	// PageSaveDraft persists draft metadata for the page (placeholder implementation).
+	PageSaveDraft(ctx context.Context, token string, pageID string, draft PageDraftInput) (PageDraft, error)
+	// PageTogglePublish toggles the publish status for a page.
+	PageTogglePublish(ctx context.Context, token string, pageID string, publish bool) (Page, error)
+	// PageSchedule updates or clears the scheduled publish timestamp for a page.
+	PageSchedule(ctx context.Context, token string, pageID string, scheduledAt *time.Time) (Page, error)
 }
 
 // GuideStatus enumerates the lifecycle states for guides.
@@ -193,10 +210,19 @@ type GuideDraftInput struct {
 
 // StaticService is an in-memory implementation of the Service interface suitable for local development.
 type StaticService struct {
-	mu       sync.RWMutex
-	guides   []Guide
-	previews map[string]previewEntry
-	drafts   map[string]GuideDraft
+	mu             sync.RWMutex
+	guides         []Guide
+	previews       map[string]previewEntry
+	drafts         map[string]GuideDraft
+	pages          []Page
+	pageDrafts     map[string]PageDraft
+	pagePreviews   map[string]pagePreviewEntry
+	pageLocales    map[string][]PageLocale
+	pageProperties map[string]PageProperties
+	pageSchedules  map[string]PageSchedule
+	pageHistory    map[string][]PageHistoryEntry
+	pagePalette    []PageBlockPaletteGroup
+	pageStructure  []pageTreeNodeDef
 }
 
 type previewEntry struct {
@@ -425,7 +451,7 @@ func NewStaticService() *StaticService {
 		},
 	}
 
-	drafts := make(map[string]GuideDraft, len(guides))
+	guideDrafts := make(map[string]GuideDraft, len(guides))
 	for _, guide := range guides {
 		entry := previews[previewKey(guide.Slug, guide.Locale)]
 		body := strings.TrimSpace(entry.BodyHTML)
@@ -436,7 +462,7 @@ func NewStaticService() *StaticService {
 		if hero == "" {
 			hero = guide.HeroImageURL
 		}
-		drafts[guide.ID] = GuideDraft{
+		guideDrafts[guide.ID] = GuideDraft{
 			Locale:       guide.Locale,
 			Title:        guide.Title,
 			Summary:      guide.Summary,
@@ -450,10 +476,21 @@ func NewStaticService() *StaticService {
 		}
 	}
 
+	pageDataset := buildStaticPages(now)
+
 	return &StaticService{
-		guides:   guides,
-		previews: previews,
-		drafts:   drafts,
+		guides:         guides,
+		previews:       previews,
+		drafts:         guideDrafts,
+		pages:          pageDataset.pages,
+		pageDrafts:     pageDataset.drafts,
+		pagePreviews:   pageDataset.previews,
+		pageLocales:    pageDataset.locales,
+		pageProperties: pageDataset.properties,
+		pageSchedules:  pageDataset.schedules,
+		pageHistory:    pageDataset.history,
+		pagePalette:    pageDataset.palette,
+		pageStructure:  pageDataset.structure,
 	}
 }
 
