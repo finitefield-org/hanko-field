@@ -169,6 +169,36 @@ func (h *Handlers) GuidesEditPreview(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(guidestpl.EditorPreview(data)).ServeHTTP(w, r)
 }
 
+// GuidesHistory renders the version history panel fragment for htmx requests.
+func (h *Handlers) GuidesHistory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	guideID := strings.TrimSpace(chi.URLParam(r, "guideID"))
+	if guideID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	editor, err := h.content.EditorGuide(ctx, user.Token, guideID)
+	if err != nil {
+		if errors.Is(err, admincontent.ErrGuideNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("guides: history payload failed: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	data := guidestpl.BuildHistoryPanelFragmentData(custommw.BasePathFromContext(ctx), editor)
+	templ.Handler(guidestpl.HistoryPanel(data)).ServeHTTP(w, r)
+}
+
 // GuidesTable renders the table fragment for htmx updates.
 func (h *Handlers) GuidesTable(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -239,6 +269,43 @@ func (h *Handlers) GuidesUnschedule(w http.ResponseWriter, r *http.Request) {
 		log.Printf("guides: unschedule failed: %v", err)
 	}
 	h.renderGuidesFragment(w, r, user.Token, params)
+}
+
+// GuidesRevert restores the draft from a previous history snapshot.
+func (h *Handlers) GuidesRevert(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	guideID := strings.TrimSpace(chi.URLParam(r, "guideID"))
+	historyID := strings.TrimSpace(chi.URLParam(r, "historyID"))
+	if guideID == "" || historyID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	actor := strings.TrimSpace(user.Email)
+	if actor == "" {
+		actor = strings.TrimSpace(user.UID)
+	}
+
+	if _, err := h.content.GuideRevert(ctx, user.Token, guideID, historyID, actor); err != nil {
+		switch {
+		case errors.Is(err, admincontent.ErrGuideNotFound):
+			http.NotFound(w, r)
+		case errors.Is(err, admincontent.ErrGuideHistoryNotFound):
+			http.NotFound(w, r)
+		default:
+			log.Printf("guides: revert failed: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	redirectSelf(w, r)
 }
 
 // GuidesBulkPublish publishes selected guides.

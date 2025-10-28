@@ -336,14 +336,17 @@ func (s *StaticService) PagePreview(_ context.Context, _ string, pageID string, 
 		locales[i].Active = strings.EqualFold(locales[i].Locale, pageForLocale.Locale)
 	}
 
+	hero := sanitizeMarkup(entry.HeroHTML)
+	body := sanitizeMarkup(entry.BodyHTML)
+
 	return PagePreview{
 		Page:        pageForLocale,
 		Locales:     locales,
 		ShareURL:    entry.ShareURL,
 		ExternalURL: entry.ExternalURL,
 		Content: PagePreviewContent{
-			HeroHTML: entry.HeroHTML,
-			BodyHTML: entry.BodyHTML,
+			HeroHTML: hero,
+			BodyHTML: body,
 		},
 		Notes: entry.Notes,
 		SEO:   entry.SEO,
@@ -384,8 +387,8 @@ func (s *StaticService) PagePreviewDraft(_ context.Context, _ string, pageID str
 	page.UpdatedAt = time.Now()
 	page.UpdatedBy = "Draft Preview"
 
-	body := renderDraftPreviewBody(draft)
-	hero := renderDraftHero(draft)
+	body := sanitizeMarkup(renderDraftPreviewBody(draft))
+	hero := sanitizeMarkup(renderDraftHero(draft))
 
 	seo := draft.SEO
 	if seo.MetaTitle == "" {
@@ -411,12 +414,9 @@ func (s *StaticService) PagePreviewDraft(_ context.Context, _ string, pageID str
 			return fmt.Sprintf("https://preview.hanko.example/pages/%s?lang=%s&draft=1", page.Slug, page.Locale)
 		}(),
 		ExternalURL: basePreview.ExternalURL,
-		Content: PagePreviewContent{
-			HeroHTML: hero,
-			BodyHTML: body,
-		},
-		SEO:   seo,
-		Notes: append([]string(nil), basePreview.Notes...),
+		Content:     PagePreviewContent{HeroHTML: hero, BodyHTML: body},
+		SEO:         seo,
+		Notes:       append([]string(nil), basePreview.Notes...),
 	}, nil
 }
 

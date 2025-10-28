@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -18,6 +19,9 @@ var ErrGuideNotFound = errors.New("guide not found")
 
 // ErrPageNotFound signals that the requested page could not be located.
 var ErrPageNotFound = errors.New("page not found")
+
+// ErrGuideHistoryNotFound indicates the requested historical version is missing.
+var ErrGuideHistoryNotFound = errors.New("guide history entry not found")
 
 // Service exposes CMS guide management capabilities.
 type Service interface {
@@ -37,6 +41,10 @@ type Service interface {
 	PreviewGuide(ctx context.Context, token string, guideID string, locale string) (GuidePreview, error)
 	// EditorGuide returns the data required to render the guide editor experience.
 	EditorGuide(ctx context.Context, token string, guideID string) (GuideEditor, error)
+	// GuideHistory returns historical revisions associated with the guide.
+	GuideHistory(ctx context.Context, token string, guideID string) ([]GuideHistoryEntry, error)
+	// GuideRevert restores the draft to the snapshot stored in the specified history entry.
+	GuideRevert(ctx context.Context, token string, guideID string, historyID string, actor string) (GuideDraft, error)
 	// PreviewDraft renders a preview for the supplied draft values without persisting changes.
 	PreviewDraft(ctx context.Context, token string, guideID string, draft GuideDraftInput) (GuidePreview, error)
 	// ListPages returns the content page hierarchy matching the supplied query.
@@ -194,10 +202,37 @@ type GuideEditor struct {
 	Guide   Guide
 	Draft   GuideDraft
 	Locales []GuideLocale
+	History []GuideHistoryEntry
 }
 
 // GuideDraftInput captures unsaved form values used to generate live previews.
 type GuideDraftInput struct {
+	Locale       string
+	Title        string
+	Summary      string
+	HeroImageURL string
+	BodyHTML     string
+	Persona      string
+	Category     string
+	Tags         []string
+}
+
+// GuideHistoryEntry represents a stored version of a guide along with diff metadata.
+type GuideHistoryEntry struct {
+	ID         string
+	Title      string
+	Summary    string
+	Actor      string
+	Version    string
+	OccurredAt time.Time
+	Tone       string
+	Icon       string
+	DiffHTML   string
+	Snapshot   GuideHistorySnapshot
+}
+
+// GuideHistorySnapshot captures the editable fields at the time of the change.
+type GuideHistorySnapshot struct {
 	Locale       string
 	Title        string
 	Summary      string
@@ -214,6 +249,7 @@ type StaticService struct {
 	guides         []Guide
 	previews       map[string]previewEntry
 	drafts         map[string]GuideDraft
+	guideHistory   map[string][]GuideHistoryEntry
 	pages          []Page
 	pageDrafts     map[string]PageDraft
 	pagePreviews   map[string]pagePreviewEntry
@@ -476,12 +512,101 @@ func NewStaticService() *StaticService {
 		}
 	}
 
+	guideHistory := map[string][]GuideHistoryEntry{
+		"guide-getting-started-ja": {
+			{
+				ID:         "hist-guide-getting-started-ja-v1-4-3",
+				Title:      "QAチェックリストを更新",
+				Summary:    "QA手順のセクションを最新化しました。",
+				Actor:      "中村 麻衣",
+				Version:    "v1.4.3",
+				OccurredAt: now.Add(-30 * time.Hour),
+				Tone:       "info",
+				Icon:       "🛠",
+				DiffHTML: `<div class="space-y-2 text-sm">
+  <ins class="block rounded bg-emerald-50 px-3 py-2 text-emerald-700">追加: QAチェックリストに自動テスト項目を追加</ins>
+  <del class="block rounded bg-red-50 px-3 py-2 text-red-600">削除: 二重記載されていた確認タスク</del>
+</div>`,
+				Snapshot: GuideHistorySnapshot{
+					Locale:       "ja-JP",
+					Title:        "はじめての判子フィールド",
+					Summary:      "オンボーディングの流れと初期設定を順番に説明します。",
+					HeroImageURL: "https://images.example.com/guides/onboarding.jpg",
+					BodyHTML: `<article class="prose prose-slate max-w-none">
+  <h2>QAチェックリスト</h2>
+  <ol>
+    <li>管理者アカウントでテスト注文を作成</li>
+    <li>QA担当者が承認コメントを記録</li>
+    <li>サインオフ後に公開タスクへ移行</li>
+  </ol>
+</article>`,
+					Persona:  "newcomer",
+					Category: "basics",
+					Tags:     []string{"オンボーディング", "設定"},
+				},
+			},
+			{
+				ID:         "hist-guide-getting-started-ja-v1-4-2",
+				Title:      "リード文のトーンを調整",
+				Summary:    "導入文でオンボーディングの流れを明記しました。",
+				Actor:      "中村 麻衣",
+				Version:    "v1.4.2",
+				OccurredAt: now.Add(-72 * time.Hour),
+				Tone:       "success",
+				Icon:       "✏️",
+				DiffHTML:   `<p class="text-sm text-slate-600"><mark>リード文</mark>に「オンボーディングの流れ」を追加しました。</p>`,
+				Snapshot: GuideHistorySnapshot{
+					Locale:       "ja-JP",
+					Title:        "はじめての判子フィールド",
+					Summary:      "オンボーディングの流れと初期設定を順番に説明します。",
+					HeroImageURL: "https://images.example.com/guides/onboarding.jpg",
+					BodyHTML: `<article class="prose prose-slate max-w-none">
+  <h1>はじめての判子フィールド</h1>
+  <p class="lead">オンボーディングの流れを5つのステップで整理しました。</p>
+  <p>初回設定を円滑に進めるための手順をまとめています。</p>
+</article>`,
+					Persona:  "newcomer",
+					Category: "basics",
+					Tags:     []string{"オンボーディング", "設定"},
+				},
+			},
+		},
+		"guide-brand-story": {
+			{
+				ID:         "hist-guide-brand-story-v2-1",
+				Title:      "ブランドメッセージを刷新",
+				Summary:    "ビジョンの段落にCrafted Togetherの表現を追加しました。",
+				Actor:      "松本 彩",
+				Version:    "v2.1.0",
+				OccurredAt: now.Add(-96 * time.Hour),
+				Tone:       "info",
+				Icon:       "✨",
+				DiffHTML:   `<p class="text-sm text-slate-600">ブランドビジョンに <ins>Crafted Together</ins> の表現を組み込みました。</p>`,
+				Snapshot: GuideHistorySnapshot{
+					Locale:       "ja-JP",
+					Title:        "ブランドストーリー更新ガイド",
+					Summary:      "ブランドストーリーの更新手順とコンテンツ要素のチェックリスト。",
+					HeroImageURL: "https://images.example.com/guides/brand.jpg",
+					BodyHTML: `<article class="prose prose-slate max-w-none">
+  <h2>ブランドビジョン</h2>
+  <p>Hanko Fieldは <strong>Crafted Together</strong> を合言葉に、全国の工房と共に新しいものづくり体験を届けます。</p>
+  <p>言語トーンは温度感のある丁寧語で統一し、ストーリー性を重視してください。</p>
+</article>`,
+					Persona:  "marketer",
+					Category: "marketing",
+					Tags:     []string{"ブランド", "マーケティング"},
+				},
+			},
+		},
+	}
+
 	pageDataset := buildStaticPages(now)
 
 	return &StaticService{
 		guides:         guides,
 		previews:       previews,
 		drafts:         guideDrafts,
+		guideHistory:   guideHistory,
 		pages:          pageDataset.pages,
 		pageDrafts:     pageDataset.drafts,
 		pagePreviews:   pageDataset.previews,
@@ -694,6 +819,7 @@ func (s *StaticService) PreviewGuide(_ context.Context, _ string, guideID string
 	if body == "" {
 		body = defaultPreviewBody(active)
 	}
+	body = sanitizeMarkup(body)
 
 	notes := append([]string(nil), entry.Notes...)
 	if len(notes) == 0 && strings.TrimSpace(active.LastChangeNote) != "" {
@@ -766,12 +892,27 @@ func (s *StaticService) EditorGuide(_ context.Context, _ string, guideID string)
 		}
 	}
 	locales := s.localesForSlug(guide.Slug, guide.Locale)
+	history := sanitizeGuideHistory(s.guideHistory[guide.ID])
 
 	return GuideEditor{
 		Guide:   guide,
 		Draft:   draft,
 		Locales: locales,
+		History: history,
 	}, nil
+}
+
+// GuideHistory implements Service.
+func (s *StaticService) GuideHistory(_ context.Context, _ string, guideID string) ([]GuideHistoryEntry, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	idx := s.indexOfLocked(guideID)
+	if idx < 0 {
+		return nil, ErrGuideNotFound
+	}
+
+	return sanitizeGuideHistory(s.guideHistory[guideID]), nil
 }
 
 // PreviewDraft implements Service.
@@ -829,6 +970,7 @@ func (s *StaticService) PreviewDraft(_ context.Context, _ string, guideID string
 	if body == "" {
 		body = defaultPreviewBody(active)
 	}
+	body = sanitizeMarkup(body)
 
 	notes := append([]string(nil), entry.Notes...)
 	notes = append(notes, "ライブプレビュー: 未保存の変更が表示されています。")
@@ -861,6 +1003,119 @@ func (s *StaticService) PreviewDraft(_ context.Context, _ string, guideID string
 		Notes:    notes,
 		Feedback: feedback,
 	}, nil
+}
+
+// GuideRevert implements Service.
+func (s *StaticService) GuideRevert(_ context.Context, _ string, guideID string, historyID string, actor string) (GuideDraft, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	idx := s.indexOfLocked(guideID)
+	if idx < 0 {
+		return GuideDraft{}, ErrGuideNotFound
+	}
+
+	entries := s.guideHistory[guideID]
+	var entry *GuideHistoryEntry
+	for i := range entries {
+		if entries[i].ID == historyID {
+			entry = &entries[i]
+			break
+		}
+	}
+	if entry == nil {
+		return GuideDraft{}, ErrGuideHistoryNotFound
+	}
+
+	if strings.TrimSpace(actor) == "" {
+		actor = "system"
+	}
+
+	snapshot := entry.Snapshot
+	body := sanitizeMarkup(snapshot.BodyHTML)
+	now := time.Now()
+
+	guide := s.guides[idx]
+	if strings.TrimSpace(snapshot.Locale) != "" {
+		guide.Locale = snapshot.Locale
+	}
+	if strings.TrimSpace(snapshot.Title) != "" {
+		guide.Title = snapshot.Title
+	}
+	guide.Summary = snapshot.Summary
+	guide.Persona = snapshot.Persona
+	guide.Category = snapshot.Category
+	if snapshot.Tags != nil {
+		guide.Tags = append([]string(nil), snapshot.Tags...)
+	} else {
+		guide.Tags = nil
+	}
+	if strings.TrimSpace(snapshot.HeroImageURL) != "" {
+		guide.HeroImageURL = snapshot.HeroImageURL
+	}
+	guide.UpdatedAt = now
+	guide.UpdatedBy = actor
+	guide.StatusLabel, guide.StatusTone = statusPresentation(guide.Status)
+	s.guides[idx] = guide
+
+	draft := s.drafts[guideID]
+	if strings.TrimSpace(snapshot.Locale) != "" {
+		draft.Locale = snapshot.Locale
+	}
+	draft.Title = snapshot.Title
+	draft.Summary = snapshot.Summary
+	draft.HeroImageURL = snapshot.HeroImageURL
+	draft.BodyHTML = body
+	draft.Persona = snapshot.Persona
+	draft.Category = snapshot.Category
+	if snapshot.Tags != nil {
+		draft.Tags = append([]string(nil), snapshot.Tags...)
+	} else {
+		draft.Tags = nil
+	}
+	draft.LastSavedAt = now
+	draft.LastSavedBy = actor
+	s.drafts[guideID] = draft
+
+	versionLabel := strings.TrimSpace(entry.Version)
+	if versionLabel == "" {
+		versionLabel = strings.TrimSpace(entry.Title)
+	}
+	if versionLabel == "" {
+		versionLabel = "以前のバージョン"
+	}
+
+	newSnapshot := GuideHistorySnapshot{
+		Locale:       draft.Locale,
+		Title:        draft.Title,
+		Summary:      draft.Summary,
+		HeroImageURL: draft.HeroImageURL,
+		BodyHTML:     draft.BodyHTML,
+		Persona:      draft.Persona,
+		Category:     draft.Category,
+	}
+	if draft.Tags != nil {
+		newSnapshot.Tags = append([]string(nil), draft.Tags...)
+	}
+
+	revertEntry := GuideHistoryEntry{
+		ID:         fmt.Sprintf("%s-revert-%d", guideID, now.UnixNano()),
+		Title:      "以前のバージョンを復元",
+		Summary:    fmt.Sprintf("%s が %s を復元しました。", actor, versionLabel),
+		Actor:      actor,
+		Version:    versionLabel,
+		OccurredAt: now,
+		Tone:       "warning",
+		Icon:       "↩️",
+		DiffHTML:   sanitizeMarkup(fmt.Sprintf(`<p class="text-sm text-slate-600">%s へロールバックしました。</p>`, versionLabel)),
+		Snapshot:   newSnapshot,
+	}
+
+	s.guideHistory[guideID] = append([]GuideHistoryEntry{revertEntry}, entries...)
+
+	log.Printf("guide: %s reverted to %s by %s", guideID, historyID, actor)
+
+	return draft, nil
 }
 
 func (s *StaticService) localesForSlug(slug string, activeLocale string) []GuideLocale {
@@ -942,6 +1197,30 @@ func cloneGuide(src Guide) Guide {
 		dst.Highlights = append([]GuideHighlight(nil), src.Highlights...)
 	}
 	return dst
+}
+
+func cloneGuideHistory(entries []GuideHistoryEntry) []GuideHistoryEntry {
+	if len(entries) == 0 {
+		return nil
+	}
+	cloned := make([]GuideHistoryEntry, len(entries))
+	for i, entry := range entries {
+		copyEntry := entry
+		if entry.Snapshot.Tags != nil {
+			copyEntry.Snapshot.Tags = append([]string(nil), entry.Snapshot.Tags...)
+		}
+		cloned[i] = copyEntry
+	}
+	return cloned
+}
+
+func sanitizeGuideHistory(entries []GuideHistoryEntry) []GuideHistoryEntry {
+	cloned := cloneGuideHistory(entries)
+	for i := range cloned {
+		cloned[i].DiffHTML = sanitizeMarkup(cloned[i].DiffHTML)
+		cloned[i].Snapshot.BodyHTML = sanitizeMarkup(cloned[i].Snapshot.BodyHTML)
+	}
+	return cloned
 }
 
 func matchesQuery(guide Guide, query GuideQuery) bool {

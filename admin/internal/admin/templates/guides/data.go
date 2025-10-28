@@ -325,6 +325,7 @@ type EditorPageData struct {
 	Form            EditorFormData
 	Preview         EditorPreviewData
 	LocaleOptions   []PreviewLocaleOption
+	History         HistoryPanelData
 }
 
 // EditorFormData represents the editable fields within the form pane.
@@ -345,6 +346,28 @@ type EditorFormData struct {
 type EditorPreviewData struct {
 	FragmentID string
 	Preview    PreviewPageData
+}
+
+// HistoryPanelData drives the version history sidebar.
+type HistoryPanelData struct {
+	FragmentID    string
+	Entries       []HistoryEntryData
+	RefreshAction string
+	EmptyMessage  string
+}
+
+// HistoryEntryData represents a single item within the history panel.
+type HistoryEntryData struct {
+	ID           string
+	Title        string
+	Summary      string
+	Actor        string
+	Version      string
+	Relative     string
+	Occurred     string
+	Icon         string
+	Diff         templ.Component
+	RevertAction string
 }
 
 // BuildPageData assembles page payload.
@@ -498,6 +521,7 @@ func BuildEditorPageData(basePath string, editor admincontent.GuideEditor, previ
 		},
 		Preview:       BuildEditorPreviewData(basePath, preview),
 		LocaleOptions: buildPreviewLocaleOptions(basePath, editor.Guide.ID, preview.Locales),
+		History:       buildHistoryPanelData(basePath, editor),
 	}
 }
 
@@ -507,6 +531,11 @@ func BuildEditorPreviewData(basePath string, preview admincontent.GuidePreview) 
 		FragmentID: "guide-editor-preview",
 		Preview:    BuildPreviewPageData(basePath, preview),
 	}
+}
+
+// BuildHistoryPanelFragmentData assembles data required for rendering the history panel fragment.
+func BuildHistoryPanelFragmentData(basePath string, editor admincontent.GuideEditor) HistoryPanelData {
+	return buildHistoryPanelData(basePath, editor)
 }
 
 // SummaryPayload builds summary data.
@@ -1077,6 +1106,38 @@ func totalIntMap(counts map[string]int) int {
 		total += count
 	}
 	return total
+}
+
+func buildHistoryPanelData(basePath string, editor admincontent.GuideEditor) HistoryPanelData {
+	entries := make([]HistoryEntryData, 0, len(editor.History))
+	for _, entry := range editor.History {
+		diff := strings.TrimSpace(entry.DiffHTML)
+		if diff == "" {
+			diff = `<p class="text-xs text-slate-400">差分情報はありません。</p>`
+		}
+		revertAction := joinBase(basePath, fmt.Sprintf("/content/guides/%s/history/%s:revert", editor.Guide.ID, entry.ID))
+		entries = append(entries, HistoryEntryData{
+			ID:           entry.ID,
+			Title:        entry.Title,
+			Summary:      entry.Summary,
+			Actor:        entry.Actor,
+			Version:      entry.Version,
+			Relative:     helpers.Relative(entry.OccurredAt),
+			Occurred:     helpers.Date(entry.OccurredAt, "2006-01-02 15:04"),
+			Icon:         entry.Icon,
+			Diff:         htmlComponent(diff),
+			RevertAction: revertAction,
+		})
+	}
+
+	refresh := joinBase(basePath, fmt.Sprintf("/content/guides/%s/history", editor.Guide.ID))
+
+	return HistoryPanelData{
+		FragmentID:    "guide-history-panel",
+		Entries:       entries,
+		RefreshAction: refresh,
+		EmptyMessage:  "履歴はまだありません。",
+	}
 }
 
 func localeLabel(locale string) string {

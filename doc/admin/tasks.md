@@ -65,7 +65,7 @@
 - [x] [Build guide preview route (`/admin/content/guides/{id}/preview?lang=`) with localization selector.](doc/admin/tasks/043-build-guide-preview-route-admin-content-guides-id-preview-lang-with-localization-selector.md)
 - [x] [Implement edit modal or two-pane editor with live preview using htmx for partial refresh.](doc/admin/tasks/044-implement-edit-modal-or-two-pane-editor-with-live-preview-using-htmx-for-partial-refresh.md)
 - [x] [Implement pages management (`/admin/content/pages`) with block-based editor, preview, and publish scheduling.](doc/admin/tasks/045-implement-pages-management-admin-content-pages-with-block-based-editor-preview-and-publish.md)
-- [ ] [Ensure content editing includes markdown/HTML sanitization and version history display.](doc/admin/tasks/046-ensure-content-editing-includes-markdown-html-sanitization-and-version-history-display.md)
+- [x] [Ensure content editing includes markdown/HTML sanitization and version history display.](doc/admin/tasks/046-ensure-content-editing-includes-markdown-html-sanitization-and-version-history-display.md)
 
 ## 8. Promotions & Marketing
 - [ ] [Build promotions index page (`/admin/promotions`) with table fragment, filters (status, type, schedule), and mass actions.](doc/admin/tasks/047-build-promotions-index-page-admin-promotions-with-table-fragment-filters-status-type-sched.md)
