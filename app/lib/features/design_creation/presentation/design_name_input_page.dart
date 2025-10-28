@@ -153,6 +153,7 @@ class _DesignNameInputPageState extends ConsumerState<DesignNameInputPage> {
                 validationState: state.surnameReadingError == null
                     ? null
                     : AppValidationState.error,
+                required: state.requiresKana,
               ),
               const SizedBox(height: AppTokens.spaceM),
               AppTextField(
@@ -170,6 +171,7 @@ class _DesignNameInputPageState extends ConsumerState<DesignNameInputPage> {
                 validationState: state.givenNameReadingError == null
                     ? null
                     : AppValidationState.error,
+                required: state.requiresKana,
               ),
               const SizedBox(height: AppTokens.spaceXL),
               _KanjiMappingCard(
@@ -270,7 +272,7 @@ class _DesignNameInputPageState extends ConsumerState<DesignNameInputPage> {
     final l10n = AppLocalizations.of(context);
     switch (error) {
       case DesignNameFieldError.empty:
-        return null;
+        return l10n.designInputErrorEmptyKana;
       case DesignNameFieldError.invalidScript:
         return l10n.designInputErrorInvalidKana;
       case DesignNameFieldError.tooLong:
@@ -370,7 +372,9 @@ class _PreviewCard extends StatelessWidget {
                         : primaryText,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      letterSpacing: persona == UserPersona.japanese ? 10 : 2,
+                      letterSpacing: persona == UserPersona.japanese
+                          ? AppTokens.designPreviewLetterSpacingKanji
+                          : AppTokens.designPreviewLetterSpacingLatin,
                     ),
                   ),
                   if (reading.isNotEmpty)

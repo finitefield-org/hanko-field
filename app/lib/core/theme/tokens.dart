@@ -19,6 +19,10 @@ class AppTokens {
   static const BorderRadius radiusM = BorderRadius.all(Radius.circular(8));
   static const BorderRadius radiusL = BorderRadius.all(Radius.circular(12));
 
+  // Letter spacing for preview typography
+  static const double designPreviewLetterSpacingKanji = 10;
+  static const double designPreviewLetterSpacingLatin = 2;
+
   // Animation durations
   static const Duration fast = Duration(milliseconds: 150);
   static const Duration medium = Duration(milliseconds: 250);

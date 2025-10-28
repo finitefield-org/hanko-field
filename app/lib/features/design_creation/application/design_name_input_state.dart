@@ -183,7 +183,7 @@ class DesignNameInputState {
   DesignNameFieldError? _validateReading(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
-      return null;
+      return requiresKana ? DesignNameFieldError.empty : null;
     }
     if (!_kanaPattern.hasMatch(trimmed)) {
       return DesignNameFieldError.invalidScript;

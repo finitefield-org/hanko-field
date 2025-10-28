@@ -272,7 +272,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designInputGivenNameReadingLabel => 'Given name reading';
 
   @override
-  String get designInputReadingHelper => 'Use Hiragana or Katakana (optional).';
+  String get designInputReadingHelper =>
+      'Use Hiragana or Katakana. Required when designing a Japanese seal.';
 
   @override
   String get designInputContinue => 'Choose style';
@@ -324,6 +325,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get designInputErrorTooLongKana =>
       'Keep the reading within 20 characters.';
+
+  @override
+  String get designInputErrorEmptyKana =>
+      'Enter the reading in Hiragana or Katakana.';
 
   @override
   String get designInputValidationFailed => 'Check the highlighted fields.';

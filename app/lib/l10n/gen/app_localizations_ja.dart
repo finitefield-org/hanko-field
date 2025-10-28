@@ -260,7 +260,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designInputGivenNameReadingLabel => '名（ふりがな）';
 
   @override
-  String get designInputReadingHelper => 'ひらがな・カタカナで入力してください（任意）。';
+  String get designInputReadingHelper => 'ひらがな・カタカナで入力してください（日本語の印影では必須）。';
 
   @override
   String get designInputContinue => '書体を選ぶ';
@@ -306,6 +306,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get designInputErrorTooLongKana => '20文字以内で入力してください。';
+
+  @override
+  String get designInputErrorEmptyKana => 'ふりがなを入力してください。';
 
   @override
   String get designInputValidationFailed => '入力内容を確認してください。';

@@ -403,7 +403,7 @@
   "description": "Label for the given name reading text field"
 }
 
-, "designInputReadingHelper": "Use Hiragana or Katakana (optional)."
+, "designInputReadingHelper": "Use Hiragana or Katakana. Required when designing a Japanese seal."
 , "@designInputReadingHelper": {
   "description": "Helper text for pronunciation fields"
 }
@@ -481,6 +481,11 @@
 , "designInputErrorTooLongKana": "Keep the reading within 20 characters."
 , "@designInputErrorTooLongKana": {
   "description": "Validation error when kana input exceeds limit"
+}
+
+, "designInputErrorEmptyKana": "Enter the reading in Hiragana or Katakana."
+, "@designInputErrorEmptyKana": {
+  "description": "Validation error when required reading field is blank"
 }
 
 , "designInputValidationFailed": "Check the highlighted fields."

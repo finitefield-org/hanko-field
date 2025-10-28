@@ -59,7 +59,7 @@
 , "designInputGivenNameHelper": "全角6文字まで入力できます。"
 , "designInputSurnameReadingLabel": "姓（ふりがな）"
 , "designInputGivenNameReadingLabel": "名（ふりがな）"
-, "designInputReadingHelper": "ひらがな・カタカナで入力してください（任意）。"
+, "designInputReadingHelper": "ひらがな・カタカナで入力してください（日本語の印影では必須）。"
 , "designInputContinue": "書体を選ぶ"
 , "designInputSuggestionHeader": "プロフィールから補完"
 , "designInputSuggestionProfile": "プロフィール名を使用"
@@ -75,5 +75,6 @@
 , "designInputErrorTooLongLatin": "20文字以内で入力してください。"
 , "designInputErrorInvalidKana": "ひらがな・カタカナ・長音符のみ使用できます。"
 , "designInputErrorTooLongKana": "20文字以内で入力してください。"
+, "designInputErrorEmptyKana": "ふりがなを入力してください。"
 , "designInputValidationFailed": "入力内容を確認してください。"
 }

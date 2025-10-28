@@ -569,7 +569,7 @@ abstract class AppLocalizations {
   /// Helper text for pronunciation fields
   ///
   /// In en, this message translates to:
-  /// **'Use Hiragana or Katakana (optional).'**
+  /// **'Use Hiragana or Katakana. Required when designing a Japanese seal.'**
   String get designInputReadingHelper;
 
   /// Primary action label to proceed from the name input screen
@@ -661,6 +661,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep the reading within 20 characters.'**
   String get designInputErrorTooLongKana;
+
+  /// Validation error when required reading field is blank
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the reading in Hiragana or Katakana.'**
+  String get designInputErrorEmptyKana;
 
   /// Snackbar message shown when validation fails on submit
   ///
