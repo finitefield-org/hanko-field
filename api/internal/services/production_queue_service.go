@@ -166,7 +166,7 @@ func (s *productionQueueService) UpdateQueue(ctx context.Context, cmd UpsertProd
 	if err != nil {
 		return ProductionQueue{}, err
 	}
-	saved, err := s.repo.Update(ctx, queue)
+	saved, err := s.repo.Update(ctx, queue, existing.UpdatedAt)
 	if err != nil {
 		return ProductionQueue{}, translateQueueRepositoryError(err)
 	}
@@ -214,9 +214,6 @@ func (s *productionQueueService) normalizeQueue(input ProductionQueue, now time.
 			return domain.ProductionQueue{}, fmt.Errorf("%w: queue id is required", ErrProductionQueueInvalid)
 		}
 		generated := strings.ToLower(strings.TrimSpace(s.idGen()))
-		if generated == "" {
-			generated = strings.ToLower(strings.TrimSpace(s.idGen()))
-		}
 		if generated == "" {
 			return domain.ProductionQueue{}, fmt.Errorf("%w: could not generate identifier", ErrProductionQueueInvalid)
 		}

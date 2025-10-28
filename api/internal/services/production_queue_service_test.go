@@ -197,6 +197,9 @@ func TestProductionQueueService_UpdateQueue_PreservesCreatedAt(t *testing.T) {
 	if repo.updateQueue.UpdatedAt != now {
 		t.Fatalf("expected updatedAt set, got %v", repo.updateQueue.UpdatedAt)
 	}
+	if !repo.updateExpected.Equal(existing.UpdatedAt) {
+		t.Fatalf("expected optimistic locking timestamp %v, got %v", existing.UpdatedAt, repo.updateExpected)
+	}
 	if repo.updateQueue.Priority != domain.ProductionQueuePriorityRush {
 		t.Fatalf("expected priority rush, got %q", repo.updateQueue.Priority)
 	}
@@ -339,6 +342,7 @@ type stubProductionQueueRepository struct {
 	insertResult   domain.ProductionQueue
 	insertErr      error
 	updateQueue    domain.ProductionQueue
+	updateExpected time.Time
 	updateResult   domain.ProductionQueue
 	updateErr      error
 	deletedID      string
@@ -375,8 +379,9 @@ func (s *stubProductionQueueRepository) Insert(_ context.Context, queue domain.P
 	return queue, nil
 }
 
-func (s *stubProductionQueueRepository) Update(_ context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error) {
+func (s *stubProductionQueueRepository) Update(_ context.Context, queue domain.ProductionQueue, expectedUpdatedAt time.Time) (domain.ProductionQueue, error) {
 	s.updateQueue = queue
+	s.updateExpected = expectedUpdatedAt
 	if s.updateErr != nil {
 		return domain.ProductionQueue{}, s.updateErr
 	}

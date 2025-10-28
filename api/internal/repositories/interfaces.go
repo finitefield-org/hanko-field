@@ -424,7 +424,7 @@ type ProductionQueueRepository interface {
 	List(ctx context.Context, filter ProductionQueueListFilter) (domain.CursorPage[domain.ProductionQueue], error)
 	Get(ctx context.Context, queueID string) (domain.ProductionQueue, error)
 	Insert(ctx context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error)
-	Update(ctx context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error)
+	Update(ctx context.Context, queue domain.ProductionQueue, expectedUpdatedAt time.Time) (domain.ProductionQueue, error)
 	Delete(ctx context.Context, queueID string) error
 	HasActiveAssignments(ctx context.Context, queueID string) (bool, error)
 }
