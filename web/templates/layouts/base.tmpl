@@ -27,12 +27,9 @@
           {{ end }}
         </nav>
         <div class="flex items-center gap-3">
-          <a href="/notifications" class="hidden md:inline-flex items-center justify-center rounded-full p-2 text-gray-600 hover:bg-gray-100" aria-label="{{ tlang $.Lang "nav.notifications" }}">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
-              <path d="M13.73 21a2 2 0 01-3.46 0" />
-            </svg>
-          </a>
+          <div class="hidden md:block">
+            {{ template "component_notifications_shell" .Notifications }}
+          </div>
           <a href="/cart" class="hidden md:inline-flex items-center justify-center rounded-full p-2 text-gray-600 hover:bg-gray-100" aria-label="{{ tlang $.Lang "nav.cart" }}">
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="9" cy="21" r="1" />
@@ -59,7 +56,7 @@
                 <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
                 <path d="M13.73 21a2 2 0 01-3.46 0" />
               </svg>
-              <span>{{ tlang $.Lang "nav.notifications" }}</span>
+              <span>{{ if gt $.Notifications.UnreadCount 0 }}{{ printf "%s (%d)" (tlang $.Lang "nav.notifications") $.Notifications.UnreadCount }}{{ else }}{{ tlang $.Lang "nav.notifications" }}{{ end }}</span>
             </a>
             <a href="/cart" class="inline-flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100" aria-label="{{ tlang $.Lang "nav.cart" }}">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -165,6 +162,43 @@
             if (expanded) { closeMenu(); } else { openMenu(); }
           });
         }
+      })();
+    </script>
+    <script>
+      (function(){
+        var doc = document;
+        function getShell(){
+          return doc.querySelector('[data-notification-shell]');
+        }
+        function closeShell(shell){
+          if (!shell || shell.getAttribute('data-open') !== 'true') { return; }
+          if (typeof htmx === 'undefined') { return; }
+          htmx.ajax('GET', '/frags/notifications/list?open=0', {target: shell, swap: 'outerHTML'});
+        }
+        doc.addEventListener('click', function(e){
+          var shell = getShell();
+          if (!shell || shell.getAttribute('data-open') !== 'true') { return; }
+          if (shell.contains(e.target)) { return; }
+          closeShell(shell);
+        });
+        doc.addEventListener('keydown', function(e){
+          if (e.key !== 'Escape') { return; }
+          closeShell(getShell());
+        });
+        doc.addEventListener('htmx:afterSwap', function(e){
+          if (!e.target || !e.target.matches('[data-notification-shell]')) { return; }
+          var shell = e.target;
+          var btn = shell.querySelector('[data-notification-toggle]');
+          if (btn) {
+            btn.setAttribute('data-open', shell.getAttribute('data-open') === 'true' ? 'true' : 'false');
+          }
+          if (shell.getAttribute('data-open') === 'true') {
+            var focusable = shell.querySelector('[data-notification-dropdown] a, [data-notification-dropdown] button');
+            if (focusable && focusable.focus) { focusable.focus(); }
+          } else if (btn && btn.focus) {
+            btn.focus();
+          }
+        });
       })();
     </script>
     <script>

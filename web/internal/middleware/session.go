@@ -17,15 +17,16 @@ import (
 const sessionCookieName = "HANKO_WEB_SESSION"
 
 type SessionData struct {
-	ID        string         `json:"id"`
-	UserID    string         `json:"uid,omitempty"`
-	Locale    string         `json:"locale,omitempty"`
-	CartID    string         `json:"cart,omitempty"`
-	Checkout  CheckoutState  `json:"checkout,omitempty"`
-	Profile   SessionProfile `json:"profile,omitempty"`
-	CSRFToken string         `json:"csrf,omitempty"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
+	ID            string               `json:"id"`
+	UserID        string               `json:"uid,omitempty"`
+	Locale        string               `json:"locale,omitempty"`
+	CartID        string               `json:"cart,omitempty"`
+	Checkout      CheckoutState        `json:"checkout,omitempty"`
+	Profile       SessionProfile       `json:"profile,omitempty"`
+	Notifications SessionNotifications `json:"notifications,omitempty"`
+	CSRFToken     string               `json:"csrf,omitempty"`
+	CreatedAt     time.Time            `json:"createdAt"`
+	UpdatedAt     time.Time            `json:"updatedAt"`
 	// internal dirty flag; not serialized
 	dirty bool `json:"-"`
 }
@@ -67,6 +68,11 @@ type SessionProfile struct {
 	Language     string `json:"language,omitempty"`
 	Country      string `json:"country,omitempty"`
 	AvatarURL    string `json:"avatar,omitempty"`
+}
+
+// SessionNotifications tracks notification read state scoped to the session.
+type SessionNotifications struct {
+	Read map[string]time.Time `json:"read,omitempty"`
 }
 
 var sessionSignKey []byte
@@ -195,6 +201,33 @@ func (s *SessionData) RegenerateID() {
 	s.ID = randID()
 	s.CSRFToken = newCSRFToken()
 	s.MarkDirty()
+}
+
+// MarkNotificationRead marks a notification id as read in the session.
+func (s *SessionData) MarkNotificationRead(id string) {
+	if id == "" {
+		return
+	}
+	if s.Notifications.Read == nil {
+		s.Notifications.Read = map[string]time.Time{}
+	}
+	if _, exists := s.Notifications.Read[id]; exists {
+		return
+	}
+	s.Notifications.Read[id] = time.Now().UTC()
+	s.MarkDirty()
+}
+
+// IsNotificationRead reports whether a notification id is marked as read.
+func (s *SessionData) IsNotificationRead(id string) bool {
+	if id == "" {
+		return false
+	}
+	if s.Notifications.Read == nil {
+		return false
+	}
+	_, ok := s.Notifications.Read[id]
+	return ok
 }
 
 // helpers

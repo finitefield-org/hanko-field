@@ -933,8 +933,10 @@ func main() {
 	// Fragment endpoints (htmx)
 	r.Get("/frags/compare/sku-table", CompareSKUTableFrag)
 	r.Get("/frags/guides/latest", LatestGuidesFrag)
+	r.Get("/frags/notifications/list", NotificationsShellFrag)
 	// Modal demo fragment (htmx)
 	r.Get("/modals/demo", DemoModalHandler)
+	r.MethodFunc(http.MethodPost, "/notifications/{notificationID}:read", NotificationMarkReadHandler)
 
 	srv := &http.Server{
 		Addr:              addr,
@@ -1112,9 +1114,66 @@ func render(w http.ResponseWriter, r *http.Request, data any) {
 		http.Error(w, "template not initialized", http.StatusInternalServerError)
 		return
 	}
-	if err := t.ExecuteTemplate(w, "base", data); err != nil {
+	payload := withLayoutNotifications(r, data)
+	if err := t.ExecuteTemplate(w, "base", payload); err != nil {
 		http.Error(w, fmt.Sprintf("template exec error: %v", err), http.StatusInternalServerError)
 		return
+	}
+}
+
+func withLayoutNotifications(r *http.Request, data any) any {
+	lang := mw.Lang(r)
+	switch v := data.(type) {
+	case handlersPkg.PageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		}
+		return struct {
+			handlersPkg.PageData
+			Notifications NotificationBellView
+		}{
+			PageData:      v,
+			Notifications: buildNotificationBellView(r, lang, false),
+		}
+	case *handlersPkg.PageData:
+		if v.Lang != "" {
+			lang = v.Lang
+		} else {
+			v.Lang = lang
+		}
+		return &struct {
+			*handlersPkg.PageData
+			Notifications NotificationBellView
+		}{
+			PageData:      v,
+			Notifications: buildNotificationBellView(r, lang, false),
+		}
+	case handlersPkg.HomeData:
+		if v.Lang != "" {
+			lang = v.Lang
+		}
+		return struct {
+			handlersPkg.HomeData
+			Notifications NotificationBellView
+		}{
+			HomeData:      v,
+			Notifications: buildNotificationBellView(r, lang, false),
+		}
+	case *handlersPkg.HomeData:
+		if v.Lang != "" {
+			lang = v.Lang
+		} else {
+			v.Lang = lang
+		}
+		return &struct {
+			*handlersPkg.HomeData
+			Notifications NotificationBellView
+		}{
+			HomeData:      v,
+			Notifications: buildNotificationBellView(r, lang, false),
+		}
+	default:
+		return data
 	}
 }
 
@@ -1149,7 +1208,8 @@ func renderPage(w http.ResponseWriter, r *http.Request, page string, data any) {
 		http.Error(w, "template not initialized", http.StatusInternalServerError)
 		return
 	}
-	if err := t.ExecuteTemplate(w, "base", data); err != nil {
+	payload := withLayoutNotifications(r, data)
+	if err := t.ExecuteTemplate(w, "base", payload); err != nil {
 		http.Error(w, fmt.Sprintf("template exec error: %v", err), http.StatusInternalServerError)
 		return
 	}
