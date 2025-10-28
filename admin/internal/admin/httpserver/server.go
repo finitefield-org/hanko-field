@@ -20,6 +20,7 @@ import (
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
+	"finitefield.org/hanko-admin/internal/admin/rbac"
 	"finitefield.org/hanko-admin/internal/admin/search"
 	appsession "finitefield.org/hanko-admin/internal/admin/session"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
@@ -283,6 +284,13 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				pr.Post("/", uiHandlers.PromotionsCreate)
 				pr.Put("/{promotionID}", uiHandlers.PromotionsUpdate)
 				pr.Post("/bulk/status", uiHandlers.PromotionsBulkStatus)
+				pr.Route("/{promotionID}/usages", func(ur chi.Router) {
+					ur.Use(custommw.RequireCapability(rbac.CapPromotionsUsage))
+					ur.Get("/", uiHandlers.PromotionsUsagePage)
+					RegisterFragment(ur, "/table", uiHandlers.PromotionsUsageTable)
+					RegisterFragment(ur, "/export/jobs/{jobID}", uiHandlers.PromotionsUsageExportJobStatus)
+					ur.Post("/export", uiHandlers.PromotionsUsageExport)
+				})
 			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)

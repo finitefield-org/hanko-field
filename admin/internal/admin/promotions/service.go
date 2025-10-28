@@ -13,6 +13,15 @@ var ErrNotConfigured = errors.New("promotions service not configured")
 // ErrPromotionNotFound indicates the requested promotion does not exist or is not visible.
 var ErrPromotionNotFound = errors.New("promotion not found")
 
+// ErrUsageExportFormatNotAllowed indicates the requested export format is unsupported.
+var ErrUsageExportFormatNotAllowed = errors.New("promotion usage export format not allowed")
+
+// ErrUsageExportJobNotFound indicates the requested export job does not exist.
+var ErrUsageExportJobNotFound = errors.New("promotion usage export job not found")
+
+// ErrUsageExportNoRecords indicates that no usage records matched the export query.
+var ErrUsageExportNoRecords = errors.New("no promotion usage records to export")
+
 // Service exposes promotion listing and enrichment capabilities for the admin UI.
 type Service interface {
 	// List returns a paginated collection of promotions matching the provided query.
@@ -29,6 +38,15 @@ type Service interface {
 
 	// Update modifies an existing promotion.
 	Update(ctx context.Context, token, promotionID string, input PromotionInput) (Promotion, error)
+
+	// Usage returns aggregated redemption records for a specific promotion.
+	Usage(ctx context.Context, token, promotionID string, query UsageQuery) (UsageResult, error)
+
+	// StartUsageExport enqueues an export job for the current usage query.
+	StartUsageExport(ctx context.Context, token string, req UsageExportRequest) (UsageExportJob, error)
+
+	// UsageExportStatus reports the latest status for an export job.
+	UsageExportStatus(ctx context.Context, token, jobID string) (UsageExportJobStatus, error)
 }
 
 // Status represents the lifecycle state of a promotion.
@@ -297,4 +315,161 @@ type BulkStatusResult struct {
 	AffectedIDs   []string
 	SkippedIDs    []string
 	FailureReason string
+}
+
+// UsageQuery captures filters and pagination arguments when listing usage records.
+type UsageQuery struct {
+	MinUses       int
+	Timeframe     string
+	Start         *time.Time
+	End           *time.Time
+	Channels      []Channel
+	Sources       []string
+	SegmentKeys   []string
+	Page          int
+	PageSize      int
+	SortKey       string
+	SortDirection string
+	AutoRefresh   bool
+}
+
+// UsageResult encapsulates the response from a usage listing call.
+type UsageResult struct {
+	Promotion   Promotion
+	Summary     UsageSummary
+	Filters     UsageFilterSummary
+	Records     []UsageRecord
+	Pagination  Pagination
+	Alert       *UsageAlert
+	GeneratedAt time.Time
+}
+
+// UsageSummary aggregates quick metrics for the usage view.
+type UsageSummary struct {
+	TotalRedemptions        int
+	TotalDiscountMinor      int64
+	AverageDiscountMinor    int64
+	AverageOrderAmountMinor int64
+	ConversionRate          float64
+}
+
+// UsageFilterSummary enumerates available filter options.
+type UsageFilterSummary struct {
+	ChannelOptions   []UsageFilterOption
+	SourceOptions    []UsageFilterOption
+	SegmentOptions   []UsageFilterOption
+	TimeframePresets []UsageTimeframePreset
+	UsageThresholds  []UsageThresholdOption
+}
+
+// UsageFilterOption represents a selectable filter entry.
+type UsageFilterOption struct {
+	Value string
+	Label string
+	Count int
+}
+
+// UsageTimeframePreset describes a saved timeframe shortcut.
+type UsageTimeframePreset struct {
+	Key   string
+	Label string
+	Start *time.Time
+	End   *time.Time
+}
+
+// UsageThresholdOption represents a minimum usage preset.
+type UsageThresholdOption struct {
+	Value int
+	Label string
+}
+
+// UsageAlert describes anomaly alerts for the usage view.
+type UsageAlert struct {
+	Tone      string
+	Message   string
+	LinkLabel string
+	LinkURL   string
+}
+
+// UsageRecord represents an aggregated usage entry for a single customer.
+type UsageRecord struct {
+	User                    UsageUser
+	UsageCount              int
+	TotalDiscountMinor      int64
+	TotalOrderAmountMinor   int64
+	AverageDiscountMinor    int64
+	AverageOrderAmountMinor int64
+	FirstUsedAt             time.Time
+	LastUsedAt              time.Time
+	SegmentKey              string
+	SegmentLabel            string
+	SegmentTone             string
+	Channels                []Channel
+	Sources                 []string
+	LastOrder               UsageOrder
+}
+
+// UsageUser summarises the customer associated with a usage record.
+type UsageUser struct {
+	ID        string
+	Name      string
+	Email     string
+	AvatarURL string
+}
+
+// UsageOrder summarises the most recent order associated with a usage record.
+type UsageOrder struct {
+	ID          string
+	Number      string
+	AmountMinor int64
+	Currency    string
+	Status      string
+	StatusLabel string
+	StatusTone  string
+	PlacedAt    time.Time
+	Channel     Channel
+	Source      string
+}
+
+// UsageExportFormat enumerates supported export formats.
+type UsageExportFormat string
+
+const (
+	// UsageExportFormatCSV exports usage records as CSV.
+	UsageExportFormatCSV UsageExportFormat = "csv"
+)
+
+// UsageExportRequest captures the parameters for a usage export job.
+type UsageExportRequest struct {
+	PromotionID   string
+	PromotionCode string
+	PromotionName string
+	Format        UsageExportFormat
+	Query         UsageQuery
+	ActorID       string
+	ActorEmail    string
+}
+
+// UsageExportJob summarises the state of a usage export job.
+type UsageExportJob struct {
+	ID               string
+	PromotionID      string
+	PromotionName    string
+	Format           UsageExportFormat
+	SubmittedAt      time.Time
+	SubmittedBy      string
+	SubmittedByEmail string
+	Status           string
+	StatusTone       string
+	Progress         int
+	RecordCount      int
+	DownloadURL      string
+	CompletedAt      *time.Time
+	Message          string
+}
+
+// UsageExportJobStatus reports progress for an export job.
+type UsageExportJobStatus struct {
+	Job  UsageExportJob
+	Done bool
 }

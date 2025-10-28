@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -11,16 +12,25 @@ import (
 
 // StaticService provides deterministic promotion data suitable for development and tests.
 type StaticService struct {
-	mu         sync.RWMutex
-	promotions []Promotion
-	details    map[string]PromotionDetail
-	nextID     int
+	mu           sync.RWMutex
+	promotions   []Promotion
+	details      map[string]PromotionDetail
+	usageData    map[string][]UsageRecord
+	usageExports map[string]usageExportState
+	nextID       int
 }
 
 const (
-	shippingOptionFree = "free"
-	shippingOptionFlat = "flat"
+	shippingOptionFree   = "free"
+	shippingOptionFlat   = "flat"
+	defaultUsagePageSize = 25
 )
+
+type usageExportState struct {
+	Job       UsageExportJob
+	Attempts  int
+	Completed bool
+}
 
 // NewStaticService builds a StaticService with representative promotions.
 func NewStaticService() *StaticService {
@@ -326,10 +336,356 @@ func NewStaticService() *StaticService {
 			}),
 	}
 
+	vipSegment := promotions[0].Segment
+	ringSegment := promotions[1].Segment
+	appSegment := promotions[2].Segment
+	rushSegment := promotions[3].Segment
+	winterSegment := promotions[4].Segment
+
+	usageData := map[string][]UsageRecord{
+		promotions[0].ID: {
+			makeUsageRecord(
+				UsageUser{ID: "user_vip_001", Name: "星野 彩香", Email: "ayaka.hoshino@example.jp"},
+				4,
+				int64(168000),
+				int64(1112000),
+				now.AddDate(0, 0, -28),
+				now.Add(-6*time.Hour),
+				vipSegment.Key,
+				vipSegment.Name,
+				"success",
+				[]Channel{ChannelOnlineStore, ChannelApp},
+				[]string{"checkout_web", "app_push"},
+				UsageOrder{
+					ID:          "order-74821",
+					Number:      "HF-74821",
+					AmountMinor: int64(282000),
+					Currency:    "JPY",
+					Status:      "delivered",
+					StatusLabel: "配送完了",
+					StatusTone:  "success",
+					PlacedAt:    now.Add(-6 * time.Hour),
+					Channel:     ChannelOnlineStore,
+					Source:      "checkout_web",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_vip_014", Name: "三浦 文雄", Email: "fumio.miura@example.jp"},
+				3,
+				int64(108000),
+				int64(684000),
+				now.AddDate(0, 0, -21),
+				now.Add(-30*time.Hour),
+				vipSegment.Key,
+				vipSegment.Name,
+				"success",
+				[]Channel{ChannelApp},
+				[]string{"app_push"},
+				UsageOrder{
+					ID:          "order-74210",
+					Number:      "HF-74210",
+					AmountMinor: int64(218000),
+					Currency:    "JPY",
+					Status:      "shipped",
+					StatusLabel: "出荷準備中",
+					StatusTone:  "info",
+					PlacedAt:    now.Add(-30 * time.Hour),
+					Channel:     ChannelApp,
+					Source:      "app_push",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_vip_033", Name: "森下 純", Email: "jun.morishita@example.jp"},
+				2,
+				int64(72000),
+				int64(392000),
+				now.AddDate(0, 0, -14),
+				now.AddDate(0, 0, -2),
+				vipSegment.Key,
+				vipSegment.Name,
+				"success",
+				[]Channel{ChannelOnlineStore},
+				[]string{"checkout_web"},
+				UsageOrder{
+					ID:          "order-73654",
+					Number:      "HF-73654",
+					AmountMinor: int64(196000),
+					Currency:    "JPY",
+					Status:      "delivered",
+					StatusLabel: "配送完了",
+					StatusTone:  "success",
+					PlacedAt:    now.AddDate(0, 0, -2),
+					Channel:     ChannelOnlineStore,
+					Source:      "checkout_web",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_vip_081", Name: "神田 舞", Email: "mai.kanda@example.jp"},
+				1,
+				int64(24000),
+				int64(168000),
+				now.AddDate(0, 0, -9),
+				now.AddDate(0, 0, -1),
+				vipSegment.Key,
+				vipSegment.Name,
+				"success",
+				[]Channel{ChannelApp},
+				[]string{"app_campaign"},
+				UsageOrder{
+					ID:          "order-75102",
+					Number:      "HF-75102",
+					AmountMinor: int64(168000),
+					Currency:    "JPY",
+					Status:      "processing",
+					StatusLabel: "支払い確認中",
+					StatusTone:  "warning",
+					PlacedAt:    now.AddDate(0, 0, -1),
+					Channel:     ChannelApp,
+					Source:      "app_campaign",
+				},
+			),
+		},
+		promotions[1].ID: {
+			makeUsageRecord(
+				UsageUser{ID: "user_ring_004", Name: "井上 千春", Email: "chiharu.inoue@example.jp"},
+				1,
+				int64(50000),
+				int64(300000),
+				now.AddDate(0, 0, -3),
+				now.AddDate(0, 0, -3),
+				ringSegment.Key,
+				ringSegment.Name,
+				"info",
+				[]Channel{ChannelOnlineStore},
+				[]string{"campaign_preview"},
+				UsageOrder{
+					ID:          "order-77001",
+					Number:      "HF-77001",
+					AmountMinor: int64(300000),
+					Currency:    "JPY",
+					Status:      "pending",
+					StatusLabel: "公開待ち",
+					StatusTone:  "muted",
+					PlacedAt:    now.AddDate(0, 0, -3),
+					Channel:     ChannelOnlineStore,
+					Source:      "campaign_preview",
+				},
+			),
+		},
+		promotions[2].ID: {
+			makeUsageRecord(
+				UsageUser{ID: "user_app_011", Name: "北川 誠", Email: "makoto.kitagawa@example.jp"},
+				3,
+				int64(90000),
+				int64(540000),
+				now.AddDate(0, 0, -18),
+				now.Add(-12*time.Hour),
+				appSegment.Key,
+				appSegment.Name,
+				"warning",
+				[]Channel{ChannelApp},
+				[]string{"app_flash", "push_message"},
+				UsageOrder{
+					ID:          "order-72882",
+					Number:      "HF-72882",
+					AmountMinor: int64(198000),
+					Currency:    "JPY",
+					Status:      "cancelled",
+					StatusLabel: "キャンセル済み",
+					StatusTone:  "danger",
+					PlacedAt:    now.Add(-12 * time.Hour),
+					Channel:     ChannelApp,
+					Source:      "app_flash",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_app_027", Name: "谷口 菜々", Email: "nana.taniguchi@example.jp"},
+				2,
+				int64(56000),
+				int64(352000),
+				now.AddDate(0, 0, -15),
+				now.AddDate(0, 0, -5),
+				appSegment.Key,
+				appSegment.Name,
+				"warning",
+				[]Channel{ChannelApp},
+				[]string{"push_message"},
+				UsageOrder{
+					ID:          "order-73100",
+					Number:      "HF-73100",
+					AmountMinor: int64(176000),
+					Currency:    "JPY",
+					Status:      "processing",
+					StatusLabel: "支払い確認中",
+					StatusTone:  "warning",
+					PlacedAt:    now.AddDate(0, 0, -5),
+					Channel:     ChannelApp,
+					Source:      "push_message",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_app_045", Name: "岡村 遥", Email: "haruka.okamura@example.jp"},
+				1,
+				int64(28000),
+				int64(140000),
+				now.AddDate(0, 0, -9),
+				now.AddDate(0, 0, -1),
+				appSegment.Key,
+				appSegment.Name,
+				"warning",
+				[]Channel{ChannelApp},
+				[]string{"app_flash"},
+				UsageOrder{
+					ID:          "order-73554",
+					Number:      "HF-73554",
+					AmountMinor: int64(140000),
+					Currency:    "JPY",
+					Status:      "refunded",
+					StatusLabel: "返金済み",
+					StatusTone:  "danger",
+					PlacedAt:    now.AddDate(0, 0, -1),
+					Channel:     ChannelApp,
+					Source:      "app_flash",
+				},
+			),
+		},
+		promotions[3].ID: {
+			makeUsageRecord(
+				UsageUser{ID: "user_ship_006", Name: "佐竹 真", Email: "makoto.satake@example.jp"},
+				5,
+				int64(0),
+				int64(640000),
+				now.AddDate(0, 0, -12),
+				now.Add(-3*time.Hour),
+				rushSegment.Key,
+				rushSegment.Name,
+				"success",
+				[]Channel{ChannelOnlineStore},
+				[]string{"checkout_web", "express_checkout"},
+				UsageOrder{
+					ID:          "order-74452",
+					Number:      "HF-74452",
+					AmountMinor: int64(128000),
+					Currency:    "JPY",
+					Status:      "preparing",
+					StatusLabel: "出荷準備中",
+					StatusTone:  "info",
+					PlacedAt:    now.Add(-3 * time.Hour),
+					Channel:     ChannelOnlineStore,
+					Source:      "express_checkout",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_ship_018", Name: "柳沼 晶", Email: "akira.yaginuma@example.jp"},
+				2,
+				int64(0),
+				int64(256000),
+				now.AddDate(0, 0, -10),
+				now.AddDate(0, 0, -1),
+				rushSegment.Key,
+				rushSegment.Name,
+				"success",
+				[]Channel{ChannelOnlineStore},
+				[]string{"checkout_web"},
+				UsageOrder{
+					ID:          "order-74601",
+					Number:      "HF-74601",
+					AmountMinor: int64(128000),
+					Currency:    "JPY",
+					Status:      "delivered",
+					StatusLabel: "配送完了",
+					StatusTone:  "success",
+					PlacedAt:    now.AddDate(0, 0, -1),
+					Channel:     ChannelOnlineStore,
+					Source:      "checkout_web",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_ship_029", Name: "中村 美咲", Email: "misaki.nakamura@example.jp"},
+				1,
+				int64(0),
+				int64(98000),
+				now.AddDate(0, 0, -6),
+				now.AddDate(0, 0, -2),
+				rushSegment.Key,
+				rushSegment.Name,
+				"success",
+				[]Channel{ChannelOnlineStore},
+				[]string{"support_manual"},
+				UsageOrder{
+					ID:          "order-74870",
+					Number:      "HF-74870",
+					AmountMinor: int64(98000),
+					Currency:    "JPY",
+					Status:      "processing",
+					StatusLabel: "支払い確認中",
+					StatusTone:  "warning",
+					PlacedAt:    now.AddDate(0, 0, -2),
+					Channel:     ChannelOnlineStore,
+					Source:      "support_manual",
+				},
+			),
+		},
+		promotions[4].ID: {
+			makeUsageRecord(
+				UsageUser{ID: "user_winter_002", Name: "市川 遼", Email: "ryo.ichikawa@example.jp"},
+				3,
+				int64(9000),
+				int64(420000),
+				lastMonth.AddDate(0, 0, 5),
+				lastWeek,
+				winterSegment.Key,
+				winterSegment.Name,
+				"muted",
+				[]Channel{ChannelOnlineStore, ChannelRetail},
+				[]string{"retail_pos", "checkout_web"},
+				UsageOrder{
+					ID:          "order-69220",
+					Number:      "HF-69220",
+					AmountMinor: int64(140000),
+					Currency:    "JPY",
+					Status:      "delivered",
+					StatusLabel: "配送完了",
+					StatusTone:  "success",
+					PlacedAt:    lastWeek,
+					Channel:     ChannelRetail,
+					Source:      "retail_pos",
+				},
+			),
+			makeUsageRecord(
+				UsageUser{ID: "user_winter_014", Name: "佐々木 絵里", Email: "eri.sasaki@example.jp"},
+				1,
+				int64(3000),
+				int64(138000),
+				lastMonth.AddDate(0, 0, 12),
+				lastMonth.AddDate(0, 0, 15),
+				winterSegment.Key,
+				winterSegment.Name,
+				"muted",
+				[]Channel{ChannelOnlineStore},
+				[]string{"checkout_web"},
+				UsageOrder{
+					ID:          "order-68411",
+					Number:      "HF-68411",
+					AmountMinor: int64(138000),
+					Currency:    "JPY",
+					Status:      "refunded",
+					StatusLabel: "返金済み",
+					StatusTone:  "danger",
+					PlacedAt:    lastMonth.AddDate(0, 0, 15),
+					Channel:     ChannelOnlineStore,
+					Source:      "checkout_web",
+				},
+			),
+		},
+	}
+
 	return &StaticService{
-		promotions: promotions,
-		details:    details,
-		nextID:     len(promotions),
+		promotions:   promotions,
+		details:      details,
+		usageData:    usageData,
+		usageExports: make(map[string]usageExportState),
+		nextID:       len(promotions),
 	}
 }
 
@@ -611,6 +967,193 @@ func (s *StaticService) Update(_ context.Context, _ string, promotionID string, 
 	return updated, nil
 }
 
+// Usage returns aggregated promotion usage records for the provided query.
+func (s *StaticService) Usage(_ context.Context, _ string, promotionID string, query UsageQuery) (UsageResult, error) {
+	promotionID = strings.TrimSpace(promotionID)
+	if promotionID == "" {
+		return UsageResult{}, ErrPromotionNotFound
+	}
+
+	s.mu.RLock()
+	promo, ok := s.findPromotionLocked(promotionID)
+	if !ok {
+		s.mu.RUnlock()
+		return UsageResult{}, ErrPromotionNotFound
+	}
+	source := append([]UsageRecord(nil), s.usageData[promotionID]...)
+	s.mu.RUnlock()
+
+	reference := time.Now()
+	start, end := resolveUsageTimeframe(query, reference)
+	filtered := filterUsageRecords(source, query, start, end)
+	sortUsageRecords(filtered, query.SortKey, query.SortDirection)
+
+	page := query.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := query.PageSize
+	if pageSize <= 0 {
+		pageSize = defaultUsagePageSize
+	}
+
+	total := len(filtered)
+	startIdx := (page - 1) * pageSize
+	if startIdx > total {
+		startIdx = total
+	}
+	endIdx := startIdx + pageSize
+	if endIdx > total {
+		endIdx = total
+	}
+
+	pageRecords := append([]UsageRecord(nil), filtered[startIdx:endIdx]...)
+	summary := aggregateUsageSummary(filtered, promo)
+	filters := buildUsageFilterSummary(source, reference)
+	alert := buildUsageAlert(promo, query, summary)
+
+	var nextPage *int
+	if endIdx < total {
+		val := page + 1
+		nextPage = &val
+	}
+	var prevPage *int
+	if page > 1 && startIdx > 0 {
+		val := page - 1
+		prevPage = &val
+	}
+
+	pagination := Pagination{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: total,
+		NextPage:   nextPage,
+		PrevPage:   prevPage,
+	}
+
+	return UsageResult{
+		Promotion:   promo,
+		Summary:     summary,
+		Filters:     filters,
+		Records:     pageRecords,
+		Pagination:  pagination,
+		Alert:       alert,
+		GeneratedAt: reference,
+	}, nil
+}
+
+// StartUsageExport records a simulated export job for promotion usage.
+func (s *StaticService) StartUsageExport(_ context.Context, _ string, req UsageExportRequest) (UsageExportJob, error) {
+	promotionID := strings.TrimSpace(req.PromotionID)
+	if promotionID == "" {
+		return UsageExportJob{}, ErrPromotionNotFound
+	}
+
+	format := UsageExportFormat(strings.TrimSpace(string(req.Format)))
+	if format == "" {
+		format = UsageExportFormatCSV
+	}
+	if !strings.EqualFold(string(format), string(UsageExportFormatCSV)) {
+		return UsageExportJob{}, ErrUsageExportFormatNotAllowed
+	}
+	format = UsageExportFormatCSV
+
+	s.mu.RLock()
+	promo, ok := s.findPromotionLocked(promotionID)
+	if !ok {
+		s.mu.RUnlock()
+		return UsageExportJob{}, ErrPromotionNotFound
+	}
+	source := append([]UsageRecord(nil), s.usageData[promotionID]...)
+	s.mu.RUnlock()
+
+	reference := time.Now()
+	start, end := resolveUsageTimeframe(req.Query, reference)
+	filtered := filterUsageRecords(source, req.Query, start, end)
+	if len(filtered) == 0 {
+		return UsageExportJob{}, ErrUsageExportNoRecords
+	}
+
+	jobID := fmt.Sprintf("usage-export-%d", reference.UnixNano())
+	submitter := strings.TrimSpace(req.ActorID)
+	if submitter == "" {
+		submitter = strings.TrimSpace(req.ActorEmail)
+	}
+
+	job := UsageExportJob{
+		ID:               jobID,
+		PromotionID:      promo.ID,
+		PromotionName:    promo.Name,
+		Format:           format,
+		SubmittedAt:      reference,
+		SubmittedBy:      submitter,
+		SubmittedByEmail: strings.TrimSpace(req.ActorEmail),
+		Status:           "キュー投入済み",
+		StatusTone:       "info",
+		Progress:         5,
+		RecordCount:      len(filtered),
+		Message:          "CSVエクスポートを準備しています。",
+	}
+
+	s.mu.Lock()
+	s.usageExports[jobID] = usageExportState{
+		Job: job,
+	}
+	s.mu.Unlock()
+
+	return job, nil
+}
+
+// UsageExportStatus returns the simulated status of a promotion usage export job.
+func (s *StaticService) UsageExportStatus(_ context.Context, _ string, jobID string) (UsageExportJobStatus, error) {
+	jobID = strings.TrimSpace(jobID)
+	if jobID == "" {
+		return UsageExportJobStatus{}, ErrUsageExportJobNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.usageExports[jobID]
+	if !ok {
+		return UsageExportJobStatus{}, ErrUsageExportJobNotFound
+	}
+
+	if !state.Completed {
+		state.Attempts++
+		state.Job.Status = "処理中"
+		state.Job.StatusTone = "info"
+		state.Job.Message = "使用状況レコードを集計しています..."
+
+		step := 30
+		if state.Job.RecordCount > 25 {
+			step = 20
+		}
+		state.Job.Progress += step
+		if state.Job.Progress >= 95 {
+			state.Job.Progress = 95
+		}
+
+		if state.Attempts >= 3 || state.Job.Progress >= 90 {
+			now := time.Now()
+			state.Completed = true
+			state.Job.Progress = 100
+			state.Job.Status = "完了"
+			state.Job.StatusTone = "success"
+			state.Job.Message = "エクスポートが完了しました。ダウンロードを開始できます。"
+			state.Job.CompletedAt = &now
+			state.Job.DownloadURL = fmt.Sprintf("/admin/downloads/promotions/%s/%s.%s", state.Job.PromotionID, state.Job.ID, state.Job.Format)
+		}
+
+		s.usageExports[jobID] = state
+	}
+
+	return UsageExportJobStatus{
+		Job:  state.Job,
+		Done: state.Completed,
+	}, nil
+}
+
 func (s *StaticService) validatePromotionInput(input PromotionInput, ignoreID string) *PromotionValidationError {
 	fieldErrors := make(map[string]string)
 	code := strings.TrimSpace(input.Code)
@@ -688,6 +1231,38 @@ func copyChannels(channels []Channel) []Channel {
 	cpy := make([]Channel, len(channels))
 	copy(cpy, channels)
 	return cpy
+}
+
+func makeUsageRecord(user UsageUser, usageCount int, totalDiscountMinor, totalOrderMinor int64, firstUsed, lastUsed time.Time, segmentKey, segmentLabel, segmentTone string, channels []Channel, sources []string, lastOrder UsageOrder) UsageRecord {
+	if usageCount < 0 {
+		usageCount = 0
+	}
+	record := UsageRecord{
+		User:                  user,
+		UsageCount:            usageCount,
+		TotalDiscountMinor:    totalDiscountMinor,
+		TotalOrderAmountMinor: totalOrderMinor,
+		FirstUsedAt:           firstUsed,
+		LastUsedAt:            lastUsed,
+		SegmentKey:            segmentKey,
+		SegmentLabel:          segmentLabel,
+		SegmentTone:           segmentTone,
+		Channels:              append([]Channel(nil), channels...),
+		Sources:               append([]string(nil), sources...),
+		LastOrder:             lastOrder,
+	}
+	if usageCount > 0 {
+		count := int64(usageCount)
+		record.AverageDiscountMinor = 0
+		if totalDiscountMinor != 0 {
+			record.AverageDiscountMinor = totalDiscountMinor / count
+		}
+		record.AverageOrderAmountMinor = 0
+		if totalOrderMinor != 0 {
+			record.AverageOrderAmountMinor = totalOrderMinor / count
+		}
+	}
+	return record
 }
 
 func buildDetailForPromotion(p Promotion) PromotionDetail {
@@ -943,4 +1518,451 @@ func copyTimePtr(t *time.Time) *time.Time {
 	}
 	cpy := *t
 	return &cpy
+}
+
+func (s *StaticService) findPromotionLocked(id string) (Promotion, bool) {
+	target := strings.TrimSpace(id)
+	if target == "" {
+		return Promotion{}, false
+	}
+	for _, promo := range s.promotions {
+		if strings.EqualFold(strings.TrimSpace(promo.ID), target) {
+			return promo, true
+		}
+	}
+	return Promotion{}, false
+}
+
+func resolveUsageTimeframe(query UsageQuery, reference time.Time) (start *time.Time, end *time.Time) {
+	if query.Start != nil {
+		val := query.Start.In(reference.Location())
+		start = &val
+	}
+	if query.End != nil {
+		val := query.End.In(reference.Location())
+		end = &val
+	}
+	if start != nil || end != nil {
+		return start, end
+	}
+
+	key := strings.ToLower(strings.TrimSpace(query.Timeframe))
+	switch key {
+	case "last_7_days":
+		s := reference.AddDate(0, 0, -7)
+		start = &s
+	case "last_14_days":
+		s := reference.AddDate(0, 0, -14)
+		start = &s
+	case "last_30_days", "", "default":
+		s := reference.AddDate(0, 0, -30)
+		start = &s
+	case "quarter_to_date":
+		month := ((int(reference.Month()) - 1) / 3) * 3
+		if month < 0 {
+			month = 0
+		}
+		s := time.Date(reference.Year(), time.Month(month+1), 1, 0, 0, 0, 0, reference.Location())
+		start = &s
+	}
+	if start != nil && end == nil {
+		e := reference
+		end = &e
+	}
+	return start, end
+}
+
+func filterUsageRecords(records []UsageRecord, query UsageQuery, start, end *time.Time) []UsageRecord {
+	minUses := query.MinUses
+	if minUses < 0 {
+		minUses = 0
+	}
+
+	channelFilter := make(map[Channel]struct{}, len(query.Channels))
+	for _, ch := range query.Channels {
+		channelFilter[ch] = struct{}{}
+	}
+
+	sourceFilter := make(map[string]struct{}, len(query.Sources))
+	for _, src := range query.Sources {
+		key := strings.ToLower(strings.TrimSpace(src))
+		if key != "" {
+			sourceFilter[key] = struct{}{}
+		}
+	}
+
+	segmentFilter := make(map[string]struct{}, len(query.SegmentKeys))
+	for _, seg := range query.SegmentKeys {
+		key := strings.ToLower(strings.TrimSpace(seg))
+		if key != "" {
+			segmentFilter[key] = struct{}{}
+		}
+	}
+
+	result := make([]UsageRecord, 0, len(records))
+	for _, rec := range records {
+		if minUses > 0 && rec.UsageCount < minUses {
+			continue
+		}
+		if len(segmentFilter) > 0 {
+			key := strings.ToLower(strings.TrimSpace(rec.SegmentKey))
+			if _, ok := segmentFilter[key]; !ok {
+				continue
+			}
+		}
+		if !matchesChannelFilter(rec.Channels, channelFilter) {
+			continue
+		}
+		if !matchesSourceFilter(rec.Sources, sourceFilter) {
+			continue
+		}
+		if start != nil && !rec.LastUsedAt.IsZero() && rec.LastUsedAt.Before(*start) {
+			continue
+		}
+		if end != nil && !rec.LastUsedAt.IsZero() && rec.LastUsedAt.After(*end) {
+			continue
+		}
+		result = append(result, rec)
+	}
+	return result
+}
+
+func matchesChannelFilter(channels []Channel, filter map[Channel]struct{}) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	seen := make(map[Channel]struct{}, len(channels))
+	for _, ch := range channels {
+		seen[ch] = struct{}{}
+	}
+	for ch := range seen {
+		if _, ok := filter[ch]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesSourceFilter(sources []string, filter map[string]struct{}) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	seen := make(map[string]struct{}, len(sources))
+	for _, src := range sources {
+		key := strings.ToLower(strings.TrimSpace(src))
+		if key != "" {
+			seen[key] = struct{}{}
+		}
+	}
+	for key := range seen {
+		if _, ok := filter[key]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func sortUsageRecords(records []UsageRecord, sortKey, sortDirection string) {
+	if len(records) <= 1 {
+		return
+	}
+
+	descending := true
+	if strings.EqualFold(strings.TrimSpace(sortDirection), "asc") {
+		descending = false
+	}
+
+	key := strings.ToLower(strings.TrimSpace(sortKey))
+	switch key {
+	case "usage", "usage_count":
+		sort.SliceStable(records, func(i, j int) bool {
+			if descending {
+				if records[i].UsageCount == records[j].UsageCount {
+					return records[i].LastUsedAt.After(records[j].LastUsedAt)
+				}
+				return records[i].UsageCount > records[j].UsageCount
+			}
+			if records[i].UsageCount == records[j].UsageCount {
+				return records[i].LastUsedAt.Before(records[j].LastUsedAt)
+			}
+			return records[i].UsageCount < records[j].UsageCount
+		})
+	case "discount":
+		sort.SliceStable(records, func(i, j int) bool {
+			if descending {
+				if records[i].TotalDiscountMinor == records[j].TotalDiscountMinor {
+					return records[i].LastUsedAt.After(records[j].LastUsedAt)
+				}
+				return records[i].TotalDiscountMinor > records[j].TotalDiscountMinor
+			}
+			if records[i].TotalDiscountMinor == records[j].TotalDiscountMinor {
+				return records[i].LastUsedAt.Before(records[j].LastUsedAt)
+			}
+			return records[i].TotalDiscountMinor < records[j].TotalDiscountMinor
+		})
+	case "customer":
+		sort.SliceStable(records, func(i, j int) bool {
+			left := strings.ToLower(records[i].User.Name)
+			if left == "" {
+				left = strings.ToLower(records[i].User.Email)
+			}
+			right := strings.ToLower(records[j].User.Name)
+			if right == "" {
+				right = strings.ToLower(records[j].User.Email)
+			}
+			if descending {
+				return left > right
+			}
+			return left < right
+		})
+	default:
+		sort.SliceStable(records, func(i, j int) bool {
+			if descending {
+				return records[i].LastUsedAt.After(records[j].LastUsedAt)
+			}
+			return records[i].LastUsedAt.Before(records[j].LastUsedAt)
+		})
+	}
+}
+
+func aggregateUsageSummary(records []UsageRecord, promotion Promotion) UsageSummary {
+	var totalRedemptions int
+	var totalDiscount int64
+	var totalOrder int64
+
+	for _, rec := range records {
+		totalRedemptions += rec.UsageCount
+		totalDiscount += rec.TotalDiscountMinor
+		totalOrder += rec.TotalOrderAmountMinor
+	}
+
+	summary := UsageSummary{
+		TotalRedemptions:   totalRedemptions,
+		TotalDiscountMinor: totalDiscount,
+	}
+	if totalRedemptions > 0 {
+		count := int64(totalRedemptions)
+		summary.AverageDiscountMinor = totalDiscount / count
+		summary.AverageOrderAmountMinor = totalOrder / count
+	}
+
+	audience := promotion.Segment.Audience
+	if audience <= 0 {
+		audience = 1
+	}
+	rate := float64(totalRedemptions) / float64(audience)
+	if rate > 1 {
+		rate = 1
+	}
+	summary.ConversionRate = rate
+	return summary
+}
+
+func buildUsageFilterSummary(records []UsageRecord, reference time.Time) UsageFilterSummary {
+	if len(records) == 0 {
+		return UsageFilterSummary{
+			TimeframePresets: usageTimeframePresets(reference),
+			UsageThresholds:  defaultUsageThresholds(),
+		}
+	}
+
+	channelCounts := make(map[Channel]int)
+	sourceCounts := make(map[string]int)
+	segmentCounts := make(map[string]struct {
+		Label string
+		Count int
+	})
+
+	for _, rec := range records {
+		channelSeen := make(map[Channel]struct{})
+		for _, ch := range rec.Channels {
+			channelSeen[ch] = struct{}{}
+		}
+		for ch := range channelSeen {
+			channelCounts[ch]++
+		}
+
+		sourceSeen := make(map[string]struct{})
+		for _, src := range rec.Sources {
+			key := strings.ToLower(strings.TrimSpace(src))
+			if key != "" {
+				sourceSeen[key] = struct{}{}
+			}
+		}
+		for key := range sourceSeen {
+			sourceCounts[key]++
+		}
+
+		key := strings.ToLower(strings.TrimSpace(rec.SegmentKey))
+		if key == "" {
+			continue
+		}
+		entry := segmentCounts[key]
+		entry.Label = rec.SegmentLabel
+		entry.Count++
+		segmentCounts[key] = entry
+	}
+
+	channelOptions := make([]UsageFilterOption, 0, len(channelCounts))
+	for ch, count := range channelCounts {
+		channelOptions = append(channelOptions, UsageFilterOption{
+			Value: string(ch),
+			Label: channelDisplay(ch),
+			Count: count,
+		})
+	}
+	sort.SliceStable(channelOptions, func(i, j int) bool {
+		if channelOptions[i].Count == channelOptions[j].Count {
+			return channelOptions[i].Label < channelOptions[j].Label
+		}
+		return channelOptions[i].Count > channelOptions[j].Count
+	})
+
+	sourceOptions := make([]UsageFilterOption, 0, len(sourceCounts))
+	for key, count := range sourceCounts {
+		sourceOptions = append(sourceOptions, UsageFilterOption{
+			Value: key,
+			Label: usageSourceLabel(key),
+			Count: count,
+		})
+	}
+	sort.SliceStable(sourceOptions, func(i, j int) bool {
+		if sourceOptions[i].Count == sourceOptions[j].Count {
+			return sourceOptions[i].Label < sourceOptions[j].Label
+		}
+		return sourceOptions[i].Count > sourceOptions[j].Count
+	})
+
+	segmentOptions := make([]UsageFilterOption, 0, len(segmentCounts))
+	for key, entry := range segmentCounts {
+		segmentOptions = append(segmentOptions, UsageFilterOption{
+			Value: key,
+			Label: entry.Label,
+			Count: entry.Count,
+		})
+	}
+	sort.SliceStable(segmentOptions, func(i, j int) bool {
+		if segmentOptions[i].Count == segmentOptions[j].Count {
+			return segmentOptions[i].Label < segmentOptions[j].Label
+		}
+		return segmentOptions[i].Count > segmentOptions[j].Count
+	})
+
+	return UsageFilterSummary{
+		ChannelOptions:   channelOptions,
+		SourceOptions:    sourceOptions,
+		SegmentOptions:   segmentOptions,
+		TimeframePresets: usageTimeframePresets(reference),
+		UsageThresholds:  defaultUsageThresholds(),
+	}
+}
+
+func usageTimeframePresets(reference time.Time) []UsageTimeframePreset {
+	end := reference
+	start7 := reference.AddDate(0, 0, -7)
+	start14 := reference.AddDate(0, 0, -14)
+	start30 := reference.AddDate(0, 0, -30)
+
+	month := ((int(reference.Month()) - 1) / 3) * 3
+	startQuarter := time.Date(reference.Year(), time.Month(month+1), 1, 0, 0, 0, 0, reference.Location())
+
+	return []UsageTimeframePreset{
+		{Key: "last_7_days", Label: "直近7日間", Start: &start7, End: &end},
+		{Key: "last_14_days", Label: "直近14日間", Start: &start14, End: &end},
+		{Key: "last_30_days", Label: "直近30日間", Start: &start30, End: &end},
+		{Key: "quarter_to_date", Label: "四半期累計", Start: &startQuarter, End: &end},
+	}
+}
+
+func defaultUsageThresholds() []UsageThresholdOption {
+	values := []int{1, 3, 5, 10}
+	options := make([]UsageThresholdOption, 0, len(values))
+	for _, v := range values {
+		options = append(options, UsageThresholdOption{
+			Value: v,
+			Label: fmt.Sprintf("%d回以上", v),
+		})
+	}
+	return options
+}
+
+func channelDisplay(ch Channel) string {
+	switch ch {
+	case ChannelOnlineStore:
+		return "オンライン"
+	case ChannelRetail:
+		return "店舗"
+	case ChannelApp:
+		return "アプリ"
+	default:
+		return string(ch)
+	}
+}
+
+func usageSourceLabel(code string) string {
+	switch strings.ToLower(strings.TrimSpace(code)) {
+	case "checkout_web":
+		return "オンラインストア"
+	case "express_checkout":
+		return "クイックチェックアウト"
+	case "app_push":
+		return "アプリPush"
+	case "app_campaign":
+		return "アプリキャンペーン"
+	case "app_flash":
+		return "フラッシュセール"
+	case "push_message":
+		return "Pushメッセージ"
+	case "support_manual":
+		return "サポート代行"
+	case "retail_pos":
+		return "店舗POS"
+	case "campaign_preview":
+		return "キャンペーン検証"
+	default:
+		return code
+	}
+}
+
+func buildUsageAlert(promotion Promotion, query UsageQuery, summary UsageSummary) *UsageAlert {
+	if summary.TotalRedemptions == 0 {
+		return nil
+	}
+	if promotion.Status == StatusPaused {
+		link := fmt.Sprintf("/admin/promotions/%s/analytics", url.QueryEscape(promotion.ID))
+		message := fmt.Sprintf("%s は一時停止中ですが直近で %d 件の利用が検知されています。", promotion.Name, summary.TotalRedemptions)
+		return &UsageAlert{
+			Tone:      "warning",
+			Message:   message,
+			LinkLabel: "分析を開く",
+			LinkURL:   link,
+		}
+	}
+
+	timeframe := strings.ToLower(strings.TrimSpace(query.Timeframe))
+	threshold := promotion.UsageLimitTotal / 12
+	if threshold < 25 {
+		threshold = 25
+	}
+	if timeframe == "last_7_days" {
+		threshold = promotion.UsageLimitTotal / 20
+		if threshold < 15 {
+			threshold = 15
+		}
+	}
+	if promotion.UsageLimitTotal == 0 {
+		threshold = 30
+	}
+
+	if summary.TotalRedemptions >= threshold && threshold > 0 {
+		link := fmt.Sprintf("/admin/promotions/%s/analytics", url.QueryEscape(promotion.ID))
+		message := fmt.Sprintf("%s の利用が想定より多く発生しています。(期間内 %d 件)", promotion.Name, summary.TotalRedemptions)
+		return &UsageAlert{
+			Tone:      "warning",
+			Message:   message,
+			LinkLabel: "詳細を確認",
+			LinkURL:   link,
+		}
+	}
+	return nil
 }

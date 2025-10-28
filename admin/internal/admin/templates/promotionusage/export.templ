@@ -1,0 +1,87 @@
+package promotionusage
+
+import (
+	"strconv"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+)
+
+templ ExportStatus(data *ExportJobPayload) {
+	if data == nil || !data.Visible {
+		<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+			エクスポートジョブはまだ開始されていません。
+		</div>
+		return
+	}
+	<div
+		class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+		if data.Poll {
+			hx-get={ data.StatusURL }
+			hx-trigger="load delay:2s"
+			hx-target="this"
+			hx-swap="outerHTML"
+		}
+		data-export-job-id={ data.Job.ID }
+	>
+		<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+			<div>
+				<div class="flex items-center gap-2">
+					@components.Badge(data.Job.Status, fallbackTone(data.Job.StatusTone))
+					<p class="text-sm text-slate-600">ジョブID: { data.Job.ID }</p>
+				</div>
+				if data.Job.Message != "" {
+					<p class="mt-1 text-sm text-slate-700">{ data.Job.Message }</p>
+				}
+			</div>
+			if data.Job.Download != "" && data.Finished {
+				<a
+					href={ data.Job.Download }
+					class={ helpers.ButtonClass("primary", "sm", false, false) }
+				>
+					ダウンロード
+				</a>
+			}
+		</div>
+
+		<div class="mt-4">
+			<div class="h-2 rounded-full bg-slate-200">
+				<div
+					class="h-2 rounded-full bg-brand-500 transition-all"
+					style={ "width: " + strconv.Itoa(clampPercentage(data.Job.Progress)) + "%;" }
+				></div>
+			</div>
+			<div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+				<span>進捗: { strconv.Itoa(clampPercentage(data.Job.Progress)) }%</span>
+				if data.Job.RecordCount > 0 {
+					<span>{ data.Job.RecordCount } 件</span>
+				}
+			</div>
+		</div>
+
+		<div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+			if data.Submitted != "" {
+				<span>開始: { data.Submitted }</span>
+			}
+			if data.Completed != "" {
+				<span>完了: { data.Completed }</span>
+			}
+			if !data.Finished {
+				<span class="inline-flex items-center gap-1 text-amber-600">
+					<span aria-hidden="true">⏳</span>
+					自動更新中
+				</span>
+			}
+		</div>
+	</div>
+}
+
+func clampPercentage(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
+}
