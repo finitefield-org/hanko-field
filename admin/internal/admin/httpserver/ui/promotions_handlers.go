@@ -339,14 +339,11 @@ func parsePromotionsDate(value string) *time.Time {
 }
 
 func promotionsToolbarProps(basePath string, selectedCount, total int) components.BulkToolbarProps {
-	displayCount := selectedCount
-	if displayCount <= 0 {
-		displayCount = 1
-	}
 	props := components.BulkToolbarProps{
-		SelectedCount: displayCount,
-		TotalCount:    total,
-		Message:       "",
+		SelectedCount:   selectedCount,
+		TotalCount:      total,
+		Message:         "",
+		RenderWhenEmpty: true,
 		Actions: []components.BulkToolbarAction{
 			buttonAction("アクティブ化", "選択したプロモーションをアクティブにします", "activate", "primary"),
 			buttonAction("一時停止", "選択したプロモーションを一時停止します", "pause", "secondary"),

@@ -442,45 +442,44 @@ type BulkToolbarProps struct {
 	ClearAction   *BulkToolbarAction
 	Actions       []BulkToolbarAction
 	Attrs         templ.Attributes
+	RenderWhenEmpty bool
 }
 
 templ BulkActionToolbar(props BulkToolbarProps) {
-	if props.SelectedCount <= 0 {
-		return
-	}
-
-	<div
-		class="flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-slate-900 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-		role="region"
-		aria-live="polite"
-		aria-label="Bulk actions toolbar"
-		data-selected-count={ strconv.Itoa(props.SelectedCount) }
-		if props.Attrs != nil {
-			{ props.Attrs... }
-		}
-	>
-		<div class="flex items-center gap-3">
-			<span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white" data-bulk-count>
-				{ props.SelectedCount }
-			</span>
-			<div class="space-y-1">
-				<p class="text-sm font-semibold text-slate-900" data-bulk-message>{ bulkToolbarMessage(props) }</p>
-				if props.TotalCount > 0 {
-					<p class="text-xs text-slate-600" data-bulk-total>
-						of { props.TotalCount } total
-					</p>
+	if props.SelectedCount > 0 || props.RenderWhenEmpty {
+		<div
+			class="flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-slate-900 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+			role="region"
+			aria-live="polite"
+			aria-label="Bulk actions toolbar"
+			data-selected-count={ strconv.Itoa(props.SelectedCount) }
+			if props.Attrs != nil {
+				{ props.Attrs... }
+			}
+		>
+			<div class="flex items-center gap-3">
+				<span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white" data-bulk-count>
+					{ props.SelectedCount }
+				</span>
+				<div class="space-y-1">
+					<p class="text-sm font-semibold text-slate-900" data-bulk-message>{ bulkToolbarMessage(props) }</p>
+					if props.TotalCount > 0 {
+						<p class="text-xs text-slate-600" data-bulk-total>
+							of { props.TotalCount } total
+						</p>
+					}
+				</div>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				if props.ClearAction != nil {
+					@renderBulkToolbarAction(*props.ClearAction, true)
+				}
+				for _, action := range props.Actions {
+					@renderBulkToolbarAction(action, false)
 				}
 			</div>
 		</div>
-		<div class="flex flex-wrap items-center gap-2">
-			if props.ClearAction != nil {
-				@renderBulkToolbarAction(*props.ClearAction, true)
-			}
-			for _, action := range props.Actions {
-				@renderBulkToolbarAction(action, false)
-			}
-		</div>
-	</div>
+	}
 }
 
 type TextInputProps struct {
