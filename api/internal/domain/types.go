@@ -418,11 +418,22 @@ type Shipment struct {
 	ID           string
 	OrderID      string
 	Carrier      string
+	Service      string
 	TrackingCode string
 	Status       string
+	ETA          *time.Time
+	LabelURL     *string
+	Documents    []string
+	Items        []ShipmentItem
 	Events       []ShipmentEvent
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// ShipmentItem links order line items to the quantities fulfilled in a shipment.
+type ShipmentItem struct {
+	LineItemSKU string
+	Quantity    int
 }
 
 // ShipmentEvent stores timestamped updates from carriers or operations.

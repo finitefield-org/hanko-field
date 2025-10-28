@@ -45,6 +45,7 @@ type (
 	Payment                   = domain.Payment
 	Shipment                  = domain.Shipment
 	ShipmentEvent             = domain.ShipmentEvent
+	ShipmentItem              = domain.ShipmentItem
 	Review                    = domain.Review
 	ReviewReply               = domain.ReviewReply
 	ReviewStatus              = domain.ReviewStatus
@@ -685,15 +686,22 @@ type PaymentManualRefundCommand struct {
 }
 
 type CreateShipmentCommand struct {
-	OrderID   string
-	Carrier   string
-	Items     []ShipmentItem
-	CreatedBy string
+	OrderID            string
+	Carrier            string
+	ServiceLevel       string
+	TrackingPreference string
+	Package            *ShipmentPackage
+	Items              []ShipmentItem
+	CreatedBy          string
+	ManualTrackingCode *string
 }
 
-type ShipmentItem struct {
-	LineItemSKU string
-	Quantity    int
+type ShipmentPackage struct {
+	Length float64
+	Width  float64
+	Height float64
+	Weight float64
+	Unit   string
 }
 
 type UpdateShipmentCommand struct {

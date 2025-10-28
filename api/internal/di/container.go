@@ -204,6 +204,21 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 		svc.Orders = orderSvc
 	}
 
+	if ordersRepo != nil {
+		if shipmentRepo := reg.OrderShipments(); shipmentRepo != nil {
+			shipmentSvc, err := services.NewShipmentService(services.ShipmentServiceDeps{
+				Orders:     ordersRepo,
+				Shipments:  shipmentRepo,
+				UnitOfWork: reg,
+				Clock:      time.Now,
+			})
+			if err != nil {
+				return Services{}, fmt.Errorf("build shipment service: %w", err)
+			}
+			svc.Shipments = shipmentSvc
+		}
+	}
+
 	if reviewRepo := reg.Reviews(); reviewRepo != nil && ordersRepo != nil {
 		reviewSvc, err := services.NewReviewService(services.ReviewServiceDeps{
 			Reviews: reviewRepo,

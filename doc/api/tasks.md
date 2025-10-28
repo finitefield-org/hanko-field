@@ -110,7 +110,7 @@
 - [x] [077 Implement admin order listing endpoint with status/date filters for operations dashboards.](./tasks/077-implement-admin-order-listing-endpoint-with-status-date-filters-for-operations-d.md)
 - [x] [078 Implement order status transition endpoint enforcing workflow (`paid → in_production → shipped → delivered`) with audit log.](./tasks/078-implement-order-status-transition-endpoint-enforcing-workflow-paid-in-production.md)
 - [x] [079 Implement manual payment capture and refund endpoints integrating PSP APIs.](./tasks/079-implement-manual-payment-capture-and-refund-endpoints-integrating-psp-apis.md)
-- [ ] [080 Implement shipment creation endpoint generating labels via carrier integrations and storing tracking info.](./tasks/080-implement-shipment-creation-endpoint-generating-labels-via-carrier-integrations-.md)
+- [x] [080 Implement shipment creation endpoint generating labels via carrier integrations and storing tracking info.](./tasks/080-implement-shipment-creation-endpoint-generating-labels-via-carrier-integrations-.md)
 - [ ] [081 Implement shipment update endpoint for correcting tracking statuses/events.](./tasks/081-implement-shipment-update-endpoint-for-correcting-tracking-statuses-events.md)
 - [ ] [082 Implement production events POST endpoint allowing operations to append workflow events.](./tasks/082-implement-production-events-post-endpoint-allowing-operations-to-append-workflow.md)
 - [ ] [083 Implement low stock endpoint aggregating inventory below thresholds.](./tasks/083-implement-low-stock-endpoint-aggregating-inventory-below-thresholds.md)

@@ -24,7 +24,7 @@ func TestAdminOrderHandlers_ListOrders_MapsFilters(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders?status=paid,in_production&payment_status=captured,pending&paymentStatus=refunded&queue=queue-a&production_queue=queue-b&channel=dashboard&sales_channel=app&customer_email=%20ops@example.com%20&promotion_code=%20SPRING%20&page_size=150&page_token=%20token123%20&order=asc&sort=updated_at&since=2024-01-01T00:00:00Z&until=2024-02-01T00:00:00Z", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
@@ -143,7 +143,7 @@ func TestAdminOrderHandlers_ListOrders_ReturnsOperationalFields(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/orders", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
@@ -259,7 +259,7 @@ func TestAdminOrderHandlers_ListOrders_RequiresPrivilegedRole(t *testing.T) {
 			return domain.CursorPage[services.Order]{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	cases := []struct {
 		name         string
@@ -344,7 +344,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
 		},
 	}
 	audit := &captureAuditLogService{}
-	handler := NewAdminOrderHandlers(nil, service, nil, audit)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, audit)
 
 	body := `{"target_status":"in_production","reason":" expedite ","metadata":{"queue":"laser","notify":true}}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_123:status", strings.NewReader(body))
@@ -412,6 +412,97 @@ func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
 	}
 }
 
+func TestAdminOrderHandlers_CreateShipment_Success(t *testing.T) {
+	shipments := &stubShipmentService{
+		createFn: func(ctx context.Context, cmd services.CreateShipmentCommand) (services.Shipment, error) {
+			return services.Shipment{
+				ID:           "shp_001",
+				OrderID:      cmd.OrderID,
+				Carrier:      strings.TrimSpace(cmd.Carrier),
+				Service:      strings.TrimSpace(cmd.ServiceLevel),
+				TrackingCode: "TRK-001",
+				Status:       "label_created",
+				CreatedAt:    time.Date(2024, 7, 10, 8, 0, 0, 0, time.UTC),
+				UpdatedAt:    time.Date(2024, 7, 10, 8, 0, 0, 0, time.UTC),
+			}, nil
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, nil, shipments, nil, nil)
+
+	body := `{
+		"carrier": " yamato ",
+		"service_level": "TA-Q-BIN",
+		"tracking_preference": "auto",
+		"package": {"length": 20, "width": 10, "height": 5, "weight": 1.2, "unit": "cm"},
+		"items": [{"sku": " sku-1 ", "quantity": 1}]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_abc/shipments", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_abc")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "staff-1", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.createShipment(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", rec.Code)
+	}
+	if shipments.captured == nil {
+		t.Fatalf("expected shipment command to be captured")
+	}
+	cmd := *shipments.captured
+	if cmd.OrderID != "ord_abc" {
+		t.Fatalf("expected order id ord_abc, got %s", cmd.OrderID)
+	}
+	if len(cmd.Items) != 1 || cmd.Items[0].LineItemSKU != "sku-1" || cmd.Items[0].Quantity != 1 {
+		t.Fatalf("unexpected shipment items: %#v", cmd.Items)
+	}
+	if cmd.Package == nil || cmd.Package.Unit != "cm" {
+		t.Fatalf("expected package unit to be set")
+	}
+	var resp struct {
+		Shipment orderShipmentPayload `json:"shipment"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Shipment.ID != "shp_001" {
+		t.Fatalf("expected response shipment id shp_001, got %s", resp.Shipment.ID)
+	}
+	if !strings.EqualFold(resp.Shipment.Carrier, "yamato") {
+		t.Fatalf("expected response carrier yamato, got %s", resp.Shipment.Carrier)
+	}
+}
+
+func TestAdminOrderHandlers_CreateShipment_MapsServiceErrors(t *testing.T) {
+	shipments := &stubShipmentService{
+		err: services.ErrShipmentInvalidInput,
+	}
+	handler := NewAdminOrderHandlers(nil, nil, shipments, nil, nil)
+
+	body := `{
+		"carrier": "yamato",
+		"service_level": "TA-Q-BIN",
+		"tracking_preference": "auto",
+		"items": [{"sku": "sku-1", "quantity": 1}]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_err/shipments", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_err")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "staff-2", Roles: []string{auth.RoleStaff}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.createShipment(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+}
+
 func TestAdminOrderHandlers_UpdateOrderStatus_AllowsReadyToShipToShipped(t *testing.T) {
 	var capturedCmd services.OrderStatusTransitionCommand
 	service := &stubOrderService{
@@ -429,7 +520,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_AllowsReadyToShipToShipped(t *test
 			}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	body := `{"target_status":"shipped"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_ready:status", strings.NewReader(body))
@@ -466,7 +557,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_RejectsOutOfSequenceTransition(t *
 			return services.Order{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	body := `{"target_status":"shipped"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_200:status", strings.NewReader(body))
@@ -497,7 +588,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_ExpectedStatusMismatch(t *testing.
 			return services.Order{}, nil
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	body := `{"target_status":"in_production","expected_status":"in_production"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_300:status", strings.NewReader(body))
@@ -527,7 +618,7 @@ func TestAdminOrderHandlers_UpdateOrderStatus_ServiceConflict(t *testing.T) {
 			return services.Order{}, services.ErrOrderConflict
 		},
 	}
-	handler := NewAdminOrderHandlers(nil, service, nil, nil)
+	handler := NewAdminOrderHandlers(nil, service, nil, nil, nil)
 
 	body := `{"target_status":"delivered"}`
 	req := httptest.NewRequest(http.MethodPut, "/orders/ord_400:status", strings.NewReader(body))
@@ -586,7 +677,7 @@ func TestAdminOrderHandlers_ManualCapturePayment_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewAdminOrderHandlers(nil, orderSvc, paymentSvc, nil)
+	handler := NewAdminOrderHandlers(nil, orderSvc, nil, paymentSvc, nil)
 
 	body := `{"payment_id":" pay_123 ","amount":1500,"reason":" partial ","idempotency_key":" key-1 ","metadata":{"note":" expedite "}}`
 	req := httptest.NewRequest(http.MethodPost, "/orders/ord_900/payments:manual-capture", strings.NewReader(body))
@@ -688,7 +779,7 @@ func TestAdminOrderHandlers_ManualRefundPayment_ServiceError(t *testing.T) {
 		},
 	}
 
-	handler := NewAdminOrderHandlers(nil, &stubOrderService{}, paymentSvc, nil)
+	handler := NewAdminOrderHandlers(nil, &stubOrderService{}, nil, paymentSvc, nil)
 
 	body := `{"payment_id":"pay_777"}`
 	req := httptest.NewRequest(http.MethodPost, "/orders/ord_777/payments:refund", strings.NewReader(body))
@@ -751,4 +842,34 @@ func (s *stubPaymentService) ListPayments(ctx context.Context, orderID string) (
 		return s.listFn(ctx, orderID)
 	}
 	return nil, nil
+}
+
+type stubShipmentService struct {
+	captured *services.CreateShipmentCommand
+	createFn func(context.Context, services.CreateShipmentCommand) (services.Shipment, error)
+	err      error
+}
+
+func (s *stubShipmentService) CreateShipment(ctx context.Context, cmd services.CreateShipmentCommand) (services.Shipment, error) {
+	cloned := cmd
+	s.captured = &cloned
+	if s.err != nil {
+		return services.Shipment{}, s.err
+	}
+	if s.createFn != nil {
+		return s.createFn(ctx, cmd)
+	}
+	return services.Shipment{}, nil
+}
+
+func (s *stubShipmentService) UpdateShipmentStatus(context.Context, services.UpdateShipmentCommand) (services.Shipment, error) {
+	return services.Shipment{}, nil
+}
+
+func (s *stubShipmentService) ListShipments(context.Context, string) ([]services.Shipment, error) {
+	return nil, nil
+}
+
+func (s *stubShipmentService) RecordCarrierEvent(context.Context, services.ShipmentEventCommand) error {
+	return nil
 }

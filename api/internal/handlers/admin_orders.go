@@ -21,23 +21,48 @@ import (
 const (
 	defaultAdminOrderPageSize = 50
 	maxAdminOrderPageSize     = 200
+	maxAdminShipmentBodySize  = 6 * 1024
 )
 
 // AdminOrderHandlers exposes order list endpoints for operations dashboards.
 type AdminOrderHandlers struct {
-	authn    *auth.Authenticator
-	orders   services.OrderService
-	payments services.PaymentService
-	audit    services.AuditLogService
+	authn     *auth.Authenticator
+	orders    services.OrderService
+	shipments services.ShipmentService
+	payments  services.PaymentService
+	audit     services.AuditLogService
+}
+
+type adminCreateShipmentRequest struct {
+	Carrier            string                     `json:"carrier"`
+	ServiceLevel       string                     `json:"service_level"`
+	TrackingPreference string                     `json:"tracking_preference"`
+	ManualTrackingCode *string                    `json:"manual_tracking_code"`
+	Package            *adminShipmentPackage      `json:"package"`
+	Items              []adminShipmentItemRequest `json:"items"`
+}
+
+type adminShipmentPackage struct {
+	Length float64 `json:"length"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+	Weight float64 `json:"weight"`
+	Unit   string  `json:"unit"`
+}
+
+type adminShipmentItemRequest struct {
+	SKU      string `json:"sku"`
+	Quantity int    `json:"quantity"`
 }
 
 // NewAdminOrderHandlers constructs the admin order handler set.
-func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService, payments services.PaymentService, audit services.AuditLogService) *AdminOrderHandlers {
+func NewAdminOrderHandlers(authn *auth.Authenticator, orders services.OrderService, shipments services.ShipmentService, payments services.PaymentService, audit services.AuditLogService) *AdminOrderHandlers {
 	return &AdminOrderHandlers{
-		authn:    authn,
-		orders:   orders,
-		payments: payments,
-		audit:    audit,
+		authn:     authn,
+		orders:    orders,
+		shipments: shipments,
+		payments:  payments,
+		audit:     audit,
 	}
 }
 
@@ -51,6 +76,9 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	}
 	r.Get("/orders", h.listOrders)
 	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
+	if h.shipments != nil {
+		r.Post("/orders/{orderID}/shipments", h.createShipment)
+	}
 	if h.payments != nil {
 		r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
 		r.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
@@ -366,6 +394,90 @@ func (h *AdminOrderHandlers) updateOrderStatus(w http.ResponseWriter, r *http.Re
 		Order: buildAdminOrderSummary(updated),
 	}
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *AdminOrderHandlers) createShipment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.shipments == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("shipment_service_unavailable", "shipment service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_order_id", "order id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminShipmentBodySize)
+	if err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	}
+
+	var payload adminCreateShipmentRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON payload", http.StatusBadRequest))
+		return
+	}
+
+	items := make([]services.ShipmentItem, 0, len(payload.Items))
+	for _, item := range payload.Items {
+		items = append(items, services.ShipmentItem{
+			LineItemSKU: strings.TrimSpace(item.SKU),
+			Quantity:    item.Quantity,
+		})
+	}
+
+	var pkg *services.ShipmentPackage
+	if payload.Package != nil {
+		pkg = &services.ShipmentPackage{
+			Length: payload.Package.Length,
+			Width:  payload.Package.Width,
+			Height: payload.Package.Height,
+			Weight: payload.Package.Weight,
+			Unit:   strings.TrimSpace(payload.Package.Unit),
+		}
+	}
+
+	cmd := services.CreateShipmentCommand{
+		OrderID:            orderID,
+		Carrier:            payload.Carrier,
+		ServiceLevel:       payload.ServiceLevel,
+		TrackingPreference: payload.TrackingPreference,
+		Package:            pkg,
+		Items:              items,
+		CreatedBy:          identity.UID,
+	}
+	if payload.ManualTrackingCode != nil {
+		manual := strings.TrimSpace(*payload.ManualTrackingCode)
+		if manual != "" {
+			cmd.ManualTrackingCode = &manual
+		}
+	}
+
+	shipment, err := h.shipments.CreateShipment(ctx, cmd)
+	if err != nil {
+		writeShipmentError(ctx, w, err)
+		return
+	}
+
+	response := struct {
+		Shipment orderShipmentPayload `json:"shipment"`
+	}{
+		Shipment: buildOrderShipmentDetail(shipment),
+	}
+	writeJSONResponse(w, http.StatusCreated, response)
 }
 
 type adminPaymentActionRequest struct {

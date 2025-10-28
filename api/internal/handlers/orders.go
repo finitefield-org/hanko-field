@@ -1329,6 +1329,24 @@ func writeOrderError(ctx context.Context, w http.ResponseWriter, err error) {
 	}
 }
 
+func writeShipmentError(ctx context.Context, w http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	switch {
+	case errors.Is(err, services.ErrShipmentInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+	case errors.Is(err, services.ErrShipmentNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("shipment_not_found", "shipment not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrShipmentConflict):
+		httpx.WriteError(ctx, w, httpx.NewError("shipment_conflict", err.Error(), http.StatusConflict))
+	case errors.Is(err, services.ErrOrderNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("order_not_found", "order not found", http.StatusNotFound))
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("shipment_error", "failed to process shipment request", http.StatusInternalServerError))
+	}
+}
+
 func extractReservationID(metadata map[string]any) string {
 	if len(metadata) == 0 {
 		return ""
