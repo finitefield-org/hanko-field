@@ -125,11 +125,22 @@ func (h *Handlers) PromotionsUsageExport(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	detail, err := h.promotions.Detail(ctx, user.Token, promotionID)
+	if err != nil {
+		if errors.Is(err, adminpromotions.ErrPromotionNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		log.Printf("promotions: usage export detail lookup failed: %v", err)
+		http.Error(w, "プロモーション情報の取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
 	formReq := buildPromotionUsageRequestFromValues(r.PostForm)
 	exportReq := adminpromotions.UsageExportRequest{
 		PromotionID:   promotionID,
-		PromotionCode: strings.TrimSpace(r.FormValue("promotionCode")),
-		PromotionName: strings.TrimSpace(r.FormValue("promotionName")),
+		PromotionCode: detail.Promotion.Code,
+		PromotionName: detail.Promotion.Name,
 		Query:         formReq.query,
 		ActorID:       user.UID,
 		ActorEmail:    user.Email,
