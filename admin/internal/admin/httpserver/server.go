@@ -274,6 +274,12 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				cr.Post("/pages/{pageID}:unschedule", uiHandlers.PagesUnschedule)
 				cr.With(custommw.RequireHTMX()).Get("/pages/{pageID}/history", uiHandlers.PagesHistoryModal)
 			})
+			protected.Route("/promotions", func(pr chi.Router) {
+				pr.Get("/", uiHandlers.PromotionsPage)
+				RegisterFragment(pr, "/table", uiHandlers.PromotionsTable)
+				RegisterFragment(pr, "/drawer", uiHandlers.PromotionsDrawer)
+				pr.Post("/bulk/status", uiHandlers.PromotionsBulkStatus)
+			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
 			// Future admin routes will be registered here.

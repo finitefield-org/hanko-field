@@ -2818,6 +2818,98 @@ const initOrdersInteractions = (scope) => {
   initOrdersTable(scope);
 };
 
+const initPromotionsTable = (scope) => {
+  const container = scope instanceof Element ? scope : document;
+  const fragment = container.querySelector("[data-promotions-table-fragment]");
+  if (!(fragment instanceof HTMLElement) || fragment.dataset.promotionsTableInit === "true") {
+    return;
+  }
+  fragment.dataset.promotionsTableInit = "true";
+
+  const master = fragment.querySelector("[data-promotions-master]");
+  const checkboxes = Array.from(fragment.querySelectorAll("[data-promotions-checkbox]")).filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  const root = fragment.closest("[data-promotions-root]") || fragment.parentElement;
+  const toolbar = root ? root.querySelector("[data-promotions-bulk-toolbar]") : null;
+  if (!(toolbar instanceof HTMLElement)) {
+    return;
+  }
+
+  const countEl = toolbar.querySelector("[data-bulk-count]");
+  const messageEl = toolbar.querySelector("[data-bulk-message]");
+  const totalEl = toolbar.querySelector("[data-bulk-total]");
+  const actionButtons = Array.from(toolbar.querySelectorAll("[data-promotions-bulk-action]")).filter(
+    (el) => el instanceof HTMLButtonElement,
+  );
+  const clearButton = toolbar.querySelector("[data-promotions-clear-selection]");
+  const initialCount = Number.parseInt(toolbar.getAttribute("data-initial-count") || "0", 10) || 0;
+
+  const updateState = () => {
+    const selected = checkboxes.filter((input) => input.checked);
+    const count = selected.length;
+    if (toolbar instanceof HTMLElement) {
+      toolbar.dataset.selectedCount = String(count);
+      toolbar.dataset.promotionsSelectedCount = String(count);
+      toolbar.style.display = count > 0 ? "" : "none";
+    }
+    if (countEl instanceof HTMLElement) {
+      countEl.textContent = String(count);
+    }
+    if (messageEl instanceof HTMLElement) {
+      const totalText = totalEl instanceof HTMLElement ? totalEl.textContent?.trim() ?? "" : "";
+      messageEl.textContent = count > 0 ? `${count} 件選択中` : totalText || "選択中のプロモーションはありません";
+    }
+    actionButtons.forEach((button) => {
+      button.disabled = count === 0;
+    });
+    if (master instanceof HTMLInputElement) {
+      master.checked = count > 0 && count === checkboxes.length;
+      master.indeterminate = count > 0 && count < checkboxes.length;
+    }
+  };
+
+  if (master instanceof HTMLInputElement) {
+    master.addEventListener("change", () => {
+      checkboxes.forEach((input) => {
+        input.checked = master.checked;
+      });
+      updateState();
+    });
+  }
+
+  checkboxes.forEach((input) => {
+    input.addEventListener("change", updateState);
+  });
+
+  if (clearButton instanceof HTMLElement) {
+    clearButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      checkboxes.forEach((input) => {
+        input.checked = false;
+      });
+      if (master instanceof HTMLInputElement) {
+        master.checked = false;
+        master.indeterminate = false;
+      }
+      updateState();
+    });
+  }
+
+  if (initialCount > 0) {
+    const limited = checkboxes.slice(0, initialCount);
+    limited.forEach((input) => {
+      input.checked = true;
+    });
+  }
+
+  updateState();
+};
+
+const initPromotionsModule = (scope) => {
+  initPromotionsTable(scope);
+};
+
 // Expose a hook for future htmx/alpine wiring without blocking initial scaffold.
 window.hankoAdmin = window.hankoAdmin || {
   init() {
@@ -2898,6 +2990,7 @@ window.hankoAdmin = window.hankoAdmin || {
     initUserMenu();
     initGlobalSearchInteractions();
     initOrdersInteractions(document);
+    initPromotionsModule(document);
     initAssetUploads(document);
 
     if (window.htmx) {
@@ -2906,6 +2999,7 @@ window.hankoAdmin = window.hankoAdmin || {
           return;
         }
         initOrdersInteractions(event.target);
+        initPromotionsModule(event.target);
         initGuidesModule();
         initShipmentsModule();
         initProductionKanban();

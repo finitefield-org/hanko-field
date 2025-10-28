@@ -1,0 +1,136 @@
+package promotions
+
+import (
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+)
+
+templ Drawer(data DrawerData) {
+	<section
+		class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+		data-promotions-drawer
+	>
+		if data.Empty {
+			<div class="space-y-2 text-sm text-slate-600">
+				<p class="text-base font-semibold text-slate-900">プロモーションを選択してください</p>
+				<p>一覧からプロモーションを選択すると、ターゲティングや監査ログがここに表示されます。</p>
+			</div>
+			return
+		}
+
+		<header class="space-y-2">
+			<div class="flex items-start justify-between gap-3">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ data.TypeLabel }</p>
+					<h2 class="mt-1 text-lg font-semibold text-slate-900">{ data.Title }</h2>
+				</div>
+				<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
+			</div>
+			<div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+				<span>{ data.Schedule }</span>
+				if data.ChannelLabel != "" {
+					<span>· { data.ChannelLabel }</span>
+				}
+			</div>
+			<p class="text-xs text-slate-400">更新者: { data.CreatedBy } · { data.LastEdited } ({ data.LastEditedRelative })</p>
+		</header>
+
+		if len(data.Metrics) > 0 {
+			<div class="mt-4 grid gap-3 sm:grid-cols-2">
+				for _, metric := range data.Metrics {
+					<div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+						<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+							if metric.Icon != "" {
+								<span aria-hidden="true">{ metric.Icon }</span>
+							}
+							{ metric.Label }
+						</div>
+						<div class="mt-1 text-lg font-semibold text-slate-900">{ metric.Value }</div>
+					</div>
+				}
+			</div>
+		}
+
+		<section class="mt-6 space-y-3">
+			<h3 class="text-sm font-semibold text-slate-800">ターゲットセグメント</h3>
+			<p class="text-sm text-slate-600">{ data.SegmentName }</p>
+			<p class="text-xs text-slate-500">{ data.SegmentDescription }</p>
+			if len(data.SegmentPreview) > 0 {
+				<div class="flex flex-wrap gap-2 text-xs text-slate-400">
+					for _, preview := range data.SegmentPreview {
+						<span class="rounded-full bg-slate-100 px-2 py-0.5">#{ preview }</span>
+					}
+				</div>
+			}
+		</section>
+
+		if len(data.Targeting) > 0 {
+			<section class="mt-6 space-y-2">
+				<h3 class="text-sm font-semibold text-slate-800">対象条件</h3>
+				<dl class="space-y-2">
+					for _, item := range data.Targeting {
+						<div class="flex items-start justify-between gap-2 text-sm text-slate-600">
+							<dt class="font-medium text-slate-500 flex items-center gap-1">
+								if item.Icon != "" {
+									<span aria-hidden="true">{ item.Icon }</span>
+								}
+								{ item.Label }
+							</dt>
+							<dd class="text-right text-slate-700">{ item.Value }</dd>
+						</div>
+					}
+				</dl>
+			</section>
+		}
+
+		if len(data.Benefits) > 0 {
+			<section class="mt-6 space-y-2">
+				<h3 class="text-sm font-semibold text-slate-800">提供特典</h3>
+				<ul class="space-y-2 text-sm text-slate-600">
+					for _, benefit := range data.Benefits {
+						<li class="flex items-start gap-2">
+							if benefit.Icon != "" {
+								<span aria-hidden="true">{ benefit.Icon }</span>
+							}
+							<div>
+								<p class="font-medium text-slate-700">{ benefit.Label }</p>
+								<p class="text-xs text-slate-500">{ benefit.Value }</p>
+							</div>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.Usage) > 0 {
+			<section class="mt-6 space-y-2">
+				<h3 class="text-sm font-semibold text-slate-800">利用内訳</h3>
+				<ul class="space-y-1 text-sm text-slate-600">
+					for _, item := range data.Usage {
+						<li class="flex items-center justify-between gap-2">
+							<span>{ item.Label }</span>
+							<span class="font-semibold text-slate-900">{ item.Value }</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.AuditLog) > 0 {
+			<section class="mt-6 space-y-3">
+				<h3 class="text-sm font-semibold text-slate-800">監査ログ</h3>
+				<ol class="space-y-2 text-sm text-slate-600">
+					for _, entry := range data.AuditLog {
+						<li class="rounded-lg border border-slate-200 px-3 py-2">
+							<div class="flex items-center justify-between text-xs text-slate-500">
+								<span>{ entry.Timestamp }</span>
+								<span>{ entry.Relative }</span>
+							</div>
+							<p class="mt-1 text-sm font-semibold text-slate-800">{ entry.Action }</p>
+							<p class="text-xs text-slate-500">{ entry.Actor } · { entry.Summary }</p>
+						</li>
+					}
+				</ol>
+			</section>
+		}
+	</section>
+}

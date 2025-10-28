@@ -134,7 +134,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(header.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 35, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 35, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -152,7 +152,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(header.Subtitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 37, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 37, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -179,7 +179,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var6).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -192,7 +192,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(header.StatusLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 40, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 40, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -210,7 +210,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(header.UpdatedRelative)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 42, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 42, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -229,7 +229,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(header.UpdatedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 45, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 45, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -262,7 +262,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 				var templ_7745c5c3_Var12 templ.SafeURL
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(option.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 54, Col: 25}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 54, Col: 25}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -275,7 +275,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var11).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -288,7 +288,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(boolAttr(option.Active))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 57, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 57, Col: 47}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -301,7 +301,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 59, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 59, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -329,7 +329,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 			var templ_7745c5c3_Var16 templ.SafeURL
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(header.ShareURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 66, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 66, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -348,7 +348,7 @@ func previewHeader(header PreviewHeaderData) templ.Component {
 			var templ_7745c5c3_Var17 templ.SafeURL
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(header.ExternalURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 72, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 72, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -400,7 +400,7 @@ func previewViewport(viewer PreviewContentData) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(viewer.Language)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 88, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 88, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -433,7 +433,7 @@ func previewViewport(viewer PreviewContentData) templ.Component {
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var20).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -456,7 +456,7 @@ func previewViewport(viewer PreviewContentData) templ.Component {
 				var templ_7745c5c3_Var22 string
 				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(mode.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 95, Col: 19}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 95, Col: 19}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 				if templ_7745c5c3_Err != nil {
@@ -484,7 +484,7 @@ func previewViewport(viewer PreviewContentData) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(viewer.HeroImageURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 104, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 104, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -544,7 +544,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(sidebar.Summary)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 122, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 122, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -617,7 +617,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(shareURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 155, Col: 94}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 155, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -641,7 +641,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 163, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 163, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -674,7 +674,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(note)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 175, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 175, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -708,7 +708,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 					var templ_7745c5c3_Var29 string
 					templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(event.Icon)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 187, Col: 42}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 187, Col: 42}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 					if templ_7745c5c3_Err != nil {
@@ -726,7 +726,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(event.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 190, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 190, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
@@ -744,7 +744,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 					var templ_7745c5c3_Var31 string
 					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(event.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 192, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 192, Col: 54}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 					if templ_7745c5c3_Err != nil {
@@ -762,7 +762,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(event.OccursLabel)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 194, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 194, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
@@ -775,7 +775,7 @@ func previewSidebar(sidebar PreviewSidebarData, shareURL string) templ.Component
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(event.Relative)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 194, Col: 83}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 194, Col: 83}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -827,7 +827,7 @@ func previewActionBar(feedback PreviewFeedbackData) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(feedback.CommentPlaceholder)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 213, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 213, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -845,7 +845,7 @@ func previewActionBar(feedback PreviewFeedbackData) templ.Component {
 			var templ_7745c5c3_Var36 templ.SafeURL
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinURLErrs(feedback.RequestChangesURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 218, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 218, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 			if templ_7745c5c3_Err != nil {
@@ -864,7 +864,7 @@ func previewActionBar(feedback PreviewFeedbackData) templ.Component {
 			var templ_7745c5c3_Var37 templ.SafeURL
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinURLErrs(feedback.ApproveURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 221, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 221, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -911,7 +911,7 @@ func metaRow(label string, value string) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 230, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 230, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -924,7 +924,7 @@ func metaRow(label string, value string) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/guides/preview.templ`, Line: 231, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `guides/preview.templ`, Line: 231, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
