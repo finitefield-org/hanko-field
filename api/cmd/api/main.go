@@ -448,11 +448,13 @@ func main() {
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
 	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
 	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, promotionService)
+	adminInventoryHandlers := handlers.NewAdminInventoryHandlers(authenticator, inventoryService, nil, orderService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
 		adminContentHandlers.Routes,
 		adminPromotionHandlers.Routes,
+		adminInventoryHandlers.Routes,
 	}
 	if orderService != nil {
 		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, shipmentService, nil, nil)

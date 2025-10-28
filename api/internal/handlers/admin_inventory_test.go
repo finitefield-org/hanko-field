@@ -1,0 +1,301 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	domain "github.com/hanko-field/api/internal/domain"
+	"github.com/hanko-field/api/internal/platform/auth"
+	"github.com/hanko-field/api/internal/services"
+)
+
+func TestAdminInventoryHandlers_ListLowStock_RequiresAuthentication(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/stock/low", nil)
+	rec := httptest.NewRecorder()
+
+	handler.listLowStock(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ListLowStock_RequiresStaffRole(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/stock/low", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "user-1", Roles: []string{"customer"}}))
+	rec := httptest.NewRecorder()
+
+	handler.listLowStock(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ListLowStock_ServiceUnavailable(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/stock/low", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.listLowStock(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ListLowStock_AggregatesSupplierAndVelocity(t *testing.T) {
+	now := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	var capturedFilter services.InventoryLowStockFilter
+	inventory := &stubInventoryService{
+		listFn: func(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+			capturedFilter = filter
+			return domain.CursorPage[services.InventorySnapshot]{
+				Items: []services.InventorySnapshot{{
+					SKU:         "SKU-42",
+					ProductRef:  "/materials/mat-wood",
+					OnHand:      12,
+					Reserved:    3,
+					Available:   9,
+					SafetyStock: 15,
+					SafetyDelta: -6,
+					UpdatedAt:   now.Add(-2 * time.Hour),
+				}},
+				NextPageToken: " next ",
+			}, nil
+		},
+	}
+
+	catalog := &inventoryCatalogStub{
+		getMaterialFn: func(ctx context.Context, materialID string) (services.Material, error) {
+			if materialID != "mat-wood" {
+				t.Fatalf("expected material id mat-wood got %s", materialID)
+			}
+			return services.Material{
+				MaterialSummary: services.MaterialSummary{
+					ID:           materialID,
+					LeadTimeDays: 12,
+					Procurement: services.MaterialProcurement{
+						SupplierRef:  "sup-17",
+						SupplierName: "Nagoya Timber",
+					},
+				},
+			}, nil
+		},
+	}
+
+	order := &stubOrderService{
+		listFn: func(ctx context.Context, filter services.OrderListFilter) (domain.CursorPage[services.Order], error) {
+			if filter.Pagination.PageSize != 100 {
+				t.Fatalf("expected page size 100, got %d", filter.Pagination.PageSize)
+			}
+			if filter.DateRange.From == nil {
+				t.Fatalf("expected lookback start")
+			}
+			expectedFrom := now.Add(-14 * 24 * time.Hour)
+			if filter.DateRange.From.Sub(expectedFrom) > time.Second || filter.DateRange.From.Sub(expectedFrom) < -time.Second {
+				t.Fatalf("expected lookback start near %v got %v", expectedFrom, filter.DateRange.From)
+			}
+			statuses := map[string]bool{}
+			for _, s := range filter.Status {
+				statuses[s] = true
+			}
+			if !statuses[string(domain.OrderStatusPaid)] || !statuses[string(domain.OrderStatusCompleted)] {
+				t.Fatalf("expected relevant statuses, got %v", filter.Status)
+			}
+			return domain.CursorPage[services.Order]{
+				Items: []services.Order{
+					{
+						ID:        "ord-1",
+						CreatedAt: now.Add(-time.Hour),
+						Status:    domain.OrderStatusPaid,
+						Items: []services.OrderLineItem{
+							{SKU: "SKU-42", Quantity: 7},
+						},
+					},
+					{
+						ID:        "ord-2",
+						CreatedAt: now.Add(-48 * time.Hour),
+						Status:    domain.OrderStatusCompleted,
+						Items: []services.OrderLineItem{
+							{SKU: "SKU-42", Quantity: 7},
+							{SKU: "SKU-99", Quantity: 2},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := NewAdminInventoryHandlers(nil, inventory, catalog, order)
+	handler.now = func() time.Time { return now }
+	handler.velocityLookbackDays = 14
+	handler.orderPageSize = 100
+	handler.maxOrderPages = 3
+
+	req := httptest.NewRequest(http.MethodGet, "/stock/low?threshold=5&page_size=120&page_token=%20tok%20", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.listLowStock(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 got %d", rec.Code)
+	}
+
+	if capturedFilter.Threshold != 5 {
+		t.Fatalf("expected threshold 5 got %d", capturedFilter.Threshold)
+	}
+	if capturedFilter.Pagination.PageSize != 120 {
+		t.Fatalf("expected page size 120 got %d", capturedFilter.Pagination.PageSize)
+	}
+	if capturedFilter.Pagination.PageToken != "tok" {
+		t.Fatalf("expected trimmed page token tok got %q", capturedFilter.Pagination.PageToken)
+	}
+
+	var payload adminLowStockResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.NextPageToken != "next" {
+		t.Fatalf("expected trimmed next page token next got %q", payload.NextPageToken)
+	}
+	if len(payload.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(payload.Items))
+	}
+	item := payload.Items[0]
+	if item.SKU != "SKU-42" {
+		t.Fatalf("expected sku preserved got %s", item.SKU)
+	}
+	if strings.TrimSpace(item.SupplierRef) != "sup-17" {
+		t.Fatalf("expected supplier ref sup-17 got %s", item.SupplierRef)
+	}
+	if strings.TrimSpace(item.SupplierName) != "Nagoya Timber" {
+		t.Fatalf("expected supplier name Nagoya Timber got %s", item.SupplierName)
+	}
+	expectedVelocity := 1.0 // 14 units / 14 days
+	if item.RecentSalesVelocity != expectedVelocity {
+		t.Fatalf("expected velocity %.1f got %.2f", expectedVelocity, item.RecentSalesVelocity)
+	}
+	if item.ProjectedDepletionDate == nil {
+		t.Fatalf("expected projected depletion date")
+	}
+	expectedDepletion := now.Add(9 * 24 * time.Hour)
+	if item.ProjectedDepletionDate.Sub(expectedDepletion) > time.Minute || item.ProjectedDepletionDate.Sub(expectedDepletion) < -time.Minute {
+		t.Fatalf("expected depletion around %v got %v", expectedDepletion, item.ProjectedDepletionDate)
+	}
+}
+
+type stubInventoryService struct {
+	listFn func(context.Context, services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error)
+}
+
+func (s *stubInventoryService) ReserveStocks(ctx context.Context, cmd services.InventoryReserveCommand) (services.InventoryReservation, error) {
+	return services.InventoryReservation{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) CommitReservation(ctx context.Context, cmd services.InventoryCommitCommand) (services.InventoryReservation, error) {
+	return services.InventoryReservation{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) ReleaseReservation(ctx context.Context, cmd services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+	return services.InventoryReservation{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) ListLowStock(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, filter)
+	}
+	return domain.CursorPage[services.InventorySnapshot]{}, nil
+}
+
+func (s *stubInventoryService) ConfigureSafetyStock(ctx context.Context, cmd services.ConfigureSafetyStockCommand) (services.InventoryStock, error) {
+	return services.InventoryStock{}, errors.New("not implemented")
+}
+
+type inventoryCatalogStub struct {
+	getMaterialFn func(context.Context, string) (services.Material, error)
+	getProductFn  func(context.Context, string) (services.Product, error)
+}
+
+func (s *inventoryCatalogStub) ListTemplates(ctx context.Context, filter services.TemplateFilter) (domain.CursorPage[services.TemplateSummary], error) {
+	return domain.CursorPage[services.TemplateSummary]{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) GetTemplate(ctx context.Context, templateID string) (services.Template, error) {
+	return services.Template{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) UpsertTemplate(ctx context.Context, cmd services.UpsertTemplateCommand) (services.Template, error) {
+	return services.Template{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) DeleteTemplate(ctx context.Context, cmd services.DeleteTemplateCommand) error {
+	return errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) ListFonts(ctx context.Context, filter services.FontFilter) (domain.CursorPage[services.FontSummary], error) {
+	return domain.CursorPage[services.FontSummary]{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) GetFont(ctx context.Context, fontID string) (services.Font, error) {
+	return services.Font{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) UpsertFont(ctx context.Context, cmd services.UpsertFontCommand) (services.FontSummary, error) {
+	return services.FontSummary{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) DeleteFont(ctx context.Context, fontID string) error {
+	return errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) ListMaterials(ctx context.Context, filter services.MaterialFilter) (domain.CursorPage[services.MaterialSummary], error) {
+	return domain.CursorPage[services.MaterialSummary]{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) GetMaterial(ctx context.Context, materialID string) (services.Material, error) {
+	if s.getMaterialFn != nil {
+		return s.getMaterialFn(ctx, materialID)
+	}
+	return services.Material{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) UpsertMaterial(ctx context.Context, cmd services.UpsertMaterialCommand) (services.MaterialSummary, error) {
+	return services.MaterialSummary{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) DeleteMaterial(ctx context.Context, cmd services.DeleteMaterialCommand) error {
+	return errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) ListProducts(ctx context.Context, filter services.ProductFilter) (domain.CursorPage[services.ProductSummary], error) {
+	return domain.CursorPage[services.ProductSummary]{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) GetProduct(ctx context.Context, productID string) (services.Product, error) {
+	if s.getProductFn != nil {
+		return s.getProductFn(ctx, productID)
+	}
+	return services.Product{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) UpsertProduct(ctx context.Context, cmd services.UpsertProductCommand) (services.Product, error) {
+	return services.Product{}, errors.New("not implemented")
+}
+
+func (s *inventoryCatalogStub) DeleteProduct(ctx context.Context, cmd services.DeleteProductCommand) error {
+	return errors.New("not implemented")
+}
