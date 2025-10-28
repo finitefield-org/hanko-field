@@ -21,9 +21,7 @@ class DesignCreationController extends Notifier<DesignCreationState> {
   void selectMode(DesignSourceType mode) {
     state = state.copyWith(
       selectedMode: mode,
-      storagePermissionGranted: mode == DesignSourceType.typed
-          ? true
-          : state.storagePermissionGranted,
+      storagePermissionGranted: mode == DesignSourceType.typed,
     );
   }
 

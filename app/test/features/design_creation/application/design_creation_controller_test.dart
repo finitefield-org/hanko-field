@@ -85,5 +85,21 @@ void main() {
       state = container.read(designCreationControllerProvider);
       expect(state.selectedFilter, isNull);
     });
+
+    test('selectMode resets storage permission when leaving typed flow', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(
+        designCreationControllerProvider.notifier,
+      );
+      notifier.selectMode(DesignSourceType.typed);
+      var state = container.read(designCreationControllerProvider);
+      expect(state.storagePermissionGranted, isTrue);
+
+      notifier.selectMode(DesignSourceType.uploaded);
+      state = container.read(designCreationControllerProvider);
+      expect(state.storagePermissionGranted, isFalse);
+    });
   });
 }
