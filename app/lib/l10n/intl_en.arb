@@ -232,4 +232,109 @@
 , "@homeShapeSquare": {
   "description": "Label for square shape chip"
 }
+
+, "designNewTitle": "Start a new seal"
+, "@designNewTitle": {
+  "description": "Title for the design type selection screen"
+}
+
+, "designNewSubtitle": "Choose how you'd like to create your seal design."
+, "@designNewSubtitle": {
+  "description": "Subtitle explaining the available creation modes"
+}
+
+, "designNewHelpTooltip": "Help for design creation"
+, "@designNewHelpTooltip": {
+  "description": "Tooltip for the help icon on the design creation entry screen"
+}
+
+, "designNewContinueLabel": "Continue"
+, "@designNewContinueLabel": {
+  "description": "Label for the primary action button advancing the creation flow"
+}
+
+, "designNewFilterPersonal": "Personal seal"
+, "@designNewFilterPersonal": {
+  "description": "Quick filter chip label for personal seal use cases"
+}
+
+, "designNewFilterBusiness": "Business use"
+, "@designNewFilterBusiness": {
+  "description": "Quick filter chip label for business use cases"
+}
+
+, "designNewFilterGift": "Gift / ceremonial"
+, "@designNewFilterGift": {
+  "description": "Quick filter chip label for gift or ceremonial use cases"
+}
+
+, "designNewOptionTypedTitle": "Type your name"
+, "@designNewOptionTypedTitle": {
+  "description": "Card title for the typed input creation mode"
+}
+
+, "designNewOptionTypedDescription": "Enter kanji or romaji and preview layouts instantly."
+, "@designNewOptionTypedDescription": {
+  "description": "Description for the typed input creation mode card"
+}
+
+, "designNewOptionUploadTitle": "Upload artwork"
+, "@designNewOptionUploadTitle": {
+  "description": "Card title for the upload creation mode"
+}
+
+, "designNewOptionUploadDescription": "Import an existing seal image to refine or trace."
+, "@designNewOptionUploadDescription": {
+  "description": "Description for the upload creation mode card"
+}
+
+, "designNewOptionLogoTitle": "Engrave a logo"
+, "@designNewOptionLogoTitle": {
+  "description": "Card title for the logo engraving mode"
+}
+
+, "designNewOptionLogoDescription": "Provide brand marks or vector files for engraving guidance."
+, "@designNewOptionLogoDescription": {
+  "description": "Description for the logo engraving mode card"
+}
+
+, "designNewHighlightsTitle": "What you get in each mode"
+, "@designNewHighlightsTitle": {
+  "description": "Section title for the feature highlight list"
+}
+
+, "designNewHighlightsAiTitle": "AI assistance"
+, "@designNewHighlightsAiTitle": {
+  "description": "Feature highlight title for AI support"
+}
+
+, "designNewHighlightsAiBody": "Receive smart suggestions for layouts, naming, and visual balance."
+, "@designNewHighlightsAiBody": {
+  "description": "Feature highlight body text describing AI support"
+}
+
+, "designNewHighlightsTemplateTitle": "Templates & fonts"
+, "@designNewHighlightsTemplateTitle": {
+  "description": "Feature highlight title for templates"
+}
+
+, "designNewHighlightsTemplateBody": "Browse curated scripts and templates tuned for Japanese seals."
+, "@designNewHighlightsTemplateBody": {
+  "description": "Feature highlight body text for templates"
+}
+
+, "designNewHighlightsCloudTitle": "Cloud workspace"
+, "@designNewHighlightsCloudTitle": {
+  "description": "Feature highlight title for cloud syncing"
+}
+
+, "designNewHighlightsCloudBody": "Keep uploads synced securely so you can resume on any device."
+, "@designNewHighlightsCloudBody": {
+  "description": "Feature highlight body text for cloud syncing"
+}
+
+, "designNewPermissionDenied": "Storage access is required to continue with this mode."
+, "@designNewPermissionDenied": {
+  "description": "Snackbar message shown when storage permission is missing"
+}
 }

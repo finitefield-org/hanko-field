@@ -361,6 +361,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Square'**
   String get homeShapeSquare;
+
+  /// Title for the design type selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new seal'**
+  String get designNewTitle;
+
+  /// Subtitle explaining the available creation modes
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you\'d like to create your seal design.'**
+  String get designNewSubtitle;
+
+  /// Tooltip for the help icon on the design creation entry screen
+  ///
+  /// In en, this message translates to:
+  /// **'Help for design creation'**
+  String get designNewHelpTooltip;
+
+  /// Label for the primary action button advancing the creation flow
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get designNewContinueLabel;
+
+  /// Quick filter chip label for personal seal use cases
+  ///
+  /// In en, this message translates to:
+  /// **'Personal seal'**
+  String get designNewFilterPersonal;
+
+  /// Quick filter chip label for business use cases
+  ///
+  /// In en, this message translates to:
+  /// **'Business use'**
+  String get designNewFilterBusiness;
+
+  /// Quick filter chip label for gift or ceremonial use cases
+  ///
+  /// In en, this message translates to:
+  /// **'Gift / ceremonial'**
+  String get designNewFilterGift;
+
+  /// Card title for the typed input creation mode
+  ///
+  /// In en, this message translates to:
+  /// **'Type your name'**
+  String get designNewOptionTypedTitle;
+
+  /// Description for the typed input creation mode card
+  ///
+  /// In en, this message translates to:
+  /// **'Enter kanji or romaji and preview layouts instantly.'**
+  String get designNewOptionTypedDescription;
+
+  /// Card title for the upload creation mode
+  ///
+  /// In en, this message translates to:
+  /// **'Upload artwork'**
+  String get designNewOptionUploadTitle;
+
+  /// Description for the upload creation mode card
+  ///
+  /// In en, this message translates to:
+  /// **'Import an existing seal image to refine or trace.'**
+  String get designNewOptionUploadDescription;
+
+  /// Card title for the logo engraving mode
+  ///
+  /// In en, this message translates to:
+  /// **'Engrave a logo'**
+  String get designNewOptionLogoTitle;
+
+  /// Description for the logo engraving mode card
+  ///
+  /// In en, this message translates to:
+  /// **'Provide brand marks or vector files for engraving guidance.'**
+  String get designNewOptionLogoDescription;
+
+  /// Section title for the feature highlight list
+  ///
+  /// In en, this message translates to:
+  /// **'What you get in each mode'**
+  String get designNewHighlightsTitle;
+
+  /// Feature highlight title for AI support
+  ///
+  /// In en, this message translates to:
+  /// **'AI assistance'**
+  String get designNewHighlightsAiTitle;
+
+  /// Feature highlight body text describing AI support
+  ///
+  /// In en, this message translates to:
+  /// **'Receive smart suggestions for layouts, naming, and visual balance.'**
+  String get designNewHighlightsAiBody;
+
+  /// Feature highlight title for templates
+  ///
+  /// In en, this message translates to:
+  /// **'Templates & fonts'**
+  String get designNewHighlightsTemplateTitle;
+
+  /// Feature highlight body text for templates
+  ///
+  /// In en, this message translates to:
+  /// **'Browse curated scripts and templates tuned for Japanese seals.'**
+  String get designNewHighlightsTemplateBody;
+
+  /// Feature highlight title for cloud syncing
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud workspace'**
+  String get designNewHighlightsCloudTitle;
+
+  /// Feature highlight body text for cloud syncing
+  ///
+  /// In en, this message translates to:
+  /// **'Keep uploads synced securely so you can resume on any device.'**
+  String get designNewHighlightsCloudBody;
+
+  /// Snackbar message shown when storage permission is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Storage access is required to continue with this mode.'**
+  String get designNewPermissionDenied;
 }
 
 class _AppLocalizationsDelegate

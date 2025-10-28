@@ -156,4 +156,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeShapeSquare => 'Square';
+
+  @override
+  String get designNewTitle => 'Start a new seal';
+
+  @override
+  String get designNewSubtitle =>
+      'Choose how you\'d like to create your seal design.';
+
+  @override
+  String get designNewHelpTooltip => 'Help for design creation';
+
+  @override
+  String get designNewContinueLabel => 'Continue';
+
+  @override
+  String get designNewFilterPersonal => 'Personal seal';
+
+  @override
+  String get designNewFilterBusiness => 'Business use';
+
+  @override
+  String get designNewFilterGift => 'Gift / ceremonial';
+
+  @override
+  String get designNewOptionTypedTitle => 'Type your name';
+
+  @override
+  String get designNewOptionTypedDescription =>
+      'Enter kanji or romaji and preview layouts instantly.';
+
+  @override
+  String get designNewOptionUploadTitle => 'Upload artwork';
+
+  @override
+  String get designNewOptionUploadDescription =>
+      'Import an existing seal image to refine or trace.';
+
+  @override
+  String get designNewOptionLogoTitle => 'Engrave a logo';
+
+  @override
+  String get designNewOptionLogoDescription =>
+      'Provide brand marks or vector files for engraving guidance.';
+
+  @override
+  String get designNewHighlightsTitle => 'What you get in each mode';
+
+  @override
+  String get designNewHighlightsAiTitle => 'AI assistance';
+
+  @override
+  String get designNewHighlightsAiBody =>
+      'Receive smart suggestions for layouts, naming, and visual balance.';
+
+  @override
+  String get designNewHighlightsTemplateTitle => 'Templates & fonts';
+
+  @override
+  String get designNewHighlightsTemplateBody =>
+      'Browse curated scripts and templates tuned for Japanese seals.';
+
+  @override
+  String get designNewHighlightsCloudTitle => 'Cloud workspace';
+
+  @override
+  String get designNewHighlightsCloudBody =>
+      'Keep uploads synced securely so you can resume on any device.';
+
+  @override
+  String get designNewPermissionDenied =>
+      'Storage access is required to continue with this mode.';
 }

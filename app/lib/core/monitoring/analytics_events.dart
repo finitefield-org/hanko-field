@@ -276,3 +276,33 @@ class HomeFeedRefreshedEvent extends AnalyticsEvent {
     }
   }
 }
+
+class DesignCreationModeSelectedEvent extends AnalyticsEvent {
+  const DesignCreationModeSelectedEvent({required this.mode, this.filter});
+
+  final String mode;
+  final String? filter;
+
+  @override
+  String get name => 'design_creation_mode_selected';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'mode': mode,
+    if (filter != null) 'filter': filter!,
+  };
+
+  @override
+  void validate() {
+    if (mode.isEmpty || mode.length > 24) {
+      throw ArgumentError.value(mode, 'mode', 'Mode must be 1-24 characters.');
+    }
+    if (filter != null && (filter!.isEmpty || filter!.length > 24)) {
+      throw ArgumentError.value(
+        filter,
+        'filter',
+        'Filter must be 1-24 characters.',
+      );
+    }
+  }
+}

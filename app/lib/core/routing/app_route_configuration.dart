@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
+import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
@@ -89,7 +90,12 @@ class CreationStageRoute implements IndependentRoute {
   final List<String> stageSegments;
 
   @override
-  Widget get page => CreationStagePage(stageSegments: stageSegments);
+  Widget get page {
+    if (stageSegments.isEmpty || stageSegments.first == 'new') {
+      return const DesignTypeSelectionPage();
+    }
+    return CreationStagePage(stageSegments: stageSegments);
+  }
 
   @override
   Object stackKey(AppTab tab, int index) =>
