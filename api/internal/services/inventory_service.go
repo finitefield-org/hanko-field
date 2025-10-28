@@ -19,6 +19,9 @@ const (
 	eventInventoryCommit  = "inventory.commit"
 	eventInventoryRelease = "inventory.release"
 
+	defaultExpiredReleaseBatchSize = 100
+	maxExpiredReleaseBatchSize     = 500
+
 	statusReserved  = "reserved"
 	statusCommitted = "committed"
 	statusReleased  = "released"
@@ -217,6 +220,98 @@ func (s *inventoryService) ReleaseReservation(ctx context.Context, cmd Inventory
 	s.logEventFailure(ctx, s.emitStockEvents(ctx, eventInventoryRelease, result.Reservation, result.Stocks, deltas, metadata))
 
 	return result.Reservation, nil
+}
+
+func (s *inventoryService) ReleaseExpiredReservations(ctx context.Context, cmd ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error) {
+	limit := cmd.Limit
+	if limit <= 0 {
+		limit = defaultExpiredReleaseBatchSize
+	}
+	if limit > maxExpiredReleaseBatchSize {
+		limit = maxExpiredReleaseBatchSize
+	}
+
+	now := s.now()
+	reservations, err := s.repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now,
+		Limit:  limit,
+	})
+	if err != nil {
+		return InventoryReleaseExpiredResult{}, s.mapRepositoryError(err)
+	}
+
+	result := InventoryReleaseExpiredResult{
+		CheckedCount: len(reservations),
+	}
+	if len(reservations) == 0 {
+		return result, nil
+	}
+
+	reason := strings.TrimSpace(cmd.Reason)
+	if reason == "" {
+		reason = "expired_manual_release"
+	}
+	actorID := strings.TrimSpace(cmd.ActorID)
+
+	skuSet := make(map[string]struct{})
+	result.ReservationIDs = make([]string, 0, len(reservations))
+	for _, reservation := range reservations {
+		released, releaseErr := s.ReleaseReservation(ctx, InventoryReleaseCommand{
+			ReservationID: reservation.ID,
+			Reason:        reason,
+			ActorID:       actorID,
+		})
+		if releaseErr != nil {
+			switch {
+			case errors.Is(releaseErr, ErrInventoryInvalidState):
+				result.AlreadyReleasedCount++
+				result.AlreadyReleasedIDs = append(result.AlreadyReleasedIDs, reservation.ID)
+				continue
+			case errors.Is(releaseErr, ErrInventoryReservationNotFound):
+				result.NotFoundCount++
+				continue
+			default:
+				return InventoryReleaseExpiredResult{}, releaseErr
+			}
+		}
+		result.ReleasedCount++
+		result.ReservationIDs = append(result.ReservationIDs, released.ID)
+		for _, line := range released.Lines {
+			sku := strings.TrimSpace(line.SKU)
+			if sku == "" {
+				continue
+			}
+			skuSet[sku] = struct{}{}
+		}
+	}
+
+	if len(skuSet) > 0 {
+		result.SKUs = make([]string, 0, len(skuSet))
+		for sku := range skuSet {
+			result.SKUs = append(result.SKUs, sku)
+		}
+		sort.Strings(result.SKUs)
+	}
+
+	if s.logger != nil {
+		fields := map[string]any{
+			"released": result.ReleasedCount,
+			"checked":  result.CheckedCount,
+			"limit":    limit,
+		}
+		if actorID != "" {
+			fields["actorId"] = actorID
+		}
+		if result.AlreadyReleasedCount > 0 {
+			fields["alreadyReleased"] = result.AlreadyReleasedCount
+		}
+		if result.NotFoundCount > 0 {
+			fields["notFound"] = result.NotFoundCount
+		}
+		s.logger(ctx, "inventory.releaseExpired", fields)
+	}
+
+	return result, nil
 }
 
 func (s *inventoryService) ListLowStock(ctx context.Context, filter InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error) {

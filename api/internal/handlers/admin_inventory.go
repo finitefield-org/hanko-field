@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -24,7 +25,23 @@ const (
 	defaultVelocityLookback      = 14
 	defaultLowStockOrderPageSize = 200
 	maxVelocityPages             = 20
+	maxReleaseExpiredBodySize    = 8 * 1024
 )
+
+type adminReleaseExpiredRequest struct {
+	Limit  *int   `json:"limit"`
+	Reason string `json:"reason"`
+}
+
+type adminReleaseExpiredResponse struct {
+	CheckedCount         int      `json:"checked_count"`
+	ReleasedCount        int      `json:"released_count"`
+	AlreadyReleasedCount int      `json:"already_released_count"`
+	NotFoundCount        int      `json:"not_found_count"`
+	ReservationIDs       []string `json:"reservation_ids"`
+	AlreadyReleasedIDs   []string `json:"already_released_ids"`
+	Skus                 []string `json:"skus"`
+}
 
 // AdminInventoryHandlers exposes admin/staff stock endpoints.
 type AdminInventoryHandlers struct {
@@ -96,6 +113,7 @@ func (h *AdminInventoryHandlers) Routes(r chi.Router) {
 	}
 	r.Route("/stock", func(rt chi.Router) {
 		rt.Get("/low", h.listLowStock)
+		rt.Post("/reservations:release-expired", h.releaseExpiredReservations)
 	})
 }
 
@@ -226,6 +244,79 @@ func (h *AdminInventoryHandlers) listLowStock(w http.ResponseWriter, r *http.Req
 	_ = json.NewEncoder(w).Encode(response)
 }
 
+func (h *AdminInventoryHandlers) releaseExpiredReservations(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.inventory == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("inventory_service_unavailable", "inventory service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	var payload adminReleaseExpiredRequest
+	if r.Body != nil {
+		raw, err := io.ReadAll(io.LimitReader(r.Body, maxReleaseExpiredBodySize+1))
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		}
+		if int64(len(raw)) > maxReleaseExpiredBodySize {
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+			return
+		}
+		if trimmed := strings.TrimSpace(string(raw)); trimmed != "" {
+			if err := json.Unmarshal([]byte(trimmed), &payload); err != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+				return
+			}
+		}
+	}
+
+	if payload.Limit != nil && *payload.Limit < 0 {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "limit must be non-negative", http.StatusBadRequest))
+		return
+	}
+
+	cmd := services.ReleaseExpiredReservationsCommand{
+		ActorID: strings.TrimSpace(identity.UID),
+		Reason:  strings.TrimSpace(payload.Reason),
+	}
+	if payload.Limit != nil {
+		cmd.Limit = *payload.Limit
+	}
+
+	result, err := h.inventory.ReleaseExpiredReservations(ctx, cmd)
+	if err != nil {
+		status := http.StatusInternalServerError
+		code := "inventory_release_failed"
+		if errors.Is(err, services.ErrInventoryInvalidInput) {
+			status = http.StatusBadRequest
+			code = "invalid_request"
+		}
+		httpx.WriteError(ctx, w, httpx.NewError(code, err.Error(), status))
+		return
+	}
+
+	response := adminReleaseExpiredResponse{
+		CheckedCount:         result.CheckedCount,
+		ReleasedCount:        result.ReleasedCount,
+		AlreadyReleasedCount: result.AlreadyReleasedCount,
+		NotFoundCount:        result.NotFoundCount,
+		ReservationIDs:       ensureStringSlice(result.ReservationIDs),
+		AlreadyReleasedIDs:   ensureStringSlice(result.AlreadyReleasedIDs),
+		Skus:                 ensureStringSlice(result.SKUs),
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
 func (h *AdminInventoryHandlers) computeSalesVelocity(ctx context.Context, now time.Time, skus map[string]struct{}) (map[string]float64, error) {
 	result := make(map[string]float64, len(skus))
 	if h.orders == nil || len(skus) == 0 {
@@ -375,4 +466,11 @@ type adminLowStockItem struct {
 	RecentSalesVelocity    float64    `json:"recent_sales_velocity"`
 	ProjectedDepletionDate *time.Time `json:"projected_depletion_date,omitempty"`
 	UpdatedAt              time.Time  `json:"updated_at"`
+}
+
+func ensureStringSlice(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }

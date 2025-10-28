@@ -70,6 +70,117 @@ func TestAdminInventoryHandlers_ListLowStock_CatalogUnavailable(t *testing.T) {
 	}
 }
 
+func TestAdminInventoryHandlers_ReleaseExpired_RequiresAuthentication(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", nil)
+	rec := httptest.NewRecorder()
+
+	handler.releaseExpiredReservations(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ReleaseExpired_RequiresStaffRole(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "user-1", Roles: []string{"customer"}}))
+	rec := httptest.NewRecorder()
+
+	handler.releaseExpiredReservations(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ReleaseExpired_ServiceUnavailable(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", nil)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.releaseExpiredReservations(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ReleaseExpired_RejectsNegativeLimit(t *testing.T) {
+	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", strings.NewReader(`{"limit": -5}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.releaseExpiredReservations(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAdminInventoryHandlers_ReleaseExpired_Succeeds(t *testing.T) {
+	var captured services.ReleaseExpiredReservationsCommand
+	inventory := &stubInventoryService{
+		releaseExpiredFn: func(ctx context.Context, cmd services.ReleaseExpiredReservationsCommand) (services.InventoryReleaseExpiredResult, error) {
+			captured = cmd
+			return services.InventoryReleaseExpiredResult{
+				CheckedCount:         3,
+				ReleasedCount:        2,
+				AlreadyReleasedCount: 1,
+				NotFoundCount:        0,
+				ReservationIDs:       []string{"res-1", "res-3"},
+				AlreadyReleasedIDs:   []string{"res-2"},
+				SKUs:                 []string{"SKU-1", "SKU-3"},
+			}, nil
+		},
+	}
+	handler := NewAdminInventoryHandlers(nil, inventory, nil, nil)
+
+	body := strings.NewReader(`{"limit": 25, "reason": " manual cleanup "}`)
+	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", body)
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops-1", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.releaseExpiredReservations(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if captured.Limit != 25 {
+		t.Fatalf("expected limit 25 captured, got %d", captured.Limit)
+	}
+	if captured.ActorID != "ops-1" {
+		t.Fatalf("expected actor ops-1, got %s", captured.ActorID)
+	}
+	if captured.Reason != "manual cleanup" {
+		t.Fatalf("expected trimmed reason manual cleanup, got %q", captured.Reason)
+	}
+
+	var payload adminReleaseExpiredResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.CheckedCount != 3 || payload.ReleasedCount != 2 {
+		t.Fatalf("unexpected counts %+v", payload)
+	}
+	if len(payload.ReservationIDs) != 2 || payload.ReservationIDs[0] != "res-1" {
+		t.Fatalf("unexpected reservation ids %+v", payload.ReservationIDs)
+	}
+	if len(payload.AlreadyReleasedIDs) != 1 || payload.AlreadyReleasedIDs[0] != "res-2" {
+		t.Fatalf("unexpected already released ids %+v", payload.AlreadyReleasedIDs)
+	}
+	if len(payload.Skus) != 2 {
+		t.Fatalf("expected two skus, got %+v", payload.Skus)
+	}
+}
+
 func TestAdminInventoryHandlers_ListLowStock_AggregatesSupplierAndVelocity(t *testing.T) {
 	now := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
 	var capturedFilter services.InventoryLowStockFilter
@@ -245,7 +356,8 @@ func TestAdminInventoryHandlers_WithConfigZeroValuesFallback(t *testing.T) {
 }
 
 type stubInventoryService struct {
-	listFn func(context.Context, services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error)
+	listFn           func(context.Context, services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error)
+	releaseExpiredFn func(context.Context, services.ReleaseExpiredReservationsCommand) (services.InventoryReleaseExpiredResult, error)
 }
 
 func (s *stubInventoryService) ReserveStocks(ctx context.Context, cmd services.InventoryReserveCommand) (services.InventoryReservation, error) {
@@ -258,6 +370,13 @@ func (s *stubInventoryService) CommitReservation(ctx context.Context, cmd servic
 
 func (s *stubInventoryService) ReleaseReservation(ctx context.Context, cmd services.InventoryReleaseCommand) (services.InventoryReservation, error) {
 	return services.InventoryReservation{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) ReleaseExpiredReservations(ctx context.Context, cmd services.ReleaseExpiredReservationsCommand) (services.InventoryReleaseExpiredResult, error) {
+	if s.releaseExpiredFn != nil {
+		return s.releaseExpiredFn(ctx, cmd)
+	}
+	return services.InventoryReleaseExpiredResult{}, errors.New("not implemented")
 }
 
 func (s *stubInventoryService) ListLowStock(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {

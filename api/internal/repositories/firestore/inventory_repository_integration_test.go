@@ -191,6 +191,53 @@ func TestInventoryRepositoryIntegration(t *testing.T) {
 		t.Fatalf("expected released status, got %s", releaseResult.Reservation.Status)
 	}
 
+	expiredReservation := domain.InventoryReservation{
+		ID:        "sr_expired_manual",
+		OrderRef:  "/orders/o_expired",
+		UserRef:   "/users/u_test",
+		Lines:     []domain.InventoryReservationLine{{ProductRef: "/products/prod_001", SKU: "SKU-001", Quantity: 1}},
+		ExpiresAt: now.Add(-time.Minute),
+		CreatedAt: now.Add(-2 * time.Minute),
+		UpdatedAt: now.Add(-2 * time.Minute),
+	}
+
+	if _, err := repo.Reserve(ctx, repositories.InventoryReserveRequest{
+		Reservation: expiredReservation,
+		Now:         now.Add(-2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("reserve expired: %v", err)
+	}
+
+	expired, err := repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now.Add(time.Minute),
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("list expired reservations: %v", err)
+	}
+	if len(expired) != 1 || expired[0].ID != expiredReservation.ID {
+		t.Fatalf("expected expired reservation %s, got %+v", expiredReservation.ID, expired)
+	}
+
+	if _, err := repo.Release(ctx, repositories.InventoryReleaseRequest{
+		ReservationID: expiredReservation.ID,
+		Reason:        "manual_expired_cleanup",
+		Now:           now.Add(time.Minute),
+	}); err != nil {
+		t.Fatalf("release expired: %v", err)
+	}
+
+	expired, err = repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now.Add(2 * time.Minute),
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("list expired after release: %v", err)
+	}
+	if len(expired) != 0 {
+		t.Fatalf("expected no expired reservations after release, got %d", len(expired))
+	}
+
 	lowPage, err := repo.ListLowStock(ctx, repositories.InventoryLowStockQuery{Threshold: 0, PageSize: 10})
 	if err != nil {
 		t.Fatalf("list low stock: %v", err)

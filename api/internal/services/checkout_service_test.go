@@ -764,6 +764,10 @@ func (s *stubCheckoutInventory) ReleaseReservation(ctx context.Context, cmd Inve
 	return InventoryReservation{}, nil
 }
 
+func (s *stubCheckoutInventory) ReleaseExpiredReservations(context.Context, ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error) {
+	return InventoryReleaseExpiredResult{}, errors.New("not implemented")
+}
+
 func (s *stubCheckoutInventory) ListLowStock(context.Context, InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error) {
 	return domain.CursorPage[InventorySnapshot]{}, errors.New("not implemented")
 }

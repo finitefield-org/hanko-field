@@ -305,6 +305,7 @@ type InventoryService interface {
 	ReserveStocks(ctx context.Context, cmd InventoryReserveCommand) (InventoryReservation, error)
 	CommitReservation(ctx context.Context, cmd InventoryCommitCommand) (InventoryReservation, error)
 	ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error)
+	ReleaseExpiredReservations(ctx context.Context, cmd ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error)
 	ListLowStock(ctx context.Context, filter InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error)
 	ConfigureSafetyStock(ctx context.Context, cmd ConfigureSafetyStockCommand) (InventoryStock, error)
 }
@@ -905,6 +906,22 @@ type InventoryReleaseCommand struct {
 	ReservationID string
 	Reason        string
 	ActorID       string
+}
+
+type ReleaseExpiredReservationsCommand struct {
+	Limit   int
+	Reason  string
+	ActorID string
+}
+
+type InventoryReleaseExpiredResult struct {
+	CheckedCount         int
+	ReleasedCount        int
+	AlreadyReleasedCount int
+	NotFoundCount        int
+	ReservationIDs       []string
+	AlreadyReleasedIDs   []string
+	SKUs                 []string
 }
 
 type InventoryLine struct {

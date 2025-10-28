@@ -14,6 +14,7 @@ type stubInventoryRepo struct {
 	reserveFn   func(ctx context.Context, req repositories.InventoryReserveRequest) (repositories.InventoryReserveResult, error)
 	commitFn    func(ctx context.Context, req repositories.InventoryCommitRequest) (repositories.InventoryCommitResult, error)
 	releaseFn   func(ctx context.Context, req repositories.InventoryReleaseRequest) (repositories.InventoryReleaseResult, error)
+	expiredFn   func(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error)
 	listFn      func(ctx context.Context, query repositories.InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
 	configureFn func(ctx context.Context, cfg repositories.InventorySafetyStockConfig) (domain.InventoryStock, error)
 }
@@ -37,6 +38,13 @@ func (s *stubInventoryRepo) Release(ctx context.Context, req repositories.Invent
 		return s.releaseFn(ctx, req)
 	}
 	return repositories.InventoryReleaseResult{}, nil
+}
+
+func (s *stubInventoryRepo) ListExpiredReservations(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error) {
+	if s.expiredFn != nil {
+		return s.expiredFn(ctx, query)
+	}
+	return nil, nil
 }
 
 func (s *stubInventoryRepo) GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error) {
@@ -340,5 +348,146 @@ func TestInventoryServiceConfigureSafetyStockValidatesInput(t *testing.T) {
 	initial := -5
 	if _, err := svc.ConfigureSafetyStock(context.Background(), ConfigureSafetyStockCommand{SKU: "MAT-1", SafetyStock: 1, ProductRef: "/materials/mat_1", InitialOnHand: &initial}); err == nil {
 		t.Fatalf("expected error for negative initial stock")
+	}
+}
+
+func TestInventoryServiceReleaseExpiredReleasesReservations(t *testing.T) {
+	now := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+	repo := &stubInventoryRepo{}
+	repo.expiredFn = func(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error) {
+		if query.Limit != maxExpiredReleaseBatchSize {
+			t.Fatalf("expected limit clamped to %d got %d", maxExpiredReleaseBatchSize, query.Limit)
+		}
+		if !query.Before.Equal(now) {
+			t.Fatalf("expected before time %v got %v", now, query.Before)
+		}
+		return []domain.InventoryReservation{
+			{
+				ID:    "res-1",
+				Lines: []domain.InventoryReservationLine{{SKU: "SKU-1", Quantity: 1}},
+			},
+			{
+				ID:    "res-2",
+				Lines: []domain.InventoryReservationLine{{SKU: "SKU-2", Quantity: 2}},
+			},
+		}, nil
+	}
+	releaseReasons := make(map[string]string)
+	repo.releaseFn = func(ctx context.Context, req repositories.InventoryReleaseRequest) (repositories.InventoryReleaseResult, error) {
+		releaseReasons[req.ReservationID] = req.Reason
+		lines := map[string][]domain.InventoryReservationLine{
+			"res-1": {{SKU: "SKU-1", Quantity: 1}},
+			"res-2": {{SKU: "SKU-2", Quantity: 2}},
+		}
+		return repositories.InventoryReleaseResult{
+			Reservation: domain.InventoryReservation{
+				ID:    req.ReservationID,
+				Lines: lines[req.ReservationID],
+			},
+		}, nil
+	}
+
+	var logged map[string]any
+	svc, err := NewInventoryService(InventoryServiceDeps{
+		Inventory: repo,
+		Clock: func() time.Time {
+			return now
+		},
+		Logger: func(_ context.Context, event string, fields map[string]any) {
+			if event == "inventory.releaseExpired" {
+				logged = fields
+			}
+		},
+	})
+	if err != nil {
+		t.Fatalf("new inventory service: %v", err)
+	}
+
+	result, err := svc.ReleaseExpiredReservations(context.Background(), ReleaseExpiredReservationsCommand{
+		Limit:   2000,
+		Reason:  " manual override ",
+		ActorID: " staff-ops ",
+	})
+	if err != nil {
+		t.Fatalf("release expired reservations: %v", err)
+	}
+	if result.CheckedCount != 2 || result.ReleasedCount != 2 {
+		t.Fatalf("unexpected counts %+v", result)
+	}
+	if len(result.SKUs) != 2 || result.SKUs[0] != "SKU-1" || result.SKUs[1] != "SKU-2" {
+		t.Fatalf("expected sorted skus, got %+v", result.SKUs)
+	}
+	if len(result.ReservationIDs) != 2 {
+		t.Fatalf("expected reservation ids recorded, got %+v", result.ReservationIDs)
+	}
+	if result.AlreadyReleasedCount != 0 || result.NotFoundCount != 0 {
+		t.Fatalf("expected no skips %+v", result)
+	}
+	if reason := releaseReasons["res-1"]; reason != "manual override" {
+		t.Fatalf("expected trimmed reason manual override, got %q", reason)
+	}
+	if releaseReasons["res-2"] != "manual override" {
+		t.Fatalf("expected trimmed reason manual override for res-2, got %q", releaseReasons["res-2"])
+	}
+	if logged == nil {
+		t.Fatalf("expected logger invoked")
+	}
+	if logged["released"] != 2 || logged["checked"] != 2 || logged["limit"] != maxExpiredReleaseBatchSize {
+		t.Fatalf("unexpected logger fields %+v", logged)
+	}
+	if logged["actorId"] != "staff-ops" {
+		t.Fatalf("expected logger actor staff-ops, got %#v", logged["actorId"])
+	}
+}
+
+func TestInventoryServiceReleaseExpiredHandlesIdempotency(t *testing.T) {
+	now := time.Date(2025, 2, 1, 8, 0, 0, 0, time.UTC)
+	repo := &stubInventoryRepo{}
+	repo.expiredFn = func(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error) {
+		return []domain.InventoryReservation{
+			{ID: "res-1"},
+			{ID: "res-2"},
+		}, nil
+	}
+	repo.releaseFn = func(ctx context.Context, req repositories.InventoryReleaseRequest) (repositories.InventoryReleaseResult, error) {
+		if req.ReservationID == "res-2" {
+			return repositories.InventoryReleaseResult{}, repositories.NewInventoryError(repositories.InventoryErrorInvalidReservationState, "already released", nil)
+		}
+		return repositories.InventoryReleaseResult{
+			Reservation: domain.InventoryReservation{
+				ID:    req.ReservationID,
+				Lines: []domain.InventoryReservationLine{{SKU: "SKU-1", Quantity: 1}},
+			},
+		}, nil
+	}
+
+	svc, err := NewInventoryService(InventoryServiceDeps{
+		Inventory: repo,
+		Clock: func() time.Time {
+			return now
+		},
+	})
+	if err != nil {
+		t.Fatalf("new inventory service: %v", err)
+	}
+
+	result, err := svc.ReleaseExpiredReservations(context.Background(), ReleaseExpiredReservationsCommand{})
+	if err != nil {
+		t.Fatalf("release expired reservations: %v", err)
+	}
+	if result.ReleasedCount != 1 || result.CheckedCount != 2 {
+		t.Fatalf("unexpected release counts %+v", result)
+	}
+	if result.AlreadyReleasedCount != 1 {
+		t.Fatalf("expected already released count 1, got %d", result.AlreadyReleasedCount)
+	}
+	if len(result.AlreadyReleasedIDs) != 1 || result.AlreadyReleasedIDs[0] != "res-2" {
+		t.Fatalf("expected already released ids contain res-2, got %+v", result.AlreadyReleasedIDs)
+	}
+	if len(result.ReservationIDs) != 1 || result.ReservationIDs[0] != "res-1" {
+		t.Fatalf("expected reservation ids to include res-1 only, got %+v", result.ReservationIDs)
+	}
+	if len(result.SKUs) != 1 || result.SKUs[0] != "SKU-1" {
+		t.Fatalf("expected skus to include SKU-1 once, got %+v", result.SKUs)
 	}
 }

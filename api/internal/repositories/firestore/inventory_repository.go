@@ -312,6 +312,57 @@ func (r *InventoryRepository) Release(ctx context.Context, req repositories.Inve
 	return result, nil
 }
 
+func (r *InventoryRepository) ListExpiredReservations(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error) {
+	if r == nil || r.provider == nil {
+		return nil, errors.New("inventory repository not initialised")
+	}
+
+	limit := query.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	before := query.Before.UTC()
+	if before.IsZero() {
+		before = time.Now().UTC()
+	}
+
+	client, err := r.provider.Client(ctx)
+	if err != nil {
+		return nil, wrapInventoryError("inventory.expired", err)
+	}
+
+	firestoreQuery := client.Collection(stockReservationsCollection).
+		Where("status", "==", reservationStatusReserved).
+		Where("expiresAt", "<", before).
+		OrderBy("expiresAt", firestore.Asc).
+		Limit(limit)
+
+	iter := firestoreQuery.Documents(ctx)
+	defer iter.Stop()
+
+	var reservations []domain.InventoryReservation
+	for {
+		snap, err := iter.Next()
+		if errors.Is(err, iterator.Done) {
+			break
+		}
+		if err != nil {
+			return nil, wrapInventoryError("inventory.expired", err)
+		}
+		doc, err := decodeReservation(snap)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, doc.toDomain(snap.Ref.ID))
+	}
+
+	return reservations, nil
+}
+
 func (r *InventoryRepository) GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error) {
 	if r == nil || r.reservations == nil {
 		return domain.InventoryReservation{}, errors.New("inventory repository not initialised")

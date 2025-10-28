@@ -116,6 +116,7 @@ type InventoryRepository interface {
 	Reserve(ctx context.Context, req InventoryReserveRequest) (InventoryReserveResult, error)
 	Commit(ctx context.Context, req InventoryCommitRequest) (InventoryCommitResult, error)
 	Release(ctx context.Context, req InventoryReleaseRequest) (InventoryReleaseResult, error)
+	ListExpiredReservations(ctx context.Context, query InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error)
 	GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error)
 	ListLowStock(ctx context.Context, query InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
 	ConfigureSafetyStock(ctx context.Context, cfg InventorySafetyStockConfig) (domain.InventoryStock, error)
@@ -157,6 +158,12 @@ type InventoryReleaseRequest struct {
 type InventoryReleaseResult struct {
 	Reservation domain.InventoryReservation
 	Stocks      map[string]domain.InventoryStock
+}
+
+// InventoryExpiredReservationQuery locates reservations that should be released.
+type InventoryExpiredReservationQuery struct {
+	Before time.Time
+	Limit  int
 }
 
 // InventoryLowStockQuery controls pagination and threshold filtering for low stock listings.

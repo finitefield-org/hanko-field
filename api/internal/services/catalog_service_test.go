@@ -1339,6 +1339,10 @@ func (s *stubInventorySafetyService) ReleaseReservation(context.Context, Invento
 	return InventoryReservation{}, errors.New("not implemented")
 }
 
+func (s *stubInventorySafetyService) ReleaseExpiredReservations(context.Context, ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error) {
+	return InventoryReleaseExpiredResult{}, errors.New("not implemented")
+}
+
 func (s *stubInventorySafetyService) ListLowStock(context.Context, InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error) {
 	return domain.CursorPage[InventorySnapshot]{}, nil
 }

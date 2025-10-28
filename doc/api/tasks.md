@@ -114,7 +114,7 @@
 - [x] [081 Implement shipment update endpoint for correcting tracking statuses/events.](./tasks/081-implement-shipment-update-endpoint-for-correcting-tracking-statuses-events.md)
 - [x] [082 Implement production events POST endpoint allowing operations to append workflow events.](./tasks/082-implement-production-events-post-endpoint-allowing-operations-to-append-workflow.md)
 - [x] [083 Implement low stock endpoint aggregating inventory below thresholds.](./tasks/083-implement-low-stock-endpoint-aggregating-inventory-below-thresholds.md)
-- [ ] [084 Implement stock reservation release endpoint for manual override of expired reservations.](./tasks/084-implement-stock-reservation-release-endpoint-for-manual-override-of-expired-rese.md)
+- [x] [084 Implement stock reservation release endpoint for manual override of expired reservations.](./tasks/084-implement-stock-reservation-release-endpoint-for-manual-override-of-expired-rese.md)
 
 ### 6.4 Production Queues
 - [ ] [085 Implement production queue CRUD endpoints storing capacity, priorities, and metadata.](./tasks/085-implement-production-queue-crud-endpoints-storing-capacity-priorities-and-metada.md)
