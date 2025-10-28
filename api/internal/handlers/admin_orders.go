@@ -540,7 +540,7 @@ func (h *AdminOrderHandlers) updateShipment(w http.ResponseWriter, r *http.Reque
 	if payload.ExpectedDelivery != nil {
 		trimmed := strings.TrimSpace(*payload.ExpectedDelivery)
 		if trimmed != "" {
-			parsed, parseErr := time.Parse(time.RFC3339, trimmed)
+			parsed, parseErr := parseRFC3339Flexible(trimmed)
 			if parseErr != nil {
 				httpx.WriteError(ctx, w, httpx.NewError("invalid_expected_delivery", "expected_delivery must be RFC3339", http.StatusBadRequest))
 				return
@@ -558,7 +558,7 @@ func (h *AdminOrderHandlers) updateShipment(w http.ResponseWriter, r *http.Reque
 	if payload.IfUnmodifiedSince != nil {
 		trimmed := strings.TrimSpace(*payload.IfUnmodifiedSince)
 		if trimmed != "" {
-			parsed, parseErr := time.Parse(time.RFC3339, trimmed)
+			parsed, parseErr := parseRFC3339Flexible(trimmed)
 			if parseErr != nil {
 				httpx.WriteError(ctx, w, httpx.NewError("invalid_if_unmodified_since", "if_unmodified_since must be RFC3339", http.StatusBadRequest))
 				return
@@ -620,6 +620,13 @@ func (h *AdminOrderHandlers) updateShipment(w http.ResponseWriter, r *http.Reque
 		Shipment: buildOrderShipmentDetail(shipment),
 	}
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func parseRFC3339Flexible(value string) (time.Time, error) {
+	if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return parsed, nil
+	}
+	return time.Parse(time.RFC3339, value)
 }
 
 type adminPaymentActionRequest struct {
