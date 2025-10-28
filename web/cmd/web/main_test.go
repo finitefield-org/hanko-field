@@ -873,6 +873,12 @@ func TestStatusHandlerFallback(t *testing.T) {
 	if !strings.Contains(body, "Scheduled maintenance") {
 		t.Fatalf("expected incident timeline in body, got %s", body)
 	}
+	if !strings.Contains(body, "Uptime summary") {
+		t.Fatalf("expected uptime summary section, got %s", body)
+	}
+	if !strings.Contains(body, "Email alerts") {
+		t.Fatalf("expected subscription card to render, got %s", body)
+	}
 	cache := rec.Header().Get("Cache-Control")
 	if cache != "public, max-age=60" {
 		t.Fatalf("expected Cache-Control=public, max-age=60, got %q", cache)

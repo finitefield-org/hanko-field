@@ -57,7 +57,7 @@
 ## 7. Support & Legal
 - [x] [Build support page (`/support`) with contact form, FAQ links, and response handling.](doc/web/tasks/041-build-support-page-support-with-contact-form-faq-links-and-response-handling.md)
 - [x] [Implement legal content pages (`/legal/{slug}`) with markdown rendering, localization, and version tracking.](doc/web/tasks/042-implement-legal-content-pages-legal-slug-with-markdown-rendering-localization-and-version-.md)
-- [ ] [Build status page (`/status`) displaying system health and incident history.](doc/web/tasks/043-build-status-page-status-displaying-system-health-and-incident-history.md)
+- [x] [Build status page (`/status`) displaying system health and incident history.](doc/web/tasks/043-build-status-page-status-displaying-system-health-and-incident-history.md)
 
 ## 8. Notifications, Search, and Utilities
 - [ ] [Implement notification dropdown/list accessible from header with htmx refresh.](doc/web/tasks/044-implement-notification-dropdown-list-accessible-from-header-with-htmx-refresh.md)

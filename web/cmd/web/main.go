@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -3438,7 +3439,52 @@ func computeStatusETag(summary status.Summary, lang string) string {
 	var parts []string
 	parts = append(parts, lang, summary.State, summary.StateLabel, summary.UpdatedAt.UTC().Format(time.RFC3339Nano))
 	for _, comp := range summary.Components {
-		parts = append(parts, comp.Name, comp.Status)
+		parts = append(parts,
+			comp.Name,
+			comp.Status,
+			comp.Slug,
+			comp.Description,
+			strconv.Itoa(comp.IncidentCount),
+			comp.MTTR.String(),
+			comp.DocsURL,
+		)
+		parts = append(parts, comp.Tags...)
+		parts = append(parts,
+			comp.Uptime.Period,
+			fmt.Sprintf("%.4f", comp.Uptime.Percentage),
+			fmt.Sprintf("%.4f", comp.Uptime.Target),
+		)
+		for _, point := range comp.Uptime.Trend {
+			parts = append(parts,
+				point.Timestamp.UTC().Format(time.RFC3339Nano),
+				fmt.Sprintf("%.4f", point.Percentage),
+			)
+		}
+	}
+	for _, period := range summary.Uptime.Periods {
+		parts = append(parts,
+			period.Period,
+			period.Label,
+			fmt.Sprintf("%.4f", period.Percentage),
+			fmt.Sprintf("%.4f", period.Target),
+		)
+		for _, point := range period.Trend {
+			parts = append(parts,
+				point.Timestamp.UTC().Format(time.RFC3339Nano),
+				fmt.Sprintf("%.4f", point.Percentage),
+			)
+		}
+	}
+	for _, sub := range summary.Subscriptions {
+		parts = append(parts,
+			sub.Channel,
+			sub.Title,
+			sub.Description,
+			sub.PrimaryLabel,
+			sub.PrimaryURL,
+			sub.SecondaryLabel,
+			sub.SecondaryURL,
+		)
 	}
 	for _, incident := range summary.Incidents {
 		parts = append(parts, incident.ID, incident.Status, incident.Impact, incident.StartedAt.UTC().Format(time.RFC3339Nano), incident.ResolvedAt.UTC().Format(time.RFC3339Nano))
@@ -3456,6 +3502,7 @@ func buildStatusPageView(lang string, summary status.Summary) StatusPageViewMode
 	}
 	badge, badgeText := statusStateVariant(summary.State)
 	updated, updatedISO := displayDateTime(summary.UpdatedAt, lang)
+	_, _, _, stateIcon := statusStatePalette(summary.State)
 	overview := StatusOverviewView{
 		State:      summary.State,
 		StateLabel: stateLabel,
@@ -3463,20 +3510,41 @@ func buildStatusPageView(lang string, summary status.Summary) StatusPageViewMode
 		BadgeText:  badgeText,
 		Updated:    updated,
 		UpdatedISO: updatedISO,
+		Icon:       stateIcon,
 	}
 
+	services := make([]StatusServiceView, 0, len(summary.Components))
 	components := make([]StatusComponentView, 0, len(summary.Components))
 	for _, comp := range summary.Components {
 		label := statusStateLabel(lang, comp.Status)
 		cBadge, cText := statusComponentVariant(comp.Status)
+		_, _, _, iconName := statusStatePalette(comp.Status)
+		metrics := buildStatusComponentMetrics(lang, comp)
+		docsLabel := i18nOrDefault(lang, "status.components.docs", "View details")
+		services = append(services, StatusServiceView{
+			Name:        comp.Name,
+			StatusLabel: label,
+			Badge:       cBadge,
+			Icon:        iconName,
+			Tooltip:     comp.Description,
+		})
 		components = append(components, StatusComponentView{
 			Name:        comp.Name,
 			Status:      comp.Status,
 			StatusLabel: label,
 			Badge:       cBadge,
 			BadgeText:   cText,
+			Description: comp.Description,
+			Metrics:     metrics,
+			DocsURL:     comp.DocsURL,
+			DocsLabel:   docsLabel,
+			Tags:        comp.Tags,
+			Primary:     comp.Primary,
+			Icon:        iconName,
 		})
 	}
+
+	uptime := buildStatusUptimeView(lang, summary.Uptime)
 
 	incidents := make([]StatusIncidentView, 0, len(summary.Incidents))
 	for _, inc := range summary.Incidents {
@@ -3515,6 +3583,10 @@ func buildStatusPageView(lang string, summary status.Summary) StatusPageViewMode
 		})
 	}
 
+	filters := buildStatusIncidentFilters(lang, summary)
+	subscriptions := buildStatusSubscriptions(lang, summary.Subscriptions)
+	supportLinks := buildStatusSupportLinks(lang)
+
 	header := ContentHeaderView{
 		Icon:    "signal",
 		Title:   i18nOrDefault(lang, "status.title", "System Status"),
@@ -3540,11 +3612,16 @@ func buildStatusPageView(lang string, summary status.Summary) StatusPageViewMode
 	}
 
 	return StatusPageViewModel{
-		Header:     header,
-		Banner:     banner,
-		Overview:   overview,
-		Components: components,
-		Incidents:  incidents,
+		Header:        header,
+		Banner:        banner,
+		Overview:      overview,
+		Services:      services,
+		Components:    components,
+		Uptime:        uptime,
+		Incidents:     incidents,
+		Filters:       filters,
+		Subscriptions: subscriptions,
+		Support:       supportLinks,
 	}
 }
 
@@ -3684,6 +3761,361 @@ func statusImpactVariant(impact string) (badge, text string) {
 		return "bg-sky-100 text-sky-800", "text-sky-900"
 	default:
 		return "bg-slate-100 text-slate-800", "text-slate-900"
+	}
+}
+
+func buildStatusComponentMetrics(lang string, comp status.Component) []StatusComponentMetricView {
+	metrics := make([]StatusComponentMetricView, 0, 3)
+	periodLabel := formatStatusPeriodLabel(lang, comp.Uptime.Period)
+
+	if comp.Uptime.Percentage > 0 {
+		value := formatPercentage(comp.Uptime.Percentage)
+		target := ""
+		if comp.Uptime.Target > 0 {
+			target = formatPercentage(comp.Uptime.Target)
+		}
+		tooltip := i18nOrDefault(lang, "status.component.metric.uptime.tooltip_no_target", "Measured availability for the selected period.")
+		if target != "" {
+			tooltip = fmt.Sprintf(i18nOrDefault(lang, "status.component.metric.uptime.tooltip", "%s uptime vs %s target"), value, target)
+		}
+		metrics = append(metrics, StatusComponentMetricView{
+			Label:   fmt.Sprintf(i18nOrDefault(lang, "status.component.metric.uptime", "%s uptime"), periodLabel),
+			Value:   value,
+			Tooltip: tooltip,
+			Accent:  statusMetricAccent(comp.Uptime.Percentage, comp.Uptime.Target),
+		})
+	}
+
+	if comp.MTTR > 0 {
+		metrics = append(metrics, StatusComponentMetricView{
+			Label:   i18nOrDefault(lang, "status.component.metric.mttr", "MTTR"),
+			Value:   formatDurationCompact(comp.MTTR, lang),
+			Tooltip: i18nOrDefault(lang, "status.component.metric.mttr.tooltip", "Average time to recovery across the selected window."),
+		})
+	}
+
+	metrics = append(metrics, StatusComponentMetricView{
+		Label:   fmt.Sprintf(i18nOrDefault(lang, "status.component.metric.incidents", "%s incidents"), periodLabel),
+		Value:   formatIncidentCount(comp.IncidentCount),
+		Tooltip: i18nOrDefault(lang, "status.component.metric.incidents.tooltip", "Number of tracked incidents impacting this component."),
+	})
+	return metrics
+}
+
+func formatStatusPeriodLabel(lang, period string) string {
+	period = strings.ToLower(strings.TrimSpace(period))
+	if period == "" {
+		period = "30d"
+	}
+	key := fmt.Sprintf("status.uptime.period.%s", period)
+	var fallback string
+	switch period {
+	case "7d":
+		fallback = "7-day"
+	case "30d":
+		fallback = "30-day"
+	case "90d":
+		fallback = "90-day"
+	default:
+		fallback = strings.ToUpper(period)
+	}
+	return i18nOrDefault(lang, key, fallback)
+}
+
+func formatPercentage(value float64) string {
+	if value <= 0 {
+		return "–"
+	}
+	return fmt.Sprintf("%.2f%%", value)
+}
+
+func statusMetricAccent(value, target float64) string {
+	if target <= 0 {
+		return ""
+	}
+	if value >= target {
+		return "text-emerald-600"
+	}
+	return "text-rose-600"
+}
+
+func formatDurationCompact(d time.Duration, lang string) string {
+	if d <= 0 {
+		if strings.HasPrefix(strings.ToLower(lang), "ja") {
+			return "―"
+		}
+		return "–"
+	}
+	d = d.Round(time.Minute)
+	if d < time.Minute {
+		d = time.Minute
+	}
+	hours := int(d / time.Hour)
+	minutes := int((d % time.Hour) / time.Minute)
+	if hours == 0 && minutes == 0 {
+		minutes = 1
+	}
+	if strings.HasPrefix(strings.ToLower(lang), "ja") {
+		switch {
+		case hours > 0 && minutes > 0:
+			return fmt.Sprintf("%d時間%d分", hours, minutes)
+		case hours > 0:
+			return fmt.Sprintf("%d時間", hours)
+		default:
+			return fmt.Sprintf("%d分", minutes)
+		}
+	}
+	switch {
+	case hours > 0 && minutes > 0:
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	case hours > 0:
+		return fmt.Sprintf("%dh", hours)
+	default:
+		return fmt.Sprintf("%dm", minutes)
+	}
+}
+
+func formatIncidentCount(count int) string {
+	if count < 0 {
+		count = 0
+	}
+	return strconv.Itoa(count)
+}
+
+func buildStatusUptimeView(lang string, summary status.UptimeSummary) StatusUptimeView {
+	view := StatusUptimeView{
+		Title:       i18nOrDefault(lang, "status.uptime.title", "Uptime summary"),
+		Subtitle:    i18nOrDefault(lang, "status.uptime.subtitle", "Rolling availability compared with SLO targets."),
+		LegendLabel: i18nOrDefault(lang, "status.uptime.legend", "Target"),
+	}
+	if len(summary.Periods) == 0 {
+		return view
+	}
+	periods := make([]StatusUptimePeriodView, 0, len(summary.Periods))
+	for idx, period := range summary.Periods {
+		label := period.Label
+		if label == "" {
+			label = formatStatusPeriodLabel(lang, period.Period)
+		}
+		percentage := formatPercentage(period.Percentage)
+		targetLabel := ""
+		if period.Target > 0 {
+			targetLabel = fmt.Sprintf(i18nOrDefault(lang, "status.uptime.target", "Target %s"), formatPercentage(period.Target))
+		}
+		delta := ""
+		deltaClass := ""
+		if period.Target > 0 && period.Percentage > 0 {
+			diff := period.Percentage - period.Target
+			if diff > 0.0001 {
+				delta = fmt.Sprintf(i18nOrDefault(lang, "status.uptime.delta.above", "+%.2f%% vs target"), diff)
+				deltaClass = "text-emerald-600"
+			} else if diff < -0.0001 {
+				delta = fmt.Sprintf(i18nOrDefault(lang, "status.uptime.delta.below", "%.2f%% below target"), math.Abs(diff))
+				deltaClass = "text-rose-600"
+			}
+		}
+		trend := make([]StatusUptimeTrendPoint, 0, len(period.Trend))
+		for _, point := range period.Trend {
+			dateLabel, _ := displayDate(point.Timestamp, lang)
+			if dateLabel == "" {
+				dateLabel = point.Timestamp.Format("Jan 2")
+			}
+			normalized := (point.Percentage - 95.0) * 20.0
+			if normalized < 12 {
+				normalized = 12
+			}
+			if normalized > 100 {
+				normalized = 100
+			}
+			trend = append(trend, StatusUptimeTrendPoint{
+				Label:     dateLabel,
+				Value:     formatPercentage(point.Percentage),
+				BarHeight: fmt.Sprintf("%.0f%%", normalized),
+			})
+		}
+		periods = append(periods, StatusUptimePeriodView{
+			Period:     period.Period,
+			Label:      label,
+			Percentage: percentage,
+			Target:     targetLabel,
+			Delta:      delta,
+			DeltaClass: deltaClass,
+			Trend:      trend,
+			Selected:   idx == 0,
+		})
+	}
+	view.Periods = periods
+	return view
+}
+
+func buildStatusIncidentFilters(lang string, summary status.Summary) StatusIncidentFiltersView {
+	filters := StatusIncidentFiltersView{
+		SearchPlaceholder: i18nOrDefault(lang, "status.incidents.search_placeholder", "Search incidents"),
+	}
+	severitySet := map[string]struct{}{}
+	stateSet := map[string]struct{}{}
+	for _, inc := range summary.Incidents {
+		if impact := strings.ToLower(strings.TrimSpace(inc.Impact)); impact != "" {
+			severitySet[impact] = struct{}{}
+		}
+		if st := strings.ToLower(strings.TrimSpace(inc.Status)); st != "" {
+			stateSet[st] = struct{}{}
+		}
+	}
+	severities := make([]string, 0, len(severitySet))
+	for impact := range severitySet {
+		severities = append(severities, impact)
+	}
+	sort.Strings(severities)
+	for _, impact := range severities {
+		filters.Severity = append(filters.Severity, StatusFilterChip{
+			Label: statusImpactLabel(lang, impact),
+			Value: impact,
+		})
+	}
+	states := make([]string, 0, len(stateSet))
+	for st := range stateSet {
+		states = append(states, st)
+	}
+	sort.Strings(states)
+	for _, st := range states {
+		filters.State = append(filters.State, StatusFilterChip{
+			Label: statusTimelineLabel(lang, st),
+			Value: st,
+		})
+	}
+	for _, comp := range summary.Components {
+		if comp.Name == "" {
+			continue
+		}
+		value := comp.Slug
+		if value == "" {
+			value = strings.ToLower(strings.ReplaceAll(comp.Name, " ", "-"))
+		}
+		filters.Components = append(filters.Components, StatusFilterChip{
+			Label: comp.Name,
+			Value: value,
+		})
+	}
+	return filters
+}
+
+func buildStatusSubscriptions(lang string, options []status.SubscriptionOption) []StatusSubscriptionView {
+	if len(options) == 0 {
+		return nil
+	}
+	subs := make([]StatusSubscriptionView, 0, len(options))
+	for _, opt := range options {
+		channel := strings.ToLower(strings.TrimSpace(opt.Channel))
+		title := opt.Title
+		if title == "" {
+			title = defaultSubscriptionTitle(lang, channel)
+		}
+		description := opt.Description
+		if description == "" {
+			description = defaultSubscriptionDescription(lang, channel)
+		}
+		primaryLabel := opt.PrimaryLabel
+		if primaryLabel == "" {
+			primaryLabel = defaultSubscriptionPrimaryLabel(lang, channel)
+		}
+		secondaryLabel := opt.SecondaryLabel
+		if secondaryLabel == "" {
+			secondaryLabel = defaultSubscriptionSecondaryLabel(lang, channel)
+		}
+		subs = append(subs, StatusSubscriptionView{
+			Channel:        channel,
+			Title:          title,
+			Description:    description,
+			Icon:           statusSubscriptionIcon(channel),
+			PrimaryLabel:   primaryLabel,
+			PrimaryURL:     opt.PrimaryURL,
+			SecondaryLabel: secondaryLabel,
+			SecondaryURL:   opt.SecondaryURL,
+		})
+	}
+	return subs
+}
+
+func defaultSubscriptionTitle(lang, channel string) string {
+	switch channel {
+	case "email":
+		return i18nOrDefault(lang, "status.subscriptions.email.title", "Email alerts")
+	case "webhook":
+		return i18nOrDefault(lang, "status.subscriptions.webhook.title", "Webhook")
+	case "rss":
+		return i18nOrDefault(lang, "status.subscriptions.rss.title", "RSS feed")
+	default:
+		return i18nOrDefault(lang, "status.subscriptions.generic.title", "Notifications")
+	}
+}
+
+func defaultSubscriptionDescription(lang, channel string) string {
+	switch channel {
+	case "email":
+		return i18nOrDefault(lang, "status.subscriptions.email.description", "Get notified when incidents are opened or resolved.")
+	case "webhook":
+		return i18nOrDefault(lang, "status.subscriptions.webhook.description", "Receive JSON payloads when status changes occur.")
+	case "rss":
+		return i18nOrDefault(lang, "status.subscriptions.rss.description", "Follow incidents in your RSS reader or chat tools.")
+	default:
+		return i18nOrDefault(lang, "status.subscriptions.generic.description", "Stay informed about platform status changes.")
+	}
+}
+
+func defaultSubscriptionPrimaryLabel(lang, channel string) string {
+	switch channel {
+	case "email":
+		return i18nOrDefault(lang, "status.subscriptions.email.primary", "Subscribe via email")
+	case "webhook":
+		return i18nOrDefault(lang, "status.subscriptions.webhook.primary", "Copy webhook endpoint")
+	case "rss":
+		return i18nOrDefault(lang, "status.subscriptions.rss.primary", "Copy RSS URL")
+	default:
+		return i18nOrDefault(lang, "status.subscriptions.generic.primary", "Enable notifications")
+	}
+}
+
+func defaultSubscriptionSecondaryLabel(lang, channel string) string {
+	switch channel {
+	case "email":
+		return i18nOrDefault(lang, "status.subscriptions.email.secondary", "Manage preferences")
+	case "webhook":
+		return i18nOrDefault(lang, "status.subscriptions.webhook.secondary", "View schema")
+	case "rss":
+		return i18nOrDefault(lang, "status.subscriptions.rss.secondary", "Add to integrations")
+	default:
+		return i18nOrDefault(lang, "status.subscriptions.generic.secondary", "Learn more")
+	}
+}
+
+func statusSubscriptionIcon(channel string) string {
+	switch channel {
+	case "email":
+		return "envelope"
+	case "webhook":
+		return "arrow-path-rounded-square"
+	case "rss":
+		return "rss"
+	default:
+		return "bell-alert"
+	}
+}
+
+func buildStatusSupportLinks(lang string) []StatusSupportLinkView {
+	return []StatusSupportLinkView{
+		{
+			Label:       i18nOrDefault(lang, "status.support.runbook", "Incident response runbook"),
+			Description: i18nOrDefault(lang, "status.support.runbook.desc", "Step-by-step guidance for triaging and communicating platform incidents."),
+			Icon:        "book-open",
+			URL:         "/guides/operations/incident-response",
+		},
+		{
+			Label:       i18nOrDefault(lang, "status.support.contact", "Contact support"),
+			Description: i18nOrDefault(lang, "status.support.contact.desc", "Escalate persistent issues directly to our support engineers."),
+			Icon:        "lifebuoy",
+			URL:         "mailto:support@hanko-field.jp",
+		},
 	}
 }
 
@@ -4042,6 +4474,15 @@ type StatusOverviewView struct {
 	BadgeText  string
 	Updated    string
 	UpdatedISO string
+	Icon       string
+}
+
+type StatusServiceView struct {
+	Name        string
+	StatusLabel string
+	Badge       string
+	Icon        string
+	Tooltip     string
 }
 
 type StatusComponentView struct {
@@ -4050,6 +4491,38 @@ type StatusComponentView struct {
 	StatusLabel string
 	Badge       string
 	BadgeText   string
+	Description string
+	Metrics     []StatusComponentMetricView
+	DocsURL     string
+	DocsLabel   string
+	Tags        []string
+	Primary     bool
+	Icon        string
+}
+
+type StatusComponentMetricView struct {
+	Label   string
+	Value   string
+	Tooltip string
+	Accent  string
+}
+
+type StatusUptimeView struct {
+	Title       string
+	Subtitle    string
+	Periods     []StatusUptimePeriodView
+	LegendLabel string
+}
+
+type StatusUptimePeriodView struct {
+	Period     string
+	Label      string
+	Percentage string
+	Target     string
+	Delta      string
+	DeltaClass string
+	Trend      []StatusUptimeTrendPoint
+	Selected   bool
 }
 
 type StatusIncidentUpdateView struct {
@@ -4077,12 +4550,53 @@ type StatusIncidentView struct {
 	Updates     []StatusIncidentUpdateView
 }
 
+type StatusUptimeTrendPoint struct {
+	Label     string
+	Value     string
+	BarHeight string
+}
+
+type StatusSubscriptionView struct {
+	Channel        string
+	Title          string
+	Description    string
+	Icon           string
+	PrimaryLabel   string
+	PrimaryURL     string
+	SecondaryLabel string
+	SecondaryURL   string
+}
+
+type StatusSupportLinkView struct {
+	Label       string
+	Description string
+	Icon        string
+	URL         string
+}
+
+type StatusFilterChip struct {
+	Label string
+	Value string
+}
+
+type StatusIncidentFiltersView struct {
+	SearchPlaceholder string
+	Severity          []StatusFilterChip
+	State             []StatusFilterChip
+	Components        []StatusFilterChip
+}
+
 type StatusPageViewModel struct {
-	Header     ContentHeaderView
-	Banner     *AlertBannerView
-	Overview   StatusOverviewView
-	Components []StatusComponentView
-	Incidents  []StatusIncidentView
+	Header        ContentHeaderView
+	Banner        *AlertBannerView
+	Overview      StatusOverviewView
+	Services      []StatusServiceView
+	Components    []StatusComponentView
+	Uptime        StatusUptimeView
+	Incidents     []StatusIncidentView
+	Filters       StatusIncidentFiltersView
+	Subscriptions []StatusSubscriptionView
+	Support       []StatusSupportLinkView
 }
 
 var (
