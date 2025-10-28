@@ -412,6 +412,162 @@ func TestAdminOrderHandlers_UpdateOrderStatus_SucceedsWithAudit(t *testing.T) {
 	}
 }
 
+func TestAdminOrderHandlers_AppendProductionEvent_Success(t *testing.T) {
+	now := time.Date(2024, 8, 21, 9, 15, 0, 0, time.UTC)
+	var captured services.AppendProductionEventCommand
+
+	orders := &stubOrderService{
+		appendFn: func(ctx context.Context, cmd services.AppendProductionEventCommand) (services.OrderProductionEvent, error) {
+			captured = cmd
+			return services.OrderProductionEvent{
+				ID:          "ope_123",
+				OrderID:     cmd.OrderID,
+				Type:        cmd.Event.Type,
+				Station:     cmd.Event.Station,
+				OperatorRef: cmd.Event.OperatorRef,
+				DurationSec: cmd.Event.DurationSec,
+				Note:        cmd.Event.Note,
+				PhotoURL:    cmd.Event.PhotoURL,
+				QC:          cmd.Event.QC,
+				CreatedAt:   now,
+			}, nil
+		},
+	}
+	audit := &captureAuditLogService{}
+	handler := NewAdminOrderHandlers(nil, orders, nil, nil, audit)
+
+	body := `{
+		"stage": " QC ",
+		"status": " Fail ",
+		"notes": "  <b>Edge</b> chipped ",
+		"operator": " ops-123 ",
+		"station": " QC-02 ",
+		"attachments": [" https://cdn.example.com/qc.jpg ", " https://cdn.example.com/qc.jpg "],
+		"defects": ["  scratch ", "Scratch"]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_789/production-events", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_789")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: " staff-900 ", Roles: []string{auth.RoleStaff}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.appendProductionEvent(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", rec.Code)
+	}
+
+	if captured.OrderID != "ord_789" {
+		t.Fatalf("expected order id ord_789, got %s", captured.OrderID)
+	}
+	if captured.ActorID != "staff-900" {
+		t.Fatalf("expected actor id trimmed staff-900, got %s", captured.ActorID)
+	}
+	if captured.Event.Type != "qc" {
+		t.Fatalf("expected event type qc, got %s", captured.Event.Type)
+	}
+	if captured.Event.OperatorRef == nil || *captured.Event.OperatorRef != "/users/ops-123" {
+		t.Fatalf("expected operator ref /users/ops-123, got %#v", captured.Event.OperatorRef)
+	}
+	if captured.Event.QC == nil || captured.Event.QC.Result != "fail" {
+		t.Fatalf("expected qc result fail, got %#v", captured.Event.QC)
+	}
+	if captured.Event.QC != nil && len(captured.Event.QC.Defects) != 1 {
+		t.Fatalf("expected single defect after sanitization, got %#v", captured.Event.QC.Defects)
+	}
+	if captured.Event.PhotoURL == nil || *captured.Event.PhotoURL != "https://cdn.example.com/qc.jpg" {
+		t.Fatalf("expected trimmed photo url, got %#v", captured.Event.PhotoURL)
+	}
+	if captured.Event.Note != "[fail] Edge chipped" {
+		t.Fatalf("expected sanitized note with status, got %q", captured.Event.Note)
+	}
+	if captured.Event.Station != "QC-02" {
+		t.Fatalf("expected station QC-02, got %q", captured.Event.Station)
+	}
+
+	var resp adminProductionEventResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	event := resp.Event
+	if event.ID != "ope_123" {
+		t.Fatalf("expected response event id ope_123, got %s", event.ID)
+	}
+	if event.Type != "qc" {
+		t.Fatalf("expected response type qc, got %s", event.Type)
+	}
+	if event.Status != "fail" {
+		t.Fatalf("expected response status fail, got %s", event.Status)
+	}
+	if event.Note != "[fail] Edge chipped" {
+		t.Fatalf("expected response note sanitized, got %q", event.Note)
+	}
+	if event.OperatorRef != "/users/ops-123" {
+		t.Fatalf("expected operator_ref preserved, got %s", event.OperatorRef)
+	}
+	if event.Station != "QC-02" {
+		t.Fatalf("expected station QC-02, got %s", event.Station)
+	}
+	if len(event.Attachments) != 1 || event.Attachments[0] != "https://cdn.example.com/qc.jpg" {
+		t.Fatalf("expected attachments array with single url, got %#v", event.Attachments)
+	}
+	if event.PhotoURL == nil || *event.PhotoURL != "https://cdn.example.com/qc.jpg" {
+		t.Fatalf("expected photo_url pointer, got %#v", event.PhotoURL)
+	}
+	if event.QC == nil || event.QC.Result != "fail" {
+		t.Fatalf("expected qc payload fail, got %#v", event.QC)
+	}
+	if event.QC != nil && len(event.QC.Defects) != 1 {
+		t.Fatalf("expected qc defects sanitized, got %#v", event.QC.Defects)
+	}
+	if event.CreatedAt != now.Format(time.RFC3339Nano) {
+		t.Fatalf("expected created_at %s, got %s", now.Format(time.RFC3339Nano), event.CreatedAt)
+	}
+
+	if len(audit.records) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(audit.records))
+	}
+	record := audit.records[0]
+	if record.Action != "order.production.append" {
+		t.Fatalf("expected audit action order.production.append, got %s", record.Action)
+	}
+	if record.Metadata["status"] != "fail" {
+		t.Fatalf("expected audit status fail, got %#v", record.Metadata["status"])
+	}
+	attachmentsMeta, ok := record.Metadata["attachments"].([]string)
+	if !ok || len(attachmentsMeta) != 1 || attachmentsMeta[0] != "https://cdn.example.com/qc.jpg" {
+		t.Fatalf("expected attachments metadata, got %#v", record.Metadata["attachments"])
+	}
+}
+
+func TestAdminOrderHandlers_AppendProductionEvent_StageRequired(t *testing.T) {
+	orders := &stubOrderService{
+		appendFn: func(ctx context.Context, cmd services.AppendProductionEventCommand) (services.OrderProductionEvent, error) {
+			t.Fatalf("service should not be called when stage missing")
+			return services.OrderProductionEvent{}, nil
+		},
+	}
+	handler := NewAdminOrderHandlers(nil, orders, nil, nil, nil)
+
+	body := `{"stage":"   ","status":"pass"}`
+	req := httptest.NewRequest(http.MethodPost, "/orders/ord_001/production-events", strings.NewReader(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("orderID", "ord_001")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx)
+	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: "admin-1", Roles: []string{auth.RoleAdmin}})
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.appendProductionEvent(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+}
+
 func TestAdminOrderHandlers_CreateShipment_Success(t *testing.T) {
 	shipments := &stubShipmentService{
 		createFn: func(ctx context.Context, cmd services.CreateShipmentCommand) (services.Shipment, error) {

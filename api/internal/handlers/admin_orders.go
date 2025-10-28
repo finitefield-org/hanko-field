@@ -85,6 +85,7 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	}
 	r.Get("/orders", h.listOrders)
 	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
+	r.Post("/orders/{orderID}/production-events", h.appendProductionEvent)
 	if h.shipments != nil {
 		r.Post("/orders/{orderID}/shipments", h.createShipment)
 		r.Put("/orders/{orderID}/shipments/{shipmentID}", h.updateShipment)
@@ -254,8 +255,9 @@ type adminOrderSummary struct {
 }
 
 const (
-	maxAdminOrderStatusBodySize = 4 * 1024
-	maxAdminPaymentBodySize     = 8 * 1024
+	maxAdminOrderStatusBodySize     = 4 * 1024
+	maxAdminPaymentBodySize         = 8 * 1024
+	maxAdminProductionEventBodySize = 6 * 1024
 )
 
 var adminOrderWorkflowTransitions = map[services.OrderStatus]services.OrderStatus{
@@ -282,6 +284,40 @@ type adminOrderStatusRequest struct {
 
 type adminOrderStatusResponse struct {
 	Order adminOrderSummary `json:"order"`
+}
+
+type adminProductionEventRequest struct {
+	Stage       string   `json:"stage"`
+	Status      string   `json:"status"`
+	Notes       string   `json:"notes"`
+	Operator    string   `json:"operator"`
+	Station     string   `json:"station"`
+	DurationSec *int     `json:"duration_sec"`
+	Attachments []string `json:"attachments"`
+	Defects     []string `json:"defects"`
+}
+
+type adminProductionEventResponse struct {
+	Event adminProductionEventPayload `json:"event"`
+}
+
+type adminProductionEventPayload struct {
+	ID          string                         `json:"id"`
+	Type        string                         `json:"type"`
+	Status      string                         `json:"status,omitempty"`
+	Note        string                         `json:"note,omitempty"`
+	OperatorRef string                         `json:"operator_ref,omitempty"`
+	Station     string                         `json:"station,omitempty"`
+	DurationSec *int                           `json:"duration_sec,omitempty"`
+	PhotoURL    *string                        `json:"photo_url,omitempty"`
+	Attachments []string                       `json:"attachments,omitempty"`
+	QC          *adminProductionEventQCPayload `json:"qc,omitempty"`
+	CreatedAt   string                         `json:"created_at"`
+}
+
+type adminProductionEventQCPayload struct {
+	Result  string   `json:"result"`
+	Defects []string `json:"defects,omitempty"`
 }
 
 func (h *AdminOrderHandlers) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
@@ -404,6 +440,142 @@ func (h *AdminOrderHandlers) updateOrderStatus(w http.ResponseWriter, r *http.Re
 		Order: buildAdminOrderSummary(updated),
 	}
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *AdminOrderHandlers) appendProductionEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.orders == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "order id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxAdminProductionEventBodySize)
+	if err != nil {
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload adminProductionEventRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+		return
+	}
+
+	stage := normalizeProductionStage(payload.Stage)
+	if stage == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "stage is required", http.StatusBadRequest))
+		return
+	}
+
+	status := normalizeProductionStatus(payload.Status)
+	attachments := sanitizeStringSlice(payload.Attachments)
+	defects := sanitizeStringSlice(payload.Defects)
+	note := sanitizeProductionNote(payload.Notes)
+	if status != "" {
+		if note != "" {
+			note = fmt.Sprintf("[%s] %s", status, note)
+		} else {
+			note = status
+		}
+	}
+
+	actorID := strings.TrimSpace(identity.UID)
+	if actorID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	var duration *int
+	if payload.DurationSec != nil {
+		if *payload.DurationSec < 0 {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "duration_sec must be zero or positive", http.StatusBadRequest))
+			return
+		}
+		value := *payload.DurationSec
+		duration = &value
+	}
+
+	operatorRef := normalizeOperatorRef(payload.Operator)
+	station := strings.TrimSpace(payload.Station)
+
+	event := services.OrderProductionEvent{
+		Type:        stage,
+		Station:     station,
+		Note:        note,
+		DurationSec: duration,
+	}
+	if operatorRef != "" {
+		event.OperatorRef = &operatorRef
+	}
+	if len(attachments) > 0 {
+		first := attachments[0]
+		event.PhotoURL = &first
+	}
+
+	if stage == "qc" {
+		qcResult := ""
+		switch status {
+		case "pass":
+			qcResult = "pass"
+		case "fail":
+			qcResult = "fail"
+		}
+		if qcResult != "" {
+			status = qcResult
+		}
+		if qcResult != "" || len(defects) > 0 {
+			qc := services.OrderProductionQC{}
+			if qcResult != "" {
+				qc.Result = qcResult
+			}
+			if len(defects) > 0 {
+				qc.Defects = defects
+			}
+			event.QC = &qc
+		}
+	}
+
+	cmd := services.AppendProductionEventCommand{
+		OrderID: orderID,
+		ActorID: actorID,
+		Event:   event,
+	}
+
+	inserted, err := h.orders.AppendProductionEvent(ctx, cmd)
+	if err != nil {
+		writeOrderError(ctx, w, err)
+		return
+	}
+
+	response := adminProductionEventResponse{
+		Event: buildAdminProductionEventPayload(inserted, status),
+	}
+
+	h.recordProductionEventAudit(ctx, identity, orderID, inserted, status)
+	writeJSONResponse(w, http.StatusCreated, response)
 }
 
 func (h *AdminOrderHandlers) createShipment(w http.ResponseWriter, r *http.Request) {
@@ -1101,6 +1273,207 @@ func sanitizeStringMap(input map[string]string) map[string]string {
 		return nil
 	}
 	return result
+}
+
+func buildAdminProductionEventPayload(event services.OrderProductionEvent, status string) adminProductionEventPayload {
+	attachments := buildProductionEventAttachments(event)
+	payload := adminProductionEventPayload{
+		ID:        strings.TrimSpace(event.ID),
+		Type:      strings.TrimSpace(event.Type),
+		CreatedAt: formatTime(event.CreatedAt),
+	}
+
+	if trimmedStatus := strings.TrimSpace(status); trimmedStatus != "" {
+		payload.Status = trimmedStatus
+	}
+	if note := strings.TrimSpace(event.Note); note != "" {
+		payload.Note = note
+	}
+	if station := strings.TrimSpace(event.Station); station != "" {
+		payload.Station = station
+	}
+	if event.OperatorRef != nil {
+		if operator := strings.TrimSpace(*event.OperatorRef); operator != "" {
+			payload.OperatorRef = operator
+		}
+	}
+	if event.DurationSec != nil {
+		value := *event.DurationSec
+		payload.DurationSec = &value
+	}
+	if event.PhotoURL != nil {
+		if photo := strings.TrimSpace(*event.PhotoURL); photo != "" {
+			payload.PhotoURL = &photo
+		}
+	}
+	if len(attachments) > 0 {
+		payload.Attachments = attachments
+	}
+	if event.QC != nil {
+		qcPayload := adminProductionEventQCPayload{}
+		if result := strings.TrimSpace(event.QC.Result); result != "" {
+			qcPayload.Result = result
+		}
+		if len(event.QC.Defects) > 0 {
+			clean := make([]string, 0, len(event.QC.Defects))
+			for _, defect := range event.QC.Defects {
+				if trimmed := strings.TrimSpace(defect); trimmed != "" {
+					clean = append(clean, trimmed)
+				}
+			}
+			if len(clean) > 0 {
+				qcPayload.Defects = clean
+			}
+		}
+		if qcPayload.Result != "" || len(qcPayload.Defects) > 0 {
+			payload.QC = &qcPayload
+		}
+	}
+
+	return payload
+}
+
+func normalizeProductionStage(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	normalized := strings.ToLower(trimmed)
+	normalized = strings.ReplaceAll(normalized, "-", "_")
+	normalized = strings.ReplaceAll(normalized, " ", "_")
+	for strings.Contains(normalized, "__") {
+		normalized = strings.ReplaceAll(normalized, "__", "_")
+	}
+	return strings.Trim(normalized, "_")
+}
+
+func normalizeProductionStatus(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	normalized := strings.ToLower(trimmed)
+	normalized = strings.ReplaceAll(normalized, "-", "_")
+	normalized = strings.ReplaceAll(normalized, " ", "_")
+	switch normalized {
+	case "passed":
+		return "pass"
+	case "failed":
+		return "fail"
+	case "complete":
+		return "completed"
+	default:
+		return normalized
+	}
+}
+
+func normalizeOperatorRef(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "/") {
+		return trimmed
+	}
+	return "/users/" + trimmed
+}
+
+func sanitizeStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, trimmed)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func (h *AdminOrderHandlers) recordProductionEventAudit(ctx context.Context, identity *auth.Identity, orderID string, event services.OrderProductionEvent, status string) {
+	if h.audit == nil {
+		return
+	}
+
+	trimmedOrderID := strings.TrimSpace(orderID)
+	trimmedEventID := strings.TrimSpace(event.ID)
+	actorID := ""
+	if identity != nil {
+		actorID = strings.TrimSpace(identity.UID)
+	}
+
+	metadata := map[string]any{
+		"eventType": strings.TrimSpace(event.Type),
+	}
+	if trimmedStatus := strings.TrimSpace(status); trimmedStatus != "" {
+		metadata["status"] = trimmedStatus
+	}
+	if station := strings.TrimSpace(event.Station); station != "" {
+		metadata["station"] = station
+	}
+	if event.OperatorRef != nil {
+		if operator := strings.TrimSpace(*event.OperatorRef); operator != "" {
+			metadata["operatorRef"] = operator
+		}
+	}
+	if event.DurationSec != nil {
+		metadata["durationSec"] = *event.DurationSec
+	}
+	if note := strings.TrimSpace(event.Note); note != "" {
+		metadata["note"] = note
+	}
+	if event.PhotoURL != nil {
+		if photo := strings.TrimSpace(*event.PhotoURL); photo != "" {
+			metadata["photoUrl"] = photo
+		}
+	}
+	if attachments := buildProductionEventAttachments(event); len(attachments) > 0 {
+		metadata["attachments"] = attachments
+	}
+	if event.QC != nil {
+		qcMeta := make(map[string]any)
+		if res := strings.TrimSpace(event.QC.Result); res != "" {
+			qcMeta["result"] = res
+		}
+		if len(event.QC.Defects) > 0 {
+			clean := make([]string, 0, len(event.QC.Defects))
+			for _, defect := range event.QC.Defects {
+				if trimmed := strings.TrimSpace(defect); trimmed != "" {
+					clean = append(clean, trimmed)
+				}
+			}
+			if len(clean) > 0 {
+				qcMeta["defects"] = clean
+			}
+		}
+		if len(qcMeta) > 0 {
+			metadata["qc"] = qcMeta
+		}
+	}
+	metadata["createdAt"] = formatTime(event.CreatedAt)
+
+	record := services.AuditLogRecord{
+		Actor:      actorID,
+		ActorType:  adminOrderActorType(identity),
+		Action:     "order.production.append",
+		TargetRef:  fmt.Sprintf("/orders/%s/production-events/%s", trimmedOrderID, trimmedEventID),
+		OccurredAt: time.Now().UTC(),
+		Metadata:   metadata,
+	}
+
+	h.audit.Record(ctx, record)
 }
 
 func writePaymentError(ctx context.Context, w http.ResponseWriter, err error) {

@@ -112,7 +112,7 @@
 - [x] [079 Implement manual payment capture and refund endpoints integrating PSP APIs.](./tasks/079-implement-manual-payment-capture-and-refund-endpoints-integrating-psp-apis.md)
 - [x] [080 Implement shipment creation endpoint generating labels via carrier integrations and storing tracking info.](./tasks/080-implement-shipment-creation-endpoint-generating-labels-via-carrier-integrations-.md)
 - [x] [081 Implement shipment update endpoint for correcting tracking statuses/events.](./tasks/081-implement-shipment-update-endpoint-for-correcting-tracking-statuses-events.md)
-- [ ] [082 Implement production events POST endpoint allowing operations to append workflow events.](./tasks/082-implement-production-events-post-endpoint-allowing-operations-to-append-workflow.md)
+- [x] [082 Implement production events POST endpoint allowing operations to append workflow events.](./tasks/082-implement-production-events-post-endpoint-allowing-operations-to-append-workflow.md)
 - [ ] [083 Implement low stock endpoint aggregating inventory below thresholds.](./tasks/083-implement-low-stock-endpoint-aggregating-inventory-below-thresholds.md)
 - [ ] [084 Implement stock reservation release endpoint for manual override of expired reservations.](./tasks/084-implement-stock-reservation-release-endpoint-for-manual-override-of-expired-rese.md)
 
