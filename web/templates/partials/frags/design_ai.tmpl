@@ -172,7 +172,7 @@
     <section class="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 text-center shadow-inner">
       <div class="mx-auto flex h-40 max-w-xs items-center justify-center rounded-full border-4 border-gray-900/80 bg-white text-3xl font-semibold tracking-wide text-gray-900">
         {{ if $detail.Thumbnail }}
-          <img src="{{ $detail.Thumbnail }}" alt="Preview thumbnail" class="h-full w-full rounded-full object-cover">
+          <img src="{{ $detail.Thumbnail }}" alt="Preview thumbnail" class="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $detail.Thumbnail 160 240 320 }}" sizes="{{ responsiveSizes "thumb" }}">
         {{ else }}
           AI
         {{ end }}

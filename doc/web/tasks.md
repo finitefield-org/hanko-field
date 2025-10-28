@@ -66,7 +66,7 @@
 - [x] [Provide offline/error pages and progressive enhancement fallbacks.](doc/web/tasks/047-provide-offline-error-pages-and-progressive-enhancement-fallbacks.md)
 
 ## 9. Performance, Accessibility, and QA
-- [ ] [Optimize asset pipeline (Tailwind purge, lazy loading, responsive images) and configure CDN headers.](doc/web/tasks/048-optimize-asset-pipeline-tailwind-purge-lazy-loading-responsive-images-and-configure-cdn-he.md)
+- [x] [Optimize asset pipeline (Tailwind purge, lazy loading, responsive images) and configure CDN headers.](doc/web/tasks/048-optimize-asset-pipeline-tailwind-purge-lazy-loading-responsive-images-and-configure-cdn-he.md)
 - [ ] [Ensure accessibility compliance (ARIA roles, keyboard navigation, focus management) across pages and modals.](doc/web/tasks/049-ensure-accessibility-compliance-aria-roles-keyboard-navigation-focus-management-across-pag.md)
 - [ ] [Implement automated tests for fragments/modals (htmx interactions) and critical flows.](doc/web/tasks/050-implement-automated-tests-for-fragments-modals-htmx-interactions-and-critical-flows.md)
 - [ ] [Set up monitoring (logging, metrics, uptime checks) and real user metrics reporting.](doc/web/tasks/051-set-up-monitoring-logging-metrics-uptime-checks-and-real-user-metrics-reporting.md)

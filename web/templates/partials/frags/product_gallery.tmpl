@@ -43,7 +43,7 @@
               hx-target="#modal-root"
               hx-swap="innerHTML"
               aria-label="{{ if eq $.Lang "ja" }}ギャラリーを拡大{{ else }}Open gallery modal{{ end }}">
-        <img src="{{ $active.Src }}" alt="{{ $active.Alt }}" class="w-full object-cover transition duration-300 group-hover:scale-[1.02]">
+        <img src="{{ $active.Src }}" alt="{{ $active.Alt }}" class="w-full object-cover transition duration-300 group-hover:scale-[1.02]" loading="eager" decoding="async" fetchpriority="high" srcset="{{ responsiveSrcset $active.Src }}" sizes="{{ responsiveSizes "gallery-main" }}">
         <span class="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow">
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor">
             <path d="M11 3h6v6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -71,7 +71,7 @@
         {{ if eq $media.Kind "video" }}
           <div class="relative aspect-square bg-gray-100">
             {{ if $media.Poster }}
-              <img src="{{ $media.Poster }}" alt="{{ $media.Alt }}" class="h-full w-full object-cover">
+              <img src="{{ $media.Poster }}" alt="{{ $media.Alt }}" class="h-full w-full object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $media.Poster }}" sizes="{{ responsiveSizes "gallery-thumb" }}">
             {{ else }}
               <span class="flex h-full w-full items-center justify-center text-gray-400">Video</span>
             {{ end }}
@@ -82,7 +82,9 @@
             </span>
           </div>
         {{ else }}
-          <img src="{{ if $media.Thumbnail }}{{ $media.Thumbnail }}{{ else }}{{ $media.Src }}{{ end }}" alt="{{ $media.Alt }}" class="h-full w-full object-cover">
+          {{ $thumbSrc := $media.Src }}
+          {{ if $media.Thumbnail }}{{ $thumbSrc = $media.Thumbnail }}{{ end }}
+          <img src="{{ $thumbSrc }}" alt="{{ $media.Alt }}" class="h-full w-full object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $thumbSrc }}" sizes="{{ responsiveSizes "gallery-thumb" }}">
         {{ end }}
       </button>
     {{ end }}

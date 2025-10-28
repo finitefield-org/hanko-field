@@ -21,7 +21,7 @@
         </div>
         <div class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:gap-5">
           <div class="flex items-center gap-3">
-            <img src="{{ $account.User.AvatarURL }}" alt="{{ $account.User.DisplayName }}" class="h-14 w-14 rounded-full border border-gray-200 object-cover">
+            <img src="{{ $account.User.AvatarURL }}" alt="{{ $account.User.DisplayName }}" class="h-14 w-14 rounded-full border border-gray-200 object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $account.User.AvatarURL 96 128 192 }}" sizes="{{ responsiveSizes "avatar" }}">
             <div>
               <p class="text-base font-semibold text-gray-900">{{ $account.User.DisplayName }}</p>
               <p class="text-xs text-gray-500">{{ $account.User.Email }}</p>

@@ -15,7 +15,7 @@
           <source src="{{ $media.Src }}" type="video/mp4">
         </video>
       {{ else }}
-        <img src="{{ $media.Src }}" alt="{{ $media.Alt }}" class="mx-auto max-h-[80vh] w-full object-contain">
+        <img src="{{ $media.Src }}" alt="{{ $media.Alt }}" class="mx-auto max-h-[80vh] w-full object-contain" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $media.Src }}" sizes="{{ responsiveSizes "gallery-main" }}">
       {{ end }}
     </div>
     <div class="border-t border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">

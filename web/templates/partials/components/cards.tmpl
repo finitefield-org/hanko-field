@@ -9,7 +9,9 @@
   {{ $cls = printf "%s %s" $cls "border border-gray-100" }}
 {{ end }}
 <div class="{{ $cls }}">
-  {{ if .MediaURL }}<img src="{{ .MediaURL }}" alt="{{ .MediaAlt }}" class="w-full h-40 object-cover rounded-t-lg">{{ end }}
+  {{ if .MediaURL }}
+    <img src="{{ .MediaURL }}" alt="{{ .MediaAlt }}" class="w-full h-40 object-cover rounded-t-lg" loading="lazy" decoding="async" srcset="{{ responsiveSrcset .MediaURL 320 480 640 }}" sizes="{{ responsiveSizes "card" }}">
+  {{ end }}
   <div class="p-4">
     {{ if .Title }}<h3 class="text-base font-semibold">{{ .Title }}</h3>{{ end }}
     {{ if .Description }}<p class="mt-1 text-sm text-gray-600">{{ .Description }}</p>{{ end }}

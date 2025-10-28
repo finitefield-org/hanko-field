@@ -32,7 +32,7 @@ tidy:
 # --- Assets (Tailwind standalone CLI) ---
 css: tools
 	@mkdir -p public/assets
-	@$(TAILWIND) -c tailwind.config.js -i assets/css/input.css -o public/assets/app.css --minify
+	@NODE_ENV=production $(TAILWIND) -c tailwind.config.js -i assets/css/input.css -o public/assets/app.css --minify
 
 css-watch: tools
 	@mkdir -p public/assets
@@ -47,7 +47,7 @@ tools:
 
 htmx:
 	@mkdir -p public/assets/js
-	@echo "Fetching htmx $(HTMX_VERSION) from $(HTMX_URL)" 
+	@echo "Fetching htmx $(HTMX_VERSION) from $(HTMX_URL)"
 	@curl -fsSL "$(HTMX_URL)" -o public/assets/js/htmx.min.js
 
 assets: css htmx

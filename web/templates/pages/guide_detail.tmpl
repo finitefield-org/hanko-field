@@ -20,7 +20,7 @@
 
         {{ if .Guide.HeroImageURL }}
           <figure class="overflow-hidden rounded-lg border border-gray-200">
-            <img src="{{ .Guide.HeroImageURL }}" alt="{{ .Guide.Title }}" class="w-full object-cover">
+            <img src="{{ .Guide.HeroImageURL }}" alt="{{ .Guide.Title }}" class="w-full object-cover" loading="eager" decoding="async" fetchpriority="high" srcset="{{ responsiveSrcset .Guide.HeroImageURL }}" sizes="{{ responsiveSizes "hero" }}">
           </figure>
         {{ end }}
 

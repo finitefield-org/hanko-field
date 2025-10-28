@@ -32,6 +32,8 @@ func AssetsWithCache(dir string) http.Handler {
 		// add cache headers
 		w.Header().Set("Vary", "Accept-Encoding")
 		w.Header().Set("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
+		w.Header().Set("CDN-Cache-Control", "public, max-age=604800, stale-while-revalidate=86400")
+		w.Header().Set("Surrogate-Control", "max-age=604800, stale-while-revalidate=86400")
 		if et := etags[strings.TrimPrefix(r.URL.Path, "/assets")]; et != "" {
 			w.Header().Set("ETag", et)
 			if inm := r.Header.Get("If-None-Match"); inm != "" && inm == et {

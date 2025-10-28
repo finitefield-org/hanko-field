@@ -5,7 +5,7 @@
       {{ range .Guides }}
         <a href="{{ .Href }}" class="block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-indigo-400 hover:shadow">
           <div class="h-32 bg-gray-100">
-            <img src="{{ .HeroImageURL }}" alt="{{ .Title }}" class="h-32 w-full object-cover">
+            <img src="{{ .HeroImageURL }}" alt="{{ .Title }}" class="h-32 w-full object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset .HeroImageURL }}" sizes="{{ responsiveSizes "thumb" }}">
           </div>
           <div class="space-y-2 p-3">
             <div class="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">

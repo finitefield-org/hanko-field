@@ -78,7 +78,7 @@
           <article class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
             <a href="{{ .Href }}" class="block h-full">
               <div class="h-40 w-full bg-gray-100">
-                <img src="{{ .HeroImageURL }}" alt="{{ .Title }}" class="h-40 w-full object-cover">
+                <img src="{{ .HeroImageURL }}" alt="{{ .Title }}" class="h-40 w-full object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset .HeroImageURL }}" sizes="{{ responsiveSizes "card" }}">
               </div>
               <div class="space-y-3 p-4">
                 <div class="flex items-center justify-between text-xs text-gray-500">

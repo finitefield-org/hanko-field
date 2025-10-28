@@ -22,6 +22,7 @@ import (
 	"time"
 	"unicode"
 
+	"finitefield.org/hanko-web/internal/assets"
 	"finitefield.org/hanko-web/internal/cms"
 	"finitefield.org/hanko-web/internal/format"
 	handlersPkg "finitefield.org/hanko-web/internal/handlers"
@@ -976,12 +977,14 @@ func tmplFuncMapFor(getT func() *template.Template) template.FuncMap {
 			}
 			return i18nBundle.T(lang, key)
 		},
-		"fmtDate":       func(ts time.Time, lang string) string { return format.FmtDate(ts, lang) },
-		"fmtMoney":      func(amount int64, currency, lang string) string { return format.FmtCurrency(amount, currency, lang) },
-		"materialLabel": materialLabel,
-		"shapeLabel":    shapeLabel,
-		"sizeLabel":     sizeLabel,
-		"ratingStars":   ratingStars,
+		"fmtDate":          func(ts time.Time, lang string) string { return format.FmtDate(ts, lang) },
+		"fmtMoney":         func(amount int64, currency, lang string) string { return format.FmtCurrency(amount, currency, lang) },
+		"materialLabel":    materialLabel,
+		"shapeLabel":       shapeLabel,
+		"sizeLabel":        sizeLabel,
+		"ratingStars":      ratingStars,
+		"responsiveSrcset": assets.ResponsiveSrcset,
+		"responsiveSizes":  assets.ResponsiveSizes,
 		"seq": func(n int) []int {
 			if n < 0 {
 				n = 0
