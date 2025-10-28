@@ -408,7 +408,10 @@ func main() {
 	}
 	designHandlers := handlers.NewDesignHandlers(authenticator, designService)
 	reviewHandlers := handlers.NewReviewHandlers(authenticator, nil)
-	var orderService services.OrderService
+	var (
+		orderService    services.OrderService
+		shipmentService services.ShipmentService
+	)
 	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
 
 	projectID := traceProjectID(cfg)
@@ -452,7 +455,7 @@ func main() {
 		adminPromotionHandlers.Routes,
 	}
 	if orderService != nil {
-		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, nil, nil, nil)
+		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, shipmentService, nil, nil)
 		adminRegistrars = append(adminRegistrars, adminOrderHandlers.Routes)
 	}
 
