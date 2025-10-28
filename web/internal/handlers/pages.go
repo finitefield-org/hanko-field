@@ -6,10 +6,11 @@ import (
 
 // PageData is a generic view model for simple pages using the shared layout.
 type PageData struct {
-	Title     string
-	Lang      string
-	SEO       SEOData
-	Analytics Analytics
+	Title        string
+	Lang         string
+	SEO          SEOData
+	Analytics    Analytics
+	FeatureFlags FeatureFlags
 
 	Path        string
 	Nav         []nav.RenderedItem

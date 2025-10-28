@@ -29,6 +29,7 @@ func DesignVersionsHandler(w http.ResponseWriter, r *http.Request) {
 		Nav:            nav.Build(r.URL.Path),
 		Breadcrumbs:    nav.Breadcrumbs(r.URL.Path),
 		Analytics:      handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags:   handlersPkg.LoadFeatureFlags(),
 		DesignVersions: view,
 	}
 

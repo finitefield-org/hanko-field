@@ -743,5 +743,18 @@
   "support.timeline.response.sla": "2 営業時間以内",
   "support.timeline.response.title": "初回返信",
   "support.timeline.subtitle": "解決までの流れと目安時間をご案内します。",
-  "support.timeline.title": "対応タイムライン"
+  "support.timeline.title": "対応タイムライン",
+  "consent.banner.accept": "すべて許可",
+  "consent.banner.analytics.desc": "利用状況を把握し、サービス改善に役立てます。",
+  "consent.banner.analytics.title": "解析用クッキー",
+  "consent.banner.body": "必須クッキーに加え、体験向上のためのオプションデータ取得にご協力ください。",
+  "consent.banner.functional": "必須クッキーはサイトを安全に動作させるため無効化できません。",
+  "consent.banner.manage": "詳細設定",
+  "consent.banner.marketing.desc": "キャンペーン最適化やレコメンドの改善に利用します。",
+  "consent.banner.marketing.title": "マーケティング用クッキー",
+  "consent.banner.preferences": "クッキー設定",
+  "consent.banner.reject": "任意を拒否",
+  "consent.banner.reset": "リセット",
+  "consent.banner.save": "設定を保存",
+  "consent.banner.title": "クッキーの利用について"
 }

@@ -1,0 +1,69 @@
+{{ define "feature_flags" }}
+<script>
+(function(){
+  var payload = {{ safe .FeatureFlags.JSON }};
+  window.__HANKO_FLAGS__ = payload;
+  function ensureFlags(){
+    return window.__HANKO_FLAGS__ || {};
+  }
+  function enabled(key){
+    var data = ensureFlags();
+    if (!data.flags) { return false; }
+    return data.flags[key] === true;
+  }
+  function variant(key, fallback){
+    var data = ensureFlags();
+    if (data.variants && Object.prototype.hasOwnProperty.call(data.variants, key)) {
+      return data.variants[key];
+    }
+    return fallback === undefined ? null : fallback;
+  }
+  function applyFeatureBindings(){
+    var data = ensureFlags();
+    var nodes = document.querySelectorAll('[data-feature-flag]');
+    nodes.forEach(function(node){
+      var flag = node.getAttribute('data-feature-flag');
+      if (!flag) { return; }
+      var invert = node.getAttribute('data-feature-invert') === 'true';
+      var active = enabled(flag);
+      if (invert) { active = !active; }
+      node.setAttribute('data-feature-active', active ? 'true' : 'false');
+      if (node.hasAttribute('data-feature-toggle-hidden')) {
+        node.classList.toggle('hidden', !active);
+      }
+    });
+    var experiments = document.querySelectorAll('[data-feature-experiment]');
+    experiments.forEach(function(node){
+      var key = node.getAttribute('data-feature-experiment');
+      if (!key) { return; }
+      var fallback = node.getAttribute('data-feature-default') || null;
+      var value = variant(key, fallback);
+      if (value == null) { value = ''; }
+      node.setAttribute('data-feature-variant', value);
+    });
+    document.dispatchEvent(new CustomEvent('hanko:flags-applied', { detail: data }));
+  }
+  window.hankoFlags = {
+    enabled: enabled,
+    variant: variant,
+    all: ensureFlags,
+    refresh: function(next){
+      if (next && typeof next === 'object') {
+        window.__HANKO_FLAGS__ = next;
+      }
+      payload = ensureFlags();
+      applyFeatureBindings();
+    }
+  };
+  function ready(){
+    applyFeatureBindings();
+    document.dispatchEvent(new CustomEvent('hanko:flags-ready', { detail: ensureFlags() }));
+  }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    ready();
+  } else {
+    document.addEventListener('DOMContentLoaded', ready, { once: true });
+  }
+})();
+</script>
+{{ end }}

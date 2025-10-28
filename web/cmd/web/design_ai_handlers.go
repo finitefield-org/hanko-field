@@ -23,6 +23,7 @@ func DesignAISuggestionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	vm.Breadcrumbs = nav.Breadcrumbs(r.URL.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	view := buildDesignAISuggestionsView(lang, r.URL.Query())
 	vm.DesignAI = view
 

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/assets/app.css">
   </head>
   <body class="min-h-screen bg-gray-50 text-gray-900">
+    {{ template "feature_flags" . }}
     <header class="border-b bg-white">
       <div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -660,6 +661,7 @@
         window.hankoModalClose = closeModal;
       })();
     </script>
+    {{ template "cookie_consent_banner" . }}
     {{ template "analytics_body" . }}
   </body>
 </html>

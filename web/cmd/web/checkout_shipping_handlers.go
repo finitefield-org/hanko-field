@@ -21,13 +21,14 @@ func CheckoutShippingHandler(w http.ResponseWriter, r *http.Request) {
 	desc := i18nOrDefault(lang, "checkout.shipping.desc", "Compare carrier speeds and pick how we should dispatch your seals.")
 
 	vm := handlersPkg.PageData{
-		Title:       title,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
-		Checkout:    view,
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+		Checkout:     view,
 	}
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")

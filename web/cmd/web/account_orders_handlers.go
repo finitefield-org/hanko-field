@@ -20,13 +20,14 @@ func AccountOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
 
 	vm := handlersPkg.PageData{
-		Title:       title,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
-		Account:     view,
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+		Account:      view,
 	}
 
 	vm.SEO.Title = title + " | " + brand

@@ -19,13 +19,14 @@ func CartHandler(w http.ResponseWriter, r *http.Request) {
 	desc := i18nOrDefault(lang, "cart.description", "Review each seal, apply promo codes, and lock in your fulfillment estimate.")
 
 	vm := handlersPkg.PageData{
-		Title:       title,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
-		Cart:        view,
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+		Cart:         view,
 	}
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")

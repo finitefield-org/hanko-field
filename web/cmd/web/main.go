@@ -1226,6 +1226,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	if i18nBundle != nil {
 		vm.SEO.Title = i18nBundle.T(lang, "home.seo.title")
 		vm.SEO.Description = i18nBundle.T(lang, "home.seo.description")
@@ -1261,6 +1262,7 @@ func DesignNewHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.Design = map[string]any{
 		"Selection": buildDesignSelectionProps(lang),
 	}
@@ -1292,6 +1294,7 @@ func DesignEditorHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.Design = view
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
@@ -1350,6 +1353,7 @@ func DesignPreviewHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.DesignPreview = view
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
@@ -1470,6 +1474,7 @@ func ShopHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
 	vm.SEO.OG.SiteName = i18nOrDefault(lang, "brand.name", "Hanko Field")
@@ -1495,6 +1500,7 @@ func ProductDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.Product = detail
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
@@ -2098,6 +2104,7 @@ func TemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
 	vm.Templates = buildTemplateListProps(lang, r.URL.Query())
 	vm.SEO.Title = fmt.Sprintf("%s | %s", i18nOrDefault(lang, "nav.templates", "Templates"), brand)
@@ -2136,6 +2143,7 @@ func TemplateDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.Template = detail
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
@@ -2196,6 +2204,7 @@ func GuidesHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.Alternates = buildAlternates(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
@@ -2290,6 +2299,7 @@ func GuideDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.Alternates = buildAlternates(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
@@ -3344,6 +3354,7 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
 
@@ -3479,6 +3490,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
 	vm.SEO.Alternates = buildAlternates(r)

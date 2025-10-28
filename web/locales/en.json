@@ -743,5 +743,18 @@
   "support.timeline.response.sla": "Under 2 business hours",
   "support.timeline.response.title": "First response",
   "support.timeline.subtitle": "We keep you informed at every step until resolution.",
-  "support.timeline.title": "Response timeline"
+  "support.timeline.title": "Response timeline",
+  "consent.banner.accept": "Accept all",
+  "consent.banner.analytics.desc": "Help us understand how the site is used so we can improve it.",
+  "consent.banner.analytics.title": "Analytics cookies",
+  "consent.banner.body": "We use cookies to power essential features and collect optional analytics data.",
+  "consent.banner.functional": "Essential cookies keep the site secure and cannot be disabled.",
+  "consent.banner.manage": "Adjust preferences",
+  "consent.banner.marketing.desc": "Allow tailored campaigns and experiments from trusted partners.",
+  "consent.banner.marketing.title": "Marketing cookies",
+  "consent.banner.preferences": "Cookie preferences",
+  "consent.banner.reject": "Decline optional",
+  "consent.banner.reset": "Reset",
+  "consent.banner.save": "Save selection",
+  "consent.banner.title": "Your privacy choices"
 }

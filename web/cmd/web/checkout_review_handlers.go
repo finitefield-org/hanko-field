@@ -30,13 +30,14 @@ func CheckoutReviewHandler(w http.ResponseWriter, r *http.Request) {
 	desc := i18nOrDefault(lang, "checkout.review.desc", "Confirm engraving details, fulfillment, and payment before placing the order.")
 
 	vm := handlersPkg.PageData{
-		Title:       title,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
-		Checkout:    view,
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+		Checkout:     view,
 	}
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")

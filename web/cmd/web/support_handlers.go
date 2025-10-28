@@ -147,6 +147,7 @@ func renderSupportPage(w http.ResponseWriter, r *http.Request, lang string, stat
 	}
 	vm.Breadcrumbs = crumbs
 	vm.Analytics = handlersPkg.LoadAnalyticsFromEnv()
+	vm.FeatureFlags = handlersPkg.LoadFeatureFlags()
 	vm.Support = view
 
 	vm.SEO.Canonical = absoluteURL(r)

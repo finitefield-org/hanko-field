@@ -18,13 +18,14 @@ func CheckoutCompleteHandler(w http.ResponseWriter, r *http.Request) {
 	desc := i18nOrDefault(lang, "checkout.complete.seo.desc", "View your order number, tracking steps, and share updates with your team.")
 
 	vm := handlersPkg.PageData{
-		Title:       title,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
-		Checkout:    view,
+		Title:        title,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
+		Checkout:     view,
 	}
 
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")

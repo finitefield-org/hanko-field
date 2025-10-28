@@ -54,12 +54,13 @@ func NotificationsPageHandler(w http.ResponseWriter, r *http.Request) {
 	lang := mw.Lang(r)
 	pageView := buildNotificationPageView(r, lang)
 	vm := handlersPkg.PageData{
-		Title:       pageView.Heading,
-		Lang:        lang,
-		Path:        r.URL.Path,
-		Nav:         nav.Build(r.URL.Path),
-		Breadcrumbs: nav.Breadcrumbs(r.URL.Path),
-		Analytics:   handlersPkg.LoadAnalyticsFromEnv(),
+		Title:        pageView.Heading,
+		Lang:         lang,
+		Path:         r.URL.Path,
+		Nav:          nav.Build(r.URL.Path),
+		Breadcrumbs:  nav.Breadcrumbs(r.URL.Path),
+		Analytics:    handlersPkg.LoadAnalyticsFromEnv(),
+		FeatureFlags: handlersPkg.LoadFeatureFlags(),
 	}
 	vm.NotificationsPage = pageView
 
