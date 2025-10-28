@@ -41,6 +41,8 @@ type adminReleaseExpiredResponse struct {
 	ReservationIDs       []string `json:"reservation_ids"`
 	AlreadyReleasedIDs   []string `json:"already_released_ids"`
 	Skus                 []string `json:"skus"`
+	SkippedCount         int      `json:"skipped_count"`
+	SkippedIDs           []string `json:"skipped_ids"`
 }
 
 // AdminInventoryHandlers exposes admin/staff stock endpoints.
@@ -313,6 +315,8 @@ func (h *AdminInventoryHandlers) releaseExpiredReservations(w http.ResponseWrite
 		ReservationIDs:       ensureStringSlice(result.ReservationIDs),
 		AlreadyReleasedIDs:   ensureStringSlice(result.AlreadyReleasedIDs),
 		Skus:                 ensureStringSlice(result.SKUs),
+		SkippedCount:         result.SkippedCount,
+		SkippedIDs:           ensureStringSlice(result.SkippedIDs),
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)

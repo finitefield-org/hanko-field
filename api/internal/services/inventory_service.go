@@ -232,6 +232,10 @@ func (s *inventoryService) ReleaseExpiredReservations(ctx context.Context, cmd R
 	}
 
 	now := s.now()
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return InventoryReleaseExpiredResult{}, fmt.Errorf("%w: actor id is required", ErrInventoryInvalidInput)
+	}
 	reservations, err := s.repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
 		Before: now,
 		Limit:  limit,
@@ -251,11 +255,30 @@ func (s *inventoryService) ReleaseExpiredReservations(ctx context.Context, cmd R
 	if reason == "" {
 		reason = "expired_manual_release"
 	}
-	actorID := strings.TrimSpace(cmd.ActorID)
 
 	skuSet := make(map[string]struct{})
 	result.ReservationIDs = make([]string, 0, len(reservations))
 	for _, reservation := range reservations {
+		current, fetchErr := s.repo.GetReservation(ctx, reservation.ID)
+		if fetchErr != nil {
+			mapped := s.mapRepositoryError(fetchErr)
+			if errors.Is(mapped, ErrInventoryReservationNotFound) {
+				result.NotFoundCount++
+				continue
+			}
+			return InventoryReleaseExpiredResult{}, mapped
+		}
+		if current.Status != statusReserved {
+			result.AlreadyReleasedCount++
+			result.AlreadyReleasedIDs = append(result.AlreadyReleasedIDs, current.ID)
+			continue
+		}
+		if !current.ExpiresAt.Before(now) {
+			result.SkippedCount++
+			result.SkippedIDs = append(result.SkippedIDs, current.ID)
+			continue
+		}
+
 		released, releaseErr := s.ReleaseReservation(ctx, InventoryReleaseCommand{
 			ReservationID: reservation.ID,
 			Reason:        reason,
@@ -307,6 +330,9 @@ func (s *inventoryService) ReleaseExpiredReservations(ctx context.Context, cmd R
 		}
 		if result.NotFoundCount > 0 {
 			fields["notFound"] = result.NotFoundCount
+		}
+		if result.SkippedCount > 0 {
+			fields["skipped"] = result.SkippedCount
 		}
 		s.logger(ctx, "inventory.releaseExpired", fields)
 	}

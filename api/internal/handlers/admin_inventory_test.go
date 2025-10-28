@@ -115,6 +115,7 @@ func TestAdminInventoryHandlers_ReleaseExpired_RejectsNegativeLimit(t *testing.T
 	handler := NewAdminInventoryHandlers(nil, &stubInventoryService{}, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", strings.NewReader(`{"limit": -5}`))
+	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops", Roles: []string{auth.RoleAdmin}}))
 	rec := httptest.NewRecorder()
 
@@ -145,6 +146,7 @@ func TestAdminInventoryHandlers_ReleaseExpired_Succeeds(t *testing.T) {
 
 	body := strings.NewReader(`{"limit": 25, "reason": " manual cleanup "}`)
 	req := httptest.NewRequest(http.MethodPost, "/stock/reservations:release-expired", body)
+	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "ops-1", Roles: []string{auth.RoleAdmin}}))
 	rec := httptest.NewRecorder()
 
@@ -178,6 +180,9 @@ func TestAdminInventoryHandlers_ReleaseExpired_Succeeds(t *testing.T) {
 	}
 	if len(payload.Skus) != 2 {
 		t.Fatalf("expected two skus, got %+v", payload.Skus)
+	}
+	if payload.SkippedCount != 0 || len(payload.SkippedIDs) != 0 {
+		t.Fatalf("expected no skipped reservations, got %+v", payload.SkippedIDs)
 	}
 }
 

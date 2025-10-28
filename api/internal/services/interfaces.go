@@ -922,6 +922,8 @@ type InventoryReleaseExpiredResult struct {
 	ReservationIDs       []string
 	AlreadyReleasedIDs   []string
 	SKUs                 []string
+	SkippedCount         int
+	SkippedIDs           []string
 }
 
 type InventoryLine struct {
