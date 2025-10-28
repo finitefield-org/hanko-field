@@ -892,6 +892,7 @@ func main() {
 	r.Get("/support", SupportHandler)
 	r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
 	r.Get("/status", StatusHandler)
+	r.Get("/notifications", NotificationsPageHandler)
 	r.Get("/cart", CartHandler)
 	r.Get("/cart/table", CartTableFrag)
 	r.Get("/cart/estimate", CartEstimateFrag)

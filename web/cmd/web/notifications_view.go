@@ -26,6 +26,15 @@ type NotificationBellView struct {
 	Items         []NotificationItemView
 }
 
+// NotificationPageView powers the full notifications archive page.
+type NotificationPageView struct {
+	Lang     string
+	Heading  string
+	Summary  string
+	List     NotificationBellView
+	LastSync time.Time
+}
+
 // NotificationItemView renders an individual notification entry.
 type NotificationItemView struct {
 	ID            string
@@ -124,6 +133,20 @@ func buildNotificationBellView(r *http.Request, lang string, open bool) Notifica
 		MarkReadLabel: i18nOrDefault(lang, "notifications.markRead", "Mark as read"),
 		ViewLabel:     i18nOrDefault(lang, "notifications.viewDetails", "View details"),
 		Items:         items,
+	}
+}
+
+func buildNotificationPageView(r *http.Request, lang string) NotificationPageView {
+	view := buildNotificationBellView(r, lang, false)
+	view.Open = false
+	heading := i18nOrDefault(lang, "notifications.page.title", "Notifications")
+	summary := i18nOrDefault(lang, "notifications.page.subtitle", "Latest alerts about orders, designs, and account activity.")
+	return NotificationPageView{
+		Lang:     lang,
+		Heading:  heading,
+		Summary:  summary,
+		List:     view,
+		LastSync: time.Now().UTC(),
 	}
 }
 

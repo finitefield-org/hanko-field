@@ -1,0 +1,61 @@
+{{ define "content" }}
+{{ $view := $.NotificationsPage }}
+<section class="py-12" data-notifications-page>
+  <div class="mx-auto w-full max-w-4xl space-y-8 px-4">
+    <header class="space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">{{ tlang $.Lang "nav.notifications" }}</p>
+      <div class="space-y-2">
+        <h1 class="text-3xl font-semibold text-gray-900 md:text-4xl">{{ $view.Heading }}</h1>
+        <p class="max-w-2xl text-base text-gray-600 md:text-lg">{{ $view.Summary }}</p>
+      </div>
+      <div class="text-xs text-gray-400">
+        <span>{{ tlang $.Lang "notifications.page.synced" }} </span>
+        <time datetime="{{ $view.LastSync.Format "2006-01-02T15:04:05Z07:00" }}">{{ fmtDate $view.LastSync $.Lang }}</time>
+      </div>
+    </header>
+
+    {{ $list := $view.List }}
+    {{ if $list.Items }}
+      <ul class="space-y-4">
+        {{ range $item := $list.Items }}
+        <li class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-indigo-200" data-notification-item data-unread="{{ if not $item.Read }}true{{ else }}false{{ end }}">
+          <article class="space-y-4">
+            <div class="flex items-start gap-3">
+              <span class="mt-1 inline-flex h-2 w-2 flex-none rounded-full {{ if not $item.Read }}bg-indigo-500{{ else }}bg-gray-300{{ end }}" aria-hidden="true"></span>
+              <div class="min-w-0 flex-1 space-y-2">
+                <h2 class="text-lg font-semibold text-gray-900">{{ $item.Title }}</h2>
+                <p class="text-sm text-gray-600">{{ $item.Body }}</p>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <span>{{ $item.TimeLabel }}</span>
+                  {{ if not $item.Read }}
+                  <span class="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">{{ $item.UnreadLabel }}</span>
+                  {{ end }}
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <a href="{{ $item.Href }}" class="inline-flex items-center gap-1 rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ $item.ViewLabel }}</a>
+              {{ if not $item.Read }}
+              <form method="post"
+                    hx-post="/notifications/{{ $item.ID }}:read"
+                    hx-target="body"
+                    hx-select="[data-notifications-page]"
+                    hx-swap="outerHTML"
+                    class="inline-flex">
+                <input type="hidden" name="context" value="page">
+                <button type="submit" class="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">{{ $item.MarkReadLabel }}</button>
+              </form>
+              {{ end }}
+            </div>
+          </article>
+        </li>
+        {{ end }}
+      </ul>
+    {{ else }}
+      <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-sm text-gray-500">
+        {{ $list.EmptyMessage }}
+      </div>
+    {{ end }}
+  </div>
+</section>
+{{ end }}
