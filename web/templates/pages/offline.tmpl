@@ -123,6 +123,23 @@
 (function(){
   var area = document.querySelector('[data-offline-cache]');
   if (!area) { return; }
+  function safePath(raw){
+    if (typeof raw !== 'string' || !raw) { return '/'; }
+    try {
+      var url = new URL(raw, window.location.origin);
+      if (url.origin === window.location.origin) {
+        return url.pathname + url.search + url.hash;
+      }
+    } catch (_) {}
+    if (raw.charAt(0) === '/') { return raw; }
+    return '/';
+  }
+  function safeString(value){
+    return typeof value === 'string' ? value : '';
+  }
+  function isISO(ts){
+    return typeof ts === 'string' && ts.length <= 40 && /^[0-9T:\-+.Z]+$/.test(ts);
+  }
   try {
     var raw = localStorage.getItem('hanko:offline:recent');
     if (!raw) { return; }
@@ -131,15 +148,42 @@
     area.innerHTML = '';
     data.slice(0, 6).forEach(function(entry){
       if (!entry || !entry.href || !entry.title) { return; }
+      var title = safeString(entry.title).trim();
+      if (!title) { return; }
+      var description = safeString(entry.description).trim();
+      var href = safePath(entry.href);
       var card = document.createElement('article');
       card.className = 'group rounded-2xl border border-gray-200 bg-white px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/60';
-      card.innerHTML = '<a class="flex flex-col gap-2 text-left no-underline" href="' + entry.href + '">' +
-        '<div class="flex items-center justify-between gap-3">' +
-        '<h3 class="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">' + entry.title + '</h3>' +
-        (entry.updatedISO ? '<time class="text-xs text-gray-400" datetime="' + entry.updatedISO + '">' + (entry.updated || '') + '</time>' : '') +
-        '</div>' +
-        (entry.description ? '<p class="text-xs text-gray-500">' + entry.description + '</p>' : '') +
-        '</a>';
+      var link = document.createElement('a');
+      link.className = 'flex flex-col gap-2 text-left no-underline';
+      link.setAttribute('href', href);
+
+      var header = document.createElement('div');
+      header.className = 'flex items-center justify-between gap-3';
+
+      var heading = document.createElement('h3');
+      heading.className = 'text-sm font-semibold text-gray-900 group-hover:text-indigo-600';
+      heading.textContent = title;
+      header.appendChild(heading);
+
+      if (isISO(entry.updatedISO)) {
+        var time = document.createElement('time');
+        time.className = 'text-xs text-gray-400';
+        time.setAttribute('datetime', entry.updatedISO);
+        time.textContent = safeString(entry.updated || '');
+        header.appendChild(time);
+      }
+
+      link.appendChild(header);
+
+      if (description) {
+        var para = document.createElement('p');
+        para.className = 'text-xs text-gray-500';
+        para.textContent = description;
+        link.appendChild(para);
+      }
+
+      card.appendChild(link);
       area.appendChild(card);
     });
   } catch (_) {}
