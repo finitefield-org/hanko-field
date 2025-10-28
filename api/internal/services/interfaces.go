@@ -95,6 +95,7 @@ type (
 	NameMappingInput          = domain.NameMappingInput
 	NameMappingCandidate      = domain.NameMappingCandidate
 	NameMappingStatus         = domain.NameMappingStatus
+	ProductionQueue           = domain.ProductionQueue
 )
 
 // PromotionConstraint identifies a validation group evaluated for promotion definitions.
@@ -171,6 +172,13 @@ const (
 	NameMappingStatusReady    = domain.NameMappingStatusReady
 	NameMappingStatusSelected = domain.NameMappingStatusSelected
 	NameMappingStatusExpired  = domain.NameMappingStatusExpired
+
+	ProductionQueueStatusActive   = domain.ProductionQueueStatusActive
+	ProductionQueueStatusPaused   = domain.ProductionQueueStatusPaused
+	ProductionQueueStatusArchived = domain.ProductionQueueStatusArchived
+
+	ProductionQueuePriorityNormal = domain.ProductionQueuePriorityNormal
+	ProductionQueuePriorityRush   = domain.ProductionQueuePriorityRush
 )
 
 // DesignService orchestrates design lifecycle operations, coordinating repositories,
@@ -320,6 +328,15 @@ type ContentService interface {
 	GetPage(ctx context.Context, slug string, locale string) (ContentPage, error)
 	UpsertPage(ctx context.Context, cmd UpsertContentPageCommand) (ContentPage, error)
 	DeletePage(ctx context.Context, cmd DeleteContentPageCommand) error
+}
+
+// ProductionQueueService manages configuration lifecycle for production queues used by operations staff.
+type ProductionQueueService interface {
+	ListQueues(ctx context.Context, filter ProductionQueueListFilter) (domain.CursorPage[ProductionQueue], error)
+	GetQueue(ctx context.Context, queueID string) (ProductionQueue, error)
+	CreateQueue(ctx context.Context, cmd UpsertProductionQueueCommand) (ProductionQueue, error)
+	UpdateQueue(ctx context.Context, cmd UpsertProductionQueueCommand) (ProductionQueue, error)
+	DeleteQueue(ctx context.Context, cmd DeleteProductionQueueCommand) error
 }
 
 // CatalogService manages templates, fonts, materials, and products for admin-facing operations.
@@ -937,6 +954,12 @@ type InventoryLowStockFilter struct {
 	Pagination Pagination
 }
 
+type ProductionQueueListFilter struct {
+	Status     []string
+	Priorities []string
+	Pagination Pagination
+}
+
 type ConfigureSafetyStockCommand struct {
 	SKU           string
 	ProductRef    string
@@ -967,6 +990,17 @@ type UpsertContentPageCommand struct {
 
 type DeleteContentPageCommand struct {
 	PageID  string
+	ActorID string
+}
+
+type UpsertProductionQueueCommand struct {
+	QueueID string
+	Queue   ProductionQueue
+	ActorID string
+}
+
+type DeleteProductionQueueCommand struct {
+	QueueID string
 	ActorID string
 }
 

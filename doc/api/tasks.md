@@ -117,7 +117,7 @@
 - [x] [084 Implement stock reservation release endpoint for manual override of expired reservations.](./tasks/084-implement-stock-reservation-release-endpoint-for-manual-override-of-expired-rese.md)
 
 ### 6.4 Production Queues
-- [ ] [085 Implement production queue CRUD endpoints storing capacity, priorities, and metadata.](./tasks/085-implement-production-queue-crud-endpoints-storing-capacity-priorities-and-metada.md)
+- [x] [085 Implement production queue CRUD endpoints storing capacity, priorities, and metadata.](./tasks/085-implement-production-queue-crud-endpoints-storing-capacity-priorities-and-metada.md)
 - [ ] [086 Implement queue WIP summary endpoint aggregating counts/status per queue.](./tasks/086-implement-queue-wip-summary-endpoint-aggregating-counts-status-per-queue.md)
 - [ ] [087 Implement queue assign-order endpoint ensuring concurrency control and queue policies.](./tasks/087-implement-queue-assign-order-endpoint-ensuring-concurrency-control-and-queue-pol.md)
 

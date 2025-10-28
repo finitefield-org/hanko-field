@@ -26,6 +26,7 @@ type Registry interface {
 	OrderProductionEvents() OrderProductionEventRepository
 	Promotions() PromotionRepository
 	PromotionUsage() PromotionUsageRepository
+	ProductionQueues() ProductionQueueRepository
 	Users() UserRepository
 	Addresses() AddressRepository
 	PaymentMethods() PaymentMethodRepository
@@ -415,6 +416,23 @@ type PromotionListFilter struct {
 	Status     []string
 	Kinds      []string
 	ActiveOn   *time.Time
+	Pagination domain.Pagination
+}
+
+// ProductionQueueRepository manages persistence for production queue configurations.
+type ProductionQueueRepository interface {
+	List(ctx context.Context, filter ProductionQueueListFilter) (domain.CursorPage[domain.ProductionQueue], error)
+	Get(ctx context.Context, queueID string) (domain.ProductionQueue, error)
+	Insert(ctx context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error)
+	Update(ctx context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error)
+	Delete(ctx context.Context, queueID string) error
+	HasActiveAssignments(ctx context.Context, queueID string) (bool, error)
+}
+
+// ProductionQueueListFilter controls filtering and pagination for queue listings.
+type ProductionQueueListFilter struct {
+	Status     []string
+	Priorities []string
 	Pagination domain.Pagination
 }
 
