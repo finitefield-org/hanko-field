@@ -620,6 +620,12 @@ abstract class AppLocalizations {
   /// **'Open mapper'**
   String get designInputKanjiMappingCta;
 
+  /// Label showing the currently selected kanji mapping on the input screen
+  ///
+  /// In en, this message translates to:
+  /// **'Selected kanji: {value}'**
+  String designInputKanjiMappingSelectionLabel(String value);
+
   /// Validation error shown when surname field is empty
   ///
   /// In en, this message translates to:
@@ -673,6 +679,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check the highlighted fields.'**
   String get designInputValidationFailed;
+
+  /// App bar title for kanji mapping screen
+  ///
+  /// In en, this message translates to:
+  /// **'Kanji mapper'**
+  String get designKanjiMappingTitle;
+
+  /// Button label that confirms kanji selection
+  ///
+  /// In en, this message translates to:
+  /// **'Use selection'**
+  String get designKanjiMappingConfirm;
+
+  /// Hint text inside the kanji mapper search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Search by meaning, sound, or radical'**
+  String get designKanjiMappingSearchHint;
+
+  /// Tooltip for refresh button in kanji mapper search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh suggestions'**
+  String get designKanjiMappingRefreshTooltip;
+
+  /// Heading for compare chip section
+  ///
+  /// In en, this message translates to:
+  /// **'Compare list'**
+  String get designKanjiMappingCompareHeader;
+
+  /// Label for chip that adds candidate to comparison list
+  ///
+  /// In en, this message translates to:
+  /// **'Add to compare'**
+  String get designKanjiMappingCompareToggleLabel;
+
+  /// Label when candidate is already in comparison list
+  ///
+  /// In en, this message translates to:
+  /// **'In compare list'**
+  String get designKanjiMappingCompareSelectedLabel;
+
+  /// Chip label describing stroke count for a candidate
+  ///
+  /// In en, this message translates to:
+  /// **'{count} strokes'**
+  String designKanjiMappingStrokeCountLabel(int count);
+
+  /// Tooltip when bookmarking a kanji candidate
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark'**
+  String get designKanjiMappingBookmarkAdd;
+
+  /// Tooltip when removing a bookmarked candidate
+  ///
+  /// In en, this message translates to:
+  /// **'Remove bookmark'**
+  String get designKanjiMappingBookmarkRemove;
+
+  /// Tooltip when selecting a kanji candidate
+  ///
+  /// In en, this message translates to:
+  /// **'Select this candidate'**
+  String get designKanjiMappingSelectTooltip;
+
+  /// Heading for manual kanji entry card
+  ///
+  /// In en, this message translates to:
+  /// **'Manual entry'**
+  String get designKanjiMappingManualTitle;
+
+  /// Description for manual kanji entry
+  ///
+  /// In en, this message translates to:
+  /// **'Already have characters in mind? Enter them directly.'**
+  String get designKanjiMappingManualDescription;
+
+  /// Label for manual kanji entry field
+  ///
+  /// In en, this message translates to:
+  /// **'Kanji characters'**
+  String get designKanjiMappingManualKanjiLabel;
+
+  /// Helper text for manual kanji field
+  ///
+  /// In en, this message translates to:
+  /// **'Use up to 4 characters. Full-width recommended.'**
+  String get designKanjiMappingManualKanjiHelper;
+
+  /// Label for manual meaning/notes field
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning or notes (optional)'**
+  String get designKanjiMappingManualMeaningLabel;
+
+  /// Helper text for manual meaning field
+  ///
+  /// In en, this message translates to:
+  /// **'Visible only to you for reference.'**
+  String get designKanjiMappingManualMeaningHelper;
+
+  /// Title shown when kanji search has no results
+  ///
+  /// In en, this message translates to:
+  /// **'No candidates match yet'**
+  String get designKanjiMappingEmptyResultsTitle;
+
+  /// Subtitle when kanji search returns no results
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust filters or try a different meaning to explore more kanji.'**
+  String get designKanjiMappingEmptyResultsDescription;
 }
 
 class _AppLocalizationsDelegate

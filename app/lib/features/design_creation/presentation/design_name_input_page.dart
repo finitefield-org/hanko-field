@@ -1,3 +1,4 @@
+import 'package:app/core/domain/entities/design.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/routing/app_route_configuration.dart';
 import 'package:app/core/routing/app_state_notifier.dart';
@@ -180,6 +181,7 @@ class _DesignNameInputPageState extends ConsumerState<DesignNameInputPage> {
                     .openKanjiMapper(),
                 l10n: l10n,
                 colorScheme: colorScheme,
+                selectedMapping: state.selectedKanjiMapping,
               ),
               const SizedBox(height: AppTokens.spaceXXL),
             ],
@@ -409,11 +411,13 @@ class _KanjiMappingCard extends StatelessWidget {
     required this.onOpen,
     required this.l10n,
     required this.colorScheme,
+    this.selectedMapping,
   });
 
   final VoidCallback onOpen;
   final AppLocalizations l10n;
   final ColorScheme colorScheme;
+  final DesignKanjiMapping? selectedMapping;
 
   @override
   Widget build(BuildContext context) {
@@ -443,6 +447,19 @@ class _KanjiMappingCard extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (selectedMapping != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppTokens.spaceS),
+                    child: Text(
+                      l10n.designInputKanjiMappingSelectionLabel(
+                        selectedMapping!.value,
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

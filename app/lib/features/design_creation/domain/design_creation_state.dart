@@ -22,6 +22,7 @@ class DesignNameDraft {
     required this.givenName,
     this.surnameReading,
     this.givenNameReading,
+    this.kanjiMapping,
   });
 
   final UserPersona persona;
@@ -29,6 +30,7 @@ class DesignNameDraft {
   final String givenName;
   final String? surnameReading;
   final String? givenNameReading;
+  final DesignKanjiMapping? kanjiMapping;
 
   /// 表示用の結合済みテキスト。日本語は姓+名、その他はスペース区切り。
   String get combined {
@@ -50,6 +52,8 @@ class DesignNameDraft {
     bool clearSurnameReading = false,
     String? givenNameReading,
     bool clearGivenNameReading = false,
+    DesignKanjiMapping? kanjiMapping,
+    bool clearKanjiMapping = false,
   }) {
     return DesignNameDraft(
       persona: persona ?? this.persona,
@@ -61,6 +65,9 @@ class DesignNameDraft {
       givenNameReading: clearGivenNameReading
           ? null
           : givenNameReading ?? this.givenNameReading,
+      kanjiMapping: clearKanjiMapping
+          ? null
+          : kanjiMapping ?? this.kanjiMapping,
     );
   }
 
@@ -69,10 +76,13 @@ class DesignNameDraft {
     final hasNonAscii = combinedValue.runes.any(
       (codePoint) => codePoint > 0x7F,
     );
+    final effectiveMapping =
+        kanjiMapping ??
+        (hasNonAscii ? DesignKanjiMapping(value: combinedValue) : null);
     return DesignInput(
       sourceType: DesignSourceType.typed,
       rawName: combinedValue,
-      kanji: hasNonAscii ? DesignKanjiMapping(value: combinedValue) : null,
+      kanji: effectiveMapping,
     );
   }
 
@@ -84,7 +94,8 @@ class DesignNameDraft {
             other.surname == surname &&
             other.givenName == givenName &&
             other.surnameReading == surnameReading &&
-            other.givenNameReading == givenNameReading);
+            other.givenNameReading == givenNameReading &&
+            other.kanjiMapping == kanjiMapping);
   }
 
   @override
@@ -95,6 +106,7 @@ class DesignNameDraft {
       givenName,
       surnameReading,
       givenNameReading,
+      kanjiMapping,
     );
   }
 }

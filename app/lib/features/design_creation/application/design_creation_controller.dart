@@ -54,4 +54,19 @@ class DesignCreationController extends Notifier<DesignCreationState> {
   void resetSelection() {
     state = const DesignCreationState();
   }
+
+  void updateKanjiMapping(DesignKanjiMapping? mapping) {
+    final currentDraft = state.nameDraft;
+    if (currentDraft == null) {
+      return;
+    }
+    final updatedDraft = currentDraft.copyWith(
+      kanjiMapping: mapping,
+      clearKanjiMapping: mapping == null,
+    );
+    state = state.copyWith(
+      nameDraft: updatedDraft,
+      pendingInput: updatedDraft.toDesignInput(),
+    );
+  }
 }

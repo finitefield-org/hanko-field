@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
+import 'package:app/features/design_creation/presentation/design_kanji_mapping_page.dart';
 import 'package:app/features/design_creation/presentation/design_name_input_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
@@ -97,6 +98,11 @@ class CreationStageRoute implements IndependentRoute {
     }
     if (stageSegments.first == 'input' && stageSegments.length == 1) {
       return const DesignNameInputPage();
+    }
+    if (stageSegments.length >= 2 &&
+        stageSegments.first == 'input' &&
+        stageSegments[1] == 'kanji-map') {
+      return const DesignKanjiMappingPage();
     }
     return CreationStagePage(stageSegments: stageSegments);
   }

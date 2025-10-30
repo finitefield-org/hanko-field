@@ -448,6 +448,17 @@
   "description": "Call-to-action for the kanji mapping helper card"
 }
 
+, "designInputKanjiMappingSelectionLabel": "Selected kanji: {value}"
+, "@designInputKanjiMappingSelectionLabel": {
+  "description": "Label showing the currently selected kanji mapping on the input screen",
+  "placeholders": {
+    "value": {
+      "type": "String",
+      "example": "和"
+    }
+  }
+}
+
 , "designInputErrorEmptySurname": "Enter your surname."
 , "@designInputErrorEmptySurname": {
   "description": "Validation error shown when surname field is empty"
@@ -491,5 +502,106 @@
 , "designInputValidationFailed": "Check the highlighted fields."
 , "@designInputValidationFailed": {
   "description": "Snackbar message shown when validation fails on submit"
+}
+
+, "designKanjiMappingTitle": "Kanji mapper"
+, "@designKanjiMappingTitle": {
+  "description": "App bar title for kanji mapping screen"
+}
+
+, "designKanjiMappingConfirm": "Use selection"
+, "@designKanjiMappingConfirm": {
+  "description": "Button label that confirms kanji selection"
+}
+
+, "designKanjiMappingSearchHint": "Search by meaning, sound, or radical"
+, "@designKanjiMappingSearchHint": {
+  "description": "Hint text inside the kanji mapper search bar"
+}
+
+, "designKanjiMappingRefreshTooltip": "Refresh suggestions"
+, "@designKanjiMappingRefreshTooltip": {
+  "description": "Tooltip for refresh button in kanji mapper search bar"
+}
+
+, "designKanjiMappingCompareHeader": "Compare list"
+, "@designKanjiMappingCompareHeader": {
+  "description": "Heading for compare chip section"
+}
+
+, "designKanjiMappingCompareToggleLabel": "Add to compare"
+, "@designKanjiMappingCompareToggleLabel": {
+  "description": "Label for chip that adds candidate to comparison list"
+}
+
+, "designKanjiMappingCompareSelectedLabel": "In compare list"
+, "@designKanjiMappingCompareSelectedLabel": {
+  "description": "Label when candidate is already in comparison list"
+}
+
+, "designKanjiMappingStrokeCountLabel": "{count} strokes"
+, "@designKanjiMappingStrokeCountLabel": {
+  "description": "Chip label describing stroke count for a candidate",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": 12
+    }
+  }
+}
+
+, "designKanjiMappingBookmarkAdd": "Bookmark"
+, "@designKanjiMappingBookmarkAdd": {
+  "description": "Tooltip when bookmarking a kanji candidate"
+}
+
+, "designKanjiMappingBookmarkRemove": "Remove bookmark"
+, "@designKanjiMappingBookmarkRemove": {
+  "description": "Tooltip when removing a bookmarked candidate"
+}
+
+, "designKanjiMappingSelectTooltip": "Select this candidate"
+, "@designKanjiMappingSelectTooltip": {
+  "description": "Tooltip when selecting a kanji candidate"
+}
+
+, "designKanjiMappingManualTitle": "Manual entry"
+, "@designKanjiMappingManualTitle": {
+  "description": "Heading for manual kanji entry card"
+}
+
+, "designKanjiMappingManualDescription": "Already have characters in mind? Enter them directly.",
+, "@designKanjiMappingManualDescription": {
+  "description": "Description for manual kanji entry"
+}
+
+, "designKanjiMappingManualKanjiLabel": "Kanji characters"
+, "@designKanjiMappingManualKanjiLabel": {
+  "description": "Label for manual kanji entry field"
+}
+
+, "designKanjiMappingManualKanjiHelper": "Use up to 4 characters. Full-width recommended."
+, "@designKanjiMappingManualKanjiHelper": {
+  "description": "Helper text for manual kanji field"
+}
+
+, "designKanjiMappingManualMeaningLabel": "Meaning or notes (optional)"
+, "@designKanjiMappingManualMeaningLabel": {
+  "description": "Label for manual meaning/notes field"
+}
+
+, "designKanjiMappingManualMeaningHelper": "Visible only to you for reference."
+, "@designKanjiMappingManualMeaningHelper": {
+  "description": "Helper text for manual meaning field"
+}
+
+, "designKanjiMappingEmptyResultsTitle": "No candidates match yet"
+, "@designKanjiMappingEmptyResultsTitle": {
+  "description": "Title shown when kanji search has no results"
+}
+
+, "designKanjiMappingEmptyResultsDescription": "Adjust filters or try a different meaning to explore more kanji.",
+, "@designKanjiMappingEmptyResultsDescription": {
+  "description": "Subtitle when kanji search returns no results"
 }
 }

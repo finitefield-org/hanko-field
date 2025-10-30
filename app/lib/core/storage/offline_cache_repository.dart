@@ -2,6 +2,7 @@ import 'package:app/core/data/dtos/design_dto.dart';
 import 'package:app/core/storage/cache_bucket.dart';
 import 'package:app/core/storage/cache_policy.dart';
 import 'package:app/core/storage/local_cache_store.dart';
+import 'package:app/features/design_creation/domain/kanji_candidate.dart';
 
 class OfflineCacheRepository {
   OfflineCacheRepository(this._store);
@@ -64,6 +65,46 @@ class OfflineCacheRepository {
       key: key,
       encoder: (value) => value.toJson(),
       value: payload,
+    );
+  }
+
+  Future<CacheReadResult<KanjiCandidateResponse>> readKanjiCandidates({
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.kanjiCandidates,
+      key: key,
+      decoder: (data) =>
+          KanjiCandidateResponse.fromSerializableMap(_asJson(data)),
+    );
+  }
+
+  Future<void> writeKanjiCandidates(
+    KanjiCandidateResponse response, {
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.kanjiCandidates,
+      key: key,
+      encoder: (value) => value.toSerializableMap(),
+      value: response,
+    );
+  }
+
+  Future<CacheReadResult<Set<String>>> readKanjiBookmarks() {
+    return _store.read(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'bookmarks',
+      decoder: (data) => Set<String>.from(List<dynamic>.from(data as List)),
+    );
+  }
+
+  Future<void> writeKanjiBookmarks(Set<String> bookmarks) {
+    return _store.write(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'bookmarks',
+      encoder: (value) => value.toList()..sort(),
+      value: bookmarks,
     );
   }
 

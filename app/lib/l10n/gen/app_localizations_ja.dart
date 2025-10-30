@@ -287,6 +287,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designInputKanjiMappingCta => '漢字マップを開く';
 
   @override
+  String designInputKanjiMappingSelectionLabel(String value) => '選択中の漢字：$value';
+
+  @override
   String get designInputErrorEmptySurname => '姓を入力してください。';
 
   @override
@@ -312,4 +315,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get designInputValidationFailed => '入力内容を確認してください。';
+
+  @override
+  String get designKanjiMappingTitle => '漢字マップ';
+
+  @override
+  String get designKanjiMappingConfirm => 'この候補を使う';
+
+  @override
+  String get designKanjiMappingSearchHint => '意味・読み・部首で検索';
+
+  @override
+  String get designKanjiMappingRefreshTooltip => '候補を更新';
+
+  @override
+  String get designKanjiMappingCompareHeader => '比較リスト';
+
+  @override
+  String get designKanjiMappingCompareToggleLabel => '比較に追加';
+
+  @override
+  String get designKanjiMappingCompareSelectedLabel => '比較リストに追加済み';
+
+  @override
+  String designKanjiMappingStrokeCountLabel(int count) => '$count画';
+
+  @override
+  String get designKanjiMappingBookmarkAdd => 'ブックマークに追加';
+
+  @override
+  String get designKanjiMappingBookmarkRemove => 'ブックマークを解除';
+
+  @override
+  String get designKanjiMappingManualTitle => '手動入力';
+
+  @override
+  String get designKanjiMappingSelectTooltip => 'この候補を選択';
+
+  @override
+  String get designKanjiMappingManualDescription =>
+      '使いたい漢字が決まっている場合はこちらから直接入力できます。';
+
+  @override
+  String get designKanjiMappingManualKanjiLabel => '漢字';
+
+  @override
+  String get designKanjiMappingManualKanjiHelper => '最大4文字まで。全角で入力してください。';
+
+  @override
+  String get designKanjiMappingManualMeaningLabel => '意味・メモ（任意）';
+
+  @override
+  String get designKanjiMappingManualMeaningHelper => '自分用のメモ。印影には表示されません。';
+
+  @override
+  String get designKanjiMappingEmptyResultsTitle => '一致する候補が見つかりません';
+
+  @override
+  String get designKanjiMappingEmptyResultsDescription =>
+      'フィルターを見直すか、別の意味・読みで検索してみてください。';
 }

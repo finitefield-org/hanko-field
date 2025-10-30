@@ -38,11 +38,25 @@ class DesignNameInputController extends Notifier<DesignNameInputState> {
   }
 
   void updateSurname(String value) {
-    state = state.copyWith(surname: value, surnameDirty: true);
+    final shouldClear =
+        state.selectedKanjiMapping != null &&
+        value.trim() != state.surname.trim();
+    state = state.copyWith(
+      surname: value,
+      surnameDirty: true,
+      clearSelectedKanjiMapping: shouldClear,
+    );
   }
 
   void updateGivenName(String value) {
-    state = state.copyWith(givenName: value, givenNameDirty: true);
+    final shouldClear =
+        state.selectedKanjiMapping != null &&
+        value.trim() != state.givenName.trim();
+    state = state.copyWith(
+      givenName: value,
+      givenNameDirty: true,
+      clearSelectedKanjiMapping: shouldClear,
+    );
   }
 
   void updateSurnameReading(String value) {
@@ -65,6 +79,7 @@ class DesignNameInputController extends Notifier<DesignNameInputState> {
       givenName: suggestion.givenName,
       surnameDirty: false,
       givenNameDirty: false,
+      clearSelectedKanjiMapping: true,
     );
   }
 
@@ -88,6 +103,7 @@ class DesignNameInputController extends Notifier<DesignNameInputState> {
       givenName: current.givenName.trim(),
       surnameReading: _normalizeOptional(current.surnameReading),
       givenNameReading: _normalizeOptional(current.givenNameReading),
+      kanjiMapping: current.selectedKanjiMapping,
     );
 
     ref.read(designCreationControllerProvider.notifier).setNameDraft(draft);
@@ -120,16 +136,26 @@ class DesignNameInputController extends Notifier<DesignNameInputState> {
   }
 
   void _applyDraft(DesignNameDraft? draft) {
-    if (draft == null || !state.isPristine) {
+    if (draft == null) {
       return;
     }
-    state = state.copyWith(
-      surname: draft.surname,
-      givenName: draft.givenName,
-      surnameReading: draft.surnameReading ?? '',
-      givenNameReading: draft.givenNameReading ?? '',
-      persona: draft.persona,
+    var nextState = state;
+    if (state.isPristine) {
+      nextState = nextState.copyWith(
+        surname: draft.surname,
+        givenName: draft.givenName,
+        surnameReading: draft.surnameReading ?? '',
+        givenNameReading: draft.givenNameReading ?? '',
+        persona: draft.persona,
+      );
+    } else {
+      nextState = nextState.copyWith(persona: draft.persona);
+    }
+    nextState = nextState.copyWith(
+      selectedKanjiMapping: draft.kanjiMapping,
+      clearSelectedKanjiMapping: draft.kanjiMapping == null,
     );
+    state = nextState;
   }
 
   List<DesignNameSuggestion> _buildSuggestions(UserSessionState session) {

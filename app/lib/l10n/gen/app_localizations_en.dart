@@ -301,6 +301,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designInputKanjiMappingCta => 'Open mapper';
 
   @override
+  String designInputKanjiMappingSelectionLabel(String value) =>
+      'Selected kanji: $value';
+
+  @override
   String get designInputErrorEmptySurname => 'Enter your surname.';
 
   @override
@@ -332,4 +336,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get designInputValidationFailed => 'Check the highlighted fields.';
+
+  @override
+  String get designKanjiMappingTitle => 'Kanji mapper';
+
+  @override
+  String get designKanjiMappingConfirm => 'Use selection';
+
+  @override
+  String get designKanjiMappingSearchHint =>
+      'Search by meaning, sound, or radical';
+
+  @override
+  String get designKanjiMappingRefreshTooltip => 'Refresh suggestions';
+
+  @override
+  String get designKanjiMappingCompareHeader => 'Compare list';
+
+  @override
+  String get designKanjiMappingCompareToggleLabel => 'Add to compare';
+
+  @override
+  String get designKanjiMappingCompareSelectedLabel => 'In compare list';
+
+  @override
+  String designKanjiMappingStrokeCountLabel(int count) => '$count strokes';
+
+  @override
+  String get designKanjiMappingBookmarkAdd => 'Bookmark';
+
+  @override
+  String get designKanjiMappingBookmarkRemove => 'Remove bookmark';
+
+  @override
+  String get designKanjiMappingManualTitle => 'Manual entry';
+
+  @override
+  String get designKanjiMappingSelectTooltip => 'Select this candidate';
+
+  @override
+  String get designKanjiMappingManualDescription =>
+      'Already have characters in mind? Enter them directly.';
+
+  @override
+  String get designKanjiMappingManualKanjiLabel => 'Kanji characters';
+
+  @override
+  String get designKanjiMappingManualKanjiHelper =>
+      'Use up to 4 characters. Full-width recommended.';
+
+  @override
+  String get designKanjiMappingManualMeaningLabel =>
+      'Meaning or notes (optional)';
+
+  @override
+  String get designKanjiMappingManualMeaningHelper =>
+      'Visible only to you for reference.';
+
+  @override
+  String get designKanjiMappingEmptyResultsTitle => 'No candidates match yet';
+
+  @override
+  String get designKanjiMappingEmptyResultsDescription =>
+      'Adjust filters or try a different meaning to explore more kanji.';
 }

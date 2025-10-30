@@ -1,3 +1,4 @@
+import 'package:app/core/domain/entities/design.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:flutter/foundation.dart';
 
@@ -49,6 +50,7 @@ class DesignNameInputState {
     this.persona = UserPersona.japanese,
     this.suggestions = const <DesignNameSuggestion>[],
     this.isSubmitting = false,
+    this.selectedKanjiMapping,
   });
 
   final String surname;
@@ -62,6 +64,7 @@ class DesignNameInputState {
   final UserPersona persona;
   final List<DesignNameSuggestion> suggestions;
   final bool isSubmitting;
+  final DesignKanjiMapping? selectedKanjiMapping;
 
   static const int _kanjiMaxLength = 6;
   static const int _latinMaxLength = 20;
@@ -143,6 +146,8 @@ class DesignNameInputState {
     UserPersona? persona,
     List<DesignNameSuggestion>? suggestions,
     bool? isSubmitting,
+    DesignKanjiMapping? selectedKanjiMapping,
+    bool clearSelectedKanjiMapping = false,
   }) {
     return DesignNameInputState(
       surname: surname ?? this.surname,
@@ -157,6 +162,9 @@ class DesignNameInputState {
       persona: persona ?? this.persona,
       suggestions: suggestions ?? this.suggestions,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      selectedKanjiMapping: clearSelectedKanjiMapping
+          ? null
+          : selectedKanjiMapping ?? this.selectedKanjiMapping,
     );
   }
 

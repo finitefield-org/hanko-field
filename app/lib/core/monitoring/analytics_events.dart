@@ -204,6 +204,57 @@ class OnboardingTutorialSkippedEvent extends AnalyticsEvent {
   }
 }
 
+class KanjiMappingSelectedEvent extends AnalyticsEvent {
+  const KanjiMappingSelectedEvent({
+    required this.method,
+    this.candidateId,
+    this.query,
+    this.strokeFilters = const <String>[],
+    this.radicalFilters = const <String>[],
+    required this.bookmarkCount,
+  });
+
+  final String method;
+  final String? candidateId;
+  final String? query;
+  final Iterable<String> strokeFilters;
+  final Iterable<String> radicalFilters;
+  final int bookmarkCount;
+
+  @override
+  String get name => 'kanji_mapping_selected';
+
+  @override
+  AnalyticsParameters toParameters() {
+    return {
+      'method': method,
+      if (candidateId != null) 'candidate_id': candidateId!,
+      if (query != null && query!.isNotEmpty) 'query': query!,
+      'stroke_filters': strokeFilters.toList(growable: false),
+      'radical_filters': radicalFilters.toList(growable: false),
+      'bookmarks': bookmarkCount,
+    };
+  }
+
+  @override
+  void validate() {
+    if (method != 'suggested' && method != 'manual') {
+      throw ArgumentError.value(
+        method,
+        'method',
+        'Kanji mapping method must be "suggested" or "manual".',
+      );
+    }
+    if (bookmarkCount < 0) {
+      throw ArgumentError.value(
+        bookmarkCount,
+        'bookmarkCount',
+        'Bookmark count cannot be negative.',
+      );
+    }
+  }
+}
+
 class HomeSectionInteractionEvent extends AnalyticsEvent {
   const HomeSectionInteractionEvent({
     required this.section,

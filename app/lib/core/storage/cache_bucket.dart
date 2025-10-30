@@ -23,6 +23,13 @@ enum CacheBucket {
       staleGrace: Duration(days: 3),
     ),
   ),
+  kanjiCandidates(
+    boxName: 'cache.kanji_candidates',
+    policy: CachePolicy(
+      timeToLive: Duration(hours: 6),
+      staleGrace: Duration(days: 2),
+    ),
+  ),
   featureFlags(
     boxName: 'cache.feature_flags',
     policy: CachePolicy(

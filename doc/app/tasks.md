@@ -38,7 +38,7 @@
 ## 5. Design Creation Flow (作成タブ)
 - [x] [Implement design type selection (`/design/new`) with entry points for text/upload/logo flows.](doc/app/tasks/026-implement-design-type-selection-design-new-with-entry-points-for-text-upload-logo-flows.md)
 - [x] [Build name input screen (`/design/input`) with validation, localization, and optional kanji mapping entry point.](doc/app/tasks/027-build-name-input-screen-design-input-with-validation-localization-and-optional-kanji-mappi.md)
-- [ ] [Implement kanji mapping flow (`/design/input/kanji-map`) displaying candidate list, meanings, and selection persistence.](doc/app/tasks/028-implement-kanji-mapping-flow-design-input-kanji-map-displaying-candidate-list-meanings-and.md)
+- [x] [Implement kanji mapping flow (`/design/input/kanji-map`) displaying candidate list, meanings, and selection persistence.](doc/app/tasks/028-implement-kanji-mapping-flow-design-input-kanji-map-displaying-candidate-list-meanings-and.md)
 - [ ] [Build style selection (`/design/style`) with preview carousel, filtering by script/shape, and template fetching.](doc/app/tasks/029-build-style-selection-design-style-with-preview-carousel-filtering-by-script-shape-and-tem.md)
 - [ ] [Implement design editor (`/design/editor`) with canvas controls (layout, stroke, margins, rotation, grid) using custom painter widgets.](doc/app/tasks/030-implement-design-editor-design-editor-with-canvas-controls-layout-stroke-margins-rotation-.md)
 - [ ] [Integrate AI suggestions (`/design/ai`) showing queued/completed proposals, comparison, and accept/reject actions.](doc/app/tasks/031-integrate-ai-suggestions-design-ai-showing-queued-completed-proposals-comparison-and-accep.md)
