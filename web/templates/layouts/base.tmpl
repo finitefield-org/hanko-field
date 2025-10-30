@@ -11,10 +11,15 @@
       html.no-js [data-progressive-content]{display:none;}
       html.no-js [data-progressive-fallback]{display:block;}
       [data-progressive-fallback]{display:none;}
+      .skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+      .skip-link:focus{left:1rem;top:1rem;width:auto;height:auto;clip:auto;overflow:visible;padding:0.5rem 1rem;background:#fff;border-radius:0.5rem;box-shadow:0 0 0 3px rgba(79,70,229,0.35);color:#4338ca;font-weight:600;font-size:0.875rem;z-index:9999;}
     </style>
     <script>(function(){var doc=document.documentElement;if(!doc){return;}doc.classList.remove('no-js');doc.classList.add('js');})();</script>
   </head>
   <body class="min-h-screen bg-gray-50 text-gray-900">
+    <a href="#main-content" class="skip-link">
+      {{ if eq $.Lang "ja" }}メインコンテンツへ移動{{ else }}Skip to main content{{ end }}
+    </a>
     {{ template "feature_flags" . }}
     {{ template "component_toast_host" . }}
     <header class="border-b bg-white">
@@ -35,7 +40,7 @@
           {{ end }}
         </nav>
         <div class="flex items-center gap-3">
-          <button type="button" class="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-indigo-200 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40 md:inline-flex" data-search-open aria-label="{{ tlang $.Lang "nav.search" }}">
+          <button type="button" class="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-indigo-200 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40 md:inline-flex" data-search-open aria-label="{{ tlang $.Lang "nav.search" }}" aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded="false">
             <svg class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="M20 20l-3.5-3.5"></path>
@@ -64,7 +69,7 @@
           {{ range .Nav }}
           <a href="{{ .Href }}" class="block py-2 text-sm hover:underline {{ if .Active }}text-indigo-600 font-medium underline{{ end }}">{{ tlang $.Lang .LabelKey }}</a>
           {{ end }}
-          <button type="button" class="inline-flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-600 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-search-open>
+          <button type="button" class="inline-flex items-center gap-2 rounded px-2 py-1 text-sm text-gray-600 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-search-open aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded="false">
             <svg class="h-4 w-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="M20 20l-3.5-3.5"></path>
@@ -96,7 +101,7 @@
         </div>
       </div>
     </header>
-    <main id="main" class="mx-auto max-w-5xl px-4 py-10" data-progressive-shell>
+    <main id="main-content" class="mx-auto max-w-5xl px-4 py-10" role="main" tabindex="-1" data-progressive-shell>
       <div data-progressive-fallback class="space-y-6" aria-hidden="true">
         <div class="rounded-2xl border border-dashed border-gray-200 bg-white/80 p-6">
           <p class="text-sm font-semibold text-gray-900">{{ tlang $.Lang "progressive.fallback.title" }}</p>
@@ -228,6 +233,32 @@
         var debounceTimer = null;
         var pendingRequest = null;
         var overlayLockedBody = false;
+        function isVisible(el){
+          return !!(el && (el.offsetParent !== null || el.getClientRects().length > 0));
+        }
+        function getFocusableElements(){
+          return Array.prototype.slice.call(overlay.querySelectorAll('a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(function(el){
+            return !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true' && isVisible(el);
+          });
+        }
+        function trapFocus(e){
+          if (overlay.classList.contains('hidden')) { return; }
+          if (e.key !== 'Tab') { return; }
+          var focusables = getFocusableElements();
+          if (!focusables.length) { return; }
+          var index = focusables.indexOf(document.activeElement);
+          if (e.shiftKey) {
+            if (index <= 0) {
+              focusables[focusables.length - 1].focus();
+              e.preventDefault();
+            }
+          } else {
+            if (index === focusables.length - 1) {
+              focusables[0].focus();
+              e.preventDefault();
+            }
+          }
+        }
 
         function loadHistory(){
           try {
@@ -260,8 +291,13 @@
         }
 
         function openOverlay(){
+          if (!overlay.classList.contains('hidden')) { return; }
           overlay.classList.remove('hidden');
           overlay.setAttribute('aria-hidden', 'false');
+          overlay.removeAttribute('data-active-index');
+          openButtons.forEach(function(btn){
+            btn.setAttribute('aria-expanded', 'true');
+          });
           if (!document.body.classList.contains('overflow-hidden')) {
             document.body.classList.add('overflow-hidden');
             overlayLockedBody = true;
@@ -269,6 +305,7 @@
             overlayLockedBody = false;
           }
           lastFocus = document.activeElement;
+          document.addEventListener('keydown', trapFocus, true);
           setTimeout(function(){
             if (input && input.focus) {
               input.focus();
@@ -281,11 +318,20 @@
         }
 
         function closeOverlay(){
+          if (overlay.classList.contains('hidden')) { return; }
           overlay.classList.add('hidden');
           overlay.setAttribute('aria-hidden', 'true');
+          openButtons.forEach(function(btn){
+            btn.setAttribute('aria-expanded', 'false');
+          });
+          overlay.removeAttribute('data-active-index');
+          document.removeEventListener('keydown', trapFocus, true);
           if (overlayLockedBody) {
             document.body.classList.remove('overflow-hidden');
             overlayLockedBody = false;
+          }
+          if (resultsTarget) {
+            resultsTarget.setAttribute('aria-busy', 'false');
           }
           if (lastFocus && lastFocus.focus) {
             try { lastFocus.focus(); } catch(_) {}
@@ -317,6 +363,9 @@
           }
           if (pendingRequest && typeof pendingRequest.abort === 'function') {
             pendingRequest.abort();
+          }
+          if (resultsTarget) {
+            resultsTarget.setAttribute('aria-busy', 'true');
           }
           pendingRequest = htmx.ajax('GET', '/frags/search/results?' + params.toString(), {
             target: resultsTarget,
@@ -559,6 +608,7 @@
         doc.addEventListener('htmx:afterSwap', function(e){
           if (!resultsTarget) { return; }
           if (e.target !== resultsTarget && !resultsTarget.contains(e.target)) { return; }
+          resultsTarget.setAttribute('aria-busy', 'false');
           var fragment = resultsTarget.querySelector('[data-search-results]');
           if (fragment) {
             var count = parseInt(fragment.getAttribute('data-count') || '0', 10);
