@@ -96,6 +96,7 @@ type (
 	NameMappingCandidate      = domain.NameMappingCandidate
 	NameMappingStatus         = domain.NameMappingStatus
 	ProductionQueue           = domain.ProductionQueue
+	ProductionQueueWIPSummary = domain.ProductionQueueWIPSummary
 )
 
 // PromotionConstraint identifies a validation group evaluated for promotion definitions.
@@ -337,6 +338,7 @@ type ProductionQueueService interface {
 	CreateQueue(ctx context.Context, cmd UpsertProductionQueueCommand) (ProductionQueue, error)
 	UpdateQueue(ctx context.Context, cmd UpsertProductionQueueCommand) (ProductionQueue, error)
 	DeleteQueue(ctx context.Context, cmd DeleteProductionQueueCommand) error
+	QueueWIPSummary(ctx context.Context, queueID string) (ProductionQueueWIPSummary, error)
 }
 
 // CatalogService manages templates, fonts, materials, and products for admin-facing operations.

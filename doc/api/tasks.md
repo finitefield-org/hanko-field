@@ -118,7 +118,7 @@
 
 ### 6.4 Production Queues
 - [x] [085 Implement production queue CRUD endpoints storing capacity, priorities, and metadata.](./tasks/085-implement-production-queue-crud-endpoints-storing-capacity-priorities-and-metada.md)
-- [ ] [086 Implement queue WIP summary endpoint aggregating counts/status per queue.](./tasks/086-implement-queue-wip-summary-endpoint-aggregating-counts-status-per-queue.md)
+- [x] [086 Implement queue WIP summary endpoint aggregating counts/status per queue.](./tasks/086-implement-queue-wip-summary-endpoint-aggregating-counts-status-per-queue.md)
 - [ ] [087 Implement queue assign-order endpoint ensuring concurrency control and queue policies.](./tasks/087-implement-queue-assign-order-endpoint-ensuring-concurrency-control-and-queue-pol.md)
 
 ### 6.5 Users / Reviews / Audit

@@ -201,6 +201,21 @@ func (s *productionQueueService) DeleteQueue(ctx context.Context, cmd DeleteProd
 	return nil
 }
 
+func (s *productionQueueService) QueueWIPSummary(ctx context.Context, queueID string) (ProductionQueueWIPSummary, error) {
+	if s.repo == nil {
+		return ProductionQueueWIPSummary{}, ErrProductionQueueRepositoryMissing
+	}
+	queueID = strings.TrimSpace(queueID)
+	if queueID == "" {
+		return ProductionQueueWIPSummary{}, fmt.Errorf("%w: queue id is required", ErrProductionQueueInvalid)
+	}
+	summary, err := s.repo.QueueWIPSummary(ctx, queueID)
+	if err != nil {
+		return ProductionQueueWIPSummary{}, translateQueueRepositoryError(err)
+	}
+	return normalizeQueueWIPSummary(summary, queueID), nil
+}
+
 func (s *productionQueueService) normalizeQueue(input ProductionQueue, now time.Time, existing *domain.ProductionQueue, isCreate bool) (domain.ProductionQueue, error) {
 	var queue domain.ProductionQueue
 	queue.Metadata = normalizeQueueMetadata(input.Metadata)
@@ -430,6 +445,62 @@ func convertQueueSlice(items []domain.ProductionQueue) []ProductionQueue {
 	}
 	result := make([]ProductionQueue, len(items))
 	copy(result, items)
+	return result
+}
+
+func normalizeQueueWIPSummary(summary domain.ProductionQueueWIPSummary, fallbackID string) ProductionQueueWIPSummary {
+	result := ProductionQueueWIPSummary{
+		QueueID: strings.TrimSpace(summary.QueueID),
+		Total:   summary.Total,
+	}
+	if result.QueueID == "" {
+		result.QueueID = strings.TrimSpace(fallbackID)
+	}
+
+	if summary.StatusCounts != nil {
+		normalized := make(map[string]int, len(summary.StatusCounts))
+		totalFromCounts := 0
+		for key, value := range summary.StatusCounts {
+			trimmedKey := strings.TrimSpace(key)
+			if trimmedKey == "" {
+				continue
+			}
+			statusKey := strings.ToLower(trimmedKey)
+			statusKey = strings.ReplaceAll(statusKey, " ", "_")
+			statusKey = strings.ReplaceAll(statusKey, "-", "_")
+			if value < 0 {
+				value = 0
+			}
+			if value == 0 {
+				continue
+			}
+			normalized[statusKey] += value
+			totalFromCounts += value
+		}
+		if len(normalized) > 0 {
+			result.StatusCounts = normalized
+		}
+		if totalFromCounts > result.Total {
+			result.Total = totalFromCounts
+		}
+	}
+
+	if result.Total < 0 {
+		result.Total = 0
+	}
+
+	if summary.AverageAge > 0 {
+		result.AverageAge = summary.AverageAge
+	}
+	if summary.OldestAge > 0 {
+		result.OldestAge = summary.OldestAge
+	}
+	if summary.SLABreachCount > 0 {
+		result.SLABreachCount = summary.SLABreachCount
+	}
+	if !summary.GeneratedAt.IsZero() {
+		result.GeneratedAt = summary.GeneratedAt.UTC()
+	}
 	return result
 }
 

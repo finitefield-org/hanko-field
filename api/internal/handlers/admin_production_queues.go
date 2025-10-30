@@ -45,6 +45,7 @@ func (h *AdminProductionQueueHandlers) Routes(r chi.Router) {
 		rt.Get("/", h.listQueues)
 		rt.Post("/", h.createQueue)
 		rt.Put("/{queueID}", h.updateQueue)
+		rt.Get("/{queueID}/wip", h.getQueueWIP)
 		rt.Delete("/{queueID}", h.deleteQueue)
 	})
 }
@@ -207,6 +208,37 @@ func (h *AdminProductionQueueHandlers) deleteQueue(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *AdminProductionQueueHandlers) getQueueWIP(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.queues == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("queue_service_unavailable", "production queue service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	queueID := strings.TrimSpace(chi.URLParam(r, "queueID"))
+	if queueID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "queue id is required", http.StatusBadRequest))
+		return
+	}
+
+	summary, err := h.queues.QueueWIPSummary(ctx, queueID)
+	if err != nil {
+		writeAdminProductionQueueError(ctx, w, err, "get_wip")
+		return
+	}
+
+	writeJSONResponse(w, http.StatusOK, newAdminProductionQueueWIPResponse(summary))
+}
+
 type adminProductionQueueRequest struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
@@ -268,6 +300,16 @@ type adminProductionQueueListResponse struct {
 	NextPageToken string                         `json:"next_page_token,omitempty"`
 }
 
+type adminProductionQueueWIPResponse struct {
+	QueueID           string         `json:"queue_id"`
+	Total             int            `json:"total"`
+	Counts            map[string]int `json:"counts,omitempty"`
+	AverageAgeSeconds float64        `json:"average_age_seconds"`
+	OldestAgeSeconds  float64        `json:"oldest_age_seconds"`
+	SLABreachCount    int            `json:"sla_breach_count"`
+	GeneratedAt       time.Time      `json:"generated_at,omitempty"`
+}
+
 func newAdminProductionQueueResponse(queue services.ProductionQueue) adminProductionQueueResponse {
 	resp := adminProductionQueueResponse{
 		ID:          strings.TrimSpace(queue.ID),
@@ -288,6 +330,40 @@ func newAdminProductionQueueResponse(queue services.ProductionQueue) adminProduc
 	}
 	if strings.TrimSpace(resp.Notes) == "" {
 		resp.Notes = ""
+	}
+	return resp
+}
+
+func newAdminProductionQueueWIPResponse(summary services.ProductionQueueWIPSummary) adminProductionQueueWIPResponse {
+	queueID := strings.TrimSpace(summary.QueueID)
+	if queueID == "" {
+		queueID = summary.QueueID
+	}
+	resp := adminProductionQueueWIPResponse{
+		QueueID:           queueID,
+		Total:             summary.Total,
+		AverageAgeSeconds: summary.AverageAge.Seconds(),
+		OldestAgeSeconds:  summary.OldestAge.Seconds(),
+		SLABreachCount:    summary.SLABreachCount,
+	}
+	if len(summary.StatusCounts) > 0 {
+		counts := make(map[string]int, len(summary.StatusCounts))
+		for key, value := range summary.StatusCounts {
+			counts[key] = value
+		}
+		resp.Counts = counts
+	}
+	if summary.AverageAge <= 0 {
+		resp.AverageAgeSeconds = 0
+	}
+	if summary.OldestAge <= 0 {
+		resp.OldestAgeSeconds = 0
+	}
+	if summary.SLABreachCount < 0 {
+		resp.SLABreachCount = 0
+	}
+	if !summary.GeneratedAt.IsZero() {
+		resp.GeneratedAt = summary.GeneratedAt
 	}
 	return resp
 }

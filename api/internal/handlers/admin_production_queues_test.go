@@ -186,6 +186,115 @@ func TestAdminProductionQueueHandlers_UpdateQueue_PassesIdentifiers(t *testing.T
 	}
 }
 
+func TestAdminProductionQueueHandlers_GetQueueWIP_Authorization(t *testing.T) {
+	handler := NewAdminProductionQueueHandlers(nil, &stubAdminProductionQueueService{})
+
+	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_123/wip", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_123")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+
+	rec := httptest.NewRecorder()
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "user"}))
+	rec = httptest.NewRecorder()
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestAdminProductionQueueHandlers_GetQueueWIP_Success(t *testing.T) {
+	generated := time.Date(2024, 4, 8, 12, 15, 0, 0, time.UTC)
+	service := &stubAdminProductionQueueService{
+		wipResult: services.ProductionQueueWIPSummary{
+			QueueID: "pqu_prod",
+			StatusCounts: map[string]int{
+				"waiting":     4,
+				"in_progress": 3,
+			},
+			Total:          7,
+			AverageAge:     30 * time.Minute,
+			OldestAge:      2 * time.Hour,
+			SLABreachCount: 1,
+			GeneratedAt:    generated,
+		},
+	}
+	handler := NewAdminProductionQueueHandlers(nil, service)
+
+	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_prod/wip", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", " pqu_prod ")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if service.wipQueueID != "pqu_prod" {
+		t.Fatalf("expected trimmed queue id passed, got %q", service.wipQueueID)
+	}
+
+	var payload struct {
+		QueueID        string         `json:"queue_id"`
+		Total          int            `json:"total"`
+		Counts         map[string]int `json:"counts"`
+		AverageAge     float64        `json:"average_age_seconds"`
+		OldestAge      float64        `json:"oldest_age_seconds"`
+		SLABreachCount int            `json:"sla_breach_count"`
+		GeneratedAt    string         `json:"generated_at"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if payload.QueueID != "pqu_prod" {
+		t.Fatalf("expected queue id pqu_prod, got %q", payload.QueueID)
+	}
+	if payload.Total != 7 {
+		t.Fatalf("expected total 7, got %d", payload.Total)
+	}
+	if payload.Counts["waiting"] != 4 || payload.Counts["in_progress"] != 3 {
+		t.Fatalf("unexpected counts %+v", payload.Counts)
+	}
+	if payload.AverageAge != float64(30*60) {
+		t.Fatalf("expected average age seconds 1800, got %.0f", payload.AverageAge)
+	}
+	if payload.OldestAge != float64(2*3600) {
+		t.Fatalf("expected oldest age seconds 7200, got %.0f", payload.OldestAge)
+	}
+	if payload.SLABreachCount != 1 {
+		t.Fatalf("expected SLA breach count 1, got %d", payload.SLABreachCount)
+	}
+	if payload.GeneratedAt != generated.Format(time.RFC3339Nano) {
+		t.Fatalf("expected generated at %s, got %s", generated.Format(time.RFC3339Nano), payload.GeneratedAt)
+	}
+}
+
+func TestAdminProductionQueueHandlers_GetQueueWIP_NotFound(t *testing.T) {
+	service := &stubAdminProductionQueueService{
+		wipErr: services.ErrProductionQueueNotFound,
+	}
+	handler := NewAdminProductionQueueHandlers(nil, service)
+
+	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_missing/wip", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_missing")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
 func TestAdminProductionQueueHandlers_DeleteQueue_ErrorMapping(t *testing.T) {
 	service := &stubAdminProductionQueueService{
 		deleteErr: services.ErrProductionQueueHasAssignments,
@@ -222,6 +331,9 @@ type stubAdminProductionQueueService struct {
 	updateErr    error
 	deleteCmd    services.DeleteProductionQueueCommand
 	deleteErr    error
+	wipQueueID   string
+	wipResult    services.ProductionQueueWIPSummary
+	wipErr       error
 }
 
 func (s *stubAdminProductionQueueService) ListQueues(ctx context.Context, filter services.ProductionQueueListFilter) (domain.CursorPage[services.ProductionQueue], error) {
@@ -263,4 +375,13 @@ func (s *stubAdminProductionQueueService) DeleteQueue(ctx context.Context, cmd s
 	_ = ctx
 	s.deleteCmd = cmd
 	return s.deleteErr
+}
+
+func (s *stubAdminProductionQueueService) QueueWIPSummary(ctx context.Context, queueID string) (services.ProductionQueueWIPSummary, error) {
+	_ = ctx
+	s.wipQueueID = queueID
+	if s.wipErr != nil {
+		return services.ProductionQueueWIPSummary{}, s.wipErr
+	}
+	return s.wipResult, nil
 }

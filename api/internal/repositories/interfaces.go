@@ -427,6 +427,7 @@ type ProductionQueueRepository interface {
 	Update(ctx context.Context, queue domain.ProductionQueue, expectedUpdatedAt time.Time) (domain.ProductionQueue, error)
 	Delete(ctx context.Context, queueID string) error
 	HasActiveAssignments(ctx context.Context, queueID string) (bool, error)
+	QueueWIPSummary(ctx context.Context, queueID string) (domain.ProductionQueueWIPSummary, error)
 }
 
 // ProductionQueueListFilter controls filtering and pagination for queue listings.

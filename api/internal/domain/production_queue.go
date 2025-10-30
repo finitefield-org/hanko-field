@@ -16,6 +16,17 @@ type ProductionQueue struct {
 	UpdatedAt   time.Time
 }
 
+// ProductionQueueWIPSummary captures aggregated workload metrics for a production queue.
+type ProductionQueueWIPSummary struct {
+	QueueID        string
+	StatusCounts   map[string]int
+	Total          int
+	AverageAge     time.Duration
+	OldestAge      time.Duration
+	SLABreachCount int
+	GeneratedAt    time.Time
+}
+
 // ProductionQueue status values.
 const (
 	ProductionQueueStatusActive   = "active"

@@ -331,6 +331,104 @@ func TestProductionQueueService_UpdateQueue_NotFound(t *testing.T) {
 	}
 }
 
+func TestProductionQueueService_QueueWIPSummary_Normalizes(t *testing.T) {
+	generated := time.Date(2024, 4, 8, 15, 30, 0, 0, time.FixedZone("JST", 9*3600))
+	repo := &stubProductionQueueRepository{
+		wipResult: domain.ProductionQueueWIPSummary{
+			QueueID: " pqu_metrics ",
+			StatusCounts: map[string]int{
+				"Waiting":      5,
+				"in-progress":  3,
+				"blocked":      -2,
+				"Extra Stage ": 2,
+				"":             7,
+			},
+			Total:          6,
+			AverageAge:     45*time.Minute + 30*time.Second,
+			OldestAge:      2 * time.Hour,
+			SLABreachCount: 4,
+			GeneratedAt:    generated,
+		},
+	}
+	svc, err := NewProductionQueueService(ProductionQueueServiceDeps{
+		Repository: repo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	summary, err := svc.QueueWIPSummary(context.Background(), " pqu_metrics ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.wipRequestedID != "pqu_metrics" {
+		t.Fatalf("expected queue id trimmed, got %q", repo.wipRequestedID)
+	}
+	if summary.QueueID != "pqu_metrics" {
+		t.Fatalf("expected queue id propagated, got %q", summary.QueueID)
+	}
+	if summary.Total != 10 {
+		t.Fatalf("expected total derived from counts, got %d", summary.Total)
+	}
+	if summary.StatusCounts["waiting"] != 5 {
+		t.Fatalf("expected waiting count 5, got %d", summary.StatusCounts["waiting"])
+	}
+	if summary.StatusCounts["in_progress"] != 3 {
+		t.Fatalf("expected in_progress count 3, got %d", summary.StatusCounts["in_progress"])
+	}
+	if _, exists := summary.StatusCounts["blocked"]; exists {
+		t.Fatalf("blocked status should be omitted when count zero")
+	}
+	if summary.StatusCounts["extra_stage"] != 2 {
+		t.Fatalf("expected extra_stage count 2, got %d", summary.StatusCounts["extra_stage"])
+	}
+	if summary.AverageAge != 45*time.Minute+30*time.Second {
+		t.Fatalf("unexpected average age %v", summary.AverageAge)
+	}
+	if summary.OldestAge != 2*time.Hour {
+		t.Fatalf("unexpected oldest age %v", summary.OldestAge)
+	}
+	if summary.SLABreachCount != 4 {
+		t.Fatalf("expected SLA breach count 4, got %d", summary.SLABreachCount)
+	}
+	if !summary.GeneratedAt.Equal(generated.UTC()) {
+		t.Fatalf("expected generated timestamp normalized to UTC, got %v", summary.GeneratedAt)
+	}
+}
+
+func TestProductionQueueService_QueueWIPSummary_ErrorMapping(t *testing.T) {
+	repo := &stubProductionQueueRepository{
+		wipErr: stubQueueRepoError{notFound: true},
+	}
+	svc, err := NewProductionQueueService(ProductionQueueServiceDeps{
+		Repository: repo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_, err = svc.QueueWIPSummary(context.Background(), "missing")
+	if !errors.Is(err, ErrProductionQueueNotFound) {
+		t.Fatalf("expected ErrProductionQueueNotFound, got %v", err)
+	}
+}
+
+func TestProductionQueueService_QueueWIPSummary_InvalidID(t *testing.T) {
+	repo := &stubProductionQueueRepository{}
+	svc, err := NewProductionQueueService(ProductionQueueServiceDeps{
+		Repository: repo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_, err = svc.QueueWIPSummary(context.Background(), "   ")
+	if !errors.Is(err, ErrProductionQueueInvalid) {
+		t.Fatalf("expected ErrProductionQueueInvalid, got %v", err)
+	}
+}
+
 type stubProductionQueueRepository struct {
 	listFilter     repositories.ProductionQueueListFilter
 	listResult     domain.CursorPage[domain.ProductionQueue]
@@ -350,6 +448,9 @@ type stubProductionQueueRepository struct {
 	hasQueriedID   string
 	hasAssignments bool
 	hasErr         error
+	wipRequestedID string
+	wipResult      domain.ProductionQueueWIPSummary
+	wipErr         error
 }
 
 func (s *stubProductionQueueRepository) List(_ context.Context, filter repositories.ProductionQueueListFilter) (domain.CursorPage[domain.ProductionQueue], error) {
@@ -402,6 +503,14 @@ func (s *stubProductionQueueRepository) HasActiveAssignments(_ context.Context, 
 		return false, s.hasErr
 	}
 	return s.hasAssignments, nil
+}
+
+func (s *stubProductionQueueRepository) QueueWIPSummary(_ context.Context, queueID string) (domain.ProductionQueueWIPSummary, error) {
+	s.wipRequestedID = queueID
+	if s.wipErr != nil {
+		return domain.ProductionQueueWIPSummary{}, s.wipErr
+	}
+	return s.wipResult, nil
 }
 
 type stubQueueRepoError struct {
