@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	domain "github.com/hanko-field/api/internal/domain"
 	pfirestore "github.com/hanko-field/api/internal/platform/firestore"
+	"github.com/hanko-field/api/internal/platform/textutil"
 	"github.com/hanko-field/api/internal/repositories"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -140,15 +142,27 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 		limit = 200
 	}
 
+	offset := 0
+	if token := strings.TrimSpace(filter.PageToken); token != "" {
+		if idx, err := strconv.Atoi(token); err == nil && idx >= 0 {
+			offset = idx
+		}
+	}
+
+	maxResults := limit + offset + 1
+	if maxResults > 500 {
+		maxResults = 500
+	}
+
 	type searchResult struct {
 		profile   domain.UserProfile
 		updatedAt time.Time
 	}
 
-	results := make([]searchResult, 0, limit)
+	results := make([]searchResult, 0, maxResults)
 	seen := make(map[string]struct{})
 	appendDoc := func(doc pfirestore.Document[userDocument]) {
-		if len(results) >= limit {
+		if len(results) >= maxResults {
 			return
 		}
 		if _, exists := seen[doc.ID]; exists {
@@ -176,7 +190,7 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 	}
 
 	// Attempt direct document lookup by ID.
-	if len(results) < limit {
+	if len(results) < maxResults {
 		if doc, err := r.base.Get(ctx, query); err == nil {
 			appendDoc(doc)
 		} else if !isRepositoryNotFound(err) {
@@ -185,9 +199,9 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 	}
 
 	// Additional lookup by stored UID field (may differ from doc ID when migrated).
-	if len(results) < limit {
+	if len(results) < maxResults {
 		docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
-			return q.Where("uid", "==", query).Limit(limit)
+			return q.Where("uid", "==", query).Limit(maxResults)
 		})
 		if err != nil {
 			return domain.CursorPage[domain.UserProfile]{}, err
@@ -198,11 +212,11 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 	}
 
 	// Lookup by email (case-insensitive).
-	if len(results) < limit {
+	if len(results) < maxResults {
 		email := strings.ToLower(query)
 		if email != "" {
 			docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
-				return q.Where("email", "==", email).Limit(limit)
+				return q.Where("email", "==", email).Limit(maxResults)
 			})
 			if err != nil {
 				return domain.CursorPage[domain.UserProfile]{}, err
@@ -214,10 +228,10 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 	}
 
 	// Lookup by phone number; try both trimmed and digits-only forms.
-	if len(results) < limit {
+	if len(results) < maxResults {
 		trimmedPhone := strings.TrimSpace(query)
 		phoneCandidates := []string{trimmedPhone}
-		if normalised := normalisePhone(trimmedPhone); normalised != "" && normalised != trimmedPhone {
+		if normalised := textutil.NormalizePhone(trimmedPhone); normalised != "" && normalised != trimmedPhone {
 			phoneCandidates = append(phoneCandidates, normalised)
 		}
 		for _, phone := range phoneCandidates {
@@ -225,7 +239,7 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 				continue
 			}
 			docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
-				return q.Where("phoneNumber", "==", phone).Limit(limit)
+				return q.Where("phoneNumber", "==", phone).Limit(maxResults)
 			})
 			if err != nil {
 				return domain.CursorPage[domain.UserProfile]{}, err
@@ -237,7 +251,7 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 	}
 
 	// Prefix lookup on display name (case-sensitive due to Firestore limitations).
-	if len(results) < limit {
+	if len(results) < maxResults {
 		prefix := strings.TrimSpace(query)
 		if prefix != "" {
 			upperBound := prefix + "\uf8ff"
@@ -245,7 +259,7 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 				return q.Where("displayName", ">=", prefix).
 					Where("displayName", "<=", upperBound).
 					OrderBy("displayName", firestore.Asc).
-					Limit(limit)
+					Limit(maxResults)
 			})
 			if err != nil {
 				return domain.CursorPage[domain.UserProfile]{}, err
@@ -265,17 +279,32 @@ func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSea
 		}
 	})
 
-	if len(results) > limit {
-		results = results[:limit]
+	if len(results) > maxResults {
+		results = results[:maxResults]
 	}
 
-	items := make([]domain.UserProfile, 0, len(results))
-	for _, res := range results {
+	start := offset
+	if start > len(results) {
+		start = len(results)
+	}
+	end := start + limit
+	if end > len(results) {
+		end = len(results)
+	}
+
+	items := make([]domain.UserProfile, 0, end-start)
+	for _, res := range results[start:end] {
 		items = append(items, res.profile)
 	}
 
+	nextToken := ""
+	if end < len(results) {
+		nextToken = strconv.Itoa(end)
+	}
+
 	return domain.CursorPage[domain.UserProfile]{
-		Items: items,
+		Items:         items,
+		NextPageToken: nextToken,
 	}, nil
 }
 
@@ -377,23 +406,6 @@ func fromDomainProfile(profile domain.UserProfile, now time.Time) userDocument {
 		}
 	}
 	return doc
-}
-
-func normalisePhone(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return ""
-	}
-	var builder strings.Builder
-	for i, r := range value {
-		switch {
-		case r >= '0' && r <= '9':
-			builder.WriteRune(r)
-		case r == '+' && i == 0:
-			builder.WriteRune(r)
-		}
-	}
-	return builder.String()
 }
 
 func isRepositoryNotFound(err error) bool {

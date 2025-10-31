@@ -12,6 +12,7 @@ import (
 
 	firebaseauth "firebase.google.com/go/v4/auth"
 	domain "github.com/hanko-field/api/internal/domain"
+	"github.com/hanko-field/api/internal/platform/textutil"
 	"github.com/hanko-field/api/internal/repositories"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1682,30 +1683,13 @@ func matchUserSearch(profile domain.UserProfile, rawQuery, lowerQuery string) bo
 		return true
 	}
 
-	phoneQuery := normaliseTestPhone(rawQuery)
+	phoneQuery := textutil.NormalizePhone(rawQuery)
 	if phoneQuery != "" {
-		if normaliseTestPhone(profile.PhoneNumber) == phoneQuery {
+		if textutil.NormalizePhone(profile.PhoneNumber) == phoneQuery {
 			return true
 		}
 	}
 	return false
-}
-
-func normaliseTestPhone(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return ""
-	}
-	var builder strings.Builder
-	for i, r := range value {
-		switch {
-		case r >= '0' && r <= '9':
-			builder.WriteRune(r)
-		case r == '+' && i == 0:
-			builder.WriteRune(r)
-		}
-	}
-	return builder.String()
 }
 
 var _ repositories.UserRepository = (*memoryUserRepo)(nil)

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -99,7 +100,11 @@ func (h *AdminUserHandlers) searchUsers(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	includeInactive, _ := parseBoolParam(values, "include_inactive", "includeInactive")
+	includeInactive, _, boolErr := parseBoolParam(values, "include_inactive", "includeInactive")
+	if boolErr != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_include_inactive", boolErr.Error(), http.StatusBadRequest))
+		return
+	}
 
 	filter := services.UserSearchFilter{
 		Query:           query,
@@ -388,7 +393,7 @@ func isOpenAdminOrderStatus(status services.OrderStatus) bool {
 	}
 }
 
-func parseBoolParam(values url.Values, keys ...string) (bool, bool) {
+func parseBoolParam(values url.Values, keys ...string) (bool, bool, error) {
 	for _, key := range keys {
 		raw := strings.TrimSpace(values.Get(key))
 		if raw == "" {
@@ -396,14 +401,14 @@ func parseBoolParam(values url.Values, keys ...string) (bool, bool) {
 		}
 		switch strings.ToLower(raw) {
 		case "1", "true", "yes", "on":
-			return true, true
+			return true, true, nil
 		case "0", "false", "no", "off":
-			return false, true
+			return false, true, nil
 		default:
-			return false, true
+			return false, true, fmt.Errorf("invalid boolean value for %s", key)
 		}
 	}
-	return false, false
+	return false, false, nil
 }
 
 func maskEmail(email string) string {

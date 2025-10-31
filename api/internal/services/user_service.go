@@ -808,9 +808,11 @@ func (s *userService) SearchProfiles(ctx context.Context, filter UserSearchFilte
 	for _, profile := range page.Items {
 		var record *firebaseauth.UserRecord
 		if s.firebase != nil {
-			if fetched, err := s.firebase.GetUser(ctx, profile.ID); err == nil {
-				record = fetched
+			fetched, err := s.firebase.GetUser(ctx, profile.ID)
+			if err != nil {
+				return domain.CursorPage[UserAdminSummary]{}, fmt.Errorf("fetch firebase user %s: %w", profile.ID, err)
 			}
+			record = fetched
 		}
 		summaries = append(summaries, s.buildAdminSummary(profile, record))
 	}
@@ -827,18 +829,9 @@ func (s *userService) GetAdminDetail(ctx context.Context, userID string) (UserAd
 		return UserAdminDetail{}, errUserIDRequired
 	}
 
-	profile, err := s.getProfile(ctx, userID, true)
+	profile, record, err := s.loadProfileWithRecord(ctx, userID)
 	if err != nil {
 		return UserAdminDetail{}, err
-	}
-
-	if s.firebase == nil {
-		return UserAdminDetail{}, errors.New("user: firebase user getter is required for admin detail")
-	}
-
-	record, err := s.firebase.GetUser(ctx, userID)
-	if err != nil {
-		return UserAdminDetail{}, fmt.Errorf("fetch firebase user: %w", err)
 	}
 
 	detail := UserAdminDetail{
@@ -855,6 +848,39 @@ func (s *userService) GetAdminDetail(ctx context.Context, userID string) (UserAd
 	detail.TokensValidAt = firebaseTimestampPtr(record.TokensValidAfterMillis)
 
 	return detail, nil
+}
+
+func (s *userService) loadProfileWithRecord(ctx context.Context, userID string) (domain.UserProfile, *firebaseauth.UserRecord, error) {
+	if strings.TrimSpace(userID) == "" {
+		return domain.UserProfile{}, nil, errUserIDRequired
+	}
+
+	profile, err := s.users.FindByID(ctx, userID)
+	if err != nil && !isNotFound(err) {
+		return domain.UserProfile{}, nil, err
+	}
+
+	if s.firebase == nil {
+		return domain.UserProfile{}, nil, errors.New("user: firebase user getter is required")
+	}
+
+	record, err := s.firebase.GetUser(ctx, userID)
+	if err != nil {
+		return domain.UserProfile{}, nil, fmt.Errorf("fetch firebase user: %w", err)
+	}
+
+	if isNotFound(err) || profile.ID == "" {
+		now := s.clock()
+		fresh := profileFromFirebase(record, now)
+		fresh.ID = userID
+		saved, saveErr := s.users.UpdateProfile(ctx, fresh)
+		if saveErr != nil {
+			return domain.UserProfile{}, nil, saveErr
+		}
+		profile = saved
+	}
+
+	return profile, record, nil
 }
 
 func (s *userService) getProfile(ctx context.Context, userID string, seed bool) (domain.UserProfile, error) {
