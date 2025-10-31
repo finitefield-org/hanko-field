@@ -241,6 +241,10 @@
             return !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true' && isVisible(el);
           });
         }
+        function focusFirstElement(){
+          var focusables = getFocusableElements();
+          if (focusables.length) { focusables[0].focus(); }
+        }
         function trapFocus(e){
           if (overlay.classList.contains('hidden')) { return; }
           if (e.key !== 'Tab') { return; }
@@ -257,6 +261,12 @@
               focusables[0].focus();
               e.preventDefault();
             }
+          }
+        }
+        function enforceOverlayFocus(e){
+          if (overlay.classList.contains('hidden')) { return; }
+          if (!overlay.contains(e.target)) {
+            focusFirstElement();
           }
         }
 
@@ -306,10 +316,13 @@
           }
           lastFocus = document.activeElement;
           document.addEventListener('keydown', trapFocus, true);
+          doc.addEventListener('focusin', enforceOverlayFocus, true);
           setTimeout(function(){
             if (input && input.focus) {
               input.focus();
               input.select();
+            } else {
+              focusFirstElement();
             }
           }, 10);
           updateHistoryUI();
@@ -326,6 +339,7 @@
           });
           overlay.removeAttribute('data-active-index');
           document.removeEventListener('keydown', trapFocus, true);
+          doc.removeEventListener('focusin', enforceOverlayFocus, true);
           if (overlayLockedBody) {
             document.body.classList.remove('overflow-hidden');
             overlayLockedBody = false;

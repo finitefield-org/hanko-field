@@ -510,6 +510,7 @@
   "search.overlay.voice": "Voice search",
   "search.overlay.close": "Close search",
   "search.overlay.keyboard": "Keyboard shortcut",
+  "search.overlay.results.title": "Search results",
   "search.tabs.products": "Products",
   "search.tabs.templates": "Templates",
   "search.tabs.guides": "Guides",

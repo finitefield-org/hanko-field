@@ -510,6 +510,7 @@
   "search.overlay.voice": "音声検索",
   "search.overlay.close": "検索を閉じる",
   "search.overlay.keyboard": "キーボードショートカット",
+  "search.overlay.results.title": "検索結果",
   "search.tabs.products": "商品",
   "search.tabs.templates": "テンプレート",
   "search.tabs.guides": "ガイド",
