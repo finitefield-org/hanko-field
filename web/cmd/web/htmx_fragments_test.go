@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/net/html"
 )
 
-func primeCSRFCookies(t *testing.T, handler http.Handler) ([]*http.Cookie, string) {
+func primeCSRFCookies(t *testing.T, handler http.Handler, path string) ([]*http.Cookie, string) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, path, nil)
 	req.Header.Set("Accept-Language", "en")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -34,13 +35,63 @@ func primeCSRFCookies(t *testing.T, handler http.Handler) ([]*http.Cookie, strin
 	return res.Cookies(), token
 }
 
+func requireAttr(t *testing.T, markup, attr, want string) {
+	t.Helper()
+	doc, err := html.Parse(strings.NewReader(markup))
+	if err != nil {
+		t.Fatalf("parse html: %v", err)
+	}
+	if !nodeContainsAttr(doc, attr, want) {
+		t.Fatalf("expected attribute %s=%q in markup", attr, want)
+	}
+}
+
+func nodeContainsAttr(n *html.Node, attr, want string) bool {
+	for _, a := range n.Attr {
+		if a.Key == attr && a.Val == want {
+			return true
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if nodeContainsAttr(c, attr, want) {
+			return true
+		}
+	}
+	return false
+}
+
+func requireAttrContains(t *testing.T, markup, attr, want string) {
+	t.Helper()
+	doc, err := html.Parse(strings.NewReader(markup))
+	if err != nil {
+		t.Fatalf("parse html: %v", err)
+	}
+	if !nodeAttrContains(doc, attr, want) {
+		t.Fatalf("expected attribute %s to contain %q", attr, want)
+	}
+}
+
+func nodeAttrContains(n *html.Node, attr, want string) bool {
+	for _, a := range n.Attr {
+		if a.Key == attr && strings.Contains(a.Val, want) {
+			return true
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if nodeAttrContains(c, attr, want) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDesignEditorFormFragHXHeaders(t *testing.T) {
 	handler := newTestRouter(t, func(r chi.Router) {
 		r.MethodFunc(http.MethodGet, "/design/editor/form", DesignEditorFormFrag)
 		r.MethodFunc(http.MethodPost, "/design/editor/form", DesignEditorFormFrag)
 	})
 
-	cookies, csrfToken := primeCSRFCookies(t, handler)
+	cookies, csrfToken := primeCSRFCookies(t, handler, "/design/editor/form")
 
 	form := url.Values{
 		"name":   {"Kaito Studio"},
@@ -63,9 +114,30 @@ func TestDesignEditorFormFragHXHeaders(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d body=%s", rec.Code, rec.Body.String())
 	}
 	push := rec.Header().Get("HX-Push-Url")
-	if push == "" || !strings.HasPrefix(push, "/design/editor") {
-		t.Fatalf("expected HX-Push-Url with /design/editor*, got %q", push)
+	if push == "" {
+		t.Fatalf("expected HX-Push-Url header")
 	}
+	pushURL, err := url.Parse(push)
+	if err != nil {
+		t.Fatalf("parse HX-Push-Url: %v", err)
+	}
+	if pushURL.Path != "/design/editor" {
+		t.Fatalf("expected HX-Push-Url path /design/editor, got %s", pushURL.Path)
+	}
+	pushQuery := pushURL.Query()
+	if got := pushQuery.Get("mode"); got != "text" {
+		t.Fatalf("expected mode=text in push query, got %q", got)
+	}
+	if got := pushQuery.Get("name"); got != "Kaito Studio" {
+		t.Fatalf("expected name preserved in push query, got %q", got)
+	}
+	if got := pushQuery.Get("template"); got != "tpl-ring-corporate" {
+		t.Fatalf("expected template id in push query, got %q", got)
+	}
+	if got := pushQuery.Get("font"); got != "jp-mincho" {
+		t.Fatalf("expected font id in push query, got %q", got)
+	}
+
 	trigger := rec.Header().Get("HX-Trigger")
 	if trigger == "" {
 		t.Fatalf("expected HX-Trigger header")
@@ -78,16 +150,25 @@ func TestDesignEditorFormFragHXHeaders(t *testing.T) {
 	if !ok || event["query"] == "" {
 		t.Fatalf("expected editor:state-updated event with query, got %v", payload)
 	}
-	if !strings.Contains(event["query"], "mode=text") {
-		t.Fatalf("expected query to preserve mode=text, got %q", event["query"])
+	q, err := url.ParseQuery(event["query"])
+	if err != nil {
+		t.Fatalf("parse event query: %v", err)
 	}
+	if q.Get("mode") != "text" {
+		t.Fatalf("expected event query mode=text, got %q", q.Get("mode"))
+	}
+	if q.Get("template") != "tpl-ring-corporate" {
+		t.Fatalf("expected event query template=tpl-ring-corporate, got %q", q.Get("template"))
+	}
+	if q.Get("font") != "jp-mincho" {
+		t.Fatalf("expected event query font=jp-mincho, got %q", q.Get("font"))
+	}
+	if event["query"] != pushURL.RawQuery {
+		t.Fatalf("expected HX-Trigger query to match HX-Push-Url, got %q vs %q", event["query"], pushURL.RawQuery)
+	}
+
 	body := rec.Body.String()
-	if !strings.Contains(body, `id="design-editor-form"`) {
-		t.Fatalf("expected form markup in fragment body")
-	}
-	if !strings.Contains(body, "Design saved") {
-		t.Fatalf("expected success toast copy in body")
-	}
+	requireAttr(t, body, "id", "design-editor-form")
 }
 
 func TestCartPromoModalHTMXAttributes(t *testing.T) {
@@ -104,23 +185,18 @@ func TestCartPromoModalHTMXAttributes(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d body=%s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "cart-promo-modal") {
-		t.Fatalf("expected modal wrapper id in body")
-	}
-	if !strings.Contains(body, `hx-post="/cart:apply-promo"`) {
-		t.Fatalf("expected hx-post attribute pointing to promo apply endpoint")
-	}
-	if !strings.Contains(body, `hx-target="#modal-root"`) {
-		t.Fatalf("expected hx-target modal root attribute")
-	}
+	requireAttr(t, body, "id", "cart-promo-modal_title")
+	requireAttr(t, body, "hx-post", "/cart:apply-promo")
+	requireAttr(t, body, "hx-target", "#modal-root")
 }
 
 func TestCartPromoApplyHandlerValidPromoTriggersEvent(t *testing.T) {
 	handler := newTestRouter(t, func(r chi.Router) {
+		r.Get("/modal/cart/promo", CartPromoModal)
 		r.MethodFunc(http.MethodPost, "/cart:apply-promo", CartPromoApplyHandler)
 	})
 
-	cookies, csrfToken := primeCSRFCookies(t, handler)
+	cookies, csrfToken := primeCSRFCookies(t, handler, "/modal/cart/promo")
 
 	form := url.Values{
 		"promo_code": {"HANKO10"},
@@ -156,9 +232,42 @@ func TestCartPromoApplyHandlerValidPromoTriggersEvent(t *testing.T) {
 		t.Fatalf("expected event code HANKO10, got %q", code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "Promo applied.") {
-		t.Fatalf("expected success status copy in body")
+	requireAttrContains(t, body, "class", "border-emerald-200")
+	requireAttrContains(t, body, "class", "bg-emerald-50")
+}
+
+func TestCartPromoApplyHandlerInvalidPromoShowsError(t *testing.T) {
+	handler := newTestRouter(t, func(r chi.Router) {
+		r.Get("/modal/cart/promo", CartPromoModal)
+		r.MethodFunc(http.MethodPost, "/cart:apply-promo", CartPromoApplyHandler)
+	})
+
+	cookies, csrfToken := primeCSRFCookies(t, handler, "/modal/cart/promo")
+
+	form := url.Values{
+		"promo_code": {"INVALID"},
 	}
+	req := httptest.NewRequest(http.MethodPost, "/cart:apply-promo", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("Accept-Language", "en")
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", csrfToken)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if trigger := rec.Header().Get("HX-Trigger"); trigger != "" {
+		t.Fatalf("expected no HX-Trigger on invalid promo, got %s", trigger)
+	}
+	body := rec.Body.String()
+	requireAttrContains(t, body, "class", "border-red-200")
+	requireAttrContains(t, body, "class", "bg-red-50")
 }
 
 func TestModalPickTemplateDefaultsToFirstTemplate(t *testing.T) {
@@ -175,15 +284,10 @@ func TestModalPickTemplateDefaultsToFirstTemplate(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d body=%s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "template-picker-modal") {
-		t.Fatalf("expected modal id in body")
-	}
-	if !strings.Contains(body, "tpl-ring-corporate") {
-		t.Fatalf("expected fallback template id in body")
-	}
-	if !strings.Contains(body, "Currently applied") {
-		t.Fatalf("expected selected template hint in body")
-	}
+	requireAttr(t, body, "id", "template-picker-modal_title")
+	requireAttr(t, body, "hx-vals", `{"template":"tpl-ring-corporate"}`)
+	requireAttrContains(t, body, "class", "border-indigo-400")
+	requireAttrContains(t, body, "class", "bg-indigo-50")
 }
 
 func TestProductGalleryModalFragDefaultsToPrimaryMedia(t *testing.T) {
