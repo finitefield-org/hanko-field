@@ -664,7 +664,7 @@ func (s *orderService) AssignOrderToQueue(ctx context.Context, cmd AssignOrderTo
 			expected := cmd.IfUnmodifiedSince.UTC()
 			current := order.UpdatedAt.UTC()
 			if !current.Equal(expected) {
-				return fmt.Errorf("%w: order updated at %s differs from expected %s", ErrOrderConflict, current.Format(time.RFC3339Nano), expected.Format(time.RFC3339Nano))
+				return fmt.Errorf("%w: order was modified after the provided timestamp", ErrOrderConflict)
 			}
 		}
 
@@ -759,6 +759,17 @@ func (s *orderService) AssignOrderToQueue(ctx context.Context, cmd AssignOrderTo
 
 		if err := s.orders.Update(txCtx, order); err != nil {
 			return s.mapRepositoryError(err)
+		}
+
+		if queue.Capacity > 0 {
+			summaryAfter, err := s.queues.QueueWIPSummary(txCtx, queueID)
+			if err != nil {
+				return s.mapQueueError(err)
+			}
+
+			if summaryAfter.Total > queue.Capacity {
+				return ErrOrderQueueCapacityReached
+			}
 		}
 
 		updated = Order(order)

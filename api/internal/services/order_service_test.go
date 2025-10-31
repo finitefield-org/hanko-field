@@ -455,6 +455,7 @@ func TestOrderServiceAssignOrderToQueue_Success(t *testing.T) {
 		},
 	}
 
+	counter := 0
 	queueRepo := &stubProductionQueueRepo{
 		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
 			if queueID != "pqu_main" {
@@ -471,9 +472,14 @@ func TestOrderServiceAssignOrderToQueue_Success(t *testing.T) {
 			if queueID != "pqu_main" {
 				t.Fatalf("expected summary for pqu_main, got %s", queueID)
 			}
+			counter++
+			total := 3
+			if counter > 1 {
+				total = 4
+			}
 			return domain.ProductionQueueWIPSummary{
 				QueueID: queueID,
-				Total:   3,
+				Total:   total,
 			}, nil
 		},
 	}
@@ -602,6 +608,62 @@ func TestOrderServiceAssignOrderToQueue_CapacityReached(t *testing.T) {
 		OrderID: "ord_cap",
 		QueueID: "pqu_limit",
 		ActorID: "staff-1",
+	})
+	if !errors.Is(err, ErrOrderQueueCapacityReached) {
+		t.Fatalf("expected ErrOrderQueueCapacityReached, got %v", err)
+	}
+}
+
+func TestOrderServiceAssignOrderToQueue_CapacityExceededAfterRecheck(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 5, 1, 12, 0, 0, 0, time.UTC)
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:        "ord_race",
+				Status:    domain.OrderStatusPaid,
+				UpdatedAt: now.Add(-10 * time.Minute),
+			}, nil
+		},
+	}
+
+	call := 0
+	queueRepo := &stubProductionQueueRepo{
+		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
+			return domain.ProductionQueue{
+				ID:       queueID,
+				Status:   domain.ProductionQueueStatusActive,
+				Capacity: 4,
+			}, nil
+		},
+		wipFn: func(_ context.Context, _ string) (domain.ProductionQueueWIPSummary, error) {
+			call++
+			total := 3
+			if call > 1 {
+				total = 5
+			}
+			return domain.ProductionQueueWIPSummary{Total: total}, nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:      orderRepo,
+		Production:  &stubProductionRepo{},
+		Queues:      queueRepo,
+		Counters:    &stubCounterRepo{},
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "IGNORE" },
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	_, err = svc.AssignOrderToQueue(ctx, AssignOrderToQueueCommand{
+		OrderID: "ord_race",
+		QueueID: "pqu_race",
+		ActorID: "staff-2",
 	})
 	if !errors.Is(err, ErrOrderQueueCapacityReached) {
 		t.Fatalf("expected ErrOrderQueueCapacityReached, got %v", err)

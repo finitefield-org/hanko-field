@@ -320,7 +320,8 @@ func (h *AdminProductionQueueHandlers) assignOrder(w http.ResponseWriter, r *htt
 	}
 
 	if expectedQueue := strings.TrimSpace(payload.ExpectedQueueID); expectedQueue != "" {
-		cmd.ExpectedQueueID = &expectedQueue
+		eq := expectedQueue
+		cmd.ExpectedQueueID = &eq
 	}
 
 	order, err := h.orders.AssignOrderToQueue(ctx, cmd)
