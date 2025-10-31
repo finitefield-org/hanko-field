@@ -377,8 +377,8 @@ func TestProductionQueueService_QueueWIPSummary_Normalizes(t *testing.T) {
 	if summary.StatusCounts["in_progress"] != 3 {
 		t.Fatalf("expected in_progress count 3, got %d", summary.StatusCounts["in_progress"])
 	}
-	if _, exists := summary.StatusCounts["blocked"]; exists {
-		t.Fatalf("blocked status should be omitted when count zero")
+	if count, exists := summary.StatusCounts["blocked"]; !exists || count != 0 {
+		t.Fatalf("expected blocked status with zero count, got %v", summary.StatusCounts["blocked"])
 	}
 	if summary.StatusCounts["extra_stage"] != 2 {
 		t.Fatalf("expected extra_stage count 2, got %d", summary.StatusCounts["extra_stage"])
@@ -394,6 +394,55 @@ func TestProductionQueueService_QueueWIPSummary_Normalizes(t *testing.T) {
 	}
 	if !summary.GeneratedAt.Equal(generated.UTC()) {
 		t.Fatalf("expected generated timestamp normalized to UTC, got %v", summary.GeneratedAt)
+	}
+}
+
+func TestProductionQueueService_QueueWIPSummary_PreservesZeroValues(t *testing.T) {
+	repo := &stubProductionQueueRepository{
+		wipResult: domain.ProductionQueueWIPSummary{
+			StatusCounts: map[string]int{
+				"waiting": 0,
+			},
+			Total:          0,
+			AverageAge:     0,
+			OldestAge:      -5 * time.Minute,
+			SLABreachCount: 0,
+		},
+	}
+	svc, err := NewProductionQueueService(ProductionQueueServiceDeps{
+		Repository: repo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	summary, err := svc.QueueWIPSummary(context.Background(), " pqu_zero ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.wipRequestedID != "pqu_zero" {
+		t.Fatalf("expected trimmed queue id, got %q", repo.wipRequestedID)
+	}
+	if summary.QueueID != "pqu_zero" {
+		t.Fatalf("expected queue id pqu_zero, got %q", summary.QueueID)
+	}
+	if count, ok := summary.StatusCounts["waiting"]; !ok || count != 0 {
+		t.Fatalf("expected waiting count 0, got %v", summary.StatusCounts)
+	}
+	if summary.Total != 0 {
+		t.Fatalf("expected total 0, got %d", summary.Total)
+	}
+	if summary.AverageAge != 0 {
+		t.Fatalf("expected average age 0, got %v", summary.AverageAge)
+	}
+	if summary.OldestAge != 0 {
+		t.Fatalf("expected oldest age clamped to 0, got %v", summary.OldestAge)
+	}
+	if summary.SLABreachCount != 0 {
+		t.Fatalf("expected SLA breach count 0, got %d", summary.SLABreachCount)
+	}
+	if !summary.GeneratedAt.IsZero() {
+		t.Fatalf("expected generated at zero value, got %v", summary.GeneratedAt)
 	}
 }
 

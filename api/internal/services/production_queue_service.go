@@ -460,6 +460,7 @@ func normalizeQueueWIPSummary(summary domain.ProductionQueueWIPSummary, fallback
 	if summary.StatusCounts != nil {
 		normalized := make(map[string]int, len(summary.StatusCounts))
 		totalFromCounts := 0
+		hadCounts := false
 		for key, value := range summary.StatusCounts {
 			trimmedKey := strings.TrimSpace(key)
 			if trimmedKey == "" {
@@ -471,16 +472,12 @@ func normalizeQueueWIPSummary(summary domain.ProductionQueueWIPSummary, fallback
 			if value < 0 {
 				value = 0
 			}
-			if value == 0 {
-				continue
-			}
-			normalized[statusKey] += value
+			normalized[statusKey] = normalized[statusKey] + value
 			totalFromCounts += value
+			hadCounts = true
 		}
-		if len(normalized) > 0 {
+		if hadCounts {
 			result.StatusCounts = normalized
-		}
-		if totalFromCounts > result.Total {
 			result.Total = totalFromCounts
 		}
 	}
@@ -489,13 +486,19 @@ func normalizeQueueWIPSummary(summary domain.ProductionQueueWIPSummary, fallback
 		result.Total = 0
 	}
 
-	if summary.AverageAge > 0 {
+	if summary.AverageAge < 0 {
+		result.AverageAge = 0
+	} else {
 		result.AverageAge = summary.AverageAge
 	}
-	if summary.OldestAge > 0 {
+	if summary.OldestAge < 0 {
+		result.OldestAge = 0
+	} else {
 		result.OldestAge = summary.OldestAge
 	}
-	if summary.SLABreachCount > 0 {
+	if summary.SLABreachCount < 0 {
+		result.SLABreachCount = 0
+	} else {
 		result.SLABreachCount = summary.SLABreachCount
 	}
 	if !summary.GeneratedAt.IsZero() {

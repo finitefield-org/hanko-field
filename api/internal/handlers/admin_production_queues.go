@@ -336,9 +336,6 @@ func newAdminProductionQueueResponse(queue services.ProductionQueue) adminProduc
 
 func newAdminProductionQueueWIPResponse(summary services.ProductionQueueWIPSummary) adminProductionQueueWIPResponse {
 	queueID := strings.TrimSpace(summary.QueueID)
-	if queueID == "" {
-		queueID = summary.QueueID
-	}
 	resp := adminProductionQueueWIPResponse{
 		QueueID:           queueID,
 		Total:             summary.Total,
