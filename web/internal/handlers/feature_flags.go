@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"finitefield.org/hanko-web/internal/telemetry"
 )
 
 // FeatureFlags exposes remote configuration and experiment variants to templates.
@@ -67,7 +68,7 @@ func (ff FeatureFlags) JSON() string {
 	}
 	b, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("featureflags: marshal json: %v", err)
+		telemetry.Logger().Error("feature flags marshal failed", "error", err)
 		return "{}"
 	}
 	return string(b)
@@ -117,7 +118,7 @@ func LoadFeatureFlags() FeatureFlags {
 	if err != nil {
 		msg := err.Error()
 		if msg != featureFlagLastError {
-			log.Printf("featureflags: %v", err)
+			telemetry.Logger().Warn("feature flags load error", "error", err)
 			featureFlagLastError = msg
 		}
 		if featureFlagsLoaded {
@@ -174,7 +175,7 @@ func fetchFeatureFlags() (FeatureFlags, error) {
 		ff, err := parseFeatureFlags([]byte(raw))
 		if err == nil {
 			if remoteErr != nil {
-				log.Printf("featureflags: remote fetch failed (%v); using env fallback", remoteErr)
+				telemetry.Logger().Warn("feature flags remote fetch failed, falling back to env", "error", remoteErr)
 			}
 			ff.Source = "env"
 			return ff, nil
@@ -187,7 +188,7 @@ func fetchFeatureFlags() (FeatureFlags, error) {
 		return ff, errors.New(strings.Join(errs, "; "))
 	}
 	if remoteErr != nil {
-		log.Printf("featureflags: remote fetch failed (%v); falling back to defaults", remoteErr)
+		telemetry.Logger().Warn("feature flags remote fetch failed, using defaults", "error", remoteErr)
 	}
 	return ff, nil
 }
@@ -238,7 +239,7 @@ func parseFeatureFlags(raw []byte) (FeatureFlags, error) {
 	}
 	var rawMap map[string]any
 	if err := json.Unmarshal(raw, &rawMap); err != nil {
-		log.Printf("featureflags: parse raw metadata: %v", err)
+		telemetry.Logger().Warn("feature flags raw metadata parse failed", "error", err)
 		rawMap = map[string]any{}
 	}
 	ff := FeatureFlags{

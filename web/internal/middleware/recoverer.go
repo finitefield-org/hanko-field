@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"runtime/debug"
 )
@@ -24,7 +23,7 @@ func Recoverer(handler PanicHandler) func(http.Handler) http.Handler {
 						err = fmt.Errorf("%v", e)
 					}
 					stack := debug.Stack()
-					log.Printf("panic recovered: %v\n%s", err, stack)
+					ContextLogger(r.Context()).Error("panic recovered", "error", err, "stack", string(stack))
 					w.Header().Set("Connection", "close")
 					if handler != nil {
 						handler(w, r, err)

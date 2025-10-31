@@ -2,17 +2,20 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
+
+	"finitefield.org/hanko-web/internal/telemetry"
 )
 
 // context keys are unexported to avoid collisions
 type ctxKey string
 
 const (
-    ctxKeyRequestID ctxKey = "req_id"
-    ctxKeyIsHTMX    ctxKey = "is_htmx"
-    ctxKeySession   ctxKey = "session"
-    ctxKeyUser      ctxKey = "user"
-    ctxKeyLocaleFB  ctxKey = "locale_fallback"
+	ctxKeyRequestID ctxKey = "req_id"
+	ctxKeyIsHTMX    ctxKey = "is_htmx"
+	ctxKeySession   ctxKey = "session"
+	ctxKeyUser      ctxKey = "user"
+	ctxKeyLocaleFB  ctxKey = "locale_fallback"
 )
 
 // WithRequestID stores request id in context
@@ -56,4 +59,21 @@ func UserFromContext(ctx context.Context) *User {
 		}
 	}
 	return nil
+}
+
+// ContextLogger returns the shared structured logger augmented with request context.
+func ContextLogger(ctx context.Context) *slog.Logger {
+	logger := telemetry.Logger()
+	if rid, ok := RequestID(ctx); ok && rid != "" {
+		logger = logger.With("request_id", rid)
+	}
+	if u := UserFromContext(ctx); u != nil && u.ID != "" {
+		if hash := telemetry.HashUserID(u.ID); hash != "" {
+			logger = logger.With("user_hash", hash)
+		}
+	}
+	if IsHTMX(ctx) {
+		logger = logger.With("htmx", true)
+	}
+	return logger
 }

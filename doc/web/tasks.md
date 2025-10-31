@@ -69,7 +69,7 @@
 - [x] [Optimize asset pipeline (Tailwind purge, lazy loading, responsive images) and configure CDN headers.](doc/web/tasks/048-optimize-asset-pipeline-tailwind-purge-lazy-loading-responsive-images-and-configure-cdn-he.md)
 - [x] [Ensure accessibility compliance (ARIA roles, keyboard navigation, focus management) across pages and modals.](doc/web/tasks/049-ensure-accessibility-compliance-aria-roles-keyboard-navigation-focus-management-across-pag.md)
 - [x] [Implement automated tests for fragments/modals (htmx interactions) and critical flows.](doc/web/tasks/050-implement-automated-tests-for-fragments-modals-htmx-interactions-and-critical-flows.md)
-- [ ] [Set up monitoring (logging, metrics, uptime checks) and real user metrics reporting.](doc/web/tasks/051-set-up-monitoring-logging-metrics-uptime-checks-and-real-user-metrics-reporting.md)
+- [x] [Set up monitoring (logging, metrics, uptime checks) and real user metrics reporting.](doc/web/tasks/051-set-up-monitoring-logging-metrics-uptime-checks-and-real-user-metrics-reporting.md)
 - [ ] [Document QA checklist covering regression flows prior to release.](doc/web/tasks/052-document-qa-checklist-covering-regression-flows-prior-to-release.md)
 
 ## 10. Deployment & Maintenance

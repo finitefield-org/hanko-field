@@ -7,11 +7,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"finitefield.org/hanko-web/internal/telemetry"
 )
 
 const sessionCookieName = "HANKO_WEB_SESSION"
@@ -84,10 +85,10 @@ func init() {
 	if key == "" {
 		sessionSignKey = make([]byte, 32)
 		if _, err := rand.Read(sessionSignKey); err != nil {
-			log.Printf("session: failed to generate signing key: %v", err)
+			telemetry.Logger().Error("session signing key generation failed", "error", err)
 			sessionSignKey = []byte("insecure-dev-key-please-set-HANKO_WEB_SESSION_SIGNING_KEY")
 		}
-		log.Printf("session: using ephemeral signing key (dev). Set HANKO_WEB_SESSION_SIGNING_KEY for production.")
+		telemetry.Logger().Warn("session using ephemeral signing key", "hint", "set HANKO_WEB_SESSION_SIGNING_KEY for production security")
 	} else {
 		sessionSignKey = []byte(key)
 	}

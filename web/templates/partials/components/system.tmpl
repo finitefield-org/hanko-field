@@ -77,6 +77,164 @@
     flush: flush
   };
 
+  function ratingForMetric(name, value){
+    if (typeof value !== 'number' || isNaN(value)) { return 'unknown'; }
+    if (name === 'LCP') {
+      if (value <= 2500) { return 'good'; }
+      if (value <= 4000) { return 'needs-improvement'; }
+      return 'poor';
+    }
+    if (name === 'FID') {
+      if (value <= 100) { return 'good'; }
+      if (value <= 300) { return 'needs-improvement'; }
+      return 'poor';
+    }
+    if (name === 'CLS') {
+      if (value <= 0.1) { return 'good'; }
+      if (value <= 0.25) { return 'needs-improvement'; }
+      return 'poor';
+    }
+    if (name === 'INP') {
+      if (value <= 200) { return 'good'; }
+      if (value <= 500) { return 'needs-improvement'; }
+      return 'poor';
+    }
+    if (name === 'TTFB') {
+      if (value <= 800) { return 'good'; }
+      if (value <= 1800) { return 'needs-improvement'; }
+      return 'poor';
+    }
+    return 'unknown';
+  }
+
+  function recordWebVital(name, value, info){
+    if (!window.hankoTelemetry || typeof value !== 'number' || isNaN(value)) { return; }
+    var meta = {};
+    if (info && typeof info === 'object') {
+      for (var key in info) {
+        if (Object.prototype.hasOwnProperty.call(info, key) && info[key] !== undefined) {
+          meta[key] = info[key];
+        }
+      }
+    }
+    meta.metric = name;
+    meta.value = Math.round(value);
+    meta.rating = ratingForMetric(name, meta.value);
+    window.hankoTelemetry.record('web-vital', meta);
+  }
+
+  function initRUM(){
+    if (typeof PerformanceObserver !== 'function' || typeof window === 'undefined') {
+      return;
+    }
+
+    // Largest Contentful Paint
+    try {
+      var lcpValue = 0;
+      var lcpId = '';
+      var lcpObserver = new PerformanceObserver(function(list){
+        var entries = list.getEntries();
+        if (!entries.length) { return; }
+        var entry = entries[entries.length - 1];
+        lcpValue = entry.renderTime || entry.loadTime || entry.startTime || 0;
+        lcpId = entry.id || '';
+      });
+      lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+      var finalizeLCP = function(){
+        if (lcpObserver) {
+          lcpObserver.takeRecords();
+          lcpObserver.disconnect();
+          lcpObserver = null;
+          if (lcpValue) {
+            recordWebVital('LCP', lcpValue, { id: lcpId });
+          }
+        }
+      };
+      document.addEventListener('visibilitychange', function(){
+        if (document.visibilityState === 'hidden') { finalizeLCP(); }
+      }, { once: false });
+      window.addEventListener('pagehide', finalizeLCP, { once: true });
+    } catch (_) {}
+
+    // First Input Delay
+    try {
+      var fidObserver = new PerformanceObserver(function(list){
+        var entries = list.getEntries();
+        if (!entries.length) { return; }
+        var entry = entries[0];
+        var value = entry.processingStart - entry.startTime;
+        recordWebVital('FID', value, {
+          target: entry.target && entry.target.tagName ? entry.target.tagName.toLowerCase() : undefined
+        });
+      });
+      fidObserver.observe({ type: 'first-input', buffered: true });
+    } catch (_) {}
+
+    // Cumulative Layout Shift
+    try {
+      var clsValue = 0;
+      var clsObserver = new PerformanceObserver(function(list){
+        list.getEntries().forEach(function(entry){
+          if (!entry.hadRecentInput) {
+            clsValue += entry.value;
+          }
+        });
+      });
+      clsObserver.observe({ type: 'layout-shift', buffered: true });
+      var finalizeCLS = function(){
+        if (clsObserver) {
+          clsObserver.takeRecords();
+          clsObserver.disconnect();
+          clsObserver = null;
+          recordWebVital('CLS', clsValue, {});
+        }
+      };
+      document.addEventListener('visibilitychange', function(){
+        if (document.visibilityState === 'hidden') { finalizeCLS(); }
+      }, { once: false });
+      window.addEventListener('beforeunload', finalizeCLS, { once: true });
+    } catch (_) {}
+
+    // Interaction to Next Paint
+    try {
+      var inpDuration = 0;
+      var inpId = '';
+      var inpObserver = new PerformanceObserver(function(list){
+        var entries = list.getEntries();
+        if (!entries.length) { return; }
+        var entry = entries[entries.length - 1];
+        inpDuration = entry.duration;
+        inpId = entry.interactionId || entry.name || '';
+      });
+      inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+      var finalizeINP = function(){
+        if (inpObserver) {
+          inpObserver.takeRecords();
+          inpObserver.disconnect();
+          inpObserver = null;
+          if (inpDuration) {
+            recordWebVital('INP', inpDuration, { id: inpId });
+          }
+        }
+      };
+      document.addEventListener('visibilitychange', function(){
+        if (document.visibilityState === 'hidden') { finalizeINP(); }
+      }, { once: false });
+      window.addEventListener('pagehide', finalizeINP, { once: true });
+    } catch (_) {}
+
+    // Time To First Byte
+    try {
+      if (performance && typeof performance.getEntriesByType === 'function') {
+        var navEntries = performance.getEntriesByType('navigation');
+        if (navEntries && navEntries.length) {
+          var nav = navEntries[0];
+          recordWebVital('TTFB', nav.responseStart || 0, { id: nav.name || location.href });
+        }
+      }
+    } catch (_) {}
+  }
+
   window.addEventListener('online', flush);
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     send({ event: 'offline', meta: { state: 'offline' }, path: window.location.pathname });
@@ -86,6 +244,7 @@
       flush();
     }
   });
+  initRUM();
 })();
 </script>
 {{ end }}

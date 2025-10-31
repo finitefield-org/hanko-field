@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"finitefield.org/hanko-web/internal/telemetry"
 )
 
 // ErrNotFound is returned when a CMS resource cannot be located.
@@ -59,8 +60,8 @@ type ListGuidesOptions struct {
 
 // Client provides read-only access to CMS content endpoints.
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL    string
+	http       *http.Client
 	contentDir string
 }
 
@@ -87,12 +88,12 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 
 	endpoint, err := url.JoinPath(c.baseURL, "content/guides")
 	if err != nil {
-		log.Printf("cms: join path guides: %v", err)
+		telemetry.Logger().Error("cms join guide list path failed", "error", err)
 		return filterGuides(fallbackGuidesForLang(lang), opts), nil
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		log.Printf("cms: build request guides: %v", err)
+		telemetry.Logger().Error("cms build guide list request failed", "error", err)
 		return filterGuides(fallbackGuidesForLang(lang), opts), nil
 	}
 	q := req.URL.Query()
@@ -110,7 +111,7 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		log.Printf("cms: list guides request: %v", err)
+		telemetry.Logger().Error("cms guide list request failed", "error", err)
 		return filterGuides(fallbackGuidesForLang(lang), opts), nil
 	}
 	defer resp.Body.Close()
@@ -119,13 +120,13 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 		return []Guide{}, nil
 	}
 	if resp.StatusCode >= 400 {
-		log.Printf("cms: list guides status %d", resp.StatusCode)
+		telemetry.Logger().Warn("cms guide list non-success status", "status", resp.StatusCode)
 		return filterGuides(fallbackGuidesForLang(lang), opts), nil
 	}
 
 	var pg pageGuide
 	if err := json.NewDecoder(resp.Body).Decode(&pg); err != nil {
-		log.Printf("cms: decode list guides: %v", err)
+		telemetry.Logger().Error("cms decode guide list failed", "error", err)
 		return filterGuides(fallbackGuidesForLang(lang), opts), nil
 	}
 
@@ -162,12 +163,12 @@ func (c *Client) GetGuide(ctx context.Context, slug, lang string) (Guide, error)
 
 	endpoint, err := url.JoinPath(c.baseURL, "content/guides", slug)
 	if err != nil {
-		log.Printf("cms: join path guide detail: %v", err)
+		telemetry.Logger().Error("cms join guide detail path failed", "error", err)
 		return fallbackGuide(slug, lang)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		log.Printf("cms: build request guide detail: %v", err)
+		telemetry.Logger().Error("cms build guide detail request failed", "error", err)
 		return fallbackGuide(slug, lang)
 	}
 	q := req.URL.Query()
@@ -179,7 +180,7 @@ func (c *Client) GetGuide(ctx context.Context, slug, lang string) (Guide, error)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		log.Printf("cms: guide detail request: %v", err)
+		telemetry.Logger().Error("cms guide detail request failed", "error", err)
 		return fallbackGuide(slug, lang)
 	}
 	defer resp.Body.Close()
@@ -191,13 +192,13 @@ func (c *Client) GetGuide(ctx context.Context, slug, lang string) (Guide, error)
 		return Guide{}, ErrNotFound
 	}
 	if resp.StatusCode >= 400 {
-		log.Printf("cms: guide detail status %d", resp.StatusCode)
+		telemetry.Logger().Warn("cms guide detail non-success status", "status", resp.StatusCode)
 		return fallbackGuide(slug, lang)
 	}
 
 	var raw rawGuide
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		log.Printf("cms: decode guide detail: %v", err)
+		telemetry.Logger().Error("cms decode guide detail failed", "error", err)
 		return fallbackGuide(slug, lang)
 	}
 

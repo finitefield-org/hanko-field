@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -31,6 +30,7 @@ import (
 	"finitefield.org/hanko-web/internal/nav"
 	"finitefield.org/hanko-web/internal/seo"
 	"finitefield.org/hanko-web/internal/status"
+	"finitefield.org/hanko-web/internal/telemetry"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/microcosm-cc/bluemonday"
@@ -787,14 +787,16 @@ func main() {
 	var err error
 	i18nBundle, err = i18n.Load(localesDir, "ja", sup)
 	if err != nil {
-		log.Fatalf("i18n load failed: %v", err)
+		telemetry.Logger().Error("i18n bundle load failed", "error", err, "locales_dir", localesDir)
+		os.Exit(1)
 	}
 
 	if !devMode {
 		// Parse templates once in production
 		tc, err := parseTemplates()
 		if err != nil {
-			log.Fatalf("parse templates: %v", err)
+			telemetry.Logger().Error("template parse failed", "error", err)
+			os.Exit(1)
 		}
 		tmplCache = tc
 	}
@@ -839,6 +841,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+	r.Method(http.MethodGet, "/internal/metrics", telemetry.MetricsHandler())
 
 	// Static assets under /assets/ (with Cache-Control and ETag)
 	assetsRoot := filepath.Join(publicDir, "assets")
@@ -961,9 +964,10 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("web listening on %s (devMode=%v)", addr, devMode)
+	telemetry.Logger().Info("web server listening", "addr", addr, "dev_mode", devMode)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("listen: %v", err)
+		telemetry.Logger().Error("web server listen failed", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -1376,7 +1380,7 @@ func handleRecoveredPanic(w http.ResponseWriter, r *http.Request, err error) {
 
 func renderServerError(w http.ResponseWriter, r *http.Request, cause error) {
 	if cause != nil {
-		log.Printf("server error: %v", cause)
+		mw.ContextLogger(r.Context()).Error("server error", "error", cause)
 	}
 	lang := mw.Lang(r)
 	title := i18nOrDefault(lang, "errors.500.title", "We hit a snag")
@@ -1526,7 +1530,11 @@ func MaintenanceNotifyHandler(w http.ResponseWriter, r *http.Request) {
 		renderMaintenancePage(w, r, http.StatusBadRequest, vm)
 		return
 	}
-	log.Printf("maintenance notify signup: email=%s", email)
+	logger := mw.ContextLogger(r.Context())
+	if email != "" {
+		logger = logger.With("email_hash", telemetry.HashUserID(strings.ToLower(email)))
+	}
+	logger.Info("maintenance notify signup")
 	vm.NotifyForm.Success = true
 	renderMaintenancePage(w, r, http.StatusAccepted, vm)
 }
@@ -1611,7 +1619,12 @@ func TelemetryEventHandler(w http.ResponseWriter, r *http.Request) {
 	if payload.Release == "" {
 		payload.Release = appRelease
 	}
-	log.Printf("telemetry event: event=%s path=%s req_id=%s release=%s meta=%v", payload.Event, payload.Path, payload.RequestID, payload.Release, payload.Meta)
+	mw.ContextLogger(r.Context()).
+		With(
+			"path", payload.Path,
+			"release", payload.Release,
+			"meta", payload.Meta,
+		).Info("telemetry event", "event", payload.Event)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusAccepted)
 	_, _ = w.Write([]byte(`{"status":"accepted"}`))
@@ -2623,7 +2636,7 @@ func GuidesHandler(w http.ResponseWriter, r *http.Request) {
 
 	allGuides, err := cmsClient.ListGuides(ctx, cms.ListGuidesOptions{Lang: lang})
 	if err != nil {
-		log.Printf("guides: list: %v", err)
+		mw.ContextLogger(r.Context()).Warn("guides list fetch failed", "error", err)
 	}
 
 	personaParam := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("persona")))
@@ -2689,7 +2702,7 @@ func GuideDetailHandler(w http.ResponseWriter, r *http.Request) {
 			renderNotFound(w, r)
 			return
 		}
-		log.Printf("guides: detail: %v", err)
+		mw.ContextLogger(r.Context()).Warn("guide detail fetch failed", "error", err, "slug", slug)
 		http.Error(w, "guides unavailable", http.StatusBadGateway)
 		return
 	}
@@ -2763,7 +2776,7 @@ func GuideDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	relatedPool, err := cmsClient.ListGuides(ctx, cms.ListGuidesOptions{Lang: lang})
 	if err != nil {
-		log.Printf("guides: related list: %v", err)
+		mw.ContextLogger(r.Context()).Warn("guides related list fetch failed", "error", err, "slug", slug)
 	}
 	if len(relatedPool) > 0 {
 		detailVM.Related = buildRelatedGuides(guide, relatedPool, lang)
@@ -3719,7 +3732,9 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 			renderNotFound(w, r)
 			return
 		}
-		log.Printf("%s: fetch %s: %v", kind, slug, err)
+		mw.ContextLogger(r.Context()).
+			With("kind", kind, "slug", slug).
+			Warn("content fetch failed", "error", err)
 		http.Error(w, "content unavailable", http.StatusBadGateway)
 		return
 	}
@@ -3742,7 +3757,9 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 	if !cached {
 		rendered, tocEntries, renderErr := renderContentBody(page)
 		if renderErr != nil {
-			log.Printf("%s: render %s: %v", kind, slug, renderErr)
+			mw.ContextLogger(r.Context()).
+				With("kind", kind, "slug", slug).
+				Error("content render failed", "error", renderErr)
 		}
 		body = rendered
 		toc = tocEntries
@@ -3788,7 +3805,9 @@ func serveStaticPage(w http.ResponseWriter, r *http.Request, kind, templateName,
 
 	if kind == "legal" {
 		if entries, histErr := cmsClient.GetContentHistory(ctx, kind, slug, lang); histErr != nil {
-			log.Printf("legal: history %s: %v", slug, histErr)
+			mw.ContextLogger(r.Context()).
+				With("slug", slug).
+				Warn("legal content history fetch failed", "error", histErr)
 		} else if len(entries) > 0 {
 			extras.History = buildContentHistoryRows(lang, entries)
 		}
@@ -3830,14 +3849,18 @@ func LegalFeedbackHandler(w http.ResponseWriter, r *http.Request) {
 	if len(notes) > 500 {
 		notes = notes[:500]
 	}
-	log.Printf("legal feedback: slug=%s helpful=%s notes=%q", slug, helpful, notes)
+	logger := mw.ContextLogger(r.Context()).With("slug", slug, "helpful", helpful)
+	if notes != "" {
+		logger = logger.With("notes_len", len(notes))
+	}
+	logger.Info("legal feedback submitted")
 	message := i18nOrDefault(lang, "legal.feedback.thanks", "Thanks for your feedback.")
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusAccepted)
 		snippet := fmt.Sprintf(`<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">%s</div>`, template.HTMLEscapeString(message))
 		if _, err := w.Write([]byte(snippet)); err != nil {
-			log.Printf("legal feedback: write response: %v", err)
+			logger.Error("legal feedback response write failed", "error", err)
 		}
 		return
 	}
@@ -3860,7 +3883,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := statusClient.FetchSummary(ctx, lang)
 	if err != nil {
-		log.Printf("status: fetch: %v", err)
+		mw.ContextLogger(r.Context()).Warn("status summary fetch failed", "error", err)
 	}
 
 	etag := computeStatusETag(summary, lang)
@@ -5911,7 +5934,7 @@ func LatestGuidesFrag(w http.ResponseWriter, r *http.Request) {
 
 	guides, err := cmsClient.ListGuides(ctx, cms.ListGuidesOptions{Lang: lang, Limit: 3})
 	if err != nil {
-		log.Printf("guides: latest: %v", err)
+		mw.ContextLogger(r.Context()).Warn("latest guides fetch failed", "error", err)
 	}
 	cards := make([]GuideCard, 0, len(guides))
 	hashParts := []string{lang}

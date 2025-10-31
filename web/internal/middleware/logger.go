@@ -1,66 +1,49 @@
 package middleware
 
 import (
-	"encoding/json"
-	chimw "github.com/go-chi/chi/v5/middleware"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"finitefield.org/hanko-web/internal/telemetry"
 )
 
-type logEntry struct {
-	Timestamp  string `json:"ts"`
-	Level      string `json:"level"`
-	Message    string `json:"msg"`
-	Method     string `json:"method"`
-	Path       string `json:"path"`
-	Status     int    `json:"status"`
-	DurationMs int64  `json:"duration_ms"`
-	RemoteIP   string `json:"remote_ip,omitempty"`
-	RequestID  string `json:"request_id,omitempty"`
-	UserID     string `json:"user_id,omitempty"`
-	HTMX       bool   `json:"htmx"`
-}
-
-var useStdoutLogger = true
-
-// Logger emits a structured JSON log per request
+// Logger emits a structured JSON log per request and feeds metrics observers.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		// wrap writer to capture status
 		rw := NewResponseRecorder(w)
+
 		next.ServeHTTP(rw, r)
-		// build entry
+
 		rid := chimw.GetReqID(r.Context())
 		if rid != "" {
 			r = r.WithContext(WithRequestID(r.Context(), rid))
 		}
-		var uid string
-		if u := UserFromContext(r.Context()); u != nil {
-			uid = u.ID
+
+		status := rw.Status()
+		duration := time.Since(start)
+		route := routePattern(r)
+
+		telemetry.ObserveHTTPRequest(r.Method, route, status, duration)
+
+		logger := ContextLogger(r.Context()).
+			With(
+				"method", r.Method,
+				"path", r.URL.Path,
+				"route", route,
+				"status", status,
+				"duration_ms", duration.Milliseconds(),
+			)
+
+		if ip := clientIP(r); ip != "" {
+			logger = logger.With("remote_ip", ip)
 		}
-		e := logEntry{
-			Timestamp:  time.Now().Format(time.RFC3339Nano),
-			Level:      "info",
-			Message:    "request",
-			Method:     r.Method,
-			Path:       r.URL.Path,
-			Status:     rw.Status(),
-			DurationMs: time.Since(start).Milliseconds(),
-			RemoteIP:   clientIP(r),
-			RequestID:  rid,
-			UserID:     uid,
-			HTMX:       IsHTMX(r.Context()),
-		}
-		b, _ := json.Marshal(e)
-		if useStdoutLogger {
-			log.Println(string(b))
-		} else {
-			_, _ = os.Stdout.Write(append(b, '\n'))
-		}
+
+		logger.Info("http_request")
 	})
 }
 
@@ -80,4 +63,13 @@ func clientIP(r *http.Request) string {
 		return host[:i]
 	}
 	return host
+}
+
+func routePattern(r *http.Request) string {
+	if rc := chi.RouteContext(r.Context()); rc != nil {
+		if pattern := rc.RoutePattern(); pattern != "" {
+			return pattern
+		}
+	}
+	return r.URL.Path
 }

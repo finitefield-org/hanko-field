@@ -1,0 +1,48 @@
+checks:
+  - name: hanko-web-healthz
+    description: HTTP health check for Cloud Run service
+    interval: 60s
+    timeout: 5s
+    request:
+      method: GET
+      url: ${HANKO_WEB_BASE_URL}/healthz
+      headers:
+        User-Agent: hanko-uptime-probe
+    expect:
+      status: 200
+      body_contains: ok
+    regions:
+      - asia-northeast1
+      - us-west1
+      - europe-west1
+  - name: hanko-web-home
+    description: Synthetic browse through landing page to capture latency
+    interval: 300s
+    timeout: 10s
+    request:
+      method: GET
+      url: ${HANKO_WEB_BASE_URL}/
+      headers:
+        Cache-Control: no-cache
+        User-Agent: hanko-uptime-probe
+    expect:
+      status: 200
+      text_match: Hanko Field
+    regions:
+      - asia-northeast1
+      - us-central1
+  - name: hanko-web-status
+    description: Status page availability check
+    interval: 300s
+    timeout: 10s
+    request:
+      method: GET
+      url: ${HANKO_WEB_BASE_URL}/status
+      headers:
+        Cache-Control: no-cache
+        User-Agent: hanko-uptime-probe
+    expect:
+      status: 200
+    regions:
+      - asia-northeast1
+      - us-east1
