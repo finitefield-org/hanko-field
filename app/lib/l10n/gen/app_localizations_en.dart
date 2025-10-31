@@ -326,6 +326,119 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designStyleSelectedHeading => 'Selected template';
 
   @override
+  String get designEditorTitle => 'Design editor';
+
+  @override
+  String get designEditorFallbackText => 'Sample';
+
+  @override
+  String get designEditorPrimaryCta => 'Preview & export';
+
+  @override
+  String get designEditorUndoTooltip => 'Undo';
+
+  @override
+  String get designEditorRedoTooltip => 'Redo';
+
+  @override
+  String get designEditorMoreActionsTooltip => 'More actions';
+
+  @override
+  String get designEditorResetMenu => 'Reset to template defaults';
+
+  @override
+  String get designEditorResetSnackbar => 'Restored template defaults.';
+
+  @override
+  String get designEditorToolSelect => 'Select';
+
+  @override
+  String get designEditorToolText => 'Text';
+
+  @override
+  String get designEditorToolLayout => 'Layout';
+
+  @override
+  String get designEditorToolExport => 'Export';
+
+  @override
+  String get designEditorCanvasTitle => 'Live canvas';
+
+  @override
+  String get designEditorCanvasUntitled => 'Untitled template';
+
+  @override
+  String get designEditorAutosaveInProgress => 'Autosaving…';
+
+  @override
+  String get designEditorAutosaveIdle => 'Adjustments save automatically.';
+
+  @override
+  String designEditorAutosaveCompleted(String time) {
+    return 'Saved at $time';
+  }
+
+  @override
+  String get designEditorPropertiesHeading => 'Properties';
+
+  @override
+  String get designEditorStrokeLabel => 'Stroke weight';
+
+  @override
+  String designEditorStrokeValue(String weight) {
+    return '$weight pt';
+  }
+
+  @override
+  String get designEditorMarginLabel => 'Margins';
+
+  @override
+  String designEditorMarginValue(String value) {
+    return '$value px';
+  }
+
+  @override
+  String get designEditorRotationLabel => 'Rotation';
+
+  @override
+  String designEditorRotationValue(String value) {
+    return '$value deg';
+  }
+
+  @override
+  String get designEditorGridLabel => 'Grid overlay';
+
+  @override
+  String get designEditorGridNone => 'None';
+
+  @override
+  String get designEditorGridSquare => 'Square';
+
+  @override
+  String get designEditorGridRadial => 'Radial';
+
+  @override
+  String get designEditorAlignmentLabel => 'Alignment';
+
+  @override
+  String get designEditorAlignCenter => 'Center';
+
+  @override
+  String get designEditorAlignTop => 'Top';
+
+  @override
+  String get designEditorAlignBottom => 'Bottom';
+
+  @override
+  String get designEditorAlignLeft => 'Left';
+
+  @override
+  String get designEditorAlignRight => 'Right';
+
+  @override
+  String get designEditorPreviewPlaceholder => 'Preview will open soon.';
+
+  @override
   String get designInputSuggestionHeader => 'Quick fill';
 
   @override

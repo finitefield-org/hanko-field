@@ -8,6 +8,8 @@ enum DesignShape { round, square }
 
 enum DesignWritingStyle { tensho, reisho, kaisho, gyosho, koentai, custom }
 
+enum DesignCanvasAlignment { center, top, bottom, left, right }
+
 @immutable
 class DesignKanjiMapping {
   const DesignKanjiMapping({required this.value, this.mappingRef});
@@ -118,23 +120,40 @@ class DesignStroke {
 
 @immutable
 class DesignLayout {
-  const DesignLayout({this.grid, this.margin});
+  const DesignLayout({this.grid, this.margin, this.alignment, this.rotation});
 
   final String? grid;
   final double? margin;
+  final DesignCanvasAlignment? alignment;
+  final double? rotation;
 
-  DesignLayout copyWith({String? grid, double? margin}) {
-    return DesignLayout(grid: grid ?? this.grid, margin: margin ?? this.margin);
+  DesignLayout copyWith({
+    String? grid,
+    double? margin,
+    DesignCanvasAlignment? alignment,
+    bool clearAlignment = false,
+    double? rotation,
+  }) {
+    return DesignLayout(
+      grid: grid ?? this.grid,
+      margin: margin ?? this.margin,
+      alignment: clearAlignment ? null : alignment ?? this.alignment,
+      rotation: rotation ?? this.rotation,
+    );
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other is DesignLayout && other.grid == grid && other.margin == margin);
+        (other is DesignLayout &&
+            other.grid == grid &&
+            other.margin == margin &&
+            other.alignment == alignment &&
+            other.rotation == rotation);
   }
 
   @override
-  int get hashCode => Object.hash(grid, margin);
+  int get hashCode => Object.hash(grid, margin, alignment, rotation);
 }
 
 @immutable

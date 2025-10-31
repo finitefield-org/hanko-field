@@ -93,4 +93,32 @@ class DesignCreationController extends Notifier<DesignCreationState> {
       selectedTemplateTitle: templateTitle,
     );
   }
+
+  void applyEditorAdjustments({
+    required double strokeWeight,
+    required double margin,
+    required DesignCanvasAlignment alignment,
+    required double rotation,
+    required String grid,
+  }) {
+    final currentStyle = state.styleDraft;
+    if (currentStyle == null) {
+      return;
+    }
+    final stroke = (currentStyle.stroke ?? const DesignStroke()).copyWith(
+      weight: strokeWeight,
+    );
+    final layout =
+        (currentStyle.layout ??
+                const DesignLayout(alignment: DesignCanvasAlignment.center))
+            .copyWith(
+              grid: grid,
+              margin: margin,
+              alignment: alignment,
+              rotation: rotation,
+            );
+    state = state.copyWith(
+      styleDraft: currentStyle.copyWith(stroke: stroke, layout: layout),
+    );
+  }
 }

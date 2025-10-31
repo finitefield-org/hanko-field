@@ -488,6 +488,205 @@
   "description": "Heading for the selected template details card"
 }
 
+, "designEditorTitle": "Design editor"
+, "@designEditorTitle": {
+  "description": "Title for the design editor screen"
+}
+
+, "designEditorFallbackText": "Sample"
+, "@designEditorFallbackText": {
+  "description": "Fallback text shown on the canvas when no name is available"
+}
+
+, "designEditorPrimaryCta": "Preview & export"
+, "@designEditorPrimaryCta": {
+  "description": "Label for the bottom extended FAB on the design editor screen"
+}
+
+, "designEditorUndoTooltip": "Undo"
+, "@designEditorUndoTooltip": {
+  "description": "Tooltip for the undo icon button"
+}
+
+, "designEditorRedoTooltip": "Redo"
+, "@designEditorRedoTooltip": {
+  "description": "Tooltip for the redo icon button"
+}
+
+, "designEditorMoreActionsTooltip": "More actions"
+, "@designEditorMoreActionsTooltip": {
+  "description": "Tooltip for the overflow menu on the design editor app bar"
+}
+
+, "designEditorResetMenu": "Reset to template defaults"
+, "@designEditorResetMenu": {
+  "description": "Menu item label to reset the editor values back to the template defaults"
+}
+
+, "designEditorResetSnackbar": "Restored template defaults."
+, "@designEditorResetSnackbar": {
+  "description": "Snackbar message shown after resetting the editor"
+}
+
+, "designEditorToolSelect": "Select"
+, "@designEditorToolSelect": {
+  "description": "Navigation rail label for the selection tool"
+}
+
+, "designEditorToolText": "Text"
+, "@designEditorToolText": {
+  "description": "Navigation rail label for the text tool"
+}
+
+, "designEditorToolLayout": "Layout"
+, "@designEditorToolLayout": {
+  "description": "Navigation rail label for the layout tool"
+}
+
+, "designEditorToolExport": "Export"
+, "@designEditorToolExport": {
+  "description": "Navigation rail label for the export shortcuts"
+}
+
+, "designEditorCanvasTitle": "Live canvas"
+, "@designEditorCanvasTitle": {
+  "description": "Heading for the canvas preview section"
+}
+
+, "designEditorCanvasUntitled": "Untitled template"
+, "@designEditorCanvasUntitled": {
+  "description": "Subtitle shown when the template has no title"
+}
+
+, "designEditorAutosaveInProgress": "Autosaving…"
+, "@designEditorAutosaveInProgress": {
+  "description": "Status label shown while autosave is running"
+}
+
+, "designEditorAutosaveIdle": "Adjustments save automatically."
+, "@designEditorAutosaveIdle": {
+  "description": "Status label when nothing has been saved yet"
+}
+
+, "designEditorAutosaveCompleted": "Saved at {time}"
+, "@designEditorAutosaveCompleted": {
+  "description": "Status label showing when the last autosave happened",
+  "placeholders": {
+    "time": {
+      "type": "String",
+      "example": "14:52"
+    }
+  }
+}
+
+, "designEditorPropertiesHeading": "Properties"
+, "@designEditorPropertiesHeading": {
+  "description": "Heading for the property sheet"
+}
+
+, "designEditorStrokeLabel": "Stroke weight"
+, "@designEditorStrokeLabel": {
+  "description": "Label for the stroke weight slider control"
+}
+
+, "designEditorStrokeValue": "{weight} pt"
+, "@designEditorStrokeValue": {
+  "description": "Slider value label for stroke width",
+  "placeholders": {
+    "weight": {
+      "type": "String",
+      "example": "2.5"
+    }
+  }
+}
+
+, "designEditorMarginLabel": "Margins"
+, "@designEditorMarginLabel": {
+  "description": "Label for the margin slider control"
+}
+
+, "designEditorMarginValue": "{value} px"
+, "@designEditorMarginValue": {
+  "description": "Slider value label for margin amount",
+  "placeholders": {
+    "value": {
+      "type": "String",
+      "example": "6.0"
+    }
+  }
+}
+
+, "designEditorRotationLabel": "Rotation"
+, "@designEditorRotationLabel": {
+  "description": "Label for the rotation slider control"
+}
+
+, "designEditorRotationValue": "{value} deg"
+, "@designEditorRotationValue": {
+  "description": "Slider value label for rotation",
+  "placeholders": {
+    "value": {
+      "type": "String",
+      "example": "45"
+    }
+  }
+}
+
+, "designEditorGridLabel": "Grid overlay"
+, "@designEditorGridLabel": {
+  "description": "Label for the grid toggle segmented button"
+}
+
+, "designEditorGridNone": "None"
+, "@designEditorGridNone": {
+  "description": "Grid option label for none"
+}
+
+, "designEditorGridSquare": "Square"
+, "@designEditorGridSquare": {
+  "description": "Grid option label for square grids"
+}
+
+, "designEditorGridRadial": "Radial"
+, "@designEditorGridRadial": {
+  "description": "Grid option label for radial guides"
+}
+
+, "designEditorAlignmentLabel": "Alignment"
+, "@designEditorAlignmentLabel": {
+  "description": "Label for the alignment segmented button"
+}
+
+, "designEditorAlignCenter": "Center"
+, "@designEditorAlignCenter": {
+  "description": "Alignment option label for center"
+}
+
+, "designEditorAlignTop": "Top"
+, "@designEditorAlignTop": {
+  "description": "Alignment option label for top"
+}
+
+, "designEditorAlignBottom": "Bottom"
+, "@designEditorAlignBottom": {
+  "description": "Alignment option label for bottom"
+}
+
+, "designEditorAlignLeft": "Left"
+, "@designEditorAlignLeft": {
+  "description": "Alignment option label for left"
+}
+
+, "designEditorAlignRight": "Right"
+, "@designEditorAlignRight": {
+  "description": "Alignment option label for right"
+}
+
+, "designEditorPreviewPlaceholder": "Preview will open soon."
+, "@designEditorPreviewPlaceholder": {
+  "description": "Placeholder snackbar message for the preview/export action"
+}
+
 , "designInputSuggestionHeader": "Quick fill"
 , "@designInputSuggestionHeader": {
   "description": "Header for suggestion chips sourced from the profile"

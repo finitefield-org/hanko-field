@@ -104,6 +104,37 @@ String _designWritingStyleToJson(DesignWritingStyle style) {
   }
 }
 
+DesignCanvasAlignment _parseDesignCanvasAlignment(String value) {
+  switch (value) {
+    case 'center':
+      return DesignCanvasAlignment.center;
+    case 'top':
+      return DesignCanvasAlignment.top;
+    case 'bottom':
+      return DesignCanvasAlignment.bottom;
+    case 'left':
+      return DesignCanvasAlignment.left;
+    case 'right':
+      return DesignCanvasAlignment.right;
+  }
+  throw ArgumentError.value(value, 'value', 'Unknown DesignCanvasAlignment');
+}
+
+String _designCanvasAlignmentToJson(DesignCanvasAlignment alignment) {
+  switch (alignment) {
+    case DesignCanvasAlignment.center:
+      return 'center';
+    case DesignCanvasAlignment.top:
+      return 'top';
+    case DesignCanvasAlignment.bottom:
+      return 'bottom';
+    case DesignCanvasAlignment.left:
+      return 'left';
+    case DesignCanvasAlignment.right:
+      return 'right';
+  }
+}
+
 class DesignKanjiMappingDto {
   DesignKanjiMappingDto({required this.value, this.mappingRef});
 
@@ -227,12 +258,16 @@ class DesignStrokeDto {
 }
 
 class DesignLayoutDto {
-  DesignLayoutDto({this.grid, this.margin});
+  DesignLayoutDto({this.grid, this.margin, this.alignment, this.rotation});
 
   factory DesignLayoutDto.fromJson(Map<String, dynamic> json) {
     return DesignLayoutDto(
       grid: json['grid'] as String?,
       margin: (json['margin'] as num?)?.toDouble(),
+      alignment: json['alignment'] == null
+          ? null
+          : _parseDesignCanvasAlignment(json['alignment'] as String),
+      rotation: (json['rotation'] as num?)?.toDouble(),
     );
   }
 
@@ -240,18 +275,37 @@ class DesignLayoutDto {
     if (domain == null) {
       return DesignLayoutDto();
     }
-    return DesignLayoutDto(grid: domain.grid, margin: domain.margin);
+    return DesignLayoutDto(
+      grid: domain.grid,
+      margin: domain.margin,
+      alignment: domain.alignment,
+      rotation: domain.rotation,
+    );
   }
 
   final String? grid;
   final double? margin;
+  final DesignCanvasAlignment? alignment;
+  final double? rotation;
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{'grid': grid, 'margin': margin};
+    return <String, dynamic>{
+      'grid': grid,
+      'margin': margin,
+      'alignment': alignment == null
+          ? null
+          : _designCanvasAlignmentToJson(alignment!),
+      'rotation': rotation,
+    };
   }
 
   DesignLayout toDomain() {
-    return DesignLayout(grid: grid, margin: margin);
+    return DesignLayout(
+      grid: grid,
+      margin: margin,
+      alignment: alignment,
+      rotation: rotation,
+    );
   }
 }
 

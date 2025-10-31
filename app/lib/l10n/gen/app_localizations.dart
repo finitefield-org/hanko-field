@@ -668,6 +668,216 @@ abstract class AppLocalizations {
   /// **'Selected template'**
   String get designStyleSelectedHeading;
 
+  /// Title for the design editor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Design editor'**
+  String get designEditorTitle;
+
+  /// Fallback text shown on the canvas when no name is available
+  ///
+  /// In en, this message translates to:
+  /// **'Sample'**
+  String get designEditorFallbackText;
+
+  /// Label for the bottom extended FAB on the design editor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Preview & export'**
+  String get designEditorPrimaryCta;
+
+  /// Tooltip for the undo icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get designEditorUndoTooltip;
+
+  /// Tooltip for the redo icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get designEditorRedoTooltip;
+
+  /// Tooltip for the overflow menu on the design editor app bar
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get designEditorMoreActionsTooltip;
+
+  /// Menu item label to reset the editor values back to the template defaults
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to template defaults'**
+  String get designEditorResetMenu;
+
+  /// Snackbar message shown after resetting the editor
+  ///
+  /// In en, this message translates to:
+  /// **'Restored template defaults.'**
+  String get designEditorResetSnackbar;
+
+  /// Navigation rail label for the selection tool
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get designEditorToolSelect;
+
+  /// Navigation rail label for the text tool
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get designEditorToolText;
+
+  /// Navigation rail label for the layout tool
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get designEditorToolLayout;
+
+  /// Navigation rail label for the export shortcuts
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get designEditorToolExport;
+
+  /// Heading for the canvas preview section
+  ///
+  /// In en, this message translates to:
+  /// **'Live canvas'**
+  String get designEditorCanvasTitle;
+
+  /// Subtitle shown when the template has no title
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled template'**
+  String get designEditorCanvasUntitled;
+
+  /// Status label shown while autosave is running
+  ///
+  /// In en, this message translates to:
+  /// **'Autosaving…'**
+  String get designEditorAutosaveInProgress;
+
+  /// Status label when nothing has been saved yet
+  ///
+  /// In en, this message translates to:
+  /// **'Adjustments save automatically.'**
+  String get designEditorAutosaveIdle;
+
+  /// Status label showing when the last autosave happened
+  ///
+  /// In en, this message translates to:
+  /// **'Saved at {time}'**
+  String designEditorAutosaveCompleted(String time);
+
+  /// Heading for the property sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Properties'**
+  String get designEditorPropertiesHeading;
+
+  /// Label for the stroke weight slider control
+  ///
+  /// In en, this message translates to:
+  /// **'Stroke weight'**
+  String get designEditorStrokeLabel;
+
+  /// Slider value label for stroke width
+  ///
+  /// In en, this message translates to:
+  /// **'{weight} pt'**
+  String designEditorStrokeValue(String weight);
+
+  /// Label for the margin slider control
+  ///
+  /// In en, this message translates to:
+  /// **'Margins'**
+  String get designEditorMarginLabel;
+
+  /// Slider value label for margin amount
+  ///
+  /// In en, this message translates to:
+  /// **'{value} px'**
+  String designEditorMarginValue(String value);
+
+  /// Label for the rotation slider control
+  ///
+  /// In en, this message translates to:
+  /// **'Rotation'**
+  String get designEditorRotationLabel;
+
+  /// Slider value label for rotation
+  ///
+  /// In en, this message translates to:
+  /// **'{value} deg'**
+  String designEditorRotationValue(String value);
+
+  /// Label for the grid toggle segmented button
+  ///
+  /// In en, this message translates to:
+  /// **'Grid overlay'**
+  String get designEditorGridLabel;
+
+  /// Grid option label for none
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get designEditorGridNone;
+
+  /// Grid option label for square grids
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get designEditorGridSquare;
+
+  /// Grid option label for radial guides
+  ///
+  /// In en, this message translates to:
+  /// **'Radial'**
+  String get designEditorGridRadial;
+
+  /// Label for the alignment segmented button
+  ///
+  /// In en, this message translates to:
+  /// **'Alignment'**
+  String get designEditorAlignmentLabel;
+
+  /// Alignment option label for center
+  ///
+  /// In en, this message translates to:
+  /// **'Center'**
+  String get designEditorAlignCenter;
+
+  /// Alignment option label for top
+  ///
+  /// In en, this message translates to:
+  /// **'Top'**
+  String get designEditorAlignTop;
+
+  /// Alignment option label for bottom
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom'**
+  String get designEditorAlignBottom;
+
+  /// Alignment option label for left
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get designEditorAlignLeft;
+
+  /// Alignment option label for right
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get designEditorAlignRight;
+
+  /// Placeholder snackbar message for the preview/export action
+  ///
+  /// In en, this message translates to:
+  /// **'Preview will open soon.'**
+  String get designEditorPreviewPlaceholder;
+
   /// Header for suggestion chips sourced from the profile
   ///
   /// In en, this message translates to:

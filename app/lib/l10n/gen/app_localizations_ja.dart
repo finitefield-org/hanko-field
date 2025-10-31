@@ -313,6 +313,119 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designStyleSelectedHeading => '選択中のテンプレート';
 
   @override
+  String get designEditorTitle => 'デザインエディター';
+
+  @override
+  String get designEditorFallbackText => 'サンプル';
+
+  @override
+  String get designEditorPrimaryCta => 'プレビュー・エクスポート';
+
+  @override
+  String get designEditorUndoTooltip => '元に戻す';
+
+  @override
+  String get designEditorRedoTooltip => 'やり直す';
+
+  @override
+  String get designEditorMoreActionsTooltip => 'その他の操作';
+
+  @override
+  String get designEditorResetMenu => 'テンプレート初期値にリセット';
+
+  @override
+  String get designEditorResetSnackbar => 'テンプレート初期値にリセットしました。';
+
+  @override
+  String get designEditorToolSelect => '選択';
+
+  @override
+  String get designEditorToolText => 'テキスト';
+
+  @override
+  String get designEditorToolLayout => 'レイアウト';
+
+  @override
+  String get designEditorToolExport => '書き出し';
+
+  @override
+  String get designEditorCanvasTitle => 'ライブキャンバス';
+
+  @override
+  String get designEditorCanvasUntitled => 'テンプレート（名称未設定）';
+
+  @override
+  String get designEditorAutosaveInProgress => '自動保存中...';
+
+  @override
+  String get designEditorAutosaveIdle => '調整内容は自動的に保存されます。';
+
+  @override
+  String designEditorAutosaveCompleted(String time) {
+    return '$time に保存しました';
+  }
+
+  @override
+  String get designEditorPropertiesHeading => 'プロパティ';
+
+  @override
+  String get designEditorStrokeLabel => '輪郭の太さ';
+
+  @override
+  String designEditorStrokeValue(String weight) {
+    return '$weight pt';
+  }
+
+  @override
+  String get designEditorMarginLabel => '余白';
+
+  @override
+  String designEditorMarginValue(String value) {
+    return '$value px';
+  }
+
+  @override
+  String get designEditorRotationLabel => '回転';
+
+  @override
+  String designEditorRotationValue(String value) {
+    return '$value 度';
+  }
+
+  @override
+  String get designEditorGridLabel => 'グリッド';
+
+  @override
+  String get designEditorGridNone => 'なし';
+
+  @override
+  String get designEditorGridSquare => '方眼';
+
+  @override
+  String get designEditorGridRadial => '放射';
+
+  @override
+  String get designEditorAlignmentLabel => '配置';
+
+  @override
+  String get designEditorAlignCenter => '中央';
+
+  @override
+  String get designEditorAlignTop => '上';
+
+  @override
+  String get designEditorAlignBottom => '下';
+
+  @override
+  String get designEditorAlignLeft => '左';
+
+  @override
+  String get designEditorAlignRight => '右';
+
+  @override
+  String get designEditorPreviewPlaceholder => 'プレビュー機能は近日公開予定です。';
+
+  @override
   String get designInputSuggestionHeader => 'プロフィールから補完';
 
   @override

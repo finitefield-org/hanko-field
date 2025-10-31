@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
+import 'package:app/features/design_creation/presentation/design_editor_page.dart';
 import 'package:app/features/design_creation/presentation/design_kanji_mapping_page.dart';
 import 'package:app/features/design_creation/presentation/design_name_input_page.dart';
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
@@ -107,6 +108,9 @@ class CreationStageRoute implements IndependentRoute {
     }
     if (stageSegments.first == 'style') {
       return const DesignStyleSelectionPage();
+    }
+    if (stageSegments.first == 'editor') {
+      return const DesignEditorPage();
     }
     return CreationStagePage(stageSegments: stageSegments);
   }
