@@ -112,6 +112,41 @@ func (m *memoryUserRepo) UpdateProfile(_ context.Context, profile domain.UserPro
 	return cloneProfile(profile), nil
 }
 
+func (m *memoryUserRepo) Search(_ context.Context, filter repositories.UserSearchFilter) (domain.CursorPage[domain.UserProfile], error) {
+	query := strings.TrimSpace(filter.Query)
+	if query == "" {
+		return domain.CursorPage[domain.UserProfile]{}, errors.New("query required")
+	}
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = len(m.store)
+	}
+
+	lower := strings.ToLower(query)
+	results := make([]domain.UserProfile, 0, limit)
+	for _, profile := range m.store {
+		if !filter.IncludeInactive && !profile.IsActive {
+			continue
+		}
+		if matchUserSearch(profile, query, lower) {
+			results = append(results, cloneProfile(profile))
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		switch {
+		case results[i].UpdatedAt.Equal(results[j].UpdatedAt):
+			return results[i].ID < results[j].ID
+		default:
+			return results[i].UpdatedAt.After(results[j].UpdatedAt)
+		}
+	})
+	if len(results) > limit {
+		results = results[:limit]
+	}
+	return domain.CursorPage[domain.UserProfile]{Items: results}, nil
+}
+
 func (m *memoryAddressRepo) List(_ context.Context, userID string) ([]domain.Address, error) {
 	if m.store == nil {
 		m.store = make(map[string]map[string]domain.Address)
@@ -1430,6 +1465,186 @@ func TestUserServiceToggleFavoriteShareable(t *testing.T) {
 	}
 }
 
+func TestUserServiceSearchProfilesReturnsFlagsAndMetadata(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return base }
+
+	repo := newMemoryUserRepo(clock)
+	repo.store["user-active"] = domain.UserProfile{
+		ID:           "user-active",
+		DisplayName:  "Alice Hanko",
+		Email:        "alice@example.com",
+		PhoneNumber:  "+819012345678",
+		IsActive:     true,
+		Roles:        []string{"user"},
+		CreatedAt:    base.Add(-48 * time.Hour),
+		UpdatedAt:    base.Add(-24 * time.Hour),
+		LastSyncTime: base.Add(-24 * time.Hour),
+	}
+	maskedAt := base.Add(-72 * time.Hour)
+	repo.store["user-masked"] = domain.UserProfile{
+		ID:           "user-masked",
+		DisplayName:  "Masked Patron",
+		Email:        "masked+user@example.com",
+		PhoneNumber:  "+81 90-0000-0000",
+		IsActive:     false,
+		PiiMaskedAt:  &maskedAt,
+		Roles:        []string{"user"},
+		CreatedAt:    base.Add(-96 * time.Hour),
+		UpdatedAt:    base.Add(-90 * time.Hour),
+		LastSyncTime: base.Add(-90 * time.Hour),
+	}
+
+	loginActive := base.Add(-6 * time.Hour)
+	loginMasked := base.Add(-100 * time.Hour)
+	firebase := &stubFirebase{
+		records: map[string]*firebaseauth.UserRecord{
+			"user-active": {
+				UserInfo: &firebaseauth.UserInfo{UID: "user-active", Email: "alice@example.com"},
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp: loginActive.UnixMilli(),
+				},
+			},
+			"user-masked": {
+				UserInfo: &firebaseauth.UserInfo{UID: "user-masked", Email: "masked+user@example.com"},
+				Disabled: true,
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp: loginMasked.UnixMilli(),
+				},
+			},
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+		Clock:    clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	page, err := svc.SearchProfiles(ctx, UserSearchFilter{Query: "Alice"})
+	if err != nil {
+		t.Fatalf("search profiles: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected one result, got %d", len(page.Items))
+	}
+	item := page.Items[0]
+	if item.Profile.ID != "user-active" {
+		t.Fatalf("expected user-active, got %s", item.Profile.ID)
+	}
+	if item.LastLoginAt == nil || !item.LastLoginAt.Equal(loginActive.UTC()) {
+		t.Fatalf("expected last login %v, got %v", loginActive.UTC(), item.LastLoginAt)
+	}
+	if len(item.Flags) != 0 {
+		t.Fatalf("expected no flags, got %v", item.Flags)
+	}
+
+	page, err = svc.SearchProfiles(ctx, UserSearchFilter{Query: "masked", IncludeInactive: true})
+	if err != nil {
+		t.Fatalf("search masked: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected one masked result, got %d", len(page.Items))
+	}
+	masked := page.Items[0]
+	if masked.Profile.ID != "user-masked" {
+		t.Fatalf("expected user-masked, got %s", masked.Profile.ID)
+	}
+	if masked.LastLoginAt == nil || !masked.LastLoginAt.Equal(loginMasked.UTC()) {
+		t.Fatalf("expected masked login %v, got %v", loginMasked.UTC(), masked.LastLoginAt)
+	}
+	if !containsFlag(masked.Flags, "pii_masked") || !containsFlag(masked.Flags, "inactive") || !containsFlag(masked.Flags, "auth_disabled") {
+		t.Fatalf("expected flags [pii_masked inactive auth_disabled], got %v", masked.Flags)
+	}
+}
+
+func TestUserServiceGetAdminDetailIncludesAuthState(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 7, 20, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return now }
+
+	repo := newMemoryUserRepo(clock)
+	repo.store["user-auth"] = domain.UserProfile{
+		ID:           "user-auth",
+		DisplayName:  "Detail User",
+		Email:        "detail@example.com",
+		IsActive:     false,
+		Roles:        []string{"user"},
+		CreatedAt:    now.Add(-30 * 24 * time.Hour),
+		UpdatedAt:    now.Add(-10 * time.Hour),
+		LastSyncTime: now.Add(-10 * time.Hour),
+	}
+
+	login := now.Add(-2 * time.Hour)
+	refresh := now.Add(-1 * time.Hour)
+	tokensValid := now.Add(-5 * time.Hour)
+	firebase := &stubFirebase{
+		records: map[string]*firebaseauth.UserRecord{
+			"user-auth": {
+				UserInfo: &firebaseauth.UserInfo{
+					UID:   "user-auth",
+					Email: "detail@example.com",
+				},
+				Disabled:      true,
+				EmailVerified: true,
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp:   login.UnixMilli(),
+					LastRefreshTimestamp: refresh.UnixMilli(),
+				},
+				TokensValidAfterMillis: tokensValid.UnixMilli(),
+			},
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+		Clock:    clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	detail, err := svc.GetAdminDetail(ctx, "user-auth")
+	if err != nil {
+		t.Fatalf("get admin detail: %v", err)
+	}
+	if detail.Profile.ID != "user-auth" {
+		t.Fatalf("unexpected profile id %s", detail.Profile.ID)
+	}
+	if !detail.EmailVerified {
+		t.Fatalf("expected email verified")
+	}
+	if !detail.AuthDisabled {
+		t.Fatalf("expected auth disabled true")
+	}
+	if detail.LastLoginAt == nil || !detail.LastLoginAt.Equal(login.UTC()) {
+		t.Fatalf("expected login time %v, got %v", login.UTC(), detail.LastLoginAt)
+	}
+	if detail.LastRefreshAt == nil || !detail.LastRefreshAt.Equal(refresh.UTC()) {
+		t.Fatalf("expected refresh time %v, got %v", refresh.UTC(), detail.LastRefreshAt)
+	}
+	if detail.TokensValidAt == nil || !detail.TokensValidAt.Equal(tokensValid.UTC()) {
+		t.Fatalf("expected tokens valid time %v, got %v", tokensValid.UTC(), detail.TokensValidAt)
+	}
+	if !containsFlag(detail.Flags, "inactive") || !containsFlag(detail.Flags, "auth_disabled") {
+		t.Fatalf("expected flags include inactive and auth_disabled, got %v", detail.Flags)
+	}
+}
+
+func containsFlag(flags []string, target string) bool {
+	for _, flag := range flags {
+		if flag == target {
+			return true
+		}
+	}
+	return false
+}
+
 func cloneProfile(profile domain.UserProfile) domain.UserProfile {
 	copy := profile
 	if profile.NotificationPrefs != nil {
@@ -1454,6 +1669,43 @@ func cloneProfile(profile domain.UserProfile) domain.UserProfile {
 		copy.NameMappingRef = &value
 	}
 	return copy
+}
+
+func matchUserSearch(profile domain.UserProfile, rawQuery, lowerQuery string) bool {
+	if strings.EqualFold(profile.ID, rawQuery) {
+		return true
+	}
+	if strings.EqualFold(profile.Email, rawQuery) || strings.EqualFold(profile.Email, lowerQuery) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(profile.DisplayName), lowerQuery) {
+		return true
+	}
+
+	phoneQuery := normaliseTestPhone(rawQuery)
+	if phoneQuery != "" {
+		if normaliseTestPhone(profile.PhoneNumber) == phoneQuery {
+			return true
+		}
+	}
+	return false
+}
+
+func normaliseTestPhone(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	var builder strings.Builder
+	for i, r := range value {
+		switch {
+		case r >= '0' && r <= '9':
+			builder.WriteRune(r)
+		case r == '+' && i == 0:
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
 }
 
 var _ repositories.UserRepository = (*memoryUserRepo)(nil)

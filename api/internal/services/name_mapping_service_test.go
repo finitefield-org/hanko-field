@@ -96,6 +96,10 @@ func (r *fakeUserRepository) UpdateProfile(ctx context.Context, profile domain.U
 	return cloneUserProfile(r.profile), nil
 }
 
+func (r *fakeUserRepository) Search(context.Context, repositories.UserSearchFilter) (domain.CursorPage[domain.UserProfile], error) {
+	return domain.CursorPage[domain.UserProfile]{}, nil
+}
+
 func TestNameMappingServiceConvert_GeneratesMapping(t *testing.T) {
 	now := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
 	repo := &fakeNameMappingRepository{}

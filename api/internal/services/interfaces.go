@@ -297,6 +297,34 @@ type UserService interface {
 	RemovePaymentMethod(ctx context.Context, cmd RemovePaymentMethodCommand) error
 	ListFavorites(ctx context.Context, userID string, pager Pagination) (domain.CursorPage[FavoriteDesign], error)
 	ToggleFavorite(ctx context.Context, cmd ToggleFavoriteCommand) error
+	SearchProfiles(ctx context.Context, filter UserSearchFilter) (domain.CursorPage[UserAdminSummary], error)
+	GetAdminDetail(ctx context.Context, userID string) (UserAdminDetail, error)
+}
+
+// UserSearchFilter configures user lookup requests for admin/staff tooling.
+type UserSearchFilter struct {
+	Query           string
+	PageSize        int
+	PageToken       string
+	IncludeInactive bool
+}
+
+// UserAdminSummary represents high-level metadata about a user for listings.
+type UserAdminSummary struct {
+	Profile     UserProfile
+	Flags       []string
+	LastLoginAt *time.Time
+}
+
+// UserAdminDetail enriches user metadata with authentication state for detail views.
+type UserAdminDetail struct {
+	Profile       UserProfile
+	Flags         []string
+	LastLoginAt   *time.Time
+	LastRefreshAt *time.Time
+	EmailVerified bool
+	AuthDisabled  bool
+	TokensValidAt *time.Time
 }
 
 // NameMappingService orchestrates transliteration requests and caching logic for kanji candidate mappings.

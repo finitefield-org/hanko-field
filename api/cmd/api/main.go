@@ -454,6 +454,7 @@ func main() {
 		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
 	}))
 	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
+	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, nil)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -461,6 +462,7 @@ func main() {
 		adminPromotionHandlers.Routes,
 		adminInventoryHandlers.Routes,
 		adminProductionQueueHandlers.Routes,
+		adminUserHandlers.Routes,
 	}
 	if orderService != nil {
 		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, shipmentService, nil, nil)

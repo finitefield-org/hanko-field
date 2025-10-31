@@ -849,3 +849,11 @@ func (s *stubUserService) ListFavorites(context.Context, string, Pagination) (do
 func (s *stubUserService) ToggleFavorite(context.Context, ToggleFavoriteCommand) error {
 	return nil
 }
+
+func (s *stubUserService) SearchProfiles(context.Context, UserSearchFilter) (domain.CursorPage[UserAdminSummary], error) {
+	return domain.CursorPage[UserAdminSummary]{}, nil
+}
+
+func (s *stubUserService) GetAdminDetail(context.Context, string) (UserAdminDetail, error) {
+	return UserAdminDetail{}, nil
+}

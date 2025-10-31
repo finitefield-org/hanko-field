@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/firestore"
 	domain "github.com/hanko-field/api/internal/domain"
 	pfirestore "github.com/hanko-field/api/internal/platform/firestore"
+	"github.com/hanko-field/api/internal/repositories"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -121,6 +122,163 @@ func (r *UserRepository) UpdateProfile(ctx context.Context, profile domain.UserP
 	return saved, nil
 }
 
+// Search performs flexible lookups across uid/email/phone/displayName to support admin tooling.
+func (r *UserRepository) Search(ctx context.Context, filter repositories.UserSearchFilter) (domain.CursorPage[domain.UserProfile], error) {
+	if r == nil || r.base == nil {
+		return domain.CursorPage[domain.UserProfile]{}, errors.New("user repository not initialised")
+	}
+	query := strings.TrimSpace(filter.Query)
+	if query == "" {
+		return domain.CursorPage[domain.UserProfile]{}, errors.New("user search query is required")
+	}
+
+	limit := filter.Limit
+	switch {
+	case limit <= 0:
+		limit = 20
+	case limit > 200:
+		limit = 200
+	}
+
+	type searchResult struct {
+		profile   domain.UserProfile
+		updatedAt time.Time
+	}
+
+	results := make([]searchResult, 0, limit)
+	seen := make(map[string]struct{})
+	appendDoc := func(doc pfirestore.Document[userDocument]) {
+		if len(results) >= limit {
+			return
+		}
+		if _, exists := seen[doc.ID]; exists {
+			return
+		}
+
+		profile := toDomainProfile(doc.Data)
+		profile.ID = doc.ID
+		profile.LastSyncTime = doc.UpdateTime
+		if profile.CreatedAt.IsZero() {
+			profile.CreatedAt = doc.CreateTime
+		}
+		if profile.UpdatedAt.IsZero() {
+			profile.UpdatedAt = doc.UpdateTime
+		}
+		if !filter.IncludeInactive && !profile.IsActive {
+			return
+		}
+
+		seen[profile.ID] = struct{}{}
+		results = append(results, searchResult{
+			profile:   profile,
+			updatedAt: doc.UpdateTime,
+		})
+	}
+
+	// Attempt direct document lookup by ID.
+	if len(results) < limit {
+		if doc, err := r.base.Get(ctx, query); err == nil {
+			appendDoc(doc)
+		} else if !isRepositoryNotFound(err) {
+			return domain.CursorPage[domain.UserProfile]{}, err
+		}
+	}
+
+	// Additional lookup by stored UID field (may differ from doc ID when migrated).
+	if len(results) < limit {
+		docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
+			return q.Where("uid", "==", query).Limit(limit)
+		})
+		if err != nil {
+			return domain.CursorPage[domain.UserProfile]{}, err
+		}
+		for _, doc := range docs {
+			appendDoc(doc)
+		}
+	}
+
+	// Lookup by email (case-insensitive).
+	if len(results) < limit {
+		email := strings.ToLower(query)
+		if email != "" {
+			docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
+				return q.Where("email", "==", email).Limit(limit)
+			})
+			if err != nil {
+				return domain.CursorPage[domain.UserProfile]{}, err
+			}
+			for _, doc := range docs {
+				appendDoc(doc)
+			}
+		}
+	}
+
+	// Lookup by phone number; try both trimmed and digits-only forms.
+	if len(results) < limit {
+		trimmedPhone := strings.TrimSpace(query)
+		phoneCandidates := []string{trimmedPhone}
+		if normalised := normalisePhone(trimmedPhone); normalised != "" && normalised != trimmedPhone {
+			phoneCandidates = append(phoneCandidates, normalised)
+		}
+		for _, phone := range phoneCandidates {
+			if phone == "" || len(results) >= limit {
+				continue
+			}
+			docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
+				return q.Where("phoneNumber", "==", phone).Limit(limit)
+			})
+			if err != nil {
+				return domain.CursorPage[domain.UserProfile]{}, err
+			}
+			for _, doc := range docs {
+				appendDoc(doc)
+			}
+		}
+	}
+
+	// Prefix lookup on display name (case-sensitive due to Firestore limitations).
+	if len(results) < limit {
+		prefix := strings.TrimSpace(query)
+		if prefix != "" {
+			upperBound := prefix + "\uf8ff"
+			docs, err := r.base.Query(ctx, func(q firestore.Query) firestore.Query {
+				return q.Where("displayName", ">=", prefix).
+					Where("displayName", "<=", upperBound).
+					OrderBy("displayName", firestore.Asc).
+					Limit(limit)
+			})
+			if err != nil {
+				return domain.CursorPage[domain.UserProfile]{}, err
+			}
+			for _, doc := range docs {
+				appendDoc(doc)
+			}
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		switch {
+		case results[i].updatedAt.Equal(results[j].updatedAt):
+			return results[i].profile.ID < results[j].profile.ID
+		default:
+			return results[i].updatedAt.After(results[j].updatedAt)
+		}
+	})
+
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	items := make([]domain.UserProfile, 0, len(results))
+	for _, res := range results {
+		items = append(items, res.profile)
+	}
+
+	return domain.CursorPage[domain.UserProfile]{
+		Items: items,
+	}, nil
+}
+
 type userDocument struct {
 	UID               string             `firestore:"uid"`
 	DisplayName       string             `firestore:"displayName"`
@@ -219,6 +377,34 @@ func fromDomainProfile(profile domain.UserProfile, now time.Time) userDocument {
 		}
 	}
 	return doc
+}
+
+func normalisePhone(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	var builder strings.Builder
+	for i, r := range value {
+		switch {
+		case r >= '0' && r <= '9':
+			builder.WriteRune(r)
+		case r == '+' && i == 0:
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
+}
+
+func isRepositoryNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var repoErr repositories.RepositoryError
+	if errors.As(err, &repoErr) {
+		return repoErr.IsNotFound()
+	}
+	return false
 }
 
 func toDomainProviders(docs []providerDocument) []domain.AuthProvider {

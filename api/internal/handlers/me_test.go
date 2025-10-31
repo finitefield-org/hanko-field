@@ -603,6 +603,8 @@ type stubUserService struct {
 	removePaymentMethodFunc func(ctx context.Context, cmd services.RemovePaymentMethodCommand) error
 	listFavoritesFunc       func(ctx context.Context, userID string, pager services.Pagination) (domain.CursorPage[services.FavoriteDesign], error)
 	toggleFavoriteFunc      func(ctx context.Context, cmd services.ToggleFavoriteCommand) error
+	searchProfilesFunc      func(ctx context.Context, filter services.UserSearchFilter) (domain.CursorPage[services.UserAdminSummary], error)
+	getAdminDetailFunc      func(ctx context.Context, userID string) (services.UserAdminDetail, error)
 }
 
 func (s *stubUserService) GetProfile(ctx context.Context, userID string) (services.UserProfile, error) {
@@ -685,4 +687,18 @@ func (s *stubUserService) ToggleFavorite(ctx context.Context, cmd services.Toggl
 		return s.toggleFavoriteFunc(ctx, cmd)
 	}
 	return errors.New("not implemented")
+}
+
+func (s *stubUserService) SearchProfiles(ctx context.Context, filter services.UserSearchFilter) (domain.CursorPage[services.UserAdminSummary], error) {
+	if s != nil && s.searchProfilesFunc != nil {
+		return s.searchProfilesFunc(ctx, filter)
+	}
+	return domain.CursorPage[services.UserAdminSummary]{}, errors.New("not implemented")
+}
+
+func (s *stubUserService) GetAdminDetail(ctx context.Context, userID string) (services.UserAdminDetail, error) {
+	if s != nil && s.getAdminDetailFunc != nil {
+		return s.getAdminDetailFunc(ctx, userID)
+	}
+	return services.UserAdminDetail{}, errors.New("not implemented")
 }

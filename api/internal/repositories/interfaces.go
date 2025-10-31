@@ -275,6 +275,7 @@ const (
 type UserRepository interface {
 	FindByID(ctx context.Context, userID string) (domain.UserProfile, error)
 	UpdateProfile(ctx context.Context, profile domain.UserProfile) (domain.UserProfile, error)
+	Search(ctx context.Context, filter UserSearchFilter) (domain.CursorPage[domain.UserProfile], error)
 }
 
 // AddressRepository stores shipping addresses per user.
@@ -302,6 +303,14 @@ type FavoriteRepository interface {
 	List(ctx context.Context, userID string, pager domain.Pagination) (domain.CursorPage[domain.FavoriteDesign], error)
 	Put(ctx context.Context, userID string, designID string, addedAt time.Time, limit int) (bool, error)
 	Delete(ctx context.Context, userID string, designID string) error
+}
+
+// UserSearchFilter controls flexible lookup queries for admin/staff tooling.
+type UserSearchFilter struct {
+	Query           string
+	Limit           int
+	PageToken       string
+	IncludeInactive bool
 }
 
 // NameMappingRepository persists transliteration results and selection state.

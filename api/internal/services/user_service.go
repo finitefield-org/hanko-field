@@ -51,6 +51,8 @@ var (
 	errFavoriteDesignNotFound         = errors.New("user: design not found")
 	errFavoriteDesignForbidden        = errors.New("user: design is not shareable or owned by user")
 	errDesignRepositoryUnavailable    = errors.New("user: design repository not configured")
+	errUserSearchNotSupported         = errors.New("user: search repository not configured")
+	errUserSearchQueryRequired        = errors.New("user: search query is required")
 	emailMaskSuffix                   = "@hanko-field.invalid"
 	notificationKeyPattern            = regexp.MustCompile(`^[a-z0-9_.-]{1,40}$`)
 	addressPhonePattern               = regexp.MustCompile(`^[0-9+()\-\s]{6,20}$`)
@@ -101,9 +103,17 @@ var (
 	ErrUserFavoriteDesignNotFound = errFavoriteDesignNotFound
 	// ErrUserFavoriteDesignForbidden indicates the design is not owned or shareable.
 	ErrUserFavoriteDesignForbidden = errFavoriteDesignForbidden
+	// ErrUserSearchUnavailable indicates no search backend is configured.
+	ErrUserSearchUnavailable = errUserSearchNotSupported
+	// ErrUserSearchInvalidQuery indicates the supplied search query failed validation.
+	ErrUserSearchInvalidQuery = errUserSearchQueryRequired
 )
 
-const maxFavorites = 200
+const (
+	maxFavorites              = 200
+	defaultUserSearchPageSize = 20
+	maxUserSearchPageSize     = 100
+)
 
 var shareableDesignStatuses = map[string]struct{}{
 	"ready":   {},
@@ -764,6 +774,89 @@ func (s *userService) ToggleFavorite(ctx context.Context, cmd ToggleFavoriteComm
 	return nil
 }
 
+func (s *userService) SearchProfiles(ctx context.Context, filter UserSearchFilter) (domain.CursorPage[UserAdminSummary], error) {
+	if s.users == nil {
+		return domain.CursorPage[UserAdminSummary]{}, ErrUserSearchUnavailable
+	}
+
+	query := strings.TrimSpace(filter.Query)
+	if query == "" {
+		return domain.CursorPage[UserAdminSummary]{}, ErrUserSearchInvalidQuery
+	}
+
+	pageSize := filter.PageSize
+	switch {
+	case pageSize <= 0:
+		pageSize = defaultUserSearchPageSize
+	case pageSize > maxUserSearchPageSize:
+		pageSize = maxUserSearchPageSize
+	}
+
+	repoFilter := repositories.UserSearchFilter{
+		Query:           query,
+		Limit:           pageSize,
+		PageToken:       strings.TrimSpace(filter.PageToken),
+		IncludeInactive: filter.IncludeInactive,
+	}
+
+	page, err := s.users.Search(ctx, repoFilter)
+	if err != nil {
+		return domain.CursorPage[UserAdminSummary]{}, err
+	}
+
+	summaries := make([]UserAdminSummary, 0, len(page.Items))
+	for _, profile := range page.Items {
+		var record *firebaseauth.UserRecord
+		if s.firebase != nil {
+			if fetched, err := s.firebase.GetUser(ctx, profile.ID); err == nil {
+				record = fetched
+			}
+		}
+		summaries = append(summaries, s.buildAdminSummary(profile, record))
+	}
+
+	return domain.CursorPage[UserAdminSummary]{
+		Items:         summaries,
+		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+func (s *userService) GetAdminDetail(ctx context.Context, userID string) (UserAdminDetail, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return UserAdminDetail{}, errUserIDRequired
+	}
+
+	profile, err := s.getProfile(ctx, userID, true)
+	if err != nil {
+		return UserAdminDetail{}, err
+	}
+
+	if s.firebase == nil {
+		return UserAdminDetail{}, errors.New("user: firebase user getter is required for admin detail")
+	}
+
+	record, err := s.firebase.GetUser(ctx, userID)
+	if err != nil {
+		return UserAdminDetail{}, fmt.Errorf("fetch firebase user: %w", err)
+	}
+
+	detail := UserAdminDetail{
+		Profile:       profile,
+		EmailVerified: record.EmailVerified,
+		AuthDisabled:  record.Disabled,
+	}
+	detail.Flags = s.userAdminFlags(profile, record)
+
+	if record.UserMetadata != nil {
+		detail.LastLoginAt = firebaseTimestampPtr(record.UserMetadata.LastLogInTimestamp)
+		detail.LastRefreshAt = firebaseTimestampPtr(record.UserMetadata.LastRefreshTimestamp)
+	}
+	detail.TokensValidAt = firebaseTimestampPtr(record.TokensValidAfterMillis)
+
+	return detail, nil
+}
+
 func (s *userService) getProfile(ctx context.Context, userID string, seed bool) (domain.UserProfile, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
@@ -944,6 +1037,52 @@ func equalNotificationPrefs(a, b domain.NotificationPreferences) bool {
 		return true
 	}
 	return maps.Equal(map[string]bool(a), map[string]bool(b))
+}
+
+func (s *userService) buildAdminSummary(profile domain.UserProfile, record *firebaseauth.UserRecord) UserAdminSummary {
+	summary := UserAdminSummary{
+		Profile: profile,
+		Flags:   s.userAdminFlags(profile, record),
+	}
+	if record != nil && record.UserMetadata != nil {
+		summary.LastLoginAt = firebaseTimestampPtr(record.UserMetadata.LastLogInTimestamp)
+	}
+	return summary
+}
+
+func (s *userService) userAdminFlags(profile domain.UserProfile, record *firebaseauth.UserRecord) []string {
+	flags := make([]string, 0, 3)
+	if profile.PiiMaskedAt != nil {
+		flags = appendFlag(flags, "pii_masked")
+	}
+	if !profile.IsActive {
+		flags = appendFlag(flags, "inactive")
+	}
+	if record != nil && record.Disabled {
+		flags = appendFlag(flags, "auth_disabled")
+	}
+	return flags
+}
+
+func appendFlag(flags []string, value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return flags
+	}
+	for _, existing := range flags {
+		if strings.EqualFold(existing, value) {
+			return flags
+		}
+	}
+	return append(flags, value)
+}
+
+func firebaseTimestampPtr(ms int64) *time.Time {
+	if ms <= 0 {
+		return nil
+	}
+	t := time.Unix(0, ms*int64(time.Millisecond)).UTC()
+	return &t
 }
 
 func cloneNotificationPrefs(prefs domain.NotificationPreferences) domain.NotificationPreferences {
