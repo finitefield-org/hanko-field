@@ -119,6 +119,10 @@ class DesignCreationState {
     this.storagePermissionGranted = false,
     this.nameDraft,
     this.pendingInput,
+    this.styleDraft,
+    this.selectedShape,
+    this.selectedTemplatePreviewUrl,
+    this.selectedTemplateTitle,
   });
 
   final DesignSourceType? selectedMode;
@@ -126,6 +130,10 @@ class DesignCreationState {
   final bool storagePermissionGranted;
   final DesignNameDraft? nameDraft;
   final DesignInput? pendingInput;
+  final DesignStyle? styleDraft;
+  final DesignShape? selectedShape;
+  final String? selectedTemplatePreviewUrl;
+  final String? selectedTemplateTitle;
 
   DesignCreationState copyWith({
     DesignSourceType? selectedMode,
@@ -136,6 +144,14 @@ class DesignCreationState {
     bool clearNameDraft = false,
     DesignInput? pendingInput,
     bool clearPendingInput = false,
+    DesignStyle? styleDraft,
+    bool clearStyleDraft = false,
+    DesignShape? selectedShape,
+    bool clearSelectedShape = false,
+    String? selectedTemplatePreviewUrl,
+    bool clearSelectedTemplatePreview = false,
+    String? selectedTemplateTitle,
+    bool clearSelectedTemplateTitle = false,
   }) {
     return DesignCreationState(
       selectedMode: selectedMode ?? this.selectedMode,
@@ -148,10 +164,22 @@ class DesignCreationState {
       pendingInput: clearPendingInput
           ? null
           : pendingInput ?? this.pendingInput,
+      styleDraft: clearStyleDraft ? null : styleDraft ?? this.styleDraft,
+      selectedShape: clearSelectedShape
+          ? null
+          : selectedShape ?? this.selectedShape,
+      selectedTemplatePreviewUrl: clearSelectedTemplatePreview
+          ? null
+          : selectedTemplatePreviewUrl ?? this.selectedTemplatePreviewUrl,
+      selectedTemplateTitle: clearSelectedTemplateTitle
+          ? null
+          : selectedTemplateTitle ?? this.selectedTemplateTitle,
     );
   }
 
   bool get hasSelection => selectedMode != null;
+
+  bool get hasStyleSelection => styleDraft != null && selectedShape != null;
 
   bool get canProceed {
     if (selectedMode == null) {
@@ -164,4 +192,34 @@ class DesignCreationState {
   }
 
   DesignInput? get typedInput => pendingInput;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is DesignCreationState &&
+            other.selectedMode == selectedMode &&
+            other.selectedFilter == selectedFilter &&
+            other.storagePermissionGranted == storagePermissionGranted &&
+            other.nameDraft == nameDraft &&
+            other.pendingInput == pendingInput &&
+            other.styleDraft == styleDraft &&
+            other.selectedShape == selectedShape &&
+            other.selectedTemplatePreviewUrl == selectedTemplatePreviewUrl &&
+            other.selectedTemplateTitle == selectedTemplateTitle);
+  }
+
+  @override
+  int get hashCode {
+    return Object.hashAll([
+      selectedMode,
+      selectedFilter,
+      storagePermissionGranted,
+      nameDraft,
+      pendingInput,
+      styleDraft,
+      selectedShape,
+      selectedTemplatePreviewUrl,
+      selectedTemplateTitle,
+    ]);
+  }
 }

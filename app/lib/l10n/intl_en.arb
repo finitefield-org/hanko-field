@@ -413,6 +413,81 @@
   "description": "Primary action label to proceed from the name input screen"
 }
 
+, "designStyleTitle": "Choose style & template"
+, "@designStyleTitle": {
+  "description": "Title for the style selection screen"
+}
+
+, "designStyleSubtitle": "Select the script family, seal shape, and template that best matches your persona. You can fine-tune details later in the editor."
+, "@designStyleSubtitle": {
+  "description": "Subtitle explaining the style selection screen"
+}
+
+, "designStyleHelpTooltip": "Typography tips"
+, "@designStyleHelpTooltip": {
+  "description": "Tooltip for the help button on the style selection screen"
+}
+
+, "designStyleScriptKanji": "Kanji"
+, "@designStyleScriptKanji": {
+  "description": "Segmented button label for kanji script"
+}
+
+, "designStyleScriptKana": "Kana"
+, "@designStyleScriptKana": {
+  "description": "Segmented button label for kana script"
+}
+
+, "designStyleScriptRoman": "Roman"
+, "@designStyleScriptRoman": {
+  "description": "Segmented button label for roman script"
+}
+
+, "designStyleShapeRound": "Round"
+, "@designStyleShapeRound": {
+  "description": "Filter chip label for round seal shape"
+}
+
+, "designStyleShapeSquare": "Square"
+, "@designStyleShapeSquare": {
+  "description": "Filter chip label for square seal shape"
+}
+
+, "designStyleContinue": "Open editor"
+, "@designStyleContinue": {
+  "description": "Primary action after selecting a style"
+}
+
+, "designStyleFavoritesAdd": "Add to favourites"
+, "@designStyleFavoritesAdd": {
+  "description": "Assist chip label to add the template to favourites"
+}
+
+, "designStyleFavoritesRemove": "Favourited"
+, "@designStyleFavoritesRemove": {
+  "description": "Assist chip label shown when template is already a favourite"
+}
+
+, "designStyleEmptyTitle": "No templates available"
+, "@designStyleEmptyTitle": {
+  "description": "Empty state title when there are no templates to show"
+}
+
+, "designStyleEmptyBody": "Adjust your filters or refresh to load templates that match your persona and available fonts."
+, "@designStyleEmptyBody": {
+  "description": "Empty state body text on the style selection screen"
+}
+
+, "designStyleRetry": "Retry"
+, "@designStyleRetry": {
+  "description": "Retry button label in the style selection empty state"
+}
+
+, "designStyleSelectedHeading": "Selected template"
+, "@designStyleSelectedHeading": {
+  "description": "Heading for the selected template details card"
+}
+
 , "designInputSuggestionHeader": "Quick fill"
 , "@designInputSuggestionHeader": {
   "description": "Header for suggestion chips sourced from the profile"
@@ -545,7 +620,7 @@
   "placeholders": {
     "count": {
       "type": "int",
-      "example": 12
+      "example": "12"
     }
   }
 }
@@ -570,7 +645,7 @@
   "description": "Heading for manual kanji entry card"
 }
 
-, "designKanjiMappingManualDescription": "Already have characters in mind? Enter them directly.",
+, "designKanjiMappingManualDescription": "Already have characters in mind? Enter them directly."
 , "@designKanjiMappingManualDescription": {
   "description": "Description for manual kanji entry"
 }
@@ -600,7 +675,7 @@
   "description": "Title shown when kanji search has no results"
 }
 
-, "designKanjiMappingEmptyResultsDescription": "Adjust filters or try a different meaning to explore more kanji.",
+, "designKanjiMappingEmptyResultsDescription": "Adjust filters or try a different meaning to explore more kanji."
 , "@designKanjiMappingEmptyResultsDescription": {
   "description": "Subtitle when kanji search returns no results"
 }

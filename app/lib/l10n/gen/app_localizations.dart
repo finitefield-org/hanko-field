@@ -578,6 +578,96 @@ abstract class AppLocalizations {
   /// **'Choose style'**
   String get designInputContinue;
 
+  /// Title for the style selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Choose style & template'**
+  String get designStyleTitle;
+
+  /// Subtitle explaining the style selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Select the script family, seal shape, and template that best matches your persona. You can fine-tune details later in the editor.'**
+  String get designStyleSubtitle;
+
+  /// Tooltip for the help button on the style selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Typography tips'**
+  String get designStyleHelpTooltip;
+
+  /// Segmented button label for kanji script
+  ///
+  /// In en, this message translates to:
+  /// **'Kanji'**
+  String get designStyleScriptKanji;
+
+  /// Segmented button label for kana script
+  ///
+  /// In en, this message translates to:
+  /// **'Kana'**
+  String get designStyleScriptKana;
+
+  /// Segmented button label for roman script
+  ///
+  /// In en, this message translates to:
+  /// **'Roman'**
+  String get designStyleScriptRoman;
+
+  /// Filter chip label for round seal shape
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get designStyleShapeRound;
+
+  /// Filter chip label for square seal shape
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get designStyleShapeSquare;
+
+  /// Primary action after selecting a style
+  ///
+  /// In en, this message translates to:
+  /// **'Open editor'**
+  String get designStyleContinue;
+
+  /// Assist chip label to add the template to favourites
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favourites'**
+  String get designStyleFavoritesAdd;
+
+  /// Assist chip label shown when template is already a favourite
+  ///
+  /// In en, this message translates to:
+  /// **'Favourited'**
+  String get designStyleFavoritesRemove;
+
+  /// Empty state title when there are no templates to show
+  ///
+  /// In en, this message translates to:
+  /// **'No templates available'**
+  String get designStyleEmptyTitle;
+
+  /// Empty state body text on the style selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust your filters or refresh to load templates that match your persona and available fonts.'**
+  String get designStyleEmptyBody;
+
+  /// Retry button label in the style selection empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get designStyleRetry;
+
+  /// Heading for the selected template details card
+  ///
+  /// In en, this message translates to:
+  /// **'Selected template'**
+  String get designStyleSelectedHeading;
+
   /// Header for suggestion chips sourced from the profile
   ///
   /// In en, this message translates to:

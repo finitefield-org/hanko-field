@@ -266,6 +266,53 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designInputContinue => '書体を選ぶ';
 
   @override
+  String get designStyleTitle => '書体とテンプレートを選択';
+
+  @override
+  String get designStyleSubtitle =>
+      'ペルソナに合わせて書体ファミリーと印面の形状、テンプレートを選択してください。詳細の調整は後で行えます。';
+
+  @override
+  String get designStyleHelpTooltip => '書体のヒント';
+
+  @override
+  String get designStyleScriptKanji => '漢字';
+
+  @override
+  String get designStyleScriptKana => 'かな';
+
+  @override
+  String get designStyleScriptRoman => 'ローマ字';
+
+  @override
+  String get designStyleShapeRound => '丸印';
+
+  @override
+  String get designStyleShapeSquare => '角印';
+
+  @override
+  String get designStyleContinue => 'エディターを開く';
+
+  @override
+  String get designStyleFavoritesAdd => 'お気に入りに追加';
+
+  @override
+  String get designStyleFavoritesRemove => 'お気に入り済み';
+
+  @override
+  String get designStyleEmptyTitle => '表示できるテンプレートがありません';
+
+  @override
+  String get designStyleEmptyBody =>
+      'フィルターを調整するか再読み込みして、ペルソナや利用可能なフォントに合うテンプレートを取得してください。';
+
+  @override
+  String get designStyleRetry => '再試行';
+
+  @override
+  String get designStyleSelectedHeading => '選択中のテンプレート';
+
+  @override
   String get designInputSuggestionHeader => 'プロフィールから補完';
 
   @override
@@ -287,7 +334,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designInputKanjiMappingCta => '漢字マップを開く';
 
   @override
-  String designInputKanjiMappingSelectionLabel(String value) => '選択中の漢字：$value';
+  String designInputKanjiMappingSelectionLabel(String value) {
+    return '選択中の漢字：$value';
+  }
 
   @override
   String get designInputErrorEmptySurname => '姓を入力してください。';
@@ -338,7 +387,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designKanjiMappingCompareSelectedLabel => '比較リストに追加済み';
 
   @override
-  String designKanjiMappingStrokeCountLabel(int count) => '$count画';
+  String designKanjiMappingStrokeCountLabel(int count) {
+    return '$count画';
+  }
 
   @override
   String get designKanjiMappingBookmarkAdd => 'ブックマークに追加';
@@ -347,10 +398,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designKanjiMappingBookmarkRemove => 'ブックマークを解除';
 
   @override
-  String get designKanjiMappingManualTitle => '手動入力';
+  String get designKanjiMappingSelectTooltip => 'この候補を選択';
 
   @override
-  String get designKanjiMappingSelectTooltip => 'この候補を選択';
+  String get designKanjiMappingManualTitle => '手動入力';
 
   @override
   String get designKanjiMappingManualDescription =>

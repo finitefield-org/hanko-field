@@ -22,6 +22,10 @@ class DesignCreationController extends Notifier<DesignCreationState> {
     state = state.copyWith(
       selectedMode: mode,
       storagePermissionGranted: mode == DesignSourceType.typed,
+      clearStyleDraft: true,
+      clearSelectedShape: true,
+      clearSelectedTemplatePreview: true,
+      clearSelectedTemplateTitle: true,
     );
   }
 
@@ -67,6 +71,26 @@ class DesignCreationController extends Notifier<DesignCreationState> {
     state = state.copyWith(
       nameDraft: updatedDraft,
       pendingInput: updatedDraft.toDesignInput(),
+    );
+  }
+
+  void setStyleSelection({
+    required DesignShape shape,
+    required DesignWritingStyle writingStyle,
+    required String templateRef,
+    String? fontRef,
+    String? previewUrl,
+    String? templateTitle,
+  }) {
+    state = state.copyWith(
+      styleDraft: DesignStyle(
+        writing: writingStyle,
+        fontRef: fontRef,
+        templateRef: templateRef,
+      ),
+      selectedShape: shape,
+      selectedTemplatePreviewUrl: previewUrl,
+      selectedTemplateTitle: templateTitle,
     );
   }
 }

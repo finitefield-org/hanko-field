@@ -357,3 +357,50 @@ class DesignCreationModeSelectedEvent extends AnalyticsEvent {
     }
   }
 }
+
+class DesignStyleSelectedEvent extends AnalyticsEvent {
+  const DesignStyleSelectedEvent({
+    required this.templateId,
+    required this.script,
+    required this.shape,
+  });
+
+  final String templateId;
+  final String script;
+  final String shape;
+
+  @override
+  String get name => 'design_style_selected';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'template_id': templateId,
+    'script': script,
+    'shape': shape,
+  };
+
+  @override
+  void validate() {
+    if (templateId.isEmpty || templateId.length > 64) {
+      throw ArgumentError.value(
+        templateId,
+        'templateId',
+        'Template id must be 1-64 characters.',
+      );
+    }
+    if (script.isEmpty || script.length > 24) {
+      throw ArgumentError.value(
+        script,
+        'script',
+        'Script must be 1-24 characters.',
+      );
+    }
+    if (shape.isEmpty || shape.length > 24) {
+      throw ArgumentError.value(
+        shape,
+        'shape',
+        'Shape must be 1-24 characters.',
+      );
+    }
+  }
+}

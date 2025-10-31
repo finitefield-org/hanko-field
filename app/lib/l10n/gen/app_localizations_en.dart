@@ -279,6 +279,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designInputContinue => 'Choose style';
 
   @override
+  String get designStyleTitle => 'Choose style & template';
+
+  @override
+  String get designStyleSubtitle =>
+      'Select the script family, seal shape, and template that best matches your persona. You can fine-tune details later in the editor.';
+
+  @override
+  String get designStyleHelpTooltip => 'Typography tips';
+
+  @override
+  String get designStyleScriptKanji => 'Kanji';
+
+  @override
+  String get designStyleScriptKana => 'Kana';
+
+  @override
+  String get designStyleScriptRoman => 'Roman';
+
+  @override
+  String get designStyleShapeRound => 'Round';
+
+  @override
+  String get designStyleShapeSquare => 'Square';
+
+  @override
+  String get designStyleContinue => 'Open editor';
+
+  @override
+  String get designStyleFavoritesAdd => 'Add to favourites';
+
+  @override
+  String get designStyleFavoritesRemove => 'Favourited';
+
+  @override
+  String get designStyleEmptyTitle => 'No templates available';
+
+  @override
+  String get designStyleEmptyBody =>
+      'Adjust your filters or refresh to load templates that match your persona and available fonts.';
+
+  @override
+  String get designStyleRetry => 'Retry';
+
+  @override
+  String get designStyleSelectedHeading => 'Selected template';
+
+  @override
   String get designInputSuggestionHeader => 'Quick fill';
 
   @override
@@ -301,8 +348,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designInputKanjiMappingCta => 'Open mapper';
 
   @override
-  String designInputKanjiMappingSelectionLabel(String value) =>
-      'Selected kanji: $value';
+  String designInputKanjiMappingSelectionLabel(String value) {
+    return 'Selected kanji: $value';
+  }
 
   @override
   String get designInputErrorEmptySurname => 'Enter your surname.';
@@ -360,7 +408,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designKanjiMappingCompareSelectedLabel => 'In compare list';
 
   @override
-  String designKanjiMappingStrokeCountLabel(int count) => '$count strokes';
+  String designKanjiMappingStrokeCountLabel(int count) {
+    return '$count strokes';
+  }
 
   @override
   String get designKanjiMappingBookmarkAdd => 'Bookmark';
@@ -369,10 +419,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designKanjiMappingBookmarkRemove => 'Remove bookmark';
 
   @override
-  String get designKanjiMappingManualTitle => 'Manual entry';
+  String get designKanjiMappingSelectTooltip => 'Select this candidate';
 
   @override
-  String get designKanjiMappingSelectTooltip => 'Select this candidate';
+  String get designKanjiMappingManualTitle => 'Manual entry';
 
   @override
   String get designKanjiMappingManualDescription =>

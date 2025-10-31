@@ -4,6 +4,7 @@ import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/design_creation/presentation/design_kanji_mapping_page.dart';
 import 'package:app/features/design_creation/presentation/design_name_input_page.dart';
+import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
@@ -103,6 +104,9 @@ class CreationStageRoute implements IndependentRoute {
         stageSegments.first == 'input' &&
         stageSegments[1] == 'kanji-map') {
       return const DesignKanjiMappingPage();
+    }
+    if (stageSegments.first == 'style') {
+      return const DesignStyleSelectionPage();
     }
     return CreationStagePage(stageSegments: stageSegments);
   }
