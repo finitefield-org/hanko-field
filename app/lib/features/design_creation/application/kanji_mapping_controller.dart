@@ -21,12 +21,17 @@ final kanjiMappingControllerProvider =
 class KanjiMappingController extends Notifier<KanjiMappingState> {
   late final KanjiMappingRepository _repository;
   DesignNameDraft? _draft;
+  bool _bootstrapped = false;
+  int _activeSearchToken = 0;
 
   @override
   KanjiMappingState build() {
     _repository = ref.read(kanjiMappingRepositoryProvider);
     _draft = ref.read(designCreationControllerProvider).nameDraft;
-    Future.microtask(_bootstrap);
+    if (!_bootstrapped) {
+      _bootstrapped = true;
+      Future.microtask(_bootstrap);
+    }
     return const KanjiMappingState();
   }
 
@@ -76,6 +81,7 @@ class KanjiMappingController extends Notifier<KanjiMappingState> {
     bool refresh = false,
     bool allowEmptyQuery = false,
   }) async {
+    final requestToken = ++_activeSearchToken;
     final currentQuery = state.query.trim();
     if (!allowEmptyQuery && currentQuery.isEmpty) {
       state = state.copyWith(
@@ -98,6 +104,9 @@ class KanjiMappingController extends Notifier<KanjiMappingState> {
         strokeFilters: state.strokeFilters,
         radicalFilters: state.radicalFilters,
       );
+      if (requestToken != _activeSearchToken) {
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         results: result.response.candidates,
@@ -115,6 +124,9 @@ class KanjiMappingController extends Notifier<KanjiMappingState> {
         }
       }
     } catch (error) {
+      if (requestToken != _activeSearchToken) {
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to load suggestions. Please try again.',
@@ -166,17 +178,22 @@ class KanjiMappingController extends Notifier<KanjiMappingState> {
   }
 
   Future<void> toggleBookmark(String candidateId) async {
-    final current = Set<String>.from(state.bookmarks);
-    if (current.contains(candidateId)) {
-      current.remove(candidateId);
+    final previous = Set<String>.from(state.bookmarks);
+    final updated = Set<String>.from(state.bookmarks);
+    if (updated.contains(candidateId)) {
+      updated.remove(candidateId);
     } else {
-      current.add(candidateId);
+      updated.add(candidateId);
     }
-    state = state.copyWith(bookmarks: current);
+    state = state.copyWith(bookmarks: updated, clearErrorMessage: true);
     try {
-      await _repository.saveBookmarks(current);
+      await _repository.saveBookmarks(updated);
     } catch (_) {
-      // Ignore cache persistence errors.
+      state = state.copyWith(
+        bookmarks: previous,
+        errorMessage: 'Failed to update bookmarks. Please try again.',
+        clearInfoMessage: true,
+      );
     }
   }
 
