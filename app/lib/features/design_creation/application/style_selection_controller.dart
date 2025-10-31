@@ -133,25 +133,43 @@ class StyleSelectionController extends Notifier<StyleSelectionState> {
   }
 
   Future<void> toggleFavorite(String templateId) async {
-    final current = Set<String>.from(state.favoriteTemplateIds);
-    if (current.contains(templateId)) {
-      current.remove(templateId);
-    } else {
-      current.add(templateId);
+    if (state.togglingFavoriteTemplateIds.contains(templateId)) {
+      return;
     }
-    state = state.copyWith(favoriteTemplateIds: current);
+
+    final previousFavorites = Set<String>.from(state.favoriteTemplateIds);
+    final nextFavorites = Set<String>.from(state.favoriteTemplateIds);
+    final removed = nextFavorites.remove(templateId);
+    if (!removed) {
+      nextFavorites.add(templateId);
+    }
+    final toggling = Set<String>.from(state.togglingFavoriteTemplateIds)
+      ..add(templateId);
+
+    state = state.copyWith(
+      favoriteTemplateIds: nextFavorites,
+      togglingFavoriteTemplateIds: toggling,
+      clearError: true,
+    );
+
     try {
-      await _repository.saveFavoriteTemplateIds(current);
+      await _repository.saveFavoriteTemplateIds(nextFavorites);
     } catch (_) {
-      // Revert on failure
-      current.contains(templateId)
-          ? current.remove(templateId)
-          : current.add(templateId);
+      final rollbackToggling = Set<String>.from(
+        state.togglingFavoriteTemplateIds,
+      )..remove(templateId);
       state = state.copyWith(
-        favoriteTemplateIds: current,
+        favoriteTemplateIds: previousFavorites,
+        togglingFavoriteTemplateIds: rollbackToggling,
         errorMessage: 'Unable to update favorites. Please retry.',
       );
+      return;
     }
+
+    final completedToggling = Set<String>.from(
+      state.togglingFavoriteTemplateIds,
+    )..remove(templateId);
+    state = state.copyWith(togglingFavoriteTemplateIds: completedToggling);
   }
 
   void clearErrorMessage() {

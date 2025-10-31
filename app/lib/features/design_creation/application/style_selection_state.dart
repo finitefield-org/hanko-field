@@ -19,6 +19,7 @@ class StyleSelectionState {
     this.prefetchingTemplateId,
     this.prefetchedTemplateIds = const <String>{},
     this.favoriteTemplateIds = const <String>{},
+    this.togglingFavoriteTemplateIds = const <String>{},
   });
 
   final bool isLoading;
@@ -34,6 +35,7 @@ class StyleSelectionState {
   final String? prefetchingTemplateId;
   final Set<String> prefetchedTemplateIds;
   final Set<String> favoriteTemplateIds;
+  final Set<String> togglingFavoriteTemplateIds;
 
   List<StyleTemplate> get visibleTemplates {
     return templates
@@ -68,6 +70,7 @@ class StyleSelectionState {
     bool clearPrefetchingTemplate = false,
     Set<String>? prefetchedTemplateIds,
     Set<String>? favoriteTemplateIds,
+    Set<String>? togglingFavoriteTemplateIds,
   }) {
     return StyleSelectionState(
       isLoading: isLoading ?? this.isLoading,
@@ -88,6 +91,8 @@ class StyleSelectionState {
       prefetchedTemplateIds:
           prefetchedTemplateIds ?? this.prefetchedTemplateIds,
       favoriteTemplateIds: favoriteTemplateIds ?? this.favoriteTemplateIds,
+      togglingFavoriteTemplateIds:
+          togglingFavoriteTemplateIds ?? this.togglingFavoriteTemplateIds,
     );
   }
 

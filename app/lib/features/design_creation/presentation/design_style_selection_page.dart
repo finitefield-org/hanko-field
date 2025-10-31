@@ -127,6 +127,8 @@ class _DesignStyleSelectionPageState
                             selectedTemplateId: state.selectedTemplateId,
                             favoriteTemplateIds: state.favoriteTemplateIds,
                             prefetchingTemplateId: state.prefetchingTemplateId,
+                            favoriteTogglingTemplateIds:
+                                state.togglingFavoriteTemplateIds,
                             onSelect: notifier.selectTemplate,
                             onToggleFavorite: notifier.toggleFavorite,
                           ),
@@ -326,6 +328,7 @@ class _TemplateCarousel extends StatelessWidget {
     required this.selectedTemplateId,
     required this.favoriteTemplateIds,
     required this.prefetchingTemplateId,
+    required this.favoriteTogglingTemplateIds,
     required this.onSelect,
     required this.onToggleFavorite,
   });
@@ -334,6 +337,7 @@ class _TemplateCarousel extends StatelessWidget {
   final String? selectedTemplateId;
   final Set<String> favoriteTemplateIds;
   final String? prefetchingTemplateId;
+  final Set<String> favoriteTogglingTemplateIds;
   final void Function(String templateId) onSelect;
   final Future<void> Function(String templateId) onToggleFavorite;
 
@@ -349,6 +353,7 @@ class _TemplateCarousel extends StatelessWidget {
           selected: template.id == selectedTemplateId,
           isFavorite: favoriteTemplateIds.contains(template.id),
           isPrefetching: prefetchingTemplateId == template.id,
+          isFavoriteBusy: favoriteTogglingTemplateIds.contains(template.id),
           onTap: () => onSelect(template.id),
           onToggleFavorite: () {
             onToggleFavorite(template.id);
@@ -367,6 +372,7 @@ class _TemplateCard extends StatelessWidget {
     required this.selected,
     required this.isFavorite,
     required this.isPrefetching,
+    required this.isFavoriteBusy,
     required this.onTap,
     required this.onToggleFavorite,
   });
@@ -375,6 +381,7 @@ class _TemplateCard extends StatelessWidget {
   final bool selected;
   final bool isFavorite;
   final bool isPrefetching;
+  final bool isFavoriteBusy;
   final VoidCallback onTap;
   final VoidCallback onToggleFavorite;
 
@@ -496,10 +503,21 @@ class _TemplateCard extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: ActionChip(
-                    avatar: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite ? scheme.error : null,
-                    ),
+                    avatar: isFavoriteBusy
+                        ? SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                scheme.primary,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite ? scheme.error : null,
+                          ),
                     label: Text(
                       isFavorite
                           ? AppLocalizations.of(
@@ -509,7 +527,7 @@ class _TemplateCard extends StatelessWidget {
                               context,
                             ).designStyleFavoritesAdd,
                     ),
-                    onPressed: onToggleFavorite,
+                    onPressed: isFavoriteBusy ? null : onToggleFavorite,
                   ),
                 ),
               ],
