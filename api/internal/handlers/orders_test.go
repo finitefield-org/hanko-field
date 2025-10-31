@@ -25,6 +25,7 @@ type stubOrderService struct {
 	transitionFn func(context.Context, services.OrderStatusTransitionCommand) (services.Order, error)
 	cancelFn     func(context.Context, services.CancelOrderCommand) (services.Order, error)
 	appendFn     func(context.Context, services.AppendProductionEventCommand) (services.OrderProductionEvent, error)
+	assignFn     func(context.Context, services.AssignOrderToQueueCommand) (services.Order, error)
 	invoiceFn    func(context.Context, services.RequestInvoiceCommand) (services.Order, error)
 	reorderFn    func(context.Context, services.CloneForReorderCommand) (services.Order, error)
 }
@@ -69,6 +70,13 @@ func (s *stubOrderService) AppendProductionEvent(ctx context.Context, cmd servic
 		return s.appendFn(ctx, cmd)
 	}
 	return services.OrderProductionEvent{}, errors.New("not implemented")
+}
+
+func (s *stubOrderService) AssignOrderToQueue(ctx context.Context, cmd services.AssignOrderToQueueCommand) (services.Order, error) {
+	if s.assignFn != nil {
+		return s.assignFn(ctx, cmd)
+	}
+	return services.Order{}, errors.New("not implemented")
 }
 
 func (s *stubOrderService) RequestInvoice(ctx context.Context, cmd services.RequestInvoiceCommand) (services.Order, error) {

@@ -40,6 +40,14 @@ var (
 	ErrOrderConflict = errors.New("order: conflict")
 	// ErrOrderInvoiceAlreadyRequested indicates an invoice request already exists.
 	ErrOrderInvoiceAlreadyRequested = errors.New("order: invoice already requested")
+	// ErrOrderQueueNotFound indicates the requested production queue does not exist.
+	ErrOrderQueueNotFound = errors.New("order: production queue not found")
+	// ErrOrderQueueInactive indicates the production queue is not accepting assignments.
+	ErrOrderQueueInactive = errors.New("order: production queue inactive")
+	// ErrOrderQueueCapacityReached indicates the queue cannot accept more assignments due to capacity limits.
+	ErrOrderQueueCapacityReached = errors.New("order: production queue capacity reached")
+	// ErrOrderQueueRepositoryUnavailable indicates the queue repository dependency is missing or unavailable.
+	ErrOrderQueueRepositoryUnavailable = errors.New("order: production queue repository not configured")
 
 	errOrderPaymentRepositoryUnavailable    = errors.New("order: payment repository not configured")
 	errOrderShipmentRepositoryUnavailable   = errors.New("order: shipment repository not configured")
@@ -62,6 +70,11 @@ var cancellableStatuses = []domain.OrderStatus{
 	domain.OrderStatusPaid,
 	domain.OrderStatusInProduction,
 	domain.OrderStatusReadyToShip,
+}
+
+var assignableProductionStatuses = map[domain.OrderStatus]struct{}{
+	domain.OrderStatusPaid:         {},
+	domain.OrderStatusInProduction: {},
 }
 
 var productionEventStatusMapping = map[string]domain.OrderStatus{
@@ -130,6 +143,7 @@ type OrderServiceDeps struct {
 	Payments    repositories.OrderPaymentRepository
 	Shipments   repositories.OrderShipmentRepository
 	Production  repositories.OrderProductionEventRepository
+	Queues      repositories.ProductionQueueRepository
 	Counters    repositories.CounterRepository
 	Inventory   InventoryService
 	UnitOfWork  repositories.UnitOfWork
@@ -144,6 +158,7 @@ type orderService struct {
 	payments   repositories.OrderPaymentRepository
 	shipments  repositories.OrderShipmentRepository
 	production repositories.OrderProductionEventRepository
+	queues     repositories.ProductionQueueRepository
 	counters   repositories.CounterRepository
 	inventory  InventoryService
 	unitOfWork repositories.UnitOfWork
@@ -189,6 +204,7 @@ func NewOrderService(deps OrderServiceDeps) (OrderService, error) {
 		payments:   deps.Payments,
 		shipments:  deps.Shipments,
 		production: deps.Production,
+		queues:     deps.Queues,
 		counters:   deps.Counters,
 		inventory:  deps.Inventory,
 		unitOfWork: unit,
@@ -608,6 +624,183 @@ func (s *orderService) AppendProductionEvent(ctx context.Context, cmd AppendProd
 	return inserted, nil
 }
 
+func (s *orderService) AssignOrderToQueue(ctx context.Context, cmd AssignOrderToQueueCommand) (Order, error) {
+	orderID := strings.TrimSpace(cmd.OrderID)
+	queueID := strings.TrimSpace(cmd.QueueID)
+	actorID := strings.TrimSpace(cmd.ActorID)
+
+	if orderID == "" {
+		return Order{}, fmt.Errorf("%w: order id is required", ErrOrderInvalidInput)
+	}
+	if queueID == "" {
+		return Order{}, fmt.Errorf("%w: queue id is required", ErrOrderInvalidInput)
+	}
+	if actorID == "" {
+		return Order{}, fmt.Errorf("%w: actor id is required", ErrOrderInvalidInput)
+	}
+	if s.queues == nil {
+		return Order{}, ErrOrderQueueRepositoryUnavailable
+	}
+	if s.production == nil {
+		return Order{}, errOrderProductionRepositoryUnavailable
+	}
+
+	now := s.now()
+	var (
+		updated             Order
+		prevStatus          domain.OrderStatus
+		statusChanged       bool
+		assignmentEventType string
+		queueName           string
+	)
+
+	err := s.runInTx(ctx, func(txCtx context.Context) error {
+		order, err := s.orders.FindByID(txCtx, orderID)
+		if err != nil {
+			return s.mapRepositoryError(err)
+		}
+
+		if cmd.IfUnmodifiedSince != nil {
+			expected := cmd.IfUnmodifiedSince.UTC()
+			current := order.UpdatedAt.UTC()
+			if !current.Equal(expected) {
+				return fmt.Errorf("%w: order updated at %s differs from expected %s", ErrOrderConflict, current.Format(time.RFC3339Nano), expected.Format(time.RFC3339Nano))
+			}
+		}
+
+		if cmd.ExpectedStatus != nil {
+			expected := normalizeStatus(*cmd.ExpectedStatus)
+			if expected != "" && order.Status != expected {
+				return fmt.Errorf("%w: expected status %q but was %q", ErrOrderConflict, expected, order.Status)
+			}
+		}
+
+		currentQueue := ""
+		if order.Production.QueueRef != nil {
+			currentQueue = strings.TrimSpace(*order.Production.QueueRef)
+		}
+		if cmd.ExpectedQueueID != nil {
+			expectedQueue := strings.TrimSpace(*cmd.ExpectedQueueID)
+			if expectedQueue != "" && !strings.EqualFold(expectedQueue, currentQueue) {
+				return fmt.Errorf("%w: expected queue %q but was %q", ErrOrderConflict, expectedQueue, currentQueue)
+			}
+		}
+
+		normalizedStatus := normalizeStatus(order.Status)
+		if _, ok := assignableProductionStatuses[normalizedStatus]; !ok {
+			return fmt.Errorf("%w: order status %q cannot be assigned to production queue", ErrOrderInvalidState, normalizedStatus)
+		}
+
+		queue, err := s.queues.Get(txCtx, queueID)
+		if err != nil {
+			return s.mapQueueError(err)
+		}
+		queueName = strings.TrimSpace(queue.Name)
+
+		if !strings.EqualFold(strings.TrimSpace(queue.Status), string(domain.ProductionQueueStatusActive)) {
+			return ErrOrderQueueInactive
+		}
+
+		if queue.Capacity > 0 {
+			summary, err := s.queues.QueueWIPSummary(txCtx, queueID)
+			if err != nil {
+				return s.mapQueueError(err)
+			}
+			currentLoad := summary.Total
+			if strings.EqualFold(currentQueue, queueID) && currentLoad > 0 {
+				currentLoad--
+			}
+			if currentLoad >= queue.Capacity {
+				return ErrOrderQueueCapacityReached
+			}
+		}
+
+		order.Production.QueueRef = valuePtr(queueID)
+		order.Production.AssignedAt = valuePtr(now)
+		order.Production.AssignedBy = valuePtr(actorID)
+		order.Production.AssignedStation = nil
+		order.Production.OperatorRef = nil
+		order.Production.OnHold = false
+
+		eventNote := fmt.Sprintf("assigned to %s", queueID)
+		if queueName != "" {
+			eventNote = fmt.Sprintf("assigned to %s (%s)", queueName, queueID)
+		}
+
+		event := domain.OrderProductionEvent{
+			ID:        s.nextProductionEventID(),
+			OrderID:   orderID,
+			Type:      "queued",
+			Note:      eventNote,
+			CreatedAt: now,
+		}
+		if actorID != "" {
+			event.OperatorRef = valuePtr(actorID)
+		}
+
+		order.Production.LastEventType = event.Type
+		order.Production.LastEventAt = valuePtr(now)
+
+		prev, err := s.applyStatusTransition(&order, domain.OrderStatusInProduction, actorID, now)
+		if err != nil {
+			return err
+		}
+		prevStatus = prev
+		statusChanged = prev != order.Status
+
+		inserted, err := s.production.Insert(txCtx, event)
+		if err != nil {
+			return s.mapRepositoryError(err)
+		}
+		assignmentEventType = strings.TrimSpace(inserted.Type)
+		if assignmentEventType == "" {
+			assignmentEventType = event.Type
+		}
+
+		if err := s.orders.Update(txCtx, order); err != nil {
+			return s.mapRepositoryError(err)
+		}
+
+		updated = Order(order)
+		return nil
+	})
+	if err != nil {
+		return Order{}, err
+	}
+
+	metadata := map[string]any{
+		"eventType": assignmentEventType,
+		"queueId":   queueID,
+	}
+	if queueName != "" {
+		metadata["queueName"] = queueName
+	}
+
+	if statusChanged {
+		s.publishEvent(ctx, OrderEvent{
+			Type:           orderEventStatusChanged,
+			OrderID:        updated.ID,
+			OrderNumber:    updated.OrderNumber,
+			PreviousStatus: string(prevStatus),
+			CurrentStatus:  string(updated.Status),
+			ActorID:        actorID,
+			OccurredAt:     now,
+			Metadata:       metadata,
+		})
+	}
+
+	s.publishEvent(ctx, OrderEvent{
+		Type:        orderEventProductionAppended,
+		OrderID:     updated.ID,
+		OrderNumber: updated.OrderNumber,
+		ActorID:     actorID,
+		OccurredAt:  now,
+		Metadata:    metadata,
+	})
+
+	return updated, nil
+}
+
 func (s *orderService) RequestInvoice(ctx context.Context, cmd RequestInvoiceCommand) (Order, error) {
 	orderID := strings.TrimSpace(cmd.OrderID)
 	if orderID == "" {
@@ -812,6 +1005,25 @@ func (s *orderService) mapRepositoryError(err error) error {
 	}
 
 	return err
+}
+
+func (s *orderService) mapQueueError(err error) error {
+	if err == nil {
+		return nil
+	}
+	translated := translateQueueRepositoryError(err)
+	switch translated {
+	case nil:
+		return err
+	case ErrProductionQueueNotFound:
+		return ErrOrderQueueNotFound
+	case ErrProductionQueueConflict:
+		return ErrOrderConflict
+	case ErrProductionQueueRepositoryUnavailable:
+		return ErrOrderQueueRepositoryUnavailable
+	default:
+		return translated
+	}
 }
 
 func (s *orderService) generateOrderNumber(ctx context.Context, now time.Time) (string, error) {

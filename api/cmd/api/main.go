@@ -453,7 +453,7 @@ func main() {
 		OrderPageSize:        cfg.Inventory.LowStockOrderPageSize,
 		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
 	}))
-	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil)
+	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,

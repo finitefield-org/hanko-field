@@ -18,7 +18,7 @@ import (
 )
 
 func TestAdminProductionQueueHandlers_ListQueues_Authorization(t *testing.T) {
-	handler := NewAdminProductionQueueHandlers(nil, &stubAdminProductionQueueService{})
+	handler := NewAdminProductionQueueHandlers(nil, &stubAdminProductionQueueService{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/production-queues", nil)
 	rec := httptest.NewRecorder()
@@ -54,7 +54,7 @@ func TestAdminProductionQueueHandlers_ListQueues_Success(t *testing.T) {
 			NextPageToken: "next123",
 		},
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/production-queues", nil)
 	query := req.URL.Query()
@@ -108,7 +108,7 @@ func TestAdminProductionQueueHandlers_CreateQueue_PassesPayload(t *testing.T) {
 			UpdatedAt:   time.Now(),
 		},
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	body := `{"name":"  New Queue ","capacity":5,"work_centers":[" Station Z "],"priority":"normal","status":"active","notes":" note ","metadata":{"region":"tokyo"}}`
 	req := httptest.NewRequest(http.MethodPost, "/production-queues", bytes.NewBufferString(body))
@@ -144,7 +144,7 @@ func TestAdminProductionQueueHandlers_CreateQueue_ServiceError(t *testing.T) {
 	service := &stubAdminProductionQueueService{
 		createErr: services.ErrProductionQueueInvalid,
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/production-queues", bytes.NewBufferString(`{"name":"Queue"}`))
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
@@ -165,7 +165,7 @@ func TestAdminProductionQueueHandlers_UpdateQueue_PassesIdentifiers(t *testing.T
 			UpdatedAt: time.Now(),
 		},
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/production-queues/pqu_123", bytes.NewBufferString(`{"name":"Updated","capacity":3}`))
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
@@ -187,7 +187,7 @@ func TestAdminProductionQueueHandlers_UpdateQueue_PassesIdentifiers(t *testing.T
 }
 
 func TestAdminProductionQueueHandlers_GetQueueWIP_Authorization(t *testing.T) {
-	handler := NewAdminProductionQueueHandlers(nil, &stubAdminProductionQueueService{})
+	handler := NewAdminProductionQueueHandlers(nil, &stubAdminProductionQueueService{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_123/wip", nil)
 	ctx := chi.NewRouteContext()
@@ -224,7 +224,7 @@ func TestAdminProductionQueueHandlers_GetQueueWIP_Success(t *testing.T) {
 			GeneratedAt:    generated,
 		},
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_prod/wip", nil)
 	ctx := chi.NewRouteContext()
@@ -280,7 +280,7 @@ func TestAdminProductionQueueHandlers_GetQueueWIP_NotFound(t *testing.T) {
 	service := &stubAdminProductionQueueService{
 		wipErr: services.ErrProductionQueueNotFound,
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_missing/wip", nil)
 	ctx := chi.NewRouteContext()
@@ -299,7 +299,7 @@ func TestAdminProductionQueueHandlers_DeleteQueue_ErrorMapping(t *testing.T) {
 	service := &stubAdminProductionQueueService{
 		deleteErr: services.ErrProductionQueueHasAssignments,
 	}
-	handler := NewAdminProductionQueueHandlers(nil, service)
+	handler := NewAdminProductionQueueHandlers(nil, service, nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/production-queues/pqu_busy", nil)
 	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "staff", Roles: []string{auth.RoleStaff}}))
@@ -314,6 +314,147 @@ func TestAdminProductionQueueHandlers_DeleteQueue_ErrorMapping(t *testing.T) {
 	}
 	if service.deleteCmd.QueueID != "pqu_busy" {
 		t.Fatalf("expected queue id forwarded")
+	}
+}
+
+func TestAdminProductionQueueHandlers_AssignOrder_Success(t *testing.T) {
+	var captured services.AssignOrderToQueueCommand
+	now := time.Date(2024, 5, 1, 9, 0, 0, 0, time.UTC)
+	queue := "pqu_main"
+
+	orderSvc := &stubOrderService{
+		assignFn: func(_ context.Context, cmd services.AssignOrderToQueueCommand) (services.Order, error) {
+			captured = cmd
+			return services.Order{
+				ID:          "ord_assign",
+				OrderNumber: "HF-2024-000050",
+				Status:      domain.OrderStatusInProduction,
+				Production: services.OrderProduction{
+					QueueRef:      &queue,
+					LastEventType: "queued",
+					LastEventAt:   &now,
+				},
+				CreatedAt: now,
+				UpdatedAt: now,
+			}, nil
+		},
+	}
+	handler := NewAdminProductionQueueHandlers(nil, nil, orderSvc)
+
+	body := `{"order_id":" ord_assign ","expected_status":"paid","expected_queue_id":" old_queue ","if_unmodified_since":"2024-04-30T23:00:00Z"}`
+	req := httptest.NewRequest(http.MethodPost, "/production-queues/pqu_main:assign-order", bytes.NewBufferString(body))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("queueID", " pqu_main ")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: " staff-77 ", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.assignOrder(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if captured.QueueID != "pqu_main" {
+		t.Fatalf("expected queue id trimmed, got %q", captured.QueueID)
+	}
+	if captured.ActorID != "staff-77" {
+		t.Fatalf("expected actor trimmed, got %q", captured.ActorID)
+	}
+	if captured.OrderID != "ord_assign" {
+		t.Fatalf("expected order id trimmed, got %q", captured.OrderID)
+	}
+	if captured.ExpectedStatus == nil || *captured.ExpectedStatus != services.OrderStatus(domain.OrderStatusPaid) {
+		t.Fatalf("expected expected status paid, got %#v", captured.ExpectedStatus)
+	}
+	if captured.ExpectedQueueID == nil || *captured.ExpectedQueueID != "old_queue" {
+		t.Fatalf("expected expected queue old_queue, got %#v", captured.ExpectedQueueID)
+	}
+	if captured.IfUnmodifiedSince == nil || captured.IfUnmodifiedSince.Format(time.RFC3339) != "2024-04-30T23:00:00Z" {
+		t.Fatalf("expected if_unmodified_since parsed, got %#v", captured.IfUnmodifiedSince)
+	}
+
+	var payload struct {
+		Order adminOrderSummary `json:"order"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if payload.Order.ID != "ord_assign" {
+		t.Fatalf("expected order id in response, got %s", payload.Order.ID)
+	}
+	if payload.Order.ProductionQueue != "pqu_main" {
+		t.Fatalf("expected production queue pqu_main, got %s", payload.Order.ProductionQueue)
+	}
+	if payload.Order.Status != "in_production" {
+		t.Fatalf("expected status in_production, got %s", payload.Order.Status)
+	}
+}
+
+func TestAdminProductionQueueHandlers_AssignOrder_InvalidRequest(t *testing.T) {
+	orderSvc := &stubOrderService{}
+	handler := NewAdminProductionQueueHandlers(nil, nil, orderSvc)
+
+	req := httptest.NewRequest(http.MethodPost, "/production-queues/pqu_main:assign-order", bytes.NewBufferString(`{"order_id":""}`))
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_main")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "staff", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.assignOrder(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAdminProductionQueueHandlers_AssignOrder_ServiceError(t *testing.T) {
+	orderSvc := &stubOrderService{
+		assignFn: func(context.Context, services.AssignOrderToQueueCommand) (services.Order, error) {
+			return services.Order{}, services.ErrOrderQueueCapacityReached
+		},
+	}
+	handler := NewAdminProductionQueueHandlers(nil, nil, orderSvc)
+
+	req := httptest.NewRequest(http.MethodPost, "/production-queues/pqu_main:assign-order", bytes.NewBufferString(`{"order_id":"ord"}`))
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_main")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "staff", Roles: []string{auth.RoleStaff}}))
+	rec := httptest.NewRecorder()
+
+	handler.assignOrder(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", rec.Code)
+	}
+}
+
+func TestAdminProductionQueueHandlers_AssignOrder_Unauthorized(t *testing.T) {
+	handler := NewAdminProductionQueueHandlers(nil, nil, &stubOrderService{})
+
+	req := httptest.NewRequest(http.MethodPost, "/production-queues/pqu_main:assign-order", bytes.NewBufferString(`{"order_id":"ord"}`))
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_main")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	rec := httptest.NewRecorder()
+
+	handler.assignOrder(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAdminProductionQueueHandlers_AssignOrder_ServiceUnavailable(t *testing.T) {
+	handler := NewAdminProductionQueueHandlers(nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/production-queues/pqu_main:assign-order", bytes.NewBufferString(`{"order_id":"ord"}`))
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_main")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.assignOrder(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
 	}
 }
 

@@ -357,6 +357,8 @@ type OrderFulfillment struct {
 // OrderProduction stores production assignment metadata for an order.
 type OrderProduction struct {
 	QueueRef        *string
+	AssignedAt      *time.Time
+	AssignedBy      *string
 	AssignedStation *string
 	OperatorRef     *string
 	LastEventType   string

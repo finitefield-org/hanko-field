@@ -1328,6 +1328,14 @@ func writeOrderError(ctx context.Context, w http.ResponseWriter, err error) {
 		httpx.WriteError(ctx, w, httpx.NewError("order_conflict", err.Error(), http.StatusConflict))
 	case errors.Is(err, services.ErrOrderInvalidState):
 		httpx.WriteError(ctx, w, httpx.NewError("order_invalid_state", err.Error(), http.StatusConflict))
+	case errors.Is(err, services.ErrOrderQueueNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("queue_not_found", "queue not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrOrderQueueInactive):
+		httpx.WriteError(ctx, w, httpx.NewError("queue_inactive", "queue is not accepting assignments", http.StatusConflict))
+	case errors.Is(err, services.ErrOrderQueueCapacityReached):
+		httpx.WriteError(ctx, w, httpx.NewError("queue_capacity_reached", "queue capacity reached", http.StatusConflict))
+	case errors.Is(err, services.ErrOrderQueueRepositoryUnavailable):
+		httpx.WriteError(ctx, w, httpx.NewError("queue_repository_unavailable", "production queue repository unavailable", http.StatusServiceUnavailable))
 	default:
 		httpx.WriteError(ctx, w, httpx.NewError("order_error", "failed to process order request", http.StatusInternalServerError))
 	}

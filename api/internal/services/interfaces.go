@@ -233,6 +233,7 @@ type OrderService interface {
 	TransitionStatus(ctx context.Context, cmd OrderStatusTransitionCommand) (Order, error)
 	Cancel(ctx context.Context, cmd CancelOrderCommand) (Order, error)
 	AppendProductionEvent(ctx context.Context, cmd AppendProductionEventCommand) (OrderProductionEvent, error)
+	AssignOrderToQueue(ctx context.Context, cmd AssignOrderToQueueCommand) (Order, error)
 	RequestInvoice(ctx context.Context, cmd RequestInvoiceCommand) (Order, error)
 	CloneForReorder(ctx context.Context, cmd CloneForReorderCommand) (Order, error)
 }
@@ -671,6 +672,15 @@ type AppendProductionEventCommand struct {
 	OrderID string
 	Event   OrderProductionEvent
 	ActorID string
+}
+
+type AssignOrderToQueueCommand struct {
+	OrderID           string
+	QueueID           string
+	ActorID           string
+	ExpectedStatus    *OrderStatus
+	ExpectedQueueID   *string
+	IfUnmodifiedSince *time.Time
 }
 
 type CloneForReorderCommand struct {

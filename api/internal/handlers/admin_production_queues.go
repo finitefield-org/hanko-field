@@ -17,19 +17,24 @@ import (
 	"github.com/hanko-field/api/internal/services"
 )
 
-const maxProductionQueueRequestBody = 32 * 1024
+const (
+	maxProductionQueueRequestBody = 32 * 1024
+	maxQueueAssignBodySize        = 4 * 1024
+)
 
 // AdminProductionQueueHandlers exposes CRUD operations for production queue configurations.
 type AdminProductionQueueHandlers struct {
 	authn  *auth.Authenticator
 	queues services.ProductionQueueService
+	orders services.OrderService
 }
 
 // NewAdminProductionQueueHandlers constructs the handler set for production queue administration.
-func NewAdminProductionQueueHandlers(authn *auth.Authenticator, queues services.ProductionQueueService) *AdminProductionQueueHandlers {
+func NewAdminProductionQueueHandlers(authn *auth.Authenticator, queues services.ProductionQueueService, orders services.OrderService) *AdminProductionQueueHandlers {
 	return &AdminProductionQueueHandlers{
 		authn:  authn,
 		queues: queues,
+		orders: orders,
 	}
 }
 
@@ -47,6 +52,9 @@ func (h *AdminProductionQueueHandlers) Routes(r chi.Router) {
 		rt.Put("/{queueID}", h.updateQueue)
 		rt.Get("/{queueID}/wip", h.getQueueWIP)
 		rt.Delete("/{queueID}", h.deleteQueue)
+		if h.orders != nil {
+			rt.Post("/{queueID}:assign-order", h.assignOrder)
+		}
 	})
 }
 
@@ -239,6 +247,94 @@ func (h *AdminProductionQueueHandlers) getQueueWIP(w http.ResponseWriter, r *htt
 	writeJSONResponse(w, http.StatusOK, newAdminProductionQueueWIPResponse(summary))
 }
 
+func (h *AdminProductionQueueHandlers) assignOrder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.orders == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasAnyRole(auth.RoleAdmin, auth.RoleStaff) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin or staff role required", http.StatusForbidden))
+		return
+	}
+
+	queueID := strings.TrimSpace(chi.URLParam(r, "queueID"))
+	if queueID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "queue id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxQueueAssignBodySize)
+	if err != nil {
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body exceeds allowed size", http.StatusRequestEntityTooLarge))
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload adminQueueAssignRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+		return
+	}
+
+	orderID := strings.TrimSpace(payload.OrderID)
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "order_id is required", http.StatusBadRequest))
+		return
+	}
+
+	cmd := services.AssignOrderToQueueCommand{
+		OrderID: orderID,
+		QueueID: queueID,
+		ActorID: strings.TrimSpace(identity.UID),
+	}
+
+	if raw := strings.TrimSpace(payload.IfUnmodifiedSince); raw != "" {
+		ts, err := parseTimeParam(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_if_unmodified_since", "if_unmodified_since must be RFC3339", http.StatusBadRequest))
+			return
+		}
+		cmd.IfUnmodifiedSince = &ts
+	}
+
+	if statusRaw := strings.TrimSpace(payload.ExpectedStatus); statusRaw != "" {
+		status, ok := parseOrderStatus(statusRaw)
+		if !ok {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_expected_status", "expected_status must be a valid order status", http.StatusBadRequest))
+			return
+		}
+		cmd.ExpectedStatus = &status
+	}
+
+	if expectedQueue := strings.TrimSpace(payload.ExpectedQueueID); expectedQueue != "" {
+		cmd.ExpectedQueueID = &expectedQueue
+	}
+
+	order, err := h.orders.AssignOrderToQueue(ctx, cmd)
+	if err != nil {
+		writeOrderError(ctx, w, err)
+		return
+	}
+
+	response := adminQueueAssignResponse{
+		Order: buildAdminOrderSummary(order),
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
 type adminProductionQueueRequest struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
@@ -363,6 +459,17 @@ func newAdminProductionQueueWIPResponse(summary services.ProductionQueueWIPSumma
 		resp.GeneratedAt = summary.GeneratedAt
 	}
 	return resp
+}
+
+type adminQueueAssignRequest struct {
+	OrderID           string `json:"order_id"`
+	ExpectedStatus    string `json:"expected_status"`
+	ExpectedQueueID   string `json:"expected_queue_id"`
+	IfUnmodifiedSince string `json:"if_unmodified_since"`
+}
+
+type adminQueueAssignResponse struct {
+	Order adminOrderSummary `json:"order"`
 }
 
 func writeAdminProductionQueueError(ctx context.Context, w http.ResponseWriter, err error, action string) {
