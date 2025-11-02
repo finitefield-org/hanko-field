@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,7 +30,7 @@ func defaultPromotionValidationState(detail adminpromotions.PromotionDetail) pro
 		Currency:    defaultCurrency(detail.Promotion.DiscountCurrency),
 		SegmentKey:  strings.TrimSpace(detail.Promotion.Segment.Key),
 	}
-	state.ensureRows(3)
+	state.ensureRows(adminpromotions.ValidationMaxItems)
 	return state
 }
 
@@ -43,7 +44,7 @@ func promotionValidationStateFromValues(values url.Values) promotionValidationFo
 		ItemQuantities: cloneRaw(values["itemQuantity"]),
 		ItemPrices:     cloneRaw(values["itemPrice"]),
 	}
-	state.ensureRows(3)
+	state.ensureRows(adminpromotions.ValidationMaxItems)
 	return state
 }
 
@@ -114,12 +115,15 @@ func parsePromotionValidationForm(form url.Values) (adminpromotions.ValidationRe
 	qtyValues := form["itemQuantity"]
 	priceValues := form["itemPrice"]
 	maxLen := maxLen3(len(skuValues), len(qtyValues), len(priceValues))
-	if maxLen < 3 {
-		maxLen = 3
+	if maxLen < adminpromotions.ValidationMaxItems {
+		maxLen = adminpromotions.ValidationMaxItems
+	}
+	if maxLen > adminpromotions.ValidationMaxItems {
+		maxLen = adminpromotions.ValidationMaxItems
 	}
 	state.ensureRows(maxLen)
 
-	items := make([]adminpromotions.ValidationRequestItem, 0, maxLen)
+	items := make([]adminpromotions.ValidationRequestItem, 0, adminpromotions.ValidationMaxItems)
 	for idx := 0; idx < maxLen; idx++ {
 		sku := trimmedValue(skuValues, idx)
 		qtyRaw := trimmedValue(qtyValues, idx)
@@ -172,6 +176,9 @@ func parsePromotionValidationForm(form url.Values) (adminpromotions.ValidationRe
 			Quantity:   int(qty),
 			PriceMinor: price,
 		})
+		if len(items) >= adminpromotions.ValidationMaxItems {
+			break
+		}
 	}
 
 	req.Items = items
@@ -211,7 +218,7 @@ func buildPromotionValidationModal(basePath string, detail adminpromotions.Promo
 	if fieldErrors == nil {
 		fieldErrors = map[string]string{}
 	}
-	state.ensureRows(3)
+	state.ensureRows(adminpromotions.ValidationMaxItems)
 
 	form := promotionstpl.ValidationFormState{
 		PromotionID:    state.PromotionID,
@@ -233,6 +240,7 @@ func buildPromotionValidationModal(basePath string, detail adminpromotions.Promo
 		Error:          strings.TrimSpace(generalErr),
 		FieldErrors:    fieldErrors,
 		Form:           form,
+		MaxItems:       adminpromotions.ValidationMaxItems,
 	}
 
 	if result != nil {
@@ -264,6 +272,7 @@ func buildValidationResultView(result adminpromotions.ValidationResult) promotio
 	if formatted, err := indentJSON(result.Raw); err == nil {
 		rawJSON = formatted
 	}
+	escaped := html.EscapeString(rawJSON)
 
 	return promotionstpl.ValidationResultView{
 		Eligible:   result.Eligible,
@@ -271,7 +280,7 @@ func buildValidationResultView(result adminpromotions.ValidationResult) promotio
 		ExecutedAt: result.ExecutedAt,
 		Rules:      ruleViews,
 		Blockers:   blockers,
-		RawJSON:    rawJSON,
+		RawJSON:    escaped,
 	}
 }
 

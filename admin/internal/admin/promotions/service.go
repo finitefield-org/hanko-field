@@ -269,6 +269,9 @@ type ValidationRequest struct {
 	Items         []ValidationRequestItem
 }
 
+// ValidationMaxItems defines the maximum number of cart lines that can be evaluated in a dry-run request.
+const ValidationMaxItems = 3
+
 // ValidationRequestItem represents a single cart line in the dry-run evaluation payload.
 type ValidationRequestItem struct {
 	SKU        string

@@ -823,6 +823,7 @@ type ValidationModalData struct {
 	FieldErrors    map[string]string
 	Form           ValidationFormState
 	Result         *ValidationResultView
+	MaxItems       int
 }
 
 // ValidationFormState captures persisted form values when re-rendering the modal.

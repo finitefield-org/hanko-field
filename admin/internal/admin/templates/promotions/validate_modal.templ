@@ -82,7 +82,7 @@ templ validationModalBody(data ValidationModalData) {
             <section class="space-y-2">
                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">カート商品 (SKU / 数量 / 単価)</p>
-                    <p class="text-xs text-slate-500">最大3件まで入力できます。</p>
+                    <p class="text-xs text-slate-500">{ fmt.Sprintf("最大%d件まで入力できます。", data.MaxItems) }</p>
                 </div>
                 <div class="space-y-3">
                     for idx, sku := range data.Form.ItemSKUs {

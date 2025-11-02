@@ -928,6 +928,14 @@ func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequ
 	promo := detail.Promotion
 	executedAt := time.Now().Truncate(time.Second)
 
+	subtotal := req.SubtotalMinor
+	if subtotal < 0 {
+		subtotal = 0
+	}
+
+	currency := coalesceCurrency(req.Currency)
+	sanitizedItems := sanitizeValidationItems(req.Items)
+
 	rules := make([]ValidationRuleResult, 0, 6)
 	eligible := true
 
@@ -971,7 +979,6 @@ func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequ
 		},
 	})
 
-	subtotal := req.SubtotalMinor
 	minOrder := promo.MinOrderAmountMinor
 	addRule(ValidationRuleResult{
 		Key:      "subtotal_threshold",
@@ -1016,10 +1023,7 @@ func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequ
 
 	itemCount := 0
 	qualifyingItems := 0
-	for _, item := range req.Items {
-		if strings.TrimSpace(item.SKU) == "" || item.Quantity <= 0 {
-			continue
-		}
+	for _, item := range sanitizedItems {
 		itemCount += item.Quantity
 		if promo.Type == TypeBundle {
 			if strings.Contains(strings.ToLower(item.SKU), "ring") {
@@ -1090,11 +1094,11 @@ func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequ
 		"rules":         rulesEvaluated,
 		"cart": map[string]any{
 			"subtotalMinor": subtotal,
-			"currency":      req.Currency,
+			"currency":      currency,
 			"segmentKey":    req.SegmentKey,
 			"items": func() []map[string]any {
-				out := make([]map[string]any, 0, len(req.Items))
-				for _, item := range req.Items {
+				out := make([]map[string]any, 0, len(sanitizedItems))
+				for _, item := range sanitizedItems {
 					out = append(out, map[string]any{
 						"sku":          item.SKU,
 						"quantity":     item.Quantity,
@@ -1126,6 +1130,38 @@ func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequ
 		Rules:         rules,
 		Raw:           raw,
 	}, nil
+}
+
+func sanitizeValidationItems(items []ValidationRequestItem) []ValidationRequestItem {
+	if len(items) == 0 {
+		return nil
+	}
+	capacity := len(items)
+	if capacity > ValidationMaxItems {
+		capacity = ValidationMaxItems
+	}
+	sanitized := make([]ValidationRequestItem, 0, capacity)
+	for _, item := range items {
+		if len(sanitized) >= ValidationMaxItems {
+			break
+		}
+		sku := strings.TrimSpace(item.SKU)
+		if sku == "" {
+			continue
+		}
+		if item.Quantity <= 0 {
+			continue
+		}
+		if item.PriceMinor < 0 {
+			continue
+		}
+		sanitized = append(sanitized, ValidationRequestItem{
+			SKU:        sku,
+			Quantity:   item.Quantity,
+			PriceMinor: item.PriceMinor,
+		})
+	}
+	return sanitized
 }
 
 // Update mutates an existing promotion.
