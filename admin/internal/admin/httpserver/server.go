@@ -223,6 +223,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			})
 			protected.Route("/customers", func(cr chi.Router) {
 				cr.Get("/", uiHandlers.CustomersPage)
+				cr.Get("/{customerID}", uiHandlers.CustomerDetailPage)
 				RegisterFragment(cr, "/table", uiHandlers.CustomersTable)
 			})
 			protected.Route("/shipments", func(sr chi.Router) {

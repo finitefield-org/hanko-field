@@ -13,6 +13,9 @@ var ErrNotConfigured = errors.New("customers service not configured")
 type Service interface {
 	// List returns a filtered and paginated set of customers.
 	List(ctx context.Context, token string, query ListQuery) (ListResult, error)
+
+	// Detail loads full profile data for a single customer.
+	Detail(ctx context.Context, token, customerID string) (Detail, error)
 }
 
 // Status represents the lifecycle state of a customer account.
@@ -106,6 +109,9 @@ type TierOption struct {
 	Count int
 }
 
+// ErrCustomerNotFound indicates the requested customer doesn't exist.
+var ErrCustomerNotFound = errors.New("customer not found")
+
 // Customer represents a single customer row in the index table.
 type Customer struct {
 	ID                 string
@@ -135,4 +141,168 @@ type Flag struct {
 	Tone        string
 	Icon        string
 	Description string
+}
+
+// Detail encapsulates the data needed to render a customer profile view.
+type Detail struct {
+	Profile        Profile
+	Metrics        []Metric
+	RecentOrders   []OrderSummary
+	Addresses      []Address
+	PaymentMethods []PaymentMethod
+	SupportNotes   []SupportNote
+	Activity       []ActivityItem
+	InfoRail       InfoRail
+	LastUpdated    time.Time
+}
+
+// Profile summarises the primary customer information.
+type Profile struct {
+	ID                 string
+	DisplayName        string
+	Email              string
+	Phone              string
+	AvatarURL          string
+	Company            string
+	Location           string
+	Tier               string
+	Status             Status
+	TotalOrders        int
+	LifetimeValueMinor int64
+	Currency           string
+	LastOrderAt        time.Time
+	LastOrderNumber    string
+	LastOrderID        string
+	JoinedAt           time.Time
+	RiskLevel          string
+	Flags              []Flag
+	Tags               []string
+	QuickActions       []QuickAction
+}
+
+// QuickAction renders shortcut buttons in the profile header.
+type QuickAction struct {
+	Label   string
+	Href    string
+	Variant string
+	Icon    string
+	Method  string
+}
+
+// Metric renders summary KPI cards.
+type Metric struct {
+	Key       string
+	Label     string
+	Value     string
+	SubLabel  string
+	Tone      string
+	Trend     Trend
+	Indicator string
+}
+
+// Trend describes directional change for a metric.
+type Trend struct {
+	Label string
+	Tone  string
+	Icon  string
+}
+
+// OrderSummary renders rows in the orders tab.
+type OrderSummary struct {
+	ID                string
+	Number            string
+	PlacedAt          time.Time
+	Status            string
+	StatusTone        string
+	FulfillmentStatus string
+	FulfillmentTone   string
+	PaymentStatus     string
+	PaymentTone       string
+	TotalMinor        int64
+	Currency          string
+	ItemSummary       string
+	DeliveryTarget    string
+	LastUpdated       time.Time
+}
+
+// Address represents a saved customer address.
+type Address struct {
+	ID         string
+	Label      string
+	Name       string
+	Company    string
+	Phone      string
+	Lines      []string
+	City       string
+	Prefecture string
+	PostalCode string
+	Country    string
+	Type       string
+	Primary    bool
+	UpdatedAt  time.Time
+	Notes      []string
+}
+
+// PaymentMethod represents a stored payment credential.
+type PaymentMethod struct {
+	ID         string
+	Type       string
+	Brand      string
+	Last4      string
+	ExpMonth   int
+	ExpYear    int
+	HolderName string
+	Status     string
+	StatusTone string
+	Primary    bool
+	AddedAt    time.Time
+}
+
+// SupportNote captures support interactions or notes.
+type SupportNote struct {
+	ID         string
+	Title      string
+	Body       string
+	CreatedAt  time.Time
+	Author     string
+	AuthorRole string
+	Tone       string
+	Visibility string
+	Tags       []string
+}
+
+// ActivityItem renders timeline events in the activity tab.
+type ActivityItem struct {
+	ID          string
+	Timestamp   time.Time
+	Actor       string
+	ActorRole   string
+	Title       string
+	Description string
+	Tone        string
+	Icon        string
+}
+
+// InfoRail summarises contextual panels shown in the right-hand column.
+type InfoRail struct {
+	RiskLevel       string
+	RiskTone        string
+	RiskDescription string
+	Segments        []string
+	Flags           []Flag
+	Escalations     []RailItem
+	FraudChecks     []RailItem
+	IdentityDocs    []RailItem
+	Contacts        []RailItem
+}
+
+// RailItem renders an item inside the info rail sections.
+type RailItem struct {
+	ID          string
+	Label       string
+	Description string
+	Tone        string
+	Timestamp   time.Time
+	LinkLabel   string
+	LinkURL     string
 }

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/go-chi/chi/v5"
 
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
@@ -77,6 +79,52 @@ func (h *Handlers) CustomersTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templ.Handler(customerstpl.Table(table)).ServeHTTP(w, r)
+}
+
+// CustomerDetailPage renders the detailed profile view for a single customer.
+func (h *Handlers) CustomerDetailPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	customerID := strings.TrimSpace(chi.URLParam(r, "customerID"))
+	if customerID == "" {
+		http.Error(w, "顧客IDが指定されていません。", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.customers.Detail(ctx, user.Token, customerID)
+	if err != nil {
+		if errors.Is(err, admincustomers.ErrCustomerNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		if errors.Is(err, admincustomers.ErrNotConfigured) {
+			http.Error(w, "顧客詳細サービスが構成されていません。", http.StatusNotImplemented)
+			return
+		}
+		log.Printf("customers: detail fetch failed: %v", err)
+		http.Error(w, "顧客詳細の取得に失敗しました。時間を置いて再度お試しください。", http.StatusBadGateway)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	activeTab := normalizeCustomerDetailTab(r.URL.Query().Get("tab"))
+	page := customerstpl.BuildDetailPageData(basePath, detail, activeTab)
+
+	if custommw.IsHTMXRequest(ctx) {
+		target := strings.TrimSpace(custommw.HTMXInfoFromContext(ctx).Target)
+		target = strings.TrimPrefix(target, "#")
+		if strings.EqualFold(target, "customer-tabs") {
+			templ.Handler(customerstpl.CustomerTabs(page)).ServeHTTP(w, r)
+			return
+		}
+	}
+
+	templ.Handler(customerstpl.DetailPage(page)).ServeHTTP(w, r)
 }
 
 func buildCustomersRequest(r *http.Request) customersRequest {
@@ -207,4 +255,23 @@ func canonicalCustomersURL(basePath string, req customersRequest) string {
 		return base + "/customers?" + query
 	}
 	return base + "/customers"
+}
+
+func normalizeCustomerDetailTab(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "orders":
+		return "orders"
+	case "addresses":
+		return "addresses"
+	case "payments":
+		return "payments"
+	case "notes":
+		return "notes"
+	case "activity":
+		return "activity"
+	case "overview":
+		fallthrough
+	default:
+		return "overview"
+	}
 }

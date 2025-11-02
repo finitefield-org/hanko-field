@@ -1,0 +1,570 @@
+package customers
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"strings"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ DetailPage(data DetailPageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, detailBody(data))
+}
+
+templ detailBody(data DetailPageData) {
+	<div class="space-y-6">
+		@detailHeaderCard(data.Header, data.Description)
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+			<div class="space-y-6">
+				@detailMetricsRow(data.Metrics)
+				<div id="customer-tabs">
+					@CustomerTabs(data)
+				</div>
+			</div>
+			<aside class="space-y-4">
+				@infoRailCard(data.InfoRail)
+				<section class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+					<div class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終更新</div>
+					<p class="mt-1 text-sm font-medium text-slate-900">{ data.LastUpdated }</p>
+					if data.LastRelative != "" {
+						<p class="text-xs text-slate-500">{ data.LastRelative }</p>
+					}
+				</section>
+			</aside>
+		</div>
+	</div>
+}
+
+templ detailHeaderCard(header DetailHeader, description string) {
+	<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+		<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+			<div class="flex flex-1 flex-col gap-4">
+				<div class="flex items-start gap-4">
+					<div class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-2xl font-semibold text-indigo-700">
+						@avatarBlock(header)
+					</div>
+					<div class="space-y-2">
+						<div class="flex flex-wrap items-center gap-2">
+							<h1 class="text-2xl font-semibold text-slate-900">{ header.DisplayName }</h1>
+							if header.StatusLabel != "" {
+								@components.Badge(header.StatusLabel, header.StatusTone)
+							}
+							if header.TierLabel != "" {
+								@components.Badge(header.TierLabel, header.TierTone)
+							}
+						</div>
+						<div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+							if header.Email != "" {
+								<a href={ fmt.Sprintf("mailto:%s", header.Email) } class="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900">
+									✉ { header.Email }
+								</a>
+							}
+							if header.Phone != "" {
+								<span class="inline-flex items-center gap-1">
+									📞 { header.Phone }
+								</span>
+							}
+							if header.Company != "" {
+								<span class="inline-flex items-center gap-1">
+									🏢 { header.Company }
+								</span>
+							}
+							if header.Location != "" {
+								<span class="inline-flex items-center gap-1">
+									📍 { header.Location }
+								</span>
+							}
+						</div>
+						<p class="text-sm text-slate-500">{ description }</p>
+					</div>
+				</div>
+				<div class="grid gap-4 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+					<div>
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">顧客 ID</dt>
+						<dd class="mt-1 font-mono text-sm text-slate-900">{ header.CustomerID }</dd>
+					</div>
+					<div>
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">累計注文</dt>
+						<dd class="mt-1 font-semibold text-slate-900">{ header.TotalOrdersLabel }</dd>
+					</div>
+					<div>
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">累計売上</dt>
+						<dd class="mt-1 font-semibold text-slate-900">{ header.LTVLabel }</dd>
+					</div>
+					<div>
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">登録日</dt>
+						<dd class="mt-1 text-slate-900">{ header.JoinedLabel }</dd>
+					</div>
+					<div>
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終注文</dt>
+						<dd class="mt-1 text-slate-900">{ fallback(header.LastOrderLabel, "未注文") }</dd>
+					</div>
+				</div>
+				if len(header.Tags) > 0 {
+					<div class="flex flex-wrap gap-2">
+						for _, tag := range header.Tags {
+							<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{ tag }</span>
+						}
+					</div>
+				}
+				if len(header.Flags) > 0 {
+					<div class="flex flex-wrap gap-2">
+						for _, badge := range header.Flags {
+							@components.Badge(fmt.Sprintf("%s %s", badge.Icon, badge.Label), badge.Tone)
+						}
+					</div>
+				}
+			</div>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-start">
+				if header.RiskLabel != "" {
+					<div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+						<p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+							リスク
+							if header.RiskLabel != "" {
+								@components.Badge(header.RiskLabel, header.RiskTone)
+							}
+						</p>
+						if header.RiskDescription != "" {
+							<p class="mt-2 text-sm text-slate-600">{ header.RiskDescription }</p>
+						}
+					</div>
+				}
+			</div>
+		</div>
+		if len(header.QuickActions) > 0 {
+			<div class="mt-6 flex flex-wrap gap-2">
+				for _, action := range header.QuickActions {
+					@components.ButtonWith(action.Label, components.ButtonOptions{
+						Variant: action.Variant,
+						Href:    action.Href,
+						Attrs: templ.Attributes{
+							"data-icon": action.Icon,
+							"data-method": action.Method,
+						},
+					})
+				}
+			</div>
+		}
+	</section>
+}
+
+templ avatarBlock(header DetailHeader) {
+	if strings.TrimSpace(header.AvatarURL) != "" {
+		<img
+			src={ header.AvatarURL }
+			alt={ fmt.Sprintf("%sのアバター", header.DisplayName) }
+			class="h-full w-full object-cover"
+		/>
+	} else {
+		<span>{ header.AvatarInitial }</span>
+	}
+}
+
+templ detailMetricsRow(metrics []DetailMetricCard) {
+	if len(metrics) == 0 {
+		return
+	}
+	<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+		<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+			for _, metric := range metrics {
+				<div class="rounded-xl border border-slate-200 px-4 py-3">
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ metric.Label }</p>
+					<p class="mt-2 text-2xl font-semibold text-slate-900">{ metric.Value }</p>
+					if metric.SubLabel != "" {
+						<p class="mt-1 text-xs text-slate-500">{ metric.SubLabel }</p>
+					}
+					if metric.TrendLabel != "" {
+						<p class={ trendToneClass(metric.TrendTone) }>{ metric.TrendIcon } { metric.TrendLabel }</p>
+					}
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ CustomerTabs(data DetailPageData) {
+	<div class="space-y-4">
+		@components.UnderlineTabs(components.UnderlineTabsProps{
+			Tabs: func() []components.UnderlineTab {
+				result := make([]components.UnderlineTab, 0, len(data.Tabs))
+				for _, tab := range data.Tabs {
+					var badge templ.Component
+					if strings.TrimSpace(tab.Badge) != "" {
+						badge = templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+							_, err := io.WriteString(w, fmt.Sprintf("<span class=\"ml-2 inline-flex min-w-[1.5rem] justify-center rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600\">%s</span>", tab.Badge))
+							return err
+						})
+					}
+					result = append(result, components.UnderlineTab{
+						ID:     tab.ID,
+						Label:  tab.Label,
+						Href:   tab.Href,
+						Active: tab.Active,
+						Badge:  badge,
+					})
+				}
+				return result
+			}(),
+			HxTarget:  "#customer-tabs",
+			HxSwap:    "outerHTML",
+			HxPushURL: true,
+		})
+		<div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<div class="space-y-6 px-6 py-6">
+				if data.ActiveTab == "overview" {
+					@overviewTabContent(data.Overview)
+				} else if data.ActiveTab == "orders" {
+					@ordersTabContent(data.Orders)
+				} else if data.ActiveTab == "addresses" {
+					@addressesTabContent(data.Addresses)
+				} else if data.ActiveTab == "payments" {
+					@paymentsTabContent(data.Payments)
+				} else if data.ActiveTab == "notes" {
+					@notesTabContent(data.Notes)
+				} else if data.ActiveTab == "activity" {
+					@activityTabContent(data.Activity)
+				} else {
+					<p class="text-sm text-slate-500">表示できるセクションがありません。</p>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+templ overviewTabContent(overview OverviewTabData) {
+	<section class="space-y-6">
+		<div class="space-y-4">
+			<div>
+				<h2 class="text-xl font-semibold text-slate-900">プロフィール概要</h2>
+				<p class="text-sm text-slate-600">基本情報と直近の注文状況を確認できます。</p>
+			</div>
+			if len(overview.Summary) > 0 {
+				<dl class="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+					for _, field := range overview.Summary {
+						<div>
+							<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ field.Label }</dt>
+							<dd class="mt-1 text-slate-900">
+								if strings.TrimSpace(field.Value) == "" {
+									<span class="text-slate-400">-</span>
+								} else if field.Href != "" {
+									<a href={ field.Href } class="text-brand-600 hover:text-brand-500">{ field.Value }</a>
+								} else {
+									{ field.Value }
+								}
+							</dd>
+						</div>
+					}
+				</dl>
+			}
+		</div>
+		if len(overview.Tags) > 0 {
+			<div class="space-y-2">
+				<h3 class="text-sm font-semibold text-slate-700">タグ</h3>
+				<div class="flex flex-wrap gap-2">
+					for _, tag := range overview.Tags {
+						<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{ tag }</span>
+					}
+				</div>
+			</div>
+		}
+		if len(overview.Flags) > 0 {
+			<div class="space-y-2">
+				<h3 class="text-sm font-semibold text-slate-700">フラグ</h3>
+				<div class="flex flex-wrap gap-2">
+					for _, badge := range overview.Flags {
+						@components.Badge(fmt.Sprintf("%s %s", badge.Icon, badge.Label), badge.Tone)
+					}
+				</div>
+			</div>
+		}
+		if len(overview.RecentOrders) > 0 {
+			<div class="space-y-4">
+				<h3 class="text-sm font-semibold text-slate-700">最近の注文</h3>
+				<div class="space-y-3">
+					for _, order := range overview.RecentOrders {
+						<a href={ order.Href } class="block rounded-xl border border-slate-200 px-4 py-4 transition hover:border-brand-300 hover:shadow-sm">
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<div>
+									<p class="font-semibold text-slate-900">{ order.Number }</p>
+									<p class="text-xs text-slate-500">{ order.PlacedDate }</p>
+								</div>
+								@components.Badge(order.Status, order.StatusTone)
+							</div>
+							if order.Detail != "" {
+								<p class="mt-2 text-sm text-slate-600">{ order.Detail }</p>
+							}
+							<div class="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
+								<span>支払い: { order.Payment }</span>
+								<span>フルフィルメント: { order.Fulfillment }</span>
+								<span class="font-semibold text-slate-900">{ order.Total }</span>
+							</div>
+						</a>
+					}
+				</div>
+			</div>
+		} else {
+			<p class="text-sm text-slate-500">まだ注文履歴がありません。</p>
+		}
+	</section>
+}
+
+templ ordersTabContent(orders OrdersTabData) {
+	if len(orders.Rows) == 0 {
+		<p class="text-sm text-slate-500">{ fallback(orders.EmptyMessage, "注文履歴がありません。") }</p>
+		return
+	}
+	<div class="overflow-hidden rounded-xl border border-slate-200">
+		<table class="min-w-full divide-y divide-slate-200 text-sm">
+			<thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+				<tr>
+					<th scope="col" class="px-4 py-3 text-left">注文</th>
+					<th scope="col" class="px-4 py-3 text-left">日時</th>
+					<th scope="col" class="px-4 py-3 text-left">ステータス</th>
+					<th scope="col" class="px-4 py-3 text-left">支払い</th>
+					<th scope="col" class="px-4 py-3 text-left">フルフィルメント</th>
+					<th scope="col" class="px-4 py-3 text-right">合計</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-slate-200 bg-white">
+				for _, row := range orders.Rows {
+					<tr>
+						<td class="px-4 py-3">
+							<a href={ row.Href } class="font-semibold text-brand-600 hover:text-brand-500">{ row.Number }</a>
+							<p class="text-xs text-slate-500">{ row.Relative }</p>
+						</td>
+						<td class="px-4 py-3 text-slate-600">{ row.Date }</td>
+						<td class="px-4 py-3">
+							@components.Badge(row.Status, row.StatusTone)
+						</td>
+						<td class="px-4 py-3">
+							@components.Badge(row.Payment, row.PaymentTone)
+						</td>
+						<td class="px-4 py-3">
+							@components.Badge(row.Fulfillment, row.FulfillmentTone)
+						</td>
+						<td class="px-4 py-3 text-right font-semibold text-slate-900">{ row.Total }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ addressesTabContent(addresses AddressesTabData) {
+	if len(addresses.Cards) == 0 {
+		<p class="text-sm text-slate-500">{ fallback(addresses.EmptyMessage, "住所情報がありません。") }</p>
+		return
+	}
+	<div class="grid gap-4 md:grid-cols-2">
+		for _, card := range addresses.Cards {
+			<div class="space-y-3 rounded-2xl border border-slate-200 px-4 py-4 shadow-sm">
+				<div class="flex items-center justify-between">
+					<div>
+						<h3 class="text-sm font-semibold text-slate-900">{ fallback(card.Title, "住所") }</h3>
+						<p class="text-xs text-slate-500">{ card.Updated }</p>
+					</div>
+					@components.Badge(card.TypeLabel, card.TypeTone)
+				</div>
+				<div class="space-y-1 text-sm text-slate-700">
+					if card.Name != "" {
+						<p>{ card.Name }</p>
+					}
+					if card.Company != "" {
+						<p>{ card.Company }</p>
+					}
+					for _, line := range card.Lines {
+						if strings.TrimSpace(line) != "" {
+							<p>{ line }</p>
+						}
+					}
+					if card.Phone != "" {
+						<p class="text-xs text-slate-500">TEL: { card.Phone }</p>
+					}
+				</div>
+				if len(card.Notes) > 0 {
+					<ul class="list-disc space-y-1 pl-4 text-xs text-slate-500">
+						for _, note := range card.Notes {
+							<li>{ note }</li>
+						}
+					</ul>
+				}
+				if card.Primary {
+					@components.Badge("既定", "success")
+				}
+			</div>
+		}
+	</div>
+}
+
+templ paymentsTabContent(payments PaymentsTabData) {
+	if len(payments.Rows) == 0 {
+		<p class="text-sm text-slate-500">{ fallback(payments.EmptyMessage, "保存された支払い方法がありません。") }</p>
+		return
+	}
+	<div class="overflow-hidden rounded-xl border border-slate-200">
+		<table class="min-w-full divide-y divide-slate-200 text-sm">
+			<thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+				<tr>
+					<th scope="col" class="px-4 py-3 text-left">種類</th>
+					<th scope="col" class="px-4 py-3 text-left">ブランド</th>
+					<th scope="col" class="px-4 py-3 text-left">名義</th>
+					<th scope="col" class="px-4 py-3 text-left">有効期限</th>
+					<th scope="col" class="px-4 py-3 text-left">状態</th>
+					<th scope="col" class="px-4 py-3 text-left">登録日</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-slate-200 bg-white">
+				for _, row := range payments.Rows {
+					<tr>
+						<td class="px-4 py-3">
+							<div class="font-semibold text-slate-900">{ row.Type }</div>
+							if row.Primary {
+								<p class="text-xs text-slate-500">メイン</p>
+							}
+						</td>
+						<td class="px-4 py-3 text-slate-700">
+							{ row.Brand }
+							if row.Last4 != "" {
+								<span class="ml-2 text-xs text-slate-500">•••• { row.Last4 }</span>
+							}
+						</td>
+						<td class="px-4 py-3 text-slate-600">{ row.Holder }</td>
+						<td class="px-4 py-3 text-slate-600">{ fallback(row.Expires, "-") }</td>
+						<td class="px-4 py-3">
+							@components.Badge(row.Status, row.StatusTone)
+						</td>
+						<td class="px-4 py-3 text-slate-600">{ row.Added }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ notesTabContent(notes NotesTabData) {
+	if len(notes.Notes) == 0 {
+		<p class="text-sm text-slate-500">{ fallback(notes.EmptyMessage, "登録されたメモがありません。") }</p>
+		return
+	}
+	<div class="space-y-4">
+		for _, note := range notes.Notes {
+			<article class={ noteCardClass(note.Tone) }>
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<div>
+						<h3 class="text-sm font-semibold text-slate-900">{ note.Title }</h3>
+						<p class="text-xs text-slate-500">{ note.Author }</p>
+					</div>
+					<span class="text-xs text-slate-500">{ note.Visibility }</span>
+				</div>
+				<p class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{ note.Body }</p>
+				<div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+					<span>{ note.Created } ({ note.Relative })</span>
+					if len(note.Tags) > 0 {
+						<div class="flex flex-wrap gap-2">
+							for _, tag := range note.Tags {
+								<span class="rounded-full bg-white/40 px-2 py-0.5 text-xs text-slate-700">{ tag }</span>
+							}
+						</div>
+					}
+				</div>
+			</article>
+		}
+	</div>
+}
+
+templ activityTabContent(activity ActivityTabData) {
+	if len(activity.Items) == 0 {
+		<p class="text-sm text-slate-500">{ fallback(activity.EmptyMessage, "アクティビティはありません。") }</p>
+		return
+	}
+	<div class="space-y-4">
+		for _, item := range activity.Items {
+			<div class="flex gap-3 rounded-2xl border border-slate-200 px-4 py-4">
+				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-lg">
+					{ fallback(item.Icon, "📝") }
+				</div>
+				<div class="flex-1 space-y-1">
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<p class="font-semibold text-slate-900">{ item.Title }</p>
+						<span class="text-xs text-slate-500">{ item.Time } ({ item.Relative })</span>
+					</div>
+					<p class="text-xs text-slate-500">
+						{ item.Actor }
+						if strings.TrimSpace(item.ActorRole) != "" {
+							<span class="ml-1 text-xs text-slate-400">{ fmt.Sprintf("(%s)", item.ActorRole) }</span>
+						}
+					</p>
+					if item.Description != "" {
+						<p class="text-sm text-slate-600">{ item.Description }</p>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ infoRailCard(data InfoRailData) {
+	<section class="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
+		<div class="space-y-4">
+			<div>
+				<h2 class="text-base font-semibold text-slate-900">サポート情報</h2>
+				<p class="text-xs text-slate-500">エスカレーション、本人確認、関連連絡先をまとめています。</p>
+			</div>
+			if data.RiskLabel != "" {
+				<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">リスク評価</p>
+					<div class="mt-2 flex items-center gap-2">
+						@components.Badge(data.RiskLabel, data.RiskTone)
+						<span class="text-sm text-slate-600">{ data.RiskDescription }</span>
+					</div>
+				</div>
+			}
+			if len(data.Segments) > 0 {
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">セグメント</p>
+					<div class="flex flex-wrap gap-2">
+						for _, segment := range data.Segments {
+							<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{ segment }</span>
+						}
+					</div>
+				</div>
+			}
+			if len(data.Flags) > 0 {
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">フラグ</p>
+					<div class="flex flex-wrap gap-2">
+						for _, flag := range data.Flags {
+							@components.Badge(fmt.Sprintf("%s %s", flag.Icon, flag.Label), flag.Tone)
+						}
+					</div>
+				</div>
+			}
+			for _, section := range data.Sections {
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ section.Title }</p>
+					<ul class="space-y-2">
+						for _, item := range section.Items {
+							<li class="rounded-xl border border-slate-200 px-3 py-3">
+								<p class="font-medium text-slate-900">{ item.Label }</p>
+								if item.Description != "" {
+									<p class="text-sm text-slate-600">{ item.Description }</p>
+								}
+								<div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+									if item.Meta != "" {
+										<span>{ item.Meta }</span>
+									}
+									if item.LinkURL != "" {
+										<a href={ item.LinkURL } class="text-brand-600 hover:text-brand-500">{ fallback(item.LinkLabel, "詳細を見る") }</a>
+									}
+								</div>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+		</div>
+	</section>
+}

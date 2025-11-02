@@ -2,6 +2,7 @@ package customers
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 // StaticService provides canned customer data for development and previews.
 type StaticService struct {
 	Customers []Customer
+	Details   map[string]Detail
 }
 
 // NewStaticService builds a StaticService populated with representative customers.
@@ -158,7 +160,539 @@ func NewStaticService() *StaticService {
 		},
 	}
 
-	return &StaticService{Customers: customers}
+	return &StaticService{
+		Customers: customers,
+		Details:   buildStaticDetails(customers, now),
+	}
+}
+
+func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
+	details := make(map[string]Detail, len(customers))
+	for _, c := range customers {
+		switch c.ID {
+		case "cus_1001":
+			details[c.ID] = Detail{
+				Profile: Profile{
+					ID:                 c.ID,
+					DisplayName:        c.DisplayName,
+					Email:              c.Email,
+					Phone:              "03-1234-5678",
+					AvatarURL:          c.AvatarURL,
+					Company:            c.Company,
+					Location:           c.Location,
+					Tier:               c.Tier,
+					Status:             c.Status,
+					TotalOrders:        c.TotalOrders,
+					LifetimeValueMinor: c.LifetimeValueMinor,
+					Currency:           c.Currency,
+					LastOrderAt:        c.LastOrderAt,
+					LastOrderNumber:    c.LastOrderNumber,
+					LastOrderID:        c.LastOrderID,
+					JoinedAt:           c.JoinedAt,
+					RiskLevel:          c.RiskLevel,
+					Flags:              append([]Flag(nil), c.Flags...),
+					Tags:               append([]string(nil), c.Tags...),
+					QuickActions: []QuickAction{
+						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
+						{Label: "注文を作成", Href: "/admin/orders/new?customer=" + c.ID, Variant: "primary", Icon: "🛒"},
+						{Label: "Slack で共有", Href: "https://slack.com/app_redirect?channel=support", Variant: "ghost", Icon: "💬"},
+					},
+				},
+				Metrics: []Metric{
+					{Key: "orders", Label: "累計注文", Value: "24件", SubLabel: "今月 3件", Tone: "info", Trend: Trend{Label: "+12% vs LY", Tone: "success", Icon: "⬆"}},
+					{Key: "ltv", Label: "累計売上", Value: "¥1,280,000", SubLabel: "平均 ¥53,333", Tone: "success", Trend: Trend{Label: "+8% QoQ", Tone: "success", Icon: "⬆"}},
+					{Key: "returns", Label: "返品率", Value: "1.2%", SubLabel: "過去12ヶ月 2件", Tone: "success", Trend: Trend{Label: "-0.8pt", Tone: "success", Icon: "⬇"}},
+					{Key: "tickets", Label: "サポート対応", Value: "5件", SubLabel: "未解決 1件", Tone: "warning", Trend: Trend{Label: "今月 2件", Tone: "info", Icon: "🛈"}},
+				},
+				RecentOrders: []OrderSummary{
+					{
+						ID:                "ord_1051",
+						Number:            "HF-240513-1051",
+						PlacedAt:          now.Add(-5 * time.Hour),
+						Status:            "制作中",
+						StatusTone:        "info",
+						FulfillmentStatus: "工場: プレート加工",
+						FulfillmentTone:   "info",
+						PaymentStatus:     "支払い済み (カード)",
+						PaymentTone:       "success",
+						TotalMinor:        580000,
+						Currency:          "JPY",
+						ItemSummary:       "特注表札 200枚 / ギフト包装",
+						DeliveryTarget:    "5月20日 納品予定",
+						LastUpdated:       now.Add(-90 * time.Minute),
+					},
+					{
+						ID:                "ord_1048",
+						Number:            "HF-240512-1048",
+						PlacedAt:          now.Add(-36 * time.Hour),
+						Status:            "出荷済み",
+						StatusTone:        "success",
+						FulfillmentStatus: "配送中 (佐川急便)",
+						FulfillmentTone:   "success",
+						PaymentStatus:     "支払い済み (請求書)",
+						PaymentTone:       "success",
+						TotalMinor:        420000,
+						Currency:          "JPY",
+						ItemSummary:       "ショップカード 5,000枚",
+						DeliveryTarget:    "5月18日 到着予定",
+						LastUpdated:       now.Add(-10 * time.Hour),
+					},
+					{
+						ID:                "ord_0988",
+						Number:            "HF-240430-0988",
+						PlacedAt:          now.Add(-14 * 24 * time.Hour),
+						Status:            "完了",
+						StatusTone:        "success",
+						FulfillmentStatus: "納品済み",
+						FulfillmentTone:   "success",
+						PaymentStatus:     "支払い済み",
+						PaymentTone:       "success",
+						TotalMinor:        160000,
+						Currency:          "JPY",
+						ItemSummary:       "封筒 2,000枚 / 活版名刺 300セット",
+						DeliveryTarget:    "4月28日 納品済み",
+						LastUpdated:       now.Add(-12 * 24 * time.Hour),
+					},
+				},
+				Addresses: []Address{
+					{
+						ID:         "addr_hanako_main",
+						Label:      "本社出荷先",
+						Name:       "佐藤 花子",
+						Company:    c.Company,
+						Phone:      "03-1234-5678",
+						Lines:      []string{"東京都渋谷区桜丘町 5-10", "Hanako Design Studio"},
+						City:       "渋谷区",
+						Prefecture: "東京都",
+						PostalCode: "150-0031",
+						Country:    "日本",
+						Type:       "shipping",
+						Primary:    true,
+						UpdatedAt:  now.Add(-30 * 24 * time.Hour),
+						Notes:      []string{"平日 10:00-17:00 受け取り可"},
+					},
+					{
+						ID:         "addr_hanako_billing",
+						Label:      "請求書送付先",
+						Name:       "経理担当: 中村様",
+						Company:    c.Company,
+						Phone:      "03-1234-5679",
+						Lines:      []string{"東京都渋谷区渋谷 1-2-3", "WeWork 12F"},
+						City:       "渋谷区",
+						Prefecture: "東京都",
+						PostalCode: "150-0002",
+						Country:    "日本",
+						Type:       "billing",
+						Primary:    false,
+						UpdatedAt:  now.Add(-90 * 24 * time.Hour),
+					},
+				},
+				PaymentMethods: []PaymentMethod{
+					{
+						ID:         "pm_card_visa",
+						Type:       "card",
+						Brand:      "Visa",
+						Last4:      "4242",
+						ExpMonth:   4,
+						ExpYear:    now.AddDate(3, 0, 0).Year(),
+						HolderName: "HANAKO SATO",
+						Status:     "有効",
+						StatusTone: "success",
+						Primary:    true,
+						AddedAt:    now.AddDate(-1, -2, 0),
+					},
+					{
+						ID:         "pm_bank_mizuho",
+						Type:       "bank_transfer",
+						Brand:      "みずほ銀行",
+						Last4:      "1023",
+						HolderName: "ハナコデザインスタジオ",
+						Status:     "承認済み (法人口座)",
+						StatusTone: "info",
+						Primary:    false,
+						AddedAt:    now.AddDate(-2, 0, 0),
+					},
+				},
+				SupportNotes: []SupportNote{
+					{
+						ID:         "note_vip_follow",
+						Title:      "VIP向けオンボーディング完了",
+						Body:       "制作工程の見学を希望。来月頭に工場ツアーを実施予定。要フォローアップ。",
+						CreatedAt:  now.Add(-7 * 24 * time.Hour),
+						Author:     "三浦 (CS)",
+						AuthorRole: "カスタマーサクセス",
+						Tone:       "info",
+						Visibility: "internal",
+						Tags:       []string{"VIP", "ツアー"},
+					},
+					{
+						ID:         "note_color_profile",
+						Title:      "特色インクの指定あり",
+						Body:       "DIC F57を固定使用。色ブレがあった場合は即時連絡のこと。サンプル保管済み。",
+						CreatedAt:  now.Add(-30 * 24 * time.Hour),
+						Author:     "大森 (プリズム工場)",
+						AuthorRole: "工場マネージャー",
+						Tone:       "warning",
+						Visibility: "internal",
+						Tags:       []string{"製造メモ"},
+					},
+				},
+				Activity: []ActivityItem{
+					{
+						ID:          "act_support_ticket",
+						Timestamp:   now.Add(-72 * time.Hour),
+						Actor:       "CS高木",
+						ActorRole:   "サポート",
+						Title:       "名刺の再印刷を完了",
+						Description: "特急料金にて 200 部再印刷。FedExで発送済み。",
+						Tone:        "success",
+						Icon:        "📬",
+					},
+					{
+						ID:          "act_order_create",
+						Timestamp:   now.Add(-6 * 24 * time.Hour),
+						Actor:       "花子 佐藤",
+						ActorRole:   "顧客",
+						Title:       "オンライン注文 #HF-240512-1048",
+						Description: "店舗カード 5,000枚を発注。請求書払いを選択。",
+						Tone:        "info",
+						Icon:        "🧾",
+					},
+					{
+						ID:          "act_design_approval",
+						Timestamp:   now.Add(-15 * 24 * time.Hour),
+						Actor:       "デザイン審査",
+						ActorRole:   "オペレーション",
+						Title:       "特色検版を承認",
+						Description: "特色インク DIC F57 の試刷り承認済み。",
+						Tone:        "success",
+						Icon:        "✅",
+					},
+				},
+				InfoRail: InfoRail{
+					RiskLevel:       c.RiskLevel,
+					RiskTone:        "low",
+					RiskDescription: "支払い遅延なし。年間LTV100万円超えのパートナー顧客。",
+					Segments:        []string{"VIP", "共同開発パートナー"},
+					Flags:           append([]Flag(nil), c.Flags...),
+					Escalations: []RailItem{
+						{
+							ID:          "esc_feb_issue",
+							Label:       "2月: 色ブレクレーム",
+							Description: "再印刷対応で解決。原因: 特色インクの撹拌不足。",
+							Tone:        "warning",
+							Timestamp:   now.AddDate(0, -3, -12),
+						},
+					},
+					FraudChecks: []RailItem{
+						{
+							ID:          "fraud_kb",
+							Label:       "KYC 済み (法人登録)",
+							Description: "登記簿謄本確認済み 2024/01/10",
+							Tone:        "success",
+							Timestamp:   now.AddDate(0, -4, 0),
+						},
+					},
+					IdentityDocs: []RailItem{
+						{
+							ID:          "doc_vendor_contract",
+							Label:       "業務委託契約書",
+							Description: "2023/12/01 締結 - 次回更新 2024/12/01",
+							Tone:        "info",
+						},
+					},
+					Contacts: []RailItem{
+						{
+							ID:          "contact_cs",
+							Label:       "CS担当: 三浦",
+							Description: "Slack #vip-customers で連絡済み。",
+							Tone:        "info",
+							LinkLabel:   "Slackで開く",
+							LinkURL:     "https://slack.com/app_redirect?channel=vip-customers",
+						},
+					},
+				},
+				LastUpdated: now,
+			}
+		case "cus_1002":
+			details[c.ID] = Detail{
+				Profile: Profile{
+					ID:                 c.ID,
+					DisplayName:        c.DisplayName,
+					Email:              c.Email,
+					Phone:              "06-2222-3333",
+					AvatarURL:          c.AvatarURL,
+					Company:            c.Company,
+					Location:           c.Location,
+					Tier:               c.Tier,
+					Status:             c.Status,
+					TotalOrders:        c.TotalOrders,
+					LifetimeValueMinor: c.LifetimeValueMinor,
+					Currency:           c.Currency,
+					LastOrderAt:        c.LastOrderAt,
+					LastOrderNumber:    c.LastOrderNumber,
+					LastOrderID:        c.LastOrderID,
+					JoinedAt:           c.JoinedAt,
+					RiskLevel:          c.RiskLevel,
+					Flags:              append([]Flag(nil), c.Flags...),
+					Tags:               append([]string(nil), c.Tags...),
+					QuickActions: []QuickAction{
+						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
+						{Label: "営業へ共有", Href: "https://slack.com/app_redirect?channel=upsell", Variant: "ghost", Icon: "📈"},
+					},
+				},
+				Metrics: []Metric{
+					{Key: "orders", Label: "累計注文", Value: "12件", SubLabel: "今月 1件", Tone: "info", Trend: Trend{Label: "+5% vs LY", Tone: "success", Icon: "⬆"}},
+					{Key: "ltv", Label: "累計売上", Value: "¥420,000", SubLabel: "平均 ¥35,000", Tone: "info", Trend: Trend{Label: "+3% QoQ", Tone: "success", Icon: "⬆"}},
+					{Key: "returns", Label: "返品率", Value: "3.4%", SubLabel: "過去12ヶ月 1件", Tone: "warning", Trend: Trend{Label: "+1pt", Tone: "warning", Icon: "⚠"}},
+					{Key: "tickets", Label: "サポート対応", Value: "2件", SubLabel: "未解決 0件", Tone: "success", Trend: Trend{Label: "今月 0件", Tone: "success", Icon: "✅"}},
+				},
+				RecentOrders: []OrderSummary{
+					{
+						ID:                "ord_0998",
+						Number:            "HF-240428-0998",
+						PlacedAt:          now.Add(-6 * 24 * time.Hour),
+						Status:            "配送中",
+						StatusTone:        "info",
+						FulfillmentStatus: "大阪DCより出荷済み",
+						FulfillmentTone:   "info",
+						PaymentStatus:     "支払い待ち (期日 5/20)",
+						PaymentTone:       "warning",
+						TotalMinor:        320000,
+						Currency:          "JPY",
+						ItemSummary:       "木製什器セット 20台",
+						DeliveryTarget:    "5月21日 納期",
+						LastUpdated:       now.Add(-12 * time.Hour),
+					},
+					{
+						ID:                "ord_0931",
+						Number:            "HF-240312-0931",
+						PlacedAt:          now.Add(-60 * 24 * time.Hour),
+						Status:            "完了",
+						StatusTone:        "success",
+						FulfillmentStatus: "納品済み",
+						FulfillmentTone:   "success",
+						PaymentStatus:     "支払い済み",
+						PaymentTone:       "success",
+						TotalMinor:        68000,
+						Currency:          "JPY",
+						ItemSummary:       "販促カード 1,000枚",
+						DeliveryTarget:    "3月25日 納品済み",
+						LastUpdated:       now.Add(-58 * 24 * time.Hour),
+					},
+				},
+				Addresses: []Address{
+					{
+						ID:         "addr_takumi_shop",
+						Label:      "工房",
+						Name:       "高橋 健",
+						Company:    c.Company,
+						Phone:      "06-2222-3333",
+						Lines:      []string{"大阪府堺市北区木町 2-5-1"},
+						City:       "堺市",
+						Prefecture: "大阪府",
+						PostalCode: "591-8002",
+						Country:    "日本",
+						Type:       "shipping",
+						Primary:    true,
+						UpdatedAt:  now.Add(-120 * 24 * time.Hour),
+					},
+				},
+				PaymentMethods: []PaymentMethod{
+					{
+						ID:         "pm_card_mc",
+						Type:       "card",
+						Brand:      "Mastercard",
+						Last4:      "7788",
+						ExpMonth:   11,
+						ExpYear:    now.AddDate(2, 0, 0).Year(),
+						HolderName: "TAKUMI CRAFT WORKS",
+						Status:     "有効",
+						StatusTone: "success",
+						Primary:    true,
+						AddedAt:    now.AddDate(-1, 0, 0),
+					},
+				},
+				SupportNotes: []SupportNote{
+					{
+						ID:         "note_upsell",
+						Title:      "大型什器案件の見積もり進行",
+						Body:       "6月の展示会向け。月末までに初回提案を送付予定。",
+						CreatedAt:  now.Add(-10 * 24 * time.Hour),
+						Author:     "森下 (営業)",
+						AuthorRole: "アカウントエグゼクティブ",
+						Tone:       "info",
+						Visibility: "internal",
+						Tags:       []string{"アップセル"},
+					},
+				},
+				Activity: []ActivityItem{
+					{
+						ID:          "act_invoice_reminder",
+						Timestamp:   now.Add(-2 * 24 * time.Hour),
+						Actor:       "請求チーム",
+						ActorRole:   "バックオフィス",
+						Title:       "請求書送付",
+						Description: "注文 #HF-240428-0998 の請求書 (支払い期限 5/20) を送付。",
+						Tone:        "info",
+						Icon:        "📨",
+					},
+				},
+				InfoRail: InfoRail{
+					RiskLevel:       c.RiskLevel,
+					RiskTone:        "warning",
+					RiskDescription: "支払い遅延はないが大型案件で与信要確認。",
+					Segments:        []string{"B2B", "アップセル候補"},
+					Flags:           append([]Flag(nil), c.Flags...),
+					FraudChecks: []RailItem{
+						{
+							ID:          "fraud_basic",
+							Label:       "KYC 済み (代表者免許証)",
+							Description: "2023/11/01 実施",
+							Tone:        "success",
+						},
+					},
+				},
+				LastUpdated: now,
+			}
+		default:
+			details[c.ID] = detailFromCustomer(c, now)
+		}
+	}
+	return details
+}
+
+func detailFromCustomer(c Customer, now time.Time) Detail {
+	profile := Profile{
+		ID:                 c.ID,
+		DisplayName:        c.DisplayName,
+		Email:              c.Email,
+		Phone:              "",
+		AvatarURL:          c.AvatarURL,
+		Company:            c.Company,
+		Location:           c.Location,
+		Tier:               c.Tier,
+		Status:             c.Status,
+		TotalOrders:        c.TotalOrders,
+		LifetimeValueMinor: c.LifetimeValueMinor,
+		Currency:           c.Currency,
+		LastOrderAt:        c.LastOrderAt,
+		LastOrderNumber:    c.LastOrderNumber,
+		LastOrderID:        c.LastOrderID,
+		JoinedAt:           c.JoinedAt,
+		RiskLevel:          c.RiskLevel,
+		Flags:              append([]Flag(nil), c.Flags...),
+		Tags:               append([]string(nil), c.Tags...),
+		QuickActions: []QuickAction{
+			{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
+		},
+	}
+
+	defaultCurrency := c.Currency
+	if defaultCurrency == "" {
+		defaultCurrency = "JPY"
+	}
+
+	metrics := []Metric{
+		{Key: "orders", Label: "累計注文", Value: fmt.Sprintf("%d件", c.TotalOrders), SubLabel: "", Tone: "info"},
+		{Key: "ltv", Label: "累計売上", Value: formatCurrency(c.LifetimeValueMinor, defaultCurrency), SubLabel: "", Tone: "info"},
+	}
+
+	addresses := []Address{
+		{
+			ID:         c.ID + "_primary_address",
+			Label:      "登録住所",
+			Name:       c.DisplayName,
+			Company:    c.Company,
+			Phone:      "",
+			Lines:      []string{strings.TrimSpace(c.Location)},
+			City:       "",
+			Prefecture: "",
+			PostalCode: "",
+			Country:    "日本",
+			Type:       "shipping",
+			Primary:    true,
+			UpdatedAt:  now.Add(-48 * time.Hour),
+		},
+	}
+
+	return Detail{
+		Profile:        profile,
+		Metrics:        metrics,
+		RecentOrders:   nil,
+		Addresses:      addresses,
+		PaymentMethods: nil,
+		SupportNotes:   nil,
+		Activity:       nil,
+		InfoRail: InfoRail{
+			RiskLevel:       c.RiskLevel,
+			RiskTone:        riskToneValue(c.RiskLevel),
+			RiskDescription: "詳細情報は登録されていません。",
+			Flags:           append([]Flag(nil), c.Flags...),
+		},
+		LastUpdated: now,
+	}
+}
+
+func formatCurrency(amount int64, currency string) string {
+	code := strings.ToUpper(strings.TrimSpace(currency))
+	if code == "" {
+		code = "JPY"
+	}
+	symbol := code + " "
+	switch code {
+	case "JPY":
+		symbol = "¥"
+	case "USD":
+		symbol = "$"
+	case "EUR":
+		symbol = "€"
+	}
+
+	sign := ""
+	if amount < 0 {
+		sign = "-"
+		amount = -amount
+	}
+
+	major := amount / 100
+	minor := amount % 100
+
+	return fmt.Sprintf("%s%s%d.%02d", sign, symbol, major, minor)
+}
+
+func riskToneValue(level string) string {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "high":
+		return "danger"
+	case "medium":
+		return "warning"
+	case "low":
+		return "success"
+	default:
+		return "muted"
+	}
+}
+
+// Detail implements Service.
+func (s *StaticService) Detail(_ context.Context, _ string, customerID string) (Detail, error) {
+	if s.Customers == nil {
+		s.Customers = []Customer{}
+	}
+	if s.Details == nil {
+		s.Details = buildStaticDetails(s.Customers, time.Now())
+	}
+	if detail, ok := s.Details[customerID]; ok {
+		return detail, nil
+	}
+	for _, c := range s.Customers {
+		if c.ID == customerID {
+			detail := detailFromCustomer(c, time.Now())
+			s.Details[customerID] = detail
+			return detail, nil
+		}
+	}
+	return Detail{}, ErrCustomerNotFound
 }
 
 // List implements Service.
