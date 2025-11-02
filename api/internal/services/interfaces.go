@@ -288,6 +288,7 @@ type UserService interface {
 	GetByUID(ctx context.Context, userID string) (UserProfile, error)
 	UpdateProfile(ctx context.Context, cmd UpdateProfileCommand) (UserProfile, error)
 	MaskProfile(ctx context.Context, cmd MaskProfileCommand) (UserProfile, error)
+	DeactivateAndMask(ctx context.Context, cmd DeactivateAndMaskCommand) (UserProfile, error)
 	SetUserActive(ctx context.Context, cmd SetUserActiveCommand) (UserProfile, error)
 	ListAddresses(ctx context.Context, userID string) ([]Address, error)
 	UpsertAddress(ctx context.Context, cmd UpsertAddressCommand) (Address, error)
@@ -325,6 +326,24 @@ type UserAdminDetail struct {
 	EmailVerified bool
 	AuthDisabled  bool
 	TokensValidAt *time.Time
+}
+
+// UserLifecycleNotifier dispatches user lifecycle events to downstream systems.
+type UserLifecycleNotifier interface {
+	NotifyUserDeactivated(ctx context.Context, notification UserDeactivatedNotification) error
+}
+
+// UserDeactivatedNotification captures context needed by integrations to process deactivation requests.
+type UserDeactivatedNotification struct {
+	UserID        string
+	ActorID       string
+	Reason        string
+	OccurredAt    time.Time
+	OriginalEmail string
+	OriginalPhone string
+	OriginalName  string
+	MaskedEmail   string
+	MaskedName    string
 }
 
 // NameMappingService orchestrates transliteration requests and caching logic for kanji candidate mappings.
@@ -860,6 +879,12 @@ type MaskProfileCommand struct {
 	ActorID  string
 	Reason   string
 	Occurred time.Time
+}
+
+type DeactivateAndMaskCommand struct {
+	UserID  string
+	ActorID string
+	Reason  string
 }
 
 type SetUserActiveCommand struct {

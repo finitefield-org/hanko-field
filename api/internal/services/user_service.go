@@ -58,6 +58,7 @@ var (
 	addressPhonePattern               = regexp.MustCompile(`^[0-9+()\-\s]{6,20}$`)
 	addressCountryPattern             = regexp.MustCompile(`^[A-Za-z]{2}$`)
 	addressPostalPattern              = regexp.MustCompile(`^[0-9A-Za-z\-\s]{3,16}$`)
+	auditActionProfileDeactivateMask  = "user.profile.deactivate_mask"
 	auditActionProfileUpdate          = "user.profile.update"
 	auditActionProfileMask            = "user.profile.mask"
 	auditActionProfileActivate        = "user.profile.activate"
@@ -121,6 +122,11 @@ var shareableDesignStatuses = map[string]struct{}{
 	"locked":  {},
 }
 
+type firebaseUserClient interface {
+	auth.UserGetter
+	DisableUser(ctx context.Context, uid string) error
+}
+
 // UserServiceDeps bundles the dependencies required to construct a user service instance.
 type UserServiceDeps struct {
 	Users           repositories.UserRepository
@@ -131,7 +137,8 @@ type UserServiceDeps struct {
 	Favorites       repositories.FavoriteRepository
 	Designs         DesignFinder
 	Audit           AuditLogService
-	Firebase        auth.UserGetter
+	Firebase        firebaseUserClient
+	Lifecycle       UserLifecycleNotifier
 	Clock           func() time.Time
 }
 
@@ -144,7 +151,8 @@ type userService struct {
 	favorites       repositories.FavoriteRepository
 	designs         DesignFinder
 	audit           AuditLogService
-	firebase        auth.UserGetter
+	firebase        firebaseUserClient
+	lifecycle       UserLifecycleNotifier
 	clock           func() time.Time
 }
 
@@ -172,6 +180,7 @@ func NewUserService(deps UserServiceDeps) (UserService, error) {
 		designs:         deps.Designs,
 		audit:           deps.Audit,
 		firebase:        deps.Firebase,
+		lifecycle:       deps.Lifecycle,
 		clock: func() time.Time {
 			return clock().UTC()
 		},
@@ -268,6 +277,105 @@ func (s *userService) MaskProfile(ctx context.Context, cmd MaskProfileCommand) (
 
 	if err := s.appendAudit(ctx, auditActionProfileMask, cmd.ActorID, saved.ID, changes); err != nil {
 		return UserProfile{}, err
+	}
+
+	return saved, nil
+}
+
+func (s *userService) DeactivateAndMask(ctx context.Context, cmd DeactivateAndMaskCommand) (UserProfile, error) {
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return UserProfile{}, errUserIDRequired
+	}
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return UserProfile{}, errActorIDRequired
+	}
+
+	profile, err := s.getProfile(ctx, userID, true)
+	if err != nil {
+		return UserProfile{}, err
+	}
+
+	now := s.clock()
+	desired, changed := projectMaskedProfile(profile, now)
+	desired.LastSyncTime = profile.LastSyncTime
+
+	saved := profile
+	if changed {
+		saved, err = s.users.UpdateProfile(ctx, desired)
+		if err != nil {
+			return UserProfile{}, mapConflictError(err)
+		}
+	}
+
+	detached, err := s.detachAllPaymentMethods(ctx, userID)
+	if err != nil {
+		return UserProfile{}, err
+	}
+
+	if s.firebase == nil {
+		return UserProfile{}, errors.New("user: firebase user getter is required")
+	}
+	if err := s.firebase.DisableUser(ctx, userID); err != nil {
+		return UserProfile{}, err
+	}
+
+	notify := changed || len(detached) > 0
+	if notify {
+		changes := map[string]any{
+			"masked":     true,
+			"occurredAt": now.Format(time.RFC3339Nano),
+		}
+		if trimmed := strings.TrimSpace(cmd.Reason); trimmed != "" {
+			changes["reason"] = trimmed
+		}
+		if changed {
+			if profile.DisplayName != saved.DisplayName {
+				changes["displayName"] = diffValue(profile.DisplayName, saved.DisplayName)
+			}
+			if strings.TrimSpace(profile.Email) != strings.TrimSpace(saved.Email) {
+				changes["email"] = diffValue(strings.TrimSpace(profile.Email), strings.TrimSpace(saved.Email))
+			}
+			if strings.TrimSpace(profile.PhoneNumber) != strings.TrimSpace(saved.PhoneNumber) {
+				changes["phoneNumber"] = diffValue(strings.TrimSpace(profile.PhoneNumber), strings.TrimSpace(saved.PhoneNumber))
+			}
+			if profile.IsActive != saved.IsActive {
+				changes["isActive"] = diffValue(profile.IsActive, saved.IsActive)
+			}
+			if !slices.Equal(profile.Roles, saved.Roles) {
+				changes["roles"] = diffValue(cloneStringsSafe(profile.Roles), cloneStringsSafe(saved.Roles))
+			}
+			if !equalNotificationPrefs(profile.NotificationPrefs, saved.NotificationPrefs) {
+				changes["notificationPrefs"] = diffValue(cloneNotificationPrefs(profile.NotificationPrefs), cloneNotificationPrefs(saved.NotificationPrefs))
+			}
+			if !timePointersEqual(profile.PiiMaskedAt, saved.PiiMaskedAt) {
+				changes["piiMaskedAt"] = diffValue(timePointerValue(profile.PiiMaskedAt), timePointerValue(saved.PiiMaskedAt))
+			}
+		}
+		if len(detached) > 0 {
+			changes["detachedPaymentMethods"] = detached
+		}
+		if err := s.appendAudit(ctx, auditActionProfileDeactivateMask, actorID, saved.ID, changes); err != nil {
+			return UserProfile{}, err
+		}
+	}
+
+	if s.lifecycle != nil && notify {
+		notification := UserDeactivatedNotification{
+			UserID:        saved.ID,
+			ActorID:       actorID,
+			Reason:        strings.TrimSpace(cmd.Reason),
+			OccurredAt:    now,
+			OriginalEmail: strings.TrimSpace(profile.Email),
+			OriginalPhone: strings.TrimSpace(profile.PhoneNumber),
+			OriginalName:  strings.TrimSpace(profile.DisplayName),
+			MaskedEmail:   strings.TrimSpace(saved.Email),
+			MaskedName:    strings.TrimSpace(saved.DisplayName),
+		}
+		if err := s.lifecycle.NotifyUserDeactivated(ctx, notification); err != nil {
+			return UserProfile{}, err
+		}
 	}
 
 	return saved, nil
@@ -1144,6 +1252,118 @@ func diffValue(from, to any) map[string]any {
 		"from": from,
 		"to":   to,
 	}
+}
+
+func projectMaskedProfile(profile domain.UserProfile, now time.Time) (domain.UserProfile, bool) {
+	masked := profile
+	changed := false
+
+	if masked.DisplayName != "Masked User" {
+		masked.DisplayName = "Masked User"
+		changed = true
+	}
+
+	maskedEmail := fmt.Sprintf("masked+%s%s", profile.ID, emailMaskSuffix)
+	if strings.TrimSpace(masked.Email) != maskedEmail {
+		masked.Email = maskedEmail
+		changed = true
+	}
+
+	if strings.TrimSpace(masked.PhoneNumber) != "" {
+		masked.PhoneNumber = ""
+		changed = true
+	}
+	if strings.TrimSpace(masked.PhotoURL) != "" {
+		masked.PhotoURL = ""
+		changed = true
+	}
+	if masked.AvatarAssetID != nil {
+		masked.AvatarAssetID = nil
+		changed = true
+	}
+	if len(masked.NotificationPrefs) > 0 {
+		masked.NotificationPrefs = nil
+		changed = true
+	}
+	if strings.TrimSpace(masked.PreferredLanguage) != "" {
+		masked.PreferredLanguage = ""
+		changed = true
+	}
+	if strings.TrimSpace(masked.Locale) != "" {
+		masked.Locale = ""
+		changed = true
+	}
+	if len(masked.ProviderData) > 0 {
+		masked.ProviderData = nil
+		changed = true
+	}
+	if len(masked.Roles) > 0 {
+		masked.Roles = nil
+		changed = true
+	}
+	if masked.IsActive {
+		masked.IsActive = false
+		changed = true
+	}
+
+	if profile.PiiMaskedAt == nil {
+		maskedAt := now
+		masked.PiiMaskedAt = &maskedAt
+		changed = true
+	} else {
+		existing := profile.PiiMaskedAt.UTC()
+		masked.PiiMaskedAt = &existing
+	}
+
+	return masked, changed
+}
+
+func (s *userService) detachAllPaymentMethods(ctx context.Context, userID string) ([]string, error) {
+	if s.paymentMethods == nil {
+		return nil, nil
+	}
+	methods, err := s.paymentMethods.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(methods) == 0 {
+		return nil, nil
+	}
+	detached := make([]string, 0, len(methods))
+	for _, method := range methods {
+		if err := s.paymentMethods.Delete(ctx, userID, method.ID); err != nil {
+			if isNotFound(err) {
+				continue
+			}
+			return detached, err
+		}
+		detached = append(detached, strings.TrimSpace(method.ID))
+	}
+	return detached, nil
+}
+
+func cloneStringsSafe(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return slices.Clone(values)
+}
+
+func timePointersEqual(a, b *time.Time) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.UTC().Equal(b.UTC())
+}
+
+func timePointerValue(value *time.Time) any {
+	if value == nil {
+		return nil
+	}
+	return value.UTC().Format(time.RFC3339Nano)
 }
 
 func splitAuditChanges(changes map[string]any) (map[string]AuditLogDiff, []string, map[string]any) {

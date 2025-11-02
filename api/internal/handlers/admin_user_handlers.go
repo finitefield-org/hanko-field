@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -25,6 +28,7 @@ const (
 	adminUserRecentOrdersLimit     = 5
 	adminUserOrderPageSize         = 50
 	adminUserOrderMaxPages         = 4
+	maxAdminUserDeactivateBody     = 4 * 1024
 )
 
 // AdminUserHandlers exposes admin endpoints for user search and detail views.
@@ -57,6 +61,7 @@ func (h *AdminUserHandlers) Routes(r chi.Router) {
 	}
 	r.Get("/users", h.searchUsers)
 	r.Get("/users/{userID}", h.getUserDetail)
+	r.Post("/users/{userID}:deactivate-and-mask", h.deactivateAndMaskUser)
 }
 
 func (h *AdminUserHandlers) searchUsers(w http.ResponseWriter, r *http.Request) {
@@ -191,6 +196,75 @@ func (h *AdminUserHandlers) getUserDetail(w http.ResponseWriter, r *http.Request
 		"user_id": userID,
 		"flags":   detail.Flags,
 	})
+}
+
+func (h *AdminUserHandlers) deactivateAndMaskUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.users == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("user_service_unavailable", "user service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !identity.HasRole(auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("insufficient_role", "admin role required", http.StatusForbidden))
+		return
+	}
+
+	userID := strings.TrimSpace(chi.URLParam(r, "userID"))
+	if userID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "user id is required", http.StatusBadRequest))
+		return
+	}
+
+	var payload adminUserDeactivateRequest
+	if r.Body != nil {
+		defer r.Body.Close()
+		raw, err := io.ReadAll(io.LimitReader(r.Body, maxAdminUserDeactivateBody+1))
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "failed to read request body", http.StatusBadRequest))
+			return
+		}
+		if len(raw) > maxAdminUserDeactivateBody {
+			httpx.WriteError(ctx, w, httpx.NewError("request_too_large", "request body too large", http.StatusRequestEntityTooLarge))
+			return
+		}
+		raw = bytes.TrimSpace(raw)
+		if len(raw) > 0 {
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON body", http.StatusBadRequest))
+				return
+			}
+		}
+	}
+
+	reason := strings.TrimSpace(payload.Reason)
+	profile, err := h.users.DeactivateAndMask(ctx, services.DeactivateAndMaskCommand{
+		UserID:  userID,
+		ActorID: strings.TrimSpace(identity.UID),
+		Reason:  reason,
+	})
+	if err != nil {
+		writeAdminUserError(ctx, w, err)
+		return
+	}
+
+	response := adminUserDeactivateResponse{
+		Profile: buildAdminUserProfile(profile, true),
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+
+	metadata := map[string]any{
+		"user_id": userID,
+	}
+	if reason != "" {
+		metadata["reason"] = reason
+	}
+	h.recordUserAudit(ctx, identity, "admin.user.deactivate_mask", fmt.Sprintf("/users/%s:deactivate-and-mask", userID), metadata)
 }
 
 func (h *AdminUserHandlers) buildOrdersSummary(ctx context.Context, userID string) (adminUserOrdersSummary, error) {
@@ -463,6 +537,14 @@ type adminUserDetailResponse struct {
 	AuthDisabled  bool                   `json:"auth_disabled"`
 	Orders        adminUserOrdersSummary `json:"orders"`
 	Providers     []adminUserProvider    `json:"providers,omitempty"`
+}
+
+type adminUserDeactivateRequest struct {
+	Reason string `json:"reason"`
+}
+
+type adminUserDeactivateResponse struct {
+	Profile adminUserProfile `json:"profile"`
 }
 
 type adminUserProfile struct {

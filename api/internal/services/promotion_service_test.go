@@ -814,6 +814,10 @@ func (s *stubUserService) MaskProfile(context.Context, MaskProfileCommand) (User
 	return UserProfile{}, nil
 }
 
+func (s *stubUserService) DeactivateAndMask(context.Context, DeactivateAndMaskCommand) (UserProfile, error) {
+	return UserProfile{}, nil
+}
+
 func (s *stubUserService) SetUserActive(context.Context, SetUserActiveCommand) (UserProfile, error) {
 	return UserProfile{}, nil
 }

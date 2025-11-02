@@ -123,7 +123,7 @@
 
 ### 6.5 Users / Reviews / Audit
 - [x] [088 Implement admin user search/list/detail endpoints with flexible query support.](./tasks/088-implement-admin-user-search-list-detail-endpoints-with-flexible-query-support.md)
-- [ ] [089 Implement deactivate-and-mask endpoint anonymizing user data and revoking access.](./tasks/089-implement-deactivate-and-mask-endpoint-anonymizing-user-data-and-revoking-access.md)
+- [x] [089 Implement deactivate-and-mask endpoint anonymizing user data and revoking access.](./tasks/089-implement-deactivate-and-mask-endpoint-anonymizing-user-data-and-revoking-access.md)
 - [ ] [090 Implement review moderation endpoints (list pending, approve/reject, store reply) updating moderation status.](./tasks/090-implement-review-moderation-endpoints-list-pending-approve-reject-store-reply-up.md)
 - [ ] [091 Implement audit log retrieval endpoint with filtering by target reference.](./tasks/091-implement-audit-log-retrieval-endpoint-with-filtering-by-target-reference.md)
 

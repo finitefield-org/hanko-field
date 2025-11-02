@@ -252,9 +252,113 @@ func TestAdminUserHandlers_GetUserDetail_NotFound(t *testing.T) {
 	}
 }
 
+func TestAdminUserHandlers_DeactivateAndMask_Success(t *testing.T) {
+	var captured services.DeactivateAndMaskCommand
+	service := &stubAdminUserService{
+		deactivateFn: func(ctx context.Context, cmd services.DeactivateAndMaskCommand) (services.UserProfile, error) {
+			captured = cmd
+			return services.UserProfile{
+				ID:          "user-5",
+				DisplayName: "Masked User",
+				Email:       "masked+user-5@hanko-field.invalid",
+				IsActive:    false,
+			}, nil
+		},
+	}
+	handler := NewAdminUserHandlers(nil, service, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/users/user-5:deactivate-and-mask", strings.NewReader(`{"reason":"gdpr"}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{
+		UID:   "admin-1",
+		Roles: []string{auth.RoleAdmin},
+	}))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("userID", "user-5")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	rec := httptest.NewRecorder()
+
+	handler.deactivateAndMaskUser(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	if captured.UserID != "user-5" || captured.ActorID != "admin-1" || captured.Reason != "gdpr" {
+		t.Fatalf("unexpected command capture %+v", captured)
+	}
+
+	var payload adminUserDeactivateResponse
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Profile.ID != "user-5" {
+		t.Fatalf("unexpected profile id %s", payload.Profile.ID)
+	}
+	if payload.Profile.Email != "masked+user-5@hanko-field.invalid" {
+		t.Fatalf("expected masked email to be returned, got %s", payload.Profile.Email)
+	}
+}
+
+func TestAdminUserHandlers_DeactivateAndMask_StaffForbidden(t *testing.T) {
+	called := false
+	service := &stubAdminUserService{
+		deactivateFn: func(ctx context.Context, cmd services.DeactivateAndMaskCommand) (services.UserProfile, error) {
+			called = true
+			return services.UserProfile{}, nil
+		},
+	}
+	handler := NewAdminUserHandlers(nil, service, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/users/user-6:deactivate-and-mask", strings.NewReader(`{"reason":"gdpr"}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{
+		UID:   "staff-1",
+		Roles: []string{auth.RoleStaff},
+	}))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("userID", "user-6")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	rec := httptest.NewRecorder()
+
+	handler.deactivateAndMaskUser(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403, got %d", rec.Code)
+	}
+	if called {
+		t.Fatalf("expected service not to be called for staff identity")
+	}
+}
+
+func TestAdminUserHandlers_DeactivateAndMask_InvalidJSON(t *testing.T) {
+	service := &stubAdminUserService{
+		deactivateFn: func(ctx context.Context, cmd services.DeactivateAndMaskCommand) (services.UserProfile, error) {
+			t.Fatalf("service should not be invoked on invalid payload")
+			return services.UserProfile{}, nil
+		},
+	}
+	handler := NewAdminUserHandlers(nil, service, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/users/user-7:deactivate-and-mask", strings.NewReader(`{"reason":123}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{
+		UID:   "admin-1",
+		Roles: []string{auth.RoleAdmin},
+	}))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("userID", "user-7")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	rec := httptest.NewRecorder()
+
+	handler.deactivateAndMaskUser(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for invalid payload, got %d", rec.Code)
+	}
+}
+
 type stubAdminUserService struct {
-	searchFn func(context.Context, services.UserSearchFilter) (domain.CursorPage[services.UserAdminSummary], error)
-	detailFn func(context.Context, string) (services.UserAdminDetail, error)
+	searchFn     func(context.Context, services.UserSearchFilter) (domain.CursorPage[services.UserAdminSummary], error)
+	detailFn     func(context.Context, string) (services.UserAdminDetail, error)
+	deactivateFn func(context.Context, services.DeactivateAndMaskCommand) (services.UserProfile, error)
 }
 
 func (s *stubAdminUserService) SearchProfiles(ctx context.Context, filter services.UserSearchFilter) (domain.CursorPage[services.UserAdminSummary], error) {
@@ -269,6 +373,13 @@ func (s *stubAdminUserService) GetAdminDetail(ctx context.Context, userID string
 		return s.detailFn(ctx, userID)
 	}
 	return services.UserAdminDetail{}, nil
+}
+
+func (s *stubAdminUserService) DeactivateAndMask(ctx context.Context, cmd services.DeactivateAndMaskCommand) (services.UserProfile, error) {
+	if s != nil && s.deactivateFn != nil {
+		return s.deactivateFn(ctx, cmd)
+	}
+	return services.UserProfile{}, nil
 }
 
 // Remaining UserService interface methods are unused in these tests.

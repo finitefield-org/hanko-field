@@ -629,6 +629,10 @@ func (s *stubUserService) MaskProfile(ctx context.Context, cmd services.MaskProf
 	return services.UserProfile{}, errors.New("not implemented")
 }
 
+func (s *stubUserService) DeactivateAndMask(ctx context.Context, cmd services.DeactivateAndMaskCommand) (services.UserProfile, error) {
+	return services.UserProfile{}, errors.New("not implemented")
+}
+
 func (s *stubUserService) SetUserActive(ctx context.Context, cmd services.SetUserActiveCommand) (services.UserProfile, error) {
 	return services.UserProfile{}, errors.New("not implemented")
 }

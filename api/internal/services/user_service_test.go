@@ -594,7 +594,9 @@ func (c *captureAuditService) List(_ context.Context, _ AuditLogFilter) (domain.
 }
 
 type stubFirebase struct {
-	records map[string]*firebaseauth.UserRecord
+	records   map[string]*firebaseauth.UserRecord
+	disableFn func(ctx context.Context, uid string) error
+	disabled  []string
 }
 
 func (s *stubFirebase) GetUser(_ context.Context, uid string) (*firebaseauth.UserRecord, error) {
@@ -603,6 +605,17 @@ func (s *stubFirebase) GetUser(_ context.Context, uid string) (*firebaseauth.Use
 		return nil, fmt.Errorf("firebase user %s not found", uid)
 	}
 	return record, nil
+}
+
+func (s *stubFirebase) DisableUser(ctx context.Context, uid string) error {
+	if s == nil {
+		return nil
+	}
+	if s.disableFn != nil {
+		return s.disableFn(ctx, uid)
+	}
+	s.disabled = append(s.disabled, uid)
+	return nil
 }
 
 type stubPaymentVerifier struct {
@@ -625,6 +638,22 @@ func (s *stubInvoiceChecker) HasOutstandingInvoices(ctx context.Context, userID 
 		return s.checkFunc(ctx, userID)
 	}
 	return false, nil
+}
+
+type stubUserLifecycleNotifier struct {
+	notifications []UserDeactivatedNotification
+	err           error
+}
+
+func (s *stubUserLifecycleNotifier) NotifyUserDeactivated(_ context.Context, notification UserDeactivatedNotification) error {
+	if s == nil {
+		return nil
+	}
+	if s.err != nil {
+		return s.err
+	}
+	s.notifications = append(s.notifications, notification)
+	return nil
 }
 
 func TestUserServiceGetProfileSeedsFromFirebase(t *testing.T) {
@@ -1032,6 +1061,161 @@ func TestUserServiceMaskProfile(t *testing.T) {
 	}
 }
 
+func TestUserServiceDeactivateAndMask(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 10, 1, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	repo := newMemoryUserRepo(clock)
+	payments := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	audits := &captureAuditService{}
+	notifier := &stubUserLifecycleNotifier{}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:          repo,
+		PaymentMethods: payments,
+		Audit:          audits,
+		Firebase:       firebase,
+		Lifecycle:      notifier,
+		Clock:          clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	originalProfile := domain.UserProfile{
+		ID:                "user-mask",
+		DisplayName:       "Original User",
+		Email:             "original@example.com",
+		PhoneNumber:       "+819012345678",
+		Roles:             []string{"user", "vip"},
+		NotificationPrefs: domain.NotificationPreferences{"email": true, "sms": true},
+		PreferredLanguage: "ja",
+		Locale:            "ja-JP",
+		ProviderData: []domain.AuthProvider{
+			{ProviderID: "google.com", UID: "google-uid", Email: "original@example.com"},
+		},
+		IsActive: true,
+	}
+	if _, err := repo.UpdateProfile(ctx, originalProfile); err != nil {
+		t.Fatalf("seed profile: %v", err)
+	}
+
+	method, err := payments.Insert(ctx, "user-mask", domain.PaymentMethod{
+		ID:        "pm-existing",
+		Provider:  "stripe",
+		Token:     "tok_test_1234",
+		Brand:     "visa",
+		Last4:     "1234",
+		ExpMonth:  12,
+		ExpYear:   2030,
+		IsDefault: true,
+	})
+	if err != nil {
+		t.Fatalf("seed payment method: %v", err)
+	}
+
+	result, err := svc.DeactivateAndMask(ctx, DeactivateAndMaskCommand{
+		UserID:  "user-mask",
+		ActorID: "admin-user",
+		Reason:  "right to be forgotten",
+	})
+	if err != nil {
+		t.Fatalf("deactivate and mask: %v", err)
+	}
+
+	if result.IsActive {
+		t.Fatalf("expected user to be inactive")
+	}
+	if result.PiiMaskedAt == nil {
+		t.Fatalf("expected piiMaskedAt to be set")
+	}
+	if !strings.HasPrefix(result.Email, "masked+user-mask") {
+		t.Fatalf("expected masked email, got %s", result.Email)
+	}
+	if result.PhoneNumber != "" {
+		t.Fatalf("expected phone cleared, got %s", result.PhoneNumber)
+	}
+	if len(result.Roles) != 0 {
+		t.Fatalf("expected roles cleared, got %v", result.Roles)
+	}
+	if len(result.NotificationPrefs) != 0 {
+		t.Fatalf("expected notification prefs cleared")
+	}
+
+	remaining, err := payments.List(ctx, "user-mask")
+	if err != nil {
+		t.Fatalf("list payment methods: %v", err)
+	}
+	if len(remaining) != 0 {
+		t.Fatalf("expected payment methods detached, got %d", len(remaining))
+	}
+
+	if len(firebase.disabled) != 1 || firebase.disabled[0] != "user-mask" {
+		t.Fatalf("expected firebase disable call for user-mask, got %v", firebase.disabled)
+	}
+
+	if len(audits.records) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(audits.records))
+	}
+	record := audits.records[0]
+	if record.Action != auditActionProfileDeactivateMask {
+		t.Fatalf("unexpected audit action %s", record.Action)
+	}
+	if record.Metadata == nil {
+		t.Fatalf("expected metadata in audit record")
+	}
+	detached, ok := record.Metadata["detachedPaymentMethods"].([]string)
+	if !ok || len(detached) != 1 || detached[0] != strings.TrimSpace(method.ID) {
+		t.Fatalf("expected detached methods metadata, got %#v", record.Metadata["detachedPaymentMethods"])
+	}
+
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected single lifecycle notification, got %d", len(notifier.notifications))
+	}
+	notification := notifier.notifications[0]
+	if notification.UserID != "user-mask" {
+		t.Fatalf("unexpected notification user id %s", notification.UserID)
+	}
+	if notification.ActorID != "admin-user" {
+		t.Fatalf("unexpected actor id %s", notification.ActorID)
+	}
+	if notification.OriginalEmail != "original@example.com" {
+		t.Fatalf("unexpected original email %s", notification.OriginalEmail)
+	}
+	if notification.MaskedEmail != result.Email {
+		t.Fatalf("unexpected masked email %s", notification.MaskedEmail)
+	}
+	if notification.Reason != "right to be forgotten" {
+		t.Fatalf("unexpected reason %s", notification.Reason)
+	}
+
+	second, err := svc.DeactivateAndMask(ctx, DeactivateAndMaskCommand{
+		UserID:  "user-mask",
+		ActorID: "admin-user",
+		Reason:  "duplicate request",
+	})
+	if err != nil {
+		t.Fatalf("second deactivate call: %v", err)
+	}
+	if second.PiiMaskedAt == nil || !second.PiiMaskedAt.Equal(*result.PiiMaskedAt) {
+		t.Fatalf("expected piiMaskedAt unchanged, got %v vs %v", second.PiiMaskedAt, result.PiiMaskedAt)
+	}
+	if len(audits.records) != 1 {
+		t.Fatalf("expected no additional audit records on idempotent call, got %d", len(audits.records))
+	}
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected no additional notifications, got %d", len(notifier.notifications))
+	}
+	if len(firebase.disabled) != 2 {
+		t.Fatalf("expected firebase disable invoked twice for idempotency, got %v", firebase.disabled)
+	}
+}
 func TestUserServiceSetUserActiveConflict(t *testing.T) {
 	ctx := context.Background()
 	current := time.Date(2024, 8, 1, 12, 0, 0, 0, time.UTC)
