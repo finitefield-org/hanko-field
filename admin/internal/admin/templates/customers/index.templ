@@ -1,0 +1,219 @@
+package customers
+
+import (
+	"strconv"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-customers-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+					if data.LastUpdated != "" && data.LastUpdated != "-" {
+						<p class="text-xs text-slate-400">
+							最終更新: { data.LastUpdated }
+							if data.LastRelative != "" {
+								<span class="ml-2">({ data.LastRelative })</span>
+							}
+						</p>
+					}
+				</div>
+				if len(data.Metrics) > 0 {
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+						for _, metric := range data.Metrics {
+							<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+								<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+									if metric.Icon != "" {
+										<span aria-hidden="true">{ metric.Icon }</span>
+									}
+									{ metric.Label }
+								</div>
+								<div class="text-xl font-semibold text-slate-900">{ metric.Value }</div>
+								if metric.SubText != "" {
+									<div class="text-xs text-slate-500">{ metric.SubText }</div>
+								}
+							</div>
+						}
+					</div>
+				}
+			</div>
+
+			if len(data.Segments) > 0 {
+				<div class="mt-6 flex flex-wrap items-center gap-2">
+					<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">セグメント</span>
+					for _, chip := range data.Segments {
+						<button
+							type="submit"
+							name="tier"
+							value={ chip.Key }
+							form="customers-filter"
+							class={ segmentChipClass(chip.Active) }
+							title={ chip.Tooltip }
+						>
+							{ chip.Label }
+							<span class="ml-1 text-xs text-slate-400">({ chip.Count })</span>
+						</button>
+					}
+					<button
+						type="submit"
+						name="tier"
+						value=""
+						form="customers-filter"
+						class={ segmentChipClass(data.Query.Tier == "") }
+						title="全セグメントを表示"
+					>
+						全て
+					</button>
+				</div>
+			}
+
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterForm(data)
+			</div>
+		</section>
+
+		<div
+			id="customers-table"
+			class="space-y-4"
+			hx-target="this"
+			hx-swap="outerHTML"
+			data-customers-table-root
+		>
+			@Table(data.Table)
+		</div>
+	</div>
+}
+
+templ filterForm(data PageData) {
+	<form
+		id="customers-filter"
+		class="space-y-4"
+		method="get"
+		hx-get={ data.TableEndpoint }
+		hx-target="#customers-table"
+		hx-push-url="true"
+		hx-indicator="#customers-loading"
+	>
+		<input type="hidden" name="page" value="1" />
+		<input type="hidden" name="sort" value={ data.Query.Sort } />
+		<input type="hidden" name="pageSize" value={ strconv.Itoa(data.Query.PageSize) } />
+
+		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label for="customers-search" class="text-xs font-semibold uppercase tracking-wide text-slate-500">検索</label>
+				<div class="relative">
+					<input
+						id="customers-search"
+						name="q"
+						type="search"
+						value={ data.Query.Search }
+						placeholder="名前・メール・会社名で検索"
+						class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</span>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="顧客ステータス">
+					for _, option := range data.Filters.Status {
+						<label class={ statusChipClass(option.Active, option.Tone) }>
+							<input
+								type="radio"
+								name="status"
+								value={ option.Value }
+								class="sr-only"
+								checked?={ option.Active }
+							/>
+							<span class="inline-flex items-center gap-1 text-sm">
+								{ option.Label }
+								if option.Count > 0 {
+									<span class="text-xs text-slate-400">({ option.Count })</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="customers-tier" class="text-xs font-semibold uppercase tracking-wide text-slate-500">ティア</label>
+				<select
+					id="customers-tier"
+					name="tier"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range data.Filters.Tiers {
+						<option value={ option.Value } selected?={ option.Selected }>
+							if option.Count > 0 {
+								{ option.Label } ({ option.Count })
+							} else {
+								{ option.Label }
+							}
+						</option>
+					}
+				</select>
+			</div>
+			<div class="flex items-end gap-3">
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+				<a
+					href={ data.ResetURL }
+					class={ helpers.ButtonClass("ghost", "sm", false, false) }
+					hx-get={ data.ResetURL }
+					hx-target="#customers-table"
+					hx-push-url="true"
+				>
+					リセット
+				</a>
+			</div>
+		</div>
+
+		<div
+			id="customers-loading"
+			class="htmx-indicator text-xs text-slate-400"
+		>
+			読み込み中…
+		</div>
+	</form>
+}
+
+func segmentChipClass(active bool) string {
+	base := []string{
+		"inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
+	}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-600")
+	} else {
+		base = append(base, "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900")
+	}
+	return helpers.ClassList(base...)
+}
+
+func statusChipClass(active bool, tone string) string {
+	base := []string{
+		"inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
+	}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-600")
+	} else {
+		switch tone {
+		case "success":
+			base = append(base, "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300")
+		case "warning":
+			base = append(base, "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300")
+		case "danger":
+			base = append(base, "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300")
+		default:
+			base = append(base, "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900")
+		}
+	}
+	return helpers.ClassList(base...)
+}

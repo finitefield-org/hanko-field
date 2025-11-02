@@ -13,6 +13,7 @@ import (
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
+	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
 	"finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
@@ -36,6 +37,7 @@ type Config struct {
 	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
 	ContentService       admincontent.Service
+	CustomersService     admincustomers.Service
 	DashboardService     dashboard.Service
 	ProfileService       profile.Service
 	SearchService        search.Service
@@ -108,6 +110,7 @@ func New(cfg Config) *http.Server {
 		AssetsService:        cfg.AssetsService,
 		CatalogService:       cfg.CatalogService,
 		ContentService:       cfg.ContentService,
+		CustomersService:     cfg.CustomersService,
 		DashboardService:     cfg.DashboardService,
 		ProfileService:       cfg.ProfileService,
 		SearchService:        cfg.SearchService,
@@ -217,6 +220,10 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				or.Get("/{orderID}/modal/invoice", uiHandlers.OrdersInvoiceModal)
 				or.Post("/{orderID}/shipments", uiHandlers.ShipmentsCreateOrderShipment)
 				or.Post("/{orderID}/production-events", uiHandlers.OrdersProductionEvent)
+			})
+			protected.Route("/customers", func(cr chi.Router) {
+				cr.Get("/", uiHandlers.CustomersPage)
+				RegisterFragment(cr, "/table", uiHandlers.CustomersTable)
 			})
 			protected.Route("/shipments", func(sr chi.Router) {
 				sr.Get("/tracking", uiHandlers.ShipmentsTrackingPage)
