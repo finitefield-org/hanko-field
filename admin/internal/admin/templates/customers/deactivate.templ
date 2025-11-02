@@ -70,6 +70,16 @@ templ deactivateModalBody(data DeactivateModalData) {
 			class="space-y-4"
 		>
 			<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
+			<input type="hidden" name="action_url" value={ data.ActionURL } />
+			<input type="hidden" name="expected_confirmation" value={ data.ConfirmationPhrase } />
+			<input type="hidden" name="customer_name" value={ data.CustomerName } />
+			<input type="hidden" name="customer_email" value={ data.Email } />
+			<input type="hidden" name="status_label" value={ data.StatusLabel } />
+			<input type="hidden" name="status_tone" value={ data.StatusTone } />
+			<input type="hidden" name="total_orders_label" value={ data.TotalOrdersLabel } />
+			<input type="hidden" name="lifetime_value_label" value={ data.LifetimeValueLabel } />
+			<input type="hidden" name="last_order_label" value={ data.LastOrderLabel } />
+			<input type="hidden" name="impacts_json" value={ data.ImpactsJSON } />
 			<div class="space-y-2">
 				<label for="deactivate-reason" class="text-xs font-semibold uppercase tracking-wide text-slate-500">理由</label>
 				<textarea

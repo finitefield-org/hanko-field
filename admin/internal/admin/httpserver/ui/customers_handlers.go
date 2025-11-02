@@ -189,22 +189,32 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	basePath := custommw.BasePathFromContext(ctx)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+
+	meta := customerstpl.DeactivateModalMeta{
+		CustomerID:         customerID,
+		CustomerName:       strings.TrimSpace(r.PostFormValue("customer_name")),
+		Email:              strings.TrimSpace(r.PostFormValue("customer_email")),
+		StatusLabel:        strings.TrimSpace(r.PostFormValue("status_label")),
+		StatusTone:         strings.TrimSpace(r.PostFormValue("status_tone")),
+		TotalOrdersLabel:   strings.TrimSpace(r.PostFormValue("total_orders_label")),
+		LifetimeValueLabel: strings.TrimSpace(r.PostFormValue("lifetime_value_label")),
+		LastOrderLabel:     strings.TrimSpace(r.PostFormValue("last_order_label")),
+		ConfirmationPhrase: strings.TrimSpace(r.PostFormValue("expected_confirmation")),
+		ActionURL:          strings.TrimSpace(r.PostFormValue("action_url")),
+	}
+
+	if strings.TrimSpace(meta.ActionURL) == "" {
+		base := strings.TrimRight(strings.TrimSpace(basePath), "/")
+		if base == "" {
+			base = "/admin"
+		}
+		meta.ActionURL = fmt.Sprintf("%s/customers/%s:deactivate-and-mask", base, customerID)
+	}
+
 	reason := strings.TrimSpace(r.PostFormValue("reason"))
 	confirmation := strings.TrimSpace(r.PostFormValue("confirmation"))
-
-	modal, err := h.customers.DeactivateModal(ctx, user.Token, customerID)
-	if err != nil {
-		switch {
-		case errors.Is(err, admincustomers.ErrCustomerNotFound):
-			http.NotFound(w, r)
-		case errors.Is(err, admincustomers.ErrNotConfigured):
-			http.Error(w, "顧客サービスが構成されていません。", http.StatusNotImplemented)
-		default:
-			log.Printf("customers: deactivate modal reload failed: %v", err)
-			http.Error(w, "退会モーダルの読み込みに失敗しました。時間を置いて再度お試しください。", http.StatusBadGateway)
-		}
-		return
-	}
 
 	form := customerstpl.DeactivateFormState{
 		Reason:       reason,
@@ -212,20 +222,49 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		FieldErrors:  make(map[string]string),
 	}
 
+	if rawImpacts := strings.TrimSpace(r.PostFormValue("impacts_json")); rawImpacts != "" {
+		var impacts []customerstpl.DeactivateImpactItem
+		if err := json.Unmarshal([]byte(rawImpacts), &impacts); err == nil && len(impacts) > 0 {
+			meta.Impacts = impacts
+		}
+	}
+
 	if reason == "" {
 		form.FieldErrors["reason"] = "理由を入力してください。"
 	}
 	if confirmation == "" {
 		form.FieldErrors["confirmation"] = "確認フレーズを入力してください。"
-	} else if confirmation != modal.ConfirmationPhrase {
+	} else if expected := strings.TrimSpace(meta.ConfirmationPhrase); expected != "" && confirmation != expected {
 		form.FieldErrors["confirmation"] = "確認フレーズが一致しません。"
 	}
 
-	basePath := custommw.BasePathFromContext(ctx)
-	csrf := custommw.CSRFTokenFromContext(ctx)
+	refreshMeta := func() (customerstpl.DeactivateModalMeta, error) {
+		modal, err := h.customers.DeactivateModal(ctx, user.Token, customerID)
+		if err != nil {
+			return customerstpl.DeactivateModalMeta{}, err
+		}
+		return customerstpl.DeactivateModalMetaFromModal(basePath, modal), nil
+	}
+
+	if meta.CustomerName == "" || meta.TotalOrdersLabel == "" || meta.LifetimeValueLabel == "" || meta.StatusLabel == "" || meta.ConfirmationPhrase == "" {
+		if refreshed, fetchErr := refreshMeta(); fetchErr == nil {
+			meta = refreshed
+		} else {
+			switch {
+			case errors.Is(fetchErr, admincustomers.ErrCustomerNotFound):
+				http.NotFound(w, r)
+			case errors.Is(fetchErr, admincustomers.ErrNotConfigured):
+				http.Error(w, "顧客サービスが構成されていません。", http.StatusNotImplemented)
+			default:
+				log.Printf("customers: deactivate modal metadata fetch failed: %v", fetchErr)
+				http.Error(w, "退会モーダルの読み込みに失敗しました。時間を置いて再度お試しください。", http.StatusBadGateway)
+			}
+			return
+		}
+	}
 
 	if len(form.FieldErrors) > 0 {
-		payload := customerstpl.DeactivateModalPayload(basePath, modal, csrf, form)
+		payload := meta.ToData(csrf, form)
 		templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
 		return
 	}
@@ -241,9 +280,15 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		switch {
 		case errors.Is(err, admincustomers.ErrInvalidConfirmation):
 			form.FieldErrors["confirmation"] = "確認フレーズが一致しません。"
+			if refreshed, refreshErr := refreshMeta(); refreshErr == nil {
+				meta = refreshed
+			}
 		case errors.Is(err, admincustomers.ErrAlreadyDeactivated):
 			form.Error = "すでに退会・マスク済みの顧客です。"
 			form.DisableSubmit = true
+			if refreshed, refreshErr := refreshMeta(); refreshErr == nil {
+				meta = refreshed
+			}
 		case errors.Is(err, admincustomers.ErrCustomerNotFound):
 			http.NotFound(w, r)
 			return
@@ -256,14 +301,14 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		payload := customerstpl.DeactivateModalPayload(basePath, modal, csrf, form)
+		payload := meta.ToData(csrf, form)
 		templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
 		return
 	}
 
-	displayName := strings.TrimSpace(modal.DisplayName)
+	displayName := strings.TrimSpace(meta.CustomerName)
 	if displayName == "" {
-		displayName = strings.TrimSpace(modal.CustomerID)
+		displayName = strings.TrimSpace(meta.CustomerID)
 	}
 
 	trigger := map[string]any{

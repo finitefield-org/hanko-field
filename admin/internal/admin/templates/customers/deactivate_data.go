@@ -1,6 +1,7 @@
 package customers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -23,6 +24,7 @@ type DeactivateModalData struct {
 	ActionURL          string
 	CSRFToken          string
 	Impacts            []DeactivateImpactItem
+	ImpactsJSON        string
 	Form               DeactivateFormState
 }
 
@@ -57,6 +59,27 @@ type DeactivateSuccessData struct {
 
 // DeactivateModalPayload normalises service data for the modal template.
 func DeactivateModalPayload(basePath string, modal admincustomers.DeactivateModal, csrfToken string, form DeactivateFormState) DeactivateModalData {
+	meta := DeactivateModalMetaFromModal(basePath, modal)
+	return meta.ToData(csrfToken, form)
+}
+
+// DeactivateModalMeta captures immutable modal fields passed between form submits.
+type DeactivateModalMeta struct {
+	CustomerID         string
+	CustomerName       string
+	Email              string
+	StatusLabel        string
+	StatusTone         string
+	TotalOrdersLabel   string
+	LifetimeValueLabel string
+	LastOrderLabel     string
+	ConfirmationPhrase string
+	ActionURL          string
+	Impacts            []DeactivateImpactItem
+}
+
+// DeactivateModalMetaFromModal builds persistent modal metadata from service output.
+func DeactivateModalMetaFromModal(basePath string, modal admincustomers.DeactivateModal) DeactivateModalMeta {
 	totalOrders := fmt.Sprintf("%d件", modal.TotalOrders)
 	lifetime := helpers.Currency(modal.LifetimeValueMinor, modal.Currency)
 	lastOrder := "-"
@@ -74,6 +97,8 @@ func DeactivateModalPayload(basePath string, modal admincustomers.DeactivateModa
 	statusLabel := statusLabel(modal.Status)
 	statusTone := statusTone(modal.Status)
 
+	actionURL := joinBase(basePath, fmt.Sprintf("/customers/%s:deactivate-and-mask", url.PathEscape(strings.TrimSpace(modal.CustomerID))))
+
 	impacts := make([]DeactivateImpactItem, 0, len(modal.Impacts))
 	for _, impact := range modal.Impacts {
 		impacts = append(impacts, DeactivateImpactItem{
@@ -84,13 +109,7 @@ func DeactivateModalPayload(basePath string, modal admincustomers.DeactivateModa
 		})
 	}
 
-	if form.FieldErrors == nil {
-		form.FieldErrors = make(map[string]string)
-	}
-
-	actionURL := joinBase(basePath, fmt.Sprintf("/customers/%s:deactivate-and-mask", url.PathEscape(strings.TrimSpace(modal.CustomerID))))
-
-	return DeactivateModalData{
+	return DeactivateModalMeta{
 		CustomerID:         modal.CustomerID,
 		CustomerName:       modal.DisplayName,
 		Email:              modal.Email,
@@ -101,9 +120,61 @@ func DeactivateModalPayload(basePath string, modal admincustomers.DeactivateModa
 		LastOrderLabel:     lastOrder,
 		ConfirmationPhrase: modal.ConfirmationPhrase,
 		ActionURL:          actionURL,
+		Impacts:            impacts,
+	}
+}
+
+// ToData converts modal metadata into template data with form state.
+func (m DeactivateModalMeta) ToData(csrfToken string, form DeactivateFormState) DeactivateModalData {
+	if form.FieldErrors == nil {
+		form.FieldErrors = make(map[string]string)
+	}
+	impacts := m.Impacts
+	if len(impacts) == 0 {
+		impacts = defaultDeactivateImpacts()
+	}
+	payload, err := json.Marshal(impacts)
+	if err != nil {
+		payload = nil
+	}
+	return DeactivateModalData{
+		CustomerID:         m.CustomerID,
+		CustomerName:       m.CustomerName,
+		Email:              m.Email,
+		StatusLabel:        m.StatusLabel,
+		StatusTone:         m.StatusTone,
+		TotalOrdersLabel:   m.TotalOrdersLabel,
+		LifetimeValueLabel: m.LifetimeValueLabel,
+		LastOrderLabel:     m.LastOrderLabel,
+		ConfirmationPhrase: m.ConfirmationPhrase,
+		ActionURL:          m.ActionURL,
 		CSRFToken:          csrfToken,
 		Impacts:            impacts,
+		ImpactsJSON:        string(payload),
 		Form:               form,
+	}
+}
+
+func defaultDeactivateImpacts() []DeactivateImpactItem {
+	return []DeactivateImpactItem{
+		{
+			Title:       "サインイン権限を即時停止",
+			Description: "顧客は以後、アプリやウェブからログインできなくなります。",
+			Icon:        "🚫",
+			Tone:        "danger",
+		},
+		{
+			Title:       "個人情報を匿名化",
+			Description: "氏名・メール・電話番号などのPIIをマスクし、通知も停止します。",
+			Icon:        "🛡️",
+			Tone:        "warning",
+		},
+		{
+			Title:       "注文・請求データは保持",
+			Description: "会計・レポート用途のため、注文履歴と請求記録は削除されません。",
+			Icon:        "📦",
+			Tone:        "info",
+		},
 	}
 }
 
