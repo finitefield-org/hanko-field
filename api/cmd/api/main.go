@@ -456,6 +456,7 @@ func main() {
 	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
 	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, nil)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, nil)
+	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, nil)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -465,6 +466,7 @@ func main() {
 		adminProductionQueueHandlers.Routes,
 		adminReviewHandlers.Routes,
 		adminUserHandlers.Routes,
+		adminAuditHandlers.Routes,
 	}
 	if orderService != nil {
 		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, shipmentService, nil, nil)
