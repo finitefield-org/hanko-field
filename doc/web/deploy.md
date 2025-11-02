@@ -1,6 +1,7 @@
 # Web Deployment (Cloud Run)
 
 This document outlines how to build and deploy the web service to Cloud Run using Docker and Cloud Build.
+For the GitHub Actions workflow that automates staging and production releases (including smoke tests and rollback metadata), see `doc/web/ci_cd.md`.
 
 ## Prerequisites
 - Google Cloud project with Artifact Registry and Cloud Run enabled
