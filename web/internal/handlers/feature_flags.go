@@ -243,7 +243,11 @@ func loadRemoteFeatureFlags(url string) (FeatureFlags, error) {
 }
 
 func loadFeatureFlagsFromFile(path string) (FeatureFlags, error) {
-	data, err := os.ReadFile(filepath.Clean(path))
+	resolvedPath, err := resolveFeatureFlagFile(path)
+	if err != nil {
+		return FeatureFlags{}, err
+	}
+	data, err := os.ReadFile(resolvedPath)
 	if err != nil {
 		return FeatureFlags{}, err
 	}
@@ -252,6 +256,14 @@ func loadFeatureFlagsFromFile(path string) (FeatureFlags, error) {
 		return FeatureFlags{}, err
 	}
 	ff.Source = "file"
+	if ff.Raw == nil {
+		ff.Raw = map[string]any{}
+	}
+	ff.Raw["file"] = map[string]any{
+		"path":   resolvedPath,
+		"base":   featureFlagBaseDir(),
+		"source": "env:HANKO_WEB_FEATURE_FLAG_FILE",
+	}
 	return ff, nil
 }
 
@@ -390,6 +402,7 @@ func parseOverrideList(raw string) map[string]bool {
 		}
 		keyPart := part
 		val := true
+		valueProvided := false
 		if eq := strings.IndexAny(part, ":="); eq >= 0 {
 			keyPart = strings.TrimSpace(part[:eq])
 			value := strings.TrimSpace(part[eq+1:])
@@ -397,11 +410,16 @@ func parseOverrideList(raw string) map[string]bool {
 			if !ok {
 				continue
 			}
+			valueProvided = true
 			val = parsed
 		}
 		key := strings.TrimSpace(keyPart)
 		if strings.HasPrefix(key, "!") || strings.HasPrefix(key, "-") {
 			key = strings.TrimLeft(key, "!-")
+			if valueProvided && val {
+				telemetry.Logger().Warn("feature flag override conflict", "flag", key, "raw", part)
+				continue
+			}
 			val = false
 		}
 		key = strings.TrimSpace(key)
@@ -423,4 +441,53 @@ func parseOverrideBool(raw string) (bool, bool) {
 	default:
 		return false, false
 	}
+}
+
+func resolveFeatureFlagFile(path string) (string, error) {
+	if strings.TrimSpace(path) == "" {
+		return "", errors.New("feature flag file path is empty")
+	}
+	baseDir := featureFlagBaseDir()
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve feature flag base dir: %w", err)
+	}
+	if info, err := os.Stat(absBase); err == nil {
+		if !info.IsDir() {
+			return "", fmt.Errorf("feature flag base dir %q is not a directory", absBase)
+		}
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("feature flag base dir stat failed: %w", err)
+	}
+	candidate := path
+	if !filepath.IsAbs(candidate) {
+		candidate = filepath.Join(absBase, candidate)
+	}
+	absCandidate, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve feature flag file path: %w", err)
+	}
+	rel, err := filepath.Rel(absBase, absCandidate)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate feature flag file path: %w", err)
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("feature flag file %q must be within %q", absCandidate, absBase)
+	}
+	info, err := os.Stat(absCandidate)
+	if err != nil {
+		return "", err
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("feature flag file path %q is a directory", absCandidate)
+	}
+	return absCandidate, nil
+}
+
+func featureFlagBaseDir() string {
+	base := strings.TrimSpace(os.Getenv("HANKO_WEB_FEATURE_FLAG_BASE_DIR"))
+	if base == "" {
+		return "."
+	}
+	return base
 }

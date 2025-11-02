@@ -5,8 +5,8 @@ This playbook documents how the web surface consumes and operates feature flags,
 ## Components & Sources
 - **Remote config (`HANKO_WEB_REMOTE_CONFIG_URL`)** – primary source. Payload must contain `flags`, optionally `variants`, and may include `meta.rollouts` (see schema below).
 - **Environment override (`HANKO_WEB_FEATURE_FLAGS`)** – JSON fallback used when remote config is unreachable.
-- **Config file (`HANKO_WEB_FEATURE_FLAG_FILE`)** – optional path to a JSON file bundled with the deploy artifact (useful for canary or local dev).
-- **Runtime overrides (`HANKO_WEB_FEATURE_FLAG_OVERRIDES`)** – comma/semicolon separated list of flag assignments (e.g. `new_checkout=false,ai_writer=true`). This is the fastest lever for emergency rollback.
+- **Config file (`HANKO_WEB_FEATURE_FLAG_FILE`)** – optional path to a JSON file bundled with the deploy artifact. The file must live under `HANKO_WEB_FEATURE_FLAG_BASE_DIR` (defaults to the process working directory); paths escaping that directory are rejected to avoid leaking arbitrary files.
+- **Runtime overrides (`HANKO_WEB_FEATURE_FLAG_OVERRIDES`)** – comma/semicolon separated list of flag assignments (e.g. `new_checkout=false,ai_writer=true`). Prefix `!`/`-` can disable a flag (`!new_checkout`). When a prefix and explicit value conflict (e.g. `!new_checkout=true`) the entry is ignored and a warning is logged.
 - **Feature flag API (`GET /api/feature-flags`)** – exposes the resolved payload (after overrides) for clients that need to poll without a full page reload.
 
 Every successful load publishes Prometheus metrics:
@@ -108,5 +108,6 @@ Additional safeguards:
 - [ ] `document.dispatchEvent('hanko:flags-applied')` includes the rollout metadata for targeted flags.
 - [ ] Overrides via `HANKO_WEB_FEATURE_FLAG_OVERRIDES` are reflected without clearing caches (check HTML source).
 - [ ] Browser cookie `hanko_rollout_id` exists (or `meta.identity.seed` is provided for authenticated visitors).
+- [ ] File-sourced flags reject paths outside `HANKO_WEB_FEATURE_FLAG_BASE_DIR`.
 
 Keep this document alongside `doc/web/deploy.md` when preparing the maintenance playbook so future operators have a single reference for toggling and rollbacks.
