@@ -76,4 +76,4 @@
 - [x] [Configure Cloud Run service, environment variables, and Secret Manager integration.](doc/web/tasks/053-configure-cloud-run-service-environment-variables-and-secret-manager-integration.md)
 - [x] [Set up CI/CD pipeline with staging/production deployments and smoke tests.](doc/web/tasks/054-set-up-ci-cd-pipeline-with-staging-production-deployments-and-smoke-tests.md)
 - [x] [Implement feature flag rollout strategy and rollback procedures.](doc/web/tasks/055-implement-feature-flag-rollout-strategy-and-rollback-procedures.md)
-- [ ] [Document operational runbooks (incident response, cache purge, SEO updates).](doc/web/tasks/056-document-operational-runbooks-incident-response-cache-purge-seo-updates.md)
+- [x] [Document operational runbooks (incident response, cache purge, SEO updates).](doc/web/tasks/056-document-operational-runbooks-incident-response-cache-purge-seo-updates.md)
