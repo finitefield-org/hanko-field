@@ -301,12 +301,11 @@ func (s *userService) DeactivateAndMask(ctx context.Context, cmd DeactivateAndMa
 	desired, changed := projectMaskedProfile(profile, now)
 	desired.LastSyncTime = profile.LastSyncTime
 
-	saved := profile
-	if changed {
-		saved, err = s.users.UpdateProfile(ctx, desired)
-		if err != nil {
-			return UserProfile{}, mapConflictError(err)
-		}
+	if s.firebase == nil {
+		return UserProfile{}, errors.New("user: firebase user getter is required")
+	}
+	if err := s.firebase.DisableUser(ctx, userID); err != nil {
+		return UserProfile{}, err
 	}
 
 	detached, err := s.detachAllPaymentMethods(ctx, userID)
@@ -314,11 +313,12 @@ func (s *userService) DeactivateAndMask(ctx context.Context, cmd DeactivateAndMa
 		return UserProfile{}, err
 	}
 
-	if s.firebase == nil {
-		return UserProfile{}, errors.New("user: firebase user getter is required")
-	}
-	if err := s.firebase.DisableUser(ctx, userID); err != nil {
-		return UserProfile{}, err
+	saved := profile
+	if changed {
+		saved, err = s.users.UpdateProfile(ctx, desired)
+		if err != nil {
+			return UserProfile{}, mapConflictError(err)
+		}
 	}
 
 	notify := changed || len(detached) > 0
@@ -1329,15 +1329,23 @@ func (s *userService) detachAllPaymentMethods(ctx context.Context, userID string
 	if len(methods) == 0 {
 		return nil, nil
 	}
+
 	detached := make([]string, 0, len(methods))
+	var errs []error
 	for _, method := range methods {
+		trimmedID := strings.TrimSpace(method.ID)
 		if err := s.paymentMethods.Delete(ctx, userID, method.ID); err != nil {
 			if isNotFound(err) {
 				continue
 			}
-			return detached, err
+			errs = append(errs, fmt.Errorf("detach payment method %s: %w", trimmedID, err))
+			continue
 		}
-		detached = append(detached, strings.TrimSpace(method.ID))
+		detached = append(detached, trimmedID)
+	}
+
+	if len(errs) > 0 {
+		return detached, errors.Join(errs...)
 	}
 	return detached, nil
 }
