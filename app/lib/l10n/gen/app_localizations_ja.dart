@@ -426,6 +426,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designEditorRedoTooltip => 'やり直す';
 
   @override
+  String get designEditorRegistrabilityTooltip => '登録可否チェック';
+
+  @override
   String get designEditorMoreActionsTooltip => 'その他の操作';
 
   @override
@@ -465,6 +468,89 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get designEditorPropertiesHeading => 'プロパティ';
+
+  @override
+  String get designRegistrabilityTitle => '登録可否チェック';
+
+  @override
+  String get designRegistrabilityRefreshTooltip => '再チェック';
+
+  @override
+  String get designRegistrabilityIncompleteTitle => 'デザインの設定を完了してください';
+
+  @override
+  String get designRegistrabilityIncompleteBody =>
+      'テンプレートを選び、名前を入力してから登録可否を確認します。';
+
+  @override
+  String get designRegistrabilityNoResultTitle => 'まだチェックしていません';
+
+  @override
+  String get designRegistrabilityNoResultBody =>
+      '登録可否チェックを実行して、重複や注意点を確認しましょう。';
+
+  @override
+  String get designRegistrabilityRunCheck => 'チェックを実行';
+
+  @override
+  String get designRegistrabilityOutdatedBanner =>
+      '最後のチェック以降にデザインが変更されました。再チェックしてください。';
+
+  @override
+  String get designRegistrabilityOfflineTitle => 'キャッシュ結果を表示しています';
+
+  @override
+  String get designRegistrabilityOfflineBody =>
+      'オフラインのため、最後に成功したチェック結果を表示しています。';
+
+  @override
+  String get designRegistrabilityStatusSafe => '登録可能';
+
+  @override
+  String get designRegistrabilityStatusCaution => '提出前に確認が必要';
+
+  @override
+  String get designRegistrabilityStatusBlocked => '登録不可';
+
+  @override
+  String designRegistrabilityCheckedAt(String timestamp) {
+    return '$timestamp にチェック';
+  }
+
+  @override
+  String get designRegistrabilityCacheStale => 'キャッシュ結果が古い可能性があります。';
+
+  @override
+  String get designRegistrabilityCacheFresh => '最新の結果をオフライン用に保存しました。';
+
+  @override
+  String get designRegistrabilityOutdatedHint => '最新の調整を反映するには再チェックしてください。';
+
+  @override
+  String designRegistrabilityScore(String value) {
+    return 'スコア $value';
+  }
+
+  @override
+  String get designRegistrabilityDiagnosticsTitle => '診断結果';
+
+  @override
+  String get designRegistrabilityBadgeSafe => '安全';
+
+  @override
+  String get designRegistrabilityBadgeSimilar => '類似';
+
+  @override
+  String get designRegistrabilityBadgeConflict => '衝突';
+
+  @override
+  String get designRegistrabilityBadgeInfo => '注意';
+
+  @override
+  String get designRegistrabilityConflictTitle => '衝突を検出しました';
+
+  @override
+  String get designRegistrabilityConflictBody => '提出前に以下の問題を解消してください。';
 
   @override
   String get designEditorStrokeLabel => '輪郭の太さ';

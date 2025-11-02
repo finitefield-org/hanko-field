@@ -691,6 +691,11 @@
   "description": "Tooltip for the redo icon button"
 }
 
+, "designEditorRegistrabilityTooltip": "Check registrability"
+, "@designEditorRegistrabilityTooltip": {
+  "description": "Tooltip for the registrability check shortcut"
+}
+
 , "designEditorMoreActionsTooltip": "More actions"
 , "@designEditorMoreActionsTooltip": {
   "description": "Tooltip for the overflow menu on the design editor app bar"
@@ -760,6 +765,143 @@
 , "designEditorPropertiesHeading": "Properties"
 , "@designEditorPropertiesHeading": {
   "description": "Heading for the property sheet"
+}
+
+, "designRegistrabilityTitle": "Registrability check"
+, "@designRegistrabilityTitle": {
+  "description": "App bar title for the registrability check screen"
+}
+
+, "designRegistrabilityRefreshTooltip": "Run check again"
+, "@designRegistrabilityRefreshTooltip": {
+  "description": "Tooltip for refresh icon on the registrability screen"
+}
+
+, "designRegistrabilityIncompleteTitle": "Finish the design setup"
+, "@designRegistrabilityIncompleteTitle": {
+  "description": "Placeholder title when the design is not ready for checks"
+}
+
+, "designRegistrabilityIncompleteBody": "Select a template and enter the name to check registrability."
+, "@designRegistrabilityIncompleteBody": {
+  "description": "Placeholder body when registrability cannot run yet"
+}
+
+, "designRegistrabilityNoResultTitle": "No results yet"
+, "@designRegistrabilityNoResultTitle": {
+  "description": "Card title shown before the first registrability run"
+}
+
+, "designRegistrabilityNoResultBody": "Run the registrability check to see conflicts and guidance."
+, "@designRegistrabilityNoResultBody": {
+  "description": "Card body prompting the user to run the check"
+}
+
+, "designRegistrabilityRunCheck": "Run check"
+, "@designRegistrabilityRunCheck": {
+  "description": "Button label to trigger registrability evaluation"
+}
+
+, "designRegistrabilityOutdatedBanner": "The design changed since the last check. Run it again to refresh."
+, "@designRegistrabilityOutdatedBanner": {
+  "description": "Banner copy when the stored check is outdated"
+}
+
+, "designRegistrabilityOfflineTitle": "Showing cached result"
+, "@designRegistrabilityOfflineTitle": {
+  "description": "Title when displaying cached registrability data"
+}
+
+, "designRegistrabilityOfflineBody": "We reused the last successful check while offline."
+, "@designRegistrabilityOfflineBody": {
+  "description": "Body text explaining cached fallback usage"
+}
+
+, "designRegistrabilityStatusSafe": "Ready to register"
+, "@designRegistrabilityStatusSafe": {
+  "description": "Status headline when no issues were found"
+}
+
+, "designRegistrabilityStatusCaution": "Review before submitting"
+, "@designRegistrabilityStatusCaution": {
+  "description": "Status headline when warnings were found"
+}
+
+, "designRegistrabilityStatusBlocked": "Registration blocked"
+, "@designRegistrabilityStatusBlocked": {
+  "description": "Status headline when registration is not allowed"
+}
+
+, "designRegistrabilityCheckedAt": "Checked at {timestamp}"
+, "@designRegistrabilityCheckedAt": {
+  "description": "Label describing when the registrability check was performed",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "May 24, 2024 14:30"
+    }
+  }
+}
+
+, "designRegistrabilityCacheStale": "Cached result may be outdated."
+, "@designRegistrabilityCacheStale": {
+  "description": "Label when cached result is stale"
+}
+
+, "designRegistrabilityCacheFresh": "Latest result is cached for offline use."
+, "@designRegistrabilityCacheFresh": {
+  "description": "Label when cached result is fresh"
+}
+
+, "designRegistrabilityOutdatedHint": "Run the check again to reflect recent adjustments."
+, "@designRegistrabilityOutdatedHint": {
+  "description": "Hint text under the summary card when outdated"
+}
+
+, "designRegistrabilityScore": "Score {value}"
+, "@designRegistrabilityScore": {
+  "description": "Chip label showing registrability score",
+  "placeholders": {
+    "value": {
+      "type": "String",
+      "example": "82"
+    }
+  }
+}
+
+, "designRegistrabilityDiagnosticsTitle": "Diagnostics"
+, "@designRegistrabilityDiagnosticsTitle": {
+  "description": "Heading for the diagnostics list"
+}
+
+, "designRegistrabilityBadgeSafe": "Safe"
+, "@designRegistrabilityBadgeSafe": {
+  "description": "Assist chip label for safe diagnostic"
+}
+
+, "designRegistrabilityBadgeSimilar": "Similar"
+, "@designRegistrabilityBadgeSimilar": {
+  "description": "Assist chip label for similar diagnostic"
+}
+
+, "designRegistrabilityBadgeConflict": "Conflict"
+, "@designRegistrabilityBadgeConflict": {
+  "description": "Assist chip label for conflict diagnostic"
+}
+
+, "designRegistrabilityBadgeInfo": "Notice"
+, "@designRegistrabilityBadgeInfo": {
+  "description": "Assist chip label for informational diagnostic"
+}
+
+, "designRegistrabilityConflictTitle": "Conflicts detected"
+, "@designRegistrabilityConflictTitle": {
+  "description": "Title for conflict banner"
+}
+
+, "designRegistrabilityConflictBody": "Resolve the conflicts below before submitting."
+, "@designRegistrabilityConflictBody": {
+  "description": "Default message under the conflict banner"
 }
 
 , "designEditorStrokeLabel": "Stroke weight"

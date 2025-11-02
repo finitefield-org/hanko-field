@@ -1,4 +1,6 @@
 import 'package:app/core/domain/entities/design.dart';
+import 'package:app/core/routing/app_route_configuration.dart';
+import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/features/design_creation/application/design_creation_controller.dart';
 import 'package:app/features/design_creation/application/design_editor_controller.dart';
@@ -35,7 +37,13 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
     final shape = creationState.selectedShape ?? DesignShape.round;
 
     return Scaffold(
-      appBar: _buildAppBar(context, l10n, editorState, editorNotifier),
+      appBar: _buildAppBar(
+        context,
+        l10n,
+        editorState,
+        editorNotifier,
+        creationState,
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -90,7 +98,11 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
     AppLocalizations l10n,
     DesignEditorState state,
     DesignEditorController notifier,
+    DesignCreationState creationState,
   ) {
+    final router = ref.read(appStateProvider.notifier);
+    final canRunCheck = creationState.hasStyleSelection;
+
     return AppBar(
       title: Text(l10n.designEditorTitle),
       actions: [
@@ -103,6 +115,13 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
           tooltip: l10n.designEditorRedoTooltip,
           icon: const Icon(Icons.redo),
           onPressed: state.canRedo ? notifier.redo : null,
+        ),
+        IconButton(
+          tooltip: l10n.designEditorRegistrabilityTooltip,
+          icon: const Icon(Icons.verified_outlined),
+          onPressed: canRunCheck
+              ? () => router.push(CreationStageRoute(const ['check']))
+              : null,
         ),
         PopupMenuButton<_EditorMenuAction>(
           tooltip: l10n.designEditorMoreActionsTooltip,

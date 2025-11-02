@@ -441,6 +441,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designEditorRedoTooltip => 'Redo';
 
   @override
+  String get designEditorRegistrabilityTooltip => 'Check registrability';
+
+  @override
   String get designEditorMoreActionsTooltip => 'More actions';
 
   @override
@@ -480,6 +483,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get designEditorPropertiesHeading => 'Properties';
+
+  @override
+  String get designRegistrabilityTitle => 'Registrability check';
+
+  @override
+  String get designRegistrabilityRefreshTooltip => 'Run check again';
+
+  @override
+  String get designRegistrabilityIncompleteTitle => 'Finish the design setup';
+
+  @override
+  String get designRegistrabilityIncompleteBody =>
+      'Select a template and enter the name to check registrability.';
+
+  @override
+  String get designRegistrabilityNoResultTitle => 'No results yet';
+
+  @override
+  String get designRegistrabilityNoResultBody =>
+      'Run the registrability check to see conflicts and guidance.';
+
+  @override
+  String get designRegistrabilityRunCheck => 'Run check';
+
+  @override
+  String get designRegistrabilityOutdatedBanner =>
+      'The design changed since the last check. Run it again to refresh.';
+
+  @override
+  String get designRegistrabilityOfflineTitle => 'Showing cached result';
+
+  @override
+  String get designRegistrabilityOfflineBody =>
+      'We reused the last successful check while offline.';
+
+  @override
+  String get designRegistrabilityStatusSafe => 'Ready to register';
+
+  @override
+  String get designRegistrabilityStatusCaution => 'Review before submitting';
+
+  @override
+  String get designRegistrabilityStatusBlocked => 'Registration blocked';
+
+  @override
+  String designRegistrabilityCheckedAt(String timestamp) {
+    return 'Checked at $timestamp';
+  }
+
+  @override
+  String get designRegistrabilityCacheStale => 'Cached result may be outdated.';
+
+  @override
+  String get designRegistrabilityCacheFresh =>
+      'Latest result is cached for offline use.';
+
+  @override
+  String get designRegistrabilityOutdatedHint =>
+      'Run the check again to reflect recent adjustments.';
+
+  @override
+  String designRegistrabilityScore(String value) {
+    return 'Score $value';
+  }
+
+  @override
+  String get designRegistrabilityDiagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get designRegistrabilityBadgeSafe => 'Safe';
+
+  @override
+  String get designRegistrabilityBadgeSimilar => 'Similar';
+
+  @override
+  String get designRegistrabilityBadgeConflict => 'Conflict';
+
+  @override
+  String get designRegistrabilityBadgeInfo => 'Notice';
+
+  @override
+  String get designRegistrabilityConflictTitle => 'Conflicts detected';
+
+  @override
+  String get designRegistrabilityConflictBody =>
+      'Resolve the conflicts below before submitting.';
 
   @override
   String get designEditorStrokeLabel => 'Stroke weight';

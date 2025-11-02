@@ -3,6 +3,7 @@ import 'package:app/core/storage/cache_bucket.dart';
 import 'package:app/core/storage/cache_policy.dart';
 import 'package:app/core/storage/local_cache_store.dart';
 import 'package:app/features/design_creation/domain/kanji_candidate.dart';
+import 'package:app/features/design_creation/domain/registrability_check.dart';
 
 class OfflineCacheRepository {
   OfflineCacheRepository(this._store);
@@ -105,6 +106,28 @@ class OfflineCacheRepository {
       key: 'bookmarks',
       encoder: (value) => value.toList()..sort(),
       value: bookmarks,
+    );
+  }
+
+  Future<CacheReadResult<RegistrabilityCheckSnapshot>> readRegistrabilityCheck({
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.registrability,
+      key: key,
+      decoder: (data) => RegistrabilityCheckSnapshot.fromJson(_asJson(data)),
+    );
+  }
+
+  Future<void> writeRegistrabilityCheck(
+    RegistrabilityCheckSnapshot payload, {
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.registrability,
+      key: key,
+      encoder: (value) => value.toJson(),
+      value: payload,
     );
   }
 

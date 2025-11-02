@@ -854,6 +854,12 @@ abstract class AppLocalizations {
   /// **'Redo'**
   String get designEditorRedoTooltip;
 
+  /// Tooltip for the registrability check shortcut
+  ///
+  /// In en, this message translates to:
+  /// **'Check registrability'**
+  String get designEditorRegistrabilityTooltip;
+
   /// Tooltip for the overflow menu on the design editor app bar
   ///
   /// In en, this message translates to:
@@ -931,6 +937,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Properties'**
   String get designEditorPropertiesHeading;
+
+  /// App bar title for the registrability check screen
+  ///
+  /// In en, this message translates to:
+  /// **'Registrability check'**
+  String get designRegistrabilityTitle;
+
+  /// Tooltip for refresh icon on the registrability screen
+  ///
+  /// In en, this message translates to:
+  /// **'Run check again'**
+  String get designRegistrabilityRefreshTooltip;
+
+  /// Placeholder title when the design is not ready for checks
+  ///
+  /// In en, this message translates to:
+  /// **'Finish the design setup'**
+  String get designRegistrabilityIncompleteTitle;
+
+  /// Placeholder body when registrability cannot run yet
+  ///
+  /// In en, this message translates to:
+  /// **'Select a template and enter the name to check registrability.'**
+  String get designRegistrabilityIncompleteBody;
+
+  /// Card title shown before the first registrability run
+  ///
+  /// In en, this message translates to:
+  /// **'No results yet'**
+  String get designRegistrabilityNoResultTitle;
+
+  /// Card body prompting the user to run the check
+  ///
+  /// In en, this message translates to:
+  /// **'Run the registrability check to see conflicts and guidance.'**
+  String get designRegistrabilityNoResultBody;
+
+  /// Button label to trigger registrability evaluation
+  ///
+  /// In en, this message translates to:
+  /// **'Run check'**
+  String get designRegistrabilityRunCheck;
+
+  /// Banner copy when the stored check is outdated
+  ///
+  /// In en, this message translates to:
+  /// **'The design changed since the last check. Run it again to refresh.'**
+  String get designRegistrabilityOutdatedBanner;
+
+  /// Title when displaying cached registrability data
+  ///
+  /// In en, this message translates to:
+  /// **'Showing cached result'**
+  String get designRegistrabilityOfflineTitle;
+
+  /// Body text explaining cached fallback usage
+  ///
+  /// In en, this message translates to:
+  /// **'We reused the last successful check while offline.'**
+  String get designRegistrabilityOfflineBody;
+
+  /// Status headline when no issues were found
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to register'**
+  String get designRegistrabilityStatusSafe;
+
+  /// Status headline when warnings were found
+  ///
+  /// In en, this message translates to:
+  /// **'Review before submitting'**
+  String get designRegistrabilityStatusCaution;
+
+  /// Status headline when registration is not allowed
+  ///
+  /// In en, this message translates to:
+  /// **'Registration blocked'**
+  String get designRegistrabilityStatusBlocked;
+
+  /// Label describing when the registrability check was performed
+  ///
+  /// In en, this message translates to:
+  /// **'Checked at {timestamp}'**
+  String designRegistrabilityCheckedAt(String timestamp);
+
+  /// Label when cached result is stale
+  ///
+  /// In en, this message translates to:
+  /// **'Cached result may be outdated.'**
+  String get designRegistrabilityCacheStale;
+
+  /// Label when cached result is fresh
+  ///
+  /// In en, this message translates to:
+  /// **'Latest result is cached for offline use.'**
+  String get designRegistrabilityCacheFresh;
+
+  /// Hint text under the summary card when outdated
+  ///
+  /// In en, this message translates to:
+  /// **'Run the check again to reflect recent adjustments.'**
+  String get designRegistrabilityOutdatedHint;
+
+  /// Chip label showing registrability score
+  ///
+  /// In en, this message translates to:
+  /// **'Score {value}'**
+  String designRegistrabilityScore(String value);
+
+  /// Heading for the diagnostics list
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get designRegistrabilityDiagnosticsTitle;
+
+  /// Assist chip label for safe diagnostic
+  ///
+  /// In en, this message translates to:
+  /// **'Safe'**
+  String get designRegistrabilityBadgeSafe;
+
+  /// Assist chip label for similar diagnostic
+  ///
+  /// In en, this message translates to:
+  /// **'Similar'**
+  String get designRegistrabilityBadgeSimilar;
+
+  /// Assist chip label for conflict diagnostic
+  ///
+  /// In en, this message translates to:
+  /// **'Conflict'**
+  String get designRegistrabilityBadgeConflict;
+
+  /// Assist chip label for informational diagnostic
+  ///
+  /// In en, this message translates to:
+  /// **'Notice'**
+  String get designRegistrabilityBadgeInfo;
+
+  /// Title for conflict banner
+  ///
+  /// In en, this message translates to:
+  /// **'Conflicts detected'**
+  String get designRegistrabilityConflictTitle;
+
+  /// Default message under the conflict banner
+  ///
+  /// In en, this message translates to:
+  /// **'Resolve the conflicts below before submitting.'**
+  String get designRegistrabilityConflictBody;
 
   /// Label for the stroke weight slider control
   ///

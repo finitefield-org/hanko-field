@@ -30,6 +30,13 @@ enum CacheBucket {
       staleGrace: Duration(days: 2),
     ),
   ),
+  registrability(
+    boxName: 'cache.registrability',
+    policy: CachePolicy(
+      timeToLive: Duration(hours: 12),
+      staleGrace: Duration(days: 3),
+    ),
+  ),
   featureFlags(
     boxName: 'cache.feature_flags',
     policy: CachePolicy(
