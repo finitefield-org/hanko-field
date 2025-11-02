@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -38,6 +39,9 @@ type Service interface {
 
 	// Update modifies an existing promotion.
 	Update(ctx context.Context, token, promotionID string, input PromotionInput) (Promotion, error)
+
+	// Validate runs a dry-run eligibility evaluation against synthetic cart data.
+	Validate(ctx context.Context, token string, req ValidationRequest) (ValidationResult, error)
 
 	// Usage returns aggregated redemption records for a specific promotion.
 	Usage(ctx context.Context, token, promotionID string, query UsageQuery) (UsageResult, error)
@@ -254,6 +258,44 @@ type PromotionInput struct {
 	StartAt               time.Time
 	EndAt                 *time.Time
 	Version               string
+}
+
+// ValidationRequest captures the synthetic cart payload for a dry-run eligibility check.
+type ValidationRequest struct {
+	PromotionID   string
+	Currency      string
+	SubtotalMinor int64
+	SegmentKey    string
+	Items         []ValidationRequestItem
+}
+
+// ValidationRequestItem represents a single cart line in the dry-run evaluation payload.
+type ValidationRequestItem struct {
+	SKU        string
+	Quantity   int
+	PriceMinor int64
+}
+
+// ValidationResult summarises the outcome of a dry-run eligibility evaluation.
+type ValidationResult struct {
+	PromotionID   string
+	PromotionName string
+	Eligible      bool
+	ExecutedAt    time.Time
+	Summary       string
+	Rules         []ValidationRuleResult
+	Raw           json.RawMessage
+}
+
+// ValidationRuleResult captures the evaluation status of an individual eligibility rule.
+type ValidationRuleResult struct {
+	Key      string
+	Label    string
+	Passed   bool
+	Blocking bool
+	Severity string
+	Message  string
+	Details  map[string]any
 }
 
 // PromotionValidationError indicates validation issues for promotion create/update operations.

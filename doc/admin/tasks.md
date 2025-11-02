@@ -71,7 +71,7 @@
 - [x] [Build promotions index page (`/admin/promotions`) with table fragment, filters (status, type, schedule), and mass actions.](doc/admin/tasks/047-build-promotions-index-page-admin-promotions-with-table-fragment-filters-status-type-sched.md)
 - [x] [Implement promotion modals for create/edit (`/admin/promotions/modal/{new|edit}`) with validation and conditional fields.](doc/admin/tasks/048-implement-promotion-modals-for-create-edit-admin-promotions-modal-new-edit-with-validation.md)
 - [x] [Implement promotion usage view (`/admin/promotions/{promoId}/usages`) with pagination and CSV export capability.](doc/admin/tasks/049-implement-promotion-usage-view-admin-promotions-promoid-usages-with-pagination-and-csv-exp.md)
-- [ ] [Integrate promotion dry-run validation UI linking to `POST /admin/promotions:validate` with rule breakdown display.](doc/admin/tasks/050-integrate-promotion-dry-run-validation-ui-linking-to-post-admin-promotions-validate-with-r.md)
+- [x] [Integrate promotion dry-run validation UI linking to `POST /admin/promotions:validate` with rule breakdown display.](doc/admin/tasks/050-integrate-promotion-dry-run-validation-ui-linking-to-post-admin-promotions-validate-with-r.md)
 
 ## 9. Customers, Reviews, and KYC
 - [ ] [Implement customers list page (`/admin/customers`) with search filters (name, email, status) and table fragment.](doc/admin/tasks/051-implement-customers-list-page-admin-customers-with-search-filters-name-email-status-and-ta.md)

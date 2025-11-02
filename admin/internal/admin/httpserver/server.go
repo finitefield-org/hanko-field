@@ -281,9 +281,11 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				RegisterFragment(pr, "/drawer", uiHandlers.PromotionsDrawer)
 				RegisterFragment(pr, "/modal/new", uiHandlers.PromotionsNewModal)
 				RegisterFragment(pr, "/modal/edit", uiHandlers.PromotionsEditModal)
+				RegisterFragment(pr, "/modal/validate", uiHandlers.PromotionsValidateModal)
 				pr.Post("/", uiHandlers.PromotionsCreate)
 				pr.Put("/{promotionID}", uiHandlers.PromotionsUpdate)
 				pr.Post("/bulk/status", uiHandlers.PromotionsBulkStatus)
+				pr.Post("/modal/validate", uiHandlers.PromotionsValidateSubmit)
 				pr.Route("/{promotionID}/usages", func(ur chi.Router) {
 					ur.Use(custommw.RequireCapability(rbac.CapPromotionsUsage))
 					ur.Get("/", uiHandlers.PromotionsUsagePage)

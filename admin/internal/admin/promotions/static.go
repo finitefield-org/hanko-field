@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
@@ -908,6 +909,223 @@ func (s *StaticService) Create(_ context.Context, _ string, input PromotionInput
 	s.details[promo.ID] = buildDetailForPromotion(promo)
 
 	return promo, nil
+}
+
+// Validate performs a synthetic eligibility check against stored promotion metadata.
+func (s *StaticService) Validate(_ context.Context, _ string, req ValidationRequest) (ValidationResult, error) {
+	promoID := strings.TrimSpace(req.PromotionID)
+	if promoID == "" {
+		return ValidationResult{}, ErrPromotionNotFound
+	}
+
+	s.mu.RLock()
+	detail, ok := s.details[promoID]
+	s.mu.RUnlock()
+	if !ok {
+		return ValidationResult{}, ErrPromotionNotFound
+	}
+
+	promo := detail.Promotion
+	executedAt := time.Now().Truncate(time.Second)
+
+	rules := make([]ValidationRuleResult, 0, 6)
+	eligible := true
+
+	addRule := func(rule ValidationRuleResult) {
+		if !rule.Passed && rule.Blocking {
+			eligible = false
+		}
+		if rule.Severity == "" {
+			if rule.Passed {
+				rule.Severity = "success"
+			} else if rule.Blocking {
+				rule.Severity = "danger"
+			} else {
+				rule.Severity = "warning"
+			}
+		}
+		rules = append(rules, rule)
+	}
+
+	now := time.Now()
+	withinStart := promo.StartAt == nil || !now.Before(*promo.StartAt)
+	withinEnd := promo.EndAt == nil || !now.After(*promo.EndAt)
+	addRule(ValidationRuleResult{
+		Key:      "schedule_window",
+		Label:    "公開期間",
+		Passed:   withinStart && withinEnd,
+		Blocking: true,
+		Message: func() string {
+			if withinStart && withinEnd {
+				return "現在の日時で適用可能な期間内です。"
+			}
+			if !withinStart {
+				return "開始日時より前のため適用できません。"
+			}
+			return "終了日時を過ぎているため適用できません。"
+		}(),
+		Details: map[string]any{
+			"startAt": promo.StartAt,
+			"endAt":   promo.EndAt,
+			"now":     now,
+		},
+	})
+
+	subtotal := req.SubtotalMinor
+	minOrder := promo.MinOrderAmountMinor
+	addRule(ValidationRuleResult{
+		Key:      "subtotal_threshold",
+		Label:    "最低購入金額",
+		Passed:   minOrder <= 0 || subtotal >= minOrder,
+		Blocking: minOrder > 0,
+		Message: func() string {
+			if minOrder <= 0 {
+				return "最低購入金額の条件は設定されていません。"
+			}
+			if subtotal >= minOrder {
+				return fmt.Sprintf("小計が条件を満たしています (¥%d ≧ ¥%d)", subtotal, minOrder)
+			}
+			return fmt.Sprintf("小計が条件を満たしていません (¥%d < ¥%d)", subtotal, minOrder)
+		}(),
+		Details: map[string]any{
+			"subtotalMinor":  subtotal,
+			"thresholdMinor": minOrder,
+		},
+	})
+
+	segmentMatch := strings.TrimSpace(req.SegmentKey) == strings.TrimSpace(promo.Segment.Key)
+	addRule(ValidationRuleResult{
+		Key:      "segment_match",
+		Label:    "対象セグメント",
+		Passed:   segmentMatch,
+		Blocking: true,
+		Message: func() string {
+			if segmentMatch {
+				return fmt.Sprintf("セグメント %s に一致しました。", promo.Segment.Name)
+			}
+			if req.SegmentKey == "" {
+				return "セグメントが未指定のため一致しません。"
+			}
+			return fmt.Sprintf("セグメントが一致しません (要求: %s / プロモーション: %s)", req.SegmentKey, promo.Segment.Key)
+		}(),
+		Details: map[string]any{
+			"expected": promo.Segment.Key,
+			"received": req.SegmentKey,
+		},
+	})
+
+	itemCount := 0
+	qualifyingItems := 0
+	for _, item := range req.Items {
+		if strings.TrimSpace(item.SKU) == "" || item.Quantity <= 0 {
+			continue
+		}
+		itemCount += item.Quantity
+		if promo.Type == TypeBundle {
+			if strings.Contains(strings.ToLower(item.SKU), "ring") {
+				qualifyingItems += item.Quantity
+			}
+		} else {
+			qualifyingItems += item.Quantity
+		}
+	}
+
+	addRule(ValidationRuleResult{
+		Key:      "cart_items",
+		Label:    "カート内商品",
+		Passed:   itemCount > 0,
+		Blocking: true,
+		Message: func() string {
+			if itemCount > 0 {
+				return fmt.Sprintf("%d 点の商品がカートに含まれています。", itemCount)
+			}
+			return "カートに商品がないため適用できません。"
+		}(),
+		Details: map[string]any{
+			"itemCount": itemCount,
+		},
+	})
+
+	if promo.Type == TypeBundle {
+		required := promo.BundleBuyQty
+		if required <= 0 {
+			required = 2
+		}
+		addRule(ValidationRuleResult{
+			Key:      "bundle_requirements",
+			Label:    "セット条件",
+			Passed:   qualifyingItems >= required,
+			Blocking: true,
+			Message: func() string {
+				if qualifyingItems >= required {
+					return fmt.Sprintf("必要数量を満たしています (%d/%d)。", qualifyingItems, required)
+				}
+				return fmt.Sprintf("必要数量を満たしていません (%d/%d)。", qualifyingItems, required)
+			}(),
+			Details: map[string]any{
+				"qualifyingItems": qualifyingItems,
+				"required":        required,
+			},
+		})
+	}
+
+	rulesEvaluated := make([]map[string]any, 0, len(rules))
+	for _, rule := range rules {
+		rulesEvaluated = append(rulesEvaluated, map[string]any{
+			"key":      rule.Key,
+			"label":    rule.Label,
+			"passed":   rule.Passed,
+			"blocking": rule.Blocking,
+			"severity": rule.Severity,
+			"message":  rule.Message,
+			"details":  rule.Details,
+		})
+	}
+
+	payload := map[string]any{
+		"promotionId":   promo.ID,
+		"promotionCode": promo.Code,
+		"eligible":      eligible,
+		"executedAt":    executedAt,
+		"rules":         rulesEvaluated,
+		"cart": map[string]any{
+			"subtotalMinor": subtotal,
+			"currency":      req.Currency,
+			"segmentKey":    req.SegmentKey,
+			"items": func() []map[string]any {
+				out := make([]map[string]any, 0, len(req.Items))
+				for _, item := range req.Items {
+					out = append(out, map[string]any{
+						"sku":          item.SKU,
+						"quantity":     item.Quantity,
+						"priceMinor":   item.PriceMinor,
+						"lineSubtotal": int64(item.Quantity) * item.PriceMinor,
+					})
+				}
+				return out
+			}(),
+		},
+	}
+
+	raw, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		raw = []byte("{}")
+	}
+
+	summary := "カートはプロモーション適用対象です。"
+	if !eligible {
+		summary = "条件を満たしていないため、プロモーションは適用されません。"
+	}
+
+	return ValidationResult{
+		PromotionID:   promo.ID,
+		PromotionName: promo.Name,
+		Eligible:      eligible,
+		ExecutedAt:    executedAt,
+		Summary:       summary,
+		Rules:         rules,
+		Raw:           raw,
+	}, nil
 }
 
 // Update mutates an existing promotion.

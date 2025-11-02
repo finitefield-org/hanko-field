@@ -68,6 +68,7 @@ func (h *Handlers) PromotionsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	if drawer.ID != "" {
 		drawer.EditURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/edit?promotionID=%s", url.QueryEscape(drawer.ID)))
+		drawer.ValidateURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/validate?promotionID=%s", url.QueryEscape(drawer.ID)))
 	}
 
 	toolbar := promotionsToolbarProps(basePath, 0, result.Pagination.TotalItems)
@@ -141,6 +142,7 @@ func (h *Handlers) PromotionsDrawer(w http.ResponseWriter, r *http.Request) {
 	payload := promotionstpl.DrawerPayload(detail)
 	basePath := custommw.BasePathFromContext(ctx)
 	payload.EditURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/edit?promotionID=%s", url.QueryEscape(detail.Promotion.ID)))
+	payload.ValidateURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/validate?promotionID=%s", url.QueryEscape(detail.Promotion.ID)))
 	templ.Handler(promotionstpl.Drawer(payload)).ServeHTTP(w, r)
 }
 
@@ -246,6 +248,97 @@ func (h *Handlers) PromotionsEditModal(w http.ResponseWriter, r *http.Request) {
 	data := buildPromotionModal(promotionModalModeEdit, state, nil, "", action, http.MethodPut, csrf)
 
 	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+}
+
+// PromotionsValidateModal renders the dry-run validation modal for a promotion.
+func (h *Handlers) PromotionsValidateModal(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	promotionID := strings.TrimSpace(r.URL.Query().Get("promotionID"))
+	if promotionID == "" {
+		http.Error(w, "promotionID is required", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.promotions.Detail(ctx, user.Token, promotionID)
+	if err != nil {
+		if errors.Is(err, adminpromotions.ErrPromotionNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		log.Printf("promotions: validation detail fetch failed: %v", err)
+		http.Error(w, "プロモーションの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	state := defaultPromotionValidationState(detail)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	basePath := custommw.BasePathFromContext(ctx)
+	data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, "", nil)
+
+	templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+}
+
+// PromotionsValidateSubmit handles dry-run validation submissions.
+func (h *Handlers) PromotionsValidateSubmit(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "フォームの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	promotionID := strings.TrimSpace(r.PostForm.Get("promotionID"))
+	if promotionID == "" {
+		http.Error(w, "promotionID is required", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.promotions.Detail(ctx, user.Token, promotionID)
+	if err != nil {
+		if errors.Is(err, adminpromotions.ErrPromotionNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		log.Printf("promotions: validation detail fetch failed: %v", err)
+		http.Error(w, "プロモーションの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	req, state, fieldErrors, generalErr := parsePromotionValidationForm(r.PostForm)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	basePath := custommw.BasePathFromContext(ctx)
+
+	if len(fieldErrors) > 0 || strings.TrimSpace(generalErr) != "" {
+		data := buildPromotionValidationModal(basePath, detail, csrf, state, fieldErrors, generalErr, nil)
+		templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+		return
+	}
+
+	result, err := h.promotions.Validate(ctx, user.Token, req)
+	if err != nil {
+		log.Printf("promotions: dry-run validate failed: %v", err)
+		message := "検証に失敗しました。時間を置いて再度お試しください。"
+		data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, message, nil)
+		templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+		return
+	}
+
+	// Use normalised currency from the request/result for subsequent renders.
+	state.Currency = req.Currency
+	data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, "", &result)
+
+	templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
 }
 
 // PromotionsCreate handles creation submissions.

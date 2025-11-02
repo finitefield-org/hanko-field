@@ -34,6 +34,15 @@ templ Drawer(data DrawerData) {
 							hx-swap="innerHTML"
 						>編集</button>
 					}
+					if data.ValidateURL != "" {
+						<button
+							type="button"
+							class={ helpers.ButtonClass("ghost", "sm", false, false) }
+							hx-get={ data.ValidateURL }
+							hx-target="#modal"
+							hx-swap="innerHTML"
+						>ドライラン検証</button>
+					}
 				</div>
 			</div>
 			<div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">

@@ -164,6 +164,7 @@ type DrawerData struct {
 	Usage              []DrawerItem
 	Metrics            []RowMetric
 	EditURL            string
+	ValidateURL        string
 }
 
 // DrawerItem is a labeled value row in the drawer.
@@ -808,4 +809,49 @@ type ModalOption struct {
 	Label       string
 	Selected    bool
 	Description string
+}
+
+// ValidationModalData represents the payload for the promotion dry-run validation modal.
+type ValidationModalData struct {
+	Title          string
+	PromotionLabel string
+	PromotionCode  string
+	ActionURL      string
+	Method         string
+	CSRFToken      string
+	Error          string
+	FieldErrors    map[string]string
+	Form           ValidationFormState
+	Result         *ValidationResultView
+}
+
+// ValidationFormState captures persisted form values when re-rendering the modal.
+type ValidationFormState struct {
+	PromotionID    string
+	Subtotal       string
+	Currency       string
+	SegmentKey     string
+	ItemSKUs       []string
+	ItemQuantities []string
+	ItemPrices     []string
+}
+
+// ValidationResultView adapts the service response for template rendering.
+type ValidationResultView struct {
+	Eligible   bool
+	Summary    string
+	ExecutedAt time.Time
+	Rules      []ValidationRuleView
+	Blockers   []string
+	RawJSON    string
+}
+
+// ValidationRuleView renders an individual rule evaluation row.
+type ValidationRuleView struct {
+	Key      string
+	Label    string
+	Passed   bool
+	Blocking bool
+	Severity string
+	Message  string
 }
