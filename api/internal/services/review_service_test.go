@@ -504,6 +504,9 @@ func (m *memoryReviewRepo) List(_ context.Context, filter repositories.ReviewLis
 	}
 
 	for _, review := range m.reviews {
+		if filter.ReviewID != "" && review.ID != filter.ReviewID {
+			continue
+		}
 		if len(statusFilter) > 0 {
 			if _, ok := statusFilter[review.Status]; !ok {
 				continue

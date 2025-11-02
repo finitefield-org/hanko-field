@@ -211,6 +211,16 @@ func (h *AdminReviewHandlers) moderateReview(w http.ResponseWriter, r *http.Requ
 
 	reason := strings.TrimSpace(payload.Reason)
 
+	var previousStatus services.ReviewStatus
+	if page, err := h.reviews.ListReviews(ctx, services.ReviewListFilter{
+		ReviewID: reviewID,
+		Pagination: services.Pagination{
+			PageSize: 1,
+		},
+	}); err == nil && len(page.Items) > 0 {
+		previousStatus = page.Items[0].Status
+	}
+
 	review, err := h.reviews.Moderate(ctx, services.ModerateReviewCommand{
 		ReviewID: reviewID,
 		ActorID:  strings.TrimSpace(identity.UID),
@@ -221,7 +231,7 @@ func (h *AdminReviewHandlers) moderateReview(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	h.recordModerationAudit(ctx, identity, review, action, reason)
+	h.recordModerationAudit(ctx, identity, review, action, reason, previousStatus)
 
 	response := adminReviewResponse{
 		Review: buildAdminReviewPayload(review),
@@ -276,10 +286,16 @@ func (h *AdminReviewHandlers) storeReviewReply(w http.ResponseWriter, r *http.Re
 		visible = *payload.Visible
 	}
 
+	message := strings.TrimSpace(payload.Message)
+	if message == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "message is required", http.StatusBadRequest))
+		return
+	}
+
 	review, err := h.reviews.StoreReply(ctx, services.StoreReviewReplyCommand{
 		ReviewID: reviewID,
 		ActorID:  strings.TrimSpace(identity.UID),
-		Message:  strings.TrimSpace(payload.Message),
+		Message:  message,
 		Visible:  visible,
 	})
 	if err != nil {
@@ -295,7 +311,7 @@ func (h *AdminReviewHandlers) storeReviewReply(w http.ResponseWriter, r *http.Re
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-func (h *AdminReviewHandlers) recordModerationAudit(ctx context.Context, identity *auth.Identity, review services.Review, action string, reason string) {
+func (h *AdminReviewHandlers) recordModerationAudit(ctx context.Context, identity *auth.Identity, review services.Review, action string, reason string, previous services.ReviewStatus) {
 	if h.audit == nil {
 		return
 	}
@@ -315,11 +331,14 @@ func (h *AdminReviewHandlers) recordModerationAudit(ctx context.Context, identit
 	if reason != "" {
 		metadata["reason"] = reason
 	}
+	if previous != "" {
+		metadata["previousStatus"] = string(previous)
+	}
 
 	diff := make(map[string]services.AuditLogDiff)
-	if review.Status == domain.ReviewStatusApproved || review.Status == domain.ReviewStatusRejected {
+	if previous != "" && previous != review.Status {
 		diff["status"] = services.AuditLogDiff{
-			Before: string(domain.ReviewStatusPending),
+			Before: string(previous),
 			After:  string(review.Status),
 		}
 	}
@@ -452,7 +471,6 @@ func buildAdminReviewPayload(review services.Review) adminReviewPayload {
 
 func parseAdminReviewStatuses(values url.Values) ([]services.ReviewStatus, error) {
 	rawValues := append([]string(nil), values["moderation"]...)
-	rawValues = append(rawValues, values["status"]...)
 
 	if len(rawValues) == 0 {
 		return nil, nil

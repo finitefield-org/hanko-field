@@ -230,6 +230,7 @@ type ReviewRepository interface {
 
 // ReviewListFilter filters review listings for moderation workflows.
 type ReviewListFilter struct {
+	ReviewID   string
 	Status     []domain.ReviewStatus
 	OrderRef   string
 	UserRef    string

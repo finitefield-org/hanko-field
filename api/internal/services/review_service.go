@@ -200,6 +200,7 @@ func (s *reviewService) ListReviews(ctx context.Context, filter ReviewListFilter
 	}
 
 	repoFilter := repositories.ReviewListFilter{
+		ReviewID:   strings.TrimSpace(filter.ReviewID),
 		Status:     cloneReviewStatuses(filter.Status),
 		OrderRef:   strings.TrimSpace(filter.OrderRef),
 		UserRef:    strings.TrimSpace(filter.UserRef),

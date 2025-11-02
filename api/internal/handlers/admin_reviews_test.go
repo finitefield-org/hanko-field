@@ -123,6 +123,16 @@ func TestAdminReviewHandlers_ModerateReview_Approve(t *testing.T) {
 	now := time.Date(2024, 6, 2, 9, 30, 0, 0, time.UTC)
 	var capturedCmd services.ModerateReviewCommand
 	service := &stubAdminReviewService{
+		listFunc: func(ctx context.Context, filter services.ReviewListFilter) (domain.CursorPage[services.Review], error) {
+			return domain.CursorPage[services.Review]{
+				Items: []services.Review{
+					{
+						ID:     "rev_42",
+						Status: domain.ReviewStatusPending,
+					},
+				},
+			}, nil
+		},
 		moderateFunc: func(ctx context.Context, cmd services.ModerateReviewCommand) (services.Review, error) {
 			capturedCmd = cmd
 			moderatedAt := now
@@ -326,6 +336,25 @@ func TestAdminReviewHandlers_StoreReply_Success(t *testing.T) {
 	}
 	if record.Metadata["messageLength"] != 10 {
 		t.Fatalf("expected message length 10, got %#v", record.Metadata["messageLength"])
+	}
+}
+
+func TestAdminReviewHandlers_StoreReply_EmptyMessage(t *testing.T) {
+	handler := NewAdminReviewHandlers(nil, &stubAdminReviewService{}, nil)
+	req := httptest.NewRequest(http.MethodPost, "/reviews/rev_55:store-reply", bytes.NewBufferString(`{"message":"   "}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{
+		UID:   "staff-1",
+		Roles: []string{auth.RoleStaff},
+	}))
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("reviewID", "rev_55")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	rec := httptest.NewRecorder()
+
+	handler.storeReviewReply(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
 	}
 }
 
