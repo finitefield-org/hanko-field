@@ -128,7 +128,7 @@
 - [x] [091 Implement audit log retrieval endpoint with filtering by target reference.](./tasks/091-implement-audit-log-retrieval-endpoint-with-filtering-by-target-reference.md)
 
 ### 6.6 Operations Utilities
-- [ ] [092 Implement invoices issue endpoint creating batch jobs and storing generated PDFs.](./tasks/092-implement-invoices-issue-endpoint-creating-batch-jobs-and-storing-generated-pdfs.md)
+- [x] [092 Implement invoices issue endpoint creating batch jobs and storing generated PDFs.](./tasks/092-implement-invoices-issue-endpoint-creating-batch-jobs-and-storing-generated-pdfs.md)
 - [ ] [093 Implement counters next endpoint managing named sequences with concurrency safety.](./tasks/093-implement-counters-next-endpoint-managing-named-sequences-with-concurrency-safet.md)
 - [ ] [094 Implement exports to BigQuery endpoint initiating sync jobs and tracking progress.](./tasks/094-implement-exports-to-bigquery-endpoint-initiating-sync-jobs-and-tracking-progres.md)
 - [ ] [095 Implement system errors/tasks endpoints reading from failure queues/log storage.](./tasks/095-implement-system-errors-tasks-endpoints-reading-from-failure-queues-log-storage.md)

@@ -446,6 +446,81 @@ type ShipmentEvent struct {
 	Details    map[string]any
 }
 
+// InvoiceStatus captures lifecycle states for invoices.
+type InvoiceStatus string
+
+const (
+	// InvoiceStatusDraft indicates the invoice has been prepared but not finalised.
+	InvoiceStatusDraft InvoiceStatus = "draft"
+	// InvoiceStatusIssued indicates the invoice has been generated and stored.
+	InvoiceStatusIssued InvoiceStatus = "issued"
+	// InvoiceStatusSent indicates the invoice has been dispatched to the recipient.
+	InvoiceStatusSent InvoiceStatus = "sent"
+	// InvoiceStatusPaid marks the invoice as fully settled.
+	InvoiceStatusPaid InvoiceStatus = "paid"
+	// InvoiceStatusVoid marks the invoice as voided or cancelled.
+	InvoiceStatusVoid InvoiceStatus = "void"
+)
+
+// InvoiceLineItem represents a single row within an invoice document.
+type InvoiceLineItem struct {
+	Description string
+	Amount      int64
+}
+
+// Invoice stores issued invoice metadata and references to generated assets.
+type Invoice struct {
+	ID            string
+	InvoiceNumber string
+	OrderRef      string
+	Status        InvoiceStatus
+	Currency      string
+	Amount        int64
+	DueDate       *time.Time
+	SentAt        *time.Time
+	PaidAt        *time.Time
+	VoidedAt      *time.Time
+	PDFAssetRef   *string
+	LineItems     []InvoiceLineItem
+	Metadata      map[string]any
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// InvoiceBatchSummary aggregates issuance results for reporting.
+type InvoiceBatchSummary struct {
+	TotalOrders int
+	Issued      int
+	Failed      int
+}
+
+// InvoiceBatchJobStatus enumerates invoice batch job lifecycle states.
+type InvoiceBatchJobStatus string
+
+const (
+	// InvoiceBatchJobStatusQueued indicates the job has been enqueued.
+	InvoiceBatchJobStatusQueued InvoiceBatchJobStatus = "queued"
+	// InvoiceBatchJobStatusProcessing indicates the job is currently processing.
+	InvoiceBatchJobStatusProcessing InvoiceBatchJobStatus = "processing"
+	// InvoiceBatchJobStatusSucceeded indicates the job completed successfully.
+	InvoiceBatchJobStatusSucceeded InvoiceBatchJobStatus = "succeeded"
+	// InvoiceBatchJobStatusFailed indicates the job failed.
+	InvoiceBatchJobStatusFailed InvoiceBatchJobStatus = "failed"
+)
+
+// InvoiceBatchJob records a bulk invoice issuance request for tracking.
+type InvoiceBatchJob struct {
+	ID          string
+	RequestedBy string
+	Status      InvoiceBatchJobStatus
+	OrderIDs    []string
+	Filters     map[string]any
+	Metadata    map[string]any
+	Summary     InvoiceBatchSummary
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 // ReviewStatus indicates the moderation state of a review.
 type ReviewStatus string
 

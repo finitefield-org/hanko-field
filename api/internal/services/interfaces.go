@@ -98,6 +98,12 @@ type (
 	NameMappingStatus         = domain.NameMappingStatus
 	ProductionQueue           = domain.ProductionQueue
 	ProductionQueueWIPSummary = domain.ProductionQueueWIPSummary
+	Invoice                   = domain.Invoice
+	InvoiceStatus             = domain.InvoiceStatus
+	InvoiceLineItem           = domain.InvoiceLineItem
+	InvoiceBatchSummary       = domain.InvoiceBatchSummary
+	InvoiceBatchJob           = domain.InvoiceBatchJob
+	InvoiceBatchJobStatus     = domain.InvoiceBatchJobStatus
 )
 
 // PromotionConstraint identifies a validation group evaluated for promotion definitions.
@@ -181,6 +187,11 @@ const (
 
 	ProductionQueuePriorityNormal = domain.ProductionQueuePriorityNormal
 	ProductionQueuePriorityRush   = domain.ProductionQueuePriorityRush
+
+	InvoiceBatchJobStatusQueued     = domain.InvoiceBatchJobStatusQueued
+	InvoiceBatchJobStatusProcessing = domain.InvoiceBatchJobStatusProcessing
+	InvoiceBatchJobStatusSucceeded  = domain.InvoiceBatchJobStatusSucceeded
+	InvoiceBatchJobStatusFailed     = domain.InvoiceBatchJobStatusFailed
 )
 
 // DesignService orchestrates design lifecycle operations, coordinating repositories,
@@ -237,6 +248,11 @@ type OrderService interface {
 	AssignOrderToQueue(ctx context.Context, cmd AssignOrderToQueueCommand) (Order, error)
 	RequestInvoice(ctx context.Context, cmd RequestInvoiceCommand) (Order, error)
 	CloneForReorder(ctx context.Context, cmd CloneForReorderCommand) (Order, error)
+}
+
+// InvoiceService coordinates bulk invoice generation and storage workflows.
+type InvoiceService interface {
+	IssueInvoices(ctx context.Context, cmd IssueInvoicesCommand) (IssueInvoicesResult, error)
 }
 
 // PaymentService handles idempotent PSP webhook processing and admin adjustments.
@@ -715,6 +731,35 @@ type RequestInvoiceCommand struct {
 	ActorID        string
 	Notes          string
 	ExpectedStatus *OrderStatus
+}
+
+// InvoiceBatchFilter narrows invoice issuance scope when order IDs are not supplied.
+type InvoiceBatchFilter struct {
+	Statuses    []string
+	PlacedRange domain.RangeQuery[time.Time]
+}
+
+// IssueInvoicesCommand requests batch invoice generation for selected orders.
+type IssueInvoicesCommand struct {
+	OrderIDs []string
+	Filter   InvoiceBatchFilter
+	ActorID  string
+	Limit    int
+	Notes    string
+}
+
+// IssuedInvoice summarises invoice metadata for each processed order.
+type IssuedInvoice struct {
+	OrderID       string
+	InvoiceNumber string
+	PDFAssetRef   string
+}
+
+// IssueInvoicesResult reports batch job details and issued invoice metadata.
+type IssueInvoicesResult struct {
+	JobID   string
+	Issued  []IssuedInvoice
+	Summary InvoiceBatchSummary
 }
 
 type AppendProductionEventCommand struct {

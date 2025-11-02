@@ -19,6 +19,7 @@ type Services struct {
 	Cart       services.CartService
 	Checkout   services.CheckoutService
 	Orders     services.OrderService
+	Invoices   services.InvoiceService
 	Reviews    services.ReviewService
 	Counters   services.CounterService
 	Payments   services.PaymentService

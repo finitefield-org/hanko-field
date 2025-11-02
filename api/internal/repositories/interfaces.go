@@ -36,6 +36,8 @@ type Registry interface {
 	Assets() AssetRepository
 	AuditLogs() AuditLogRepository
 	NameMappings() NameMappingRepository
+	Invoices() InvoiceRepository
+	InvoiceBatches() InvoiceBatchRepository
 	Counters() CounterRepository
 	Health() HealthRepository
 	UnitOfWork
@@ -189,6 +191,17 @@ type OrderRepository interface {
 	Update(ctx context.Context, order domain.Order) error
 	FindByID(ctx context.Context, orderID string) (domain.Order, error)
 	List(ctx context.Context, filter OrderListFilter) (domain.CursorPage[domain.Order], error)
+}
+
+// InvoiceRepository persists invoice records linked to orders.
+type InvoiceRepository interface {
+	Insert(ctx context.Context, invoice domain.Invoice) (domain.Invoice, error)
+	FindByOrderID(ctx context.Context, orderID string) ([]domain.Invoice, error)
+}
+
+// InvoiceBatchRepository tracks invoice batch runs for operations.
+type InvoiceBatchRepository interface {
+	Insert(ctx context.Context, job domain.InvoiceBatchJob) (domain.InvoiceBatchJob, error)
 }
 
 // OrderSort enumerates supported sort fields for admin and user order listings.

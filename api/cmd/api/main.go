@@ -467,6 +467,7 @@ func main() {
 	}))
 	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
 	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, auditService)
+	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, nil)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
 
@@ -476,6 +477,7 @@ func main() {
 		adminPromotionHandlers.Routes,
 		adminInventoryHandlers.Routes,
 		adminProductionQueueHandlers.Routes,
+		adminInvoiceHandlers.Routes,
 		adminReviewHandlers.Routes,
 		adminUserHandlers.Routes,
 		adminAuditHandlers.Routes,
