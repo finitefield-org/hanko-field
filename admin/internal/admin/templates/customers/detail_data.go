@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	templ "github.com/a-h/templ"
+
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/partials"
@@ -17,6 +19,7 @@ type DetailPageData struct {
 	Breadcrumbs  []partials.Breadcrumb
 	CustomerID   string
 	ActiveTab    string
+	RefreshURL   string
 	Tabs         []DetailTab
 	Header       DetailHeader
 	Metrics      []DetailMetricCard
@@ -73,6 +76,8 @@ type QuickActionButton struct {
 	Variant string
 	Icon    string
 	Method  string
+	Modal   bool
+	Attrs   templ.Attributes
 }
 
 // DetailMetricCard renders a KPI card in the metrics row.
@@ -264,6 +269,10 @@ func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTa
 	}
 
 	tabBase := joinBase(basePath, fmt.Sprintf("/customers/%s", profile.ID))
+	refreshURL := tabBase
+	if tab != "" && tab != "overview" {
+		refreshURL = tabBase + "?tab=" + tab
+	}
 	tabs := []DetailTab{
 		{ID: "overview", Label: "概要", Href: tabBase, Active: tab == "overview"},
 		{ID: "orders", Label: "注文", Href: tabBase + "?tab=orders", Active: tab == "orders", Badge: fmt.Sprintf("%d", profile.TotalOrders)},
@@ -332,6 +341,7 @@ func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTa
 		Breadcrumbs:  breadcrumbs,
 		CustomerID:   profile.ID,
 		ActiveTab:    tab,
+		RefreshURL:   refreshURL,
 		Tabs:         tabs,
 		Header:       header,
 		Metrics:      metrics,
@@ -588,12 +598,28 @@ func quickActions(actions []admincustomers.QuickAction) []QuickActionButton {
 		if variant == "" {
 			variant = "secondary"
 		}
+		href := strings.TrimSpace(action.Href)
+		method := strings.TrimSpace(action.Method)
+		attrs := templ.Attributes{
+			"data-icon": strings.TrimSpace(action.Icon),
+		}
+		if method != "" {
+			attrs["data-method"] = method
+		}
+		isModal := strings.EqualFold(method, "modal") && href != ""
+		if isModal {
+			attrs["hx-get"] = href
+			attrs["hx-target"] = "#modal"
+			attrs["hx-swap"] = "innerHTML"
+		}
 		result = append(result, QuickActionButton{
 			Label:   action.Label,
-			Href:    action.Href,
+			Href:    href,
 			Variant: variant,
 			Icon:    action.Icon,
-			Method:  action.Method,
+			Method:  method,
+			Modal:   isModal,
+			Attrs:   attrs,
 		})
 	}
 	return result

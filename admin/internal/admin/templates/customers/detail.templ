@@ -15,7 +15,17 @@ templ DetailPage(data DetailPageData) {
 }
 
 templ detailBody(data DetailPageData) {
-	<div class="space-y-6">
+	<div
+		id="customer-detail"
+		class="space-y-6"
+		data-customer-detail
+		if strings.TrimSpace(data.RefreshURL) != "" {
+			hx-get={ data.RefreshURL }
+			hx-trigger="refresh from:body"
+			hx-target="this"
+			hx-swap="outerHTML"
+		}
+	>
 		@detailHeaderCard(data.Header, data.Description)
 		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
 			<div class="space-y-6">
@@ -140,10 +150,7 @@ templ detailHeaderCard(header DetailHeader, description string) {
 					@components.ButtonWith(action.Label, components.ButtonOptions{
 						Variant: action.Variant,
 						Href:    action.Href,
-						Attrs: templ.Attributes{
-							"data-icon": action.Icon,
-							"data-method": action.Method,
-						},
+						Attrs:   action.Attrs,
 					})
 				}
 			</div>

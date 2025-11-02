@@ -225,6 +225,8 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				cr.Get("/", uiHandlers.CustomersPage)
 				cr.Get("/{customerID}", uiHandlers.CustomerDetailPage)
 				RegisterFragment(cr, "/table", uiHandlers.CustomersTable)
+				RegisterFragment(cr, "/{customerID}/modal/deactivate-mask", uiHandlers.CustomerDeactivateModal)
+				cr.Post("/{customerID}:deactivate-and-mask", uiHandlers.CustomerDeactivateAndMask)
 			})
 			protected.Route("/shipments", func(sr chi.Router) {
 				sr.Get("/tracking", uiHandlers.ShipmentsTrackingPage)

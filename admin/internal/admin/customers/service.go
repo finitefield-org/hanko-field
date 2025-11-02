@@ -16,6 +16,12 @@ type Service interface {
 
 	// Detail loads full profile data for a single customer.
 	Detail(ctx context.Context, token, customerID string) (Detail, error)
+
+	// DeactivateModal retrieves contextual information required to render the deactivate + mask modal.
+	DeactivateModal(ctx context.Context, token, customerID string) (DeactivateModal, error)
+
+	// DeactivateAndMask performs the irreversible deactivate + mask operation and returns the updated profile context.
+	DeactivateAndMask(ctx context.Context, token, customerID string, req DeactivateAndMaskRequest) (DeactivateAndMaskResult, error)
 }
 
 // Status represents the lifecycle state of a customer account.
@@ -111,6 +117,12 @@ type TierOption struct {
 
 // ErrCustomerNotFound indicates the requested customer doesn't exist.
 var ErrCustomerNotFound = errors.New("customer not found")
+
+// ErrInvalidConfirmation indicates the provided confirmation phrase is incorrect.
+var ErrInvalidConfirmation = errors.New("invalid confirmation phrase")
+
+// ErrAlreadyDeactivated is returned when trying to deactivate an already deactivated customer.
+var ErrAlreadyDeactivated = errors.New("customer already deactivated")
 
 // Customer represents a single customer row in the index table.
 type Customer struct {
@@ -305,4 +317,54 @@ type RailItem struct {
 	Timestamp   time.Time
 	LinkLabel   string
 	LinkURL     string
+}
+
+// DeactivateModal provides the data needed to render the deactivate + mask confirmation modal.
+type DeactivateModal struct {
+	CustomerID         string
+	DisplayName        string
+	Email              string
+	Status             Status
+	TotalOrders        int
+	LifetimeValueMinor int64
+	Currency           string
+	LastOrderNumber    string
+	LastOrderAt        time.Time
+	ConfirmationPhrase string
+	Impacts            []DeactivateImpact
+}
+
+// DeactivateImpact summarises a single consequence of the deactivate + mask action.
+type DeactivateImpact struct {
+	Title       string
+	Description string
+	Icon        string
+	Tone        string
+}
+
+// DeactivateAndMaskRequest captures input required to process a deactivate + mask operation.
+type DeactivateAndMaskRequest struct {
+	Reason        string
+	Confirmation  string
+	ActorID       string
+	ActorEmail    string
+	RequestedAt   time.Time
+	CorrelationID string
+}
+
+// DeactivateAndMaskResult returns the updated customer detail context together with audit metadata.
+type DeactivateAndMaskResult struct {
+	Detail Detail
+	Audit  AuditRecord
+}
+
+// AuditRecord references the audit log entry emitted after a destructive operation.
+type AuditRecord struct {
+	ID         string
+	Action     string
+	Message    string
+	Timestamp  time.Time
+	ActorID    string
+	ActorEmail string
+	Metadata   map[string]string
 }

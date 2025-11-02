@@ -76,7 +76,7 @@
 ## 9. Customers, Reviews, and KYC
 - [x] [Implement customers list page (`/admin/customers`) with search filters (name, email, status) and table fragment.](doc/admin/tasks/051-implement-customers-list-page-admin-customers-with-search-filters-name-email-status-and-ta.md)
 - [x] [Build customer detail page (`/admin/customers/{uid}`) showing orders, addresses, payment methods, and support notes.](doc/admin/tasks/052-build-customer-detail-page-admin-customers-uid-showing-orders-addresses-payment-methods-an.md)
-- [ ] [Implement deactivate-and-mask modal tied to `POST /users/{uid}:deactivate-and-mask` with confirmation and audit log output.](doc/admin/tasks/053-implement-deactivate-and-mask-modal-tied-to-post-users-uid-deactivate-and-mask-with-confir.md)
+- [x] [Implement deactivate-and-mask modal tied to `POST /users/{uid}:deactivate-and-mask` with confirmation and audit log output.](doc/admin/tasks/053-implement-deactivate-and-mask-modal-tied-to-post-users-uid-deactivate-and-mask-with-confir.md)
 - [ ] [Implement review moderation dashboard (`/admin/reviews?moderation=pending`) with table fragment showing review details and filters.](doc/admin/tasks/054-implement-review-moderation-dashboard-admin-reviews-moderation-pending-with-table-fragment.md)
 - [ ] [Build moderation modal(s) for approve/reject (`PUT /admin/reviews/{id}:moderate`) and store reply (`POST /admin/reviews/{id}:store-reply`).](doc/admin/tasks/055-build-moderation-modal-s-for-approve-reject-put-admin-reviews-id-moderate-and-store-reply-.md)
 

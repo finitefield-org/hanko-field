@@ -13,6 +13,7 @@ import (
 type StaticService struct {
 	Customers []Customer
 	Details   map[string]Detail
+	AuditLog  map[string][]AuditRecord
 }
 
 // NewStaticService builds a StaticService populated with representative customers.
@@ -163,6 +164,7 @@ func NewStaticService() *StaticService {
 	return &StaticService{
 		Customers: customers,
 		Details:   buildStaticDetails(customers, now),
+		AuditLog:  make(map[string][]AuditRecord),
 	}
 }
 
@@ -196,6 +198,7 @@ func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
 						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
 						{Label: "注文を作成", Href: "/admin/orders/new?customer=" + c.ID, Variant: "primary", Icon: "🛒"},
 						{Label: "Slack で共有", Href: "https://slack.com/app_redirect?channel=support", Variant: "ghost", Icon: "💬"},
+						{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
 					},
 				},
 				Metrics: []Metric{
@@ -439,6 +442,7 @@ func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
 					QuickActions: []QuickAction{
 						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
 						{Label: "営業へ共有", Href: "https://slack.com/app_redirect?channel=upsell", Variant: "ghost", Icon: "📈"},
+						{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
 					},
 				},
 				Metrics: []Metric{
@@ -563,6 +567,13 @@ func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
 }
 
 func detailFromCustomer(c Customer, now time.Time) Detail {
+	quickActions := []QuickAction{
+		{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
+	}
+	if c.Status != StatusDeactivated {
+		quickActions = append(quickActions, QuickAction{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"})
+	}
+
 	profile := Profile{
 		ID:                 c.ID,
 		DisplayName:        c.DisplayName,
@@ -583,9 +594,7 @@ func detailFromCustomer(c Customer, now time.Time) Detail {
 		RiskLevel:          c.RiskLevel,
 		Flags:              append([]Flag(nil), c.Flags...),
 		Tags:               append([]string(nil), c.Tags...),
-		QuickActions: []QuickAction{
-			{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
-		},
+		QuickActions:       quickActions,
 	}
 
 	defaultCurrency := c.Currency
@@ -632,6 +641,186 @@ func detailFromCustomer(c Customer, now time.Time) Detail {
 		},
 		LastUpdated: now,
 	}
+}
+
+// DeactivateModal returns a canned deactivate + mask modal dataset.
+func (s *StaticService) DeactivateModal(_ context.Context, _ string, customerID string) (DeactivateModal, error) {
+	detail, ok := s.Details[customerID]
+	if !ok {
+		return DeactivateModal{}, ErrCustomerNotFound
+	}
+
+	profile := detail.Profile
+	phrase := confirmationPhrase(profile.ID)
+	impacts := []DeactivateImpact{
+		{
+			Title:       "サインイン権限を即時停止",
+			Description: "顧客は以後、アプリやウェブからログインできなくなります。",
+			Icon:        "🚫",
+			Tone:        "danger",
+		},
+		{
+			Title:       "個人情報を匿名化",
+			Description: "氏名・メール・電話番号などのPIIをマスクし、通知も停止します。",
+			Icon:        "🛡️",
+			Tone:        "warning",
+		},
+		{
+			Title:       "注文・請求データは保持",
+			Description: "会計・レポート用途のため、注文履歴と請求記録は削除されません。",
+			Icon:        "📦",
+			Tone:        "info",
+		},
+	}
+
+	return DeactivateModal{
+		CustomerID:         profile.ID,
+		DisplayName:        profile.DisplayName,
+		Email:              profile.Email,
+		Status:             profile.Status,
+		TotalOrders:        profile.TotalOrders,
+		LifetimeValueMinor: profile.LifetimeValueMinor,
+		Currency:           profile.Currency,
+		LastOrderNumber:    profile.LastOrderNumber,
+		LastOrderAt:        profile.LastOrderAt,
+		ConfirmationPhrase: phrase,
+		Impacts:            impacts,
+	}, nil
+}
+
+// DeactivateAndMask updates the in-memory dataset to simulate a deactivate + mask request.
+func (s *StaticService) DeactivateAndMask(_ context.Context, _ string, customerID string, req DeactivateAndMaskRequest) (DeactivateAndMaskResult, error) {
+	detail, ok := s.Details[customerID]
+	if !ok {
+		return DeactivateAndMaskResult{}, ErrCustomerNotFound
+	}
+
+	expected := confirmationPhrase(customerID)
+	if !strings.EqualFold(strings.TrimSpace(req.Confirmation), expected) {
+		return DeactivateAndMaskResult{}, ErrInvalidConfirmation
+	}
+
+	if detail.Profile.Status == StatusDeactivated {
+		return DeactivateAndMaskResult{}, ErrAlreadyDeactivated
+	}
+
+	now := time.Now().UTC()
+
+	actorEmail := strings.TrimSpace(req.ActorEmail)
+	if actorEmail == "" {
+		actorEmail = "system@example.com"
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	if actorID == "" {
+		actorID = "system"
+	}
+
+	reason := strings.TrimSpace(req.Reason)
+
+	detail.Profile.Status = StatusDeactivated
+	detail.Profile.DisplayName = "マスク済み顧客"
+	detail.Profile.Email = fmt.Sprintf("masked+%s@hanko-field.invalid", customerID)
+	detail.Profile.Phone = ""
+	detail.Profile.AvatarURL = ""
+	detail.Profile.QuickActions = []QuickAction{
+		{Label: "監査ログを開く", Href: fmt.Sprintf("/admin/audit-logs?targetRef=user:%s", customerID), Variant: "ghost", Icon: "📜"},
+	}
+	if !contains(detail.Profile.Tags, "masked") {
+		detail.Profile.Tags = append(detail.Profile.Tags, "masked")
+	}
+	maskFlag := Flag{Label: "マスク済み", Tone: "warning", Icon: "🛡️", Description: "PIIを匿名化済み"}
+	if !flagExists(detail.Profile.Flags, maskFlag.Label) {
+		detail.Profile.Flags = append(detail.Profile.Flags, maskFlag)
+	}
+
+	detail.InfoRail.RiskLevel = "low"
+	detail.InfoRail.RiskTone = "muted"
+	detail.InfoRail.RiskDescription = "アカウントは退会・マスク済みです。"
+	if !flagExists(detail.InfoRail.Flags, maskFlag.Label) {
+		detail.InfoRail.Flags = append(detail.InfoRail.Flags, maskFlag)
+	}
+
+	detail.LastUpdated = now
+
+	event := ActivityItem{
+		ID:          fmt.Sprintf("activity_%s", now.Format("20060102T150405")),
+		Timestamp:   now,
+		Actor:       actorEmail,
+		ActorRole:   "管理者",
+		Title:       "アカウントを無効化・マスク",
+		Description: fallbackActivityDescription(reason),
+		Tone:        "danger",
+		Icon:        "🛡️",
+	}
+	detail.Activity = append([]ActivityItem{event}, detail.Activity...)
+
+	for idx := range s.Customers {
+		if s.Customers[idx].ID == customerID {
+			s.Customers[idx].Status = StatusDeactivated
+			s.Customers[idx].Email = detail.Profile.Email
+			s.Customers[idx].DisplayName = detail.Profile.DisplayName
+			if !flagExists(s.Customers[idx].Flags, maskFlag.Label) {
+				s.Customers[idx].Flags = append(s.Customers[idx].Flags, maskFlag)
+			}
+			break
+		}
+	}
+
+	audit := AuditRecord{
+		ID:         fmt.Sprintf("audit_%s", now.Format("20060102T150405")),
+		Action:     "customers.deactivate_mask",
+		Message:    "顧客アカウントを無効化し、PIIをマスクしました。",
+		Timestamp:  now,
+		ActorID:    actorID,
+		ActorEmail: actorEmail,
+		Metadata:   map[string]string{},
+	}
+	if reason != "" {
+		audit.Metadata["reason"] = reason
+	}
+	audit.Metadata["customerID"] = customerID
+
+	s.AuditLog[customerID] = append([]AuditRecord{audit}, s.AuditLog[customerID]...)
+
+	s.Details[customerID] = detail
+
+	return DeactivateAndMaskResult{
+		Detail: detail,
+		Audit:  audit,
+	}, nil
+}
+
+func confirmationPhrase(customerID string) string {
+	id := strings.TrimSpace(customerID)
+	if id == "" {
+		return "DEACTIVATE"
+	}
+	return fmt.Sprintf("DEACTIVATE %s", strings.ToUpper(id))
+}
+
+func contains(list []string, value string) bool {
+	for _, item := range list {
+		if strings.EqualFold(strings.TrimSpace(item), strings.TrimSpace(value)) {
+			return true
+		}
+	}
+	return false
+}
+
+func flagExists(flags []Flag, label string) bool {
+	for _, flag := range flags {
+		if strings.EqualFold(strings.TrimSpace(flag.Label), strings.TrimSpace(label)) {
+			return true
+		}
+	}
+	return false
+}
+
+func fallbackActivityDescription(reason string) string {
+	if strings.TrimSpace(reason) == "" {
+		return "管理コンソールから退会＋マスク処理を実行しました。"
+	}
+	return reason
 }
 
 func formatCurrency(amount int64, currency string) string {
