@@ -369,6 +369,8 @@ func writeReviewError(ctx context.Context, w http.ResponseWriter, err error) {
 		httpx.WriteError(ctx, w, httpx.NewError("review_conflict", err.Error(), http.StatusConflict))
 	case errors.Is(err, services.ErrReviewNotFound):
 		httpx.WriteError(ctx, w, httpx.NewError("review_not_found", "review not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrReviewInvalidState):
+		httpx.WriteError(ctx, w, httpx.NewError("review_invalid_state", err.Error(), http.StatusConflict))
 	default:
 		var repoErr repositories.RepositoryError
 		if errors.As(err, &repoErr) && repoErr.IsUnavailable() {

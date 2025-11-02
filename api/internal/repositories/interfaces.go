@@ -223,8 +223,17 @@ type ReviewRepository interface {
 	FindByID(ctx context.Context, reviewID string) (domain.Review, error)
 	FindByOrder(ctx context.Context, orderID string) (domain.Review, error)
 	ListByUser(ctx context.Context, userID string, pager domain.Pagination) (domain.CursorPage[domain.Review], error)
+	List(ctx context.Context, filter ReviewListFilter) (domain.CursorPage[domain.Review], error)
 	UpdateStatus(ctx context.Context, reviewID string, status domain.ReviewStatus, update ReviewModerationUpdate) (domain.Review, error)
 	UpdateReply(ctx context.Context, reviewID string, reply *domain.ReviewReply, updatedAt time.Time) (domain.Review, error)
+}
+
+// ReviewListFilter filters review listings for moderation workflows.
+type ReviewListFilter struct {
+	Status     []domain.ReviewStatus
+	OrderRef   string
+	UserRef    string
+	Pagination domain.Pagination
 }
 
 // OrderProductionEventRepository stores production timeline events for an order.

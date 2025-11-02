@@ -49,6 +49,7 @@ type (
 	Review                    = domain.Review
 	ReviewReply               = domain.ReviewReply
 	ReviewStatus              = domain.ReviewStatus
+	ReviewListFilter          = repositories.ReviewListFilter
 	Promotion                 = domain.Promotion
 	PromotionStacking         = domain.PromotionStacking
 	PromotionConditions       = domain.PromotionConditions
@@ -259,6 +260,7 @@ type ReviewService interface {
 	Create(ctx context.Context, cmd CreateReviewCommand) (Review, error)
 	GetByOrder(ctx context.Context, cmd GetReviewByOrderCommand) (Review, error)
 	ListByUser(ctx context.Context, cmd ListUserReviewsCommand) (domain.CursorPage[Review], error)
+	ListReviews(ctx context.Context, filter ReviewListFilter) (domain.CursorPage[Review], error)
 	Moderate(ctx context.Context, cmd ModerateReviewCommand) (Review, error)
 	StoreReply(ctx context.Context, cmd StoreReviewReplyCommand) (Review, error)
 }

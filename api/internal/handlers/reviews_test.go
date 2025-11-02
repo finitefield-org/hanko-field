@@ -380,6 +380,7 @@ type stubReviewService struct {
 	createFunc     func(ctx context.Context, cmd services.CreateReviewCommand) (services.Review, error)
 	getByOrderFunc func(ctx context.Context, cmd services.GetReviewByOrderCommand) (services.Review, error)
 	listByUserFunc func(ctx context.Context, cmd services.ListUserReviewsCommand) (domain.CursorPage[services.Review], error)
+	listFunc       func(ctx context.Context, filter services.ReviewListFilter) (domain.CursorPage[services.Review], error)
 	moderateFunc   func(ctx context.Context, cmd services.ModerateReviewCommand) (services.Review, error)
 	storeReplyFunc func(ctx context.Context, cmd services.StoreReviewReplyCommand) (services.Review, error)
 }
@@ -403,6 +404,13 @@ func (s *stubReviewService) ListByUser(ctx context.Context, cmd services.ListUse
 		return domain.CursorPage[services.Review]{}, nil
 	}
 	return s.listByUserFunc(ctx, cmd)
+}
+
+func (s *stubReviewService) ListReviews(ctx context.Context, filter services.ReviewListFilter) (domain.CursorPage[services.Review], error) {
+	if s == nil || s.listFunc == nil {
+		return domain.CursorPage[services.Review]{}, nil
+	}
+	return s.listFunc(ctx, filter)
 }
 
 func (s *stubReviewService) Moderate(ctx context.Context, cmd services.ModerateReviewCommand) (services.Review, error) {
