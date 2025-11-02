@@ -521,6 +521,37 @@ type InvoiceBatchJob struct {
 	UpdatedAt   time.Time
 }
 
+// SystemTaskStatus describes the lifecycle state of a long-running background task.
+type SystemTaskStatus string
+
+const (
+	// SystemTaskStatusPending indicates the task has been accepted but not yet started.
+	SystemTaskStatusPending SystemTaskStatus = "pending"
+	// SystemTaskStatusRunning indicates the task is currently being processed.
+	SystemTaskStatusRunning SystemTaskStatus = "running"
+	// SystemTaskStatusCompleted indicates the task finished successfully.
+	SystemTaskStatusCompleted SystemTaskStatus = "completed"
+	// SystemTaskStatusFailed indicates the task finished with an error.
+	SystemTaskStatusFailed SystemTaskStatus = "failed"
+)
+
+// SystemTask records asynchronous operations for progress tracking in admin tools.
+type SystemTask struct {
+	ID             string
+	Kind           string
+	Status         SystemTaskStatus
+	RequestedBy    string
+	IdempotencyKey string
+	Parameters     map[string]any
+	Metadata       map[string]any
+	ResultRef      *string
+	ErrorMessage   *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	StartedAt      *time.Time
+	CompletedAt    *time.Time
+}
+
 // ReviewStatus indicates the moderation state of a review.
 type ReviewStatus string
 

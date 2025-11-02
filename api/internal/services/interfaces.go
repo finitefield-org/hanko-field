@@ -88,6 +88,8 @@ type (
 	ProductVariantOption      = domain.ProductVariantOption
 	ProductInventorySettings  = domain.ProductInventorySettings
 	SystemHealthReport        = domain.SystemHealthReport
+	SystemTask                = domain.SystemTask
+	SystemTaskStatus          = domain.SystemTaskStatus
 	AuditLogEntry             = domain.AuditLogEntry
 	SignedAssetResponse       = domain.SignedAssetResponse
 	PromotionUsage            = domain.PromotionUsage
@@ -192,6 +194,10 @@ const (
 	InvoiceBatchJobStatusProcessing = domain.InvoiceBatchJobStatusProcessing
 	InvoiceBatchJobStatusSucceeded  = domain.InvoiceBatchJobStatusSucceeded
 	InvoiceBatchJobStatusFailed     = domain.InvoiceBatchJobStatusFailed
+	SystemTaskStatusPending         = domain.SystemTaskStatusPending
+	SystemTaskStatusRunning         = domain.SystemTaskStatusRunning
+	SystemTaskStatusCompleted       = domain.SystemTaskStatusCompleted
+	SystemTaskStatusFailed          = domain.SystemTaskStatusFailed
 )
 
 // DesignService orchestrates design lifecycle operations, coordinating repositories,
@@ -438,6 +444,11 @@ type SystemService interface {
 	HealthReport(ctx context.Context) (SystemHealthReport, error)
 	ListAuditLogs(ctx context.Context, filter AuditLogFilter) (domain.CursorPage[AuditLogEntry], error)
 	NextCounterValue(ctx context.Context, cmd CounterCommand) (int64, error)
+}
+
+// ExportService coordinates data export tasks to downstream analytics systems.
+type ExportService interface {
+	StartBigQuerySync(ctx context.Context, cmd BigQueryExportCommand) (SystemTask, error)
 }
 
 // AuditLogService centralizes immutable audit log persistence and retrieval.
@@ -767,6 +778,21 @@ type IssueInvoicesResult struct {
 	Issued  []IssuedInvoice
 	Summary InvoiceBatchSummary
 	Failed  []InvoiceFailure
+}
+
+// ExportTimeWindow constrains export scope to a specific time range.
+type ExportTimeWindow struct {
+	From *time.Time
+	To   *time.Time
+}
+
+// BigQueryExportCommand requests a background sync of selected entities to BigQuery.
+type BigQueryExportCommand struct {
+	ActorID        string
+	Entities       []string
+	Window         *ExportTimeWindow
+	IdempotencyKey string
+	Metadata       map[string]any
 }
 
 type AppendProductionEventCommand struct {

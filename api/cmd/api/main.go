@@ -435,6 +435,7 @@ func main() {
 	var (
 		orderService    services.OrderService
 		shipmentService services.ShipmentService
+		exportService   services.ExportService
 	)
 	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
 
@@ -483,6 +484,7 @@ func main() {
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
 	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, counterService, auditService, handlers.WithAdminCounterAllowedScopes("orders", "invoices"))
+	adminOperationsHandlers := handlers.NewAdminOperationsHandlers(authenticator, exportService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -491,6 +493,7 @@ func main() {
 		adminInventoryHandlers.Routes,
 		adminProductionQueueHandlers.Routes,
 		adminInvoiceHandlers.Routes,
+		adminOperationsHandlers.Routes,
 		adminCounterHandlers.Routes,
 		adminReviewHandlers.Routes,
 		adminUserHandlers.Routes,
