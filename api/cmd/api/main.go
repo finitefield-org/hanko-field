@@ -124,7 +124,19 @@ func main() {
 		logger.Fatal("failed to initialise signed url client", zap.Error(err))
 	}
 
-	systemService, err := newSystemService(ctx, firestoreClient, fetcher, buildInfo)
+	counterRepo, err := firestoreRepo.NewCounterRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise counter repository", zap.Error(err))
+	}
+	counterService, err := services.NewCounterService(services.CounterServiceDeps{
+		Repository: counterRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise counter service", zap.Error(err))
+	}
+
+	systemService, err := newSystemService(ctx, firestoreClient, fetcher, buildInfo, counterService)
 	if err != nil {
 		logger.Warn("health: system service init failed", zap.Error(err))
 	}
@@ -470,7 +482,7 @@ func main() {
 	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, nil)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
-	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, nil, auditService)
+	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, counterService, auditService, handlers.WithAdminCounterAllowedScopes("orders", "invoices"))
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -556,7 +568,7 @@ func buildInfoFromEnv(env map[string]string, cfg config.Config, started time.Tim
 	}
 }
 
-func newSystemService(ctx context.Context, client *firestore.Client, fetcher *secrets.Fetcher, build services.BuildInfo) (services.SystemService, error) {
+func newSystemService(ctx context.Context, client *firestore.Client, fetcher *secrets.Fetcher, build services.BuildInfo, counters services.CounterService) (services.SystemService, error) {
 	checks := make([]repositories.DependencyCheck, 0, 4)
 	if client != nil {
 		c := client
@@ -604,6 +616,7 @@ func newSystemService(ctx context.Context, client *firestore.Client, fetcher *se
 		HealthRepository: repo,
 		Clock:            time.Now,
 		Build:            build,
+		Counters:         counters,
 	})
 }
 
