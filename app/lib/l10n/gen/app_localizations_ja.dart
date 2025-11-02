@@ -699,6 +699,99 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designPreviewShareCancel => 'キャンセル';
 
   @override
+  String get designExportTitle => 'デジタル書き出し';
+
+  @override
+  String get designExportHistoryTooltip => '書き出し履歴を表示';
+
+  @override
+  String get designExportPreviewLabel => 'プレビュー';
+
+  @override
+  String get designExportFormatLabel => 'フォーマット';
+
+  @override
+  String get designExportFormatPng => 'PNG';
+
+  @override
+  String get designExportFormatSvg => 'SVG';
+
+  @override
+  String get designExportFormatPdf => 'PDF';
+
+  @override
+  String get designExportOptionTransparent => '背景を透明にする';
+
+  @override
+  String get designExportOptionTransparentSubtitle => '印影以外の背景を透過にします。';
+
+  @override
+  String get designExportOptionBleed => '塗り足しを追加';
+
+  @override
+  String get designExportOptionBleedSubtitle => '印影の周囲に安全マージンを確保します。';
+
+  @override
+  String get designExportOptionMetadata => 'メタデータを埋め込む';
+
+  @override
+  String get designExportOptionMetadataSubtitle => '書き出しファイルと一緒に作成情報を保存します。';
+
+  @override
+  String get designExportExportButton => '書き出す';
+
+  @override
+  String get designExportShareButton => '共有';
+
+  @override
+  String get designExportPermissionDenied => 'ストレージへのアクセス許可が必要です。';
+
+  @override
+  String designExportExportSuccess(String path) {
+    return '$path に書き出しました';
+  }
+
+  @override
+  String designExportMetadataSaved(String path) {
+    return '$path にメタデータを保存しました';
+  }
+
+  @override
+  String get designExportGenericError => '書き出しに失敗しました。もう一度お試しください。';
+
+  @override
+  String get designExportPdfUnavailable => 'PDF書き出しは現在準備中です。';
+
+  @override
+  String get designExportShareError => '現在は共有できません。';
+
+  @override
+  String get designExportShareSubject => '印鑑デザインのプレビュー';
+
+  @override
+  String get designExportShareBody => '最新の印鑑デザインを書き出しました。';
+
+  @override
+  String get designExportDestinationTitle => '保存先を選択';
+
+  @override
+  String get designExportDestinationDownloads => 'ダウンロードフォルダ';
+
+  @override
+  String get designExportDestinationAppStorage => 'アプリ内ドキュメント';
+
+  @override
+  String get designExportHistoryTitle => '最近の書き出し';
+
+  @override
+  String designExportHistorySubtitle(String format, String timestamp) {
+    return '$format・$timestamp';
+  }
+
+  @override
+  String get designExportHistoryEmpty => 'まだ書き出し履歴はありません。';
+
+  @override
   String get designInputSuggestionHeader => 'プロフィールから補完';
 
   @override

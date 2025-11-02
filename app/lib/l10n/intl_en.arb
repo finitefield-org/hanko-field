@@ -1157,6 +1157,173 @@
   "description": "Button label to dismiss the share sheet"
 }
 
+, "designExportTitle": "Digital export"
+, "@designExportTitle": {
+  "description": "Title for the design export screen"
+}
+
+, "designExportHistoryTooltip": "View previous exports"
+, "@designExportHistoryTooltip": {
+  "description": "Tooltip for the export history icon"
+}
+
+, "designExportPreviewLabel": "Preview"
+, "@designExportPreviewLabel": {
+  "description": "Label above the export preview artboard"
+}
+
+, "designExportFormatLabel": "Format"
+, "@designExportFormatLabel": {
+  "description": "Label for the export format selector"
+}
+
+, "designExportFormatPng": "PNG"
+, "@designExportFormatPng": {
+  "description": "PNG format option label"
+}
+
+, "designExportFormatSvg": "SVG"
+, "@designExportFormatSvg": {
+  "description": "SVG format option label"
+}
+
+, "designExportFormatPdf": "PDF"
+, "@designExportFormatPdf": {
+  "description": "PDF format option label"
+}
+
+, "designExportOptionTransparent": "Transparent background"
+, "@designExportOptionTransparent": {
+  "description": "Toggle label for transparent background option"
+}
+
+, "designExportOptionTransparentSubtitle": "Removes the artboard fill so only the stamp shape is opaque."
+, "@designExportOptionTransparentSubtitle": {
+  "description": "Helper text for transparent background option"
+}
+
+, "designExportOptionBleed": "Include bleed margin"
+, "@designExportOptionBleed": {
+  "description": "Toggle label for adding bleed spacing"
+}
+
+, "designExportOptionBleedSubtitle": "Adds a safety margin around the imprint for print layouts."
+, "@designExportOptionBleedSubtitle": {
+  "description": "Helper text for bleed option"
+}
+
+, "designExportOptionMetadata": "Embed metadata"
+, "@designExportOptionMetadata": {
+  "description": "Toggle label for metadata option"
+}
+
+, "designExportOptionMetadataSubtitle": "Saves creation details alongside the exported file."
+, "@designExportOptionMetadataSubtitle": {
+  "description": "Helper text for metadata option"
+}
+
+, "designExportExportButton": "Export file"
+, "@designExportExportButton": {
+  "description": "Label for the export action button"
+}
+
+, "designExportShareButton": "Share…"
+, "@designExportShareButton": {
+  "description": "Label for the share action button"
+}
+
+, "designExportPermissionDenied": "Storage permission is required to continue."
+, "@designExportPermissionDenied": {
+  "description": "Message shown when storage access is denied"
+}
+
+, "designExportExportSuccess": "Exported to {path}"
+, "@designExportExportSuccess": {
+  "description": "Snackbar message when export succeeds",
+  "placeholders": {
+    "path": {
+      "type": "String",
+      "example": "/Downloads/hanko.png"
+    }
+  }
+}
+
+, "designExportMetadataSaved": "Metadata saved as {path}"
+, "@designExportMetadataSaved": {
+  "description": "Snackbar indicating metadata file location",
+  "placeholders": {
+    "path": {
+      "type": "String",
+      "example": "/Downloads/hanko_meta.json"
+    }
+  }
+}
+
+, "designExportGenericError": "Export failed. Please try again."
+, "@designExportGenericError": {
+  "description": "Generic error shown when export fails"
+}
+
+, "designExportPdfUnavailable": "PDF export is not available yet."
+, "@designExportPdfUnavailable": {
+  "description": "Error shown when user selects PDF"
+}
+
+, "designExportShareError": "Unable to share right now."
+, "@designExportShareError": {
+  "description": "Error shown when share action fails"
+}
+
+, "designExportShareSubject": "Hanko design preview"
+, "@designExportShareSubject": {
+  "description": "Subject used for share intents"
+}
+
+, "designExportShareBody": "Here is the latest hanko design export."
+, "@designExportShareBody": {
+  "description": "Body text used for share intents"
+}
+
+, "designExportDestinationTitle": "Save to"
+, "@designExportDestinationTitle": {
+  "description": "Title for the destination picker sheet"
+}
+
+, "designExportDestinationDownloads": "Downloads folder"
+, "@designExportDestinationDownloads": {
+  "description": "Destination option for downloads"
+}
+
+, "designExportDestinationAppStorage": "App documents"
+, "@designExportDestinationAppStorage": {
+  "description": "Destination option for app-managed storage"
+}
+
+, "designExportHistoryTitle": "Recent export"
+, "@designExportHistoryTitle": {
+  "description": "Title for export history sheet"
+}
+
+, "designExportHistorySubtitle": "{format} • {timestamp}"
+, "@designExportHistorySubtitle": {
+  "description": "Subtitle showing format and timestamp in history",
+  "placeholders": {
+    "format": {
+      "type": "String",
+      "example": "PNG"
+    },
+    "timestamp": {
+      "type": "String",
+      "example": "2024-05-10 14:32"
+    }
+  }
+}
+
+, "designExportHistoryEmpty": "No exports yet."
+, "@designExportHistoryEmpty": {
+  "description": "Message shown when export history is empty"
+}
+
 , "designInputSuggestionHeader": "Quick fill"
 , "@designInputSuggestionHeader": {
   "description": "Header for suggestion chips sourced from the profile"

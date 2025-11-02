@@ -1358,6 +1358,180 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get designPreviewShareCancel;
 
+  /// Title for the design export screen
+  ///
+  /// In en, this message translates to:
+  /// **'Digital export'**
+  String get designExportTitle;
+
+  /// Tooltip for the export history icon
+  ///
+  /// In en, this message translates to:
+  /// **'View previous exports'**
+  String get designExportHistoryTooltip;
+
+  /// Label above the export preview artboard
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get designExportPreviewLabel;
+
+  /// Label for the export format selector
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get designExportFormatLabel;
+
+  /// PNG format option label
+  ///
+  /// In en, this message translates to:
+  /// **'PNG'**
+  String get designExportFormatPng;
+
+  /// SVG format option label
+  ///
+  /// In en, this message translates to:
+  /// **'SVG'**
+  String get designExportFormatSvg;
+
+  /// PDF format option label
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get designExportFormatPdf;
+
+  /// Toggle label for transparent background option
+  ///
+  /// In en, this message translates to:
+  /// **'Transparent background'**
+  String get designExportOptionTransparent;
+
+  /// Helper text for transparent background option
+  ///
+  /// In en, this message translates to:
+  /// **'Removes the artboard fill so only the stamp shape is opaque.'**
+  String get designExportOptionTransparentSubtitle;
+
+  /// Toggle label for adding bleed spacing
+  ///
+  /// In en, this message translates to:
+  /// **'Include bleed margin'**
+  String get designExportOptionBleed;
+
+  /// Helper text for bleed option
+  ///
+  /// In en, this message translates to:
+  /// **'Adds a safety margin around the imprint for print layouts.'**
+  String get designExportOptionBleedSubtitle;
+
+  /// Toggle label for metadata option
+  ///
+  /// In en, this message translates to:
+  /// **'Embed metadata'**
+  String get designExportOptionMetadata;
+
+  /// Helper text for metadata option
+  ///
+  /// In en, this message translates to:
+  /// **'Saves creation details alongside the exported file.'**
+  String get designExportOptionMetadataSubtitle;
+
+  /// Label for the export action button
+  ///
+  /// In en, this message translates to:
+  /// **'Export file'**
+  String get designExportExportButton;
+
+  /// Label for the share action button
+  ///
+  /// In en, this message translates to:
+  /// **'Share…'**
+  String get designExportShareButton;
+
+  /// Message shown when storage access is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Storage permission is required to continue.'**
+  String get designExportPermissionDenied;
+
+  /// Snackbar message when export succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Exported to {path}'**
+  String designExportExportSuccess(String path);
+
+  /// Snackbar indicating metadata file location
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata saved as {path}'**
+  String designExportMetadataSaved(String path);
+
+  /// Generic error shown when export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed. Please try again.'**
+  String get designExportGenericError;
+
+  /// Error shown when user selects PDF
+  ///
+  /// In en, this message translates to:
+  /// **'PDF export is not available yet.'**
+  String get designExportPdfUnavailable;
+
+  /// Error shown when share action fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to share right now.'**
+  String get designExportShareError;
+
+  /// Subject used for share intents
+  ///
+  /// In en, this message translates to:
+  /// **'Hanko design preview'**
+  String get designExportShareSubject;
+
+  /// Body text used for share intents
+  ///
+  /// In en, this message translates to:
+  /// **'Here is the latest hanko design export.'**
+  String get designExportShareBody;
+
+  /// Title for the destination picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Save to'**
+  String get designExportDestinationTitle;
+
+  /// Destination option for downloads
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads folder'**
+  String get designExportDestinationDownloads;
+
+  /// Destination option for app-managed storage
+  ///
+  /// In en, this message translates to:
+  /// **'App documents'**
+  String get designExportDestinationAppStorage;
+
+  /// Title for export history sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Recent export'**
+  String get designExportHistoryTitle;
+
+  /// Subtitle showing format and timestamp in history
+  ///
+  /// In en, this message translates to:
+  /// **'{format} • {timestamp}'**
+  String designExportHistorySubtitle(String format, String timestamp);
+
+  /// Message shown when export history is empty
+  ///
+  /// In en, this message translates to:
+  /// **'No exports yet.'**
+  String get designExportHistoryEmpty;
+
   /// Header for suggestion chips sourced from the profile
   ///
   /// In en, this message translates to:

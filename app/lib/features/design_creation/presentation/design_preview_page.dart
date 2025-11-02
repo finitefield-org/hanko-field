@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:app/core/domain/entities/design.dart';
+import 'package:app/core/routing/app_route_configuration.dart';
 import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/features/design_creation/application/design_creation_controller.dart';
@@ -115,10 +116,12 @@ class _DesignPreviewPageState extends ConsumerState<DesignPreviewPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FilledButton.tonalIcon(
-              icon: const Icon(Icons.ios_share),
+            FilledButton.icon(
+              icon: const Icon(Icons.download_outlined),
               label: Text(l10n.designPreviewExportCta),
-              onPressed: () => _showShareSheet(context, l10n),
+              onPressed: () => ref
+                  .read(appStateProvider.notifier)
+                  .push(CreationStageRoute(const ['export'])),
             ),
             const SizedBox(height: AppTokens.spaceM),
             OutlinedButton.icon(

@@ -21,12 +21,34 @@ class DesignCanvasPreview extends StatelessWidget {
     required this.config,
     required this.shape,
     required this.primaryText,
+    this.boundaryKey,
+    this.strokeColor,
+    this.gridColor,
+    this.fillColor,
+    this.textStyle,
+    this.drawContainer = true,
+    this.outerPadding,
+    this.containerDecoration,
+    this.framePaddingFactor,
+    this.strokeScale = 1,
+    this.marginScale = 1,
     super.key,
   });
 
   final DesignEditorConfig config;
   final DesignShape shape;
   final String primaryText;
+  final GlobalKey? boundaryKey;
+  final Color? strokeColor;
+  final Color? gridColor;
+  final Color? fillColor;
+  final TextStyle? textStyle;
+  final bool drawContainer;
+  final EdgeInsets? outerPadding;
+  final Decoration? containerDecoration;
+  final double? framePaddingFactor;
+  final double strokeScale;
+  final double marginScale;
 
   @override
   Widget build(BuildContext context) {
@@ -37,52 +59,74 @@ class DesignCanvasPreview extends StatelessWidget {
         final size = shortestSide.isFinite && shortestSide > 0
             ? shortestSide
             : 320.0;
-        final fgColor = theme.colorScheme.onSurface;
-        final gridColor = theme.colorScheme.outlineVariant.withValues(
+        final defaultStrokeColor = theme.colorScheme.onSurface;
+        final resolvedStrokeColor = strokeColor ?? defaultStrokeColor;
+        final defaultGridColor = theme.colorScheme.outlineVariant.withValues(
           alpha: 0.5,
         );
-        final fillColor = theme.colorScheme.surfaceContainerHighest;
-        final textStyle =
-            theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: fgColor,
-              letterSpacing: _letterSpacingForText(primaryText),
-            ) ??
-            TextStyle(
-              fontSize: size * 0.18,
-              fontWeight: FontWeight.w600,
-              color: fgColor,
+        final resolvedGridColor = gridColor ?? defaultGridColor;
+        final defaultFillColor =
+            fillColor ?? theme.colorScheme.surfaceContainerHighest;
+        final resolvedTextStyle =
+            textStyle ??
+            (theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: resolvedStrokeColor,
+                  letterSpacing: _letterSpacingForText(primaryText),
+                ) ??
+                TextStyle(
+                  fontSize: size * 0.18,
+                  fontWeight: FontWeight.w600,
+                  color: resolvedStrokeColor,
+                ));
+
+        final resolvedPadding =
+            outerPadding ??
+            (drawContainer
+                ? const EdgeInsets.all(AppTokens.spaceL)
+                : EdgeInsets.zero);
+        final decoration =
+            containerDecoration ??
+            BoxDecoration(
+              color: drawContainer
+                  ? theme.colorScheme.surface
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppTokens.spaceL),
+              border: drawContainer
+                  ? Border.all(color: theme.colorScheme.outlineVariant)
+                  : null,
+              boxShadow: drawContainer ? kElevationToShadow[1] : null,
             );
 
-        return Align(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppTokens.spaceL),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-                boxShadow: kElevationToShadow[1],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppTokens.spaceL),
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _DesignCanvasPainter(
-                      config: config,
-                      shape: shape,
-                      primaryText: primaryText,
-                      strokeColor: fgColor,
-                      gridColor: gridColor,
-                      fillColor: fillColor,
-                      textStyle: textStyle,
-                    ),
-                  ),
-                ),
-              ),
+        Widget painted = RepaintBoundary(
+          key: boundaryKey,
+          child: CustomPaint(
+            painter: DesignCanvasPainter(
+              config: config,
+              shape: shape,
+              primaryText: primaryText,
+              strokeColor: resolvedStrokeColor,
+              gridColor: resolvedGridColor,
+              fillColor: defaultFillColor,
+              textStyle: resolvedTextStyle,
+              drawContainer: drawContainer,
+              framePaddingFactor: framePaddingFactor ?? _kFramePaddingFactor,
+              strokeScale: strokeScale,
+              marginScale: marginScale,
             ),
           ),
         );
+
+        if (drawContainer || containerDecoration != null) {
+          painted = DecoratedBox(
+            decoration: decoration,
+            child: Padding(padding: resolvedPadding, child: painted),
+          );
+        } else {
+          painted = Padding(padding: resolvedPadding, child: painted);
+        }
+
+        return Align(child: AspectRatio(aspectRatio: 1, child: painted));
       },
     );
   }
@@ -107,8 +151,8 @@ class DesignCanvasPreview extends StatelessWidget {
   }
 }
 
-class _DesignCanvasPainter extends CustomPainter {
-  _DesignCanvasPainter({
+class DesignCanvasPainter extends CustomPainter {
+  DesignCanvasPainter({
     required this.config,
     required this.shape,
     required this.primaryText,
@@ -116,6 +160,13 @@ class _DesignCanvasPainter extends CustomPainter {
     required this.gridColor,
     required this.fillColor,
     required this.textStyle,
+    this.drawContainer = true,
+    this.framePaddingFactor = _kFramePaddingFactor,
+    this.shapeFillOpacity = 0.8,
+    this.containerFillOpacity = 0.2,
+    this.outlineOpacity = 0.2,
+    this.strokeScale = 1,
+    this.marginScale = 1,
   });
 
   final DesignEditorConfig config;
@@ -125,31 +176,40 @@ class _DesignCanvasPainter extends CustomPainter {
   final Color gridColor;
   final Color fillColor;
   final TextStyle textStyle;
+  final bool drawContainer;
+  final double framePaddingFactor;
+  final double shapeFillOpacity;
+  final double containerFillOpacity;
+  final double outlineOpacity;
+  final double strokeScale;
+  final double marginScale;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final containerRadius = Radius.circular(
-      size.shortestSide * _kContainerCornerRadiusFactor,
-    );
-    final backgroundPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = fillColor.withValues(alpha: 0.2);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, containerRadius),
-      backgroundPaint,
-    );
+    if (drawContainer) {
+      final containerRadius = Radius.circular(
+        size.shortestSide * _kContainerCornerRadiusFactor,
+      );
+      final backgroundPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = fillColor.withValues(alpha: containerFillOpacity);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, containerRadius),
+        backgroundPaint,
+      );
 
-    final outlinePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = strokeColor.withValues(alpha: 0.2);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, containerRadius),
-      outlinePaint,
-    );
+      final outlinePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1 * strokeScale
+        ..color = strokeColor.withValues(alpha: outlineOpacity);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, containerRadius),
+        outlinePaint,
+      );
+    }
 
-    final framePadding = size.shortestSide * _kFramePaddingFactor;
+    final framePadding = size.shortestSide * framePaddingFactor;
     final frameRect = Rect.fromLTWH(
       rect.left + framePadding,
       rect.top + framePadding,
@@ -161,10 +221,10 @@ class _DesignCanvasPainter extends CustomPainter {
 
     final shapePaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = fillColor.withValues(alpha: 0.8);
+      ..color = fillColor.withValues(alpha: shapeFillOpacity);
     final strokePaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = config.strokeWidth
+      ..strokeWidth = config.strokeWidth * strokeScale
       ..strokeCap = StrokeCap.round
       ..color = strokeColor;
 
@@ -194,14 +254,15 @@ class _DesignCanvasPainter extends CustomPainter {
       1.0,
     );
     final relativeCap = frameRect.shortestSide * _kMarginRelativeCap;
-    final absoluteCap = frameRect.shortestSide / 2 - _kMarginSafetyInset;
+    final absoluteCap =
+        frameRect.shortestSide / 2 - (_kMarginSafetyInset * marginScale);
     return max(0, min(absoluteCap, relativeCap * normalized));
   }
 
   void _paintGrid(Canvas canvas, Rect contentRect) {
     final gridPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
+      ..strokeWidth = 1 * strokeScale
       ..color = gridColor;
 
     if (config.grid == DesignGridType.square) {
@@ -313,13 +374,20 @@ class _DesignCanvasPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DesignCanvasPainter oldDelegate) {
+  bool shouldRepaint(covariant DesignCanvasPainter oldDelegate) {
     return oldDelegate.config != config ||
         oldDelegate.shape != shape ||
         oldDelegate.primaryText != primaryText ||
         oldDelegate.strokeColor != strokeColor ||
         oldDelegate.gridColor != gridColor ||
         oldDelegate.fillColor != fillColor ||
-        oldDelegate.textStyle != textStyle;
+        oldDelegate.textStyle != textStyle ||
+        oldDelegate.drawContainer != drawContainer ||
+        oldDelegate.framePaddingFactor != framePaddingFactor ||
+        oldDelegate.shapeFillOpacity != shapeFillOpacity ||
+        oldDelegate.containerFillOpacity != containerFillOpacity ||
+        oldDelegate.outlineOpacity != outlineOpacity ||
+        oldDelegate.strokeScale != strokeScale ||
+        oldDelegate.marginScale != marginScale;
   }
 }

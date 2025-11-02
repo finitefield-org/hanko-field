@@ -722,6 +722,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designPreviewShareCancel => 'Cancel';
 
   @override
+  String get designExportTitle => 'Digital export';
+
+  @override
+  String get designExportHistoryTooltip => 'View previous exports';
+
+  @override
+  String get designExportPreviewLabel => 'Preview';
+
+  @override
+  String get designExportFormatLabel => 'Format';
+
+  @override
+  String get designExportFormatPng => 'PNG';
+
+  @override
+  String get designExportFormatSvg => 'SVG';
+
+  @override
+  String get designExportFormatPdf => 'PDF';
+
+  @override
+  String get designExportOptionTransparent => 'Transparent background';
+
+  @override
+  String get designExportOptionTransparentSubtitle =>
+      'Removes the artboard fill so only the stamp shape is opaque.';
+
+  @override
+  String get designExportOptionBleed => 'Include bleed margin';
+
+  @override
+  String get designExportOptionBleedSubtitle =>
+      'Adds a safety margin around the imprint for print layouts.';
+
+  @override
+  String get designExportOptionMetadata => 'Embed metadata';
+
+  @override
+  String get designExportOptionMetadataSubtitle =>
+      'Saves creation details alongside the exported file.';
+
+  @override
+  String get designExportExportButton => 'Export file';
+
+  @override
+  String get designExportShareButton => 'Share…';
+
+  @override
+  String get designExportPermissionDenied =>
+      'Storage permission is required to continue.';
+
+  @override
+  String designExportExportSuccess(String path) {
+    return 'Exported to $path';
+  }
+
+  @override
+  String designExportMetadataSaved(String path) {
+    return 'Metadata saved as $path';
+  }
+
+  @override
+  String get designExportGenericError => 'Export failed. Please try again.';
+
+  @override
+  String get designExportPdfUnavailable => 'PDF export is not available yet.';
+
+  @override
+  String get designExportShareError => 'Unable to share right now.';
+
+  @override
+  String get designExportShareSubject => 'Hanko design preview';
+
+  @override
+  String get designExportShareBody => 'Here is the latest hanko design export.';
+
+  @override
+  String get designExportDestinationTitle => 'Save to';
+
+  @override
+  String get designExportDestinationDownloads => 'Downloads folder';
+
+  @override
+  String get designExportDestinationAppStorage => 'App documents';
+
+  @override
+  String get designExportHistoryTitle => 'Recent export';
+
+  @override
+  String designExportHistorySubtitle(String format, String timestamp) {
+    return '$format • $timestamp';
+  }
+
+  @override
+  String get designExportHistoryEmpty => 'No exports yet.';
+
+  @override
   String get designInputSuggestionHeader => 'Quick fill';
 
   @override
