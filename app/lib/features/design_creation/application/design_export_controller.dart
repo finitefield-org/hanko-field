@@ -13,6 +13,9 @@ class DesignExportController extends Notifier<DesignExportState> {
   DesignExportState build() => const DesignExportState();
 
   void selectFormat(DesignExportFormat format) {
+    if (format == DesignExportFormat.pdf) {
+      return;
+    }
     if (state.format == format) {
       return;
     }

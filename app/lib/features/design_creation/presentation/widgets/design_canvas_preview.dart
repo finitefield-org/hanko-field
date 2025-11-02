@@ -5,6 +5,7 @@ import 'package:app/core/theme/tokens.dart';
 import 'package:app/features/design_creation/application/design_editor_state.dart';
 import 'package:flutter/material.dart';
 
+// Preview geometry knobs tuned during design QA to mimic real-world stamp spacing.
 const double _kContainerCornerRadiusFactor = 0.05;
 const double _kFramePaddingFactor = 0.08;
 const double _kShapeCornerRadiusFactor = 0.1;
@@ -143,11 +144,39 @@ class DesignCanvasPreview extends StatelessWidget {
   }
 
   bool _isCjkCodePoint(int codePoint) {
-    return (codePoint >= 0x3000 && codePoint <= 0x30FF) || // punctuation + kana
-        (codePoint >= 0x3400 && codePoint <= 0x9FFF) || // unified ideographs
-        (codePoint >= 0xF900 &&
-            codePoint <= 0xFAFF) || // compatibility ideographs
-        (codePoint >= 0xFF66 && codePoint <= 0xFF9D); // half-width katakana
+    if (codePoint >= 0x3000 && codePoint <= 0x30FF) {
+      // punctuation + kana
+      return true;
+    }
+    if (codePoint >= 0x3400 && codePoint <= 0x9FFF) {
+      // unified ideographs
+      return true;
+    }
+    if (codePoint >= 0xAC00 && codePoint <= 0xD7A3) {
+      // hangul syllables
+      return true;
+    }
+    if (codePoint >= 0xF900 && codePoint <= 0xFAFF) {
+      // compatibility ideographs
+      return true;
+    }
+    if (codePoint >= 0xFF66 && codePoint <= 0xFF9D) {
+      // half-width katakana
+      return true;
+    }
+    if (codePoint >= 0x20000 && codePoint <= 0x2B81F) {
+      // CJK extensions B-D
+      return true;
+    }
+    if (codePoint >= 0x2B820 && codePoint <= 0x2CEAF) {
+      // extensions E-F
+      return true;
+    }
+    if (codePoint >= 0x2F800 && codePoint <= 0x2FA1F) {
+      // compatibility supplement
+      return true;
+    }
+    return false;
   }
 }
 

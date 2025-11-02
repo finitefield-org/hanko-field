@@ -148,7 +148,7 @@
 , "designExportFormatLabel": "フォーマット"
 , "designExportFormatPng": "PNG"
 , "designExportFormatSvg": "SVG"
-, "designExportFormatPdf": "PDF"
+, "designExportFormatPdf": "PDF（近日対応）"
 , "designExportOptionTransparent": "背景を透明にする"
 , "designExportOptionTransparentSubtitle": "印影以外の背景を透過にします。"
 , "designExportOptionBleed": "塗り足しを追加"

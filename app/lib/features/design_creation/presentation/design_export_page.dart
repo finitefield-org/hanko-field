@@ -823,6 +823,14 @@ class _FormatSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(designExportControllerProvider.notifier);
+    final effectiveFormat = state.format == DesignExportFormat.pdf
+        ? DesignExportFormat.png
+        : state.format;
+    if (effectiveFormat != state.format) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.selectFormat(effectiveFormat);
+      });
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -847,9 +855,10 @@ class _FormatSelector extends ConsumerWidget {
               value: DesignExportFormat.pdf,
               label: Text(l10n.designExportFormatPdf),
               icon: const Icon(Icons.picture_as_pdf_outlined),
+              enabled: false,
             ),
           ],
-          selected: {state.format},
+          selected: {effectiveFormat},
           onSelectionChanged: (selection) {
             if (selection.isEmpty) {
               return;

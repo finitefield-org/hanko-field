@@ -740,7 +740,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designExportFormatSvg => 'SVG';
 
   @override
-  String get designExportFormatPdf => 'PDF';
+  String get designExportFormatPdf => 'PDF (coming soon)';
 
   @override
   String get designExportOptionTransparent => 'Transparent background';

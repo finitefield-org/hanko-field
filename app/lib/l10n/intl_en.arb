@@ -1187,7 +1187,7 @@
   "description": "SVG format option label"
 }
 
-, "designExportFormatPdf": "PDF"
+, "designExportFormatPdf": "PDF (coming soon)"
 , "@designExportFormatPdf": {
   "description": "PDF format option label"
 }

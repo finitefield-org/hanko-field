@@ -1397,7 +1397,7 @@ abstract class AppLocalizations {
   /// PDF format option label
   ///
   /// In en, this message translates to:
-  /// **'PDF'**
+  /// **'PDF (coming soon)'**
   String get designExportFormatPdf;
 
   /// Toggle label for transparent background option
