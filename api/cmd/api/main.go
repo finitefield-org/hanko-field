@@ -470,6 +470,7 @@ func main() {
 	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, nil)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
+	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, nil, auditService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -478,6 +479,7 @@ func main() {
 		adminInventoryHandlers.Routes,
 		adminProductionQueueHandlers.Routes,
 		adminInvoiceHandlers.Routes,
+		adminCounterHandlers.Routes,
 		adminReviewHandlers.Routes,
 		adminUserHandlers.Routes,
 		adminAuditHandlers.Routes,
