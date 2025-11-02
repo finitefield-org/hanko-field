@@ -25,7 +25,7 @@ Additional contacts:
 - **Dashboards:** DataDog `Web › Production Overview`, Grafana `web/traffic`, Google Cloud Trace.
 - **Logs:** Cloud Logging `resource.type="cloud_run_revision" AND resource.labels.service_name="hanko-web"`.
 - **Deploy/rollback:** `doc/web/deploy.md` for Cloud Run procedures, `doc/web/feature_flag_rollout.md` for toggles.
-- **SEO assets:** `web/templates/seo/`, `web/assets/sitemap/`, and CMS guidelines in `doc/web/navigation_seo_map.md`.
+- **SEO assets:** Meta markup in `web/templates/partials/head.tmpl`, SEO models in `web/internal/seo` and handlers under `web/cmd/web`, content front matter in `web/content/**`, and canonical map in `doc/web/navigation_seo_map.md`.
 - **Cache layer:** Cloud CDN fronting the Cloud Run service via load balancer `web-global-lb` (Terraform module `infra/terraform/modules/cloud_run_service`).
 
 ---
@@ -45,7 +45,7 @@ Additional contacts:
    - Post initial incident message in `#incidents` (use template: impact, start time, owner, next update).
    - Trigger Statuspage if SEV1/SEV2 persists >15 minutes or checkout is affected.
 4. **Resolve**
-   - Validate recovery using smoke tests (`infra/scripts/web_smoke.sh` or GitHub Action workflow dispatch).
+   - Validate recovery using smoke tests (probe `/healthz`, e.g. `curl -fSs https://<service>/healthz`, or dispatch the `Web CI/CD` workflow to rerun staging/production smoke checks).
    - Confirm error rate back within baseline for 2 consecutive 5-minute windows.
    - Close PagerDuty incident, post final summary, and update Statuspage.
 5. **Post-Incident**
@@ -87,17 +87,17 @@ Fallbacks:
 Trigger this runbook when marketing ships new campaigns, updates structured data, or Google Search Console flags issues.
 
 1. **Plan changes**
-   - Confirm source of truth: metadata templates live in `web/templates/seo/`, canonical URLs in `doc/web/navigation_seo_map.md`.
-   - Identify whether change is content-only (templated copy) or requires code (new partial).
+   - Confirm source of truth: page metadata is set via handlers/view models in `web/cmd/web/*_handlers.go` and rendered through `web/templates/partials/head.tmpl`; canonical coverage lives in `doc/web/navigation_seo_map.md`.
+   - Identify whether the update is content-only (Markdown/front matter in `web/content/**`) or code-level (new structured data, helper changes).
 2. **Implement**
-   - For simple metadata updates, edit template partials and run `make lint-web` to ensure templ compile succeeds.
-   - Update sitemap data (`web/assets/sitemap/*.xml.tmpl`). Regenerate via `go run ./cmd/sitemap`.
+   - For copy/meta tweaks, adjust the relevant handler/view model and `head.tmpl`, then run `cd web && go test ./...` (or `go build ./cmd/web`) to ensure compilation.
+   - If the public sitemap needs adjusting, update the canonical list in `doc/web/navigation_seo_map.md` and coordinate with the platform team to publish the XML via the deployment pipeline (automation tracked under Deployment Task 048).
 3. **Review**
    - Request review from marketing owner (`@pm-seo`) and one engineer.
    - Validate structured data with Google Rich Results test using staging URL.
 4. **Deploy**
    - Ship via standard Cloud Run deploy. Tag commit `seo/<yyyy-mm-dd>-<slug>` for traceability.
-   - If only sitemap changed, use cache purge runbook for `/sitemap.xml`.
+   - If a sitemap publish was coordinated, confirm the platform job completed and align on any follow-up cache purge once the XML endpoint is live.
 5. **Post-deploy**
    - Verify `Last-Modified` and `ETag` headers changed.
    - Submit updated sitemap in Google Search Console.
@@ -108,12 +108,13 @@ For emergency copy changes or CMS-driven updates that should not wait for the fu
 
 1. **Eligibility check**
    - Change touches templates, markdown, or localization files only (no Go code or assets requiring rebuild).
-   - Tests or lint still pass (`make test-web-light`).
+   - Tests still pass (`cd web && go test ./...`).
 2. **Prepare branch**
    ```bash
    git checkout -b hotfix/content-<slug>
-   # edit templates/content
-   make test-web-light
+   # make changes under web/templates or web/content
+   cd web
+   go test ./...
    ```
 3. **Deploy shortcut**
    - Use `web/cloudbuild.yaml` manual trigger with substitution `_DEPLOY_MESSAGE="Content hotfix: <summary>"`.
@@ -123,7 +124,7 @@ For emergency copy changes or CMS-driven updates that should not wait for the fu
    - Confirm CDN cache invalidated if necessary (see Section 2).
 5. **Communicate**
    - Post in `#web-ops` with link to PR/trigger, expected impact, and whether follow-up deploy is planned.
-   - Update changelog (`web/CHANGELOG.md`) under “Hotfix” section.
+   - Log the change in the shared `Notion › Web Ops › Content Hotfixes` page and flag marketing for release notes.
 
 ---
 
@@ -138,4 +139,3 @@ For emergency copy changes or CMS-driven updates that should not wait for the fu
 - [ ] SEO updates logged and sitemap submitted post-deploy.
 - [ ] Content-only deploys follow hotfix trigger and are announced in `#web-ops`.
 - [ ] Knowledge base link verified during quarterly review.
-
