@@ -33,57 +33,60 @@ class DesignAiSuggestionRepository {
   final Map<String, List<DesignAiSuggestion>> _suggestionsByDesign = {};
   final Map<String, DateTime> _lastRequestAt = {};
   int _jobSeed = 0;
+  int _sequence = 0;
+  final Map<String, Future<void>> _operationLocks = {};
 
   Future<String> requestSuggestions({required String designId}) async {
     await Future<void>.delayed(const Duration(milliseconds: 320));
-    final now = DateTime.now();
-    final last = _lastRequestAt[designId];
-    if (last != null && now.difference(last) < _rateLimitWindow) {
-      final retryAfter = _rateLimitWindow - now.difference(last);
-      throw DesignAiSuggestionRateLimitException(
-        message: 'Rate limited',
-        retryAfter: retryAfter,
+    return _runSynchronized(designId, () async {
+      final now = DateTime.now();
+      final last = _lastRequestAt[designId];
+      if (last != null && now.difference(last) < _rateLimitWindow) {
+        final retryAfter = _rateLimitWindow - now.difference(last);
+        throw DesignAiSuggestionRateLimitException(
+          message: 'Rate limited',
+          retryAfter: retryAfter,
+        );
+      }
+
+      final newSuggestions = [
+        _generateSuggestion(designId: designId),
+        _generateSuggestion(designId: designId),
+      ];
+
+      final existing = _suggestionsByDesign.putIfAbsent(
+        designId,
+        () => <DesignAiSuggestion>[],
       );
-    }
-
-    final newSuggestions = [
-      _generateSuggestion(designId: designId, seed: _jobSeed++),
-      _generateSuggestion(designId: designId, seed: _jobSeed++),
-    ];
-
-    final existing = _suggestionsByDesign.putIfAbsent(
-      designId,
-      () => <DesignAiSuggestion>[],
-    );
-    existing.addAll(newSuggestions);
-    _lastRequestAt[designId] = now;
-    return 'job-$designId-${now.millisecondsSinceEpoch}';
+      existing.addAll(newSuggestions);
+      _lastRequestAt[designId] = now;
+      return 'job-$designId-${now.microsecondsSinceEpoch}-${_random.nextInt(1 << 20)}';
+    });
   }
 
   Future<List<DesignAiSuggestion>> fetchSuggestions(String designId) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final entries = _suggestionsByDesign[designId];
-    if (entries == null) {
-      return const [];
-    }
+    return _runSynchronized(designId, () async {
+      final entries = _suggestionsByDesign[designId];
+      if (entries == null) {
+        return const [];
+      }
 
-    final now = DateTime.now();
-    final updated = entries
-        .map((suggestion) {
-          if (suggestion.status == DesignAiSuggestionStatus.queued &&
-              suggestion.readyAt != null &&
-              now.isAfter(suggestion.readyAt!)) {
-            return suggestion.copyWith(
-              status: DesignAiSuggestionStatus.ready,
-              completedAt: suggestion.completedAt ?? now,
-            );
-          }
-          return suggestion;
-        })
-        .toList(growable: false);
-    updated.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-    _suggestionsByDesign[designId] = List<DesignAiSuggestion>.from(updated);
-    return List<DesignAiSuggestion>.unmodifiable(updated);
+      final now = DateTime.now();
+      for (var index = 0; index < entries.length; index++) {
+        final suggestion = entries[index];
+        if (suggestion.status == DesignAiSuggestionStatus.queued &&
+            suggestion.readyAt != null &&
+            now.isAfter(suggestion.readyAt!)) {
+          entries[index] = suggestion.copyWith(
+            status: DesignAiSuggestionStatus.ready,
+            completedAt: suggestion.completedAt ?? now,
+          );
+        }
+      }
+      entries.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+      return List<DesignAiSuggestion>.unmodifiable(entries);
+    });
   }
 
   Future<DesignAiSuggestion> acceptSuggestion({
@@ -91,26 +94,28 @@ class DesignAiSuggestionRepository {
     required String suggestionId,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 220));
-    final entries = _suggestionsByDesign[designId];
-    if (entries == null) {
-      throw const DesignAiSuggestionException('Suggestion not found');
-    }
-    final index = entries.indexWhere((item) => item.id == suggestionId);
-    if (index == -1) {
-      throw const DesignAiSuggestionException('Suggestion not found');
-    }
-    final suggestion = entries[index];
-    if (suggestion.status != DesignAiSuggestionStatus.ready) {
-      throw const DesignAiSuggestionException(
-        'Suggestion is not ready to accept',
+    return _runSynchronized(designId, () async {
+      final entries = _suggestionsByDesign[designId];
+      if (entries == null) {
+        throw const DesignAiSuggestionException('Suggestion not found');
+      }
+      final index = entries.indexWhere((item) => item.id == suggestionId);
+      if (index == -1) {
+        throw const DesignAiSuggestionException('Suggestion not found');
+      }
+      final suggestion = entries[index];
+      if (suggestion.status != DesignAiSuggestionStatus.ready) {
+        throw const DesignAiSuggestionException(
+          'Suggestion is not ready to accept',
+        );
+      }
+      final applied = suggestion.copyWith(
+        status: DesignAiSuggestionStatus.applied,
+        appliedAt: DateTime.now(),
       );
-    }
-    final applied = suggestion.copyWith(
-      status: DesignAiSuggestionStatus.applied,
-      appliedAt: DateTime.now(),
-    );
-    entries[index] = applied;
-    return applied;
+      entries[index] = applied;
+      return applied;
+    });
   }
 
   Future<DesignAiSuggestion> rejectSuggestion({
@@ -118,31 +123,48 @@ class DesignAiSuggestionRepository {
     required String suggestionId,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 180));
-    final entries = _suggestionsByDesign[designId];
-    if (entries == null) {
-      throw const DesignAiSuggestionException('Suggestion not found');
-    }
-    final index = entries.indexWhere((item) => item.id == suggestionId);
-    if (index == -1) {
-      throw const DesignAiSuggestionException('Suggestion not found');
-    }
-    final suggestion = entries[index];
-    final rejected = suggestion.copyWith(
-      status: DesignAiSuggestionStatus.rejected,
-      completedAt: suggestion.completedAt ?? DateTime.now(),
-    );
-    entries[index] = rejected;
-    return rejected;
+    return _runSynchronized(designId, () async {
+      final entries = _suggestionsByDesign[designId];
+      if (entries == null) {
+        throw const DesignAiSuggestionException('Suggestion not found');
+      }
+      final index = entries.indexWhere((item) => item.id == suggestionId);
+      if (index == -1) {
+        throw const DesignAiSuggestionException('Suggestion not found');
+      }
+      final suggestion = entries[index];
+      final rejected = suggestion.copyWith(
+        status: DesignAiSuggestionStatus.rejected,
+        completedAt: suggestion.completedAt ?? DateTime.now(),
+      );
+      entries[index] = rejected;
+      return rejected;
+    });
   }
 
-  DesignAiSuggestion _generateSuggestion({
-    required String designId,
-    required int seed,
-  }) {
+  Future<T> _runSynchronized<T>(
+    String designId,
+    Future<T> Function() operation,
+  ) {
+    final previous = _operationLocks[designId] ?? Future<void>.value();
+    final completer = Completer<void>();
+    final queued = previous.whenComplete(() => completer.future);
+    _operationLocks[designId] = queued;
+    return previous.then((_) => operation()).whenComplete(() {
+      completer.complete();
+      if (identical(_operationLocks[designId], queued)) {
+        _operationLocks.remove(designId);
+      }
+    });
+  }
+
+  DesignAiSuggestion _generateSuggestion({required String designId}) {
     final now = DateTime.now();
     final blueprint = _SuggestionBlueprint
-        .samples[seed % _SuggestionBlueprint.samples.length];
-    final jobRef = 'job-$designId-${now.millisecondsSinceEpoch}-$seed';
+        .samples[_jobSeed % _SuggestionBlueprint.samples.length];
+    final suggestionId =
+        'aisg-$designId-${_sequence++}-${_random.nextInt(1 << 20)}';
+    final jobRef = 'job-$designId-${_jobSeed++}-${now.microsecondsSinceEpoch}';
     final readyDelay =
         _random.nextInt(
           _maxReadyDelay.inSeconds - _minReadyDelay.inSeconds + 1,
@@ -150,7 +172,7 @@ class DesignAiSuggestionRepository {
         _minReadyDelay.inSeconds;
     final readyAt = now.add(Duration(seconds: readyDelay));
     return DesignAiSuggestion(
-      id: 'aisg-$designId-${now.millisecondsSinceEpoch}-$seed',
+      id: suggestionId,
       title: blueprint.title,
       summary: blueprint.summary,
       score: blueprint.score,
