@@ -87,7 +87,7 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
         child: FloatingActionButton.extended(
           icon: const Icon(Icons.visibility_outlined),
           label: Text(l10n.designEditorPrimaryCta),
-          onPressed: () => _handlePreview(context, l10n),
+          onPressed: () => _handlePreview(context),
         ),
       ),
     );
@@ -150,12 +150,9 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
     });
   }
 
-  void _handlePreview(BuildContext context, AppLocalizations l10n) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(l10n.designEditorPreviewPlaceholder)),
-      );
+  void _handlePreview(BuildContext context) {
+    final router = ref.read(appStateProvider.notifier);
+    router.push(CreationStageRoute(const ['preview']));
   }
 }
 

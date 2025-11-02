@@ -1196,6 +1196,168 @@ abstract class AppLocalizations {
   /// **'Preview will open soon.'**
   String get designEditorPreviewPlaceholder;
 
+  /// Title for the design preview screen
+  ///
+  /// In en, this message translates to:
+  /// **'Preview & Share'**
+  String get designPreviewTitle;
+
+  /// Tooltip for the share icon in the preview screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Share preview'**
+  String get designPreviewShareTooltip;
+
+  /// Tooltip for the edit/back icon in the preview screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Back to editor'**
+  String get designPreviewEditTooltip;
+
+  /// Fallback message when preview screen is opened without required state
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a template and enter text before viewing the preview.'**
+  String get designPreviewMissingSelection;
+
+  /// Primary CTA label for sharing/exporting the design from preview screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share or export'**
+  String get designPreviewExportCta;
+
+  /// Secondary CTA label returning to the editor from preview screen
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen editor'**
+  String get designPreviewBackToEditor;
+
+  /// Label describing the actual size measurement of the stamp
+  ///
+  /// In en, this message translates to:
+  /// **'Actual size · {sizeMm} mm · {sizeInch} in'**
+  String designPreviewActualSizeLabel(String sizeMm, String sizeInch);
+
+  /// Hint text explaining how to view the design at actual size
+  ///
+  /// In en, this message translates to:
+  /// **'Hold your device upright to inspect the stamp at 1:1 scale. Pinch to zoom for details.'**
+  String get designPreviewActualSizeHint;
+
+  /// Label for background selection controls
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get designPreviewBackgroundLabel;
+
+  /// Segmented button label for paper background
+  ///
+  /// In en, this message translates to:
+  /// **'Paper'**
+  String get designPreviewBackgroundPaper;
+
+  /// Segmented button label for wood background
+  ///
+  /// In en, this message translates to:
+  /// **'Wood'**
+  String get designPreviewBackgroundWood;
+
+  /// Segmented button label for transparent background
+  ///
+  /// In en, this message translates to:
+  /// **'Transparent'**
+  String get designPreviewBackgroundTransparent;
+
+  /// Label for lighting preset chips
+  ///
+  /// In en, this message translates to:
+  /// **'Lighting'**
+  String get designPreviewLightingLabel;
+
+  /// Lighting preset for no additional lighting
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get designPreviewLightingNone;
+
+  /// Lighting preset for a soft diffused light
+  ///
+  /// In en, this message translates to:
+  /// **'Soft light'**
+  String get designPreviewLightingSoft;
+
+  /// Lighting preset for a studio-style highlight
+  ///
+  /// In en, this message translates to:
+  /// **'Studio glow'**
+  String get designPreviewLightingStudio;
+
+  /// Toggle label for showing measurement overlay
+  ///
+  /// In en, this message translates to:
+  /// **'Display measurement overlay'**
+  String get designPreviewMeasurementToggle;
+
+  /// Helper text describing the measurement overlay
+  ///
+  /// In en, this message translates to:
+  /// **'Shows horizontal and vertical guides with millimeter and inch values.'**
+  String get designPreviewMeasurementHint;
+
+  /// Title for the bottom sheet with share options
+  ///
+  /// In en, this message translates to:
+  /// **'Share design'**
+  String get designPreviewShareSheetTitle;
+
+  /// Subtitle for the share options sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Send a quick preview to collaborators or save it for reference.'**
+  String get designPreviewShareSheetSubtitle;
+
+  /// Share option to save the design locally
+  ///
+  /// In en, this message translates to:
+  /// **'Save to device'**
+  String get designPreviewShareOptionSave;
+
+  /// Subtitle describing the save-to-device share option
+  ///
+  /// In en, this message translates to:
+  /// **'Export a high-resolution PNG to your gallery.'**
+  String get designPreviewShareOptionSaveSubtitle;
+
+  /// Share option for messaging apps
+  ///
+  /// In en, this message translates to:
+  /// **'Send via messages'**
+  String get designPreviewShareOptionMessage;
+
+  /// Subtitle for the messaging share option
+  ///
+  /// In en, this message translates to:
+  /// **'Share a lightweight preview through chat apps.'**
+  String get designPreviewShareOptionMessageSubtitle;
+
+  /// Share option to copy a link
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get designPreviewShareOptionLink;
+
+  /// Subtitle for the copy-link share option
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a shareable link when available.'**
+  String get designPreviewShareOptionLinkSubtitle;
+
+  /// Button label to dismiss the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get designPreviewShareCancel;
+
   /// Header for suggestion chips sourced from the profile
   ///
   /// In en, this message translates to:

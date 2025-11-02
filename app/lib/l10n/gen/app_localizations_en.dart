@@ -632,6 +632,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designEditorPreviewPlaceholder => 'Preview will open soon.';
 
   @override
+  String get designPreviewTitle => 'Preview & Share';
+
+  @override
+  String get designPreviewShareTooltip => 'Share preview';
+
+  @override
+  String get designPreviewEditTooltip => 'Back to editor';
+
+  @override
+  String get designPreviewMissingSelection =>
+      'Choose a template and enter text before viewing the preview.';
+
+  @override
+  String get designPreviewExportCta => 'Share or export';
+
+  @override
+  String get designPreviewBackToEditor => 'Reopen editor';
+
+  @override
+  String designPreviewActualSizeLabel(String sizeMm, String sizeInch) {
+    return 'Actual size · $sizeMm mm · $sizeInch in';
+  }
+
+  @override
+  String get designPreviewActualSizeHint =>
+      'Hold your device upright to inspect the stamp at 1:1 scale. Pinch to zoom for details.';
+
+  @override
+  String get designPreviewBackgroundLabel => 'Background';
+
+  @override
+  String get designPreviewBackgroundPaper => 'Paper';
+
+  @override
+  String get designPreviewBackgroundWood => 'Wood';
+
+  @override
+  String get designPreviewBackgroundTransparent => 'Transparent';
+
+  @override
+  String get designPreviewLightingLabel => 'Lighting';
+
+  @override
+  String get designPreviewLightingNone => 'None';
+
+  @override
+  String get designPreviewLightingSoft => 'Soft light';
+
+  @override
+  String get designPreviewLightingStudio => 'Studio glow';
+
+  @override
+  String get designPreviewMeasurementToggle => 'Display measurement overlay';
+
+  @override
+  String get designPreviewMeasurementHint =>
+      'Shows horizontal and vertical guides with millimeter and inch values.';
+
+  @override
+  String get designPreviewShareSheetTitle => 'Share design';
+
+  @override
+  String get designPreviewShareSheetSubtitle =>
+      'Send a quick preview to collaborators or save it for reference.';
+
+  @override
+  String get designPreviewShareOptionSave => 'Save to device';
+
+  @override
+  String get designPreviewShareOptionSaveSubtitle =>
+      'Export a high-resolution PNG to your gallery.';
+
+  @override
+  String get designPreviewShareOptionMessage => 'Send via messages';
+
+  @override
+  String get designPreviewShareOptionMessageSubtitle =>
+      'Share a lightweight preview through chat apps.';
+
+  @override
+  String get designPreviewShareOptionLink => 'Copy link';
+
+  @override
+  String get designPreviewShareOptionLinkSubtitle =>
+      'Generate a shareable link when available.';
+
+  @override
+  String get designPreviewShareCancel => 'Cancel';
+
+  @override
   String get designInputSuggestionHeader => 'Quick fill';
 
   @override

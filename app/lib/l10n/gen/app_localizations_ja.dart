@@ -613,6 +613,92 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designEditorPreviewPlaceholder => 'プレビュー機能は近日公開予定です。';
 
   @override
+  String get designPreviewTitle => 'プレビューと共有';
+
+  @override
+  String get designPreviewShareTooltip => 'プレビューを共有';
+
+  @override
+  String get designPreviewEditTooltip => '編集に戻る';
+
+  @override
+  String get designPreviewMissingSelection =>
+      'テンプレートを選択し、文字を入力してからプレビューを表示してください。';
+
+  @override
+  String get designPreviewExportCta => '共有・エクスポート';
+
+  @override
+  String get designPreviewBackToEditor => '編集に戻る';
+
+  @override
+  String designPreviewActualSizeLabel(String sizeMm, String sizeInch) {
+    return '実寸表示・$sizeMm mm・$sizeInch in';
+  }
+
+  @override
+  String get designPreviewActualSizeHint =>
+      '端末を正面に持って実寸（1:1）を確認し、細部はピンチ操作で拡大してください。';
+
+  @override
+  String get designPreviewBackgroundLabel => '背景';
+
+  @override
+  String get designPreviewBackgroundPaper => '和紙';
+
+  @override
+  String get designPreviewBackgroundWood => '木目';
+
+  @override
+  String get designPreviewBackgroundTransparent => '透明';
+
+  @override
+  String get designPreviewLightingLabel => 'ライティング';
+
+  @override
+  String get designPreviewLightingNone => 'なし';
+
+  @override
+  String get designPreviewLightingSoft => 'ソフトライト';
+
+  @override
+  String get designPreviewLightingStudio => 'スタジオ光';
+
+  @override
+  String get designPreviewMeasurementToggle => '寸法ガイドを表示';
+
+  @override
+  String get designPreviewMeasurementHint => 'ミリとインチの横・縦ガイドを重ねて表示します。';
+
+  @override
+  String get designPreviewShareSheetTitle => 'デザインを共有';
+
+  @override
+  String get designPreviewShareSheetSubtitle => 'スタッフや取引先にすぐ見せたり、メモとして保存できます。';
+
+  @override
+  String get designPreviewShareOptionSave => 'デバイスに保存';
+
+  @override
+  String get designPreviewShareOptionSaveSubtitle => '高解像度PNGとしてギャラリーに書き出します。';
+
+  @override
+  String get designPreviewShareOptionMessage => 'メッセージで送信';
+
+  @override
+  String get designPreviewShareOptionMessageSubtitle =>
+      'チャットアプリで軽量プレビューを共有します。';
+
+  @override
+  String get designPreviewShareOptionLink => 'リンクをコピー';
+
+  @override
+  String get designPreviewShareOptionLinkSubtitle => '利用可能になったら共有リンクを生成します。';
+
+  @override
+  String get designPreviewShareCancel => 'キャンセル';
+
+  @override
   String get designInputSuggestionHeader => 'プロフィールから補完';
 
   @override

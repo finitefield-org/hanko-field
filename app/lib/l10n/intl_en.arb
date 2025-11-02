@@ -1012,6 +1012,151 @@
   "description": "Placeholder snackbar message for the preview/export action"
 }
 
+, "designPreviewTitle": "Preview & Share"
+, "@designPreviewTitle": {
+  "description": "Title for the design preview screen"
+}
+
+, "designPreviewShareTooltip": "Share preview"
+, "@designPreviewShareTooltip": {
+  "description": "Tooltip for the share icon in the preview screen app bar"
+}
+
+, "designPreviewEditTooltip": "Back to editor"
+, "@designPreviewEditTooltip": {
+  "description": "Tooltip for the edit/back icon in the preview screen app bar"
+}
+
+, "designPreviewMissingSelection": "Choose a template and enter text before viewing the preview."
+, "@designPreviewMissingSelection": {
+  "description": "Fallback message when preview screen is opened without required state"
+}
+
+, "designPreviewExportCta": "Share or export"
+, "@designPreviewExportCta": {
+  "description": "Primary CTA label for sharing/exporting the design from preview screen"
+}
+
+, "designPreviewBackToEditor": "Reopen editor"
+, "@designPreviewBackToEditor": {
+  "description": "Secondary CTA label returning to the editor from preview screen"
+}
+
+, "designPreviewActualSizeLabel": "Actual size · {sizeMm} mm · {sizeInch} in"
+, "@designPreviewActualSizeLabel": {
+  "description": "Label describing the actual size measurement of the stamp",
+  "placeholders": {
+    "sizeMm": {
+      "type": "String",
+      "example": "18.0"
+    },
+    "sizeInch": {
+      "type": "String",
+      "example": "0.71"
+    }
+  }
+}
+
+, "designPreviewActualSizeHint": "Hold your device upright to inspect the stamp at 1:1 scale. Pinch to zoom for details."
+, "@designPreviewActualSizeHint": {
+  "description": "Hint text explaining how to view the design at actual size"
+}
+
+, "designPreviewBackgroundLabel": "Background"
+, "@designPreviewBackgroundLabel": {
+  "description": "Label for background selection controls"
+}
+
+, "designPreviewBackgroundPaper": "Paper"
+, "@designPreviewBackgroundPaper": {
+  "description": "Segmented button label for paper background"
+}
+
+, "designPreviewBackgroundWood": "Wood"
+, "@designPreviewBackgroundWood": {
+  "description": "Segmented button label for wood background"
+}
+
+, "designPreviewBackgroundTransparent": "Transparent"
+, "@designPreviewBackgroundTransparent": {
+  "description": "Segmented button label for transparent background"
+}
+
+, "designPreviewLightingLabel": "Lighting"
+, "@designPreviewLightingLabel": {
+  "description": "Label for lighting preset chips"
+}
+
+, "designPreviewLightingNone": "None"
+, "@designPreviewLightingNone": {
+  "description": "Lighting preset for no additional lighting"
+}
+
+, "designPreviewLightingSoft": "Soft light"
+, "@designPreviewLightingSoft": {
+  "description": "Lighting preset for a soft diffused light"
+}
+
+, "designPreviewLightingStudio": "Studio glow"
+, "@designPreviewLightingStudio": {
+  "description": "Lighting preset for a studio-style highlight"
+}
+
+, "designPreviewMeasurementToggle": "Display measurement overlay"
+, "@designPreviewMeasurementToggle": {
+  "description": "Toggle label for showing measurement overlay"
+}
+
+, "designPreviewMeasurementHint": "Shows horizontal and vertical guides with millimeter and inch values."
+, "@designPreviewMeasurementHint": {
+  "description": "Helper text describing the measurement overlay"
+}
+
+, "designPreviewShareSheetTitle": "Share design"
+, "@designPreviewShareSheetTitle": {
+  "description": "Title for the bottom sheet with share options"
+}
+
+, "designPreviewShareSheetSubtitle": "Send a quick preview to collaborators or save it for reference."
+, "@designPreviewShareSheetSubtitle": {
+  "description": "Subtitle for the share options sheet"
+}
+
+, "designPreviewShareOptionSave": "Save to device"
+, "@designPreviewShareOptionSave": {
+  "description": "Share option to save the design locally"
+}
+
+, "designPreviewShareOptionSaveSubtitle": "Export a high-resolution PNG to your gallery."
+, "@designPreviewShareOptionSaveSubtitle": {
+  "description": "Subtitle describing the save-to-device share option"
+}
+
+, "designPreviewShareOptionMessage": "Send via messages"
+, "@designPreviewShareOptionMessage": {
+  "description": "Share option for messaging apps"
+}
+
+, "designPreviewShareOptionMessageSubtitle": "Share a lightweight preview through chat apps."
+, "@designPreviewShareOptionMessageSubtitle": {
+  "description": "Subtitle for the messaging share option"
+}
+
+, "designPreviewShareOptionLink": "Copy link"
+, "@designPreviewShareOptionLink": {
+  "description": "Share option to copy a link"
+}
+
+, "designPreviewShareOptionLinkSubtitle": "Generate a shareable link when available."
+, "@designPreviewShareOptionLinkSubtitle": {
+  "description": "Subtitle for the copy-link share option"
+}
+
+, "designPreviewShareCancel": "Cancel"
+, "@designPreviewShareCancel": {
+  "description": "Button label to dismiss the share sheet"
+}
+
 , "designInputSuggestionHeader": "Quick fill"
 , "@designInputSuggestionHeader": {
   "description": "Header for suggestion chips sourced from the profile"
