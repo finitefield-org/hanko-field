@@ -755,11 +755,18 @@ type IssuedInvoice struct {
 	PDFAssetRef   string
 }
 
+// InvoiceFailure captures an order that failed during invoice issuance.
+type InvoiceFailure struct {
+	OrderID string
+	Error   string
+}
+
 // IssueInvoicesResult reports batch job details and issued invoice metadata.
 type IssueInvoicesResult struct {
 	JobID   string
 	Issued  []IssuedInvoice
 	Summary InvoiceBatchSummary
+	Failed  []InvoiceFailure
 }
 
 type AppendProductionEventCommand struct {

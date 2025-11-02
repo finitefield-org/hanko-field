@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -17,6 +18,7 @@ import (
 const (
 	defaultInvoiceBatchLimit = 50
 	maxInvoiceBatchLimit     = 200
+	defaultInvoiceWorkers    = 5
 )
 
 var (
@@ -154,34 +156,50 @@ func (s *invoiceService) IssueInvoices(ctx context.Context, cmd IssueInvoicesCom
 	}
 
 	jobID := s.newID()
-	issued := make([]IssuedInvoice, 0, len(targetOrders))
-	orderRefs := make([]string, 0, len(targetOrders))
+	issued, failures := s.processOrders(ctx, targetOrders, actorID, notes)
 
+	now := s.now()
+	status := domain.InvoiceBatchJobStatusSucceeded
+	if len(failures) > 0 {
+		status = domain.InvoiceBatchJobStatusFailed
+	}
+
+	orderRefs := make([]string, 0, len(targetOrders))
 	for _, order := range targetOrders {
-		result, err := s.issueForOrder(ctx, order, actorID, notes)
-		if err != nil {
-			return IssueInvoicesResult{}, err
-		}
-		issued = append(issued, result)
 		orderRefs = append(orderRefs, order.ID)
 	}
 
-	now := s.now()
+	metadata := buildMetadata(notes)
+	if len(failures) > 0 {
+		failureMeta := make([]map[string]any, len(failures))
+		for i, failure := range failures {
+			failureMeta[i] = map[string]any{
+				"orderId": failure.OrderID,
+				"error":   failure.Error,
+			}
+		}
+		if metadata == nil {
+			metadata = make(map[string]any)
+		}
+		metadata["failures"] = failureMeta
+	}
+
 	job := domain.InvoiceBatchJob{
 		ID:          jobID,
 		RequestedBy: actorID,
-		Status:      domain.InvoiceBatchJobStatusSucceeded,
+		Status:      status,
 		OrderIDs:    orderRefs,
 		Filters:     s.buildFilterSnapshot(filterStatuses, cmd.Filter.PlacedRange),
-		Metadata:    buildMetadata(notes),
+		Metadata:    metadata,
 		Summary: domain.InvoiceBatchSummary{
 			TotalOrders: len(targetOrders),
 			Issued:      len(targetOrders),
-			Failed:      0,
+			Failed:      len(failures),
 		},
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+	job.Summary.Issued = len(issued)
 
 	if _, err := s.batches.Insert(ctx, job); err != nil {
 		return IssueInvoicesResult{}, s.mapRepositoryError(err)
@@ -191,13 +209,89 @@ func (s *invoiceService) IssueInvoices(ctx context.Context, cmd IssueInvoicesCom
 		"jobId":       job.ID,
 		"orders":      len(targetOrders),
 		"requestedBy": actorID,
+		"failures":    len(failures),
 	})
 
 	return IssueInvoicesResult{
 		JobID:   job.ID,
 		Issued:  issued,
 		Summary: job.Summary,
+		Failed:  failures,
 	}, nil
+}
+
+func (s *invoiceService) processOrders(ctx context.Context, orders []domain.Order, actorID, notes string) ([]IssuedInvoice, []InvoiceFailure) {
+	if len(orders) == 0 {
+		return nil, nil
+	}
+
+	concurrency := defaultInvoiceWorkers
+	if len(orders) < concurrency {
+		concurrency = len(orders)
+	}
+
+	type result struct {
+		orderID string
+		issued  *IssuedInvoice
+		err     error
+	}
+
+	jobs := make(chan domain.Order)
+	results := make(chan result, concurrency)
+
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			defer wg.Done()
+			for order := range jobs {
+				if ctx.Err() != nil {
+					results <- result{orderID: order.ID, err: ctx.Err()}
+					continue
+				}
+				issued, err := s.issueForOrder(ctx, order, actorID, notes)
+				if err != nil {
+					results <- result{orderID: order.ID, err: err}
+					continue
+				}
+				issuedCopy := issued
+				results <- result{orderID: order.ID, issued: &issuedCopy}
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	go func() {
+		for _, order := range orders {
+			jobs <- order
+		}
+		close(jobs)
+	}()
+
+	issued := make([]IssuedInvoice, 0, len(orders))
+	failures := make([]InvoiceFailure, 0)
+	for res := range results {
+		if res.err != nil {
+			failures = append(failures, InvoiceFailure{
+				OrderID: res.orderID,
+				Error:   res.err.Error(),
+			})
+			s.log(ctx, "invoice.issue.failed", map[string]any{
+				"orderId": res.orderID,
+				"error":   res.err.Error(),
+			})
+			continue
+		}
+		if res.issued != nil {
+			issued = append(issued, *res.issued)
+		}
+	}
+
+	return issued, failures
 }
 
 func (s *invoiceService) resolveOrders(ctx context.Context, ids []string, statuses []string, placed domain.RangeQuery[time.Time], limit int) ([]domain.Order, error) {
@@ -323,7 +417,8 @@ func (s *invoiceService) issueForOrder(ctx context.Context, order domain.Order, 
 			return err
 		}
 		if ref := strings.TrimSpace(assetRef); ref != "" {
-			invoice.PDFAssetRef = stringPtr(ref)
+			refCopy := ref
+			invoice.PDFAssetRef = &refCopy
 		}
 
 		saved, err := s.invoices.Insert(txCtx, invoice)
@@ -337,11 +432,9 @@ func (s *invoiceService) issueForOrder(ctx context.Context, order domain.Order, 
 		}
 		orderCopy.Metadata["invoiceNumber"] = saved.InvoiceNumber
 		orderCopy.Metadata["invoiceStatus"] = string(saved.Status)
-		ref := assetRef
 		if trimmed := strings.TrimSpace(assetRef); trimmed != "" {
-			ref = trimmed
+			orderCopy.Metadata["invoiceAssetRef"] = trimmed
 		}
-		orderCopy.Metadata["invoiceAssetRef"] = ref
 		orderCopy.Metadata["invoiceIssuedAt"] = now.Format(time.RFC3339Nano)
 		if notes != "" {
 			orderCopy.Metadata["invoiceNotes"] = notes

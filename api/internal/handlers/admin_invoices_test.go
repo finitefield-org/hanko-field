@@ -47,6 +47,7 @@ func TestAdminInvoiceHandlers_IssueInvoicesSuccess(t *testing.T) {
 				Issued: []services.IssuedInvoice{
 					{OrderID: "order_1", InvoiceNumber: "INV-1", PDFAssetRef: "/assets/orders/order_1/invoices/INV-1.pdf"},
 				},
+				Failed: nil,
 			}, nil
 		},
 	}
@@ -107,6 +108,9 @@ func TestAdminInvoiceHandlers_IssueInvoicesSuccess(t *testing.T) {
 	if len(resp.Invoices) != 1 || resp.Invoices[0].OrderID != "order_1" {
 		t.Fatalf("expected issued invoice in response, got %+v", resp.Invoices)
 	}
+	if len(resp.Failures) != 0 {
+		t.Fatalf("expected no failures, got %+v", resp.Failures)
+	}
 }
 
 func TestAdminInvoiceHandlers_IssueInvoicesInvalidJSON(t *testing.T) {
@@ -137,6 +141,48 @@ func TestAdminInvoiceHandlers_IssueInvoicesServiceError(t *testing.T) {
 	handler.issueInvoices(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAdminInvoiceHandlers_IssueInvoicesReturnsFailures(t *testing.T) {
+	service := &stubAdminInvoiceService{
+		issueFn: func(context.Context, services.IssueInvoicesCommand) (services.IssueInvoicesResult, error) {
+			return services.IssueInvoicesResult{
+				JobID: "job_fail",
+				Summary: services.InvoiceBatchSummary{
+					TotalOrders: 2,
+					Issued:      1,
+					Failed:      1,
+				},
+				Issued: []services.IssuedInvoice{
+					{OrderID: "order_1", InvoiceNumber: "INV-1"},
+				},
+				Failed: []services.InvoiceFailure{
+					{OrderID: "order_2", Error: "storage unavailable"},
+				},
+			}, nil
+		},
+	}
+	handler := NewAdminInvoiceHandlers(nil, service)
+
+	req := httptest.NewRequest(http.MethodPost, "/invoices:issue", bytes.NewBufferString(`{}`))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.issueInvoices(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", rec.Code)
+	}
+
+	var resp adminIssueInvoicesResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if len(resp.Failures) != 1 || resp.Failures[0].OrderID != "order_2" {
+		t.Fatalf("expected failure entry, got %+v", resp.Failures)
+	}
+	if resp.Summary.Failed != 1 {
+		t.Fatalf("expected summary failed 1, got %d", resp.Summary.Failed)
 	}
 }
 

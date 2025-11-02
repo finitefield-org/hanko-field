@@ -62,10 +62,16 @@ type adminInvoiceBatchSummary struct {
 	Failed int `json:"failed"`
 }
 
+type adminInvoiceFailure struct {
+	OrderID string `json:"orderId"`
+	Error   string `json:"error"`
+}
+
 type adminIssueInvoicesResponse struct {
 	JobID    string                   `json:"jobId"`
 	Summary  adminInvoiceBatchSummary `json:"summary"`
 	Invoices []adminIssuedInvoice     `json:"invoices"`
+	Failures []adminInvoiceFailure    `json:"failures,omitempty"`
 }
 
 func (h *AdminInvoiceHandlers) issueInvoices(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +159,15 @@ func (h *AdminInvoiceHandlers) issueInvoices(w http.ResponseWriter, r *http.Requ
 				OrderID:       issued.OrderID,
 				InvoiceNumber: issued.InvoiceNumber,
 				PDFAssetRef:   issued.PDFAssetRef,
+			}
+		}
+	}
+	if len(result.Failed) > 0 {
+		resp.Failures = make([]adminInvoiceFailure, len(result.Failed))
+		for i, failure := range result.Failed {
+			resp.Failures[i] = adminInvoiceFailure{
+				OrderID: failure.OrderID,
+				Error:   failure.Error,
 			}
 		}
 	}

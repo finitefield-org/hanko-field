@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -85,6 +86,9 @@ func TestInvoiceServiceIssueInvoices_WithOrderIDs(t *testing.T) {
 	if len(result.Issued) != 2 {
 		t.Fatalf("expected 2 issued invoices, got %d", len(result.Issued))
 	}
+	if len(result.Failed) != 0 {
+		t.Fatalf("expected no failures, got %v", result.Failed)
+	}
 	if result.Summary.TotalOrders != 2 || result.Summary.Issued != 2 || result.Summary.Failed != 0 {
 		t.Fatalf("unexpected summary: %+v", result.Summary)
 	}
@@ -131,11 +135,17 @@ func TestInvoiceServiceIssueInvoices_WithOrderIDs(t *testing.T) {
 	if job.ID != "job_001" {
 		t.Fatalf("expected job id job_001, got %q", job.ID)
 	}
+	if job.Status != domain.InvoiceBatchJobStatusSucceeded {
+		t.Fatalf("expected job status succeeded, got %s", job.Status)
+	}
 	if len(job.OrderIDs) != 2 || job.OrderIDs[0] != "order_1" {
 		t.Fatalf("expected order ids tracked, got %v", job.OrderIDs)
 	}
 	if note, ok := job.Metadata["notes"].(string); !ok || note != "send asap" {
 		t.Fatalf("expected job metadata notes, got %v", job.Metadata["notes"])
+	}
+	if _, ok := job.Metadata["failures"]; ok {
+		t.Fatalf("did not expect failures metadata, got %v", job.Metadata["failures"])
 	}
 }
 
@@ -215,8 +225,112 @@ func TestInvoiceServiceIssueInvoices_FilterLimit(t *testing.T) {
 	if result.Summary.TotalOrders != 1 {
 		t.Fatalf("expected summary total 1, got %d", result.Summary.TotalOrders)
 	}
+	if len(result.Failed) != 0 {
+		t.Fatalf("expected no failures, got %v", result.Failed)
+	}
 	if val, ok := batchRepo.inserted[0].Filters["placedFrom"].(string); !ok || val == "" {
 		t.Fatalf("expected filter snapshot stored, got %v", batchRepo.inserted[0].Filters["placedFrom"])
+	}
+	if batchRepo.inserted[0].Status != domain.InvoiceBatchJobStatusSucceeded {
+		t.Fatalf("expected succeeded status, got %s", batchRepo.inserted[0].Status)
+	}
+}
+
+func TestInvoiceServiceIssueInvoices_PartialFailures(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 7, 1, 9, 0, 0, 0, time.UTC)
+
+	orderSamples := map[string]domain.Order{
+		"order_ok": {
+			ID:       "order_ok",
+			Currency: "JPY",
+			Totals:   domain.OrderTotals{Total: 5000},
+			Metadata: map[string]any{},
+		},
+		"order_fail": {
+			ID:       "order_fail",
+			Currency: "JPY",
+			Totals:   domain.OrderTotals{Total: 2500},
+			Metadata: map[string]any{},
+		},
+	}
+
+	var updated []domain.Order
+	orderRepo := &stubOrderRepo{
+		findFn: func(_ context.Context, id string) (domain.Order, error) {
+			if order, ok := orderSamples[id]; ok {
+				return order, nil
+			}
+			return domain.Order{}, errors.New("not found")
+		},
+		updateFn: func(_ context.Context, order domain.Order) error {
+			updated = append(updated, order)
+			return nil
+		},
+	}
+	invoiceRepo := &stubInvoiceRepo{}
+	batchRepo := &stubInvoiceBatchRepo{}
+	counter := &stubInvoiceCounterService{invoiceNumbers: []string{"INV-202507-000001", "INV-202507-000002"}}
+	storage := &stubInvoiceStorage{
+		failures: map[string]error{
+			"order_fail": errors.New("storage unavailable"),
+		},
+	}
+	renderer := &stubInvoiceRenderer{}
+
+	idSeq := []string{"job_partial", "inv_ok", "inv_fail"}
+	idIdx := 0
+	idGen := func() string {
+		defer func() { idIdx++ }()
+		return idSeq[idIdx]
+	}
+
+	service, err := NewInvoiceService(InvoiceServiceDeps{
+		Orders:      orderRepo,
+		Invoices:    invoiceRepo,
+		Batches:     batchRepo,
+		Counters:    counter,
+		Storage:     storage,
+		Renderer:    renderer,
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: idGen,
+	})
+	if err != nil {
+		t.Fatalf("NewInvoiceService: %v", err)
+	}
+
+	result, err := service.IssueInvoices(ctx, IssueInvoicesCommand{
+		OrderIDs: []string{"order_ok", "order_fail"},
+		ActorID:  "ops",
+	})
+	if err != nil {
+		t.Fatalf("IssueInvoices: %v", err)
+	}
+	if len(result.Issued) != 1 || result.Issued[0].OrderID != "order_ok" {
+		t.Fatalf("expected one issued invoice for order_ok, got %+v", result.Issued)
+	}
+	if len(result.Failed) != 1 || result.Failed[0].OrderID != "order_fail" {
+		t.Fatalf("expected one failure for order_fail, got %+v", result.Failed)
+	}
+	if result.Summary.Issued != 1 || result.Summary.Failed != 1 {
+		t.Fatalf("unexpected summary %+v", result.Summary)
+	}
+	if len(invoiceRepo.inserted) != 1 {
+		t.Fatalf("expected one invoice inserted, got %d", len(invoiceRepo.inserted))
+	}
+	if len(updated) != 1 || updated[0].ID != "order_ok" {
+		t.Fatalf("expected only order_ok updated, got %+v", updated)
+	}
+	if batchRepo.inserted[0].Status != domain.InvoiceBatchJobStatusFailed {
+		t.Fatalf("expected job status failed, got %s", batchRepo.inserted[0].Status)
+	}
+	failuresMeta, ok := batchRepo.inserted[0].Metadata["failures"].([]map[string]any)
+	if !ok || len(failuresMeta) != 1 {
+		t.Fatalf("expected failures metadata recorded, got %v", batchRepo.inserted[0].Metadata["failures"])
+	}
+	if val, ok := failuresMeta[0]["orderId"]; !ok || val != "order_fail" {
+		t.Fatalf("expected failure order id recorded, got %v", failuresMeta)
 	}
 }
 
@@ -274,11 +388,29 @@ func (s *stubInvoiceCounterService) NextInvoiceNumber(context.Context) (string, 
 
 type stubInvoiceStorage struct {
 	storedObjects []string
+	failures      map[string]error
 }
 
 func (s *stubInvoiceStorage) StoreInvoice(_ context.Context, object string, _ []byte, _ map[string]string) (string, error) {
+	if s.failures != nil {
+		if orderID := extractOrderID(object); orderID != "" {
+			if err := s.failures[orderID]; err != nil {
+				return "", err
+			}
+		}
+	}
 	s.storedObjects = append(s.storedObjects, object)
 	return "/assets/" + object, nil
+}
+
+func extractOrderID(object string) string {
+	segments := strings.Split(object, "/")
+	for i := 0; i < len(segments); i++ {
+		if segments[i] == "orders" && i+1 < len(segments) {
+			return segments[i+1]
+		}
+	}
+	return ""
 }
 
 type stubInvoiceRenderer struct {
