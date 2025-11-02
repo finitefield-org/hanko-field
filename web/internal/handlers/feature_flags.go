@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -130,6 +131,8 @@ func LoadFeatureFlags() FeatureFlags {
 		featureFlagLastError = ""
 	}
 
+	flags = applyFeatureFlagOverrides(flags)
+
 	if flags.Flags == nil {
 		flags.Flags = map[string]bool{}
 	}
@@ -153,6 +156,8 @@ func LoadFeatureFlags() FeatureFlags {
 	featureFlagExpiry = now.Add(featureFlagTTL)
 	featureFlagsLoaded = true
 
+	telemetry.RecordFeatureFlagMetrics(featureFlagCache.Source, featureFlagCache.Version, featureFlagCache.Flags)
+
 	return featureFlagCache.clone()
 }
 
@@ -165,6 +170,7 @@ func fetchFeatureFlags() (FeatureFlags, error) {
 	if remoteURL := strings.TrimSpace(os.Getenv("HANKO_WEB_REMOTE_CONFIG_URL")); remoteURL != "" {
 		ff, err := loadRemoteFeatureFlags(remoteURL)
 		if err == nil {
+			ff.Source = "remote"
 			return ff, nil
 		}
 		remoteErr = err
@@ -181,6 +187,18 @@ func fetchFeatureFlags() (FeatureFlags, error) {
 			return ff, nil
 		}
 		errs = append(errs, fmt.Sprintf("env: %v", err))
+	}
+
+	if file := strings.TrimSpace(os.Getenv("HANKO_WEB_FEATURE_FLAG_FILE")); file != "" {
+		ff, err := loadFeatureFlagsFromFile(file)
+		if err == nil {
+			if remoteErr != nil {
+				telemetry.Logger().Warn("feature flags remote fetch failed, falling back to file", "error", remoteErr, "path", file)
+			}
+			ff.Source = "file"
+			return ff, nil
+		}
+		errs = append(errs, fmt.Sprintf("file: %v", err))
 	}
 
 	ff := defaultFeatureFlags()
@@ -221,6 +239,19 @@ func loadRemoteFeatureFlags(url string) (FeatureFlags, error) {
 		return FeatureFlags{}, err
 	}
 	ff.Source = "remote"
+	return ff, nil
+}
+
+func loadFeatureFlagsFromFile(path string) (FeatureFlags, error) {
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		return FeatureFlags{}, err
+	}
+	ff, err := parseFeatureFlags(data)
+	if err != nil {
+		return FeatureFlags{}, err
+	}
+	ff.Source = "file"
 	return ff, nil
 }
 
@@ -303,4 +334,93 @@ func cloneAnyMap(src map[string]any) map[string]any {
 		dst[k] = v
 	}
 	return dst
+}
+
+func applyFeatureFlagOverrides(ff FeatureFlags) FeatureFlags {
+	raw := strings.TrimSpace(os.Getenv("HANKO_WEB_FEATURE_FLAG_OVERRIDES"))
+	if raw == "" {
+		return ff
+	}
+	overrides := parseOverrideList(raw)
+	if len(overrides) == 0 {
+		return ff
+	}
+	if ff.Flags == nil {
+		ff.Flags = map[string]bool{}
+	}
+	applied := make(map[string]bool, len(overrides))
+	for key, val := range overrides {
+		if key == "" {
+			continue
+		}
+		ff.Flags[key] = val
+		applied[key] = val
+	}
+	if len(applied) == 0 {
+		return ff
+	}
+	if !strings.Contains(ff.Source, "override") {
+		ff.Source = ff.Source + "+override"
+	}
+	if ff.Raw == nil {
+		ff.Raw = map[string]any{}
+	}
+	ff.Raw["overrides"] = map[string]any{
+		"source": "env:HANKO_WEB_FEATURE_FLAG_OVERRIDES",
+		"flags":  applied,
+	}
+	return ff
+}
+
+func parseOverrideList(raw string) map[string]bool {
+	result := map[string]bool{}
+	splitFn := func(r rune) bool {
+		switch r {
+		case ',', ';', '\n':
+			return true
+		default:
+			return false
+		}
+	}
+	parts := strings.FieldsFunc(raw, splitFn)
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		keyPart := part
+		val := true
+		if eq := strings.IndexAny(part, ":="); eq >= 0 {
+			keyPart = strings.TrimSpace(part[:eq])
+			value := strings.TrimSpace(part[eq+1:])
+			parsed, ok := parseOverrideBool(value)
+			if !ok {
+				continue
+			}
+			val = parsed
+		}
+		key := strings.TrimSpace(keyPart)
+		if strings.HasPrefix(key, "!") || strings.HasPrefix(key, "-") {
+			key = strings.TrimLeft(key, "!-")
+			val = false
+		}
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		result[key] = val
+	}
+	return result
+}
+
+func parseOverrideBool(raw string) (bool, bool) {
+	r := strings.ToLower(strings.TrimSpace(raw))
+	switch r {
+	case "1", "true", "on", "yes", "enable", "enabled":
+		return true, true
+	case "0", "false", "off", "no", "disable", "disabled":
+		return false, true
+	default:
+		return false, false
+	}
 }

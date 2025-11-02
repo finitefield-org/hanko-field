@@ -1,16 +1,37 @@
 {{ define "feature_flags" }}
 <script>
 (function(){
-  var payload = {{ safe .FeatureFlags.JSON }};
-  window.__HANKO_FLAGS__ = payload;
-  function ensureFlags(){
-    return window.__HANKO_FLAGS__ || {};
+  var initialPayload = normalizePayload({{ safe .FeatureFlags.JSON }});
+  var initialRollouts = applyRolloutStrategies(initialPayload);
+  window.__HANKO_FLAGS__ = initialPayload;
+  window.__HANKO_ROLLOUT_STATE__ = initialRollouts;
+
+  function normalizePayload(input){
+    var data = input && typeof input === 'object' ? input : {};
+    if (!data.flags || typeof data.flags !== 'object') { data.flags = {}; }
+    if (!data.variants || typeof data.variants !== 'object') { data.variants = {}; }
+    if (!data.meta || typeof data.meta !== 'object') { data.meta = {}; }
+    return data;
   }
+
+  function ensureFlags(){
+    var data = window.__HANKO_FLAGS__;
+    if (!data || typeof data !== 'object') {
+      data = normalizePayload({});
+      window.__HANKO_FLAGS__ = data;
+    }
+    if (!Array.isArray(window.__HANKO_ROLLOUT_STATE__)) {
+      window.__HANKO_ROLLOUT_STATE__ = [];
+    }
+    return data;
+  }
+
   function enabled(key){
     var data = ensureFlags();
     if (!data.flags) { return false; }
     return data.flags[key] === true;
   }
+
   function variant(key, fallback){
     var data = ensureFlags();
     if (data.variants && Object.prototype.hasOwnProperty.call(data.variants, key)) {
@@ -18,6 +39,7 @@
     }
     return fallback === undefined ? null : fallback;
   }
+
   function applyFeatureBindings(){
     var data = ensureFlags();
     var nodes = document.querySelectorAll('[data-feature-flag]');
@@ -41,28 +63,283 @@
       if (value == null) { value = ''; }
       node.setAttribute('data-feature-variant', value);
     });
-    document.dispatchEvent(new CustomEvent('hanko:flags-applied', { detail: data }));
+    var detail = data;
+    if (detail && typeof detail === 'object') {
+      detail.rolloutState = window.__HANKO_ROLLOUT_STATE__ || [];
+    }
+    document.dispatchEvent(new CustomEvent('hanko:flags-applied', { detail: detail }));
   }
+
+  function ready(){
+    applyFeatureBindings();
+    var detail = ensureFlags();
+    if (detail && typeof detail === 'object') {
+      detail.rolloutState = window.__HANKO_ROLLOUT_STATE__ || [];
+    }
+    document.dispatchEvent(new CustomEvent('hanko:flags-ready', { detail: detail }));
+  }
+
   window.hankoFlags = {
     enabled: enabled,
     variant: variant,
     all: ensureFlags,
+    exposures: function(){
+      var state = window.__HANKO_ROLLOUT_STATE__ || [];
+      return state.slice ? state.slice() : state;
+    },
+    rolloutSeed: function(){
+      var data = ensureFlags();
+      var meta = data.meta || {};
+      return {
+        hash: meta.rolloutSeedHash || null,
+        source: meta.rolloutSeedSource || null,
+        ttlDays: meta.rolloutSeedTtlDays || null
+      };
+    },
     refresh: function(next){
-      if (next && typeof next === 'object') {
-        window.__HANKO_FLAGS__ = next;
-      }
-      payload = ensureFlags();
+      var updated = next && typeof next === 'object' ? normalizePayload(next) : ensureFlags();
+      window.__HANKO_FLAGS__ = updated;
+      window.__HANKO_ROLLOUT_STATE__ = applyRolloutStrategies(updated);
       applyFeatureBindings();
+      return updated;
+    },
+    refreshRemote: function(endpoint){
+      if (typeof fetch !== 'function') {
+        return Promise.reject(new Error('fetch API is not available'));
+      }
+      var url = endpoint || '/api/feature-flags';
+      return fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' }})
+        .then(function(resp){
+          if (!resp.ok) {
+            throw new Error('Failed to fetch feature flags: ' + resp.status);
+          }
+          return resp.json();
+        })
+        .then(function(json){
+          return window.hankoFlags.refresh(json);
+        });
     }
   };
-  function ready(){
-    applyFeatureBindings();
-    document.dispatchEvent(new CustomEvent('hanko:flags-ready', { detail: ensureFlags() }));
-  }
+
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     ready();
   } else {
     document.addEventListener('DOMContentLoaded', ready, { once: true });
+  }
+
+  function applyRolloutStrategies(payload){
+    payload = normalizePayload(payload);
+    var meta = payload.meta;
+    var rollouts = meta.rollouts;
+    if (!rollouts || typeof rollouts !== 'object') {
+      meta.rolloutState = [];
+      return [];
+    }
+    var seedInfo = resolveRolloutSeed(meta, rollouts);
+    var exposures = [];
+    Object.keys(rollouts).forEach(function(flag){
+      if (flag === '_seed') { return; }
+      if (!Object.prototype.hasOwnProperty.call(rollouts, flag)) { return; }
+      var cfg = rollouts[flag];
+      if (!cfg || typeof cfg !== 'object') { return; }
+      var result = evaluateRollout(flag, cfg, payload, seedInfo);
+      if (!result) { return; }
+      payload.flags[flag] = result.active;
+      exposures.push(result.exposure);
+    });
+    meta.rolloutState = exposures;
+    if (seedInfo.hash) {
+      meta.rolloutSeedHash = seedInfo.hash;
+    }
+    if (seedInfo.source) {
+      meta.rolloutSeedSource = seedInfo.source;
+    }
+    if (seedInfo.ttlDays) {
+      meta.rolloutSeedTtlDays = seedInfo.ttlDays;
+    }
+    return exposures;
+  }
+
+  function evaluateRollout(flag, cfg, payload, seedInfo){
+    var flags = payload.flags || {};
+    var defaultValue = Object.prototype.hasOwnProperty.call(flags, flag) ? !!flags[flag] : !!cfg.default;
+    var active = defaultValue;
+    var exposure = {
+      flag: flag,
+      active: defaultValue,
+      reason: 'default',
+      bucket: null,
+      threshold: null,
+      forced: false,
+      version: payload.version || null,
+      source: payload.source || null
+    };
+    var now = Date.now();
+    if (cfg.startAt) {
+      var start = Date.parse(cfg.startAt);
+      if (!isNaN(start) && now < start) {
+        exposure.reason = 'window:not-started';
+        exposure.active = active;
+        return { active: active, exposure: exposure };
+      }
+    }
+    if (cfg.endAt) {
+      var end = Date.parse(cfg.endAt);
+      if (!isNaN(end) && now >= end) {
+        exposure.reason = 'window:ended';
+        exposure.active = active;
+        return { active: active, exposure: exposure };
+      }
+    }
+    var force = typeof cfg.force === 'string' ? cfg.force.toLowerCase() : null;
+    if (force === 'on' || force === 'enable' || force === 'enabled' || force === 'true') {
+      active = true;
+      exposure.reason = 'forced-on';
+      exposure.forced = true;
+    } else if (force === 'off' || force === 'disable' || force === 'disabled' || force === 'false') {
+      active = false;
+      exposure.reason = 'forced-off';
+      exposure.forced = true;
+    } else if (Object.prototype.hasOwnProperty.call(cfg, 'percentage')) {
+      var pct = Number(cfg.percentage);
+      if (cfg.scale === 'fraction' || cfg.mode === 'fraction' || cfg.percentageIsFraction === true) {
+        pct = pct * 100;
+      }
+      if (isFinite(pct)) {
+        pct = Math.max(0, Math.min(100, pct));
+        var threshold = Math.round(pct * 100);
+        var seed = seedInfo && seedInfo.id ? seedInfo.id : '';
+        if (cfg.seed) {
+          seed = seed + '::' + String(cfg.seed);
+        }
+        var bucket = computeRolloutBucket(seed, flag);
+        exposure.bucket = bucket;
+        exposure.threshold = threshold;
+        exposure.reason = 'percentage';
+        active = bucket < threshold;
+      }
+    }
+    if (Array.isArray(cfg.metrics)) {
+      exposure.metrics = cfg.metrics.slice();
+    }
+    if (cfg.guardrail) {
+      exposure.guardrail = cfg.guardrail;
+    }
+    if (cfg.rollback || cfg.rollbackFlag) {
+      exposure.rollback = cfg.rollback || cfg.rollbackFlag;
+    }
+    if (seedInfo && seedInfo.hash) {
+      exposure.seedHash = seedInfo.hash;
+      exposure.seedSource = seedInfo.source || null;
+    }
+    exposure.active = active;
+    return { active: active, exposure: exposure };
+  }
+
+  function resolveRolloutSeed(meta, rollouts){
+    var identitySeed = null;
+    if (meta && typeof meta === 'object') {
+      if (meta.identity && typeof meta.identity === 'object') {
+        if (meta.identity.rolloutSeed) {
+          identitySeed = meta.identity.rolloutSeed;
+        } else if (meta.identity.seed) {
+          identitySeed = meta.identity.seed;
+        } else if (meta.identity.user) {
+          identitySeed = meta.identity.user;
+        }
+      }
+      if (!identitySeed && meta.rolloutSeed) {
+        identitySeed = meta.rolloutSeed;
+      }
+    }
+    if (identitySeed) {
+      var identHash = obscureSeed(identitySeed);
+      return { id: String(identitySeed), source: 'identity', hash: identHash, ttlDays: null };
+    }
+    var cfg = rollouts && rollouts._seed;
+    if (cfg && cfg.value) {
+      var cfgHash = obscureSeed(cfg.value);
+      return { id: String(cfg.value), source: 'config', hash: cfgHash, ttlDays: null };
+    }
+    var cookieName = (cfg && cfg.cookie) || 'hanko_rollout_id';
+    var ttlDays = Number(cfg && cfg.ttlDays);
+    if (!isFinite(ttlDays) || ttlDays <= 0) {
+      ttlDays = 365;
+    }
+    var cookieSeed = getCookie(cookieName);
+    if (cookieSeed) {
+      return { id: cookieSeed, source: 'cookie', hash: obscureSeed(cookieSeed), ttlDays: ttlDays };
+    }
+    var generated = generateSeed();
+    setCookie(cookieName, generated, ttlDays);
+    return { id: generated, source: 'cookie:new', hash: obscureSeed(generated), ttlDays: ttlDays };
+  }
+
+  function hash32(str){
+    var hash = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = imul(hash, 16777619);
+    }
+    return (hash >>> 0);
+  }
+
+  function imul(a, b){
+    if (typeof Math.imul === 'function') {
+      return Math.imul(a, b);
+    }
+    var ah = (a >>> 16) & 0xffff;
+    var al = a & 0xffff;
+    var bh = (b >>> 16) & 0xffff;
+    var bl = b & 0xffff;
+    var low = (al * bl) >>> 0;
+    var mid = ((ah * bl + al * bh) << 16) >>> 0;
+    return (low + mid) >>> 0;
+  }
+
+  function obscureSeed(seed){
+    var value = hash32(String(seed));
+    return value.toString(16).padStart(8, '0');
+  }
+
+  function computeRolloutBucket(seed, flag){
+    var input = String(seed || '') + '::' + String(flag || '');
+    return hash32(input) % 10000;
+  }
+
+  function getCookie(name){
+    var pattern = new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)');
+    var match = document.cookie.match(pattern);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function setCookie(name, value, days){
+    var expires = '';
+    if (typeof days === 'number' && isFinite(days) && days > 0) {
+      var date = new Date();
+      date.setTime(date.getTime() + days * 86400000);
+      expires = '; expires=' + date.toUTCString();
+    }
+    var secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/; SameSite=Lax' + secure;
+  }
+
+  function generateSeed(){
+    if (typeof crypto !== 'undefined') {
+      if (typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      if (typeof crypto.getRandomValues === 'function') {
+        var arr = new Uint8Array(16);
+        crypto.getRandomValues(arr);
+        var hex = [];
+        for (var i = 0; i < arr.length; i++) {
+          hex.push(arr[i].toString(16).padStart(2, '0'));
+        }
+        return hex.join('');
+      }
+    }
+    return 'anon-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 })();
 </script>

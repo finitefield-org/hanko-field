@@ -847,6 +847,7 @@ func main() {
 	assetsRoot := filepath.Join(publicDir, "assets")
 	assets := http.StripPrefix("/assets", mw.AssetsWithCache(assetsRoot))
 	r.Handle("/assets/*", assets)
+	r.Get("/api/feature-flags", handlersPkg.FeatureFlagsAPIHandler)
 
 	// Home page
 	r.Get("/", HomeHandler)
