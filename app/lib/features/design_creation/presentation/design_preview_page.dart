@@ -456,16 +456,16 @@ class _BackgroundSurface extends StatelessWidget {
         gradient: RadialGradient(
           radius: 1.1,
           center: Alignment.topLeft,
-          colors: [Colors.white.withValues(alpha: 0.6), Colors.transparent],
+          colors: [Colors.white.withAlpha(153), Colors.transparent],
           stops: const [0, 1],
         ),
       ),
       _LightingPreset.studio => BoxDecoration(
         gradient: SweepGradient(
           colors: [
-            Colors.white.withValues(alpha: 0.55),
+            Colors.white.withAlpha(140),
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.25),
+            Colors.black.withAlpha(64),
             Colors.transparent,
           ],
           stops: const [0.0, 0.35, 0.6, 1],
@@ -572,7 +572,7 @@ class _MeasurementPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = accentColor.withValues(alpha: 0.8)
+      ..color = accentColor.withAlpha(204)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -640,7 +640,7 @@ class _MeasurementPainter extends CustomPainter {
         textPainter.height + 8,
       ),
       Paint()
-        ..color = const Color(0xFFFDFDFD).withValues(alpha: 0.9)
+        ..color = const Color(0xFFFDFDFD).withAlpha(230)
         ..style = PaintingStyle.fill,
     );
     textPainter.paint(canvas, textOffset);
