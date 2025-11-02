@@ -11,7 +11,6 @@ import (
 	"finitefield.org/hanko-web/internal/cms"
 	"finitefield.org/hanko-web/internal/format"
 	mw "finitefield.org/hanko-web/internal/middleware"
-	"finitefield.org/hanko-web/internal/telemetry"
 )
 
 const (
@@ -284,7 +283,7 @@ func searchGuides(ctx context.Context, lang, query string, limit int) []SearchRe
 
 	guides, err := cmsClient.ListGuides(ctx, opts)
 	if err != nil {
-		telemetry.Logger().Warn("search guides fetch failed", "error", err)
+		mw.ContextLogger(ctx).Warn("search guides fetch failed", "error", err, "query", query, "lang", lang)
 	}
 
 	results := make([]SearchResultItem, 0, len(guides))

@@ -11,12 +11,15 @@ import (
 
 var (
 	loggerInit sync.Once
+	loggerMu   sync.RWMutex
 	baseLogger *slog.Logger
 )
 
 // Logger returns the process-wide structured logger, initialising it on first use.
 func Logger() *slog.Logger {
 	loggerInit.Do(initLogger)
+	loggerMu.RLock()
+	defer loggerMu.RUnlock()
 	return baseLogger
 }
 
@@ -26,7 +29,9 @@ func SetLogger(l *slog.Logger) {
 		return
 	}
 	loggerInit.Do(initLogger)
+	loggerMu.Lock()
 	baseLogger = l
+	loggerMu.Unlock()
 }
 
 func initLogger() {
@@ -46,7 +51,9 @@ func initLogger() {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: level,
 	})
+	loggerMu.Lock()
 	baseLogger = slog.New(handler)
+	loggerMu.Unlock()
 }
 
 // With returns a logger augmented with the supplied attributes.

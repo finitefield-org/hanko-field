@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sort"
@@ -78,9 +79,10 @@ func NewClient(baseURL string) *Client {
 // ListGuides returns localized guides, applying filters client-side when necessary.
 func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guide, error) {
 	lang := normalizeLang(opts.Lang)
+	fallback := filterGuides(fallbackGuidesForLang(lang), opts)
 
 	if c == nil || c.baseURL == "" {
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		return fallback, nil
 	}
 	if c.http == nil {
 		c.http = &http.Client{Timeout: 5 * time.Second}
@@ -88,13 +90,13 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 
 	endpoint, err := url.JoinPath(c.baseURL, "content/guides")
 	if err != nil {
-		telemetry.Logger().Error("cms join guide list path failed", "error", err)
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		telemetry.Logger().Error("cms join guide list path failed", "error", err, "lang", lang)
+		return fallback, fmt.Errorf("cms: list guides path: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		telemetry.Logger().Error("cms build guide list request failed", "error", err)
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		telemetry.Logger().Error("cms build guide list request failed", "error", err, "lang", lang)
+		return fallback, fmt.Errorf("cms: list guides request build: %w", err)
 	}
 	q := req.URL.Query()
 	if lang != "" {
@@ -111,8 +113,8 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		telemetry.Logger().Error("cms guide list request failed", "error", err)
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		telemetry.Logger().Error("cms guide list request failed", "error", err, "lang", lang)
+		return fallback, fmt.Errorf("cms: list guides do: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -120,14 +122,14 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 		return []Guide{}, nil
 	}
 	if resp.StatusCode >= 400 {
-		telemetry.Logger().Warn("cms guide list non-success status", "status", resp.StatusCode)
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		telemetry.Logger().Warn("cms guide list non-success status", "status", resp.StatusCode, "lang", lang)
+		return fallback, fmt.Errorf("cms: list guides status %d", resp.StatusCode)
 	}
 
 	var pg pageGuide
 	if err := json.NewDecoder(resp.Body).Decode(&pg); err != nil {
-		telemetry.Logger().Error("cms decode guide list failed", "error", err)
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		telemetry.Logger().Error("cms decode guide list failed", "error", err, "lang", lang)
+		return fallback, fmt.Errorf("cms: list guides decode: %w", err)
 	}
 
 	guides := make([]Guide, 0, len(pg.Items))
@@ -139,7 +141,7 @@ func (c *Client) ListGuides(ctx context.Context, opts ListGuidesOptions) ([]Guid
 		guides = append(guides, g)
 	}
 	if len(guides) == 0 {
-		return filterGuides(fallbackGuidesForLang(lang), opts), nil
+		return fallback, nil
 	}
 
 	sortGuides(guides)
@@ -163,13 +165,19 @@ func (c *Client) GetGuide(ctx context.Context, slug, lang string) (Guide, error)
 
 	endpoint, err := url.JoinPath(c.baseURL, "content/guides", slug)
 	if err != nil {
-		telemetry.Logger().Error("cms join guide detail path failed", "error", err)
-		return fallbackGuide(slug, lang)
+		telemetry.Logger().Error("cms join guide detail path failed", "error", err, "slug", slug, "lang", lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail path: %w", err)
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail path: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		telemetry.Logger().Error("cms build guide detail request failed", "error", err)
-		return fallbackGuide(slug, lang)
+		telemetry.Logger().Error("cms build guide detail request failed", "error", err, "slug", slug, "lang", lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail request build: %w", err)
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail request build: %w", err)
 	}
 	q := req.URL.Query()
 	if lang != "" {
@@ -180,31 +188,43 @@ func (c *Client) GetGuide(ctx context.Context, slug, lang string) (Guide, error)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		telemetry.Logger().Error("cms guide detail request failed", "error", err)
-		return fallbackGuide(slug, lang)
+		telemetry.Logger().Error("cms guide detail request failed", "error", err, "slug", slug, "lang", lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail do: %w", err)
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail do: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		if g, err := fallbackGuide(slug, lang); err == nil {
-			return g, nil
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, ErrNotFound
 		}
 		return Guide{}, ErrNotFound
 	}
 	if resp.StatusCode >= 400 {
-		telemetry.Logger().Warn("cms guide detail non-success status", "status", resp.StatusCode)
-		return fallbackGuide(slug, lang)
+		telemetry.Logger().Warn("cms guide detail non-success status", "status", resp.StatusCode, "slug", slug, "lang", lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail status %d", resp.StatusCode)
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail status %d", resp.StatusCode)
 	}
 
 	var raw rawGuide
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		telemetry.Logger().Error("cms decode guide detail failed", "error", err)
-		return fallbackGuide(slug, lang)
+		telemetry.Logger().Error("cms decode guide detail failed", "error", err, "slug", slug, "lang", lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail decode: %w", err)
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail decode: %w", err)
 	}
 
 	guide, ok := mapRawGuide(raw, lang)
 	if !ok {
-		return fallbackGuide(slug, lang)
+		if g, fbErr := fallbackGuide(slug, lang); fbErr == nil {
+			return g, fmt.Errorf("cms: guide detail map: invalid payload")
+		}
+		return Guide{}, fmt.Errorf("cms: guide detail map: invalid payload")
 	}
 	return guide, nil
 }
