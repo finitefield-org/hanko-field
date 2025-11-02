@@ -73,7 +73,7 @@
 - [x] [Document QA checklist covering regression flows prior to release.](doc/web/tasks/052-document-qa-checklist-covering-regression-flows-prior-to-release.md)
 
 ## 10. Deployment & Maintenance
-- [ ] [Configure Cloud Run service, environment variables, and Secret Manager integration.](doc/web/tasks/053-configure-cloud-run-service-environment-variables-and-secret-manager-integration.md)
+- [x] [Configure Cloud Run service, environment variables, and Secret Manager integration.](doc/web/tasks/053-configure-cloud-run-service-environment-variables-and-secret-manager-integration.md)
 - [ ] [Set up CI/CD pipeline with staging/production deployments and smoke tests.](doc/web/tasks/054-set-up-ci-cd-pipeline-with-staging-production-deployments-and-smoke-tests.md)
 - [ ] [Implement feature flag rollout strategy and rollback procedures.](doc/web/tasks/055-implement-feature-flag-rollout-strategy-and-rollback-procedures.md)
 - [ ] [Document operational runbooks (incident response, cache purge, SEO updates).](doc/web/tasks/056-document-operational-runbooks-incident-response-cache-purge-seo-updates.md)
