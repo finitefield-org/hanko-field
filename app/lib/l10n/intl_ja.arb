@@ -118,6 +118,184 @@
 , "designInputSuggestionFallback": "名前を挿入"
 , "designInputKanjiMappingTitle": "漢字の候補を探していますか？"
 , "designInputKanjiMappingDescription": "外国人の方向けに、意味付きの漢字候補を検索できます。"
+
+, "designAiSuggestionsTitle": "AI提案"
+, "@designAiSuggestionsTitle": {
+  "description": "Title for the AI suggestions page in the design flow"
+}
+
+, "designAiSuggestionsQueueTooltip": "キュー中の提案"
+, "@designAiSuggestionsQueueTooltip": {
+  "description": "Tooltip for the queue badge icon in the AI suggestions page"
+}
+
+, "designAiSuggestionsRequestQueued": "AIジョブを受け付けました。まもなく提案が追加されます。"
+, "@designAiSuggestionsRequestQueued": {
+  "description": "Snackbar message shown when an AI request is successfully queued"
+}
+
+, "designAiSuggestionsRequestRateLimited": "次のリクエストまで {seconds} 秒お待ちください。"
+, "@designAiSuggestionsRequestRateLimited": {
+  "description": "Snackbar message shown when the user hits the rate limit for AI requests",
+  "placeholders": {
+    "seconds": {
+      "type": "int",
+      "description": "Remaining seconds before a new request can be sent"
+    }
+  }
+}
+
+, "designAiSuggestionsGenericError": "提案を更新できませんでした。時間をおいて再試行してください。"
+, "@designAiSuggestionsGenericError": {
+  "description": "Generic error message for AI suggestion operations"
+}
+
+, "designAiSuggestionsSegmentReady": "利用可能 ({count})"
+, "@designAiSuggestionsSegmentReady": {
+  "description": "Label for the segmented button showing ready suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of ready suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsSegmentQueued": "キュー中 ({count})"
+, "@designAiSuggestionsSegmentQueued": {
+  "description": "Label for the segmented button showing queued suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of queued suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsSegmentApplied": "適用済み ({count})"
+, "@designAiSuggestionsSegmentApplied": {
+  "description": "Label for the segmented button showing applied suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of applied suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsHelperTitle": "別の案を試しますか？"
+, "@designAiSuggestionsHelperTitle": {
+  "description": "Headline for the AI helper card at the top of the suggestions page"
+}
+
+, "designAiSuggestionsHelperSubtitle": "AIが現在のデザインと比較できるレイアウト提案を生成します。"
+, "@designAiSuggestionsHelperSubtitle": {
+  "description": "Supporting copy under the helper headline on the AI page"
+}
+
+, "designAiSuggestionsRequestCta": "新しい提案を依頼"
+, "@designAiSuggestionsRequestCta": {
+  "description": "Primary CTA to request new AI suggestions"
+}
+
+, "designAiSuggestionsRateLimitCountdown": "あと {seconds} 秒で再度リクエストできます"
+, "@designAiSuggestionsRateLimitCountdown": {
+  "description": "Hint text displayed while the user is rate limited from requesting AI suggestions",
+  "placeholders": {
+    "seconds": {
+      "type": "int",
+      "description": "Remaining seconds before the user can request again"
+    }
+  }
+}
+
+, "designAiSuggestionsEmptyReadyTitle": "提案がまだありません"
+, "@designAiSuggestionsEmptyReadyTitle": {
+  "description": "Title shown when there are no ready AI suggestions"
+}
+
+, "designAiSuggestionsEmptyReadyBody": "AIに依頼してレイアウト案を取得し、現在の印影と見比べてみましょう。"
+, "@designAiSuggestionsEmptyReadyBody": {
+  "description": "Body copy shown when there are no ready suggestions"
+}
+
+, "designAiSuggestionsEmptyQueuedTitle": "キューは空です"
+, "@designAiSuggestionsEmptyQueuedTitle": {
+  "description": "Title shown when there are no queued AI suggestions"
+}
+
+, "designAiSuggestionsEmptyQueuedBody": "準備ができたら提案を依頼してください。バックグラウンドで処理されます。"
+, "@designAiSuggestionsEmptyQueuedBody": {
+  "description": "Body copy shown when the queued list is empty"
+}
+
+, "designAiSuggestionsEmptyAppliedTitle": "適用した提案はありません"
+, "@designAiSuggestionsEmptyAppliedTitle": {
+  "description": "Title shown when the user hasn't applied any AI suggestions"
+}
+
+, "designAiSuggestionsEmptyAppliedBody": "受け入れた提案がここに履歴として表示されます。"
+, "@designAiSuggestionsEmptyAppliedBody": {
+  "description": "Body copy for the empty state of applied suggestions"
+}
+
+, "designAiSuggestionsAcceptSuccess": "\"{title}\" をデザインに適用しました。"
+, "@designAiSuggestionsAcceptSuccess": {
+  "description": "Snackbar message shown when an AI suggestion is accepted",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "description": "Title of the accepted suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsRejectSuccess": "\"{title}\" を却下しました。"
+, "@designAiSuggestionsRejectSuccess": {
+  "description": "Snackbar message shown when an AI suggestion is rejected",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "description": "Title of the rejected suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsAccept": "受け入れる"
+, "@designAiSuggestionsAccept": {
+  "description": "Label for the accept button on an AI suggestion card"
+}
+
+, "designAiSuggestionsReject": "却下"
+, "@designAiSuggestionsReject": {
+  "description": "Label for the reject button on an AI suggestion card"
+}
+
+, "designAiSuggestionsAppliedLabel": "デザインに適用済み"
+, "@designAiSuggestionsAppliedLabel": {
+  "description": "Badge text shown on cards that were already applied"
+}
+
+, "designAiSuggestionsQueuedLabel": "処理待ち"
+, "@designAiSuggestionsQueuedLabel": {
+  "description": "Badge text shown on queued suggestion cards"
+}
+
+, "designAiSuggestionsScoreLabel": "スコア {percent}%"
+, "@designAiSuggestionsScoreLabel": {
+  "description": "Label showing the AI confidence/quality score",
+  "placeholders": {
+    "percent": {
+      "type": "int",
+      "description": "Score percentage for the suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsComparisonHint": "比較スライダー"
+, "@designAiSuggestionsComparisonHint": {
+  "description": "Hint text shown next to the comparison slider"
+}
 , "designInputKanjiMappingCta": "漢字マップを開く"
 , "designInputKanjiMappingSelectionLabel": "選択中の漢字：{value}"
 , "designInputErrorEmptySurname": "姓を入力してください。"

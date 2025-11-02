@@ -203,6 +203,104 @@ class AppLocalizationsJa extends AppLocalizations {
       'Receive smart suggestions for layouts, naming, and visual balance.';
 
   @override
+  String get designAiSuggestionsTitle => 'AI提案';
+
+  @override
+  String get designAiSuggestionsQueueTooltip => 'キュー中の提案';
+
+  @override
+  String get designAiSuggestionsRequestQueued => 'AIジョブを受け付けました。まもなく提案が追加されます。';
+
+  @override
+  String designAiSuggestionsRequestRateLimited(int seconds) {
+    return '次のリクエストまで $seconds 秒お待ちください。';
+  }
+
+  @override
+  String get designAiSuggestionsGenericError =>
+      '提案を更新できませんでした。時間をおいて再試行してください。';
+
+  @override
+  String designAiSuggestionsSegmentReady(int count) {
+    return '利用可能 ($count)';
+  }
+
+  @override
+  String designAiSuggestionsSegmentQueued(int count) {
+    return 'キュー中 ($count)';
+  }
+
+  @override
+  String designAiSuggestionsSegmentApplied(int count) {
+    return '適用済み ($count)';
+  }
+
+  @override
+  String get designAiSuggestionsHelperTitle => '別の案を試しますか？';
+
+  @override
+  String get designAiSuggestionsHelperSubtitle =>
+      'AIが現在のデザインと比較できるレイアウト提案を生成します。';
+
+  @override
+  String get designAiSuggestionsRequestCta => '新しい提案を依頼';
+
+  @override
+  String designAiSuggestionsRateLimitCountdown(int seconds) {
+    return 'あと $seconds 秒で再度リクエストできます';
+  }
+
+  @override
+  String get designAiSuggestionsEmptyReadyTitle => '提案がまだありません';
+
+  @override
+  String get designAiSuggestionsEmptyReadyBody =>
+      'AIに依頼してレイアウト案を取得し、現在の印影と見比べてみましょう。';
+
+  @override
+  String get designAiSuggestionsEmptyQueuedTitle => 'キューは空です';
+
+  @override
+  String get designAiSuggestionsEmptyQueuedBody =>
+      '準備ができたら提案を依頼してください。バックグラウンドで処理されます。';
+
+  @override
+  String get designAiSuggestionsEmptyAppliedTitle => '適用した提案はありません';
+
+  @override
+  String get designAiSuggestionsEmptyAppliedBody => '受け入れた提案がここに履歴として表示されます。';
+
+  @override
+  String designAiSuggestionsAcceptSuccess(String title) {
+    return '\"$title\" をデザインに適用しました。';
+  }
+
+  @override
+  String designAiSuggestionsRejectSuccess(String title) {
+    return '\"$title\" を却下しました。';
+  }
+
+  @override
+  String get designAiSuggestionsAccept => '受け入れる';
+
+  @override
+  String get designAiSuggestionsReject => '却下';
+
+  @override
+  String get designAiSuggestionsAppliedLabel => 'デザインに適用済み';
+
+  @override
+  String get designAiSuggestionsQueuedLabel => '処理待ち';
+
+  @override
+  String designAiSuggestionsScoreLabel(int percent) {
+    return 'スコア $percent%';
+  }
+
+  @override
+  String get designAiSuggestionsComparisonHint => '比較スライダー';
+
+  @override
   String get designNewHighlightsTemplateTitle => 'Templates & fonts';
 
   @override

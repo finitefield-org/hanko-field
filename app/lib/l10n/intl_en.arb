@@ -313,6 +313,184 @@
   "description": "Feature highlight body text describing AI support"
 }
 
+, "designAiSuggestionsTitle": "AI suggestions"
+, "@designAiSuggestionsTitle": {
+  "description": "Title for the AI suggestions page in the design flow"
+}
+
+, "designAiSuggestionsQueueTooltip": "Queued proposals"
+, "@designAiSuggestionsQueueTooltip": {
+  "description": "Tooltip for the queue badge icon in the AI suggestions page"
+}
+
+, "designAiSuggestionsRequestQueued": "AI job queued. We'll add new proposals shortly."
+, "@designAiSuggestionsRequestQueued": {
+  "description": "Snackbar message shown when an AI request is successfully queued"
+}
+
+, "designAiSuggestionsRequestRateLimited": "Please wait {seconds} seconds before requesting again."
+, "@designAiSuggestionsRequestRateLimited": {
+  "description": "Snackbar message shown when the user hits the rate limit for AI requests",
+  "placeholders": {
+    "seconds": {
+      "type": "int",
+      "description": "Remaining seconds before a new request can be sent"
+    }
+  }
+}
+
+, "designAiSuggestionsGenericError": "We couldn't update suggestions. Please try again."
+, "@designAiSuggestionsGenericError": {
+  "description": "Generic error message for AI suggestion operations"
+}
+
+, "designAiSuggestionsSegmentReady": "Ready ({count})"
+, "@designAiSuggestionsSegmentReady": {
+  "description": "Label for the segmented button showing ready suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of ready suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsSegmentQueued": "Queued ({count})"
+, "@designAiSuggestionsSegmentQueued": {
+  "description": "Label for the segmented button showing queued suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of queued suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsSegmentApplied": "Applied ({count})"
+, "@designAiSuggestionsSegmentApplied": {
+  "description": "Label for the segmented button showing applied suggestions",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "description": "Number of applied suggestions"
+    }
+  }
+}
+
+, "designAiSuggestionsHelperTitle": "Need a fresh take?"
+, "@designAiSuggestionsHelperTitle": {
+  "description": "Headline for the AI helper card at the top of the suggestions page"
+}
+
+, "designAiSuggestionsHelperSubtitle": "Queue a proposal and we'll compare it with your current design, highlighting balance and spacing tweaks."
+, "@designAiSuggestionsHelperSubtitle": {
+  "description": "Supporting copy under the helper headline on the AI page"
+}
+
+, "designAiSuggestionsRequestCta": "Request new proposals"
+, "@designAiSuggestionsRequestCta": {
+  "description": "Primary CTA to request new AI suggestions"
+}
+
+, "designAiSuggestionsRateLimitCountdown": "Next request available in {seconds}s"
+, "@designAiSuggestionsRateLimitCountdown": {
+  "description": "Hint text displayed while the user is rate limited from requesting AI suggestions",
+  "placeholders": {
+    "seconds": {
+      "type": "int",
+      "description": "Remaining seconds before the user can request again"
+    }
+  }
+}
+
+, "designAiSuggestionsEmptyReadyTitle": "No proposals yet"
+, "@designAiSuggestionsEmptyReadyTitle": {
+  "description": "Title shown when there are no ready AI suggestions"
+}
+
+, "designAiSuggestionsEmptyReadyBody": "Ask the AI for layout ideas to compare against your baseline design."
+, "@designAiSuggestionsEmptyReadyBody": {
+  "description": "Body copy shown when there are no ready suggestions"
+}
+
+, "designAiSuggestionsEmptyQueuedTitle": "Queue is clear"
+, "@designAiSuggestionsEmptyQueuedTitle": {
+  "description": "Title shown when there are no queued AI suggestions"
+}
+
+, "designAiSuggestionsEmptyQueuedBody": "Request more proposals when you're ready. We'll process them in the background."
+, "@designAiSuggestionsEmptyQueuedBody": {
+  "description": "Body copy shown when the queued list is empty"
+}
+
+, "designAiSuggestionsEmptyAppliedTitle": "No applied proposals"
+, "@designAiSuggestionsEmptyAppliedTitle": {
+  "description": "Title shown when the user hasn't applied any AI suggestions"
+}
+
+, "designAiSuggestionsEmptyAppliedBody": "Accepted proposals will show here so you can revisit the history of changes."
+, "@designAiSuggestionsEmptyAppliedBody": {
+  "description": "Body copy for the empty state of applied suggestions"
+}
+
+, "designAiSuggestionsAcceptSuccess": "Applied \"{title}\" to your design."
+, "@designAiSuggestionsAcceptSuccess": {
+  "description": "Snackbar message shown when an AI suggestion is accepted",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "description": "Title of the accepted suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsRejectSuccess": "Dismissed \"{title}\"."
+, "@designAiSuggestionsRejectSuccess": {
+  "description": "Snackbar message shown when an AI suggestion is rejected",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "description": "Title of the rejected suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsAccept": "Accept"
+, "@designAiSuggestionsAccept": {
+  "description": "Label for the accept button on an AI suggestion card"
+}
+
+, "designAiSuggestionsReject": "Reject"
+, "@designAiSuggestionsReject": {
+  "description": "Label for the reject button on an AI suggestion card"
+}
+
+, "designAiSuggestionsAppliedLabel": "Applied to your draft"
+, "@designAiSuggestionsAppliedLabel": {
+  "description": "Badge text shown on cards that were already applied"
+}
+
+, "designAiSuggestionsQueuedLabel": "Waiting for processing"
+, "@designAiSuggestionsQueuedLabel": {
+  "description": "Badge text shown on queued suggestion cards"
+}
+
+, "designAiSuggestionsScoreLabel": "Score {percent}%"
+, "@designAiSuggestionsScoreLabel": {
+  "description": "Label showing the AI confidence/quality score",
+  "placeholders": {
+    "percent": {
+      "type": "int",
+      "description": "Score percentage for the suggestion"
+    }
+  }
+}
+
+, "designAiSuggestionsComparisonHint": "Drag to compare"
+, "@designAiSuggestionsComparisonHint": {
+  "description": "Hint text shown next to the comparison slider"
+}
+
 , "designNewHighlightsTemplateTitle": "Templates & fonts"
 , "@designNewHighlightsTemplateTitle": {
   "description": "Feature highlight title for templates"

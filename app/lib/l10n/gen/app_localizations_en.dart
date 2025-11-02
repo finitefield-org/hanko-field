@@ -211,6 +211,106 @@ class AppLocalizationsEn extends AppLocalizations {
       'Receive smart suggestions for layouts, naming, and visual balance.';
 
   @override
+  String get designAiSuggestionsTitle => 'AI suggestions';
+
+  @override
+  String get designAiSuggestionsQueueTooltip => 'Queued proposals';
+
+  @override
+  String get designAiSuggestionsRequestQueued =>
+      'AI job queued. We\'ll add new proposals shortly.';
+
+  @override
+  String designAiSuggestionsRequestRateLimited(int seconds) {
+    return 'Please wait $seconds seconds before requesting again.';
+  }
+
+  @override
+  String get designAiSuggestionsGenericError =>
+      'We couldn\'t update suggestions. Please try again.';
+
+  @override
+  String designAiSuggestionsSegmentReady(int count) {
+    return 'Ready ($count)';
+  }
+
+  @override
+  String designAiSuggestionsSegmentQueued(int count) {
+    return 'Queued ($count)';
+  }
+
+  @override
+  String designAiSuggestionsSegmentApplied(int count) {
+    return 'Applied ($count)';
+  }
+
+  @override
+  String get designAiSuggestionsHelperTitle => 'Need a fresh take?';
+
+  @override
+  String get designAiSuggestionsHelperSubtitle =>
+      'Queue a proposal and we\'ll compare it with your current design, highlighting balance and spacing tweaks.';
+
+  @override
+  String get designAiSuggestionsRequestCta => 'Request new proposals';
+
+  @override
+  String designAiSuggestionsRateLimitCountdown(int seconds) {
+    return 'Next request available in ${seconds}s';
+  }
+
+  @override
+  String get designAiSuggestionsEmptyReadyTitle => 'No proposals yet';
+
+  @override
+  String get designAiSuggestionsEmptyReadyBody =>
+      'Ask the AI for layout ideas to compare against your baseline design.';
+
+  @override
+  String get designAiSuggestionsEmptyQueuedTitle => 'Queue is clear';
+
+  @override
+  String get designAiSuggestionsEmptyQueuedBody =>
+      'Request more proposals when you\'re ready. We\'ll process them in the background.';
+
+  @override
+  String get designAiSuggestionsEmptyAppliedTitle => 'No applied proposals';
+
+  @override
+  String get designAiSuggestionsEmptyAppliedBody =>
+      'Accepted proposals will show here so you can revisit the history of changes.';
+
+  @override
+  String designAiSuggestionsAcceptSuccess(String title) {
+    return 'Applied \"$title\" to your design.';
+  }
+
+  @override
+  String designAiSuggestionsRejectSuccess(String title) {
+    return 'Dismissed \"$title\".';
+  }
+
+  @override
+  String get designAiSuggestionsAccept => 'Accept';
+
+  @override
+  String get designAiSuggestionsReject => 'Reject';
+
+  @override
+  String get designAiSuggestionsAppliedLabel => 'Applied to your draft';
+
+  @override
+  String get designAiSuggestionsQueuedLabel => 'Waiting for processing';
+
+  @override
+  String designAiSuggestionsScoreLabel(int percent) {
+    return 'Score $percent%';
+  }
+
+  @override
+  String get designAiSuggestionsComparisonHint => 'Drag to compare';
+
+  @override
   String get designNewHighlightsTemplateTitle => 'Templates & fonts';
 
   @override

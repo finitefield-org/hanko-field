@@ -458,6 +458,162 @@ abstract class AppLocalizations {
   /// **'Receive smart suggestions for layouts, naming, and visual balance.'**
   String get designNewHighlightsAiBody;
 
+  /// Title for the AI suggestions page in the design flow
+  ///
+  /// In en, this message translates to:
+  /// **'AI suggestions'**
+  String get designAiSuggestionsTitle;
+
+  /// Tooltip for the queue badge icon in the AI suggestions page
+  ///
+  /// In en, this message translates to:
+  /// **'Queued proposals'**
+  String get designAiSuggestionsQueueTooltip;
+
+  /// Snackbar message shown when an AI request is successfully queued
+  ///
+  /// In en, this message translates to:
+  /// **'AI job queued. We\'ll add new proposals shortly.'**
+  String get designAiSuggestionsRequestQueued;
+
+  /// Snackbar message shown when the user hits the rate limit for AI requests
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait {seconds} seconds before requesting again.'**
+  String designAiSuggestionsRequestRateLimited(int seconds);
+
+  /// Generic error message for AI suggestion operations
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t update suggestions. Please try again.'**
+  String get designAiSuggestionsGenericError;
+
+  /// Label for the segmented button showing ready suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Ready ({count})'**
+  String designAiSuggestionsSegmentReady(int count);
+
+  /// Label for the segmented button showing queued suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Queued ({count})'**
+  String designAiSuggestionsSegmentQueued(int count);
+
+  /// Label for the segmented button showing applied suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Applied ({count})'**
+  String designAiSuggestionsSegmentApplied(int count);
+
+  /// Headline for the AI helper card at the top of the suggestions page
+  ///
+  /// In en, this message translates to:
+  /// **'Need a fresh take?'**
+  String get designAiSuggestionsHelperTitle;
+
+  /// Supporting copy under the helper headline on the AI page
+  ///
+  /// In en, this message translates to:
+  /// **'Queue a proposal and we\'ll compare it with your current design, highlighting balance and spacing tweaks.'**
+  String get designAiSuggestionsHelperSubtitle;
+
+  /// Primary CTA to request new AI suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Request new proposals'**
+  String get designAiSuggestionsRequestCta;
+
+  /// Hint text displayed while the user is rate limited from requesting AI suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Next request available in {seconds}s'**
+  String designAiSuggestionsRateLimitCountdown(int seconds);
+
+  /// Title shown when there are no ready AI suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'No proposals yet'**
+  String get designAiSuggestionsEmptyReadyTitle;
+
+  /// Body copy shown when there are no ready suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the AI for layout ideas to compare against your baseline design.'**
+  String get designAiSuggestionsEmptyReadyBody;
+
+  /// Title shown when there are no queued AI suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Queue is clear'**
+  String get designAiSuggestionsEmptyQueuedTitle;
+
+  /// Body copy shown when the queued list is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Request more proposals when you\'re ready. We\'ll process them in the background.'**
+  String get designAiSuggestionsEmptyQueuedBody;
+
+  /// Title shown when the user hasn't applied any AI suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'No applied proposals'**
+  String get designAiSuggestionsEmptyAppliedTitle;
+
+  /// Body copy for the empty state of applied suggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted proposals will show here so you can revisit the history of changes.'**
+  String get designAiSuggestionsEmptyAppliedBody;
+
+  /// Snackbar message shown when an AI suggestion is accepted
+  ///
+  /// In en, this message translates to:
+  /// **'Applied \"{title}\" to your design.'**
+  String designAiSuggestionsAcceptSuccess(String title);
+
+  /// Snackbar message shown when an AI suggestion is rejected
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed \"{title}\".'**
+  String designAiSuggestionsRejectSuccess(String title);
+
+  /// Label for the accept button on an AI suggestion card
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get designAiSuggestionsAccept;
+
+  /// Label for the reject button on an AI suggestion card
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get designAiSuggestionsReject;
+
+  /// Badge text shown on cards that were already applied
+  ///
+  /// In en, this message translates to:
+  /// **'Applied to your draft'**
+  String get designAiSuggestionsAppliedLabel;
+
+  /// Badge text shown on queued suggestion cards
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for processing'**
+  String get designAiSuggestionsQueuedLabel;
+
+  /// Label showing the AI confidence/quality score
+  ///
+  /// In en, this message translates to:
+  /// **'Score {percent}%'**
+  String designAiSuggestionsScoreLabel(int percent);
+
+  /// Hint text shown next to the comparison slider
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to compare'**
+  String get designAiSuggestionsComparisonHint;
+
   /// Feature highlight title for templates
   ///
   /// In en, this message translates to:

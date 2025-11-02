@@ -5,6 +5,7 @@ import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/design_creation/presentation/design_editor_page.dart';
 import 'package:app/features/design_creation/presentation/design_kanji_mapping_page.dart';
 import 'package:app/features/design_creation/presentation/design_name_input_page.dart';
+import 'package:app/features/design_creation/presentation/design_ai_suggestions_page.dart';
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
@@ -108,6 +109,9 @@ class CreationStageRoute implements IndependentRoute {
     }
     if (stageSegments.first == 'style') {
       return const DesignStyleSelectionPage();
+    }
+    if (stageSegments.first == 'ai') {
+      return const DesignAiSuggestionsPage();
     }
     if (stageSegments.first == 'editor') {
       return const DesignEditorPage();
