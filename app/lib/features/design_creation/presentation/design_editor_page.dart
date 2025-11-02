@@ -123,6 +123,11 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
               ? () => router.push(CreationStageRoute(const ['check']))
               : null,
         ),
+        IconButton(
+          tooltip: l10n.designEditorVersionHistoryTooltip,
+          icon: const Icon(Icons.compare_arrows_outlined),
+          onPressed: () => router.push(CreationStageRoute(const ['versions'])),
+        ),
         PopupMenuButton<_EditorMenuAction>(
           tooltip: l10n.designEditorMoreActionsTooltip,
           itemBuilder: (context) => [

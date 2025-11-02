@@ -11,6 +11,7 @@ import 'package:app/features/design_creation/presentation/design_preview_page.da
 import 'package:app/features/design_creation/presentation/design_registrability_check_page.dart';
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
+import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
@@ -127,6 +128,9 @@ class CreationStageRoute implements IndependentRoute {
     }
     if (stageSegments.first == 'export') {
       return const DesignExportPage();
+    }
+    if (stageSegments.first == 'versions') {
+      return const DesignVersionHistoryPage();
     }
     return CreationStagePage(stageSegments: stageSegments);
   }

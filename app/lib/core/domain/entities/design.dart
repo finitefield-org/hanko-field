@@ -408,3 +408,52 @@ class Design {
     ]);
   }
 }
+
+@immutable
+class DesignVersion {
+  const DesignVersion({
+    required this.version,
+    required this.snapshot,
+    required this.createdAt,
+    required this.createdBy,
+    this.changeNote,
+  });
+
+  final int version;
+  final Design snapshot;
+  final DateTime createdAt;
+  final String createdBy;
+  final String? changeNote;
+
+  DesignVersion copyWith({
+    int? version,
+    Design? snapshot,
+    DateTime? createdAt,
+    String? createdBy,
+    String? changeNote,
+    bool clearChangeNote = false,
+  }) {
+    return DesignVersion(
+      version: version ?? this.version,
+      snapshot: snapshot ?? this.snapshot,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
+      changeNote: clearChangeNote ? null : changeNote ?? this.changeNote,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is DesignVersion &&
+            other.version == version &&
+            other.snapshot == snapshot &&
+            other.createdAt == createdAt &&
+            other.createdBy == createdBy &&
+            other.changeNote == changeNote);
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(version, snapshot, createdAt, createdBy, changeNote);
+}

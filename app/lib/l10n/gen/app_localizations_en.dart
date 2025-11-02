@@ -447,6 +447,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designEditorMoreActionsTooltip => 'More actions';
 
   @override
+  String get designEditorVersionHistoryTooltip => 'Version history';
+
+  @override
   String get designEditorResetMenu => 'Reset to template defaults';
 
   @override
@@ -720,6 +723,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get designPreviewShareCancel => 'Cancel';
+
+  @override
+  String get designVersionHistoryTitle => 'Version history';
+
+  @override
+  String get designVersionHistoryShowAllTooltip => 'Show all fields';
+
+  @override
+  String get designVersionHistoryShowChangesTooltip => 'Highlight changes only';
+
+  @override
+  String get designVersionHistoryEmptyState =>
+      'No previous versions yet. Restore points appear after you save updates.';
+
+  @override
+  String designVersionHistoryRestoredSnack(int version) {
+    return 'Version v$version restored.';
+  }
+
+  @override
+  String designVersionHistoryDuplicatedSnack(String designId) {
+    return 'Duplicated as $designId.';
+  }
+
+  @override
+  String get designVersionHistoryTimelineTitle => 'History timeline';
+
+  @override
+  String get designVersionHistoryTimelineSubtitle =>
+      'Select a version to compare and restore.';
+
+  @override
+  String get designVersionHistoryRefreshTooltip => 'Refresh versions';
+
+  @override
+  String get designVersionHistoryStatusCurrent => 'Current';
+
+  @override
+  String get designVersionHistoryStatusArchived => 'Archived';
+
+  @override
+  String get designVersionHistoryCurrentLabel => 'Current version';
+
+  @override
+  String designVersionHistorySelectedLabel(int version) {
+    return 'Selected v$version';
+  }
+
+  @override
+  String get designVersionHistoryDiffTitle => 'Diff overview';
+
+  @override
+  String get designVersionHistoryDiffHighlightSubtitle =>
+      'Showing changed fields only.';
+
+  @override
+  String get designVersionHistoryDiffAllSubtitle =>
+      'Showing all tracked fields.';
+
+  @override
+  String get designVersionHistoryDiffNoChanges =>
+      'No differences detected for the selected version.';
+
+  @override
+  String get designVersionHistoryDiffNotAvailable =>
+      'Comparison data is unavailable.';
+
+  @override
+  String designVersionHistoryDiffCurrent(String value) {
+    return 'Current: $value';
+  }
+
+  @override
+  String designVersionHistoryDiffSelected(String value) {
+    return 'Selected: $value';
+  }
+
+  @override
+  String get designVersionHistoryDuplicateCta => 'Duplicate version';
+
+  @override
+  String get designVersionHistoryRestoreCta => 'Restore version';
 
   @override
   String get designExportTitle => 'Digital export';

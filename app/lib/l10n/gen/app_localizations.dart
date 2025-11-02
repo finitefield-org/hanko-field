@@ -866,6 +866,12 @@ abstract class AppLocalizations {
   /// **'More actions'**
   String get designEditorMoreActionsTooltip;
 
+  /// Tooltip for the version history shortcut in the design editor
+  ///
+  /// In en, this message translates to:
+  /// **'Version history'**
+  String get designEditorVersionHistoryTooltip;
+
   /// Menu item label to reset the editor values back to the template defaults
   ///
   /// In en, this message translates to:
@@ -1357,6 +1363,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get designPreviewShareCancel;
+
+  /// Title for the design version history screen
+  ///
+  /// In en, this message translates to:
+  /// **'Version history'**
+  String get designVersionHistoryTitle;
+
+  /// Tooltip for showing all tracked fields in the diff view
+  ///
+  /// In en, this message translates to:
+  /// **'Show all fields'**
+  String get designVersionHistoryShowAllTooltip;
+
+  /// Tooltip for showing only the fields that changed in the diff view
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight changes only'**
+  String get designVersionHistoryShowChangesTooltip;
+
+  /// Empty state message when no design versions are available
+  ///
+  /// In en, this message translates to:
+  /// **'No previous versions yet. Restore points appear after you save updates.'**
+  String get designVersionHistoryEmptyState;
+
+  /// Snackbar message shown after restoring a version
+  ///
+  /// In en, this message translates to:
+  /// **'Version v{version} restored.'**
+  String designVersionHistoryRestoredSnack(int version);
+
+  /// Snackbar message shown after duplicating a version
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicated as {designId}.'**
+  String designVersionHistoryDuplicatedSnack(String designId);
+
+  /// Heading for the version timeline card
+  ///
+  /// In en, this message translates to:
+  /// **'History timeline'**
+  String get designVersionHistoryTimelineTitle;
+
+  /// Subtitle describing how to use the version timeline
+  ///
+  /// In en, this message translates to:
+  /// **'Select a version to compare and restore.'**
+  String get designVersionHistoryTimelineSubtitle;
+
+  /// Tooltip for reloading the version history list
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh versions'**
+  String get designVersionHistoryRefreshTooltip;
+
+  /// Assist chip label for the current version
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get designVersionHistoryStatusCurrent;
+
+  /// Assist chip label for archived versions
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get designVersionHistoryStatusArchived;
+
+  /// Header label shown on the current version preview card
+  ///
+  /// In en, this message translates to:
+  /// **'Current version'**
+  String get designVersionHistoryCurrentLabel;
+
+  /// Header label shown on the selected version preview card
+  ///
+  /// In en, this message translates to:
+  /// **'Selected v{version}'**
+  String designVersionHistorySelectedLabel(int version);
+
+  /// Heading for the diff comparison card
+  ///
+  /// In en, this message translates to:
+  /// **'Diff overview'**
+  String get designVersionHistoryDiffTitle;
+
+  /// Subtitle shown when highlighting changed fields
+  ///
+  /// In en, this message translates to:
+  /// **'Showing changed fields only.'**
+  String get designVersionHistoryDiffHighlightSubtitle;
+
+  /// Subtitle shown when displaying all diff fields
+  ///
+  /// In en, this message translates to:
+  /// **'Showing all tracked fields.'**
+  String get designVersionHistoryDiffAllSubtitle;
+
+  /// Message shown when there are no diff changes
+  ///
+  /// In en, this message translates to:
+  /// **'No differences detected for the selected version.'**
+  String get designVersionHistoryDiffNoChanges;
+
+  /// Message shown when diff data cannot be produced
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison data is unavailable.'**
+  String get designVersionHistoryDiffNotAvailable;
+
+  /// Label describing the current value in the diff entry
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {value}'**
+  String designVersionHistoryDiffCurrent(String value);
+
+  /// Label describing the selected version value in the diff entry
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {value}'**
+  String designVersionHistoryDiffSelected(String value);
+
+  /// Button label for duplicating a version
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate version'**
+  String get designVersionHistoryDuplicateCta;
+
+  /// Button label for restoring a version
+  ///
+  /// In en, this message translates to:
+  /// **'Restore version'**
+  String get designVersionHistoryRestoreCta;
 
   /// Title for the design export screen
   ///

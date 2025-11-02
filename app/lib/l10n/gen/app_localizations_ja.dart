@@ -432,6 +432,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designEditorMoreActionsTooltip => 'その他の操作';
 
   @override
+  String get designEditorVersionHistoryTooltip => '版の履歴';
+
+  @override
   String get designEditorResetMenu => 'テンプレート初期値にリセット';
 
   @override
@@ -697,6 +700,83 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get designPreviewShareCancel => 'キャンセル';
+
+  @override
+  String get designVersionHistoryTitle => '版の履歴';
+
+  @override
+  String get designVersionHistoryShowAllTooltip => 'すべての項目を表示';
+
+  @override
+  String get designVersionHistoryShowChangesTooltip => '変更された項目のみ強調';
+
+  @override
+  String get designVersionHistoryEmptyState =>
+      'まだ履歴がありません。変更を保存すると復元ポイントが表示されます。';
+
+  @override
+  String designVersionHistoryRestoredSnack(int version) {
+    return 'バージョン v$version を復元しました。';
+  }
+
+  @override
+  String designVersionHistoryDuplicatedSnack(String designId) {
+    return '$designId として複製しました。';
+  }
+
+  @override
+  String get designVersionHistoryTimelineTitle => '履歴タイムライン';
+
+  @override
+  String get designVersionHistoryTimelineSubtitle => '比較・復元したいバージョンを選択してください。';
+
+  @override
+  String get designVersionHistoryRefreshTooltip => '履歴を再読み込み';
+
+  @override
+  String get designVersionHistoryStatusCurrent => '現在';
+
+  @override
+  String get designVersionHistoryStatusArchived => '保存済み';
+
+  @override
+  String get designVersionHistoryCurrentLabel => '現在のバージョン';
+
+  @override
+  String designVersionHistorySelectedLabel(int version) {
+    return '選択中 v$version';
+  }
+
+  @override
+  String get designVersionHistoryDiffTitle => '差分ビュー';
+
+  @override
+  String get designVersionHistoryDiffHighlightSubtitle => '変更された項目のみ表示しています。';
+
+  @override
+  String get designVersionHistoryDiffAllSubtitle => 'トラッキングしているすべての項目を表示しています。';
+
+  @override
+  String get designVersionHistoryDiffNoChanges => '選択したバージョンとの違いは見つかりませんでした。';
+
+  @override
+  String get designVersionHistoryDiffNotAvailable => '差分を取得できませんでした。';
+
+  @override
+  String designVersionHistoryDiffCurrent(String value) {
+    return '現在: $value';
+  }
+
+  @override
+  String designVersionHistoryDiffSelected(String value) {
+    return '選択: $value';
+  }
+
+  @override
+  String get designVersionHistoryDuplicateCta => 'バージョンを複製';
+
+  @override
+  String get designVersionHistoryRestoreCta => 'バージョンを復元';
 
   @override
   String get designExportTitle => 'デジタル書き出し';

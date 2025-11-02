@@ -80,6 +80,43 @@ class DesignExportedEvent extends AnalyticsEvent {
   }
 }
 
+class DesignVersionRestoredEvent extends AnalyticsEvent {
+  const DesignVersionRestoredEvent({
+    required this.designId,
+    required this.restoredVersion,
+  });
+
+  final String designId;
+  final int restoredVersion;
+
+  @override
+  String get name => 'design_version_restored';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'design_id': designId,
+    'restored_version': restoredVersion,
+  };
+
+  @override
+  void validate() {
+    if (designId.isEmpty || designId.length > 64) {
+      throw ArgumentError.value(
+        designId,
+        'designId',
+        'Design id must be 1-64 characters.',
+      );
+    }
+    if (restoredVersion <= 0) {
+      throw ArgumentError.value(
+        restoredVersion,
+        'restoredVersion',
+        'Version must be positive.',
+      );
+    }
+  }
+}
+
 class ScreenViewAnalyticsEvent {
   const ScreenViewAnalyticsEvent({
     required this.screenName,

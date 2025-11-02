@@ -701,6 +701,11 @@
   "description": "Tooltip for the overflow menu on the design editor app bar"
 }
 
+, "designEditorVersionHistoryTooltip": "Version history"
+, "@designEditorVersionHistoryTooltip": {
+  "description": "Tooltip for the version history shortcut in the design editor"
+}
+
 , "designEditorResetMenu": "Reset to template defaults"
 , "@designEditorResetMenu": {
   "description": "Menu item label to reset the editor values back to the template defaults"
@@ -1155,6 +1160,131 @@
 , "designPreviewShareCancel": "Cancel"
 , "@designPreviewShareCancel": {
   "description": "Button label to dismiss the share sheet"
+}
+
+, "designVersionHistoryTitle": "Version history"
+, "@designVersionHistoryTitle": {
+  "description": "Title for the design version history screen"
+}
+
+, "designVersionHistoryShowAllTooltip": "Show all fields"
+, "@designVersionHistoryShowAllTooltip": {
+  "description": "Tooltip for showing all tracked fields in the diff view"
+}
+
+, "designVersionHistoryShowChangesTooltip": "Highlight changes only"
+, "@designVersionHistoryShowChangesTooltip": {
+  "description": "Tooltip for showing only the fields that changed in the diff view"
+}
+
+, "designVersionHistoryEmptyState": "No previous versions yet. Restore points appear after you save updates."
+, "@designVersionHistoryEmptyState": {
+  "description": "Empty state message when no design versions are available"
+}
+
+, "designVersionHistoryRestoredSnack": "Version v{version} restored."
+, "@designVersionHistoryRestoredSnack": {
+  "description": "Snackbar message shown after restoring a version",
+  "placeholders": {
+    "version": { "type": "int" }
+  }
+}
+
+, "designVersionHistoryDuplicatedSnack": "Duplicated as {designId}."
+, "@designVersionHistoryDuplicatedSnack": {
+  "description": "Snackbar message shown after duplicating a version",
+  "placeholders": {
+    "designId": { "type": "String" }
+  }
+}
+
+, "designVersionHistoryTimelineTitle": "History timeline"
+, "@designVersionHistoryTimelineTitle": {
+  "description": "Heading for the version timeline card"
+}
+
+, "designVersionHistoryTimelineSubtitle": "Select a version to compare and restore."
+, "@designVersionHistoryTimelineSubtitle": {
+  "description": "Subtitle describing how to use the version timeline"
+}
+
+, "designVersionHistoryRefreshTooltip": "Refresh versions"
+, "@designVersionHistoryRefreshTooltip": {
+  "description": "Tooltip for reloading the version history list"
+}
+
+, "designVersionHistoryStatusCurrent": "Current"
+, "@designVersionHistoryStatusCurrent": {
+  "description": "Assist chip label for the current version"
+}
+
+, "designVersionHistoryStatusArchived": "Archived"
+, "@designVersionHistoryStatusArchived": {
+  "description": "Assist chip label for archived versions"
+}
+
+, "designVersionHistoryCurrentLabel": "Current version"
+, "@designVersionHistoryCurrentLabel": {
+  "description": "Header label shown on the current version preview card"
+}
+
+, "designVersionHistorySelectedLabel": "Selected v{version}"
+, "@designVersionHistorySelectedLabel": {
+  "description": "Header label shown on the selected version preview card",
+  "placeholders": {
+    "version": { "type": "int" }
+  }
+}
+
+, "designVersionHistoryDiffTitle": "Diff overview"
+, "@designVersionHistoryDiffTitle": {
+  "description": "Heading for the diff comparison card"
+}
+
+, "designVersionHistoryDiffHighlightSubtitle": "Showing changed fields only."
+, "@designVersionHistoryDiffHighlightSubtitle": {
+  "description": "Subtitle shown when highlighting changed fields"
+}
+
+, "designVersionHistoryDiffAllSubtitle": "Showing all tracked fields."
+, "@designVersionHistoryDiffAllSubtitle": {
+  "description": "Subtitle shown when displaying all diff fields"
+}
+
+, "designVersionHistoryDiffNoChanges": "No differences detected for the selected version."
+, "@designVersionHistoryDiffNoChanges": {
+  "description": "Message shown when there are no diff changes"
+}
+
+, "designVersionHistoryDiffNotAvailable": "Comparison data is unavailable."
+, "@designVersionHistoryDiffNotAvailable": {
+  "description": "Message shown when diff data cannot be produced"
+}
+
+, "designVersionHistoryDiffCurrent": "Current: {value}"
+, "@designVersionHistoryDiffCurrent": {
+  "description": "Label describing the current value in the diff entry",
+  "placeholders": {
+    "value": { "type": "String" }
+  }
+}
+
+, "designVersionHistoryDiffSelected": "Selected: {value}"
+, "@designVersionHistoryDiffSelected": {
+  "description": "Label describing the selected version value in the diff entry",
+  "placeholders": {
+    "value": { "type": "String" }
+  }
+}
+
+, "designVersionHistoryDuplicateCta": "Duplicate version"
+, "@designVersionHistoryDuplicateCta": {
+  "description": "Button label for duplicating a version"
+}
+
+, "designVersionHistoryRestoreCta": "Restore version"
+, "@designVersionHistoryRestoreCta": {
+  "description": "Button label for restoring a version"
 }
 
 , "designExportTitle": "Digital export"
