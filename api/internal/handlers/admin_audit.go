@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 
@@ -128,7 +129,7 @@ func (h *AdminAuditHandlers) listAuditLogs(w http.ResponseWriter, r *http.Reques
 	if actorType := strings.TrimSpace(firstNonEmpty(query.Get("actorType"), query.Get("actor_type"))); actorType != "" {
 		filter.ActorType = actorType
 	}
-	if action := strings.TrimSpace(query.Get("action")); action != "" {
+	if action := strings.TrimSpace(firstNonEmpty(query.Get("action"), query.Get("action_name"), query.Get("actionName"))); action != "" {
 		filter.Action = action
 	}
 	if fromTime != nil || toTime != nil {
@@ -283,12 +284,31 @@ func sanitizeAuditFilename(targetRef string) string {
 	if trimmed == "" {
 		return ""
 	}
-	normalized := strings.ReplaceAll(trimmed, "/", "-")
-	normalized = strings.Trim(normalized, "-")
-	if normalized == "" {
-		return ""
+	var builder strings.Builder
+	lastSeparator := true
+	for _, r := range trimmed {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			builder.WriteRune(unicode.ToLower(r))
+			lastSeparator = false
+		case r == '-' || r == '_':
+			builder.WriteRune(r)
+			lastSeparator = false
+		default:
+			if !lastSeparator {
+				builder.WriteRune('-')
+				lastSeparator = true
+			}
+		}
 	}
-	return fmt.Sprintf("audit-logs-%s.csv", normalized)
+	slug := strings.Trim(builder.String(), "-")
+	if slug == "" {
+		slug = "audit"
+	}
+	if len(slug) > 64 {
+		slug = slug[:64]
+	}
+	return fmt.Sprintf("audit-logs-%s.csv", slug)
 }
 
 func cloneAnyMap(src map[string]any) map[string]any {

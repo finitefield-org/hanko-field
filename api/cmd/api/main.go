@@ -232,6 +232,17 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise promotion usage repository", zap.Error(err))
 	}
+	auditRepo, err := firestoreRepo.NewAuditLogRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise audit log repository", zap.Error(err))
+	}
+	auditService, err := services.NewAuditLogService(services.AuditLogServiceDeps{
+		Repository: auditRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise audit log service", zap.Error(err))
+	}
 
 	if strings.TrimSpace(cfg.PSP.StripeAPIKey) == "" {
 		logger.Fatal("stripe api key is required for payment method management")
@@ -283,7 +294,7 @@ func main() {
 		PaymentVerifier: paymentVerifier,
 		Favorites:       favoriteRepo,
 		Designs:         designFinder,
-		Audit:           nil,
+		Audit:           auditService,
 		Firebase:        firebaseVerifier,
 		Clock:           time.Now,
 	})
@@ -385,6 +396,7 @@ func main() {
 		Promotions:         promotionRepo,
 		Usage:              promotionUsageRepo,
 		Users:              userService,
+		Audit:              auditService,
 		Clock:              time.Now,
 		UserLookupInterval: 50 * time.Millisecond,
 	})
@@ -454,9 +466,9 @@ func main() {
 		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
 	}))
 	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
-	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, nil)
-	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, nil)
-	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, nil)
+	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, auditService)
+	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
+	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
