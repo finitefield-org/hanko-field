@@ -52,11 +52,66 @@ func Relative(ts time.Time) string {
 }
 
 // I18N is a placeholder translation helper.
+var translations = map[string]string{
+	"common.last_updated":                         "最終更新",
+	"admin.customers.title":                       "顧客一覧",
+	"admin.customers.description":                 "顧客の検索、セグメント確認、リスクフラグの把握を行います。",
+	"admin.customers.breadcrumb":                  "顧客",
+	"admin.customers.metrics.total.label":         "登録顧客",
+	"admin.customers.metrics.total.subtext":       "うち停止 %d",
+	"admin.customers.metrics.active_rate.label":   "アクティブ率",
+	"admin.customers.metrics.active_rate.subtext": "アクティブ %d",
+	"admin.customers.metrics.ltv.label":           "累計LTV",
+	"admin.customers.metrics.ltv.subtext":         "平均注文額 %s",
+	"admin.customers.metrics.high_value.label":    "ハイバリュー顧客",
+	"admin.customers.metrics.high_value.subtext":  "LTV 100万円以上",
+	"admin.customers.segments.heading":            "セグメント",
+	"admin.customers.segments.all":                "全て",
+	"admin.customers.segments.tooltip":            "%s セグメント",
+	"admin.customers.filters.search.label":        "検索",
+	"admin.customers.filters.search.placeholder":  "名前・メール・会社名で検索",
+	"admin.customers.filters.status.label":        "ステータス",
+	"admin.customers.filters.tier.label":          "ティア",
+	"admin.customers.filters.apply":               "適用",
+	"admin.customers.filters.reset":               "リセット",
+	"admin.customers.loading":                     "読み込み中…",
+	"admin.customers.status.all":                  "全て",
+	"admin.customers.status.active":               "アクティブ",
+	"admin.customers.status.invited":              "未アクティブ",
+	"admin.customers.status.deactivated":          "無効化",
+	"admin.customers.tier.all":                    "全てのティア",
+	"admin.customers.tier.vip":                    "VIP",
+	"admin.customers.tier.gold":                   "ゴールド",
+	"admin.customers.tier.silver":                 "シルバー",
+	"admin.customers.tier.bronze":                 "ブロンズ",
+	"admin.customers.tier.other":                  "その他",
+	"admin.customers.table.header.customer":       "顧客",
+	"admin.customers.table.header.orders":         "注文数",
+	"admin.customers.table.header.ltv":            "LTV",
+	"admin.customers.table.header.last_order":     "最終注文",
+	"admin.customers.table.header.flags":          "フラグ",
+	"admin.customers.table.header.actions":        "アクション",
+	"admin.customers.table.empty":                 "条件に一致する顧客はありません。フィルタを調整してください。",
+	"admin.customers.table.orders_count":          "%d件",
+	"admin.customers.table.no_orders":             "未注文",
+	"admin.customers.table.action.view":           "詳細",
+	"admin.customers.avatar.alt_named":            "%sのアバター",
+	"admin.customers.avatar.alt_generic":          "ユーザーのアバター",
+	"admin.customers.avatar.initials_fallback":    "??",
+	"admin.customers.risk.high":                   "ハイリスク",
+	"admin.customers.risk.medium":                 "注意",
+	"admin.customers.risk.low":                    "安定",
+}
+
 func I18N(key string, args ...any) string {
-	if len(args) == 0 {
-		return key
+	text, ok := translations[key]
+	if !ok {
+		text = key
 	}
-	return fmt.Sprintf(key, args...)
+	if len(args) == 0 {
+		return text
+	}
+	return fmt.Sprintf(text, args...)
 }
 
 func currencySymbol(code string) string {

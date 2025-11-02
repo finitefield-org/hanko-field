@@ -120,6 +120,7 @@ type TableRow struct {
 	Company           string
 	Location          string
 	AvatarURL         string
+	AvatarAlt         string
 	DetailURL         string
 	TotalOrdersLabel  string
 	LifetimeValue     string
@@ -153,9 +154,9 @@ func BuildPageData(basePath string, state QueryState, result admincustomers.List
 	}
 
 	return PageData{
-		Title:         "顧客一覧",
-		Description:   "顧客の検索、セグメント確認、リスクフラグの把握を行います。",
-		Breadcrumbs:   []partials.Breadcrumb{{Label: "顧客"}},
+		Title:         helpers.I18N("admin.customers.title"),
+		Description:   helpers.I18N("admin.customers.description"),
+		Breadcrumbs:   []partials.Breadcrumb{{Label: helpers.I18N("admin.customers.breadcrumb")}},
 		TableEndpoint: joinBase(basePath, "/customers/table"),
 		ResetURL:      joinBase(basePath, "/customers"),
 		Query:         state,
@@ -176,7 +177,7 @@ func TablePayload(basePath string, state QueryState, result admincustomers.ListR
 
 	empty := ""
 	if errMsg == "" && len(rows) == 0 {
-		empty = "条件に一致する顧客はありません。フィルタを調整してください。"
+		empty = helpers.I18N("admin.customers.table.empty")
 	}
 
 	total := result.Pagination.TotalItems
@@ -234,40 +235,40 @@ func TablePayload(basePath string, state QueryState, result admincustomers.ListR
 func buildMetrics(summary admincustomers.Summary) []MetricCard {
 	if summary.TotalCustomers == 0 {
 		return []MetricCard{
-			{Label: "登録顧客", Value: "0"},
-			{Label: "アクティブ", Value: "0"},
-			{Label: "累計LTV", Value: "¥0.00"},
+			{Label: helpers.I18N("admin.customers.metrics.total.label"), Value: "0"},
+			{Label: helpers.I18N("admin.customers.metrics.active_rate.label"), Value: "0%"},
+			{Label: helpers.I18N("admin.customers.metrics.ltv.label"), Value: helpers.Currency(0, "JPY")},
 		}
 	}
 
 	metrics := []MetricCard{
 		{
-			Label:   "登録顧客",
+			Label:   helpers.I18N("admin.customers.metrics.total.label"),
 			Value:   strconv.Itoa(summary.TotalCustomers),
-			SubText: fmt.Sprintf("うち停止 %d", summary.DeactivatedCustomers),
+			SubText: helpers.I18N("admin.customers.metrics.total.subtext", summary.DeactivatedCustomers),
 			Tone:    "",
 			Icon:    "👥",
 		},
 		{
-			Label:   "アクティブ率",
+			Label:   helpers.I18N("admin.customers.metrics.active_rate.label"),
 			Value:   fmt.Sprintf("%d%%", int(math.Round(activeRate(summary)*100))),
-			SubText: fmt.Sprintf("アクティブ %d", summary.ActiveCustomers),
+			SubText: helpers.I18N("admin.customers.metrics.active_rate.subtext", summary.ActiveCustomers),
 			Tone:    "success",
 			Icon:    "✅",
 		},
 		{
-			Label:   "累計LTV",
+			Label:   helpers.I18N("admin.customers.metrics.ltv.label"),
 			Value:   helpers.Currency(summary.TotalLifetimeMinor, summary.PrimaryCurrency),
-			SubText: fmt.Sprintf("平均注文額 %s", helpers.Currency(int64(math.Round(summary.AverageOrderValue)), summary.PrimaryCurrency)),
+			SubText: helpers.I18N("admin.customers.metrics.ltv.subtext", helpers.Currency(int64(math.Round(summary.AverageOrderValue)), summary.PrimaryCurrency)),
 			Tone:    "info",
 			Icon:    "💴",
 		},
 	}
 	if summary.HighValueCustomers > 0 {
 		metrics = append(metrics, MetricCard{
-			Label:   "ハイバリュー顧客",
+			Label:   helpers.I18N("admin.customers.metrics.high_value.label"),
 			Value:   strconv.Itoa(summary.HighValueCustomers),
-			SubText: "LTV 100万円以上",
+			SubText: helpers.I18N("admin.customers.metrics.high_value.subtext"),
 			Tone:    "warning",
 			Icon:    "💎",
 		})
@@ -288,12 +289,18 @@ func buildSegments(state QueryState, summary admincustomers.Summary) []SegmentCh
 	}
 	chips := make([]SegmentChip, 0, len(summary.Segments))
 	for _, segment := range summary.Segments {
+		label := helpers.I18N("admin.customers.tier." + segment.Key)
+		if segment.Key == "all" {
+			label = helpers.I18N("admin.customers.segments.all")
+		} else if label == "admin.customers.tier."+segment.Key {
+			label = helpers.I18N("admin.customers.tier.other")
+		}
 		chips = append(chips, SegmentChip{
 			Key:     segment.Key,
-			Label:   segment.Label,
+			Label:   label,
 			Count:   segment.Count,
 			Active:  state.Tier != "" && strings.EqualFold(state.Tier, segment.Key),
-			Tooltip: fmt.Sprintf("%s セグメント", segment.Label),
+			Tooltip: helpers.I18N("admin.customers.segments.tooltip", label),
 		})
 	}
 	sort.SliceStable(chips, func(i, j int) bool {
@@ -304,13 +311,13 @@ func buildSegments(state QueryState, summary admincustomers.Summary) []SegmentCh
 
 func buildFilters(state QueryState, filters admincustomers.FilterSummary) Filters {
 	statusOptions := []StatusFilterOption{
-		{Value: "", Label: "全て", Tone: "", Count: totalStatusCount(filters.StatusOptions)},
+		{Value: "", Label: helpers.I18N("admin.customers.status.all"), Tone: "", Count: totalStatusCount(filters.StatusOptions)},
 	}
 	for _, option := range filters.StatusOptions {
 		tone := statusTone(option.Value)
 		statusOptions = append(statusOptions, StatusFilterOption{
 			Value:  string(option.Value),
-			Label:  option.Label,
+			Label:  helpers.I18N("admin.customers.status." + string(option.Value)),
 			Count:  option.Count,
 			Tone:   tone,
 			Active: state.Status == string(option.Value),
@@ -325,13 +332,17 @@ func buildFilters(state QueryState, filters admincustomers.FilterSummary) Filter
 	tierOptions := make([]TierFilterOption, 0, len(filters.TierOptions)+1)
 	tierOptions = append(tierOptions, TierFilterOption{
 		Value:    "",
-		Label:    "全てのティア",
+		Label:    helpers.I18N("admin.customers.tier.all"),
 		Selected: state.Tier == "",
 	})
 	for _, option := range filters.TierOptions {
+		label := helpers.I18N("admin.customers.tier." + option.Value)
+		if label == "admin.customers.tier."+option.Value {
+			label = helpers.I18N("admin.customers.tier.other")
+		}
 		tierOptions = append(tierOptions, TierFilterOption{
 			Value:    option.Value,
-			Label:    option.Label,
+			Label:    label,
 			Count:    option.Count,
 			Selected: strings.EqualFold(state.Tier, option.Value),
 		})
@@ -367,6 +378,14 @@ func statusTone(status admincustomers.Status) string {
 func toTableRows(basePath string, customers []admincustomers.Customer) []TableRow {
 	rows := make([]TableRow, 0, len(customers))
 	for _, customer := range customers {
+		name := strings.TrimSpace(customer.DisplayName)
+		var avatarAlt string
+		if name != "" {
+			avatarAlt = helpers.I18N("admin.customers.avatar.alt_named", name)
+		} else {
+			avatarAlt = helpers.I18N("admin.customers.avatar.alt_generic")
+		}
+
 		row := TableRow{
 			ID:               customer.ID,
 			DisplayName:      customer.DisplayName,
@@ -374,8 +393,9 @@ func toTableRows(basePath string, customers []admincustomers.Customer) []TableRo
 			Company:          customer.Company,
 			Location:         customer.Location,
 			AvatarURL:        customer.AvatarURL,
+			AvatarAlt:        avatarAlt,
 			DetailURL:        joinBase(basePath, "/customers/"+url.PathEscape(strings.TrimSpace(customer.ID))),
-			TotalOrdersLabel: fmt.Sprintf("%d件", customer.TotalOrders),
+			TotalOrdersLabel: helpers.I18N("admin.customers.table.orders_count", customer.TotalOrders),
 			LifetimeValue:    helpers.Currency(customer.LifetimeValueMinor, customer.Currency),
 			StatusLabel:      statusLabel(customer.Status),
 			StatusTone:       statusTone(customer.Status),
@@ -392,7 +412,7 @@ func toTableRows(basePath string, customers []admincustomers.Customer) []TableRo
 			row.LastOrderRelative = helpers.Relative(customer.LastOrderAt)
 			row.LastOrderNumber = customer.LastOrderNumber
 		} else {
-			row.LastOrderLabel = "未注文"
+			row.LastOrderLabel = helpers.I18N("admin.customers.table.no_orders")
 			row.LastOrderRelative = ""
 		}
 
@@ -404,11 +424,11 @@ func toTableRows(basePath string, customers []admincustomers.Customer) []TableRo
 func statusLabel(status admincustomers.Status) string {
 	switch status {
 	case admincustomers.StatusActive:
-		return "アクティブ"
+		return helpers.I18N("admin.customers.status.active")
 	case admincustomers.StatusDeactivated:
-		return "無効化"
+		return helpers.I18N("admin.customers.status.deactivated")
 	case admincustomers.StatusInvited:
-		return "未アクティブ"
+		return helpers.I18N("admin.customers.status.invited")
 	default:
 		return string(status)
 	}
@@ -417,15 +437,15 @@ func statusLabel(status admincustomers.Status) string {
 func tierLabel(tier string) string {
 	switch strings.ToLower(strings.TrimSpace(tier)) {
 	case "vip":
-		return "VIP"
+		return helpers.I18N("admin.customers.tier.vip")
 	case "gold":
-		return "ゴールド"
+		return helpers.I18N("admin.customers.tier.gold")
 	case "silver":
-		return "シルバー"
+		return helpers.I18N("admin.customers.tier.silver")
 	case "bronze":
-		return "ブロンズ"
+		return helpers.I18N("admin.customers.tier.bronze")
 	default:
-		return "その他"
+		return helpers.I18N("admin.customers.tier.other")
 	}
 }
 
@@ -447,11 +467,11 @@ func tierTone(tier string) string {
 func riskLabel(level string) string {
 	switch strings.ToLower(level) {
 	case "high":
-		return "ハイリスク"
+		return helpers.I18N("admin.customers.risk.high")
 	case "medium":
-		return "注意"
+		return helpers.I18N("admin.customers.risk.medium")
 	case "low":
-		return "安定"
+		return helpers.I18N("admin.customers.risk.low")
 	default:
 		return ""
 	}
