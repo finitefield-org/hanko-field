@@ -524,6 +524,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designRegistrabilityCacheFresh => '最新の結果をオフライン用に保存しました。';
 
   @override
+  String get designRegistrabilityRunFailed => '登録可否チェックを開始できませんでした。再試行してください。';
+
+  @override
   String get designRegistrabilityOutdatedHint => '最新の調整を反映するには再チェックしてください。';
 
   @override

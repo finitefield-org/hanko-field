@@ -540,6 +540,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Latest result is cached for offline use.';
 
   @override
+  String get designRegistrabilityRunFailed =>
+      'Could not start the check. Please try again.';
+
+  @override
   String get designRegistrabilityOutdatedHint =>
       'Run the check again to reflect recent adjustments.';
 

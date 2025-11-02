@@ -139,6 +139,7 @@
 , "designRegistrabilityBadgeInfo": "注意"
 , "designRegistrabilityConflictTitle": "衝突を検出しました"
 , "designRegistrabilityConflictBody": "提出前に以下の問題を解消してください。"
+, "designRegistrabilityRunFailed": "登録可否チェックを開始できませんでした。再試行してください。"
 , "designInputSuggestionHeader": "プロフィールから補完"
 , "designInputSuggestionProfile": "プロフィール名を使用"
 , "designInputSuggestionIdentity": "アカウント名を使用"

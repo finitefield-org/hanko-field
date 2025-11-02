@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:app/core/storage/cache_policy.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/features/design_creation/application/registrability_check_controller.dart';
 import 'package:app/features/design_creation/application/registrability_check_state.dart';
+import 'package:app/features/design_creation/data/registrability_check_repository.dart';
 import 'package:app/features/design_creation/domain/registrability_check.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +19,8 @@ class DesignRegistrabilityCheckPage extends ConsumerStatefulWidget {
 
 class _DesignRegistrabilityCheckPageState
     extends ConsumerState<DesignRegistrabilityCheckPage> {
+  bool _suppressErrorSnack = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,7 +28,10 @@ class _DesignRegistrabilityCheckPageState
       registrabilityCheckControllerProvider,
       (previous, next) {
         final message = next.errorMessage;
-        if (message != null && message != previous?.errorMessage && mounted) {
+        if (message != null &&
+            message != previous?.errorMessage &&
+            mounted &&
+            !_suppressErrorSnack) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(message)));
@@ -42,7 +46,6 @@ class _DesignRegistrabilityCheckPageState
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final state = ref.watch(registrabilityCheckControllerProvider);
-    final controller = ref.read(registrabilityCheckControllerProvider.notifier);
     final result = state.result;
     final isLoading = state.isLoading && !state.hasResult;
     final canRun = state.canRunCheck;
@@ -60,11 +63,7 @@ class _DesignRegistrabilityCheckPageState
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh),
-            onPressed: canRun
-                ? () {
-                    unawaited(controller.refresh());
-                  }
-                : null,
+            onPressed: canRun ? () => _triggerRefresh(l10n) : null,
           ),
         ],
       ),
@@ -74,13 +73,16 @@ class _DesignRegistrabilityCheckPageState
             : !canRun && !state.hasResult
             ? _IncompleteDesignPlaceholder(l10n: l10n)
             : RefreshIndicator(
-                onRefresh: controller.refresh,
+                onRefresh: () => _triggerRefresh(l10n),
                 displacement: 56,
                 child: ListView(
                   padding: const EdgeInsets.all(AppTokens.spaceL),
                   children: [
                     if (state.isOutdated)
-                      _RecheckBanner(l10n: l10n, onRecheck: controller.refresh),
+                      _RecheckBanner(
+                        l10n: l10n,
+                        onRecheck: () => _triggerRefresh(l10n),
+                      ),
                     if (state.isOfflineFallback) _OfflineNotice(l10n: l10n),
                     if (result != null) ...[
                       _SummaryCard(
@@ -102,7 +104,7 @@ class _DesignRegistrabilityCheckPageState
                     ] else
                       _NoResultPlaceholder(
                         l10n: l10n,
-                        onRun: controller.refresh,
+                        onRun: () => _triggerRefresh(l10n),
                       ),
                     const SizedBox(height: AppTokens.spaceXXL),
                   ],
@@ -110,6 +112,35 @@ class _DesignRegistrabilityCheckPageState
               ),
       ),
     );
+  }
+
+  Future<void> _triggerRefresh(AppLocalizations l10n) async {
+    final controller = ref.read(registrabilityCheckControllerProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    _suppressErrorSnack = true;
+    try {
+      await controller.refresh();
+    } on RegistrabilityCheckException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error.message)));
+      controller.clearError();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(l10n.designRegistrabilityRunFailed)),
+        );
+      controller.clearError();
+    } finally {
+      _suppressErrorSnack = false;
+    }
   }
 }
 
@@ -179,7 +210,7 @@ class _NoResultPlaceholder extends StatelessWidget {
             FilledButton.icon(
               icon: const Icon(Icons.verified_outlined),
               onPressed: () {
-                unawaited(onRun());
+                onRun();
               },
               label: Text(l10n.designRegistrabilityRunCheck),
             ),
@@ -207,7 +238,7 @@ class _RecheckBanner extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () {
-              unawaited(onRecheck());
+              onRecheck();
             },
             child: Text(l10n.designRegistrabilityRunCheck),
           ),

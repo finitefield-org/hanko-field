@@ -853,6 +853,11 @@
   "description": "Label when cached result is fresh"
 }
 
+, "designRegistrabilityRunFailed": "Could not start the check. Please try again."
+, "@designRegistrabilityRunFailed": {
+  "description": "Snackbar message shown when the registrability request fails to start"
+}
+
 , "designRegistrabilityOutdatedHint": "Run the check again to reflect recent adjustments."
 , "@designRegistrabilityOutdatedHint": {
   "description": "Hint text under the summary card when outdated"

@@ -84,7 +84,7 @@ class RegistrabilityCheckController extends Notifier<RegistrabilityCheckState> {
       );
     } on RegistrabilityCheckException catch (error) {
       if (!ref.mounted) {
-        return;
+        rethrow;
       }
       state = state.copyWith(
         isLoading: false,
@@ -92,16 +92,19 @@ class RegistrabilityCheckController extends Notifier<RegistrabilityCheckState> {
         errorMessage: error.message,
         isOfflineFallback: state.hasResult && !state.isOutdated,
       );
+      rethrow;
     } catch (error) {
       if (!ref.mounted) {
-        return;
+        throw RegistrabilityCheckException(error.toString());
       }
+      final message = error.toString();
       state = state.copyWith(
         isLoading: false,
         isRefreshing: false,
-        errorMessage: error.toString(),
+        errorMessage: message,
         isOfflineFallback: state.hasResult && !state.isOutdated,
       );
+      throw RegistrabilityCheckException(message);
     } finally {
       _isRunning = false;
     }

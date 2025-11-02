@@ -1034,6 +1034,12 @@ abstract class AppLocalizations {
   /// **'Latest result is cached for offline use.'**
   String get designRegistrabilityCacheFresh;
 
+  /// Snackbar message shown when the registrability request fails to start
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the check. Please try again.'**
+  String get designRegistrabilityRunFailed;
+
   /// Hint text under the summary card when outdated
   ///
   /// In en, this message translates to:
