@@ -51,7 +51,7 @@
 ## 6. Shop & Product Browsing
 - [x] [Implement shop home (`/shop`) with category tiles, promotions, and recommended materials.](doc/app/tasks/037-implement-shop-home-shop-with-category-tiles-promotions-and-recommended-materials.md)
 - [x] [Build material detail screen (`/materials/:materialId`) showing specs, gallery, availability.](doc/app/tasks/038-build-material-detail-screen-materials-materialid-showing-specs-gallery-availability.md)
-- [ ] [Implement product detail (`/products/:productId`) with variant selector, pricing tiers, stock indicators.](doc/app/tasks/039-implement-product-detail-products-productid-with-variant-selector-pricing-tiers-stock-indi.md)
+- [x] [Implement product detail (`/products/:productId`) with variant selector, pricing tiers, stock indicators.](doc/app/tasks/039-implement-product-detail-products-productid-with-variant-selector-pricing-tiers-stock-indi.md)
 - [ ] [Build add-ons screen (`/products/:productId/addons`) for optional accessories with upsell logic.](doc/app/tasks/040-build-add-ons-screen-products-productid-addons-for-optional-accessories-with-upsell-logic.md)
 
 ## 7. Cart & Checkout

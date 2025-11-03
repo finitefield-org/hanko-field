@@ -1,4 +1,5 @@
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
+import 'package:app/features/shop/presentation/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 
 /// 作成フローステージ
@@ -44,6 +45,9 @@ class ShopDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entity == 'materials') {
       return MaterialDetailScreen(materialId: identifier);
+    }
+    if (entity == 'products') {
+      return ProductDetailScreen(productId: identifier);
     }
 
     final headline = switch (entity) {
