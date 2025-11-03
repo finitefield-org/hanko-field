@@ -63,9 +63,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               onToggleFavorite: _toggleFavorite,
               onOptionSelected: _handleOptionSelected,
               images: images,
-              onAddToCart: () => _handleAddToCart(context, selectedVariant),
-              onSecondaryAction: () =>
-                  _handleSecondaryAction(context, detail, selectedVariant),
+              onAddToCart: () =>
+                  _handleAddToCart(context, selectedVariant, experience),
+              onSecondaryAction: () => _handleSecondaryAction(
+                context,
+                detail,
+                selectedVariant,
+                experience,
+              ),
             );
           },
           loading: () => const _ProductDetailLoadingView(),
@@ -111,24 +116,33 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     }
   }
 
-  void _handleAddToCart(BuildContext context, ProductVariant variant) {
+  void _handleAddToCart(
+    BuildContext context,
+    ProductVariant variant,
+    ExperienceGate experience,
+  ) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(content: Text('「${variant.displayLabel}」をカートに追加しました。')),
-    );
+    final message = experience.isInternational
+        ? 'Added "${variant.displayLabel}" to cart.'
+        : '「${variant.displayLabel}」をカートに追加しました。';
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleSecondaryAction(
     BuildContext context,
     ProductDetail detail,
     ProductVariant variant,
+    ExperienceGate experience,
   ) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    final label = detail.requiresDesignSelection ? 'デザイン選択' : 'ライブラリ保存';
+    final label = detail.requiresDesignSelection
+        ? (experience.isInternational ? 'Select design' : 'デザイン選択')
+        : (experience.isInternational ? 'Save to library' : 'ライブラリ保存');
+    final separator = experience.isInternational ? ': ' : '：';
     messenger.showSnackBar(
-      SnackBar(content: Text('$label: ${variant.displayLabel}')),
+      SnackBar(content: Text('$label$separator${variant.displayLabel}')),
     );
   }
 
