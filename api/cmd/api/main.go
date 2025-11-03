@@ -436,6 +436,7 @@ func main() {
 		orderService    services.OrderService
 		shipmentService services.ShipmentService
 		exportService   services.ExportService
+		paymentService  services.PaymentService
 	)
 	exportLogger := logger.Named("exports")
 	exportPublisher := services.NewNoopExportPublisher()
@@ -472,6 +473,14 @@ func main() {
 		handlers.WithHealthBuildInfo(buildInfo),
 		handlers.WithHealthSystemService(systemService),
 	)
+
+	stripeWebhookSecret := strings.TrimSpace(cfg.PSP.StripeWebhookSecret)
+	paymentWebhookHandlers := handlers.NewPaymentWebhookHandlers(paymentService, func(context.Context) (string, error) {
+		if stripeWebhookSecret == "" {
+			return "", errors.New("stripe webhook secret not configured")
+		}
+		return stripeWebhookSecret, nil
+	})
 
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
@@ -535,6 +544,7 @@ func main() {
 	if hmacMiddleware != nil {
 		opts = append(opts, handlers.WithWebhookMiddlewares(hmacMiddleware))
 	}
+	opts = append(opts, handlers.WithWebhookRoutes(paymentWebhookHandlers.Routes))
 
 	router := handlers.NewRouter(opts...)
 	server := &http.Server{
