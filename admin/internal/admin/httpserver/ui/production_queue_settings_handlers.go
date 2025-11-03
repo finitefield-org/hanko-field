@@ -29,20 +29,28 @@ func parseQueueSettings(raw string) queueSettingsContext {
 	if err != nil {
 		values = url.Values{}
 	}
+
+	workshopRaw := strings.TrimSpace(values.Get("workshop"))
+	statusRaw := strings.TrimSpace(values.Get("status"))
+	productRaw := strings.TrimSpace(values.Get("product_line"))
+	searchRaw := strings.TrimSpace(values.Get("search"))
+	selectedRaw := strings.TrimSpace(values.Get("selected"))
+
 	state := productiontpl.QueryState{
-		Workshop:    strings.TrimSpace(values.Get("workshop")),
-		Status:      strings.TrimSpace(values.Get("status")),
-		ProductLine: strings.TrimSpace(values.Get("product_line")),
-		Search:      strings.TrimSpace(values.Get("search")),
-		SelectedID:  strings.TrimSpace(values.Get("selected")),
+		Workshop:    workshopRaw,
+		Status:      statusRaw,
+		ProductLine: productRaw,
+		Search:      searchRaw,
+		SelectedID:  selectedRaw,
 	}
+
 	ctx := queueSettingsContext{
 		query: adminproduction.QueueSettingsQuery{
-			Workshop:    state.Workshop,
-			Status:      state.Status,
-			ProductLine: state.ProductLine,
-			Search:      state.Search,
-			SelectedID:  state.SelectedID,
+			Workshop:    decodeFacetValue(workshopRaw),
+			Status:      decodeFacetValue(statusRaw),
+			ProductLine: decodeFacetValue(productRaw),
+			Search:      searchRaw,
+			SelectedID:  selectedRaw,
 		},
 		state: state,
 	}
@@ -667,4 +675,12 @@ func joinBase(base, suffix string) string {
 		suffix = "/" + suffix
 	}
 	return b + suffix
+}
+
+func decodeFacetValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if strings.EqualFold(trimmed, productiontpl.UnsetFilterValue) {
+		return ""
+	}
+	return trimmed
 }

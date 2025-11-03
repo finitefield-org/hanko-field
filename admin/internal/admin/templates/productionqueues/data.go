@@ -14,6 +14,8 @@ import (
 const (
 	tableContainerID  = "production-queues-table"
 	drawerContainerID = "production-queues-drawer"
+	// UnsetFilterValue is the sentinel string used to represent blank facet values in query strings.
+	UnsetFilterValue = "__unset"
 )
 
 // PageData encapsulates the SSR payload for the production queue settings page.
@@ -360,11 +362,16 @@ func buildFilterBar(basePath string, state QueryState, filters adminproduction.Q
 		Active: state.Workshop == "",
 	})
 	for _, option := range filters.Workshops {
+		value := encodeFilterValue(option.Value)
+		label := strings.TrimSpace(option.Label)
+		if label == "" {
+			label = "未設定"
+		}
 		workshops = append(workshops, FilterOption{
-			Label:  option.Label,
-			Value:  option.Value,
+			Label:  label,
+			Value:  value,
 			Count:  option.Count,
-			Active: strings.EqualFold(option.Value, state.Workshop),
+			Active: strings.EqualFold(value, state.Workshop),
 		})
 	}
 
@@ -376,11 +383,16 @@ func buildFilterBar(basePath string, state QueryState, filters adminproduction.Q
 		Active: state.Status == "",
 	})
 	for _, option := range filters.Statuses {
+		value := encodeFilterValue(option.Value)
+		label := strings.TrimSpace(option.Label)
+		if label == "" {
+			label = "未設定"
+		}
 		statuses = append(statuses, FilterOption{
-			Label:  option.Label,
-			Value:  option.Value,
+			Label:  label,
+			Value:  value,
 			Count:  option.Count,
-			Active: strings.EqualFold(option.Value, state.Status),
+			Active: strings.EqualFold(value, state.Status),
 		})
 	}
 
@@ -392,11 +404,16 @@ func buildFilterBar(basePath string, state QueryState, filters adminproduction.Q
 		Active: state.ProductLine == "",
 	})
 	for _, option := range filters.ProductLines {
+		value := encodeFilterValue(option.Value)
+		label := strings.TrimSpace(option.Label)
+		if label == "" {
+			label = "未設定"
+		}
 		productLines = append(productLines, FilterOption{
-			Label:  option.Label,
-			Value:  option.Value,
+			Label:  label,
+			Value:  value,
 			Count:  option.Count,
-			Active: strings.EqualFold(option.Value, state.ProductLine),
+			Active: strings.EqualFold(value, state.ProductLine),
 		})
 	}
 
@@ -815,4 +832,11 @@ func joinBase(base, suffix string) string {
 		suffix = "/" + suffix
 	}
 	return b + suffix
+}
+
+func encodeFilterValue(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return UnsetFilterValue
+	}
+	return value
 }
