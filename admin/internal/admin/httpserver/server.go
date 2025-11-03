@@ -240,6 +240,18 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				sr.Post("/batches", uiHandlers.ShipmentsCreateBatch)
 				sr.Post("/batches/regenerate", uiHandlers.ShipmentsRegenerateLabels)
 			})
+			protected.Route("/production-queues", func(pqr chi.Router) {
+				pqr.Get("/", uiHandlers.ProductionQueueSettingsPage)
+				RegisterFragment(pqr, "/table", uiHandlers.ProductionQueueSettingsTable)
+				RegisterFragment(pqr, "/{queueID}/drawer", uiHandlers.ProductionQueueSettingsDrawer)
+				RegisterFragment(pqr, "/modal/new", uiHandlers.ProductionQueueNewModal)
+				RegisterFragment(pqr, "/{queueID}/modal/edit", uiHandlers.ProductionQueueEditModal)
+				RegisterFragment(pqr, "/{queueID}/modal/delete", uiHandlers.ProductionQueueDeleteModal)
+				pqr.Post("/", uiHandlers.ProductionQueueCreate)
+				pqr.Put("/{queueID}", uiHandlers.ProductionQueueUpdate)
+				pqr.Delete("/{queueID}", uiHandlers.ProductionQueueDelete)
+				pqr.Post("/{queueID}/toggle", uiHandlers.ProductionQueueToggle)
+			})
 			protected.Route("/production", func(pr chi.Router) {
 				pr.Get("/queues", uiHandlers.ProductionQueuesPage)
 				RegisterFragment(pr, "/queues/board", uiHandlers.ProductionQueuesBoard)

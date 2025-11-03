@@ -3,10 +3,13 @@ package production
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
 
 // StaticService provides deterministic production data for local development and tests.
@@ -19,6 +22,10 @@ type StaticService struct {
 	defaultQueue string
 	qcReasons    []QCReason
 	qcRoutes     []QCReworkRoute
+	queueDefs    map[string]QueueDefinition
+	workCenters  map[string]QueueWorkCenter
+	roleOptions  []QueueRoleOption
+	queueSeq     int
 }
 
 type cardRecord struct {
@@ -54,9 +61,11 @@ type laneDefinition struct {
 // NewStaticService returns a production service seeded with representative data.
 func NewStaticService() *StaticService {
 	svc := &StaticService{
-		queues:     make(map[string]Queue),
-		cards:      make(map[string]*cardRecord),
-		workorders: make(map[string]WorkOrder),
+		queues:      make(map[string]Queue),
+		cards:       make(map[string]*cardRecord),
+		workorders:  make(map[string]WorkOrder),
+		queueDefs:   make(map[string]QueueDefinition),
+		workCenters: make(map[string]QueueWorkCenter),
 		laneDefs: []laneDefinition{
 			{stage: StageQueued, label: "待機", description: "支給待ち / 図面確認", capacity: 10, slaLabel: "平均6h", slaTone: "info"},
 			{stage: StageEngraving, label: "刻印", description: "CNC + ハンドエングレーブ", capacity: 8, slaLabel: "平均9h", slaTone: "info"},
@@ -657,6 +666,115 @@ func (s *StaticService) seed() {
 			{ID: "evt-1071-2", Stage: StageEngraving, StageLabel: StageLabel(StageEngraving), Type: "engraving.paused", Description: "校正待ち", Actor: "辻村 慎", OccurredAt: now.Add(-2 * time.Hour), Note: "モノグラム修正要"},
 		}),
 	}
+
+	s.workCenters["wc-aoyama-engrave"] = QueueWorkCenter{ID: "wc-aoyama-engrave", Name: "青山CNCセル", Location: "青山", Capability: "CNC / レーザー刻印", Active: true}
+	s.workCenters["wc-aoyama-polish"] = QueueWorkCenter{ID: "wc-aoyama-polish", Name: "青山研磨室", Location: "青山", Capability: "研磨 / 仕上げ", Active: true}
+	s.workCenters["wc-aoyama-qc"] = QueueWorkCenter{ID: "wc-aoyama-qc", Name: "青山QCベイ", Location: "青山", Capability: "QC / 梱包", Active: true}
+	s.workCenters["wc-kyoto-hand"] = QueueWorkCenter{ID: "wc-kyoto-hand", Name: "京都手彫り工房", Location: "京都", Capability: "手彫り / 和彫り", Active: true}
+	s.workCenters["wc-kyoto-qc"] = QueueWorkCenter{ID: "wc-kyoto-qc", Name: "京都QCデスク", Location: "京都", Capability: "QC / 梱包", Active: true}
+
+	s.roleOptions = []QueueRoleOption{
+		{Key: "lead", Label: "工房リーダー", SuggestedHeadcount: 1},
+		{Key: "engraver", Label: "刻印士", SuggestedHeadcount: 3},
+		{Key: "polisher", Label: "研磨士", SuggestedHeadcount: 2},
+		{Key: "qc", Label: "QC担当", SuggestedHeadcount: 2},
+		{Key: "packer", Label: "梱包担当", SuggestedHeadcount: 1},
+	}
+
+	roleLabel := func(key string) string {
+		for _, opt := range s.roleOptions {
+			if opt.Key == key {
+				return opt.Label
+			}
+		}
+		return key
+	}
+
+	aoyamaStages := []QueueStage{
+		{Code: StageQueued, Label: "段取り", Sequence: 1, Description: "素材支給・図面確認", WIPLimit: 12, TargetSLAHours: 6},
+		{Code: StageEngraving, Label: "刻印", Sequence: 2, Description: "CNC/レーザー刻印", WIPLimit: 10, TargetSLAHours: 9},
+		{Code: StagePolishing, Label: "研磨", Sequence: 3, Description: "研磨/石留め調整", WIPLimit: 8, TargetSLAHours: 5},
+		{Code: StageQC, Label: "QC", Sequence: 4, Description: "寸法検査・外観確認", WIPLimit: 6, TargetSLAHours: 3},
+		{Code: StagePacked, Label: "梱包", Sequence: 5, Description: "付属品セット・出荷準備", WIPLimit: 6, TargetSLAHours: 2},
+	}
+
+	kyotoStages := []QueueStage{
+		{Code: StageQueued, Label: "校了待ち", Sequence: 1, Description: "図案確認・素材支給", WIPLimit: 8, TargetSLAHours: 8},
+		{Code: StageEngraving, Label: "和彫り", Sequence: 2, Description: "手彫り/和彫り工程", WIPLimit: 6, TargetSLAHours: 12},
+		{Code: StagePolishing, Label: "研磨", Sequence: 3, Description: "艶出し/仕上げ", WIPLimit: 4, TargetSLAHours: 6},
+		{Code: StageQC, Label: "QC", Sequence: 4, Description: "外観/寸法検査", WIPLimit: 3, TargetSLAHours: 3},
+		{Code: StagePacked, Label: "梱包", Sequence: 5, Description: "検品後梱包", WIPLimit: 3, TargetSLAHours: 2},
+	}
+
+	s.queueDefs["atelier-aoyama"] = QueueDefinition{
+		ID:             "atelier-aoyama",
+		Name:           "青山アトリエ",
+		Description:    "リング刻印のメインライン。VIP優先枠を備えたハイスループット編成。",
+		Workshop:       "青山工房",
+		ProductLine:    "Classic / Brilliant",
+		Priority:       1,
+		PriorityLabel:  "P1",
+		Capacity:       28,
+		TargetSLAHours: 36,
+		Active:         true,
+		Notes:          []string{"VIP優先ライン常設", "CNC 2台 + レーザー1台"},
+		Metrics: QueueDefinitionMetrics{
+			ThroughputPerShift: 42.0,
+			WIPUtilisation:     0.62,
+			SLACompliance:      0.88,
+		},
+		WorkCenters: []QueueWorkCenterAssignment{
+			{WorkCenter: s.workCenters["wc-aoyama-engrave"], Primary: true},
+			{WorkCenter: s.workCenters["wc-aoyama-polish"], Primary: false},
+			{WorkCenter: s.workCenters["wc-aoyama-qc"], Primary: false},
+		},
+		Roles: []QueueRoleAssignment{
+			{Key: "lead", Label: roleLabel("lead"), Headcount: 1},
+			{Key: "engraver", Label: roleLabel("engraver"), Headcount: 4},
+			{Key: "polisher", Label: roleLabel("polisher"), Headcount: 3},
+			{Key: "qc", Label: roleLabel("qc"), Headcount: 2},
+			{Key: "packer", Label: roleLabel("packer"), Headcount: 1},
+		},
+		Stages:    aoyamaStages,
+		CreatedAt: now.Add(-720 * time.Hour),
+		UpdatedAt: now.Add(-6 * time.Hour),
+	}
+
+	s.queueDefs["atelier-kyoto"] = QueueDefinition{
+		ID:             "atelier-kyoto",
+		Name:           "京都スタジオ",
+		Description:    "和彫り・仕上げ特化の工房。手彫り技術者とQCを兼任する体制。",
+		Workshop:       "京都工房",
+		ProductLine:    "Heritage / Monogram",
+		Priority:       2,
+		PriorityLabel:  "P2",
+		Capacity:       18,
+		TargetSLAHours: 40,
+		Active:         true,
+		Notes:          []string{"彫金士3名常駐", "QC 兼任体制"},
+		Metrics: QueueDefinitionMetrics{
+			ThroughputPerShift: 24.0,
+			WIPUtilisation:     0.48,
+			SLACompliance:      0.82,
+		},
+		WorkCenters: []QueueWorkCenterAssignment{
+			{WorkCenter: s.workCenters["wc-kyoto-hand"], Primary: true},
+			{WorkCenter: s.workCenters["wc-kyoto-qc"], Primary: false},
+		},
+		Roles: []QueueRoleAssignment{
+			{Key: "lead", Label: roleLabel("lead"), Headcount: 1},
+			{Key: "engraver", Label: roleLabel("engraver"), Headcount: 3},
+			{Key: "qc", Label: roleLabel("qc"), Headcount: 1},
+			{Key: "packer", Label: roleLabel("packer"), Headcount: 1},
+		},
+		Stages:    kyotoStages,
+		CreatedAt: now.Add(-960 * time.Hour),
+		UpdatedAt: now.Add(-12 * time.Hour),
+	}
+
+	s.queueSeq = len(s.queueDefs)
+	s.upsertQueueSummaryLocked(s.queueDefs["atelier-aoyama"])
+	s.upsertQueueSummaryLocked(s.queueDefs["atelier-kyoto"])
 
 	for _, record := range cards {
 		timeline := record.timeline
@@ -1514,6 +1632,634 @@ func buildQCAttachments(values []string, cardID string, now time.Time) []QCAttac
 		}
 	}
 	return attachments
+}
+
+func (s *StaticService) QueueSettings(_ context.Context, _ string, query QueueSettingsQuery) (QueueSettingsResult, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	normalized := QueueSettingsQuery{
+		Workshop:    strings.TrimSpace(query.Workshop),
+		Status:      strings.TrimSpace(query.Status),
+		ProductLine: strings.TrimSpace(query.ProductLine),
+		Search:      strings.TrimSpace(query.Search),
+		SelectedID:  strings.TrimSpace(query.SelectedID),
+	}
+
+	workshopCounts := make(map[string]int)
+	productCounts := make(map[string]int)
+	statusCounts := map[string]int{"active": 0, "inactive": 0}
+
+	filtered := make([]QueueDefinition, 0, len(s.queueDefs))
+
+	for _, def := range s.queueDefs {
+		workshopCounts[def.Workshop]++
+		productCounts[def.ProductLine]++
+		if def.Active {
+			statusCounts["active"]++
+		} else {
+			statusCounts["inactive"]++
+		}
+
+		if normalized.Workshop != "" && !strings.EqualFold(def.Workshop, normalized.Workshop) {
+			continue
+		}
+
+		if normalized.Status != "" {
+			switch strings.ToLower(normalized.Status) {
+			case "active":
+				if !def.Active {
+					continue
+				}
+			case "inactive":
+				if def.Active {
+					continue
+				}
+			}
+		}
+
+		if normalized.ProductLine != "" && !strings.Contains(strings.ToLower(def.ProductLine), strings.ToLower(normalized.ProductLine)) {
+			continue
+		}
+
+		if normalized.Search != "" {
+			needle := strings.ToLower(normalized.Search)
+			if !strings.Contains(strings.ToLower(def.Name), needle) && !strings.Contains(strings.ToLower(def.Description), needle) {
+				continue
+			}
+		}
+
+		filtered = append(filtered, cloneQueueDefinition(def))
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].Priority != filtered[j].Priority {
+			return filtered[i].Priority < filtered[j].Priority
+		}
+		return strings.Compare(strings.ToLower(filtered[i].Name), strings.ToLower(filtered[j].Name)) < 0
+	})
+
+	var (
+		slaTotal       float64
+		throughputSum  float64
+		utilisationSum float64
+	)
+
+	summary := QueueSettingsSummary{}
+
+	for _, def := range filtered {
+		summary.TotalCapacity += def.Capacity
+		if def.Active {
+			summary.ActiveQueues++
+		}
+		slaTotal += float64(def.TargetSLAHours)
+		throughputSum += def.Metrics.ThroughputPerShift
+		utilisationSum += def.Metrics.WIPUtilisation
+	}
+
+	summary.TotalQueues = len(filtered)
+	if summary.TotalQueues > 0 {
+		summary.AverageSLAHours = slaTotal / float64(summary.TotalQueues)
+	}
+
+	var analytics QueueAnalytics
+	if len(filtered) > 0 {
+		analytics.AverageThroughputPerShift = throughputSum / float64(len(filtered))
+		analytics.AverageWIPUtilisation = utilisationSum / float64(len(filtered))
+	}
+
+	result := QueueSettingsResult{
+		Queues: filtered,
+		Filters: QueueSettingsFilters{
+			Workshops:    queueFilterOptionsFromMap(workshopCounts),
+			ProductLines: queueFilterOptionsFromMap(productCounts),
+			Statuses: []QueueFilterOption{
+				{Value: "active", Label: "稼働中", Count: statusCounts["active"]},
+				{Value: "inactive", Label: "停止中", Count: statusCounts["inactive"]},
+			},
+		},
+		Summary:   summary,
+		Analytics: analytics,
+	}
+
+	return result, nil
+}
+
+func (s *StaticService) QueueSettingsDetail(_ context.Context, _ string, queueID string) (QueueDefinition, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	id := strings.TrimSpace(queueID)
+	if id == "" {
+		return QueueDefinition{}, ErrQueueNotFound
+	}
+
+	def, ok := s.queueDefs[id]
+	if !ok {
+		return QueueDefinition{}, ErrQueueNotFound
+	}
+
+	return cloneQueueDefinition(def), nil
+}
+
+func (s *StaticService) QueueSettingsOptions(_ context.Context, _ string) (QueueSettingsOptions, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	centers := make([]QueueWorkCenter, 0, len(s.workCenters))
+	for _, center := range s.workCenters {
+		centers = append(centers, center)
+	}
+	sort.Slice(centers, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(centers[i].Name), strings.ToLower(centers[j].Name)) < 0
+	})
+
+	roleOptions := make([]QueueRoleOption, len(s.roleOptions))
+	copy(roleOptions, s.roleOptions)
+	sort.Slice(roleOptions, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(roleOptions[i].Label), strings.ToLower(roleOptions[j].Label)) < 0
+	})
+
+	stageTemplates := s.defaultStageTemplatesLocked()
+
+	return QueueSettingsOptions{
+		WorkCenters:    centers,
+		RoleOptions:    roleOptions,
+		StageTemplates: stageTemplates,
+	}, nil
+}
+
+func (s *StaticService) CreateQueueDefinition(_ context.Context, _ string, input QueueDefinitionInput) (QueueDefinition, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return QueueDefinition{}, ErrQueueInvalidInput
+	}
+	if input.Capacity <= 0 {
+		return QueueDefinition{}, ErrQueueInvalidInput
+	}
+
+	for _, def := range s.queueDefs {
+		if strings.EqualFold(def.Name, name) {
+			return QueueDefinition{}, ErrQueueNameExists
+		}
+	}
+
+	s.queueSeq++
+	id := fmt.Sprintf("queue-%04d", s.queueSeq)
+	now := time.Now()
+
+	def := QueueDefinition{
+		ID:             id,
+		Name:           name,
+		Description:    strings.TrimSpace(input.Description),
+		Workshop:       strings.TrimSpace(input.Workshop),
+		ProductLine:    strings.TrimSpace(input.ProductLine),
+		Priority:       input.Priority,
+		PriorityLabel:  queuePriorityLabel(input.Priority),
+		Capacity:       input.Capacity,
+		TargetSLAHours: maxInt(input.TargetSLAHours, 1),
+		Active:         input.Active,
+		Notes:          copyStrings(uniqueStrings(input.Notes)),
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+
+	def.WorkCenters = s.resolveWorkCentersLocked(input.WorkCenterIDs, input.PrimaryWorkCenterID)
+	def.Roles = s.resolveRoleAssignmentsLocked(input.Roles)
+	def.Stages = s.buildStagesFromInputLocked(input.Stages, s.defaultStageTemplatesLocked())
+	def.Metrics = calculateQueueMetrics(def.Capacity, def.Metrics)
+
+	s.queueDefs[id] = def
+	s.upsertQueueSummaryLocked(def)
+
+	return cloneQueueDefinition(def), nil
+}
+
+func (s *StaticService) UpdateQueueDefinition(_ context.Context, _ string, queueID string, input QueueDefinitionInput) (QueueDefinition, error) {
+	id := strings.TrimSpace(queueID)
+	if id == "" {
+		return QueueDefinition{}, ErrQueueNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	def, ok := s.queueDefs[id]
+	if !ok {
+		return QueueDefinition{}, ErrQueueNotFound
+	}
+
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return QueueDefinition{}, ErrQueueInvalidInput
+	}
+	if input.Capacity <= 0 {
+		return QueueDefinition{}, ErrQueueInvalidInput
+	}
+
+	for otherID, existing := range s.queueDefs {
+		if otherID == id {
+			continue
+		}
+		if strings.EqualFold(existing.Name, name) {
+			return QueueDefinition{}, ErrQueueNameExists
+		}
+	}
+
+	def.Name = name
+	def.Description = strings.TrimSpace(input.Description)
+	def.Workshop = strings.TrimSpace(input.Workshop)
+	def.ProductLine = strings.TrimSpace(input.ProductLine)
+	def.Priority = input.Priority
+	def.PriorityLabel = queuePriorityLabel(input.Priority)
+	def.Capacity = input.Capacity
+	def.TargetSLAHours = maxInt(input.TargetSLAHours, 1)
+	def.Active = input.Active
+	def.Notes = copyStrings(uniqueStrings(input.Notes))
+	def.WorkCenters = s.resolveWorkCentersLocked(input.WorkCenterIDs, input.PrimaryWorkCenterID)
+	def.Roles = s.resolveRoleAssignmentsLocked(input.Roles)
+	def.Stages = s.buildStagesFromInputLocked(input.Stages, def.Stages)
+	def.Metrics = calculateQueueMetrics(def.Capacity, def.Metrics)
+	def.UpdatedAt = time.Now()
+
+	s.queueDefs[id] = def
+	s.upsertQueueSummaryLocked(def)
+
+	return cloneQueueDefinition(def), nil
+}
+
+func (s *StaticService) DeleteQueueDefinition(_ context.Context, _ string, queueID string) error {
+	id := strings.TrimSpace(queueID)
+	if id == "" {
+		return ErrQueueNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.queueDefs[id]; !ok {
+		return ErrQueueNotFound
+	}
+
+	if s.queueHasCardsLocked(id) {
+		return ErrQueueInvalidInput
+	}
+
+	delete(s.queueDefs, id)
+	delete(s.queues, id)
+
+	if strings.EqualFold(s.defaultQueue, id) {
+		s.defaultQueue = s.pickDefaultQueueLocked()
+	}
+
+	return nil
+}
+
+func (s *StaticService) resolveWorkCentersLocked(ids []string, primary string) []QueueWorkCenterAssignment {
+	if len(ids) == 0 {
+		return nil
+	}
+	assignments := make([]QueueWorkCenterAssignment, 0, len(ids))
+	seen := make(map[string]bool)
+	primaryID := strings.TrimSpace(primary)
+
+	for idx, rawID := range ids {
+		id := strings.TrimSpace(rawID)
+		if id == "" || seen[strings.ToLower(id)] {
+			continue
+		}
+		center, ok := s.workCenters[id]
+		if !ok {
+			continue
+		}
+		assignment := QueueWorkCenterAssignment{
+			WorkCenter: center,
+			Primary:    false,
+		}
+		if primaryID == "" && idx == 0 {
+			assignment.Primary = true
+		} else if primaryID != "" && strings.EqualFold(primaryID, id) {
+			assignment.Primary = true
+		}
+		assignments = append(assignments, assignment)
+		seen[strings.ToLower(id)] = true
+	}
+
+	if len(assignments) == 0 {
+		return nil
+	}
+
+	if primaryID != "" {
+		found := false
+		for i := range assignments {
+			if strings.EqualFold(assignments[i].WorkCenter.ID, primaryID) {
+				assignments[i].Primary = true
+				found = true
+			} else {
+				assignments[i].Primary = false
+			}
+		}
+		if !found {
+			assignments[0].Primary = true
+		}
+	} else {
+		assignments[0].Primary = true
+	}
+
+	return assignments
+}
+
+func (s *StaticService) resolveRoleAssignmentsLocked(inputs []QueueRoleAssignmentInput) []QueueRoleAssignment {
+	if len(inputs) == 0 {
+		return nil
+	}
+
+	options := make(map[string]QueueRoleOption, len(s.roleOptions))
+	for _, opt := range s.roleOptions {
+		options[opt.Key] = opt
+	}
+
+	assignments := make([]QueueRoleAssignment, 0, len(inputs))
+
+	for _, input := range inputs {
+		key := strings.TrimSpace(input.Key)
+		if key == "" || input.Headcount <= 0 {
+			continue
+		}
+		label := key
+		if opt, ok := options[key]; ok {
+			label = opt.Label
+		}
+		assignments = append(assignments, QueueRoleAssignment{
+			Key:       key,
+			Label:     label,
+			Headcount: input.Headcount,
+		})
+	}
+
+	if len(assignments) == 0 {
+		return nil
+	}
+
+	sort.Slice(assignments, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(assignments[i].Label), strings.ToLower(assignments[j].Label)) < 0
+	})
+
+	return assignments
+}
+
+func (s *StaticService) buildStagesFromInputLocked(inputs []QueueStageInput, fallback []QueueStage) []QueueStage {
+	if len(inputs) == 0 {
+		return cloneQueueStages(fallback)
+	}
+
+	stages := make([]QueueStage, 0, len(inputs))
+	for idx, stage := range inputs {
+		label := strings.TrimSpace(stage.Label)
+		code := stage.Code
+		if code == "" && label != "" {
+			code = Stage(strings.ToLower(strings.ReplaceAll(label, " ", "_")))
+		}
+		if label == "" {
+			label = StageLabel(code)
+		}
+		description := strings.TrimSpace(stage.Description)
+		wipLimit := stage.WIPLimit
+		if wipLimit <= 0 {
+			wipLimit = 4
+		}
+		target := stage.TargetSLAHours
+		if target <= 0 {
+			target = 4
+		}
+		stages = append(stages, QueueStage{
+			Code:           code,
+			Label:          label,
+			Sequence:       idx + 1,
+			Description:    description,
+			WIPLimit:       wipLimit,
+			TargetSLAHours: target,
+		})
+	}
+	return stages
+}
+
+func (s *StaticService) defaultStageTemplatesLocked() []QueueStage {
+	if def, ok := s.queueDefs[s.defaultQueue]; ok && len(def.Stages) > 0 {
+		return cloneQueueStages(def.Stages)
+	}
+	templates := make([]QueueStage, 0, len(s.laneDefs))
+	for idx, lane := range s.laneDefs {
+		templates = append(templates, QueueStage{
+			Code:           lane.stage,
+			Label:          lane.label,
+			Sequence:       idx + 1,
+			Description:    lane.description,
+			WIPLimit:       maxInt(lane.capacity, 1),
+			TargetSLAHours: parseHoursFromLabel(lane.slaLabel, 6),
+		})
+	}
+	return templates
+}
+
+func parseHoursFromLabel(label string, fallback int) int {
+	digits := strings.Builder{}
+	for _, r := range label {
+		if unicode.IsDigit(r) {
+			digits.WriteRune(r)
+		}
+	}
+	if digits.Len() == 0 {
+		return fallback
+	}
+	value, err := strconv.Atoi(digits.String())
+	if err != nil {
+		return fallback
+	}
+	return value
+}
+
+func (s *StaticService) upsertQueueSummaryLocked(def QueueDefinition) {
+	queue := Queue{
+		ID:            def.ID,
+		Name:          def.Name,
+		Description:   def.Description,
+		Location:      def.Workshop,
+		Shift:         "09:00-18:00",
+		Capacity:      def.Capacity,
+		Load:          0,
+		Utilisation:   math.Round(def.Metrics.WIPUtilisation * 100),
+		LeadTimeHours: def.TargetSLAHours,
+		Notes:         copyStrings(def.Notes),
+	}
+
+	if existing, ok := s.queues[def.ID]; ok {
+		queue.Load = existing.Load
+		if strings.TrimSpace(existing.Shift) != "" {
+			queue.Shift = existing.Shift
+		}
+		if len(existing.Notes) > 0 && len(queue.Notes) == 0 {
+			queue.Notes = append([]string{}, existing.Notes...)
+		}
+	}
+
+	s.queues[def.ID] = queue
+}
+
+func (s *StaticService) queueHasCardsLocked(queueID string) bool {
+	for _, record := range s.cards {
+		if strings.EqualFold(record.card.QueueID, queueID) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *StaticService) pickDefaultQueueLocked() string {
+	if _, ok := s.queueDefs[s.defaultQueue]; ok {
+		return s.defaultQueue
+	}
+	for id := range s.queueDefs {
+		return id
+	}
+	return ""
+}
+
+func queuePriorityLabel(priority int) string {
+	if priority <= 0 {
+		return "P3"
+	}
+	return fmt.Sprintf("P%d", priority)
+}
+
+func queueFilterOptionsFromMap(values map[string]int) []QueueFilterOption {
+	if len(values) == 0 {
+		return nil
+	}
+	options := make([]QueueFilterOption, 0, len(values))
+	for value, count := range values {
+		label := strings.TrimSpace(value)
+		if label == "" {
+			label = "未設定"
+		}
+		options = append(options, QueueFilterOption{
+			Value: value,
+			Label: label,
+			Count: count,
+		})
+	}
+	sort.Slice(options, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(options[i].Label), strings.ToLower(options[j].Label)) < 0
+	})
+	return options
+}
+
+func cloneQueueDefinition(def QueueDefinition) QueueDefinition {
+	out := def
+	out.Notes = copyStrings(def.Notes)
+	out.WorkCenters = cloneQueueWorkCenters(def.WorkCenters)
+	out.Roles = cloneQueueRoles(def.Roles)
+	out.Stages = cloneQueueStages(def.Stages)
+	return out
+}
+
+func cloneQueueStages(stages []QueueStage) []QueueStage {
+	if len(stages) == 0 {
+		return nil
+	}
+	out := make([]QueueStage, len(stages))
+	copy(out, stages)
+	return out
+}
+
+func cloneQueueWorkCenters(items []QueueWorkCenterAssignment) []QueueWorkCenterAssignment {
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]QueueWorkCenterAssignment, len(items))
+	copy(out, items)
+	return out
+}
+
+func cloneQueueRoles(items []QueueRoleAssignment) []QueueRoleAssignment {
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]QueueRoleAssignment, len(items))
+	copy(out, items)
+	return out
+}
+
+func copyStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			continue
+		}
+		out = append(out, trimmed)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func uniqueStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]bool)
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		result = append(result, trimmed)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func maxInt(value, fallback int) int {
+	if value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func calculateQueueMetrics(capacity int, existing QueueDefinitionMetrics) QueueDefinitionMetrics {
+	if capacity <= 0 {
+		capacity = 1
+	}
+	throughput := float64(capacity) * 1.3
+	if existing.ThroughputPerShift > 0 {
+		throughput = math.Max(existing.ThroughputPerShift*0.85, throughput)
+	}
+	utilisation := math.Min(0.95, float64(capacity)/float64(capacity+12))
+	sla := existing.SLACompliance
+	if sla <= 0 {
+		sla = 0.85
+	}
+	return QueueDefinitionMetrics{
+		ThroughputPerShift: throughput,
+		WIPUtilisation:     utilisation,
+		SLACompliance:      sla,
+	}
 }
 
 func cloneReasons(items []QCReason) []QCReason {

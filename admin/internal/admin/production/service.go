@@ -20,6 +20,18 @@ type Service interface {
 	RecordQCDecision(ctx context.Context, token, orderID string, req QCDecisionRequest) (QCDecisionResult, error)
 	// TriggerRework routes a failed QC item back to the requested stage with metadata.
 	TriggerRework(ctx context.Context, token, orderID string, req QCReworkRequest) (QCReworkResult, error)
+	// QueueSettings returns production queue definitions for the settings page with applied filters.
+	QueueSettings(ctx context.Context, token string, query QueueSettingsQuery) (QueueSettingsResult, error)
+	// QueueSettingsDetail returns the detailed configuration for a specific queue definition.
+	QueueSettingsDetail(ctx context.Context, token, queueID string) (QueueDefinition, error)
+	// QueueSettingsOptions returns selectable metadata used to populate queue definition forms.
+	QueueSettingsOptions(ctx context.Context, token string) (QueueSettingsOptions, error)
+	// CreateQueueDefinition registers a new production queue definition.
+	CreateQueueDefinition(ctx context.Context, token string, input QueueDefinitionInput) (QueueDefinition, error)
+	// UpdateQueueDefinition updates an existing production queue definition.
+	UpdateQueueDefinition(ctx context.Context, token, queueID string, input QueueDefinitionInput) (QueueDefinition, error)
+	// DeleteQueueDefinition removes a production queue definition.
+	DeleteQueueDefinition(ctx context.Context, token, queueID string) error
 }
 
 var (
@@ -35,6 +47,10 @@ var (
 	ErrQCItemNotFound = errors.New("qc item not found")
 	// ErrQCInvalidAction indicates the requested QC transition is not allowed.
 	ErrQCInvalidAction = errors.New("qc action invalid for current state")
+	// ErrQueueNameExists indicates a queue with the same name already exists.
+	ErrQueueNameExists = errors.New("queue name already exists")
+	// ErrQueueInvalidInput indicates the provided queue input is invalid.
+	ErrQueueInvalidInput = errors.New("queue definition input invalid")
 )
 
 // Stage represents a workflow step on the production board.
@@ -529,4 +545,155 @@ func StageLabel(stage Stage) string {
 	default:
 		return string(stage)
 	}
+}
+
+// QueueSettingsQuery captures filters for the production queue settings view.
+type QueueSettingsQuery struct {
+	Workshop    string
+	Status      string
+	ProductLine string
+	Search      string
+	SelectedID  string
+}
+
+// QueueSettingsResult represents the response payload used by the settings page.
+type QueueSettingsResult struct {
+	Queues    []QueueDefinition
+	Filters   QueueSettingsFilters
+	Summary   QueueSettingsSummary
+	Analytics QueueAnalytics
+}
+
+// QueueSettingsFilters enumerates selectable filter options with counts.
+type QueueSettingsFilters struct {
+	Workshops    []QueueFilterOption
+	Statuses     []QueueFilterOption
+	ProductLines []QueueFilterOption
+}
+
+// QueueFilterOption describes a selectable filter option.
+type QueueFilterOption struct {
+	Value string
+	Label string
+	Count int
+}
+
+// QueueSettingsSummary aggregates headline metrics for the settings page.
+type QueueSettingsSummary struct {
+	TotalQueues     int
+	ActiveQueues    int
+	TotalCapacity   int
+	AverageSLAHours float64
+}
+
+// QueueAnalytics captures capacity and flow analytics across filtered queues.
+type QueueAnalytics struct {
+	AverageThroughputPerShift float64
+	AverageWIPUtilisation     float64
+}
+
+// QueueDefinition models the persisted configuration of a production queue.
+type QueueDefinition struct {
+	ID             string
+	Name           string
+	Description    string
+	Workshop       string
+	ProductLine    string
+	Priority       int
+	PriorityLabel  string
+	Capacity       int
+	TargetSLAHours int
+	Active         bool
+	Notes          []string
+	Metrics        QueueDefinitionMetrics
+	WorkCenters    []QueueWorkCenterAssignment
+	Roles          []QueueRoleAssignment
+	Stages         []QueueStage
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// QueueDefinitionMetrics summarises operational metrics for a queue.
+type QueueDefinitionMetrics struct {
+	ThroughputPerShift float64
+	WIPUtilisation     float64
+	SLACompliance      float64
+}
+
+// QueueStage describes a workflow stage within a queue definition.
+type QueueStage struct {
+	Code           Stage
+	Label          string
+	Sequence       int
+	Description    string
+	WIPLimit       int
+	TargetSLAHours int
+}
+
+// QueueWorkCenter captures metadata about an assignable work center.
+type QueueWorkCenter struct {
+	ID         string
+	Name       string
+	Location   string
+	Capability string
+	Active     bool
+}
+
+// QueueWorkCenterAssignment associates a work center with a queue.
+type QueueWorkCenterAssignment struct {
+	WorkCenter QueueWorkCenter
+	Primary    bool
+}
+
+// QueueRoleOption exposes selectable roles for staffing a queue.
+type QueueRoleOption struct {
+	Key                string
+	Label              string
+	SuggestedHeadcount int
+}
+
+// QueueRoleAssignment records the staffing levels for a role within the queue.
+type QueueRoleAssignment struct {
+	Key       string
+	Label     string
+	Headcount int
+}
+
+// QueueSettingsOptions provides selectable metadata for queue definition forms.
+type QueueSettingsOptions struct {
+	WorkCenters    []QueueWorkCenter
+	RoleOptions    []QueueRoleOption
+	StageTemplates []QueueStage
+}
+
+// QueueDefinitionInput captures the fields required to create or update a queue.
+type QueueDefinitionInput struct {
+	Name                string
+	Description         string
+	Workshop            string
+	ProductLine         string
+	Priority            int
+	Capacity            int
+	TargetSLAHours      int
+	Active              bool
+	Notes               []string
+	WorkCenterIDs       []string
+	PrimaryWorkCenterID string
+	Roles               []QueueRoleAssignmentInput
+	Stages              []QueueStageInput
+}
+
+// QueueRoleAssignmentInput captures staffing adjustments supplied by the UI.
+type QueueRoleAssignmentInput struct {
+	Key       string
+	Headcount int
+}
+
+// QueueStageInput captures stage adjustments supplied by the UI.
+type QueueStageInput struct {
+	Code           Stage
+	Label          string
+	Description    string
+	WIPLimit       int
+	TargetSLAHours int
 }

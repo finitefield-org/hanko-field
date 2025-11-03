@@ -826,20 +826,31 @@ func sampleBoardResult() adminproduction.BoardResult {
 }
 
 type productionStub struct {
-	boardResult   adminproduction.BoardResult
-	boardErr      error
-	appendResult  adminproduction.AppendEventResult
-	appendErr     error
-	lastOrderID   string
-	appendCalls   []adminproduction.AppendEventRequest
-	workOrder     adminproduction.WorkOrder
-	workErr       error
-	qcResult      adminproduction.QCResult
-	qcErr         error
-	qcDecision    adminproduction.QCDecisionResult
-	qcDecisionErr error
-	qcRework      adminproduction.QCReworkResult
-	qcReworkErr   error
+	boardResult      adminproduction.BoardResult
+	boardErr         error
+	appendResult     adminproduction.AppendEventResult
+	appendErr        error
+	lastOrderID      string
+	appendCalls      []adminproduction.AppendEventRequest
+	workOrder        adminproduction.WorkOrder
+	workErr          error
+	qcResult         adminproduction.QCResult
+	qcErr            error
+	qcDecision       adminproduction.QCDecisionResult
+	qcDecisionErr    error
+	qcRework         adminproduction.QCReworkResult
+	qcReworkErr      error
+	queueSettings    adminproduction.QueueSettingsResult
+	queueSettingsErr error
+	queueDetail      adminproduction.QueueDefinition
+	queueDetailErr   error
+	queueOptions     adminproduction.QueueSettingsOptions
+	queueOptionsErr  error
+	createdQueue     adminproduction.QueueDefinition
+	createQueueErr   error
+	updatedQueue     adminproduction.QueueDefinition
+	updateQueueErr   error
+	deleteQueueErr   error
 }
 
 func (s *productionStub) Board(ctx context.Context, token string, query adminproduction.BoardQuery) (adminproduction.BoardResult, error) {
@@ -918,6 +929,54 @@ func (s *productionStub) TriggerRework(ctx context.Context, token, orderID strin
 		result.Item.ID = orderID
 	}
 	return result, nil
+}
+
+func (s *productionStub) QueueSettings(ctx context.Context, token string, query adminproduction.QueueSettingsQuery) (adminproduction.QueueSettingsResult, error) {
+	if s.queueSettingsErr != nil {
+		return adminproduction.QueueSettingsResult{}, s.queueSettingsErr
+	}
+	return s.queueSettings, nil
+}
+
+func (s *productionStub) QueueSettingsDetail(ctx context.Context, token, queueID string) (adminproduction.QueueDefinition, error) {
+	if s.queueDetailErr != nil {
+		return adminproduction.QueueDefinition{}, s.queueDetailErr
+	}
+	if s.queueDetail.ID == "" {
+		return adminproduction.QueueDefinition{ID: queueID, Name: "Stub Queue"}, nil
+	}
+	return s.queueDetail, nil
+}
+
+func (s *productionStub) QueueSettingsOptions(ctx context.Context, token string) (adminproduction.QueueSettingsOptions, error) {
+	if s.queueOptionsErr != nil {
+		return adminproduction.QueueSettingsOptions{}, s.queueOptionsErr
+	}
+	return s.queueOptions, nil
+}
+
+func (s *productionStub) CreateQueueDefinition(ctx context.Context, token string, input adminproduction.QueueDefinitionInput) (adminproduction.QueueDefinition, error) {
+	if s.createQueueErr != nil {
+		return adminproduction.QueueDefinition{}, s.createQueueErr
+	}
+	if s.createdQueue.ID == "" {
+		return adminproduction.QueueDefinition{ID: "new-queue", Name: input.Name}, nil
+	}
+	return s.createdQueue, nil
+}
+
+func (s *productionStub) UpdateQueueDefinition(ctx context.Context, token, queueID string, input adminproduction.QueueDefinitionInput) (adminproduction.QueueDefinition, error) {
+	if s.updateQueueErr != nil {
+		return adminproduction.QueueDefinition{}, s.updateQueueErr
+	}
+	if s.updatedQueue.ID == "" {
+		return adminproduction.QueueDefinition{ID: queueID, Name: input.Name}, nil
+	}
+	return s.updatedQueue, nil
+}
+
+func (s *productionStub) DeleteQueueDefinition(ctx context.Context, token, queueID string) error {
+	return s.deleteQueueErr
 }
 
 type dashboardStub struct {
