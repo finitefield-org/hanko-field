@@ -90,6 +90,7 @@ type (
 	SystemHealthReport        = domain.SystemHealthReport
 	SystemTask                = domain.SystemTask
 	SystemTaskStatus          = domain.SystemTaskStatus
+	SystemError               = domain.SystemError
 	AuditLogEntry             = domain.AuditLogEntry
 	SignedAssetResponse       = domain.SignedAssetResponse
 	PromotionUsage            = domain.PromotionUsage
@@ -443,7 +444,19 @@ type AssetService interface {
 type SystemService interface {
 	HealthReport(ctx context.Context) (SystemHealthReport, error)
 	ListAuditLogs(ctx context.Context, filter AuditLogFilter) (domain.CursorPage[AuditLogEntry], error)
+	ListSystemErrors(ctx context.Context, filter SystemErrorFilter) (domain.CursorPage[SystemError], error)
+	ListSystemTasks(ctx context.Context, filter SystemTaskFilter) (domain.CursorPage[SystemTask], error)
 	NextCounterValue(ctx context.Context, cmd CounterCommand) (int64, error)
+}
+
+// SystemErrorStore exposes access to aggregated failure records used by system monitoring endpoints.
+type SystemErrorStore interface {
+	ListSystemErrors(ctx context.Context, filter SystemErrorFilter) (domain.CursorPage[SystemError], error)
+}
+
+// SystemTaskStore surfaces background task records for operational dashboards.
+type SystemTaskStore interface {
+	ListSystemTasks(ctx context.Context, filter SystemTaskFilter) (domain.CursorPage[SystemTask], error)
 }
 
 // ExportService coordinates data export tasks to downstream analytics systems.
@@ -1230,6 +1243,26 @@ type SignedUploadCommand struct {
 type SignedDownloadCommand struct {
 	ActorID string
 	AssetID string
+}
+
+// SystemErrorFilter controls the retrieval of failure records exposed via system error endpoints.
+type SystemErrorFilter struct {
+	Sources    []string
+	JobTypes   []string
+	Statuses   []string
+	Severities []string
+	Search     string
+	DateRange  domain.RangeQuery[time.Time]
+	Pagination Pagination
+}
+
+// SystemTaskFilter applies pagination and attribute filters to system task listings.
+type SystemTaskFilter struct {
+	Statuses    []SystemTaskStatus
+	Kinds       []string
+	RequestedBy string
+	DateRange   domain.RangeQuery[time.Time]
+	Pagination  Pagination
 }
 
 // AuditLogRecord defines the payload accepted by the audit writer service.

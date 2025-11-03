@@ -552,6 +552,31 @@ type SystemTask struct {
 	CompletedAt    *time.Time
 }
 
+// SystemError surfaces failed background jobs or system failures for operational monitoring.
+type SystemError struct {
+	ID              string
+	Source          string
+	Queue           string
+	Kind            string
+	JobType         string
+	Status          string
+	Severity        string
+	Code            string
+	Message         string
+	SafeMessage     string
+	Occurrences     int
+	Retryable       bool
+	RetryEndpoint   *string
+	RetryMethod     string
+	TaskRef         *string
+	Metadata        map[string]any
+	Sensitive       map[string]any
+	FirstOccurredAt time.Time
+	LastOccurredAt  time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 // ReviewStatus indicates the moderation state of a review.
 type ReviewStatus string
 

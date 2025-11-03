@@ -505,6 +505,7 @@ func main() {
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
 	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, counterService, auditService, handlers.WithAdminCounterAllowedScopes("orders", "invoices"))
 	adminOperationsHandlers := handlers.NewAdminOperationsHandlers(authenticator, exportService)
+	adminSystemHandlers := handlers.NewAdminSystemHandlers(authenticator, systemService)
 
 	adminRegistrars := []handlers.RouteRegistrar{
 		adminCatalogHandlers.Routes,
@@ -514,6 +515,7 @@ func main() {
 		adminProductionQueueHandlers.Routes,
 		adminInvoiceHandlers.Routes,
 		adminOperationsHandlers.Routes,
+		adminSystemHandlers.Routes,
 		adminCounterHandlers.Routes,
 		adminReviewHandlers.Routes,
 		adminUserHandlers.Routes,

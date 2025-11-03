@@ -27,6 +27,14 @@ func (s *routerStubSystemService) ListAuditLogs(context.Context, services.AuditL
 	return domain.CursorPage[domain.AuditLogEntry]{}, nil
 }
 
+func (s *routerStubSystemService) ListSystemErrors(context.Context, services.SystemErrorFilter) (domain.CursorPage[domain.SystemError], error) {
+	return domain.CursorPage[domain.SystemError]{}, nil
+}
+
+func (s *routerStubSystemService) ListSystemTasks(context.Context, services.SystemTaskFilter) (domain.CursorPage[domain.SystemTask], error) {
+	return domain.CursorPage[domain.SystemTask]{}, nil
+}
+
 func (s *routerStubSystemService) NextCounterValue(context.Context, services.CounterCommand) (int64, error) {
 	return 0, nil
 }
