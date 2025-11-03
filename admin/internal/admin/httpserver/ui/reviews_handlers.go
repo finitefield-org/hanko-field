@@ -43,15 +43,19 @@ func (h *Handlers) ReviewsModerationPage(w http.ResponseWriter, r *http.Request)
 		result = adminreviews.ListResult{}
 	}
 
+	basePath := custommw.BasePathFromContext(ctx)
 	selectedID := req.selected
 	if selectedID == "" && len(result.Reviews) > 0 {
 		selectedID = result.Reviews[0].ID
 	}
 
-	basePath := custommw.BasePathFromContext(ctx)
-	table := reviewstpl.TablePayload(basePath, req.state, result, selectedID, errMsg)
 	detail := reviewstpl.DetailPayload(basePath, selectedID, result)
-	page := reviewstpl.BuildPageData(basePath, req.state, result, table, detail)
+	actualSelected := detail.SelectedID
+	state := req.state
+	state.Selected = actualSelected
+
+	table := reviewstpl.TablePayload(basePath, state, result, actualSelected, errMsg)
+	page := reviewstpl.BuildPageData(basePath, state, result, table, detail)
 
 	templ.Handler(reviewstpl.Index(page)).ServeHTTP(w, r)
 }
@@ -75,14 +79,19 @@ func (h *Handlers) ReviewsModerationTable(w http.ResponseWriter, r *http.Request
 		result = adminreviews.ListResult{}
 	}
 
+	basePath := custommw.BasePathFromContext(ctx)
 	selectedID := req.selected
 	if selectedID == "" && len(result.Reviews) > 0 {
 		selectedID = result.Reviews[0].ID
 	}
 
-	basePath := custommw.BasePathFromContext(ctx)
-	table := reviewstpl.TablePayload(basePath, req.state, result, selectedID, errMsg)
 	detail := reviewstpl.DetailPayload(basePath, selectedID, result)
+	actualSelected := detail.SelectedID
+	state := req.state
+	state.Selected = actualSelected
+
+	table := reviewstpl.TablePayload(basePath, state, result, actualSelected, errMsg)
+	req.selected = actualSelected
 	if canonical := canonicalReviewsURL(basePath, req); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
