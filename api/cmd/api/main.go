@@ -437,6 +437,26 @@ func main() {
 		shipmentService services.ShipmentService
 		exportService   services.ExportService
 	)
+	exportLogger := logger.Named("exports")
+	exportPublisher := services.NewNoopExportPublisher()
+	exportService, err = services.NewExportService(services.ExportServiceDeps{
+		Publisher: exportPublisher,
+		Clock:     time.Now,
+		IDGenerator: func() string {
+			return ulid.Make().String()
+		},
+		Logger: func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			exportLogger.Debug("export log", zFields...)
+		},
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise export service", zap.Error(err))
+	}
 	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
 
 	projectID := traceProjectID(cfg)
