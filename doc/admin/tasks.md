@@ -78,7 +78,7 @@
 - [x] [Build customer detail page (`/admin/customers/{uid}`) showing orders, addresses, payment methods, and support notes.](doc/admin/tasks/052-build-customer-detail-page-admin-customers-uid-showing-orders-addresses-payment-methods-an.md)
 - [x] [Implement deactivate-and-mask modal tied to `POST /users/{uid}:deactivate-and-mask` with confirmation and audit log output.](doc/admin/tasks/053-implement-deactivate-and-mask-modal-tied-to-post-users-uid-deactivate-and-mask-with-confir.md)
 - [x] [Implement review moderation dashboard (`/admin/reviews?moderation=pending`) with table fragment showing review details and filters.](doc/admin/tasks/054-implement-review-moderation-dashboard-admin-reviews-moderation-pending-with-table-fragment.md)
-- [ ] [Build moderation modal(s) for approve/reject (`PUT /admin/reviews/{id}:moderate`) and store reply (`POST /admin/reviews/{id}:store-reply`).](doc/admin/tasks/055-build-moderation-modal-s-for-approve-reject-put-admin-reviews-id-moderate-and-store-reply-.md)
+- [x] [Build moderation modal(s) for approve/reject (`PUT /admin/reviews/{id}:moderate`) and store reply (`POST /admin/reviews/{id}:store-reply`).](doc/admin/tasks/055-build-moderation-modal-s-for-approve-reject-put-admin-reviews-id-moderate-and-store-reply-.md)
 
 ## 10. Production Queues & Org Management
 - [ ] [Implement production queue settings page (`/admin/production-queues`) with CRUD modals for queue definitions.](doc/admin/tasks/056-implement-production-queue-settings-page-admin-production-queues-with-crud-modals-for-queu.md)

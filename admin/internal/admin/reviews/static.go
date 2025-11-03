@@ -273,6 +273,18 @@ func NewStaticService() *StaticService {
 					makeHistory("hist-1038-1", "approved", "published", "ブランドトーン確認済み", "success", "遠藤（マーケ）", 4*24*time.Hour),
 				},
 			),
+			Replies: []Reply{
+				{
+					ID:             "reply-1038-1",
+					Body:           "素敵なレビューをありがとうございます！制作チームにも共有させていただきます。",
+					IsPublic:       true,
+					NotifyCustomer: true,
+					AuthorName:     "遠藤（マーケ）",
+					AuthorEmail:    "marketing@example.com",
+					CreatedAt:      now.Add(-4 * 24 * time.Hour),
+					LastUpdatedAt:  now.Add(-4 * 24 * time.Hour),
+				},
+			},
 			Preview: Preview{
 				DisplayName: "MISAKI",
 				ProductName: "ハンドエングレーブドリング",
@@ -313,6 +325,18 @@ func NewStaticService() *StaticService {
 					makeHistory("hist-1031-1", "rejected", "hidden", "返金済みレビュー", "info", "サポートチーム", 7*24*time.Hour),
 				},
 			),
+			Replies: []Reply{
+				{
+					ID:             "reply-1031-1",
+					Body:           "ご不便をおかけし申し訳ありません。サポートより別途ご連絡差し上げます。",
+					IsPublic:       false,
+					NotifyCustomer: true,
+					AuthorName:     "サポートチーム",
+					AuthorEmail:    "support@example.com",
+					CreatedAt:      now.Add(-6 * 24 * time.Hour),
+					LastUpdatedAt:  now.Add(-6 * 24 * time.Hour),
+				},
+			},
 			Preview: Preview{
 				DisplayName: "匿名",
 				ProductName: "モノグラムペンダント",
@@ -393,6 +417,169 @@ func (s *StaticService) List(ctx context.Context, token string, query ListQuery)
 		Queue:       queue,
 		GeneratedAt: s.generatedAt,
 	}, nil
+}
+
+// ModerationModal loads contextual data for rendering the moderation modal.
+func (s *StaticService) ModerationModal(ctx context.Context, _ string, reviewID string, decision ModerationDecision) (ModerationModal, error) {
+	review, _ := s.findReview(strings.TrimSpace(reviewID))
+	if review == nil {
+		return ModerationModal{}, ErrReviewNotFound
+	}
+	if !isValidDecision(decision) {
+		return ModerationModal{}, ErrInvalidDecision
+	}
+
+	flags := make([]ModerationFlag, 0, len(review.Flags))
+	for _, flag := range review.Flags {
+		flags = append(flags, ModerationFlag{
+			Label:       firstNonEmpty(flag.Label, flag.Type),
+			Description: flag.Description,
+			Tone:        flag.Tone,
+		})
+	}
+
+	return ModerationModal{
+		ReviewID:           review.ID,
+		Decision:           decision,
+		DecisionLabel:      moderationDecisionLabel(decision),
+		ReviewTitle:        review.Title,
+		ReviewExcerpt:      trimText(review.Body, 220),
+		Rating:             review.Rating,
+		CustomerName:       review.Customer.Name,
+		CustomerEmail:      review.Customer.Email,
+		CurrentStatus:      review.Moderation.Status,
+		CurrentStatusLabel: review.Moderation.StatusLabel,
+		CurrentStatusTone:  review.Moderation.StatusTone,
+		ExistingNotes:      review.Moderation.Notes,
+		Escalated:          review.Moderation.Escalated,
+		Flags:              flags,
+	}, nil
+}
+
+// Moderate applies a decision and returns the updated review.
+func (s *StaticService) Moderate(ctx context.Context, _ string, reviewID string, req ModerationRequest) (ModerationResult, error) {
+	if !isValidDecision(req.Decision) {
+		return ModerationResult{}, ErrInvalidDecision
+	}
+	review, idx := s.findReview(strings.TrimSpace(reviewID))
+	if review == nil {
+		return ModerationResult{}, ErrReviewNotFound
+	}
+
+	now := time.Now()
+	notes := strings.TrimSpace(req.Notes)
+	actor := actorLabel(req.ActorName, req.ActorEmail)
+	status := ModerationApproved
+	if req.Decision == ModerationDecisionReject {
+		status = ModerationRejected
+	}
+	statusLabel, statusTone := moderationStatusPresentation(status)
+	event := ModerationEvent{
+		ID:        fmt.Sprintf("hist-%s-%d", review.ID, now.UnixNano()),
+		Action:    string(req.Decision),
+		Outcome:   moderationOutcome(req.Decision),
+		Reason:    notes,
+		Actor:     actor,
+		Tone:      moderationEventTone(req.Decision),
+		CreatedAt: now,
+	}
+	if req.NotifyCustomer {
+		if event.Reason != "" {
+			event.Reason += " / "
+		}
+		event.Reason += "顧客に通知しました"
+	}
+
+	review.Moderation.Status = status
+	review.Moderation.StatusLabel = statusLabel
+	review.Moderation.StatusTone = statusTone
+	review.Moderation.Notes = notes
+	review.Moderation.LastModerator = actor
+	review.Moderation.LastActionAt = now
+	review.Moderation.Escalated = false
+	review.Moderation.History = append([]ModerationEvent{event}, review.Moderation.History...)
+	if req.Decision == ModerationDecisionApprove {
+		review.Reported = false
+	}
+
+	updated := *review
+	s.reviews[idx] = updated
+	s.generatedAt = now
+
+	return ModerationResult{Review: updated}, nil
+}
+
+// ReplyModal returns context for storing a storefront reply.
+func (s *StaticService) ReplyModal(ctx context.Context, _ string, reviewID string) (ReplyModal, error) {
+	review, _ := s.findReview(strings.TrimSpace(reviewID))
+	if review == nil {
+		return ReplyModal{}, ErrReviewNotFound
+	}
+	var existing *Reply
+	if len(review.Replies) > 0 {
+		cp := review.Replies[0]
+		existing = &cp
+	}
+	return ReplyModal{
+		ReviewID:      review.ID,
+		ReviewTitle:   review.Title,
+		CustomerName:  review.Customer.Name,
+		CustomerEmail: review.Customer.Email,
+		Rating:        review.Rating,
+		ExistingReply: existing,
+	}, nil
+}
+
+// StoreReply records a reply and returns the updated review.
+func (s *StaticService) StoreReply(ctx context.Context, _ string, reviewID string, req ReplyRequest) (ReplyResult, error) {
+	body := strings.TrimSpace(req.Body)
+	if body == "" {
+		return ReplyResult{}, ErrEmptyReplyBody
+	}
+	review, idx := s.findReview(strings.TrimSpace(reviewID))
+	if review == nil {
+		return ReplyResult{}, ErrReviewNotFound
+	}
+
+	now := time.Now()
+	actor := actorLabel(req.ActorName, req.ActorEmail)
+	reply := Reply{
+		ID:             fmt.Sprintf("reply-%s-%d", review.ID, now.UnixNano()),
+		Body:           body,
+		IsPublic:       req.IsPublic,
+		NotifyCustomer: req.NotifyCustomer,
+		AuthorName:     actor,
+		AuthorEmail:    req.ActorEmail,
+		CreatedAt:      now,
+		LastUpdatedAt:  now,
+	}
+	review.Replies = append([]Reply{reply}, review.Replies...)
+
+	event := ModerationEvent{
+		ID:        fmt.Sprintf("reply-%s-%d", review.ID, now.UnixNano()),
+		Action:    "reply",
+		Outcome:   replyOutcome(req.IsPublic),
+		Reason:    body,
+		Actor:     actor,
+		Tone:      "info",
+		CreatedAt: now,
+	}
+	if req.NotifyCustomer {
+		event.Reason += " / 顧客へ通知"
+	}
+
+	review.Moderation.History = append([]ModerationEvent{event}, review.Moderation.History...)
+	review.Moderation.LastModerator = actor
+	review.Moderation.LastActionAt = now
+	if strings.TrimSpace(review.Moderation.Notes) == "" {
+		review.Moderation.Notes = "返信を登録しました。"
+	}
+
+	updated := *review
+	s.reviews[idx] = updated
+	s.generatedAt = now
+
+	return ReplyResult{Review: updated, Reply: reply}, nil
 }
 
 func (s *StaticService) clone() []Review {
@@ -738,4 +925,101 @@ func containsString(list []string, value string) bool {
 		}
 	}
 	return false
+}
+
+func (s *StaticService) findReview(id string) (*Review, int) {
+	for idx := range s.reviews {
+		if strings.EqualFold(strings.TrimSpace(s.reviews[idx].ID), strings.TrimSpace(id)) {
+			return &s.reviews[idx], idx
+		}
+	}
+	return nil, -1
+}
+
+func isValidDecision(decision ModerationDecision) bool {
+	switch decision {
+	case ModerationDecisionApprove, ModerationDecisionReject:
+		return true
+	default:
+		return false
+	}
+}
+
+func moderationDecisionLabel(decision ModerationDecision) string {
+	switch decision {
+	case ModerationDecisionApprove:
+		return "承認して公開"
+	case ModerationDecisionReject:
+		return "却下 / 修正依頼"
+	default:
+		return "モデレーション"
+	}
+}
+
+func moderationStatusPresentation(status ModerationStatus) (string, string) {
+	switch status {
+	case ModerationApproved:
+		return "公開済み", "success"
+	case ModerationRejected:
+		return "非公開", "slate"
+	default:
+		return "レビュー待ち", "warning"
+	}
+}
+
+func moderationOutcome(decision ModerationDecision) string {
+	switch decision {
+	case ModerationDecisionApprove:
+		return "published"
+	case ModerationDecisionReject:
+		return "hidden"
+	default:
+		return "pending"
+	}
+}
+
+func moderationEventTone(decision ModerationDecision) string {
+	switch decision {
+	case ModerationDecisionApprove:
+		return "success"
+	case ModerationDecisionReject:
+		return "warning"
+	default:
+		return "info"
+	}
+}
+
+func replyOutcome(isPublic bool) string {
+	if isPublic {
+		return "public_reply"
+	}
+	return "private_reply"
+}
+
+func actorLabel(name, email string) string {
+	if strings.TrimSpace(name) != "" {
+		return strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(email) != "" {
+		return strings.TrimSpace(email)
+	}
+	return "スタッフ"
+}
+
+func trimText(text string, limit int) string {
+	text = strings.TrimSpace(text)
+	if limit <= 0 || len([]rune(text)) <= limit {
+		return text
+	}
+	runes := []rune(text)
+	return string(runes[:limit]) + "…"
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

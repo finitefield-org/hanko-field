@@ -9,10 +9,31 @@ import (
 // ErrNotConfigured indicates the reviews service dependency has not been provided.
 var ErrNotConfigured = errors.New("reviews service not configured")
 
+// ErrReviewNotFound indicates the requested review does not exist.
+var ErrReviewNotFound = errors.New("review not found")
+
+// ErrInvalidDecision indicates the provided moderation decision is unsupported.
+var ErrInvalidDecision = errors.New("invalid moderation decision")
+
+// ErrEmptyReplyBody indicates the reply body was empty.
+var ErrEmptyReplyBody = errors.New("reply body cannot be empty")
+
 // Service exposes review moderation data to the admin UI.
 type Service interface {
 	// List returns reviews matching the provided moderation query.
 	List(ctx context.Context, token string, query ListQuery) (ListResult, error)
+
+	// ModerationModal loads contextual data for rendering the approval / rejection modal.
+	ModerationModal(ctx context.Context, token, reviewID string, decision ModerationDecision) (ModerationModal, error)
+
+	// Moderate submits a moderation decision for the specified review and returns the updated review.
+	Moderate(ctx context.Context, token, reviewID string, req ModerationRequest) (ModerationResult, error)
+
+	// ReplyModal loads contextual data for capturing a storefront reply for the specified review.
+	ReplyModal(ctx context.Context, token, reviewID string) (ReplyModal, error)
+
+	// StoreReply persists a storefront reply for the specified review and returns the updated review.
+	StoreReply(ctx context.Context, token, reviewID string, req ReplyRequest) (ReplyResult, error)
 }
 
 // ModerationStatus represents the moderation state of a review.
@@ -25,6 +46,16 @@ const (
 	ModerationApproved ModerationStatus = "approved"
 	// ModerationRejected indicates the review has been rejected.
 	ModerationRejected ModerationStatus = "rejected"
+)
+
+// ModerationDecision represents an approval or rejection choice.
+type ModerationDecision string
+
+const (
+	// ModerationDecisionApprove approves a review for publication.
+	ModerationDecisionApprove ModerationDecision = "approve"
+	// ModerationDecisionReject rejects a review.
+	ModerationDecisionReject ModerationDecision = "reject"
 )
 
 // SortDirection captures ascending / descending preference.
@@ -171,6 +202,7 @@ type Review struct {
 	Product     Product
 	Order       Order
 	Moderation  Moderation
+	Replies     []Reply
 	Preview     Preview
 }
 
@@ -266,4 +298,82 @@ type Preview struct {
 	Rating      int
 	Photos      []Attachment
 	SubmittedAt time.Time
+}
+
+// Reply represents a recorded storefront response from staff.
+type Reply struct {
+	ID             string
+	Body           string
+	IsPublic       bool
+	NotifyCustomer bool
+	AuthorName     string
+	AuthorEmail    string
+	CreatedAt      time.Time
+	LastUpdatedAt  time.Time
+}
+
+// ModerationModal provides context for moderation decisions.
+type ModerationModal struct {
+	ReviewID           string
+	Decision           ModerationDecision
+	DecisionLabel      string
+	ReviewTitle        string
+	ReviewExcerpt      string
+	Rating             int
+	CustomerName       string
+	CustomerEmail      string
+	CurrentStatus      ModerationStatus
+	CurrentStatusLabel string
+	CurrentStatusTone  string
+	ExistingNotes      string
+	Escalated          bool
+	Flags              []ModerationFlag
+}
+
+// ModerationFlag summarises a review flag for modal context.
+type ModerationFlag struct {
+	Label       string
+	Description string
+	Tone        string
+}
+
+// ModerationRequest encapsulates the moderation decision payload.
+type ModerationRequest struct {
+	Decision       ModerationDecision
+	Notes          string
+	NotifyCustomer bool
+	ActorID        string
+	ActorName      string
+	ActorEmail     string
+}
+
+// ModerationResult returns the updated review after a moderation decision.
+type ModerationResult struct {
+	Review Review
+}
+
+// ReplyModal encapsulates the data required to render the reply modal.
+type ReplyModal struct {
+	ReviewID      string
+	ReviewTitle   string
+	CustomerName  string
+	CustomerEmail string
+	Rating        int
+	ExistingReply *Reply
+}
+
+// ReplyRequest captures the payload for storing a reply.
+type ReplyRequest struct {
+	Body           string
+	IsPublic       bool
+	NotifyCustomer bool
+	ActorID        string
+	ActorName      string
+	ActorEmail     string
+}
+
+// ReplyResult returns the updated review and the stored reply.
+type ReplyResult struct {
+	Review Review
+	Reply  Reply
 }

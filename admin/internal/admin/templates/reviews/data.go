@@ -193,6 +193,8 @@ type DetailReview struct {
 	HelpfulYes        string
 	HelpfulNo         string
 	Moderation        DetailModeration
+	Replies           []DetailReply
+	ReplyActionURL    string
 	Preview           PreviewView
 }
 
@@ -248,6 +250,17 @@ type DetailModeration struct {
 	Actions      []ActionButton
 }
 
+// DetailReply renders stored storefront replies.
+type DetailReply struct {
+	ID              string
+	Body            string
+	Author          string
+	CreatedAt       string
+	CreatedRelative string
+	IsPublic        bool
+	Notified        bool
+}
+
 // ModerationEventView renders history timeline entries.
 type ModerationEventView struct {
 	Label    string
@@ -278,6 +291,70 @@ type PreviewView struct {
 	Rating      int
 	Photos      []AttachmentView
 	Submitted   string
+}
+
+// ModerationModalData powers the approve/reject modal.
+type ModerationModalData struct {
+	Title          string
+	Description    string
+	ActionURL      string
+	DecisionValue  string
+	DecisionLabel  string
+	ReviewID       string
+	ReviewTitle    string
+	ReviewExcerpt  string
+	Rating         int
+	CustomerName   string
+	CustomerEmail  string
+	StatusLabel    string
+	StatusTone     string
+	Notes          string
+	Flags          []ModalFlag
+	CSRFToken      string
+	NotifyCustomer bool
+	SelectedID     string
+}
+
+// ModalFlag renders flag details within modals.
+type ModalFlag struct {
+	Label       string
+	Description string
+	Tone        string
+}
+
+// ReplyModalData powers the reply capture modal.
+type ReplyModalData struct {
+	Title          string
+	Description    string
+	ActionURL      string
+	ReviewID       string
+	ReviewTitle    string
+	CustomerName   string
+	CustomerEmail  string
+	Rating         int
+	Body           string
+	IsPublic       bool
+	NotifyCustomer bool
+	CSRFToken      string
+	Error          string
+	SelectedID     string
+	ExistingReply  *ReplySummary
+}
+
+// ReplySummary shows previous reply context within the modal.
+type ReplySummary struct {
+	Body            string
+	Author          string
+	CreatedAt       string
+	CreatedRelative string
+	IsPublic        bool
+	Notified        bool
+}
+
+// RefreshPayload is returned after moderation/reply actions to refresh fragments.
+type RefreshPayload struct {
+	Table  TableData
+	Detail DetailData
 }
 
 // BuildPageData assembles the full page payload.
@@ -597,6 +674,28 @@ func toDetailReview(basePath string, review adminreviews.Review) DetailReview {
 		})
 	}
 
+	replies := make([]DetailReply, 0, len(review.Replies))
+	for _, reply := range review.Replies {
+		author := strings.TrimSpace(reply.AuthorName)
+		if author == "" {
+			author = strings.TrimSpace(reply.AuthorEmail)
+		}
+		if author == "" {
+			author = "スタッフ"
+		}
+		replies = append(replies, DetailReply{
+			ID:              reply.ID,
+			Body:            reply.Body,
+			Author:          author,
+			CreatedAt:       helpers.Date(reply.CreatedAt, "2006-01-02 15:04"),
+			CreatedRelative: helpers.Relative(reply.CreatedAt),
+			IsPublic:        reply.IsPublic,
+			Notified:        reply.NotifyCustomer,
+		})
+	}
+
+	replyURL := joinBase(basePath, fmt.Sprintf("/reviews/%s/modal/reply", review.ID))
+
 	return DetailReview{
 		ID:                review.ID,
 		Title:             review.Title,
@@ -626,12 +725,14 @@ func toDetailReview(basePath string, review adminreviews.Review) DetailReview {
 			OrderNumber: review.Order.Number,
 			OrderURL:    review.Order.URL,
 		},
-		Flags:       flags,
-		Attachments: attachments,
-		HelpfulYes:  fmt.Sprintf("%d", review.Helpful.Yes),
-		HelpfulNo:   fmt.Sprintf("%d", review.Helpful.No),
-		Moderation:  toDetailModeration(basePath, review),
-		Preview:     toPreviewView(review),
+		Flags:          flags,
+		Attachments:    attachments,
+		HelpfulYes:     fmt.Sprintf("%d", review.Helpful.Yes),
+		HelpfulNo:      fmt.Sprintf("%d", review.Helpful.No),
+		Moderation:     toDetailModeration(basePath, review),
+		Replies:        replies,
+		ReplyActionURL: replyURL,
+		Preview:        toPreviewView(review),
 	}
 }
 
@@ -650,6 +751,7 @@ func toDetailModeration(basePath string, review adminreviews.Review) DetailModer
 
 	approveURL := joinBase(basePath, fmt.Sprintf("/reviews/%s/modal/moderate?decision=approve", review.ID))
 	rejectURL := joinBase(basePath, fmt.Sprintf("/reviews/%s/modal/moderate?decision=reject", review.ID))
+	replyURL := joinBase(basePath, fmt.Sprintf("/reviews/%s/modal/reply", review.ID))
 
 	actions := []ActionButton{
 		{
@@ -666,6 +768,15 @@ func toDetailModeration(basePath string, review adminreviews.Review) DetailModer
 			Variant:  "secondary",
 			Icon:     "📝",
 			HxGet:    rejectURL,
+			HxTarget: "#modal",
+			HxSwap:   "innerHTML",
+			Disabled: false,
+		},
+		{
+			Label:    "返信を記録",
+			Variant:  "ghost",
+			Icon:     "💬",
+			HxGet:    replyURL,
 			HxTarget: "#modal",
 			HxSwap:   "innerHTML",
 			Disabled: false,
@@ -703,6 +814,112 @@ func toPreviewView(review adminreviews.Review) PreviewView {
 		Photos:      photos,
 		Submitted:   helpers.Relative(review.Preview.SubmittedAt),
 	}
+}
+
+// ModerationModalPayload converts service payload into template data.
+func ModerationModalPayload(basePath string, modal adminreviews.ModerationModal, csrfToken string, _ string) ModerationModalData {
+	flags := make([]ModalFlag, 0, len(modal.Flags))
+	for _, flag := range modal.Flags {
+		flags = append(flags, ModalFlag{
+			Label:       flag.Label,
+			Description: flag.Description,
+			Tone:        flag.Tone,
+		})
+	}
+
+	description := "ブランドトーンメモを記録し、必要に応じて顧客へ通知します。"
+	if modal.Decision == adminreviews.ModerationDecisionReject {
+		description = "却下理由を記録し、顧客通知が必要な場合はメール送信を有効にしてください。"
+	}
+	notify := modal.Decision == adminreviews.ModerationDecisionReject
+
+	return ModerationModalData{
+		Title:          modal.DecisionLabel,
+		Description:    description,
+		ActionURL:      joinBase(basePath, fmt.Sprintf("/reviews/%s:moderate", modal.ReviewID)),
+		DecisionValue:  string(modal.Decision),
+		DecisionLabel:  modal.DecisionLabel,
+		ReviewID:       modal.ReviewID,
+		ReviewTitle:    modal.ReviewTitle,
+		ReviewExcerpt:  modal.ReviewExcerpt,
+		Rating:         modal.Rating,
+		CustomerName:   modal.CustomerName,
+		CustomerEmail:  modal.CustomerEmail,
+		StatusLabel:    modal.CurrentStatusLabel,
+		StatusTone:     modal.CurrentStatusTone,
+		Notes:          modal.ExistingNotes,
+		Flags:          flags,
+		CSRFToken:      csrfToken,
+		NotifyCustomer: notify,
+		SelectedID:     modal.ReviewID,
+	}
+}
+
+// ReplyModalPayload assembles reply modal data, preferring submitted form values when provided.
+func ReplyModalPayload(basePath string, modal adminreviews.ReplyModal, csrfToken string, _ string, body string, notifyCustomer bool, isPublic bool, errMsg string) ReplyModalData {
+	useProvided := strings.TrimSpace(body) != "" || strings.TrimSpace(errMsg) != ""
+
+	initialBody := body
+	initialNotify := notifyCustomer
+	initialPublic := isPublic
+
+	if !useProvided {
+		if modal.ExistingReply != nil {
+			initialBody = modal.ExistingReply.Body
+			initialNotify = modal.ExistingReply.NotifyCustomer
+			initialPublic = modal.ExistingReply.IsPublic
+		} else {
+			initialBody = ""
+			initialNotify = true
+			initialPublic = true
+		}
+	}
+
+	var summary *ReplySummary
+	if modal.ExistingReply != nil {
+		summary = &ReplySummary{
+			Body:            modal.ExistingReply.Body,
+			Author:          modal.ExistingReply.AuthorName,
+			CreatedAt:       helpers.Date(modal.ExistingReply.CreatedAt, "2006-01-02 15:04"),
+			CreatedRelative: helpers.Relative(modal.ExistingReply.CreatedAt),
+			IsPublic:        modal.ExistingReply.IsPublic,
+			Notified:        modal.ExistingReply.NotifyCustomer,
+		}
+		if summary.Author == "" {
+			summary.Author = modal.ExistingReply.AuthorEmail
+		}
+		if summary.Author == "" {
+			summary.Author = "スタッフ"
+		}
+	}
+
+	return ReplyModalData{
+		Title:          "返信を記録",
+		Description:    "ストアフロントに表示する返信文を記録します。必要に応じて内部メモとして保存できます。",
+		ActionURL:      joinBase(basePath, fmt.Sprintf("/reviews/%s:store-reply", modal.ReviewID)),
+		ReviewID:       modal.ReviewID,
+		ReviewTitle:    modal.ReviewTitle,
+		CustomerName:   modal.CustomerName,
+		CustomerEmail:  modal.CustomerEmail,
+		Rating:         modal.Rating,
+		Body:           initialBody,
+		IsPublic:       initialPublic,
+		NotifyCustomer: initialNotify,
+		CSRFToken:      csrfToken,
+		Error:          errMsg,
+		SelectedID:     modal.ReviewID,
+		ExistingReply:  summary,
+	}
+}
+
+// ModerationSuccessPayload wraps refreshed table/detail fragments.
+func ModerationSuccessPayload(table TableData, detail DetailData) RefreshPayload {
+	return RefreshPayload{Table: table, Detail: detail}
+}
+
+// ReplySuccessPayload wraps refreshed table/detail fragments after storing a reply.
+func ReplySuccessPayload(table TableData, detail DetailData) RefreshPayload {
+	return RefreshPayload{Table: table, Detail: detail}
 }
 
 func cleanQuery(raw string, moderation string) string {
