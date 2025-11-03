@@ -250,6 +250,27 @@ class ProfileSectionRoute implements IndependentRoute {
   String toString() => 'ProfileSectionRoute(${sectionSegments.join('/')})';
 }
 
+/// ガイドコンテンツ
+class GuidesRoute implements IndependentRoute {
+  GuidesRoute({List<String> sectionSegments = const []})
+    : sectionSegments = List.unmodifiable(sectionSegments);
+
+  final List<String> sectionSegments;
+
+  @override
+  Widget get page => GuidesPage(sectionSegments: sectionSegments);
+
+  @override
+  Object stackKey(AppTab tab, int index) =>
+      'guides-${sectionSegments.isEmpty ? 'root' : sectionSegments.join('-')}-$index';
+
+  @override
+  List<String> get pathSegments => ['guides', ...sectionSegments];
+
+  @override
+  String toString() => 'GuidesRoute(sectionSegments: $sectionSegments)';
+}
+
 /// グローバル通知スタック
 class NotificationsRoute implements IndependentRoute {
   const NotificationsRoute();

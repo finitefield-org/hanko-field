@@ -5,6 +5,7 @@ import 'package:app/core/routing/app_tab.dart';
 import 'package:app/core/ui/widgets/app_help_overlay.dart';
 import 'package:app/core/ui/widgets/app_top_app_bar.dart';
 import 'package:app/features/home/presentation/home_screen.dart';
+import 'package:app/features/shop/presentation/shop_home_screen.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,44 +69,7 @@ class _TabBody extends StatelessWidget {
 
     switch (tab) {
       case AppTab.shop:
-        final subtitle = _composeSubtitle(
-          '素材・商品詳細を Tab スタックで保持',
-          experience?.shopSubtitle,
-        );
-        final chips = <String>[
-          if (experience != null) ...[
-            '通貨: ${experience.currencySymbol} ${experience.currencyCode}',
-            if (experience.isDomestic) '国内配送' else '国際配送',
-          ],
-        ];
-        return _buildList(
-          context,
-          title: tab.headline,
-          subtitle: subtitle,
-          chips: chips,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.category_outlined),
-              title: const Text('素材 #onyx'),
-              onTap: () => _push(
-                ref,
-                ShopDetailRoute(entity: 'materials', identifier: 'onyx'),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.inventory_outlined),
-              title: const Text('商品 #seal-001 → addons'),
-              onTap: () => _push(
-                ref,
-                ShopDetailRoute(
-                  entity: 'products',
-                  identifier: 'seal-001',
-                  trailingSegments: const ['addons'],
-                ),
-              ),
-            ),
-          ],
-        );
+        return const ShopHomeScreen();
       case AppTab.orders:
         final subtitle = _composeSubtitle(
           '同じタブ内で注文詳細をスタック',

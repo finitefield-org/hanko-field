@@ -365,6 +365,154 @@ class HomeFeedRefreshedEvent extends AnalyticsEvent {
   }
 }
 
+class ShopCategorySelectedEvent extends AnalyticsEvent {
+  const ShopCategorySelectedEvent({
+    required this.categoryId,
+    required this.position,
+  });
+
+  final String categoryId;
+  final int position;
+
+  @override
+  String get name => 'shop_category_selected';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'category_id': categoryId,
+    'position': position,
+  };
+
+  @override
+  void validate() {
+    if (categoryId.isEmpty || categoryId.length > 64) {
+      throw ArgumentError.value(
+        categoryId,
+        'categoryId',
+        'Category id must be 1-64 characters.',
+      );
+    }
+    if (position < 0) {
+      throw ArgumentError.value(
+        position,
+        'position',
+        'Position cannot be negative.',
+      );
+    }
+  }
+}
+
+class ShopPromotionTappedEvent extends AnalyticsEvent {
+  const ShopPromotionTappedEvent({
+    required this.promotionId,
+    required this.position,
+  });
+
+  final String promotionId;
+  final int position;
+
+  @override
+  String get name => 'shop_promotion_tapped';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'promotion_id': promotionId,
+    'position': position,
+  };
+
+  @override
+  void validate() {
+    if (promotionId.isEmpty || promotionId.length > 64) {
+      throw ArgumentError.value(
+        promotionId,
+        'promotionId',
+        'Promotion id must be 1-64 characters.',
+      );
+    }
+    if (position < 0) {
+      throw ArgumentError.value(
+        position,
+        'position',
+        'Position cannot be negative.',
+      );
+    }
+  }
+}
+
+class ShopMaterialSelectedEvent extends AnalyticsEvent {
+  const ShopMaterialSelectedEvent({
+    required this.materialId,
+    required this.position,
+  });
+
+  final String materialId;
+  final int position;
+
+  @override
+  String get name => 'shop_material_selected';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'material_id': materialId,
+    'position': position,
+  };
+
+  @override
+  void validate() {
+    if (materialId.isEmpty || materialId.length > 64) {
+      throw ArgumentError.value(
+        materialId,
+        'materialId',
+        'Material id must be 1-64 characters.',
+      );
+    }
+    if (position < 0) {
+      throw ArgumentError.value(
+        position,
+        'position',
+        'Position cannot be negative.',
+      );
+    }
+  }
+}
+
+class ShopGuideLinkTappedEvent extends AnalyticsEvent {
+  const ShopGuideLinkTappedEvent({
+    required this.linkId,
+    required this.position,
+  });
+
+  final String linkId;
+  final int position;
+
+  @override
+  String get name => 'shop_guide_link_tapped';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'link_id': linkId,
+    'position': position,
+  };
+
+  @override
+  void validate() {
+    if (linkId.isEmpty || linkId.length > 64) {
+      throw ArgumentError.value(
+        linkId,
+        'linkId',
+        'Link id must be 1-64 characters.',
+      );
+    }
+    if (position < 0) {
+      throw ArgumentError.value(
+        position,
+        'position',
+        'Position cannot be negative.',
+      );
+    }
+  }
+}
+
 class DesignCreationModeSelectedEvent extends AnalyticsEvent {
   const DesignCreationModeSelectedEvent({required this.mode, this.filter});
 

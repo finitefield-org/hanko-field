@@ -214,6 +214,12 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
           return AuthFlowRoute(nextPath: decoded);
         }
         return const AuthFlowRoute();
+      case 'guides':
+        return GuidesRoute(
+          sectionSegments: segments.length > 1
+              ? segments.sublist(1)
+              : const <String>[],
+        );
     }
     return null;
   }

@@ -152,3 +152,35 @@ class ProfileSectionPage extends StatelessWidget {
     );
   }
 }
+
+/// ガイド一覧/詳細
+class GuidesPage extends StatelessWidget {
+  const GuidesPage({required this.sectionSegments, super.key});
+
+  final List<String> sectionSegments;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = sectionSegments.isEmpty ? 'ガイド' : sectionSegments.join(' / ');
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ガイドコンテンツ', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            Text(
+              sectionSegments.isEmpty
+                  ? '文化・HowToガイドのエントリ一覧を表示します。'
+                  : '選択中のセクション: $title',
+            ),
+            const SizedBox(height: 12),
+            const Text('※ 本タスクではダミー表示です。'),
+          ],
+        ),
+      ),
+    );
+  }
+}
