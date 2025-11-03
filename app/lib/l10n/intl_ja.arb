@@ -143,6 +143,89 @@
 , "designPreviewShareOptionLinkSubtitle": "利用可能になったら共有リンクを生成します。"
 , "designPreviewShareCancel": "キャンセル"
 
+, "designShareTitle": "共有モックアップ"
+, "designShareSubtitle": "透かしやキャプション、ハッシュタグを設定してSNS向けのプレビューを作成します。"
+, "designShareCloseTooltip": "共有画面を閉じる"
+, "designShareCopyLinkTooltip": "公開リンクをコピー"
+, "designShareMissingSelection": "テンプレートと名前を選択してから共有アセットを生成してください。"
+, "designShareWatermarkLabel": "Hanko Field"
+, "designShareWatermarkToggleTitle": "Hanko Fieldの透かしを重ねる"
+, "designShareWatermarkToggleSubtitle": "試作共有向けに斜めの透かしを薄く追加します。"
+, "designShareHashtagToggleTitle": "ハッシュタグを追加"
+, "designShareHashtagToggleSubtitle": "共有時に推奨ハッシュタグを含めます。"
+, "designShareCaptionLabel": "共有キャプション"
+, "designShareCaptionHint": "短い説明文を書くか、下の候補を使用してください。"
+, "designShareSuggestionsLabel": "定型コピー"
+, "designShareSuggestionCelebrationLabel": "完成報告"
+, "designShareSuggestionCraftLabel": "制作ストーリー"
+, "designShareSuggestionLaunchLabel": "リリース告知"
+, "designShareSuggestionCelebrationText": "新しい印影「{name}」が完成しました。"
+, "@designShareSuggestionCelebrationText": {
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+, "designShareSuggestionCraftText": "{name}様のために{style}仕上げで制作しました。"
+, "@designShareSuggestionCraftText": {
+  "placeholders": {
+    "style": { "type": "String" },
+    "name": { "type": "String" }
+  }
+}
+, "designShareSuggestionCraftTextAlt": "丁寧に仕上げた印影を{name}様にご用意しました。"
+, "@designShareSuggestionCraftTextAlt": {
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+, "designShareSuggestionLaunchText": "{name}様のブランドローンチに向けて印影を準備しています。"
+, "@designShareSuggestionLaunchText": {
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+, "designShareHashtagsLabel": "ハッシュタグ"
+, "designShareQuickTargetsLabel": "クイック共有先"
+, "designShareAssistInstagram": "Instagramフィード"
+, "designShareAssistX": "X投稿"
+, "designShareAssistLinkedIn": "LinkedInアップデート"
+, "designShareShareButton": "共有シートを開く"
+, "designShareShareSubject": "{platform}向けモックアップを共有"
+, "@designShareShareSubject": {
+  "placeholders": {
+    "platform": { "type": "String" }
+  }
+}
+, "designShareShareSuccess": "共有シートを開きました。"
+, "designShareShareError": "モックアップの準備に失敗しました。もう一度お試しください。"
+, "designShareCopySuccess": "リンクをクリップボードにコピーしました。"
+, "designShareDefaultCaption": "{platform}で{name}様の印影を紹介します。"
+, "@designShareDefaultCaption": {
+  "placeholders": {
+    "name": { "type": "String" },
+    "platform": { "type": "String" }
+  }
+}
+, "designSharePlatformInstagram": "Instagram"
+, "designSharePlatformX": "X"
+, "designSharePlatformLinkedIn": "LinkedIn"
+, "designShareBackgroundSunsetGlow": "サンセットグロー"
+, "designShareBackgroundMorningMist": "モーニングミスト"
+, "designShareBackgroundNeoNoir": "ネオノワール"
+, "designShareBackgroundMidnight": "ミッドナイト"
+, "designShareBackgroundCyanGrid": "シアングリッド"
+, "designShareBackgroundGraphite": "グラファイト"
+, "designShareBackgroundStudio": "スタジオライト"
+, "designShareBackgroundNavySlate": "ネイビースレート"
+, "designShareBackgroundAquaFocus": "アクアフォーカス"
+, "designShareLastShared": "最終共有: {date} {time}"
+, "@designShareLastShared": {
+  "placeholders": {
+    "date": { "type": "String" },
+    "time": { "type": "String" }
+  }
+}
+
 , "designVersionHistoryTitle": "版の履歴"
 , "designVersionHistoryShowAllTooltip": "すべての項目を表示"
 , "designVersionHistoryShowChangesTooltip": "変更された項目のみ強調"

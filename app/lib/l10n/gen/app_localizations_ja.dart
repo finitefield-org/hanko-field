@@ -702,6 +702,152 @@ class AppLocalizationsJa extends AppLocalizations {
   String get designPreviewShareCancel => 'キャンセル';
 
   @override
+  String get designShareTitle => '共有モックアップ';
+
+  @override
+  String get designShareSubtitle => '透かしやキャプション、ハッシュタグを設定してSNS向けのプレビューを作成します。';
+
+  @override
+  String get designShareCloseTooltip => '共有画面を閉じる';
+
+  @override
+  String get designShareCopyLinkTooltip => '公開リンクをコピー';
+
+  @override
+  String get designShareMissingSelection => 'テンプレートと名前を選択してから共有アセットを生成してください。';
+
+  @override
+  String get designShareWatermarkLabel => 'Hanko Field';
+
+  @override
+  String get designShareWatermarkToggleTitle => 'Hanko Fieldの透かしを重ねる';
+
+  @override
+  String get designShareWatermarkToggleSubtitle => '試作共有向けに斜めの透かしを薄く追加します。';
+
+  @override
+  String get designShareHashtagToggleTitle => 'ハッシュタグを追加';
+
+  @override
+  String get designShareHashtagToggleSubtitle => '共有時に推奨ハッシュタグを含めます。';
+
+  @override
+  String get designShareCaptionLabel => '共有キャプション';
+
+  @override
+  String get designShareCaptionHint => '短い説明文を書くか、下の候補を使用してください。';
+
+  @override
+  String get designShareSuggestionsLabel => '定型コピー';
+
+  @override
+  String get designShareSuggestionCelebrationLabel => '完成報告';
+
+  @override
+  String get designShareSuggestionCraftLabel => '制作ストーリー';
+
+  @override
+  String get designShareSuggestionLaunchLabel => 'リリース告知';
+
+  @override
+  String designShareSuggestionCelebrationText(String name) {
+    return '新しい印影「$name」が完成しました。';
+  }
+
+  @override
+  String designShareSuggestionCraftText(String style, String name) {
+    return '$name様のために$style仕上げで制作しました。';
+  }
+
+  @override
+  String designShareSuggestionCraftTextAlt(String name) {
+    return '丁寧に仕上げた印影を$name様にご用意しました。';
+  }
+
+  @override
+  String designShareSuggestionLaunchText(String name) {
+    return '$name様のブランドローンチに向けて印影を準備しています。';
+  }
+
+  @override
+  String get designShareHashtagsLabel => 'ハッシュタグ';
+
+  @override
+  String get designShareQuickTargetsLabel => 'クイック共有先';
+
+  @override
+  String get designShareAssistInstagram => 'Instagramフィード';
+
+  @override
+  String get designShareAssistX => 'X投稿';
+
+  @override
+  String get designShareAssistLinkedIn => 'LinkedInアップデート';
+
+  @override
+  String get designShareShareButton => '共有シートを開く';
+
+  @override
+  String designShareShareSubject(String platform) {
+    return '$platform向けモックアップを共有';
+  }
+
+  @override
+  String get designShareShareSuccess => '共有シートを開きました。';
+
+  @override
+  String get designShareShareError => 'モックアップの準備に失敗しました。もう一度お試しください。';
+
+  @override
+  String get designShareCopySuccess => 'リンクをクリップボードにコピーしました。';
+
+  @override
+  String designShareDefaultCaption(String name, String platform) {
+    return '$platformで$name様の印影を紹介します。';
+  }
+
+  @override
+  String get designSharePlatformInstagram => 'Instagram';
+
+  @override
+  String get designSharePlatformX => 'X';
+
+  @override
+  String get designSharePlatformLinkedIn => 'LinkedIn';
+
+  @override
+  String get designShareBackgroundSunsetGlow => 'サンセットグロー';
+
+  @override
+  String get designShareBackgroundMorningMist => 'モーニングミスト';
+
+  @override
+  String get designShareBackgroundNeoNoir => 'ネオノワール';
+
+  @override
+  String get designShareBackgroundMidnight => 'ミッドナイト';
+
+  @override
+  String get designShareBackgroundCyanGrid => 'シアングリッド';
+
+  @override
+  String get designShareBackgroundGraphite => 'グラファイト';
+
+  @override
+  String get designShareBackgroundStudio => 'スタジオライト';
+
+  @override
+  String get designShareBackgroundNavySlate => 'ネイビースレート';
+
+  @override
+  String get designShareBackgroundAquaFocus => 'アクアフォーカス';
+
+  @override
+  String designShareLastShared(String date, String time) {
+    return '最終共有: $date $time';
+  }
+
+  @override
   String get designVersionHistoryTitle => '版の履歴';
 
   @override

@@ -1162,6 +1162,250 @@
   "description": "Button label to dismiss the share sheet"
 }
 
+, "designShareTitle": "Share mockups"
+, "@designShareTitle": {
+  "description": "Title for the share screen"
+}
+
+, "designShareSubtitle": "Craft social-ready previews with watermarks, captions, and hashtags."
+, "@designShareSubtitle": {
+  "description": "Subtitle shown on the share screen explaining its purpose"
+}
+
+, "designShareCloseTooltip": "Close share screen"
+, "@designShareCloseTooltip": {
+  "description": "Tooltip for the close button in the share screen app bar"
+}
+
+, "designShareCopyLinkTooltip": "Copy public link"
+, "@designShareCopyLinkTooltip": {
+  "description": "Tooltip for the copy link button in the share screen app bar"
+}
+
+, "designShareMissingSelection": "Select a template and enter content before generating share assets."
+, "@designShareMissingSelection": {
+  "description": "Message shown when the share screen is opened without a valid design selection"
+}
+
+, "designShareWatermarkLabel": "Hanko Field"
+, "@designShareWatermarkLabel": {
+  "description": "Text used for the watermark overlay"
+}
+
+, "designShareWatermarkToggleTitle": "Apply Hanko Field watermark"
+, "@designShareWatermarkToggleTitle": {
+  "description": "Title for the toggle that controls the watermark overlay"
+}
+
+, "designShareWatermarkToggleSubtitle": "Adds a subtle diagonal watermark for early previews."
+, "@designShareWatermarkToggleSubtitle": {
+  "description": "Subtitle describing the watermark toggle"
+}
+
+, "designShareHashtagToggleTitle": "Append hashtags"
+, "@designShareHashtagToggleTitle": {
+  "description": "Title for the toggle that controls whether hashtags are included"
+}
+
+, "designShareHashtagToggleSubtitle": "Include recommended hashtags when sharing."
+, "@designShareHashtagToggleSubtitle": {
+  "description": "Subtitle for the hashtag toggle"
+}
+
+, "designShareCaptionLabel": "Share caption"
+, "@designShareCaptionLabel": {
+  "description": "Label above the share caption text field"
+}
+
+, "designShareCaptionHint": "Write a short caption or use a suggestion below."
+, "@designShareCaptionHint": {
+  "description": "Hint text inside the caption text field"
+}
+
+, "designShareSuggestionsLabel": "Quick copy"
+, "@designShareSuggestionsLabel": {
+  "description": "Heading for suggested caption chips"
+}
+
+, "designShareSuggestionCelebrationLabel": "Announcement"
+, "@designShareSuggestionCelebrationLabel": {
+  "description": "Label for the celebration caption suggestion"
+}
+
+, "designShareSuggestionCraftLabel": "Craft story"
+, "@designShareSuggestionCraftLabel": {
+  "description": "Label for the craft caption suggestion"
+}
+
+, "designShareSuggestionLaunchLabel": "Launch hype"
+, "@designShareSuggestionLaunchLabel": {
+  "description": "Label for the launch caption suggestion"
+}
+
+, "designShareSuggestionCelebrationText": "Celebrating the new seal for {name}."
+, "@designShareSuggestionCelebrationText": {
+  "description": "Caption copy for the celebration preset",
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+
+, "designShareSuggestionCraftText": "Hand-finished {style} impression prepared for {name}."
+, "@designShareSuggestionCraftText": {
+  "description": "Caption copy for the craft preset",
+  "placeholders": {
+    "style": { "type": "String" },
+    "name": { "type": "String" }
+  }
+}
+
+, "designShareSuggestionCraftTextAlt": "Hand-finished seal impression prepared for {name}."
+, "@designShareSuggestionCraftTextAlt": {
+  "description": "Fallback craft caption when no style name is available",
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+
+, "designShareSuggestionLaunchText": "Getting {name}'s brand ready for launch with this seal."
+, "@designShareSuggestionLaunchText": {
+  "description": "Caption copy for the launch preset",
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+
+, "designShareHashtagsLabel": "Hashtags"
+, "@designShareHashtagsLabel": {
+  "description": "Heading above the hashtag chips"
+}
+
+, "designShareQuickTargetsLabel": "Quick targets"
+, "@designShareQuickTargetsLabel": {
+  "description": "Heading for the assist chips that switch platforms"
+}
+
+, "designShareAssistInstagram": "Instagram feed"
+, "@designShareAssistInstagram": {
+  "description": "Label for the Instagram assist chip"
+}
+
+, "designShareAssistX": "X post"
+, "@designShareAssistX": {
+  "description": "Label for the X assist chip"
+}
+
+, "designShareAssistLinkedIn": "LinkedIn update"
+, "@designShareAssistLinkedIn": {
+  "description": "Label for the LinkedIn assist chip"
+}
+
+, "designShareShareButton": "Open share sheet"
+, "@designShareShareButton": {
+  "description": "Label for the button that launches the native share sheet"
+}
+
+, "designShareShareSubject": "Share {platform} mockup"
+, "@designShareShareSubject": {
+  "description": "Subject provided to the share sheet",
+  "placeholders": {
+    "platform": { "type": "String" }
+  }
+}
+
+, "designShareShareSuccess": "Share sheet opened."
+, "@designShareShareSuccess": {
+  "description": "Snackbar message when share succeeds"
+}
+
+, "designShareShareError": "We couldn't prepare the mockup. Try again."
+, "@designShareShareError": {
+  "description": "Snackbar message when share fails"
+}
+
+, "designShareCopySuccess": "Link copied to clipboard."
+, "@designShareCopySuccess": {
+  "description": "Snackbar message after copying the share link"
+}
+
+, "designShareDefaultCaption": "Showcasing {name}'s seal on {platform}."
+, "@designShareDefaultCaption": {
+  "description": "Fallback caption used when the custom caption is empty",
+  "placeholders": {
+    "name": { "type": "String" },
+    "platform": { "type": "String" }
+  }
+}
+
+, "designSharePlatformInstagram": "Instagram"
+, "@designSharePlatformInstagram": {
+  "description": "Readable name for Instagram"
+}
+
+, "designSharePlatformX": "X"
+, "@designSharePlatformX": {
+  "description": "Readable name for X/Twitter"
+}
+
+, "designSharePlatformLinkedIn": "LinkedIn"
+, "@designSharePlatformLinkedIn": {
+  "description": "Readable name for LinkedIn"
+}
+
+, "designShareBackgroundSunsetGlow": "Sunset glow"
+, "@designShareBackgroundSunsetGlow": {
+  "description": "Label for the sunset background"
+}
+
+, "designShareBackgroundMorningMist": "Morning mist"
+, "@designShareBackgroundMorningMist": {
+  "description": "Label for the light neutral background"
+}
+
+, "designShareBackgroundNeoNoir": "Neo noir"
+, "@designShareBackgroundNeoNoir": {
+  "description": "Label for the dark neon background"
+}
+
+, "designShareBackgroundMidnight": "Midnight"
+, "@designShareBackgroundMidnight": {
+  "description": "Label for the midnight gradient background"
+}
+
+, "designShareBackgroundCyanGrid": "Cyan grid"
+, "@designShareBackgroundCyanGrid": {
+  "description": "Label for the cyan gradient background"
+}
+
+, "designShareBackgroundGraphite": "Graphite"
+, "@designShareBackgroundGraphite": {
+  "description": "Label for the graphite gradient background"
+}
+
+, "designShareBackgroundStudio": "Studio light"
+, "@designShareBackgroundStudio": {
+  "description": "Label for the neutral studio background"
+}
+
+, "designShareBackgroundNavySlate": "Navy slate"
+, "@designShareBackgroundNavySlate": {
+  "description": "Label for the navy background"
+}
+
+, "designShareBackgroundAquaFocus": "Aqua focus"
+, "@designShareBackgroundAquaFocus": {
+  "description": "Label for the aqua background"
+}
+
+, "designShareLastShared": "Last shared on {date} at {time}"
+, "@designShareLastShared": {
+  "description": "Message showing the last successful share timestamp",
+  "placeholders": {
+    "date": { "type": "String" },
+    "time": { "type": "String" }
+  }
+}
+
 , "designVersionHistoryTitle": "Version history"
 , "@designVersionHistoryTitle": {
   "description": "Title for the design version history screen"

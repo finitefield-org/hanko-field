@@ -725,6 +725,158 @@ class AppLocalizationsEn extends AppLocalizations {
   String get designPreviewShareCancel => 'Cancel';
 
   @override
+  String get designShareTitle => 'Share mockups';
+
+  @override
+  String get designShareSubtitle =>
+      'Craft social-ready previews with watermarks, captions, and hashtags.';
+
+  @override
+  String get designShareCloseTooltip => 'Close share screen';
+
+  @override
+  String get designShareCopyLinkTooltip => 'Copy public link';
+
+  @override
+  String get designShareMissingSelection =>
+      'Select a template and enter content before generating share assets.';
+
+  @override
+  String get designShareWatermarkLabel => 'Hanko Field';
+
+  @override
+  String get designShareWatermarkToggleTitle => 'Apply Hanko Field watermark';
+
+  @override
+  String get designShareWatermarkToggleSubtitle =>
+      'Adds a subtle diagonal watermark for early previews.';
+
+  @override
+  String get designShareHashtagToggleTitle => 'Append hashtags';
+
+  @override
+  String get designShareHashtagToggleSubtitle =>
+      'Include recommended hashtags when sharing.';
+
+  @override
+  String get designShareCaptionLabel => 'Share caption';
+
+  @override
+  String get designShareCaptionHint =>
+      'Write a short caption or use a suggestion below.';
+
+  @override
+  String get designShareSuggestionsLabel => 'Quick copy';
+
+  @override
+  String get designShareSuggestionCelebrationLabel => 'Announcement';
+
+  @override
+  String get designShareSuggestionCraftLabel => 'Craft story';
+
+  @override
+  String get designShareSuggestionLaunchLabel => 'Launch hype';
+
+  @override
+  String designShareSuggestionCelebrationText(String name) {
+    return 'Celebrating the new seal for $name.';
+  }
+
+  @override
+  String designShareSuggestionCraftText(String style, String name) {
+    return 'Hand-finished $style impression prepared for $name.';
+  }
+
+  @override
+  String designShareSuggestionCraftTextAlt(String name) {
+    return 'Hand-finished seal impression prepared for $name.';
+  }
+
+  @override
+  String designShareSuggestionLaunchText(String name) {
+    return 'Getting $name\'s brand ready for launch with this seal.';
+  }
+
+  @override
+  String get designShareHashtagsLabel => 'Hashtags';
+
+  @override
+  String get designShareQuickTargetsLabel => 'Quick targets';
+
+  @override
+  String get designShareAssistInstagram => 'Instagram feed';
+
+  @override
+  String get designShareAssistX => 'X post';
+
+  @override
+  String get designShareAssistLinkedIn => 'LinkedIn update';
+
+  @override
+  String get designShareShareButton => 'Open share sheet';
+
+  @override
+  String designShareShareSubject(String platform) {
+    return 'Share $platform mockup';
+  }
+
+  @override
+  String get designShareShareSuccess => 'Share sheet opened.';
+
+  @override
+  String get designShareShareError =>
+      'We couldn\'t prepare the mockup. Try again.';
+
+  @override
+  String get designShareCopySuccess => 'Link copied to clipboard.';
+
+  @override
+  String designShareDefaultCaption(String name, String platform) {
+    return 'Showcasing $name\'s seal on $platform.';
+  }
+
+  @override
+  String get designSharePlatformInstagram => 'Instagram';
+
+  @override
+  String get designSharePlatformX => 'X';
+
+  @override
+  String get designSharePlatformLinkedIn => 'LinkedIn';
+
+  @override
+  String get designShareBackgroundSunsetGlow => 'Sunset glow';
+
+  @override
+  String get designShareBackgroundMorningMist => 'Morning mist';
+
+  @override
+  String get designShareBackgroundNeoNoir => 'Neo noir';
+
+  @override
+  String get designShareBackgroundMidnight => 'Midnight';
+
+  @override
+  String get designShareBackgroundCyanGrid => 'Cyan grid';
+
+  @override
+  String get designShareBackgroundGraphite => 'Graphite';
+
+  @override
+  String get designShareBackgroundStudio => 'Studio light';
+
+  @override
+  String get designShareBackgroundNavySlate => 'Navy slate';
+
+  @override
+  String get designShareBackgroundAquaFocus => 'Aqua focus';
+
+  @override
+  String designShareLastShared(String date, String time) {
+    return 'Last shared on $date at $time';
+  }
+
+  @override
   String get designVersionHistoryTitle => 'Version history';
 
   @override

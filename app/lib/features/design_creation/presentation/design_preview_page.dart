@@ -63,7 +63,9 @@ class _DesignPreviewPageState extends ConsumerState<DesignPreviewPage> {
           IconButton(
             icon: const Icon(Icons.ios_share_outlined),
             tooltip: l10n.designPreviewShareTooltip,
-            onPressed: () => _showShareSheet(context, l10n),
+            onPressed: () => ref
+                .read(appStateProvider.notifier)
+                .push(CreationStageRoute(const ['share'])),
           ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -165,16 +167,6 @@ class _DesignPreviewPageState extends ConsumerState<DesignPreviewPage> {
         state.pendingInput?.rawName ??
         state.nameDraft?.combined ??
         l10n.designEditorFallbackText;
-  }
-
-  Future<void> _showShareSheet(BuildContext context, AppLocalizations l10n) {
-    return showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return _ShareSheet(l10n: l10n);
-      },
-    );
   }
 }
 
@@ -730,90 +722,6 @@ class _LightingChip extends StatelessWidget {
       onSelected: (_) => onSelected(preset),
       showCheckmark: false,
       avatar: selected ? const Icon(Icons.check, size: 18) : null,
-    );
-  }
-}
-
-class _ShareSheet extends StatelessWidget {
-  const _ShareSheet({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppTokens.spaceL,
-          vertical: AppTokens.spaceM,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.designPreviewShareSheetTitle,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppTokens.spaceS),
-            Text(
-              l10n.designPreviewShareSheetSubtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceL),
-            _ShareOptionTile(
-              icon: Icons.download_outlined,
-              title: l10n.designPreviewShareOptionSave,
-              subtitle: l10n.designPreviewShareOptionSaveSubtitle,
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            _ShareOptionTile(
-              icon: Icons.sms_outlined,
-              title: l10n.designPreviewShareOptionMessage,
-              subtitle: l10n.designPreviewShareOptionMessageSubtitle,
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            _ShareOptionTile(
-              icon: Icons.link_outlined,
-              title: l10n.designPreviewShareOptionLink,
-              subtitle: l10n.designPreviewShareOptionLinkSubtitle,
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            const SizedBox(height: AppTokens.spaceM),
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.designPreviewShareCancel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareOptionTile extends StatelessWidget {
-  const _ShareOptionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
     );
   }
 }

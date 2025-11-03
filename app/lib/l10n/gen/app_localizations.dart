@@ -1364,6 +1364,270 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get designPreviewShareCancel;
 
+  /// Title for the share screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share mockups'**
+  String get designShareTitle;
+
+  /// Subtitle shown on the share screen explaining its purpose
+  ///
+  /// In en, this message translates to:
+  /// **'Craft social-ready previews with watermarks, captions, and hashtags.'**
+  String get designShareSubtitle;
+
+  /// Tooltip for the close button in the share screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Close share screen'**
+  String get designShareCloseTooltip;
+
+  /// Tooltip for the copy link button in the share screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Copy public link'**
+  String get designShareCopyLinkTooltip;
+
+  /// Message shown when the share screen is opened without a valid design selection
+  ///
+  /// In en, this message translates to:
+  /// **'Select a template and enter content before generating share assets.'**
+  String get designShareMissingSelection;
+
+  /// Text used for the watermark overlay
+  ///
+  /// In en, this message translates to:
+  /// **'Hanko Field'**
+  String get designShareWatermarkLabel;
+
+  /// Title for the toggle that controls the watermark overlay
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Hanko Field watermark'**
+  String get designShareWatermarkToggleTitle;
+
+  /// Subtitle describing the watermark toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Adds a subtle diagonal watermark for early previews.'**
+  String get designShareWatermarkToggleSubtitle;
+
+  /// Title for the toggle that controls whether hashtags are included
+  ///
+  /// In en, this message translates to:
+  /// **'Append hashtags'**
+  String get designShareHashtagToggleTitle;
+
+  /// Subtitle for the hashtag toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Include recommended hashtags when sharing.'**
+  String get designShareHashtagToggleSubtitle;
+
+  /// Label above the share caption text field
+  ///
+  /// In en, this message translates to:
+  /// **'Share caption'**
+  String get designShareCaptionLabel;
+
+  /// Hint text inside the caption text field
+  ///
+  /// In en, this message translates to:
+  /// **'Write a short caption or use a suggestion below.'**
+  String get designShareCaptionHint;
+
+  /// Heading for suggested caption chips
+  ///
+  /// In en, this message translates to:
+  /// **'Quick copy'**
+  String get designShareSuggestionsLabel;
+
+  /// Label for the celebration caption suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Announcement'**
+  String get designShareSuggestionCelebrationLabel;
+
+  /// Label for the craft caption suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Craft story'**
+  String get designShareSuggestionCraftLabel;
+
+  /// Label for the launch caption suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Launch hype'**
+  String get designShareSuggestionLaunchLabel;
+
+  /// Caption copy for the celebration preset
+  ///
+  /// In en, this message translates to:
+  /// **'Celebrating the new seal for {name}.'**
+  String designShareSuggestionCelebrationText(String name);
+
+  /// Caption copy for the craft preset
+  ///
+  /// In en, this message translates to:
+  /// **'Hand-finished {style} impression prepared for {name}.'**
+  String designShareSuggestionCraftText(String style, String name);
+
+  /// Fallback craft caption when no style name is available
+  ///
+  /// In en, this message translates to:
+  /// **'Hand-finished seal impression prepared for {name}.'**
+  String designShareSuggestionCraftTextAlt(String name);
+
+  /// Caption copy for the launch preset
+  ///
+  /// In en, this message translates to:
+  /// **'Getting {name}\'s brand ready for launch with this seal.'**
+  String designShareSuggestionLaunchText(String name);
+
+  /// Heading above the hashtag chips
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtags'**
+  String get designShareHashtagsLabel;
+
+  /// Heading for the assist chips that switch platforms
+  ///
+  /// In en, this message translates to:
+  /// **'Quick targets'**
+  String get designShareQuickTargetsLabel;
+
+  /// Label for the Instagram assist chip
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram feed'**
+  String get designShareAssistInstagram;
+
+  /// Label for the X assist chip
+  ///
+  /// In en, this message translates to:
+  /// **'X post'**
+  String get designShareAssistX;
+
+  /// Label for the LinkedIn assist chip
+  ///
+  /// In en, this message translates to:
+  /// **'LinkedIn update'**
+  String get designShareAssistLinkedIn;
+
+  /// Label for the button that launches the native share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Open share sheet'**
+  String get designShareShareButton;
+
+  /// Subject provided to the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share {platform} mockup'**
+  String designShareShareSubject(String platform);
+
+  /// Snackbar message when share succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Share sheet opened.'**
+  String get designShareShareSuccess;
+
+  /// Snackbar message when share fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t prepare the mockup. Try again.'**
+  String get designShareShareError;
+
+  /// Snackbar message after copying the share link
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied to clipboard.'**
+  String get designShareCopySuccess;
+
+  /// Fallback caption used when the custom caption is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Showcasing {name}\'s seal on {platform}.'**
+  String designShareDefaultCaption(String name, String platform);
+
+  /// Readable name for Instagram
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram'**
+  String get designSharePlatformInstagram;
+
+  /// Readable name for X/Twitter
+  ///
+  /// In en, this message translates to:
+  /// **'X'**
+  String get designSharePlatformX;
+
+  /// Readable name for LinkedIn
+  ///
+  /// In en, this message translates to:
+  /// **'LinkedIn'**
+  String get designSharePlatformLinkedIn;
+
+  /// Label for the sunset background
+  ///
+  /// In en, this message translates to:
+  /// **'Sunset glow'**
+  String get designShareBackgroundSunsetGlow;
+
+  /// Label for the light neutral background
+  ///
+  /// In en, this message translates to:
+  /// **'Morning mist'**
+  String get designShareBackgroundMorningMist;
+
+  /// Label for the dark neon background
+  ///
+  /// In en, this message translates to:
+  /// **'Neo noir'**
+  String get designShareBackgroundNeoNoir;
+
+  /// Label for the midnight gradient background
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight'**
+  String get designShareBackgroundMidnight;
+
+  /// Label for the cyan gradient background
+  ///
+  /// In en, this message translates to:
+  /// **'Cyan grid'**
+  String get designShareBackgroundCyanGrid;
+
+  /// Label for the graphite gradient background
+  ///
+  /// In en, this message translates to:
+  /// **'Graphite'**
+  String get designShareBackgroundGraphite;
+
+  /// Label for the neutral studio background
+  ///
+  /// In en, this message translates to:
+  /// **'Studio light'**
+  String get designShareBackgroundStudio;
+
+  /// Label for the navy background
+  ///
+  /// In en, this message translates to:
+  /// **'Navy slate'**
+  String get designShareBackgroundNavySlate;
+
+  /// Label for the aqua background
+  ///
+  /// In en, this message translates to:
+  /// **'Aqua focus'**
+  String get designShareBackgroundAquaFocus;
+
+  /// Message showing the last successful share timestamp
+  ///
+  /// In en, this message translates to:
+  /// **'Last shared on {date} at {time}'**
+  String designShareLastShared(String date, String time);
+
   /// Title for the design version history screen
   ///
   /// In en, this message translates to:

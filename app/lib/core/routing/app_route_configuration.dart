@@ -9,6 +9,7 @@ import 'package:app/features/design_creation/presentation/design_kanji_mapping_p
 import 'package:app/features/design_creation/presentation/design_name_input_page.dart';
 import 'package:app/features/design_creation/presentation/design_preview_page.dart';
 import 'package:app/features/design_creation/presentation/design_registrability_check_page.dart';
+import 'package:app/features/design_creation/presentation/design_share_page.dart';
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
@@ -128,6 +129,9 @@ class CreationStageRoute implements IndependentRoute {
     }
     if (stageSegments.first == 'export') {
       return const DesignExportPage();
+    }
+    if (stageSegments.first == 'share') {
+      return const DesignSharePage();
     }
     if (stageSegments.first == 'versions') {
       return const DesignVersionHistoryPage();
