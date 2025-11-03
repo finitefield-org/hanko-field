@@ -635,7 +635,7 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
       final char = String.fromCharCode(codeUnit);
       if (RegExp(r'[a-z0-9]').hasMatch(char)) {
         buffer.write(char);
-      } else if (buffer.isNotEmpty &&
+      } else if (buffer.length > 0 &&
           buffer.toString().codeUnitAt(buffer.length - 1) != 0x2D) {
         buffer.write('-');
       }
