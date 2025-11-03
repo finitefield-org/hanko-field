@@ -68,6 +68,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
     if (detail.compatibleProductIds.isEmpty) {
       return;
     }
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -97,9 +98,8 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                         subtitle: const Text('対応製品詳細は今後追加予定です。'),
                         onTap: () {
                           Navigator.of(context).pop();
-                          final messenger = ScaffoldMessenger.of(context);
-                          messenger.hideCurrentSnackBar();
-                          messenger.showSnackBar(
+                          scaffoldMessenger.hideCurrentSnackBar();
+                          scaffoldMessenger.showSnackBar(
                             SnackBar(
                               content: Text('製品 $productId の詳細へ遷移（未実装）'),
                             ),
