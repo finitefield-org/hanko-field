@@ -21,6 +21,7 @@ import (
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
+	adminreviews "finitefield.org/hanko-admin/internal/admin/reviews"
 	"finitefield.org/hanko-admin/internal/admin/search"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
 )
@@ -40,6 +41,7 @@ func main() {
 		OrdersService:     buildOrdersService(),
 		ProductionService: buildProductionService(),
 		ShipmentsService:  shipmentsService,
+		ReviewsService:    buildReviewsService(),
 		Environment:       getEnv("ADMIN_ENVIRONMENT", "Development"),
 		Session: httpserver.SessionConfig{
 			CookieName:       getEnv("ADMIN_SESSION_COOKIE_NAME", ""),
@@ -212,6 +214,10 @@ func buildCatalogService() admincatalog.Service {
 
 func buildProductionService() adminproduction.Service {
 	return adminproduction.NewStaticService()
+}
+
+func buildReviewsService() adminreviews.Service {
+	return adminreviews.NewStaticService()
 }
 
 func buildShipmentsService(ctx context.Context) (adminshipments.Service, func()) {

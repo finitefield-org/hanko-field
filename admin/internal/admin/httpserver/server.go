@@ -22,6 +22,7 @@ import (
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	"finitefield.org/hanko-admin/internal/admin/rbac"
+	adminreviews "finitefield.org/hanko-admin/internal/admin/reviews"
 	"finitefield.org/hanko-admin/internal/admin/search"
 	appsession "finitefield.org/hanko-admin/internal/admin/session"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
@@ -45,6 +46,7 @@ type Config struct {
 	OrdersService        adminorders.Service
 	ShipmentsService     adminshipments.Service
 	ProductionService    adminproduction.Service
+	ReviewsService       adminreviews.Service
 	Session              SessionConfig
 	SessionStore         custommw.SessionStore
 	CSRFCookieName       string
@@ -118,6 +120,7 @@ func New(cfg Config) *http.Server {
 		OrdersService:        cfg.OrdersService,
 		ShipmentsService:     cfg.ShipmentsService,
 		ProductionService:    cfg.ProductionService,
+		ReviewsService:       cfg.ReviewsService,
 	})
 
 	mountAdminRoutes(router, basePath, routeOptions{
@@ -303,6 +306,11 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 					RegisterFragment(ur, "/export/jobs/{jobID}", uiHandlers.PromotionsUsageExportJobStatus)
 					ur.Post("/export", uiHandlers.PromotionsUsageExport)
 				})
+			})
+			protected.Route("/reviews", func(rr chi.Router) {
+				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))
+				rr.Get("/", uiHandlers.ReviewsModerationPage)
+				RegisterFragment(rr, "/table", uiHandlers.ReviewsModerationTable)
 			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
