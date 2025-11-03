@@ -180,6 +180,8 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 			},
 			Audit:    svc.Audit,
 			Counters: svc.Counters,
+			Errors:   services.NewNoopSystemErrorStore(),
+			Tasks:    services.NewNoopSystemTaskStore(),
 		})
 		if err != nil {
 			return Services{}, fmt.Errorf("build system service: %w", err)

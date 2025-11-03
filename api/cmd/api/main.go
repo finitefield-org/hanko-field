@@ -642,6 +642,8 @@ func newSystemService(ctx context.Context, client *firestore.Client, fetcher *se
 		Clock:            time.Now,
 		Build:            build,
 		Counters:         counters,
+		Errors:           services.NewNoopSystemErrorStore(),
+		Tasks:            services.NewNoopSystemTaskStore(),
 	})
 }
 
