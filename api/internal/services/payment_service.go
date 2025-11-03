@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	stripe "github.com/stripe/stripe-go/v78"
+
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/payments"
 	"github.com/hanko-field/api/internal/repositories"
@@ -96,9 +98,187 @@ func NewPaymentService(deps PaymentServiceDeps) (PaymentService, error) {
 	}, nil
 }
 
-// RecordWebhookEvent is not yet implemented for manual payment operations.
-func (s *paymentService) RecordWebhookEvent(context.Context, PaymentWebhookCommand) error {
-	return ErrPaymentUnavailable
+// RecordWebhookEvent reconciles PSP webhooks with persisted payments and orders.
+func (s *paymentService) RecordWebhookEvent(ctx context.Context, cmd PaymentWebhookCommand) error {
+	if s == nil || s.orders == nil || s.payments == nil {
+		return ErrPaymentUnavailable
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(cmd.Provider))
+	if provider == "" {
+		return fmt.Errorf("%w: provider is required", ErrPaymentInvalidInput)
+	}
+	if provider != "stripe" {
+		return fmt.Errorf("%w: provider %q not supported", ErrPaymentInvalidInput, cmd.Provider)
+	}
+	if len(cmd.Payload) == 0 {
+		return fmt.Errorf("%w: payload is required", ErrPaymentInvalidInput)
+	}
+
+	var event stripe.Event
+	if err := json.Unmarshal(cmd.Payload, &event); err != nil {
+		return fmt.Errorf("%w: unable to parse stripe event: %v", ErrPaymentInvalidInput, err)
+	}
+
+	eventID := strings.TrimSpace(event.ID)
+	if eventID == "" {
+		return fmt.Errorf("%w: stripe event id missing", ErrPaymentInvalidInput)
+	}
+
+	switch event.Type {
+	case stripe.EventTypePaymentIntentSucceeded, stripe.EventTypePaymentIntentPaymentFailed:
+		if event.Data == nil || len(event.Data.Raw) == 0 {
+			return fmt.Errorf("%w: payment intent payload missing", ErrPaymentInvalidInput)
+		}
+		var intent stripe.PaymentIntent
+		if err := json.Unmarshal(event.Data.Raw, &intent); err != nil {
+			return fmt.Errorf("%w: decode payment intent: %v", ErrPaymentInvalidInput, err)
+		}
+		meta := normalizeStripeMetadata(intent.Metadata)
+		orderID := meta.lookup("order_id", "orderId", "order")
+		if orderID == "" {
+			return fmt.Errorf("%w: payment intent missing order reference", ErrPaymentInvalidInput)
+		}
+		paymentID := meta.lookup("payment_id", "paymentId", "payment")
+		return s.handleStripePaymentIntentEvent(ctx, event, intent, orderID, paymentID)
+	case stripe.EventTypeChargeRefunded:
+		if event.Data == nil || len(event.Data.Raw) == 0 {
+			return fmt.Errorf("%w: charge payload missing", ErrPaymentInvalidInput)
+		}
+		var charge stripe.Charge
+		if err := json.Unmarshal(event.Data.Raw, &charge); err != nil {
+			return fmt.Errorf("%w: decode charge: %v", ErrPaymentInvalidInput, err)
+		}
+		meta := normalizeStripeMetadata(charge.Metadata)
+		orderID := meta.lookup("order_id", "orderId", "order")
+		if orderID == "" {
+			return fmt.Errorf("%w: charge missing order reference", ErrPaymentInvalidInput)
+		}
+		paymentID := meta.lookup("payment_id", "paymentId", "payment")
+		intentID := ""
+		if charge.PaymentIntent != nil {
+			intentID = strings.TrimSpace(charge.PaymentIntent.ID)
+		}
+		return s.handleStripeChargeRefunded(ctx, event, charge, orderID, paymentID, intentID)
+	default:
+		s.logger(ctx, "payments.webhook.ignored", map[string]any{
+			"provider":  provider,
+			"eventId":   eventID,
+			"eventType": string(event.Type),
+		})
+		return nil
+	}
+}
+
+func (s *paymentService) handleStripePaymentIntentEvent(ctx context.Context, event stripe.Event, intent stripe.PaymentIntent, orderID, paymentID string) error {
+	order, payment, err := s.loadOrderPaymentByReference(ctx, orderID, paymentID, intent.ID)
+	if err != nil {
+		return err
+	}
+
+	eventID := strings.TrimSpace(event.ID)
+	if isPaymentEventProcessed(payment.Raw, eventID) {
+		s.logger(ctx, "payments.webhook.duplicate", map[string]any{
+			"orderId":   order.ID,
+			"paymentId": payment.ID,
+			"eventId":   eventID,
+			"eventType": string(event.Type),
+		})
+		return nil
+	}
+
+	now := s.now()
+	raw := mergeAnyMaps(payment.Raw, eventPayloadMap(event))
+	status := mapStripeIntentStatus(intent.Status, event.Type)
+	captured, capturedAt := stripeIntentCaptureInfo(intent, event)
+
+	details := payments.PaymentDetails{
+		Provider:   "stripe",
+		IntentID:   strings.TrimSpace(intent.ID),
+		Status:     status,
+		Currency:   strings.ToUpper(string(intent.Currency)),
+		Captured:   captured,
+		CapturedAt: capturedAt,
+		Raw:        raw,
+	}
+	if intent.AmountReceived > 0 {
+		details.Amount = intent.AmountReceived
+	} else if intent.Amount > 0 {
+		details.Amount = intent.Amount
+	}
+
+	updated := applyPaymentDetails(payment, details, now)
+	if details.IntentID != "" {
+		updated.IntentID = details.IntentID
+	}
+	updated.Raw = markStripeEventProcessed(updated.Raw, event, now)
+
+	if err := s.persistPaymentUpdate(ctx, order, updated); err != nil {
+		return err
+	}
+
+	s.logger(ctx, "payments.webhook.payment_intent", map[string]any{
+		"orderId":   order.ID,
+		"paymentId": payment.ID,
+		"eventId":   eventID,
+		"eventType": string(event.Type),
+		"status":    updated.Status,
+	})
+	return nil
+}
+
+func (s *paymentService) handleStripeChargeRefunded(ctx context.Context, event stripe.Event, charge stripe.Charge, orderID, paymentID, intentID string) error {
+	order, payment, err := s.loadOrderPaymentByReference(ctx, orderID, paymentID, intentID)
+	if err != nil {
+		return err
+	}
+
+	eventID := strings.TrimSpace(event.ID)
+	if isPaymentEventProcessed(payment.Raw, eventID) {
+		s.logger(ctx, "payments.webhook.duplicate", map[string]any{
+			"orderId":   order.ID,
+			"paymentId": payment.ID,
+			"eventId":   eventID,
+			"eventType": string(event.Type),
+		})
+		return nil
+	}
+
+	now := s.now()
+	raw := mergeAnyMaps(payment.Raw, eventPayloadMap(event))
+	refundedAt := timeFromUnix(event.Created)
+
+	details := payments.PaymentDetails{
+		Provider:   "stripe",
+		IntentID:   strings.TrimSpace(intentID),
+		Status:     payments.StatusRefunded,
+		Currency:   strings.ToUpper(string(charge.Currency)),
+		Captured:   charge.Captured,
+		RefundedAt: refundedAt,
+		Raw:        raw,
+	}
+	if charge.PaymentIntent != nil && strings.TrimSpace(charge.PaymentIntent.ID) != "" {
+		details.IntentID = strings.TrimSpace(charge.PaymentIntent.ID)
+	}
+
+	updated := applyPaymentDetails(payment, details, now)
+	if details.IntentID != "" {
+		updated.IntentID = details.IntentID
+	}
+	updated.Raw = markStripeEventProcessed(updated.Raw, event, now)
+
+	if err := s.persistPaymentUpdate(ctx, order, updated); err != nil {
+		return err
+	}
+
+	s.logger(ctx, "payments.webhook.charge_refunded", map[string]any{
+		"orderId":      order.ID,
+		"paymentId":    payment.ID,
+		"eventId":      eventID,
+		"refundAmount": charge.AmountRefunded,
+		"currency":     strings.ToUpper(string(charge.Currency)),
+	})
+	return nil
 }
 
 // ManualCapture captures an authorised payment via the configured PSP.
@@ -300,6 +480,50 @@ func (s *paymentService) ListPayments(ctx context.Context, orderID string) ([]Pa
 		return nil, s.mapPaymentError(err)
 	}
 	return paymentsList, nil
+}
+
+func (s *paymentService) loadOrderPaymentByReference(ctx context.Context, orderID, paymentID, intentID string) (domain.Order, domain.Payment, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return domain.Order{}, domain.Payment{}, fmt.Errorf("%w: order id is required", ErrPaymentInvalidInput)
+	}
+
+	order, err := s.orders.FindByID(ctx, orderID)
+	if err != nil {
+		return domain.Order{}, domain.Payment{}, s.mapOrderError(err)
+	}
+
+	paymentsList, err := s.payments.List(ctx, orderID)
+	if err != nil {
+		return domain.Order{}, domain.Payment{}, s.mapPaymentError(err)
+	}
+
+	targetPaymentID := strings.TrimSpace(paymentID)
+	targetIntentID := strings.TrimSpace(intentID)
+
+	var payment domain.Payment
+	found := false
+	for _, p := range paymentsList {
+		if targetPaymentID != "" && strings.EqualFold(strings.TrimSpace(p.ID), targetPaymentID) {
+			payment = p
+			found = true
+			break
+		}
+		if targetPaymentID == "" && targetIntentID != "" && strings.EqualFold(strings.TrimSpace(p.IntentID), targetIntentID) {
+			payment = p
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		if targetPaymentID != "" {
+			return domain.Order{}, domain.Payment{}, fmt.Errorf("%w: payment %s not found for order %s", ErrPaymentNotFound, targetPaymentID, orderID)
+		}
+		return domain.Order{}, domain.Payment{}, fmt.Errorf("%w: payment intent %s not found for order %s", ErrPaymentNotFound, targetIntentID, orderID)
+	}
+
+	return order, payment, nil
 }
 
 func (s *paymentService) loadOrderPayment(ctx context.Context, orderID, paymentID string) (domain.Order, domain.Payment, error) {
@@ -651,4 +875,156 @@ func normalizeStringMap(values map[string]string) map[string]string {
 		return nil
 	}
 	return result
+}
+
+type stripeMetadata map[string]string
+
+func normalizeStripeMetadata(meta map[string]string) stripeMetadata {
+	if len(meta) == 0 {
+		return stripeMetadata{}
+	}
+	result := make(map[string]string, len(meta)*2)
+	for key, value := range meta {
+		trimmedKey := strings.TrimSpace(key)
+		trimmedValue := strings.TrimSpace(value)
+		if trimmedKey == "" || trimmedValue == "" {
+			continue
+		}
+		lower := strings.ToLower(trimmedKey)
+		result[lower] = trimmedValue
+		result[strings.ReplaceAll(lower, "_", "")] = trimmedValue
+	}
+	return stripeMetadata(result)
+}
+
+func (m stripeMetadata) lookup(keys ...string) string {
+	for _, key := range keys {
+		k := strings.ToLower(strings.TrimSpace(key))
+		if k == "" {
+			continue
+		}
+		if v, ok := m[k]; ok && strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+		noUnderscore := strings.ReplaceAll(k, "_", "")
+		if v, ok := m[noUnderscore]; ok && strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func mergeAnyMaps(base, updates map[string]any) map[string]any {
+	if len(base) == 0 && len(updates) == 0 {
+		return nil
+	}
+	result := make(map[string]any, len(base)+len(updates))
+	for k, v := range base {
+		result[k] = v
+	}
+	for k, v := range updates {
+		result[k] = v
+	}
+	return result
+}
+
+func eventPayloadMap(event stripe.Event) map[string]any {
+	if event.Data == nil {
+		return nil
+	}
+	if len(event.Data.Object) > 0 {
+		return cloneAnyMap(event.Data.Object)
+	}
+	if len(event.Data.Raw) > 0 {
+		var payload map[string]any
+		if err := json.Unmarshal(event.Data.Raw, &payload); err == nil {
+			return payload
+		}
+	}
+	return nil
+}
+
+func mapStripeIntentStatus(status stripe.PaymentIntentStatus, eventType stripe.EventType) payments.Status {
+	switch status {
+	case stripe.PaymentIntentStatusSucceeded:
+		return payments.StatusSucceeded
+	case stripe.PaymentIntentStatusCanceled, stripe.PaymentIntentStatusRequiresPaymentMethod:
+		return payments.StatusFailed
+	}
+	if eventType == stripe.EventTypePaymentIntentPaymentFailed {
+		return payments.StatusFailed
+	}
+	return payments.StatusPending
+}
+
+func stripeIntentCaptureInfo(intent stripe.PaymentIntent, event stripe.Event) (bool, *time.Time) {
+	if intent.LatestCharge != nil {
+		if intent.LatestCharge.Captured || intent.LatestCharge.Status == stripe.ChargeStatusSucceeded {
+			return true, timeFromUnix(intent.LatestCharge.Created)
+		}
+	}
+	if intent.Status == stripe.PaymentIntentStatusSucceeded {
+		if intent.Created > 0 {
+			return true, timeFromUnix(intent.Created)
+		}
+		return true, timeFromUnix(event.Created)
+	}
+	return false, nil
+}
+
+func timeFromUnix(ts int64) *time.Time {
+	if ts <= 0 {
+		return nil
+	}
+	t := time.Unix(ts, 0).UTC()
+	return &t
+}
+
+func timeFromUnixValue(ts int64) time.Time {
+	if ts <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(ts, 0).UTC()
+}
+
+func markStripeEventProcessed(raw map[string]any, event stripe.Event, processedAt time.Time) map[string]any {
+	result := mergeAnyMaps(raw, nil)
+	if result == nil {
+		result = make(map[string]any)
+	}
+
+	events := make(map[string]any)
+	if existing, ok := result["webhookEvents"].(map[string]any); ok && existing != nil {
+		events = cloneAnyMap(existing)
+	}
+
+	eventID := strings.TrimSpace(event.ID)
+	if eventID != "" {
+		events[eventID] = map[string]any{
+			"type":        string(event.Type),
+			"createdAt":   timeFromUnixValue(event.Created),
+			"processedAt": processedAt.UTC(),
+		}
+		result["webhookEvents"] = events
+		result["lastWebhookEvent"] = map[string]any{
+			"id":          eventID,
+			"type":        string(event.Type),
+			"createdAt":   timeFromUnixValue(event.Created),
+			"processedAt": processedAt.UTC(),
+		}
+	}
+
+	return result
+}
+
+func isPaymentEventProcessed(raw map[string]any, eventID string) bool {
+	if len(raw) == 0 || strings.TrimSpace(eventID) == "" {
+		return false
+	}
+	events, ok := raw["webhookEvents"].(map[string]any)
+	if !ok || events == nil {
+		return false
+	}
+	_, exists := events[strings.TrimSpace(eventID)]
+	return exists
 }

@@ -134,7 +134,7 @@
 - [x] [095 Implement system errors/tasks endpoints reading from failure queues/log storage.](./tasks/095-implement-system-errors-tasks-endpoints-reading-from-failure-queues-log-storage.md)
 
 ## 7. Webhooks (Inbound)
-- [ ] [096 Implement Stripe webhook handler validating signature and processing payment intent succeeded/failed and refund events.](./tasks/096-implement-stripe-webhook-handler-validating-signature-and-processing-payment-int.md)
+- [x] [096 Implement Stripe webhook handler validating signature and processing payment intent succeeded/failed and refund events.](./tasks/096-implement-stripe-webhook-handler-validating-signature-and-processing-payment-int.md)
 - [ ] [098 Implement shipping carrier webhook handler accepting updates per carrier and mapping payloads to shipment events.](./tasks/098-implement-shipping-carrier-webhook-handler-accepting-updates-per-carrier-and-map.md)
 - [ ] [099 Implement AI worker webhook handler updating AI job status and persisting generated suggestions.](./tasks/099-implement-ai-worker-webhook-handler-updating-ai-job-status-and-persisting-genera.md)
 - [ ] [100 Implement webhook security middleware (IP filtering, replay protection) and monitoring.](./tasks/100-implement-webhook-security-middleware-ip-filtering-replay-protection-and-monitor.md)

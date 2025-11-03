@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -272,6 +273,368 @@ func TestPaymentServiceManualRefundPartial(t *testing.T) {
 	if audit.records[0].Metadata["amount"] != int64(4000) {
 		t.Fatalf("expected audit metadata amount 4000, got %v", audit.records[0].Metadata["amount"])
 	}
+}
+
+func TestPaymentServiceRecordWebhookEventSucceeded(t *testing.T) {
+	t.Helper()
+
+	eventCreated := time.Date(2024, 9, 2, 9, 20, 0, 0, time.UTC)
+	intentCreated := eventCreated.Add(-2 * time.Minute)
+	chargeCreated := eventCreated.Add(-time.Minute)
+
+	orderRepo := &paymentTestOrderRepo{
+		orders: map[string]domain.Order{
+			"ord_webhook": {
+				ID:       "ord_webhook",
+				Status:   domain.OrderStatusPendingPayment,
+				Currency: "JPY",
+				Totals: domain.OrderTotals{
+					Total: 12000,
+				},
+				CreatedAt: intentCreated.Add(-time.Hour),
+			},
+		},
+	}
+
+	paymentRepo := &stubPaymentRepo{
+		payments: map[string]domain.Payment{
+			"pay_webhook": {
+				ID:        "pay_webhook",
+				OrderID:   "ord_webhook",
+				Provider:  "stripe",
+				IntentID:  "pi_webhook",
+				Status:    string(payments.StatusPending),
+				Amount:    12000,
+				Currency:  "JPY",
+				CreatedAt: intentCreated.Add(-30 * time.Minute),
+			},
+		},
+	}
+
+	payload := buildStripeEventPayload(t, "evt_succeeded", "payment_intent.succeeded", eventCreated.Unix(), map[string]any{
+		"id":              "pi_webhook",
+		"object":          "payment_intent",
+		"status":          "succeeded",
+		"amount":          12000,
+		"amount_received": 12000,
+		"currency":        "jpy",
+		"metadata": map[string]any{
+			"order_id":   "ord_webhook",
+			"payment_id": "pay_webhook",
+		},
+		"created": intentCreated.Unix(),
+		"charges": map[string]any{
+			"data": []any{
+				map[string]any{
+					"id":       "ch_webhook",
+					"object":   "charge",
+					"captured": true,
+					"status":   "succeeded",
+					"amount":   12000,
+					"created":  chargeCreated.Unix(),
+				},
+			},
+		},
+		"latest_charge": map[string]any{
+			"id":       "ch_webhook",
+			"captured": true,
+			"status":   "succeeded",
+			"created":  chargeCreated.Unix(),
+		},
+	})
+
+	svc, err := NewPaymentService(PaymentServiceDeps{
+		Orders:     orderRepo,
+		Payments:   paymentRepo,
+		Processor:  &stubPaymentProcessor{},
+		UnitOfWork: paymentTestUnitOfWork{},
+		Clock: func() time.Time {
+			return eventCreated
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to construct service: %v", err)
+	}
+
+	cmd := PaymentWebhookCommand{
+		Provider: "stripe",
+		Payload:  payload,
+		Headers: map[string]string{
+			"Stripe-Event-ID": "evt_succeeded",
+		},
+	}
+
+	if err := svc.RecordWebhookEvent(context.Background(), cmd); err != nil {
+		t.Fatalf("record webhook failed: %v", err)
+	}
+
+	if len(paymentRepo.updates) != 1 {
+		t.Fatalf("expected payment update recorded, got %d", len(paymentRepo.updates))
+	}
+	updated := paymentRepo.updates[0]
+	if updated.Status != string(payments.StatusSucceeded) {
+		t.Fatalf("expected payment status succeeded, got %s", updated.Status)
+	}
+	if !updated.Captured {
+		t.Fatalf("expected payment captured flag true")
+	}
+	if updated.CapturedAt == nil || !updated.CapturedAt.Equal(chargeCreated) {
+		t.Fatalf("expected capturedAt %s, got %v", chargeCreated, updated.CapturedAt)
+	}
+	if events, ok := updated.Raw["webhookEvents"].(map[string]any); !ok || events["evt_succeeded"] == nil {
+		t.Fatalf("expected webhookEvents map to record event")
+	}
+
+	order := orderRepo.orders["ord_webhook"]
+	if order.Status != domain.OrderStatusPaid {
+		t.Fatalf("expected order status paid, got %s", order.Status)
+	}
+	if order.PaidAt == nil || order.PaidAt.IsZero() {
+		t.Fatalf("expected PaidAt to be set")
+	}
+	summary := extractPaymentSummary(t, order.Metadata)
+	if summary["status"] != string(payments.StatusSucceeded) {
+		t.Fatalf("expected payment summary status succeeded, got %v", summary["status"])
+	}
+	if summary["capturedAmount"] != int64(12000) {
+		t.Fatalf("expected capturedAmount 12000, got %v", summary["capturedAmount"])
+	}
+	if summary["balanceDue"] != int64(0) {
+		t.Fatalf("expected balanceDue 0, got %v", summary["balanceDue"])
+	}
+
+	// Idempotency check
+	if err := svc.RecordWebhookEvent(context.Background(), cmd); err != nil {
+		t.Fatalf("record webhook duplicate failed: %v", err)
+	}
+	if len(paymentRepo.updates) != 1 {
+		t.Fatalf("expected no additional updates on duplicate event, got %d", len(paymentRepo.updates))
+	}
+}
+
+func TestPaymentServiceRecordWebhookEventPaymentFailed(t *testing.T) {
+	t.Helper()
+
+	eventCreated := time.Date(2024, 9, 3, 11, 0, 0, 0, time.UTC)
+	intentCreated := eventCreated.Add(-3 * time.Minute)
+
+	orderRepo := &paymentTestOrderRepo{
+		orders: map[string]domain.Order{
+			"ord_failed": {
+				ID:       "ord_failed",
+				Status:   domain.OrderStatusPendingPayment,
+				Currency: "JPY",
+				Totals: domain.OrderTotals{
+					Total: 8000,
+				},
+				CreatedAt: intentCreated.Add(-45 * time.Minute),
+			},
+		},
+	}
+	paymentRepo := &stubPaymentRepo{
+		payments: map[string]domain.Payment{
+			"pay_failed": {
+				ID:        "pay_failed",
+				OrderID:   "ord_failed",
+				Provider:  "stripe",
+				IntentID:  "pi_failed",
+				Status:    string(payments.StatusPending),
+				Amount:    8000,
+				Currency:  "JPY",
+				CreatedAt: intentCreated.Add(-20 * time.Minute),
+			},
+		},
+	}
+
+	payload := buildStripeEventPayload(t, "evt_failed", "payment_intent.payment_failed", eventCreated.Unix(), map[string]any{
+		"id":       "pi_failed",
+		"object":   "payment_intent",
+		"status":   "requires_payment_method",
+		"amount":   8000,
+		"currency": "jpy",
+		"metadata": map[string]any{
+			"order_id":   "ord_failed",
+			"payment_id": "pay_failed",
+		},
+		"created": intentCreated.Unix(),
+		"charges": map[string]any{
+			"data": []any{},
+		},
+	})
+
+	svc, err := NewPaymentService(PaymentServiceDeps{
+		Orders:     orderRepo,
+		Payments:   paymentRepo,
+		Processor:  &stubPaymentProcessor{},
+		UnitOfWork: paymentTestUnitOfWork{},
+		Clock: func() time.Time {
+			return eventCreated
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to construct service: %v", err)
+	}
+
+	if err := svc.RecordWebhookEvent(context.Background(), PaymentWebhookCommand{
+		Provider: "stripe",
+		Payload:  payload,
+	}); err != nil {
+		t.Fatalf("record webhook failed: %v", err)
+	}
+
+	if len(paymentRepo.updates) != 1 {
+		t.Fatalf("expected payment update recorded")
+	}
+	updated := paymentRepo.updates[0]
+	if updated.Status != string(payments.StatusFailed) {
+		t.Fatalf("expected payment status failed, got %s", updated.Status)
+	}
+	if updated.Captured {
+		t.Fatalf("expected captured false")
+	}
+	order := orderRepo.orders["ord_failed"]
+	if order.Status != domain.OrderStatusPendingPayment {
+		t.Fatalf("expected order to remain pending_payment, got %s", order.Status)
+	}
+	if order.PaidAt != nil {
+		t.Fatalf("expected PaidAt to remain nil")
+	}
+	summary := extractPaymentSummary(t, order.Metadata)
+	if summary["status"] != string(payments.StatusFailed) {
+		t.Fatalf("expected summary status failed, got %v", summary["status"])
+	}
+	if summary["balanceDue"] != int64(8000) {
+		t.Fatalf("expected balance due 8000, got %v", summary["balanceDue"])
+	}
+}
+
+func TestPaymentServiceRecordWebhookEventChargeRefunded(t *testing.T) {
+	t.Helper()
+
+	eventCreated := time.Date(2024, 9, 4, 15, 0, 0, 0, time.UTC)
+	chargeCreated := eventCreated.Add(-time.Minute)
+
+	orderRepo := &paymentTestOrderRepo{
+		orders: map[string]domain.Order{
+			"ord_refund": {
+				ID:       "ord_refund",
+				Status:   domain.OrderStatusPaid,
+				Currency: "JPY",
+				Totals: domain.OrderTotals{
+					Total: 5000,
+				},
+				CreatedAt: eventCreated.Add(-2 * time.Hour),
+				PaidAt: func() *time.Time {
+					ts := eventCreated.Add(-90 * time.Minute)
+					return &ts
+				}(),
+				Metadata: map[string]any{
+					"payment": map[string]any{
+						"status":         string(payments.StatusSucceeded),
+						"capturedAmount": int64(5000),
+						"balanceDue":     int64(0),
+					},
+				},
+			},
+		},
+	}
+	paymentRepo := &stubPaymentRepo{
+		payments: map[string]domain.Payment{
+			"pay_refund": {
+				ID:         "pay_refund",
+				OrderID:    "ord_refund",
+				Provider:   "stripe",
+				IntentID:   "pi_refund",
+				Status:     string(payments.StatusSucceeded),
+				Amount:     5000,
+				Currency:   "JPY",
+				Captured:   true,
+				CapturedAt: func() *time.Time { ts := eventCreated.Add(-2 * time.Hour); return &ts }(),
+				CreatedAt:  eventCreated.Add(-2 * time.Hour),
+				Raw: map[string]any{
+					"amount_received": int64(5000),
+				},
+			},
+		},
+	}
+
+	payload := buildStripeEventPayload(t, "evt_refunded", "charge.refunded", eventCreated.Unix(), map[string]any{
+		"id":              "ch_refund",
+		"object":          "charge",
+		"amount":          5000,
+		"amount_refunded": 5000,
+		"currency":        "jpy",
+		"captured":        true,
+		"created":         chargeCreated.Unix(),
+		"metadata": map[string]any{
+			"order_id":   "ord_refund",
+			"payment_id": "pay_refund",
+		},
+		"payment_intent": "pi_refund",
+		"status":         "succeeded",
+		"refunded":       true,
+	})
+
+	svc, err := NewPaymentService(PaymentServiceDeps{
+		Orders:     orderRepo,
+		Payments:   paymentRepo,
+		Processor:  &stubPaymentProcessor{},
+		UnitOfWork: paymentTestUnitOfWork{},
+		Clock: func() time.Time {
+			return eventCreated
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to construct service: %v", err)
+	}
+
+	if err := svc.RecordWebhookEvent(context.Background(), PaymentWebhookCommand{
+		Provider: "stripe",
+		Payload:  payload,
+	}); err != nil {
+		t.Fatalf("record webhook failed: %v", err)
+	}
+
+	if len(paymentRepo.updates) != 1 {
+		t.Fatalf("expected payment update recorded")
+	}
+	updated := paymentRepo.updates[0]
+	if updated.Status != string(payments.StatusRefunded) {
+		t.Fatalf("expected payment status refunded, got %s", updated.Status)
+	}
+	if updated.RefundedAt == nil || !updated.RefundedAt.Equal(eventCreated) {
+		t.Fatalf("expected refundedAt %s, got %v", eventCreated, updated.RefundedAt)
+	}
+	order := orderRepo.orders["ord_refund"]
+	summary := extractPaymentSummary(t, order.Metadata)
+	if summary["refundedAmount"] != int64(5000) {
+		t.Fatalf("expected refundedAmount 5000, got %v", summary["refundedAmount"])
+	}
+	if summary["balanceDue"] != int64(5000) {
+		t.Fatalf("expected balance due 5000, got %v", summary["balanceDue"])
+	}
+}
+
+func buildStripeEventPayload(t *testing.T, id, eventType string, created int64, object map[string]any) []byte {
+	payload := map[string]any{
+		"id":      id,
+		"object":  "event",
+		"type":    eventType,
+		"created": created,
+		"data": map[string]any{
+			"object": object,
+		},
+	}
+	return mustMarshal(t, payload)
+}
+
+func mustMarshal(t *testing.T, v any) []byte {
+	t.Helper()
+	data, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("failed to marshal json: %v", err)
+	}
+	return data
 }
 
 // --- Test helpers -----------------------------------------------------------------
