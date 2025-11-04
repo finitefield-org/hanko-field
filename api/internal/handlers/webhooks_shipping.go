@@ -648,7 +648,7 @@ func validateHMAC(cfg *carrierConfig, r *http.Request, body []byte) error {
 func validateToken(cfg *carrierConfig, r *http.Request) error {
 	token := strings.TrimSpace(cfg.authToken)
 	if token == "" {
-		return nil
+		return carrierError{code: "webhook_auth_unavailable", message: "auth token not configured", status: http.StatusServiceUnavailable}
 	}
 	header := cfg.tokenHeader
 	if header == "" {

@@ -150,6 +150,28 @@ func TestShippingWebhookHandlers_Yamato_InvalidToken(t *testing.T) {
 	}
 }
 
+func TestShippingWebhookHandlers_Yamato_MissingToken(t *testing.T) {
+	service := &shippingStubShipmentService{}
+	handler := NewShippingWebhookHandlers(service)
+	router := chi.NewRouter()
+	handler.Routes(router)
+
+	body := `{"tracking_code":"YM000111","status":"in_transit"}`
+	req := httptest.NewRequest(http.MethodPost, "/shipping/yamato", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer token-123")
+
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+
+	if res.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 service unavailable, got %d", res.Code)
+	}
+	if service.called {
+		t.Fatalf("expected shipment service not called")
+	}
+}
+
 func TestShippingWebhookHandlers_Yamato_Success(t *testing.T) {
 	now := time.Date(2024, 11, 4, 3, 0, 0, 0, time.UTC)
 	service := &shippingStubShipmentService{}
