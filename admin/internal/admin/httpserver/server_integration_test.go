@@ -696,6 +696,28 @@ func TestProductionQueuesPageRenders(t *testing.T) {
 	require.Contains(t, string(body), "待機")
 }
 
+func TestProductionQueuesSummaryRenders(t *testing.T) {
+	t.Parallel()
+
+	auth := &tokenAuthenticator{Token: "prod-summary"}
+	stub := &productionStub{summaryResult: sampleSummaryResult()}
+	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProductionService(stub))
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/production/queues/summary", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+auth.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(body), "制作WIPサマリー")
+	require.Contains(t, string(body), "ステージ別WIP")
+}
+
 func TestOrdersProductionEventSuccess(t *testing.T) {
 	t.Parallel()
 
@@ -825,9 +847,155 @@ func sampleBoardResult() adminproduction.BoardResult {
 	}
 }
 
+func sampleSummaryResult() adminproduction.QueueWIPSummaryResult {
+	now := time.Now()
+	totals := adminproduction.QueueWIPSummaryTotals{
+		TotalWIP:      6,
+		TotalCapacity: 46,
+		Utilisation:   13,
+		SLABreaches:   1,
+		DueSoon:       2,
+	}
+
+	cards := []adminproduction.QueueWIPSummaryCard{
+		{
+			QueueID:     "atelier-aoyama",
+			QueueName:   "青山アトリエ",
+			Facility:    "青山工房",
+			Shift:       "08:00-22:00",
+			QueueType:   "Classic / Brilliant",
+			WIPCount:    4,
+			Capacity:    28,
+			Utilisation: 14,
+			SLABreaches: 1,
+			DueSoon:     1,
+		},
+		{
+			QueueID:     "atelier-kyoto",
+			QueueName:   "京都スタジオ",
+			Facility:    "京都工房",
+			Shift:       "09:00-19:00",
+			QueueType:   "Heritage / Monogram",
+			WIPCount:    2,
+			Capacity:    18,
+			Utilisation: 11,
+			SLABreaches: 0,
+			DueSoon:     1,
+		},
+	}
+
+	trend := adminproduction.QueueWIPSummaryTrend{
+		Caption: "対象キュー: 2",
+		Bars: []adminproduction.QueueWIPTrendBar{
+			{Stage: adminproduction.StageQueued, Label: "待機", Count: 2, Capacity: 20, SLALabel: "平均6h", SLATone: "info"},
+			{Stage: adminproduction.StageEngraving, Label: "刻印", Count: 1, Capacity: 16, SLALabel: "平均9h", SLATone: "info"},
+			{Stage: adminproduction.StagePolishing, Label: "研磨", Count: 2, Capacity: 14, SLALabel: "平均5h", SLATone: "warning"},
+			{Stage: adminproduction.StageQC, Label: "QC", Count: 1, Capacity: 10, SLALabel: "平均3h", SLATone: "success"},
+		},
+	}
+
+	stageColumns := []adminproduction.QueueWIPStageColumn{
+		{Stage: adminproduction.StageQueued, Label: "待機"},
+		{Stage: adminproduction.StageEngraving, Label: "刻印"},
+		{Stage: adminproduction.StagePolishing, Label: "研磨"},
+		{Stage: adminproduction.StageQC, Label: "QC"},
+		{Stage: adminproduction.StagePacked, Label: "梱包"},
+	}
+
+	table := adminproduction.QueueWIPSummaryTable{
+		StageColumns: stageColumns,
+		Rows: []adminproduction.QueueWIPSummaryRow{
+			{
+				QueueID:         "atelier-aoyama",
+				QueueName:       "青山アトリエ",
+				Facility:        "青山工房",
+				Shift:           "08:00-22:00",
+				QueueType:       "Classic / Brilliant",
+				WIPCount:        4,
+				Capacity:        28,
+				Utilisation:     14,
+				SLABreaches:     1,
+				AverageAgeHours: 26,
+				StageBreakdown: []adminproduction.QueueWIPStageBreakdown{
+					{Stage: adminproduction.StageQueued, Label: "待機", Count: 2, Capacity: 10},
+					{Stage: adminproduction.StageEngraving, Label: "刻印", Count: 1, Capacity: 8},
+					{Stage: adminproduction.StagePolishing, Label: "研磨", Count: 1, Capacity: 6},
+					{Stage: adminproduction.StageQC, Label: "QC", Count: 0, Capacity: 4},
+					{Stage: adminproduction.StagePacked, Label: "梱包", Count: 0, Capacity: 4},
+				},
+				LinkPath: "/production/queues?queue=atelier-aoyama",
+			},
+			{
+				QueueID:         "atelier-kyoto",
+				QueueName:       "京都スタジオ",
+				Facility:        "京都工房",
+				Shift:           "09:00-19:00",
+				QueueType:       "Heritage / Monogram",
+				WIPCount:        2,
+				Capacity:        18,
+				Utilisation:     11,
+				SLABreaches:     0,
+				AverageAgeHours: 18,
+				StageBreakdown: []adminproduction.QueueWIPStageBreakdown{
+					{Stage: adminproduction.StageQueued, Label: "待機", Count: 0, Capacity: 8},
+					{Stage: adminproduction.StageEngraving, Label: "刻印", Count: 0, Capacity: 6},
+					{Stage: adminproduction.StagePolishing, Label: "研磨", Count: 1, Capacity: 4},
+					{Stage: adminproduction.StageQC, Label: "QC", Count: 1, Capacity: 3},
+					{Stage: adminproduction.StagePacked, Label: "梱包", Count: 0, Capacity: 3},
+				},
+				LinkPath: "/production/queues?queue=atelier-kyoto",
+			},
+		},
+		Totals:       totals,
+		EmptyMessage: "該当するキューがありません。",
+	}
+
+	filters := adminproduction.QueueWIPSummaryFilters{
+		Facilities: []adminproduction.FilterOption{
+			{Value: "青山工房", Label: "青山工房", Count: 4},
+			{Value: "京都工房", Label: "京都工房", Count: 2},
+		},
+		Shifts: []adminproduction.FilterOption{
+			{Value: "08:00-22:00", Label: "08:00-22:00", Count: 4},
+			{Value: "09:00-19:00", Label: "09:00-19:00", Count: 2},
+		},
+		QueueTypes: []adminproduction.FilterOption{
+			{Value: "Classic / Brilliant", Label: "Classic / Brilliant", Count: 4},
+			{Value: "Heritage / Monogram", Label: "Heritage / Monogram", Count: 2},
+		},
+		DateRanges: []adminproduction.FilterOption{
+			{Value: "", Label: "全期間", Active: true},
+			{Value: "7d", Label: "過去7日間"},
+		},
+	}
+
+	alerts := []adminproduction.QueueWIPSummaryAlert{
+		{
+			Tone:        "warning",
+			Title:       "青山アトリエ の稼働状況",
+			Message:     "使用率 14% / SLA逸脱 1件 / 締切迫る 1件",
+			ActionLabel: "キューを確認",
+			ActionPath:  "/production/queues?queue=atelier-aoyama",
+		},
+	}
+
+	return adminproduction.QueueWIPSummaryResult{
+		GeneratedAt:     now,
+		RefreshInterval: 45 * time.Second,
+		Totals:          totals,
+		Cards:           cards,
+		Trend:           trend,
+		Table:           table,
+		Filters:         filters,
+		Alerts:          alerts,
+	}
+}
+
 type productionStub struct {
 	boardResult      adminproduction.BoardResult
 	boardErr         error
+	summaryResult    adminproduction.QueueWIPSummaryResult
+	summaryErr       error
 	appendResult     adminproduction.AppendEventResult
 	appendErr        error
 	lastOrderID      string
@@ -858,6 +1026,13 @@ func (s *productionStub) Board(ctx context.Context, token string, query adminpro
 		return adminproduction.BoardResult{}, s.boardErr
 	}
 	return s.boardResult, nil
+}
+
+func (s *productionStub) QueueWIPSummary(ctx context.Context, token string, query adminproduction.QueueWIPSummaryQuery) (adminproduction.QueueWIPSummaryResult, error) {
+	if s.summaryErr != nil {
+		return adminproduction.QueueWIPSummaryResult{}, s.summaryErr
+	}
+	return s.summaryResult, nil
 }
 
 func (s *productionStub) AppendEvent(ctx context.Context, token, orderID string, req adminproduction.AppendEventRequest) (adminproduction.AppendEventResult, error) {

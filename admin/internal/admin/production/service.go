@@ -10,6 +10,8 @@ import (
 type Service interface {
 	// Board returns the current state of the selected production queue with filters applied.
 	Board(ctx context.Context, token string, query BoardQuery) (BoardResult, error)
+	// QueueWIPSummary returns aggregated workload and SLA metrics across production queues.
+	QueueWIPSummary(ctx context.Context, token string, query QueueWIPSummaryQuery) (QueueWIPSummaryResult, error)
 	// AppendEvent appends a production workflow event for the specified order/card.
 	AppendEvent(ctx context.Context, token, orderID string, req AppendEventRequest) (AppendEventResult, error)
 	// WorkOrder returns a detailed production brief for the specified order.
@@ -126,6 +128,129 @@ type Summary struct {
 	AvgLeadHours int
 	Utilisation  int
 	UpdatedAt    time.Time
+}
+
+// QueueWIPSummaryQuery captures filter inputs for the queue workload summary.
+type QueueWIPSummaryQuery struct {
+	Facility  string
+	Shift     string
+	QueueType string
+	DateRange string
+}
+
+// QueueWIPSummaryResult aggregates workload metrics across queues.
+type QueueWIPSummaryResult struct {
+	GeneratedAt     time.Time
+	RefreshInterval time.Duration
+	State           QueueWIPSummaryState
+	Totals          QueueWIPSummaryTotals
+	Cards           []QueueWIPSummaryCard
+	Trend           QueueWIPSummaryTrend
+	Table           QueueWIPSummaryTable
+	Filters         QueueWIPSummaryFilters
+	Alerts          []QueueWIPSummaryAlert
+}
+
+// QueueWIPSummaryState reflects the active filters for the summary view.
+type QueueWIPSummaryState struct {
+	Facility  string
+	Shift     string
+	QueueType string
+	DateRange string
+}
+
+// QueueWIPSummaryTotals provides headline metrics for the summary view.
+type QueueWIPSummaryTotals struct {
+	TotalWIP      int
+	TotalCapacity int
+	Utilisation   int
+	SLABreaches   int
+	DueSoon       int
+}
+
+// QueueWIPSummaryCard powers the per-queue KPI cards.
+type QueueWIPSummaryCard struct {
+	QueueID     string
+	QueueName   string
+	Facility    string
+	Shift       string
+	QueueType   string
+	WIPCount    int
+	Capacity    int
+	Utilisation int
+	SLABreaches int
+	DueSoon     int
+}
+
+// QueueWIPSummaryFilters enumerates selectable filters for the summary view.
+type QueueWIPSummaryFilters struct {
+	Facilities []FilterOption
+	Shifts     []FilterOption
+	QueueTypes []FilterOption
+	DateRanges []FilterOption
+}
+
+// QueueWIPSummaryTrend describes the WIP distribution per stage for charting.
+type QueueWIPSummaryTrend struct {
+	Caption string
+	Bars    []QueueWIPTrendBar
+}
+
+// QueueWIPTrendBar represents a single stage bar in the workload chart.
+type QueueWIPTrendBar struct {
+	Stage    Stage
+	Label    string
+	Count    int
+	Capacity int
+	SLALabel string
+	SLATone  string
+}
+
+// QueueWIPSummaryTable shapes the detail table content.
+type QueueWIPSummaryTable struct {
+	StageColumns []QueueWIPStageColumn
+	Rows         []QueueWIPSummaryRow
+	Totals       QueueWIPSummaryTotals
+	EmptyMessage string
+}
+
+// QueueWIPStageColumn defines metadata for a stage column in the table.
+type QueueWIPStageColumn struct {
+	Stage Stage
+	Label string
+}
+
+// QueueWIPSummaryRow renders a queue record within the detail table.
+type QueueWIPSummaryRow struct {
+	QueueID         string
+	QueueName       string
+	Facility        string
+	Shift           string
+	QueueType       string
+	WIPCount        int
+	Capacity        int
+	Utilisation     int
+	SLABreaches     int
+	AverageAgeHours int
+	StageBreakdown  []QueueWIPStageBreakdown
+	LinkPath        string
+}
+
+// QueueWIPStageBreakdown reports stage counts for a queue.
+type QueueWIPStageBreakdown struct {
+	Stage    Stage
+	Label    string
+	Count    int
+	Capacity int
+}
+
+// QueueWIPSummaryAlert surfaces capacity or SLA risks.
+type QueueWIPSummaryAlert struct {
+	Tone        string
+	Title       string
+	Message     string
+	ActionLabel string
+	ActionPath  string
 }
 
 // FilterSummary enumerates available filter options per facet.

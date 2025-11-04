@@ -40,6 +40,30 @@ func (h *Handlers) ProductionQueuesPage(w http.ResponseWriter, r *http.Request) 
 	templ.Handler(productiontpl.Index(data)).ServeHTTP(w, r)
 }
 
+// ProductionQueuesSummaryPage renders the WIP summary page across production queues.
+func (h *Handlers) ProductionQueuesSummaryPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	req := buildProductionSummaryRequest(r)
+	result, err := h.production.QueueWIPSummary(ctx, user.Token, req.query)
+	errMsg := ""
+	if err != nil {
+		log.Printf("production: fetch wip summary failed: %v", err)
+		errMsg = "WIPサマリーの取得に失敗しました。時間を置いて再度お試しください。"
+		result = adminproduction.QueueWIPSummaryResult{}
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	data := productiontpl.BuildWIPSummaryPage(basePath, req.state, result, errMsg)
+
+	templ.Handler(productiontpl.WIPSummary(data)).ServeHTTP(w, r)
+}
+
 // ProductionQueuesBoard renders the kanban fragment for HTMX swaps.
 func (h *Handlers) ProductionQueuesBoard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -349,6 +373,50 @@ func (h *Handlers) OrdersProductionEvent(w http.ResponseWriter, r *http.Request)
 
 	triggerToast(w, "制作ステージを更新しました。", "success")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type productionSummaryRequest struct {
+	query adminproduction.QueueWIPSummaryQuery
+	state productiontpl.SummaryQueryState
+}
+
+func buildProductionSummaryRequest(r *http.Request) productionSummaryRequest {
+	values := r.URL.Query()
+	facility := strings.TrimSpace(values.Get("facility"))
+	shift := strings.TrimSpace(values.Get("shift"))
+	queueType := strings.TrimSpace(values.Get("queue_type"))
+	window := strings.TrimSpace(values.Get("window"))
+
+	raw := url.Values{}
+	if facility != "" {
+		raw.Set("facility", facility)
+	}
+	if shift != "" {
+		raw.Set("shift", shift)
+	}
+	if queueType != "" {
+		raw.Set("queue_type", queueType)
+	}
+	if window != "" {
+		raw.Set("window", window)
+	}
+
+	state := productiontpl.SummaryQueryState{
+		Facility:  facility,
+		Shift:     shift,
+		QueueType: queueType,
+		DateRange: window,
+		RawQuery:  raw.Encode(),
+	}
+
+	query := adminproduction.QueueWIPSummaryQuery{
+		Facility:  facility,
+		Shift:     shift,
+		QueueType: queueType,
+		DateRange: window,
+	}
+
+	return productionSummaryRequest{query: query, state: state}
 }
 
 type productionBoardRequest struct {

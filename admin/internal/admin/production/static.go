@@ -115,6 +115,298 @@ func (s *StaticService) Board(_ context.Context, _ string, query BoardQuery) (Bo
 	}, nil
 }
 
+// QueueWIPSummary implements Service.
+func (s *StaticService) QueueWIPSummary(_ context.Context, _ string, query QueueWIPSummaryQuery) (QueueWIPSummaryResult, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	state := QueueWIPSummaryState{
+		Facility:  strings.TrimSpace(query.Facility),
+		Shift:     strings.TrimSpace(query.Shift),
+		QueueType: strings.TrimSpace(query.QueueType),
+		DateRange: strings.TrimSpace(query.DateRange),
+	}
+
+	now := time.Now()
+	result := QueueWIPSummaryResult{
+		GeneratedAt:     now,
+		RefreshInterval: 45 * time.Second,
+		State:           state,
+	}
+
+	switch strings.ToLower(state.DateRange) {
+	case "today":
+		result.RefreshInterval = 30 * time.Second
+	case "30d":
+		result.RefreshInterval = 75 * time.Second
+	}
+
+	allIDs := make([]string, 0, len(s.queues))
+	for id := range s.queues {
+		allIDs = append(allIDs, id)
+	}
+	sort.Strings(allIDs)
+
+	facilityCounts := make(counter)
+	shiftCounts := make(counter)
+	typeCounts := make(counter)
+
+	filtered := make([]string, 0, len(allIDs))
+	for _, id := range allIDs {
+		queue := s.queues[id]
+		def, hasDef := s.queueDefs[id]
+
+		facility := strings.TrimSpace(queue.Location)
+		if facility == "" && hasDef {
+			facility = strings.TrimSpace(def.Workshop)
+		}
+		if facility == "" {
+			facility = "未設定"
+		}
+
+		shift := strings.TrimSpace(queue.Shift)
+		if shift == "" {
+			shift = "未設定"
+		}
+
+		queueType := ""
+		if hasDef {
+			queueType = strings.TrimSpace(def.ProductLine)
+		}
+		if queueType == "" {
+			queueType = "General"
+		}
+
+		records := s.queueRecords(id)
+		wipCount := len(records)
+
+		facilityCounts[facility] += wipCount
+		shiftCounts[shift] += wipCount
+		typeCounts[queueType] += wipCount
+
+		if state.Facility != "" && !strings.EqualFold(facility, state.Facility) {
+			continue
+		}
+		if state.Shift != "" && !strings.EqualFold(shift, state.Shift) {
+			continue
+		}
+		if state.QueueType != "" && !strings.EqualFold(queueType, state.QueueType) {
+			continue
+		}
+
+		filtered = append(filtered, id)
+	}
+
+	facilityOpts := ensureFilterOption(buildFilterOptions(facilityCounts, state.Facility), state.Facility)
+	shiftOpts := ensureFilterOption(buildFilterOptions(shiftCounts, state.Shift), state.Shift)
+	typeOpts := ensureFilterOption(buildFilterOptions(typeCounts, state.QueueType), state.QueueType)
+
+	dateOpts := []FilterOption{
+		{Value: "", Label: "全期間", Active: state.DateRange == ""},
+		{Value: "today", Label: "今日", Active: strings.EqualFold(state.DateRange, "today")},
+		{Value: "24h", Label: "過去24時間", Active: strings.EqualFold(state.DateRange, "24h")},
+		{Value: "7d", Label: "過去7日間", Active: strings.EqualFold(state.DateRange, "7d")},
+		{Value: "30d", Label: "過去30日間", Active: strings.EqualFold(state.DateRange, "30d")},
+	}
+
+	result.Filters = QueueWIPSummaryFilters{
+		Facilities: facilityOpts,
+		Shifts:     shiftOpts,
+		QueueTypes: typeOpts,
+		DateRanges: dateOpts,
+	}
+
+	if len(filtered) == 0 {
+		result.Table = QueueWIPSummaryTable{
+			StageColumns: s.summaryStageColumns(),
+			Rows:         nil,
+			Totals:       QueueWIPSummaryTotals{},
+			EmptyMessage: "該当するキューがありません。",
+		}
+		return result, nil
+	}
+
+	aggStageCounts := make(map[Stage]int)
+	totals := QueueWIPSummaryTotals{}
+	cards := make([]QueueWIPSummaryCard, 0, len(filtered))
+	rows := make([]QueueWIPSummaryRow, 0, len(filtered))
+	alerts := make([]QueueWIPSummaryAlert, 0, len(filtered))
+
+	for _, id := range filtered {
+		queue := s.queues[id]
+		def, hasDef := s.queueDefs[id]
+
+		facility := strings.TrimSpace(queue.Location)
+		if facility == "" && hasDef {
+			facility = strings.TrimSpace(def.Workshop)
+		}
+		if facility == "" {
+			facility = "未設定"
+		}
+
+		shift := strings.TrimSpace(queue.Shift)
+		if shift == "" {
+			shift = "未設定"
+		}
+
+		queueType := ""
+		if hasDef {
+			queueType = strings.TrimSpace(def.ProductLine)
+		}
+		if queueType == "" {
+			queueType = "General"
+		}
+
+		records := s.queueRecords(id)
+		stageCounts := make(map[Stage]int)
+		totalAge := 0
+		dueSoon := 0
+		slaBreaches := 0
+
+		for _, record := range records {
+			stageCounts[record.card.Stage]++
+			aggStageCounts[record.card.Stage]++
+			totalAge += record.card.AgingHours
+
+			if record.card.DueAt.IsZero() {
+				continue
+			}
+			if record.card.DueAt.Before(now) || strings.EqualFold(record.card.DueTone, "danger") {
+				slaBreaches++
+			} else if record.card.DueAt.Sub(now) <= 8*time.Hour {
+				dueSoon++
+			}
+		}
+
+		wipCount := len(records)
+		avgAge := 0
+		if wipCount > 0 {
+			avgAge = int(math.Round(float64(totalAge) / float64(wipCount)))
+		}
+
+		capacity := queue.Capacity
+		utilisation := 0
+		if capacity > 0 {
+			utilisation = int(math.Round(float64(wipCount) / float64(capacity) * 100))
+		}
+
+		stageBreakdown := make([]QueueWIPStageBreakdown, 0, len(s.laneDefs))
+		for _, lane := range s.laneDefs {
+			stageBreakdown = append(stageBreakdown, QueueWIPStageBreakdown{
+				Stage:    lane.stage,
+				Label:    lane.label,
+				Count:    stageCounts[lane.stage],
+				Capacity: lane.capacity,
+			})
+		}
+
+		card := QueueWIPSummaryCard{
+			QueueID:     id,
+			QueueName:   queue.Name,
+			Facility:    facility,
+			Shift:       shift,
+			QueueType:   queueType,
+			WIPCount:    wipCount,
+			Capacity:    capacity,
+			Utilisation: utilisation,
+			SLABreaches: slaBreaches,
+			DueSoon:     dueSoon,
+		}
+		cards = append(cards, card)
+
+		row := QueueWIPSummaryRow{
+			QueueID:         id,
+			QueueName:       queue.Name,
+			Facility:        facility,
+			Shift:           shift,
+			QueueType:       queueType,
+			WIPCount:        wipCount,
+			Capacity:        capacity,
+			Utilisation:     utilisation,
+			SLABreaches:     slaBreaches,
+			AverageAgeHours: avgAge,
+			StageBreakdown:  stageBreakdown,
+			LinkPath:        fmt.Sprintf("/production/queues?queue=%s", id),
+		}
+		rows = append(rows, row)
+
+		totals.TotalWIP += wipCount
+		totals.TotalCapacity += capacity
+		totals.SLABreaches += slaBreaches
+		totals.DueSoon += dueSoon
+
+		if utilisation >= 85 || slaBreaches > 0 {
+			tone := "warning"
+			if utilisation >= 95 || slaBreaches > 1 {
+				tone = "danger"
+			}
+			messageParts := []string{}
+			if utilisation > 0 {
+				messageParts = append(messageParts, fmt.Sprintf("使用率 %d%%", utilisation))
+			}
+			if slaBreaches > 0 {
+				messageParts = append(messageParts, fmt.Sprintf("SLA逸脱 %d件", slaBreaches))
+			}
+			if dueSoon > 0 {
+				messageParts = append(messageParts, fmt.Sprintf("締切迫る %d件", dueSoon))
+			}
+			alerts = append(alerts, QueueWIPSummaryAlert{
+				Tone:        tone,
+				Title:       fmt.Sprintf("%s の稼働状況", queue.Name),
+				Message:     strings.Join(messageParts, " / "),
+				ActionLabel: "キューを確認",
+				ActionPath:  fmt.Sprintf("/production/queues?queue=%s", id),
+			})
+		}
+	}
+
+	if totals.TotalCapacity > 0 {
+		totals.Utilisation = int(math.Round(float64(totals.TotalWIP) / float64(totals.TotalCapacity) * 100))
+	}
+
+	sort.SliceStable(cards, func(i, j int) bool {
+		if cards[i].WIPCount == cards[j].WIPCount {
+			return strings.Compare(strings.ToLower(cards[i].QueueName), strings.ToLower(cards[j].QueueName)) < 0
+		}
+		return cards[i].WIPCount > cards[j].WIPCount
+	})
+	sort.SliceStable(rows, func(i, j int) bool {
+		if rows[i].WIPCount == rows[j].WIPCount {
+			return strings.Compare(strings.ToLower(rows[i].QueueName), strings.ToLower(rows[j].QueueName)) < 0
+		}
+		return rows[i].WIPCount > rows[j].WIPCount
+	})
+
+	queueCount := len(filtered)
+	bars := make([]QueueWIPTrendBar, 0, len(s.laneDefs))
+	for _, lane := range s.laneDefs {
+		bars = append(bars, QueueWIPTrendBar{
+			Stage:    lane.stage,
+			Label:    lane.label,
+			Count:    aggStageCounts[lane.stage],
+			Capacity: lane.capacity * queueCount,
+			SLALabel: lane.slaLabel,
+			SLATone:  lane.slaTone,
+		})
+	}
+
+	result.Totals = totals
+	result.Cards = cards
+	result.Table = QueueWIPSummaryTable{
+		StageColumns: s.summaryStageColumns(),
+		Rows:         rows,
+		Totals:       totals,
+		EmptyMessage: "該当するキューがありません。",
+	}
+	result.Trend = QueueWIPSummaryTrend{
+		Caption: fmt.Sprintf("対象キュー: %d", queueCount),
+		Bars:    bars,
+	}
+	result.Alerts = alerts
+
+	return result, nil
+}
+
 // AppendEvent implements Service.
 func (s *StaticService) AppendEvent(_ context.Context, _ string, orderID string, req AppendEventRequest) (AppendEventResult, error) {
 	stage := Stage(strings.TrimSpace(string(req.Stage)))
@@ -936,6 +1228,34 @@ func buildFilterOptions(c counter, active string) []FilterOption {
 	return options
 }
 
+func ensureFilterOption(options []FilterOption, active string) []FilterOption {
+	if active == "" {
+		return options
+	}
+	found := false
+	for i := range options {
+		if strings.EqualFold(options[i].Value, active) {
+			options[i].Active = true
+			found = true
+		} else {
+			options[i].Active = false
+		}
+	}
+	if found {
+		return options
+	}
+	options = append(options, FilterOption{
+		Value:  active,
+		Label:  active,
+		Count:  0,
+		Active: true,
+	})
+	sort.Slice(options, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(options[i].Label), strings.ToLower(options[j].Label)) < 0
+	})
+	return options
+}
+
 func priorityDisplay(value string) string {
 	switch value {
 	case string(PriorityRush):
@@ -964,6 +1284,17 @@ func (s *StaticService) queueOptions(active string) []QueueOption {
 		return options[i].Label < options[j].Label
 	})
 	return options
+}
+
+func (s *StaticService) summaryStageColumns() []QueueWIPStageColumn {
+	columns := make([]QueueWIPStageColumn, 0, len(s.laneDefs))
+	for _, lane := range s.laneDefs {
+		columns = append(columns, QueueWIPStageColumn{
+			Stage: lane.stage,
+			Label: lane.label,
+		})
+	}
+	return columns
 }
 
 func (s *StaticService) buildDrawer(records []*cardRecord, selected string) (string, Drawer) {

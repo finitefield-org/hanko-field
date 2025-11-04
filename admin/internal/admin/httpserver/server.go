@@ -253,6 +253,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				pqr.Post("/{queueID}/toggle", uiHandlers.ProductionQueueToggle)
 			})
 			protected.Route("/production", func(pr chi.Router) {
+				pr.Get("/queues/summary", uiHandlers.ProductionQueuesSummaryPage)
 				pr.Get("/queues", uiHandlers.ProductionQueuesPage)
 				RegisterFragment(pr, "/queues/board", uiHandlers.ProductionQueuesBoard)
 				pr.Get("/workorders/{orderID}", uiHandlers.ProductionWorkOrderPage)

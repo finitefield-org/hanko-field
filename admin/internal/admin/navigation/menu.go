@@ -159,6 +159,15 @@ var defaultMenu = []Group{
 				MatchPrefix: true,
 			},
 			{
+				Key:         "production-summary",
+				Label:       "WIPサマリー",
+				Icon:        "📊",
+				Capability:  rbac.CapProductionQueues,
+				Path:        "/production/queues/summary",
+				Pattern:     "/production/queues/summary",
+				MatchPrefix: false,
+			},
+			{
 				Key:         "production-qc",
 				Label:       "QC記録",
 				Icon:        "🧪",

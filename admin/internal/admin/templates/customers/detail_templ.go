@@ -80,7 +80,7 @@ func detailBody(data DetailPageData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.RefreshURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 23, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 23, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -130,7 +130,7 @@ func detailBody(data DetailPageData) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.LastUpdated)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 41, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 41, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -148,7 +148,7 @@ func detailBody(data DetailPageData) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.LastRelative)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 43, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 43, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -203,7 +203,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(header.DisplayName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 61, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 61, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -237,7 +237,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 			var templ_7745c5c3_Var8 templ.SafeURL
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(fmt.Sprintf("mailto:%s", header.Email))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 71, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 71, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -250,7 +250,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(header.Email)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 72, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 72, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -269,7 +269,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(header.Phone)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 77, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 77, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -288,7 +288,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(header.Company)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 82, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 82, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -307,7 +307,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(header.Location)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 87, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 87, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -325,7 +325,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 91, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 91, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -338,7 +338,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(header.CustomerID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 97, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 97, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -351,7 +351,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(header.TotalOrdersLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 101, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 101, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -364,7 +364,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(header.LTVLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 105, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 105, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -377,7 +377,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(header.JoinedLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 109, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 109, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -390,7 +390,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(header.LastOrderLabel, "未注文"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 113, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 113, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -413,7 +413,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 119, Col: 97}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 119, Col: 97}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -472,7 +472,7 @@ func detailHeaderCard(header DetailHeader, description string) templ.Component {
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(header.RiskDescription)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 141, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 141, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
@@ -549,7 +549,7 @@ func avatarBlock(header DetailHeader) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(header.AvatarURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 164, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 164, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -562,7 +562,7 @@ func avatarBlock(header DetailHeader) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%sのアバター", header.DisplayName))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 165, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 165, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -580,7 +580,7 @@ func avatarBlock(header DetailHeader) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(header.AvatarInitial)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 169, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 169, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -634,7 +634,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(metric.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 181, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 181, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -647,7 +647,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(metric.Value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 182, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 182, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -665,7 +665,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(metric.SubLabel)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 184, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 184, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -689,7 +689,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var29).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
@@ -702,7 +702,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 				var templ_7745c5c3_Var31 string
 				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(metric.TrendIcon)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 187, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 187, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 				if templ_7745c5c3_Err != nil {
@@ -715,7 +715,7 @@ func detailMetricsRow(metrics []DetailMetricCard) templ.Component {
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(metric.TrendLabel)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 187, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 187, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
@@ -878,7 +878,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(field.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 255, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 255, Col: 93}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 				if templ_7745c5c3_Err != nil {
@@ -901,7 +901,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 					var templ_7745c5c3_Var36 templ.SafeURL
 					templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinURLErrs(field.Href)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 260, Col: 29}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 260, Col: 29}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 					if templ_7745c5c3_Err != nil {
@@ -914,7 +914,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 					var templ_7745c5c3_Var37 string
 					templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(field.Value)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 260, Col: 89}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 260, Col: 89}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 					if templ_7745c5c3_Err != nil {
@@ -928,7 +928,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 					var templ_7745c5c3_Var38 string
 					templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(field.Value)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 262, Col: 22}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 262, Col: 22}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 					if templ_7745c5c3_Err != nil {
@@ -962,7 +962,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var39 string
 				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 275, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 275, Col: 96}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 				if templ_7745c5c3_Err != nil {
@@ -1007,7 +1007,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var40 templ.SafeURL
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(order.Href)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 295, Col: 26}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 295, Col: 26}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 				if templ_7745c5c3_Err != nil {
@@ -1020,7 +1020,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var41 string
 				templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(order.Number)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 298, Col: 63}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 298, Col: 63}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 				if templ_7745c5c3_Err != nil {
@@ -1033,7 +1033,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var42 string
 				templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(order.PlacedDate)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 299, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 299, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 				if templ_7745c5c3_Err != nil {
@@ -1059,7 +1059,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 					var templ_7745c5c3_Var43 string
 					templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(order.Detail)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 304, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 304, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 					if templ_7745c5c3_Err != nil {
@@ -1077,7 +1077,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(order.Payment)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 307, Col: 40}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 307, Col: 40}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -1090,7 +1090,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(order.Fulfillment)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 308, Col: 59}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 308, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 				if templ_7745c5c3_Err != nil {
@@ -1103,7 +1103,7 @@ func overviewTabContent(overview OverviewTabData) templ.Component {
 				var templ_7745c5c3_Var46 string
 				templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(order.Total)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 309, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 309, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 				if templ_7745c5c3_Err != nil {
@@ -1161,7 +1161,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var48 string
 			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(orders.EmptyMessage, "注文履歴がありません。"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 323, Col: 104}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 323, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 			if templ_7745c5c3_Err != nil {
@@ -1184,7 +1184,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var49 templ.SafeURL
 			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinURLErrs(row.Href)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 342, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 342, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 			if templ_7745c5c3_Err != nil {
@@ -1197,7 +1197,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var50 string
 			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(row.Number)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 342, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 342, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 			if templ_7745c5c3_Err != nil {
@@ -1210,7 +1210,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var51 string
 			templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(row.Relative)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 343, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 343, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 			if templ_7745c5c3_Err != nil {
@@ -1223,7 +1223,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var52 string
 			templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(row.Date)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 345, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 345, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 			if templ_7745c5c3_Err != nil {
@@ -1260,7 +1260,7 @@ func ordersTabContent(orders OrdersTabData) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(row.Total)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 355, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 355, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {
@@ -1308,7 +1308,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 			var templ_7745c5c3_Var55 string
 			templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(addresses.EmptyMessage, "住所情報がありません。"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 365, Col: 107}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 365, Col: 107}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 			if templ_7745c5c3_Err != nil {
@@ -1331,7 +1331,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(card.Title, "住所"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 373, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 373, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 			if templ_7745c5c3_Err != nil {
@@ -1344,7 +1344,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(card.Updated)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 374, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 374, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 			if templ_7745c5c3_Err != nil {
@@ -1370,7 +1370,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 				var templ_7745c5c3_Var58 string
 				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(card.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 380, Col: 20}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 380, Col: 20}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 				if templ_7745c5c3_Err != nil {
@@ -1389,7 +1389,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 				var templ_7745c5c3_Var59 string
 				templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(card.Company)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 383, Col: 23}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 383, Col: 23}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 				if templ_7745c5c3_Err != nil {
@@ -1409,7 +1409,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 					var templ_7745c5c3_Var60 string
 					templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(line)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 387, Col: 16}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 387, Col: 16}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 					if templ_7745c5c3_Err != nil {
@@ -1429,7 +1429,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 				var templ_7745c5c3_Var61 string
 				templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(card.Phone)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 391, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 391, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 				if templ_7745c5c3_Err != nil {
@@ -1457,7 +1457,7 @@ func addressesTabContent(addresses AddressesTabData) templ.Component {
 					var templ_7745c5c3_Var62 string
 					templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(note)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 397, Col: 17}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 397, Col: 17}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 					if templ_7745c5c3_Err != nil {
@@ -1521,7 +1521,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(payments.EmptyMessage, "保存された支払い方法がありません。"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 411, Col: 124}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 411, Col: 124}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1544,7 +1544,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(row.Type)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 430, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 430, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1567,7 +1567,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(row.Brand)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 436, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 436, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {
@@ -1585,7 +1585,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 				var templ_7745c5c3_Var67 string
 				templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(row.Last4)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 438, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 438, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 				if templ_7745c5c3_Err != nil {
@@ -1603,7 +1603,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var68 string
 			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(row.Holder)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 441, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 441, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 			if templ_7745c5c3_Err != nil {
@@ -1616,7 +1616,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var69 string
 			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(row.Expires, "-"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 442, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 442, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 			if templ_7745c5c3_Err != nil {
@@ -1637,7 +1637,7 @@ func paymentsTabContent(payments PaymentsTabData) templ.Component {
 			var templ_7745c5c3_Var70 string
 			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(row.Added)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 446, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 446, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 			if templ_7745c5c3_Err != nil {
@@ -1685,7 +1685,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var72 string
 			templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(notes.EmptyMessage, "登録されたメモがありません。"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 456, Col: 112}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 456, Col: 112}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 			if templ_7745c5c3_Err != nil {
@@ -1713,7 +1713,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var74 string
 			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var73).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 			if templ_7745c5c3_Err != nil {
@@ -1726,7 +1726,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var75 string
 			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(note.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 464, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 464, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 			if templ_7745c5c3_Err != nil {
@@ -1739,7 +1739,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var76 string
 			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(note.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 465, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 465, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 			if templ_7745c5c3_Err != nil {
@@ -1752,7 +1752,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var77 string
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(note.Visibility)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 467, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 467, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 			if templ_7745c5c3_Err != nil {
@@ -1765,7 +1765,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(note.Body)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 469, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 469, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 			if templ_7745c5c3_Err != nil {
@@ -1778,7 +1778,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var79 string
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(note.Created)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 471, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 471, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 			if templ_7745c5c3_Err != nil {
@@ -1791,7 +1791,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 			var templ_7745c5c3_Var80 string
 			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(note.Relative)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 471, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 471, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 			if templ_7745c5c3_Err != nil {
@@ -1814,7 +1814,7 @@ func notesTabContent(notes NotesTabData) templ.Component {
 					var templ_7745c5c3_Var81 string
 					templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 475, Col: 87}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 475, Col: 87}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 					if templ_7745c5c3_Err != nil {
@@ -1872,7 +1872,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var83 string
 			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(activity.EmptyMessage, "アクティビティはありません。"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 487, Col: 115}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 487, Col: 115}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 			if templ_7745c5c3_Err != nil {
@@ -1895,7 +1895,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var84 string
 			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(item.Icon, "📝"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 494, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 494, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
@@ -1908,7 +1908,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var85 string
 			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(item.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 498, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 498, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 			if templ_7745c5c3_Err != nil {
@@ -1921,7 +1921,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var86 string
 			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(item.Time)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 499, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 499, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 			if templ_7745c5c3_Err != nil {
@@ -1934,7 +1934,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var87 string
 			templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(item.Relative)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 499, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 499, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 			if templ_7745c5c3_Err != nil {
@@ -1947,7 +1947,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 			var templ_7745c5c3_Var88 string
 			templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(item.Actor)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 502, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 502, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
 			if templ_7745c5c3_Err != nil {
@@ -1965,7 +1965,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 				var templ_7745c5c3_Var89 string
 				templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("(%s)", item.ActorRole))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 504, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 504, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 				if templ_7745c5c3_Err != nil {
@@ -1988,7 +1988,7 @@ func activityTabContent(activity ActivityTabData) templ.Component {
 				var templ_7745c5c3_Var90 string
 				templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(item.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 508, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 508, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 				if templ_7745c5c3_Err != nil {
@@ -2053,7 +2053,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 			var templ_7745c5c3_Var92 string
 			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(data.RiskDescription)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 528, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 528, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 			if templ_7745c5c3_Err != nil {
@@ -2077,7 +2077,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 				var templ_7745c5c3_Var93 string
 				templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(segment)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 537, Col: 91}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 537, Col: 91}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
 				if templ_7745c5c3_Err != nil {
@@ -2117,7 +2117,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 			var templ_7745c5c3_Var94 string
 			templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(section.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 554, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 554, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
 			if templ_7745c5c3_Err != nil {
@@ -2135,7 +2135,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 				var templ_7745c5c3_Var95 string
 				templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 558, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 558, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 				if templ_7745c5c3_Err != nil {
@@ -2153,7 +2153,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 					var templ_7745c5c3_Var96 string
 					templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinStringErrs(item.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 560, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 560, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var96))
 					if templ_7745c5c3_Err != nil {
@@ -2176,7 +2176,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 					var templ_7745c5c3_Var97 string
 					templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(item.Meta)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 564, Col: 27}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 564, Col: 27}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
 					if templ_7745c5c3_Err != nil {
@@ -2195,7 +2195,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 					var templ_7745c5c3_Var98 templ.SafeURL
 					templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinURLErrs(item.LinkURL)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 567, Col: 32}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 567, Col: 32}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
 					if templ_7745c5c3_Err != nil {
@@ -2208,7 +2208,7 @@ func infoRailCard(data InfoRailData) templ.Component {
 					var templ_7745c5c3_Var99 string
 					templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(fallback(item.LinkLabel, "詳細を見る"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/detail.templ`, Line: 567, Col: 124}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/customers/detail.templ`, Line: 567, Col: 124}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 					if templ_7745c5c3_Err != nil {
