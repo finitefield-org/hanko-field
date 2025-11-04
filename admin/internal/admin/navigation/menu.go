@@ -325,7 +325,7 @@ var defaultMenu = []Group{
 				Icon:        "🧑‍🤝‍🧑",
 				Capability:  rbac.CapStaffManage,
 				Path:        "/org/staff",
-				Pattern:     "/org/staff",
+				Pattern:     "/org",
 				MatchPrefix: true,
 			},
 		},

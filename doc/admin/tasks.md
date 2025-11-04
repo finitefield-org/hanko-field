@@ -83,7 +83,7 @@
 ## 10. Production Queues & Org Management
 - [x] [Implement production queue settings page (`/admin/production-queues`) with CRUD modals for queue definitions.](doc/admin/tasks/056-implement-production-queue-settings-page-admin-production-queues-with-crud-modals-for-queu.md)
 - [x] [Provide queue WIP summary view and metrics (capacity, SLA) for operations oversight.](doc/admin/tasks/057-provide-queue-wip-summary-view-and-metrics-capacity-sla-for-operations-oversight.md)
-- [ ] [Build staff/role management pages (`/admin/org/staff`, `/admin/org/roles`) or placeholder hooking into Firebase Console if deferred; document admin-only access.](doc/admin/tasks/058-build-staff-role-management-pages-admin-org-staff-admin-org-roles-or-placeholder-hooking-i.md)
+- [x] [Build staff/role management pages (`/admin/org/staff`, `/admin/org/roles`) or placeholder hooking into Firebase Console if deferred; document admin-only access.](doc/admin/tasks/058-build-staff-role-management-pages-admin-org-staff-admin-org-roles-or-placeholder-hooking-i.md)
 - [ ] [Implement role assignment UI once supporting APIs available, including invitations and access revocation.](doc/admin/tasks/059-implement-role-assignment-ui-once-supporting-apis-available-including-invitations-and-acce.md)
 
 ## 11. Finance & Accounting

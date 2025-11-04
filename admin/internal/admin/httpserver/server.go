@@ -329,6 +329,11 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				rr.Put("/{reviewID}:moderate", uiHandlers.ReviewsModerate)
 				rr.Post("/{reviewID}:store-reply", uiHandlers.ReviewsStoreReply)
 			})
+			protected.Route("/org", func(or chi.Router) {
+				or.Use(custommw.RequireCapability(rbac.CapStaffManage))
+				or.Get("/staff", uiHandlers.OrgStaffPage)
+				or.Get("/roles", uiHandlers.OrgRolesPage)
+			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
 			// Future admin routes will be registered here.
