@@ -1,4 +1,5 @@
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
+import 'package:app/features/shop/presentation/product_addons_screen.dart';
 import 'package:app/features/shop/presentation/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -47,6 +48,9 @@ class ShopDetailPage extends StatelessWidget {
       return MaterialDetailScreen(materialId: identifier);
     }
     if (entity == 'products') {
+      if (subPage == 'addons') {
+        return ProductAddonsScreen(productId: identifier);
+      }
       return ProductDetailScreen(productId: identifier);
     }
 
