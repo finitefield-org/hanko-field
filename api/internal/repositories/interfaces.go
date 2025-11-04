@@ -228,6 +228,7 @@ type OrderShipmentRepository interface {
 	Insert(ctx context.Context, shipment domain.Shipment) error
 	Update(ctx context.Context, shipment domain.Shipment) error
 	List(ctx context.Context, orderID string) ([]domain.Shipment, error)
+	FindByTracking(ctx context.Context, trackingCode string) (domain.Shipment, error)
 }
 
 // ReviewRepository stores product reviews and their moderation meta.

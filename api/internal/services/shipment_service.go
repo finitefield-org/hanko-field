@@ -492,7 +492,204 @@ func (s *shipmentService) ListShipments(ctx context.Context, orderID string) ([]
 }
 
 func (s *shipmentService) RecordCarrierEvent(ctx context.Context, cmd ShipmentEventCommand) error {
-	return errors.New("shipment: carrier event recording not implemented")
+	carrier := strings.ToUpper(strings.TrimSpace(cmd.Carrier))
+	if carrier == "" {
+		return fmt.Errorf("%w: carrier is required", ErrShipmentInvalidInput)
+	}
+
+	status := strings.ToLower(strings.TrimSpace(cmd.Event.Status))
+	if status == "" {
+		return fmt.Errorf("%w: event status is required", ErrShipmentInvalidInput)
+	}
+	if _, ok := validShipmentStatuses[status]; !ok {
+		return fmt.Errorf("%w: status %q is not supported", ErrShipmentInvalidInput, status)
+	}
+
+	orderID := strings.TrimSpace(cmd.OrderID)
+	shipmentID := strings.TrimSpace(cmd.ShipmentID)
+	trackingCode := strings.ToUpper(strings.TrimSpace(cmd.TrackingCode))
+
+	if shipmentID == "" && trackingCode == "" {
+		return fmt.Errorf("%w: shipment id or tracking code is required", ErrShipmentInvalidInput)
+	}
+
+	occurredAt := cmd.Event.OccurredAt
+	if occurredAt.IsZero() {
+		occurredAt = s.now()
+	}
+	occurredAt = occurredAt.UTC()
+
+	now := s.now()
+	actor := fmt.Sprintf("carrier:%s", strings.ToLower(carrier))
+
+	var (
+		updated            Shipment
+		previous           Shipment
+		orderNumber        string
+		notifyDelivered    bool
+		notifyException    bool
+		orderStatusChanged bool
+		prevOrderStatus    domain.OrderStatus
+		newOrderStatus     domain.OrderStatus
+	)
+
+	err := s.runInTx(ctx, func(txCtx context.Context) error {
+		var (
+			err   error
+			order domain.Order
+		)
+
+		if orderID != "" {
+			order, err = s.orders.FindByID(txCtx, orderID)
+			if err != nil {
+				return s.mapOrderError(err)
+			}
+		} else {
+			if trackingCode == "" {
+				return fmt.Errorf("%w: order id is required when tracking code is absent", ErrShipmentInvalidInput)
+			}
+			found, findErr := s.shipments.FindByTracking(txCtx, trackingCode)
+			if findErr != nil {
+				return s.mapShipmentError(findErr)
+			}
+			orderID = strings.TrimSpace(found.OrderID)
+			if orderID == "" {
+				return fmt.Errorf("%w: shipment order id missing", ErrShipmentInvalidInput)
+			}
+			if shipmentID == "" {
+				shipmentID = strings.TrimSpace(found.ID)
+			}
+			order, err = s.orders.FindByID(txCtx, orderID)
+			if err != nil {
+				return s.mapOrderError(err)
+			}
+		}
+
+		orderNumber = strings.TrimSpace(order.OrderNumber)
+		prevOrderStatus = order.Status
+
+		shipments, err := s.shipments.List(txCtx, orderID)
+		if err != nil {
+			return s.mapShipmentError(err)
+		}
+
+		idx := -1
+		for i := range shipments {
+			idMatches := shipmentID != "" && strings.EqualFold(strings.TrimSpace(shipments[i].ID), shipmentID)
+			trackingMatches := trackingCode != "" && strings.EqualFold(strings.TrimSpace(shipments[i].TrackingCode), trackingCode)
+			if idMatches || trackingMatches {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return ErrShipmentNotFound
+		}
+
+		target := shipments[idx]
+		previous = target
+
+		if target.Carrier != "" && !strings.EqualFold(target.Carrier, carrier) {
+			return fmt.Errorf("%w: carrier mismatch for shipment %s", ErrShipmentInvalidInput, target.ID)
+		}
+		target.Carrier = carrier
+		if trackingCode != "" {
+			target.TrackingCode = trackingCode
+		}
+		target.Status = status
+		target.UpdatedAt = now
+
+		details := maps.Clone(cmd.Event.Details)
+		if details == nil {
+			details = make(map[string]any)
+		}
+		details["source"] = actor
+		details["carrier"] = carrier
+		if trackingCode != "" {
+			details["trackingNumber"] = trackingCode
+		}
+		if original := strings.TrimSpace(cmd.Event.Status); original != "" && original != status {
+			details["carrierStatus"] = strings.ToLower(original)
+		}
+
+		if etaValue, ok := details["expectedDelivery"].(time.Time); ok {
+			value := etaValue.UTC()
+			target.ETA = &value
+		}
+
+		target.Events = append(target.Events, ShipmentEvent{
+			Status:     status,
+			OccurredAt: occurredAt,
+			Details:    details,
+		})
+
+		shipments[idx] = target
+
+		if err := s.shipments.Update(txCtx, domain.Shipment(target)); err != nil {
+			return s.mapShipmentError(err)
+		}
+
+		statusChanged := !strings.EqualFold(previous.Status, status)
+		switch status {
+		case "delivered":
+			if statusChanged {
+				notifyDelivered = true
+			}
+			if s.areAllShipmentsDelivered(shipments) && canTransition(order.Status, domain.OrderStatusDelivered) {
+				order.Status = domain.OrderStatusDelivered
+				order.UpdatedAt = now
+				if order.DeliveredAt == nil {
+					delivered := occurredAt
+					order.DeliveredAt = &delivered
+				}
+				if err := s.orders.Update(txCtx, order); err != nil {
+					return s.mapOrderError(err)
+				}
+				orderStatusChanged = true
+				newOrderStatus = domain.OrderStatusDelivered
+			}
+		case "exception":
+			if statusChanged {
+				notifyException = true
+			}
+			if order.Status != domain.OrderStatusDelivered &&
+				order.Status != domain.OrderStatusCompleted &&
+				order.Status != domain.OrderStatusCanceled &&
+				order.Status != domain.OrderStatusShipped &&
+				canTransition(order.Status, domain.OrderStatusShipped) {
+				order.Status = domain.OrderStatusShipped
+				order.UpdatedAt = now
+				if order.ShippedAt == nil {
+					shipped := now
+					order.ShippedAt = &shipped
+				}
+				if err := s.orders.Update(txCtx, order); err != nil {
+					return s.mapOrderError(err)
+				}
+				orderStatusChanged = true
+				newOrderStatus = domain.OrderStatusShipped
+			}
+		}
+
+		updated = target
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	s.publishShipmentUpdated(ctx, orderID, orderNumber, previous, updated, actor, occurredAt)
+	if orderStatusChanged && newOrderStatus != "" {
+		s.publishOrderStatusChange(ctx, orderID, orderNumber, prevOrderStatus, newOrderStatus, actor, occurredAt)
+	}
+	if notifyDelivered {
+		s.publishShipmentNotification(ctx, orderID, orderNumber, updated, actor, occurredAt, orderEventShipmentDelivered)
+	}
+	if notifyException {
+		s.publishShipmentNotification(ctx, orderID, orderNumber, updated, actor, occurredAt, orderEventShipmentException)
+	}
+
+	return nil
 }
 
 func (s *shipmentService) validateQuantities(lines []OrderLineItem, existing []Shipment, items []ShipmentItem) error {

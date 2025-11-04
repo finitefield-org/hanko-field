@@ -482,6 +482,60 @@ func main() {
 		return stripeWebhookSecret, nil
 	})
 
+	lowerSecrets := make(map[string]string, len(cfg.Security.HMAC.Secrets))
+	for key, value := range cfg.Security.HMAC.Secrets {
+		normalized := strings.ToLower(strings.TrimSpace(key))
+		if normalized == "" {
+			continue
+		}
+		lowerSecrets[normalized] = strings.TrimSpace(value)
+	}
+	lookupSecret := func(keys ...string) string {
+		for _, key := range keys {
+			normalized := strings.ToLower(strings.TrimSpace(key))
+			if normalized == "" {
+				continue
+			}
+			if secret, ok := lowerSecrets[normalized]; ok && secret != "" {
+				return secret
+			}
+		}
+		return ""
+	}
+	carrierCIDRs := func(values []string, carrier string) []string {
+		prefix := strings.ToLower(strings.TrimSpace(carrier)) + ":"
+		result := make([]string, 0, len(values))
+		for _, raw := range values {
+			value := strings.TrimSpace(raw)
+			if value == "" {
+				continue
+			}
+			lower := strings.ToLower(value)
+			if strings.HasPrefix(lower, prefix) {
+				result = append(result, strings.TrimSpace(value[len(prefix):]))
+			}
+		}
+		return result
+	}
+
+	shippingOpts := make([]handlers.ShippingWebhookOption, 0, 4)
+	if secret := lookupSecret("shipping/dhl", "shipping"); secret != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierHMACSecret("dhl", secret))
+	}
+	if secret := lookupSecret("shipping/ups", "shipping"); secret != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierHMACSecret("ups", secret))
+	}
+	if token := lookupSecret("shipping/yamato"); token != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAuthToken("yamato", token))
+	}
+	if token := lookupSecret("shipping/fedex"); token != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAuthToken("fedex", token))
+	}
+	if cidrs := carrierCIDRs(cfg.Webhooks.AllowedHosts, "jp-post"); len(cidrs) > 0 {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAllowedCIDRs("jp-post", cidrs...))
+	}
+	shippingWebhookHandlers := handlers.NewShippingWebhookHandlers(shipmentService, shippingOpts...)
+
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
 	opts = append(opts, handlers.WithHealthHandlers(healthHandlers))
@@ -544,7 +598,11 @@ func main() {
 	if hmacMiddleware != nil {
 		opts = append(opts, handlers.WithWebhookMiddlewares(hmacMiddleware))
 	}
-	opts = append(opts, handlers.WithWebhookRoutes(paymentWebhookHandlers.Routes))
+	webhookRegistrars := []handlers.RouteRegistrar{paymentWebhookHandlers.Routes}
+	if shippingWebhookHandlers != nil {
+		webhookRegistrars = append(webhookRegistrars, shippingWebhookHandlers.Routes)
+	}
+	opts = append(opts, handlers.WithWebhookRoutes(handlers.CombineRouteRegistrars(webhookRegistrars...)))
 
 	router := handlers.NewRouter(opts...)
 	server := &http.Server{

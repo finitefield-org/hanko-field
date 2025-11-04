@@ -24,6 +24,7 @@ const (
 	orderEventShipmentUpdated    = "order.shipment.updated"
 	orderEventShipmentDelivered  = "order.shipment.delivered"
 	orderEventShipmentCanceled   = "order.shipment.canceled"
+	orderEventShipmentException  = "order.shipment.exception"
 
 	orderIDPrefix           = "ord_"
 	productionEventIDPrefix = "ope_"

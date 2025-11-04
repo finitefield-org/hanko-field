@@ -887,10 +887,11 @@ type UpdateShipmentCommand struct {
 }
 
 type ShipmentEventCommand struct {
-	OrderID    string
-	ShipmentID string
-	Carrier    string
-	Event      ShipmentEvent
+	OrderID      string
+	ShipmentID   string
+	Carrier      string
+	TrackingCode string
+	Event        ShipmentEvent
 }
 
 type CreateReviewCommand struct {
