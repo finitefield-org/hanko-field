@@ -359,9 +359,8 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
           lineId: 'pending-${addons.productId}',
           productId: addons.productId,
           quantity: 1,
-          price: existing?.lines.isNotEmpty == true
-              ? existing!.lines.first.price
-              : null,
+          price:
+              null, // Add-on line uses server-calculated base price when synced.
           currency: currency,
           addons: addonsMap,
         ),
