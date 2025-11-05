@@ -28,6 +28,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
     if (uri.pathSegments.first == 'cart') {
       return const TabRoute(currentTab: AppTab.shop, stack: [CartRoute()]);
     }
+    if (uri.pathSegments.first == 'checkout') {
+      final segments = uri.pathSegments.skip(1).toList();
+      final route = CheckoutRoute(segments);
+      return TabRoute(currentTab: AppTab.shop, stack: [route]);
+    }
     final firstSegment = uri.pathSegments.first;
     final remaining = uri.pathSegments.skip(1).toList();
     final routeSegments = _extractRouteSegments(remaining);
@@ -225,6 +230,10 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
         );
       case 'cart':
         return const CartRoute();
+      case 'checkout':
+        return CheckoutRoute(
+          segments.length > 1 ? segments.sublist(1) : const ['address'],
+        );
     }
     return null;
   }

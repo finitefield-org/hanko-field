@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/cart/presentation/cart_screen.dart';
+import 'package:app/features/cart/presentation/checkout_address_screen.dart';
 import 'package:app/features/design_creation/presentation/design_ai_suggestions_page.dart';
 import 'package:app/features/design_creation/presentation/design_editor_page.dart';
 import 'package:app/features/design_creation/presentation/design_export_page.dart';
@@ -199,6 +200,39 @@ class CartRoute implements IndependentRoute, StandaloneLocationRoute {
 
   @override
   String toString() => 'CartRoute()';
+}
+
+class CheckoutRoute implements IndependentRoute, StandaloneLocationRoute {
+  CheckoutRoute([List<String> segments = const ['address']])
+    : segments = List.unmodifiable(
+        segments.isEmpty ? const ['address'] : segments,
+      );
+
+  final List<String> segments;
+
+  @override
+  Widget get page {
+    final primary = segments.isEmpty ? 'address' : segments.first;
+    switch (primary) {
+      case 'address':
+        return const CheckoutAddressScreen();
+      default:
+        return const CheckoutAddressScreen();
+    }
+  }
+
+  @override
+  Object stackKey(AppTab tab, int index) =>
+      'checkout-${segments.join('-')}-$index';
+
+  @override
+  List<String> get pathSegments => ['checkout', ...segments];
+
+  @override
+  String get standaloneLocation => ['checkout', ...segments].join('/');
+
+  @override
+  String toString() => 'CheckoutRoute(${segments.join('/')})';
 }
 
 /// 注文詳細

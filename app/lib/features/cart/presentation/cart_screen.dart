@@ -206,17 +206,7 @@ class _CartLoadedView extends ConsumerWidget {
               state: state,
               checkoutLabel: checkoutLabel,
               onCheckout: () {
-                final messenger = ScaffoldMessenger.of(context);
-                messenger.hideCurrentSnackBar();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      experience.isInternational
-                          ? 'Checkout flow is under construction.'
-                          : 'チェックアウトフローは準備中です。',
-                    ),
-                  ),
-                );
+                ref.read(appStateProvider.notifier).push(CheckoutRoute());
               },
             ),
     );
