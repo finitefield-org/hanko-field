@@ -20,6 +20,7 @@ import (
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
+	adminpayments "finitefield.org/hanko-admin/internal/admin/payments"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	"finitefield.org/hanko-admin/internal/admin/rbac"
@@ -44,6 +45,7 @@ type Config struct {
 	ProfileService       profile.Service
 	SearchService        search.Service
 	NotificationsService adminnotifications.Service
+	PaymentsService      adminpayments.Service
 	OrdersService        adminorders.Service
 	ShipmentsService     adminshipments.Service
 	ProductionService    adminproduction.Service
@@ -119,6 +121,7 @@ func New(cfg Config) *http.Server {
 		ProfileService:       cfg.ProfileService,
 		SearchService:        cfg.SearchService,
 		NotificationsService: cfg.NotificationsService,
+		PaymentsService:      cfg.PaymentsService,
 		OrdersService:        cfg.OrdersService,
 		ShipmentsService:     cfg.ShipmentsService,
 		ProductionService:    cfg.ProductionService,
@@ -322,6 +325,12 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 					RegisterFragment(ur, "/export/jobs/{jobID}", uiHandlers.PromotionsUsageExportJobStatus)
 					ur.Post("/export", uiHandlers.PromotionsUsageExport)
 				})
+			})
+			protected.Route("/payments", func(pr chi.Router) {
+				pr.Use(custommw.RequireCapability(rbac.CapFinanceTransactions))
+				pr.Get("/transactions", uiHandlers.PaymentsTransactionsPage)
+				RegisterFragment(pr, "/transactions/table", uiHandlers.PaymentsTransactionsTable)
+				RegisterFragment(pr, "/transactions/drawer", uiHandlers.PaymentsTransactionsDrawer)
 			})
 			protected.Route("/reviews", func(rr chi.Router) {
 				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))

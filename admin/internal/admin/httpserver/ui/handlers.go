@@ -18,6 +18,7 @@ import (
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
+	adminpayments "finitefield.org/hanko-admin/internal/admin/payments"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
@@ -38,6 +39,7 @@ type Dependencies struct {
 	ProfileService       profile.Service
 	SearchService        adminsearch.Service
 	NotificationsService adminnotifications.Service
+	PaymentsService      adminpayments.Service
 	OrdersService        adminorders.Service
 	ShipmentsService     adminshipments.Service
 	ProductionService    adminproduction.Service
@@ -56,6 +58,7 @@ type Handlers struct {
 	profile       profile.Service
 	search        adminsearch.Service
 	notifications adminnotifications.Service
+	payments      adminpayments.Service
 	orders        adminorders.Service
 	shipments     adminshipments.Service
 	production    adminproduction.Service
@@ -89,6 +92,10 @@ func NewHandlers(deps Dependencies) *Handlers {
 	ordersService := deps.OrdersService
 	if ordersService == nil {
 		ordersService = adminorders.NewStaticService()
+	}
+	paymentsService := deps.PaymentsService
+	if paymentsService == nil {
+		paymentsService = adminpayments.NewStaticService()
 	}
 	customersService := deps.CustomersService
 	if customersService == nil {
@@ -131,6 +138,7 @@ func NewHandlers(deps Dependencies) *Handlers {
 		profile:       profileService,
 		search:        searchService,
 		notifications: notificationsService,
+		payments:      paymentsService,
 		orders:        ordersService,
 		shipments:     shipmentsService,
 		production:    productionService,

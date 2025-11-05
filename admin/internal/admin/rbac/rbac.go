@@ -18,50 +18,52 @@ const (
 type Capability string
 
 const (
-	CapDashboardOverview Capability = "dashboard.view"
-	CapOrdersList        Capability = "orders.list"
-	CapOrdersDetail      Capability = "orders.detail"
-	CapOrderRefund       Capability = "orders.refund"
-	CapShipmentsMonitor  Capability = "shipments.monitor"
-	CapProductionQueues  Capability = "production.queues"
-	CapCatalogManage     Capability = "catalog.manage"
-	CapCatalogFonts      Capability = "catalog.fonts"
-	CapContentManage     Capability = "content.manage"
-	CapPromotionsManage  Capability = "promotions.manage"
-	CapPromotionsUsage   Capability = "promotions.usage"
-	CapReviewsModerate   Capability = "reviews.moderate"
-	CapCustomersView     Capability = "customers.view"
-	CapNotificationsFeed Capability = "notifications.feed"
-	CapAuditLogView      Capability = "auditlogs.view"
-	CapSystemTasks       Capability = "system.tasks"
-	CapSystemCounters    Capability = "system.counters"
-	CapStaffManage       Capability = "org.staff"
-	CapProfileSelf       Capability = "profile.self"
-	CapSearchGlobal      Capability = "search.global"
+	CapDashboardOverview   Capability = "dashboard.view"
+	CapOrdersList          Capability = "orders.list"
+	CapOrdersDetail        Capability = "orders.detail"
+	CapOrderRefund         Capability = "orders.refund"
+	CapShipmentsMonitor    Capability = "shipments.monitor"
+	CapProductionQueues    Capability = "production.queues"
+	CapCatalogManage       Capability = "catalog.manage"
+	CapCatalogFonts        Capability = "catalog.fonts"
+	CapContentManage       Capability = "content.manage"
+	CapPromotionsManage    Capability = "promotions.manage"
+	CapPromotionsUsage     Capability = "promotions.usage"
+	CapFinanceTransactions Capability = "finance.transactions"
+	CapReviewsModerate     Capability = "reviews.moderate"
+	CapCustomersView       Capability = "customers.view"
+	CapNotificationsFeed   Capability = "notifications.feed"
+	CapAuditLogView        Capability = "auditlogs.view"
+	CapSystemTasks         Capability = "system.tasks"
+	CapSystemCounters      Capability = "system.counters"
+	CapStaffManage         Capability = "org.staff"
+	CapProfileSelf         Capability = "profile.self"
+	CapSearchGlobal        Capability = "search.global"
 )
 
 // capabilityRoles maps each capability to the roles permitted to access it.
 var capabilityRoles = map[Capability]Roles{
-	CapDashboardOverview: {RoleAdmin, RoleOps, RoleSupport, RoleMarketing},
-	CapOrdersList:        {RoleAdmin, RoleOps, RoleSupport},
-	CapOrdersDetail:      {RoleAdmin, RoleOps, RoleSupport},
-	CapOrderRefund:       {RoleAdmin, RoleSupport},
-	CapShipmentsMonitor:  {RoleAdmin, RoleOps},
-	CapProductionQueues:  {RoleAdmin, RoleOps},
-	CapCatalogManage:     {RoleAdmin, RoleOps, RoleMarketing},
-	CapCatalogFonts:      {RoleAdmin, RoleMarketing},
-	CapContentManage:     {RoleAdmin, RoleMarketing},
-	CapPromotionsManage:  {RoleAdmin, RoleMarketing},
-	CapPromotionsUsage:   {RoleAdmin, RoleMarketing},
-	CapReviewsModerate:   {RoleAdmin, RoleSupport, RoleMarketing},
-	CapCustomersView:     {RoleAdmin, RoleOps, RoleSupport},
-	CapNotificationsFeed: {RoleAdmin, RoleOps, RoleSupport},
-	CapAuditLogView:      {RoleAdmin},
-	CapSystemTasks:       {RoleAdmin, RoleOps},
-	CapSystemCounters:    {RoleAdmin},
-	CapStaffManage:       {RoleAdmin},
-	CapProfileSelf:       {RoleAdmin, RoleOps, RoleSupport, RoleMarketing},
-	CapSearchGlobal:      {RoleAdmin, RoleOps, RoleSupport},
+	CapDashboardOverview:   {RoleAdmin, RoleOps, RoleSupport, RoleMarketing},
+	CapOrdersList:          {RoleAdmin, RoleOps, RoleSupport},
+	CapOrdersDetail:        {RoleAdmin, RoleOps, RoleSupport},
+	CapOrderRefund:         {RoleAdmin, RoleSupport},
+	CapShipmentsMonitor:    {RoleAdmin, RoleOps},
+	CapProductionQueues:    {RoleAdmin, RoleOps},
+	CapCatalogManage:       {RoleAdmin, RoleOps, RoleMarketing},
+	CapCatalogFonts:        {RoleAdmin, RoleMarketing},
+	CapContentManage:       {RoleAdmin, RoleMarketing},
+	CapPromotionsManage:    {RoleAdmin, RoleMarketing},
+	CapPromotionsUsage:     {RoleAdmin, RoleMarketing},
+	CapFinanceTransactions: {RoleAdmin, RoleOps},
+	CapReviewsModerate:     {RoleAdmin, RoleSupport, RoleMarketing},
+	CapCustomersView:       {RoleAdmin, RoleOps, RoleSupport},
+	CapNotificationsFeed:   {RoleAdmin, RoleOps, RoleSupport},
+	CapAuditLogView:        {RoleAdmin},
+	CapSystemTasks:         {RoleAdmin, RoleOps},
+	CapSystemCounters:      {RoleAdmin},
+	CapStaffManage:         {RoleAdmin},
+	CapProfileSelf:         {RoleAdmin, RoleOps, RoleSupport, RoleMarketing},
+	CapSearchGlobal:        {RoleAdmin, RoleOps, RoleSupport},
 }
 
 // Roles captures a list of roles and exposes intersection checks used for RBAC evaluation.

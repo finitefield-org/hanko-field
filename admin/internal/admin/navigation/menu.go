@@ -272,6 +272,22 @@ var defaultMenu = []Group{
 		},
 	},
 	{
+		Key:        "finance",
+		Label:      "ファイナンス",
+		Capability: rbac.CapFinanceTransactions,
+		Items: []Item{
+			{
+				Key:         "payments-transactions",
+				Label:       "決済トランザクション",
+				Icon:        "💳",
+				Capability:  rbac.CapFinanceTransactions,
+				Path:        "/payments/transactions",
+				Pattern:     "/payments/transactions",
+				MatchPrefix: true,
+			},
+		},
+	},
+	{
 		Key:        "customers",
 		Label:      "顧客",
 		Capability: rbac.CapCustomersView,
