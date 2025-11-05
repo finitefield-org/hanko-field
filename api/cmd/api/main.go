@@ -536,6 +536,20 @@ func main() {
 	}
 	shippingWebhookHandlers := handlers.NewShippingWebhookHandlers(shipmentService, shippingOpts...)
 
+	aiWebhookLogger := logger.Named("webhooks.ai")
+	aiWebhookHandlers := handlers.NewAIWorkerWebhookHandlers(
+		nil,
+		services.NewNoopAISuggestionNotifier(),
+		handlers.WithAIWorkerWebhookLogger(func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			aiWebhookLogger.Debug("ai worker webhook", zFields...)
+		}),
+	)
+
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
 	opts = append(opts, handlers.WithHealthHandlers(healthHandlers))
@@ -601,6 +615,9 @@ func main() {
 	webhookRegistrars := []handlers.RouteRegistrar{paymentWebhookHandlers.Routes}
 	if shippingWebhookHandlers != nil {
 		webhookRegistrars = append(webhookRegistrars, shippingWebhookHandlers.Routes)
+	}
+	if aiWebhookHandlers != nil {
+		webhookRegistrars = append(webhookRegistrars, aiWebhookHandlers.Routes)
 	}
 	opts = append(opts, handlers.WithWebhookRoutes(handlers.CombineRouteRegistrars(webhookRegistrars...)))
 

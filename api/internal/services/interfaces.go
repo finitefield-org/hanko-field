@@ -485,6 +485,26 @@ type BackgroundJobDispatcher interface {
 	EnqueueStockCleanup(ctx context.Context, payload StockCleanupPayload) error
 }
 
+// AISuggestionNotifier dispatches notifications when AI suggestions finish processing.
+type AISuggestionNotifier interface {
+	NotifySuggestionReady(ctx context.Context, notification AISuggestionNotification) error
+}
+
+// AISuggestionNotification encapsulates metadata delivered to notification channels when an AI
+// suggestion is ready for review by the requesting user.
+type AISuggestionNotification struct {
+	JobID        string
+	DesignID     string
+	SuggestionID string
+	UserID       string
+	Method       string
+	Model        string
+	ReadyAt      time.Time
+	Suggestion   AISuggestion
+	Outputs      map[string]any
+	Metadata     map[string]any
+}
+
 // ErrorTranslator converts repository or platform errors into domain-aware sentinel errors.
 type ErrorTranslator interface {
 	Translate(err error) error
