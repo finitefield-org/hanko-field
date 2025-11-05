@@ -67,12 +67,12 @@ func (h *AdminPromotionHandlers) listPromotions(w http.ResponseWriter, r *http.R
 		},
 	}
 	if sizeStr := strings.TrimSpace(query.Get("pageSize")); sizeStr != "" {
-		if size, err := strconv.Atoi(sizeStr); err == nil {
-			filter.Pagination.PageSize = size
-		} else {
-			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_page_size", "pageSize must be numeric", http.StatusBadRequest))
+		size, err := strconv.Atoi(sizeStr)
+		if err != nil || size < 0 {
+			httpx.WriteError(r.Context(), w, httpx.NewError("invalid_page_size", "pageSize must be a non-negative integer", http.StatusBadRequest))
 			return
 		}
+		filter.Pagination.PageSize = size
 	}
 	if ts := strings.TrimSpace(query.Get("activeOn")); ts != "" {
 		parsed, err := time.Parse(time.RFC3339, ts)
