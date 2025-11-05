@@ -1,0 +1,657 @@
+package finance
+
+import (
+	"strconv"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6">
+		<section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+			<header class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+					if data.Header.LastSynced != "" {
+						<p class="text-xs text-slate-500">最終同期: { data.Header.LastSynced }</p>
+					}
+				</div>
+				<div class="flex flex-col gap-4">
+					if len(data.Header.Metrics) > 0 {
+						<div class="grid gap-3 sm:grid-cols-3">
+							for _, metric := range data.Header.Metrics {
+								@headerMetric(metric)
+							}
+						</div>
+					}
+					if len(data.Header.PolicyLinks) > 0 {
+						<div class="flex flex-wrap items-center gap-3 text-sm">
+							<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">参考リンク</span>
+							for _, link := range data.Header.PolicyLinks {
+								<a
+									href={ link.Href }
+									target="_blank"
+									rel="noopener noreferrer"
+									class="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
+								>
+									{ link.Label } →
+								</a>
+							}
+						</div>
+					}
+				</div>
+			</header>
+			if len(data.Header.Alerts) > 0 {
+				<div class="mt-6 space-y-3">
+					for _, alert := range data.Header.Alerts {
+						@inlineAlert(alert)
+					}
+				</div>
+			}
+		</section>
+
+		@GridWithSnackbar(data.Content, data.Snackbar)
+	</div>
+}
+
+templ Grid(content ContentData) {
+	<div id={ GridContainerID } class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)_360px]">
+		<aside class="space-y-4">
+			@Navigation(content.Navigation, content.Query)
+		</aside>
+		<section class="space-y-6" id={ ContentContainerID }>
+			@TableCard(content.Table)
+			@DetailCard(content.Detail)
+		</section>
+		<aside class="space-y-4" id={ HistoryContainerID }>
+			@HistoryPanel(content.History)
+		</aside>
+	</div>
+}
+
+templ GridWithSnackbar(content ContentData, snackbar *SnackbarView) {
+	@Grid(content)
+	if snackbar != nil {
+		<div hx-swap-oob="true" id="toast-stack">
+			@components.Toast(components.ToastProps{
+				Tone:     snackbar.Tone,
+				Message:  snackbar.Message,
+				AutoHide: true,
+			})
+		</div>
+	}
+}
+
+templ Navigation(nav NavigationData, query QueryState) {
+	<form
+		class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+		hx-get={ nav.ActionURL }
+		hx-target={ "#" + GridContainerID }
+		hx-swap="outerHTML"
+	>
+		<input type="hidden" name="selected" value={ query.SelectedID } />
+		<div class="flex items-center gap-2">
+			<input
+				type="search"
+				name="search"
+				value={ nav.SearchValue }
+				placeholder={ nav.SearchPlaceholder }
+				class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+			/>
+			<button type="submit" class={ helpers.ButtonClass("secondary", "sm", false, false) }>検索</button>
+		</div>
+		<label class="inline-flex items-center gap-2 text-xs text-slate-600">
+			<input
+				type="checkbox"
+				name="includeSoon"
+				value="true"
+				checked?={ nav.IncludeSoon }
+				class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+			/>
+			30日以内の更新予定を表示
+		</label>
+		<nav class="space-y-4 text-sm">
+			for _, group := range nav.Regions {
+				<div class="space-y-2">
+					<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+						<span>{ group.Label }</span>
+						<span>{ strconv.Itoa(group.Count) }</span>
+					</div>
+					<ul class="space-y-1">
+						for _, item := range group.Items {
+							<li>
+								<a
+									href={ item.Href }
+									hx-get={ item.HXGet }
+									hx-target={ item.HXTarget }
+									hx-swap={ item.HXSwap }
+									class={ navigationItemClass(item.Selected) }
+									data-selected?={ item.Selected }
+								>
+									<div class="flex flex-col">
+										<span class="font-medium">{ item.Label }</span>
+										<span class="text-xs text-slate-500">{ item.Code }</span>
+									</div>
+									<div class="flex flex-col items-end">
+										if item.Pending {
+											<span class="text-xs font-semibold text-amber-600">予定</span>
+										} else if !item.Active {
+											<span class="text-xs font-semibold text-slate-400">停止</span>
+										}
+										if item.Registration != "" {
+											<span class="text-[10px] text-slate-400">{ item.Registration }</span>
+										}
+									</div>
+								</a>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+		</nav>
+	</form>
+}
+
+templ TableCard(table JurisdictionTableData) {
+	<section class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+		<header class="flex items-center justify-between">
+			<h2 class="text-lg font-semibold text-slate-900">地域一覧</h2>
+			<span class="text-xs text-slate-500">クリックで詳細を表示</span>
+		</header>
+		<div class="overflow-x-auto">
+			<table class="min-w-full divide-y divide-slate-200 text-sm">
+				<thead class="bg-slate-50 text-xs uppercase text-slate-500">
+					<tr>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">地域</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">標準税率</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">軽減税率</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">課税閾値</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">適用期間</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">ステータス</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold">最終更新</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-100">
+					if len(table.Rows) == 0 {
+						<tr>
+							<td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">{ table.EmptyMessage }</td>
+						</tr>
+					} else {
+						for _, row := range table.Rows {
+							<tr class={ tableRowClass(row.Selected) }>
+								<td class="px-4 py-4">
+									<a
+										href={ row.SelectURL }
+										hx-get={ row.HXGet }
+										hx-target={ "#" + GridContainerID }
+										hx-swap="outerHTML"
+										class="flex flex-col gap-0.5 font-medium text-slate-900 hover:text-brand-600"
+									>
+										<span>{ row.Country }</span>
+										<span class="text-xs font-normal text-slate-500">{ row.Region } · { row.Code }</span>
+									</a>
+								</td>
+								<td class="px-4 py-4 text-slate-900">{ row.DefaultRate }</td>
+								<td class="px-4 py-4 text-slate-700">{ row.ReducedRate }</td>
+								<td class="px-4 py-4 text-slate-700">{ row.ThresholdLabel }</td>
+								<td class="px-4 py-4 text-slate-700">{ row.EffectiveLabel }</td>
+								<td class="px-4 py-4">
+									<span class={ helpers.BadgeClass(row.StatusTone) }>{ row.StatusLabel }</span>
+								</td>
+								<td class="px-4 py-4 text-xs text-slate-500">{ row.UpdatedLabel }</td>
+							</tr>
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}
+
+templ DetailCard(detail JurisdictionDetailData) {
+	<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" id={ DetailContainerID }>
+		if detail.Empty {
+			<div class="py-10 text-center text-sm text-slate-500">
+				{ detail.Title }
+			</div>
+			return
+		}
+		<header class="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<h2 class="text-xl font-semibold text-slate-900">{ detail.Title }</h2>
+				<p class="text-sm text-slate-500">{ detail.Region } · { detail.Code }</p>
+			</div>
+			<div class="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+				<span>標準 { detail.DefaultRate }</span>
+				if detail.ReducedRate != "" {
+					<span>軽減 { detail.ReducedRate }</span>
+				}
+				<span>更新 { detail.UpdatedAt } ({ detail.UpdatedRelative })</span>
+			</div>
+		</header>
+		<div class="space-y-6 pt-4">
+			if len(detail.Alerts) > 0 {
+				<div class="space-y-3">
+					for _, alert := range detail.Alerts {
+						@inlineAlert(alert)
+					}
+				</div>
+			}
+
+			if len(detail.Notes) > 0 {
+				<section class="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">メモ</h3>
+					<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+						for _, note := range detail.Notes {
+							<li>{ note }</li>
+						}
+					</ul>
+				</section>
+			}
+
+			<section class="space-y-3">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold text-slate-900">税率ルール</h3>
+					<button
+						type="button"
+						class={ helpers.ButtonClass("primary", "sm", false, false) }
+						hx-get={ detail.Rules.NewRuleURL }
+						hx-target="#modal"
+						hx-swap="innerHTML"
+					>
+						新規追加
+					</button>
+				</div>
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-slate-200 text-sm">
+						<thead class="bg-slate-50 text-xs uppercase text-slate-500">
+							<tr>
+								<th class="px-4 py-3 text-left font-semibold">区分</th>
+								<th class="px-4 py-3 text-left font-semibold">税率</th>
+								<th class="px-4 py-3 text-left font-semibold">課税閾値</th>
+								<th class="px-4 py-3 text-left font-semibold">適用期間</th>
+								<th class="px-4 py-3 text-left font-semibold">ステータス</th>
+								<th class="px-4 py-3 text-left font-semibold">更新</th>
+								<th class="px-4 py-3 text-right font-semibold">操作</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-slate-100">
+							if len(detail.Rules.Table.Rows) == 0 {
+								<tr>
+									<td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">{ detail.Rules.Table.EmptyMessage }</td>
+								</tr>
+							} else {
+								for _, row := range detail.Rules.Table.Rows {
+									<tr>
+										<td class="px-4 py-3">
+											<div class="flex flex-col">
+												<span class="font-medium text-slate-900">{ row.Label }</span>
+												<span class="text-xs text-slate-500">{ row.Scope }</span>
+											</div>
+										</td>
+										<td class="px-4 py-3 text-slate-700">{ row.Rate }</td>
+										<td class="px-4 py-3 text-slate-700">{ row.Threshold }</td>
+										<td class="px-4 py-3 text-slate-700">{ row.Effective }</td>
+										<td class="px-4 py-3">
+											<span class={ helpers.BadgeClass(row.StatusTone) }>{ row.Status }</span>
+											if row.Registration != "" {
+												<p class="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{ row.Registration }</p>
+											}
+										</td>
+										<td class="px-4 py-3 text-xs text-slate-500">{ row.Updated }</td>
+										<td class="px-4 py-3 text-right">
+											<div class="flex justify-end gap-2">
+												<button
+													type="button"
+													class={ helpers.ButtonClass("secondary", "xs", false, false) }
+													hx-get={ row.EditURL }
+													hx-target="#modal"
+													hx-swap="innerHTML"
+												>
+													編集
+												</button>
+												<button
+													type="button"
+													class={ helpers.ButtonClass("ghost", "xs", false, false) }
+													hx-get={ row.DeleteURL }
+													hx-target="#modal"
+													hx-swap="innerHTML"
+												>
+													削除
+												</button>
+											</div>
+										</td>
+									</tr>
+								}
+							}
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</section>
+}
+
+templ HistoryPanel(history AuditSectionData) {
+	<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+		<h3 class="text-sm font-semibold text-slate-900">更新履歴</h3>
+		if len(history.Events) == 0 {
+			<p class="mt-4 text-sm text-slate-500">履歴がまだありません。</p>
+			return
+		}
+		<ol class="mt-4 space-y-4 text-sm text-slate-600">
+			for _, event := range history.Events {
+				<li class="relative pl-6">
+					<span class="absolute left-0 top-1 h-2 w-2 rounded-full bg-brand-500"></span>
+					<p class="text-xs uppercase tracking-wide text-slate-400">{ event.Timestamp } · { event.Relative }</p>
+					<p class="font-medium text-slate-900">{ event.Action }</p>
+					if event.Details != "" {
+						<p class="text-sm text-slate-600">{ event.Details }</p>
+					}
+					if event.Actor != "" {
+						<p class="text-xs text-slate-500">by { event.Actor }</p>
+					}
+				</li>
+			}
+		</ol>
+	</section>
+}
+
+templ inlineAlert(alert AlertView) {
+	<div class={ alertClass(alert.Tone) }>
+		<div class="flex flex-1 flex-col gap-1">
+			<p class="font-medium">{ alert.Title }</p>
+			if alert.Body != "" {
+				<p class="text-sm text-slate-600">{ alert.Body }</p>
+			}
+			if alert.Action != nil {
+				<a href={ alert.Action.Href } class="text-sm font-medium text-brand-600 hover:text-brand-700">
+					{ alert.Action.Label } →
+				</a>
+			}
+		</div>
+	</div>
+}
+
+templ headerMetric(metric HeaderMetric) {
+	<div class={ headerMetricClass(metric.Tone) }>
+		<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ metric.Label }</p>
+		<p class="text-xl font-semibold text-slate-900">{ metric.Value }</p>
+		if metric.SubLabel != "" {
+			<p class="text-xs text-slate-500">{ metric.SubLabel }</p>
+		}
+	</div>
+}
+
+templ RuleFormModal(data RuleFormData) {
+	<div class="modal-backdrop" data-modal-state="open">
+		<div class={ helpers.ModalPanelClass("lg") }>
+			<div class="modal-header">
+				<h2 class="modal-title">{ data.Title }</h2>
+				<button type="button" class="modal-close" data-modal-dismiss aria-label="閉じる">×</button>
+			</div>
+			<div class="modal-body space-y-4">
+				<p class="text-sm text-slate-600">{ data.Description }</p>
+				if data.GeneralError != "" {
+					<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+						{ data.GeneralError }
+					</div>
+				}
+				<form
+					id="tax-rule-form"
+					class="space-y-4"
+					hx-target={ "#" + GridContainerID }
+					hx-swap="outerHTML"
+					if data.Method == "put" {
+						hx-put={ data.ActionURL }
+					} else {
+						hx-post={ data.ActionURL }
+					}
+				>
+					<input type="hidden" name="_csrf" value={ data.CSRFToken } />
+					if data.Fields.RuleID != "" {
+						<input type="hidden" name="ruleID" value={ data.Fields.RuleID } />
+					}
+					<input type="hidden" name="type" value={ data.Fields.Type } />
+					if data.ReturnQuery != "" {
+						<input type="hidden" name="return_query" value={ data.ReturnQuery } />
+					}
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-label">名称</label>
+							<input
+								id="rule-label"
+								name="label"
+								type="text"
+								value={ data.Fields.Label }
+								class={ inputClass(data.FieldErrors["label"]) }
+							/>
+							@fieldError(data.FieldErrors["label"])
+						</div>
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-scope">課税区分</label>
+							<select id="rule-scope" name="scope" class={ inputClass(data.FieldErrors["scope"]) }>
+								<option value="standard" selected?={ data.Fields.Scope == "standard" }>標準課税</option>
+								<option value="reduced" selected?={ data.Fields.Scope == "reduced" }>軽減課税</option>
+								<option value="state" selected?={ data.Fields.Scope == "state" }>州税</option>
+								<option value="local" selected?={ data.Fields.Scope == "local" }>地方税</option>
+								<option value="custom" selected?={ data.Fields.Scope == "custom" }>その他</option>
+							</select>
+							@fieldError(data.FieldErrors["scope"])
+						</div>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-rate">税率 (%)</label>
+							<input
+								id="rule-rate"
+								name="rate"
+								type="number"
+								step="0.01"
+								min="0"
+								value={ data.Fields.Rate }
+								class={ inputClass(data.FieldErrors["rate"]) }
+							/>
+							@fieldError(data.FieldErrors["rate"])
+						</div>
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-threshold">課税閾値 (minor)</label>
+							<input
+								id="rule-threshold"
+								name="threshold"
+								type="number"
+								min="0"
+								value={ data.Fields.Threshold }
+								class={ inputClass(data.FieldErrors["threshold"]) }
+							/>
+							@fieldError(data.FieldErrors["threshold"])
+						</div>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-effective-from">適用開始</label>
+							<input
+								id="rule-effective-from"
+								name="effective_from"
+								type="date"
+								value={ data.Fields.EffectiveFrom }
+								class={ inputClass(data.FieldErrors["effective_from"]) }
+							/>
+							@fieldError(data.FieldErrors["effective_from"])
+						</div>
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-effective-to">適用終了</label>
+							<input
+								id="rule-effective-to"
+								name="effective_to"
+								type="date"
+								value={ data.Fields.EffectiveTo }
+								class={ inputClass(data.FieldErrors["effective_to"]) }
+							/>
+							@fieldError(data.FieldErrors["effective_to"])
+						</div>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="space-y-1.5">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-registration">登録番号</label>
+							<input
+								id="rule-registration"
+								name="registration"
+								type="text"
+								value={ data.Fields.RegistrationNumber }
+								class={ inputClass(data.FieldErrors["registration"]) }
+							/>
+							@fieldError(data.FieldErrors["registration"])
+						</div>
+						<div class="space-y-2">
+							<label class="text-xs font-semibold uppercase tracking-wide text-slate-500">設定</label>
+							<label class="flex items-center gap-2 text-xs text-slate-600">
+								<input
+									type="checkbox"
+									name="requires_registration"
+									value="true"
+									checked?={ data.Fields.RequiresRegistration }
+									class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+								/>
+								登録番号必須
+							</label>
+							<label class="flex items-center gap-2 text-xs text-slate-600">
+								<input
+									type="checkbox"
+									name="default"
+									value="true"
+									checked?={ data.Fields.Default }
+									class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+								/>
+								既定の税率に設定
+							</label>
+							@fieldError(data.FieldErrors["default"])
+						</div>
+					</div>
+					<div class="space-y-1.5">
+						<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="rule-notes">備考</label>
+						<textarea
+							id="rule-notes"
+							name="notes"
+							rows="3"
+							class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+						>{ data.Fields.Notes }</textarea>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class={ helpers.ButtonClass("ghost", "md", false, false) } data-modal-dismiss>キャンセル</button>
+				<button type="submit" class={ helpers.ButtonClass("primary", "md", false, false) } form="tax-rule-form">
+					{ data.SubmitLabel }
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ RuleDeleteModal(data RuleDeleteModalData) {
+	<div class="modal-backdrop" data-modal-state="open">
+		<div class={ helpers.ModalPanelClass("md") }>
+			<div class="modal-header">
+				<h2 class="modal-title">{ data.Title }</h2>
+				<button type="button" class="modal-close" data-modal-dismiss aria-label="閉じる">×</button>
+			</div>
+			<div class="modal-body space-y-4">
+				<p class="text-sm text-slate-600">{ data.Description }</p>
+				<ul class="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+					<li><strong>名称:</strong> { data.RuleLabel }</li>
+					<li><strong>税率:</strong> { data.Rate }</li>
+					<li><strong>期間:</strong> { data.Effective }</li>
+				</ul>
+				if data.Error != "" {
+					<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+						{ data.Error }
+					</div>
+				}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class={ helpers.ButtonClass("ghost", "md", false, false) } data-modal-dismiss>{ data.CancelLabel }</button>
+				<form
+					hx-delete={ data.ActionURL }
+					hx-target={ "#" + GridContainerID }
+					hx-swap="outerHTML"
+				>
+					<input type="hidden" name="_csrf" value={ data.CSRFToken } />
+					if data.ReturnQuery != "" {
+						<input type="hidden" name="return_query" value={ data.ReturnQuery } />
+					}
+					<button type="submit" class={ helpers.ButtonClass("danger", "md", false, false) }>{ data.SubmitLabel }</button>
+				</form>
+			</div>
+		</div>
+	</div>
+}
+
+templ fieldError(message string) {
+	if message == "" {
+		return
+	}
+	<p class="text-xs text-red-600">{ message }</p>
+}
+
+func navigationItemClass(selected bool) string {
+	base := []string{
+		"flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors",
+	}
+	if selected {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-700")
+	} else {
+		base = append(base, "border-transparent hover:border-slate-200 hover:bg-slate-50")
+	}
+	return helpers.ClassList(base...)
+}
+
+func tableRowClass(selected bool) string {
+	if selected {
+		return "bg-brand-50"
+	}
+	return ""
+}
+
+func alertClass(tone string) string {
+	switch tone {
+	case "warning":
+		return "flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800"
+	case "danger":
+		return "flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800"
+	default:
+		return "flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700"
+	}
+}
+
+func headerMetricClass(tone string) string {
+	base := []string{"flex flex-col gap-1 rounded-xl border px-4 py-3 shadow-sm"}
+	switch tone {
+	case "success":
+		base = append(base, "border-emerald-200 bg-emerald-50 text-emerald-700")
+	case "warning":
+		base = append(base, "border-amber-200 bg-amber-50 text-amber-700")
+	case "info":
+		base = append(base, "border-blue-200 bg-blue-50 text-blue-700")
+	default:
+		base = append(base, "border-slate-200 bg-slate-50 text-slate-700")
+	}
+	return helpers.ClassList(base...)
+}
+
+func inputClass(err string) string {
+	base := []string{"w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"}
+	if err != "" {
+		base = append(base, "border-red-300 focus:border-red-500 focus:ring-red-200")
+	} else {
+		base = append(base, "border-slate-300 text-slate-700 focus:border-brand-500 focus:ring-brand-200")
+	}
+	return helpers.ClassList(base...)
+}

@@ -334,6 +334,17 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				RegisterFragment(pr, "/transactions/table", uiHandlers.PaymentsTransactionsTable)
 				RegisterFragment(pr, "/transactions/drawer", uiHandlers.PaymentsTransactionsDrawer)
 			})
+			protected.Route("/finance", func(fr chi.Router) {
+				fr.Use(custommw.RequireCapability(rbac.CapFinanceTaxSettings))
+				fr.Get("/taxes", uiHandlers.TaxSettingsPage)
+				RegisterFragment(fr, "/taxes/grid", uiHandlers.TaxSettingsGrid)
+				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/new", uiHandlers.TaxRuleNewModal)
+				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/edit", uiHandlers.TaxRuleEditModal)
+				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/delete", uiHandlers.TaxRuleDeleteModal)
+				fr.Post("/taxes/jurisdictions/{jurisdictionID}/rules", uiHandlers.TaxRuleCreate)
+				fr.Put("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleUpdate)
+				fr.Delete("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleDelete)
+			})
 			protected.Route("/reviews", func(rr chi.Router) {
 				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))
 				rr.Get("/", uiHandlers.ReviewsModerationPage)

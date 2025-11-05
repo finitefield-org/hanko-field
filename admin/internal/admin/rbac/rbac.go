@@ -30,6 +30,7 @@ const (
 	CapPromotionsManage    Capability = "promotions.manage"
 	CapPromotionsUsage     Capability = "promotions.usage"
 	CapFinanceTransactions Capability = "finance.transactions"
+	CapFinanceTaxSettings  Capability = "finance.taxes"
 	CapReviewsModerate     Capability = "reviews.moderate"
 	CapCustomersView       Capability = "customers.view"
 	CapNotificationsFeed   Capability = "notifications.feed"
@@ -55,6 +56,7 @@ var capabilityRoles = map[Capability]Roles{
 	CapPromotionsManage:    {RoleAdmin, RoleMarketing},
 	CapPromotionsUsage:     {RoleAdmin, RoleMarketing},
 	CapFinanceTransactions: {RoleAdmin, RoleOps},
+	CapFinanceTaxSettings:  {RoleAdmin, RoleOps},
 	CapReviewsModerate:     {RoleAdmin, RoleSupport, RoleMarketing},
 	CapCustomersView:       {RoleAdmin, RoleOps, RoleSupport},
 	CapNotificationsFeed:   {RoleAdmin, RoleOps, RoleSupport},

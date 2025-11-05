@@ -285,6 +285,15 @@ var defaultMenu = []Group{
 				Pattern:     "/payments/transactions",
 				MatchPrefix: true,
 			},
+			{
+				Key:         "finance-taxes",
+				Label:       "税設定",
+				Icon:        "🧾",
+				Capability:  rbac.CapFinanceTaxSettings,
+				Path:        "/finance/taxes",
+				Pattern:     "/finance/taxes",
+				MatchPrefix: true,
+			},
 		},
 	},
 	{
