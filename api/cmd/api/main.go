@@ -434,6 +434,10 @@ func main() {
 	)
 	internalPromotionHandlers := handlers.NewInternalPromotionHandlers(promotionService)
 	internalInvoiceHandlers := handlers.NewInternalInvoiceHandlers(invoiceService)
+	internalMaintenanceHandlers := handlers.NewInternalMaintenanceHandlers(
+		inventoryService,
+		handlers.WithMaintenanceMetrics(handlers.NewMaintenanceCleanupMetrics(logger.Named("metrics.maintenance"))),
+	)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
@@ -594,6 +598,7 @@ func main() {
 		internalCheckoutHandlers.Routes,
 		internalPromotionHandlers.Routes,
 		internalInvoiceHandlers.Routes,
+		internalMaintenanceHandlers.Routes,
 	)))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
