@@ -166,7 +166,7 @@ class FakeCartRepository implements CartRepository {
 
   Future<CachedCartSnapshot> _ensureSnapshot(ExperienceGate experience) async {
     final stored = await _cache.readCart();
-    if (stored.value != null && stored.value!.lines.isNotEmpty) {
+    if (stored.value != null) {
       return stored.value!;
     }
     final seeded = _seedSnapshot(experience);
