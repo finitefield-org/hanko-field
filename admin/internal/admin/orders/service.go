@@ -18,6 +18,12 @@ type Service interface {
 	// UpdateStatus attempts to transition an order to the provided status and returns the updated order state.
 	UpdateStatus(ctx context.Context, token, orderID string, req StatusUpdateRequest) (StatusUpdateResult, error)
 
+	// ManualCaptureModal loads metadata required to render the manual capture modal for an order.
+	ManualCaptureModal(ctx context.Context, token, orderID string) (ManualCaptureModal, error)
+
+	// SubmitManualCapture attempts to capture an authorized payment for the specified order.
+	SubmitManualCapture(ctx context.Context, token, orderID string, req ManualCaptureRequest) (ManualCaptureResult, error)
+
 	// RefundModal loads metadata required to render the refund modal for an order.
 	RefundModal(ctx context.Context, token, orderID string) (RefundModal, error)
 
@@ -84,6 +90,8 @@ var (
 	ErrPaymentNotFound = errors.New("payment not found")
 	// ErrRefundFailed indicates the PSP refund attempt failed for reasons other than validation.
 	ErrRefundFailed = errors.New("refund failed")
+	// ErrManualCaptureFailed indicates the PSP manual capture attempt failed for reasons other than validation.
+	ErrManualCaptureFailed = errors.New("manual capture failed")
 	// ErrInvoiceTemplateNotFound indicates the requested invoice template does not exist.
 	ErrInvoiceTemplateNotFound = errors.New("invoice template not found")
 	// ErrInvoiceJobNotFound indicates the requested invoice issuance job does not exist.
@@ -360,6 +368,73 @@ type PaymentDetail struct {
 	ExpiresAt        *time.Time
 }
 
+// ManualCaptureModal provides information required to render the manual capture UI for an order.
+type ManualCaptureModal struct {
+	Order           ManualCaptureOrderSummary
+	Payments        []ManualCapturePaymentOption
+	SupportsPartial bool
+	Currency        string
+}
+
+// ManualCaptureOrderSummary gives contextual order details for the manual capture modal.
+type ManualCaptureOrderSummary struct {
+	ID             string
+	Number         string
+	CustomerName   string
+	TotalMinor     int64
+	Currency       string
+	PaymentStatus  string
+	PaymentTone    string
+	OutstandingDue string
+}
+
+// ManualCapturePaymentOption represents a selectable payment source to capture against.
+type ManualCapturePaymentOption struct {
+	ID              string
+	Label           string
+	Method          string
+	Reference       string
+	Status          string
+	StatusTone      string
+	Currency        string
+	AuthorizedMinor int64
+	CapturedMinor   int64
+	RemainingMinor  int64
+	CapturedAt      *time.Time
+	SupportsPartial bool
+}
+
+// ManualCaptureRequest contains parameters for capturing an authorized payment.
+type ManualCaptureRequest struct {
+	PaymentID   string
+	AmountMinor *int64
+	Reason      string
+	ActorID     string
+	ActorEmail  string
+}
+
+// ManualCaptureResult returns information about the capture attempt and updated payment state.
+type ManualCaptureResult struct {
+	Payment  ManualCapturePaymentOption
+	Payments []ManualCapturePaymentOption
+	Response ManualCapturePSPResponse
+}
+
+// ManualCapturePSPResponse summarises the upstream PSP response.
+type ManualCapturePSPResponse struct {
+	Provider      string
+	ProviderLabel string
+	Reference     string
+	Status        string
+	StatusTone    string
+	Code          string
+	Message       string
+	CapturedMinor int64
+	Currency      string
+	ProcessedAt   time.Time
+	Raw           map[string]string
+}
+
 // Badge renders a small inline badge.
 type Badge struct {
 	Label string
@@ -450,6 +525,24 @@ func (e *RefundValidationError) Error() string {
 	msg := strings.TrimSpace(e.Message)
 	if msg == "" {
 		msg = "invalid refund request"
+	}
+	return msg
+}
+
+// ManualCaptureValidationError indicates validation issues with the manual capture request.
+type ManualCaptureValidationError struct {
+	Message     string
+	FieldErrors map[string]string
+}
+
+// Error implements the error interface.
+func (e *ManualCaptureValidationError) Error() string {
+	if e == nil {
+		return "invalid manual capture request"
+	}
+	msg := strings.TrimSpace(e.Message)
+	if msg == "" {
+		msg = "invalid manual capture request"
 	}
 	return msg
 }

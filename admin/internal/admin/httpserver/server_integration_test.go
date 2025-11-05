@@ -461,6 +461,77 @@ func TestOrdersStatusUpdateFlow(t *testing.T) {
 	require.Contains(t, updateHTML, "包装確認済み")
 }
 
+func TestOrdersManualCaptureFlow(t *testing.T) {
+	t.Parallel()
+
+	auth := &tokenAuthenticator{Token: "capture-token"}
+	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
+	client := noRedirectClient(t)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+auth.Token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	require.NotEmpty(t, csrf)
+
+	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1048/modal/manual-capture", nil)
+	require.NoError(t, err)
+	modalReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	modalReq.Header.Set("HX-Request", "true")
+	modalReq.Header.Set("HX-Target", "modal")
+	modalResp, err := client.Do(modalReq)
+	require.NoError(t, err)
+	modalBody, err := io.ReadAll(modalResp.Body)
+	modalResp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, modalResp.StatusCode)
+	require.Contains(t, string(modalBody), `hx-post="/admin/orders/order-1048/payments:manual-capture"`)
+
+	form := url.Values{}
+	form.Set("paymentID", "pay-1048")
+	form.Set("amount", "999999")
+	form.Set("reason", "テスト売上確定")
+
+	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
+	require.NoError(t, err)
+	invalidReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	invalidReq.Header.Set("HX-Request", "true")
+	invalidReq.Header.Set("HX-Target", "modal")
+	invalidReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	invalidReq.Header.Set("X-CSRF-Token", csrf)
+	invalidResp, err := client.Do(invalidReq)
+	require.NoError(t, err)
+	invalidBody, err := io.ReadAll(invalidResp.Body)
+	invalidResp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnprocessableEntity, invalidResp.StatusCode)
+	require.Contains(t, string(invalidBody), "確定可能額を超えています。")
+
+	form.Set("amount", "1000")
+
+	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
+	require.NoError(t, err)
+	validReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	validReq.Header.Set("HX-Request", "true")
+	validReq.Header.Set("HX-Target", "modal")
+	validReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	validReq.Header.Set("X-CSRF-Token", csrf)
+	validResp, err := client.Do(validReq)
+	require.NoError(t, err)
+	validBody, err := io.ReadAll(validResp.Body)
+	validResp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, validResp.StatusCode)
+	require.Contains(t, string(validBody), "売上を確定しました")
+	require.Contains(t, string(validBody), "PSP Raw Payload")
+	require.Equal(t, `{"toast":{"message":"売上を確定しました。","tone":"success"},"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`, validResp.Header.Get("HX-Trigger"))
+}
+
 func TestOrdersRefundFlow(t *testing.T) {
 	t.Parallel()
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -211,6 +212,76 @@ type StatusTimelineItem struct {
 type StatusUpdateSuccessData struct {
 	Cell     StatusCellData
 	Timeline StatusTimelineData
+}
+
+// ManualCaptureModalData describes the manual capture modal view model.
+type ManualCaptureModalData struct {
+	OrderID         string
+	OrderNumber     string
+	CustomerName    string
+	Total           string
+	Currency        string
+	PaymentStatus   string
+	PaymentTone     string
+	Outstanding     string
+	SupportsPartial bool
+	ActionURL       string
+	CSRFToken       string
+	SelectedPayment string
+	AmountInput     string
+	Reason          string
+	PaymentClass    string
+	AmountClass     string
+	ReasonClass     string
+	Error           string
+	FieldErrors     map[string]string
+	Payments        []ManualCapturePaymentOptionData
+	Response        *ManualCaptureResponseData
+	CaptureSuccess  bool
+	DisableForm     bool
+}
+
+// ManualCapturePaymentOptionData represents a selectable payment in the modal.
+type ManualCapturePaymentOptionData struct {
+	ID             string
+	Label          string
+	Caption        string
+	Status         string
+	StatusTone     string
+	Authorized     string
+	Captured       string
+	Remaining      string
+	RemainingMinor int64
+	Selected       bool
+	Disabled       bool
+}
+
+// ManualCaptureResponseData summarises the PSP response to display in the modal.
+type ManualCaptureResponseData struct {
+	ProviderLabel string
+	Reference     string
+	Status        string
+	StatusTone    string
+	Code          string
+	Message       string
+	Captured      string
+	CapturedMinor int64
+	Processed     string
+	Relative      string
+	Raw           []ManualCaptureResponseDetail
+}
+
+// ManualCaptureResponseDetail renders key/value pairs for raw PSP payload.
+type ManualCaptureResponseDetail struct {
+	Key   string
+	Value string
+}
+
+// ManualCaptureFormState stores user input when re-rendering the modal.
+type ManualCaptureFormState struct {
+	PaymentID string
+	Amount    string
+	Reason    string
 }
 
 // RefundModalData describes the refund modal view model.
@@ -824,6 +895,104 @@ func StatusUpdateSuccessPayload(cell StatusCellData, timeline StatusTimelineData
 	return StatusUpdateSuccessData{Cell: cell, Timeline: timeline}
 }
 
+// ManualCaptureModalPayload prepares the manual capture modal payload from service data.
+func ManualCaptureModalPayload(basePath string, modal adminorders.ManualCaptureModal, csrfToken string, form ManualCaptureFormState, errMsg string, fieldErrors map[string]string, result *adminorders.ManualCaptureResult) ManualCaptureModalData {
+	order := modal.Order
+
+	selected := strings.TrimSpace(form.PaymentID)
+	if result != nil {
+		if id := strings.TrimSpace(result.Payment.ID); id != "" {
+			selected = id
+		}
+	}
+	if selected == "" {
+		selected = defaultManualCapturePayment(modal.Payments)
+	}
+
+	amountInput := strings.TrimSpace(form.Amount)
+	if result != nil {
+		if payment := findManualCapturePayment(modal.Payments, selected); payment != nil && payment.RemainingMinor > 0 {
+			value := payment.RemainingMinor
+			amountInput = formatMajorUnits(&value)
+		} else {
+			amountInput = ""
+		}
+	} else if amountInput == "" {
+		if payment := findManualCapturePayment(modal.Payments, selected); payment != nil && payment.RemainingMinor > 0 {
+			value := payment.RemainingMinor
+			amountInput = formatMajorUnits(&value)
+		}
+	}
+
+	reasonValue := strings.TrimSpace(form.Reason)
+	if result != nil {
+		reasonValue = ""
+	}
+
+	currency := strings.TrimSpace(modal.Currency)
+	if currency == "" {
+		currency = strings.TrimSpace(order.Currency)
+	}
+
+	payments := make([]ManualCapturePaymentOptionData, 0, len(modal.Payments))
+	hasRemaining := false
+	for _, payment := range modal.Payments {
+		option := buildManualCapturePaymentOption(payment, selected, currency)
+		payments = append(payments, option)
+		if option.RemainingMinor > 0 {
+			hasRemaining = true
+		}
+	}
+
+	errs := normaliseFieldErrors(fieldErrors)
+
+	baseClass := "w-full rounded-lg border px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+	defaultClass := helpers.ClassList(baseClass, "border-slate-300")
+	errorClass := helpers.ClassList(baseClass, "border-rose-400 focus:border-rose-500 focus:ring-rose-200")
+
+	paymentClass := defaultClass
+	if errs != nil && errs["paymentID"] != "" {
+		paymentClass = errorClass
+	}
+	amountClass := defaultClass
+	if errs != nil && errs["amount"] != "" {
+		amountClass = errorClass
+	}
+	reasonClass := defaultClass
+	if errs != nil && errs["reason"] != "" {
+		reasonClass = errorClass
+	}
+
+	response := manualCaptureResponsePayload(result, currency)
+	disableForm := len(payments) == 0 || (result != nil && !hasRemaining)
+
+	return ManualCaptureModalData{
+		OrderID:         strings.TrimSpace(order.ID),
+		OrderNumber:     strings.TrimSpace(order.Number),
+		CustomerName:    strings.TrimSpace(order.CustomerName),
+		Total:           helpers.Currency(order.TotalMinor, order.Currency),
+		Currency:        currency,
+		PaymentStatus:   strings.TrimSpace(order.PaymentStatus),
+		PaymentTone:     strings.TrimSpace(order.PaymentTone),
+		Outstanding:     strings.TrimSpace(order.OutstandingDue),
+		SupportsPartial: modal.SupportsPartial,
+		ActionURL:       joinBase(basePath, "/orders/"+strings.TrimSpace(order.ID)+"/payments:manual-capture"),
+		CSRFToken:       csrfToken,
+		SelectedPayment: selected,
+		AmountInput:     amountInput,
+		Reason:          reasonValue,
+		PaymentClass:    paymentClass,
+		AmountClass:     amountClass,
+		ReasonClass:     reasonClass,
+		Error:           strings.TrimSpace(errMsg),
+		FieldErrors:     errs,
+		Payments:        payments,
+		Response:        response,
+		CaptureSuccess:  result != nil,
+		DisableForm:     disableForm,
+	}
+}
+
 // RefundModalPayload prepares the refund modal payload from service data.
 func RefundModalPayload(basePath string, modal adminorders.RefundModal, csrfToken string, form RefundFormState, errMsg string, fieldErrors map[string]string) RefundModalData {
 	order := modal.Order
@@ -1072,6 +1241,109 @@ func InvoiceJobStatusFragmentPayload(result adminorders.InvoiceJobStatus, pollUR
 		}
 	}
 	return status
+}
+
+func defaultManualCapturePayment(payments []adminorders.ManualCapturePaymentOption) string {
+	for _, payment := range payments {
+		if payment.RemainingMinor > 0 {
+			return strings.TrimSpace(payment.ID)
+		}
+	}
+	if len(payments) > 0 {
+		return strings.TrimSpace(payments[0].ID)
+	}
+	return ""
+}
+
+func findManualCapturePayment(payments []adminorders.ManualCapturePaymentOption, id string) *adminorders.ManualCapturePaymentOption {
+	for i := range payments {
+		if strings.EqualFold(strings.TrimSpace(payments[i].ID), strings.TrimSpace(id)) {
+			return &payments[i]
+		}
+	}
+	return nil
+}
+
+func buildManualCapturePaymentOption(payment adminorders.ManualCapturePaymentOption, selected string, fallbackCurrency string) ManualCapturePaymentOptionData {
+	currency := strings.TrimSpace(payment.Currency)
+	if currency == "" {
+		currency = strings.TrimSpace(fallbackCurrency)
+	}
+	return ManualCapturePaymentOptionData{
+		ID:             strings.TrimSpace(payment.ID),
+		Label:          safeText(payment.Label, "支払い"),
+		Caption:        manualCapturePaymentCaption(payment),
+		Status:         safeText(payment.Status, "未確定"),
+		StatusTone:     safeText(payment.StatusTone, "info"),
+		Authorized:     helpers.Currency(payment.AuthorizedMinor, currency),
+		Captured:       helpers.Currency(payment.CapturedMinor, currency),
+		Remaining:      helpers.Currency(payment.RemainingMinor, currency),
+		RemainingMinor: payment.RemainingMinor,
+		Selected:       strings.EqualFold(strings.TrimSpace(payment.ID), strings.TrimSpace(selected)),
+		Disabled:       payment.RemainingMinor <= 0,
+	}
+}
+
+func manualCapturePaymentCaption(payment adminorders.ManualCapturePaymentOption) string {
+	parts := []string{}
+	if method := strings.TrimSpace(payment.Method); method != "" {
+		parts = append(parts, method)
+	}
+	if ref := strings.TrimSpace(payment.Reference); ref != "" {
+		parts = append(parts, ref)
+	}
+	return strings.Join(parts, " / ")
+}
+
+func manualCaptureResponsePayload(result *adminorders.ManualCaptureResult, fallbackCurrency string) *ManualCaptureResponseData {
+	if result == nil {
+		return nil
+	}
+	response := result.Response
+	currency := strings.TrimSpace(response.Currency)
+	if currency == "" {
+		currency = strings.TrimSpace(fallbackCurrency)
+	}
+	captured := helpers.Currency(response.CapturedMinor, currency)
+	processed := ""
+	relative := ""
+	if !response.ProcessedAt.IsZero() {
+		processed = helpers.Date(response.ProcessedAt, "2006-01-02 15:04")
+		relative = helpers.Relative(response.ProcessedAt)
+	}
+	return &ManualCaptureResponseData{
+		ProviderLabel: safeText(response.ProviderLabel, response.Provider),
+		Reference:     strings.TrimSpace(response.Reference),
+		Status:        safeText(response.Status, "succeeded"),
+		StatusTone:    safeText(response.StatusTone, "success"),
+		Code:          strings.TrimSpace(response.Code),
+		Message:       strings.TrimSpace(response.Message),
+		Captured:      captured,
+		CapturedMinor: response.CapturedMinor,
+		Processed:     processed,
+		Relative:      relative,
+		Raw:           manualCaptureRawDetails(response.Raw),
+	}
+}
+
+func manualCaptureRawDetails(raw map[string]string) []ManualCaptureResponseDetail {
+	if len(raw) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(raw))
+	for key := range raw {
+		keys = append(keys, strings.TrimSpace(key))
+	}
+	sort.Strings(keys)
+	details := make([]ManualCaptureResponseDetail, 0, len(keys))
+	for _, key := range keys {
+		value := strings.TrimSpace(raw[key])
+		details = append(details, ManualCaptureResponseDetail{
+			Key:   key,
+			Value: value,
+		})
+	}
+	return details
 }
 
 func defaultRefundPayment(payments []adminorders.RefundPaymentOption) string {

@@ -343,6 +343,154 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(orderstpl.StatusUpdateSuccess(success)).ServeHTTP(w, r)
 }
 
+// OrdersManualCaptureModal renders the manual capture modal for a specific order.
+func (h *Handlers) OrdersManualCaptureModal(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	modal, err := h.orders.ManualCaptureModal(ctx, user.Token, orderID)
+	if err != nil {
+		if errors.Is(err, adminorders.ErrOrderNotFound) {
+			http.Error(w, "指定された注文が見つかりません。", http.StatusNotFound)
+			return
+		}
+		log.Printf("orders: fetch manual capture modal failed: %v", err)
+		http.Error(w, "売上確定モーダルの取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	data := orderstpl.ManualCaptureModalPayload(basePath, modal, csrf, orderstpl.ManualCaptureFormState{}, "", nil, nil)
+
+	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
+}
+
+// OrdersSubmitManualCapture processes manual capture submissions for a specific order payment.
+func (h *Handlers) OrdersSubmitManualCapture(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
+	if orderID == "" {
+		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "リクエストの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	paymentID := strings.TrimSpace(r.FormValue("paymentID"))
+	amountStr := strings.TrimSpace(r.FormValue("amount"))
+	reason := strings.TrimSpace(r.FormValue("reason"))
+
+	formState := orderstpl.ManualCaptureFormState{
+		PaymentID: paymentID,
+		Amount:    amountStr,
+		Reason:    reason,
+	}
+
+	fieldErrors := map[string]string{}
+	if paymentID == "" {
+		fieldErrors["paymentID"] = "売上確定する支払いを選択してください。"
+	}
+
+	var amountMinor int64
+	var amountPtr *int64
+	if amountStr != "" {
+		var ok bool
+		amountMinor, ok = parseAmountMinor(amountStr)
+		if !ok || amountMinor <= 0 {
+			fieldErrors["amount"] = "売上確定する金額を正しく入力してください。"
+		} else {
+			amountPtr = &amountMinor
+		}
+	}
+
+	if reason == "" {
+		fieldErrors["reason"] = "売上確定の理由を入力してください。"
+	}
+
+	if len(fieldErrors) > 0 {
+		h.renderManualCaptureModalError(w, r, user, orderID, formState, "入力内容を確認してください。", fieldErrors, http.StatusUnprocessableEntity)
+		return
+	}
+
+	request := adminorders.ManualCaptureRequest{
+		PaymentID:  paymentID,
+		Reason:     reason,
+		ActorID:    user.UID,
+		ActorEmail: user.Email,
+	}
+	if amountPtr != nil {
+		request.AmountMinor = amountPtr
+	}
+
+	result, err := h.orders.SubmitManualCapture(ctx, user.Token, orderID, request)
+	if err != nil {
+		if errors.Is(err, adminorders.ErrOrderNotFound) {
+			http.Error(w, "指定された注文が見つかりません。", http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, adminorders.ErrPaymentNotFound) {
+			fieldErrors["paymentID"] = "選択した支払いが見つかりません。"
+			h.renderManualCaptureModalError(w, r, user, orderID, formState, "売上確定対象の支払いが存在しません。", fieldErrors, http.StatusUnprocessableEntity)
+			return
+		}
+		var valErr *adminorders.ManualCaptureValidationError
+		if errors.As(err, &valErr) {
+			fieldErrors = mergeFieldErrors(fieldErrors, valErr.FieldErrors)
+			message := strings.TrimSpace(valErr.Message)
+			if message == "" {
+				message = "売上確定に失敗しました。入力内容を確認してください。"
+			}
+			h.renderManualCaptureModalError(w, r, user, orderID, formState, message, fieldErrors, http.StatusUnprocessableEntity)
+			return
+		}
+		if errors.Is(err, adminorders.ErrManualCaptureFailed) {
+			h.renderManualCaptureModalError(w, r, user, orderID, formState, "売上確定に失敗しました。時間を置いて再度お試しください。", fieldErrors, http.StatusUnprocessableEntity)
+			return
+		}
+		log.Printf("orders: submit manual capture failed: %v", err)
+		http.Error(w, "売上確定に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	modal, modalErr := h.orders.ManualCaptureModal(ctx, user.Token, orderID)
+	if modalErr != nil {
+		log.Printf("orders: reload manual capture modal after submission failed: %v", modalErr)
+		http.Error(w, "売上確定モーダルの再取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	successForm := orderstpl.ManualCaptureFormState{
+		PaymentID: strings.TrimSpace(result.Payment.ID),
+	}
+	data := orderstpl.ManualCaptureModalPayload(basePath, modal, csrf, successForm, "", nil, &result)
+
+	w.Header().Set("HX-Trigger", `{"toast":{"message":"売上を確定しました。","tone":"success"},"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
+}
+
 // OrdersRefundModal renders the refund modal for a specific order.
 func (h *Handlers) OrdersRefundModal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -652,6 +800,31 @@ func (h *Handlers) renderInvoiceModalError(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	}
 	templ.Handler(orderstpl.InvoiceModal(data)).ServeHTTP(w, r)
+}
+
+func (h *Handlers) renderManualCaptureModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.ManualCaptureFormState, message string, fieldErrors map[string]string, status int) {
+	ctx := r.Context()
+	modal, err := h.orders.ManualCaptureModal(ctx, user.Token, orderID)
+	if err != nil {
+		if errors.Is(err, adminorders.ErrOrderNotFound) {
+			http.Error(w, "指定された注文が見つかりません。", http.StatusNotFound)
+			return
+		}
+		log.Printf("orders: reload manual capture modal after error failed: %v", err)
+		http.Error(w, "売上確定モーダルの再取得に失敗しました。", http.StatusBadGateway)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	data := orderstpl.ManualCaptureModalPayload(basePath, modal, csrf, form, strings.TrimSpace(message), fieldErrors, nil)
+
+	if status > 0 {
+		w.WriteHeader(status)
+	} else {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	}
+	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
 }
 
 func (h *Handlers) renderRefundModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.RefundFormState, message string, fieldErrors map[string]string, status int) {

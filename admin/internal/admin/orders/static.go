@@ -1038,6 +1038,66 @@ func (s *StaticService) StatusModal(_ context.Context, _ string, orderID string)
 	}, nil
 }
 
+// ManualCaptureModal assembles manual capture modal data for the specified order.
+func (s *StaticService) ManualCaptureModal(_ context.Context, _ string, orderID string) (ManualCaptureModal, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	_, order := s.findOrderLocked(orderID)
+	if order == nil {
+		return ManualCaptureModal{}, ErrOrderNotFound
+	}
+
+	cloned := cloneOrder(*order)
+
+	options := make([]ManualCapturePaymentOption, 0, len(cloned.Payments))
+	var outstandingMinor int64
+	supportsPartial := false
+	for _, payment := range cloned.Payments {
+		option := toManualCapturePaymentOption(payment)
+		options = append(options, option)
+		outstandingMinor += option.RemainingMinor
+		if option.SupportsPartial {
+			supportsPartial = true
+		}
+	}
+
+	outstanding := ""
+	if outstandingMinor > 0 {
+		outstanding = formatMinorAmount(outstandingMinor, cloned.Currency)
+	}
+	if cloned.Payment.PastDue {
+		reason := strings.TrimSpace(cloned.Payment.PastDueReason)
+		if reason != "" {
+			if outstanding != "" {
+				outstanding = fmt.Sprintf("%s / %s", outstanding, reason)
+			} else {
+				outstanding = reason
+			}
+		} else if outstanding == "" {
+			outstanding = "支払い確認中"
+		}
+	}
+
+	summary := ManualCaptureOrderSummary{
+		ID:             cloned.ID,
+		Number:         cloned.Number,
+		CustomerName:   cloned.Customer.Name,
+		TotalMinor:     cloned.TotalMinor,
+		Currency:       cloned.Currency,
+		PaymentStatus:  cloned.Payment.Status,
+		PaymentTone:    cloned.Payment.StatusTone,
+		OutstandingDue: outstanding,
+	}
+
+	return ManualCaptureModal{
+		Order:           summary,
+		Payments:        options,
+		SupportsPartial: supportsPartial,
+		Currency:        cloned.Currency,
+	}, nil
+}
+
 // RefundModal assembles refund modal data for the specified order.
 func (s *StaticService) RefundModal(_ context.Context, _ string, orderID string) (RefundModal, error) {
 	s.mu.RLock()
@@ -1090,6 +1150,161 @@ func (s *StaticService) RefundModal(_ context.Context, _ string, orderID string)
 		ExistingRefunds: existing,
 		SupportsPartial: supportsPartial,
 		Currency:        cloned.Currency,
+	}, nil
+}
+
+// SubmitManualCapture mutates the payment state with a simulated manual capture.
+func (s *StaticService) SubmitManualCapture(_ context.Context, _ string, orderID string, req ManualCaptureRequest) (ManualCaptureResult, error) {
+	paymentID := strings.TrimSpace(req.PaymentID)
+	if paymentID == "" {
+		return ManualCaptureResult{}, &ManualCaptureValidationError{
+			Message:     "売上確定する支払いを選択してください。",
+			FieldErrors: map[string]string{"paymentID": "売上確定する支払いを選択してください。"},
+		}
+	}
+
+	if req.AmountMinor != nil && *req.AmountMinor <= 0 {
+		return ManualCaptureResult{}, &ManualCaptureValidationError{
+			Message:     "売上確定する金額を正しく入力してください。",
+			FieldErrors: map[string]string{"amount": "1円以上の金額を入力してください。"},
+		}
+	}
+
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		return ManualCaptureResult{}, &ManualCaptureValidationError{
+			Message:     "売上確定の理由を入力してください。",
+			FieldErrors: map[string]string{"reason": "売上確定の理由を入力してください。"},
+		}
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	idx, order := s.findOrderLocked(orderID)
+	if order == nil {
+		return ManualCaptureResult{}, ErrOrderNotFound
+	}
+
+	payment := findPayment(order, paymentID)
+	if payment == nil {
+		return ManualCaptureResult{}, ErrPaymentNotFound
+	}
+
+	remaining := payment.AmountAuthorized - payment.AmountCaptured
+	if remaining <= 0 {
+		return ManualCaptureResult{}, &ManualCaptureValidationError{
+			Message:     "この支払いは既に全額確定済みです。",
+			FieldErrors: map[string]string{"paymentID": "この支払いは既に全額確定済みです。"},
+		}
+	}
+
+	captureAmount := remaining
+	if req.AmountMinor != nil {
+		captureAmount = *req.AmountMinor
+		if captureAmount > remaining {
+			return ManualCaptureResult{}, &ManualCaptureValidationError{
+				Message:     "確定可能額を超えています。",
+				FieldErrors: map[string]string{"amount": "確定可能額を超えています。"},
+			}
+		}
+	}
+
+	now := time.Now()
+
+	payment.AmountCaptured += captureAmount
+	if payment.AmountCaptured > payment.AmountAuthorized {
+		payment.AmountCaptured = payment.AmountAuthorized
+	}
+	if payment.AmountCaptured < 0 {
+		payment.AmountCaptured = 0
+	}
+	if payment.AmountRefunded > payment.AmountCaptured {
+		payment.AmountRefunded = payment.AmountCaptured
+	}
+	payment.AmountAvailable = payment.AmountCaptured - payment.AmountRefunded
+	if payment.AmountAvailable < 0 {
+		payment.AmountAvailable = 0
+	}
+	payment.CapturedAt = timePtr(now)
+
+	outstandingMinor := payment.AmountAuthorized - payment.AmountCaptured
+	if outstandingMinor < 0 {
+		outstandingMinor = 0
+	}
+
+	order.Payment.CapturedAt = timePtr(now)
+	if outstandingMinor == 0 {
+		order.Payment.Status = "支払い済み"
+		order.Payment.StatusTone = "success"
+		order.Payment.PastDue = false
+		order.Payment.PastDueReason = ""
+	} else {
+		order.Payment.Status = "一部売上"
+		order.Payment.StatusTone = "info"
+		order.Payment.PastDue = true
+		order.Payment.PastDueReason = fmt.Sprintf("残額 %s", formatMinorAmount(outstandingMinor, payment.Currency))
+	}
+
+	order.UpdatedAt = now
+
+	actor := strings.TrimSpace(req.ActorEmail)
+	if actor == "" {
+		actor = "オペレーター"
+	}
+
+	noteAmount := formatMinorAmount(captureAmount, payment.Currency)
+	note := fmt.Sprintf("%s: 売上確定 %s (%s)", actor, noteAmount, reason)
+	order.Notes = append([]string{strings.TrimSpace(note)}, order.Notes...)
+
+	if s.timelines != nil {
+		description := fmt.Sprintf("%s を売上確定 (%s)", noteAmount, reason)
+		event := TimelineEvent{
+			ID:          fmt.Sprintf("%s-capture-%d", orderID, now.UnixNano()),
+			Status:      order.Status,
+			Title:       "売上を確定",
+			Description: strings.TrimSpace(description),
+			Actor:       actor,
+			OccurredAt:  now,
+		}
+		s.timelines[orderID] = append(s.timelines[orderID], event)
+	}
+
+	currency := strings.TrimSpace(payment.Currency)
+	if currency == "" {
+		currency = strings.TrimSpace(order.Currency)
+	}
+
+	response := ManualCapturePSPResponse{
+		Provider:      strings.TrimSpace(payment.Provider),
+		ProviderLabel: strings.TrimSpace(payment.Provider),
+		Reference:     fmt.Sprintf("%s_capture_%d", strings.TrimSpace(payment.Reference), now.Unix()),
+		Status:        "succeeded",
+		StatusTone:    "success",
+		Code:          "captured",
+		Message:       "PSPで売上確定が完了しました。",
+		CapturedMinor: captureAmount,
+		Currency:      currency,
+		ProcessedAt:   now,
+		Raw: map[string]string{
+			"psp_reference": strings.TrimSpace(payment.Reference),
+			"capture_id":    fmt.Sprintf("cap_%d", now.UnixNano()),
+			"status":        "succeeded",
+		},
+	}
+
+	updatedOption := toManualCapturePaymentOption(*payment)
+	paymentOptions := make([]ManualCapturePaymentOption, 0, len(order.Payments))
+	for _, p := range order.Payments {
+		paymentOptions = append(paymentOptions, toManualCapturePaymentOption(p))
+	}
+
+	s.orders[idx] = *order
+
+	return ManualCaptureResult{
+		Payment:  updatedOption,
+		Payments: paymentOptions,
+		Response: response,
 	}, nil
 }
 
@@ -1817,6 +2032,27 @@ func findPayment(order *Order, paymentID string) *PaymentDetail {
 		}
 	}
 	return nil
+}
+
+func toManualCapturePaymentOption(payment PaymentDetail) ManualCapturePaymentOption {
+	remaining := payment.AmountAuthorized - payment.AmountCaptured
+	if remaining < 0 {
+		remaining = 0
+	}
+	return ManualCapturePaymentOption{
+		ID:              payment.ID,
+		Label:           buildPaymentLabel(payment),
+		Method:          payment.Method,
+		Reference:       payment.Reference,
+		Status:          payment.Status,
+		StatusTone:      payment.StatusTone,
+		Currency:        payment.Currency,
+		AuthorizedMinor: payment.AmountAuthorized,
+		CapturedMinor:   payment.AmountCaptured,
+		RemainingMinor:  remaining,
+		CapturedAt:      payment.CapturedAt,
+		SupportsPartial: remaining > 0,
+	}
 }
 
 func toRefundPaymentOption(payment PaymentDetail) RefundPaymentOption {

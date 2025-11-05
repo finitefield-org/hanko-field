@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -79,6 +80,46 @@ func TestStaticServiceUpdateStatusInvalid(t *testing.T) {
 	modal, err := svc.StatusModal(ctx, "", "order-1052")
 	require.NoError(t, err)
 	require.Equal(t, StatusInProduction, modal.Order.Status)
+}
+
+func TestStaticServiceManualCaptureFlow(t *testing.T) {
+	t.Parallel()
+
+	svc := NewStaticService()
+	ctx := context.Background()
+
+	modal, err := svc.ManualCaptureModal(ctx, "", "order-1048")
+	require.NoError(t, err)
+	require.NotEmpty(t, modal.Payments)
+	require.NotEmpty(t, modal.Order.OutstandingDue)
+
+	payment := modal.Payments[0]
+	require.Greater(t, payment.RemainingMinor, int64(0))
+
+	partial := payment.RemainingMinor / 2
+	result, err := svc.SubmitManualCapture(ctx, "", "order-1048", ManualCaptureRequest{
+		PaymentID:   payment.ID,
+		AmountMinor: &partial,
+		Reason:      "テスト売上確定",
+		ActorEmail:  "ops@example.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result.Response)
+	require.Greater(t, result.Response.CapturedMinor, int64(0))
+	require.Contains(t, result.Response.Reference, strings.TrimSpace(payment.Reference))
+
+	updatedModal, err := svc.ManualCaptureModal(ctx, "", "order-1048")
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedModal.Payments)
+
+	var updatedRemaining int64
+	for _, p := range updatedModal.Payments {
+		if p.ID == payment.ID {
+			updatedRemaining = p.RemainingMinor
+			break
+		}
+	}
+	require.Equal(t, payment.RemainingMinor-partial, updatedRemaining)
 }
 
 func TestStaticServiceStartBulkExportCSV(t *testing.T) {
