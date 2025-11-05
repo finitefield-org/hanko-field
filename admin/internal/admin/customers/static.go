@@ -3,6 +3,7 @@ package customers
 import (
 	"context"
 	"fmt"
+    "sync"
 	"sort"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ type StaticService struct {
 	Customers []Customer
 	Details   map[string]Detail
 	AuditLog  map[string][]AuditRecord
+    mu        sync.RWMutex
 }
 
 // NewStaticService builds a StaticService populated with representative customers.
@@ -645,7 +647,9 @@ func detailFromCustomer(c Customer, now time.Time) Detail {
 
 // DeactivateModal returns a canned deactivate + mask modal dataset.
 func (s *StaticService) DeactivateModal(_ context.Context, _ string, customerID string) (DeactivateModal, error) {
-	detail, ok := s.Details[customerID]
+    s.mu.RLock()
+    detail, ok := s.Details[customerID]
+    s.mu.RUnlock()
 	if !ok {
 		return DeactivateModal{}, ErrCustomerNotFound
 	}
@@ -690,21 +694,24 @@ func (s *StaticService) DeactivateModal(_ context.Context, _ string, customerID 
 
 // DeactivateAndMask updates the in-memory dataset to simulate a deactivate + mask request.
 func (s *StaticService) DeactivateAndMask(_ context.Context, _ string, customerID string, req DeactivateAndMaskRequest) (DeactivateAndMaskResult, error) {
-	detail, ok := s.Details[customerID]
-	if !ok {
-		return DeactivateAndMaskResult{}, ErrCustomerNotFound
-	}
+    s.mu.Lock()
+    defer s.mu.Unlock()
 
-	expected := confirmationPhrase(customerID)
-	if !strings.EqualFold(strings.TrimSpace(req.Confirmation), expected) {
-		return DeactivateAndMaskResult{}, ErrInvalidConfirmation
-	}
+    detail, ok := s.Details[customerID]
+    if !ok {
+        return DeactivateAndMaskResult{}, ErrCustomerNotFound
+    }
 
-	if detail.Profile.Status == StatusDeactivated {
-		return DeactivateAndMaskResult{}, ErrAlreadyDeactivated
-	}
+    expected := confirmationPhrase(customerID)
+    if !strings.EqualFold(strings.TrimSpace(req.Confirmation), expected) {
+        return DeactivateAndMaskResult{}, ErrInvalidConfirmation
+    }
 
-	now := time.Now().UTC()
+    if detail.Profile.Status == StatusDeactivated {
+        return DeactivateAndMaskResult{}, ErrAlreadyDeactivated
+    }
+
+    now := time.Now().UTC()
 
 	actorEmail := strings.TrimSpace(req.ActorEmail)
 	if actorEmail == "" {
@@ -754,7 +761,7 @@ func (s *StaticService) DeactivateAndMask(_ context.Context, _ string, customerI
 	}
 	detail.Activity = append([]ActivityItem{event}, detail.Activity...)
 
-	for idx := range s.Customers {
+    for idx := range s.Customers {
 		if s.Customers[idx].ID == customerID {
 			s.Customers[idx].Status = StatusDeactivated
 			s.Customers[idx].Email = detail.Profile.Email
@@ -782,7 +789,7 @@ func (s *StaticService) DeactivateAndMask(_ context.Context, _ string, customerI
 
 	s.AuditLog[customerID] = append([]AuditRecord{audit}, s.AuditLog[customerID]...)
 
-	s.Details[customerID] = detail
+    s.Details[customerID] = detail
 
 	return DeactivateAndMaskResult{
 		Detail: detail,
@@ -868,34 +875,41 @@ func riskToneValue(level string) string {
 
 // Detail implements Service.
 func (s *StaticService) Detail(_ context.Context, _ string, customerID string) (Detail, error) {
-	if s.Customers == nil {
-		s.Customers = []Customer{}
-	}
-	if s.Details == nil {
-		s.Details = buildStaticDetails(s.Customers, time.Now())
-	}
-	if detail, ok := s.Details[customerID]; ok {
-		return detail, nil
-	}
-	for _, c := range s.Customers {
-		if c.ID == customerID {
-			detail := detailFromCustomer(c, time.Now())
-			s.Details[customerID] = detail
-			return detail, nil
-		}
-	}
-	return Detail{}, ErrCustomerNotFound
+    s.mu.Lock()
+    defer s.mu.Unlock()
+
+    if s.Customers == nil {
+        s.Customers = []Customer{}
+    }
+    if s.Details == nil {
+        s.Details = buildStaticDetails(s.Customers, time.Now())
+    }
+    if detail, ok := s.Details[customerID]; ok {
+        return detail, nil
+    }
+    for _, c := range s.Customers {
+        if c.ID == customerID {
+            detail := detailFromCustomer(c, time.Now())
+            s.Details[customerID] = detail
+            return detail, nil
+        }
+    }
+    return Detail{}, ErrCustomerNotFound
 }
 
 // List implements Service.
 func (s *StaticService) List(_ context.Context, _ string, query ListQuery) (ListResult, error) {
-	if s.Customers == nil {
-		s.Customers = []Customer{}
-	}
+    // Snapshot customers safely
+    s.mu.Lock()
+    if s.Customers == nil {
+        s.Customers = []Customer{}
+    }
+    customers := append([]Customer(nil), s.Customers...)
+    s.mu.Unlock()
 
-	filtered := make([]Customer, 0, len(s.Customers))
+    filtered := make([]Customer, 0, len(customers))
 	search := strings.ToLower(strings.TrimSpace(query.Search))
-	for _, customer := range s.Customers {
+    for _, customer := range customers {
 		if query.Status != "" && customer.Status != query.Status {
 			continue
 		}
@@ -982,11 +996,11 @@ func (s *StaticService) List(_ context.Context, _ string, query ListQuery) (List
 		prev = &p
 	}
 
-	result := ListResult{
+    result := ListResult{
 		Customers:   paged,
 		Pagination:  Pagination{Page: page, PageSize: pageSize, TotalItems: total, NextPage: next, PrevPage: prev},
 		Summary:     calculateSummary(filtered),
-		Filters:     buildFilterSummary(s.Customers),
+        Filters:     buildFilterSummary(customers),
 		GeneratedAt: time.Now(),
 	}
 	return result, nil
