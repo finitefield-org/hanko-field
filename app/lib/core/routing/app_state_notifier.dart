@@ -31,8 +31,9 @@ class AppStateNotifier extends Notifier<AppState> {
   }
 
   void pop() {
+    final capturedTab = state.currentTab;
     Future.microtask(() {
-      final tab = state.currentTab;
+      final tab = capturedTab;
       final stackForTab = state.stack.getStack(tab);
       if (stackForTab.isEmpty) {
         state = state.copyWith(currentRoute: TabRoute(currentTab: tab));
