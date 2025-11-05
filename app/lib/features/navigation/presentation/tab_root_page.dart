@@ -5,6 +5,7 @@ import 'package:app/core/routing/app_tab.dart';
 import 'package:app/core/ui/widgets/app_help_overlay.dart';
 import 'package:app/core/ui/widgets/app_top_app_bar.dart';
 import 'package:app/features/home/presentation/home_screen.dart';
+import 'package:app/features/orders/presentation/orders_list_screen.dart';
 import 'package:app/features/shop/presentation/shop_home_screen.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -71,38 +72,7 @@ class _TabBody extends StatelessWidget {
       case AppTab.shop:
         return const ShopHomeScreen();
       case AppTab.orders:
-        final subtitle = _composeSubtitle(
-          '同じタブ内で注文詳細をスタック',
-          experience?.ordersSubtitle,
-        );
-        final chips = <String>[
-          if (experience != null) '地域: ${experience.regionLabel}',
-        ];
-        final orders = ['HF-202401', 'HF-202402', 'HF-202403'];
-        return _buildList(
-          context,
-          title: tab.headline,
-          subtitle: subtitle,
-          chips: chips,
-          children: [
-            for (final orderId in orders)
-              ListTile(
-                leading: const Icon(Icons.receipt_long_outlined),
-                title: Text('注文 $orderId'),
-                onTap: () => _push(ref, OrderDetailsRoute(orderId: orderId)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.timeline_outlined),
-                  onPressed: () => _push(
-                    ref,
-                    OrderDetailsRoute(
-                      orderId: orderId,
-                      trailing: const ['production'],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
+        return const OrdersListScreen();
       case AppTab.library:
         final subtitle = _composeSubtitle(
           '保存済み印鑑の詳細',

@@ -1130,4 +1130,102 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get designKanjiMappingEmptyResultsDescription =>
       'フィルターを見直すか、別の意味・読みで検索してみてください。';
+
+  @override
+  String get ordersStatusAll => 'すべて';
+
+  @override
+  String get ordersFilterStatusLabel => 'ステータスで絞り込み';
+
+  @override
+  String get ordersStatusInProgress => '進行中';
+
+  @override
+  String get ordersStatusShipped => '発送済み';
+
+  @override
+  String get ordersStatusDelivered => '配達完了';
+
+  @override
+  String get ordersStatusCanceled => 'キャンセル済み';
+
+  @override
+  String get ordersFilterTimeLabel => '期間で絞り込み';
+
+  @override
+  String get ordersTimeRange30Days => '過去30日間';
+
+  @override
+  String get ordersTimeRange90Days => '過去90日間';
+
+  @override
+  String get ordersTimeRange6Months => '過去6か月';
+
+  @override
+  String get ordersTimeRangeYear => '過去1年間';
+
+  @override
+  String get ordersTimeRangeAll => '全期間';
+
+  @override
+  String ordersLastUpdatedText(Object timestamp) {
+    return '最終更新: $timestamp';
+  }
+
+  @override
+  String get ordersListEmptyTitle => 'まだ注文がありません';
+
+  @override
+  String get ordersListEmptyMessage => '注文すると、ステータスや追跡情報とともにここに表示されます。';
+
+  @override
+  String get ordersListErrorTitle => '注文履歴を読み込めませんでした';
+
+  @override
+  String get ordersListErrorMessage => '通信状況を確認してもう一度お試しください。';
+
+  @override
+  String get ordersListRetryLabel => '再試行';
+
+  @override
+  String get ordersListRefreshError => '注文を更新できませんでした。';
+
+  @override
+  String get ordersUnknownItem => 'カスタム注文';
+
+  @override
+  String get ordersTimelineOrdered => '注文受付';
+
+  @override
+  String get ordersTimelineProduction => '制作';
+
+  @override
+  String get ordersTimelineShipping => '発送';
+
+  @override
+  String get ordersTimelineDelivered => '配達完了';
+
+  @override
+  String get ordersTimelineCanceled => '注文はキャンセルされました';
+
+  @override
+  String get orderStatusPendingPayment => '支払い待ち';
+
+  @override
+  String get orderStatusPaid => '支払い済み';
+
+  @override
+  String get orderStatusInProduction => '制作中';
+
+  @override
+  String get orderStatusReadyToShip => '発送準備中';
+
+  @override
+  String get orderStatusShipped => '発送済み';
+
+  @override
+  String get orderStatusDelivered => '配達完了';
+
+  @override
+  String get orderStatusCanceled => 'キャンセル済み';
 }

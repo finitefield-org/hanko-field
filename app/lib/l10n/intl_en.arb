@@ -1889,4 +1889,167 @@
 , "@designKanjiMappingEmptyResultsDescription": {
   "description": "Subtitle when kanji search returns no results"
 }
+
+, "ordersStatusAll": "All"
+, "@ordersStatusAll": {
+  "description": "Filter label showing all orders"
+}
+
+, "ordersFilterStatusLabel": "Filter by status"
+, "@ordersFilterStatusLabel": {
+  "description": "Label above the status chips on the orders list"
+}
+
+, "ordersStatusInProgress": "In progress"
+, "@ordersStatusInProgress": {
+  "description": "Filter label for orders that are being processed or produced"
+}
+
+, "ordersStatusShipped": "Shipped"
+, "@ordersStatusShipped": {
+  "description": "Filter label for shipped orders"
+}
+
+, "ordersStatusDelivered": "Delivered"
+, "@ordersStatusDelivered": {
+  "description": "Filter label for delivered orders"
+}
+
+, "ordersStatusCanceled": "Canceled"
+, "@ordersStatusCanceled": {
+  "description": "Filter label for canceled orders"
+}
+
+, "ordersFilterTimeLabel": "Time range"
+, "@ordersFilterTimeLabel": {
+  "description": "Label above the time range chips on the orders list"
+}
+
+, "ordersTimeRange30Days": "Past 30 days"
+, "@ordersTimeRange30Days": {
+  "description": "Filter label for the past 30 days"
+}
+
+, "ordersTimeRange90Days": "Past 90 days"
+, "@ordersTimeRange90Days": {
+  "description": "Filter label for the past 90 days"
+}
+
+, "ordersTimeRange6Months": "Past 6 months"
+, "@ordersTimeRange6Months": {
+  "description": "Filter label for the past six months"
+}
+
+, "ordersTimeRangeYear": "Past year"
+, "@ordersTimeRangeYear": {
+  "description": "Filter label for the past year"
+}
+
+, "ordersTimeRangeAll": "All time"
+, "@ordersTimeRangeAll": {
+  "description": "Filter label for showing all orders regardless of time"
+}
+
+, "ordersLastUpdatedText": "Updated {timestamp}"
+, "@ordersLastUpdatedText": {
+  "description": "Label that shows when the orders list was last refreshed",
+  "placeholders": {
+    "timestamp": {}
+  }
+}
+
+, "ordersListEmptyTitle": "No orders yet"
+, "@ordersListEmptyTitle": {
+  "description": "Title for empty orders list state"
+}
+
+, "ordersListEmptyMessage": "When you place an order, it will appear here along with its status and tracking."
+, "@ordersListEmptyMessage": {
+  "description": "Description for empty orders list state"
+}
+
+, "ordersListErrorTitle": "Orders can’t be loaded"
+, "@ordersListErrorTitle": {
+  "description": "Title for error state on orders list"
+}
+
+, "ordersListErrorMessage": "Please check your connection and try again."
+, "@ordersListErrorMessage": {
+  "description": "Description shown when orders list fails to load"
+}
+
+, "ordersListRetryLabel": "Retry"
+, "@ordersListRetryLabel": {
+  "description": "Primary action label for retrying orders fetch"
+}
+
+, "ordersListRefreshError": "Couldn’t refresh orders."
+, "@ordersListRefreshError": {
+  "description": "Snack bar message when pull-to-refresh fails"
+}
+
+, "ordersUnknownItem": "Custom order"
+, "@ordersUnknownItem": {
+  "description": "Fallback name when order item name is missing"
+}
+
+, "ordersTimelineOrdered": "Ordered"
+, "@ordersTimelineOrdered": {
+  "description": "Timeline label for the ordered stage"
+}
+
+, "ordersTimelineProduction": "Production"
+, "@ordersTimelineProduction": {
+  "description": "Timeline label for production stage"
+}
+
+, "ordersTimelineShipping": "Shipping"
+, "@ordersTimelineShipping": {
+  "description": "Timeline label for shipping stage"
+}
+
+, "ordersTimelineDelivered": "Delivered"
+, "@ordersTimelineDelivered": {
+  "description": "Timeline label for delivered stage"
+}
+
+, "ordersTimelineCanceled": "Order canceled"
+, "@ordersTimelineCanceled": {
+  "description": "Timeline label shown for canceled orders"
+}
+
+, "orderStatusPendingPayment": "Awaiting payment"
+, "@orderStatusPendingPayment": {
+  "description": "Status label for pending payment"
+}
+
+, "orderStatusPaid": "Paid"
+, "@orderStatusPaid": {
+  "description": "Status label for paid"
+}
+
+, "orderStatusInProduction": "In production"
+, "@orderStatusInProduction": {
+  "description": "Status label for in production"
+}
+
+, "orderStatusReadyToShip": "Ready to ship"
+, "@orderStatusReadyToShip": {
+  "description": "Status label for ready to ship"
+}
+
+, "orderStatusShipped": "Shipped"
+, "@orderStatusShipped": {
+  "description": "Status label for shipped"
+}
+
+, "orderStatusDelivered": "Delivered"
+, "@orderStatusDelivered": {
+  "description": "Status label for delivered"
+}
+
+, "orderStatusCanceled": "Canceled"
+, "@orderStatusCanceled": {
+  "description": "Status label for canceled orders"
+}
 }

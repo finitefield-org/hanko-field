@@ -519,4 +519,167 @@
 , "designKanjiMappingManualMeaningHelper": "自分用のメモ。印影には表示されません。"
 , "designKanjiMappingEmptyResultsTitle": "一致する候補が見つかりません"
 , "designKanjiMappingEmptyResultsDescription": "フィルターを見直すか、別の意味・読みで検索してみてください。"
+
+, "ordersStatusAll": "すべて"
+, "@ordersStatusAll": {
+  "description": "すべての注文を表示するフィルター"
+}
+
+, "ordersFilterStatusLabel": "ステータスで絞り込み"
+, "@ordersFilterStatusLabel": {
+  "description": "注文一覧のステータスフィルター見出し"
+}
+
+, "ordersStatusInProgress": "進行中"
+, "@ordersStatusInProgress": {
+  "description": "制作・処理中の注文を表示するフィルター"
+}
+
+, "ordersStatusShipped": "発送済み"
+, "@ordersStatusShipped": {
+  "description": "発送済みの注文を表示するフィルター"
+}
+
+, "ordersStatusDelivered": "配達完了"
+, "@ordersStatusDelivered": {
+  "description": "配達が完了した注文を表示するフィルター"
+}
+
+, "ordersStatusCanceled": "キャンセル済み"
+, "@ordersStatusCanceled": {
+  "description": "キャンセルされた注文を表示するフィルター"
+}
+
+, "ordersFilterTimeLabel": "期間で絞り込み"
+, "@ordersFilterTimeLabel": {
+  "description": "注文一覧の期間フィルター見出し"
+}
+
+, "ordersTimeRange30Days": "過去30日間"
+, "@ordersTimeRange30Days": {
+  "description": "過去30日間の注文を対象とするフィルター"
+}
+
+, "ordersTimeRange90Days": "過去90日間"
+, "@ordersTimeRange90Days": {
+  "description": "過去90日間の注文を対象とするフィルター"
+}
+
+, "ordersTimeRange6Months": "過去6か月"
+, "@ordersTimeRange6Months": {
+  "description": "過去6か月の注文を対象とするフィルター"
+}
+
+, "ordersTimeRangeYear": "過去1年間"
+, "@ordersTimeRangeYear": {
+  "description": "過去1年間の注文を対象とするフィルター"
+}
+
+, "ordersTimeRangeAll": "全期間"
+, "@ordersTimeRangeAll": {
+  "description": "期間を絞り込まずにすべて表示するフィルター"
+}
+
+, "ordersLastUpdatedText": "最終更新: {timestamp}"
+, "@ordersLastUpdatedText": {
+  "description": "注文一覧の更新日時を表示するラベル",
+  "placeholders": {
+    "timestamp": {}
+  }
+}
+
+, "ordersListEmptyTitle": "まだ注文がありません"
+, "@ordersListEmptyTitle": {
+  "description": "注文一覧が空のときのタイトル"
+}
+
+, "ordersListEmptyMessage": "注文すると、ステータスや追跡情報とともにここに表示されます。"
+, "@ordersListEmptyMessage": {
+  "description": "注文一覧が空のときの説明"
+}
+
+, "ordersListErrorTitle": "注文履歴を読み込めませんでした"
+, "@ordersListErrorTitle": {
+  "description": "注文一覧の読み込みに失敗したときのタイトル"
+}
+
+, "ordersListErrorMessage": "通信状況を確認してもう一度お試しください。"
+, "@ordersListErrorMessage": {
+  "description": "注文一覧の読み込みに失敗したときの説明"
+}
+
+, "ordersListRetryLabel": "再試行"
+, "@ordersListRetryLabel": {
+  "description": "注文再読み込みボタンのラベル"
+}
+
+, "ordersListRefreshError": "注文を更新できませんでした。"
+, "@ordersListRefreshError": {
+  "description": "注文のプルリフレッシュに失敗した際のスナックバー文言"
+}
+
+, "ordersUnknownItem": "カスタム注文"
+, "@ordersUnknownItem": {
+  "description": "注文品名がない場合のフォールバック"
+}
+
+, "ordersTimelineOrdered": "注文受付"
+, "@ordersTimelineOrdered": {
+  "description": "タイムライン：注文受付のステージ"
+}
+
+, "ordersTimelineProduction": "制作"
+, "@ordersTimelineProduction": {
+  "description": "タイムライン：制作ステージ"
+}
+
+, "ordersTimelineShipping": "発送"
+, "@ordersTimelineShipping": {
+  "description": "タイムライン：発送ステージ"
+}
+
+, "ordersTimelineDelivered": "配達完了"
+, "@ordersTimelineDelivered": {
+  "description": "タイムライン：配達完了ステージ"
+}
+
+, "ordersTimelineCanceled": "注文はキャンセルされました"
+, "@ordersTimelineCanceled": {
+  "description": "キャンセル時に表示するタイムライン文言"
+}
+
+, "orderStatusPendingPayment": "支払い待ち"
+, "@orderStatusPendingPayment": {
+  "description": "注文ステータス：支払い待ち"
+}
+
+, "orderStatusPaid": "支払い済み"
+, "@orderStatusPaid": {
+  "description": "注文ステータス：支払い済み"
+}
+
+, "orderStatusInProduction": "制作中"
+, "@orderStatusInProduction": {
+  "description": "注文ステータス：制作中"
+}
+
+, "orderStatusReadyToShip": "発送準備中"
+, "@orderStatusReadyToShip": {
+  "description": "注文ステータス：発送準備中"
+}
+
+, "orderStatusShipped": "発送済み"
+, "@orderStatusShipped": {
+  "description": "注文ステータス：発送済み"
+}
+
+, "orderStatusDelivered": "配達完了"
+, "@orderStatusDelivered": {
+  "description": "注文ステータス：配達完了"
+}
+
+, "orderStatusCanceled": "キャンセル済み"
+, "@orderStatusCanceled": {
+  "description": "注文ステータス：キャンセル済み"
+}
 }

@@ -1179,4 +1179,104 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get designKanjiMappingEmptyResultsDescription =>
       'Adjust filters or try a different meaning to explore more kanji.';
+
+  @override
+  String get ordersStatusAll => 'All';
+
+  @override
+  String get ordersFilterStatusLabel => 'Filter by status';
+
+  @override
+  String get ordersStatusInProgress => 'In progress';
+
+  @override
+  String get ordersStatusShipped => 'Shipped';
+
+  @override
+  String get ordersStatusDelivered => 'Delivered';
+
+  @override
+  String get ordersStatusCanceled => 'Canceled';
+
+  @override
+  String get ordersFilterTimeLabel => 'Time range';
+
+  @override
+  String get ordersTimeRange30Days => 'Past 30 days';
+
+  @override
+  String get ordersTimeRange90Days => 'Past 90 days';
+
+  @override
+  String get ordersTimeRange6Months => 'Past 6 months';
+
+  @override
+  String get ordersTimeRangeYear => 'Past year';
+
+  @override
+  String get ordersTimeRangeAll => 'All time';
+
+  @override
+  String ordersLastUpdatedText(Object timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String get ordersListEmptyTitle => 'No orders yet';
+
+  @override
+  String get ordersListEmptyMessage =>
+      'When you place an order, it will appear here along with its status and tracking.';
+
+  @override
+  String get ordersListErrorTitle => 'Orders can’t be loaded';
+
+  @override
+  String get ordersListErrorMessage =>
+      'Please check your connection and try again.';
+
+  @override
+  String get ordersListRetryLabel => 'Retry';
+
+  @override
+  String get ordersListRefreshError => 'Couldn’t refresh orders.';
+
+  @override
+  String get ordersUnknownItem => 'Custom order';
+
+  @override
+  String get ordersTimelineOrdered => 'Ordered';
+
+  @override
+  String get ordersTimelineProduction => 'Production';
+
+  @override
+  String get ordersTimelineShipping => 'Shipping';
+
+  @override
+  String get ordersTimelineDelivered => 'Delivered';
+
+  @override
+  String get ordersTimelineCanceled => 'Order canceled';
+
+  @override
+  String get orderStatusPendingPayment => 'Awaiting payment';
+
+  @override
+  String get orderStatusPaid => 'Paid';
+
+  @override
+  String get orderStatusInProduction => 'In production';
+
+  @override
+  String get orderStatusReadyToShip => 'Ready to ship';
+
+  @override
+  String get orderStatusShipped => 'Shipped';
+
+  @override
+  String get orderStatusDelivered => 'Delivered';
+
+  @override
+  String get orderStatusCanceled => 'Canceled';
 }

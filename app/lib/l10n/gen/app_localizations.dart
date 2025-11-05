@@ -2149,6 +2149,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adjust filters or try a different meaning to explore more kanji.'**
   String get designKanjiMappingEmptyResultsDescription;
+
+  /// Filter label showing all orders
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ordersStatusAll;
+
+  /// Label above the status chips on the orders list
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by status'**
+  String get ordersFilterStatusLabel;
+
+  /// Filter label for orders that are being processed or produced
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get ordersStatusInProgress;
+
+  /// Filter label for shipped orders
+  ///
+  /// In en, this message translates to:
+  /// **'Shipped'**
+  String get ordersStatusShipped;
+
+  /// Filter label for delivered orders
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get ordersStatusDelivered;
+
+  /// Filter label for canceled orders
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get ordersStatusCanceled;
+
+  /// Label above the time range chips on the orders list
+  ///
+  /// In en, this message translates to:
+  /// **'Time range'**
+  String get ordersFilterTimeLabel;
+
+  /// Filter label for the past 30 days
+  ///
+  /// In en, this message translates to:
+  /// **'Past 30 days'**
+  String get ordersTimeRange30Days;
+
+  /// Filter label for the past 90 days
+  ///
+  /// In en, this message translates to:
+  /// **'Past 90 days'**
+  String get ordersTimeRange90Days;
+
+  /// Filter label for the past six months
+  ///
+  /// In en, this message translates to:
+  /// **'Past 6 months'**
+  String get ordersTimeRange6Months;
+
+  /// Filter label for the past year
+  ///
+  /// In en, this message translates to:
+  /// **'Past year'**
+  String get ordersTimeRangeYear;
+
+  /// Filter label for showing all orders regardless of time
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get ordersTimeRangeAll;
+
+  /// Label that shows when the orders list was last refreshed
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String ordersLastUpdatedText(Object timestamp);
+
+  /// Title for empty orders list state
+  ///
+  /// In en, this message translates to:
+  /// **'No orders yet'**
+  String get ordersListEmptyTitle;
+
+  /// Description for empty orders list state
+  ///
+  /// In en, this message translates to:
+  /// **'When you place an order, it will appear here along with its status and tracking.'**
+  String get ordersListEmptyMessage;
+
+  /// Title for error state on orders list
+  ///
+  /// In en, this message translates to:
+  /// **'Orders can’t be loaded'**
+  String get ordersListErrorTitle;
+
+  /// Description shown when orders list fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your connection and try again.'**
+  String get ordersListErrorMessage;
+
+  /// Primary action label for retrying orders fetch
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get ordersListRetryLabel;
+
+  /// Snack bar message when pull-to-refresh fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t refresh orders.'**
+  String get ordersListRefreshError;
+
+  /// Fallback name when order item name is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Custom order'**
+  String get ordersUnknownItem;
+
+  /// Timeline label for the ordered stage
+  ///
+  /// In en, this message translates to:
+  /// **'Ordered'**
+  String get ordersTimelineOrdered;
+
+  /// Timeline label for production stage
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get ordersTimelineProduction;
+
+  /// Timeline label for shipping stage
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping'**
+  String get ordersTimelineShipping;
+
+  /// Timeline label for delivered stage
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get ordersTimelineDelivered;
+
+  /// Timeline label shown for canceled orders
+  ///
+  /// In en, this message translates to:
+  /// **'Order canceled'**
+  String get ordersTimelineCanceled;
+
+  /// Status label for pending payment
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting payment'**
+  String get orderStatusPendingPayment;
+
+  /// Status label for paid
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get orderStatusPaid;
+
+  /// Status label for in production
+  ///
+  /// In en, this message translates to:
+  /// **'In production'**
+  String get orderStatusInProduction;
+
+  /// Status label for ready to ship
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to ship'**
+  String get orderStatusReadyToShip;
+
+  /// Status label for shipped
+  ///
+  /// In en, this message translates to:
+  /// **'Shipped'**
+  String get orderStatusShipped;
+
+  /// Status label for delivered
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get orderStatusDelivered;
+
+  /// Status label for canceled orders
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get orderStatusCanceled;
 }
 
 class _AppLocalizationsDelegate

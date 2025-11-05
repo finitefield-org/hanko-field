@@ -52,6 +52,14 @@ enum CacheBucket {
     ),
     encrypted: true,
   ),
+  orders(
+    boxName: 'cache.orders',
+    policy: CachePolicy(
+      timeToLive: Duration(minutes: 5),
+      staleGrace: Duration(hours: 12),
+    ),
+    encrypted: true,
+  ),
   onboarding(
     boxName: 'state.onboarding',
     policy: CachePolicy(

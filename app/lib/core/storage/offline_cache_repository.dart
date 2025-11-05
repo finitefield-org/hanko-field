@@ -1,4 +1,5 @@
 import 'package:app/core/data/dtos/design_dto.dart';
+import 'package:app/core/data/dtos/order_dto.dart';
 import 'package:app/core/storage/cache_bucket.dart';
 import 'package:app/core/storage/cache_policy.dart';
 import 'package:app/core/storage/local_cache_store.dart';
@@ -28,6 +29,28 @@ class OfflineCacheRepository {
   }) {
     return _store.write(
       bucket: CacheBucket.designs,
+      key: key,
+      encoder: (value) => value.toJson(),
+      value: payload,
+    );
+  }
+
+  Future<CacheReadResult<CachedOrderList>> readOrders({
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.orders,
+      key: key,
+      decoder: (data) => CachedOrderList.fromJson(_asJson(data)),
+    );
+  }
+
+  Future<void> writeOrders(
+    CachedOrderList payload, {
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.orders,
       key: key,
       encoder: (value) => value.toJson(),
       value: payload,
@@ -186,6 +209,34 @@ class CachedDesignList {
     return <String, dynamic>{
       'items': items.map((dto) => dto.toJson()).toList(),
       'nextPageToken': nextPageToken,
+    };
+  }
+}
+
+class CachedOrderList {
+  CachedOrderList({required this.items, this.appliedFilters});
+
+  factory CachedOrderList.fromJson(Map<String, dynamic> json) {
+    final list = (json['items'] as List<dynamic>? ?? <dynamic>[])
+        .map(
+          (item) => OrderDto.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+    return CachedOrderList(
+      items: list,
+      appliedFilters: json['filters'] == null
+          ? null
+          : Map<String, dynamic>.from(json['filters'] as Map),
+    );
+  }
+
+  final List<OrderDto> items;
+  final Map<String, dynamic>? appliedFilters;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'items': items.map((dto) => dto.toJson()).toList(),
+      if (appliedFilters != null) 'filters': appliedFilters,
     };
   }
 }
