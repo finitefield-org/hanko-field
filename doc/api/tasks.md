@@ -140,7 +140,7 @@
 - [x] [100 Implement webhook security middleware (IP filtering, replay protection) and monitoring.](./tasks/100-implement-webhook-security-middleware-ip-filtering-replay-protection-and-monitor.md)
 
 ## 8. Internal Endpoints
-- [ ] [101 Implement internal checkout reserve-stock endpoint creating reservations in transaction-safe manner and decrementing stock.](./tasks/101-implement-internal-checkout-reserve-stock-endpoint-creating-reservations-in-tran.md)
+- [x] [101 Implement internal checkout reserve-stock endpoint creating reservations in transaction-safe manner and decrementing stock.](./tasks/101-implement-internal-checkout-reserve-stock-endpoint-creating-reservations-in-tran.md)
 - [ ] [102 Implement internal checkout commit endpoint finalizing reservations, marking orders paid, and emitting events.](./tasks/102-implement-internal-checkout-commit-endpoint-finalizing-reservations-marking-orde.md)
 - [ ] [103 Implement internal checkout release endpoint restoring stock on failure/timeout.](./tasks/103-implement-internal-checkout-release-endpoint-restoring-stock-on-failure-timeout.md)
 - [ ] [104 Implement internal promotion apply endpoint performing atomic usage increments and validation.](./tasks/104-implement-internal-promotion-apply-endpoint-performing-atomic-usage-increments-a.md)

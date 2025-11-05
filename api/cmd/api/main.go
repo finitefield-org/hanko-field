@@ -379,6 +379,10 @@ func main() {
 		logger.Fatal("failed to initialise checkout service", zap.Error(err))
 	}
 	checkoutHandlers := handlers.NewCheckoutHandlers(authenticator, checkoutService)
+	internalCheckoutHandlers := handlers.NewInternalCheckoutHandlers(
+		inventoryService,
+		handlers.WithInternalCheckoutMetrics(handlers.NewCheckoutReservationMetrics(logger.Named("metrics.checkout"))),
+	)
 
 	nameMappingLogger := logger.Named("name_mapping")
 	nameMappingService, err := services.NewNameMappingService(services.NameMappingServiceDeps{
@@ -580,6 +584,7 @@ func main() {
 	opts = append(opts, handlers.WithAdditionalRoutes(cartHandlers.RegisterStandaloneRoutes))
 	opts = append(opts, handlers.WithAdditionalRoutes(assetHandlers.Routes))
 	opts = append(opts, handlers.WithAdditionalRoutes(checkoutHandlers.Routes))
+	opts = append(opts, handlers.WithInternalRoutes(internalCheckoutHandlers.Routes))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
 		handlers.WithPublicPromotionService(promotionService),
