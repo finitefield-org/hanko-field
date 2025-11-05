@@ -115,18 +115,25 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
         state.isLoading) {
       return;
     }
+    final filterSnapshot = ref.read(ordersFilterProvider);
+    final cursorSnapshot = current.nextCursor;
     final pending = current.copyWith(isLoadingMore: true);
     state = AsyncValue.data(pending);
     try {
-      final filter = ref.read(ordersFilterProvider);
       final result = await _repository.fetchOrders(
         pageSize: pageSize + 1,
-        pageToken: current.nextCursor,
-        filters: filter.toMap(),
+        pageToken: cursorSnapshot,
+        filters: filterSnapshot.toMap(),
       );
+      final latest = state.asData?.value;
+      if (latest == null ||
+          !_isSameFilter(latest.filter, filterSnapshot) ||
+          latest.nextCursor != cursorSnapshot) {
+        return;
+      }
       if (result.isEmpty) {
         state = AsyncValue.data(
-          pending.copyWith(
+          latest.copyWith(
             hasMore: false,
             nextCursor: null,
             isLoadingMore: false,
@@ -136,9 +143,7 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
         return;
       }
       final newItems = result.take(pageSize).toList();
-      final existingIds = <String>{
-        for (final order in current.orders) order.id,
-      };
+      final existingIds = <String>{for (final order in latest.orders) order.id};
       final appended = <Order>[];
       for (final order in newItems) {
         if (existingIds.add(order.id)) {
@@ -147,7 +152,7 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
       }
       if (appended.isEmpty) {
         state = AsyncValue.data(
-          pending.copyWith(
+          latest.copyWith(
             isLoadingMore: false,
             hasMore: false,
             nextCursor: null,
@@ -156,11 +161,11 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
         );
         return;
       }
-      final merged = [...current.orders, ...appended];
+      final merged = [...latest.orders, ...appended];
       final hasMore = result.length > pageSize;
       final nextCursor = hasMore && merged.isNotEmpty ? merged.last.id : null;
       state = AsyncValue.data(
-        pending.copyWith(
+        latest.copyWith(
           orders: List<Order>.unmodifiable(merged),
           hasMore: hasMore,
           nextCursor: nextCursor,
@@ -169,7 +174,8 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
         ),
       );
     } catch (error, stackTrace) {
-      state = AsyncValue.data(current.copyWith(isLoadingMore: false));
+      final fallback = state.asData?.value ?? current;
+      state = AsyncValue.data(fallback.copyWith(isLoadingMore: false));
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
@@ -193,4 +199,8 @@ class OrdersListController extends AsyncNotifier<OrdersListState> {
     controller.state = current.copyWith(time: timeRange);
     state = const AsyncValue.loading();
   }
+}
+
+bool _isSameFilter(OrderListFilter a, OrderListFilter b) {
+  return a.status == b.status && a.time == b.time;
 }
