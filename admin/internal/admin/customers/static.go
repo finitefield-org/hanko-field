@@ -844,10 +844,13 @@ func formatCurrency(amount int64, currency string) string {
 		amount = -amount
 	}
 
-	major := amount / 100
-	minor := amount % 100
-
-	return fmt.Sprintf("%s%s%d.%02d", sign, symbol, major, minor)
+    // Values are stored in minor units. JPY is zero-decimal for display.
+    major := amount / 100
+    if code == "JPY" {
+        return fmt.Sprintf("%s%s%d", sign, symbol, major)
+    }
+    minor := amount % 100
+    return fmt.Sprintf("%s%s%d.%02d", sign, symbol, major, minor)
 }
 
 func riskToneValue(level string) string {

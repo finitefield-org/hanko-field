@@ -91,10 +91,12 @@ func buildSearchRequest(r *http.Request) searchRequest {
 	}
 	var endPtr *time.Time
 	if t := parseDate(rawEnd); !t.IsZero() {
-		// Ensure end >= start if both provided.
+		// If end < start and both provided, swap them instead of silently adjusting.
 		if startPtr != nil && t.Before(*startPtr) {
-			adjusted := startPtr.Add(24 * time.Hour)
-			endPtr = &adjusted
+			end := *startPtr
+			start := t
+			startPtr = &start
+			endPtr = &end
 		} else {
 			endPtr = &t
 		}

@@ -2102,6 +2102,12 @@ func formatMinorAmount(amount int64, currency string) string {
 	major := amount / 100
 	minor := amount % 100
 	code := strings.ToUpper(strings.TrimSpace(currency))
+	if code == "JPY" {
+		if code == "" {
+			return fmt.Sprintf("%s%d", sign, major)
+		}
+		return fmt.Sprintf("%s%d %s", sign, major, code)
+	}
 	if code == "" {
 		return fmt.Sprintf("%s%d.%02d", sign, major, minor)
 	}
