@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/platform/webhook"
 	"github.com/hanko-field/api/internal/services"
 )
 
@@ -681,7 +682,7 @@ func validateCIDR(cfg *carrierConfig, r *http.Request) error {
 	if len(cfg.allowedCIDRs) == 0 {
 		return nil
 	}
-	ip, err := extractClientIP(r)
+	ip, err := webhook.ExtractClientIP(r)
 	if err != nil {
 		return carrierError{code: "forbidden", message: "source ip not allowed", status: http.StatusForbidden}
 	}
@@ -691,32 +692,6 @@ func validateCIDR(cfg *carrierConfig, r *http.Request) error {
 		}
 	}
 	return carrierError{code: "forbidden", message: "source ip not allowed", status: http.StatusForbidden}
-}
-
-func extractClientIP(r *http.Request) (net.IP, error) {
-	if r == nil {
-		return nil, errors.New("request nil")
-	}
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		parts := strings.Split(forwarded, ",")
-		for _, part := range parts {
-			if ip := net.ParseIP(strings.TrimSpace(part)); ip != nil {
-				return ip, nil
-			}
-		}
-	}
-	addr := strings.TrimSpace(r.RemoteAddr)
-	if addr == "" {
-		return nil, errors.New("remote addr missing")
-	}
-	if host, _, err := net.SplitHostPort(addr); err == nil {
-		addr = host
-	}
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		return nil, errors.New("invalid remote addr")
-	}
-	return ip, nil
 }
 
 func cloneCarrierMap(src map[string]any) map[string]any {

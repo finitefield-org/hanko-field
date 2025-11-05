@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,6 +31,7 @@ import (
 	"github.com/hanko-field/api/internal/platform/observability"
 	"github.com/hanko-field/api/internal/platform/secrets"
 	platformstorage "github.com/hanko-field/api/internal/platform/storage"
+	"github.com/hanko-field/api/internal/platform/webhook"
 	"github.com/hanko-field/api/internal/repositories"
 	firestoreRepo "github.com/hanko-field/api/internal/repositories/firestore"
 	"github.com/hanko-field/api/internal/services"
@@ -554,6 +556,18 @@ func main() {
 		)
 	}
 
+	webhookSecurityLogger := logger.Named("webhooks.security")
+	webhookNetworks := parseWebhookNetworks(webhookSecurityLogger, cfg.Webhooks.AllowedCIDRs)
+	webhookSecurityMetrics := webhook.NewMetricsRecorder(webhookSecurityLogger)
+	webhookReplayStore := webhook.NewInMemoryReplayStore()
+	webhookSecurityMiddleware := webhook.NewSecurityMiddleware(webhook.SecurityConfig{
+		AllowedNetworks: webhookNetworks,
+		ReplayStore:     webhookReplayStore,
+		ReplayTTL:       cfg.Webhooks.ReplayTTL,
+		Logger:          webhookSecurityLogger,
+		Metrics:         webhookSecurityMetrics,
+	})
+
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
 	opts = append(opts, handlers.WithHealthHandlers(healthHandlers))
@@ -612,6 +626,9 @@ func main() {
 	))
 	if oidcMiddleware != nil {
 		opts = append(opts, handlers.WithInternalMiddlewares(oidcMiddleware))
+	}
+	if webhookSecurityMiddleware != nil {
+		opts = append(opts, handlers.WithWebhookMiddlewares(webhookSecurityMiddleware))
 	}
 	if hmacMiddleware != nil {
 		opts = append(opts, handlers.WithWebhookMiddlewares(hmacMiddleware))
@@ -790,6 +807,43 @@ func buildHMACMiddleware(logger *zap.Logger, cfg config.Config) func(http.Handle
 
 	resolver := webhookSecretResolver(secrets)
 	return validator.RequireHMACResolver(resolver)
+}
+
+func parseWebhookNetworks(logger *zap.Logger, values []string) []*net.IPNet {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	networks := make([]*net.IPNet, 0, len(values))
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if value == "" {
+			continue
+		}
+		if strings.Contains(value, "/") {
+			_, network, err := net.ParseCIDR(value)
+			if err != nil {
+				logger.Warn("webhook security: invalid cidr entry", zap.String("value", value), zap.Error(err))
+				continue
+			}
+			networks = append(networks, network)
+			continue
+		}
+		ip := net.ParseIP(value)
+		if ip == nil {
+			logger.Warn("webhook security: invalid ip entry", zap.String("value", value))
+			continue
+		}
+		bits := 32
+		if ip.To4() == nil {
+			bits = 128
+		}
+		network := &net.IPNet{
+			IP:   ip,
+			Mask: net.CIDRMask(bits, bits),
+		}
+		networks = append(networks, network)
+	}
+	return networks
 }
 
 type staticSecretProvider struct {

@@ -36,6 +36,12 @@ func TestLoadWithDefaults(t *testing.T) {
 	if len(cfg.Webhooks.AllowedHosts) != 0 {
 		t.Errorf("expected no allowed hosts, got %v", cfg.Webhooks.AllowedHosts)
 	}
+	if len(cfg.Webhooks.AllowedCIDRs) != 0 {
+		t.Errorf("expected no allowed cidrs, got %v", cfg.Webhooks.AllowedCIDRs)
+	}
+	if cfg.Webhooks.ReplayTTL != defaultWebhookReplayTTL {
+		t.Errorf("expected default webhook replay ttl %s, got %s", defaultWebhookReplayTTL, cfg.Webhooks.ReplayTTL)
+	}
 	if cfg.Security.Environment != "local" {
 		t.Errorf("expected default security environment local, got %s", cfg.Security.Environment)
 	}
@@ -91,6 +97,8 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 		"API_AI_AUTH_TOKEN":                       "secret://ai/token",
 		"API_WEBHOOK_SIGNING_SECRET":              "secret://webhook/secret",
 		"API_WEBHOOK_ALLOWED_HOSTS":               "https://example.com, https://foo.bar",
+		"API_WEBHOOK_ALLOWED_CIDRS":               "203.0.113.0/24, 198.51.100.5/32",
+		"API_WEBHOOK_REPLAY_TTL":                  "10m",
 		"API_RATELIMIT_DEFAULT_PER_MIN":           "150",
 		"API_RATELIMIT_AUTH_PER_MIN":              "300",
 		"API_RATELIMIT_WEBHOOK_BURST":             "80",
@@ -149,6 +157,15 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	}
 	if len(cfg.Webhooks.AllowedHosts) != 2 {
 		t.Fatalf("expected 2 allowed hosts, got %v", cfg.Webhooks.AllowedHosts)
+	}
+	if len(cfg.Webhooks.AllowedCIDRs) != 2 {
+		t.Fatalf("expected 2 allowed cidrs, got %v", cfg.Webhooks.AllowedCIDRs)
+	}
+	if cfg.Webhooks.AllowedCIDRs[0] != "203.0.113.0/24" {
+		t.Errorf("unexpected allowed cidr %s", cfg.Webhooks.AllowedCIDRs[0])
+	}
+	if cfg.Webhooks.ReplayTTL != 10*time.Minute {
+		t.Errorf("expected replay ttl 10m, got %s", cfg.Webhooks.ReplayTTL)
 	}
 	if !cfg.Features.EnableAISuggestions {
 		t.Errorf("expected AISuggestions flag enabled")

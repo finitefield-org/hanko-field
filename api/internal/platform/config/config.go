@@ -24,6 +24,7 @@ const (
 	defaultRateLimitDefault      = 120
 	defaultRateLimitAuth         = 240
 	defaultRateLimitWebhookBurst = 60
+	defaultWebhookReplayTTL      = 5 * time.Minute
 	defaultSecurityEnvironment   = "local"
 	defaultOIDCJWKSURL           = "https://www.googleapis.com/oauth2/v3/certs"
 	defaultSecurityIssuer        = "https://accounts.google.com"
@@ -101,6 +102,8 @@ type AIConfig struct {
 type WebhookConfig struct {
 	SigningSecret string
 	AllowedHosts  []string
+	AllowedCIDRs  []string
+	ReplayTTL     time.Duration
 }
 
 // RateLimitConfig controls request throttling.
@@ -449,6 +452,8 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 		Webhooks: WebhookConfig{
 			SigningSecret: stringWithDefault(lookup, "API_WEBHOOK_SIGNING_SECRET", ""),
 			AllowedHosts:  csvWithDefault(lookup, "API_WEBHOOK_ALLOWED_HOSTS"),
+			AllowedCIDRs:  csvWithDefault(lookup, "API_WEBHOOK_ALLOWED_CIDRS"),
+			ReplayTTL:     durationWithDefault(lookup, "API_WEBHOOK_REPLAY_TTL", defaultWebhookReplayTTL),
 		},
 		RateLimits: RateLimitConfig{
 			DefaultPerMinute:       intWithDefault(lookup, "API_RATELIMIT_DEFAULT_PER_MIN", defaultRateLimitDefault),
