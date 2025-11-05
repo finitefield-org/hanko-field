@@ -292,11 +292,7 @@ class _PaymentMethodTile extends StatelessWidget {
         : _fallbackBrandLabel(method);
     final last4Digits = method.last4?.trim() ?? '';
     final maskedLast4 = last4Digits.isEmpty ? '••••' : last4Digits;
-    final expiryLabel = method.hasExpiry
-        ? (isInternational
-              ? '${method.expMonth?.toString().padLeft(2, '0')}/${method.expYear?.toString().substring(2)}'
-              : '${method.expYear}年${method.expMonth}月')
-        : (isInternational ? 'No expiry' : '有効期限なし');
+    final expiryLabel = _formatExpiry(method, isInternational);
 
     subtitle.add(
       isInternational
@@ -390,6 +386,25 @@ class _PaymentMethodTile extends StatelessWidget {
       case PaymentProvider.other:
         return isInternational ? 'Payment method' : 'お支払い方法';
     }
+  }
+
+  String _formatExpiry(
+    CheckoutPaymentMethodSummary method,
+    bool isInternational,
+  ) {
+    if (!method.hasExpiry ||
+        method.expMonth == null ||
+        method.expYear == null) {
+      return isInternational ? 'No expiry' : '有効期限なし';
+    }
+    final monthValue = method.expMonth!;
+    final month = monthValue.toString().padLeft(2, '0');
+    final year = method.expYear!;
+    if (isInternational) {
+      final shortYear = (year % 100).toString().padLeft(2, '0');
+      return '$month/$shortYear';
+    }
+    return '$year年$monthValue月';
   }
 }
 
@@ -524,6 +539,10 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
     final helper = isIntl
         ? 'Your details are tokenized by our PSP.'
         : '入力情報は決済代行でトークン化され安全に保存されます。';
+    final capacity = isIntl ? 5 : 3;
+    final usageLabel = isIntl
+        ? 'Stored methods: ${widget.existingMethodCount}/$capacity'
+        : '保存済み: ${widget.existingMethodCount}/$capacity 件';
 
     return Form(
       key: _formKey,
@@ -535,6 +554,8 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
             Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: AppTokens.spaceS),
             Text(helper, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: AppTokens.spaceXS),
+            Text(usageLabel, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: AppTokens.spaceL),
             DropdownButtonFormField<PaymentProvider>(
               initialValue: _selectedProvider,
@@ -577,7 +598,7 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
                 decoration: InputDecoration(labelText: numberLabel),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  final digits = value?.replaceAll(RegExp(r'\\D'), '') ?? '';
+                  final digits = value?.replaceAll(RegExp(r'\D'), '') ?? '';
                   if (digits.length < 12) {
                     return isIntl
                         ? 'Enter a valid card number'
@@ -611,7 +632,7 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
                       obscureText: true,
                       validator: (value) {
                         final digits =
-                            value?.replaceAll(RegExp(r'\\D'), '') ?? '';
+                            value?.replaceAll(RegExp(r'\D'), '') ?? '';
                         if (digits.length < 3) {
                           return isIntl ? 'Enter CVC' : 'CVC を入力してください';
                         }
@@ -686,7 +707,7 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
     String? billingName;
 
     if (provider == PaymentProvider.stripe) {
-      final number = _cardNumberController.text.replaceAll(RegExp(r'\\D'), '');
+      final number = _cardNumberController.text.replaceAll(RegExp(r'\D'), '');
       brand = _detectBrand(number);
       last4 = number.length >= 4 ? number.substring(number.length - 4) : null;
       final expiryParts = _parseExpiry(_expiryController.text);
@@ -714,7 +735,7 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
 
   bool _validateExpiry(String? value) {
     final match = RegExp(
-      r'^(0[1-9]|1[0-2])\\/?([0-9]{2})\$',
+      r'^(0[1-9]|1[0-2])/?([0-9]{2})$',
     ).firstMatch(value?.trim() ?? '');
     if (match == null) {
       return false;
@@ -730,7 +751,7 @@ class _AddPaymentMethodSheetState extends State<_AddPaymentMethodSheet> {
 
   (int?, int?) _parseExpiry(String value) {
     final match = RegExp(
-      r'^(0[1-9]|1[0-2])\\/?([0-9]{2})\$',
+      r'^(0[1-9]|1[0-2])/?([0-9]{2})$',
     ).firstMatch(value.trim());
     if (match == null) {
       return (null, null);
