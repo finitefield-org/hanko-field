@@ -627,11 +627,11 @@ func main() {
 	if oidcMiddleware != nil {
 		opts = append(opts, handlers.WithInternalMiddlewares(oidcMiddleware))
 	}
-	if webhookSecurityMiddleware != nil {
-		opts = append(opts, handlers.WithWebhookMiddlewares(webhookSecurityMiddleware))
-	}
 	if hmacMiddleware != nil {
 		opts = append(opts, handlers.WithWebhookMiddlewares(hmacMiddleware))
+	}
+	if webhookSecurityMiddleware != nil {
+		opts = append(opts, handlers.WithWebhookMiddlewares(webhookSecurityMiddleware))
 	}
 	webhookRegistrars := []handlers.RouteRegistrar{paymentWebhookHandlers.Routes}
 	if shippingWebhookHandlers != nil {
