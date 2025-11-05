@@ -403,6 +403,10 @@ func (s *stubInventoryService) ConfigureSafetyStock(ctx context.Context, cmd ser
 	return services.InventoryStock{}, errors.New("not implemented")
 }
 
+func (s *stubInventoryService) RecordSafetyNotification(context.Context, services.RecordSafetyNotificationCommand) (services.InventoryStock, error) {
+	return services.InventoryStock{}, errors.New("not implemented")
+}
+
 type inventoryCatalogStub struct {
 	getMaterialFn func(context.Context, string) (services.Material, error)
 	getProductFn  func(context.Context, string) (services.Product, error)

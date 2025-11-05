@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/services"
@@ -155,9 +156,128 @@ func TestInternalMaintenanceCleanup_ServiceUnavailable(t *testing.T) {
 	}
 }
 
+func TestStockSafetyNotify_DispatchesNotifications(t *testing.T) {
+	now := time.Date(2025, time.January, 10, 9, 30, 0, 0, time.UTC)
+	lastNotified := now.Add(-30 * time.Minute)
+	inventory := &stubMaintenanceInventory{}
+	inventory.listFn = func(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+		return domain.CursorPage[services.InventorySnapshot]{
+			Items: []services.InventorySnapshot{
+				{SKU: "SKU-001", SafetyDelta: -5},
+				{SKU: "SKU-002", SafetyDelta: -2, LastSafetyNotificationAt: &lastNotified},
+			},
+		}, nil
+	}
+	notifier := &captureStockSafetyNotifier{}
+	handler := NewInternalMaintenanceHandlers(inventory,
+		WithMaintenanceNotifier(notifier),
+		WithMaintenanceClock(func() time.Time { return now }),
+		WithMaintenanceNotificationCooldown(2*time.Hour),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/maintenance/stock-safety-notify", http.NoBody)
+	resp := httptest.NewRecorder()
+
+	handler.stockSafetyNotify(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.Code)
+	}
+
+	var payload stockSafetyNotifyResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if payload.NotifiedCount != 1 {
+		t.Fatalf("expected 1 notified sku, got %d", payload.NotifiedCount)
+	}
+	if payload.AlreadyNotifiedCount != 1 {
+		t.Fatalf("expected 1 already notified sku, got %d", payload.AlreadyNotifiedCount)
+	}
+	if len(payload.NotifiedSkus) != 1 || payload.NotifiedSkus[0] != "SKU-001" {
+		t.Fatalf("unexpected notified skus %+v", payload.NotifiedSkus)
+	}
+	if len(payload.AlreadyNotifiedSkus) != 1 || payload.AlreadyNotifiedSkus[0] != "SKU-002" {
+		t.Fatalf("unexpected already notified skus %+v", payload.AlreadyNotifiedSkus)
+	}
+	if !payload.GeneratedAt.Equal(now) {
+		t.Fatalf("expected generatedAt %s got %s", now, payload.GeneratedAt)
+	}
+
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected 1 notification, got %d", len(notifier.notifications))
+	}
+	note := notifier.notifications[0]
+	if len(note.Alerts) != 1 || note.Alerts[0].SKU != "SKU-001" {
+		t.Fatalf("unexpected alerts %+v", note.Alerts)
+	}
+
+	if len(inventory.recorded) != 1 {
+		t.Fatalf("expected 1 recorded notification, got %d", len(inventory.recorded))
+	}
+	record := inventory.recorded[0]
+	if record.SKU != "SKU-001" {
+		t.Fatalf("expected recorded sku SKU-001 got %s", record.SKU)
+	}
+	if !record.NotifiedAt.Equal(now) {
+		t.Fatalf("expected recorded notifiedAt %s got %s", now, record.NotifiedAt)
+	}
+	if payload.NotificationsDispatched != true {
+		t.Fatalf("expected notifications dispatched true")
+	}
+}
+
+func TestStockSafetyNotify_ForceOverridesCooldown(t *testing.T) {
+	now := time.Date(2025, time.January, 10, 9, 0, 0, 0, time.UTC)
+	recent := now.Add(-15 * time.Minute)
+	inventory := &stubMaintenanceInventory{}
+	inventory.listFn = func(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+		return domain.CursorPage[services.InventorySnapshot]{
+			Items: []services.InventorySnapshot{{SKU: "SKU-009", SafetyDelta: -4, LastSafetyNotificationAt: &recent}},
+		}, nil
+	}
+	notifier := &captureStockSafetyNotifier{}
+	handler := NewInternalMaintenanceHandlers(inventory,
+		WithMaintenanceNotifier(notifier),
+		WithMaintenanceClock(func() time.Time { return now }),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/maintenance/stock-safety-notify", strings.NewReader(`{"force": true}`))
+	resp := httptest.NewRecorder()
+
+	handler.stockSafetyNotify(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.Code)
+	}
+
+	var payload stockSafetyNotifyResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if payload.NotifiedCount != 1 || len(payload.NotifiedSkus) != 1 || payload.NotifiedSkus[0] != "SKU-009" {
+		t.Fatalf("expected forced notification for SKU-009, got %+v", payload.NotifiedSkus)
+	}
+	if payload.AlreadyNotifiedCount != 0 {
+		t.Fatalf("expected no already notified skus when forcing, got %d", payload.AlreadyNotifiedCount)
+	}
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected 1 notification, got %d", len(notifier.notifications))
+	}
+	if len(inventory.recorded) != 1 || inventory.recorded[0].SKU != "SKU-009" {
+		t.Fatalf("expected recorded sku SKU-009, got %+v", inventory.recorded)
+	}
+}
+
 type stubMaintenanceInventory struct {
 	releaseFn func(ctx context.Context, cmd services.ReleaseExpiredReservationsCommand) (services.InventoryReleaseExpiredResult, error)
-	lastCmd   services.ReleaseExpiredReservationsCommand
+	listFn    func(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error)
+	recordFn  func(ctx context.Context, cmd services.RecordSafetyNotificationCommand) (services.InventoryStock, error)
+
+	lastCmd  services.ReleaseExpiredReservationsCommand
+	recorded []services.RecordSafetyNotificationCommand
 }
 
 func (s *stubMaintenanceInventory) ReserveStocks(context.Context, services.InventoryReserveCommand) (services.InventoryReservation, error) {
@@ -184,13 +304,36 @@ func (s *stubMaintenanceInventory) ReleaseExpiredReservations(ctx context.Contex
 	return services.InventoryReleaseExpiredResult{}, nil
 }
 
-func (s *stubMaintenanceInventory) ListLowStock(context.Context, services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+func (s *stubMaintenanceInventory) ListLowStock(ctx context.Context, filter services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error) {
+	if s.listFn != nil {
+		return s.listFn(ctx, filter)
+	}
 	return domain.CursorPage[services.InventorySnapshot]{}, errors.New("not implemented")
 }
 
 func (s *stubMaintenanceInventory) ConfigureSafetyStock(context.Context, services.ConfigureSafetyStockCommand) (services.InventoryStock, error) {
 	return services.InventoryStock{}, errors.New("not implemented")
 }
+
+func (s *stubMaintenanceInventory) RecordSafetyNotification(ctx context.Context, cmd services.RecordSafetyNotificationCommand) (services.InventoryStock, error) {
+	s.recorded = append(s.recorded, cmd)
+	if s.recordFn != nil {
+		return s.recordFn(ctx, cmd)
+	}
+	return services.InventoryStock{}, nil
+}
+
+type captureStockSafetyNotifier struct {
+	notifications []services.StockSafetyNotification
+	err           error
+}
+
+func (n *captureStockSafetyNotifier) NotifyStockSafety(_ context.Context, notification services.StockSafetyNotification) error {
+	n.notifications = append(n.notifications, notification)
+	return n.err
+}
+
+var _ services.StockSafetyNotifier = (*captureStockSafetyNotifier)(nil)
 
 type stubMaintenanceMetrics struct {
 	runs     []maintenanceMetricsRun

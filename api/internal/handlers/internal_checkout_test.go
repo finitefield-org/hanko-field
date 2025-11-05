@@ -505,6 +505,10 @@ func (s *stubCheckoutInventoryService) ConfigureSafetyStock(context.Context, ser
 	return services.InventoryStock{}, errors.New("not implemented")
 }
 
+func (s *stubCheckoutInventoryService) RecordSafetyNotification(context.Context, services.RecordSafetyNotificationCommand) (services.InventoryStock, error) {
+	return services.InventoryStock{}, errors.New("not implemented")
+}
+
 type stubCheckoutOrderService struct {
 	getFn        func(context.Context, string, services.OrderReadOptions) (services.Order, error)
 	transitionFn func(context.Context, services.OrderStatusTransitionCommand) (services.Order, error)

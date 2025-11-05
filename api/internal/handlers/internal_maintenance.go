@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel"
@@ -22,6 +24,10 @@ const (
 	maxMaintenanceCleanupBodySize = 4 * 1024
 	defaultCleanupActorID         = "system:maintenance"
 	defaultCleanupReason          = "expired_maintenance_cleanup"
+	defaultStockSafetyPageSize    = 100
+	maxStockSafetyPageSize        = 500
+	defaultStockSafetyMaxPages    = 5
+	defaultStockSafetyCooldown    = 24 * time.Hour
 )
 
 // InternalMaintenanceHandlers exposes maintenance utilities for internal consumers.
@@ -29,6 +35,12 @@ type InternalMaintenanceHandlers struct {
 	inventory services.InventoryService
 	metrics   MaintenanceCleanupMetrics
 	maxBody   int64
+	notifier  services.StockSafetyNotifier
+	clock     func() time.Time
+
+	notificationCooldown time.Duration
+	notifyPageSize       int
+	notifyMaxPages       int
 
 	defaultActorID string
 	defaultReason  string
@@ -165,6 +177,51 @@ func WithMaintenanceMetrics(metrics MaintenanceCleanupMetrics) InternalMaintenan
 	}
 }
 
+// WithMaintenanceNotifier overrides the notifier used for stock safety alerts.
+func WithMaintenanceNotifier(notifier services.StockSafetyNotifier) InternalMaintenanceOption {
+	return func(h *InternalMaintenanceHandlers) {
+		if notifier != nil {
+			h.notifier = notifier
+		}
+	}
+}
+
+// WithMaintenanceClock overrides the clock used for timestamp generation.
+func WithMaintenanceClock(clock func() time.Time) InternalMaintenanceOption {
+	return func(h *InternalMaintenanceHandlers) {
+		if clock != nil {
+			h.clock = clock
+		}
+	}
+}
+
+// WithMaintenanceNotificationCooldown sets the minimum duration between notifications per SKU.
+func WithMaintenanceNotificationCooldown(cooldown time.Duration) InternalMaintenanceOption {
+	return func(h *InternalMaintenanceHandlers) {
+		if cooldown >= 0 {
+			h.notificationCooldown = cooldown
+		}
+	}
+}
+
+// WithMaintenanceNotificationPageSize sets the page size used when scanning low stock items.
+func WithMaintenanceNotificationPageSize(size int) InternalMaintenanceOption {
+	return func(h *InternalMaintenanceHandlers) {
+		if size > 0 {
+			h.notifyPageSize = size
+		}
+	}
+}
+
+// WithMaintenanceNotificationPageLimit caps the number of pages scanned per invocation.
+func WithMaintenanceNotificationPageLimit(limit int) InternalMaintenanceOption {
+	return func(h *InternalMaintenanceHandlers) {
+		if limit > 0 {
+			h.notifyMaxPages = limit
+		}
+	}
+}
+
 // WithMaintenanceDefaults customises default actor and reason values applied when omitted from requests.
 func WithMaintenanceDefaults(actorID, reason string) InternalMaintenanceOption {
 	return func(h *InternalMaintenanceHandlers) {
@@ -189,11 +246,16 @@ func WithMaintenanceBodyLimit(limit int64) InternalMaintenanceOption {
 // NewInternalMaintenanceHandlers wires dependencies for maintenance endpoints.
 func NewInternalMaintenanceHandlers(inventory services.InventoryService, opts ...InternalMaintenanceOption) *InternalMaintenanceHandlers {
 	handler := &InternalMaintenanceHandlers{
-		inventory:      inventory,
-		metrics:        noopMaintenanceCleanupMetrics{},
-		maxBody:        maxMaintenanceCleanupBodySize,
-		defaultActorID: defaultCleanupActorID,
-		defaultReason:  defaultCleanupReason,
+		inventory:            inventory,
+		metrics:              noopMaintenanceCleanupMetrics{},
+		maxBody:              maxMaintenanceCleanupBodySize,
+		notifier:             services.NewNoopStockSafetyNotifier(),
+		clock:                time.Now,
+		notificationCooldown: defaultStockSafetyCooldown,
+		notifyPageSize:       defaultStockSafetyPageSize,
+		notifyMaxPages:       defaultStockSafetyMaxPages,
+		defaultActorID:       defaultCleanupActorID,
+		defaultReason:        defaultCleanupReason,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -205,6 +267,21 @@ func NewInternalMaintenanceHandlers(inventory services.InventoryService, opts ..
 	}
 	if handler.maxBody <= 0 {
 		handler.maxBody = maxMaintenanceCleanupBodySize
+	}
+	if handler.notifier == nil {
+		handler.notifier = services.NewNoopStockSafetyNotifier()
+	}
+	if handler.clock == nil {
+		handler.clock = time.Now
+	}
+	if handler.notificationCooldown < 0 {
+		handler.notificationCooldown = defaultStockSafetyCooldown
+	}
+	if handler.notifyPageSize <= 0 {
+		handler.notifyPageSize = defaultStockSafetyPageSize
+	}
+	if handler.notifyMaxPages <= 0 {
+		handler.notifyMaxPages = defaultStockSafetyMaxPages
 	}
 	if strings.TrimSpace(handler.defaultActorID) == "" {
 		handler.defaultActorID = defaultCleanupActorID
@@ -221,6 +298,7 @@ func (h *InternalMaintenanceHandlers) Routes(r chi.Router) {
 		return
 	}
 	r.Post("/maintenance/cleanup-reservations", h.cleanupReservations)
+	r.Post("/maintenance/stock-safety-notify", h.stockSafetyNotify)
 }
 
 type internalMaintenanceCleanupRequest struct {
@@ -239,6 +317,28 @@ type internalMaintenanceCleanupResponse struct {
 	Skus                 []string `json:"skus"`
 	SkippedCount         int      `json:"skippedCount"`
 	SkippedIDs           []string `json:"skippedIds"`
+}
+
+type stockSafetyNotifyRequest struct {
+	Threshold       *int `json:"threshold,omitempty"`
+	CooldownMinutes *int `json:"cooldown_minutes,omitempty"`
+	Force           bool `json:"force,omitempty"`
+	PageSize        *int `json:"page_size,omitempty"`
+	MaxPages        *int `json:"max_pages,omitempty"`
+}
+
+type stockSafetyNotifyResponse struct {
+	GeneratedAt             time.Time `json:"generated_at"`
+	Threshold               int       `json:"threshold"`
+	CooldownMinutes         int       `json:"cooldown_minutes"`
+	NotifiedCount           int       `json:"notified_count"`
+	AlreadyNotifiedCount    int       `json:"already_notified_count"`
+	SkippedCount            int       `json:"skipped_count"`
+	TotalCandidates         int       `json:"total_candidates"`
+	NotifiedSkus            []string  `json:"notified_skus"`
+	AlreadyNotifiedSkus     []string  `json:"already_notified_skus"`
+	SkippedSkus             []string  `json:"skipped_skus"`
+	NotificationsDispatched bool      `json:"notifications_dispatched"`
 }
 
 func (h *InternalMaintenanceHandlers) cleanupReservations(w http.ResponseWriter, r *http.Request) {
@@ -343,4 +443,221 @@ func (h *InternalMaintenanceHandlers) cleanupReservations(w http.ResponseWriter,
 	logger.Info("cleanup reservations run", fields...)
 
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *InternalMaintenanceHandlers) stockSafetyNotify(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h == nil || h.inventory == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("inventory_unavailable", "inventory service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	body, err := readLimitedBody(r, h.maxBody)
+	switch {
+	case err == nil:
+	case errors.Is(err, errEmptyBody):
+		body = nil
+	case errors.Is(err, errBodyTooLarge):
+		httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body too large", http.StatusRequestEntityTooLarge))
+		return
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "unable to read request body", http.StatusBadRequest))
+		return
+	}
+
+	var req stockSafetyNotifyRequest
+	if len(body) > 0 {
+		if err := json.Unmarshal(body, &req); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_json", "request body must be valid JSON", http.StatusBadRequest))
+			return
+		}
+	}
+
+	pageSize := h.notifyPageSize
+	if pageSize <= 0 {
+		pageSize = defaultStockSafetyPageSize
+	}
+	if req.PageSize != nil {
+		if *req.PageSize <= 0 {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "page_size must be positive", http.StatusBadRequest))
+			return
+		}
+		pageSize = *req.PageSize
+		if pageSize > maxStockSafetyPageSize {
+			pageSize = maxStockSafetyPageSize
+		}
+	}
+
+	maxPages := h.notifyMaxPages
+	if maxPages <= 0 {
+		maxPages = defaultStockSafetyMaxPages
+	}
+	if req.MaxPages != nil {
+		if *req.MaxPages <= 0 {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "max_pages must be positive", http.StatusBadRequest))
+			return
+		}
+		maxPages = *req.MaxPages
+	}
+
+	cooldown := h.notificationCooldown
+	if cooldown < 0 {
+		cooldown = defaultStockSafetyCooldown
+	}
+	if req.CooldownMinutes != nil {
+		if *req.CooldownMinutes < 0 {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "cooldown_minutes must be non-negative", http.StatusBadRequest))
+			return
+		}
+		cooldown = time.Duration(*req.CooldownMinutes) * time.Minute
+	}
+	cooldownMinutes := 0
+	if cooldown > 0 {
+		cooldownMinutes = int(cooldown / time.Minute)
+	}
+
+	threshold := 0
+	if req.Threshold != nil {
+		threshold = *req.Threshold
+	}
+
+	now := h.now()
+
+	seen := make(map[string]struct{})
+	toNotify := make([]services.InventorySnapshot, 0, pageSize)
+	notifiedSkus := make([]string, 0, pageSize)
+	alreadyNotified := make([]string, 0, pageSize)
+	skippedSkus := make([]string, 0, pageSize)
+	totalCandidates := 0
+
+	pageToken := ""
+	pagesFetched := 0
+
+	for {
+		filter := services.InventoryLowStockFilter{
+			Threshold: threshold,
+			Pagination: services.Pagination{
+				PageSize:  pageSize,
+				PageToken: pageToken,
+			},
+		}
+
+		page, err := h.inventory.ListLowStock(ctx, filter)
+		if err != nil {
+			status := http.StatusInternalServerError
+			code := "inventory_query_failed"
+			if errors.Is(err, services.ErrInventoryInvalidInput) {
+				status = http.StatusBadRequest
+				code = "invalid_request"
+			}
+			httpx.WriteError(ctx, w, httpx.NewError(code, err.Error(), status))
+			return
+		}
+
+		for _, snapshot := range page.Items {
+			sku := strings.TrimSpace(snapshot.SKU)
+			if sku == "" {
+				continue
+			}
+			if _, exists := seen[sku]; exists {
+				continue
+			}
+			seen[sku] = struct{}{}
+			totalCandidates++
+
+			if !req.Force && cooldown > 0 && snapshot.LastSafetyNotificationAt != nil {
+				last := snapshot.LastSafetyNotificationAt.UTC()
+				if !last.IsZero() && now.Sub(last) < cooldown {
+					alreadyNotified = append(alreadyNotified, sku)
+					continue
+				}
+			}
+
+			if threshold <= 0 && snapshot.SafetyDelta >= 0 {
+				skippedSkus = append(skippedSkus, sku)
+				continue
+			}
+
+			toNotify = append(toNotify, snapshot)
+		}
+
+		pagesFetched++
+		pageToken = strings.TrimSpace(page.NextPageToken)
+		if pageToken == "" || pagesFetched >= maxPages {
+			break
+		}
+	}
+
+	notificationsDispatched := false
+	if len(toNotify) > 0 && h.notifier != nil {
+		notification := services.StockSafetyNotification{
+			Alerts:      toNotify,
+			GeneratedAt: now,
+		}
+		if err := h.notifier.NotifyStockSafety(ctx, notification); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("notification_failed", err.Error(), http.StatusBadGateway))
+			return
+		}
+		notificationsDispatched = true
+		recorded := make(map[string]struct{}, len(toNotify))
+		for _, snapshot := range toNotify {
+			sku := strings.TrimSpace(snapshot.SKU)
+			if sku == "" {
+				continue
+			}
+			notifiedSkus = append(notifiedSkus, sku)
+			if _, exists := recorded[sku]; exists {
+				continue
+			}
+			if _, err := h.inventory.RecordSafetyNotification(ctx, services.RecordSafetyNotificationCommand{
+				SKU:        sku,
+				NotifiedAt: now,
+			}); err != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("record_notification_failed", err.Error(), http.StatusInternalServerError))
+				return
+			}
+			recorded[sku] = struct{}{}
+		}
+	}
+
+	sort.Strings(notifiedSkus)
+	sort.Strings(alreadyNotified)
+	sort.Strings(skippedSkus)
+
+	response := stockSafetyNotifyResponse{
+		GeneratedAt:             now,
+		Threshold:               threshold,
+		CooldownMinutes:         cooldownMinutes,
+		NotifiedCount:           len(notifiedSkus),
+		AlreadyNotifiedCount:    len(alreadyNotified),
+		SkippedCount:            len(skippedSkus),
+		TotalCandidates:         totalCandidates,
+		NotifiedSkus:            ensureStringSlice(notifiedSkus),
+		AlreadyNotifiedSkus:     ensureStringSlice(alreadyNotified),
+		SkippedSkus:             ensureStringSlice(skippedSkus),
+		NotificationsDispatched: notificationsDispatched,
+	}
+
+	logger := observability.FromContext(ctx).Named("internal.maintenance")
+	fields := []zap.Field{
+		zap.Int("threshold", threshold),
+		zap.Int("notified", response.NotifiedCount),
+		zap.Int("alreadyNotified", response.AlreadyNotifiedCount),
+		zap.Int("skipped", response.SkippedCount),
+		zap.Int("candidates", totalCandidates),
+		zap.Int("cooldownMinutes", response.CooldownMinutes),
+	}
+	if len(notifiedSkus) > 0 {
+		fields = append(fields, zap.Strings("notifiedSkus", notifiedSkus))
+	}
+	logger.Info("stock safety notify run", fields...)
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *InternalMaintenanceHandlers) now() time.Time {
+	if h == nil || h.clock == nil {
+		return time.Now().UTC()
+	}
+	return h.clock().UTC()
 }

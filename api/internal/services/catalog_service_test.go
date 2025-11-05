@@ -1362,3 +1362,7 @@ func (s *stubInventorySafetyService) ConfigureSafetyStock(_ context.Context, cmd
 	}
 	return stock, nil
 }
+
+func (s *stubInventorySafetyService) RecordSafetyNotification(context.Context, RecordSafetyNotificationCommand) (InventoryStock, error) {
+	return InventoryStock{}, errors.New("not implemented")
+}

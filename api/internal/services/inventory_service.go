@@ -368,14 +368,15 @@ func (s *inventoryService) ListLowStock(ctx context.Context, filter InventoryLow
 	snapshots := make([]InventorySnapshot, len(page.Items))
 	for i, stock := range page.Items {
 		snapshots[i] = InventorySnapshot{
-			SKU:         stock.SKU,
-			ProductRef:  stock.ProductRef,
-			OnHand:      stock.OnHand,
-			Reserved:    stock.Reserved,
-			Available:   stock.Available,
-			SafetyStock: stock.SafetyStock,
-			SafetyDelta: stock.SafetyDelta,
-			UpdatedAt:   stock.UpdatedAt,
+			SKU:                      stock.SKU,
+			ProductRef:               stock.ProductRef,
+			OnHand:                   stock.OnHand,
+			Reserved:                 stock.Reserved,
+			Available:                stock.Available,
+			SafetyStock:              stock.SafetyStock,
+			SafetyDelta:              stock.SafetyDelta,
+			UpdatedAt:                stock.UpdatedAt,
+			LastSafetyNotificationAt: cloneTimePointer(stock.LastSafetyNotificationAt),
 		}
 	}
 
@@ -421,6 +422,30 @@ func (s *inventoryService) ConfigureSafetyStock(ctx context.Context, cmd Configu
 			fields["initialOnHand"] = *cmd.InitialOnHand
 		}
 		s.logger(ctx, "inventory.configureSafety", fields)
+	}
+	return InventoryStock(stock), nil
+}
+
+func (s *inventoryService) RecordSafetyNotification(ctx context.Context, cmd RecordSafetyNotificationCommand) (InventoryStock, error) {
+	sku := strings.TrimSpace(cmd.SKU)
+	if sku == "" {
+		return InventoryStock{}, fmt.Errorf("%w: sku is required", ErrInventoryInvalidInput)
+	}
+	notifiedAt := cmd.NotifiedAt
+	if notifiedAt.IsZero() {
+		notifiedAt = s.now()
+	} else {
+		notifiedAt = notifiedAt.UTC()
+	}
+	stock, err := s.repo.UpdateSafetyNotification(ctx, sku, notifiedAt)
+	if err != nil {
+		return InventoryStock{}, s.mapRepositoryError(err)
+	}
+	if s.logger != nil {
+		s.logger(ctx, "inventory.stockSafetyNotified", map[string]any{
+			"sku":        sku,
+			"notifiedAt": notifiedAt,
+		})
 	}
 	return InventoryStock(stock), nil
 }

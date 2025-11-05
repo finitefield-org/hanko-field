@@ -805,26 +805,28 @@ type InventoryReservation struct {
 
 // InventoryStock represents current stock metrics tracked per SKU.
 type InventoryStock struct {
-	SKU         string
-	ProductRef  string
-	OnHand      int
-	Reserved    int
-	Available   int
-	SafetyStock int
-	SafetyDelta int
-	UpdatedAt   time.Time
+	SKU                      string
+	ProductRef               string
+	OnHand                   int
+	Reserved                 int
+	Available                int
+	SafetyStock              int
+	SafetyDelta              int
+	UpdatedAt                time.Time
+	LastSafetyNotificationAt *time.Time
 }
 
 // InventorySnapshot exposes aggregated stock levels for admin surfaces.
 type InventorySnapshot struct {
-	SKU         string
-	ProductRef  string
-	OnHand      int
-	Reserved    int
-	Available   int
-	SafetyStock int
-	SafetyDelta int
-	UpdatedAt   time.Time
+	SKU                      string
+	ProductRef               string
+	OnHand                   int
+	Reserved                 int
+	Available                int
+	SafetyStock              int
+	SafetyDelta              int
+	UpdatedAt                time.Time
+	LastSafetyNotificationAt *time.Time
 }
 
 // InventoryStockEvent captures stock adjustments for downstream analytics/audit.

@@ -429,6 +429,7 @@ type InventoryService interface {
 	ReleaseExpiredReservations(ctx context.Context, cmd ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error)
 	ListLowStock(ctx context.Context, filter InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error)
 	ConfigureSafetyStock(ctx context.Context, cmd ConfigureSafetyStockCommand) (InventoryStock, error)
+	RecordSafetyNotification(ctx context.Context, cmd RecordSafetyNotificationCommand) (InventoryStock, error)
 }
 
 // ContentService provides read/write access to CMS content for public and admin usage.
@@ -527,6 +528,11 @@ type BackgroundJobDispatcher interface {
 // AISuggestionNotifier dispatches notifications when AI suggestions finish processing.
 type AISuggestionNotifier interface {
 	NotifySuggestionReady(ctx context.Context, notification AISuggestionNotification) error
+}
+
+// StockSafetyNotifier dispatches notifications when inventory falls below safety thresholds.
+type StockSafetyNotifier interface {
+	NotifyStockSafety(ctx context.Context, notification StockSafetyNotification) error
 }
 
 // AISuggestionNotification encapsulates metadata delivered to notification channels when an AI
@@ -1181,6 +1187,12 @@ type InventoryLowStockFilter struct {
 	Pagination Pagination
 }
 
+// RecordSafetyNotificationCommand records the time a low stock notification was dispatched for a SKU.
+type RecordSafetyNotificationCommand struct {
+	SKU        string
+	NotifiedAt time.Time
+}
+
 type ProductionQueueListFilter struct {
 	Status     []string
 	Priorities []string
@@ -1229,6 +1241,12 @@ type UpsertProductionQueueCommand struct {
 type DeleteProductionQueueCommand struct {
 	QueueID string
 	ActorID string
+}
+
+// StockSafetyNotification encapsulates the low stock alerts produced for notification channels.
+type StockSafetyNotification struct {
+	Alerts      []InventorySnapshot
+	GeneratedAt time.Time
 }
 
 type TemplateFilter struct {

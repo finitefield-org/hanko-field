@@ -11,13 +11,14 @@ import (
 )
 
 type stubInventoryRepo struct {
-	reserveFn   func(ctx context.Context, req repositories.InventoryReserveRequest) (repositories.InventoryReserveResult, error)
-	commitFn    func(ctx context.Context, req repositories.InventoryCommitRequest) (repositories.InventoryCommitResult, error)
-	releaseFn   func(ctx context.Context, req repositories.InventoryReleaseRequest) (repositories.InventoryReleaseResult, error)
-	expiredFn   func(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error)
-	getFn       func(ctx context.Context, reservationID string) (domain.InventoryReservation, error)
-	listFn      func(ctx context.Context, query repositories.InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
-	configureFn func(ctx context.Context, cfg repositories.InventorySafetyStockConfig) (domain.InventoryStock, error)
+	reserveFn      func(ctx context.Context, req repositories.InventoryReserveRequest) (repositories.InventoryReserveResult, error)
+	commitFn       func(ctx context.Context, req repositories.InventoryCommitRequest) (repositories.InventoryCommitResult, error)
+	releaseFn      func(ctx context.Context, req repositories.InventoryReleaseRequest) (repositories.InventoryReleaseResult, error)
+	expiredFn      func(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error)
+	getFn          func(ctx context.Context, reservationID string) (domain.InventoryReservation, error)
+	listFn         func(ctx context.Context, query repositories.InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
+	configureFn    func(ctx context.Context, cfg repositories.InventorySafetyStockConfig) (domain.InventoryStock, error)
+	updateNotifyFn func(ctx context.Context, sku string, notifiedAt time.Time) (domain.InventoryStock, error)
 }
 
 func (s *stubInventoryRepo) Reserve(ctx context.Context, req repositories.InventoryReserveRequest) (repositories.InventoryReserveResult, error) {
@@ -67,6 +68,13 @@ func (s *stubInventoryRepo) ConfigureSafetyStock(ctx context.Context, cfg reposi
 		return s.configureFn(ctx, cfg)
 	}
 	return domain.InventoryStock{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryRepo) UpdateSafetyNotification(ctx context.Context, sku string, notifiedAt time.Time) (domain.InventoryStock, error) {
+	if s.updateNotifyFn != nil {
+		return s.updateNotifyFn(ctx, sku, notifiedAt)
+	}
+	return domain.InventoryStock{}, nil
 }
 
 type captureInventoryEvents struct {

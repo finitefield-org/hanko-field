@@ -780,6 +780,10 @@ func (s *stubCheckoutInventory) ConfigureSafetyStock(context.Context, ConfigureS
 	return InventoryStock{}, errors.New("not implemented")
 }
 
+func (s *stubCheckoutInventory) RecordSafetyNotification(context.Context, RecordSafetyNotificationCommand) (InventoryStock, error) {
+	return InventoryStock{}, errors.New("not implemented")
+}
+
 type stubCheckoutPayments struct {
 	createFunc func(ctx context.Context, paymentCtx payments.PaymentContext, req payments.CheckoutSessionRequest) (payments.CheckoutSession, error)
 	lookupFunc func(ctx context.Context, paymentCtx payments.PaymentContext, req payments.LookupRequest) (payments.PaymentDetails, error)

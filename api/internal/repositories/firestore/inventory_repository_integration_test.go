@@ -250,6 +250,30 @@ func TestInventoryRepositoryIntegration(t *testing.T) {
 		t.Fatalf("expected negative safety delta, got %d", lowPage.Items[0].SafetyDelta)
 	}
 
+	notifiedAt := now.Add(2 * time.Hour).UTC()
+	updatedStock, err := repo.UpdateSafetyNotification(ctx, "SKU-001", notifiedAt)
+	if err != nil {
+		t.Fatalf("update safety notification: %v", err)
+	}
+	if updatedStock.LastSafetyNotificationAt == nil {
+		t.Fatalf("expected last safety notification timestamp to be set")
+	}
+	if !updatedStock.LastSafetyNotificationAt.Equal(notifiedAt) {
+		t.Fatalf("expected last safety notification %s got %s", notifiedAt, updatedStock.LastSafetyNotificationAt)
+	}
+
+	snap, err := client.Collection(inventoryCollection).Doc("SKU-001").Get(ctx)
+	if err != nil {
+		t.Fatalf("fetch stock document: %v", err)
+	}
+	var persisted stockDocument
+	if err := snap.DataTo(&persisted); err != nil {
+		t.Fatalf("decode stock document: %v", err)
+	}
+	if persisted.LastSafetyNotificationAt == nil || !persisted.LastSafetyNotificationAt.Equal(notifiedAt) {
+		t.Fatalf("firestore last safety notification mismatch, expected %s got %#v", notifiedAt, persisted.LastSafetyNotificationAt)
+	}
+
 	initial := 12
 	configured, err := repo.ConfigureSafetyStock(ctx, repositories.InventorySafetyStockConfig{
 		SKU:           "SKU-001",

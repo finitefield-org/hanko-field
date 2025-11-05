@@ -162,6 +162,10 @@ func (s *stubInventoryService) ConfigureSafetyStock(context.Context, ConfigureSa
 	return InventoryStock{}, errors.New("not implemented")
 }
 
+func (s *stubInventoryService) RecordSafetyNotification(context.Context, RecordSafetyNotificationCommand) (InventoryStock, error) {
+	return InventoryStock{}, errors.New("not implemented")
+}
+
 type captureOrderEvents struct {
 	events []OrderEvent
 }

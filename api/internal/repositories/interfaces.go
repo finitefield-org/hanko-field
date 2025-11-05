@@ -123,6 +123,7 @@ type InventoryRepository interface {
 	GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error)
 	ListLowStock(ctx context.Context, query InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
 	ConfigureSafetyStock(ctx context.Context, cfg InventorySafetyStockConfig) (domain.InventoryStock, error)
+	UpdateSafetyNotification(ctx context.Context, sku string, notifiedAt time.Time) (domain.InventoryStock, error)
 }
 
 // InventoryReserveRequest encapsulates reservation creation metadata for the repository.
