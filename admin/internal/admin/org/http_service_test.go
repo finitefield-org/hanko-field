@@ -51,7 +51,8 @@ func TestHTTPServiceList(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -63,7 +64,7 @@ func TestHTTPServiceList(t *testing.T) {
 		PageSize: 50,
 	})
 	require.NoError(t, err)
-	require.Equal(t, "/staff/org/members", receivedPath)
+	require.Equal(t, "/admin/v1/staff/org/members", receivedPath)
 	require.Equal(t, "Bearer token", strings.TrimSpace(receivedAuth))
 	require.Equal(t, "admin", receivedQuery.Get("q"))
 	require.Equal(t, "admin", receivedQuery.Get("role"))
@@ -79,7 +80,7 @@ func TestHTTPServiceInvite(t *testing.T) {
 	var payload org.InviteRequest
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
-		require.Equal(t, "/staff/org/invitations", r.URL.Path)
+		require.Equal(t, "/admin/v1/staff/org/invitations", r.URL.Path)
 		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 		defer r.Body.Close()
@@ -100,7 +101,8 @@ func TestHTTPServiceInvite(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	member, err := svc.Invite(context.Background(), "token", org.InviteRequest{
@@ -124,7 +126,7 @@ func TestHTTPServiceUpdateRoles(t *testing.T) {
 	var payload org.UpdateRolesRequest
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPut, r.Method)
-		require.Equal(t, "/staff/org/members/staff-1", r.URL.Path)
+		require.Equal(t, "/admin/v1/staff/org/members/staff-1", r.URL.Path)
 		defer r.Body.Close()
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
 
@@ -141,7 +143,8 @@ func TestHTTPServiceUpdateRoles(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	member, err := svc.UpdateRoles(context.Background(), "token", "staff-1", org.UpdateRolesRequest{
@@ -160,14 +163,15 @@ func TestHTTPServiceRevoke(t *testing.T) {
 	var payload org.RevokeRequest
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
-		require.Equal(t, "/staff/org/members/staff-1:revoke", r.URL.Path)
+		require.Equal(t, "/admin/v1/staff/org/members/staff-1:revoke", r.URL.Path)
 		defer r.Body.Close()
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	err = svc.Revoke(context.Background(), "token", "staff-1", org.RevokeRequest{
@@ -183,7 +187,7 @@ func TestHTTPServiceMember(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/staff/org/members/staff-1", r.URL.Path)
+		require.Equal(t, "/admin/v1/staff/org/members/staff-1", r.URL.Path)
 		member := org.Member{
 			ID:          "staff-1",
 			Email:       "admin@example.com",
@@ -196,7 +200,8 @@ func TestHTTPServiceMember(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	member, err := svc.Member(context.Background(), "token", "staff-1")
@@ -208,7 +213,7 @@ func TestHTTPServiceCatalog(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/staff/org/roles", r.URL.Path)
+		require.Equal(t, "/admin/v1/staff/org/roles", r.URL.Path)
 		resp := org.RoleCatalog{
 			Roles: []org.RoleDefinition{
 				{Key: "admin", Label: "管理者"},
@@ -219,7 +224,8 @@ func TestHTTPServiceCatalog(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	svc, err := org.NewHTTPService(ts.URL, ts.Client())
+	baseURL := ts.URL + "/admin/v1"
+	svc, err := org.NewHTTPService(baseURL, ts.Client())
 	require.NoError(t, err)
 
 	catalog, err := svc.Catalog(context.Background(), "token")

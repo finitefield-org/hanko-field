@@ -258,9 +258,34 @@ func (s *HTTPService) resolve(endpoint string) string {
 	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
 		return endpoint
 	}
-	trimmed := strings.TrimPrefix(endpoint, "/")
-	ref := &url.URL{Path: trimmed}
-	return s.base.ResolveReference(ref).String()
+	trimmed := strings.TrimSpace(endpoint)
+	ref, err := url.Parse(trimmed)
+	if err != nil {
+		ref = &url.URL{Path: trimmed}
+	}
+	if ref.IsAbs() {
+		return ref.String()
+	}
+	baseCopy := *s.base
+	refPath := ref.Path
+	if refPath != "" {
+		if strings.HasPrefix(refPath, "/") {
+			refPath = strings.TrimPrefix(refPath, "/")
+		}
+		basePath := strings.TrimRight(baseCopy.Path, "/")
+		if basePath == "" || basePath == "/" {
+			baseCopy.Path = "/" + refPath
+		} else {
+			baseCopy.Path = basePath + "/" + refPath
+		}
+	}
+	if ref.RawQuery != "" {
+		baseCopy.RawQuery = ref.RawQuery
+	} else {
+		baseCopy.RawQuery = ""
+	}
+	baseCopy.Fragment = ref.Fragment
+	return baseCopy.String()
 }
 
 func (s *HTTPService) errorFromResponse(resp *http.Response) error {
