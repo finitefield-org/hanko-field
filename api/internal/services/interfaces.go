@@ -151,6 +151,14 @@ type PromotionUsageRecord struct {
 // PromotionUsagePage provides pagination metadata for promotion usage listings.
 type PromotionUsagePage = domain.CursorPage[PromotionUsageRecord]
 
+// PromotionUsageReleaseCommand describes a rollback request for a promotion usage entry.
+type PromotionUsageReleaseCommand struct {
+	Code     string
+	UserID   string
+	OrderRef string
+	Reason   string
+}
+
 // PromotionUsageSort enumerates supported sort fields for usage listings.
 type PromotionUsageSort string
 
@@ -305,6 +313,7 @@ type PromotionService interface {
 	UpdatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	DeletePromotion(ctx context.Context, promoID string, actorID string) error
 	ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (PromotionUsagePage, error)
+	RollbackUsage(ctx context.Context, cmd PromotionUsageReleaseCommand) error
 }
 
 // UserService manages profile, address, payment method, and favorite surfaces.

@@ -1195,6 +1195,10 @@ func (s *stubPromotionService) ListPromotionUsage(context.Context, PromotionUsag
 	return PromotionUsagePage{}, errors.New("not implemented")
 }
 
+func (s *stubPromotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
+	return nil
+}
+
 type repositoryErrorStub struct {
 	notFound    bool
 	conflict    bool

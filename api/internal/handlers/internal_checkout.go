@@ -22,9 +22,11 @@ import (
 )
 
 const (
-	maxInternalReserveRequestBody = 16 * 1024
-	maxInternalCommitRequestBody  = 4 * 1024
-	checkoutReserveReason         = "internal_checkout"
+	maxInternalReserveRequestBody        = 16 * 1024
+	maxInternalCommitRequestBody         = 4 * 1024
+	maxInternalReleaseRequestBody        = 8 * 1024
+	checkoutReserveReason                = "internal_checkout"
+	defaultInternalCheckoutReleaseReason = "checkout_release"
 )
 
 // InternalCheckoutHandlers exposes internal checkout-specific operations.
@@ -172,6 +174,7 @@ func (h *InternalCheckoutHandlers) Routes(r chi.Router) {
 		return
 	}
 	r.Post("/checkout/reserve-stock", h.reserveStock)
+	r.Post("/checkout/release", h.releaseCheckout)
 	r.Post("/checkout/commit", h.commitCheckout)
 }
 
@@ -225,6 +228,29 @@ type internalCheckoutCommitResponse struct {
 	PaidAt            string `json:"paidAt,omitempty"`
 	PromotionCode     string `json:"promotionCode,omitempty"`
 	Message           string `json:"message,omitempty"`
+}
+
+type internalCheckoutReleaseRequest struct {
+	ReservationID   string `json:"reservationId"`
+	ReservationRef  string `json:"reservationRef"`
+	OrderID         string `json:"orderId"`
+	OrderRef        string `json:"orderRef"`
+	ActorID         string `json:"actorId"`
+	Reason          string `json:"reason"`
+	PromotionCode   string `json:"promotionCode"`
+	PromotionUserID string `json:"promotionUserId"`
+}
+
+type internalCheckoutReleaseResponse struct {
+	ReservationID string                          `json:"reservationId"`
+	Status        string                          `json:"status"`
+	OrderRef      string                          `json:"orderRef,omitempty"`
+	UserRef       string                          `json:"userRef,omitempty"`
+	ReleasedAt    string                          `json:"releasedAt,omitempty"`
+	Reason        string                          `json:"reason,omitempty"`
+	Lines         []internalReserveStockLineReply `json:"lines,omitempty"`
+	PromotionCode string                          `json:"promotionCode,omitempty"`
+	Message       string                          `json:"message,omitempty"`
 }
 
 func (h *InternalCheckoutHandlers) reserveStock(w http.ResponseWriter, r *http.Request) {
@@ -441,6 +467,123 @@ func (h *InternalCheckoutHandlers) commitCheckout(w http.ResponseWriter, r *http
 	)
 }
 
+func (h *InternalCheckoutHandlers) releaseCheckout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if h == nil || h.inventory == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("inventory_unavailable", "inventory service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxInternalReleaseRequestBody)
+	if err != nil {
+		code := http.StatusBadRequest
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			code = http.StatusRequestEntityTooLarge
+		case errors.Is(err, errEmptyBody):
+			code = http.StatusBadRequest
+		}
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), code))
+		return
+	}
+
+	var req internalCheckoutReleaseRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body must be valid JSON", http.StatusBadRequest))
+		return
+	}
+
+	reservationID := normalizeReservationID(req.ReservationID, req.ReservationRef)
+	orderID := normalizeOrderID(req.OrderID, req.OrderRef)
+	var order *services.Order
+
+	if reservationID == "" {
+		if orderID == "" {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "reservationId or orderId is required", http.StatusBadRequest))
+			return
+		}
+		if h.orders == nil {
+			httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+			return
+		}
+		fetched, err := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{})
+		if err != nil {
+			writeInternalCheckoutOrderError(ctx, w, err)
+			return
+		}
+		order = &fetched
+		reservationID = strings.TrimSpace(extractReservationID(fetched.Metadata))
+		if reservationID == "" {
+			httpx.WriteError(ctx, w, httpx.NewError("reservation_missing", "order does not have an associated reservation", http.StatusConflict))
+			return
+		}
+	}
+
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		reason = defaultInternalCheckoutReleaseReason
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	promoCode := strings.TrimSpace(req.PromotionCode)
+	promoUser := strings.TrimSpace(req.PromotionUserID)
+
+	reservation, err := h.inventory.ReleaseReservation(ctx, services.InventoryReleaseCommand{
+		ReservationID: reservationID,
+		Reason:        reason,
+		ActorID:       actorID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInventoryInvalidInput):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		case errors.Is(err, services.ErrInventoryReservationNotFound):
+			httpx.WriteError(ctx, w, httpx.NewError("reservation_not_found", err.Error(), http.StatusNotFound))
+			return
+		case errors.Is(err, services.ErrInventoryInvalidState):
+			existing, fetchErr := h.inventory.GetReservation(ctx, reservationID)
+			if fetchErr == nil && strings.EqualFold(strings.TrimSpace(existing.Status), "released") {
+				order = h.loadOrderForPromotion(ctx, order, orderID, existing)
+				h.rollbackPromotionUsage(ctx, order, existing, promoCode, promoUser, reason)
+				resp := buildReleaseResponse(existing, order, "reservation already released")
+				writeJSONResponse(w, http.StatusOK, resp)
+				logger := observability.FromContext(ctx).Named("internal.checkout")
+				logger.Info("checkout release idempotent",
+					zap.String("reservationId", resp.ReservationID),
+					zap.String("orderRef", resp.OrderRef),
+					zap.String("reason", reason),
+					zap.String("actorId", actorID),
+				)
+				return
+			}
+			if fetchErr != nil && errors.Is(fetchErr, services.ErrInventoryReservationNotFound) {
+				httpx.WriteError(ctx, w, httpx.NewError("reservation_not_found", fetchErr.Error(), http.StatusNotFound))
+				return
+			}
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_reservation_state", err.Error(), http.StatusConflict))
+			return
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("release_error", "failed to release reservation", http.StatusInternalServerError))
+			return
+		}
+	}
+
+	order = h.loadOrderForPromotion(ctx, order, orderID, reservation)
+	h.rollbackPromotionUsage(ctx, order, reservation, promoCode, promoUser, reason)
+
+	resp := buildReleaseResponse(reservation, order, "")
+	writeJSONResponse(w, http.StatusOK, resp)
+
+	logger := observability.FromContext(ctx).Named("internal.checkout")
+	logger.Info("checkout release completed",
+		zap.String("reservationId", resp.ReservationID),
+		zap.String("orderRef", resp.OrderRef),
+		zap.String("reason", reason),
+		zap.String("actorId", actorID),
+	)
+}
+
 func (h *InternalCheckoutHandlers) handleReserveError(ctx context.Context, w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, services.ErrInventoryInvalidInput):
@@ -540,6 +683,149 @@ func buildCommitResponse(order services.Order, reservation *services.InventoryRe
 		response.Message = message
 	}
 	return response
+}
+
+func buildReleaseResponse(reservation services.InventoryReservation, order *services.Order, message string) internalCheckoutReleaseResponse {
+	response := internalCheckoutReleaseResponse{
+		ReservationID: strings.TrimSpace(reservation.ID),
+		Status:        strings.TrimSpace(reservation.Status),
+		OrderRef:      strings.TrimSpace(reservation.OrderRef),
+		UserRef:       strings.TrimSpace(reservation.UserRef),
+		ReleasedAt:    formatTime(pointerTime(reservation.ReleasedAt)),
+		Lines:         convertReservationLines(reservation.Lines),
+	}
+	if reason := strings.TrimSpace(reservation.Reason); reason != "" {
+		response.Reason = reason
+	}
+	if order != nil && order.Promotion != nil {
+		if code := strings.TrimSpace(order.Promotion.Code); code != "" {
+			response.PromotionCode = code
+		}
+	}
+	if message != "" {
+		response.Message = message
+	}
+	return response
+}
+
+func (h *InternalCheckoutHandlers) loadOrderForPromotion(ctx context.Context, existing *services.Order, orderID string, reservation services.InventoryReservation) *services.Order {
+	if existing != nil {
+		return existing
+	}
+	if h == nil || h.orders == nil {
+		return nil
+	}
+	if id := strings.TrimSpace(orderID); id != "" {
+		order, err := h.orders.GetOrder(ctx, id, services.OrderReadOptions{})
+		if err == nil {
+			return &order
+		}
+	}
+	if ref := strings.TrimSpace(reservation.OrderRef); ref != "" {
+		id := lastPathSegment(ref)
+		if id != "" {
+			order, err := h.orders.GetOrder(ctx, id, services.OrderReadOptions{})
+			if err == nil {
+				return &order
+			}
+		}
+	}
+	return nil
+}
+
+func (h *InternalCheckoutHandlers) rollbackPromotionUsage(ctx context.Context, order *services.Order, reservation services.InventoryReservation, code, userID, reason string) {
+	if h == nil || h.promotions == nil {
+		return
+	}
+	code = strings.TrimSpace(code)
+	if code == "" && order != nil && order.Promotion != nil {
+		code = strings.TrimSpace(order.Promotion.Code)
+	}
+	if code == "" {
+		return
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" && order != nil {
+		userID = strings.TrimSpace(order.UserID)
+	}
+	if userID == "" {
+		userID = strings.TrimPrefix(strings.TrimSpace(reservation.UserRef), "/users/")
+		userID = strings.TrimSpace(userID)
+	}
+	if userID == "" {
+		return
+	}
+	orderRef := strings.TrimSpace(reservation.OrderRef)
+	if order != nil && strings.TrimSpace(order.ID) != "" {
+		orderRef = ensureOrderRefString(order.ID)
+	} else {
+		orderRef = ensureOrderRefString(orderRef)
+	}
+	if reason == "" {
+		reason = defaultInternalCheckoutReleaseReason
+	}
+	cmd := services.PromotionUsageReleaseCommand{
+		Code:     strings.ToUpper(code),
+		UserID:   userID,
+		OrderRef: orderRef,
+		Reason:   reason,
+	}
+	if err := h.promotions.RollbackUsage(ctx, cmd); err != nil {
+		if errors.Is(err, services.ErrPromotionOperationUnsupported) {
+			return
+		}
+		logger := observability.FromContext(ctx).Named("internal.checkout")
+		logger.Warn("promotion usage rollback failed",
+			zap.String("code", cmd.Code),
+			zap.String("userId", cmd.UserID),
+			zap.String("orderRef", cmd.OrderRef),
+			zap.Error(err),
+		)
+	}
+}
+
+func normalizeReservationID(reservationID, reservationRef string) string {
+	if id := strings.TrimSpace(reservationID); id != "" {
+		return id
+	}
+	return lastPathSegment(reservationRef)
+}
+
+func normalizeOrderID(orderID, orderRef string) string {
+	if id := strings.TrimSpace(orderID); id != "" {
+		return id
+	}
+	return lastPathSegment(orderRef)
+}
+
+func ensureOrderRefString(candidate string) string {
+	trimmed := strings.TrimSpace(candidate)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "/orders/") {
+		return trimmed
+	}
+	id := lastPathSegment(trimmed)
+	if id == "" {
+		return ""
+	}
+	return "/orders/" + id
+}
+
+func lastPathSegment(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	parts := strings.Split(trimmed, "/")
+	for i := len(parts) - 1; i >= 0; i-- {
+		segment := strings.TrimSpace(parts[i])
+		if segment != "" && segment != "orders" && segment != "stockReservations" {
+			return segment
+		}
+	}
+	return ""
 }
 
 func normalizeOrderStatus(status services.OrderStatus) domain.OrderStatus {

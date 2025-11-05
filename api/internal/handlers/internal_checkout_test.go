@@ -227,9 +227,245 @@ func TestInternalCheckoutCommit_UsesExistingCommitOnInvalidState(t *testing.T) {
 	}
 }
 
+func TestInternalCheckoutRelease_Success(t *testing.T) {
+	var (
+		releaseCmd  services.InventoryReleaseCommand
+		recordedCmd services.PromotionUsageReleaseCommand
+	)
+	releasedAt := time.Now().UTC()
+	inventory := &stubCheckoutInventoryService{
+		releaseFn: func(_ context.Context, cmd services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+			releaseCmd = cmd
+			return services.InventoryReservation{
+				ID:         "sr_123",
+				Status:     "released",
+				OrderRef:   "/orders/ord_123",
+				UserRef:    "/users/user_1",
+				Reason:     cmd.Reason,
+				ReleasedAt: &releasedAt,
+				Lines: []services.InventoryReservationLine{
+					{ProductRef: "/products/p1", SKU: "SKU-1", Quantity: 2},
+				},
+			}, nil
+		},
+	}
+
+	var rollbackCalled bool
+	promotions := &stubCheckoutPromotionService{
+		rollbackFn: func(_ context.Context, cmd services.PromotionUsageReleaseCommand) error {
+			rollbackCalled = true
+			recordedCmd = cmd
+			return nil
+		},
+	}
+
+	handler := NewInternalCheckoutHandlers(
+		inventory,
+		WithInternalCheckoutPromotions(promotions),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/checkout/release", strings.NewReader(`{"reservationId":"sr_123","reason":"checkout_timeout","promotionCode":"spring10","promotionUserId":"user_1"}`))
+	rec := httptest.NewRecorder()
+
+	handler.releaseCheckout(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	if releaseCmd.ReservationID != "sr_123" {
+		t.Fatalf("expected reservation sr_123 got %s", releaseCmd.ReservationID)
+	}
+	if releaseCmd.Reason != "checkout_timeout" {
+		t.Fatalf("expected reason checkout_timeout got %s", releaseCmd.Reason)
+	}
+
+	var resp internalCheckoutReleaseResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ReservationID != "sr_123" {
+		t.Fatalf("expected reservationId sr_123 got %s", resp.ReservationID)
+	}
+	if resp.Status != "released" {
+		t.Fatalf("expected status released got %s", resp.Status)
+	}
+	if resp.Reason != "checkout_timeout" {
+		t.Fatalf("expected response reason checkout_timeout got %s", resp.Reason)
+	}
+	if resp.ReleasedAt == "" {
+		t.Fatalf("expected releasedAt timestamp")
+	}
+	if len(resp.Lines) != 1 || resp.Lines[0].SKU != "SKU-1" {
+		t.Fatalf("expected reservation lines in response, got %+v", resp.Lines)
+	}
+
+	if !rollbackCalled {
+		t.Fatalf("expected promotion rollback to be invoked")
+	}
+	if recordedCmd.Code != "SPRING10" {
+		t.Fatalf("expected rollback code SPRING10 got %s", recordedCmd.Code)
+	}
+	if recordedCmd.UserID != "user_1" {
+		t.Fatalf("expected rollback user user_1 got %s", recordedCmd.UserID)
+	}
+	if recordedCmd.OrderRef != "/orders/ord_123" {
+		t.Fatalf("expected rollback orderRef /orders/ord_123 got %s", recordedCmd.OrderRef)
+	}
+	if recordedCmd.Reason != "checkout_timeout" {
+		t.Fatalf("expected rollback reason checkout_timeout got %s", recordedCmd.Reason)
+	}
+}
+
+func TestInternalCheckoutRelease_Idempotent(t *testing.T) {
+	inventory := &stubCheckoutInventoryService{
+		releaseFn: func(context.Context, services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+			return services.InventoryReservation{}, services.ErrInventoryInvalidState
+		},
+		getFn: func(context.Context, string) (services.InventoryReservation, error) {
+			return services.InventoryReservation{
+				ID:       "sr_789",
+				Status:   "released",
+				OrderRef: "/orders/ord_789",
+				UserRef:  "/users/u789",
+				Reason:   "checkout_payment_failed",
+			}, nil
+		},
+	}
+
+	var (
+		rollbackCalled bool
+		recordedCmd    services.PromotionUsageReleaseCommand
+	)
+	promotions := &stubCheckoutPromotionService{
+		rollbackFn: func(_ context.Context, cmd services.PromotionUsageReleaseCommand) error {
+			rollbackCalled = true
+			recordedCmd = cmd
+			return nil
+		},
+	}
+
+	handler := NewInternalCheckoutHandlers(
+		inventory,
+		WithInternalCheckoutPromotions(promotions),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/checkout/release", strings.NewReader(`{"reservationId":"sr_789","promotionCode":"winter5","promotionUserId":"u789"}`))
+	rec := httptest.NewRecorder()
+
+	handler.releaseCheckout(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp internalCheckoutReleaseResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Message == "" {
+		t.Fatalf("expected response message for idempotent release")
+	}
+	if resp.Status != "released" {
+		t.Fatalf("expected reservation status released got %s", resp.Status)
+	}
+
+	if !rollbackCalled {
+		t.Fatalf("expected promotion rollback on idempotent release")
+	}
+	if recordedCmd.Code != "WINTER5" {
+		t.Fatalf("expected rollback code WINTER5 got %s", recordedCmd.Code)
+	}
+	if recordedCmd.UserID != "u789" {
+		t.Fatalf("expected rollback user u789 got %s", recordedCmd.UserID)
+	}
+	if recordedCmd.OrderRef != "/orders/ord_789" {
+		t.Fatalf("expected rollback orderRef /orders/ord_789 got %s", recordedCmd.OrderRef)
+	}
+}
+
+func TestInternalCheckoutRelease_OrderLookup(t *testing.T) {
+	var (
+		releaseCmd services.InventoryReleaseCommand
+		recorded   services.PromotionUsageReleaseCommand
+	)
+	inventory := &stubCheckoutInventoryService{
+		releaseFn: func(_ context.Context, cmd services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+			releaseCmd = cmd
+			return services.InventoryReservation{
+				ID:       "sr_from_order",
+				Status:   "released",
+				OrderRef: "/orders/ord_lookup",
+				UserRef:  "/users/order_user",
+			}, nil
+		},
+	}
+
+	orderService := &stubCheckoutOrderService{
+		getFn: func(context.Context, string, services.OrderReadOptions) (services.Order, error) {
+			return services.Order{
+				ID:     "ord_lookup",
+				UserID: "order_user",
+				Metadata: map[string]any{
+					"reservationId": "sr_from_order",
+				},
+				Promotion: &services.CartPromotion{Code: "spring20", Applied: true},
+			}, nil
+		},
+	}
+
+	promotions := &stubCheckoutPromotionService{
+		rollbackFn: func(_ context.Context, cmd services.PromotionUsageReleaseCommand) error {
+			recorded = cmd
+			return nil
+		},
+	}
+
+	handler := NewInternalCheckoutHandlers(
+		inventory,
+		WithInternalCheckoutOrders(orderService),
+		WithInternalCheckoutPromotions(promotions),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/checkout/release", strings.NewReader(`{"orderId":"ord_lookup"}`))
+	rec := httptest.NewRecorder()
+
+	handler.releaseCheckout(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	if releaseCmd.ReservationID != "sr_from_order" {
+		t.Fatalf("expected reservation id from order metadata got %s", releaseCmd.ReservationID)
+	}
+
+	var resp internalCheckoutReleaseResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ReservationID != "sr_from_order" {
+		t.Fatalf("expected response reservationId sr_from_order got %s", resp.ReservationID)
+	}
+	if resp.PromotionCode != "spring20" {
+		t.Fatalf("expected response promotion code spring20 got %s", resp.PromotionCode)
+	}
+
+	if recorded.Code != "SPRING20" {
+		t.Fatalf("expected rollback code SPRING20 got %s", recorded.Code)
+	}
+	if recorded.UserID != "order_user" {
+		t.Fatalf("expected rollback user order_user got %s", recorded.UserID)
+	}
+	if recorded.OrderRef != "/orders/ord_lookup" {
+		t.Fatalf("expected rollback orderRef /orders/ord_lookup got %s", recorded.OrderRef)
+	}
+}
+
 type stubCheckoutInventoryService struct {
-	commitFn func(context.Context, services.InventoryCommitCommand) (services.InventoryReservation, error)
-	getFn    func(context.Context, string) (services.InventoryReservation, error)
+	commitFn  func(context.Context, services.InventoryCommitCommand) (services.InventoryReservation, error)
+	getFn     func(context.Context, string) (services.InventoryReservation, error)
+	releaseFn func(context.Context, services.InventoryReleaseCommand) (services.InventoryReservation, error)
 }
 
 func (s *stubCheckoutInventoryService) ReserveStocks(context.Context, services.InventoryReserveCommand) (services.InventoryReservation, error) {
@@ -250,7 +486,10 @@ func (s *stubCheckoutInventoryService) GetReservation(ctx context.Context, reser
 	return services.InventoryReservation{}, errors.New("not implemented")
 }
 
-func (s *stubCheckoutInventoryService) ReleaseReservation(context.Context, services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+func (s *stubCheckoutInventoryService) ReleaseReservation(ctx context.Context, cmd services.InventoryReleaseCommand) (services.InventoryReservation, error) {
+	if s.releaseFn != nil {
+		return s.releaseFn(ctx, cmd)
+	}
 	return services.InventoryReservation{}, errors.New("not implemented")
 }
 
@@ -311,4 +550,47 @@ func (s *stubCheckoutOrderService) RequestInvoice(context.Context, services.Requ
 
 func (s *stubCheckoutOrderService) CloneForReorder(context.Context, services.CloneForReorderCommand) (services.Order, error) {
 	return services.Order{}, errors.New("not implemented")
+}
+
+type stubCheckoutPromotionService struct {
+	rollbackFn func(context.Context, services.PromotionUsageReleaseCommand) error
+}
+
+func (s *stubCheckoutPromotionService) GetPublicPromotion(context.Context, string) (services.PromotionPublic, error) {
+	return services.PromotionPublic{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) ValidatePromotion(context.Context, services.ValidatePromotionCommand) (services.PromotionValidationResult, error) {
+	return services.PromotionValidationResult{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) ValidatePromotionDefinition(context.Context, services.Promotion) (services.PromotionDefinitionValidationResult, error) {
+	return services.PromotionDefinitionValidationResult{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) ListPromotions(context.Context, services.PromotionListFilter) (domain.CursorPage[services.Promotion], error) {
+	return domain.CursorPage[services.Promotion]{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) CreatePromotion(context.Context, services.UpsertPromotionCommand) (services.Promotion, error) {
+	return services.Promotion{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) UpdatePromotion(context.Context, services.UpsertPromotionCommand) (services.Promotion, error) {
+	return services.Promotion{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) DeletePromotion(context.Context, string, string) error {
+	return errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) ListPromotionUsage(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+	return services.PromotionUsagePage{}, errors.New("not implemented")
+}
+
+func (s *stubCheckoutPromotionService) RollbackUsage(ctx context.Context, cmd services.PromotionUsageReleaseCommand) error {
+	if s.rollbackFn != nil {
+		return s.rollbackFn(ctx, cmd)
+	}
+	return nil
 }

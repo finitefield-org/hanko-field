@@ -411,6 +411,10 @@ func (s *promotionService) ListPromotionUsage(ctx context.Context, filter Promot
 	}, nil
 }
 
+func (s *promotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
+	return ErrPromotionOperationUnsupported
+}
+
 func (s *promotionService) recordPromotionAudit(ctx context.Context, action string, actorID string, occurred time.Time, before, after Promotion) {
 	if s.audit == nil {
 		return

@@ -1689,6 +1689,10 @@ func (s *stubPromotionService) ListPromotionUsage(context.Context, services.Prom
 	return services.PromotionUsagePage{}, errors.New("not implemented")
 }
 
+func (s *stubPromotionService) RollbackUsage(context.Context, services.PromotionUsageReleaseCommand) error {
+	return nil
+}
+
 type stubRepoError struct {
 	notFound    bool
 	conflict    bool

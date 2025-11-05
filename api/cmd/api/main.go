@@ -387,11 +387,6 @@ func main() {
 		logger.Fatal("failed to initialise checkout service", zap.Error(err))
 	}
 	checkoutHandlers := handlers.NewCheckoutHandlers(authenticator, checkoutService)
-	internalCheckoutHandlers := handlers.NewInternalCheckoutHandlers(
-		inventoryService,
-		handlers.WithInternalCheckoutMetrics(handlers.NewCheckoutReservationMetrics(logger.Named("metrics.checkout"))),
-		handlers.WithInternalCheckoutOrders(orderService),
-	)
 
 	nameMappingLogger := logger.Named("name_mapping")
 	nameMappingService, err := services.NewNameMappingService(services.NameMappingServiceDeps{
@@ -430,6 +425,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise promotion service", zap.Error(err))
 	}
+	internalCheckoutHandlers := handlers.NewInternalCheckoutHandlers(
+		inventoryService,
+		handlers.WithInternalCheckoutMetrics(handlers.NewCheckoutReservationMetrics(logger.Named("metrics.checkout"))),
+		handlers.WithInternalCheckoutOrders(orderService),
+		handlers.WithInternalCheckoutPromotions(promotionService),
+	)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 

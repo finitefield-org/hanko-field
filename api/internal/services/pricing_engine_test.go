@@ -369,6 +369,10 @@ func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsag
 	panic("unexpected call")
 }
 
+func (f *fakePromotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
+	return nil
+}
+
 type fakeTaxCalculator struct {
 	quote       TaxQuote
 	lastRequest TaxCalculationRequest
