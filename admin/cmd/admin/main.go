@@ -19,6 +19,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/httpserver"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
+	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	adminreviews "finitefield.org/hanko-admin/internal/admin/reviews"
@@ -42,6 +43,7 @@ func main() {
 		ProductionService: buildProductionService(),
 		ShipmentsService:  shipmentsService,
 		ReviewsService:    buildReviewsService(),
+		OrgService:        buildOrgService(),
 		Environment:       getEnv("ADMIN_ENVIRONMENT", "Development"),
 		Session: httpserver.SessionConfig{
 			CookieName:       getEnv("ADMIN_SESSION_COOKIE_NAME", ""),
@@ -193,6 +195,21 @@ func buildProfileService() profile.Service {
 	service, err := profile.NewHTTPService(baseURL, httpClient)
 	if err != nil {
 		log.Fatalf("admin: failed to initialise profile service: %v", err)
+	}
+	return service
+}
+
+func buildOrgService() adminorg.Service {
+	baseURL := strings.TrimSpace(os.Getenv("ADMIN_ORG_API_BASE_URL"))
+	if baseURL == "" {
+		log.Printf("admin: ADMIN_ORG_API_BASE_URL not set; using static org service placeholder")
+		return adminorg.NewStaticService()
+	}
+
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	service, err := adminorg.NewHTTPService(baseURL, httpClient)
+	if err != nil {
+		log.Fatalf("admin: failed to initialise org service: %v", err)
 	}
 	return service
 }

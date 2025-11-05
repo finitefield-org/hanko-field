@@ -19,6 +19,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
+	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	"finitefield.org/hanko-admin/internal/admin/rbac"
@@ -47,6 +48,7 @@ type Config struct {
 	ShipmentsService     adminshipments.Service
 	ProductionService    adminproduction.Service
 	ReviewsService       adminreviews.Service
+	OrgService           adminorg.Service
 	Session              SessionConfig
 	SessionStore         custommw.SessionStore
 	CSRFCookieName       string
@@ -121,6 +123,7 @@ func New(cfg Config) *http.Server {
 		ShipmentsService:     cfg.ShipmentsService,
 		ProductionService:    cfg.ProductionService,
 		ReviewsService:       cfg.ReviewsService,
+		OrgService:           cfg.OrgService,
 	})
 
 	mountAdminRoutes(router, basePath, routeOptions{
@@ -332,6 +335,13 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			protected.Route("/org", func(or chi.Router) {
 				or.Use(custommw.RequireCapability(rbac.CapStaffManage))
 				or.Get("/staff", uiHandlers.OrgStaffPage)
+				RegisterFragment(or, "/staff/table", uiHandlers.OrgStaffTable)
+				RegisterFragment(or, "/staff/modal/invite", uiHandlers.OrgStaffInviteModal)
+				RegisterFragment(or, "/staff/{memberID}/modal/edit", uiHandlers.OrgStaffEditModal)
+				RegisterFragment(or, "/staff/{memberID}/modal/revoke", uiHandlers.OrgStaffRevokeModal)
+				or.Post("/staff/invite", uiHandlers.OrgStaffInviteSubmit)
+				or.Post("/staff/{memberID}:update", uiHandlers.OrgStaffUpdateSubmit)
+				or.Post("/staff/{memberID}:revoke", uiHandlers.OrgStaffRevokeSubmit)
 				or.Get("/roles", uiHandlers.OrgRolesPage)
 			})
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
