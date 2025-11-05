@@ -187,7 +187,15 @@ func TestAdminInvoiceHandlers_IssueInvoicesReturnsFailures(t *testing.T) {
 }
 
 type stubAdminInvoiceService struct {
-	issueFn func(context.Context, services.IssueInvoicesCommand) (services.IssueInvoicesResult, error)
+	issueFn    func(context.Context, services.IssueInvoicesCommand) (services.IssueInvoicesResult, error)
+	issueOneFn func(context.Context, services.IssueInvoiceCommand) (services.IssuedInvoice, error)
+}
+
+func (s *stubAdminInvoiceService) IssueInvoice(ctx context.Context, cmd services.IssueInvoiceCommand) (services.IssuedInvoice, error) {
+	if s.issueOneFn != nil {
+		return s.issueOneFn(ctx, cmd)
+	}
+	return services.IssuedInvoice{}, nil
 }
 
 func (s *stubAdminInvoiceService) IssueInvoices(ctx context.Context, cmd services.IssueInvoicesCommand) (services.IssueInvoicesResult, error) {

@@ -121,6 +121,36 @@ func NewInvoiceService(deps InvoiceServiceDeps) (InvoiceService, error) {
 	}, nil
 }
 
+func (s *invoiceService) IssueInvoice(ctx context.Context, cmd IssueInvoiceCommand) (IssuedInvoice, error) {
+	if ctx == nil {
+		return IssuedInvoice{}, fmt.Errorf("%w: context is required", ErrInvoiceInvalidInput)
+	}
+	if s == nil || s.orders == nil {
+		return IssuedInvoice{}, fmt.Errorf("%w: invoice service unavailable", ErrInvoiceRepositoryUnavailable)
+	}
+
+	orderID := deriveOrderID(cmd.OrderID, cmd.OrderRef)
+	if orderID == "" {
+		return IssuedInvoice{}, fmt.Errorf("%w: order id is required", ErrInvoiceInvalidInput)
+	}
+
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return IssuedInvoice{}, fmt.Errorf("%w: actor id is required", ErrInvoiceInvalidInput)
+	}
+
+	order, err := s.orders.FindByID(ctx, orderID)
+	if err != nil {
+		return IssuedInvoice{}, s.mapRepositoryError(err)
+	}
+
+	issued, err := s.issueForOrder(ctx, order, actorID, cmd.Notes)
+	if err != nil {
+		return IssuedInvoice{}, err
+	}
+	return issued, nil
+}
+
 func (s *invoiceService) IssueInvoices(ctx context.Context, cmd IssueInvoicesCommand) (IssueInvoicesResult, error) {
 	if ctx == nil {
 		return IssueInvoicesResult{}, fmt.Errorf("%w: context is required", ErrInvoiceInvalidInput)
@@ -558,6 +588,25 @@ func cloneOrder(order domain.Order) domain.Order {
 		copy.Metadata = meta
 	}
 	return copy
+}
+
+func deriveOrderID(orderID, orderRef string) string {
+	id := strings.TrimSpace(orderID)
+	if id != "" {
+		return id
+	}
+	ref := strings.TrimSpace(orderRef)
+	if ref == "" {
+		return ""
+	}
+	segments := strings.Split(ref, "/")
+	for i := len(segments) - 1; i >= 0; i-- {
+		part := strings.TrimSpace(segments[i])
+		if part != "" {
+			return part
+		}
+	}
+	return ""
 }
 
 func isRepoUnavailable(err error) bool {

@@ -144,7 +144,7 @@
 - [x] [102 Implement internal checkout commit endpoint finalizing reservations, marking orders paid, and emitting events.](./tasks/102-implement-internal-checkout-commit-endpoint-finalizing-reservations-marking-orde.md)
 - [x] [103 Implement internal checkout release endpoint restoring stock on failure/timeout.](./tasks/103-implement-internal-checkout-release-endpoint-restoring-stock-on-failure-timeout.md)
 - [x] [104 Implement internal promotion apply endpoint performing atomic usage increments and validation.](./tasks/104-implement-internal-promotion-apply-endpoint-performing-atomic-usage-increments-a.md)
-- [ ] [105 Implement internal invoice issue-one endpoint generating invoice number, PDF, and updating order.](./tasks/105-implement-internal-invoice-issue-one-endpoint-generating-invoice-number-pdf-and-.md)
+- [x] [105 Implement internal invoice issue-one endpoint generating invoice number, PDF, and updating order.](./tasks/105-implement-internal-invoice-issue-one-endpoint-generating-invoice-number-pdf-and-.md)
 - [ ] [106 Implement internal maintenance cleanup-reservations endpoint releasing expired reservations.](./tasks/106-implement-internal-maintenance-cleanup-reservations-endpoint-releasing-expired-r.md)
 - [ ] [107 Implement internal maintenance stock-safety-notify endpoint notifying downstream systems.](./tasks/107-implement-internal-maintenance-stock-safety-notify-endpoint-notifying-downstream.md)
 - [ ] [108 Implement internal audit-log endpoint for structured audit writes from other services.](./tasks/108-implement-internal-audit-log-endpoint-for-structured-audit-writes-from-other-ser.md)

@@ -11,6 +11,169 @@ import (
 	"github.com/hanko-field/api/internal/repositories"
 )
 
+func TestInvoiceServiceIssueInvoice_Success(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 4, 2, 15, 30, 0, 0, time.UTC)
+
+	var updated domain.Order
+	orderRepo := &stubOrderRepo{
+		findFn: func(_ context.Context, id string) (domain.Order, error) {
+			if id != "order_42" {
+				t.Fatalf("unexpected order id lookup %s", id)
+			}
+			return domain.Order{
+				ID:       "order_42",
+				Currency: "JPY",
+				Totals:   domain.OrderTotals{Total: 7800},
+				Metadata: map[string]any{},
+			}, nil
+		},
+		updateFn: func(_ context.Context, order domain.Order) error {
+			updated = order
+			return nil
+		},
+	}
+	invoiceRepo := &stubInvoiceRepo{}
+	counter := &stubInvoiceCounterService{invoiceNumbers: []string{"INV-202504-000042"}}
+	storage := &stubInvoiceStorage{}
+	renderer := &stubInvoiceRenderer{}
+	batchRepo := &stubInvoiceBatchRepo{}
+
+	service, err := NewInvoiceService(InvoiceServiceDeps{
+		Orders:      orderRepo,
+		Invoices:    invoiceRepo,
+		Batches:     batchRepo,
+		Counters:    counter,
+		Storage:     storage,
+		Renderer:    renderer,
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "inv_single" },
+	})
+	if err != nil {
+		t.Fatalf("NewInvoiceService: %v", err)
+	}
+
+	issued, err := service.IssueInvoice(ctx, IssueInvoiceCommand{
+		OrderRef: " /orders/order_42 ",
+		ActorID:  " system ",
+		Notes:    " send pdf ",
+	})
+	if err != nil {
+		t.Fatalf("IssueInvoice: %v", err)
+	}
+
+	if issued.OrderID != "order_42" {
+		t.Fatalf("expected order id order_42, got %q", issued.OrderID)
+	}
+	if issued.InvoiceNumber != "INV-202504-000042" {
+		t.Fatalf("expected invoice number INV-202504-000042, got %q", issued.InvoiceNumber)
+	}
+	if issued.PDFAssetRef == "" {
+		t.Fatalf("expected pdf asset ref, got empty")
+	}
+
+	if counter.invoiceCalls != 1 {
+		t.Fatalf("expected counter called once, got %d", counter.invoiceCalls)
+	}
+	if len(invoiceRepo.inserted) != 1 {
+		t.Fatalf("expected one invoice inserted, got %d", len(invoiceRepo.inserted))
+	}
+	if invoiceRepo.inserted[0].OrderRef != "/orders/order_42" {
+		t.Fatalf("expected order ref /orders/order_42, got %q", invoiceRepo.inserted[0].OrderRef)
+	}
+	if note, ok := invoiceRepo.inserted[0].Metadata["notes"].(string); !ok || note != "send pdf" {
+		t.Fatalf("expected notes stored, got %v", invoiceRepo.inserted[0].Metadata["notes"])
+	}
+	if len(storage.storedObjects) != 1 {
+		t.Fatalf("expected single stored pdf, got %d", len(storage.storedObjects))
+	}
+	if updated.ID != "order_42" {
+		t.Fatalf("expected order_42 updated, got %q", updated.ID)
+	}
+	if num, ok := updated.Metadata["invoiceNumber"].(string); !ok || num != "INV-202504-000042" {
+		t.Fatalf("expected order metadata invoice number updated, got %v", updated.Metadata["invoiceNumber"])
+	}
+	if ref, ok := updated.Metadata["invoiceAssetRef"].(string); !ok || ref == "" {
+		t.Fatalf("expected order metadata invoice asset ref, got %v", updated.Metadata["invoiceAssetRef"])
+	}
+	if updated.Audit.UpdatedBy == nil || *updated.Audit.UpdatedBy != "system" {
+		t.Fatalf("expected audit updated by system, got %v", updated.Audit.UpdatedBy)
+	}
+}
+
+func TestInvoiceServiceIssueInvoice_OrderNotFound(t *testing.T) {
+	ctx := context.Background()
+	orderRepo := &stubOrderRepo{
+		findFn: func(_ context.Context, id string) (domain.Order, error) {
+			return domain.Order{}, repoError{message: "missing", notFound: true}
+		},
+	}
+	invoiceRepo := &stubInvoiceRepo{}
+	counter := &stubInvoiceCounterService{invoiceNumbers: []string{"INV-1"}}
+	storage := &stubInvoiceStorage{}
+	renderer := &stubInvoiceRenderer{}
+	batchRepo := &stubInvoiceBatchRepo{}
+
+	service, err := NewInvoiceService(InvoiceServiceDeps{
+		Orders:     orderRepo,
+		Invoices:   invoiceRepo,
+		Batches:    batchRepo,
+		Counters:   counter,
+		Storage:    storage,
+		Renderer:   renderer,
+		UnitOfWork: &stubUnitOfWork{},
+	})
+	if err != nil {
+		t.Fatalf("NewInvoiceService: %v", err)
+	}
+
+	_, err = service.IssueInvoice(ctx, IssueInvoiceCommand{
+		OrderID: "not_found",
+		ActorID: "system",
+	})
+	if !errors.Is(err, ErrInvoiceOrderNotFound) {
+		t.Fatalf("expected ErrInvoiceOrderNotFound, got %v", err)
+	}
+}
+
+func TestInvoiceServiceIssueInvoice_InvalidInput(t *testing.T) {
+	ctx := context.Background()
+	orderRepo := &stubOrderRepo{}
+	invoiceRepo := &stubInvoiceRepo{}
+	counter := &stubInvoiceCounterService{invoiceNumbers: []string{"INV-1"}}
+	storage := &stubInvoiceStorage{}
+	renderer := &stubInvoiceRenderer{}
+	batchRepo := &stubInvoiceBatchRepo{}
+
+	service, err := NewInvoiceService(InvoiceServiceDeps{
+		Orders:     orderRepo,
+		Invoices:   invoiceRepo,
+		Batches:    batchRepo,
+		Counters:   counter,
+		Storage:    storage,
+		Renderer:   renderer,
+		UnitOfWork: &stubUnitOfWork{},
+	})
+	if err != nil {
+		t.Fatalf("NewInvoiceService: %v", err)
+	}
+
+	_, err = service.IssueInvoice(ctx, IssueInvoiceCommand{
+		ActorID: "system",
+	})
+	if !errors.Is(err, ErrInvoiceInvalidInput) {
+		t.Fatalf("expected invalid input error for missing order id, got %v", err)
+	}
+
+	_, err = service.IssueInvoice(ctx, IssueInvoiceCommand{
+		OrderRef: "/orders/order_99",
+	})
+	if !errors.Is(err, ErrInvoiceInvalidInput) {
+		t.Fatalf("expected invalid input error for missing actor id, got %v", err)
+	}
+}
+
 func TestInvoiceServiceIssueInvoices_WithOrderIDs(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2025, 5, 1, 10, 0, 0, 0, time.UTC)

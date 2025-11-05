@@ -294,6 +294,7 @@ type OrderService interface {
 
 // InvoiceService coordinates bulk invoice generation and storage workflows.
 type InvoiceService interface {
+	IssueInvoice(ctx context.Context, cmd IssueInvoiceCommand) (IssuedInvoice, error)
 	IssueInvoices(ctx context.Context, cmd IssueInvoicesCommand) (IssueInvoicesResult, error)
 }
 
@@ -819,6 +820,14 @@ type RequestInvoiceCommand struct {
 type InvoiceBatchFilter struct {
 	Statuses    []string
 	PlacedRange domain.RangeQuery[time.Time]
+}
+
+// IssueInvoiceCommand requests invoice generation for a single order.
+type IssueInvoiceCommand struct {
+	OrderID  string
+	OrderRef string
+	ActorID  string
+	Notes    string
 }
 
 // IssueInvoicesCommand requests batch invoice generation for selected orders.

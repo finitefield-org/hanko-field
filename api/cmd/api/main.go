@@ -350,6 +350,7 @@ func main() {
 		exportService   services.ExportService
 		paymentService  services.PaymentService
 		jobDispatcher   services.BackgroundJobDispatcher
+		invoiceService  services.InvoiceService
 	)
 
 	checkoutLogger := logger.Named("checkout")
@@ -432,6 +433,7 @@ func main() {
 		handlers.WithInternalCheckoutPromotions(promotionService),
 	)
 	internalPromotionHandlers := handlers.NewInternalPromotionHandlers(promotionService)
+	internalInvoiceHandlers := handlers.NewInternalInvoiceHandlers(invoiceService)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
@@ -591,6 +593,7 @@ func main() {
 	opts = append(opts, handlers.WithInternalRoutes(handlers.CombineRouteRegistrars(
 		internalCheckoutHandlers.Routes,
 		internalPromotionHandlers.Routes,
+		internalInvoiceHandlers.Routes,
 	)))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
@@ -607,7 +610,7 @@ func main() {
 	}))
 	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
 	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, auditService)
-	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, nil)
+	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, invoiceService)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
 	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
 	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, counterService, auditService, handlers.WithAdminCounterAllowedScopes("orders", "invoices"))
