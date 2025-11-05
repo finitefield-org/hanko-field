@@ -59,7 +59,7 @@
 - [x] [Build checkout address screen (`/checkout/address`) with address list, add/edit forms, and validation (JP/international formats).](doc/app/tasks/042-build-checkout-address-screen-checkout-address-with-address-list-add-edit-forms-and-valida.md)
 - [x] [Implement shipping selection (`/checkout/shipping`) supporting domestic/international options and delivery estimates.](doc/app/tasks/043-implement-shipping-selection-checkout-shipping-supporting-domestic-international-options-a.md)
 - [x] [Build payment method screen (`/checkout/payment`) integrating tokenized payment refs and adding new methods if allowed.](doc/app/tasks/044-build-payment-method-screen-checkout-payment-integrating-tokenized-payment-refs-and-adding.md)
-- [ ] [Implement review screen (`/checkout/review`) showing order summary, design snapshot, totals, and terms acknowledgement.](doc/app/tasks/045-implement-review-screen-checkout-review-showing-order-summary-design-snapshot-totals-and-t.md)
+- [x] [Implement review screen (`/checkout/review`) showing order summary, design snapshot, totals, and terms acknowledgement.](doc/app/tasks/045-implement-review-screen-checkout-review-showing-order-summary-design-snapshot-totals-and-t.md)
 - [ ] [Build order completion screen (`/checkout/complete`) displaying confirmation, next steps, and share options.](doc/app/tasks/046-build-order-completion-screen-checkout-complete-displaying-confirmation-next-steps-and-sha.md)
 
 ## 8. Orders & Tracking

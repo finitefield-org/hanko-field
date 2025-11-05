@@ -5,6 +5,7 @@ import 'package:app/features/auth/presentation/auth_screen.dart';
 import 'package:app/features/cart/presentation/cart_screen.dart';
 import 'package:app/features/cart/presentation/checkout_address_screen.dart';
 import 'package:app/features/cart/presentation/checkout_payment_screen.dart';
+import 'package:app/features/cart/presentation/checkout_review_screen.dart';
 import 'package:app/features/cart/presentation/checkout_shipping_screen.dart';
 import 'package:app/features/design_creation/presentation/design_ai_suggestions_page.dart';
 import 'package:app/features/design_creation/presentation/design_editor_page.dart';
@@ -222,6 +223,8 @@ class CheckoutRoute implements IndependentRoute, StandaloneLocationRoute {
         return const CheckoutShippingScreen();
       case 'payment':
         return const CheckoutPaymentScreen();
+      case 'review':
+        return const CheckoutReviewScreen();
       default:
         return const CheckoutAddressScreen();
     }

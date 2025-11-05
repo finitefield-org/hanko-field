@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/user.dart';
+import 'package:app/features/cart/domain/cart_models.dart';
 import 'package:app/features/cart/domain/checkout_payment_models.dart';
 import 'package:app/features/cart/domain/checkout_shipping_models.dart';
 import 'package:flutter/foundation.dart';
@@ -63,3 +64,24 @@ extension CheckoutStateX on CheckoutState {
 }
 
 const CheckoutState kInitialCheckoutState = CheckoutState();
+
+@immutable
+class CheckoutOrderReceipt {
+  const CheckoutOrderReceipt({
+    required this.orderId,
+    required this.placedAt,
+    required this.total,
+    required this.currency,
+    required this.updatedCart,
+    this.estimatedDelivery,
+    this.note,
+  });
+
+  final String orderId;
+  final DateTime placedAt;
+  final double total;
+  final String currency;
+  final CartSnapshot updatedCart;
+  final String? estimatedDelivery;
+  final String? note;
+}

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/features/cart/domain/cart_models.dart';
+import 'package:app/features/cart/domain/checkout_models.dart';
 import 'package:app/features/cart/domain/checkout_shipping_models.dart';
 
 abstract class CartRepository {
@@ -40,6 +41,12 @@ abstract class CartRepository {
   Future<CartSnapshot> selectShippingOption({
     required ExperienceGate experience,
     required String optionId,
+  });
+
+  Future<CheckoutOrderReceipt> placeOrder({
+    required ExperienceGate experience,
+    required CheckoutState checkoutState,
+    String? specialInstructions,
   });
 }
 
@@ -262,6 +269,81 @@ class FakeCartRepository implements CartRepository {
     );
     await _cache.writeCart(bundle.raw);
     return bundle.view;
+  }
+
+  @override
+  Future<CheckoutOrderReceipt> placeOrder({
+    required ExperienceGate experience,
+    required CheckoutState checkoutState,
+    String? specialInstructions,
+  }) async {
+    await Future<void>.delayed(_delay);
+    if (!checkoutState.hasSelectedAddress) {
+      throw CheckoutSubmissionException(
+        experience.isInternational
+            ? 'Add a shipping address before placing your order.'
+            : '注文する前に配送先住所を確定してください。',
+      );
+    }
+    if (!checkoutState.hasSelectedShippingOption) {
+      throw CheckoutSubmissionException(
+        experience.isInternational
+            ? 'Select a shipping option before placing your order.'
+            : '注文する前に配送方法を選択してください。',
+      );
+    }
+    if (!checkoutState.hasSelectedPaymentMethod) {
+      throw CheckoutSubmissionException(
+        experience.isInternational
+            ? 'Select a payment method before placing your order.'
+            : '注文する前にお支払い方法を選択してください。',
+      );
+    }
+
+    final raw = await _ensureSnapshot(experience);
+    final bundle = _updateAndBuild(raw, experience);
+    if (bundle.view.lines.isEmpty) {
+      throw CheckoutSubmissionException(
+        experience.isInternational ? 'Your cart is empty.' : 'カートに商品がありません。',
+      );
+    }
+
+    final note = specialInstructions?.trim();
+    final orderId = _generateOrderId();
+    final estimate = bundle.view.estimate;
+    final shippingEta = bundle.view.shippingOption?.estimatedDelivery;
+
+    final cleared = CachedCartSnapshot(
+      lines: const [],
+      currency: estimate.currency,
+      subtotal: 0,
+      total: 0,
+      discount: 0,
+      shipping: 0,
+      tax: 0,
+      promotion: null,
+      updatedAt: DateTime.now(),
+      shippingOptionId: null,
+    );
+    final clearedBundle = _updateAndBuild(cleared, experience);
+    await _cache.writeCart(clearedBundle.raw);
+
+    return CheckoutOrderReceipt(
+      orderId: orderId,
+      placedAt: DateTime.now(),
+      total: estimate.total,
+      currency: estimate.currency,
+      updatedCart: clearedBundle.view,
+      estimatedDelivery: shippingEta,
+      note: (note != null && note.isNotEmpty) ? note : null,
+    );
+  }
+
+  String _generateOrderId() {
+    final timestamp = DateTime.now();
+    final random = Random(timestamp.millisecondsSinceEpoch);
+    final suffix = random.nextInt(9000) + 1000;
+    return 'HF-${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}-$suffix';
   }
 
   Future<CachedCartSnapshot> _ensureSnapshot(ExperienceGate experience) async {
@@ -898,6 +980,15 @@ class CheckoutShippingException implements Exception {
 
   @override
   String toString() => 'CheckoutShippingException($message)';
+}
+
+class CheckoutSubmissionException implements Exception {
+  CheckoutSubmissionException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'CheckoutSubmissionException($message)';
 }
 
 class _SnapshotBundle {

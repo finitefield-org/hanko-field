@@ -206,7 +206,9 @@ class _CartLoadedView extends ConsumerWidget {
               state: state,
               checkoutLabel: checkoutLabel,
               onCheckout: () {
-                ref.read(appStateProvider.notifier).push(CheckoutRoute());
+                ref
+                    .read(appStateProvider.notifier)
+                    .push(CheckoutRoute(['review']));
               },
             ),
     );
