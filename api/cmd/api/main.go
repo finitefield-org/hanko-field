@@ -431,6 +431,7 @@ func main() {
 		handlers.WithInternalCheckoutOrders(orderService),
 		handlers.WithInternalCheckoutPromotions(promotionService),
 	)
+	internalPromotionHandlers := handlers.NewInternalPromotionHandlers(promotionService)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
@@ -587,7 +588,10 @@ func main() {
 	opts = append(opts, handlers.WithAdditionalRoutes(cartHandlers.RegisterStandaloneRoutes))
 	opts = append(opts, handlers.WithAdditionalRoutes(assetHandlers.Routes))
 	opts = append(opts, handlers.WithAdditionalRoutes(checkoutHandlers.Routes))
-	opts = append(opts, handlers.WithInternalRoutes(internalCheckoutHandlers.Routes))
+	opts = append(opts, handlers.WithInternalRoutes(handlers.CombineRouteRegistrars(
+		internalCheckoutHandlers.Routes,
+		internalPromotionHandlers.Routes,
+	)))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
 		handlers.WithPublicPromotionService(promotionService),

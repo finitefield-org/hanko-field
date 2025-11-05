@@ -564,6 +564,10 @@ func (s *stubCheckoutPromotionService) ValidatePromotion(context.Context, servic
 	return services.PromotionValidationResult{}, errors.New("not implemented")
 }
 
+func (s *stubCheckoutPromotionService) ApplyPromotion(context.Context, services.PromotionApplyCommand) (services.PromotionApplyResult, error) {
+	return services.PromotionApplyResult{}, errors.New("not implemented")
+}
+
 func (s *stubCheckoutPromotionService) ValidatePromotionDefinition(context.Context, services.Promotion) (services.PromotionDefinitionValidationResult, error) {
 	return services.PromotionDefinitionValidationResult{}, errors.New("not implemented")
 }

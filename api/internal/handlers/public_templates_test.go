@@ -1689,6 +1689,10 @@ func (s *stubPromotionService) ListPromotionUsage(context.Context, services.Prom
 	return services.PromotionUsagePage{}, errors.New("not implemented")
 }
 
+func (s *stubPromotionService) ApplyPromotion(context.Context, services.PromotionApplyCommand) (services.PromotionApplyResult, error) {
+	return services.PromotionApplyResult{}, errors.New("not implemented")
+}
+
 func (s *stubPromotionService) RollbackUsage(context.Context, services.PromotionUsageReleaseCommand) error {
 	return nil
 }

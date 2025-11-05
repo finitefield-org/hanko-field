@@ -369,6 +369,10 @@ func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsag
 	panic("unexpected call")
 }
 
+func (f *fakePromotionService) ApplyPromotion(context.Context, PromotionApplyCommand) (PromotionApplyResult, error) {
+	panic("unexpected call")
+}
+
 func (f *fakePromotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
 	return nil
 }

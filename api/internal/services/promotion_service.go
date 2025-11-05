@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"slices"
 	"sort"
@@ -135,8 +136,9 @@ func (s *promotionService) GetPublicPromotion(ctx context.Context, code string) 
 	return result, nil
 }
 
-func (s *promotionService) ValidatePromotion(context.Context, ValidatePromotionCommand) (PromotionValidationResult, error) {
-	return PromotionValidationResult{}, ErrPromotionOperationUnsupported
+func (s *promotionService) ValidatePromotion(ctx context.Context, cmd ValidatePromotionCommand) (PromotionValidationResult, error) {
+	_, result, _, err := s.evaluatePromotion(ctx, cmd)
+	return result, err
 }
 
 func (s *promotionService) ValidatePromotionDefinition(ctx context.Context, promotion Promotion) (PromotionDefinitionValidationResult, error) {
@@ -411,6 +413,63 @@ func (s *promotionService) ListPromotionUsage(ctx context.Context, filter Promot
 	}, nil
 }
 
+func (s *promotionService) ApplyPromotion(ctx context.Context, cmd PromotionApplyCommand) (PromotionApplyResult, error) {
+	if s == nil || s.repo == nil {
+		return PromotionApplyResult{}, ErrPromotionRepositoryMissing
+	}
+	if s.usageRepo == nil {
+		return PromotionApplyResult{}, ErrPromotionOperationUnsupported
+	}
+
+	code := strings.ToUpper(strings.TrimSpace(cmd.Code))
+	if code == "" {
+		return PromotionApplyResult{}, fmt.Errorf("%w: promotion code is required", ErrPromotionInvalidInput)
+	}
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return PromotionApplyResult{}, fmt.Errorf("%w: user id is required", ErrPromotionInvalidInput)
+	}
+
+	validationCmd := ValidatePromotionCommand{Code: code, Totals: normalizePromotionTotalsPtr(cmd.CartTotals)}
+	validationCmd.UserID = &userID
+
+	promotion, validation, _, err := s.evaluatePromotion(ctx, validationCmd)
+	if err != nil {
+		return PromotionApplyResult{}, err
+	}
+	if !validation.Eligible {
+		reason := strings.TrimSpace(validation.Reason)
+		if reason == "" {
+			reason = "promotion not eligible"
+		}
+		return PromotionApplyResult{}, fmt.Errorf("%w: %s", ErrPromotionInvalidInput, reason)
+	}
+
+	now := s.clock()
+	usage, err := s.usageRepo.IncrementUsage(ctx, promotion.ID, userID, now)
+	if err != nil {
+		return PromotionApplyResult{}, translatePromotionUsageError(err)
+	}
+
+	updatedPromotion, err := s.repo.Get(ctx, promotion.ID)
+	if err != nil {
+		return PromotionApplyResult{}, translatePromotionRepoError(err)
+	}
+	promotion = normalizePromotion(Promotion(updatedPromotion))
+	validation.Code = promotion.Code
+
+	result := PromotionApplyResult{
+		Promotion:  promotion,
+		Usage:      normalizePromotionUsage(usage),
+		Validation: validation,
+		AppliedAt:  now.UTC(),
+	}
+	if result.Usage.UserID == "" {
+		result.Usage.UserID = userID
+	}
+	return result, nil
+}
+
 func (s *promotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
 	return ErrPromotionOperationUnsupported
 }
@@ -456,6 +515,217 @@ func (s *promotionService) promotionsUserLookupInterval() time.Duration {
 		return defaultUsageLookupInterval
 	}
 	return interval
+}
+
+func (s *promotionService) evaluatePromotion(ctx context.Context, cmd ValidatePromotionCommand) (Promotion, PromotionValidationResult, PromotionUsage, error) {
+	if s == nil || s.repo == nil {
+		return Promotion{}, PromotionValidationResult{}, PromotionUsage{}, ErrPromotionRepositoryMissing
+	}
+	code := strings.ToUpper(strings.TrimSpace(cmd.Code))
+	if code == "" {
+		return Promotion{}, PromotionValidationResult{}, PromotionUsage{}, ErrPromotionInvalidCode
+	}
+
+	model, err := s.repo.FindByCode(ctx, code)
+	if err != nil {
+		return Promotion{}, PromotionValidationResult{}, PromotionUsage{}, translatePromotionRepoError(err)
+	}
+	promotion := normalizePromotion(Promotion(model))
+	result := PromotionValidationResult{Code: promotion.Code}
+
+	now := s.clock()
+
+	var userID string
+	if cmd.UserID != nil {
+		userID = strings.TrimSpace(*cmd.UserID)
+	}
+	if promotion.RequiresAuth && userID == "" {
+		return promotion, result, PromotionUsage{}, ErrPromotionUnavailable
+	}
+	if err := ensurePromotionActive(promotion, now); err != nil {
+		return promotion, result, PromotionUsage{}, err
+	}
+	if promotion.UsageLimit > 0 && promotion.UsageCount >= promotion.UsageLimit {
+		return promotion, result, PromotionUsage{}, ErrPromotionUsageLimitReached
+	}
+
+	var usage PromotionUsage
+	if s.usageRepo != nil && userID != "" {
+		recorded, err := s.usageRepo.GetUsage(ctx, promotion.ID, userID)
+		if err != nil {
+			return promotion, result, PromotionUsage{}, translatePromotionUsageError(err)
+		}
+		usage = normalizePromotionUsage(recorded)
+		if usage.Blocked {
+			return promotion, result, usage, ErrPromotionUsageBlocked
+		}
+		if promotion.LimitPerUser > 0 && usage.Times >= promotion.LimitPerUser {
+			return promotion, result, usage, ErrPromotionUserLimitReached
+		}
+	}
+	if usage.UserID == "" {
+		usage.UserID = userID
+	}
+
+	totals := normalizePromotionTotalsPtr(cmd.Totals)
+	if reason := evaluatePromotionConditions(promotion, totals); reason != "" {
+		result.Eligible = false
+		result.Reason = reason
+		return promotion, result, usage, nil
+	}
+
+	result.Eligible = true
+	result.DiscountAmount = calculatePromotionDiscount(promotion, totals)
+	result.Reason = buildPromotionReason(promotion)
+	return promotion, result, usage, nil
+}
+
+func ensurePromotionActive(promotion Promotion, now time.Time) error {
+	statusActive := promotion.IsActive || strings.EqualFold(promotion.Status, promotionStatusActive)
+	if !statusActive {
+		return ErrPromotionUnavailable
+	}
+	if !promotion.StartsAt.IsZero() && now.Before(promotion.StartsAt) {
+		return ErrPromotionInactive
+	}
+	if !promotion.EndsAt.IsZero() && now.After(promotion.EndsAt) {
+		return ErrPromotionExpired
+	}
+	return nil
+}
+
+func normalizePromotionTotalsPtr(totals *PromotionCartTotals) *PromotionCartTotals {
+	if totals == nil {
+		return nil
+	}
+	normalized := normalizePromotionTotals(*totals)
+	return &normalized
+}
+
+func normalizePromotionTotals(totals PromotionCartTotals) PromotionCartTotals {
+	totals.Currency = strings.ToUpper(strings.TrimSpace(totals.Currency))
+	if totals.Subtotal < 0 {
+		totals.Subtotal = 0
+	}
+	if totals.Discount < 0 {
+		totals.Discount = 0
+	}
+	if totals.Shipping < 0 {
+		totals.Shipping = 0
+	}
+	if totals.Tax < 0 {
+		totals.Tax = 0
+	}
+	if totals.Fees < 0 {
+		totals.Fees = 0
+	}
+	if totals.Total < 0 {
+		totals.Total = 0
+	}
+	return totals
+}
+
+func evaluatePromotionConditions(promotion Promotion, totals *PromotionCartTotals) string {
+	if promotion.Conditions.MinSubtotal != nil {
+		if totals == nil {
+			return "minimum subtotal not met"
+		}
+		if totals.Subtotal < *promotion.Conditions.MinSubtotal {
+			return "minimum subtotal not met"
+		}
+	}
+
+	if len(promotion.Conditions.CurrencyIn) > 0 {
+		if totals == nil || totals.Currency == "" {
+			return "currency not eligible"
+		}
+		allowed := false
+		for _, currency := range promotion.Conditions.CurrencyIn {
+			if strings.EqualFold(currency, totals.Currency) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return "currency not eligible"
+		}
+	}
+
+	if promotion.Kind == promotionKindFixed && strings.TrimSpace(promotion.Currency) != "" {
+		if totals == nil || totals.Currency == "" {
+			return "currency mismatch"
+		}
+		if !strings.EqualFold(promotion.Currency, totals.Currency) {
+			return "currency mismatch"
+		}
+	}
+
+	return ""
+}
+
+func calculatePromotionDiscount(promotion Promotion, totals *PromotionCartTotals) int64 {
+	if totals == nil {
+		return 0
+	}
+	subtotal := totals.Subtotal
+	if subtotal <= 0 {
+		subtotal = totals.Total
+	}
+	if subtotal <= 0 {
+		return 0
+	}
+
+	switch promotion.Kind {
+	case promotionKindPercent:
+		discount := int64(math.Round(float64(subtotal) * promotion.Value / 100))
+		if discount < 0 {
+			return 0
+		}
+		if discount > subtotal {
+			discount = subtotal
+		}
+		return discount
+	case promotionKindFixed:
+		amount := int64(math.Round(promotion.Value))
+		if amount < 0 {
+			amount = 0
+		}
+		if amount > subtotal {
+			amount = subtotal
+		}
+		return amount
+	default:
+		return 0
+	}
+}
+
+func buildPromotionReason(promotion Promotion) string {
+	if desc := strings.TrimSpace(promotion.Description); desc != "" {
+		return desc
+	}
+	if name := strings.TrimSpace(promotion.Name); name != "" {
+		return name
+	}
+	return promotion.Code
+}
+
+func translatePromotionUsageError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, repositories.ErrPromotionUsageLimitExceeded):
+		return ErrPromotionUsageLimitReached
+	case errors.Is(err, repositories.ErrPromotionUsagePerUserLimitExceeded):
+		return ErrPromotionUserLimitReached
+	case errors.Is(err, repositories.ErrPromotionUsageBlocked):
+		return ErrPromotionUsageBlocked
+	}
+	var repoErr repositories.RepositoryError
+	if errors.As(err, &repoErr) && repoErr.IsUnavailable() {
+		return ErrPromotionRepositoryMissing
+	}
+	return err
 }
 
 func normalizePromotionUsage(usage domain.PromotionUsage) PromotionUsage {

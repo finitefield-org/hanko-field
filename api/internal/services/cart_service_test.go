@@ -1158,6 +1158,7 @@ func (s *stubCartPricer) Calculate(ctx context.Context, cmd PriceCartCommand) (P
 
 type stubPromotionService struct {
 	validateFunc func(ctx context.Context, cmd ValidatePromotionCommand) (PromotionValidationResult, error)
+	applyFunc    func(ctx context.Context, cmd PromotionApplyCommand) (PromotionApplyResult, error)
 }
 
 func (s *stubPromotionService) GetPublicPromotion(context.Context, string) (PromotionPublic, error) {
@@ -1169,6 +1170,13 @@ func (s *stubPromotionService) ValidatePromotion(ctx context.Context, cmd Valida
 		return s.validateFunc(ctx, cmd)
 	}
 	return PromotionValidationResult{}, nil
+}
+
+func (s *stubPromotionService) ApplyPromotion(ctx context.Context, cmd PromotionApplyCommand) (PromotionApplyResult, error) {
+	if s.applyFunc != nil {
+		return s.applyFunc(ctx, cmd)
+	}
+	return PromotionApplyResult{}, nil
 }
 
 func (s *stubPromotionService) ValidatePromotionDefinition(context.Context, Promotion) (PromotionDefinitionValidationResult, error) {

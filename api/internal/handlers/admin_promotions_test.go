@@ -431,6 +431,10 @@ func (s *stubPromotionAdminService) ListPromotionUsage(ctx context.Context, filt
 	return services.PromotionUsagePage{}, services.ErrPromotionOperationUnsupported
 }
 
+func (s *stubPromotionAdminService) ApplyPromotion(context.Context, services.PromotionApplyCommand) (services.PromotionApplyResult, error) {
+	return services.PromotionApplyResult{}, services.ErrPromotionOperationUnsupported
+}
+
 func (s *stubPromotionAdminService) RollbackUsage(context.Context, services.PromotionUsageReleaseCommand) error {
 	return nil
 }

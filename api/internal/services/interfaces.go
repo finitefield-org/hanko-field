@@ -159,6 +159,33 @@ type PromotionUsageReleaseCommand struct {
 	Reason   string
 }
 
+// PromotionCartTotals captures monetary totals relevant for promotion validation.
+type PromotionCartTotals struct {
+	Currency string
+	Subtotal int64
+	Discount int64
+	Shipping int64
+	Tax      int64
+	Fees     int64
+	Total    int64
+}
+
+// PromotionApplyCommand describes an internal usage application request.
+type PromotionApplyCommand struct {
+	Code       string
+	UserID     string
+	CartTotals *PromotionCartTotals
+	OrderRef   string
+}
+
+// PromotionApplyResult returns snapshots after a successful usage increment.
+type PromotionApplyResult struct {
+	Promotion  Promotion
+	Usage      PromotionUsage
+	Validation PromotionValidationResult
+	AppliedAt  time.Time
+}
+
 // PromotionUsageSort enumerates supported sort fields for usage listings.
 type PromotionUsageSort string
 
@@ -313,6 +340,7 @@ type PromotionService interface {
 	UpdatePromotion(ctx context.Context, cmd UpsertPromotionCommand) (Promotion, error)
 	DeletePromotion(ctx context.Context, promoID string, actorID string) error
 	ListPromotionUsage(ctx context.Context, filter PromotionUsageFilter) (PromotionUsagePage, error)
+	ApplyPromotion(ctx context.Context, cmd PromotionApplyCommand) (PromotionApplyResult, error)
 	RollbackUsage(ctx context.Context, cmd PromotionUsageReleaseCommand) error
 }
 
@@ -961,6 +989,7 @@ type ValidatePromotionCommand struct {
 	UserID  *string
 	CartID  *string
 	OrderID *string
+	Totals  *PromotionCartTotals
 }
 
 type PromotionListFilter struct {

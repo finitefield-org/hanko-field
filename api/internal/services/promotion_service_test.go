@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -646,6 +647,324 @@ func TestPromotionService_ListPromotionUsage_InvalidToken(t *testing.T) {
 	}
 }
 
+func TestPromotionService_ApplyPromotion_Success(t *testing.T) {
+	now := time.Date(2024, time.August, 1, 12, 0, 0, 0, time.UTC)
+	repo := newMemoryPromotionRepository(domain.Promotion{
+		ID:           "promo-apply",
+		Code:         "SAVE10",
+		Status:       "active",
+		IsActive:     true,
+		Kind:         "percent",
+		Value:        10,
+		LimitPerUser: 5,
+		UsageLimit:   100,
+		StartsAt:     now.Add(-time.Hour),
+		EndsAt:       now.Add(time.Hour),
+	})
+	usageRepo := newMemoryPromotionUsageRepo(repo, 5, 100)
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: repo,
+		Usage:      usageRepo,
+		Clock: func() time.Time {
+			return now
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	result, err := svc.ApplyPromotion(context.Background(), PromotionApplyCommand{
+		Code:   "save10",
+		UserID: "user-1",
+		CartTotals: &PromotionCartTotals{
+			Currency: "JPY",
+			Subtotal: 12000,
+			Total:    12000,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyPromotion returned error: %v", err)
+	}
+	if result.Usage.Times != 1 {
+		t.Fatalf("expected usage times 1, got %d", result.Usage.Times)
+	}
+	if result.Promotion.UsageCount != 1 {
+		t.Fatalf("expected promotion usage count 1, got %d", result.Promotion.UsageCount)
+	}
+	if result.Validation.DiscountAmount != 1200 {
+		t.Fatalf("expected discount 1200, got %d", result.Validation.DiscountAmount)
+	}
+}
+
+func TestPromotionService_ApplyPromotion_UserLimitExceeded(t *testing.T) {
+	now := time.Date(2024, time.August, 1, 13, 0, 0, 0, time.UTC)
+	repo := newMemoryPromotionRepository(domain.Promotion{
+		ID:           "promo-apply",
+		Code:         "LIMIT1",
+		Status:       "active",
+		IsActive:     true,
+		Kind:         "fixed",
+		Value:        500,
+		Currency:     "JPY",
+		LimitPerUser: 1,
+		UsageLimit:   10,
+		StartsAt:     now.Add(-time.Hour),
+		EndsAt:       now.Add(time.Hour),
+	})
+	usageRepo := newMemoryPromotionUsageRepo(repo, 1, 10)
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: repo,
+		Usage:      usageRepo,
+		Clock:      func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+	cmd := PromotionApplyCommand{
+		Code:   "limit1",
+		UserID: "user-42",
+		CartTotals: &PromotionCartTotals{
+			Currency: "JPY",
+			Subtotal: 5000,
+			Total:    5000,
+		},
+	}
+
+	if _, err := svc.ApplyPromotion(context.Background(), cmd); err != nil {
+		t.Fatalf("first ApplyPromotion returned error: %v", err)
+	}
+	if _, err := svc.ApplyPromotion(context.Background(), cmd); !errors.Is(err, ErrPromotionUserLimitReached) {
+		t.Fatalf("expected ErrPromotionUserLimitReached, got %v", err)
+	}
+}
+
+func TestPromotionService_ApplyPromotion_GlobalLimitExceeded(t *testing.T) {
+	now := time.Date(2024, time.August, 1, 14, 0, 0, 0, time.UTC)
+	repo := newMemoryPromotionRepository(domain.Promotion{
+		ID:           "promo-global",
+		Code:         "ONCE",
+		Status:       "active",
+		IsActive:     true,
+		Kind:         "percent",
+		Value:        20,
+		LimitPerUser: 5,
+		UsageLimit:   1,
+		UsageCount:   1,
+		StartsAt:     now.Add(-time.Hour),
+		EndsAt:       now.Add(time.Hour),
+	})
+	usageRepo := newMemoryPromotionUsageRepo(repo, 5, 1)
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: repo,
+		Usage:      usageRepo,
+		Clock:      func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	_, err = svc.ApplyPromotion(context.Background(), PromotionApplyCommand{
+		Code:   "once",
+		UserID: "user-1",
+		CartTotals: &PromotionCartTotals{
+			Currency: "JPY",
+			Subtotal: 8000,
+			Total:    8000,
+		},
+	})
+	if !errors.Is(err, ErrPromotionUsageLimitReached) {
+		t.Fatalf("expected ErrPromotionUsageLimitReached, got %v", err)
+	}
+}
+
+func TestPromotionService_ApplyPromotion_Concurrent(t *testing.T) {
+	now := time.Date(2024, time.August, 1, 15, 0, 0, 0, time.UTC)
+	repo := newMemoryPromotionRepository(domain.Promotion{
+		ID:           "promo-concurrent",
+		Code:         "CAP3",
+		Status:       "active",
+		IsActive:     true,
+		Kind:         "percent",
+		Value:        5,
+		LimitPerUser: 3,
+		UsageLimit:   50,
+		StartsAt:     now.Add(-time.Hour),
+		EndsAt:       now.Add(time.Hour),
+	})
+	usageRepo := newMemoryPromotionUsageRepo(repo, 3, 50)
+
+	svc, err := NewPromotionService(PromotionServiceDeps{
+		Promotions: repo,
+		Usage:      usageRepo,
+		Clock:      func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewPromotionService: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	successes := 0
+	failures := 0
+
+	command := PromotionApplyCommand{
+		Code:   "cap3",
+		UserID: "user-99",
+		CartTotals: &PromotionCartTotals{
+			Currency: "JPY",
+			Subtotal: 6000,
+			Total:    6000,
+		},
+	}
+
+	for i := 0; i < 15; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := svc.ApplyPromotion(context.Background(), command)
+			mu.Lock()
+			defer mu.Unlock()
+			if err == nil {
+				successes++
+			} else {
+				if !errors.Is(err, ErrPromotionUserLimitReached) {
+					t.Errorf("unexpected error: %v", err)
+				}
+				failures++
+			}
+		}()
+	}
+
+	wg.Wait()
+	if successes != 3 {
+		t.Fatalf("expected exactly 3 successes, got %d (failures %d)", successes, failures)
+	}
+	updated, err := repo.Get(context.Background(), "promo-concurrent")
+	if err != nil {
+		t.Fatalf("repo.Get error: %v", err)
+	}
+	if updated.UsageCount != successes {
+		t.Fatalf("expected usage count %d, got %d", successes, updated.UsageCount)
+	}
+}
+
+type memoryPromotionRepository struct {
+	mu        sync.Mutex
+	promotion domain.Promotion
+}
+
+func newMemoryPromotionRepository(p domain.Promotion) *memoryPromotionRepository {
+	return &memoryPromotionRepository{promotion: p}
+}
+
+func (r *memoryPromotionRepository) set(p domain.Promotion) {
+	r.mu.Lock()
+	r.promotion = p
+	r.mu.Unlock()
+}
+
+func (r *memoryPromotionRepository) snapshot() domain.Promotion {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.promotion
+}
+
+func (r *memoryPromotionRepository) Insert(_ context.Context, promotion domain.Promotion) error {
+	r.set(promotion)
+	return nil
+}
+
+func (r *memoryPromotionRepository) Update(_ context.Context, promotion domain.Promotion) error {
+	r.set(promotion)
+	return nil
+}
+
+func (r *memoryPromotionRepository) Delete(context.Context, string) error {
+	return nil
+}
+
+func (r *memoryPromotionRepository) Get(context.Context, string) (domain.Promotion, error) {
+	return r.snapshot(), nil
+}
+
+func (r *memoryPromotionRepository) FindByCode(context.Context, string) (domain.Promotion, error) {
+	return r.snapshot(), nil
+}
+
+func (r *memoryPromotionRepository) List(context.Context, repositories.PromotionListFilter) (domain.CursorPage[domain.Promotion], error) {
+	return domain.CursorPage[domain.Promotion]{}, nil
+}
+
+type memoryPromotionUsageRepo struct {
+	mu           sync.Mutex
+	repo         *memoryPromotionRepository
+	usage        map[string]domain.PromotionUsage
+	perUserLimit int
+	globalLimit  int
+}
+
+func newMemoryPromotionUsageRepo(repo *memoryPromotionRepository, perUserLimit, globalLimit int) *memoryPromotionUsageRepo {
+	return &memoryPromotionUsageRepo{
+		repo:         repo,
+		usage:        make(map[string]domain.PromotionUsage),
+		perUserLimit: perUserLimit,
+		globalLimit:  globalLimit,
+	}
+}
+
+func (r *memoryPromotionUsageRepo) IncrementUsage(ctx context.Context, promoID string, userID string, now time.Time) (domain.PromotionUsage, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	promotion := r.repo.snapshot()
+	if r.globalLimit > 0 && promotion.UsageCount >= r.globalLimit {
+		return domain.PromotionUsage{}, repositories.ErrPromotionUsageLimitExceeded
+	}
+
+	entry := r.usage[userID]
+	if entry.Blocked {
+		return domain.PromotionUsage{}, repositories.ErrPromotionUsageBlocked
+	}
+	if r.perUserLimit > 0 && entry.Times >= r.perUserLimit {
+		return domain.PromotionUsage{}, repositories.ErrPromotionUsagePerUserLimitExceeded
+	}
+
+	entry.UserID = userID
+	entry.Times++
+	entry.LastUsed = now.UTC()
+	if entry.FirstUsed == nil {
+		first := entry.LastUsed
+		entry.FirstUsed = &first
+	}
+	r.usage[userID] = entry
+
+	promotion.UsageCount++
+	promotion.UpdatedAt = now.UTC()
+	r.repo.set(promotion)
+
+	return entry, nil
+}
+
+func (r *memoryPromotionUsageRepo) GetUsage(ctx context.Context, promoID string, userID string) (domain.PromotionUsage, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if entry, ok := r.usage[userID]; ok {
+		return entry, nil
+	}
+	return domain.PromotionUsage{UserID: userID}, nil
+}
+
+func (r *memoryPromotionUsageRepo) RemoveUsage(context.Context, string, string) error {
+	return nil
+}
+
+func (r *memoryPromotionUsageRepo) ListUsage(context.Context, repositories.PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error) {
+	return domain.CursorPage[domain.PromotionUsage]{}, nil
+}
+
 func TestPromotionService_DeletePromotion_RequiresActor(t *testing.T) {
 	repo := &stubPromotionRepository{}
 	svc, err := NewPromotionService(PromotionServiceDeps{Promotions: repo})
@@ -777,6 +1096,10 @@ type stubPromotionUsageRepository struct {
 }
 
 func (s *stubPromotionUsageRepository) IncrementUsage(context.Context, string, string, time.Time) (domain.PromotionUsage, error) {
+	return domain.PromotionUsage{}, nil
+}
+
+func (s *stubPromotionUsageRepository) GetUsage(context.Context, string, string) (domain.PromotionUsage, error) {
 	return domain.PromotionUsage{}, nil
 }
 

@@ -11,6 +11,8 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	domain "github.com/hanko-field/api/internal/domain"
 	pfirestore "github.com/hanko-field/api/internal/platform/firestore"
@@ -32,14 +34,146 @@ func NewPromotionUsageRepository(provider *pfirestore.Provider) (*PromotionUsage
 	return &PromotionUsageRepository{provider: provider}, nil
 }
 
-// IncrementUsage is currently not implemented.
-func (r *PromotionUsageRepository) IncrementUsage(context.Context, string, string, time.Time) (domain.PromotionUsage, error) {
-	return domain.PromotionUsage{}, errors.New("promotion usage repository: increment not implemented")
+// IncrementUsage atomically increments promotion usage counters for the supplied user.
+func (r *PromotionUsageRepository) IncrementUsage(ctx context.Context, promoID string, userID string, now time.Time) (domain.PromotionUsage, error) {
+	if r == nil || r.provider == nil {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository not initialised")
+	}
+	promoID = strings.TrimSpace(promoID)
+	userID = strings.TrimSpace(userID)
+	if promoID == "" {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository: promotion id is required")
+	}
+	if userID == "" {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository: user id is required")
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	client, err := r.provider.Client(ctx)
+	if err != nil {
+		return domain.PromotionUsage{}, err
+	}
+
+	promoRef := client.Collection(promotionsCollection).Doc(promoID)
+	usageRef := promoRef.Collection(promotionUsageCollection).Doc(userID)
+
+	var result domain.PromotionUsage
+
+	writeErr := r.provider.RunTransaction(ctx, func(txCtx context.Context, tx *firestore.Transaction) error {
+		promoSnap, err := tx.Get(promoRef)
+		if err != nil {
+			return pfirestore.WrapError("promotion_usage.increment.get_promotion", err)
+		}
+		var promoDoc promotionDocument
+		if err := promoSnap.DataTo(&promoDoc); err != nil {
+			return fmt.Errorf("promotion usage repository: decode promotion: %w", err)
+		}
+		if promoDoc.UsageLimit > 0 && promoDoc.UsageCount >= promoDoc.UsageLimit {
+			return repositories.ErrPromotionUsageLimitExceeded
+		}
+
+		usageSnap, err := tx.Get(usageRef)
+		usageDoc := promotionUsageDocument{}
+		existing := false
+		if err != nil {
+			if status.Code(err) != codes.NotFound {
+				return pfirestore.WrapError("promotion_usage.increment.get_usage", err)
+			}
+		} else {
+			existing = true
+			if err := usageSnap.DataTo(&usageDoc); err != nil {
+				return fmt.Errorf("promotion usage repository: decode usage: %w", err)
+			}
+			if usageDoc.Blocked {
+				return repositories.ErrPromotionUsageBlocked
+			}
+		}
+
+		if promoDoc.LimitPerUser > 0 {
+			if existing && usageDoc.Times >= promoDoc.LimitPerUser {
+				return repositories.ErrPromotionUsagePerUserLimitExceeded
+			}
+		}
+
+		nowUTC := now.UTC()
+		firstUsed := usageDoc.FirstUsedAt
+		if firstUsed == nil || firstUsed.IsZero() {
+			value := nowUTC
+			firstUsed = &value
+		}
+
+		updatedDoc := promotionUsageDocument{
+			UID:         fmt.Sprintf("users/%s", userID),
+			Times:       usageDoc.Times + 1,
+			LastUsedAt:  nowUTC,
+			FirstUsedAt: firstUsed,
+			OrderRefs:   cloneUsageStrings(usageDoc.OrderRefs),
+			Blocked:     usageDoc.Blocked,
+			Notes:       usageDoc.Notes,
+		}
+
+		if err := tx.Set(usageRef, updatedDoc); err != nil {
+			return pfirestore.WrapError("promotion_usage.increment.set_usage", err)
+		}
+
+		promoDoc.UsageCount++
+		promoDoc.UpdatedAt = nowUTC
+		if err := tx.Set(promoRef, map[string]any{
+			"usageCount": promoDoc.UsageCount,
+			"updatedAt":  promoDoc.UpdatedAt,
+		}, firestore.MergeAll); err != nil {
+			return pfirestore.WrapError("promotion_usage.increment.update_promotion", err)
+		}
+
+		result = decodePromotionUsage(userID, updatedDoc)
+		return nil
+	})
+
+	if writeErr != nil {
+		return domain.PromotionUsage{}, writeErr
+	}
+
+	return result, nil
 }
 
 // RemoveUsage is currently not implemented.
 func (r *PromotionUsageRepository) RemoveUsage(context.Context, string, string) error {
 	return errors.New("promotion usage repository: remove not implemented")
+}
+
+// GetUsage fetches the usage aggregate for a specific user.
+func (r *PromotionUsageRepository) GetUsage(ctx context.Context, promoID string, userID string) (domain.PromotionUsage, error) {
+	if r == nil || r.provider == nil {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository not initialised")
+	}
+	promoID = strings.TrimSpace(promoID)
+	userID = strings.TrimSpace(userID)
+	if promoID == "" {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository: promotion id is required")
+	}
+	if userID == "" {
+		return domain.PromotionUsage{}, errors.New("promotion usage repository: user id is required")
+	}
+
+	coll, err := r.collection(ctx, promoID)
+	if err != nil {
+		return domain.PromotionUsage{}, err
+	}
+
+	snap, err := coll.Doc(userID).Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return domain.PromotionUsage{UserID: userID}, nil
+		}
+		return domain.PromotionUsage{}, pfirestore.WrapError("promotion_usage.get", err)
+	}
+	var doc promotionUsageDocument
+	if err := snap.DataTo(&doc); err != nil {
+		return domain.PromotionUsage{}, fmt.Errorf("promotion usage repository: decode usage: %w", err)
+	}
+	return decodePromotionUsage(snap.Ref.ID, doc), nil
 }
 
 // ListUsage returns promotion usage aggregates keyed by user.

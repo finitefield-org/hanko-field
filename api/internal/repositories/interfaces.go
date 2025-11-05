@@ -270,11 +270,18 @@ type PromotionRepository interface {
 // PromotionUsageRepository records per-user usage counts to enforce limits.
 type PromotionUsageRepository interface {
 	IncrementUsage(ctx context.Context, promoID string, userID string, now time.Time) (domain.PromotionUsage, error)
+	GetUsage(ctx context.Context, promoID string, userID string) (domain.PromotionUsage, error)
 	RemoveUsage(ctx context.Context, promoID string, userID string) error
 	ListUsage(ctx context.Context, query PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error)
 }
 
 var ErrPromotionUsageInvalidPageToken = errors.New("promotion usage repository: invalid page token")
+
+var (
+	ErrPromotionUsageLimitExceeded        = errors.New("promotion usage repository: usage limit exceeded")
+	ErrPromotionUsagePerUserLimitExceeded = errors.New("promotion usage repository: per-user usage limit exceeded")
+	ErrPromotionUsageBlocked              = errors.New("promotion usage repository: user usage blocked")
+)
 
 // PromotionUsageListQuery filters and paginates per-user usage aggregates.
 type PromotionUsageListQuery struct {
