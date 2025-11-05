@@ -1,8 +1,10 @@
 import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
+import 'package:app/features/cart/domain/checkout_shipping_models.dart';
 import 'package:flutter/foundation.dart';
 
 const Object _promoErrorSentinel = Object();
+const Object _shippingOptionSentinel = Object();
 
 @immutable
 class CartLine {
@@ -140,6 +142,7 @@ class CartSnapshot {
     this.promotion,
     this.promoError,
     this.updatedAt,
+    this.shippingOption,
   });
 
   final List<CartLine> lines;
@@ -149,6 +152,7 @@ class CartSnapshot {
   final CartPromotion? promotion;
   final String? promoError;
   final DateTime? updatedAt;
+  final CheckoutShippingOption? shippingOption;
 
   CartSnapshot copyWith({
     List<CartLine>? lines,
@@ -158,6 +162,7 @@ class CartSnapshot {
     CartPromotion? promotion,
     Object? promoError = _promoErrorSentinel,
     DateTime? updatedAt,
+    Object? shippingOption = _shippingOptionSentinel,
   }) {
     return CartSnapshot(
       lines: lines ?? this.lines,
@@ -169,6 +174,9 @@ class CartSnapshot {
           ? this.promoError
           : promoError as String?,
       updatedAt: updatedAt ?? this.updatedAt,
+      shippingOption: identical(shippingOption, _shippingOptionSentinel)
+          ? this.shippingOption
+          : shippingOption as CheckoutShippingOption?,
     );
   }
 }

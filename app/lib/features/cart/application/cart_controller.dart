@@ -224,6 +224,24 @@ class CartController extends AsyncNotifier<CartViewState> {
     }
   }
 
+  void syncSnapshot(CartSnapshot snapshot, {String? feedbackMessage}) {
+    final current = state.value;
+    if (current == null) {
+      state = AsyncValue.data(
+        CartViewState(snapshot: snapshot, feedbackMessage: feedbackMessage),
+      );
+      return;
+    }
+    state = AsyncValue.data(
+      current.copyWith(
+        snapshot: snapshot,
+        feedbackMessage: feedbackMessage ?? current.feedbackMessage,
+        setFeedbackMessage: feedbackMessage != null,
+        setPromoError: true,
+      ),
+    );
+  }
+
   void clearFeedback() {
     final current = state.value;
     if (current == null || current.feedbackMessage == null) {

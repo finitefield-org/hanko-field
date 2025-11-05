@@ -201,6 +201,7 @@ class CachedCartSnapshot {
     this.tax,
     this.promotion,
     this.updatedAt,
+    this.shippingOptionId,
   });
 
   factory CachedCartSnapshot.fromJson(Map<String, dynamic> json) {
@@ -223,6 +224,7 @@ class CachedCartSnapshot {
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
+      shippingOptionId: json['shippingOptionId'] as String?,
     );
   }
 
@@ -235,6 +237,7 @@ class CachedCartSnapshot {
   final double? tax;
   final Map<String, dynamic>? promotion;
   final DateTime? updatedAt;
+  final String? shippingOptionId;
 
   CachedCartSnapshot copyWith({
     List<CartLineCache>? lines,
@@ -246,6 +249,7 @@ class CachedCartSnapshot {
     Object? tax = _cartSnapshotSentinel,
     Object? promotion = _cartSnapshotSentinel,
     DateTime? updatedAt,
+    Object? shippingOptionId = _cartSnapshotSentinel,
   }) {
     return CachedCartSnapshot(
       lines: lines ?? this.lines,
@@ -269,6 +273,9 @@ class CachedCartSnapshot {
           ? this.promotion
           : promotion as Map<String, dynamic>?,
       updatedAt: updatedAt ?? this.updatedAt,
+      shippingOptionId: identical(shippingOptionId, _cartSnapshotSentinel)
+          ? this.shippingOptionId
+          : shippingOptionId as String?,
     );
   }
 
@@ -283,6 +290,7 @@ class CachedCartSnapshot {
       'tax': tax,
       'promotion': promotion,
       'updatedAt': updatedAt?.toIso8601String(),
+      'shippingOptionId': shippingOptionId,
     };
   }
 }

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/features/cart/domain/cart_models.dart';
+import 'package:app/features/cart/domain/checkout_shipping_models.dart';
 
 abstract class CartRepository {
   Future<CartSnapshot> loadCart({required ExperienceGate experience});
@@ -31,6 +32,15 @@ abstract class CartRepository {
   });
 
   Future<CartSnapshot> removePromotion({required ExperienceGate experience});
+
+  Future<CheckoutShippingOptionsData> fetchShippingOptions({
+    required ExperienceGate experience,
+  });
+
+  Future<CartSnapshot> selectShippingOption({
+    required ExperienceGate experience,
+    required String optionId,
+  });
 }
 
 class FakeCartRepository implements CartRepository {
@@ -164,6 +174,96 @@ class FakeCartRepository implements CartRepository {
     return bundle.view;
   }
 
+  @override
+  Future<CheckoutShippingOptionsData> fetchShippingOptions({
+    required ExperienceGate experience,
+  }) async {
+    await Future<void>.delayed(_delay);
+    final raw = await _ensureSnapshot(experience);
+    final bundle = _updateAndBuild(raw, experience);
+    await _cache.writeCart(bundle.raw);
+    final subtotal = bundle.view.estimate.subtotal;
+    final promotion = bundle.raw.promotion;
+    final selectedId =
+        bundle.raw.shippingOptionId ?? bundle.view.shippingOption?.id;
+    final advisory = _activeShippingAdvisory(experience);
+    final options = <CheckoutShippingOption>[];
+    final code = (promotion?['code'] as String?)?.toUpperCase();
+    final type = promotion?['type'] as String?;
+    final hasFreeShippingPromo = type == 'free_shipping';
+    for (final definition in _shippingOptions.values) {
+      if (!_supportsExperience(definition, experience)) {
+        continue;
+      }
+      final threshold = experience.isInternational
+          ? definition.freeThresholdUsd
+          : definition.freeThresholdJpy;
+      final thresholdApplied =
+          subtotal > 0 && threshold != null && subtotal >= threshold;
+      final basePrice = subtotal <= 0
+          ? 0.0
+          : thresholdApplied
+          ? 0.0
+          : (experience.isInternational
+                ? definition.baseCostUsd
+                : definition.baseCostJpy);
+      var price = basePrice;
+      String? promoMessage;
+      if (hasFreeShippingPromo &&
+          definition.speed == CheckoutShippingSpeed.express) {
+        if (price > 0) {
+          promoMessage = experience.isInternational
+              ? '$code applied: express shipping covered'
+              : '$code 適用中: エクスプレス送料無料';
+        }
+        price = 0.0;
+      }
+      final thresholdValue = threshold ?? 0;
+      final thresholdMessage = thresholdApplied
+          ? (experience.isInternational
+                ? 'Free over ${_formatCurrency(thresholdValue, experience)} subtotal'
+                : '小計が${_formatCurrency(thresholdValue, experience)}以上で送料無料')
+          : null;
+      options.add(
+        definition.toDomain(
+          experience: experience,
+          price: price,
+          thresholdMessage: thresholdMessage,
+          promoMessage: promoMessage,
+        ),
+      );
+    }
+    return CheckoutShippingOptionsData(
+      options: options,
+      selectedOptionId: selectedId,
+      advisory: advisory,
+    );
+  }
+
+  @override
+  Future<CartSnapshot> selectShippingOption({
+    required ExperienceGate experience,
+    required String optionId,
+  }) async {
+    await Future<void>.delayed(_delay);
+    final raw = await _ensureSnapshot(experience);
+    final definition = _resolveShippingDefinition(optionId, experience);
+    final restriction = _validateShippingRestriction(
+      experience: experience,
+      promotion: raw.promotion,
+      option: definition,
+    );
+    if (restriction != null) {
+      throw CheckoutShippingException(restriction);
+    }
+    final bundle = _updateAndBuild(
+      raw.copyWith(shippingOptionId: definition.id),
+      experience,
+    );
+    await _cache.writeCart(bundle.raw);
+    return bundle.view;
+  }
+
   Future<CachedCartSnapshot> _ensureSnapshot(ExperienceGate experience) async {
     final stored = await _cache.readCart();
     if (stored.value != null) {
@@ -179,10 +279,13 @@ class FakeCartRepository implements CartRepository {
     ExperienceGate experience,
   ) {
     final lines = [for (final line in raw.lines) _buildLine(line, experience)];
+    final initialShippingId =
+        raw.shippingOptionId ?? _defaultShippingOptionId(experience);
     final estimate = _calculateEstimate(
       lines: lines,
       promotion: raw.promotion,
       experience: experience,
+      shippingOptionId: initialShippingId,
     );
     final updated = raw.copyWith(
       subtotal: estimate.estimate.subtotal,
@@ -192,6 +295,7 @@ class FakeCartRepository implements CartRepository {
       tax: estimate.estimate.tax,
       promotion: raw.promotion,
       updatedAt: DateTime.now(),
+      shippingOptionId: estimate.resolvedOptionId,
     );
     final snapshot = CartSnapshot(
       lines: lines,
@@ -200,6 +304,7 @@ class FakeCartRepository implements CartRepository {
       experience: experience,
       promotion: estimate.promotion,
       updatedAt: updated.updatedAt,
+      shippingOption: estimate.shippingOption,
     );
     return _SnapshotBundle(updated, snapshot);
   }
@@ -290,6 +395,7 @@ class FakeCartRepository implements CartRepository {
       lines: lines,
       currency: experience.isInternational ? 'USD' : 'JPY',
       updatedAt: DateTime.now(),
+      shippingOptionId: _defaultShippingOptionId(experience),
     );
   }
 
@@ -385,28 +491,97 @@ class FakeCartRepository implements CartRepository {
     return '$symbol$formatted';
   }
 
+  CheckoutShippingAdvisory? _activeShippingAdvisory(ExperienceGate experience) {
+    if (experience.isInternational) {
+      return const CheckoutShippingAdvisory(
+        title: 'Service advisory',
+        message:
+            'Customs inspections in EU hubs are adding 1‑2 business days. '
+            'Please allow additional time for priority packages.',
+        level: CheckoutShippingAdvisoryLevel.warning,
+      );
+    }
+    return const CheckoutShippingAdvisory(
+      title: '配送のお知らせ',
+      message: '関東エリアでの強風により一部でお届けが通常より1日遅れる可能性があります。',
+      level: CheckoutShippingAdvisoryLevel.warning,
+    );
+  }
+
+  bool _supportsExperience(
+    _ShippingOptionDefinition definition,
+    ExperienceGate experience,
+  ) {
+    return experience.isInternational
+        ? definition.region == CheckoutShippingRegion.international
+        : definition.region == CheckoutShippingRegion.domestic;
+  }
+
+  _ShippingOptionDefinition _resolveShippingDefinition(
+    String optionId,
+    ExperienceGate experience,
+  ) {
+    final definition = _shippingOptions[optionId];
+    if (definition != null && _supportsExperience(definition, experience)) {
+      return definition;
+    }
+    final fallbackId = _defaultShippingOptionId(experience);
+    return _shippingOptions[fallbackId]!;
+  }
+
+  String _defaultShippingOptionId(ExperienceGate experience) {
+    return experience.isInternational ? 'intl-priority' : 'domestic-standard';
+  }
+
+  String? _validateShippingRestriction({
+    required ExperienceGate experience,
+    required Map<String, dynamic>? promotion,
+    required _ShippingOptionDefinition option,
+  }) {
+    final code = (promotion?['code'] as String?)?.toUpperCase();
+    final type = promotion?['type'] as String?;
+    final requiresExpress = code == 'FREESHIP' && type == 'free_shipping';
+    if (requiresExpress && option.speed != CheckoutShippingSpeed.express) {
+      return experience.isInternational
+          ? 'FREESHIP covers express courier only. Select the express option to keep the benefit.'
+          : '送料無料コード（FREESHIP）はエクスプレス便でのみご利用いただけます。';
+    }
+    return null;
+  }
+
   _EstimateComputation _calculateEstimate({
     required List<CartLine> lines,
     required Map<String, dynamic>? promotion,
     required ExperienceGate experience,
+    required String shippingOptionId,
   }) {
     final currency = experience.isInternational ? 'USD' : 'JPY';
     final subtotal = lines.fold<double>(0, (sum, line) => sum + line.lineTotal);
     var discount = 0.0;
-    double baseShipping;
-    if (subtotal <= 0) {
-      baseShipping = 0.0;
-    } else if (experience.isInternational) {
-      baseShipping = subtotal >= 250 ? 0.0 : 24.0;
-    } else {
-      baseShipping = subtotal >= 20000 ? 0.0 : 880.0;
-    }
-    var shipping = baseShipping;
     CartPromotion? promo;
+    final resolvedOption = _resolveShippingDefinition(
+      shippingOptionId,
+      experience,
+    );
+    final threshold = experience.isInternational
+        ? resolvedOption.freeThresholdUsd
+        : resolvedOption.freeThresholdJpy;
+    final thresholdApplied =
+        subtotal > 0 && threshold != null && subtotal >= threshold;
+    final baseShipping = subtotal <= 0
+        ? 0.0
+        : thresholdApplied
+        ? 0.0
+        : (experience.isInternational
+              ? resolvedOption.baseCostUsd
+              : resolvedOption.baseCostJpy);
+    var shipping = baseShipping;
+    double shippingSavings = 0.0;
+
+    final code = (promotion?['code'] as String?)?.toUpperCase();
+    final type = promotion?['type'] as String?;
+    final value = (promotion?['value'] as num?)?.toDouble() ?? 0;
     if (promotion != null && promotion.isNotEmpty) {
-      final code = (promotion['code'] as String?)?.toUpperCase();
-      final type = promotion['type'] as String? ?? 'percentage';
-      final value = (promotion['value'] as num?)?.toDouble() ?? 0;
       switch (type) {
         case 'percentage':
           discount = subtotal * (value / 100);
@@ -415,13 +590,15 @@ class FakeCartRepository implements CartRepository {
           discount = min(value, subtotal).toDouble();
           break;
         case 'free_shipping':
+          shippingSavings = shipping;
           shipping = 0.0;
+          break;
+        default:
+          discount = subtotal * (value / 100);
           break;
       }
       final definition = code != null ? _promotionDefinitions[code] : null;
-      final savings = type == 'free_shipping'
-          ? baseShipping - shipping
-          : discount;
+      final savings = type == 'free_shipping' ? shippingSavings : discount;
       if (definition != null) {
         promo = definition.toDomain(
           experience: experience,
@@ -444,6 +621,23 @@ class FakeCartRepository implements CartRepository {
     final taxRate = experience.isInternational ? 0.0 : 0.1;
     final tax = taxable * taxRate;
     final total = max(0.0, taxable + shipping + tax);
+    final thresholdValue = threshold ?? 0;
+    final thresholdMessage = thresholdApplied
+        ? (experience.isInternational
+              ? 'Free over ${_formatCurrency(thresholdValue, experience)} subtotal'
+              : '小計が${_formatCurrency(thresholdValue, experience)}以上で送料無料')
+        : null;
+    final promoMessage = shipping <= 0 && shippingSavings > 0 && code != null
+        ? (experience.isInternational
+              ? '$code applied: express shipping covered'
+              : '$code 適用中: エクスプレス送料無料')
+        : null;
+    final shippingOption = resolvedOption.toDomain(
+      experience: experience,
+      price: shipping,
+      thresholdMessage: thresholdMessage,
+      promoMessage: promoMessage,
+    );
     final estimate = CartEstimate(
       subtotal: subtotal,
       discount: discount,
@@ -451,12 +645,125 @@ class FakeCartRepository implements CartRepository {
       tax: tax,
       total: total,
       currency: currency,
-      estimatedDelivery: experience.isInternational
-          ? 'Ships within 3 business days • Delivery in 5‑7 via EMS'
-          : '最短3営業日以内に発送 • 国内配送2〜3日',
+      estimatedDelivery: shippingOption.estimatedDelivery,
     );
-    return _EstimateComputation(estimate: estimate, promotion: promo);
+    return _EstimateComputation(
+      estimate: estimate,
+      promotion: promo,
+      shippingOption: shippingOption,
+      resolvedOptionId: resolvedOption.id,
+    );
   }
+
+  static final Map<String, _ShippingOptionDefinition> _shippingOptions =
+      <String, _ShippingOptionDefinition>{
+        'domestic-standard': const _ShippingOptionDefinition(
+          id: 'domestic-standard',
+          region: CheckoutShippingRegion.domestic,
+          speed: CheckoutShippingSpeed.standard,
+          baseCostJpy: 880.0,
+          baseCostUsd: 6.8,
+          labelJa: '通常便（ヤマト宅急便）',
+          labelEn: 'Domestic standard (Yamato)',
+          summaryJa: '追跡・時間指定対応',
+          summaryEn: 'Tracking • evening delivery slots',
+          etaJa: '発送後2〜3営業日',
+          etaEn: 'Ships next day • delivery in 2‑3 business days',
+          perksJa: ['追跡番号', '時間指定'],
+          perksEn: ['Tracking', 'Time slots'],
+          badgeJa: 'おすすめ',
+          badgeEn: 'Best value',
+          freeThresholdJpy: 20000.0,
+          freeThresholdUsd: 150.0,
+          recommendedDomestic: true,
+        ),
+        'domestic-express': const _ShippingOptionDefinition(
+          id: 'domestic-express',
+          region: CheckoutShippingRegion.domestic,
+          speed: CheckoutShippingSpeed.express,
+          baseCostJpy: 1400.0,
+          baseCostUsd: 10.5,
+          labelJa: 'エクスプレス便（翌日午前着）',
+          labelEn: 'Domestic express AM delivery',
+          summaryJa: '午前中指定 / 補償付き',
+          summaryEn: 'Morning delivery • insurance included',
+          etaJa: '発送後1営業日以内',
+          etaEn: 'Delivery by next business morning',
+          perksJa: ['午前中お届け', '補償付き'],
+          perksEn: ['Morning delivery', 'Insurance'],
+          badgeJa: '最速',
+          badgeEn: 'Fastest',
+        ),
+        'domestic-sameday': const _ShippingOptionDefinition(
+          id: 'domestic-sameday',
+          region: CheckoutShippingRegion.domestic,
+          speed: CheckoutShippingSpeed.express,
+          baseCostJpy: 2200.0,
+          baseCostUsd: 17.5,
+          labelJa: '当日バイク便（首都圏）',
+          labelEn: 'Same-day courier (Tokyo)',
+          summaryJa: '23区限定 / 置き配可',
+          summaryEn: 'Tokyo 23 wards • leave-at-door option',
+          etaJa: '最短3時間でお届け',
+          etaEn: 'As fast as 3 hours',
+          perksJa: ['首都圏限定', '置き配対応'],
+          perksEn: ['Metro coverage', 'Drop-off allowed'],
+        ),
+        'intl-economy': const _ShippingOptionDefinition(
+          id: 'intl-economy',
+          region: CheckoutShippingRegion.international,
+          speed: CheckoutShippingSpeed.economy,
+          baseCostJpy: 3200.0,
+          baseCostUsd: 18.0,
+          labelJa: '国際エコノミー（SAL）',
+          labelEn: 'International economy air',
+          summaryJa: '追跡あり / 税関対応サポート',
+          summaryEn: 'Tracking • customs assistance',
+          etaJa: '発送後7〜12営業日',
+          etaEn: 'Delivery in 7‑12 business days',
+          perksJa: ['税関書類サポート'],
+          perksEn: ['Customs paperwork support'],
+          badgeJa: '節約',
+          badgeEn: 'Saver',
+        ),
+        'intl-priority': const _ShippingOptionDefinition(
+          id: 'intl-priority',
+          region: CheckoutShippingRegion.international,
+          speed: CheckoutShippingSpeed.standard,
+          baseCostJpy: 4200.0,
+          baseCostUsd: 24.0,
+          labelJa: '国際優先便（EMS）',
+          labelEn: 'International priority (EMS)',
+          summaryJa: '追跡・補償付き / 配達6〜8日',
+          summaryEn: 'Tracking & insurance • delivery in 5‑8 days',
+          etaJa: '発送後5〜8営業日',
+          etaEn: 'Ships within 2 days • arrives in 5‑8 business days',
+          perksJa: ['補償付き', '土曜配送'],
+          perksEn: ['Insurance', 'Saturday delivery'],
+          badgeJa: '定番',
+          badgeEn: 'Recommended',
+          freeThresholdJpy: 35000.0,
+          freeThresholdUsd: 250.0,
+          recommendedInternational: true,
+        ),
+        'intl-express': const _ShippingOptionDefinition(
+          id: 'intl-express',
+          region: CheckoutShippingRegion.international,
+          speed: CheckoutShippingSpeed.express,
+          baseCostJpy: 6200.0,
+          baseCostUsd: 42.0,
+          labelJa: '国際エクスプレス（DHL）',
+          labelEn: 'International express (DHL)',
+          summaryJa: '税関前払い / 最速2〜3日',
+          summaryEn: 'Customs pre-cleared • delivery in 2‑3 days',
+          etaJa: '発送後2〜3営業日',
+          etaEn: 'Delivery in 2‑3 business days',
+          perksJa: ['税関前払い', '時間指定'],
+          perksEn: ['Duties prepaid', 'Time slots'],
+          badgeJa: 'グローバル最速',
+          badgeEn: 'Fastest global',
+        ),
+      };
 
   static final Map<String, _CartCatalogEntry>
   _cartCatalog = <String, _CartCatalogEntry>{
@@ -584,6 +891,15 @@ class CartPromotionException implements Exception {
   String toString() => 'CartPromotionException($message)';
 }
 
+class CheckoutShippingException implements Exception {
+  CheckoutShippingException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'CheckoutShippingException($message)';
+}
+
 class _SnapshotBundle {
   _SnapshotBundle(this.raw, this.view);
 
@@ -592,13 +908,94 @@ class _SnapshotBundle {
 }
 
 class _EstimateComputation {
-  _EstimateComputation({required this.estimate, this.promotion});
+  _EstimateComputation({
+    required this.estimate,
+    required this.shippingOption,
+    required this.resolvedOptionId,
+    this.promotion,
+  });
 
   final CartEstimate estimate;
+  final CheckoutShippingOption shippingOption;
+  final String resolvedOptionId;
   final CartPromotion? promotion;
 }
 
 enum _PromotionType { percentage, flat, freeShipping }
+
+class _ShippingOptionDefinition {
+  const _ShippingOptionDefinition({
+    required this.id,
+    required this.region,
+    required this.speed,
+    required this.baseCostJpy,
+    required this.baseCostUsd,
+    required this.labelJa,
+    required this.labelEn,
+    required this.summaryJa,
+    required this.summaryEn,
+    required this.etaJa,
+    required this.etaEn,
+    this.perksJa = const <String>[],
+    this.perksEn = const <String>[],
+    this.badgeJa,
+    this.badgeEn,
+    this.freeThresholdJpy,
+    this.freeThresholdUsd,
+    this.recommendedDomestic = false,
+    this.recommendedInternational = false,
+  });
+
+  final String id;
+  final CheckoutShippingRegion region;
+  final CheckoutShippingSpeed speed;
+  final double baseCostJpy;
+  final double baseCostUsd;
+  final String labelJa;
+  final String labelEn;
+  final String summaryJa;
+  final String summaryEn;
+  final String etaJa;
+  final String etaEn;
+  final List<String> perksJa;
+  final List<String> perksEn;
+  final String? badgeJa;
+  final String? badgeEn;
+  final double? freeThresholdJpy;
+  final double? freeThresholdUsd;
+  final bool recommendedDomestic;
+  final bool recommendedInternational;
+
+  CheckoutShippingOption toDomain({
+    required ExperienceGate experience,
+    required double price,
+    String? thresholdMessage,
+    String? promoMessage,
+  }) {
+    final isIntl = experience.isInternational;
+    final perks = <String>[...(isIntl ? perksEn : perksJa)];
+    if (thresholdMessage != null) {
+      perks.add(thresholdMessage);
+    } else if (promoMessage != null) {
+      perks.add(promoMessage);
+    } else if (price <= 0) {
+      perks.add(isIntl ? 'Free shipping' : '送料無料');
+    }
+    return CheckoutShippingOption(
+      id: id,
+      label: isIntl ? labelEn : labelJa,
+      summary: isIntl ? summaryEn : summaryJa,
+      estimatedDelivery: isIntl ? etaEn : etaJa,
+      price: price,
+      currency: isIntl ? 'USD' : 'JPY',
+      region: region,
+      speed: speed,
+      perks: perks,
+      badge: isIntl ? badgeEn : badgeJa,
+      isRecommended: isIntl ? recommendedInternational : recommendedDomestic,
+    );
+  }
+}
 
 class _PromotionDefinition {
   const _PromotionDefinition._({
