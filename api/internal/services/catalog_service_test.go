@@ -1335,6 +1335,10 @@ func (s *stubInventorySafetyService) CommitReservation(context.Context, Inventor
 	return InventoryReservation{}, errors.New("not implemented")
 }
 
+func (s *stubInventorySafetyService) GetReservation(context.Context, string) (InventoryReservation, error) {
+	return InventoryReservation{}, errors.New("not implemented")
+}
+
 func (s *stubInventorySafetyService) ReleaseReservation(context.Context, InventoryReleaseCommand) (InventoryReservation, error) {
 	return InventoryReservation{}, errors.New("not implemented")
 }

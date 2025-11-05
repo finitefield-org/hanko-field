@@ -183,6 +183,19 @@ func (s *inventoryService) CommitReservation(ctx context.Context, cmd InventoryC
 	return result.Reservation, nil
 }
 
+func (s *inventoryService) GetReservation(ctx context.Context, reservationID string) (InventoryReservation, error) {
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		return InventoryReservation{}, fmt.Errorf("%w: reservation id is required", ErrInventoryInvalidInput)
+	}
+
+	reservation, err := s.repo.GetReservation(ctx, reservationID)
+	if err != nil {
+		return InventoryReservation{}, s.mapRepositoryError(err)
+	}
+	return InventoryReservation(reservation), nil
+}
+
 func (s *inventoryService) ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error) {
 	reservationID := strings.TrimSpace(cmd.ReservationID)
 	if reservationID == "" {

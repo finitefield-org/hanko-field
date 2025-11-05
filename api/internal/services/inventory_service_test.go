@@ -253,6 +253,63 @@ func TestInventoryServiceCommitEmitsEvents(t *testing.T) {
 	}
 }
 
+func TestInventoryServiceGetReservation(t *testing.T) {
+	repo := &stubInventoryRepo{}
+	expected := domain.InventoryReservation{
+		ID:        "sr_test",
+		Status:    statusCommitted,
+		OrderRef:  "/orders/order-1",
+		UserRef:   "/users/user-1",
+		UpdatedAt: time.Now().UTC(),
+	}
+	repo.getFn = func(ctx context.Context, reservationID string) (domain.InventoryReservation, error) {
+		if reservationID != "sr_test" {
+			t.Fatalf("expected reservation id sr_test got %s", reservationID)
+		}
+		return expected, nil
+	}
+
+	svc, err := NewInventoryService(InventoryServiceDeps{
+		Inventory: repo,
+	})
+	if err != nil {
+		t.Fatalf("new inventory service: %v", err)
+	}
+
+	reservation, err := svc.GetReservation(context.Background(), "sr_test")
+	if err != nil {
+		t.Fatalf("get reservation: %v", err)
+	}
+	if reservation.ID != expected.ID || reservation.Status != expected.Status {
+		t.Fatalf("unexpected reservation %#v", reservation)
+	}
+}
+
+func TestInventoryServiceGetReservationValidation(t *testing.T) {
+	repo := &stubInventoryRepo{}
+	svc, err := NewInventoryService(InventoryServiceDeps{Inventory: repo})
+	if err != nil {
+		t.Fatalf("new inventory service: %v", err)
+	}
+	if _, err := svc.GetReservation(context.Background(), ""); err == nil || !errors.Is(err, ErrInventoryInvalidInput) {
+		t.Fatalf("expected invalid input error, got %v", err)
+	}
+}
+
+func TestInventoryServiceGetReservationMapsErrors(t *testing.T) {
+	repo := &stubInventoryRepo{}
+	repo.getFn = func(ctx context.Context, reservationID string) (domain.InventoryReservation, error) {
+		return domain.InventoryReservation{}, repositories.NewInventoryError(repositories.InventoryErrorReservationNotFound, "missing", nil)
+	}
+	svc, err := NewInventoryService(InventoryServiceDeps{Inventory: repo})
+	if err != nil {
+		t.Fatalf("new inventory service: %v", err)
+	}
+	if _, err := svc.GetReservation(context.Background(), "sr_missing"); err == nil || !errors.Is(err, ErrInventoryReservationNotFound) {
+		t.Fatalf("expected reservation not found error, got %v", err)
+	}
+}
+
 func TestInventoryServiceListLowStock(t *testing.T) {
 	repo := &stubInventoryRepo{}
 	repo.listFn = func(ctx context.Context, query repositories.InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error) {

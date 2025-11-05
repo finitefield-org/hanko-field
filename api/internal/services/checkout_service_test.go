@@ -757,6 +757,10 @@ func (s *stubCheckoutInventory) CommitReservation(context.Context, InventoryComm
 	return InventoryReservation{}, errors.New("not implemented")
 }
 
+func (s *stubCheckoutInventory) GetReservation(context.Context, string) (InventoryReservation, error) {
+	return InventoryReservation{}, errors.New("not implemented")
+}
+
 func (s *stubCheckoutInventory) ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error) {
 	if s.releaseFunc != nil {
 		return s.releaseFunc(ctx, cmd)

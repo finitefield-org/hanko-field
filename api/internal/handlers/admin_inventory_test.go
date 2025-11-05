@@ -363,6 +363,7 @@ func TestAdminInventoryHandlers_WithConfigZeroValuesFallback(t *testing.T) {
 type stubInventoryService struct {
 	listFn           func(context.Context, services.InventoryLowStockFilter) (domain.CursorPage[services.InventorySnapshot], error)
 	releaseExpiredFn func(context.Context, services.ReleaseExpiredReservationsCommand) (services.InventoryReleaseExpiredResult, error)
+	getFn            func(context.Context, string) (services.InventoryReservation, error)
 }
 
 func (s *stubInventoryService) ReserveStocks(ctx context.Context, cmd services.InventoryReserveCommand) (services.InventoryReservation, error) {
@@ -370,6 +371,13 @@ func (s *stubInventoryService) ReserveStocks(ctx context.Context, cmd services.I
 }
 
 func (s *stubInventoryService) CommitReservation(ctx context.Context, cmd services.InventoryCommitCommand) (services.InventoryReservation, error) {
+	return services.InventoryReservation{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) GetReservation(ctx context.Context, reservationID string) (services.InventoryReservation, error) {
+	if s.getFn != nil {
+		return s.getFn(ctx, reservationID)
+	}
 	return services.InventoryReservation{}, errors.New("not implemented")
 }
 

@@ -344,6 +344,14 @@ func main() {
 	}
 	cartHandlers := handlers.NewCartHandlers(authenticator, cartService)
 
+	var (
+		orderService    services.OrderService
+		shipmentService services.ShipmentService
+		exportService   services.ExportService
+		paymentService  services.PaymentService
+		jobDispatcher   services.BackgroundJobDispatcher
+	)
+
 	checkoutLogger := logger.Named("checkout")
 	checkoutWorkflowDispatcher := services.CheckoutWorkflowDispatcherFunc(func(ctx context.Context, payload services.CheckoutWorkflowPayload) (string, error) {
 		workflowID := ulid.Make().String()
@@ -382,6 +390,7 @@ func main() {
 	internalCheckoutHandlers := handlers.NewInternalCheckoutHandlers(
 		inventoryService,
 		handlers.WithInternalCheckoutMetrics(handlers.NewCheckoutReservationMetrics(logger.Named("metrics.checkout"))),
+		handlers.WithInternalCheckoutOrders(orderService),
 	)
 
 	nameMappingLogger := logger.Named("name_mapping")
@@ -438,13 +447,6 @@ func main() {
 	}
 	designHandlers := handlers.NewDesignHandlers(authenticator, designService)
 	reviewHandlers := handlers.NewReviewHandlers(authenticator, nil)
-	var (
-		orderService    services.OrderService
-		shipmentService services.ShipmentService
-		exportService   services.ExportService
-		paymentService  services.PaymentService
-		jobDispatcher   services.BackgroundJobDispatcher
-	)
 	exportLogger := logger.Named("exports")
 	exportPublisher := services.NewNoopExportPublisher()
 	exportService, err = services.NewExportService(services.ExportServiceDeps{

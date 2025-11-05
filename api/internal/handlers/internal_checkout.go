@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 
+	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/httpx"
 	"github.com/hanko-field/api/internal/platform/observability"
 	"github.com/hanko-field/api/internal/services"
@@ -22,13 +23,16 @@ import (
 
 const (
 	maxInternalReserveRequestBody = 16 * 1024
+	maxInternalCommitRequestBody  = 4 * 1024
 	checkoutReserveReason         = "internal_checkout"
 )
 
 // InternalCheckoutHandlers exposes internal checkout-specific operations.
 type InternalCheckoutHandlers struct {
-	inventory services.InventoryService
-	metrics   checkoutReservationMetricsRecorder
+	inventory  services.InventoryService
+	orders     services.OrderService
+	promotions services.PromotionService
+	metrics    checkoutReservationMetricsRecorder
 }
 
 // InternalCheckoutOption customises internal checkout handlers during construction.
@@ -129,6 +133,24 @@ func WithInternalCheckoutMetrics(metrics CheckoutReservationMetrics) InternalChe
 	}
 }
 
+// WithInternalCheckoutOrders sets the order service used by checkout handlers.
+func WithInternalCheckoutOrders(orders services.OrderService) InternalCheckoutOption {
+	return func(h *InternalCheckoutHandlers) {
+		if orders != nil {
+			h.orders = orders
+		}
+	}
+}
+
+// WithInternalCheckoutPromotions sets the promotion service used by checkout handlers.
+func WithInternalCheckoutPromotions(promotions services.PromotionService) InternalCheckoutOption {
+	return func(h *InternalCheckoutHandlers) {
+		if promotions != nil {
+			h.promotions = promotions
+		}
+	}
+}
+
 // NewInternalCheckoutHandlers wires dependencies for internal checkout operations.
 func NewInternalCheckoutHandlers(inventory services.InventoryService, opts ...InternalCheckoutOption) *InternalCheckoutHandlers {
 	handler := &InternalCheckoutHandlers{
@@ -150,6 +172,7 @@ func (h *InternalCheckoutHandlers) Routes(r chi.Router) {
 		return
 	}
 	r.Post("/checkout/reserve-stock", h.reserveStock)
+	r.Post("/checkout/commit", h.commitCheckout)
 }
 
 type internalReserveStockRequest struct {
@@ -185,6 +208,23 @@ type internalReserveStockLineReply struct {
 	ProductRef string `json:"productRef"`
 	SKU        string `json:"sku"`
 	Quantity   int    `json:"quantity"`
+}
+
+type internalCheckoutCommitRequest struct {
+	OrderID         string `json:"orderId"`
+	ReservationID   string `json:"reservationId"`
+	ActorID         string `json:"actorId"`
+	PaymentIntentID string `json:"paymentIntentId"`
+}
+
+type internalCheckoutCommitResponse struct {
+	OrderID           string `json:"orderId"`
+	OrderStatus       string `json:"orderStatus"`
+	ReservationID     string `json:"reservationId,omitempty"`
+	ReservationStatus string `json:"reservationStatus,omitempty"`
+	PaidAt            string `json:"paidAt,omitempty"`
+	PromotionCode     string `json:"promotionCode,omitempty"`
+	Message           string `json:"message,omitempty"`
 }
 
 func (h *InternalCheckoutHandlers) reserveStock(w http.ResponseWriter, r *http.Request) {
@@ -255,6 +295,152 @@ func (h *InternalCheckoutHandlers) reserveStock(w http.ResponseWriter, r *http.R
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
+func (h *InternalCheckoutHandlers) commitCheckout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if h == nil || h.inventory == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("inventory_unavailable", "inventory service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+	if h.orders == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("order_service_unavailable", "order service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxInternalCommitRequestBody)
+	if err != nil {
+		code := http.StatusBadRequest
+		switch {
+		case errors.Is(err, errBodyTooLarge):
+			code = http.StatusRequestEntityTooLarge
+		case errors.Is(err, errEmptyBody):
+			code = http.StatusBadRequest
+		}
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), code))
+		return
+	}
+
+	var req internalCheckoutCommitRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body must be valid JSON", http.StatusBadRequest))
+		return
+	}
+
+	orderID := strings.TrimSpace(req.OrderID)
+	if orderID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "orderId is required", http.StatusBadRequest))
+		return
+	}
+
+	actorID := strings.TrimSpace(req.ActorID)
+	reservationID := strings.TrimSpace(req.ReservationID)
+
+	order, err := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{})
+	if err != nil {
+		writeInternalCheckoutOrderError(ctx, w, err)
+		return
+	}
+
+	if reservationID == "" {
+		reservationID = extractReservationID(order.Metadata)
+	}
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("reservation_missing", "order does not have an associated reservation", http.StatusConflict))
+		return
+	}
+
+	status := normalizeOrderStatus(order.Status)
+	logger := observability.FromContext(ctx).Named("internal.checkout")
+
+	var reservationPtr *services.InventoryReservation
+
+	if status == domain.OrderStatusPaid {
+		if existing, err := h.inventory.GetReservation(ctx, reservationID); err == nil {
+			reservationPtr = &existing
+		}
+		resp := buildCommitResponse(order, reservationPtr, "order already marked as paid")
+		writeJSONResponse(w, http.StatusOK, resp)
+		logger.Info("checkout commit idempotent",
+			zap.String("orderId", orderID),
+			zap.String("reservationId", reservationID),
+			zap.String("status", string(order.Status)),
+		)
+		return
+	}
+
+	if status != domain.OrderStatusPendingPayment {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_order_status", fmt.Sprintf("order status %s cannot be committed", status), http.StatusConflict))
+		return
+	}
+
+	reservation, err := h.inventory.CommitReservation(ctx, services.InventoryCommitCommand{
+		ReservationID: reservationID,
+		OrderID:       orderID,
+		ActorID:       actorID,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrInventoryInvalidState) {
+			existing, fetchErr := h.inventory.GetReservation(ctx, reservationID)
+			if fetchErr == nil && strings.EqualFold(strings.TrimSpace(existing.Status), "committed") {
+				reservation = existing
+				reservationPtr = &existing
+			} else {
+				if fetchErr != nil {
+					h.handleCommitError(ctx, w, fetchErr)
+				} else {
+					httpx.WriteError(ctx, w, httpx.NewError("invalid_reservation_state", err.Error(), http.StatusConflict))
+				}
+				return
+			}
+		} else {
+			h.handleCommitError(ctx, w, err)
+			return
+		}
+	}
+	if reservationPtr == nil {
+		reservationPtr = &reservation
+	}
+
+	metadata := buildCommitMetadata(reservationID, actorID, strings.TrimSpace(req.PaymentIntentID), order)
+	expected := services.OrderStatus(domain.OrderStatusPendingPayment)
+
+	updatedOrder, err := h.orders.TransitionStatus(ctx, services.OrderStatusTransitionCommand{
+		OrderID:        orderID,
+		TargetStatus:   domain.OrderStatusPaid,
+		ActorID:        actorID,
+		ExpectedStatus: &expected,
+		Metadata:       metadata,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrOrderConflict) || errors.Is(err, services.ErrOrderInvalidState) {
+			latest, fetchErr := h.orders.GetOrder(ctx, orderID, services.OrderReadOptions{})
+			if fetchErr == nil && normalizeOrderStatus(latest.Status) == domain.OrderStatusPaid {
+				resp := buildCommitResponse(latest, reservationPtr, "order already transitioned")
+				writeJSONResponse(w, http.StatusOK, resp)
+				logger.Info("checkout commit idempotent",
+					zap.String("orderId", orderID),
+					zap.String("reservationId", reservationID),
+					zap.String("status", string(latest.Status)),
+				)
+				return
+			}
+		}
+		writeInternalCheckoutOrderError(ctx, w, err)
+		return
+	}
+
+	resp := buildCommitResponse(updatedOrder, reservationPtr, "")
+	writeJSONResponse(w, http.StatusOK, resp)
+
+	logger.Info("checkout commit completed",
+		zap.String("orderId", orderID),
+		zap.String("reservationId", reservationID),
+		zap.String("orderStatus", string(updatedOrder.Status)),
+		zap.String("reservationStatus", strings.TrimSpace(reservation.Status)),
+	)
+}
+
 func (h *InternalCheckoutHandlers) handleReserveError(ctx context.Context, w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, services.ErrInventoryInvalidInput):
@@ -272,12 +458,92 @@ func (h *InternalCheckoutHandlers) handleReserveError(ctx context.Context, w htt
 	}
 }
 
+func (h *InternalCheckoutHandlers) handleCommitError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, services.ErrInventoryInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+	case errors.Is(err, services.ErrInventoryReservationNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("reservation_not_found", err.Error(), http.StatusNotFound))
+	case errors.Is(err, services.ErrInventoryInvalidState):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_reservation_state", err.Error(), http.StatusConflict))
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("commit_error", "failed to commit reservation", http.StatusInternalServerError))
+	}
+}
+
 func (h *InternalCheckoutHandlers) recordFailure(ctx context.Context, reason string) {
 	metrics := h.metrics
 	if metrics == nil {
 		return
 	}
 	metrics.RecordFailure(ctx, reason)
+}
+
+func writeInternalCheckoutOrderError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, services.ErrOrderInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+	case errors.Is(err, services.ErrOrderNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("order_not_found", "order not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrOrderConflict), errors.Is(err, services.ErrOrderInvalidState):
+		httpx.WriteError(ctx, w, httpx.NewError("order_conflict", err.Error(), http.StatusConflict))
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("order_error", "failed to process order", http.StatusInternalServerError))
+	}
+}
+
+func buildCommitMetadata(reservationID, actorID, paymentIntentID string, order services.Order) map[string]any {
+	metadata := map[string]any{
+		"source": "internal_checkout_commit",
+	}
+	if reservationID != "" {
+		metadata["reservationId"] = reservationID
+	}
+	if paymentIntentID != "" {
+		metadata["paymentIntentId"] = paymentIntentID
+	}
+	if actorID != "" {
+		metadata["actorId"] = actorID
+	}
+	if order.Promotion != nil {
+		if code := strings.TrimSpace(order.Promotion.Code); code != "" {
+			metadata["promotionCode"] = code
+		}
+	}
+	return metadata
+}
+
+func buildCommitResponse(order services.Order, reservation *services.InventoryReservation, message string) internalCheckoutCommitResponse {
+	response := internalCheckoutCommitResponse{
+		OrderID:     strings.TrimSpace(order.ID),
+		OrderStatus: strings.TrimSpace(string(order.Status)),
+		PaidAt:      formatTime(pointerTime(order.PaidAt)),
+	}
+	if reservation != nil {
+		if id := strings.TrimSpace(reservation.ID); id != "" {
+			response.ReservationID = id
+		} else if metaID := extractReservationID(order.Metadata); metaID != "" {
+			response.ReservationID = metaID
+		}
+		if status := strings.TrimSpace(reservation.Status); status != "" {
+			response.ReservationStatus = status
+		}
+	} else if metaID := extractReservationID(order.Metadata); metaID != "" {
+		response.ReservationID = metaID
+	}
+	if order.Promotion != nil {
+		if code := strings.TrimSpace(order.Promotion.Code); code != "" {
+			response.PromotionCode = code
+		}
+	}
+	if message != "" {
+		response.Message = message
+	}
+	return response
+}
+
+func normalizeOrderStatus(status services.OrderStatus) domain.OrderStatus {
+	return domain.OrderStatus(strings.TrimSpace(string(status)))
 }
 
 func buildReserveCommand(req internalReserveStockRequest) (services.InventoryReserveCommand, time.Duration, error) {

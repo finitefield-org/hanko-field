@@ -121,6 +121,7 @@ func (s *stubCounterRepo) Configure(context.Context, string, repositories.Counte
 
 type stubInventoryService struct {
 	commitFn  func(context.Context, InventoryCommitCommand) (InventoryReservation, error)
+	getFn     func(context.Context, string) (InventoryReservation, error)
 	releaseFn func(context.Context, InventoryReleaseCommand) (InventoryReservation, error)
 }
 
@@ -133,6 +134,13 @@ func (s *stubInventoryService) CommitReservation(ctx context.Context, cmd Invent
 		return s.commitFn(ctx, cmd)
 	}
 	return InventoryReservation{}, nil
+}
+
+func (s *stubInventoryService) GetReservation(ctx context.Context, reservationID string) (InventoryReservation, error) {
+	if s.getFn != nil {
+		return s.getFn(ctx, reservationID)
+	}
+	return InventoryReservation{}, errors.New("not implemented")
 }
 
 func (s *stubInventoryService) ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error) {

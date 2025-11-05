@@ -386,6 +386,7 @@ type InventoryEventPublisher interface {
 type InventoryService interface {
 	ReserveStocks(ctx context.Context, cmd InventoryReserveCommand) (InventoryReservation, error)
 	CommitReservation(ctx context.Context, cmd InventoryCommitCommand) (InventoryReservation, error)
+	GetReservation(ctx context.Context, reservationID string) (InventoryReservation, error)
 	ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error)
 	ReleaseExpiredReservations(ctx context.Context, cmd ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error)
 	ListLowStock(ctx context.Context, filter InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error)
