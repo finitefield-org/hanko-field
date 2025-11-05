@@ -149,6 +149,7 @@ type RowAction struct {
 type DrawerData struct {
 	Empty           bool
 	TransactionID   string
+	OrderID         string
 	StatusLabel     string
 	StatusTone      string
 	ProviderLabel   string
@@ -162,6 +163,7 @@ type DrawerData struct {
 	PaymentMethod   string
 	PSPReference    string
 	PSPDashboardURL string
+	RefundURL       string
 	Timeline        []DrawerTimeline
 	Breakdown       []DrawerBreakdown
 	Adjustments     []DrawerAdjustment
@@ -295,7 +297,7 @@ func TablePayload(basePath string, state QueryState, result adminpayments.Transa
 }
 
 // DrawerPayload converts the transaction detail into drawer view data.
-func DrawerPayload(detail adminpayments.TransactionDetail) DrawerData {
+func DrawerPayload(basePath string, detail adminpayments.TransactionDetail) DrawerData {
 	if detail.Transaction.ID == "" {
 		return DrawerData{Empty: true}
 	}
@@ -381,8 +383,15 @@ func DrawerPayload(detail adminpayments.TransactionDetail) DrawerData {
 		statusTone = statusToneFor(tx.Status)
 	}
 
+	orderID := strings.TrimSpace(tx.OrderID)
+	refundURL := ""
+	if orderID != "" {
+		refundURL = joinBase(basePath, fmt.Sprintf("/orders/%s/modal/refund", orderID))
+	}
+
 	return DrawerData{
 		TransactionID:   tx.ID,
+		OrderID:         orderID,
 		StatusLabel:     statusLabel,
 		StatusTone:      statusTone,
 		ProviderLabel:   tx.ProviderLabel,
@@ -396,6 +405,7 @@ func DrawerPayload(detail adminpayments.TransactionDetail) DrawerData {
 		PaymentMethod:   tx.PaymentMethod,
 		PSPReference:    tx.PSPReference,
 		PSPDashboardURL: tx.PSPDashboardURL,
+		RefundURL:       refundURL,
 		Timeline:        timeline,
 		Breakdown:       breakdown,
 		Adjustments:     adjustments,

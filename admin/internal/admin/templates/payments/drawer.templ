@@ -20,17 +20,31 @@ templ Drawer(data DrawerData) {
 			<div class="flex flex-col gap-2">
 				<div class="flex items-center justify-between gap-2">
 					<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
-					if data.PSPDashboardURL != "" {
-						@components.ButtonWith("PSPで開く", components.ButtonOptions{
-							Variant: "outline",
-							Size:    "sm",
-							Attrs: templpkg.Attributes{
-								"href": data.PSPDashboardURL,
-								"target": "_blank",
-								"rel":   "noopener noreferrer",
-							},
-						})
-					}
+					<div class="flex items-center gap-2">
+						if data.RefundURL != "" {
+							@components.ButtonWith("返金を登録", components.ButtonOptions{
+								Variant: "secondary",
+								Size:    "sm",
+								Type:    "button",
+								Attrs: templpkg.Attributes{
+									"hx-get":   data.RefundURL,
+									"hx-target": "#modal",
+									"hx-swap":  "innerHTML",
+								},
+							})
+						}
+						if data.PSPDashboardURL != "" {
+							@components.ButtonWith("PSPで開く", components.ButtonOptions{
+								Variant: "outline",
+								Size:    "sm",
+								Attrs: templpkg.Attributes{
+									"href": data.PSPDashboardURL,
+									"target": "_blank",
+									"rel":   "noopener noreferrer",
+								},
+							})
+						}
+					</div>
 				</div>
 				<h2 class="text-lg font-semibold text-slate-900">{ data.TransactionID }</h2>
 				<dl class="grid grid-cols-2 gap-2 text-xs text-slate-500">

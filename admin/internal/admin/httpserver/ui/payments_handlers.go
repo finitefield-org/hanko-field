@@ -57,7 +57,7 @@ func (h *Handlers) PaymentsTransactionsPage(w http.ResponseWriter, r *http.Reque
 	drawer := paymentstpl.DrawerData{Empty: true}
 	if selectedID != "" {
 		if detail, derr := h.payments.TransactionDetail(ctx, user.Token, selectedID); derr == nil {
-			drawer = paymentstpl.DrawerPayload(detail)
+			drawer = paymentstpl.DrawerPayload(basePath, detail)
 		} else if errors.Is(derr, adminpayments.ErrTransactionNotFound) {
 			drawer = paymentstpl.DrawerData{Empty: true}
 		} else {
@@ -138,7 +138,8 @@ func (h *Handlers) PaymentsTransactionsDrawer(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	payload := paymentstpl.DrawerPayload(detail)
+	basePath := custommw.BasePathFromContext(ctx)
+	payload := paymentstpl.DrawerPayload(basePath, detail)
 	templ.Handler(paymentstpl.Drawer(payload)).ServeHTTP(w, r)
 }
 
