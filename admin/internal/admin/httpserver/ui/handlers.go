@@ -10,6 +10,7 @@ import (
 	"github.com/a-h/templ"
 
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
+	adminaudit "finitefield.org/hanko-admin/internal/admin/auditlogs"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
@@ -32,6 +33,7 @@ import (
 
 // Dependencies collects external services required by the UI handlers.
 type Dependencies struct {
+	AuditLogsService     adminaudit.Service
 	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
 	ContentService       admincontent.Service
@@ -52,6 +54,7 @@ type Dependencies struct {
 
 // Handlers exposes HTTP handlers for admin UI pages and fragments.
 type Handlers struct {
+	auditlogs     adminaudit.Service
 	assets        adminassets.Service
 	catalog       admincatalog.Service
 	content       admincontent.Service
@@ -72,6 +75,10 @@ type Handlers struct {
 
 // NewHandlers wires the UI handler set.
 func NewHandlers(deps Dependencies) *Handlers {
+	auditLogsService := deps.AuditLogsService
+	if auditLogsService == nil {
+		auditLogsService = adminaudit.NewStaticService()
+	}
 	assetsService := deps.AssetsService
 	if assetsService == nil {
 		assetsService = adminassets.NewStaticService("https://uploads.example.com", "https://cdn.example.com/assets")
@@ -137,6 +144,7 @@ func NewHandlers(deps Dependencies) *Handlers {
 		orgService = adminorg.NewStaticService()
 	}
 	return &Handlers{
+		auditlogs:     auditLogsService,
 		assets:        assetsService,
 		catalog:       catalogService,
 		content:       contentService,

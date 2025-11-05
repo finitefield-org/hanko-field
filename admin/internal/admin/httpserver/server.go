@@ -11,6 +11,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
+	adminaudit "finitefield.org/hanko-admin/internal/admin/auditlogs"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
@@ -37,6 +38,7 @@ type Config struct {
 	BasePath             string
 	LoginPath            string
 	Authenticator        custommw.Authenticator
+	AuditLogsService     adminaudit.Service
 	AssetsService        adminassets.Service
 	CatalogService       admincatalog.Service
 	ContentService       admincontent.Service
@@ -113,6 +115,7 @@ func New(cfg Config) *http.Server {
 	}
 
 	uiHandlers := ui.NewHandlers(ui.Dependencies{
+		AuditLogsService:     cfg.AuditLogsService,
 		AssetsService:        cfg.AssetsService,
 		CatalogService:       cfg.CatalogService,
 		ContentService:       cfg.ContentService,
@@ -352,6 +355,12 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 					tax.Put("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleUpdate)
 					tax.Delete("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleDelete)
 				})
+			})
+			protected.Route("/audit-logs", func(ar chi.Router) {
+				ar.Use(custommw.RequireCapability(rbac.CapAuditLogView))
+				ar.Get("/", uiHandlers.AuditLogsPage)
+				RegisterFragment(ar, "/table", uiHandlers.AuditLogsTable)
+				ar.Get("/export", uiHandlers.AuditLogsExport)
 			})
 			protected.Route("/reviews", func(rr chi.Router) {
 				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))

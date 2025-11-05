@@ -867,6 +867,65 @@ const initShipmentsModule = () => {
   }
 };
 
+const initAuditLogsModule = () => {
+  const roots = Array.from(document.querySelectorAll("[data-auditlogs-root]")).filter(
+    (el) => el instanceof HTMLElement,
+  );
+  if (roots.length === 0) {
+    return;
+  }
+
+  const resolveTargetRow = (root, selector) => {
+    if (typeof selector !== "string" || selector.trim() === "") {
+      return null;
+    }
+    try {
+      return root.querySelector(selector);
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const toggleRow = (button, row, open) => {
+    if (!(button instanceof HTMLElement) || !(row instanceof HTMLElement)) {
+      return;
+    }
+    if (open) {
+      row.classList.remove("hidden");
+    } else {
+      row.classList.add("hidden");
+    }
+    const expanded = open ? "true" : "false";
+    button.setAttribute("aria-expanded", expanded);
+    const icon = button.querySelector("[data-audit-toggle-icon]");
+    if (icon instanceof HTMLElement) {
+      icon.classList.toggle("rotate-180", open);
+    }
+  };
+
+  roots.forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.auditlogsBound === "true") {
+      return;
+    }
+    root.dataset.auditlogsBound = "true";
+
+    root.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target.closest("[data-audit-toggle]") : null;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      event.preventDefault();
+      const selector = target.getAttribute("data-target");
+      const row = resolveTargetRow(root, selector);
+      if (!(row instanceof HTMLElement)) {
+        return;
+      }
+      const willOpen = row.classList.contains("hidden");
+      toggleRow(target, row, willOpen);
+    });
+  });
+};
+
 const initDashboardRefresh = () => {
   const parseTargets = (value) => {
     if (typeof value !== "string" || value.trim() === "") {
@@ -3203,6 +3262,7 @@ window.hankoAdmin = window.hankoAdmin || {
     initNotificationsSelection();
     initGuidesModule();
     initShipmentsModule();
+    initAuditLogsModule();
     initProductionKanban();
     initDashboardRefresh();
     initHXTriggerHandlers();
@@ -3222,6 +3282,7 @@ window.hankoAdmin = window.hankoAdmin || {
         initPromotionsModule(event.target);
         initGuidesModule();
         initShipmentsModule();
+        initAuditLogsModule();
         initProductionKanban();
         initAssetUploads(event.target);
       });

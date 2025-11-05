@@ -94,7 +94,7 @@
 - [x] [Surface reconciliation reports or export links as required by accounting stakeholders.](doc/admin/tasks/064-surface-reconciliation-reports-or-export-links-as-required-by-accounting-stakeholders.md)
 
 ## 12. Logs, Counters, and System Operations
-- [ ] [Implement audit log viewer (`/admin/audit-logs`) with table fragment, diff collapsible rows, and filters by target/user/date.](doc/admin/tasks/065-implement-audit-log-viewer-admin-audit-logs-with-table-fragment-diff-collapsible-rows-and-.md)
+- [x] [Implement audit log viewer (`/admin/audit-logs`) with table fragment, diff collapsible rows, and filters by target/user/date.](doc/admin/tasks/065-implement-audit-log-viewer-admin-audit-logs-with-table-fragment-diff-collapsible-rows-and-.md)
 - [ ] [Build system errors dashboard (`/admin/system/errors`) pulling failed webhook/job logs with retry actions when permitted.](doc/admin/tasks/066-build-system-errors-dashboard-admin-system-errors-pulling-failed-webhook-job-logs-with-ret.md)
 - [ ] [Build jobs/tasks monitor (`/admin/system/tasks`) showing scheduler runs, job status, and manual retry triggers.](doc/admin/tasks/067-build-jobs-tasks-monitor-admin-system-tasks-showing-scheduler-runs-job-status-and-manual-r.md)
 - [ ] [Implement counters management UI (`/admin/system/counters`) allowing admins to view and test `POST /admin/counters/{name}:next`.](doc/admin/tasks/068-implement-counters-management-ui-admin-system-counters-allowing-admins-to-view-and-test-po.md)
