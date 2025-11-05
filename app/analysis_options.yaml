@@ -28,7 +28,7 @@ linter:
     # General
     always_declare_return_types: true
     avoid_print: true
-    avoid_redundant_argument_values: true
+    avoid_redundant_argument_values: false
     avoid_types_on_closure_parameters: true
     curly_braces_in_flow_control_structures: true
     directives_ordering: true

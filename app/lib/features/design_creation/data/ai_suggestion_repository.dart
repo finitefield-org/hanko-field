@@ -211,7 +211,7 @@ class _SuggestionBlueprint {
   final DesignStyle style;
 
   static final samples = <_SuggestionBlueprint>[
-    _SuggestionBlueprint(
+    const _SuggestionBlueprint(
       title: 'Balance outer strokes',
       summary:
           'Strengthens outer strokes and increases margin to avoid ink bleed.',
@@ -226,8 +226,8 @@ class _SuggestionBlueprint {
         writing: DesignWritingStyle.tensho,
         fontRef: 'jp_tensho_classic',
         templateRef: 'tpl_ai_balance_round',
-        stroke: const DesignStroke(weight: 2.8),
-        layout: const DesignLayout(
+        stroke: DesignStroke(weight: 2.8),
+        layout: DesignLayout(
           margin: 5.5,
           alignment: DesignCanvasAlignment.center,
           rotation: 0,
@@ -235,7 +235,7 @@ class _SuggestionBlueprint {
         ),
       ),
     ),
-    _SuggestionBlueprint(
+    const _SuggestionBlueprint(
       title: 'Sharpen inner curves',
       summary:
           'Refines curved strokes with subtle rotation for improved legibility.',
@@ -250,8 +250,8 @@ class _SuggestionBlueprint {
         writing: DesignWritingStyle.reisho,
         fontRef: 'jp_reisho_fine',
         templateRef: 'tpl_ai_curves_square',
-        stroke: const DesignStroke(weight: 2.2),
-        layout: const DesignLayout(
+        stroke: DesignStroke(weight: 2.2),
+        layout: DesignLayout(
           margin: 4.0,
           alignment: DesignCanvasAlignment.center,
           rotation: 2,
@@ -259,7 +259,7 @@ class _SuggestionBlueprint {
         ),
       ),
     ),
-    _SuggestionBlueprint(
+    const _SuggestionBlueprint(
       title: 'Gift-friendly flourish',
       summary:
           'Adds soft baseline flourish and loosens spacing for a gift appeal.',
@@ -274,8 +274,8 @@ class _SuggestionBlueprint {
         writing: DesignWritingStyle.gyosho,
         fontRef: 'jp_kana_flow',
         templateRef: 'tpl_ai_gift_round',
-        stroke: const DesignStroke(weight: 2.4),
-        layout: const DesignLayout(
+        stroke: DesignStroke(weight: 2.4),
+        layout: DesignLayout(
           margin: 6.0,
           alignment: DesignCanvasAlignment.center,
           rotation: -3,

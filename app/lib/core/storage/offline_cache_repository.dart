@@ -5,6 +5,8 @@ import 'package:app/core/storage/local_cache_store.dart';
 import 'package:app/features/design_creation/domain/kanji_candidate.dart';
 import 'package:app/features/design_creation/domain/registrability_check.dart';
 
+const Object _cartSnapshotSentinel = Object();
+
 class OfflineCacheRepository {
   OfflineCacheRepository(this._store);
 
@@ -194,6 +196,10 @@ class CachedCartSnapshot {
     this.currency,
     this.subtotal,
     this.total,
+    this.discount,
+    this.shipping,
+    this.tax,
+    this.promotion,
     this.updatedAt,
   });
 
@@ -208,6 +214,12 @@ class CachedCartSnapshot {
       currency: json['currency'] as String?,
       subtotal: (json['subtotal'] as num?)?.toDouble(),
       total: (json['total'] as num?)?.toDouble(),
+      discount: (json['discount'] as num?)?.toDouble(),
+      shipping: (json['shipping'] as num?)?.toDouble(),
+      tax: (json['tax'] as num?)?.toDouble(),
+      promotion: json['promotion'] == null
+          ? null
+          : Map<String, dynamic>.from(json['promotion'] as Map),
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
@@ -218,7 +230,47 @@ class CachedCartSnapshot {
   final String? currency;
   final double? subtotal;
   final double? total;
+  final double? discount;
+  final double? shipping;
+  final double? tax;
+  final Map<String, dynamic>? promotion;
   final DateTime? updatedAt;
+
+  CachedCartSnapshot copyWith({
+    List<CartLineCache>? lines,
+    Object? currency = _cartSnapshotSentinel,
+    Object? subtotal = _cartSnapshotSentinel,
+    Object? total = _cartSnapshotSentinel,
+    Object? discount = _cartSnapshotSentinel,
+    Object? shipping = _cartSnapshotSentinel,
+    Object? tax = _cartSnapshotSentinel,
+    Object? promotion = _cartSnapshotSentinel,
+    DateTime? updatedAt,
+  }) {
+    return CachedCartSnapshot(
+      lines: lines ?? this.lines,
+      currency: identical(currency, _cartSnapshotSentinel)
+          ? this.currency
+          : currency as String?,
+      subtotal: identical(subtotal, _cartSnapshotSentinel)
+          ? this.subtotal
+          : subtotal as double?,
+      total: identical(total, _cartSnapshotSentinel)
+          ? this.total
+          : total as double?,
+      discount: identical(discount, _cartSnapshotSentinel)
+          ? this.discount
+          : discount as double?,
+      shipping: identical(shipping, _cartSnapshotSentinel)
+          ? this.shipping
+          : shipping as double?,
+      tax: identical(tax, _cartSnapshotSentinel) ? this.tax : tax as double?,
+      promotion: identical(promotion, _cartSnapshotSentinel)
+          ? this.promotion
+          : promotion as Map<String, dynamic>?,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -226,6 +278,10 @@ class CachedCartSnapshot {
       'currency': currency,
       'subtotal': subtotal,
       'total': total,
+      'discount': discount,
+      'shipping': shipping,
+      'tax': tax,
+      'promotion': promotion,
       'updatedAt': updatedAt?.toIso8601String(),
     };
   }

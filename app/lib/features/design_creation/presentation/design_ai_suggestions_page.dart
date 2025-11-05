@@ -277,7 +277,6 @@ class _RequestHeader extends StatelessWidget {
           );
     return AppCard(
       variant: AppCardVariant.outlined,
-      padding: const EdgeInsets.all(AppTokens.spaceL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -560,7 +559,7 @@ class _ActionRow extends StatelessWidget {
       children: [
         Expanded(
           child: FilledButton.icon(
-            onPressed: isBusy ? null : () => onAccept(),
+            onPressed: isBusy ? null : onAccept,
             icon: isBusy
                 ? const SizedBox(
                     width: 18,
@@ -574,7 +573,7 @@ class _ActionRow extends StatelessWidget {
         const SizedBox(width: AppTokens.spaceM),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: isBusy || onReject == null ? null : () => onReject!(),
+            onPressed: isBusy || onReject == null ? null : onReject,
             icon: const Icon(Icons.close),
             label: Text(l10n.designAiSuggestionsReject),
           ),

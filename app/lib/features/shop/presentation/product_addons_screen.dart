@@ -123,7 +123,7 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
                         child: _AddonGroupSection(
                           group: group,
                           experience: experience,
-                          isSelected: (id) => _selectedAddonIds.contains(id),
+                          isSelected: _selectedAddonIds.contains,
                           onToggle: (id, value) =>
                               _handleToggleAddon(addons, id, value),
                         ),
@@ -216,9 +216,7 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
     if (_selectedAddonIds.isEmpty) {
       return;
     }
-    setState(() {
-      _selectedAddonIds.clear();
-    });
+    setState(_selectedAddonIds.clear);
     await _persistSelection(addons);
     if (!mounted) return;
     _showFeedback(
@@ -264,9 +262,7 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
     ExperienceGate experience,
   ) async {
     if (_selectedAddonIds.isNotEmpty) {
-      setState(() {
-        _selectedAddonIds.clear();
-      });
+      setState(_selectedAddonIds.clear);
       await _persistSelection(addons);
     }
     if (!mounted) {
@@ -359,8 +355,7 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
           lineId: 'pending-${addons.productId}',
           productId: addons.productId,
           quantity: 1,
-          price:
-              null, // Add-on line uses server-calculated base price when synced.
+          // price omitted: server-calculated base price when synced.
           currency: currency,
           addons: addonsMap,
         ),
@@ -372,6 +367,10 @@ class _ProductAddonsScreenState extends ConsumerState<ProductAddonsScreen> {
       currency: existing?.currency ?? currency,
       subtotal: existing?.subtotal,
       total: existing?.total,
+      discount: existing?.discount,
+      shipping: existing?.shipping,
+      tax: existing?.tax,
+      promotion: existing?.promotion,
       updatedAt: now,
     );
     await cache.writeCart(snapshot);

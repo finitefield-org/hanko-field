@@ -609,9 +609,7 @@ class _EmptyHistoryState extends StatelessWidget {
             OutlinedButton.icon(
               icon: const Icon(Icons.refresh),
               label: Text(l10n.homeRetryButtonLabel),
-              onPressed: () {
-                onRetry();
-              },
+              onPressed: onRetry,
             ),
           ],
         ),

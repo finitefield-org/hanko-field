@@ -55,7 +55,7 @@
 - [x] [Build add-ons screen (`/products/:productId/addons`) for optional accessories with upsell logic.](doc/app/tasks/040-build-add-ons-screen-products-productid-addons-for-optional-accessories-with-upsell-logic.md)
 
 ## 7. Cart & Checkout
-- [ ] [Implement cart screen (`/cart`) with line editing, quantity adjustments, promo code entry, and estimate summary.](doc/app/tasks/041-implement-cart-screen-cart-with-line-editing-quantity-adjustments-promo-code-entry-and-est.md)
+- [x] [Implement cart screen (`/cart`) with line editing, quantity adjustments, promo code entry, and estimate summary.](doc/app/tasks/041-implement-cart-screen-cart-with-line-editing-quantity-adjustments-promo-code-entry-and-est.md)
 - [ ] [Build checkout address screen (`/checkout/address`) with address list, add/edit forms, and validation (JP/international formats).](doc/app/tasks/042-build-checkout-address-screen-checkout-address-with-address-list-add-edit-forms-and-valida.md)
 - [ ] [Implement shipping selection (`/checkout/shipping`) supporting domestic/international options and delivery estimates.](doc/app/tasks/043-implement-shipping-selection-checkout-shipping-supporting-domestic-international-options-a.md)
 - [ ] [Build payment method screen (`/checkout/payment`) integrating tokenized payment refs and adding new methods if allowed.](doc/app/tasks/044-build-payment-method-screen-checkout-payment-integrating-tokenized-payment-refs-and-adding.md)

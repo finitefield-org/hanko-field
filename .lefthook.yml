@@ -1,0 +1,82 @@
+fail_fast: true
+
+pre-commit:
+  parallel: true
+  commands:
+    # --- 基本チェック ---
+    check-merge-conflict:
+      run: |
+        echo "🔍 Checking for merge conflict markers..."
+        if git grep -n "<<<<<<< HEAD" -- app/ >/dev/null 2>&1; then
+          echo "❌ Merge conflict marker found."
+          git grep -n "<<<<<<< HEAD" -- app/
+          exit 1
+        fi
+
+    # --- Dart/Flutter チェック ---
+
+    dart-format:
+      run: |
+        echo "🎯 Running dart format..."
+        dart format app/
+      stage_fixed: true
+      glob: "app/**/*.dart"
+
+    flutter-analyze:
+      run: |
+        echo "🧠 Running flutter analyze..."
+        cd app && flutter analyze
+      glob: "app/**/*.dart"
+
+    flutter-test:
+      run: |
+        echo "🧪 Running flutter tests..."
+        cd app && flutter test --no-pub
+      glob: "app/**/*.dart"
+
+    # --- Go (api/admin/web) チェック ---
+
+    gofmt-api:
+      run: |
+        echo "🧹 Running gofmt for api..."
+        for file in {staged_files}; do
+          gofmt -w "$file"
+        done
+      stage_fixed: true
+      glob: "api/**/*.go"
+
+    go-test-api:
+      run: |
+        echo "✅ Running go test (api)..."
+        cd api && go test ./...
+      glob: "api/**/*"
+
+    gofmt-admin:
+      run: |
+        echo "🧹 Running gofmt for admin..."
+        for file in {staged_files}; do
+          gofmt -w "$file"
+        done
+      stage_fixed: true
+      glob: "admin/**/*.go"
+
+    go-test-admin:
+      run: |
+        echo "✅ Running go test (admin)..."
+        cd admin && go test ./...
+      glob: "admin/**/*"
+
+    gofmt-web:
+      run: |
+        echo "🧹 Running gofmt for web..."
+        for file in {staged_files}; do
+          gofmt -w "$file"
+        done
+      stage_fixed: true
+      glob: "web/**/*.go"
+
+    go-test-web:
+      run: |
+        echo "✅ Running go test (web)..."
+        cd web && go test ./...
+      glob: "web/**/*"

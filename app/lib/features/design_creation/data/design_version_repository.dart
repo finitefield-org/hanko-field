@@ -218,6 +218,5 @@ Design _buildSnapshot({
           'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=640&auto=format&fit=crop',
     ),
     hash: 'hash-$version',
-    lastOrderedAt: null,
   );
 }

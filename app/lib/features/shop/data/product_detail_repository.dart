@@ -92,8 +92,8 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         id: 'size',
         label: '対応サイズ',
         options: [
-          ProductVariantOption(id: 'hanko-12', label: '12mm'),
-          ProductVariantOption(id: 'hanko-15', label: '15mm'),
+          const ProductVariantOption(id: 'hanko-12', label: '12mm'),
+          const ProductVariantOption(id: 'hanko-15', label: '15mm'),
         ],
       ),
       ProductVariantGroup(
@@ -101,17 +101,21 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         label: '内張りカラー',
         selectionType: ProductVariantSelectionType.chip,
         options: [
-          ProductVariantOption(
+          const ProductVariantOption(
             id: 'indigo',
             label: '藍染め',
             helperText: '落ち着いた藍色',
           ),
-          ProductVariantOption(
+          const ProductVariantOption(
             id: 'vermilion',
             label: '朱色',
             helperText: '朱肉が映える',
           ),
-          ProductVariantOption(id: 'linen', label: '生成り', helperText: '淡いホワイト'),
+          const ProductVariantOption(
+            id: 'linen',
+            label: '生成り',
+            helperText: '淡いホワイト',
+          ),
         ],
       ),
     ];
@@ -253,10 +257,14 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       specs: [
         ProductSpec(label: 'SKU', value: baseProduct.sku),
-        ProductSpec(label: '素材', value: '越前和紙・真鍮', detail: '内張りに防湿コーティング済み'),
-        ProductSpec(label: '重量', value: '約 120g'),
-        ProductSpec(label: '対応サイズ', value: '12mm / 15mm'),
-        ProductSpec(label: '製造拠点', value: '福井県越前市'),
+        const ProductSpec(
+          label: '素材',
+          value: '越前和紙・真鍮',
+          detail: '内張りに防湿コーティング済み',
+        ),
+        const ProductSpec(label: '重量', value: '約 120g'),
+        const ProductSpec(label: '対応サイズ', value: '12mm / 15mm'),
+        const ProductSpec(label: '製造拠点', value: '福井県越前市'),
       ],
       variantGroups: variantGroups,
       variants: variants,
@@ -268,7 +276,6 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       careNote: '高温多湿を避け、付属の化粧箱で保管してください。',
       shippingNote: 'ヤマト運輸（60 サイズ）で全国発送いたします。',
-      requiresDesignSelection: false,
     );
   }
 
@@ -294,13 +301,13 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         id: 'size',
         label: '印面サイズ',
         options: [
-          ProductVariantOption(
+          const ProductVariantOption(
             id: 'size-12',
             label: '12mm',
             helperText: '女性人気',
           ),
-          ProductVariantOption(id: 'size-13.5', label: '13.5mm'),
-          ProductVariantOption(
+          const ProductVariantOption(id: 'size-13.5', label: '13.5mm'),
+          const ProductVariantOption(
             id: 'size-15',
             label: '15mm',
             helperText: '男性人気',
@@ -312,9 +319,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         label: '素材',
         selectionType: ProductVariantSelectionType.chip,
         options: [
-          ProductVariantOption(id: 'tsuge', label: '国産柘'),
-          ProductVariantOption(id: 'titanium', label: 'チタン'),
-          ProductVariantOption(id: 'kuro-sui', label: '黒水牛'),
+          const ProductVariantOption(id: 'tsuge', label: '国産柘'),
+          const ProductVariantOption(id: 'titanium', label: 'チタン'),
+          const ProductVariantOption(id: 'kuro-sui', label: '黒水牛'),
         ],
       ),
     ];
@@ -435,10 +442,10 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       specs: [
         ProductSpec(label: 'SKU', value: baseProduct.sku),
-        ProductSpec(label: '印面形状', value: '丸寸胴'),
-        ProductSpec(label: '対応印影', value: '姓彫り・フルネーム'),
-        ProductSpec(label: '付属ケース', value: '越前和紙・金枠'),
-        ProductSpec(label: '製作', value: '鹿児島・福井工房連携'),
+        const ProductSpec(label: '印面形状', value: '丸寸胴'),
+        const ProductSpec(label: '対応印影', value: '姓彫り・フルネーム'),
+        const ProductSpec(label: '付属ケース', value: '越前和紙・金枠'),
+        const ProductSpec(label: '製作', value: '鹿児島・福井工房連携'),
       ],
       variantGroups: variantGroups,
       variants: variants,
@@ -463,7 +470,7 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       sizeMm: 14,
       baseAmount: 189,
       currency: 'USD',
-      stockPolicy: CatalogStockPolicy.inventory,
+
       stockQuantity: 42,
       stockSafety: 18,
       photos: const [
@@ -477,9 +484,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         id: 'script',
         label: 'Engraving Script',
         options: [
-          ProductVariantOption(id: 'kanji', label: 'Kanji'),
-          ProductVariantOption(id: 'romaji', label: 'Romaji'),
-          ProductVariantOption(id: 'katakana', label: 'Katakana'),
+          const ProductVariantOption(id: 'kanji', label: 'Kanji'),
+          const ProductVariantOption(id: 'romaji', label: 'Romaji'),
+          const ProductVariantOption(id: 'katakana', label: 'Katakana'),
         ],
       ),
       ProductVariantGroup(
@@ -487,9 +494,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         label: 'Bundle',
         selectionType: ProductVariantSelectionType.chip,
         options: [
-          ProductVariantOption(id: 'standard', label: 'Standard'),
-          ProductVariantOption(id: 'airport', label: 'Airport Pickup'),
-          ProductVariantOption(id: 'expat', label: 'Expat Support'),
+          const ProductVariantOption(id: 'standard', label: 'Standard'),
+          const ProductVariantOption(id: 'airport', label: 'Airport Pickup'),
+          const ProductVariantOption(id: 'expat', label: 'Expat Support'),
         ],
       ),
     ];
@@ -599,10 +606,13 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       specs: [
         ProductSpec(label: 'SKU', value: baseProduct.sku),
-        ProductSpec(label: 'Material', value: 'Titanium'),
-        ProductSpec(label: 'Weight', value: 'Approx. 180g'),
-        ProductSpec(label: 'Warranty', value: 'Lifetime engraving warranty'),
-        ProductSpec(
+        const ProductSpec(label: 'Material', value: 'Titanium'),
+        const ProductSpec(label: 'Weight', value: 'Approx. 180g'),
+        const ProductSpec(
+          label: 'Warranty',
+          value: 'Lifetime engraving warranty',
+        ),
+        const ProductSpec(
           label: 'Shipping',
           value: 'DHL Express',
           detail: 'Tracking updates in English included',
@@ -642,9 +652,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         id: 'language',
         label: 'Guide Language',
         options: [
-          ProductVariantOption(id: 'english', label: 'English'),
-          ProductVariantOption(id: 'french', label: 'French'),
-          ProductVariantOption(id: 'spanish', label: 'Spanish'),
+          const ProductVariantOption(id: 'english', label: 'English'),
+          const ProductVariantOption(id: 'french', label: 'French'),
+          const ProductVariantOption(id: 'spanish', label: 'Spanish'),
         ],
       ),
       ProductVariantGroup(
@@ -652,9 +662,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         label: 'Bundle Extras',
         selectionType: ProductVariantSelectionType.chip,
         options: [
-          ProductVariantOption(id: 'standard', label: 'Standard'),
-          ProductVariantOption(id: 'culture', label: 'Culture Notes'),
-          ProductVariantOption(id: 'premium', label: 'Premium Keepsake'),
+          const ProductVariantOption(id: 'standard', label: 'Standard'),
+          const ProductVariantOption(id: 'culture', label: 'Culture Notes'),
+          const ProductVariantOption(id: 'premium', label: 'Premium Keepsake'),
         ],
       ),
     ];
@@ -747,9 +757,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       specs: [
         ProductSpec(label: 'SKU', value: baseProduct.sku),
-        ProductSpec(label: 'Case', value: 'Handmade fabric case'),
-        ProductSpec(label: 'Ink Pad', value: 'Quick-dry formula'),
-        ProductSpec(label: 'Guide', value: 'Bilingual 40-page booklet'),
+        const ProductSpec(label: 'Case', value: 'Handmade fabric case'),
+        const ProductSpec(label: 'Ink Pad', value: 'Quick-dry formula'),
+        const ProductSpec(label: 'Guide', value: 'Bilingual 40-page booklet'),
       ],
       variantGroups: variantGroups,
       variants: variants,
@@ -763,7 +773,6 @@ class FakeProductDetailRepository implements ProductDetailRepository {
           'Store flat and clean the seal with the included cloth after each use.',
       shippingNote:
           'Ships from Tokyo with tracking for international delivery.',
-      requiresDesignSelection: false,
     );
   }
 
@@ -776,7 +785,7 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       sizeMm: 13,
       baseAmount: 210,
       currency: 'USD',
-      stockPolicy: CatalogStockPolicy.inventory,
+
       stockQuantity: 32,
       stockSafety: 14,
       photos: const [
@@ -789,9 +798,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         id: 'support',
         label: 'Support Level',
         options: [
-          ProductVariantOption(id: 'self', label: 'Self-serve'),
-          ProductVariantOption(id: 'guided', label: 'Guided'),
-          ProductVariantOption(id: 'concierge', label: 'Concierge'),
+          const ProductVariantOption(id: 'self', label: 'Self-serve'),
+          const ProductVariantOption(id: 'guided', label: 'Guided'),
+          const ProductVariantOption(id: 'concierge', label: 'Concierge'),
         ],
       ),
       ProductVariantGroup(
@@ -799,9 +808,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
         label: 'Support Duration',
         selectionType: ProductVariantSelectionType.chip,
         options: [
-          ProductVariantOption(id: '30days', label: '30 days'),
-          ProductVariantOption(id: '90days', label: '90 days'),
-          ProductVariantOption(id: '365days', label: '365 days'),
+          const ProductVariantOption(id: '30days', label: '30 days'),
+          const ProductVariantOption(id: '90days', label: '90 days'),
+          const ProductVariantOption(id: '365days', label: '365 days'),
         ],
       ),
     ];
@@ -894,9 +903,9 @@ class FakeProductDetailRepository implements ProductDetailRepository {
       ],
       specs: [
         ProductSpec(label: 'SKU', value: baseProduct.sku),
-        ProductSpec(label: 'Case', value: 'Water-resistant acrylic'),
-        ProductSpec(label: 'Support', value: 'Email & chat support'),
-        ProductSpec(label: 'Extras', value: 'Document review credits'),
+        const ProductSpec(label: 'Case', value: 'Water-resistant acrylic'),
+        const ProductSpec(label: 'Support', value: 'Email & chat support'),
+        const ProductSpec(label: 'Extras', value: 'Document review credits'),
       ],
       variantGroups: variantGroups,
       variants: variants,

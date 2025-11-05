@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:app/core/routing/app_tab.dart';
 import 'package:app/features/auth/presentation/auth_screen.dart';
+import 'package:app/features/cart/presentation/cart_screen.dart';
 import 'package:app/features/design_creation/presentation/design_ai_suggestions_page.dart';
 import 'package:app/features/design_creation/presentation/design_editor_page.dart';
 import 'package:app/features/design_creation/presentation/design_export_page.dart';
@@ -179,6 +180,25 @@ class ShopDetailRoute implements IndependentRoute {
   @override
   String toString() =>
       'ShopDetailRoute(entity: $entity, id: $identifier, sub: $trailingSegments)';
+}
+
+class CartRoute implements IndependentRoute, StandaloneLocationRoute {
+  const CartRoute();
+
+  @override
+  Widget get page => const CartScreen();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'cart-$index';
+
+  @override
+  List<String> get pathSegments => const ['cart'];
+
+  @override
+  String get standaloneLocation => 'cart';
+
+  @override
+  String toString() => 'CartRoute()';
 }
 
 /// 注文詳細

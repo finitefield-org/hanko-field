@@ -209,9 +209,7 @@ class _NoResultPlaceholder extends StatelessWidget {
             const SizedBox(height: AppTokens.spaceM),
             FilledButton.icon(
               icon: const Icon(Icons.verified_outlined),
-              onPressed: () {
-                onRun();
-              },
+              onPressed: onRun,
               label: Text(l10n.designRegistrabilityRunCheck),
             ),
           ],
@@ -237,9 +235,7 @@ class _RecheckBanner extends StatelessWidget {
         content: Text(l10n.designRegistrabilityOutdatedBanner),
         actions: [
           TextButton(
-            onPressed: () {
-              onRecheck();
-            },
+            onPressed: onRecheck,
             child: Text(l10n.designRegistrabilityRunCheck),
           ),
         ],
