@@ -362,6 +362,16 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				RegisterFragment(ar, "/table", uiHandlers.AuditLogsTable)
 				ar.Get("/export", uiHandlers.AuditLogsExport)
 			})
+			protected.Route("/system", func(sr chi.Router) {
+				sr.Group(func(er chi.Router) {
+					er.Use(custommw.RequireCapability(rbac.CapSystemErrors))
+					er.Get("/errors", uiHandlers.SystemErrorsPage)
+					RegisterFragment(er, "/errors/table", uiHandlers.SystemErrorsTable)
+					RegisterFragment(er, "/errors/{failureID}/drawer", uiHandlers.SystemErrorsDrawer)
+					er.Post("/errors/{failureID}:retry", uiHandlers.SystemErrorsRetry)
+					er.Post("/errors/{failureID}:acknowledge", uiHandlers.SystemErrorsAcknowledge)
+				})
+			})
 			protected.Route("/reviews", func(rr chi.Router) {
 				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))
 				rr.Get("/", uiHandlers.ReviewsModerationPage)

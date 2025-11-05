@@ -27,6 +27,7 @@ import (
 	adminreviews "finitefield.org/hanko-admin/internal/admin/reviews"
 	adminsearch "finitefield.org/hanko-admin/internal/admin/search"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
+	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	dashboardtpl "finitefield.org/hanko-admin/internal/admin/templates/dashboard"
 	profiletpl "finitefield.org/hanko-admin/internal/admin/templates/profile"
 )
@@ -50,6 +51,7 @@ type Dependencies struct {
 	PromotionsService    adminpromotions.Service
 	ReviewsService       adminreviews.Service
 	OrgService           adminorg.Service
+	SystemService        adminsystem.Service
 }
 
 // Handlers exposes HTTP handlers for admin UI pages and fragments.
@@ -71,6 +73,7 @@ type Handlers struct {
 	promotions    adminpromotions.Service
 	reviews       adminreviews.Service
 	org           adminorg.Service
+	system        adminsystem.Service
 }
 
 // NewHandlers wires the UI handler set.
@@ -143,6 +146,10 @@ func NewHandlers(deps Dependencies) *Handlers {
 	if orgService == nil {
 		orgService = adminorg.NewStaticService()
 	}
+	systemService := deps.SystemService
+	if systemService == nil {
+		systemService = adminsystem.NewStaticService()
+	}
 	return &Handlers{
 		auditlogs:     auditLogsService,
 		assets:        assetsService,
@@ -161,6 +168,7 @@ func NewHandlers(deps Dependencies) *Handlers {
 		promotions:    promotionsService,
 		reviews:       reviewsService,
 		org:           orgService,
+		system:        systemService,
 	}
 }
 

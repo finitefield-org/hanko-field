@@ -105,6 +105,7 @@ func TestSidebarRenderingFiltersAndHighlights(t *testing.T) {
 
 	// Support role should not see system tools.
 	require.Equal(t, 0, doc.Find(`a[href="/admin/system/tasks"]`).Length(), "system tasks link must be hidden")
+	require.Equal(t, 0, doc.Find(`a[href="/admin/system/errors"]`).Length(), "system errors link must be hidden")
 
 	ordersLink := doc.Find(`a[href="/admin/orders"]`)
 	require.Equal(t, 1, ordersLink.Length(), "orders link should render")

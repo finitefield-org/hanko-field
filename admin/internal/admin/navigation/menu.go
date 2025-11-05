@@ -336,6 +336,15 @@ var defaultMenu = []Group{
 				MatchPrefix: true,
 			},
 			{
+				Key:         "system-errors",
+				Label:       "エラーモニタ",
+				Icon:        "🚨",
+				Capability:  rbac.CapSystemErrors,
+				Path:        "/system/errors",
+				Pattern:     "/system/errors",
+				MatchPrefix: true,
+			},
+			{
 				Key:         "system-tasks",
 				Label:       "タスク/ジョブ",
 				Icon:        "⏱",

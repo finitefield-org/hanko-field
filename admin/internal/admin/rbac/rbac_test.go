@@ -36,6 +36,12 @@ func TestHasCapabilityMatrix(t *testing.T) {
 			want:       false,
 		},
 		{
+			name:       "support cannot view system errors",
+			roles:      []string{"support"},
+			capability: CapSystemErrors,
+			want:       false,
+		},
+		{
 			name:       "marketing cannot view customers",
 			roles:      []string{"marketing"},
 			capability: CapCustomersView,
@@ -99,6 +105,9 @@ func TestCapabilitiesForRoles(t *testing.T) {
 	}
 	if caps[CapSystemCounters] {
 		t.Fatalf("support must not have CapSystemCounters")
+	}
+	if caps[CapSystemErrors] {
+		t.Fatalf("support must not have CapSystemErrors")
 	}
 }
 

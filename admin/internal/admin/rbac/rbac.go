@@ -36,6 +36,7 @@ const (
 	CapCustomersView         Capability = "customers.view"
 	CapNotificationsFeed     Capability = "notifications.feed"
 	CapAuditLogView          Capability = "auditlogs.view"
+	CapSystemErrors          Capability = "system.errors"
 	CapSystemTasks           Capability = "system.tasks"
 	CapSystemCounters        Capability = "system.counters"
 	CapStaffManage           Capability = "org.staff"
@@ -63,6 +64,7 @@ var capabilityRoles = map[Capability]Roles{
 	CapCustomersView:         {RoleAdmin, RoleOps, RoleSupport},
 	CapNotificationsFeed:     {RoleAdmin, RoleOps, RoleSupport},
 	CapAuditLogView:          {RoleAdmin},
+	CapSystemErrors:          {RoleAdmin, RoleOps},
 	CapSystemTasks:           {RoleAdmin, RoleOps},
 	CapSystemCounters:        {RoleAdmin},
 	CapStaffManage:           {RoleAdmin},
