@@ -72,16 +72,26 @@ class CheckoutOrderReceipt {
     required this.placedAt,
     required this.total,
     required this.currency,
+    required this.orderSnapshot,
     required this.updatedCart,
     this.estimatedDelivery,
     this.note,
+    this.shippingAddress,
+    this.paymentMethod,
   });
 
   final String orderId;
   final DateTime placedAt;
   final double total;
   final String currency;
+  final CartSnapshot orderSnapshot;
   final CartSnapshot updatedCart;
   final String? estimatedDelivery;
   final String? note;
+  final UserAddress? shippingAddress;
+  final CheckoutPaymentMethodSummary? paymentMethod;
+
+  CartEstimate get estimate => orderSnapshot.estimate;
+  List<CartLine> get lines => orderSnapshot.lines;
+  CheckoutShippingOption? get shippingOption => orderSnapshot.shippingOption;
 }

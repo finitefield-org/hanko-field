@@ -341,9 +341,12 @@ class _TestCartRepository implements CartRepository {
       placedAt: DateTime.now(),
       total: snapshot.estimate.total,
       currency: snapshot.estimate.currency,
+      orderSnapshot: snapshot,
       updatedCart: cleared,
       estimatedDelivery: snapshot.shippingOption?.estimatedDelivery,
       note: (note != null && note.isNotEmpty) ? note : null,
+      shippingAddress: checkoutState.selectedShippingAddress,
+      paymentMethod: checkoutState.selectedPaymentMethod,
     );
     return receipt;
   }

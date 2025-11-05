@@ -42,6 +42,12 @@ class _CheckoutReviewScreenState extends ConsumerState<CheckoutReviewScreen> {
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(nextSuccess)));
+        final receipt = next.lastReceipt;
+        if (receipt != null) {
+          ref
+              .read(appStateProvider.notifier)
+              .push(CheckoutRoute(['complete', receipt.orderId]));
+        }
         if (mounted) {
           setState(() {
             _termsAccepted = false;

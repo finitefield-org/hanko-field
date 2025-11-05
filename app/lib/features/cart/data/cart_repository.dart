@@ -333,9 +333,12 @@ class FakeCartRepository implements CartRepository {
       placedAt: DateTime.now(),
       total: estimate.total,
       currency: estimate.currency,
+      orderSnapshot: bundle.view,
       updatedCart: clearedBundle.view,
       estimatedDelivery: shippingEta,
       note: (note != null && note.isNotEmpty) ? note : null,
+      shippingAddress: checkoutState.selectedShippingAddress,
+      paymentMethod: checkoutState.selectedPaymentMethod,
     );
   }
 
