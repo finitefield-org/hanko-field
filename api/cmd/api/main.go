@@ -437,6 +437,7 @@ func main() {
 		shipmentService services.ShipmentService
 		exportService   services.ExportService
 		paymentService  services.PaymentService
+		jobDispatcher   services.BackgroundJobDispatcher
 	)
 	exportLogger := logger.Named("exports")
 	exportPublisher := services.NewNoopExportPublisher()
@@ -536,19 +537,22 @@ func main() {
 	}
 	shippingWebhookHandlers := handlers.NewShippingWebhookHandlers(shipmentService, shippingOpts...)
 
-	aiWebhookLogger := logger.Named("webhooks.ai")
-	aiWebhookHandlers := handlers.NewAIWorkerWebhookHandlers(
-		nil,
-		services.NewNoopAISuggestionNotifier(),
-		handlers.WithAIWorkerWebhookLogger(func(ctx context.Context, event string, fields map[string]any) {
-			zFields := make([]zap.Field, 0, len(fields)+1)
-			zFields = append(zFields, zap.String("event", event))
-			for k, v := range fields {
-				zFields = append(zFields, zap.Any(k, v))
-			}
-			aiWebhookLogger.Debug("ai worker webhook", zFields...)
-		}),
-	)
+	var aiWebhookHandlers *handlers.AIWorkerWebhookHandlers
+	if jobDispatcher != nil {
+		aiWebhookLogger := logger.Named("webhooks.ai")
+		aiWebhookHandlers = handlers.NewAIWorkerWebhookHandlers(
+			jobDispatcher,
+			services.NewNoopAISuggestionNotifier(),
+			handlers.WithAIWorkerWebhookLogger(func(ctx context.Context, event string, fields map[string]any) {
+				zFields := make([]zap.Field, 0, len(fields)+1)
+				zFields = append(zFields, zap.String("event", event))
+				for k, v := range fields {
+					zFields = append(zFields, zap.Any(k, v))
+				}
+				aiWebhookLogger.Debug("ai worker webhook", zFields...)
+			}),
+		)
+	}
 
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
