@@ -286,6 +286,15 @@ var defaultMenu = []Group{
 				MatchPrefix: true,
 			},
 			{
+				Key:         "finance-reconciliation",
+				Label:       "リコンシリエーション",
+				Icon:        "📈",
+				Capability:  rbac.CapFinanceReconciliation,
+				Path:        "/finance/reconciliation",
+				Pattern:     "/finance/reconciliation",
+				MatchPrefix: false,
+			},
+			{
 				Key:         "finance-taxes",
 				Label:       "税設定",
 				Icon:        "🧾",

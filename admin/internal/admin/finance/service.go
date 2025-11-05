@@ -27,6 +27,10 @@ type Service interface {
 	UpsertTaxRule(ctx context.Context, token, jurisdictionID string, input TaxRuleInput) (JurisdictionDetail, error)
 	// DeleteTaxRule removes the specified tax rule and returns the refreshed detail payload.
 	DeleteTaxRule(ctx context.Context, token, jurisdictionID, ruleID string) (JurisdictionDetail, error)
+	// ReconciliationDashboard returns the reconciliation exports overview, report metadata, and background job statuses.
+	ReconciliationDashboard(ctx context.Context, token string) (ReconciliationDashboard, error)
+	// TriggerReconciliation enqueues a reconciliation job run and returns the refreshed dashboard payload.
+	TriggerReconciliation(ctx context.Context, token string) (ReconciliationDashboard, error)
 }
 
 // JurisdictionsQuery captures filters applied to the jurisdictions listing.
@@ -118,6 +122,59 @@ type AlertAction struct {
 type PolicyLink struct {
 	Label string
 	Href  string
+}
+
+// ReconciliationDashboard aggregates reconciliation status, report metadata, and supporting artefacts for the UI.
+type ReconciliationDashboard struct {
+	Summary ReconciliationSummary
+	Reports []ReconciliationReport
+	Jobs    []ReconciliationJob
+	History []AuditEvent
+	Alerts  []Alert
+}
+
+// ReconciliationSummary captures headline reconciliation metrics.
+type ReconciliationSummary struct {
+	LastRunAt             time.Time
+	LastRunBy             string
+	LastRunStatus         string
+	LastRunStatusTone     string
+	LastRunDuration       time.Duration
+	PendingExceptions     int
+	PendingAmountMinor    int64
+	PendingAmountCurrency string
+	NextScheduledAt       *time.Time
+	TriggerDisabled       bool
+	TriggerDisabledReason string
+}
+
+// ReconciliationReport exposes downloadable reconciliation artefacts.
+type ReconciliationReport struct {
+	ID              string
+	Label           string
+	Description     string
+	Format          string
+	Status          string
+	StatusTone      string
+	LastGeneratedAt time.Time
+	LastGeneratedBy string
+	DownloadURL     string
+	FileSizeBytes   int64
+	ExpiresAt       *time.Time
+	BackgroundJobID string
+}
+
+// ReconciliationJob summarises scheduled background jobs generating reconciliation artefacts.
+type ReconciliationJob struct {
+	ID              string
+	Label           string
+	Schedule        string
+	Status          string
+	StatusTone      string
+	LastRunAt       time.Time
+	LastRunDuration time.Duration
+	NextRunAt       *time.Time
+	LastError       string
 }
 
 // JurisdictionDetail aggregates the rule set, registrations, and audit history for display.

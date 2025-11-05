@@ -11,11 +11,12 @@ import (
 
 // StaticService provides deterministic fixture data for local development and tests.
 type StaticService struct {
-	mu            sync.RWMutex
-	ruleSeq       int
-	jurisdictions map[string]*jurisdictionRecord
-	regions       map[string]string
-	policyLinks   []PolicyLink
+	mu             sync.RWMutex
+	ruleSeq        int
+	jurisdictions  map[string]*jurisdictionRecord
+	regions        map[string]string
+	policyLinks    []PolicyLink
+	reconciliation reconciliationRecord
 }
 
 type jurisdictionRecord struct {
@@ -25,6 +26,13 @@ type jurisdictionRecord struct {
 	rules         []TaxRule
 	registrations []TaxRegistration
 	history       []AuditEvent
+}
+
+type reconciliationRecord struct {
+	summary ReconciliationSummary
+	reports map[string]*ReconciliationReport
+	jobs    map[string]*ReconciliationJob
+	history []AuditEvent
 }
 
 // NewStaticService constructs a StaticService seeded with representative tax configuration data.
@@ -45,6 +53,98 @@ func NewStaticService() *StaticService {
 			{Label: "OECD Tax Database", Href: "https://www.oecd.org/tax/tax-policy/tax-database/"},
 			{Label: "Japan Consumption Tax Guide", Href: "https://www.nta.go.jp/taxes/shiraberu/zeimokubetsu/shohi/"},
 			{Label: "EU VAT Rates", Href: "https://taxation-customs.ec.europa.eu/taxation-1/value-added-tax-vat_en"},
+		},
+	}
+
+	lastReconRun := now.Add(-4 * time.Hour)
+	nextReconRun := lastReconRun.Add(20 * time.Hour)
+	staleReconRun := now.Add(-26 * time.Hour)
+	staleNextRun := staleReconRun.Add(24 * time.Hour)
+	dailyExpiry := lastReconRun.Add(14 * 24 * time.Hour)
+	staleExpiry := staleReconRun.Add(7 * 24 * time.Hour)
+
+	service.reconciliation = reconciliationRecord{
+		summary: ReconciliationSummary{
+			LastRunAt:             lastReconRun,
+			LastRunBy:             "自動ジョブ",
+			LastRunStatus:         "成功",
+			LastRunStatusTone:     "success",
+			LastRunDuration:       3*time.Minute + 42*time.Second,
+			PendingExceptions:     2,
+			PendingAmountMinor:    128_900,
+			PendingAmountCurrency: "JPY",
+			NextScheduledAt:       &nextReconRun,
+		},
+		reports: map[string]*ReconciliationReport{
+			"daily-payouts": {
+				ID:              "daily-payouts",
+				Label:           "日次ペイアウトレポート",
+				Description:     "Stripe/ZEUSのペイアウトと内部台帳を照合するCSVエクスポートです。",
+				Format:          "CSV",
+				Status:          "最新",
+				StatusTone:      "success",
+				LastGeneratedAt: lastReconRun,
+				LastGeneratedBy: "自動ジョブ",
+				DownloadURL:     "https://downloads.example.com/reports/daily-payouts-20240401.csv",
+				FileSizeBytes:   38_912,
+				ExpiresAt:       &dailyExpiry,
+				BackgroundJobID: "job-reconciliation-daily",
+			},
+			"unsettled-transactions": {
+				ID:              "unsettled-transactions",
+				Label:           "未決済トランザクション",
+				Description:     "未入金・保留中の支払いを一覧化し、照合漏れを検知するためのレポートです。",
+				Format:          "CSV",
+				Status:          "要更新",
+				StatusTone:      "warning",
+				LastGeneratedAt: staleReconRun,
+				LastGeneratedBy: "自動ジョブ",
+				DownloadURL:     "https://downloads.example.com/reports/unsettled-transactions-20240331.csv",
+				FileSizeBytes:   52_224,
+				ExpiresAt:       &staleExpiry,
+				BackgroundJobID: "job-reconciliation-unsettled",
+			},
+		},
+		jobs: map[string]*ReconciliationJob{
+			"job-reconciliation-daily": {
+				ID:              "job-reconciliation-daily",
+				Label:           "日次ペイアウト照合",
+				Schedule:        "毎日 06:00 JST",
+				Status:          "成功",
+				StatusTone:      "success",
+				LastRunAt:       lastReconRun,
+				LastRunDuration: 2*time.Minute + 8*time.Second,
+				NextRunAt:       &nextReconRun,
+			},
+			"job-reconciliation-unsettled": {
+				ID:              "job-reconciliation-unsettled",
+				Label:           "未決済トランザクション集計",
+				Schedule:        "毎日 07:00 JST",
+				Status:          "警告",
+				StatusTone:      "warning",
+				LastRunAt:       staleReconRun,
+				LastRunDuration: 95 * time.Second,
+				NextRunAt:       &staleNextRun,
+				LastError:       "PSP APIのレートリミットにより一部データが欠落しました。",
+			},
+		},
+		history: []AuditEvent{
+			{
+				ID:        "audit-recon-002",
+				Timestamp: lastReconRun,
+				Actor:     "自動ジョブ",
+				Action:    "日次リコンシリエーションを実行",
+				Details:   "Stripeペイアウト #po_8F2 を同期。2件の調整が必要です。",
+				Tone:      "info",
+			},
+			{
+				ID:        "audit-recon-001",
+				Timestamp: now.Add(-48 * time.Hour),
+				Actor:     "吉田 恵",
+				Action:    "手動で照合レポートを再生成",
+				Details:   "ZEUS支払いの差異を確認し調整しました。",
+				Tone:      "success",
+			},
 		},
 	}
 
@@ -353,6 +453,219 @@ func NewStaticService() *StaticService {
 	}
 
 	return service
+}
+
+// ReconciliationDashboard returns the current reconciliation overview.
+func (s *StaticService) ReconciliationDashboard(_ context.Context, _ string) (ReconciliationDashboard, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.reconciliation.snapshot(), nil
+}
+
+// TriggerReconciliation simulates enqueuing a reconciliation job run and returns the refreshed dashboard.
+func (s *StaticService) TriggerReconciliation(_ context.Context, _ string) (ReconciliationDashboard, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state := &s.reconciliation
+	if state.summary.TriggerDisabled {
+		dashboard := state.snapshot()
+		reason := strings.TrimSpace(state.summary.TriggerDisabledReason)
+		if reason != "" {
+			alert := Alert{
+				Tone:  "danger",
+				Title: "手動実行は現在無効化されています",
+				Body:  reason,
+			}
+			dashboard.Alerts = append([]Alert{alert}, dashboard.Alerts...)
+		}
+		return dashboard, nil
+	}
+
+	now := time.Now().UTC()
+	actor := "山田 芽衣"
+	state.summary.LastRunAt = now
+	state.summary.LastRunBy = actor
+	state.summary.LastRunStatus = "成功"
+	state.summary.LastRunStatusTone = "success"
+	state.summary.LastRunDuration = 2*time.Minute + 18*time.Second
+	state.summary.PendingExceptions = 0
+	state.summary.PendingAmountMinor = 0
+	nextRun := now.Add(24 * time.Hour)
+	state.summary.NextScheduledAt = &nextRun
+
+	for id, report := range state.reports {
+		report.LastGeneratedAt = now
+		report.LastGeneratedBy = actor
+		report.Status = "最新"
+		report.StatusTone = "success"
+		if report.FileSizeBytes == 0 {
+			report.FileSizeBytes = 42_000
+		} else {
+			report.FileSizeBytes += 1_024
+		}
+		filenameSuffix := now.Format("20060102-150405")
+		report.DownloadURL = fmt.Sprintf("https://downloads.example.com/reports/%s-%s.%s", id, filenameSuffix, strings.ToLower(report.Format))
+		expiry := now.Add(14 * 24 * time.Hour)
+		report.ExpiresAt = &expiry
+	}
+
+	for _, job := range state.jobs {
+		job.Status = "成功"
+		job.StatusTone = "success"
+		job.LastRunAt = now
+		job.LastError = ""
+		switch job.ID {
+		case "job-reconciliation-daily":
+			job.LastRunDuration = 2*time.Minute + 5*time.Second
+		case "job-reconciliation-unsettled":
+			job.LastRunDuration = 2*time.Minute + 20*time.Second
+		default:
+			job.LastRunDuration = 90 * time.Second
+		}
+		next := now.Add(24 * time.Hour)
+		job.NextRunAt = &next
+	}
+
+	event := AuditEvent{
+		ID:        fmt.Sprintf("audit-recon-%d", now.Unix()),
+		Timestamp: now,
+		Actor:     actor,
+		Action:    "照合レポートを手動実行",
+		Details:   "日次ペイアウトおよび未決済レポートを再生成しました。",
+		Tone:      "success",
+	}
+	state.history = append([]AuditEvent{event}, state.history...)
+	if len(state.history) > 20 {
+		state.history = state.history[:20]
+	}
+
+	return state.snapshot(), nil
+}
+
+func (r *reconciliationRecord) snapshot() ReconciliationDashboard {
+	dashboard := ReconciliationDashboard{}
+	dashboard.Summary = r.summary
+	dashboard.Summary.NextScheduledAt = cloneTimePtr(r.summary.NextScheduledAt)
+
+	reports := make([]ReconciliationReport, 0, len(r.reports))
+	for _, report := range r.reports {
+		cp := *report
+		cp.ExpiresAt = cloneTimePtr(report.ExpiresAt)
+		reports = append(reports, cp)
+	}
+	sort.Slice(reports, func(i, j int) bool {
+		if reports[i].Label == reports[j].Label {
+			return reports[i].ID < reports[j].ID
+		}
+		return reports[i].Label < reports[j].Label
+	})
+	dashboard.Reports = reports
+
+	jobs := make([]ReconciliationJob, 0, len(r.jobs))
+	for _, job := range r.jobs {
+		cp := *job
+		cp.NextRunAt = cloneTimePtr(job.NextRunAt)
+		jobs = append(jobs, cp)
+	}
+	sort.Slice(jobs, func(i, j int) bool {
+		if jobs[i].Label == jobs[j].Label {
+			return jobs[i].ID < jobs[j].ID
+		}
+		return jobs[i].Label < jobs[j].Label
+	})
+	dashboard.Jobs = jobs
+
+	if len(r.history) > 0 {
+		history := make([]AuditEvent, len(r.history))
+		copy(history, r.history)
+		dashboard.History = history
+	}
+
+	dashboard.Alerts = r.buildAlerts(reports, jobs)
+	return dashboard
+}
+
+func (r *reconciliationRecord) buildAlerts(reports []ReconciliationReport, jobs []ReconciliationJob) []Alert {
+	alerts := make([]Alert, 0, 4)
+	summary := r.summary
+	if summary.PendingExceptions > 0 {
+		amount := ""
+		if summary.PendingAmountMinor > 0 && summary.PendingAmountCurrency != "" {
+			amount = fmt.Sprintf("%s %.2f", summary.PendingAmountCurrency, float64(summary.PendingAmountMinor)/100)
+		}
+		body := "未処理の照合例外を確認してください。"
+		if amount != "" {
+			body = fmt.Sprintf("差異合計: %s。未処理キューで確認してください。", amount)
+		}
+		alerts = append(alerts, Alert{
+			Tone:  "warning",
+			Title: fmt.Sprintf("%d件の照合例外", summary.PendingExceptions),
+			Body:  body,
+		})
+	}
+	if summary.TriggerDisabled {
+		reason := strings.TrimSpace(summary.TriggerDisabledReason)
+		if reason != "" {
+			alerts = append(alerts, Alert{
+				Tone:  "danger",
+				Title: "手動実行がロックされています",
+				Body:  reason,
+			})
+		}
+	}
+	for _, report := range reports {
+		switch report.StatusTone {
+		case "warning":
+			alerts = append(alerts, Alert{
+				Tone:  "warning",
+				Title: fmt.Sprintf("%sの再生成が必要です", report.Label),
+				Body:  fmt.Sprintf("最終生成: %s", report.LastGeneratedAt.Local().Format("2006/01/02 15:04")),
+			})
+		case "danger":
+			alerts = append(alerts, Alert{
+				Tone:  "danger",
+				Title: fmt.Sprintf("%sが最新ではありません", report.Label),
+				Body:  "バックグラウンドジョブのログを確認してください。",
+			})
+		}
+	}
+	for _, job := range jobs {
+		switch job.StatusTone {
+		case "warning":
+			alerts = append(alerts, Alert{
+				Tone:  "warning",
+				Title: fmt.Sprintf("%sが警告状態です", job.Label),
+				Body:  firstNonEmpty(job.LastError, "次回の実行結果を確認してください。"),
+			})
+		case "danger":
+			alerts = append(alerts, Alert{
+				Tone:  "danger",
+				Title: fmt.Sprintf("%sが失敗しています", job.Label),
+				Body:  firstNonEmpty(job.LastError, "ジョブの再実行が必要です。"),
+			})
+		}
+	}
+	return alerts
+}
+
+func cloneTimePtr(src *time.Time) *time.Time {
+	if src == nil {
+		return nil
+	}
+	val := *src
+	return &val
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		candidate := strings.TrimSpace(v)
+		if candidate != "" {
+			return candidate
+		}
+	}
+	return ""
 }
 
 // Jurisdictions returns grouped nav and summary data.

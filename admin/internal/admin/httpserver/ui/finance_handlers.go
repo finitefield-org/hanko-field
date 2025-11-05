@@ -75,6 +75,52 @@ func (req *taxSettingsRequest) canonical(basePath string) string {
 	return fmt.Sprintf("%s?%s", base, raw)
 }
 
+func (h *Handlers) ReconciliationPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	dashboard, err := h.finance.ReconciliationDashboard(ctx, user.Token)
+	if err != nil {
+		log.Printf("finance: reconciliation dashboard fetch failed: %v", err)
+		dashboard = adminfinance.ReconciliationDashboard{}
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	triggerURL := joinBasePath(basePath, "/finance/reconciliation:trigger")
+	data := financetpl.BuildReconciliationPageData(basePath, dashboard, triggerURL, custommw.CSRFTokenFromContext(ctx), nil)
+	templ.Handler(financetpl.ReconciliationPage(data)).ServeHTTP(w, r)
+}
+
+func (h *Handlers) ReconciliationTrigger(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	dashboard, err := h.finance.TriggerReconciliation(ctx, user.Token)
+	if err != nil {
+		log.Printf("finance: reconciliation trigger failed: %v", err)
+		http.Error(w, "リコンシリエーションの実行に失敗しました。時間を置いて再度お試しください。", http.StatusBadGateway)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	triggerURL := joinBasePath(basePath, "/finance/reconciliation:trigger")
+	snackbar := &financetpl.SnackbarView{Message: "リコンシリエーションジョブを実行しました。", Tone: "success"}
+	if dashboard.Summary.TriggerDisabled {
+		snackbar = &financetpl.SnackbarView{Message: "リコンシリエーションは現在ロックされています。", Tone: "warning"}
+	}
+
+	data := financetpl.BuildReconciliationPageData(basePath, dashboard, triggerURL, custommw.CSRFTokenFromContext(ctx), snackbar)
+	templ.Handler(financetpl.ReconciliationRoot(data)).ServeHTTP(w, r)
+}
+
 func (h *Handlers) TaxSettingsPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, ok := custommw.UserFromContext(ctx)

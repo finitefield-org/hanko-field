@@ -91,7 +91,7 @@
 - [x] [Provide manual capture modal linking to `POST /orders/{id}/payments:manual-capture` with PSP response handling.](doc/admin/tasks/061-provide-manual-capture-modal-linking-to-post-orders-id-payments-manual-capture-with-psp-re.md)
 - [x] [Provide refund modal integration (reuse from orders or dedicated UI) ensuring accounting notes.](doc/admin/tasks/062-provide-refund-modal-integration-reuse-from-orders-or-dedicated-ui-ensuring-accounting-not.md)
 - [x] [Implement tax settings page (`/admin/finance/taxes`) if in scope, with country/region rules management.](doc/admin/tasks/063-implement-tax-settings-page-admin-finance-taxes-if-in-scope-with-country-region-rules-mana.md)
-- [ ] [Surface reconciliation reports or export links as required by accounting stakeholders.](doc/admin/tasks/064-surface-reconciliation-reports-or-export-links-as-required-by-accounting-stakeholders.md)
+- [x] [Surface reconciliation reports or export links as required by accounting stakeholders.](doc/admin/tasks/064-surface-reconciliation-reports-or-export-links-as-required-by-accounting-stakeholders.md)
 
 ## 12. Logs, Counters, and System Operations
 - [ ] [Implement audit log viewer (`/admin/audit-logs`) with table fragment, diff collapsible rows, and filters by target/user/date.](doc/admin/tasks/065-implement-audit-log-viewer-admin-audit-logs-with-table-fragment-diff-collapsible-rows-and-.md)

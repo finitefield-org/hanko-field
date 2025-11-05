@@ -335,15 +335,23 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				RegisterFragment(pr, "/transactions/drawer", uiHandlers.PaymentsTransactionsDrawer)
 			})
 			protected.Route("/finance", func(fr chi.Router) {
-				fr.Use(custommw.RequireCapability(rbac.CapFinanceTaxSettings))
-				fr.Get("/taxes", uiHandlers.TaxSettingsPage)
-				RegisterFragment(fr, "/taxes/grid", uiHandlers.TaxSettingsGrid)
-				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/new", uiHandlers.TaxRuleNewModal)
-				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/edit", uiHandlers.TaxRuleEditModal)
-				RegisterFragment(fr, "/taxes/jurisdictions/{jurisdictionID}/modal/delete", uiHandlers.TaxRuleDeleteModal)
-				fr.Post("/taxes/jurisdictions/{jurisdictionID}/rules", uiHandlers.TaxRuleCreate)
-				fr.Put("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleUpdate)
-				fr.Delete("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleDelete)
+				fr.Group(func(recon chi.Router) {
+					recon.Use(custommw.RequireCapability(rbac.CapFinanceReconciliation))
+					recon.Get("/reconciliation", uiHandlers.ReconciliationPage)
+					recon.Post("/reconciliation:trigger", uiHandlers.ReconciliationTrigger)
+				})
+
+				fr.Group(func(tax chi.Router) {
+					tax.Use(custommw.RequireCapability(rbac.CapFinanceTaxSettings))
+					tax.Get("/taxes", uiHandlers.TaxSettingsPage)
+					RegisterFragment(tax, "/taxes/grid", uiHandlers.TaxSettingsGrid)
+					RegisterFragment(tax, "/taxes/jurisdictions/{jurisdictionID}/modal/new", uiHandlers.TaxRuleNewModal)
+					RegisterFragment(tax, "/taxes/jurisdictions/{jurisdictionID}/modal/edit", uiHandlers.TaxRuleEditModal)
+					RegisterFragment(tax, "/taxes/jurisdictions/{jurisdictionID}/modal/delete", uiHandlers.TaxRuleDeleteModal)
+					tax.Post("/taxes/jurisdictions/{jurisdictionID}/rules", uiHandlers.TaxRuleCreate)
+					tax.Put("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleUpdate)
+					tax.Delete("/taxes/jurisdictions/{jurisdictionID}/rules/{ruleID}", uiHandlers.TaxRuleDelete)
+				})
 			})
 			protected.Route("/reviews", func(rr chi.Router) {
 				rr.Use(custommw.RequireCapability(rbac.CapReviewsModerate))
