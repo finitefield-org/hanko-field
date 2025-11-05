@@ -50,10 +50,10 @@ class ApiUserRepository extends UserRepository {
     Map<String, dynamic>? response;
 
     if (address.id.isEmpty) {
-      response = await _client.post<Map<String, dynamic>?>(
+      response = await _client.post<Map<String, dynamic>>(
         '/me/addresses',
         data: payload,
-        parser: _expectMapOrNull,
+        parser: _expectMap,
       );
     } else {
       response = await _client.put<Map<String, dynamic>?>(
