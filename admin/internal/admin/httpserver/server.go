@@ -366,6 +366,10 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				ar.Get("/export", uiHandlers.AuditLogsExport)
 			})
 			protected.Route("/system", func(sr chi.Router) {
+				sr.Group(func(cfg chi.Router) {
+					cfg.Use(custommw.RequireCapability(rbac.CapSystemSettings))
+					cfg.Get("/settings", uiHandlers.SystemEnvironmentSettingsPage)
+				})
 				sr.Group(func(tr chi.Router) {
 					tr.Use(custommw.RequireCapability(rbac.CapSystemTasks))
 					tr.Get("/tasks", uiHandlers.SystemTasksPage)

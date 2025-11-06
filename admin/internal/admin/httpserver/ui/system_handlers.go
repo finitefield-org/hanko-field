@@ -19,6 +19,25 @@ import (
 	systemtpl "finitefield.org/hanko-admin/internal/admin/templates/system"
 )
 
+// SystemEnvironmentSettingsPage renders the environment configuration summary.
+func (h *Handlers) SystemEnvironmentSettingsPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	config, err := h.system.EnvironmentConfig(ctx, user.Token)
+	page := systemtpl.BuildEnvironmentSettingsPageData(custommw.BasePathFromContext(ctx), config)
+	if err != nil {
+		log.Printf("system settings: fetch environment config failed: %v", err)
+		page.Error = "環境設定の取得に失敗しました。時間を置いて再度お試しください。"
+	}
+
+	templ.Handler(systemtpl.EnvironmentSettingsPage(page)).ServeHTTP(w, r)
+}
+
 // SystemTasksPage renders the scheduler tasks monitor.
 func (h *Handlers) SystemTasksPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

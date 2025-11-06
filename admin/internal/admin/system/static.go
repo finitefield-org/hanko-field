@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -23,6 +24,7 @@ type StaticService struct {
 	counterHistory map[string][]CounterEvent
 	counterJobs    map[string][]CounterJob
 	counterNotes   map[string][]string
+	envConfig      EnvironmentConfig
 }
 
 // NewStaticService constructs a StaticService populated with representative failures.
@@ -777,6 +779,173 @@ func NewStaticService() *StaticService {
 		},
 	}
 
+	envConfig := EnvironmentConfig{
+		Environment:      "production",
+		EnvironmentLabel: "Production",
+		Region:           "asia-northeast1",
+		ReadOnly:         true,
+		Summary:          "本番環境では Cloud Run / Firestore / Firebase Auth を使用し、重要なフィーチャーフラグは LaunchDarkly で管理しています。",
+		GeneratedAt:      now.Add(-5 * time.Minute),
+		Metadata: map[string]string{
+			"GCP プロジェクト":        "hanko-prod",
+			"Firestore ネームスペース": "asia-northeast1 (regional)",
+			"Storage バケット":      "gs://hanko-prod-uploads",
+			"Auth ドメイン":         "auth.hanko.jp",
+		},
+		Documents: []Link{
+			{Label: "運用 Runbook", URL: "https://runbooks.hanko.local/system/environment-production", Icon: "📘"},
+			{Label: "設定更新手順", URL: "https://runbooks.hanko.local/system/environment-config", Icon: "🛠"},
+		},
+		Categories: []EnvironmentConfigCategory{
+			{
+				ID:          "feature-flags",
+				Title:       "フィーチャーフラグ",
+				Description: "アプリ・管理画面共通で参照する主要フラグの状態です。",
+				Items: []EnvironmentConfigItem{
+					{
+						ID:          "feature-new-checkout",
+						Label:       "新しいチェックアウト体験",
+						Description: "ウェブ注文のチェックアウト UI を新デザインに切り替えます。",
+						Value:       "有効",
+						ValueHint:   "LaunchDarkly: checkout_new_ui",
+						StatusLabel: "ON",
+						StatusTone:  "success",
+						Tags:        []string{"ga"},
+						Docs: []Link{
+							{Label: "仕様", URL: "https://docs.hanko.local/features/new-checkout"},
+						},
+					},
+					{
+						ID:          "feature-risk-signals",
+						Label:       "リスクシグナル表示",
+						Description: "注文詳細でリスク分析カードを表示します。",
+						Value:       "無効",
+						ValueHint:   "LaunchDarkly: risk_signals_panel",
+						StatusLabel: "OFF",
+						StatusTone:  "warning",
+						Tags:        []string{"beta"},
+						Docs: []Link{
+							{Label: "要件", URL: "https://docs.hanko.local/risk/insights"},
+						},
+					},
+					{
+						ID:           "feature-nps-collection",
+						Label:        "NPS 調査配信",
+						Description:  "注文完了メールで NPS アンケートを配信します。",
+						Value:        "API キー設定済み",
+						ValueHint:    "SendGrid トークン",
+						StatusLabel:  "LOCKED",
+						StatusTone:   "danger",
+						Tags:         []string{"sensitive"},
+						Sensitive:    true,
+						Locked:       true,
+						LockedReason: "セキュリティチームのみ更新可能",
+						Docs: []Link{
+							{Label: "権限申請", URL: "https://runbooks.hanko.local/security/credential-rotation"},
+						},
+					},
+				},
+			},
+			{
+				ID:          "integrations",
+				Title:       "外部連携",
+				Description: "コアシステムとの API 連携状態を一覧で確認できます。",
+				Items: []EnvironmentConfigItem{
+					{
+						ID:          "integration-shopify",
+						Label:       "Shopify ストア連携",
+						Description: "注文同期と商品在庫のハンドオフを行います。",
+						Value:       "有効 (webhooks)",
+						ValueHint:   "shopify-storefront",
+						StatusLabel: "稼働中",
+						StatusTone:  "success",
+						Tags:        []string{"sync", "webhook"},
+					},
+					{
+						ID:          "integration-slack",
+						Label:       "Slack インシデント通知",
+						Description: "重大障害を #ops-incident に通知します。",
+						Value:       "無効",
+						ValueHint:   "Slack Incoming Webhook 未設定",
+						StatusLabel: "停止中",
+						StatusTone:  "danger",
+						Tags:        []string{"alerting"},
+						Docs: []Link{
+							{Label: "通知運用", URL: "https://docs.hanko.local/ops/slack-alerts"},
+						},
+					},
+					{
+						ID:          "integration-analytics",
+						Label:       "Looker Studio エクスポート",
+						Description: "ダッシュボード用に日次でエクスポートします。",
+						Value:       "スケジュール毎日 02:00 JST",
+						StatusLabel: "スケジュール済み",
+						StatusTone:  "info",
+						Tags:        []string{"analytics"},
+					},
+				},
+			},
+			{
+				ID:          "risk-controls",
+				Title:       "リスクコントロール",
+				Description: "決済や出荷リスクに関わる設定のサマリです。",
+				Items: []EnvironmentConfigItem{
+					{
+						ID:          "risk-chargeback-monitoring",
+						Label:       "チャージバック監視",
+						Description: "Stripe Radar のチャージバック監視レベル。",
+						Value:       "High",
+						StatusLabel: "強化中",
+						StatusTone:  "info",
+						Tags:        []string{"stripe", "fraud"},
+					},
+					{
+						ID:          "risk-auto-hold",
+						Label:       "高リスク注文の自動保留",
+						Description: "スコア 70 以上の注文は手動レビューに回します。",
+						Value:       "閾値 70",
+						StatusLabel: "有効",
+						StatusTone:  "success",
+					},
+					{
+						ID:          "risk-address-verify",
+						Label:       "住所検証",
+						Description: "JP 郵便住所の正規化と P.O. Box ブロック。",
+						Value:       "正規化のみ",
+						StatusLabel: "部分対応",
+						StatusTone:  "warning",
+						Tags:        []string{"fulfillment"},
+					},
+				},
+			},
+		},
+		AuditTrail: []ConfigAuditEntry{
+			{
+				ID:         "chg-20241104-1",
+				ActorName:  "Ayaka Fujimoto",
+				ActorEmail: "ayaka.fujimoto@hanko.jp",
+				Action:     "updated",
+				Summary:    "Slack インシデント通知を一時停止しました。",
+				Timestamp:  now.Add(-6 * time.Hour),
+				Changes: []ConfigAuditChange{
+					{Field: "integration-slack", Before: "稼働中", After: "停止中"},
+				},
+			},
+			{
+				ID:         "chg-20241103-2",
+				ActorName:  "Kosuke Tanaka",
+				ActorEmail: "kosuke.tanaka@hanko.jp",
+				Action:     "updated",
+				Summary:    "新しいチェックアウト体験フラグを有効化しました。",
+				Timestamp:  now.Add(-32 * time.Hour),
+				Changes: []ConfigAuditChange{
+					{Field: "feature-new-checkout", Before: "OFF", After: "ON"},
+					{Field: "feature-risk-signals", Before: "ON", After: "OFF"},
+				},
+			},
+		},
+	}
+
 	return &StaticService{
 		failures: []Failure{webhookFailure, jobFailure, workerFailure},
 		details:  details,
@@ -797,6 +966,7 @@ func NewStaticService() *StaticService {
 		counterHistory: counterHistory,
 		counterJobs:    counterJobs,
 		counterNotes:   counterNotes,
+		envConfig:      envConfig,
 	}
 }
 
@@ -1129,6 +1299,21 @@ func (s *StaticService) NextCounter(_ context.Context, _ string, name string, op
 	s.counterNotes[baseKey] = prependCounterNote(s.counterNotes[baseKey], fmt.Sprintf("%s (%s)", note, now.Format(time.RFC3339)))
 
 	return outcome, nil
+}
+
+// EnvironmentConfig returns the cached environment configuration summary.
+func (s *StaticService) EnvironmentConfig(_ context.Context, _ string) (EnvironmentConfig, error) {
+	if s == nil {
+		return EnvironmentConfig{}, ErrNotConfigured
+	}
+	cfg := s.envConfig
+	if cfg.Environment == "" {
+		return EnvironmentConfig{}, errors.New("environment configuration unavailable")
+	}
+	if cfg.GeneratedAt.IsZero() {
+		cfg.GeneratedAt = time.Now()
+	}
+	return cfg, nil
 }
 
 func (s *StaticService) buildFilterSummary() FilterSummary {

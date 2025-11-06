@@ -98,7 +98,7 @@
 - [x] [Build system errors dashboard (`/admin/system/errors`) pulling failed webhook/job logs with retry actions when permitted.](doc/admin/tasks/066-build-system-errors-dashboard-admin-system-errors-pulling-failed-webhook-job-logs-with-ret.md)
 - [x] [Build jobs/tasks monitor (`/admin/system/tasks`) showing scheduler runs, job status, and manual retry triggers.](doc/admin/tasks/067-build-jobs-tasks-monitor-admin-system-tasks-showing-scheduler-runs-job-status-and-manual-r.md)
 - [x] [Implement counters management UI (`/admin/system/counters`) allowing admins to view and test `POST /admin/counters/{name}:next`.](doc/admin/tasks/068-implement-counters-management-ui-admin-system-counters-allowing-admins-to-view-and-test-po.md)
-- [ ] [Implement settings page for environment configuration toggles or at minimum a read-only configuration summary.](doc/admin/tasks/069-implement-settings-page-for-environment-configuration-toggles-or-at-minimum-a-read-only-co.md)
+- [x] [Implement settings page for environment configuration toggles or at minimum a read-only configuration summary.](doc/admin/tasks/069-implement-settings-page-for-environment-configuration-toggles-or-at-minimum-a-read-only-co.md)
 
 ## 13. Notifications & Real-Time Feedback
 - [ ] [Integrate WebSocket or polling mechanism for real-time updates (new orders, failed jobs, queue changes) within notifications center.](doc/admin/tasks/070-integrate-websocket-or-polling-mechanism-for-real-time-updates-new-orders-failed-jobs-queu.md)

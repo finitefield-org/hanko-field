@@ -43,6 +43,8 @@ type Service interface {
 	CounterDetail(ctx context.Context, token, name string, scope map[string]string) (CounterDetail, error)
 	// NextCounter advances the counter and returns the resulting value.
 	NextCounter(ctx context.Context, token, name string, opts CounterNextOptions) (CounterNextOutcome, error)
+	// EnvironmentConfig returns a high-level summary of environment configuration and feature toggles.
+	EnvironmentConfig(ctx context.Context, token string) (EnvironmentConfig, error)
 }
 
 // Source enumerates failure origins.

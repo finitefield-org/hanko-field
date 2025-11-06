@@ -39,6 +39,7 @@ const (
 	CapSystemErrors          Capability = "system.errors"
 	CapSystemTasks           Capability = "system.tasks"
 	CapSystemCounters        Capability = "system.counters"
+	CapSystemSettings        Capability = "system.settings"
 	CapStaffManage           Capability = "org.staff"
 	CapProfileSelf           Capability = "profile.self"
 	CapSearchGlobal          Capability = "search.global"
@@ -67,6 +68,7 @@ var capabilityRoles = map[Capability]Roles{
 	CapSystemErrors:          {RoleAdmin, RoleOps},
 	CapSystemTasks:           {RoleAdmin, RoleOps},
 	CapSystemCounters:        {RoleAdmin},
+	CapSystemSettings:        {RoleAdmin, RoleOps},
 	CapStaffManage:           {RoleAdmin},
 	CapProfileSelf:           {RoleAdmin, RoleOps, RoleSupport, RoleMarketing},
 	CapSearchGlobal:          {RoleAdmin, RoleOps, RoleSupport},

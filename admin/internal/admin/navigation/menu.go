@@ -363,6 +363,15 @@ var defaultMenu = []Group{
 				MatchPrefix: true,
 			},
 			{
+				Key:         "system-settings",
+				Label:       "環境設定",
+				Icon:        "⚙️",
+				Capability:  rbac.CapSystemSettings,
+				Path:        "/system/settings",
+				Pattern:     "/system/settings",
+				MatchPrefix: true,
+			},
+			{
 				Key:         "org-staff",
 				Label:       "スタッフ管理",
 				Icon:        "🧑‍🤝‍🧑",
