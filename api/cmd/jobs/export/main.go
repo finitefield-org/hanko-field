@@ -37,7 +37,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	processor := jobsexport.NewProcessor(nil, logger.Named("export.processor"))
+	handler := initExportHandler(ctx, logger.Named("export.handler"))
+	processor := jobsexport.NewProcessor(handler, logger.Named("export.processor"))
 	opts := runtime.Options{
 		ProjectID:                  *projectID,
 		SubscriptionID:             *subscriptionID,
@@ -67,4 +68,12 @@ func envBool(env string) bool {
 	default:
 		return false
 	}
+}
+
+func initExportHandler(ctx context.Context, logger *zap.Logger) jobsexport.Handler {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger.Fatal("export worker: handler wiring not configured; ensure initExportHandler provides a real implementation before deploying")
+	return nil
 }

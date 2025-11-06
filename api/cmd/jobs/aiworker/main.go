@@ -37,7 +37,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	processor := ai.NewProcessor(nil, logger.Named("ai.processor"))
+	executor := initAIExecutor(ctx, logger.Named("ai.executor"))
+	processor := ai.NewProcessor(executor, logger.Named("ai.processor"))
 	opts := runtime.Options{
 		ProjectID:                  *projectID,
 		SubscriptionID:             *subscriptionID,
@@ -67,4 +68,12 @@ func envBool(env string) bool {
 	default:
 		return false
 	}
+}
+
+func initAIExecutor(ctx context.Context, logger *zap.Logger) ai.Executor {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger.Fatal("ai worker: executor wiring not configured; ensure initAIExecutor provides a real implementation before deploying")
+	return nil
 }

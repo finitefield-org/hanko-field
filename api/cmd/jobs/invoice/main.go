@@ -14,6 +14,7 @@ import (
 	"github.com/hanko-field/api/internal/jobs/invoice"
 	"github.com/hanko-field/api/internal/jobs/runtime"
 	"github.com/hanko-field/api/internal/platform/observability"
+	"github.com/hanko-field/api/internal/services"
 )
 
 func main() {
@@ -37,7 +38,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	processor := invoice.NewProcessor(nil, logger.Named("invoice.processor"))
+	service := initInvoiceService(ctx, logger.Named("invoice.service"))
+	processor := invoice.NewProcessor(service, logger.Named("invoice.processor"))
 	opts := runtime.Options{
 		ProjectID:                  *projectID,
 		SubscriptionID:             *subscriptionID,
@@ -67,4 +69,12 @@ func envBool(env string) bool {
 	default:
 		return false
 	}
+}
+
+func initInvoiceService(ctx context.Context, logger *zap.Logger) services.InvoiceService {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger.Fatal("invoice worker: invoice service wiring not configured; ensure initInvoiceService provides a real implementation before deploying")
+	return nil
 }
