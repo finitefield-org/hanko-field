@@ -2052,4 +2052,305 @@
 , "@orderStatusCanceled": {
   "description": "Status label for canceled orders"
 }
+
+, "orderDetailsTabSummary": "Summary"
+, "@orderDetailsTabSummary": {
+  "description": "Tab label for the order summary view"
+}
+
+, "orderDetailsTabTimeline": "Timeline"
+, "@orderDetailsTabTimeline": {
+  "description": "Tab label for the order timeline view"
+}
+
+, "orderDetailsTabFiles": "Files"
+, "@orderDetailsTabFiles": {
+  "description": "Tab label for the order files view"
+}
+
+, "orderDetailsAppBarTitle": "Order {orderNumber}"
+, "@orderDetailsAppBarTitle": {
+  "description": "Title shown in the order details app bar",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsActionReorder": "Reorder"
+, "@orderDetailsActionReorder": {
+  "description": "Action label for reordering the same items"
+}
+
+, "orderDetailsActionShare": "Share"
+, "@orderDetailsActionShare": {
+  "description": "Action label for sharing the order summary"
+}
+
+, "orderDetailsItemsSectionTitle": "Items"
+, "@orderDetailsItemsSectionTitle": {
+  "description": "Heading for the order items section"
+}
+
+, "orderDetailsItemsSectionCount": "{count, plural, one {# item} other {# items}}"
+, "@orderDetailsItemsSectionCount": {
+  "description": "Displays the number of line items in the order",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderDetailsTotalsSectionTitle": "Payment summary"
+, "@orderDetailsTotalsSectionTitle": {
+  "description": "Heading for the payment breakdown section"
+}
+
+, "orderDetailsLastUpdated": "Synced {timestamp}"
+, "@orderDetailsLastUpdated": {
+  "description": "Label indicating when the order details were last refreshed",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderDetailsAddressesSectionTitle": "Addresses"
+, "@orderDetailsAddressesSectionTitle": {
+  "description": "Heading for the addresses section"
+}
+
+, "orderDetailsContactSectionTitle": "Contact"
+, "@orderDetailsContactSectionTitle": {
+  "description": "Heading for the order contact information section"
+}
+
+, "orderDetailsDesignSectionTitle": "Design snapshots"
+, "@orderDetailsDesignSectionTitle": {
+  "description": "Heading for the design snapshot gallery"
+}
+
+, "orderDetailsLoadErrorMessage": "Order details can’t be loaded"
+, "@orderDetailsLoadErrorMessage": {
+  "description": "Error message shown when order details fail to load"
+}
+
+, "orderDetailsRetryLabel": "Retry"
+, "@orderDetailsRetryLabel": {
+  "description": "Label for retrying to load order details"
+}
+
+, "orderDetailsTimelineTabTitle": "Production timeline"
+, "@orderDetailsTimelineTabTitle": {
+  "description": "Title shown on the timeline tab placeholder"
+}
+
+, "orderDetailsTimelinePlaceholder": "We’ll surface production, QC, and shipping updates here."
+, "@orderDetailsTimelinePlaceholder": {
+  "description": "Placeholder copy for the timeline tab while content is unavailable"
+}
+
+, "orderDetailsFilesTabTitle": "Files & documents"
+, "@orderDetailsFilesTabTitle": {
+  "description": "Title shown on the files tab placeholder"
+}
+
+, "orderDetailsFilesPlaceholder": "Invoices, certificates, and shared files will appear here."
+, "@orderDetailsFilesPlaceholder": {
+  "description": "Placeholder copy for the files tab while content is unavailable"
+}
+
+, "orderDetailsReorderSuccess": "Reorder for {orderNumber} has been placed."
+, "@orderDetailsReorderSuccess": {
+  "description": "Snack bar message shown when reorder succeeds",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsReorderError": "We couldn’t start the reorder."
+, "@orderDetailsReorderError": {
+  "description": "Snack bar message shown when reorder fails"
+}
+
+, "orderDetailsInvoiceSuccess": "Invoice request for {orderNumber} submitted."
+, "@orderDetailsInvoiceSuccess": {
+  "description": "Snack bar message shown when invoice request succeeds",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsInvoiceError": "Invoice could not be requested."
+, "@orderDetailsInvoiceError": {
+  "description": "Snack bar message shown when invoice request fails"
+}
+
+, "orderDetailsSupportMessage": "Support will reach out shortly. You can also chat from the Help tab."
+, "@orderDetailsSupportMessage": {
+  "description": "Snack bar message shown when contacting support"
+}
+
+, "orderDetailsShareSubject": "Order {orderNumber} summary"
+, "@orderDetailsShareSubject": {
+  "description": "Email subject when sharing an order",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsShareBody": "Order {orderNumber} total: {total}.\\nCheck the Hanko Field app for details."
+, "@orderDetailsShareBody": {
+  "description": "Body text when sharing an order summary",
+  "placeholders": {
+    "orderNumber": { "type": "String" },
+    "total": { "type": "String" }
+  }
+}
+
+, "orderDetailsActionSupport": "Contact support"
+, "@orderDetailsActionSupport": {
+  "description": "Assist chip label for contacting support"
+}
+
+, "orderDetailsActionInvoice": "Download invoice"
+, "@orderDetailsActionInvoice": {
+  "description": "Assist chip label for downloading the invoice"
+}
+
+, "orderDetailsSupportBannerTitle": "Need help with this order?"
+, "@orderDetailsSupportBannerTitle": {
+  "description": "Headline for the support banner"
+}
+
+, "orderDetailsSupportBannerMessage": "Production is taking longer than expected. Let us know if you need priority handling."
+, "@orderDetailsSupportBannerMessage": {
+  "description": "Body copy for the support banner"
+}
+
+, "orderDetailsHeadline": "Order {orderNumber}"
+, "@orderDetailsHeadline": {
+  "description": "Heading shown at the top of the order overview",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsProgressTitle": "Latest status"
+, "@orderDetailsProgressTitle": {
+  "description": "Heading for the recent status timeline chips"
+}
+
+, "orderDetailsSubtotalLabel": "Subtotal"
+, "@orderDetailsSubtotalLabel": {
+  "description": "Label for the subtotal line in the totals card"
+}
+
+, "orderDetailsDiscountLabel": "Discounts"
+, "@orderDetailsDiscountLabel": {
+  "description": "Label for the discount line in the totals card"
+}
+
+, "orderDetailsShippingLabel": "Shipping"
+, "@orderDetailsShippingLabel": {
+  "description": "Label for the shipping line in the totals card"
+}
+
+, "orderDetailsFeesLabel": "Fees"
+, "@orderDetailsFeesLabel": {
+  "description": "Label for the fees line in the totals card"
+}
+
+, "orderDetailsTaxLabel": "Tax"
+, "@orderDetailsTaxLabel": {
+  "description": "Label for the tax line in the totals card"
+}
+
+, "orderDetailsTotalLabel": "Total"
+, "@orderDetailsTotalLabel": {
+  "description": "Label for the grand total line in the totals card"
+}
+
+, "orderDetailsQuantityLabel": "Qty {quantity}"
+, "@orderDetailsQuantityLabel": {
+  "description": "Label that shows the quantity for a line item",
+  "placeholders": {
+    "quantity": { "type": "int" }
+  }
+}
+
+, "orderDetailsSkuLabel": "SKU {sku}"
+, "@orderDetailsSkuLabel": {
+  "description": "Label displaying the SKU for a line item",
+  "placeholders": {
+    "sku": { "type": "String" }
+  }
+}
+
+, "orderDetailsShippingAddressLabel": "Shipping address"
+, "@orderDetailsShippingAddressLabel": {
+  "description": "Heading for the shipping address card"
+}
+
+, "orderDetailsBillingAddressLabel": "Billing address"
+, "@orderDetailsBillingAddressLabel": {
+  "description": "Heading for the billing address card"
+}
+
+, "orderDetailsAddressUnavailable": "Not provided"
+, "@orderDetailsAddressUnavailable": {
+  "description": "Label shown when an address is missing"
+}
+
+, "orderDetailsPhoneLabel": "Phone: {phone}"
+, "@orderDetailsPhoneLabel": {
+  "description": "Label displaying a phone number in the addresses section",
+  "placeholders": {
+    "phone": { "type": "String" }
+  }
+}
+
+, "orderDetailsEmailLabel": "Email: {email}"
+, "@orderDetailsEmailLabel": {
+  "description": "Label displaying an email address in the contact card",
+  "placeholders": {
+    "email": { "type": "String" }
+  }
+}
+
+, "orderDetailsTimelinePaid": "Payment confirmed"
+, "@orderDetailsTimelinePaid": {
+  "description": "Timeline chip label when payment is complete"
+}
+
+, "orderDetailsTimelinePending": "Processing"
+, "@orderDetailsTimelinePending": {
+  "description": "Timeline chip label when the order is pending"
+}
+
+, "orderDetailsUpdatedJustNow": "just now"
+, "@orderDetailsUpdatedJustNow": {
+  "description": "Relative timestamp when the update was moments ago"
+}
+
+, "orderDetailsUpdatedMinutes": "{minutes, plural, one {# minute ago} other {# minutes ago}}"
+, "@orderDetailsUpdatedMinutes": {
+  "description": "Relative timestamp shown in minutes",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "orderDetailsUpdatedHours": "{hours, plural, one {# hour ago} other {# hours ago}}"
+, "@orderDetailsUpdatedHours": {
+  "description": "Relative timestamp shown in hours",
+  "placeholders": {
+    "hours": { "type": "int" }
+  }
+}
+
+, "orderDetailsUpdatedOn": "on {date}"
+, "@orderDetailsUpdatedOn": {
+  "description": "Timestamp label when showing a specific date",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
 }

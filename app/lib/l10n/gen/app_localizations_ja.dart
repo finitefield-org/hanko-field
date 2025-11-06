@@ -1228,4 +1228,188 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get orderStatusCanceled => 'キャンセル済み';
+
+  @override
+  String get orderDetailsTabSummary => '概要';
+
+  @override
+  String get orderDetailsTabTimeline => 'タイムライン';
+
+  @override
+  String get orderDetailsTabFiles => 'ファイル';
+
+  @override
+  String orderDetailsAppBarTitle(String orderNumber) {
+    return '注文 $orderNumber';
+  }
+
+  @override
+  String get orderDetailsActionReorder => '再注文';
+
+  @override
+  String get orderDetailsActionShare => '共有';
+
+  @override
+  String get orderDetailsItemsSectionTitle => '商品';
+
+  @override
+  String orderDetailsItemsSectionCount(int count) {
+    return '$count件';
+  }
+
+  @override
+  String get orderDetailsTotalsSectionTitle => '支払い内訳';
+
+  @override
+  String orderDetailsLastUpdated(String timestamp) {
+    return '$timestampに更新';
+  }
+
+  @override
+  String get orderDetailsAddressesSectionTitle => '住所';
+
+  @override
+  String get orderDetailsContactSectionTitle => '連絡先';
+
+  @override
+  String get orderDetailsDesignSectionTitle => 'デザインスナップショット';
+
+  @override
+  String get orderDetailsLoadErrorMessage => '注文詳細を読み込めませんでした';
+
+  @override
+  String get orderDetailsRetryLabel => '再試行';
+
+  @override
+  String get orderDetailsTimelineTabTitle => '制作タイムライン';
+
+  @override
+  String get orderDetailsTimelinePlaceholder => '制作・検品・配送の更新をここに表示します。';
+
+  @override
+  String get orderDetailsFilesTabTitle => 'ファイル・書類';
+
+  @override
+  String get orderDetailsFilesPlaceholder => '領収書や証明書などのファイルがここに並びます。';
+
+  @override
+  String orderDetailsReorderSuccess(String orderNumber) {
+    return '$orderNumber の再注文を受け付けました。';
+  }
+
+  @override
+  String get orderDetailsReorderError => '再注文を開始できませんでした。';
+
+  @override
+  String orderDetailsInvoiceSuccess(String orderNumber) {
+    return '$orderNumber の請求書リクエストを送信しました。';
+  }
+
+  @override
+  String get orderDetailsInvoiceError => '請求書をリクエストできませんでした。';
+
+  @override
+  String get orderDetailsSupportMessage => 'サポートがまもなくご連絡します。ヘルプタブからチャットもできます。';
+
+  @override
+  String orderDetailsShareSubject(String orderNumber) {
+    return '注文 $orderNumber の概要';
+  }
+
+  @override
+  String orderDetailsShareBody(String orderNumber, String total) {
+    return '注文 $orderNumber の合計金額は $total です。\\n詳細は Hanko Field アプリをご確認ください。';
+  }
+
+  @override
+  String get orderDetailsActionSupport => 'サポートに連絡';
+
+  @override
+  String get orderDetailsActionInvoice => '請求書をダウンロード';
+
+  @override
+  String get orderDetailsSupportBannerTitle => 'この注文でお困りですか？';
+
+  @override
+  String get orderDetailsSupportBannerMessage =>
+      '現在、制作に通常より時間がかかっています。優先対応が必要な場合はお知らせください。';
+
+  @override
+  String orderDetailsHeadline(String orderNumber) {
+    return '注文 $orderNumber';
+  }
+
+  @override
+  String get orderDetailsProgressTitle => '最新状況';
+
+  @override
+  String get orderDetailsSubtotalLabel => '小計';
+
+  @override
+  String get orderDetailsDiscountLabel => '割引';
+
+  @override
+  String get orderDetailsShippingLabel => '送料';
+
+  @override
+  String get orderDetailsFeesLabel => '手数料';
+
+  @override
+  String get orderDetailsTaxLabel => '税額';
+
+  @override
+  String get orderDetailsTotalLabel => '合計';
+
+  @override
+  String orderDetailsQuantityLabel(int quantity) {
+    return '数量 $quantity';
+  }
+
+  @override
+  String orderDetailsSkuLabel(String sku) {
+    return 'SKU $sku';
+  }
+
+  @override
+  String get orderDetailsShippingAddressLabel => '配送先住所';
+
+  @override
+  String get orderDetailsBillingAddressLabel => '請求先住所';
+
+  @override
+  String get orderDetailsAddressUnavailable => '未設定';
+
+  @override
+  String orderDetailsPhoneLabel(String phone) {
+    return '電話: $phone';
+  }
+
+  @override
+  String orderDetailsEmailLabel(String email) {
+    return 'メール: $email';
+  }
+
+  @override
+  String get orderDetailsTimelinePaid => '支払い完了';
+
+  @override
+  String get orderDetailsTimelinePending => '処理中';
+
+  @override
+  String get orderDetailsUpdatedJustNow => 'たった今';
+
+  @override
+  String orderDetailsUpdatedMinutes(int minutes) {
+    return '$minutes分前';
+  }
+
+  @override
+  String orderDetailsUpdatedHours(int hours) {
+    return '$hours時間前';
+  }
+
+  @override
+  String orderDetailsUpdatedOn(String date) {
+    return '$date 更新';
+  }
 }

@@ -2341,6 +2341,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Canceled'**
   String get orderStatusCanceled;
+
+  /// Tab label for the order summary view
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get orderDetailsTabSummary;
+
+  /// Tab label for the order timeline view
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get orderDetailsTabTimeline;
+
+  /// Tab label for the order files view
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get orderDetailsTabFiles;
+
+  /// Title shown in the order details app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Order {orderNumber}'**
+  String orderDetailsAppBarTitle(String orderNumber);
+
+  /// Action label for reordering the same items
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder'**
+  String get orderDetailsActionReorder;
+
+  /// Action label for sharing the order summary
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get orderDetailsActionShare;
+
+  /// Heading for the order items section
+  ///
+  /// In en, this message translates to:
+  /// **'Items'**
+  String get orderDetailsItemsSectionTitle;
+
+  /// Displays the number of line items in the order
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# item} other {# items}}'**
+  String orderDetailsItemsSectionCount(int count);
+
+  /// Heading for the payment breakdown section
+  ///
+  /// In en, this message translates to:
+  /// **'Payment summary'**
+  String get orderDetailsTotalsSectionTitle;
+
+  /// Label indicating when the order details were last refreshed
+  ///
+  /// In en, this message translates to:
+  /// **'Synced {timestamp}'**
+  String orderDetailsLastUpdated(String timestamp);
+
+  /// Heading for the addresses section
+  ///
+  /// In en, this message translates to:
+  /// **'Addresses'**
+  String get orderDetailsAddressesSectionTitle;
+
+  /// Heading for the order contact information section
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get orderDetailsContactSectionTitle;
+
+  /// Heading for the design snapshot gallery
+  ///
+  /// In en, this message translates to:
+  /// **'Design snapshots'**
+  String get orderDetailsDesignSectionTitle;
+
+  /// Error message shown when order details fail to load
+  ///
+  /// In en, this message translates to:
+  /// **'Order details can’t be loaded'**
+  String get orderDetailsLoadErrorMessage;
+
+  /// Label for retrying to load order details
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get orderDetailsRetryLabel;
+
+  /// Title shown on the timeline tab placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Production timeline'**
+  String get orderDetailsTimelineTabTitle;
+
+  /// Placeholder copy for the timeline tab while content is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll surface production, QC, and shipping updates here.'**
+  String get orderDetailsTimelinePlaceholder;
+
+  /// Title shown on the files tab placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Files & documents'**
+  String get orderDetailsFilesTabTitle;
+
+  /// Placeholder copy for the files tab while content is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Invoices, certificates, and shared files will appear here.'**
+  String get orderDetailsFilesPlaceholder;
+
+  /// Snack bar message shown when reorder succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder for {orderNumber} has been placed.'**
+  String orderDetailsReorderSuccess(String orderNumber);
+
+  /// Snack bar message shown when reorder fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t start the reorder.'**
+  String get orderDetailsReorderError;
+
+  /// Snack bar message shown when invoice request succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice request for {orderNumber} submitted.'**
+  String orderDetailsInvoiceSuccess(String orderNumber);
+
+  /// Snack bar message shown when invoice request fails
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice could not be requested.'**
+  String get orderDetailsInvoiceError;
+
+  /// Snack bar message shown when contacting support
+  ///
+  /// In en, this message translates to:
+  /// **'Support will reach out shortly. You can also chat from the Help tab.'**
+  String get orderDetailsSupportMessage;
+
+  /// Email subject when sharing an order
+  ///
+  /// In en, this message translates to:
+  /// **'Order {orderNumber} summary'**
+  String orderDetailsShareSubject(String orderNumber);
+
+  /// Body text when sharing an order summary
+  ///
+  /// In en, this message translates to:
+  /// **'Order {orderNumber} total: {total}.\\nCheck the Hanko Field app for details.'**
+  String orderDetailsShareBody(String orderNumber, String total);
+
+  /// Assist chip label for contacting support
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get orderDetailsActionSupport;
+
+  /// Assist chip label for downloading the invoice
+  ///
+  /// In en, this message translates to:
+  /// **'Download invoice'**
+  String get orderDetailsActionInvoice;
+
+  /// Headline for the support banner
+  ///
+  /// In en, this message translates to:
+  /// **'Need help with this order?'**
+  String get orderDetailsSupportBannerTitle;
+
+  /// Body copy for the support banner
+  ///
+  /// In en, this message translates to:
+  /// **'Production is taking longer than expected. Let us know if you need priority handling.'**
+  String get orderDetailsSupportBannerMessage;
+
+  /// Heading shown at the top of the order overview
+  ///
+  /// In en, this message translates to:
+  /// **'Order {orderNumber}'**
+  String orderDetailsHeadline(String orderNumber);
+
+  /// Heading for the recent status timeline chips
+  ///
+  /// In en, this message translates to:
+  /// **'Latest status'**
+  String get orderDetailsProgressTitle;
+
+  /// Label for the subtotal line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Subtotal'**
+  String get orderDetailsSubtotalLabel;
+
+  /// Label for the discount line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Discounts'**
+  String get orderDetailsDiscountLabel;
+
+  /// Label for the shipping line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping'**
+  String get orderDetailsShippingLabel;
+
+  /// Label for the fees line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Fees'**
+  String get orderDetailsFeesLabel;
+
+  /// Label for the tax line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Tax'**
+  String get orderDetailsTaxLabel;
+
+  /// Label for the grand total line in the totals card
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get orderDetailsTotalLabel;
+
+  /// Label that shows the quantity for a line item
+  ///
+  /// In en, this message translates to:
+  /// **'Qty {quantity}'**
+  String orderDetailsQuantityLabel(int quantity);
+
+  /// Label displaying the SKU for a line item
+  ///
+  /// In en, this message translates to:
+  /// **'SKU {sku}'**
+  String orderDetailsSkuLabel(String sku);
+
+  /// Heading for the shipping address card
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping address'**
+  String get orderDetailsShippingAddressLabel;
+
+  /// Heading for the billing address card
+  ///
+  /// In en, this message translates to:
+  /// **'Billing address'**
+  String get orderDetailsBillingAddressLabel;
+
+  /// Label shown when an address is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Not provided'**
+  String get orderDetailsAddressUnavailable;
+
+  /// Label displaying a phone number in the addresses section
+  ///
+  /// In en, this message translates to:
+  /// **'Phone: {phone}'**
+  String orderDetailsPhoneLabel(String phone);
+
+  /// Label displaying an email address in the contact card
+  ///
+  /// In en, this message translates to:
+  /// **'Email: {email}'**
+  String orderDetailsEmailLabel(String email);
+
+  /// Timeline chip label when payment is complete
+  ///
+  /// In en, this message translates to:
+  /// **'Payment confirmed'**
+  String get orderDetailsTimelinePaid;
+
+  /// Timeline chip label when the order is pending
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get orderDetailsTimelinePending;
+
+  /// Relative timestamp when the update was moments ago
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get orderDetailsUpdatedJustNow;
+
+  /// Relative timestamp shown in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, one {# minute ago} other {# minutes ago}}'**
+  String orderDetailsUpdatedMinutes(int minutes);
+
+  /// Relative timestamp shown in hours
+  ///
+  /// In en, this message translates to:
+  /// **'{hours, plural, one {# hour ago} other {# hours ago}}'**
+  String orderDetailsUpdatedHours(int hours);
+
+  /// Timestamp label when showing a specific date
+  ///
+  /// In en, this message translates to:
+  /// **'on {date}'**
+  String orderDetailsUpdatedOn(String date);
 }
 
 class _AppLocalizationsDelegate

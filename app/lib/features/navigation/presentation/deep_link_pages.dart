@@ -77,37 +77,6 @@ class ShopDetailPage extends StatelessWidget {
   }
 }
 
-/// 注文詳細ページ
-class OrderDetailsPage extends StatelessWidget {
-  const OrderDetailsPage({
-    required this.orderId,
-    required this.subPage,
-    super.key,
-  });
-
-  final String orderId;
-  final String subPage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('注文 $orderId')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('注文詳細', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text('注文 ID: $orderId'),
-            if (subPage.isNotEmpty) Text('セクション: $subPage'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// 保存済み印影
 class LibraryEntryPage extends StatelessWidget {
   const LibraryEntryPage({

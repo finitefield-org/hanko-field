@@ -1279,4 +1279,209 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderStatusCanceled => 'Canceled';
+
+  @override
+  String get orderDetailsTabSummary => 'Summary';
+
+  @override
+  String get orderDetailsTabTimeline => 'Timeline';
+
+  @override
+  String get orderDetailsTabFiles => 'Files';
+
+  @override
+  String orderDetailsAppBarTitle(String orderNumber) {
+    return 'Order $orderNumber';
+  }
+
+  @override
+  String get orderDetailsActionReorder => 'Reorder';
+
+  @override
+  String get orderDetailsActionShare => 'Share';
+
+  @override
+  String get orderDetailsItemsSectionTitle => 'Items';
+
+  @override
+  String orderDetailsItemsSectionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# items',
+      one: '# item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderDetailsTotalsSectionTitle => 'Payment summary';
+
+  @override
+  String orderDetailsLastUpdated(String timestamp) {
+    return 'Synced $timestamp';
+  }
+
+  @override
+  String get orderDetailsAddressesSectionTitle => 'Addresses';
+
+  @override
+  String get orderDetailsContactSectionTitle => 'Contact';
+
+  @override
+  String get orderDetailsDesignSectionTitle => 'Design snapshots';
+
+  @override
+  String get orderDetailsLoadErrorMessage => 'Order details can’t be loaded';
+
+  @override
+  String get orderDetailsRetryLabel => 'Retry';
+
+  @override
+  String get orderDetailsTimelineTabTitle => 'Production timeline';
+
+  @override
+  String get orderDetailsTimelinePlaceholder =>
+      'We’ll surface production, QC, and shipping updates here.';
+
+  @override
+  String get orderDetailsFilesTabTitle => 'Files & documents';
+
+  @override
+  String get orderDetailsFilesPlaceholder =>
+      'Invoices, certificates, and shared files will appear here.';
+
+  @override
+  String orderDetailsReorderSuccess(String orderNumber) {
+    return 'Reorder for $orderNumber has been placed.';
+  }
+
+  @override
+  String get orderDetailsReorderError => 'We couldn’t start the reorder.';
+
+  @override
+  String orderDetailsInvoiceSuccess(String orderNumber) {
+    return 'Invoice request for $orderNumber submitted.';
+  }
+
+  @override
+  String get orderDetailsInvoiceError => 'Invoice could not be requested.';
+
+  @override
+  String get orderDetailsSupportMessage =>
+      'Support will reach out shortly. You can also chat from the Help tab.';
+
+  @override
+  String orderDetailsShareSubject(String orderNumber) {
+    return 'Order $orderNumber summary';
+  }
+
+  @override
+  String orderDetailsShareBody(String orderNumber, String total) {
+    return 'Order $orderNumber total: $total.\\nCheck the Hanko Field app for details.';
+  }
+
+  @override
+  String get orderDetailsActionSupport => 'Contact support';
+
+  @override
+  String get orderDetailsActionInvoice => 'Download invoice';
+
+  @override
+  String get orderDetailsSupportBannerTitle => 'Need help with this order?';
+
+  @override
+  String get orderDetailsSupportBannerMessage =>
+      'Production is taking longer than expected. Let us know if you need priority handling.';
+
+  @override
+  String orderDetailsHeadline(String orderNumber) {
+    return 'Order $orderNumber';
+  }
+
+  @override
+  String get orderDetailsProgressTitle => 'Latest status';
+
+  @override
+  String get orderDetailsSubtotalLabel => 'Subtotal';
+
+  @override
+  String get orderDetailsDiscountLabel => 'Discounts';
+
+  @override
+  String get orderDetailsShippingLabel => 'Shipping';
+
+  @override
+  String get orderDetailsFeesLabel => 'Fees';
+
+  @override
+  String get orderDetailsTaxLabel => 'Tax';
+
+  @override
+  String get orderDetailsTotalLabel => 'Total';
+
+  @override
+  String orderDetailsQuantityLabel(int quantity) {
+    return 'Qty $quantity';
+  }
+
+  @override
+  String orderDetailsSkuLabel(String sku) {
+    return 'SKU $sku';
+  }
+
+  @override
+  String get orderDetailsShippingAddressLabel => 'Shipping address';
+
+  @override
+  String get orderDetailsBillingAddressLabel => 'Billing address';
+
+  @override
+  String get orderDetailsAddressUnavailable => 'Not provided';
+
+  @override
+  String orderDetailsPhoneLabel(String phone) {
+    return 'Phone: $phone';
+  }
+
+  @override
+  String orderDetailsEmailLabel(String email) {
+    return 'Email: $email';
+  }
+
+  @override
+  String get orderDetailsTimelinePaid => 'Payment confirmed';
+
+  @override
+  String get orderDetailsTimelinePending => 'Processing';
+
+  @override
+  String get orderDetailsUpdatedJustNow => 'just now';
+
+  @override
+  String orderDetailsUpdatedMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '# minutes ago',
+      one: '# minute ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String orderDetailsUpdatedHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '# hours ago',
+      one: '# hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String orderDetailsUpdatedOn(String date) {
+    return 'on $date';
+  }
 }

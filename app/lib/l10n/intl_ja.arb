@@ -682,4 +682,305 @@
 , "@orderStatusCanceled": {
   "description": "注文ステータス：キャンセル済み"
 }
+
+, "orderDetailsTabSummary": "概要"
+, "@orderDetailsTabSummary": {
+  "description": "注文詳細画面の概要タブラベル"
+}
+
+, "orderDetailsTabTimeline": "タイムライン"
+, "@orderDetailsTabTimeline": {
+  "description": "注文詳細画面のタイムラインタブラベル"
+}
+
+, "orderDetailsTabFiles": "ファイル"
+, "@orderDetailsTabFiles": {
+  "description": "注文詳細画面のファイルタブラベル"
+}
+
+, "orderDetailsAppBarTitle": "注文 {orderNumber}"
+, "@orderDetailsAppBarTitle": {
+  "description": "注文詳細画面のアプリバータイトル",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsActionReorder": "再注文"
+, "@orderDetailsActionReorder": {
+  "description": "同じ内容で再注文するアクションラベル"
+}
+
+, "orderDetailsActionShare": "共有"
+, "@orderDetailsActionShare": {
+  "description": "注文概要を共有するアクションラベル"
+}
+
+, "orderDetailsItemsSectionTitle": "商品"
+, "@orderDetailsItemsSectionTitle": {
+  "description": "注文商品セクションの見出し"
+}
+
+, "orderDetailsItemsSectionCount": "{count}件"
+, "@orderDetailsItemsSectionCount": {
+  "description": "注文に含まれる商品点数を表示するラベル",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderDetailsTotalsSectionTitle": "支払い内訳"
+, "@orderDetailsTotalsSectionTitle": {
+  "description": "支払い金額の内訳を表示するセクション見出し"
+}
+
+, "orderDetailsLastUpdated": "{timestamp}に更新"
+, "@orderDetailsLastUpdated": {
+  "description": "注文詳細の最終更新時刻を表示するラベル",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderDetailsAddressesSectionTitle": "住所"
+, "@orderDetailsAddressesSectionTitle": {
+  "description": "配送先・請求先住所セクションの見出し"
+}
+
+, "orderDetailsContactSectionTitle": "連絡先"
+, "@orderDetailsContactSectionTitle": {
+  "description": "注文に紐づく連絡先セクションの見出し"
+}
+
+, "orderDetailsDesignSectionTitle": "デザインスナップショット"
+, "@orderDetailsDesignSectionTitle": {
+  "description": "デザインスナップショットギャラリーの見出し"
+}
+
+, "orderDetailsLoadErrorMessage": "注文詳細を読み込めませんでした"
+, "@orderDetailsLoadErrorMessage": {
+  "description": "注文詳細取得に失敗した際のエラーメッセージ"
+}
+
+, "orderDetailsRetryLabel": "再試行"
+, "@orderDetailsRetryLabel": {
+  "description": "注文詳細の再読み込みボタンラベル"
+}
+
+, "orderDetailsTimelineTabTitle": "制作タイムライン"
+, "@orderDetailsTimelineTabTitle": {
+  "description": "タイムラインタブのプレースホルダー見出し"
+}
+
+, "orderDetailsTimelinePlaceholder": "制作・検品・配送の更新をここに表示します。"
+, "@orderDetailsTimelinePlaceholder": {
+  "description": "タイムラインタブのプレースホルダー文言"
+}
+
+, "orderDetailsFilesTabTitle": "ファイル・書類"
+, "@orderDetailsFilesTabTitle": {
+  "description": "ファイルタブのプレースホルダー見出し"
+}
+
+, "orderDetailsFilesPlaceholder": "領収書や証明書などのファイルがここに並びます。"
+, "@orderDetailsFilesPlaceholder": {
+  "description": "ファイルタブのプレースホルダー文言"
+}
+
+, "orderDetailsReorderSuccess": "{orderNumber} の再注文を受け付けました。"
+, "@orderDetailsReorderSuccess": {
+  "description": "再注文が成功した際のスナックバー文言",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsReorderError": "再注文を開始できませんでした。"
+, "@orderDetailsReorderError": {
+  "description": "再注文に失敗した際のスナックバー文言"
+}
+
+, "orderDetailsInvoiceSuccess": "{orderNumber} の請求書リクエストを送信しました。"
+, "@orderDetailsInvoiceSuccess": {
+  "description": "請求書リクエストが成功した際のスナックバー文言",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsInvoiceError": "請求書をリクエストできませんでした。"
+, "@orderDetailsInvoiceError": {
+  "description": "請求書リクエストに失敗した際のスナックバー文言"
+}
+
+, "orderDetailsSupportMessage": "サポートがまもなくご連絡します。ヘルプタブからチャットもできます。"
+, "@orderDetailsSupportMessage": {
+  "description": "サポートへの連絡ボタン押下時のスナックバー文言"
+}
+
+, "orderDetailsShareSubject": "注文 {orderNumber} の概要"
+, "@orderDetailsShareSubject": {
+  "description": "注文概要を共有する際の件名",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsShareBody": "注文 {orderNumber} の合計金額は {total} です。\\n詳細は Hanko Field アプリをご確認ください。"
+, "@orderDetailsShareBody": {
+  "description": "注文概要を共有する際の本文",
+  "placeholders": {
+    "orderNumber": { "type": "String" },
+    "total": { "type": "String" }
+  }
+}
+
+, "orderDetailsActionSupport": "サポートに連絡"
+, "@orderDetailsActionSupport": {
+  "description": "サポートへ連絡するアシストチップのラベル"
+}
+
+, "orderDetailsActionInvoice": "請求書をダウンロード"
+, "@orderDetailsActionInvoice": {
+  "description": "請求書をダウンロードするアシストチップのラベル"
+}
+
+, "orderDetailsSupportBannerTitle": "この注文でお困りですか？"
+, "@orderDetailsSupportBannerTitle": {
+  "description": "サポートバナーの見出し"
+}
+
+, "orderDetailsSupportBannerMessage": "現在、制作に通常より時間がかかっています。優先対応が必要な場合はお知らせください。"
+, "@orderDetailsSupportBannerMessage": {
+  "description": "サポートバナーの本文"
+}
+
+, "orderDetailsHeadline": "注文 {orderNumber}"
+, "@orderDetailsHeadline": {
+  "description": "注文概要のヘッドライン",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderDetailsProgressTitle": "最新状況"
+, "@orderDetailsProgressTitle": {
+  "description": "最新の進捗を示すセクションの見出し"
+}
+
+, "orderDetailsSubtotalLabel": "小計"
+, "@orderDetailsSubtotalLabel": {
+  "description": "金額内訳の小計ラベル"
+}
+
+, "orderDetailsDiscountLabel": "割引"
+, "@orderDetailsDiscountLabel": {
+  "description": "金額内訳の割引ラベル"
+}
+
+, "orderDetailsShippingLabel": "送料"
+, "@orderDetailsShippingLabel": {
+  "description": "金額内訳の送料ラベル"
+}
+
+, "orderDetailsFeesLabel": "手数料"
+, "@orderDetailsFeesLabel": {
+  "description": "金額内訳の手数料ラベル"
+}
+
+, "orderDetailsTaxLabel": "税額"
+, "@orderDetailsTaxLabel": {
+  "description": "金額内訳の税額ラベル"
+}
+
+, "orderDetailsTotalLabel": "合計"
+, "@orderDetailsTotalLabel": {
+  "description": "金額内訳の合計ラベル"
+}
+
+, "orderDetailsQuantityLabel": "数量 {quantity}"
+, "@orderDetailsQuantityLabel": {
+  "description": "注文商品の数量ラベル",
+  "placeholders": {
+    "quantity": { "type": "int" }
+  }
+}
+
+, "orderDetailsSkuLabel": "SKU {sku}"
+, "@orderDetailsSkuLabel": {
+  "description": "注文商品のSKUラベル",
+  "placeholders": {
+    "sku": { "type": "String" }
+  }
+}
+
+, "orderDetailsShippingAddressLabel": "配送先住所"
+, "@orderDetailsShippingAddressLabel": {
+  "description": "配送先住所カードの見出し"
+}
+
+, "orderDetailsBillingAddressLabel": "請求先住所"
+, "@orderDetailsBillingAddressLabel": {
+  "description": "請求先住所カードの見出し"
+}
+
+, "orderDetailsAddressUnavailable": "未設定"
+, "@orderDetailsAddressUnavailable": {
+  "description": "住所情報がない場合に表示する文言"
+}
+
+, "orderDetailsPhoneLabel": "電話: {phone}"
+, "@orderDetailsPhoneLabel": {
+  "description": "住所・連絡先セクションでの電話ラベル",
+  "placeholders": {
+    "phone": { "type": "String" }
+  }
+}
+
+, "orderDetailsEmailLabel": "メール: {email}"
+, "@orderDetailsEmailLabel": {
+  "description": "連絡先セクションでのメールラベル",
+  "placeholders": {
+    "email": { "type": "String" }
+  }
+}
+
+, "orderDetailsTimelinePaid": "支払い完了"
+, "@orderDetailsTimelinePaid": {
+  "description": "支払い完了を示すタイムラインラベル"
+}
+
+, "orderDetailsTimelinePending": "処理中"
+, "@orderDetailsTimelinePending": {
+  "description": "処理中を示すタイムラインラベル"
+}
+
+, "orderDetailsUpdatedJustNow": "たった今"
+, "@orderDetailsUpdatedJustNow": {
+  "description": "直近で更新された場合の相対時間ラベル"
+}
+
+, "orderDetailsUpdatedMinutes": "{minutes}分前"
+, "@orderDetailsUpdatedMinutes": {
+  "description": "分単位の相対時間ラベル",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "orderDetailsUpdatedHours": "{hours}時間前"
+, "@orderDetailsUpdatedHours": {
+  "description": "時間単位の相対時間ラベル",
+  "placeholders": {
+    "hours": { "type": "int" }
+  }
+}
+
+, "orderDetailsUpdatedOn": "{date} 更新"
+, "@orderDetailsUpdatedOn": {
+  "description": "特定の日付で更新されたことを示すラベル",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
 }

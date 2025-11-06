@@ -21,6 +21,7 @@ import 'package:app/features/design_creation/presentation/design_type_selection_
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
+import 'package:app/features/orders/presentation/order_details_screen.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
 import 'package:flutter/material.dart';
 
@@ -258,7 +259,7 @@ class OrderDetailsRoute implements IndependentRoute {
 
   @override
   Widget get page =>
-      OrderDetailsPage(orderId: orderId, subPage: trailingSegments.join('/'));
+      OrderDetailsScreen(orderId: orderId, subPage: trailingSegments.join('/'));
 
   @override
   Object stackKey(AppTab tab, int index) =>

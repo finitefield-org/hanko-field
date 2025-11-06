@@ -417,6 +417,29 @@ class FakeOrderRepository extends OrderRepository {
       total: merchandiseTotal,
       options: const <String, dynamic>{'script': '楷書体', 'layout': '縦書き'},
     );
+    const shippingAddress = OrderAddress(
+      recipient: '佐藤 太郎',
+      line1: '東京都渋谷区道玄坂 1-12-1',
+      line2: 'マークシティ ウエスト 22F',
+      city: '渋谷区',
+      state: '東京都',
+      postalCode: '150-0043',
+      country: '日本',
+      phone: '03-4520-1234',
+    );
+    const billingAddress = OrderAddress(
+      recipient: '佐藤 太郎',
+      line1: '東京都港区南青山 2-11-17',
+      city: '港区',
+      state: '東京都',
+      postalCode: '107-0062',
+      country: '日本',
+      phone: '03-4520-5678',
+    );
+    const contact = OrderContact(
+      email: 'taro.sato@example.com',
+      phone: '090-1234-5678',
+    );
     return Order(
       id: id,
       orderNumber: number,
@@ -425,9 +448,9 @@ class FakeOrderRepository extends OrderRepository {
       currency: 'JPY',
       totals: totals,
       lineItems: <OrderLineItem>[lineItem],
-      shippingAddress: null,
-      billingAddress: null,
-      contact: null,
+      shippingAddress: shippingAddress,
+      billingAddress: billingAddress,
+      contact: contact,
       fulfillment: null,
       production: null,
       notes: null,
