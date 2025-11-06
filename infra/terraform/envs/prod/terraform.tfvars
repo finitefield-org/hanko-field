@@ -7,16 +7,18 @@ vpc_connector    = "projects/hanko-field-prod/locations/asia-northeast1/connecto
 min_instances    = 3
 max_instances    = 30
 
+api_oidc_audience = "https://api.internal.hanko-field.app"
+
 scheduler_jobs = {
   cleanup_reservations = {
     schedule             = "*/10 * * * *"
-    uri                  = "https://api.internal.hanko-field.app/internal/maintenance/cleanup-reservations"
+    uri                  = "https://api.internal.hanko-field.app/api/v1/internal/maintenance/cleanup-reservations"
     oidc_service_account = "svc-api-scheduler@hanko-field-prod.iam.gserviceaccount.com"
     time_zone            = "Asia/Tokyo"
   }
   stock_safety_notify = {
     schedule             = "0 * * * *"
-    uri                  = "https://api.internal.hanko-field.app/internal/maintenance/stock-safety-notify"
+    uri                  = "https://api.internal.hanko-field.app/api/v1/internal/maintenance/stock-safety-notify"
     oidc_service_account = "svc-api-scheduler@hanko-field-prod.iam.gserviceaccount.com"
     time_zone            = "Asia/Tokyo"
   }

@@ -11,6 +11,10 @@ locals {
   }
 }
 
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
 module "service_accounts" {
   source = "./modules/service_accounts"
 
@@ -33,11 +37,44 @@ module "cloud_run" {
   vpc_connector         = var.vpc_connector
   environment           = var.environment
   env_vars = {
-    API_ENVIRONMENT = var.environment
+    API_ENVIRONMENT             = var.environment
+    API_SECURITY_OIDC_AUDIENCE  = var.api_oidc_audience
   }
   invokers = [
     module.service_accounts.service_account_emails["scheduler_invoker"],
   ]
+}
+
+locals {
+  scheduler_job_defaults = {
+    cleanup_reservations = {
+      schedule             = "*/15 * * * *"
+      http_method          = "POST"
+      uri                  = "${module.cloud_run.service_url}/api/v1/internal/maintenance/cleanup-reservations"
+      time_zone            = "Asia/Tokyo"
+      oidc_service_account = module.service_accounts.service_account_emails["scheduler_invoker"]
+      audience             = var.api_oidc_audience
+    }
+    stock_safety_notify = {
+      schedule             = "0 * * * *"
+      http_method          = "POST"
+      uri                  = "${module.cloud_run.service_url}/api/v1/internal/maintenance/stock-safety-notify"
+      time_zone            = "Asia/Tokyo"
+      oidc_service_account = module.service_accounts.service_account_emails["scheduler_invoker"]
+      audience             = var.api_oidc_audience
+    }
+  }
+
+  scheduler_jobs = merge(
+    local.scheduler_job_defaults,
+    {
+      for name, override in var.scheduler_jobs :
+      name => merge(
+        lookup(local.scheduler_job_defaults, name, {}),
+        override,
+      )
+    },
+  )
 }
 
 module "firestore" {
@@ -67,8 +104,15 @@ module "scheduler" {
 
   project_id   = var.project_id
   location     = var.region
-  jobs         = var.scheduler_jobs
+  jobs         = local.scheduler_jobs
   service_account_email = module.service_accounts.service_account_emails["scheduler_invoker"]
+  default_audience      = var.api_oidc_audience
+}
+
+resource "google_service_account_iam_member" "scheduler_token_creator" {
+  service_account_id = module.service_accounts.service_account_ids["scheduler_invoker"]
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
 }
 
 module "secrets" {
