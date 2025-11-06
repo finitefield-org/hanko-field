@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/domain/entities/order_reorder.dart';
 import 'package:app/core/domain/repositories/order_repository.dart';
 import 'package:app/features/orders/application/order_invoice_provider.dart';
 import 'package:app/features/orders/data/order_repository_provider.dart';
@@ -80,5 +81,12 @@ class _StubOrderRepository extends OrderRepository {
   Future<Order> requestInvoice(String orderId) => throw UnimplementedError();
 
   @override
-  Future<Order> reorder(String orderId) => throw UnimplementedError();
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  }) => throw UnimplementedError();
 }

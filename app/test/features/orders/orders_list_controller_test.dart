@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/domain/entities/order_reorder.dart';
 import 'package:app/core/domain/repositories/order_repository.dart';
 import 'package:app/features/orders/application/orders_list_controller.dart';
 import 'package:app/features/orders/data/order_repository_provider.dart';
@@ -177,8 +178,39 @@ class _TestOrderRepository extends OrderRepository {
   }
 
   @override
-  Future<Order> reorder(String orderId) {
-    return fetchOrder(orderId);
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId) async {
+    final order = await fetchOrder(orderId);
+    return OrderReorderPreview(
+      order: order,
+      lines: [
+        for (final (index, item) in order.lineItems.indexed)
+          OrderReorderLine(
+            id: item.id ?? '${order.id}-line-$index',
+            item: item,
+          ),
+      ],
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  }) async {
+    final preview = await fetchReorderPreview(orderId);
+    final ids = [
+      for (final line in preview.lines)
+        if (lineIds == null || lineIds.contains(line.id)) line.id,
+    ];
+    return OrderReorderResult(
+      orderId: orderId,
+      cartId: 'cart-$orderId',
+      addedLineIds: ids,
+      skippedLineIds: const [],
+      priceAdjustedLineIds: const [],
+      createdAt: DateTime.now(),
+    );
   }
 }
 
@@ -288,9 +320,14 @@ class _BlockingOrderRepository extends OrderRepository {
   }
 
   @override
-  Future<Order> reorder(String orderId) {
-    return fetchOrder(orderId);
-  }
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  }) => throw UnimplementedError();
 }
 
 const _kDefaultPageSize = 20;

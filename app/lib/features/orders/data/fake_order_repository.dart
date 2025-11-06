@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/domain/entities/order_reorder.dart';
 import 'package:app/core/domain/repositories/order_repository.dart';
 import 'package:app/core/storage/cache_policy.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
@@ -21,6 +22,7 @@ class FakeOrderRepository extends OrderRepository {
     _shipmentsByOrder = _buildSeedShipments(base);
     _productionEventsByOrder = _buildSeedProductionEvents(base);
     _invoicesByOrder = _buildSeedInvoices(base);
+    _reorderPreviewByOrder = <String, OrderReorderPreview>{};
   }
 
   final OfflineCacheRepository _cache;
@@ -32,6 +34,7 @@ class FakeOrderRepository extends OrderRepository {
   late final Map<String, List<OrderShipment>> _shipmentsByOrder;
   late final Map<String, List<ProductionEvent>> _productionEventsByOrder;
   late final Map<String, OrderInvoice> _invoicesByOrder;
+  late final Map<String, OrderReorderPreview> _reorderPreviewByOrder;
 
   static const _defaultPageSize = 10;
 
@@ -181,8 +184,197 @@ class FakeOrderRepository extends OrderRepository {
   }
 
   @override
-  Future<Order> reorder(String orderId) async {
-    return fetchOrder(orderId);
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId) async {
+    await Future<void>.delayed(_latency);
+    return _ensureReorderPreview(orderId);
+  }
+
+  @override
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  }) async {
+    await Future<void>.delayed(_latency);
+    final preview = _ensureReorderPreview(orderId);
+    final selected = lineIds == null ? null : Set<String>.from(lineIds);
+    final addedLineIds = <String>[];
+    final skippedLineIds = <String>[];
+    final priceAdjustedLineIds = <String>[];
+
+    final linesToClone = <OrderReorderLine>[];
+    for (final line in preview.lines) {
+      if (selected != null && !selected.contains(line.id)) {
+        continue;
+      }
+      if (!line.isAvailable) {
+        skippedLineIds.add(line.id);
+        continue;
+      }
+      linesToClone.add(line);
+      addedLineIds.add(line.id);
+      if (line.hasPriceChange) {
+        priceAdjustedLineIds.add(line.id);
+      }
+    }
+
+    final cartId = 'cart-${preview.order.id}-${_now().millisecondsSinceEpoch}';
+    if (linesToClone.isNotEmpty) {
+      await _persistCartFromReorder(preview.order, linesToClone);
+    } else {
+      await _persistEmptyCart(preview.order);
+    }
+
+    return OrderReorderResult(
+      orderId: preview.order.id,
+      cartId: cartId,
+      addedLineIds: addedLineIds,
+      skippedLineIds: skippedLineIds,
+      priceAdjustedLineIds: priceAdjustedLineIds,
+      createdAt: _now(),
+      message: linesToClone.isEmpty
+          ? 'No items could be added from the previous order.'
+          : null,
+    );
+  }
+
+  OrderReorderPreview _ensureReorderPreview(String orderId) {
+    final normalized = orderId.toLowerCase();
+    final cached = _reorderPreviewByOrder[normalized];
+    if (cached != null) {
+      return cached;
+    }
+    final order = _ordersById[normalized];
+    if (order == null) {
+      throw StateError('Order $orderId not found');
+    }
+    final preview = _buildReorderPreview(order);
+    _reorderPreviewByOrder[normalized] = preview;
+    return preview;
+  }
+
+  OrderReorderPreview _buildReorderPreview(Order order) {
+    final generatedAt = _now();
+    final lines = <OrderReorderLine>[
+      for (final (index, item) in order.lineItems.indexed)
+        _buildReorderLine(order, item, index),
+    ];
+    return OrderReorderPreview(
+      order: order,
+      lines: lines,
+      generatedAt: generatedAt,
+    );
+  }
+
+  OrderReorderLine _buildReorderLine(
+    Order order,
+    OrderLineItem item,
+    int index,
+  ) {
+    final fallbackId =
+        '${order.id.toLowerCase()}-$index-${item.productRef.toLowerCase()}';
+    final id = (item.id ?? fallbackId).toLowerCase();
+    final bucket = id.hashCode.abs() % 6;
+    var availability = OrderReorderLineAvailability.available;
+    int? currentUnitPrice;
+    String? note;
+    switch (bucket) {
+      case 0:
+        break;
+      case 1:
+        currentUnitPrice = item.unitPrice + 800;
+        note = 'Price updated due to material costs.';
+        break;
+      case 2:
+        availability = OrderReorderLineAvailability.lowStock;
+        note = 'Limited stock • ships in 5–7 days.';
+        break;
+      case 3:
+        availability = OrderReorderLineAvailability.unavailable;
+        note = 'This item is currently discontinued.';
+        break;
+      case 4:
+        final discounted = (item.unitPrice * 0.9).round();
+        currentUnitPrice = discounted <= 0 ? item.unitPrice : discounted;
+        note = 'Loyalty pricing applied.';
+        break;
+      case 5:
+        availability = OrderReorderLineAvailability.lowStock;
+        currentUnitPrice = item.unitPrice + 500;
+        note = 'Rush surcharge applied for expedited restock.';
+        break;
+    }
+    return OrderReorderLine(
+      id: id,
+      item: item,
+      availability: availability,
+      currentUnitPrice: currentUnitPrice,
+      note: note,
+    );
+  }
+
+  Future<void> _persistCartFromReorder(
+    Order order,
+    List<OrderReorderLine> lines,
+  ) async {
+    final cartLines = <CartLineCache>[
+      for (final (index, line) in lines.indexed)
+        _mapOrderLineToCart(order, line, index),
+    ];
+    final snapshot = CachedCartSnapshot(
+      lines: cartLines,
+      currency: order.currency,
+      promotion: null,
+      subtotal: null,
+      total: null,
+      discount: null,
+      shipping: null,
+      tax: null,
+      updatedAt: _now(),
+      shippingOptionId: null,
+    );
+    await _cache.writeCart(snapshot);
+  }
+
+  Future<void> _persistEmptyCart(Order order) async {
+    final snapshot = CachedCartSnapshot(
+      lines: const [],
+      currency: order.currency,
+      promotion: null,
+      subtotal: null,
+      total: null,
+      discount: null,
+      shipping: null,
+      tax: null,
+      updatedAt: _now(),
+      shippingOptionId: null,
+    );
+    await _cache.writeCart(snapshot);
+  }
+
+  CartLineCache _mapOrderLineToCart(
+    Order order,
+    OrderReorderLine line,
+    int index,
+  ) {
+    final baseId = line.id.isEmpty
+        ? '${order.id.toLowerCase()}-$index'
+        : line.id;
+    final addons = <String, dynamic>{};
+    if (line.item.options != null && line.item.options!.isNotEmpty) {
+      addons['selectedOptions'] = line.item.options;
+    }
+    if (line.item.designSnapshot != null &&
+        line.item.designSnapshot!.isNotEmpty) {
+      addons['designSnapshot'] = line.item.designSnapshot;
+    }
+    return CartLineCache(
+      lineId: 'reorder-$baseId',
+      productId: line.item.productRef,
+      quantity: line.item.quantity,
+      price: line.effectiveUnitPrice.toDouble(),
+      currency: order.currency,
+      addons: addons.isEmpty ? null : addons,
+    );
   }
 
   List<Order> _buildSeedOrders(DateTime base) {

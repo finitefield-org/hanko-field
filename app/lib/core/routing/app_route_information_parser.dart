@@ -141,6 +141,10 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
         result.add(OrderInvoiceRoute(orderId: orderId));
         continue;
       }
+      if (segments.length >= 2 && segments[1] == 'reorder') {
+        result.add(OrderReorderRoute(orderId: orderId));
+        continue;
+      }
       result.add(
         OrderDetailsRoute(
           orderId: orderId,

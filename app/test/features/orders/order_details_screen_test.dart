@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/domain/entities/order_reorder.dart';
 import 'package:app/core/domain/repositories/order_repository.dart';
 import 'package:app/features/orders/data/order_repository_provider.dart';
 import 'package:app/features/orders/presentation/order_details_screen.dart';
@@ -98,7 +99,36 @@ class _TestOrderRepository extends OrderRepository {
   Future<Order> requestInvoice(String orderId) async => order;
 
   @override
-  Future<Order> reorder(String orderId) async => order;
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId) async {
+    return OrderReorderPreview(
+      order: order,
+      lines: [
+        for (final (index, item) in order.lineItems.indexed)
+          OrderReorderLine(id: item.id ?? 'line-$index', item: item),
+      ],
+      generatedAt: order.createdAt,
+    );
+  }
+
+  @override
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  }) async {
+    final preview = await fetchReorderPreview(orderId);
+    final ids = [
+      for (final line in preview.lines)
+        if (lineIds == null || lineIds.contains(line.id)) line.id,
+    ];
+    return OrderReorderResult(
+      orderId: orderId,
+      cartId: 'cart-$orderId',
+      addedLineIds: ids,
+      skippedLineIds: const [],
+      priceAdjustedLineIds: const [],
+      createdAt: order.createdAt,
+    );
+  }
 }
 
 Order _buildTestOrder() {

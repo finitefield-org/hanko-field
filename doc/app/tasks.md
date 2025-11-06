@@ -68,7 +68,7 @@
 - [x] [Implement production timeline (`/orders/:orderId/production`) visualizing stages and timestamps.](doc/app/tasks/049-implement-production-timeline-orders-orderid-production-visualizing-stages-and-timestamps.md)
 - [x] [Build shipment tracking (`/orders/:orderId/tracking`) with event timeline and carrier integration.](doc/app/tasks/050-build-shipment-tracking-orders-orderid-tracking-with-event-timeline-and-carrier-integratio.md)
 - [x] [Implement invoice viewer (`/orders/:orderId/invoice`) with PDF download/share support.](doc/app/tasks/051-implement-invoice-viewer-orders-orderid-invoice-with-pdf-download-share-support.md)
-- [ ] [Build reorder flow (`/orders/:orderId/reorder`) cloning cart data and redirecting to checkout.](doc/app/tasks/052-build-reorder-flow-orders-orderid-reorder-cloning-cart-data-and-redirecting-to-checkout.md)
+- [x] [Build reorder flow (`/orders/:orderId/reorder`) cloning cart data and redirecting to checkout.](doc/app/tasks/052-build-reorder-flow-orders-orderid-reorder-cloning-cart-data-and-redirecting-to-checkout.md)
 
 ## 9. My Hanko Library
 - [ ] [Implement library list (`/library`) with sorting, filtering (status, date, AI score), and grid/list toggle.](doc/app/tasks/053-implement-library-list-library-with-sorting-filtering-status-date-ai-score-and-grid-list-t.md)

@@ -2081,6 +2081,137 @@
   "description": "Action label for reordering the same items"
 }
 
+, "orderReorderAppBarTitle": "Reorder {orderNumber}"
+, "@orderReorderAppBarTitle": {
+  "description": "Title for the reorder screen app bar",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderReorderAppBarSubtitle": "Placed on {date}"
+, "@orderReorderAppBarSubtitle": {
+  "description": "Subtitle showing when the original order was placed",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
+
+, "orderReorderLoadError": "We couldn’t load the reorder preview."
+, "@orderReorderLoadError": {
+  "description": "Error message shown when the reorder preview fails to load"
+}
+
+, "orderReorderRetryLabel": "Retry"
+, "@orderReorderRetryLabel": {
+  "description": "Label for retry button on the reorder error state"
+}
+
+, "orderReorderBannerUnavailable": "Some items are no longer available and were left unchecked."
+, "@orderReorderBannerUnavailable": {
+  "description": "Banner message explaining unavailable reorder items"
+}
+
+, "orderReorderBannerPriceChanges": "Pricing has been updated since your original order."
+, "@orderReorderBannerPriceChanges": {
+  "description": "Banner message explaining pricing adjustments on reorder"
+}
+
+, "orderReorderNoItemsAvailable": "No line items are available for reorder."
+, "@orderReorderNoItemsAvailable": {
+  "description": "Message shown when an order has no eligible lines to reorder"
+}
+
+, "orderReorderSelectionSummary": "{selected} of {total} items selected"
+, "@orderReorderSelectionSummary": {
+  "description": "Summary of how many reorder items are selected",
+  "placeholders": {
+    "selected": { "type": "int" },
+    "total": { "type": "int" }
+  }
+}
+
+, "orderReorderSelectAll": "Select all"
+, "@orderReorderSelectAll": {
+  "description": "Label for selecting all reorderable items"
+}
+
+, "orderReorderSelectNone": "Clear"
+, "@orderReorderSelectNone": {
+  "description": "Label for clearing all selected reorder items"
+}
+
+, "orderReorderPrimaryCta": "Move to checkout"
+, "@orderReorderPrimaryCta": {
+  "description": "Primary button label to rebuild cart and continue to checkout"
+}
+
+, "orderReorderCancelCta": "Cancel"
+, "@orderReorderCancelCta": {
+  "description": "Secondary action to cancel the reorder flow"
+}
+
+, "orderReorderQuantity": "Qty {count}"
+, "@orderReorderQuantity": {
+  "description": "Displays quantity for a reorder line",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderReorderSkuLabel": "SKU: {sku}"
+, "@orderReorderSkuLabel": {
+  "description": "Label showing the SKU for a reorder line",
+  "placeholders": {
+    "sku": { "type": "String" }
+  }
+}
+
+, "orderReorderPriceChangeLabel": "New price {newPrice} (was {oldPrice})"
+, "@orderReorderPriceChangeLabel": {
+  "description": "Label describing a price change for the reorder line",
+  "placeholders": {
+    "newPrice": { "type": "String" },
+    "oldPrice": { "type": "String" }
+  }
+}
+
+, "orderReorderAvailabilityLowStock": "Limited stock — ships a bit slower"
+, "@orderReorderAvailabilityLowStock": {
+  "description": "Badge text indicating a reorder line is low stock but available"
+}
+
+, "orderReorderAvailabilityUnavailable": "Unavailable"
+, "@orderReorderAvailabilityUnavailable": {
+  "description": "Badge text indicating a reorder line cannot be reordered"
+}
+
+, "orderReorderResultAdded": "{count, plural, one {# item added to cart} other {# items added to cart}}"
+, "@orderReorderResultAdded": {
+  "description": "Snack bar message summarising how many items were added to the cart",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderReorderResultSkipped": "{count, plural, one {# item unavailable} other {# items unavailable}}"
+, "@orderReorderResultSkipped": {
+  "description": "Snack bar message summarising how many items could not be reordered",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderReorderResultPriceAdjusted": "Latest pricing applied."
+, "@orderReorderResultPriceAdjusted": {
+  "description": "Snack bar note indicating pricing adjustments were applied"
+}
+
+, "orderReorderSubmitError": "We couldn’t rebuild the cart. Try again."
+, "@orderReorderSubmitError": {
+  "description": "Error message when reorder submission fails"
+}
+
 , "orderDetailsActionShare": "Share"
 , "@orderDetailsActionShare": {
   "description": "Action label for sharing the order summary"

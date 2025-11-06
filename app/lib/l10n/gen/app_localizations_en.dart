@@ -1298,6 +1298,102 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderDetailsActionReorder => 'Reorder';
 
   @override
+  String orderReorderAppBarTitle(String orderNumber) {
+    return 'Reorder $orderNumber';
+  }
+
+  @override
+  String orderReorderAppBarSubtitle(String date) {
+    return 'Placed on $date';
+  }
+
+  @override
+  String get orderReorderLoadError => 'We couldn’t load the reorder preview.';
+
+  @override
+  String get orderReorderRetryLabel => 'Retry';
+
+  @override
+  String get orderReorderBannerUnavailable =>
+      'Some items are no longer available and were left unchecked.';
+
+  @override
+  String get orderReorderBannerPriceChanges =>
+      'Pricing has been updated since your original order.';
+
+  @override
+  String get orderReorderNoItemsAvailable =>
+      'No line items are available for reorder.';
+
+  @override
+  String orderReorderSelectionSummary(int selected, int total) {
+    return '$selected of $total items selected';
+  }
+
+  @override
+  String get orderReorderSelectAll => 'Select all';
+
+  @override
+  String get orderReorderSelectNone => 'Clear';
+
+  @override
+  String get orderReorderPrimaryCta => 'Move to checkout';
+
+  @override
+  String get orderReorderCancelCta => 'Cancel';
+
+  @override
+  String orderReorderQuantity(int count) {
+    return 'Qty $count';
+  }
+
+  @override
+  String orderReorderSkuLabel(String sku) {
+    return 'SKU: $sku';
+  }
+
+  @override
+  String orderReorderPriceChangeLabel(String newPrice, String oldPrice) {
+    return 'New price $newPrice (was $oldPrice)';
+  }
+
+  @override
+  String get orderReorderAvailabilityLowStock =>
+      'Limited stock — ships a bit slower';
+
+  @override
+  String get orderReorderAvailabilityUnavailable => 'Unavailable';
+
+  @override
+  String orderReorderResultAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# items added to cart',
+      one: '# item added to cart',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String orderReorderResultSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# items unavailable',
+      one: '# item unavailable',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderReorderResultPriceAdjusted => 'Latest pricing applied.';
+
+  @override
+  String get orderReorderSubmitError =>
+      'We couldn’t rebuild the cart. Try again.';
+
+  @override
   String get orderDetailsActionShare => 'Share';
 
   @override

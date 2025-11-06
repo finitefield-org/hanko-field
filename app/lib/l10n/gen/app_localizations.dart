@@ -2372,6 +2372,132 @@ abstract class AppLocalizations {
   /// **'Reorder'**
   String get orderDetailsActionReorder;
 
+  /// Title for the reorder screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder {orderNumber}'**
+  String orderReorderAppBarTitle(String orderNumber);
+
+  /// Subtitle showing when the original order was placed
+  ///
+  /// In en, this message translates to:
+  /// **'Placed on {date}'**
+  String orderReorderAppBarSubtitle(String date);
+
+  /// Error message shown when the reorder preview fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load the reorder preview.'**
+  String get orderReorderLoadError;
+
+  /// Label for retry button on the reorder error state
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get orderReorderRetryLabel;
+
+  /// Banner message explaining unavailable reorder items
+  ///
+  /// In en, this message translates to:
+  /// **'Some items are no longer available and were left unchecked.'**
+  String get orderReorderBannerUnavailable;
+
+  /// Banner message explaining pricing adjustments on reorder
+  ///
+  /// In en, this message translates to:
+  /// **'Pricing has been updated since your original order.'**
+  String get orderReorderBannerPriceChanges;
+
+  /// Message shown when an order has no eligible lines to reorder
+  ///
+  /// In en, this message translates to:
+  /// **'No line items are available for reorder.'**
+  String get orderReorderNoItemsAvailable;
+
+  /// Summary of how many reorder items are selected
+  ///
+  /// In en, this message translates to:
+  /// **'{selected} of {total} items selected'**
+  String orderReorderSelectionSummary(int selected, int total);
+
+  /// Label for selecting all reorderable items
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get orderReorderSelectAll;
+
+  /// Label for clearing all selected reorder items
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get orderReorderSelectNone;
+
+  /// Primary button label to rebuild cart and continue to checkout
+  ///
+  /// In en, this message translates to:
+  /// **'Move to checkout'**
+  String get orderReorderPrimaryCta;
+
+  /// Secondary action to cancel the reorder flow
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get orderReorderCancelCta;
+
+  /// Displays quantity for a reorder line
+  ///
+  /// In en, this message translates to:
+  /// **'Qty {count}'**
+  String orderReorderQuantity(int count);
+
+  /// Label showing the SKU for a reorder line
+  ///
+  /// In en, this message translates to:
+  /// **'SKU: {sku}'**
+  String orderReorderSkuLabel(String sku);
+
+  /// Label describing a price change for the reorder line
+  ///
+  /// In en, this message translates to:
+  /// **'New price {newPrice} (was {oldPrice})'**
+  String orderReorderPriceChangeLabel(String newPrice, String oldPrice);
+
+  /// Badge text indicating a reorder line is low stock but available
+  ///
+  /// In en, this message translates to:
+  /// **'Limited stock — ships a bit slower'**
+  String get orderReorderAvailabilityLowStock;
+
+  /// Badge text indicating a reorder line cannot be reordered
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get orderReorderAvailabilityUnavailable;
+
+  /// Snack bar message summarising how many items were added to the cart
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# item added to cart} other {# items added to cart}}'**
+  String orderReorderResultAdded(int count);
+
+  /// Snack bar message summarising how many items could not be reordered
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# item unavailable} other {# items unavailable}}'**
+  String orderReorderResultSkipped(int count);
+
+  /// Snack bar note indicating pricing adjustments were applied
+  ///
+  /// In en, this message translates to:
+  /// **'Latest pricing applied.'**
+  String get orderReorderResultPriceAdjusted;
+
+  /// Error message when reorder submission fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t rebuild the cart. Try again.'**
+  String get orderReorderSubmitError;
+
   /// Action label for sharing the order summary
   ///
   /// In en, this message translates to:

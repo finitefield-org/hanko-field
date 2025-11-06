@@ -1,6 +1,7 @@
 import 'package:app/core/data/dtos/order_dto.dart';
 import 'package:app/core/data/dtos/order_invoice_dto.dart';
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/domain/entities/order_reorder.dart';
 
 mixin OrderDtoMapper {
   Order mapOrder(OrderDto dto) => dto.toDomain();
@@ -38,5 +39,9 @@ abstract class OrderRepository with OrderDtoMapper {
 
   Future<Order> cancelOrder(String orderId, {String? reason});
   Future<Order> requestInvoice(String orderId);
-  Future<Order> reorder(String orderId);
+  Future<OrderReorderPreview> fetchReorderPreview(String orderId);
+  Future<OrderReorderResult> reorder(
+    String orderId, {
+    Iterable<String>? lineIds,
+  });
 }

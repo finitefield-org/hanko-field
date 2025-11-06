@@ -23,6 +23,7 @@ import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
 import 'package:app/features/orders/presentation/order_details_screen.dart';
 import 'package:app/features/orders/presentation/order_invoice_screen.dart';
+import 'package:app/features/orders/presentation/order_reorder_screen.dart';
 import 'package:app/features/orders/presentation/order_tracking_screen.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
 import 'package:flutter/material.dart';
@@ -309,6 +310,24 @@ class OrderInvoiceRoute implements IndependentRoute {
 
   @override
   String toString() => 'OrderInvoiceRoute(orderId: $orderId)';
+}
+
+class OrderReorderRoute implements IndependentRoute {
+  const OrderReorderRoute({required this.orderId});
+
+  final String orderId;
+
+  @override
+  Widget get page => OrderReorderScreen(orderId: orderId);
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'orders-$orderId-reorder-$index';
+
+  @override
+  List<String> get pathSegments => [orderId, 'reorder'];
+
+  @override
+  String toString() => 'OrderReorderRoute(orderId: $orderId)';
 }
 
 /// マイ印鑑詳細

@@ -31,7 +31,6 @@ class OrderDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
-  bool _isReordering = false;
   bool _isRequestingInvoice = false;
 
   @override
@@ -61,8 +60,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                 title: Text(l10n.orderDetailsAppBarTitle(orderNumber)),
                 actions: [
                   _ReorderActionButton(
-                    isLoading: _isReordering,
-                    onPressed: order == null || _isReordering
+                    isLoading: false,
+                    onPressed: order == null
                         ? null
                         : () => _handleReorder(context, l10n),
                     tooltip: l10n.orderDetailsActionReorder,
@@ -138,7 +137,6 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                           onContactTap: () => _handleSupport(context, l10n),
                           onReorderTap: () => _handleReorder(context, l10n),
                           onInvoiceTap: () => _handleInvoice(context, l10n),
-                          isReordering: _isReordering,
                           isRequestingInvoice: _isRequestingInvoice,
                         ),
                       ),
@@ -303,36 +301,9 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
     BuildContext context,
     AppLocalizations l10n,
   ) async {
-    if (_isReordering) {
-      return;
-    }
-    setState(() {
-      _isReordering = true;
-    });
-    final repository = ref.read(orderRepositoryProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final order = await repository.reorder(widget.orderId);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isReordering = false;
-      });
-      _showSnackBar(
-        messenger,
-        l10n.orderDetailsReorderSuccess(order.orderNumber),
-      );
-      ref.invalidate(orderDetailsProvider(widget.orderId));
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isReordering = false;
-      });
-      _showSnackBar(messenger, l10n.orderDetailsReorderError);
-    }
+    ref
+        .read(appStateProvider.notifier)
+        .push(OrderReorderRoute(orderId: widget.orderId));
   }
 
   Future<void> _handleInvoice(
@@ -923,7 +894,6 @@ class _SupportBanner extends StatelessWidget {
     required this.onContactTap,
     required this.onReorderTap,
     required this.onInvoiceTap,
-    required this.isReordering,
     required this.isRequestingInvoice,
   });
 
@@ -931,7 +901,6 @@ class _SupportBanner extends StatelessWidget {
   final VoidCallback onContactTap;
   final VoidCallback onReorderTap;
   final VoidCallback onInvoiceTap;
-  final bool isReordering;
   final bool isRequestingInvoice;
 
   @override
@@ -945,14 +914,8 @@ class _SupportBanner extends StatelessWidget {
       ),
       ActionChip(
         label: Text(l10n.orderDetailsActionReorder),
-        avatar: isReordering
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.shopping_basket_outlined),
-        onPressed: isReordering ? null : onReorderTap,
+        avatar: const Icon(Icons.shopping_basket_outlined),
+        onPressed: onReorderTap,
       ),
       ActionChip(
         label: Text(l10n.orderDetailsActionInvoice),
