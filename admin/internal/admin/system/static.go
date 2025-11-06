@@ -798,13 +798,16 @@ func (s *StaticService) TriggerJob(_ context.Context, _ string, jobID string, op
 	if !ok {
 		return TriggerOutcome{}, ErrJobNotFound
 	}
-	if !detail.Job.ManualTrigger {
+	if !(detail.Job.ManualTrigger || detail.Job.RetryAvailable) {
 		return TriggerOutcome{}, ErrJobTriggerNotAllowed
 	}
 	now := time.Now()
 	runID := fmt.Sprintf("%s-manual-%s", jobID, now.Format("20060102-150405"))
 	scheduled := now.Add(30 * time.Second)
 	message := fmt.Sprintf("%s の手動実行をキューに登録しました。", detail.Job.Name)
+	if !detail.Job.ManualTrigger && detail.Job.RetryAvailable {
+		message = fmt.Sprintf("%s の再実行をキューに登録しました。", detail.Job.Name)
+	}
 	if strings.TrimSpace(opts.Reason) != "" {
 		message = fmt.Sprintf("%s (%s)", message, opts.Reason)
 	}
