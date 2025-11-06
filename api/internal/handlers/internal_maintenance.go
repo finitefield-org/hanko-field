@@ -249,7 +249,7 @@ func NewInternalMaintenanceHandlers(inventory services.InventoryService, opts ..
 		inventory:            inventory,
 		metrics:              noopMaintenanceCleanupMetrics{},
 		maxBody:              maxMaintenanceCleanupBodySize,
-		notifier:             services.NewNoopStockSafetyNotifier(),
+		notifier:             nil,
 		clock:                time.Now,
 		notificationCooldown: defaultStockSafetyCooldown,
 		notifyPageSize:       defaultStockSafetyPageSize,
@@ -267,9 +267,6 @@ func NewInternalMaintenanceHandlers(inventory services.InventoryService, opts ..
 	}
 	if handler.maxBody <= 0 {
 		handler.maxBody = maxMaintenanceCleanupBodySize
-	}
-	if handler.notifier == nil {
-		handler.notifier = services.NewNoopStockSafetyNotifier()
 	}
 	if handler.clock == nil {
 		handler.clock = time.Now
@@ -617,6 +614,14 @@ func (h *InternalMaintenanceHandlers) stockSafetyNotify(w http.ResponseWriter, r
 				return
 			}
 			recorded[sku] = struct{}{}
+		}
+	} else if len(toNotify) > 0 {
+		for _, snapshot := range toNotify {
+			sku := strings.TrimSpace(snapshot.SKU)
+			if sku == "" {
+				continue
+			}
+			skippedSkus = append(skippedSkus, sku)
 		}
 	}
 
