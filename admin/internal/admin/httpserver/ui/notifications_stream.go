@@ -128,10 +128,7 @@ func (h *Handlers) NotificationsStream(w http.ResponseWriter, r *http.Request) {
 		badgeChanged := currentBadge != lastBadge
 		idChanged := latestID != lastID
 
-		refresh := false
-		if !force {
-			refresh = badgeChanged || (latestID != "" && idChanged) || (latestID == "" && lastID != "")
-		}
+		refresh := badgeChanged || idChanged
 
 		if !force && !badgeChanged && !idChanged {
 			lastBadge = currentBadge
