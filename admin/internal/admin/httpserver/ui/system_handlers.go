@@ -228,6 +228,207 @@ func (h *Handlers) SystemTasksStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// SystemCountersPage renders the counters management page.
+func (h *Handlers) SystemCountersPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	req := buildSystemCountersRequest(r)
+	result, err := h.system.ListCounters(ctx, user.Token, req.query)
+	errMsg := ""
+	if err != nil {
+		log.Printf("system counters: list failed: %v", err)
+		errMsg = "カウンタ情報の取得に失敗しました。"
+		result = adminsystem.CounterResult{}
+	}
+
+	selected := resolveCounterSelected(req.selected, result)
+	req.state.Selected = selected
+	req.state.RawQuery = encodeSystemCountersQuery(req.state)
+
+	basePath := custommw.BasePathFromContext(ctx)
+	table := systemtpl.CountersTablePayload(basePath, req.state, result, selected, errMsg)
+
+	var detail adminsystem.CounterDetail
+	detailErr := ""
+	if selected != "" {
+		scope, scopeErr := parseScopeInput(req.state.Scope)
+		if scopeErr != nil {
+			detailErr = "スコープは JSON オブジェクトで指定してください。"
+		} else {
+			var derr error
+			detail, derr = h.system.CounterDetail(ctx, user.Token, selected, scope)
+			if derr != nil {
+				if errors.Is(derr, adminsystem.ErrCounterNotFound) {
+					detailErr = "対象のカウンタが見つかりませんでした。"
+				} else {
+					detailErr = "カウンタ詳細の取得に失敗しました。"
+				}
+				log.Printf("system counters: detail failed: %v", derr)
+				detail = adminsystem.CounterDetail{}
+			}
+		}
+	}
+
+	drawer := systemtpl.CountersDrawerPayload(basePath, req.state, detail, nil, detailErr)
+	page := systemtpl.BuildCountersPageData(basePath, req.state, result, table, drawer)
+
+	templ.Handler(systemtpl.CountersPage(page)).ServeHTTP(w, r)
+}
+
+// SystemCountersTable renders the counters table fragment.
+func (h *Handlers) SystemCountersTable(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	req := buildSystemCountersRequest(r)
+	result, err := h.system.ListCounters(ctx, user.Token, req.query)
+	errMsg := ""
+	if err != nil {
+		log.Printf("system counters: list failed: %v", err)
+		errMsg = "カウンタ情報の取得に失敗しました。"
+		result = adminsystem.CounterResult{}
+	}
+
+	selected := resolveCounterSelected(req.selected, result)
+	req.state.Selected = selected
+	req.state.RawQuery = encodeSystemCountersQuery(req.state)
+
+	basePath := custommw.BasePathFromContext(ctx)
+	table := systemtpl.CountersTablePayload(basePath, req.state, result, selected, errMsg)
+
+	if canonical := canonicalSystemCountersURL(basePath, req.state); canonical != "" {
+		w.Header().Set("HX-Push-Url", canonical)
+	}
+
+	templ.Handler(systemtpl.CountersTable(table)).ServeHTTP(w, r)
+}
+
+// SystemCountersDrawer renders the counter drawer fragment.
+func (h *Handlers) SystemCountersDrawer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	name := strings.TrimSpace(chi.URLParam(r, "name"))
+	if name == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	req := buildSystemCountersRequest(r)
+	req.state.Selected = name
+	req.state.RawQuery = encodeSystemCountersQuery(req.state)
+
+	scope, scopeErr := parseScopeInput(req.state.Scope)
+	if scopeErr != nil {
+		drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, adminsystem.CounterDetail{}, nil, "スコープは JSON オブジェクトで指定してください。")
+		templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+		return
+	}
+
+	detail, err := h.system.CounterDetail(ctx, user.Token, name, scope)
+	detailErr := ""
+	if err != nil {
+		if errors.Is(err, adminsystem.ErrCounterNotFound) {
+			detailErr = "対象のカウンタが見つかりませんでした。"
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			detailErr = "カウンタ詳細の取得に失敗しました。"
+			log.Printf("system counters: drawer detail failed: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		detail = adminsystem.CounterDetail{}
+	}
+
+	drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, detail, nil, detailErr)
+	templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+}
+
+// SystemCountersNext advances the selected counter and re-renders the drawer.
+func (h *Handlers) SystemCountersNext(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	name := strings.TrimSpace(chi.URLParam(r, "name"))
+	if name == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	req := buildSystemCountersRequest(r)
+	req.state.Selected = name
+	req.state.RawQuery = encodeSystemCountersQuery(req.state)
+
+	scope, scopeErr := parseScopeInput(req.state.Scope)
+	if scopeErr != nil {
+		drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, adminsystem.CounterDetail{}, nil, "スコープは JSON オブジェクトで指定してください。")
+		templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+		return
+	}
+
+	amount := int64(0)
+	if raw := strings.TrimSpace(r.Form.Get("amount")); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			http.Error(w, "回数は整数で指定してください。", http.StatusBadRequest)
+			return
+		}
+		amount = parsed
+	}
+
+	outcome, err := h.system.NextCounter(ctx, user.Token, name, adminsystem.CounterNextOptions{
+		Actor:  user.Email,
+		Scope:  scope,
+		Amount: amount,
+	})
+	if err != nil {
+		if errors.Is(err, adminsystem.ErrCounterNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		log.Printf("system counters: next failed: %v", err)
+		http.Error(w, "次番号の取得に失敗しました。", http.StatusInternalServerError)
+		return
+	}
+
+	detail, derr := h.system.CounterDetail(ctx, user.Token, name, scope)
+	detailErr := ""
+	if derr != nil {
+		if errors.Is(derr, adminsystem.ErrCounterNotFound) {
+			detailErr = "対象のカウンタが見つかりませんでした。"
+		} else {
+			detailErr = "カウンタ詳細の取得に失敗しました。"
+			log.Printf("system counters: detail refresh failed: %v", derr)
+		}
+		detail = adminsystem.CounterDetail{}
+	}
+
+	drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, detail, &outcome, detailErr)
+	sendHXTrigger(w, outcome.Message, "success")
+	templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+}
+
 type systemTasksRequest struct {
 	query      adminsystem.JobQuery
 	state      systemtpl.TasksQueryState
@@ -380,6 +581,119 @@ func canonicalSystemTasksURL(basePath string, state systemtpl.TasksQueryState) s
 		return path + "?" + raw
 	}
 	return path
+}
+
+type systemCountersRequest struct {
+	query    adminsystem.CounterQuery
+	state    systemtpl.CountersQueryState
+	selected string
+}
+
+func buildSystemCountersRequest(r *http.Request) systemCountersRequest {
+	_ = r.ParseForm()
+	state := systemtpl.CountersQueryState{
+		Namespace: strings.TrimSpace(r.Form.Get("namespace")),
+		Search:    strings.TrimSpace(r.Form.Get("q")),
+		Selected:  strings.TrimSpace(r.Form.Get("selected")),
+		Scope:     strings.TrimSpace(r.Form.Get("scope")),
+	}
+	query := adminsystem.CounterQuery{
+		Namespace: state.Namespace,
+		Search:    state.Search,
+	}
+	if raw := strings.TrimSpace(r.Form.Get("limit")); raw != "" {
+		if limit, err := strconv.Atoi(raw); err == nil && limit > 0 {
+			query.Limit = limit
+		}
+	}
+	return systemCountersRequest{
+		query:    query,
+		state:    state,
+		selected: state.Selected,
+	}
+}
+
+func resolveCounterSelected(candidate string, result adminsystem.CounterResult) string {
+	id := strings.TrimSpace(candidate)
+	if id != "" {
+		for _, counter := range result.Counters {
+			if strings.EqualFold(counter.Name, id) {
+				return counter.Name
+			}
+		}
+	}
+	if len(result.Counters) > 0 {
+		return result.Counters[0].Name
+	}
+	return ""
+}
+
+func encodeSystemCountersQuery(state systemtpl.CountersQueryState) string {
+	values := url.Values{}
+	if state.Namespace != "" {
+		values.Set("namespace", state.Namespace)
+	}
+	if state.Search != "" {
+		values.Set("q", state.Search)
+	}
+	if state.Scope != "" {
+		values.Set("scope", state.Scope)
+	}
+	if state.Selected != "" {
+		values.Set("selected", state.Selected)
+	}
+	return values.Encode()
+}
+
+func canonicalSystemCountersURL(basePath string, state systemtpl.CountersQueryState) string {
+	base := strings.TrimSpace(basePath)
+	if base == "" {
+		base = "/admin"
+	}
+	if !strings.HasPrefix(base, "/") {
+		base = "/" + base
+	}
+	base = strings.TrimRight(base, "/")
+	path := base + "/system/counters"
+	if raw := encodeSystemCountersQuery(state); raw != "" {
+		return path + "?" + raw
+	}
+	return path
+}
+
+func parseScopeInput(raw string) (map[string]string, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || trimmed == "{}" {
+		return nil, nil
+	}
+	var generic map[string]any
+	if err := json.Unmarshal([]byte(trimmed), &generic); err != nil {
+		return nil, err
+	}
+	scope := make(map[string]string, len(generic))
+	for key, value := range generic {
+		k := strings.TrimSpace(key)
+		if k == "" {
+			continue
+		}
+		var str string
+		switch v := value.(type) {
+		case string:
+			str = strings.TrimSpace(v)
+		case fmt.Stringer:
+			str = strings.TrimSpace(v.String())
+		default:
+			str = strings.TrimSpace(fmt.Sprintf("%v", v))
+		}
+		if str == "" {
+			continue
+		}
+		scope[k] = str
+	}
+	if len(scope) == 0 {
+		return nil, nil
+	}
+	return scope, nil
 }
 
 // SystemErrorsPage renders the system errors dashboard.

@@ -6,17 +6,23 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // StaticService provides canned responses for development previews and tests.
 type StaticService struct {
-	failures  []Failure
-	details   map[string]FailureDetail
-	metrics   MetricsSummary
-	jobs      []Job
-	jobIndex  map[string]JobDetail
-	scheduler SchedulerHealth
-	alerts    []JobAlert
+	failures       []Failure
+	details        map[string]FailureDetail
+	metrics        MetricsSummary
+	jobs           []Job
+	jobIndex       map[string]JobDetail
+	scheduler      SchedulerHealth
+	alerts         []JobAlert
+	counters       []Counter
+	counterAlerts  []CounterAlert
+	counterHistory map[string][]CounterEvent
+	counterJobs    map[string][]CounterJob
+	counterNotes   map[string][]string
 }
 
 // NewStaticService constructs a StaticService populated with representative failures.
@@ -621,6 +627,156 @@ func NewStaticService() *StaticService {
 		},
 	}
 
+	counterAlerts := []CounterAlert{
+		{
+			ID:      "invoices-fy-threshold",
+			Tone:    "warning",
+			Title:   "請求書番号が閾値に近づいています",
+			Message: "FY2024 の請求書番号は 80% を超えました。年次ローテーションを準備してください。",
+			Action: Link{
+				Label: "運用手順を確認",
+				URL:   "https://runbooks.hanko.local/finance/invoices#rotate",
+				Icon:  "📘",
+			},
+		},
+	}
+
+	ordersCounter := Counter{
+		Name:         "orders",
+		Label:        "注文番号",
+		Namespace:    "commerce",
+		Description:  "オンライン注文のヒューマンリーダブルな番号を採番します。",
+		ScopeKeys:    []string{"site"},
+		ScopeExample: map[string]string{"site": "jp"},
+		Increment:    1,
+		CurrentValue: 48217,
+		LastUpdated:  now.Add(-2 * time.Minute),
+		Owner:        "Operations",
+		Tags:         []string{"orders", "public-id"},
+	}
+
+	invoicesCounter := Counter{
+		Name:         "invoices",
+		Label:        "請求書番号",
+		Namespace:    "finance",
+		Description:  "請求書 PDF および会計連携で利用する連番。",
+		ScopeKeys:    []string{"fiscal_year"},
+		ScopeExample: map[string]string{"fiscal_year": fmt.Sprintf("%d", now.Year())},
+		Increment:    1,
+		CurrentValue: 958,
+		LastUpdated:  now.Add(-10 * time.Minute),
+		Owner:        "Finance",
+		Tags:         []string{"invoices", "finance"},
+		Alert:        &counterAlerts[0],
+	}
+
+	exportsCounter := Counter{
+		Name:         "exports/daily",
+		Label:        "日次エクスポート",
+		Namespace:    "ops",
+		Description:  "データエクスポートジョブ用の採番。スコープでリージョンと日付を指定します。",
+		ScopeKeys:    []string{"region", "date"},
+		ScopeExample: map[string]string{"region": "apac", "date": now.Format("2006-01-02")},
+		Increment:    100,
+		CurrentValue: 3200,
+		LastUpdated:  now.Add(-30 * time.Minute),
+		Owner:        "DataOps",
+		Tags:         []string{"exports", "batch"},
+	}
+
+	counters := []Counter{ordersCounter, invoicesCounter, exportsCounter}
+
+	counterHistory := map[string][]CounterEvent{
+		counterHistoryKey(ordersCounter.Namespace, ordersCounter.Name, map[string]string{"site": "jp"}): {
+			{
+				ID:         "evt-orders-jp-001",
+				OccurredAt: now.Add(-5 * time.Minute),
+				Actor:      "ops@hanko.local",
+				ActorEmail: "ops@hanko.local",
+				Scope:      map[string]string{"site": "jp"},
+				Delta:      1,
+				Value:      ordersCounter.CurrentValue,
+				Message:    "Admin UI テスト採番",
+				Source:     "admin-ui",
+				AuditID:    "AUD-000982",
+			},
+			{
+				ID:         "evt-orders-jp-000",
+				OccurredAt: now.Add(-90 * time.Minute),
+				Actor:      "checkout-service",
+				ActorEmail: "",
+				Scope:      map[string]string{"site": "jp"},
+				Delta:      1,
+				Value:      ordersCounter.CurrentValue - 1,
+				Message:    "チェックアウト完了",
+				Source:     "service",
+				AuditID:    "AUD-000921",
+			},
+		},
+		counterHistoryKey(invoicesCounter.Namespace, invoicesCounter.Name, map[string]string{"fiscal_year": fmt.Sprintf("%d", now.Year())}): {
+			{
+				ID:         "evt-invoices-fy-001",
+				OccurredAt: now.Add(-20 * time.Minute),
+				Actor:      "finance@hanko.local",
+				ActorEmail: "finance@hanko.local",
+				Scope:      map[string]string{"fiscal_year": fmt.Sprintf("%d", now.Year())},
+				Delta:      1,
+				Value:      invoicesCounter.CurrentValue,
+				Message:    "請求書発行",
+				Source:     "billing-service",
+				AuditID:    "AUD-000872",
+			},
+		},
+		counterHistoryKey(exportsCounter.Namespace, exportsCounter.Name, map[string]string{"region": "apac", "date": now.Format("2006-01-02")}): {
+			{
+				ID:         "evt-exports-apac-001",
+				OccurredAt: now.Add(-3 * time.Hour),
+				Actor:      "batch@hanko.local",
+				ActorEmail: "",
+				Scope:      map[string]string{"region": "apac", "date": now.Format("2006-01-02")},
+				Delta:      exportsCounter.Increment,
+				Value:      exportsCounter.CurrentValue,
+				Message:    "日次バッチ出力",
+				Source:     "scheduler",
+				AuditID:    "AUD-000601",
+			},
+		},
+	}
+
+	counterJobs := map[string][]CounterJob{
+		counterBaseKey(ordersCounter.Namespace, ordersCounter.Name): {
+			{
+				ID:          "inventory-rebuild",
+				Name:        "注文番号同期",
+				Description: "チェックアウトのバックフィル時にカウンタを検証します。",
+				URL:         "/system/tasks?selected=inventory-rebuild",
+				StatusLabel: "成功",
+				StatusTone:  "success",
+				LastRun:     now.Add(-6 * time.Hour),
+			},
+		},
+		counterBaseKey(invoicesCounter.Namespace, invoicesCounter.Name): {
+			{
+				ID:          "invoice-closeout",
+				Name:        "請求書締め処理",
+				Description: "月次締め時に請求書番号の残量を確認します。",
+				URL:         "/system/tasks?selected=invoice-closeout",
+				StatusLabel: "警告",
+				StatusTone:  "warning",
+				LastRun:     now.Add(-26 * time.Hour),
+			},
+		},
+	}
+
+	counterNotes := map[string][]string{
+		counterBaseKey(ordersCounter.Namespace, ordersCounter.Name): {
+			"JP サイトの番号は年度ごとにリセットします。",
+		},
+		counterBaseKey(invoicesCounter.Namespace, invoicesCounter.Name): {
+			"年次切り替え時に `fiscal_year` スコープを更新してください。",
+		},
+	}
+
 	return &StaticService{
 		failures: []Failure{webhookFailure, jobFailure, workerFailure},
 		details:  details,
@@ -632,10 +788,15 @@ func NewStaticService() *StaticService {
 			ActiveIncidents:    3,
 			RetrySuccessSample: 120,
 		},
-		jobs:      []Job{inventoryJob, cleanupJob, reportingJob},
-		jobIndex:  jobIndex,
-		scheduler: scheduler,
-		alerts:    alerts,
+		jobs:           []Job{inventoryJob, cleanupJob, reportingJob},
+		jobIndex:       jobIndex,
+		scheduler:      scheduler,
+		alerts:         alerts,
+		counters:       counters,
+		counterAlerts:  counterAlerts,
+		counterHistory: counterHistory,
+		counterJobs:    counterJobs,
+		counterNotes:   counterNotes,
 	}
 }
 
@@ -819,6 +980,157 @@ func (s *StaticService) TriggerJob(_ context.Context, _ string, jobID string, op
 	}, nil
 }
 
+// ListCounters returns the configured counters with optional filtering.
+func (s *StaticService) ListCounters(_ context.Context, _ string, query CounterQuery) (CounterResult, error) {
+	if s == nil {
+		return CounterResult{}, ErrNotConfigured
+	}
+	namespaceFilter := strings.ToLower(strings.TrimSpace(query.Namespace))
+	search := strings.ToLower(strings.TrimSpace(query.Search))
+
+	result := CounterResult{
+		GeneratedAt: time.Now(),
+		Alerts:      append([]CounterAlert(nil), s.counterAlerts...),
+	}
+
+	if len(s.counters) == 0 {
+		return result, nil
+	}
+
+	counts := make(map[string]int)
+	for _, counter := range s.counters {
+		key := strings.ToLower(strings.TrimSpace(counter.Namespace))
+		counts[key]++
+	}
+
+	seenNamespace := make(map[string]struct{})
+	for _, counter := range s.counters {
+		nsKey := strings.ToLower(strings.TrimSpace(counter.Namespace))
+		if _, ok := seenNamespace[nsKey]; !ok {
+			seenNamespace[nsKey] = struct{}{}
+			result.Namespaces = append(result.Namespaces, CounterNamespace{
+				ID:       counter.Namespace,
+				Label:    titleCase(counter.Namespace),
+				Sublabel: fmt.Sprintf("%d 種", counts[nsKey]),
+				Active:   namespaceFilter != "" && nsKey == namespaceFilter,
+			})
+		}
+		if namespaceFilter != "" && nsKey != namespaceFilter {
+			continue
+		}
+		if search != "" && !matchesCounterSearch(search, counter) {
+			continue
+		}
+		result.Counters = append(result.Counters, counter)
+	}
+
+	sort.Slice(result.Counters, func(i, j int) bool {
+		leftNS := strings.ToLower(result.Counters[i].Namespace)
+		rightNS := strings.ToLower(result.Counters[j].Namespace)
+		if leftNS == rightNS {
+			return strings.ToLower(result.Counters[i].Name) < strings.ToLower(result.Counters[j].Name)
+		}
+		return leftNS < rightNS
+	})
+
+	result.Total = len(result.Counters)
+	return result, nil
+}
+
+// CounterDetail returns drawer data for a counter.
+func (s *StaticService) CounterDetail(_ context.Context, _ string, name string, scope map[string]string) (CounterDetail, error) {
+	if s == nil {
+		return CounterDetail{}, ErrNotConfigured
+	}
+	idx := s.findCounterIndex(name)
+	if idx == -1 {
+		return CounterDetail{}, ErrCounterNotFound
+	}
+	counter := s.counters[idx]
+
+	key := counterHistoryKey(counter.Namespace, counter.Name, scope)
+	history := append([]CounterEvent(nil), s.counterHistory[key]...)
+	if len(history) == 0 {
+		fallbackKey := counterHistoryKey(counter.Namespace, counter.Name, nil)
+		history = append([]CounterEvent(nil), s.counterHistory[fallbackKey]...)
+	}
+
+	baseKey := counterBaseKey(counter.Namespace, counter.Name)
+	detail := CounterDetail{
+		Counter:     counter,
+		History:     history,
+		RelatedJobs: append([]CounterJob(nil), s.counterJobs[baseKey]...),
+		Notes:       append([]string(nil), s.counterNotes[baseKey]...),
+	}
+	return detail, nil
+}
+
+// NextCounter advances the counter and records audit-friendly history.
+func (s *StaticService) NextCounter(_ context.Context, _ string, name string, opts CounterNextOptions) (CounterNextOutcome, error) {
+	if s == nil {
+		return CounterNextOutcome{}, ErrNotConfigured
+	}
+	idx := s.findCounterIndex(name)
+	if idx == -1 {
+		return CounterNextOutcome{}, ErrCounterNotFound
+	}
+	if s.counterHistory == nil {
+		s.counterHistory = make(map[string][]CounterEvent)
+	}
+	if s.counterNotes == nil {
+		s.counterNotes = make(map[string][]string)
+	}
+
+	amount := opts.Amount
+	if amount == 0 {
+		increment := s.counters[idx].Increment
+		if increment == 0 {
+			increment = 1
+		}
+		amount = increment
+	}
+
+	now := time.Now()
+	s.counters[idx].CurrentValue += amount
+	s.counters[idx].LastUpdated = now
+
+	scope := copyScope(opts.Scope)
+	auditID := fmt.Sprintf("AUD-%d", now.UnixNano())
+	actor := fallbackString(opts.Actor, "admin@hanko.local")
+	message := fallbackString(opts.Reason, "手動採番テスト")
+
+	outcome := CounterNextOutcome{
+		Name:       s.counters[idx].Name,
+		Scope:      scope,
+		Value:      s.counters[idx].CurrentValue,
+		Message:    fmt.Sprintf("次の番号: %d", s.counters[idx].CurrentValue),
+		AuditID:    auditID,
+		OccurredAt: now,
+	}
+
+	event := CounterEvent{
+		ID:         fmt.Sprintf("evt-%d", now.UnixNano()),
+		OccurredAt: now,
+		Actor:      actor,
+		ActorEmail: actor,
+		Scope:      scope,
+		Delta:      amount,
+		Value:      outcome.Value,
+		Message:    message,
+		Source:     "admin-ui",
+		AuditID:    auditID,
+	}
+
+	historyKey := counterHistoryKey(s.counters[idx].Namespace, s.counters[idx].Name, scope)
+	s.counterHistory[historyKey] = prependCounterEvent(s.counterHistory[historyKey], event)
+
+	baseKey := counterBaseKey(s.counters[idx].Namespace, s.counters[idx].Name)
+	note := fmt.Sprintf("%s が %d 進めて %d になりました。", actor, amount, outcome.Value)
+	s.counterNotes[baseKey] = prependCounterNote(s.counterNotes[baseKey], fmt.Sprintf("%s (%s)", note, now.Format(time.RFC3339)))
+
+	return outcome, nil
+}
+
 func (s *StaticService) buildFilterSummary() FilterSummary {
 	sourceCounts := make(map[Source]int)
 	severityCounts := make(map[Severity]int)
@@ -943,6 +1255,118 @@ func matchesJobState(filter []JobState, value JobState) bool {
 		}
 	}
 	return false
+}
+
+func (s *StaticService) findCounterIndex(name string) int {
+	target := strings.ToLower(strings.TrimSpace(name))
+	for i, counter := range s.counters {
+		if strings.ToLower(counter.Name) == target {
+			return i
+		}
+	}
+	return -1
+}
+
+func matchesCounterSearch(search string, counter Counter) bool {
+	fields := []string{
+		counter.Name,
+		counter.Label,
+		counter.Description,
+		counter.Namespace,
+		counter.Owner,
+	}
+	for _, tag := range counter.Tags {
+		fields = append(fields, tag)
+	}
+	if counter.Alert != nil {
+		fields = append(fields, counter.Alert.Title, counter.Alert.Message)
+	}
+	for _, field := range fields {
+		if strings.Contains(strings.ToLower(field), search) {
+			return true
+		}
+	}
+	for key, value := range counter.ScopeExample {
+		if strings.Contains(strings.ToLower(key), search) || strings.Contains(strings.ToLower(value), search) {
+			return true
+		}
+	}
+	return false
+}
+
+func copyScope(input map[string]string) map[string]string {
+	if len(input) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(input))
+	for key, value := range input {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func counterHistoryKey(namespace, name string, scope map[string]string) string {
+	ns := strings.ToLower(strings.TrimSpace(namespace))
+	if ns == "" {
+		ns = "default"
+	}
+	nm := strings.ToLower(strings.TrimSpace(name))
+	parts := make([]string, 0, len(scope))
+	for key, value := range scope {
+		parts = append(parts, fmt.Sprintf("%s=%s", strings.ToLower(strings.TrimSpace(key)), strings.ToLower(strings.TrimSpace(value))))
+	}
+	sort.Strings(parts)
+	scopeKey := strings.Join(parts, "&")
+	if scopeKey == "" {
+		scopeKey = "default"
+	}
+	return fmt.Sprintf("%s/%s?%s", ns, nm, scopeKey)
+}
+
+func counterBaseKey(namespace, name string) string {
+	ns := strings.ToLower(strings.TrimSpace(namespace))
+	if ns == "" {
+		ns = "default"
+	}
+	nm := strings.ToLower(strings.TrimSpace(name))
+	return fmt.Sprintf("%s/%s", ns, nm)
+}
+
+func prependCounterEvent(events []CounterEvent, event CounterEvent) []CounterEvent {
+	updated := append([]CounterEvent{event}, events...)
+	if len(updated) > 10 {
+		updated = updated[:10]
+	}
+	return updated
+}
+
+func prependCounterNote(notes []string, note string) []string {
+	updated := append([]string{note}, notes...)
+	if len(updated) > 10 {
+		updated = updated[:10]
+	}
+	return updated
+}
+
+func fallbackString(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return value
+}
+
+func titleCase(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "default"
+	}
+	lower := strings.ToLower(value)
+	runes := []rune(lower)
+	if len(runes) == 0 {
+		return value
+	}
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
 
 func matchesJobHost(filter []string, value string) bool {

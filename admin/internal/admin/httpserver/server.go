@@ -29,6 +29,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/search"
 	appsession "finitefield.org/hanko-admin/internal/admin/session"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
+	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	"finitefield.org/hanko-admin/public"
 )
 
@@ -53,6 +54,7 @@ type Config struct {
 	ProductionService    adminproduction.Service
 	ReviewsService       adminreviews.Service
 	OrgService           adminorg.Service
+	SystemService        adminsystem.Service
 	Session              SessionConfig
 	SessionStore         custommw.SessionStore
 	CSRFCookieName       string
@@ -130,6 +132,7 @@ func New(cfg Config) *http.Server {
 		ProductionService:    cfg.ProductionService,
 		ReviewsService:       cfg.ReviewsService,
 		OrgService:           cfg.OrgService,
+		SystemService:        cfg.SystemService,
 	})
 
 	mountAdminRoutes(router, basePath, routeOptions{
@@ -370,6 +373,13 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 					RegisterFragment(tr, "/tasks/jobs/{jobID}/drawer", uiHandlers.SystemTasksDrawer)
 					tr.Post("/tasks/jobs/{jobID}:trigger", uiHandlers.SystemTasksTrigger)
 					tr.Get("/tasks/stream", uiHandlers.SystemTasksStream)
+				})
+				sr.Group(func(cr chi.Router) {
+					cr.Use(custommw.RequireCapability(rbac.CapSystemCounters))
+					cr.Get("/counters", uiHandlers.SystemCountersPage)
+					RegisterFragment(cr, "/counters/table", uiHandlers.SystemCountersTable)
+					RegisterFragment(cr, "/counters/{name}/drawer", uiHandlers.SystemCountersDrawer)
+					cr.Post("/counters/{name}:next", uiHandlers.SystemCountersNext)
 				})
 				sr.Group(func(er chi.Router) {
 					er.Use(custommw.RequireCapability(rbac.CapSystemErrors))

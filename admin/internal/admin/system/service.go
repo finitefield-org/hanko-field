@@ -18,6 +18,9 @@ var ErrJobNotFound = errors.New("job not found")
 // ErrJobTriggerNotAllowed indicates a manual trigger cannot be performed for the job.
 var ErrJobTriggerNotAllowed = errors.New("job manual trigger not supported")
 
+// ErrCounterNotFound indicates the requested counter could not be located.
+var ErrCounterNotFound = errors.New("counter not found")
+
 // Service exposes operations for the system errors dashboard.
 type Service interface {
 	// ListFailures returns a filtered collection of recent failures along with dashboard metrics.
@@ -34,6 +37,12 @@ type Service interface {
 	JobDetail(ctx context.Context, token, jobID string) (JobDetail, error)
 	// TriggerJob enqueues a manual execution for the specified job when supported.
 	TriggerJob(ctx context.Context, token, jobID string, opts TriggerOptions) (TriggerOutcome, error)
+	// ListCounters returns the configured counters and supporting metadata.
+	ListCounters(ctx context.Context, token string, query CounterQuery) (CounterResult, error)
+	// CounterDetail returns the timeline and related jobs for a counter.
+	CounterDetail(ctx context.Context, token, name string, scope map[string]string) (CounterDetail, error)
+	// NextCounter advances the counter and returns the resulting value.
+	NextCounter(ctx context.Context, token, name string, opts CounterNextOptions) (CounterNextOutcome, error)
 }
 
 // Source enumerates failure origins.
