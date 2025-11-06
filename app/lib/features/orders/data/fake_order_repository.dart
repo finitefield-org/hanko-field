@@ -18,6 +18,7 @@ class FakeOrderRepository extends OrderRepository {
     _orders = _buildSeedOrders(base);
     _orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _ordersById = {for (final order in _orders) order.id: order};
+    _shipmentsByOrder = _buildSeedShipments(base);
     _productionEventsByOrder = _buildSeedProductionEvents(base);
   }
 
@@ -27,6 +28,7 @@ class FakeOrderRepository extends OrderRepository {
 
   late final List<Order> _orders;
   late final Map<String, Order> _ordersById;
+  late final Map<String, List<OrderShipment>> _shipmentsByOrder;
   late final Map<String, List<ProductionEvent>> _productionEventsByOrder;
 
   static const _defaultPageSize = 10;
@@ -108,7 +110,14 @@ class FakeOrderRepository extends OrderRepository {
   @override
   Future<List<OrderShipment>> fetchShipments(String orderId) async {
     await Future<void>.delayed(_latency);
-    return const <OrderShipment>[];
+    final normalized = orderId.toLowerCase();
+    final shipments = _shipmentsByOrder[normalized];
+    if (shipments == null) {
+      return const <OrderShipment>[];
+    }
+    final sorted = List<OrderShipment>.from(shipments)
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return sorted;
   }
 
   @override
@@ -391,6 +400,311 @@ class FakeOrderRepository extends OrderRepository {
       ),
     ];
     return orders;
+  }
+
+  Map<String, List<OrderShipment>> _buildSeedShipments(DateTime base) {
+    final now = base;
+
+    final shipments = <String, List<OrderShipment>>{
+      'hf-202404-015': [
+        _shipment(
+          id: 'hf-202404-015-shp1',
+          carrier: OrderShipmentCarrier.yamato,
+          service: '宅急便 (クール便)',
+          trackingNumber: 'YMT123456789JP',
+          status: OrderShipmentStatus.labelCreated,
+          createdAt: now.subtract(const Duration(days: 4, hours: 12)),
+          eta: now.add(const Duration(days: 2)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 4, hours: 12)),
+              location: '渋谷区 道玄坂フルフィルメントセンター',
+              note: '送り状を発行しました。集荷を待っています。',
+            ),
+          ],
+        ),
+      ],
+      'hf-202404-014': [
+        _shipment(
+          id: 'hf-202404-014-shp1',
+          carrier: OrderShipmentCarrier.yamato,
+          service: '宅急便 (時間指定)',
+          trackingNumber: 'YMT987654321JP',
+          status: OrderShipmentStatus.outForDelivery,
+          createdAt: now.subtract(const Duration(days: 3, hours: 18)),
+          eta: now.add(const Duration(hours: 6)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 3, hours: 18)),
+              location: '渋谷区 道玄坂フルフィルメントセンター',
+              note: '荷物情報を登録しました。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.pickedUp,
+              timestamp: now.subtract(const Duration(days: 2, hours: 20)),
+              location: '渋谷区',
+              note: 'ドライバーが荷物を集荷しました。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.inTransit,
+              timestamp: now.subtract(const Duration(days: 2, hours: 6)),
+              location: '東京ゲートウェイベース',
+              note: '仕分け中です。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.arrivedHub,
+              timestamp: now.subtract(const Duration(days: 1, hours: 5)),
+              location: '横浜南ベース',
+              note: '配達営業所に到着しました。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.outForDelivery,
+              timestamp: now.subtract(const Duration(hours: 3, minutes: 20)),
+              location: '横浜市 西区',
+              note: '配達員が持ち出しました。',
+            ),
+          ],
+        ),
+      ],
+      'hf-202404-013': [
+        _shipment(
+          id: 'hf-202404-013-shp1',
+          carrier: OrderShipmentCarrier.dhl,
+          service: 'Express Worldwide',
+          trackingNumber: 'DHL0011223344',
+          status: OrderShipmentStatus.delivered,
+          createdAt: now.subtract(const Duration(days: 9, hours: 20)),
+          eta: now.subtract(const Duration(days: 2, hours: 12)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 9, hours: 20)),
+              location: 'Tokyo Export Facility',
+              note: 'Shipment information received.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.pickedUp,
+              timestamp: now.subtract(const Duration(days: 9, hours: 6)),
+              location: 'Tokyo',
+              note: 'Picked up by DHL courier.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.inTransit,
+              timestamp: now.subtract(const Duration(days: 8, hours: 18)),
+              location: 'Hong Kong Hub',
+              note: 'Departed facility.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.customsClearance,
+              timestamp: now.subtract(const Duration(days: 7, hours: 22)),
+              location: 'Los Angeles, CA',
+              note: 'Cleared customs.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.arrivedHub,
+              timestamp: now.subtract(const Duration(days: 6, hours: 12)),
+              location: 'San Francisco, CA',
+              note: 'Arrived at destination facility.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.outForDelivery,
+              timestamp: now.subtract(const Duration(days: 2, hours: 19)),
+              location: 'San Jose, CA',
+              note: 'With courier for delivery.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.delivered,
+              timestamp: now.subtract(const Duration(days: 2, hours: 12)),
+              location: 'San Jose, CA',
+              note: 'Delivered. Signed by K. Suzuki.',
+            ),
+          ],
+        ),
+      ],
+      'hf-202403-010': [
+        _shipment(
+          id: 'hf-202403-010-shp1',
+          carrier: OrderShipmentCarrier.sagawa,
+          service: '飛脚宅配便',
+          trackingNumber: 'SGW5566778899',
+          status: OrderShipmentStatus.inTransit,
+          createdAt: now.subtract(const Duration(days: 6, hours: 8)),
+          eta: now.add(const Duration(days: 1, hours: 6)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 6, hours: 8)),
+              location: '京都市 下京区',
+              note: '送り状を発行しました。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.pickedUp,
+              timestamp: now.subtract(const Duration(days: 5, hours: 20)),
+              location: '京都市 下京区',
+              note: '荷物を集荷しました。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.inTransit,
+              timestamp: now.subtract(const Duration(days: 3, hours: 12)),
+              location: '名古屋中継センター',
+              note: '輸送中です。',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.arrivedHub,
+              timestamp: now.subtract(const Duration(days: 2, hours: 6)),
+              location: '大田区 羽田センター',
+              note: '配達店に到着しました。',
+            ),
+          ],
+        ),
+      ],
+      'hf-202403-009': [
+        _shipment(
+          id: 'hf-202403-009-shp1',
+          carrier: OrderShipmentCarrier.jppost,
+          service: 'ゆうパック',
+          trackingNumber: 'JP9933445566',
+          status: OrderShipmentStatus.delivered,
+          createdAt: now.subtract(const Duration(days: 35, hours: 5)),
+          eta: now.subtract(const Duration(days: 25, hours: 2)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 35, hours: 5)),
+              location: '新宿区 高田馬場支店',
+              note: '引受',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.inTransit,
+              timestamp: now.subtract(const Duration(days: 33, hours: 8)),
+              location: '新東京郵便局',
+              note: '通過',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.arrivedHub,
+              timestamp: now.subtract(const Duration(days: 30, hours: 6)),
+              location: '大阪北郵便局',
+              note: '到着',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.outForDelivery,
+              timestamp: now.subtract(const Duration(days: 25, hours: 8)),
+              location: '大阪市 北区',
+              note: 'お届け中',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.delivered,
+              timestamp: now.subtract(const Duration(days: 25, hours: 2)),
+              location: '大阪市 北区',
+              note: 'お届け済み',
+            ),
+          ],
+        ),
+      ],
+      'hf-202402-008': [
+        _shipment(
+          id: 'hf-202402-008-shp1',
+          carrier: OrderShipmentCarrier.fedex,
+          service: 'International Priority',
+          trackingNumber: 'FDX7788990011',
+          status: OrderShipmentStatus.delivered,
+          createdAt: now.subtract(const Duration(days: 48)),
+          eta: now.subtract(const Duration(days: 36)),
+          events: [
+            _shipmentEvent(
+              code: OrderShipmentEventCode.labelCreated,
+              timestamp: now.subtract(const Duration(days: 48)),
+              location: 'Osaka Export Center',
+              note: 'Shipment information sent to FedEx.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.pickedUp,
+              timestamp: now.subtract(const Duration(days: 47, hours: 18)),
+              location: 'Osaka',
+              note: 'Package picked up.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.inTransit,
+              timestamp: now.subtract(const Duration(days: 46, hours: 12)),
+              location: 'Incheon Hub',
+              note: 'Departed FedEx location.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.customsClearance,
+              timestamp: now.subtract(const Duration(days: 44, hours: 6)),
+              location: 'Seattle, WA',
+              note: 'Cleared customs. Duties paid.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.arrivedHub,
+              timestamp: now.subtract(const Duration(days: 40, hours: 18)),
+              location: 'Portland, OR',
+              note: 'At local FedEx facility.',
+            ),
+            _shipmentEvent(
+              code: OrderShipmentEventCode.delivered,
+              timestamp: now.subtract(const Duration(days: 36)),
+              location: 'Portland, OR',
+              note: 'Delivered at front door.',
+            ),
+          ],
+        ),
+      ],
+    };
+
+    return {
+      for (final entry in shipments.entries)
+        entry.key.toLowerCase(): List<OrderShipment>.unmodifiable(entry.value),
+    };
+  }
+
+  OrderShipment _shipment({
+    required String id,
+    required OrderShipmentCarrier carrier,
+    required OrderShipmentStatus status,
+    required DateTime createdAt,
+    required List<OrderShipmentEvent> events,
+    String? service,
+    String? trackingNumber,
+    DateTime? eta,
+    String? labelUrl,
+    List<String> documents = const <String>[],
+    DateTime? updatedAt,
+  }) {
+    final sortedEvents = List<OrderShipmentEvent>.from(events)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final fallbackUpdatedAt = sortedEvents.isNotEmpty
+        ? sortedEvents.last.timestamp
+        : createdAt;
+    return OrderShipment(
+      id: id,
+      carrier: carrier,
+      status: status,
+      createdAt: createdAt,
+      service: service,
+      trackingNumber: trackingNumber,
+      eta: eta,
+      labelUrl: labelUrl,
+      documents: List<String>.unmodifiable(documents),
+      events: List<OrderShipmentEvent>.unmodifiable(sortedEvents),
+      updatedAt: updatedAt ?? fallbackUpdatedAt,
+    );
+  }
+
+  OrderShipmentEvent _shipmentEvent({
+    required OrderShipmentEventCode code,
+    required DateTime timestamp,
+    String? location,
+    String? note,
+  }) {
+    return OrderShipmentEvent(
+      timestamp: timestamp,
+      code: code,
+      location: location,
+      note: note,
+    );
   }
 
   Map<String, List<ProductionEvent>> _buildSeedProductionEvents(DateTime base) {

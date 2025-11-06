@@ -1609,4 +1609,201 @@ class AppLocalizationsEn extends AppLocalizations {
   String orderDetailsUpdatedOn(String date) {
     return 'on $date';
   }
+
+  @override
+  String get orderDetailsTrackingSectionTitle => 'Shipment tracking';
+
+  @override
+  String get orderDetailsTrackingCardTitle => 'Current shipment';
+
+  @override
+  String orderDetailsTrackingCardPending(String status) {
+    return 'Tracking activates once your order ships. Current order status: $status';
+  }
+
+  @override
+  String orderDetailsTrackingCardStatus(String status) {
+    return 'Current status: $status';
+  }
+
+  @override
+  String orderDetailsTrackingCardLatest(String event, String timestamp) {
+    return 'Latest update: $event · $timestamp';
+  }
+
+  @override
+  String orderDetailsTrackingCardLocation(String location) {
+    return 'Location: $location';
+  }
+
+  @override
+  String get orderDetailsTrackingActionLabel => 'View tracking';
+
+  @override
+  String get orderDetailsTrackingCardError => 'Tracking could not be loaded.';
+
+  @override
+  String orderTrackingAppBarTitle(String orderNumber) {
+    return 'Tracking · $orderNumber';
+  }
+
+  @override
+  String get orderTrackingActionViewMap => 'View on map';
+
+  @override
+  String get orderTrackingLoadError => 'We couldn’t load tracking details.';
+
+  @override
+  String get orderTrackingUnavailableTitle => 'Tracking not available yet';
+
+  @override
+  String get orderTrackingUnavailableMessage =>
+      'We’ll show tracking updates here once the carrier shares them.';
+
+  @override
+  String get orderTrackingContactSupport => 'Contact support';
+
+  @override
+  String get orderTrackingSupportPending => 'Support will reach out soon.';
+
+  @override
+  String orderTrackingTimelineTitle(int count) {
+    return 'Tracking updates ($count)';
+  }
+
+  @override
+  String orderTrackingContactCarrierPending(String carrier) {
+    return 'We’ll connect you with $carrier shortly.';
+  }
+
+  @override
+  String orderTrackingCopied(String trackingId) {
+    return 'Tracking ID $trackingId copied.';
+  }
+
+  @override
+  String orderTrackingMapPlaceholder(String location) {
+    return 'Map preview for $location is coming soon.';
+  }
+
+  @override
+  String get orderTrackingMapPlaceholderGeneric =>
+      'Map preview is coming soon.';
+
+  @override
+  String get orderTrackingShipmentSelectorLabel => 'Select shipment';
+
+  @override
+  String orderTrackingShipmentSelectorOption(int index, String carrier) {
+    return 'Shipment $index · $carrier';
+  }
+
+  @override
+  String orderTrackingUpdatedAt(String timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String orderTrackingLatestLocation(String location) {
+    return 'Latest location: $location';
+  }
+
+  @override
+  String orderTrackingEta(String date) {
+    return 'Estimated delivery: $date';
+  }
+
+  @override
+  String orderTrackingTrackingIdLabel(String trackingId) {
+    return 'Tracking ID: $trackingId';
+  }
+
+  @override
+  String get orderTrackingContactCarrierButton => 'Contact carrier';
+
+  @override
+  String get orderTrackingCopyTrackingIdButton => 'Copy tracking ID';
+
+  @override
+  String get orderTrackingNoEventsTitle => 'No tracking events yet';
+
+  @override
+  String get orderTrackingNoEventsMessage =>
+      'Check back soon for the first carrier update.';
+
+  @override
+  String orderTrackingOrderSummaryTitle(String orderNumber) {
+    return 'Order $orderNumber';
+  }
+
+  @override
+  String orderTrackingOrderStatus(String status) {
+    return 'Order status: $status';
+  }
+
+  @override
+  String get orderTrackingCarrierJapanPost => 'Japan Post';
+
+  @override
+  String get orderTrackingCarrierYamato => 'Yamato Transport';
+
+  @override
+  String get orderTrackingCarrierSagawa => 'Sagawa Express';
+
+  @override
+  String get orderTrackingCarrierDhl => 'DHL Express';
+
+  @override
+  String get orderTrackingCarrierUps => 'UPS';
+
+  @override
+  String get orderTrackingCarrierFedex => 'FedEx';
+
+  @override
+  String get orderTrackingCarrierOther => 'Other carrier';
+
+  @override
+  String get orderTrackingStatusLabelCreated => 'Label created';
+
+  @override
+  String get orderTrackingStatusInTransit => 'In transit';
+
+  @override
+  String get orderTrackingStatusOutForDelivery => 'Out for delivery';
+
+  @override
+  String get orderTrackingStatusDelivered => 'Delivered';
+
+  @override
+  String get orderTrackingStatusException => 'Exception';
+
+  @override
+  String get orderTrackingStatusCancelled => 'Canceled';
+
+  @override
+  String get orderTrackingEventLabelCreated => 'Label created';
+
+  @override
+  String get orderTrackingEventPickedUp => 'Picked up';
+
+  @override
+  String get orderTrackingEventInTransit => 'In transit';
+
+  @override
+  String get orderTrackingEventArrivedHub => 'Arrived at facility';
+
+  @override
+  String get orderTrackingEventCustomsClearance => 'Customs clearance';
+
+  @override
+  String get orderTrackingEventOutForDelivery => 'Out for delivery';
+
+  @override
+  String get orderTrackingEventDelivered => 'Delivered';
+
+  @override
+  String get orderTrackingEventException => 'Exception';
+
+  @override
+  String get orderTrackingEventReturnToSender => 'Returned to sender';
 }

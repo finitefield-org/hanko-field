@@ -1182,4 +1182,324 @@
     "date": { "type": "String" }
   }
 }
+
+, "orderDetailsTrackingSectionTitle": "配送トラッキング"
+, "@orderDetailsTrackingSectionTitle": {
+  "description": "注文詳細のサマリー画面に表示する配送トラッキング見出し"
+}
+
+, "orderDetailsTrackingCardTitle": "現在の配送状況"
+, "@orderDetailsTrackingCardTitle": {
+  "description": "配送トラッキングプレビューカードのタイトル"
+}
+
+, "orderDetailsTrackingCardPending": "出荷が完了すると追跡が有効になります。現在の注文ステータス：{status}"
+, "@orderDetailsTrackingCardPending": {
+  "description": "配送データがまだ取得できない場合に表示するメッセージ",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardStatus": "配送ステータス：{status}"
+, "@orderDetailsTrackingCardStatus": {
+  "description": "配送トラッキングプレビューカードで現在の配送ステータスを表示する行",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardLatest": "最新更新：{event} · {timestamp}"
+, "@orderDetailsTrackingCardLatest": {
+  "description": "配送トラッキングプレビューカードで最新イベントを表示する行",
+  "placeholders": {
+    "event": { "type": "String" },
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardLocation": "配送先：{location}"
+, "@orderDetailsTrackingCardLocation": {
+  "description": "最新の配送場所を表示するラベル",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingActionLabel": "追跡を見る"
+, "@orderDetailsTrackingActionLabel": {
+  "description": "配送トラッキング画面を開くボタンラベル"
+}
+
+, "orderDetailsTrackingCardError": "配送情報を読み込めませんでした。"
+, "@orderDetailsTrackingCardError": {
+  "description": "配送プレビューの読み込みに失敗した際のメッセージ"
+}
+
+, "orderTrackingAppBarTitle": "追跡 · {orderNumber}"
+, "@orderTrackingAppBarTitle": {
+  "description": "配送トラッキング画面のタイトル",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderTrackingActionViewMap": "マップで表示"
+, "@orderTrackingActionViewMap": {
+  "description": "マップアイコンのツールチップ"
+}
+
+, "orderTrackingLoadError": "配送情報を取得できませんでした。"
+, "@orderTrackingLoadError": {
+  "description": "配送データの取得に失敗したときのエラーメッセージ"
+}
+
+, "orderTrackingUnavailableTitle": "まだ追跡情報がありません"
+, "@orderTrackingUnavailableTitle": {
+  "description": "追跡データが存在しない場合の見出し"
+}
+
+, "orderTrackingUnavailableMessage": "配送業者から更新が届き次第ここに表示されます。"
+, "@orderTrackingUnavailableMessage": {
+  "description": "追跡データがない場合の補足メッセージ"
+}
+
+, "orderTrackingContactSupport": "サポートに連絡"
+, "@orderTrackingContactSupport": {
+  "description": "サポートへ連絡するボタンのラベル"
+}
+
+, "orderTrackingSupportPending": "サポート担当がまもなく連絡します。"
+, "@orderTrackingSupportPending": {
+  "description": "サポート連絡を開始した際に表示するスナックバー"
+}
+
+, "orderTrackingTimelineTitle": "追跡履歴（{count}件）"
+, "@orderTrackingTimelineTitle": {
+  "description": "追跡タイムラインの見出し",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderTrackingContactCarrierPending": "{carrier} へ接続中です。"
+, "@orderTrackingContactCarrierPending": {
+  "description": "配送業者への連絡を開始した際に表示するスナックバー",
+  "placeholders": {
+    "carrier": { "type": "String" }
+  }
+}
+
+, "orderTrackingCopied": "追跡番号 {trackingId} をコピーしました。"
+, "@orderTrackingCopied": {
+  "description": "追跡番号をコピーした際のスナックバー",
+  "placeholders": {
+    "trackingId": { "type": "String" }
+  }
+}
+
+, "orderTrackingMapPlaceholder": "{location} のマップ表示は近日対応予定です。"
+, "@orderTrackingMapPlaceholder": {
+  "description": "位置情報がある場合に表示するマップ未対応メッセージ",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderTrackingMapPlaceholderGeneric": "マップ表示は近日対応予定です。"
+, "@orderTrackingMapPlaceholderGeneric": {
+  "description": "位置情報がない場合に表示するマップ未対応メッセージ"
+}
+
+, "orderTrackingShipmentSelectorLabel": "配送を選択"
+, "@orderTrackingShipmentSelectorLabel": {
+  "description": "配送選択ドロップダウンのラベル"
+}
+
+, "orderTrackingShipmentSelectorOption": "配送 {index} · {carrier}"
+, "@orderTrackingShipmentSelectorOption": {
+  "description": "ドロップダウン内で表示する配送オプションのラベル",
+  "placeholders": {
+    "index": { "type": "int" },
+    "carrier": { "type": "String" }
+  }
+}
+
+, "orderTrackingUpdatedAt": "更新日時：{timestamp}"
+, "@orderTrackingUpdatedAt": {
+  "description": "追跡画面での最終更新日時ラベル",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderTrackingLatestLocation": "最新の場所：{location}"
+, "@orderTrackingLatestLocation": {
+  "description": "最新の配送場所を表示するラベル",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderTrackingEta": "お届け予定日：{date}"
+, "@orderTrackingEta": {
+  "description": "お届け予定日を表示するラベル",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
+
+, "orderTrackingTrackingIdLabel": "追跡番号：{trackingId}"
+, "@orderTrackingTrackingIdLabel": {
+  "description": "追跡番号を表示するラベル",
+  "placeholders": {
+    "trackingId": { "type": "String" }
+  }
+}
+
+, "orderTrackingContactCarrierButton": "配送業者に連絡"
+, "@orderTrackingContactCarrierButton": {
+  "description": "配送業者へ連絡するボタンのラベル"
+}
+
+, "orderTrackingCopyTrackingIdButton": "追跡番号をコピー"
+, "@orderTrackingCopyTrackingIdButton": {
+  "description": "追跡番号をコピーするボタンのラベル"
+}
+
+, "orderTrackingNoEventsTitle": "追跡イベントはまだありません"
+, "@orderTrackingNoEventsTitle": {
+  "description": "追跡イベントが存在しない場合のタイトル"
+}
+
+, "orderTrackingNoEventsMessage": "最初の更新が届くまで少しお待ちください。"
+, "@orderTrackingNoEventsMessage": {
+  "description": "追跡イベントがない場合のメッセージ"
+}
+
+, "orderTrackingOrderSummaryTitle": "注文 {orderNumber}"
+, "@orderTrackingOrderSummaryTitle": {
+  "description": "追跡画面で表示する注文サマリーの見出し",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderTrackingOrderStatus": "注文ステータス：{status}"
+, "@orderTrackingOrderStatus": {
+  "description": "追跡画面で注文ステータスを表示するテキスト",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderTrackingCarrierJapanPost": "日本郵便"
+, "@orderTrackingCarrierJapanPost": {
+  "description": "日本郵便のキャリア名"
+}
+
+, "orderTrackingCarrierYamato": "ヤマト運輸"
+, "@orderTrackingCarrierYamato": {
+  "description": "ヤマト運輸のキャリア名"
+}
+
+, "orderTrackingCarrierSagawa": "佐川急便"
+, "@orderTrackingCarrierSagawa": {
+  "description": "佐川急便のキャリア名"
+}
+
+, "orderTrackingCarrierDhl": "DHL"
+, "@orderTrackingCarrierDhl": {
+  "description": "DHLのキャリア名"
+}
+
+, "orderTrackingCarrierUps": "UPS"
+, "@orderTrackingCarrierUps": {
+  "description": "UPSのキャリア名"
+}
+
+, "orderTrackingCarrierFedex": "FedEx"
+, "@orderTrackingCarrierFedex": {
+  "description": "FedExのキャリア名"
+}
+
+, "orderTrackingCarrierOther": "その他の配送業者"
+, "@orderTrackingCarrierOther": {
+  "description": "その他の配送業者のラベル"
+}
+
+, "orderTrackingStatusLabelCreated": "送り状作成済み"
+, "@orderTrackingStatusLabelCreated": {
+  "description": "送り状が作成された状態のステータスラベル"
+}
+
+, "orderTrackingStatusInTransit": "輸送中"
+, "@orderTrackingStatusInTransit": {
+  "description": "輸送中のステータスラベル"
+}
+
+, "orderTrackingStatusOutForDelivery": "配達中"
+, "@orderTrackingStatusOutForDelivery": {
+  "description": "配達中のステータスラベル"
+}
+
+, "orderTrackingStatusDelivered": "配達済み"
+, "@orderTrackingStatusDelivered": {
+  "description": "配達完了のステータスラベル"
+}
+
+, "orderTrackingStatusException": "例外発生"
+, "@orderTrackingStatusException": {
+  "description": "例外が発生した際のステータスラベル"
+}
+
+, "orderTrackingStatusCancelled": "キャンセル"
+, "@orderTrackingStatusCancelled": {
+  "description": "配送がキャンセルされた際のステータスラベル"
+}
+
+, "orderTrackingEventLabelCreated": "送り状を作成"
+, "@orderTrackingEventLabelCreated": {
+  "description": "送り状作成イベントのラベル"
+}
+
+, "orderTrackingEventPickedUp": "集荷完了"
+, "@orderTrackingEventPickedUp": {
+  "description": "集荷イベントのラベル"
+}
+
+, "orderTrackingEventInTransit": "輸送中"
+, "@orderTrackingEventInTransit": {
+  "description": "輸送中イベントのラベル"
+}
+
+, "orderTrackingEventArrivedHub": "拠点に到着"
+, "@orderTrackingEventArrivedHub": {
+  "description": "拠点到着イベントのラベル"
+}
+
+, "orderTrackingEventCustomsClearance": "通関手続き完了"
+, "@orderTrackingEventCustomsClearance": {
+  "description": "通関完了イベントのラベル"
+}
+
+, "orderTrackingEventOutForDelivery": "配達中"
+, "@orderTrackingEventOutForDelivery": {
+  "description": "配達中イベントのラベル"
+}
+
+, "orderTrackingEventDelivered": "配達完了"
+, "@orderTrackingEventDelivered": {
+  "description": "配達完了イベントのラベル"
+}
+
+, "orderTrackingEventException": "例外発生"
+, "@orderTrackingEventException": {
+  "description": "例外イベントのラベル"
+}
+
+, "orderTrackingEventReturnToSender": "差出人に返送"
+, "@orderTrackingEventReturnToSender": {
+  "description": "返送イベントのラベル"
+}
 }

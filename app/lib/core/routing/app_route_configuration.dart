@@ -22,6 +22,7 @@ import 'package:app/features/design_creation/presentation/design_version_history
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
 import 'package:app/features/orders/presentation/order_details_screen.dart';
+import 'package:app/features/orders/presentation/order_tracking_screen.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
 import 'package:flutter/material.dart';
 
@@ -271,6 +272,24 @@ class OrderDetailsRoute implements IndependentRoute {
   @override
   String toString() =>
       'OrderDetailsRoute(orderId: $orderId, sub: $trailingSegments)';
+}
+
+class OrderTrackingRoute implements IndependentRoute {
+  const OrderTrackingRoute({required this.orderId});
+
+  final String orderId;
+
+  @override
+  Widget get page => OrderTrackingScreen(orderId: orderId);
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'orders-$orderId-tracking-$index';
+
+  @override
+  List<String> get pathSegments => [orderId, 'tracking'];
+
+  @override
+  String toString() => 'OrderTrackingRoute(orderId: $orderId)';
 }
 
 /// マイ印鑑詳細

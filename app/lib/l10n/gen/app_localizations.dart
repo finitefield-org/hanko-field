@@ -2845,6 +2845,330 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'on {date}'**
   String orderDetailsUpdatedOn(String date);
+
+  /// Heading for the shipment tracking preview section on the order summary tab
+  ///
+  /// In en, this message translates to:
+  /// **'Shipment tracking'**
+  String get orderDetailsTrackingSectionTitle;
+
+  /// Title displayed at the top of the shipment tracking preview card
+  ///
+  /// In en, this message translates to:
+  /// **'Current shipment'**
+  String get orderDetailsTrackingCardTitle;
+
+  /// Message shown when shipment tracking data isn’t available yet
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking activates once your order ships. Current order status: {status}'**
+  String orderDetailsTrackingCardPending(String status);
+
+  /// Summary line in the tracking preview card showing the shipment status
+  ///
+  /// In en, this message translates to:
+  /// **'Current status: {status}'**
+  String orderDetailsTrackingCardStatus(String status);
+
+  /// Line describing the most recent shipment event in the preview card
+  ///
+  /// In en, this message translates to:
+  /// **'Latest update: {event} · {timestamp}'**
+  String orderDetailsTrackingCardLatest(String event, String timestamp);
+
+  /// Label for the latest shipment location in the preview card
+  ///
+  /// In en, this message translates to:
+  /// **'Location: {location}'**
+  String orderDetailsTrackingCardLocation(String location);
+
+  /// Button label to open the full shipment tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'View tracking'**
+  String get orderDetailsTrackingActionLabel;
+
+  /// Error message shown when the tracking preview fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking could not be loaded.'**
+  String get orderDetailsTrackingCardError;
+
+  /// App bar title for the shipment tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking · {orderNumber}'**
+  String orderTrackingAppBarTitle(String orderNumber);
+
+  /// Tooltip for the map icon on the tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'View on map'**
+  String get orderTrackingActionViewMap;
+
+  /// Error message when tracking data fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load tracking details.'**
+  String get orderTrackingLoadError;
+
+  /// Title for the empty state when no tracking data is available
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking not available yet'**
+  String get orderTrackingUnavailableTitle;
+
+  /// Body message for the empty tracking state
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll show tracking updates here once the carrier shares them.'**
+  String get orderTrackingUnavailableMessage;
+
+  /// Primary action label for contacting support from the tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get orderTrackingContactSupport;
+
+  /// Snack bar message shown when support contact is triggered
+  ///
+  /// In en, this message translates to:
+  /// **'Support will reach out soon.'**
+  String get orderTrackingSupportPending;
+
+  /// Heading above the tracking event timeline
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking updates ({count})'**
+  String orderTrackingTimelineTitle(int count);
+
+  /// Snack bar message shown when contacting the carrier
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll connect you with {carrier} shortly.'**
+  String orderTrackingContactCarrierPending(String carrier);
+
+  /// Snack bar message confirming the tracking number was copied
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking ID {trackingId} copied.'**
+  String orderTrackingCopied(String trackingId);
+
+  /// Snack bar shown when map integration is not yet available but location is known
+  ///
+  /// In en, this message translates to:
+  /// **'Map preview for {location} is coming soon.'**
+  String orderTrackingMapPlaceholder(String location);
+
+  /// Snack bar shown when map integration is not yet available and no location is provided
+  ///
+  /// In en, this message translates to:
+  /// **'Map preview is coming soon.'**
+  String get orderTrackingMapPlaceholderGeneric;
+
+  /// Label above the shipment selector dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Select shipment'**
+  String get orderTrackingShipmentSelectorLabel;
+
+  /// Label for each shipment option in the dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Shipment {index} · {carrier}'**
+  String orderTrackingShipmentSelectorOption(int index, String carrier);
+
+  /// Label for the last updated timestamp in the tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String orderTrackingUpdatedAt(String timestamp);
+
+  /// Label showing the latest known location for the shipment
+  ///
+  /// In en, this message translates to:
+  /// **'Latest location: {location}'**
+  String orderTrackingLatestLocation(String location);
+
+  /// Label displaying the estimated delivery date
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated delivery: {date}'**
+  String orderTrackingEta(String date);
+
+  /// Label showing the shipment tracking number
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking ID: {trackingId}'**
+  String orderTrackingTrackingIdLabel(String trackingId);
+
+  /// Button label to initiate contacting the shipping carrier
+  ///
+  /// In en, this message translates to:
+  /// **'Contact carrier'**
+  String get orderTrackingContactCarrierButton;
+
+  /// Button label to copy the tracking number
+  ///
+  /// In en, this message translates to:
+  /// **'Copy tracking ID'**
+  String get orderTrackingCopyTrackingIdButton;
+
+  /// Title shown when the shipment has no events in the timeline
+  ///
+  /// In en, this message translates to:
+  /// **'No tracking events yet'**
+  String get orderTrackingNoEventsTitle;
+
+  /// Message shown when there are no tracking events
+  ///
+  /// In en, this message translates to:
+  /// **'Check back soon for the first carrier update.'**
+  String get orderTrackingNoEventsMessage;
+
+  /// Heading for the order summary card on the tracking screen
+  ///
+  /// In en, this message translates to:
+  /// **'Order {orderNumber}'**
+  String orderTrackingOrderSummaryTitle(String orderNumber);
+
+  /// Text showing the current order status in the tracking summary
+  ///
+  /// In en, this message translates to:
+  /// **'Order status: {status}'**
+  String orderTrackingOrderStatus(String status);
+
+  /// Carrier label for Japan Post
+  ///
+  /// In en, this message translates to:
+  /// **'Japan Post'**
+  String get orderTrackingCarrierJapanPost;
+
+  /// Carrier label for Yamato Transport
+  ///
+  /// In en, this message translates to:
+  /// **'Yamato Transport'**
+  String get orderTrackingCarrierYamato;
+
+  /// Carrier label for Sagawa Express
+  ///
+  /// In en, this message translates to:
+  /// **'Sagawa Express'**
+  String get orderTrackingCarrierSagawa;
+
+  /// Carrier label for DHL
+  ///
+  /// In en, this message translates to:
+  /// **'DHL Express'**
+  String get orderTrackingCarrierDhl;
+
+  /// Carrier label for UPS
+  ///
+  /// In en, this message translates to:
+  /// **'UPS'**
+  String get orderTrackingCarrierUps;
+
+  /// Carrier label for FedEx
+  ///
+  /// In en, this message translates to:
+  /// **'FedEx'**
+  String get orderTrackingCarrierFedex;
+
+  /// Fallback carrier label
+  ///
+  /// In en, this message translates to:
+  /// **'Other carrier'**
+  String get orderTrackingCarrierOther;
+
+  /// Shipment status label when the label is created
+  ///
+  /// In en, this message translates to:
+  /// **'Label created'**
+  String get orderTrackingStatusLabelCreated;
+
+  /// Shipment status label for in-transit state
+  ///
+  /// In en, this message translates to:
+  /// **'In transit'**
+  String get orderTrackingStatusInTransit;
+
+  /// Shipment status label when out for delivery
+  ///
+  /// In en, this message translates to:
+  /// **'Out for delivery'**
+  String get orderTrackingStatusOutForDelivery;
+
+  /// Shipment status label for delivered state
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get orderTrackingStatusDelivered;
+
+  /// Shipment status label for exception
+  ///
+  /// In en, this message translates to:
+  /// **'Exception'**
+  String get orderTrackingStatusException;
+
+  /// Shipment status label for canceled shipments
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get orderTrackingStatusCancelled;
+
+  /// Event label when the shipping label is created
+  ///
+  /// In en, this message translates to:
+  /// **'Label created'**
+  String get orderTrackingEventLabelCreated;
+
+  /// Event label for carrier pickup
+  ///
+  /// In en, this message translates to:
+  /// **'Picked up'**
+  String get orderTrackingEventPickedUp;
+
+  /// Event label for in-transit updates
+  ///
+  /// In en, this message translates to:
+  /// **'In transit'**
+  String get orderTrackingEventInTransit;
+
+  /// Event label for arriving at a hub or facility
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at facility'**
+  String get orderTrackingEventArrivedHub;
+
+  /// Event label for customs clearance updates
+  ///
+  /// In en, this message translates to:
+  /// **'Customs clearance'**
+  String get orderTrackingEventCustomsClearance;
+
+  /// Event label for out-for-delivery updates
+  ///
+  /// In en, this message translates to:
+  /// **'Out for delivery'**
+  String get orderTrackingEventOutForDelivery;
+
+  /// Event label for delivery confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get orderTrackingEventDelivered;
+
+  /// Event label for exception events
+  ///
+  /// In en, this message translates to:
+  /// **'Exception'**
+  String get orderTrackingEventException;
+
+  /// Event label when the shipment is being returned
+  ///
+  /// In en, this message translates to:
+  /// **'Returned to sender'**
+  String get orderTrackingEventReturnToSender;
 }
 
 class _AppLocalizationsDelegate

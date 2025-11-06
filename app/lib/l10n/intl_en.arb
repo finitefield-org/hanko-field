@@ -2551,4 +2551,324 @@
     "date": { "type": "String" }
   }
 }
+
+, "orderDetailsTrackingSectionTitle": "Shipment tracking"
+, "@orderDetailsTrackingSectionTitle": {
+  "description": "Heading for the shipment tracking preview section on the order summary tab"
+}
+
+, "orderDetailsTrackingCardTitle": "Current shipment"
+, "@orderDetailsTrackingCardTitle": {
+  "description": "Title displayed at the top of the shipment tracking preview card"
+}
+
+, "orderDetailsTrackingCardPending": "Tracking activates once your order ships. Current order status: {status}"
+, "@orderDetailsTrackingCardPending": {
+  "description": "Message shown when shipment tracking data isn’t available yet",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardStatus": "Current status: {status}"
+, "@orderDetailsTrackingCardStatus": {
+  "description": "Summary line in the tracking preview card showing the shipment status",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardLatest": "Latest update: {event} · {timestamp}"
+, "@orderDetailsTrackingCardLatest": {
+  "description": "Line describing the most recent shipment event in the preview card",
+  "placeholders": {
+    "event": { "type": "String" },
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingCardLocation": "Location: {location}"
+, "@orderDetailsTrackingCardLocation": {
+  "description": "Label for the latest shipment location in the preview card",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderDetailsTrackingActionLabel": "View tracking"
+, "@orderDetailsTrackingActionLabel": {
+  "description": "Button label to open the full shipment tracking screen"
+}
+
+, "orderDetailsTrackingCardError": "Tracking could not be loaded."
+, "@orderDetailsTrackingCardError": {
+  "description": "Error message shown when the tracking preview fails to load"
+}
+
+, "orderTrackingAppBarTitle": "Tracking · {orderNumber}"
+, "@orderTrackingAppBarTitle": {
+  "description": "App bar title for the shipment tracking screen",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderTrackingActionViewMap": "View on map"
+, "@orderTrackingActionViewMap": {
+  "description": "Tooltip for the map icon on the tracking screen"
+}
+
+, "orderTrackingLoadError": "We couldn’t load tracking details."
+, "@orderTrackingLoadError": {
+  "description": "Error message when tracking data fails to load"
+}
+
+, "orderTrackingUnavailableTitle": "Tracking not available yet"
+, "@orderTrackingUnavailableTitle": {
+  "description": "Title for the empty state when no tracking data is available"
+}
+
+, "orderTrackingUnavailableMessage": "We’ll show tracking updates here once the carrier shares them."
+, "@orderTrackingUnavailableMessage": {
+  "description": "Body message for the empty tracking state"
+}
+
+, "orderTrackingContactSupport": "Contact support"
+, "@orderTrackingContactSupport": {
+  "description": "Primary action label for contacting support from the tracking screen"
+}
+
+, "orderTrackingSupportPending": "Support will reach out soon."
+, "@orderTrackingSupportPending": {
+  "description": "Snack bar message shown when support contact is triggered"
+}
+
+, "orderTrackingTimelineTitle": "Tracking updates ({count})"
+, "@orderTrackingTimelineTitle": {
+  "description": "Heading above the tracking event timeline",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "orderTrackingContactCarrierPending": "We’ll connect you with {carrier} shortly."
+, "@orderTrackingContactCarrierPending": {
+  "description": "Snack bar message shown when contacting the carrier",
+  "placeholders": {
+    "carrier": { "type": "String" }
+  }
+}
+
+, "orderTrackingCopied": "Tracking ID {trackingId} copied."
+, "@orderTrackingCopied": {
+  "description": "Snack bar message confirming the tracking number was copied",
+  "placeholders": {
+    "trackingId": { "type": "String" }
+  }
+}
+
+, "orderTrackingMapPlaceholder": "Map preview for {location} is coming soon."
+, "@orderTrackingMapPlaceholder": {
+  "description": "Snack bar shown when map integration is not yet available but location is known",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderTrackingMapPlaceholderGeneric": "Map preview is coming soon."
+, "@orderTrackingMapPlaceholderGeneric": {
+  "description": "Snack bar shown when map integration is not yet available and no location is provided"
+}
+
+, "orderTrackingShipmentSelectorLabel": "Select shipment"
+, "@orderTrackingShipmentSelectorLabel": {
+  "description": "Label above the shipment selector dropdown"
+}
+
+, "orderTrackingShipmentSelectorOption": "Shipment {index} · {carrier}"
+, "@orderTrackingShipmentSelectorOption": {
+  "description": "Label for each shipment option in the dropdown",
+  "placeholders": {
+    "index": { "type": "int" },
+    "carrier": { "type": "String" }
+  }
+}
+
+, "orderTrackingUpdatedAt": "Updated {timestamp}"
+, "@orderTrackingUpdatedAt": {
+  "description": "Label for the last updated timestamp in the tracking screen",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "orderTrackingLatestLocation": "Latest location: {location}"
+, "@orderTrackingLatestLocation": {
+  "description": "Label showing the latest known location for the shipment",
+  "placeholders": {
+    "location": { "type": "String" }
+  }
+}
+
+, "orderTrackingEta": "Estimated delivery: {date}"
+, "@orderTrackingEta": {
+  "description": "Label displaying the estimated delivery date",
+  "placeholders": {
+    "date": { "type": "String" }
+  }
+}
+
+, "orderTrackingTrackingIdLabel": "Tracking ID: {trackingId}"
+, "@orderTrackingTrackingIdLabel": {
+  "description": "Label showing the shipment tracking number",
+  "placeholders": {
+    "trackingId": { "type": "String" }
+  }
+}
+
+, "orderTrackingContactCarrierButton": "Contact carrier"
+, "@orderTrackingContactCarrierButton": {
+  "description": "Button label to initiate contacting the shipping carrier"
+}
+
+, "orderTrackingCopyTrackingIdButton": "Copy tracking ID"
+, "@orderTrackingCopyTrackingIdButton": {
+  "description": "Button label to copy the tracking number"
+}
+
+, "orderTrackingNoEventsTitle": "No tracking events yet"
+, "@orderTrackingNoEventsTitle": {
+  "description": "Title shown when the shipment has no events in the timeline"
+}
+
+, "orderTrackingNoEventsMessage": "Check back soon for the first carrier update."
+, "@orderTrackingNoEventsMessage": {
+  "description": "Message shown when there are no tracking events"
+}
+
+, "orderTrackingOrderSummaryTitle": "Order {orderNumber}"
+, "@orderTrackingOrderSummaryTitle": {
+  "description": "Heading for the order summary card on the tracking screen",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderTrackingOrderStatus": "Order status: {status}"
+, "@orderTrackingOrderStatus": {
+  "description": "Text showing the current order status in the tracking summary",
+  "placeholders": {
+    "status": { "type": "String" }
+  }
+}
+
+, "orderTrackingCarrierJapanPost": "Japan Post"
+, "@orderTrackingCarrierJapanPost": {
+  "description": "Carrier label for Japan Post"
+}
+
+, "orderTrackingCarrierYamato": "Yamato Transport"
+, "@orderTrackingCarrierYamato": {
+  "description": "Carrier label for Yamato Transport"
+}
+
+, "orderTrackingCarrierSagawa": "Sagawa Express"
+, "@orderTrackingCarrierSagawa": {
+  "description": "Carrier label for Sagawa Express"
+}
+
+, "orderTrackingCarrierDhl": "DHL Express"
+, "@orderTrackingCarrierDhl": {
+  "description": "Carrier label for DHL"
+}
+
+, "orderTrackingCarrierUps": "UPS"
+, "@orderTrackingCarrierUps": {
+  "description": "Carrier label for UPS"
+}
+
+, "orderTrackingCarrierFedex": "FedEx"
+, "@orderTrackingCarrierFedex": {
+  "description": "Carrier label for FedEx"
+}
+
+, "orderTrackingCarrierOther": "Other carrier"
+, "@orderTrackingCarrierOther": {
+  "description": "Fallback carrier label"
+}
+
+, "orderTrackingStatusLabelCreated": "Label created"
+, "@orderTrackingStatusLabelCreated": {
+  "description": "Shipment status label when the label is created"
+}
+
+, "orderTrackingStatusInTransit": "In transit"
+, "@orderTrackingStatusInTransit": {
+  "description": "Shipment status label for in-transit state"
+}
+
+, "orderTrackingStatusOutForDelivery": "Out for delivery"
+, "@orderTrackingStatusOutForDelivery": {
+  "description": "Shipment status label when out for delivery"
+}
+
+, "orderTrackingStatusDelivered": "Delivered"
+, "@orderTrackingStatusDelivered": {
+  "description": "Shipment status label for delivered state"
+}
+
+, "orderTrackingStatusException": "Exception"
+, "@orderTrackingStatusException": {
+  "description": "Shipment status label for exception"
+}
+
+, "orderTrackingStatusCancelled": "Canceled"
+, "@orderTrackingStatusCancelled": {
+  "description": "Shipment status label for canceled shipments"
+}
+
+, "orderTrackingEventLabelCreated": "Label created"
+, "@orderTrackingEventLabelCreated": {
+  "description": "Event label when the shipping label is created"
+}
+
+, "orderTrackingEventPickedUp": "Picked up"
+, "@orderTrackingEventPickedUp": {
+  "description": "Event label for carrier pickup"
+}
+
+, "orderTrackingEventInTransit": "In transit"
+, "@orderTrackingEventInTransit": {
+  "description": "Event label for in-transit updates"
+}
+
+, "orderTrackingEventArrivedHub": "Arrived at facility"
+, "@orderTrackingEventArrivedHub": {
+  "description": "Event label for arriving at a hub or facility"
+}
+
+, "orderTrackingEventCustomsClearance": "Customs clearance"
+, "@orderTrackingEventCustomsClearance": {
+  "description": "Event label for customs clearance updates"
+}
+
+, "orderTrackingEventOutForDelivery": "Out for delivery"
+, "@orderTrackingEventOutForDelivery": {
+  "description": "Event label for out-for-delivery updates"
+}
+
+, "orderTrackingEventDelivered": "Delivered"
+, "@orderTrackingEventDelivered": {
+  "description": "Event label for delivery confirmation"
+}
+
+, "orderTrackingEventException": "Exception"
+, "@orderTrackingEventException": {
+  "description": "Event label for exception events"
+}
+
+, "orderTrackingEventReturnToSender": "Returned to sender"
+, "@orderTrackingEventReturnToSender": {
+  "description": "Event label when the shipment is being returned"
+}
 }

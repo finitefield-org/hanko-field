@@ -132,9 +132,14 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
       if (segments.isEmpty) {
         continue;
       }
+      final orderId = segments.first;
+      if (segments.length >= 2 && segments[1] == 'tracking') {
+        result.add(OrderTrackingRoute(orderId: orderId));
+        continue;
+      }
       result.add(
         OrderDetailsRoute(
-          orderId: segments.first,
+          orderId: orderId,
           trailing: segments.length > 1
               ? segments.sublist(1)
               : const <String>[],

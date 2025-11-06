@@ -1,4 +1,6 @@
 import 'package:app/core/domain/entities/order.dart';
+import 'package:app/core/routing/app_route_configuration.dart';
+import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_button.dart';
 import 'package:app/core/ui/widgets/app_card.dart';
@@ -6,6 +8,7 @@ import 'package:app/core/ui/widgets/app_empty_state.dart';
 import 'package:app/core/ui/widgets/app_skeleton.dart';
 import 'package:app/features/orders/application/order_details_provider.dart';
 import 'package:app/features/orders/application/order_production_timeline_provider.dart';
+import 'package:app/features/orders/application/order_shipments_provider.dart';
 import 'package:app/features/orders/data/order_repository_provider.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -166,6 +169,18 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                     ),
                     const SizedBox(height: AppTokens.spaceM),
                     _OrderTotalsCard(order: order, l10n: l10n),
+                    if (_shouldShowTrackingCard(order)) ...[
+                      const SizedBox(height: AppTokens.spaceXL),
+                      _SectionTitle(
+                        label: l10n.orderDetailsTrackingSectionTitle,
+                      ),
+                      const SizedBox(height: AppTokens.spaceM),
+                      _OrderTrackingPreviewCard(
+                        orderId: order.orderNumber,
+                        status: order.status,
+                        onViewTracking: () => _openTracking(order.orderNumber),
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceXL),
                     _SectionTitle(
                       label: l10n.orderDetailsAddressesSectionTitle,
@@ -276,6 +291,12 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
         onRetry: () => ref.refresh(orderDetailsProvider(widget.orderId).future),
       ),
     );
+  }
+
+  void _openTracking(String orderNumber) {
+    ref
+        .read(appStateProvider.notifier)
+        .push(OrderTrackingRoute(orderId: orderNumber));
   }
 
   Future<void> _handleReorder(
@@ -1349,6 +1370,189 @@ class _DesignPreviewTile extends StatelessWidget {
   }
 }
 
+class _OrderTrackingPreviewCard extends ConsumerWidget {
+  const _OrderTrackingPreviewCard({
+    required this.orderId,
+    required this.status,
+    required this.onViewTracking,
+  });
+
+  final String orderId;
+  final OrderStatus status;
+  final VoidCallback onViewTracking;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final shipmentsAsync = ref.watch(orderShipmentsProvider(orderId));
+    return shipmentsAsync.when(
+      data: (shipments) => _buildContent(context, l10n, shipments),
+      loading: () => const AppSkeletonBlock(height: 120),
+      error: (error, stackTrace) => _buildError(context, l10n, ref),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    List<OrderShipment> shipments,
+  ) {
+    final summary = _resolveShipmentPreviewSummary(shipments);
+    final scheme = Theme.of(context).colorScheme;
+    final orderStatusLabel = _statusLabel(status, l10n);
+    final statusLabel = summary == null
+        ? null
+        : _trackingStatusLabel(l10n, summary.status);
+    final latestEvent = summary?.latestEvent;
+    final latestLabel = latestEvent == null
+        ? null
+        : l10n.orderDetailsTrackingCardLatest(
+            _trackingEventLabel(l10n, latestEvent.code),
+            DateFormat.yMMMd().add_Hm().format(latestEvent.timestamp),
+          );
+    final location = (latestEvent?.location ?? '').isEmpty
+        ? null
+        : latestEvent!.location;
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTokens.spaceS),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.12),
+                  borderRadius: AppTokens.radiusM,
+                ),
+                child: Icon(
+                  summary == null
+                      ? Icons.local_shipping_outlined
+                      : _shipmentStatusIcon(summary.status),
+                  color: scheme.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppTokens.spaceM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.orderDetailsTrackingCardTitle,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceXS),
+                    Text(
+                      statusLabel == null
+                          ? l10n.orderDetailsTrackingCardPending(
+                              orderStatusLabel,
+                            )
+                          : l10n.orderDetailsTrackingCardStatus(statusLabel),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (latestLabel != null) ...[
+            const SizedBox(height: AppTokens.spaceS),
+            Text(latestLabel, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+          if (location != null) ...[
+            const SizedBox(height: AppTokens.spaceXS),
+            Text(
+              l10n.orderDetailsTrackingCardLocation(location),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+          const SizedBox(height: AppTokens.spaceL),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onViewTracking,
+              icon: const Icon(Icons.open_in_new),
+              label: Text(l10n.orderDetailsTrackingActionLabel),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError(
+    BuildContext context,
+    AppLocalizations l10n,
+    WidgetRef ref,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTokens.spaceS),
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer,
+                  borderRadius: AppTokens.radiusM,
+                ),
+                child: Icon(
+                  Icons.report_problem_outlined,
+                  color: scheme.onErrorContainer,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppTokens.spaceM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.orderDetailsTrackingCardTitle,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceXS),
+                    Text(
+                      l10n.orderDetailsTrackingCardError,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceL),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => ref.invalidate(orderShipmentsProvider(orderId)),
+              child: Text(l10n.orderDetailsRetryLabel),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _OrderAddressesSection extends StatelessWidget {
   const _OrderAddressesSection({required this.order, required this.l10n});
 
@@ -1592,6 +1796,103 @@ bool _shouldShowSupportBanner(Order order) {
     OrderStatus.inProduction ||
     OrderStatus.readyToShip => true,
     _ => false,
+  };
+}
+
+bool _shouldShowTrackingCard(Order order) {
+  return switch (order.status) {
+    OrderStatus.readyToShip ||
+    OrderStatus.shipped ||
+    OrderStatus.delivered => true,
+    _ => false,
+  };
+}
+
+class _ShipmentPreviewSummary {
+  const _ShipmentPreviewSummary({
+    required this.status,
+    required this.latestEvent,
+    required this.updatedAt,
+  });
+
+  final OrderShipmentStatus status;
+  final OrderShipmentEvent? latestEvent;
+  final DateTime updatedAt;
+}
+
+_ShipmentPreviewSummary? _resolveShipmentPreviewSummary(
+  List<OrderShipment> shipments,
+) {
+  if (shipments.isEmpty) {
+    return null;
+  }
+  OrderShipment latest = shipments.first;
+  var latestUpdatedAt = _shipmentUpdatedAt(latest);
+  for (final shipment in shipments.skip(1)) {
+    final updatedAt = _shipmentUpdatedAt(shipment);
+    if (updatedAt.isAfter(latestUpdatedAt)) {
+      latest = shipment;
+      latestUpdatedAt = updatedAt;
+    }
+  }
+  OrderShipmentEvent? latestEvent;
+  if (latest.events.isNotEmpty) {
+    latestEvent = latest.events.reduce(
+      (previous, element) =>
+          element.timestamp.isAfter(previous.timestamp) ? element : previous,
+    );
+  }
+  return _ShipmentPreviewSummary(
+    status: latest.status,
+    latestEvent: latestEvent,
+    updatedAt: latestUpdatedAt,
+  );
+}
+
+DateTime _shipmentUpdatedAt(OrderShipment shipment) {
+  return shipment.updatedAt ??
+      (shipment.events.isNotEmpty
+          ? shipment.events.last.timestamp
+          : shipment.createdAt);
+}
+
+String _trackingStatusLabel(AppLocalizations l10n, OrderShipmentStatus status) {
+  return switch (status) {
+    OrderShipmentStatus.labelCreated => l10n.orderTrackingStatusLabelCreated,
+    OrderShipmentStatus.inTransit => l10n.orderTrackingStatusInTransit,
+    OrderShipmentStatus.outForDelivery =>
+      l10n.orderTrackingStatusOutForDelivery,
+    OrderShipmentStatus.delivered => l10n.orderTrackingStatusDelivered,
+    OrderShipmentStatus.exception => l10n.orderTrackingStatusException,
+    OrderShipmentStatus.cancelled => l10n.orderTrackingStatusCancelled,
+  };
+}
+
+String _trackingEventLabel(AppLocalizations l10n, OrderShipmentEventCode code) {
+  return switch (code) {
+    OrderShipmentEventCode.labelCreated => l10n.orderTrackingEventLabelCreated,
+    OrderShipmentEventCode.pickedUp => l10n.orderTrackingEventPickedUp,
+    OrderShipmentEventCode.inTransit => l10n.orderTrackingEventInTransit,
+    OrderShipmentEventCode.arrivedHub => l10n.orderTrackingEventArrivedHub,
+    OrderShipmentEventCode.customsClearance =>
+      l10n.orderTrackingEventCustomsClearance,
+    OrderShipmentEventCode.outForDelivery =>
+      l10n.orderTrackingEventOutForDelivery,
+    OrderShipmentEventCode.delivered => l10n.orderTrackingEventDelivered,
+    OrderShipmentEventCode.exception => l10n.orderTrackingEventException,
+    OrderShipmentEventCode.returnToSender =>
+      l10n.orderTrackingEventReturnToSender,
+  };
+}
+
+IconData _shipmentStatusIcon(OrderShipmentStatus status) {
+  return switch (status) {
+    OrderShipmentStatus.labelCreated => Icons.receipt_long_outlined,
+    OrderShipmentStatus.inTransit => Icons.delivery_dining_outlined,
+    OrderShipmentStatus.outForDelivery => Icons.directions_run_outlined,
+    OrderShipmentStatus.delivered => Icons.home_work_outlined,
+    OrderShipmentStatus.exception => Icons.warning_rounded,
+    OrderShipmentStatus.cancelled => Icons.cancel_outlined,
   };
 }
 

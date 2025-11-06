@@ -1533,4 +1533,198 @@ class AppLocalizationsJa extends AppLocalizations {
   String orderDetailsUpdatedOn(String date) {
     return '$date 更新';
   }
+
+  @override
+  String get orderDetailsTrackingSectionTitle => '配送トラッキング';
+
+  @override
+  String get orderDetailsTrackingCardTitle => '現在の配送状況';
+
+  @override
+  String orderDetailsTrackingCardPending(String status) {
+    return '出荷が完了すると追跡が有効になります。現在の注文ステータス：$status';
+  }
+
+  @override
+  String orderDetailsTrackingCardStatus(String status) {
+    return '配送ステータス：$status';
+  }
+
+  @override
+  String orderDetailsTrackingCardLatest(String event, String timestamp) {
+    return '最新更新：$event · $timestamp';
+  }
+
+  @override
+  String orderDetailsTrackingCardLocation(String location) {
+    return '配送先：$location';
+  }
+
+  @override
+  String get orderDetailsTrackingActionLabel => '追跡を見る';
+
+  @override
+  String get orderDetailsTrackingCardError => '配送情報を読み込めませんでした。';
+
+  @override
+  String orderTrackingAppBarTitle(String orderNumber) {
+    return '追跡 · $orderNumber';
+  }
+
+  @override
+  String get orderTrackingActionViewMap => 'マップで表示';
+
+  @override
+  String get orderTrackingLoadError => '配送情報を取得できませんでした。';
+
+  @override
+  String get orderTrackingUnavailableTitle => 'まだ追跡情報がありません';
+
+  @override
+  String get orderTrackingUnavailableMessage => '配送業者から更新が届き次第ここに表示されます。';
+
+  @override
+  String get orderTrackingContactSupport => 'サポートに連絡';
+
+  @override
+  String get orderTrackingSupportPending => 'サポート担当がまもなく連絡します。';
+
+  @override
+  String orderTrackingTimelineTitle(int count) {
+    return '追跡履歴（$count件）';
+  }
+
+  @override
+  String orderTrackingContactCarrierPending(String carrier) {
+    return '$carrier へ接続中です。';
+  }
+
+  @override
+  String orderTrackingCopied(String trackingId) {
+    return '追跡番号 $trackingId をコピーしました。';
+  }
+
+  @override
+  String orderTrackingMapPlaceholder(String location) {
+    return '$location のマップ表示は近日対応予定です。';
+  }
+
+  @override
+  String get orderTrackingMapPlaceholderGeneric => 'マップ表示は近日対応予定です。';
+
+  @override
+  String get orderTrackingShipmentSelectorLabel => '配送を選択';
+
+  @override
+  String orderTrackingShipmentSelectorOption(int index, String carrier) {
+    return '配送 $index · $carrier';
+  }
+
+  @override
+  String orderTrackingUpdatedAt(String timestamp) {
+    return '更新日時：$timestamp';
+  }
+
+  @override
+  String orderTrackingLatestLocation(String location) {
+    return '最新の場所：$location';
+  }
+
+  @override
+  String orderTrackingEta(String date) {
+    return 'お届け予定日：$date';
+  }
+
+  @override
+  String orderTrackingTrackingIdLabel(String trackingId) {
+    return '追跡番号：$trackingId';
+  }
+
+  @override
+  String get orderTrackingContactCarrierButton => '配送業者に連絡';
+
+  @override
+  String get orderTrackingCopyTrackingIdButton => '追跡番号をコピー';
+
+  @override
+  String get orderTrackingNoEventsTitle => '追跡イベントはまだありません';
+
+  @override
+  String get orderTrackingNoEventsMessage => '最初の更新が届くまで少しお待ちください。';
+
+  @override
+  String orderTrackingOrderSummaryTitle(String orderNumber) {
+    return '注文 $orderNumber';
+  }
+
+  @override
+  String orderTrackingOrderStatus(String status) {
+    return '注文ステータス：$status';
+  }
+
+  @override
+  String get orderTrackingCarrierJapanPost => '日本郵便';
+
+  @override
+  String get orderTrackingCarrierYamato => 'ヤマト運輸';
+
+  @override
+  String get orderTrackingCarrierSagawa => '佐川急便';
+
+  @override
+  String get orderTrackingCarrierDhl => 'DHL';
+
+  @override
+  String get orderTrackingCarrierUps => 'UPS';
+
+  @override
+  String get orderTrackingCarrierFedex => 'FedEx';
+
+  @override
+  String get orderTrackingCarrierOther => 'その他の配送業者';
+
+  @override
+  String get orderTrackingStatusLabelCreated => '送り状作成済み';
+
+  @override
+  String get orderTrackingStatusInTransit => '輸送中';
+
+  @override
+  String get orderTrackingStatusOutForDelivery => '配達中';
+
+  @override
+  String get orderTrackingStatusDelivered => '配達済み';
+
+  @override
+  String get orderTrackingStatusException => '例外発生';
+
+  @override
+  String get orderTrackingStatusCancelled => 'キャンセル';
+
+  @override
+  String get orderTrackingEventLabelCreated => '送り状を作成';
+
+  @override
+  String get orderTrackingEventPickedUp => '集荷完了';
+
+  @override
+  String get orderTrackingEventInTransit => '輸送中';
+
+  @override
+  String get orderTrackingEventArrivedHub => '拠点に到着';
+
+  @override
+  String get orderTrackingEventCustomsClearance => '通関手続き完了';
+
+  @override
+  String get orderTrackingEventOutForDelivery => '配達中';
+
+  @override
+  String get orderTrackingEventDelivered => '配達完了';
+
+  @override
+  String get orderTrackingEventException => '例外発生';
+
+  @override
+  String get orderTrackingEventReturnToSender => '差出人に返送';
 }
