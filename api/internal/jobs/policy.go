@@ -54,7 +54,7 @@ func DefaultSubscriptionPolicy(kind WorkerKind) *SubscriptionPolicy {
 	case WorkerKindAI:
 		return &SubscriptionPolicy{
 			Retry: &RetryPolicy{
-				MinimumBackoff: 5 * time.Second,
+				MinimumBackoff: 10 * time.Second,
 				MaximumBackoff: 2 * time.Minute,
 			},
 			DeadLetter: &DeadLetterPolicy{

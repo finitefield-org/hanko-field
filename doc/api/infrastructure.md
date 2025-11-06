@@ -81,7 +81,7 @@ Terraform outputs the Cloud Run URL, bucket names, secret IDs, and service accou
 ## Background Job Retry & Dead Letter Policy
 
 - AI (`ai-worker`), invoice (`invoice-worker`), and export (`export-worker`) subscriptions apply exponential backoff and dead-letter routing automatically when workers start:
-  - AI: min backoff 5s, max backoff 2m, dead-letter topic `ai-jobs-dlq`, max delivery attempts 10
+- AI: min backoff 10s, max backoff 2m, dead-letter topic `ai-jobs-dlq`, max delivery attempts 10
   - Invoice: min backoff 10s, max backoff 5m, dead-letter topic `invoice-jobs-dlq`, max delivery attempts 8
   - Export: min backoff 15s, max backoff 10m, dead-letter topic `export-jobs-dlq`, max delivery attempts 8
 - Dead-letter topics live in the same project (`projects/{id}/topics/{name}`) and are monitored by `cmd/jobs/dlq`, which emits structured alerts when messages arrive.

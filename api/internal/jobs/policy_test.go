@@ -17,7 +17,7 @@ func TestDefaultSubscriptionPolicy(t *testing.T) {
 		{
 			name:         "ai",
 			kind:         WorkerKindAI,
-			minBackoff:   5 * time.Second,
+			minBackoff:   10 * time.Second,
 			maxBackoff:   2 * time.Minute,
 			deadLetterID: "ai-jobs-dlq",
 			maxAttempts:  10,
