@@ -151,7 +151,7 @@
 
 ## 9. Background Jobs & Scheduling
 - [x] [109 Configure Cloud Scheduler jobs (cleanup reservations, stock safety notifications) invoking internal endpoints with auth.](./tasks/109-configure-cloud-scheduler-jobs-cleanup-reservations-stock-safety-notifications-i.md)
-- [ ] [110 Implement job runners (Cloud Run jobs/PubSub subscribers) for asynchronous tasks (AI processing, invoice generation, exports).](./tasks/110-implement-job-runners-cloud-run-jobs-pubsub-subscribers-for-asynchronous-tasks-a.md)
+- [x] [110 Implement job runners (Cloud Run jobs/PubSub subscribers) for asynchronous tasks (AI processing, invoice generation, exports).](./tasks/110-implement-job-runners-cloud-run-jobs-pubsub-subscribers-for-asynchronous-tasks-a.md)
 - [ ] [111 Implement retry/backoff strategy and dead-letter handling for background workers.](./tasks/111-implement-retry-backoff-strategy-and-dead-letter-handling-for-background-workers.md)
 
 ## 10. Testing Strategy
