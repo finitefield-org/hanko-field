@@ -120,19 +120,25 @@ ProductionTimelineState _buildTimelineState(
   final stages = <ProductionTimelineStage>[];
   Duration expectedElapsed = Duration.zero;
   Duration actualElapsed = Duration.zero;
-  DateTime? previousTime;
 
   for (var index = 0; index < sorted.length; index++) {
     final event = sorted[index];
+    final nextEvent = index + 1 < sorted.length ? sorted[index + 1] : null;
     final isCurrent = index == sorted.length - 1;
     final expectedDuration = _stageTargetDurations[event.type];
+
     Duration? actualDuration;
-    if (previousTime != null) {
-      actualDuration = event.createdAt.difference(previousTime);
-      if (actualDuration.isNegative) {
+    if (event.durationSec != null) {
+      actualDuration = Duration(seconds: event.durationSec!);
+    } else if (nextEvent != null) {
+      final diff = nextEvent.createdAt.difference(event.createdAt);
+      if (diff.isNegative) {
         actualDuration = Duration.zero;
+      } else {
+        actualDuration = diff;
       }
     }
+
     final dwellDuration = isCurrent ? now.difference(event.createdAt) : null;
     final health = _resolveStageHealth(
       event: event,
@@ -152,7 +158,6 @@ ProductionTimelineState _buildTimelineState(
       ),
     );
 
-    previousTime = event.createdAt;
     if (expectedDuration != null) {
       expectedElapsed += expectedDuration;
     }
