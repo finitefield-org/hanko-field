@@ -15,7 +15,7 @@ const metricNamespace = "github.com/hanko-field/api/internal/jobs"
 
 // MetricsRecorder emits telemetry for processed messages.
 type MetricsRecorder interface {
-	Record(ctx context.Context, worker string, outcome string, duration time.Duration)
+	Record(ctx context.Context, worker string, outcome string, attempt int, duration time.Duration)
 }
 
 type otelMetrics struct {
@@ -64,13 +64,14 @@ func NewMetricsRecorder(logger *zap.Logger) MetricsRecorder {
 }
 
 // Record emits the measurement for the supplied outcome.
-func (m *otelMetrics) Record(ctx context.Context, worker string, outcome string, duration time.Duration) {
+func (m *otelMetrics) Record(ctx context.Context, worker string, outcome string, attempt int, duration time.Duration) {
 	if m == nil {
 		return
 	}
 	attr := attribute.NewSet(
 		attribute.String("worker", sanitizeName(worker)),
 		attribute.String("outcome", sanitizeOutcome(outcome)),
+		attribute.Int64("attempt", int64(normalizeAttempt(attempt))),
 	)
 	if m.enabled.latency {
 		ms := float64(duration) / float64(time.Millisecond)
@@ -101,4 +102,14 @@ func sanitizeOutcome(outcome string) string {
 		return outcome[:48]
 	}
 	return outcome
+}
+
+func normalizeAttempt(attempt int) int {
+	if attempt <= 0 {
+		return 1
+	}
+	if attempt > 1000 {
+		return 1000
+	}
+	return attempt
 }

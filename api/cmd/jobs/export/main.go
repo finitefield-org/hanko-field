@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
+	jobs "github.com/hanko-field/api/internal/jobs"
 	jobsexport "github.com/hanko-field/api/internal/jobs/export"
 	"github.com/hanko-field/api/internal/jobs/runtime"
 	"github.com/hanko-field/api/internal/platform/observability"
@@ -46,6 +47,10 @@ func main() {
 		Processor:                  processor,
 		Logger:                     logger.Named("export.runner"),
 		SkipSubscriptionValidation: *skipCheck,
+	}
+
+	if policy := jobs.DefaultSubscriptionPolicy(jobs.WorkerKindExport); policy != nil {
+		opts.SubscriptionPolicy = policy.Clone()
 	}
 
 	if err := runtime.Run(ctx, opts); err != nil {

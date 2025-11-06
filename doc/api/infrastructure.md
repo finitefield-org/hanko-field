@@ -77,3 +77,12 @@ Terraform outputs the Cloud Run URL, bucket names, secret IDs, and service accou
 - Firestore indexes included represent critical query patterns (`userRef+createdAt`, `status+updatedAt`). Add more in Terraform as new endpoints require.
 - Cloud Scheduler jobs authenticate via OIDC using the `svc-api-scheduler` service account.
 - Update retention/versioning policies in `variables.tf` for bucket-specific compliance requirements.
+
+## Background Job Retry & Dead Letter Policy
+
+- AI (`ai-worker`), invoice (`invoice-worker`), and export (`export-worker`) subscriptions apply exponential backoff and dead-letter routing automatically when workers start:
+  - AI: min backoff 5s, max backoff 2m, dead-letter topic `ai-jobs-dlq`, max delivery attempts 10
+  - Invoice: min backoff 10s, max backoff 5m, dead-letter topic `invoice-jobs-dlq`, max delivery attempts 8
+  - Export: min backoff 15s, max backoff 10m, dead-letter topic `export-jobs-dlq`, max delivery attempts 8
+- Dead-letter topics live in the same project (`projects/{id}/topics/{name}`) and are monitored by `cmd/jobs/dlq`, which emits structured alerts when messages arrive.
+- Job metrics export per-message outcome, delivery attempt, and dead-letter counts via OpenTelemetry (`jobs.worker.*`).

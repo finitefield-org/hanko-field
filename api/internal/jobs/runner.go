@@ -129,11 +129,10 @@ func (r *Runner) Run(ctx context.Context) error {
 func (r *Runner) handleMessage(ctx context.Context, msg *pubsub.Message) {
 	outcome := outcomeRetry
 	started := time.Now()
-	defer func() {
-		r.metrics.Record(ctx, r.name, outcome, time.Since(started))
-	}()
-
 	message := normalizeMessage(r.subscriptionString(), msg)
+	defer func() {
+		r.metrics.Record(ctx, r.name, outcome, message.DeliveryAttempt, time.Since(started))
+	}()
 
 	defer func() {
 		if rec := recover(); rec != nil {
