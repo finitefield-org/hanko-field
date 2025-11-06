@@ -155,7 +155,7 @@
 - [x] [111 Implement retry/backoff strategy and dead-letter handling for background workers.](./tasks/111-implement-retry-backoff-strategy-and-dead-letter-handling-for-background-workers.md)
 
 ## 10. Testing Strategy
-- [ ] [112 Write unit tests for middleware, services, and repositories (using Firestore emulator/mocks).](./tasks/112-write-unit-tests-for-middleware-services-and-repositories-using-firestore-emulat.md)
+- [x] [112 Write unit tests for middleware, services, and repositories (using Firestore emulator/mocks).](./tasks/112-write-unit-tests-for-middleware-services-and-repositories-using-firestore-emulat.md)
 - [ ] [113 Write integration tests exercising representative endpoint flows with emulators.](./tasks/113-write-integration-tests-exercising-representative-endpoint-flows-with-emulators.md)
 - [ ] [114 Implement contract tests for webhooks to ensure payload parsing and idempotency.](./tasks/114-implement-contract-tests-for-webhooks-to-ensure-payload-parsing-and-idempotency.md)
 - [ ] [115 Add load/performance test plan for critical paths (checkout, AI requests, stock reservations).](./tasks/115-add-load-performance-test-plan-for-critical-paths-checkout-ai-requests-stock-res.md)
