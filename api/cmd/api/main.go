@@ -438,6 +438,7 @@ func main() {
 		inventoryService,
 		handlers.WithMaintenanceMetrics(handlers.NewMaintenanceCleanupMetrics(logger.Named("metrics.maintenance"))),
 	)
+	internalAuditHandlers := handlers.NewInternalAuditLogHandlers(auditService)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
 
@@ -599,6 +600,7 @@ func main() {
 		internalPromotionHandlers.Routes,
 		internalInvoiceHandlers.Routes,
 		internalMaintenanceHandlers.Routes,
+		internalAuditHandlers.Routes,
 	)))
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),

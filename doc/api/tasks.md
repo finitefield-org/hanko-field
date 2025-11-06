@@ -147,7 +147,7 @@
 - [x] [105 Implement internal invoice issue-one endpoint generating invoice number, PDF, and updating order.](./tasks/105-implement-internal-invoice-issue-one-endpoint-generating-invoice-number-pdf-and-.md)
 - [x] [106 Implement internal maintenance cleanup-reservations endpoint releasing expired reservations.](./tasks/106-implement-internal-maintenance-cleanup-reservations-endpoint-releasing-expired-r.md)
 - [x] [107 Implement internal maintenance stock-safety-notify endpoint notifying downstream systems.](./tasks/107-implement-internal-maintenance-stock-safety-notify-endpoint-notifying-downstream.md)
-- [ ] [108 Implement internal audit-log endpoint for structured audit writes from other services.](./tasks/108-implement-internal-audit-log-endpoint-for-structured-audit-writes-from-other-ser.md)
+- [x] [108 Implement internal audit-log endpoint for structured audit writes from other services.](./tasks/108-implement-internal-audit-log-endpoint-for-structured-audit-writes-from-other-ser.md)
 
 ## 9. Background Jobs & Scheduling
 - [ ] [109 Configure Cloud Scheduler jobs (cleanup reservations, stock safety notifications) invoking internal endpoints with auth.](./tasks/109-configure-cloud-scheduler-jobs-cleanup-reservations-stock-safety-notifications-i.md)

@@ -1354,6 +1354,7 @@ type SystemTaskFilter struct {
 
 // AuditLogRecord defines the payload accepted by the audit writer service.
 type AuditLogRecord struct {
+	ID                    string
 	Actor                 string
 	ActorType             string
 	Action                string
