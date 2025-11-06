@@ -2147,6 +2147,204 @@
   "description": "Placeholder copy for the timeline tab while content is unavailable"
 }
 
+, "orderDetailsTimelineLoadErrorMessage": "Production updates can’t be loaded"
+, "@orderDetailsTimelineLoadErrorMessage": {
+  "description": "Error message shown when production timeline fails to load"
+}
+
+, "orderDetailsActionRefresh": "Refresh"
+, "@orderDetailsActionRefresh": {
+  "description": "Tooltip label for refreshing order details and timeline"
+}
+
+, "orderDetailsProductionTimelineEmpty": "No production checkpoints yet."
+, "@orderDetailsProductionTimelineEmpty": {
+  "description": "Empty state message when no production events are available"
+}
+
+, "orderDetailsProductionTimelineStageListTitle": "Stage history"
+, "@orderDetailsProductionTimelineStageListTitle": {
+  "description": "Heading for the production timeline stage list"
+}
+
+, "orderDetailsProductionOverviewTitle": "Production overview"
+, "@orderDetailsProductionOverviewTitle": {
+  "description": "Heading for the production overview card"
+}
+
+, "orderDetailsProductionEstimatedCompletionLabel": "Estimated completion"
+, "@orderDetailsProductionEstimatedCompletionLabel": {
+  "description": "Label describing the estimated production completion"
+}
+
+, "orderDetailsProductionEstimatedCompletionUnknown": "Pending schedule"
+, "@orderDetailsProductionEstimatedCompletionUnknown": {
+  "description": "Value shown when estimated completion is unavailable"
+}
+
+, "orderDetailsProductionCurrentStageLabel": "Current stage"
+, "@orderDetailsProductionCurrentStageLabel": {
+  "description": "Label describing the current production stage"
+}
+
+, "orderDetailsProductionOnSchedule": "On schedule"
+, "@orderDetailsProductionOnSchedule": {
+  "description": "Message shown when production is on schedule"
+}
+
+, "orderDetailsProductionDelay": "Running {duration} late"
+, "@orderDetailsProductionDelay": {
+  "description": "Message shown when production is delayed",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQueue": "Queue: {queue}"
+, "@orderDetailsProductionQueue": {
+  "description": "Label for the production queue reference",
+  "placeholders": {
+    "queue": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionStation": "Station: {station}"
+, "@orderDetailsProductionStation": {
+  "description": "Label for the production station",
+  "placeholders": {
+    "station": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionOperator": "Operator: {operator}"
+, "@orderDetailsProductionOperator": {
+  "description": "Label for the production operator",
+  "placeholders": {
+    "operator": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionValueUnknown": "Not assigned"
+, "@orderDetailsProductionValueUnknown": {
+  "description": "Value displayed when production metadata is missing"
+}
+
+, "orderDetailsProductionHealthOnTrack": "On track"
+, "@orderDetailsProductionHealthOnTrack": {
+  "description": "Assist chip label when a stage is on track"
+}
+
+, "orderDetailsProductionHealthAttention": "Attention"
+, "@orderDetailsProductionHealthAttention": {
+  "description": "Assist chip label when a stage needs attention"
+}
+
+, "orderDetailsProductionHealthDelayed": "Delayed"
+, "@orderDetailsProductionHealthDelayed": {
+  "description": "Assist chip label when a stage is delayed"
+}
+
+, "orderDetailsProductionStageUnknown": "Unknown stage"
+, "@orderDetailsProductionStageUnknown": {
+  "description": "Fallback label when the production stage is unknown"
+}
+
+, "orderDetailsProductionStageQueued": "Queued"
+, "@orderDetailsProductionStageQueued": {
+  "description": "Label for the queued production event"
+}
+
+, "orderDetailsProductionStageEngraving": "Engraving"
+, "@orderDetailsProductionStageEngraving": {
+  "description": "Label for the engraving production event"
+}
+
+, "orderDetailsProductionStagePolishing": "Polishing"
+, "@orderDetailsProductionStagePolishing": {
+  "description": "Label for the polishing production event"
+}
+
+, "orderDetailsProductionStageQc": "Quality control"
+, "@orderDetailsProductionStageQc": {
+  "description": "Label for the QC production event"
+}
+
+, "orderDetailsProductionStagePacked": "Packed"
+, "@orderDetailsProductionStagePacked": {
+  "description": "Label for the packed production event"
+}
+
+, "orderDetailsProductionStageOnHold": "On hold"
+, "@orderDetailsProductionStageOnHold": {
+  "description": "Label for the on hold production event"
+}
+
+, "orderDetailsProductionStageRework": "Rework"
+, "@orderDetailsProductionStageRework": {
+  "description": "Label for the rework production event"
+}
+
+, "orderDetailsProductionStageCanceled": "Canceled"
+, "@orderDetailsProductionStageCanceled": {
+  "description": "Label for the canceled production event"
+}
+
+, "orderDetailsProductionDurationHours": "{hours}h"
+, "@orderDetailsProductionDurationHours": {
+  "description": "Compact representation of duration hours",
+  "placeholders": {
+    "hours": { "type": "int" }
+  }
+}
+
+, "orderDetailsProductionDurationMinutes": "{minutes}m"
+, "@orderDetailsProductionDurationMinutes": {
+  "description": "Compact representation of duration minutes",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "orderDetailsProductionStageDuration": "Elapsed {duration}"
+, "@orderDetailsProductionStageDuration": {
+  "description": "Label describing how long a stage took",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionStageActive": "Active for {duration}"
+, "@orderDetailsProductionStageActive": {
+  "description": "Label describing how long the current stage has been active",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQcResult": "QC result: {result}"
+, "@orderDetailsProductionQcResult": {
+  "description": "Label describing QC result for a stage",
+  "placeholders": {
+    "result": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQcDefects": "Defects: {defects}"
+, "@orderDetailsProductionQcDefects": {
+  "description": "Label listing QC defects",
+  "placeholders": {
+    "defects": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionNotes": "Notes: {notes}"
+, "@orderDetailsProductionNotes": {
+  "description": "Label showing production notes",
+  "placeholders": {
+    "notes": { "type": "String" }
+  }
+}
+
 , "orderDetailsFilesTabTitle": "Files & documents"
 , "@orderDetailsFilesTabTitle": {
   "description": "Title shown on the files tab placeholder"

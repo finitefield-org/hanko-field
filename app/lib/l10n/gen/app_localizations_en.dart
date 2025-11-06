@@ -1345,6 +1345,131 @@ class AppLocalizationsEn extends AppLocalizations {
       'We’ll surface production, QC, and shipping updates here.';
 
   @override
+  String get orderDetailsTimelineLoadErrorMessage =>
+      'Production updates can’t be loaded';
+
+  @override
+  String get orderDetailsActionRefresh => 'Refresh';
+
+  @override
+  String get orderDetailsProductionTimelineEmpty =>
+      'No production checkpoints yet.';
+
+  @override
+  String get orderDetailsProductionTimelineStageListTitle => 'Stage history';
+
+  @override
+  String get orderDetailsProductionOverviewTitle => 'Production overview';
+
+  @override
+  String get orderDetailsProductionEstimatedCompletionLabel =>
+      'Estimated completion';
+
+  @override
+  String get orderDetailsProductionEstimatedCompletionUnknown =>
+      'Pending schedule';
+
+  @override
+  String get orderDetailsProductionCurrentStageLabel => 'Current stage';
+
+  @override
+  String get orderDetailsProductionOnSchedule => 'On schedule';
+
+  @override
+  String orderDetailsProductionDelay(String duration) {
+    return 'Running $duration late';
+  }
+
+  @override
+  String orderDetailsProductionQueue(String queue) {
+    return 'Queue: $queue';
+  }
+
+  @override
+  String orderDetailsProductionStation(String station) {
+    return 'Station: $station';
+  }
+
+  @override
+  String orderDetailsProductionOperator(String operator) {
+    return 'Operator: $operator';
+  }
+
+  @override
+  String get orderDetailsProductionValueUnknown => 'Not assigned';
+
+  @override
+  String get orderDetailsProductionHealthOnTrack => 'On track';
+
+  @override
+  String get orderDetailsProductionHealthAttention => 'Attention';
+
+  @override
+  String get orderDetailsProductionHealthDelayed => 'Delayed';
+
+  @override
+  String get orderDetailsProductionStageUnknown => 'Unknown stage';
+
+  @override
+  String get orderDetailsProductionStageQueued => 'Queued';
+
+  @override
+  String get orderDetailsProductionStageEngraving => 'Engraving';
+
+  @override
+  String get orderDetailsProductionStagePolishing => 'Polishing';
+
+  @override
+  String get orderDetailsProductionStageQc => 'Quality control';
+
+  @override
+  String get orderDetailsProductionStagePacked => 'Packed';
+
+  @override
+  String get orderDetailsProductionStageOnHold => 'On hold';
+
+  @override
+  String get orderDetailsProductionStageRework => 'Rework';
+
+  @override
+  String get orderDetailsProductionStageCanceled => 'Canceled';
+
+  @override
+  String orderDetailsProductionDurationHours(int hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String orderDetailsProductionDurationMinutes(int minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String orderDetailsProductionStageDuration(String duration) {
+    return 'Elapsed $duration';
+  }
+
+  @override
+  String orderDetailsProductionStageActive(String duration) {
+    return 'Active for $duration';
+  }
+
+  @override
+  String orderDetailsProductionQcResult(String result) {
+    return 'QC result: $result';
+  }
+
+  @override
+  String orderDetailsProductionQcDefects(String defects) {
+    return 'Defects: $defects';
+  }
+
+  @override
+  String orderDetailsProductionNotes(String notes) {
+    return 'Notes: $notes';
+  }
+
+  @override
   String get orderDetailsFilesTabTitle => 'Files & documents';
 
   @override

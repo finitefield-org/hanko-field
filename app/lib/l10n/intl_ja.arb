@@ -777,6 +777,205 @@
   "description": "タイムラインタブのプレースホルダー文言"
 }
 
+
+, "orderDetailsTimelineLoadErrorMessage": "生産状況を読み込めませんでした"
+, "@orderDetailsTimelineLoadErrorMessage": {
+  "description": "Error message shown when production timeline fails to load"
+}
+
+, "orderDetailsActionRefresh": "更新"
+, "@orderDetailsActionRefresh": {
+  "description": "Tooltip label for refreshing order details and timeline"
+}
+
+, "orderDetailsProductionTimelineEmpty": "生産のチェックポイントはまだありません。"
+, "@orderDetailsProductionTimelineEmpty": {
+  "description": "Empty state message when no production events are available"
+}
+
+, "orderDetailsProductionTimelineStageListTitle": "ステージ履歴"
+, "@orderDetailsProductionTimelineStageListTitle": {
+  "description": "Heading for the production timeline stage list"
+}
+
+, "orderDetailsProductionOverviewTitle": "生産概要"
+, "@orderDetailsProductionOverviewTitle": {
+  "description": "Heading for the production overview card"
+}
+
+, "orderDetailsProductionEstimatedCompletionLabel": "完了予定"
+, "@orderDetailsProductionEstimatedCompletionLabel": {
+  "description": "Label describing the estimated production completion"
+}
+
+, "orderDetailsProductionEstimatedCompletionUnknown": "スケジュール調整中"
+, "@orderDetailsProductionEstimatedCompletionUnknown": {
+  "description": "Value shown when estimated completion is unavailable"
+}
+
+, "orderDetailsProductionCurrentStageLabel": "現在のステージ"
+, "@orderDetailsProductionCurrentStageLabel": {
+  "description": "Label describing the current production stage"
+}
+
+, "orderDetailsProductionOnSchedule": "予定どおり"
+, "@orderDetailsProductionOnSchedule": {
+  "description": "Message shown when production is on schedule"
+}
+
+, "orderDetailsProductionDelay": "約{duration}の遅れ"
+, "@orderDetailsProductionDelay": {
+  "description": "Message shown when production is delayed",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQueue": "キュー: {queue}"
+, "@orderDetailsProductionQueue": {
+  "description": "Label for the production queue reference",
+  "placeholders": {
+    "queue": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionStation": "作業台: {station}"
+, "@orderDetailsProductionStation": {
+  "description": "Label for the production station",
+  "placeholders": {
+    "station": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionOperator": "担当者: {operator}"
+, "@orderDetailsProductionOperator": {
+  "description": "Label for the production operator",
+  "placeholders": {
+    "operator": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionValueUnknown": "未割り当て"
+, "@orderDetailsProductionValueUnknown": {
+  "description": "Value displayed when production metadata is missing"
+}
+
+, "orderDetailsProductionHealthOnTrack": "順調"
+, "@orderDetailsProductionHealthOnTrack": {
+  "description": "Assist chip label when a stage is on track"
+}
+
+, "orderDetailsProductionHealthAttention": "要確認"
+, "@orderDetailsProductionHealthAttention": {
+  "description": "Assist chip label when a stage needs attention"
+}
+
+, "orderDetailsProductionHealthDelayed": "遅延"
+, "@orderDetailsProductionHealthDelayed": {
+  "description": "Assist chip label when a stage is delayed"
+}
+
+, "orderDetailsProductionStageUnknown": "不明なステージ"
+, "@orderDetailsProductionStageUnknown": {
+  "description": "Fallback label when the production stage is unknown"
+}
+
+, "orderDetailsProductionStageQueued": "待機中"
+, "@orderDetailsProductionStageQueued": {
+  "description": "Label for the queued production event"
+}
+
+, "orderDetailsProductionStageEngraving": "彫刻"
+, "@orderDetailsProductionStageEngraving": {
+  "description": "Label for the engraving production event"
+}
+
+, "orderDetailsProductionStagePolishing": "研磨"
+, "@orderDetailsProductionStagePolishing": {
+  "description": "Label for the polishing production event"
+}
+
+, "orderDetailsProductionStageQc": "検品"
+, "@orderDetailsProductionStageQc": {
+  "description": "Label for the QC production event"
+}
+
+, "orderDetailsProductionStagePacked": "梱包"
+, "@orderDetailsProductionStagePacked": {
+  "description": "Label for the packed production event"
+}
+
+, "orderDetailsProductionStageOnHold": "保留"
+, "@orderDetailsProductionStageOnHold": {
+  "description": "Label for the on hold production event"
+}
+
+, "orderDetailsProductionStageRework": "手直し"
+, "@orderDetailsProductionStageRework": {
+  "description": "Label for the rework production event"
+}
+
+, "orderDetailsProductionStageCanceled": "キャンセル"
+, "@orderDetailsProductionStageCanceled": {
+  "description": "Label for the canceled production event"
+}
+
+, "orderDetailsProductionDurationHours": "{hours}時間"
+, "@orderDetailsProductionDurationHours": {
+  "description": "Compact representation of duration hours",
+  "placeholders": {
+    "hours": { "type": "int" }
+  }
+}
+
+, "orderDetailsProductionDurationMinutes": "{minutes}分"
+, "@orderDetailsProductionDurationMinutes": {
+  "description": "Compact representation of duration minutes",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "orderDetailsProductionStageDuration": "{duration}経過"
+, "@orderDetailsProductionStageDuration": {
+  "description": "Label describing how long a stage took",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionStageActive": "経過中: {duration}"
+, "@orderDetailsProductionStageActive": {
+  "description": "Label describing how long the current stage has been active",
+  "placeholders": {
+    "duration": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQcResult": "検品結果: {result}"
+, "@orderDetailsProductionQcResult": {
+  "description": "Label describing QC result for a stage",
+  "placeholders": {
+    "result": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionQcDefects": "指摘事項: {defects}"
+, "@orderDetailsProductionQcDefects": {
+  "description": "Label listing QC defects",
+  "placeholders": {
+    "defects": { "type": "String" }
+  }
+}
+
+, "orderDetailsProductionNotes": "メモ: {notes}"
+, "@orderDetailsProductionNotes": {
+  "description": "Label showing production notes",
+  "placeholders": {
+    "notes": { "type": "String" }
+  }
+}
+
 , "orderDetailsFilesTabTitle": "ファイル・書類"
 , "@orderDetailsFilesTabTitle": {
   "description": "ファイルタブのプレースホルダー見出し"

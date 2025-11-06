@@ -1287,6 +1287,127 @@ class AppLocalizationsJa extends AppLocalizations {
   String get orderDetailsTimelinePlaceholder => '制作・検品・配送の更新をここに表示します。';
 
   @override
+  String get orderDetailsTimelineLoadErrorMessage => '生産状況を読み込めませんでした';
+
+  @override
+  String get orderDetailsActionRefresh => '更新';
+
+  @override
+  String get orderDetailsProductionTimelineEmpty => '生産のチェックポイントはまだありません。';
+
+  @override
+  String get orderDetailsProductionTimelineStageListTitle => 'ステージ履歴';
+
+  @override
+  String get orderDetailsProductionOverviewTitle => '生産概要';
+
+  @override
+  String get orderDetailsProductionEstimatedCompletionLabel => '完了予定';
+
+  @override
+  String get orderDetailsProductionEstimatedCompletionUnknown => 'スケジュール調整中';
+
+  @override
+  String get orderDetailsProductionCurrentStageLabel => '現在のステージ';
+
+  @override
+  String get orderDetailsProductionOnSchedule => '予定どおり';
+
+  @override
+  String orderDetailsProductionDelay(String duration) {
+    return '約$durationの遅れ';
+  }
+
+  @override
+  String orderDetailsProductionQueue(String queue) {
+    return 'キュー: $queue';
+  }
+
+  @override
+  String orderDetailsProductionStation(String station) {
+    return '作業台: $station';
+  }
+
+  @override
+  String orderDetailsProductionOperator(String operator) {
+    return '担当者: $operator';
+  }
+
+  @override
+  String get orderDetailsProductionValueUnknown => '未割り当て';
+
+  @override
+  String get orderDetailsProductionHealthOnTrack => '順調';
+
+  @override
+  String get orderDetailsProductionHealthAttention => '要確認';
+
+  @override
+  String get orderDetailsProductionHealthDelayed => '遅延';
+
+  @override
+  String get orderDetailsProductionStageUnknown => '不明なステージ';
+
+  @override
+  String get orderDetailsProductionStageQueued => '待機中';
+
+  @override
+  String get orderDetailsProductionStageEngraving => '彫刻';
+
+  @override
+  String get orderDetailsProductionStagePolishing => '研磨';
+
+  @override
+  String get orderDetailsProductionStageQc => '検品';
+
+  @override
+  String get orderDetailsProductionStagePacked => '梱包';
+
+  @override
+  String get orderDetailsProductionStageOnHold => '保留';
+
+  @override
+  String get orderDetailsProductionStageRework => '手直し';
+
+  @override
+  String get orderDetailsProductionStageCanceled => 'キャンセル';
+
+  @override
+  String orderDetailsProductionDurationHours(int hours) {
+    return '$hours時間';
+  }
+
+  @override
+  String orderDetailsProductionDurationMinutes(int minutes) {
+    return '$minutes分';
+  }
+
+  @override
+  String orderDetailsProductionStageDuration(String duration) {
+    return '$duration経過';
+  }
+
+  @override
+  String orderDetailsProductionStageActive(String duration) {
+    return '経過中: $duration';
+  }
+
+  @override
+  String orderDetailsProductionQcResult(String result) {
+    return '検品結果: $result';
+  }
+
+  @override
+  String orderDetailsProductionQcDefects(String defects) {
+    return '指摘事項: $defects';
+  }
+
+  @override
+  String orderDetailsProductionNotes(String notes) {
+    return 'メモ: $notes';
+  }
+
+  @override
   String get orderDetailsFilesTabTitle => 'ファイル・書類';
 
   @override

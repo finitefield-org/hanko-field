@@ -5,6 +5,7 @@ import 'package:app/core/ui/widgets/app_card.dart';
 import 'package:app/core/ui/widgets/app_empty_state.dart';
 import 'package:app/core/ui/widgets/app_skeleton.dart';
 import 'package:app/features/orders/application/order_details_provider.dart';
+import 'package:app/features/orders/application/order_production_timeline_provider.dart';
 import 'package:app/features/orders/data/order_repository_provider.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,20 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                         ? null
                         : () => _handleReorder(context, l10n),
                     tooltip: l10n.orderDetailsActionReorder,
+                  ),
+                  IconButton(
+                    tooltip: l10n.orderDetailsActionRefresh,
+                    onPressed: order == null
+                        ? null
+                        : () {
+                            ref.invalidate(
+                              orderDetailsProvider(widget.orderId),
+                            );
+                            ref.invalidate(
+                              orderProductionTimelineProvider(widget.orderId),
+                            );
+                          },
+                    icon: const Icon(Icons.refresh_rounded),
                   ),
                   IconButton(
                     tooltip: l10n.orderDetailsActionShare,
@@ -193,12 +208,43 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
     AppLocalizations l10n,
     AsyncValue<Order> asyncOrder,
   ) {
+    final timelineAsync = ref.watch(
+      orderProductionTimelineProvider(widget.orderId),
+    );
     return asyncOrder.when(
       data: (order) {
-        return _PlaceholderTab(
-          icon: Icons.route_outlined,
-          title: l10n.orderDetailsTimelineTabTitle,
-          message: l10n.orderDetailsTimelinePlaceholder,
+        return timelineAsync.when(
+          data: (timeline) {
+            return RefreshIndicator(
+              onRefresh: () async {
+                // ignore: unused_result
+                await ref.refresh(orderDetailsProvider(widget.orderId).future);
+                // ignore: unused_result
+                await ref.refresh(
+                  orderProductionTimelineProvider(widget.orderId).future,
+                );
+              },
+              displacement: 72,
+              child: _ProductionTimelineView(
+                order: order,
+                timeline: timeline,
+                l10n: l10n,
+              ),
+            );
+          },
+          loading: () => const _OrderDetailsLoadingView(),
+          error: (error, stackTrace) => _OrderDetailsErrorView(
+            message: l10n.orderDetailsTimelineLoadErrorMessage,
+            actionLabel: l10n.orderDetailsRetryLabel,
+            onRetry: () async {
+              // ignore: unused_result
+              await ref.refresh(orderDetailsProvider(widget.orderId).future);
+              // ignore: unused_result
+              await ref.refresh(
+                orderProductionTimelineProvider(widget.orderId).future,
+              );
+            },
+          ),
         );
       },
       loading: () => const _OrderDetailsLoadingView(),
@@ -320,6 +366,419 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _ProductionTimelineView extends StatelessWidget {
+  const _ProductionTimelineView({
+    required this.order,
+    required this.timeline,
+    required this.l10n,
+  });
+
+  final Order order;
+  final ProductionTimelineState timeline;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    if (timeline.stages.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppTokens.spaceL),
+        children: [
+          AppEmptyState(
+            title: l10n.orderDetailsProductionTimelineEmpty,
+            icon: const Icon(Icons.route_outlined),
+          ),
+        ],
+      );
+    }
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.spaceL,
+            AppTokens.spaceL,
+            AppTokens.spaceL,
+            AppTokens.spaceXL,
+          ),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _ProductionTimelineHeaderCard(
+                order: order,
+                timeline: timeline,
+                l10n: l10n,
+              ),
+              const SizedBox(height: AppTokens.spaceXL),
+              _SectionTitle(
+                label: l10n.orderDetailsProductionTimelineStageListTitle,
+              ),
+              const SizedBox(height: AppTokens.spaceM),
+              AppCard(
+                variant: AppCardVariant.outlined,
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < timeline.stages.length; index++)
+                      _ProductionTimelineStageTile(
+                        stage: timeline.stages[index],
+                        l10n: l10n,
+                        isFirst: index == 0,
+                        isLast: index == timeline.stages.length - 1,
+                      ),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProductionTimelineHeaderCard extends StatelessWidget {
+  const _ProductionTimelineHeaderCard({
+    required this.order,
+    required this.timeline,
+    required this.l10n,
+  });
+
+  final Order order;
+  final ProductionTimelineState timeline;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final locale = Localizations.localeOf(context);
+    final currentStage = timeline.currentStage;
+    final stageLabel = currentStage == null
+        ? l10n.orderDetailsProductionStageUnknown
+        : _stageLabel(l10n, currentStage.event.type);
+    final stageStartedAt = currentStage == null
+        ? null
+        : '${_formatAbsoluteTimestamp(currentStage.event.createdAt, locale)} '
+              '(${_formatRelativeTimestamp(l10n, currentStage.event.createdAt)})';
+    final estimatedCompletion = timeline.estimatedCompletion == null
+        ? l10n.orderDetailsProductionEstimatedCompletionUnknown
+        : _formatAbsoluteTimestamp(timeline.estimatedCompletion!, locale);
+    final queueRef = order.production?.queueRef;
+    final station =
+        currentStage?.event.station ?? order.production?.assignedStation;
+    final operatorRef =
+        currentStage?.event.operatorRef ?? order.production?.operatorRef;
+    final scheduleText = timeline.delay == null
+        ? l10n.orderDetailsProductionOnSchedule
+        : l10n.orderDetailsProductionDelay(
+            _formatCompactDuration(l10n, timeline.delay!),
+          );
+    final scheduleColor = timeline.delay == null
+        ? scheme.primary
+        : scheme.error;
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.orderDetailsProductionOverviewTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              _StageHealthChip(health: timeline.overallHealth, l10n: l10n),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceM),
+          _HeaderMetadataBlock(
+            label: l10n.orderDetailsProductionEstimatedCompletionLabel,
+            value: estimatedCompletion,
+          ),
+          if (stageStartedAt != null) ...[
+            const SizedBox(height: AppTokens.spaceS),
+            _HeaderMetadataBlock(
+              label: l10n.orderDetailsProductionCurrentStageLabel,
+              value: '$stageLabel · $stageStartedAt',
+            ),
+          ] else ...[
+            const SizedBox(height: AppTokens.spaceS),
+            _HeaderMetadataBlock(
+              label: l10n.orderDetailsProductionCurrentStageLabel,
+              value: stageLabel,
+            ),
+          ],
+          const SizedBox(height: AppTokens.spaceS),
+          Text(
+            scheduleText,
+            style: theme.textTheme.bodyMedium?.copyWith(color: scheduleColor),
+          ),
+          const SizedBox(height: AppTokens.spaceM),
+          Wrap(
+            spacing: AppTokens.spaceL,
+            runSpacing: AppTokens.spaceS,
+            children: [
+              _HeaderMetadataPill(
+                text: l10n.orderDetailsProductionQueue(
+                  queueRef ?? l10n.orderDetailsProductionValueUnknown,
+                ),
+              ),
+              _HeaderMetadataPill(
+                text: l10n.orderDetailsProductionStation(
+                  station ?? l10n.orderDetailsProductionValueUnknown,
+                ),
+              ),
+              _HeaderMetadataPill(
+                text: l10n.orderDetailsProductionOperator(
+                  operatorRef ?? l10n.orderDetailsProductionValueUnknown,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderMetadataBlock extends StatelessWidget {
+  const _HeaderMetadataBlock({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceXS),
+        Text(
+          value,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderMetadataPill extends StatelessWidget {
+  const _HeaderMetadataPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: AppTokens.radiusM,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.spaceM,
+          vertical: AppTokens.spaceXS,
+        ),
+        child: Text(text, style: theme.textTheme.bodySmall),
+      ),
+    );
+  }
+}
+
+class _ProductionTimelineStageTile extends StatelessWidget {
+  const _ProductionTimelineStageTile({
+    required this.stage,
+    required this.l10n,
+    required this.isFirst,
+    required this.isLast,
+  });
+
+  final ProductionTimelineStage stage;
+  final AppLocalizations l10n;
+  final bool isFirst;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final locale = Localizations.localeOf(context);
+    final event = stage.event;
+    final stageLabel = _stageLabel(l10n, event.type);
+    final timestamp = _formatAbsoluteTimestamp(event.createdAt, locale);
+    final relative = _formatRelativeTimestamp(l10n, event.createdAt);
+    final note = event.note;
+
+    final metadata = <String>[];
+    if (stage.actualDuration != null && stage.actualDuration! > Duration.zero) {
+      metadata.add(
+        l10n.orderDetailsProductionStageDuration(
+          _formatCompactDuration(l10n, stage.actualDuration!),
+        ),
+      );
+    }
+    if (stage.timeSinceStageStart != null &&
+        stage.timeSinceStageStart! > Duration.zero) {
+      metadata.add(
+        l10n.orderDetailsProductionStageActive(
+          _formatCompactDuration(l10n, stage.timeSinceStageStart!),
+        ),
+      );
+    }
+    if (event.station != null && event.station!.isNotEmpty) {
+      metadata.add(l10n.orderDetailsProductionStation(event.station!));
+    }
+    if (event.operatorRef != null && event.operatorRef!.isNotEmpty) {
+      metadata.add(l10n.orderDetailsProductionOperator(event.operatorRef!));
+    }
+    if (event.qcResult != null && event.qcResult!.isNotEmpty) {
+      metadata.add(l10n.orderDetailsProductionQcResult(event.qcResult!));
+    }
+    if (event.qcDefects.isNotEmpty) {
+      metadata.add(
+        l10n.orderDetailsProductionQcDefects(event.qcDefects.join(', ')),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppTokens.spaceL,
+        isFirst ? AppTokens.spaceL : AppTokens.spaceM,
+        AppTokens.spaceL,
+        isLast ? AppTokens.spaceL : AppTokens.spaceM,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StageIcon(type: event.type, colorScheme: scheme),
+              const SizedBox(width: AppTokens.spaceM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            stageLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        _StageHealthChip(health: stage.health, l10n: l10n),
+                      ],
+                    ),
+                    const SizedBox(height: AppTokens.spaceXS),
+                    Text(
+                      '$timestamp ($relative)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (note != null && note.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceS),
+                        child: Text(
+                          l10n.orderDetailsProductionNotes(note),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                    for (final entry in metadata)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceXS),
+                        child: Text(
+                          entry,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (!isLast)
+            const Padding(
+              padding: EdgeInsets.only(top: AppTokens.spaceM),
+              child: Divider(height: 1),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StageIcon extends StatelessWidget {
+  const _StageIcon({required this.type, required this.colorScheme});
+
+  final ProductionEventType type;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _stageIcon(type);
+    return CircleAvatar(
+      backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
+      foregroundColor: colorScheme.primary,
+      radius: 20,
+      child: Icon(icon, size: 18),
+    );
+  }
+}
+
+class _StageHealthChip extends StatelessWidget {
+  const _StageHealthChip({required this.health, required this.l10n});
+
+  final ProductionStageHealth health;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final colors = _healthColors(health, scheme);
+    return RawChip(
+      showCheckmark: false,
+      label: Text(
+        _healthLabel(l10n, health),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colors.foreground,
+        ),
+      ),
+      avatar: Icon(_healthIcon(health), size: 18, color: colors.foreground),
+      backgroundColor: colors.background,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.spaceS,
+        vertical: AppTokens.spaceXS,
+      ),
+    );
   }
 }
 
@@ -1190,6 +1649,24 @@ String _formatRelativeTimestamp(AppLocalizations l10n, DateTime? timestamp) {
   return l10n.orderDetailsUpdatedOn(DateFormat.yMMMd().format(target));
 }
 
+String _formatAbsoluteTimestamp(DateTime timestamp, Locale locale) {
+  final format = DateFormat.yMMMd(locale.toLanguageTag()).add_Hm();
+  return format.format(timestamp);
+}
+
+String _formatCompactDuration(AppLocalizations l10n, Duration duration) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60);
+  final parts = <String>[];
+  if (hours > 0) {
+    parts.add(l10n.orderDetailsProductionDurationHours(hours));
+  }
+  if (minutes > 0 || parts.isEmpty) {
+    parts.add(l10n.orderDetailsProductionDurationMinutes(minutes));
+  }
+  return parts.join(' ');
+}
+
 class _StatusColors {
   const _StatusColors({required this.background, required this.foreground});
 
@@ -1240,6 +1717,69 @@ String _statusLabel(OrderStatus status, AppLocalizations l10n) {
     OrderStatus.delivered => l10n.orderStatusDelivered,
     OrderStatus.canceled => l10n.orderStatusCanceled,
     OrderStatus.draft => l10n.orderStatusCanceled,
+  };
+}
+
+_StatusColors _healthColors(ProductionStageHealth health, ColorScheme scheme) {
+  switch (health) {
+    case ProductionStageHealth.onTrack:
+      return _StatusColors(
+        background: scheme.tertiaryContainer,
+        foreground: scheme.onTertiaryContainer,
+      );
+    case ProductionStageHealth.attention:
+      return _StatusColors(
+        background: scheme.secondaryContainer,
+        foreground: scheme.onSecondaryContainer,
+      );
+    case ProductionStageHealth.delayed:
+      return _StatusColors(
+        background: scheme.errorContainer,
+        foreground: scheme.onErrorContainer,
+      );
+  }
+}
+
+String _healthLabel(AppLocalizations l10n, ProductionStageHealth health) {
+  return switch (health) {
+    ProductionStageHealth.onTrack => l10n.orderDetailsProductionHealthOnTrack,
+    ProductionStageHealth.attention =>
+      l10n.orderDetailsProductionHealthAttention,
+    ProductionStageHealth.delayed => l10n.orderDetailsProductionHealthDelayed,
+  };
+}
+
+IconData _healthIcon(ProductionStageHealth health) {
+  return switch (health) {
+    ProductionStageHealth.onTrack => Icons.task_alt,
+    ProductionStageHealth.attention => Icons.warning_amber_rounded,
+    ProductionStageHealth.delayed => Icons.error_outline,
+  };
+}
+
+String _stageLabel(AppLocalizations l10n, ProductionEventType type) {
+  return switch (type) {
+    ProductionEventType.queued => l10n.orderDetailsProductionStageQueued,
+    ProductionEventType.engraving => l10n.orderDetailsProductionStageEngraving,
+    ProductionEventType.polishing => l10n.orderDetailsProductionStagePolishing,
+    ProductionEventType.qc => l10n.orderDetailsProductionStageQc,
+    ProductionEventType.packed => l10n.orderDetailsProductionStagePacked,
+    ProductionEventType.onHold => l10n.orderDetailsProductionStageOnHold,
+    ProductionEventType.rework => l10n.orderDetailsProductionStageRework,
+    ProductionEventType.canceled => l10n.orderDetailsProductionStageCanceled,
+  };
+}
+
+IconData _stageIcon(ProductionEventType type) {
+  return switch (type) {
+    ProductionEventType.queued => Icons.pending_actions_outlined,
+    ProductionEventType.engraving => Icons.design_services_outlined,
+    ProductionEventType.polishing => Icons.auto_fix_high_outlined,
+    ProductionEventType.qc => Icons.verified_outlined,
+    ProductionEventType.packed => Icons.inventory_2_outlined,
+    ProductionEventType.onHold => Icons.pause_circle_outline,
+    ProductionEventType.rework => Icons.build_circle_outlined,
+    ProductionEventType.canceled => Icons.cancel_outlined,
   };
 }
 

@@ -2444,6 +2444,204 @@ abstract class AppLocalizations {
   /// **'We’ll surface production, QC, and shipping updates here.'**
   String get orderDetailsTimelinePlaceholder;
 
+  /// Error message shown when production timeline fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Production updates can’t be loaded'**
+  String get orderDetailsTimelineLoadErrorMessage;
+
+  /// Tooltip label for refreshing order details and timeline
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get orderDetailsActionRefresh;
+
+  /// Empty state message when no production events are available
+  ///
+  /// In en, this message translates to:
+  /// **'No production checkpoints yet.'**
+  String get orderDetailsProductionTimelineEmpty;
+
+  /// Heading for the production timeline stage list
+  ///
+  /// In en, this message translates to:
+  /// **'Stage history'**
+  String get orderDetailsProductionTimelineStageListTitle;
+
+  /// Heading for the production overview card
+  ///
+  /// In en, this message translates to:
+  /// **'Production overview'**
+  String get orderDetailsProductionOverviewTitle;
+
+  /// Label describing the estimated production completion
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated completion'**
+  String get orderDetailsProductionEstimatedCompletionLabel;
+
+  /// Value shown when estimated completion is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Pending schedule'**
+  String get orderDetailsProductionEstimatedCompletionUnknown;
+
+  /// Label describing the current production stage
+  ///
+  /// In en, this message translates to:
+  /// **'Current stage'**
+  String get orderDetailsProductionCurrentStageLabel;
+
+  /// Message shown when production is on schedule
+  ///
+  /// In en, this message translates to:
+  /// **'On schedule'**
+  String get orderDetailsProductionOnSchedule;
+
+  /// Message shown when production is delayed
+  ///
+  /// In en, this message translates to:
+  /// **'Running {duration} late'**
+  String orderDetailsProductionDelay(String duration);
+
+  /// Label for the production queue reference
+  ///
+  /// In en, this message translates to:
+  /// **'Queue: {queue}'**
+  String orderDetailsProductionQueue(String queue);
+
+  /// Label for the production station
+  ///
+  /// In en, this message translates to:
+  /// **'Station: {station}'**
+  String orderDetailsProductionStation(String station);
+
+  /// Label for the production operator
+  ///
+  /// In en, this message translates to:
+  /// **'Operator: {operator}'**
+  String orderDetailsProductionOperator(String operator);
+
+  /// Value displayed when production metadata is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned'**
+  String get orderDetailsProductionValueUnknown;
+
+  /// Assist chip label when a stage is on track
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get orderDetailsProductionHealthOnTrack;
+
+  /// Assist chip label when a stage needs attention
+  ///
+  /// In en, this message translates to:
+  /// **'Attention'**
+  String get orderDetailsProductionHealthAttention;
+
+  /// Assist chip label when a stage is delayed
+  ///
+  /// In en, this message translates to:
+  /// **'Delayed'**
+  String get orderDetailsProductionHealthDelayed;
+
+  /// Fallback label when the production stage is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown stage'**
+  String get orderDetailsProductionStageUnknown;
+
+  /// Label for the queued production event
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get orderDetailsProductionStageQueued;
+
+  /// Label for the engraving production event
+  ///
+  /// In en, this message translates to:
+  /// **'Engraving'**
+  String get orderDetailsProductionStageEngraving;
+
+  /// Label for the polishing production event
+  ///
+  /// In en, this message translates to:
+  /// **'Polishing'**
+  String get orderDetailsProductionStagePolishing;
+
+  /// Label for the QC production event
+  ///
+  /// In en, this message translates to:
+  /// **'Quality control'**
+  String get orderDetailsProductionStageQc;
+
+  /// Label for the packed production event
+  ///
+  /// In en, this message translates to:
+  /// **'Packed'**
+  String get orderDetailsProductionStagePacked;
+
+  /// Label for the on hold production event
+  ///
+  /// In en, this message translates to:
+  /// **'On hold'**
+  String get orderDetailsProductionStageOnHold;
+
+  /// Label for the rework production event
+  ///
+  /// In en, this message translates to:
+  /// **'Rework'**
+  String get orderDetailsProductionStageRework;
+
+  /// Label for the canceled production event
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get orderDetailsProductionStageCanceled;
+
+  /// Compact representation of duration hours
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h'**
+  String orderDetailsProductionDurationHours(int hours);
+
+  /// Compact representation of duration minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m'**
+  String orderDetailsProductionDurationMinutes(int minutes);
+
+  /// Label describing how long a stage took
+  ///
+  /// In en, this message translates to:
+  /// **'Elapsed {duration}'**
+  String orderDetailsProductionStageDuration(String duration);
+
+  /// Label describing how long the current stage has been active
+  ///
+  /// In en, this message translates to:
+  /// **'Active for {duration}'**
+  String orderDetailsProductionStageActive(String duration);
+
+  /// Label describing QC result for a stage
+  ///
+  /// In en, this message translates to:
+  /// **'QC result: {result}'**
+  String orderDetailsProductionQcResult(String result);
+
+  /// Label listing QC defects
+  ///
+  /// In en, this message translates to:
+  /// **'Defects: {defects}'**
+  String orderDetailsProductionQcDefects(String defects);
+
+  /// Label showing production notes
+  ///
+  /// In en, this message translates to:
+  /// **'Notes: {notes}'**
+  String orderDetailsProductionNotes(String notes);
+
   /// Title shown on the files tab placeholder
   ///
   /// In en, this message translates to:

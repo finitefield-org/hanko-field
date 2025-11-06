@@ -18,6 +18,7 @@ class FakeOrderRepository extends OrderRepository {
     _orders = _buildSeedOrders(base);
     _orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _ordersById = {for (final order in _orders) order.id: order};
+    _productionEventsByOrder = _buildSeedProductionEvents(base);
   }
 
   final OfflineCacheRepository _cache;
@@ -26,6 +27,7 @@ class FakeOrderRepository extends OrderRepository {
 
   late final List<Order> _orders;
   late final Map<String, Order> _ordersById;
+  late final Map<String, List<ProductionEvent>> _productionEventsByOrder;
 
   static const _defaultPageSize = 10;
 
@@ -112,7 +114,14 @@ class FakeOrderRepository extends OrderRepository {
   @override
   Future<List<ProductionEvent>> fetchProductionEvents(String orderId) async {
     await Future<void>.delayed(_latency);
-    return const <ProductionEvent>[];
+    final normalized = orderId.toLowerCase();
+    final events = _productionEventsByOrder[normalized];
+    if (events == null) {
+      return const <ProductionEvent>[];
+    }
+    final sorted = List<ProductionEvent>.from(events)
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return sorted;
   }
 
   @override
@@ -382,6 +391,199 @@ class FakeOrderRepository extends OrderRepository {
       ),
     ];
     return orders;
+  }
+
+  Map<String, List<ProductionEvent>> _buildSeedProductionEvents(DateTime base) {
+    final now = base;
+    final seeds = <String, List<ProductionEvent>>{
+      'hf-202404-018': _buildProductionEvents(
+        stages: [
+          _event(
+            idSuffix: 'queued',
+            type: ProductionEventType.queued,
+            createdAt: now.subtract(const Duration(hours: 6)),
+            note: 'Order entered production queue.',
+          ),
+        ],
+      ),
+      'hf-202404-017': _buildProductionEvents(
+        stages: [
+          _event(
+            idSuffix: 'queued',
+            type: ProductionEventType.queued,
+            createdAt: now.subtract(const Duration(days: 2, hours: 4)),
+            note: 'Awaiting artisan assignment.',
+          ),
+          _event(
+            idSuffix: 'engraving',
+            type: ProductionEventType.engraving,
+            createdAt: now.subtract(const Duration(days: 2, hours: 2)),
+            duration: const Duration(hours: 3, minutes: 20),
+            station: 'Engraving-2',
+            operatorRef: 'artisan-amy',
+            note: 'Custom logo alignment verified.',
+          ),
+        ],
+      ),
+      'hf-202404-016': _buildProductionEvents(
+        stages: [
+          _event(
+            idSuffix: 'queued',
+            type: ProductionEventType.queued,
+            createdAt: now.subtract(const Duration(days: 4, hours: 2)),
+            note: 'Queued for production.',
+          ),
+          _event(
+            idSuffix: 'engraving',
+            type: ProductionEventType.engraving,
+            createdAt: now.subtract(const Duration(days: 3, hours: 19)),
+            duration: const Duration(hours: 2, minutes: 45),
+            station: 'Engraving-1',
+            operatorRef: 'artisan-hori',
+            note: 'Kanji crest engraving in progress.',
+          ),
+          _event(
+            idSuffix: 'polishing',
+            type: ProductionEventType.polishing,
+            createdAt: now.subtract(const Duration(days: 3, hours: 14)),
+            duration: const Duration(hours: 1, minutes: 30),
+            station: 'Polish-3',
+            operatorRef: 'artisan-kato',
+            note: 'Fine polishing for satin finish.',
+          ),
+          _event(
+            idSuffix: 'qc',
+            type: ProductionEventType.qc,
+            createdAt: now.subtract(const Duration(days: 3, hours: 6)),
+            duration: const Duration(hours: 1),
+            station: 'QC-Line',
+            operatorRef: 'qc-sato',
+            note: 'Detected micro chip near base; sending for rework.',
+            qcResult: 'needs_rework',
+            qcDefects: const ['Surface chip near base'],
+          ),
+          _event(
+            idSuffix: 'rework',
+            type: ProductionEventType.rework,
+            createdAt: now.subtract(const Duration(days: 2, hours: 18)),
+            duration: const Duration(hours: 5, minutes: 30),
+            station: 'Rework-1',
+            operatorRef: 'artisan-kato',
+            note: 'Chip patched; waiting for QC confirmation.',
+          ),
+          _event(
+            idSuffix: 'on-hold',
+            type: ProductionEventType.onHold,
+            createdAt: now.subtract(const Duration(hours: 12)),
+            note: 'Holding for client approval on revised engraving.',
+          ),
+        ],
+      ),
+      'hf-202404-015': _buildProductionEvents(
+        stages: [
+          _event(
+            idSuffix: 'queued',
+            type: ProductionEventType.queued,
+            createdAt: now.subtract(const Duration(days: 5, hours: 6)),
+          ),
+          _event(
+            idSuffix: 'engraving',
+            type: ProductionEventType.engraving,
+            createdAt: now.subtract(const Duration(days: 5, hours: 2)),
+            station: 'Engraving-3',
+            operatorRef: 'artisan-suzu',
+            duration: const Duration(hours: 3),
+          ),
+          _event(
+            idSuffix: 'polishing',
+            type: ProductionEventType.polishing,
+            createdAt: now.subtract(const Duration(days: 4, hours: 20)),
+            duration: const Duration(hours: 1, minutes: 10),
+          ),
+          _event(
+            idSuffix: 'qc',
+            type: ProductionEventType.qc,
+            createdAt: now.subtract(const Duration(days: 4, hours: 16)),
+            duration: const Duration(hours: 1),
+            qcResult: 'pass',
+          ),
+          _event(
+            idSuffix: 'packed',
+            type: ProductionEventType.packed,
+            createdAt: now.subtract(const Duration(days: 4, hours: 12)),
+            note: 'Packaged with silk wrap and certificate.',
+          ),
+        ],
+      ),
+      'hf-202404-014': _buildProductionEvents(
+        stages: [
+          _event(
+            idSuffix: 'queued',
+            type: ProductionEventType.queued,
+            createdAt: now.subtract(const Duration(days: 6, hours: 6)),
+          ),
+          _event(
+            idSuffix: 'engraving',
+            type: ProductionEventType.engraving,
+            createdAt: now.subtract(const Duration(days: 6, hours: 3)),
+            station: 'Engraving-3',
+            operatorRef: 'artisan-suzu',
+            duration: const Duration(hours: 2, minutes: 20),
+          ),
+          _event(
+            idSuffix: 'polishing',
+            type: ProductionEventType.polishing,
+            createdAt: now.subtract(const Duration(days: 5, hours: 20)),
+            duration: const Duration(hours: 1, minutes: 15),
+          ),
+          _event(
+            idSuffix: 'qc',
+            type: ProductionEventType.qc,
+            createdAt: now.subtract(const Duration(days: 5, hours: 16)),
+            duration: const Duration(hours: 1),
+            qcResult: 'pass',
+          ),
+          _event(
+            idSuffix: 'packed',
+            type: ProductionEventType.packed,
+            createdAt: now.subtract(const Duration(days: 5, hours: 12)),
+          ),
+        ],
+      ),
+    };
+    return {
+      for (final entry in seeds.entries) entry.key.toLowerCase(): entry.value,
+    };
+  }
+
+  List<ProductionEvent> _buildProductionEvents({
+    required List<ProductionEvent> stages,
+  }) {
+    return List<ProductionEvent>.unmodifiable(stages);
+  }
+
+  ProductionEvent _event({
+    required String idSuffix,
+    required ProductionEventType type,
+    required DateTime createdAt,
+    Duration? duration,
+    String? station,
+    String? operatorRef,
+    String? note,
+    String? qcResult,
+    List<String>? qcDefects,
+  }) {
+    return ProductionEvent(
+      id: '$idSuffix-${createdAt.millisecondsSinceEpoch}',
+      type: type,
+      createdAt: createdAt,
+      durationSec: duration?.inSeconds,
+      station: station,
+      operatorRef: operatorRef,
+      note: note,
+      qcResult: qcResult,
+      qcDefects: qcDefects ?? const <String>[],
+    );
   }
 
   Order _buildOrder({
