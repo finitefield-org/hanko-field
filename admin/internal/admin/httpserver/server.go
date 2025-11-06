@@ -220,6 +220,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				nr.Get("/", uiHandlers.NotificationsPage)
 				nr.Get("/table", uiHandlers.NotificationsTable)
 				nr.Get("/badge", uiHandlers.NotificationsBadge)
+				nr.Get("/stream", uiHandlers.NotificationsStream)
 			})
 			protected.Route("/orders", func(or chi.Router) {
 				or.Get("/", uiHandlers.OrdersPage)

@@ -101,7 +101,7 @@
 - [x] [Implement settings page for environment configuration toggles or at minimum a read-only configuration summary.](doc/admin/tasks/069-implement-settings-page-for-environment-configuration-toggles-or-at-minimum-a-read-only-co.md)
 
 ## 13. Notifications & Real-Time Feedback
-- [ ] [Integrate WebSocket or polling mechanism for real-time updates (new orders, failed jobs, queue changes) within notifications center.](doc/admin/tasks/070-integrate-websocket-or-polling-mechanism-for-real-time-updates-new-orders-failed-jobs-queu.md)
+- [x] [Integrate WebSocket or polling mechanism for real-time updates (new orders, failed jobs, queue changes) within notifications center.](doc/admin/tasks/070-integrate-websocket-or-polling-mechanism-for-real-time-updates-new-orders-failed-jobs-queu.md)
 - [ ] [Provide badge counts on sidebar/top bar for pending reviews, alerts, and tasks.](doc/admin/tasks/071-provide-badge-counts-on-sidebar-top-bar-for-pending-reviews-alerts-and-tasks.md)
 - [ ] [Implement toast/alert patterns for success/failure responses from htmx requests using response headers or JSON payload.](doc/admin/tasks/072-implement-toast-alert-patterns-for-success-failure-responses-from-htmx-requests-using-resp.md)
 

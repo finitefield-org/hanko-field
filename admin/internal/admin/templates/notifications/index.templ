@@ -42,6 +42,7 @@ templ pageBody(data PageData) {
 					hx-swap="innerHTML"
 					class="space-y-4"
 					data-notifications-table
+					data-notifications-endpoint={ data.TableEndpoint }
 				>
 					@Table(data.Table)
 				</div>

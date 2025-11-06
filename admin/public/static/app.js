@@ -101,12 +101,189 @@ const applyNotificationBadgeState = (root) => {
   badge.classList.toggle("pointer-events-auto", !isEmpty);
 };
 
+const parseNotificationInteger = (value) => {
+  const raw = String(value ?? "").trim();
+  if (raw === "") {
+    return 0;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return parsed < 0 ? 0 : parsed;
+};
+
+const normalizeBadgeCounts = (raw) => {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const total = parseNotificationInteger(raw.total ?? raw.Total);
+  const critical = parseNotificationInteger(raw.critical ?? raw.Critical);
+  const warning = parseNotificationInteger(raw.warning ?? raw.Warning);
+  return { total, critical, warning };
+};
+
+const applyNotificationBadgeCounts = (counts) => {
+  if (!counts) {
+    return;
+  }
+  document.querySelectorAll("[data-notifications-root]").forEach((root) => {
+    if (!(root instanceof Element)) {
+      return;
+    }
+    const badge = root.querySelector("[data-notification-count]");
+    if (!(badge instanceof HTMLElement)) {
+      return;
+    }
+    const payload = formatNotificationCount(counts.total);
+    badge.textContent = payload.display;
+    badge.dataset.empty = payload.empty ? "true" : "false";
+    badge.dataset.critical = String(counts.critical ?? 0);
+    badge.dataset.warning = String(counts.warning ?? 0);
+    badge.setAttribute("aria-label", `未対応通知: ${payload.display}`);
+    applyNotificationBadgeState(root);
+  });
+};
+
+const dispatchNotificationsEvent = (name, detail) => {
+  if (typeof name !== "string" || name.trim() === "") {
+    return;
+  }
+  document.dispatchEvent(new CustomEvent(name, { detail }));
+};
+
+// Maintain a single EventSource connection and broadcast updates.
+const startNotificationsStream = (() => {
+  let source = null;
+  let reconnectTimer = null;
+  let currentURL = null;
+
+  const closeStream = () => {
+    if (source) {
+      source.removeEventListener("open", handleOpen);
+      source.removeEventListener("badge", handleBadge);
+      source.removeEventListener("error", handleError);
+      source.removeEventListener("stream_error", handleStreamError);
+      source.close();
+      source = null;
+    }
+  };
+
+  const clearReconnect = () => {
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
+
+  const scheduleReconnect = (url) => {
+    if (reconnectTimer) {
+      return;
+    }
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null;
+      connect(url);
+    }, 5000);
+  };
+
+  const toAbsoluteURL = (value) => {
+    try {
+      return new URL(value, window.location.origin).toString();
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const dispatchFromPayload = (payload) => {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+    const counts = normalizeBadgeCounts(payload.badge);
+    if (counts) {
+      applyNotificationBadgeCounts(counts);
+    }
+    dispatchNotificationsEvent("notifications:stream", payload);
+    if (payload.refresh) {
+      dispatchNotificationsEvent("notifications:refresh", payload);
+    }
+  };
+
+  const handleOpen = () => {
+    clearReconnect();
+  };
+
+  const handleBadge = (event) => {
+    if (!event || typeof event.data !== "string") {
+      return;
+    }
+    try {
+      const payload = JSON.parse(event.data);
+      dispatchFromPayload(payload);
+    } catch (error) {
+      // ignore malformed payloads
+    }
+  };
+
+  const handleStreamError = (event) => {
+    if (event && typeof event.data === "string") {
+      try {
+        const payload = JSON.parse(event.data);
+        dispatchNotificationsEvent("notifications:stream-error", payload);
+        if (payload && payload.error && payload.error.message) {
+          console.warn("notifications stream error:", payload.error.message);
+        }
+      } catch (error) {
+        // ignore malformed payloads
+      }
+    }
+    handleError();
+  };
+
+  const handleError = () => {
+    closeStream();
+    if (currentURL) {
+      scheduleReconnect(currentURL);
+    }
+  };
+
+  const connect = (url) => {
+    if (typeof EventSource === "undefined") {
+      return;
+    }
+    const absolute = toAbsoluteURL(url);
+    if (!absolute) {
+      return;
+    }
+    if (absolute === currentURL && source) {
+      return;
+    }
+    currentURL = absolute;
+    closeStream();
+    try {
+      source = new EventSource(absolute, { withCredentials: true });
+    } catch (error) {
+      scheduleReconnect(absolute);
+      return;
+    }
+    source.addEventListener("open", handleOpen);
+    source.addEventListener("badge", handleBadge);
+    source.addEventListener("error", handleError);
+    source.addEventListener("stream_error", handleStreamError);
+  };
+
+  return (url) => connect(url);
+})();
+
 const initNotificationsBadge = () => {
   const initialize = (root) => {
     if (!(root instanceof Element)) {
       return;
     }
     applyNotificationBadgeState(root);
+    const streamURL = root.getAttribute("data-notifications-stream");
+    if (typeof streamURL === "string" && streamURL.trim() !== "") {
+      startNotificationsStream(streamURL.trim());
+    }
   };
 
   document.querySelectorAll("[data-notifications-root]").forEach(initialize);
@@ -414,10 +591,40 @@ const parseNotificationPayload = (row) => {
 };
 
 const initNotificationsSelection = () => {
-  const root = document.querySelector("[data-notifications-root]");
+  const roots = Array.from(document.querySelectorAll("[data-notifications-root]"));
+  const root = roots.find((element) => element instanceof HTMLElement && element.querySelector("[data-notifications-table]"));
   if (!(root instanceof HTMLElement)) {
     return;
   }
+
+  let refreshTimer = null;
+
+  const queueRefresh = () => {
+    if (!window.htmx) {
+      return;
+    }
+    if (refreshTimer) {
+      return;
+    }
+    refreshTimer = window.setTimeout(() => {
+      refreshTimer = null;
+      if (!document.body.contains(root)) {
+        return;
+      }
+      const table = root.querySelector("[data-notifications-table]");
+      if (!(table instanceof HTMLElement)) {
+        return;
+      }
+      const endpoint = table.getAttribute("data-notifications-endpoint");
+      if (typeof endpoint !== "string" || endpoint.trim() === "") {
+        return;
+      }
+      const url = `${endpoint.trim()}${window.location.search || ""}`;
+      window.htmx.ajax("GET", url, "#notifications-table");
+    }, 300);
+  };
+
+  document.addEventListener("notifications:refresh", queueRefresh);
 
   const applyDefaultSelection = (scope) => {
     const table = scope.querySelector("[data-notifications-table]");
