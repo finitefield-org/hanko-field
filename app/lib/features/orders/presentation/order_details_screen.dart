@@ -359,6 +359,9 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
         messenger,
         l10n.orderDetailsInvoiceSuccess(order.orderNumber),
       );
+      ref
+          .read(appStateProvider.notifier)
+          .push(OrderInvoiceRoute(orderId: order.orderNumber));
       ref.invalidate(orderDetailsProvider(widget.orderId));
     } catch (_) {
       if (!mounted) {

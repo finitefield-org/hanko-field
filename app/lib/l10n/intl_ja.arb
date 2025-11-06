@@ -1044,6 +1044,208 @@
   "description": "請求書をダウンロードするアシストチップのラベル"
 }
 
+, "orderInvoiceAppBarTitle": "請求書 · {orderNumber}"
+, "@orderInvoiceAppBarTitle": {
+  "description": "請求書画面のアプリバータイトル",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareTooltip": "PDFを共有"
+, "@orderInvoiceShareTooltip": {
+  "description": "請求書共有アイコンのツールチップ"
+}
+
+, "orderInvoiceLoadError": "請求書を読み込めませんでした。"
+, "@orderInvoiceLoadError": {
+  "description": "請求書取得に失敗した際のエラーメッセージ"
+}
+
+, "orderInvoiceRetryLabel": "再試行"
+, "@orderInvoiceRetryLabel": {
+  "description": "請求書読み込み失敗時の再試行ボタンラベル"
+}
+
+, "orderInvoiceHeadline": "{orderNumber} の請求書"
+, "@orderInvoiceHeadline": {
+  "description": "請求書概要のヘッドライン",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceSubHeadline": "合計 {amount}"
+, "@orderInvoiceSubHeadline": {
+  "description": "請求書合計額を示すサブヘッドライン",
+  "placeholders": {
+    "amount": { "type": "String" }
+  }
+}
+
+, "orderInvoiceValueNotAvailable": "未設定"
+, "@orderInvoiceValueNotAvailable": {
+  "description": "請求書の各項目が未設定の場合の表示"
+}
+
+, "orderInvoiceDetailsTitle": "詳細"
+, "@orderInvoiceDetailsTitle": {
+  "description": "請求書詳細カードの見出し"
+}
+
+, "orderInvoiceDetailsNumber": "請求書番号"
+, "@orderInvoiceDetailsNumber": {
+  "description": "請求書番号表示のラベル"
+}
+
+, "orderInvoiceDetailsIssuedOn": "発行日"
+, "@orderInvoiceDetailsIssuedOn": {
+  "description": "請求書の発行日ラベル"
+}
+
+, "orderInvoiceDetailsDueDate": "支払期日"
+, "@orderInvoiceDetailsDueDate": {
+  "description": "請求書の支払期日ラベル"
+}
+
+, "orderInvoiceDetailsTotal": "請求金額"
+, "@orderInvoiceDetailsTotal": {
+  "description": "請求書の合計金額ラベル"
+}
+
+, "orderInvoiceLineItemsTitle": "内訳"
+, "@orderInvoiceLineItemsTitle": {
+  "description": "請求書内訳カードの見出し"
+}
+
+, "orderInvoiceDownloadAction": "PDFをダウンロード"
+, "@orderInvoiceDownloadAction": {
+  "description": "請求書をダウンロードするボタンラベル"
+}
+
+, "orderInvoiceEmailAction": "メールで送信"
+, "@orderInvoiceEmailAction": {
+  "description": "請求書をメール送信するボタンラベル"
+}
+
+, "orderInvoiceEmailPlaceholder": "メール配信機能は準備中です。"
+, "@orderInvoiceEmailPlaceholder": {
+  "description": "メール送信が未対応の場合のメッセージ"
+}
+
+, "orderInvoicePendingMessage": "請求書を生成しています。数分お待ちください。"
+, "@orderInvoicePendingMessage": {
+  "description": "請求書生成待ちのバナーメッセージ"
+}
+
+, "orderInvoicePendingRefresh": "状態を更新"
+, "@orderInvoicePendingRefresh": {
+  "description": "請求書生成状態を更新するボタンラベル"
+}
+
+, "orderInvoiceTaxStatusInclusive": "税込"
+, "@orderInvoiceTaxStatusInclusive": {
+  "description": "税込の場合のアシストチップラベル"
+}
+
+, "orderInvoiceTaxStatusExclusive": "税抜"
+, "@orderInvoiceTaxStatusExclusive": {
+  "description": "税抜の場合のアシストチップラベル"
+}
+
+, "orderInvoiceTaxStatusExempt": "非課税"
+, "@orderInvoiceTaxStatusExempt": {
+  "description": "非課税の場合のアシストチップラベル"
+}
+
+, "orderInvoiceStatusDraft": "下書き"
+, "@orderInvoiceStatusDraft": {
+  "description": "請求書ステータス表示（下書き）"
+}
+
+, "orderInvoiceStatusIssued": "発行済み"
+, "@orderInvoiceStatusIssued": {
+  "description": "請求書ステータス表示（発行済み）"
+}
+
+, "orderInvoiceStatusSent": "送信済み"
+, "@orderInvoiceStatusSent": {
+  "description": "請求書ステータス表示（送信済み）"
+}
+
+, "orderInvoiceStatusPaid": "支払い済み"
+, "@orderInvoiceStatusPaid": {
+  "description": "請求書ステータス表示（支払い済み）"
+}
+
+, "orderInvoiceStatusVoided": "無効"
+, "@orderInvoiceStatusVoided": {
+  "description": "請求書ステータス表示（無効）"
+}
+
+, "orderInvoicePreviewLabel": "PDFプレビュー"
+, "@orderInvoicePreviewLabel": {
+  "description": "請求書プレビュー下のラベル"
+}
+
+, "orderInvoicePreviewPending": "請求書PDFを作成しています…"
+, "@orderInvoicePreviewPending": {
+  "description": "PDF生成中に表示するメッセージ"
+}
+
+, "orderInvoicePreviewPendingHint": "下に引いて更新するか、時間をおいて再度お試しください。"
+, "@orderInvoicePreviewPendingHint": {
+  "description": "PDF生成待ち時のヒント文言"
+}
+
+, "orderInvoicePreviewOpen": "プレビューを開く"
+, "@orderInvoicePreviewOpen": {
+  "description": "PDFプレビューを開くボタンラベル"
+}
+
+, "orderInvoicePreviewError": "PDFを開けませんでした。"
+, "@orderInvoicePreviewError": {
+  "description": "PDF起動に失敗した際のメッセージ"
+}
+
+, "orderInvoiceDownloadSuccess": "{path} に保存しました"
+, "@orderInvoiceDownloadSuccess": {
+  "description": "請求書を保存できた際のスナックバー文言",
+  "placeholders": {
+    "path": { "type": "String" }
+  }
+}
+
+, "orderInvoiceDownloadError": "ダウンロードに失敗しました。"
+, "@orderInvoiceDownloadError": {
+  "description": "請求書のダウンロードに失敗した際の文言"
+}
+
+, "orderInvoiceShareSubject": "請求書 {invoiceNumber}"
+, "@orderInvoiceShareSubject": {
+  "description": "請求書共有時の件名",
+  "placeholders": {
+    "invoiceNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareBody": "Hanko Fieldの請求書 {invoiceNumber} を共有します。"
+, "@orderInvoiceShareBody": {
+  "description": "請求書共有時の本文",
+  "placeholders": {
+    "invoiceNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareError": "請求書を共有できませんでした。"
+, "@orderInvoiceShareError": {
+  "description": "請求書共有に失敗した際のスナックバー文言"
+}
+
+, "orderInvoiceErrorTitle": "請求書を表示できません"
+, "@orderInvoiceErrorTitle": {
+  "description": "請求書画面のエラーステートのタイトル"
+}
 , "orderDetailsSupportBannerTitle": "この注文でお困りですか？"
 , "@orderDetailsSupportBannerTitle": {
   "description": "サポートバナーの見出し"

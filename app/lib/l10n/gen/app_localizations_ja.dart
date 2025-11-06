@@ -1449,6 +1449,129 @@ class AppLocalizationsJa extends AppLocalizations {
   String get orderDetailsActionInvoice => '請求書をダウンロード';
 
   @override
+  String orderInvoiceAppBarTitle(String orderNumber) {
+    return '請求書 · $orderNumber';
+  }
+
+  @override
+  String get orderInvoiceShareTooltip => 'PDFを共有';
+
+  @override
+  String get orderInvoiceLoadError => '請求書を読み込めませんでした。';
+
+  @override
+  String get orderInvoiceRetryLabel => '再試行';
+
+  @override
+  String orderInvoiceHeadline(String orderNumber) {
+    return '$orderNumber の請求書';
+  }
+
+  @override
+  String orderInvoiceSubHeadline(String amount) {
+    return '合計 $amount';
+  }
+
+  @override
+  String get orderInvoiceValueNotAvailable => '未設定';
+
+  @override
+  String get orderInvoiceDetailsTitle => '詳細';
+
+  @override
+  String get orderInvoiceDetailsNumber => '請求書番号';
+
+  @override
+  String get orderInvoiceDetailsIssuedOn => '発行日';
+
+  @override
+  String get orderInvoiceDetailsDueDate => '支払期日';
+
+  @override
+  String get orderInvoiceDetailsTotal => '請求金額';
+
+  @override
+  String get orderInvoiceLineItemsTitle => '内訳';
+
+  @override
+  String get orderInvoiceDownloadAction => 'PDFをダウンロード';
+
+  @override
+  String get orderInvoiceEmailAction => 'メールで送信';
+
+  @override
+  String get orderInvoiceEmailPlaceholder => 'メール配信機能は準備中です。';
+
+  @override
+  String get orderInvoicePendingMessage => '請求書を生成しています。数分お待ちください。';
+
+  @override
+  String get orderInvoicePendingRefresh => '状態を更新';
+
+  @override
+  String get orderInvoiceTaxStatusInclusive => '税込';
+
+  @override
+  String get orderInvoiceTaxStatusExclusive => '税抜';
+
+  @override
+  String get orderInvoiceTaxStatusExempt => '非課税';
+
+  @override
+  String get orderInvoiceStatusDraft => '下書き';
+
+  @override
+  String get orderInvoiceStatusIssued => '発行済み';
+
+  @override
+  String get orderInvoiceStatusSent => '送信済み';
+
+  @override
+  String get orderInvoiceStatusPaid => '支払い済み';
+
+  @override
+  String get orderInvoiceStatusVoided => '無効';
+
+  @override
+  String get orderInvoicePreviewLabel => 'PDFプレビュー';
+
+  @override
+  String get orderInvoicePreviewPending => '請求書PDFを作成しています…';
+
+  @override
+  String get orderInvoicePreviewPendingHint => '下に引いて更新するか、時間をおいて再度お試しください。';
+
+  @override
+  String get orderInvoicePreviewOpen => 'プレビューを開く';
+
+  @override
+  String get orderInvoicePreviewError => 'PDFを開けませんでした。';
+
+  @override
+  String orderInvoiceDownloadSuccess(String path) {
+    return '$path に保存しました';
+  }
+
+  @override
+  String get orderInvoiceDownloadError => 'ダウンロードに失敗しました。';
+
+  @override
+  String orderInvoiceShareSubject(String invoiceNumber) {
+    return '請求書 $invoiceNumber';
+  }
+
+  @override
+  String orderInvoiceShareBody(String invoiceNumber) {
+    return 'Hanko Fieldの請求書 $invoiceNumber を共有します。';
+  }
+
+  @override
+  String get orderInvoiceShareError => '請求書を共有できませんでした。';
+
+  @override
+  String get orderInvoiceErrorTitle => '請求書を表示できません';
+
+  @override
   String get orderDetailsSupportBannerTitle => 'この注文でお困りですか？';
 
   @override

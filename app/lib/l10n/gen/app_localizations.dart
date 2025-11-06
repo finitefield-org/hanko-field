@@ -2708,6 +2708,228 @@ abstract class AppLocalizations {
   /// **'Download invoice'**
   String get orderDetailsActionInvoice;
 
+  /// Title for the invoice screen top app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice · {orderNumber}'**
+  String orderInvoiceAppBarTitle(String orderNumber);
+
+  /// Tooltip for the invoice share icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Share PDF'**
+  String get orderInvoiceShareTooltip;
+
+  /// Error message shown when invoice fetch fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load the invoice.'**
+  String get orderInvoiceLoadError;
+
+  /// Label for retry button when invoice fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get orderInvoiceRetryLabel;
+
+  /// Headline shown above the invoice summary
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice for {orderNumber}'**
+  String orderInvoiceHeadline(String orderNumber);
+
+  /// Subheadline summarising the invoice total amount
+  ///
+  /// In en, this message translates to:
+  /// **'Total {amount}'**
+  String orderInvoiceSubHeadline(String amount);
+
+  /// Placeholder label when invoice metadata is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Not available'**
+  String get orderInvoiceValueNotAvailable;
+
+  /// Heading for the invoice details card
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get orderInvoiceDetailsTitle;
+
+  /// Label for the invoice number field
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice number'**
+  String get orderInvoiceDetailsNumber;
+
+  /// Label for the invoice issued date field
+  ///
+  /// In en, this message translates to:
+  /// **'Issued on'**
+  String get orderInvoiceDetailsIssuedOn;
+
+  /// Label for the invoice due date field
+  ///
+  /// In en, this message translates to:
+  /// **'Due date'**
+  String get orderInvoiceDetailsDueDate;
+
+  /// Label for the invoice total field
+  ///
+  /// In en, this message translates to:
+  /// **'Amount due'**
+  String get orderInvoiceDetailsTotal;
+
+  /// Heading for the invoice line items card
+  ///
+  /// In en, this message translates to:
+  /// **'Line items'**
+  String get orderInvoiceLineItemsTitle;
+
+  /// Primary action label for downloading the invoice
+  ///
+  /// In en, this message translates to:
+  /// **'Download PDF'**
+  String get orderInvoiceDownloadAction;
+
+  /// Secondary action label for emailing the invoice
+  ///
+  /// In en, this message translates to:
+  /// **'Send by email'**
+  String get orderInvoiceEmailAction;
+
+  /// Placeholder message when email delivery is not available
+  ///
+  /// In en, this message translates to:
+  /// **'Email delivery will be available soon.'**
+  String get orderInvoiceEmailPlaceholder;
+
+  /// Banner message shown while invoice is pending generation
+  ///
+  /// In en, this message translates to:
+  /// **'Your invoice is being generated. This can take a few minutes.'**
+  String get orderInvoicePendingMessage;
+
+  /// Button label to refresh pending invoice state
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh status'**
+  String get orderInvoicePendingRefresh;
+
+  /// Assist chip label when taxes are included
+  ///
+  /// In en, this message translates to:
+  /// **'Tax inclusive'**
+  String get orderInvoiceTaxStatusInclusive;
+
+  /// Assist chip label when taxes are excluded
+  ///
+  /// In en, this message translates to:
+  /// **'Tax exclusive'**
+  String get orderInvoiceTaxStatusExclusive;
+
+  /// Assist chip label when invoice is tax exempt
+  ///
+  /// In en, this message translates to:
+  /// **'Tax exempt'**
+  String get orderInvoiceTaxStatusExempt;
+
+  /// Invoice status label - draft
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get orderInvoiceStatusDraft;
+
+  /// Invoice status label - issued
+  ///
+  /// In en, this message translates to:
+  /// **'Issued'**
+  String get orderInvoiceStatusIssued;
+
+  /// Invoice status label - sent
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get orderInvoiceStatusSent;
+
+  /// Invoice status label - paid
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get orderInvoiceStatusPaid;
+
+  /// Invoice status label - voided
+  ///
+  /// In en, this message translates to:
+  /// **'Voided'**
+  String get orderInvoiceStatusVoided;
+
+  /// Label shown below the invoice preview thumbnail
+  ///
+  /// In en, this message translates to:
+  /// **'PDF preview'**
+  String get orderInvoicePreviewLabel;
+
+  /// Message shown while waiting for the PDF to be ready
+  ///
+  /// In en, this message translates to:
+  /// **'Generating invoice PDF…'**
+  String get orderInvoicePreviewPending;
+
+  /// Hint displayed below the pending preview message
+  ///
+  /// In en, this message translates to:
+  /// **'Pull to refresh or check again shortly.'**
+  String get orderInvoicePreviewPendingHint;
+
+  /// Button label to open the PDF preview
+  ///
+  /// In en, this message translates to:
+  /// **'Open preview'**
+  String get orderInvoicePreviewOpen;
+
+  /// Error message shown when launching the preview fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the PDF.'**
+  String get orderInvoicePreviewError;
+
+  /// Snack bar message shown when invoice download succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String orderInvoiceDownloadSuccess(String path);
+
+  /// Snack bar message shown when invoice download fails
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed.'**
+  String get orderInvoiceDownloadError;
+
+  /// Subject used when sharing the invoice PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice {invoiceNumber}'**
+  String orderInvoiceShareSubject(String invoiceNumber);
+
+  /// Body text used when sharing the invoice PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Here’s the invoice {invoiceNumber} from Hanko Field.'**
+  String orderInvoiceShareBody(String invoiceNumber);
+
+  /// Snack bar message shown when invoice sharing fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t share the invoice.'**
+  String get orderInvoiceShareError;
+
+  /// Title shown on the invoice error state
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice unavailable'**
+  String get orderInvoiceErrorTitle;
+
   /// Headline for the support banner
   ///
   /// In en, this message translates to:

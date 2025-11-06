@@ -74,6 +74,24 @@ class _TestOrderRepository extends OrderRepository {
       const [];
 
   @override
+  Future<OrderInvoice> fetchInvoice(String orderId) async {
+    return OrderInvoice(
+      id: 'invoice-$orderId',
+      orderId: orderId,
+      invoiceNumber: 'TEST-$orderId',
+      status: OrderInvoiceStatus.issued,
+      taxStatus: OrderInvoiceTaxStatus.inclusive,
+      currency: order.currency,
+      amount: order.totals.total,
+      taxAmount: order.totals.tax,
+      lineItems: const [],
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      downloadUrl: 'https://example.com/invoice.pdf',
+    );
+  }
+
+  @override
   Future<Order> cancelOrder(String orderId, {String? reason}) async => order;
 
   @override

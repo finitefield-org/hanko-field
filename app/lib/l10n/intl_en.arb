@@ -2413,6 +2413,208 @@
   "description": "Assist chip label for downloading the invoice"
 }
 
+, "orderInvoiceAppBarTitle": "Invoice · {orderNumber}"
+, "@orderInvoiceAppBarTitle": {
+  "description": "Title for the invoice screen top app bar",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareTooltip": "Share PDF"
+, "@orderInvoiceShareTooltip": {
+  "description": "Tooltip for the invoice share icon button"
+}
+
+, "orderInvoiceLoadError": "We couldn’t load the invoice."
+, "@orderInvoiceLoadError": {
+  "description": "Error message shown when invoice fetch fails"
+}
+
+, "orderInvoiceRetryLabel": "Try again"
+, "@orderInvoiceRetryLabel": {
+  "description": "Label for retry button when invoice fails to load"
+}
+
+, "orderInvoiceHeadline": "Invoice for {orderNumber}"
+, "@orderInvoiceHeadline": {
+  "description": "Headline shown above the invoice summary",
+  "placeholders": {
+    "orderNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceSubHeadline": "Total {amount}"
+, "@orderInvoiceSubHeadline": {
+  "description": "Subheadline summarising the invoice total amount",
+  "placeholders": {
+    "amount": { "type": "String" }
+  }
+}
+
+, "orderInvoiceValueNotAvailable": "Not available"
+, "@orderInvoiceValueNotAvailable": {
+  "description": "Placeholder label when invoice metadata is missing"
+}
+
+, "orderInvoiceDetailsTitle": "Details"
+, "@orderInvoiceDetailsTitle": {
+  "description": "Heading for the invoice details card"
+}
+
+, "orderInvoiceDetailsNumber": "Invoice number"
+, "@orderInvoiceDetailsNumber": {
+  "description": "Label for the invoice number field"
+}
+
+, "orderInvoiceDetailsIssuedOn": "Issued on"
+, "@orderInvoiceDetailsIssuedOn": {
+  "description": "Label for the invoice issued date field"
+}
+
+, "orderInvoiceDetailsDueDate": "Due date"
+, "@orderInvoiceDetailsDueDate": {
+  "description": "Label for the invoice due date field"
+}
+
+, "orderInvoiceDetailsTotal": "Amount due"
+, "@orderInvoiceDetailsTotal": {
+  "description": "Label for the invoice total field"
+}
+
+, "orderInvoiceLineItemsTitle": "Line items"
+, "@orderInvoiceLineItemsTitle": {
+  "description": "Heading for the invoice line items card"
+}
+
+, "orderInvoiceDownloadAction": "Download PDF"
+, "@orderInvoiceDownloadAction": {
+  "description": "Primary action label for downloading the invoice"
+}
+
+, "orderInvoiceEmailAction": "Send by email"
+, "@orderInvoiceEmailAction": {
+  "description": "Secondary action label for emailing the invoice"
+}
+
+, "orderInvoiceEmailPlaceholder": "Email delivery will be available soon."
+, "@orderInvoiceEmailPlaceholder": {
+  "description": "Placeholder message when email delivery is not available"
+}
+
+, "orderInvoicePendingMessage": "Your invoice is being generated. This can take a few minutes."
+, "@orderInvoicePendingMessage": {
+  "description": "Banner message shown while invoice is pending generation"
+}
+
+, "orderInvoicePendingRefresh": "Refresh status"
+, "@orderInvoicePendingRefresh": {
+  "description": "Button label to refresh pending invoice state"
+}
+
+, "orderInvoiceTaxStatusInclusive": "Tax inclusive"
+, "@orderInvoiceTaxStatusInclusive": {
+  "description": "Assist chip label when taxes are included"
+}
+
+, "orderInvoiceTaxStatusExclusive": "Tax exclusive"
+, "@orderInvoiceTaxStatusExclusive": {
+  "description": "Assist chip label when taxes are excluded"
+}
+
+, "orderInvoiceTaxStatusExempt": "Tax exempt"
+, "@orderInvoiceTaxStatusExempt": {
+  "description": "Assist chip label when invoice is tax exempt"
+}
+
+, "orderInvoiceStatusDraft": "Draft"
+, "@orderInvoiceStatusDraft": {
+  "description": "Invoice status label - draft"
+}
+
+, "orderInvoiceStatusIssued": "Issued"
+, "@orderInvoiceStatusIssued": {
+  "description": "Invoice status label - issued"
+}
+
+, "orderInvoiceStatusSent": "Sent"
+, "@orderInvoiceStatusSent": {
+  "description": "Invoice status label - sent"
+}
+
+, "orderInvoiceStatusPaid": "Paid"
+, "@orderInvoiceStatusPaid": {
+  "description": "Invoice status label - paid"
+}
+
+, "orderInvoiceStatusVoided": "Voided"
+, "@orderInvoiceStatusVoided": {
+  "description": "Invoice status label - voided"
+}
+
+, "orderInvoicePreviewLabel": "PDF preview"
+, "@orderInvoicePreviewLabel": {
+  "description": "Label shown below the invoice preview thumbnail"
+}
+
+, "orderInvoicePreviewPending": "Generating invoice PDF…"
+, "@orderInvoicePreviewPending": {
+  "description": "Message shown while waiting for the PDF to be ready"
+}
+
+, "orderInvoicePreviewPendingHint": "Pull to refresh or check again shortly."
+, "@orderInvoicePreviewPendingHint": {
+  "description": "Hint displayed below the pending preview message"
+}
+
+, "orderInvoicePreviewOpen": "Open preview"
+, "@orderInvoicePreviewOpen": {
+  "description": "Button label to open the PDF preview"
+}
+
+, "orderInvoicePreviewError": "Could not open the PDF."
+, "@orderInvoicePreviewError": {
+  "description": "Error message shown when launching the preview fails"
+}
+
+, "orderInvoiceDownloadSuccess": "Saved to {path}"
+, "@orderInvoiceDownloadSuccess": {
+  "description": "Snack bar message shown when invoice download succeeds",
+  "placeholders": {
+    "path": { "type": "String" }
+  }
+}
+
+, "orderInvoiceDownloadError": "Download failed."
+, "@orderInvoiceDownloadError": {
+  "description": "Snack bar message shown when invoice download fails"
+}
+
+, "orderInvoiceShareSubject": "Invoice {invoiceNumber}"
+, "@orderInvoiceShareSubject": {
+  "description": "Subject used when sharing the invoice PDF",
+  "placeholders": {
+    "invoiceNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareBody": "Here’s the invoice {invoiceNumber} from Hanko Field."
+, "@orderInvoiceShareBody": {
+  "description": "Body text used when sharing the invoice PDF",
+  "placeholders": {
+    "invoiceNumber": { "type": "String" }
+  }
+}
+
+, "orderInvoiceShareError": "We couldn’t share the invoice."
+, "@orderInvoiceShareError": {
+  "description": "Snack bar message shown when invoice sharing fails"
+}
+
+, "orderInvoiceErrorTitle": "Invoice unavailable"
+, "@orderInvoiceErrorTitle": {
+  "description": "Title shown on the invoice error state"
+}
 , "orderDetailsSupportBannerTitle": "Need help with this order?"
 , "@orderDetailsSupportBannerTitle": {
   "description": "Headline for the support banner"

@@ -1513,6 +1513,132 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderDetailsActionInvoice => 'Download invoice';
 
   @override
+  String orderInvoiceAppBarTitle(String orderNumber) {
+    return 'Invoice · $orderNumber';
+  }
+
+  @override
+  String get orderInvoiceShareTooltip => 'Share PDF';
+
+  @override
+  String get orderInvoiceLoadError => 'We couldn’t load the invoice.';
+
+  @override
+  String get orderInvoiceRetryLabel => 'Try again';
+
+  @override
+  String orderInvoiceHeadline(String orderNumber) {
+    return 'Invoice for $orderNumber';
+  }
+
+  @override
+  String orderInvoiceSubHeadline(String amount) {
+    return 'Total $amount';
+  }
+
+  @override
+  String get orderInvoiceValueNotAvailable => 'Not available';
+
+  @override
+  String get orderInvoiceDetailsTitle => 'Details';
+
+  @override
+  String get orderInvoiceDetailsNumber => 'Invoice number';
+
+  @override
+  String get orderInvoiceDetailsIssuedOn => 'Issued on';
+
+  @override
+  String get orderInvoiceDetailsDueDate => 'Due date';
+
+  @override
+  String get orderInvoiceDetailsTotal => 'Amount due';
+
+  @override
+  String get orderInvoiceLineItemsTitle => 'Line items';
+
+  @override
+  String get orderInvoiceDownloadAction => 'Download PDF';
+
+  @override
+  String get orderInvoiceEmailAction => 'Send by email';
+
+  @override
+  String get orderInvoiceEmailPlaceholder =>
+      'Email delivery will be available soon.';
+
+  @override
+  String get orderInvoicePendingMessage =>
+      'Your invoice is being generated. This can take a few minutes.';
+
+  @override
+  String get orderInvoicePendingRefresh => 'Refresh status';
+
+  @override
+  String get orderInvoiceTaxStatusInclusive => 'Tax inclusive';
+
+  @override
+  String get orderInvoiceTaxStatusExclusive => 'Tax exclusive';
+
+  @override
+  String get orderInvoiceTaxStatusExempt => 'Tax exempt';
+
+  @override
+  String get orderInvoiceStatusDraft => 'Draft';
+
+  @override
+  String get orderInvoiceStatusIssued => 'Issued';
+
+  @override
+  String get orderInvoiceStatusSent => 'Sent';
+
+  @override
+  String get orderInvoiceStatusPaid => 'Paid';
+
+  @override
+  String get orderInvoiceStatusVoided => 'Voided';
+
+  @override
+  String get orderInvoicePreviewLabel => 'PDF preview';
+
+  @override
+  String get orderInvoicePreviewPending => 'Generating invoice PDF…';
+
+  @override
+  String get orderInvoicePreviewPendingHint =>
+      'Pull to refresh or check again shortly.';
+
+  @override
+  String get orderInvoicePreviewOpen => 'Open preview';
+
+  @override
+  String get orderInvoicePreviewError => 'Could not open the PDF.';
+
+  @override
+  String orderInvoiceDownloadSuccess(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
+  String get orderInvoiceDownloadError => 'Download failed.';
+
+  @override
+  String orderInvoiceShareSubject(String invoiceNumber) {
+    return 'Invoice $invoiceNumber';
+  }
+
+  @override
+  String orderInvoiceShareBody(String invoiceNumber) {
+    return 'Here’s the invoice $invoiceNumber from Hanko Field.';
+  }
+
+  @override
+  String get orderInvoiceShareError => 'We couldn’t share the invoice.';
+
+  @override
+  String get orderInvoiceErrorTitle => 'Invoice unavailable';
+
+  @override
   String get orderDetailsSupportBannerTitle => 'Need help with this order?';
 
   @override

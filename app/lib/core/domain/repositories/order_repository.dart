@@ -1,4 +1,5 @@
 import 'package:app/core/data/dtos/order_dto.dart';
+import 'package:app/core/data/dtos/order_invoice_dto.dart';
 import 'package:app/core/domain/entities/order.dart';
 
 mixin OrderDtoMapper {
@@ -16,6 +17,10 @@ mixin OrderDtoMapper {
   ProductionEvent mapProductionEvent(ProductionEventDto dto) => dto.toDomain();
   ProductionEventDto mapProductionEventToDto(ProductionEvent domain) =>
       ProductionEventDto.fromDomain(domain);
+
+  OrderInvoice mapInvoice(OrderInvoiceDto dto) => dto.toDomain();
+  OrderInvoiceDto mapInvoiceToDto(OrderInvoice domain) =>
+      OrderInvoiceDto.fromDomain(domain);
 }
 
 abstract class OrderRepository with OrderDtoMapper {
@@ -29,6 +34,7 @@ abstract class OrderRepository with OrderDtoMapper {
   Future<List<OrderPayment>> fetchPayments(String orderId);
   Future<List<OrderShipment>> fetchShipments(String orderId);
   Future<List<ProductionEvent>> fetchProductionEvents(String orderId);
+  Future<OrderInvoice> fetchInvoice(String orderId);
 
   Future<Order> cancelOrder(String orderId, {String? reason});
   Future<Order> requestInvoice(String orderId);

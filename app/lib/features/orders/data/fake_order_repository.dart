@@ -20,6 +20,7 @@ class FakeOrderRepository extends OrderRepository {
     _ordersById = {for (final order in _orders) order.id: order};
     _shipmentsByOrder = _buildSeedShipments(base);
     _productionEventsByOrder = _buildSeedProductionEvents(base);
+    _invoicesByOrder = _buildSeedInvoices(base);
   }
 
   final OfflineCacheRepository _cache;
@@ -30,6 +31,7 @@ class FakeOrderRepository extends OrderRepository {
   late final Map<String, Order> _ordersById;
   late final Map<String, List<OrderShipment>> _shipmentsByOrder;
   late final Map<String, List<ProductionEvent>> _productionEventsByOrder;
+  late final Map<String, OrderInvoice> _invoicesByOrder;
 
   static const _defaultPageSize = 10;
 
@@ -131,6 +133,33 @@ class FakeOrderRepository extends OrderRepository {
     final sorted = List<ProductionEvent>.from(events)
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return sorted;
+  }
+
+  @override
+  Future<OrderInvoice> fetchInvoice(String orderId) async {
+    await Future<void>.delayed(_latency);
+    final normalized = orderId.toLowerCase();
+    final invoice = _invoicesByOrder[normalized];
+    if (invoice != null) {
+      return invoice;
+    }
+    final fallback = OrderInvoice(
+      id: normalized,
+      orderId: normalized,
+      invoiceNumber: 'PENDING-$normalized',
+      status: OrderInvoiceStatus.draft,
+      taxStatus: OrderInvoiceTaxStatus.inclusive,
+      currency: 'JPY',
+      amount: 0,
+      taxAmount: 0,
+      lineItems: const [],
+      createdAt: _now(),
+      updatedAt: _now(),
+      downloadUrl: null,
+      metadata: const {'note': 'Invoice generation pending'},
+    );
+    _invoicesByOrder[normalized] = fallback;
+    return fallback;
   }
 
   @override
@@ -400,6 +429,78 @@ class FakeOrderRepository extends OrderRepository {
       ),
     ];
     return orders;
+  }
+
+  Map<String, OrderInvoice> _buildSeedInvoices(DateTime base) {
+    final issuedAt = base.subtract(const Duration(days: 2, hours: 1));
+    final sentAt = base.subtract(const Duration(days: 2));
+    final pendingCreated = base.subtract(const Duration(hours: 6));
+    return {
+      'hf-202404-018': OrderInvoice(
+        id: 'invoice-hf-202404-018',
+        orderId: 'hf-202404-018',
+        invoiceNumber: 'INV-2024-018',
+        status: OrderInvoiceStatus.draft,
+        taxStatus: OrderInvoiceTaxStatus.inclusive,
+        currency: 'JPY',
+        amount: 12800,
+        taxAmount: 1164,
+        lineItems: const [
+          OrderInvoiceLineItem(description: '手彫り印鑑（檜） x1', amount: 11800),
+          OrderInvoiceLineItem(description: '送料', amount: 1000),
+        ],
+        createdAt: pendingCreated,
+        updatedAt: pendingCreated,
+        dueDate: base.add(const Duration(days: 7)),
+        pdfAssetRef: null,
+        downloadUrl: null,
+        metadata: const {'taxLabel': '消費税10%対象', 'emailSent': false},
+      ),
+      'hf-202404-017': OrderInvoice(
+        id: 'invoice-hf-202404-017',
+        orderId: 'hf-202404-017',
+        invoiceNumber: 'INV-2024-017',
+        status: OrderInvoiceStatus.issued,
+        taxStatus: OrderInvoiceTaxStatus.inclusive,
+        currency: 'JPY',
+        amount: 14200,
+        taxAmount: 1291,
+        lineItems: const [
+          OrderInvoiceLineItem(description: '黒水牛 薩摩本柘セット x1', amount: 13200),
+          OrderInvoiceLineItem(description: '配送保険', amount: 1000),
+        ],
+        createdAt: issuedAt,
+        updatedAt: issuedAt,
+        dueDate: issuedAt.add(const Duration(days: 14)),
+        sentAt: sentAt,
+        pdfAssetRef: '/assets/invoices/INV-2024-017',
+        downloadUrl:
+            'https://storage.googleapis.com/hanko-dev-assets/invoices/INV-2024-017.pdf',
+        metadata: const {'taxLabel': '消費税10%対象', 'emailSent': true},
+      ),
+      'hf-202404-016': OrderInvoice(
+        id: 'invoice-hf-202404-016',
+        orderId: 'hf-202404-016',
+        invoiceNumber: 'INV-2024-016',
+        status: OrderInvoiceStatus.sent,
+        taxStatus: OrderInvoiceTaxStatus.exclusive,
+        currency: 'JPY',
+        amount: 16800,
+        taxAmount: 0,
+        lineItems: const [
+          OrderInvoiceLineItem(description: '法人代表印（丸印） x1', amount: 15800),
+          OrderInvoiceLineItem(description: '海外配送手数料', amount: 1000),
+        ],
+        createdAt: base.subtract(const Duration(days: 3, hours: 5)),
+        updatedAt: base.subtract(const Duration(days: 3, hours: 5)),
+        dueDate: base.add(const Duration(days: 10)),
+        sentAt: base.subtract(const Duration(days: 3, hours: 4)),
+        pdfAssetRef: '/assets/invoices/INV-2024-016',
+        downloadUrl:
+            'https://storage.googleapis.com/hanko-dev-assets/invoices/INV-2024-016.pdf',
+        metadata: const {'taxLabel': '輸出免税', 'emailSent': true},
+      ),
+    };
   }
 
   Map<String, List<OrderShipment>> _buildSeedShipments(DateTime base) {

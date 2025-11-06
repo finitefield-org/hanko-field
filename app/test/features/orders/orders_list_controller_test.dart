@@ -149,6 +149,24 @@ class _TestOrderRepository extends OrderRepository {
   }
 
   @override
+  Future<OrderInvoice> fetchInvoice(String orderId) async {
+    final order = await fetchOrder(orderId);
+    return OrderInvoice(
+      id: 'invoice-$orderId',
+      orderId: orderId,
+      invoiceNumber: 'TEST-$orderId',
+      status: OrderInvoiceStatus.draft,
+      taxStatus: OrderInvoiceTaxStatus.inclusive,
+      currency: order.currency,
+      amount: order.totals.total,
+      taxAmount: order.totals.tax,
+      lineItems: const [],
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    );
+  }
+
+  @override
   Future<Order> cancelOrder(String orderId, {String? reason}) {
     return fetchOrder(orderId);
   }
@@ -239,6 +257,24 @@ class _BlockingOrderRepository extends OrderRepository {
   @override
   Future<List<ProductionEvent>> fetchProductionEvents(String orderId) async {
     return const <ProductionEvent>[];
+  }
+
+  @override
+  Future<OrderInvoice> fetchInvoice(String orderId) async {
+    final order = await fetchOrder(orderId);
+    return OrderInvoice(
+      id: 'invoice-$orderId',
+      orderId: orderId,
+      invoiceNumber: 'TEST-$orderId',
+      status: OrderInvoiceStatus.draft,
+      taxStatus: OrderInvoiceTaxStatus.inclusive,
+      currency: order.currency,
+      amount: order.totals.total,
+      taxAmount: order.totals.tax,
+      lineItems: const [],
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    );
   }
 
   @override

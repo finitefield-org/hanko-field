@@ -901,6 +901,171 @@ class ProductionEvent {
   }
 }
 
+enum OrderInvoiceStatus { draft, issued, sent, paid, voided }
+
+enum OrderInvoiceTaxStatus { inclusive, exclusive, exempt }
+
+@immutable
+class OrderInvoiceLineItem {
+  const OrderInvoiceLineItem({required this.description, required this.amount});
+
+  final String description;
+  final int amount;
+
+  OrderInvoiceLineItem copyWith({String? description, int? amount}) {
+    return OrderInvoiceLineItem(
+      description: description ?? this.description,
+      amount: amount ?? this.amount,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is OrderInvoiceLineItem &&
+            other.description == description &&
+            other.amount == amount);
+  }
+
+  @override
+  int get hashCode => Object.hash(description, amount);
+}
+
+@immutable
+class OrderInvoice {
+  const OrderInvoice({
+    required this.id,
+    required this.orderId,
+    required this.invoiceNumber,
+    required this.status,
+    required this.taxStatus,
+    required this.currency,
+    required this.amount,
+    required this.lineItems,
+    required this.createdAt,
+    required this.updatedAt,
+    this.taxAmount,
+    this.dueDate,
+    this.sentAt,
+    this.paidAt,
+    this.voidedAt,
+    this.pdfAssetRef,
+    this.downloadUrl,
+    this.metadata,
+  });
+
+  final String id;
+  final String orderId;
+  final String invoiceNumber;
+  final OrderInvoiceStatus status;
+  final OrderInvoiceTaxStatus taxStatus;
+  final String currency;
+  final int amount;
+  final int? taxAmount;
+  final List<OrderInvoiceLineItem> lineItems;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? dueDate;
+  final DateTime? sentAt;
+  final DateTime? paidAt;
+  final DateTime? voidedAt;
+  final String? pdfAssetRef;
+  final String? downloadUrl;
+  final Map<String, dynamic>? metadata;
+
+  OrderInvoice copyWith({
+    String? id,
+    String? orderId,
+    String? invoiceNumber,
+    OrderInvoiceStatus? status,
+    OrderInvoiceTaxStatus? taxStatus,
+    String? currency,
+    int? amount,
+    int? taxAmount,
+    List<OrderInvoiceLineItem>? lineItems,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? dueDate,
+    DateTime? sentAt,
+    DateTime? paidAt,
+    DateTime? voidedAt,
+    String? pdfAssetRef,
+    String? downloadUrl,
+    Map<String, dynamic>? metadata,
+  }) {
+    return OrderInvoice(
+      id: id ?? this.id,
+      orderId: orderId ?? this.orderId,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      status: status ?? this.status,
+      taxStatus: taxStatus ?? this.taxStatus,
+      currency: currency ?? this.currency,
+      amount: amount ?? this.amount,
+      taxAmount: taxAmount ?? this.taxAmount,
+      lineItems: lineItems ?? this.lineItems,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      dueDate: dueDate ?? this.dueDate,
+      sentAt: sentAt ?? this.sentAt,
+      paidAt: paidAt ?? this.paidAt,
+      voidedAt: voidedAt ?? this.voidedAt,
+      pdfAssetRef: pdfAssetRef ?? this.pdfAssetRef,
+      downloadUrl: downloadUrl ?? this.downloadUrl,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
+  bool get isDownloadReady => (downloadUrl ?? '').isNotEmpty;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is OrderInvoice &&
+            other.id == id &&
+            other.orderId == orderId &&
+            other.invoiceNumber == invoiceNumber &&
+            other.status == status &&
+            other.taxStatus == taxStatus &&
+            other.currency == currency &&
+            other.amount == amount &&
+            other.taxAmount == taxAmount &&
+            listEquals(other.lineItems, lineItems) &&
+            other.createdAt == createdAt &&
+            other.updatedAt == updatedAt &&
+            other.dueDate == dueDate &&
+            other.sentAt == sentAt &&
+            other.paidAt == paidAt &&
+            other.voidedAt == voidedAt &&
+            other.pdfAssetRef == pdfAssetRef &&
+            other.downloadUrl == downloadUrl &&
+            mapEquals(other.metadata, metadata));
+  }
+
+  @override
+  int get hashCode {
+    return Object.hashAll([
+      id,
+      orderId,
+      invoiceNumber,
+      status,
+      taxStatus,
+      currency,
+      amount,
+      taxAmount,
+      Object.hashAll(lineItems),
+      createdAt,
+      updatedAt,
+      dueDate,
+      sentAt,
+      paidAt,
+      voidedAt,
+      pdfAssetRef,
+      downloadUrl,
+      if (metadata != null) Object.hashAll(metadata!.entries),
+    ]);
+  }
+}
+
 @immutable
 class Order {
   const Order({
