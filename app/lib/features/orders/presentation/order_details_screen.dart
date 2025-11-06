@@ -205,7 +205,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
       error: (error, stackTrace) => _OrderDetailsErrorView(
         message: l10n.orderDetailsLoadErrorMessage,
         actionLabel: l10n.orderDetailsRetryLabel,
-        onRetry: null,
+        onRetry: () => ref.refresh(orderDetailsProvider(widget.orderId).future),
       ),
     );
   }
