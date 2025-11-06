@@ -293,7 +293,12 @@ func counterAlerts(alerts []adminsystem.CounterAlert) []Alert {
 
 func buildNamespaceSelector(basePath, selected string, options []adminsystem.CounterNamespace) NamespaceSelector {
 	selector := NamespaceSelector{Endpoint: joinBasePath(basePath, "/system/counters")}
+	selected = strings.TrimSpace(selected)
+	allActive := selected == ""
+	selector.Options = append(selector.Options, NamespaceOption{ID: "", Label: "すべて", Active: allActive})
+
 	seen := make(map[string]struct{})
+	hasActive := allActive
 	for _, opt := range options {
 		id := strings.TrimSpace(opt.ID)
 		if _, ok := seen[id]; ok {
@@ -301,8 +306,11 @@ func buildNamespaceSelector(basePath, selected string, options []adminsystem.Cou
 		}
 		seen[id] = struct{}{}
 		active := opt.Active
-		if !active && selected != "" {
+		if selected != "" {
 			active = strings.EqualFold(selected, id)
+		}
+		if active {
+			hasActive = true
 		}
 		selector.Options = append(selector.Options, NamespaceOption{
 			ID:       id,
@@ -311,8 +319,8 @@ func buildNamespaceSelector(basePath, selected string, options []adminsystem.Cou
 			Active:   active,
 		})
 	}
-	if len(selector.Options) == 0 {
-		selector.Options = append(selector.Options, NamespaceOption{ID: "", Label: "すべて", Active: true})
+	if !hasActive {
+		selector.Options[0].Active = true
 	}
 	return selector
 }
