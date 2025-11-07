@@ -42,17 +42,19 @@ var (
 
 // ProductionQueueServiceDeps bundles constructor dependencies for the production queue service.
 type ProductionQueueServiceDeps struct {
-	Repository  repositories.ProductionQueueRepository
-	Audit       AuditLogService
-	Clock       func() time.Time
-	IDGenerator func() string
+	Repository   repositories.ProductionQueueRepository
+	Audit        AuditLogService
+	Clock        func() time.Time
+	IDGenerator  func() string
+	QueueMetrics QueueDepthRecorder
 }
 
 type productionQueueService struct {
-	repo  repositories.ProductionQueueRepository
-	audit AuditLogService
-	clock func() time.Time
-	idGen func() string
+	repo    repositories.ProductionQueueRepository
+	audit   AuditLogService
+	clock   func() time.Time
+	idGen   func() string
+	metrics QueueDepthRecorder
 }
 
 // NewProductionQueueService constructs a ProductionQueueService backed by the provided repository.
@@ -69,10 +71,11 @@ func NewProductionQueueService(deps ProductionQueueServiceDeps) (ProductionQueue
 		idGen = func() string { return ulid.Make().String() }
 	}
 	return &productionQueueService{
-		repo:  deps.Repository,
-		audit: deps.Audit,
-		clock: func() time.Time { return clock().UTC() },
-		idGen: idGen,
+		repo:    deps.Repository,
+		audit:   deps.Audit,
+		clock:   func() time.Time { return clock().UTC() },
+		idGen:   idGen,
+		metrics: deps.QueueMetrics,
 	}, nil
 }
 
@@ -213,7 +216,11 @@ func (s *productionQueueService) QueueWIPSummary(ctx context.Context, queueID st
 	if err != nil {
 		return ProductionQueueWIPSummary{}, translateQueueRepositoryError(err)
 	}
-	return normalizeQueueWIPSummary(summary, queueID), nil
+	result := normalizeQueueWIPSummary(summary, queueID)
+	if s.metrics != nil {
+		s.metrics.RecordQueueDepth(ctx, result.QueueID, result.Total, result.StatusCounts)
+	}
+	return result, nil
 }
 
 func (s *productionQueueService) normalizeQueue(input ProductionQueue, now time.Time, existing *domain.ProductionQueue, isCreate bool) (domain.ProductionQueue, error) {

@@ -169,7 +169,7 @@
 - [x] [121 Perform security review (HMAC secret rotation, OAuth scopes, firewall rules) before launch.](./tasks/121-perform-security-review-hmac-secret-rotation-oauth-scopes-firewall-rules-before-.md)
 
 ## 12. Observability & Operations
-- [ ] [122 Expose metrics (latency, error rates, queue depth) via Cloud Monitoring.](./tasks/122-expose-metrics-latency-error-rates-queue-depth-via-cloud-monitoring.md)
+- [x] [122 Expose metrics (latency, error rates, queue depth) via Cloud Monitoring.](./tasks/122-expose-metrics-latency-error-rates-queue-depth-via-cloud-monitoring.md)
 - [ ] [123 Configure alerting for failures (webhook retries, stock reservation errors, payment mismatches).](./tasks/123-configure-alerting-for-failures-webhook-retries-stock-reservation-errors-payment.md)
 - [ ] [124 Implement centralized structured logging with correlation IDs and request IDs.](./tasks/124-implement-centralized-structured-logging-with-correlation-ids-and-request-ids.md)
 - [ ] [125 Document on-call runbooks for incident handling and operational tasks.](./tasks/125-document-on-call-runbooks-for-incident-handling-and-operational-tasks.md)

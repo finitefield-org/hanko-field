@@ -478,6 +478,45 @@ func TestProductionQueueService_QueueWIPSummary_InvalidID(t *testing.T) {
 	}
 }
 
+func TestProductionQueueService_QueueWIPSummary_RecordsMetrics(t *testing.T) {
+	repo := &stubProductionQueueRepository{
+		wipResult: domain.ProductionQueueWIPSummary{
+			QueueID: "pqu_depth",
+			StatusCounts: map[string]int{
+				"waiting":     2,
+				"in_progress": 1,
+			},
+			Total: 3,
+		},
+	}
+	recorder := &stubQueueDepthRecorder{}
+	svc, err := NewProductionQueueService(ProductionQueueServiceDeps{
+		Repository:   repo,
+		Clock:        time.Now,
+		QueueMetrics: recorder,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_, err = svc.QueueWIPSummary(context.Background(), "pqu_depth")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(recorder.records) != 1 {
+		t.Fatalf("expected 1 metrics record, got %d", len(recorder.records))
+	}
+	record := recorder.records[0]
+	if record.queueID != "pqu_depth" {
+		t.Fatalf("expected queue id pqu_depth, got %q", record.queueID)
+	}
+	if record.total != 3 {
+		t.Fatalf("expected total 3, got %d", record.total)
+	}
+	if record.statuses["waiting"] != 2 || record.statuses["in_progress"] != 1 {
+		t.Fatalf("unexpected statuses %+v", record.statuses)
+	}
+}
+
 type stubProductionQueueRepository struct {
 	listFilter     repositories.ProductionQueueListFilter
 	listResult     domain.CursorPage[domain.ProductionQueue]
@@ -560,6 +599,28 @@ func (s *stubProductionQueueRepository) QueueWIPSummary(_ context.Context, queue
 		return domain.ProductionQueueWIPSummary{}, s.wipErr
 	}
 	return s.wipResult, nil
+}
+
+type queueDepthRecord struct {
+	queueID  string
+	total    int
+	statuses map[string]int
+}
+
+type stubQueueDepthRecorder struct {
+	records []queueDepthRecord
+}
+
+func (s *stubQueueDepthRecorder) RecordQueueDepth(_ context.Context, queueID string, total int, statusCounts map[string]int) {
+	cloned := make(map[string]int, len(statusCounts))
+	for key, value := range statusCounts {
+		cloned[key] = value
+	}
+	s.records = append(s.records, queueDepthRecord{
+		queueID:  queueID,
+		total:    total,
+		statuses: cloned,
+	})
 }
 
 type stubQueueRepoError struct {

@@ -84,6 +84,27 @@ func main() {
 	}
 
 	buildInfo := buildInfoFromEnv(envValues, cfg, startedAt)
+	projectID := traceProjectID(cfg)
+
+	metricsShutdown, err := observability.InitMetrics(ctx, observability.MetricsOptions{
+		ProjectID:      projectID,
+		ServiceName:    "hanko-field-api",
+		ServiceVersion: buildInfo.Version,
+		Environment:    buildInfo.Environment,
+	})
+	if err != nil {
+		logger.Warn("metrics initialisation failed", zap.Error(err))
+	}
+	defer func() {
+		if metricsShutdown == nil {
+			return
+		}
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := metricsShutdown(shutdownCtx); err != nil {
+			logger.Warn("metrics shutdown error", zap.Error(err))
+		}
+	}()
 
 	firestoreProvider := pfirestore.NewProvider(cfg.Firestore)
 	firestoreClient, err := firestoreProvider.Client(ctx)
@@ -489,8 +510,9 @@ func main() {
 	}
 	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
 
-	projectID := traceProjectID(cfg)
+	httpMetrics := observability.NewHTTPMetrics(logger.Named("metrics.http"))
 	middlewares := []func(http.Handler) http.Handler{
+		observability.HTTPMetricsMiddleware(httpMetrics),
 		observability.InjectLoggerMiddleware(logger.Named("http")),
 		observability.TraceMiddleware(projectID),
 		observability.RecoveryMiddleware(logger.Named("http")),
