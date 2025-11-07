@@ -1706,6 +1706,111 @@ const createModalController = () => {
 const productionRoots = new WeakMap();
 const productionMoves = new WeakMap();
 
+const PRODUCTION_DIRECTION = {
+  backward: -1,
+  forward: 1,
+};
+
+const getProductionAnnouncer = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return null;
+  }
+  const announcer = root.querySelector("[data-production-announcer]");
+  return announcer instanceof HTMLElement ? announcer : null;
+};
+
+const announceProductionStatus = (root, message) => {
+  const announcer = getProductionAnnouncer(root);
+  if (!announcer || typeof message !== "string") {
+    return;
+  }
+  announcer.textContent = message.trim();
+};
+
+const getLaneAnnouncementLabel = (lane) => {
+  if (!(lane instanceof HTMLElement)) {
+    return "";
+  }
+  const label = lane.getAttribute("data-lane-label") || lane.getAttribute("data-stage");
+  return label ? label : "";
+};
+
+const getCardAnnouncementLabel = (card) => {
+  if (!(card instanceof HTMLElement)) {
+    return "カード";
+  }
+  const orderNumber = card.getAttribute("data-order-number");
+  if (orderNumber) {
+    return `注文 ${orderNumber}`;
+  }
+  const orderID = card.getAttribute("data-order-id");
+  if (orderID) {
+    return `カード ${orderID}`;
+  }
+  return "カード";
+};
+
+const announceProductionMove = (root, card, laneLabel) => {
+  const announcer = getProductionAnnouncer(root);
+  if (!announcer) {
+    return;
+  }
+  const cardLabel = getCardAnnouncementLabel(card);
+  const destination = laneLabel && laneLabel.trim() !== "" ? laneLabel : "別ステージ";
+  announcer.textContent = `${cardLabel} を ${destination} に移動しました。`;
+};
+
+const setCardGrabbedState = (card, grabbed) => {
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+  card.setAttribute("aria-grabbed", grabbed ? "true" : "false");
+};
+
+const moveCardWithKeyboard = (root, card, direction) => {
+  if (!(root instanceof HTMLElement) || !(card instanceof HTMLElement) || direction === 0) {
+    return;
+  }
+  const lanes = Array.from(root.querySelectorAll("[data-production-lane]"));
+  if (lanes.length === 0) {
+    return;
+  }
+  const currentLane = card.closest("[data-production-lane]");
+  if (!currentLane) {
+    return;
+  }
+  const currentIndex = lanes.indexOf(currentLane);
+  if (currentIndex === -1) {
+    return;
+  }
+  const targetIndex = currentIndex + direction;
+  if (targetIndex < 0 || targetIndex >= lanes.length) {
+    announceProductionStatus(
+      root,
+      direction < 0 ? "これ以上前のステージはありません。" : "これ以上後ろのステージはありません。",
+    );
+    return;
+  }
+  const targetLane = lanes[targetIndex];
+  if (!(targetLane instanceof HTMLElement)) {
+    return;
+  }
+  const targetStage = targetLane.getAttribute("data-stage");
+  if (!targetStage || targetStage === card.getAttribute("data-stage")) {
+    return;
+  }
+  setCardGrabbedState(card, true);
+  moveProductionCard(targetLane, card);
+  announceProductionMove(root, card, getLaneAnnouncementLabel(targetLane));
+  sendStageUpdate(root, card, targetStage);
+  queueMicrotask(() => {
+    if (card instanceof HTMLElement) {
+      card.focus({ preventScroll: true });
+      setCardGrabbedState(card, false);
+    }
+  });
+};
+
 const initProductionKanban = () => {
   document.querySelectorAll("[data-production-root]").forEach((root) => {
     if (root instanceof HTMLElement) {
@@ -1728,15 +1833,23 @@ const ensureProductionRoot = (root) => {
       requestBoardSelection(root, card.getAttribute("data-order-id"));
     });
     root.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
       const card = event.target instanceof Element ? event.target.closest("[data-production-card]") : null;
       if (!card) {
         return;
       }
-      event.preventDefault();
-      requestBoardSelection(root, card.getAttribute("data-order-id"));
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        requestBoardSelection(root, card.getAttribute("data-order-id"));
+        return;
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        moveCardWithKeyboard(
+          root,
+          card,
+          event.key === "ArrowLeft" ? PRODUCTION_DIRECTION.backward : PRODUCTION_DIRECTION.forward,
+        );
+      }
     });
   }
   bindProductionElements(root, state);
@@ -1751,12 +1864,14 @@ const bindProductionElements = (root, state) => {
     card.addEventListener("dragstart", (event) => {
       state.dragging = card;
       card.classList.add("opacity-60");
+      setCardGrabbedState(card, true);
       if (event && event.dataTransfer) {
         event.dataTransfer.effectAllowed = "move";
       }
     });
     card.addEventListener("dragend", () => {
       card.classList.remove("opacity-60");
+      setCardGrabbedState(card, false);
       state.dragging = null;
     });
   });
@@ -1785,6 +1900,7 @@ const bindProductionElements = (root, state) => {
         return;
       }
       moveProductionCard(lane, card);
+      announceProductionMove(root, card, getLaneAnnouncementLabel(lane));
       sendStageUpdate(root, card, targetStage);
     });
   });
@@ -1815,6 +1931,7 @@ const revertProductionCard = (card) => {
     }
   }
   card.classList.remove("opacity-70");
+  setCardGrabbedState(card, false);
   productionMoves.delete(card);
 };
 

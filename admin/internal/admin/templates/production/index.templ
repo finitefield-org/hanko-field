@@ -18,6 +18,7 @@ templ productionBody(data PageData) {
         data-production-root
         data-board-endpoint={ data.Board.FragmentPath }
     >
+        <p class="sr-only" role="status" aria-live="polite" data-production-announcer></p>
         <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
@@ -32,9 +33,9 @@ templ productionBody(data PageData) {
                     hx-swap="outerHTML"
                     hx-push-url="true"
                 >
-                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">制作キュー</label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for={ queueSelectDomID(data.Board.ContainerID) }>制作キュー</label>
                     <div class="flex items-center gap-2">
-                        <select name="queue" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
+                        <select id={ queueSelectDomID(data.Board.ContainerID) } name="queue" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
                             for _, option := range data.QueueForm.Options {
                                 <option value={ option.ID } selected?={ option.Active }>
                                     { option.Label }
@@ -169,14 +170,33 @@ templ Board(data BoardData) {
             </div>
         </div>
         @errorNotice(data.Error)
+        <p id={ boardInstructionsDomID(data.BoardID) } class="sr-only">
+            カードにフォーカスした状態で左右キーでステージを移動し、Enterキーで詳細を開きます。ドラッグ＆ドロップにも対応しています。
+        </p>
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div id={ data.BoardID } class="space-y-4" data-production-board data-selected={ data.Query.Selected }>
+            <div
+                id={ data.BoardID }
+                class="space-y-4"
+                role="region"
+                aria-label={ boardAriaLabel(data.Queue) }
+                aria-describedby={ boardInstructionsDomID(data.BoardID) }
+                data-production-board
+                data-selected={ data.Query.Selected }
+            >
                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     for _, lane := range data.Lanes {
-                        <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4" data-production-lane data-stage={ lane.Stage }>
+                        <section
+                            class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4"
+                            data-production-lane
+                            data-stage={ lane.Stage }
+                            data-lane-label={ lane.Label }
+                            role="region"
+                            aria-labelledby={ laneHeadingDomID(data.BoardID, lane.Stage, lane.Label) }
+                            aria-describedby={ laneMetaDomID(data.BoardID, lane.Stage) }
+                        >
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-semibold text-slate-900">{ lane.Label }</p>
+                                    <h2 id={ laneHeadingDomID(data.BoardID, lane.Stage, lane.Label) } class="text-sm font-semibold text-slate-900">{ lane.Label }</h2>
                                     <p class="text-xs text-slate-500">{ lane.Description }</p>
                                 </div>
                                 <div class="text-right">
@@ -187,7 +207,10 @@ templ Board(data BoardData) {
                             <div class="mt-3 h-1.5 w-full rounded-full bg-slate-100">
                                 <div class="h-full rounded-full bg-brand-500" style={ fmt.Sprintf("width:%d%%", helpers.MinInt(lane.CapacityPercent, 100)) }></div>
                             </div>
-                            <div class="mt-4 space-y-3" data-production-cards>
+                            <p id={ laneMetaDomID(data.BoardID, lane.Stage) } class="sr-only">
+                                { laneAssistiveDescription(lane) }
+                            </p>
+                            <div class="mt-4 space-y-3" data-production-cards role="list" aria-label={ fmt.Sprintf("%s のカード", lane.Label) }>
                                 if len(lane.Cards) == 0 {
                                     <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-6 text-center text-xs text-slate-500">{ lane.EmptyMessage }</div>
                                 }
@@ -195,7 +218,7 @@ templ Board(data BoardData) {
                                     @kanbanCard(card)
                                 }
                             </div>
-                        </div>
+                        </section>
                     }
                 </div>
             </div>
@@ -218,10 +241,16 @@ templ kanbanCard(card CardData) {
         draggable="true"
         data-production-card
         data-order-id={ card.ID }
+        data-order-number={ card.OrderNumber }
         data-stage={ card.Stage }
         data-endpoint={ card.Endpoint }
         data-card-payload={ card.Payload }
         data-selected={ card.Selected }
+        role="listitem"
+        aria-roledescription="生産カード"
+        aria-label={ cardAriaLabel(card) }
+        aria-describedby={ cardMetaDomID(card) }
+        aria-grabbed="false"
         tabindex="0"
     >
         <div class="flex items-center justify-between">
@@ -246,6 +275,7 @@ templ kanbanCard(card CardData) {
                 <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white bg-slate-800 text-xs font-semibold text-white" title={ assignee.Name }>{ assignee.Initials }</span>
             }
         </div>
+        <p id={ cardMetaDomID(card) } class="sr-only">{ cardAssistiveMeta(card) }</p>
     </div>
 }
 
@@ -308,6 +338,18 @@ templ errorNotice(message string) {
     <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ message }</div>
 }
 
+func laneAssistiveDescription(lane LaneData) string {
+    label := strings.TrimSpace(lane.Label)
+    if label == "" {
+        label = "ステージ"
+    }
+    capacity := strings.TrimSpace(lane.CapacityLabel)
+    if capacity == "" {
+        capacity = "未設定"
+    }
+    return fmt.Sprintf("%s: 容量 %s、カード %d 件", label, capacity, len(lane.Cards))
+}
+
 func kanbanCardClass(selected bool, blocked bool) string {
     classes := []string{"rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"}
     if selected {
@@ -328,4 +370,118 @@ func dueToneClass(tone string) string {
     default:
         return "text-slate-500"
     }
+}
+
+func cardAriaLabel(card CardData) string {
+    sections := []string{}
+    if number := strings.TrimSpace(card.OrderNumber); number != "" {
+        sections = append(sections, fmt.Sprintf("注文 %s", number))
+    }
+    if customer := strings.TrimSpace(card.Customer); customer != "" {
+        sections = append(sections, fmt.Sprintf("顧客 %s", customer))
+    }
+    if combo := compactJoin(" / ", card.ProductLine, card.Design); combo != "" {
+        sections = append(sections, combo)
+    }
+    if stage := strings.TrimSpace(card.StageLabel); stage != "" {
+        sections = append(sections, fmt.Sprintf("ステージ %s", stage))
+    }
+    if due := strings.TrimSpace(card.DueLabel); due != "" {
+        sections = append(sections, fmt.Sprintf("期限 %s", due))
+    }
+    if len(sections) == 0 {
+        return "生産カード"
+    }
+    return strings.Join(sections, "、")
+}
+
+func cardAssistiveMeta(card CardData) string {
+    meta := []string{}
+    if blocked := strings.TrimSpace(card.BlockedReason); card.Blocked && blocked != "" {
+        meta = append(meta, fmt.Sprintf("ブロック理由: %s", blocked))
+    } else if card.Blocked {
+        meta = append(meta, "現在ブロック中")
+    }
+    if priority := strings.TrimSpace(card.PriorityLabel); priority != "" {
+        meta = append(meta, fmt.Sprintf("優先度 %s", priority))
+    }
+    if workstation := strings.TrimSpace(card.Workstation); workstation != "" {
+        meta = append(meta, fmt.Sprintf("作業場所 %s", workstation))
+    }
+    if len(card.Assignees) > 0 {
+        meta = append(meta, fmt.Sprintf("担当者 %d 名", len(card.Assignees)))
+    }
+    if len(card.Flags) > 0 {
+        meta = append(meta, fmt.Sprintf("フラグ %d 件", len(card.Flags)))
+    }
+    if len(meta) == 0 {
+        return "カードの詳細は開いて確認できます。"
+    }
+    return strings.Join(meta, "、")
+}
+
+func cardMetaDomID(card CardData) string {
+    return fmt.Sprintf("%s-meta", domSlug("card", card.ID, card.OrderNumber))
+}
+
+func compactJoin(sep string, values ...string) string {
+    cleaned := make([]string, 0, len(values))
+    for _, value := range values {
+        if trimmed := strings.TrimSpace(value); trimmed != "" {
+            cleaned = append(cleaned, trimmed)
+        }
+    }
+    return strings.Join(cleaned, sep)
+}
+
+func domSlug(values ...string) string {
+    builder := strings.Builder{}
+    for _, value := range values {
+        segment := strings.ToLower(strings.TrimSpace(value))
+        if segment == "" {
+            continue
+        }
+        if builder.Len() > 0 {
+            builder.WriteString("-")
+        }
+        for _, r := range segment {
+            switch {
+            case r >= 'a' && r <= 'z':
+                builder.WriteRune(r)
+            case r >= '0' && r <= '9':
+                builder.WriteRune(r)
+            default:
+                builder.WriteRune('-')
+            }
+        }
+    }
+    result := strings.Trim(builder.String(), "-")
+    if result == "" {
+        return "id"
+    }
+    return result
+}
+
+func queueSelectDomID(containerID string) string {
+    return fmt.Sprintf("%s-queue-select", domSlug(containerID))
+}
+
+func boardInstructionsDomID(boardID string) string {
+    return fmt.Sprintf("%s-instructions", domSlug(boardID))
+}
+
+func boardAriaLabel(queue QueueMeta) string {
+    name := strings.TrimSpace(queue.Name)
+    if name == "" {
+        return "制作ステージ"
+    }
+    return fmt.Sprintf("%sのステージ", name)
+}
+
+func laneHeadingDomID(boardID string, stage string, label string) string {
+    return fmt.Sprintf("%s-%s-heading", domSlug(boardID), domSlug(stage, label))
+}
+
+func laneMetaDomID(boardID string, stage string) string {
+    return fmt.Sprintf("%s-%s-meta", domSlug(boardID), domSlug(stage, "meta"))
 }

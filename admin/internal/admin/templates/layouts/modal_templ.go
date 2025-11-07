@@ -29,20 +29,33 @@ func Modal(title string, body templ.Component) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"modal-overlay\" data-modal-overlay><div class=\"modal-panel\" data-modal-panel role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><header class=\"modal-header\"><div class=\"flex-1\"><h2 class=\"modal-title\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"modal-overlay\" data-modal-overlay><div class=\"modal-panel\" data-modal-panel role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modal-title\" aria-describedby=\"modal-description\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/modal.templ`, Line: 8, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/modal.templ`, Line: 5, Col: 163}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</h2></div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-modal-close><span class=\"sr-only\">閉じる</span> <svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" class=\"h-4 w-4\"><path d=\"M6 18L18 6M6 6l12 12\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"></path></svg></button></header><div class=\"modal-body\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" tabindex=\"-1\"><header class=\"modal-header\"><div class=\"flex-1\"><h2 id=\"modal-title\" class=\"modal-title\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/modal.templ`, Line: 8, Col: 58}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</h2></div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-modal-close><span class=\"sr-only\">閉じる</span> <svg viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" class=\"h-4 w-4\"><path d=\"M6 18L18 6M6 6l12 12\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"></path></svg></button></header><div id=\"modal-description\" class=\"modal-body\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -50,7 +63,7 @@ func Modal(title string, body templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

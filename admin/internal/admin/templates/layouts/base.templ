@@ -35,7 +35,7 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 				メインコンテンツへスキップ
 			</a>
 
-			<div id="mobile-sidebar" class="fixed inset-0 z-40 hidden" data-sidebar aria-hidden="true" role="dialog" aria-modal="true">
+			<div id="mobile-sidebar" class="fixed inset-0 z-40 hidden" data-sidebar aria-hidden="true" role="dialog" aria-modal="true" aria-label="メインメニュー">
 				<div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-sidebar-dismiss></div>
 				<div class="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-white shadow-xl ring-1 ring-slate-900/10">
 					<div class="flex items-center justify-between border-b border-slate-200 px-4 py-4">
@@ -54,7 +54,7 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 			</div>
 
 			<div class="flex min-h-screen">
-				<aside class="relative hidden bg-white lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:shadow-none">
+				<aside class="relative hidden bg-white lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:shadow-none" role="complementary" aria-label="管理ナビゲーション">
 					<div class="flex h-full flex-1 flex-col overflow-hidden">
 						<div class="flex-1 overflow-y-auto py-8">
                             <div class="pr-2">
@@ -65,7 +65,7 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 				</aside>
 
 				<div class="flex min-w-0 flex-1 flex-col">
-					<header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+					<header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur" role="banner">
 						<div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
 							<div class="flex items-center gap-3">
 								<button
@@ -94,7 +94,7 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 						</div>
 					</header>
 
-					<main id="content" class="flex-1 bg-slate-50">
+					<main id="content" class="flex-1 bg-slate-50" tabindex="-1">
 		<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 			@body
 		</div>
