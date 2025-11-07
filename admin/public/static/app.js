@@ -1968,6 +1968,128 @@ const initHXTriggerHandlers = () => {
   bus.addEventListener("refresh:targets", handler("refresh"));
 };
 
+const safeParseJSON = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    return null;
+  }
+};
+
+const hxHeaderContainsToast = (value) => {
+  if (typeof value !== "string" || value.trim() === "") {
+    return false;
+  }
+  const lower = value.toLowerCase();
+  if (lower.includes("showtoast") || lower.includes("\"toast\"") || lower.includes("toast:show")) {
+    return true;
+  }
+  const parsed = safeParseJSON(value);
+  if (!parsed || typeof parsed !== "object") {
+    return false;
+  }
+  return Boolean(parsed.toast || parsed.showToast || parsed["toast:show"]);
+};
+
+const hasHXToastHeader = (xhr) => {
+  if (!xhr) {
+    return false;
+  }
+  const headers = ["HX-Trigger", "HX-Trigger-After-Swap", "HX-Trigger-After-Settle"];
+  return headers.some((name) => hxHeaderContainsToast(xhr.getResponseHeader(name)));
+};
+
+const normaliseJSONToastPayload = (value) => {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string") {
+    const message = value.trim();
+    return message ? { message } : null;
+  }
+  if (typeof value === "object") {
+    return value;
+  }
+  return null;
+};
+
+const extractToastPayloadFromJSON = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    if (typeof payload === "string") {
+      return normaliseJSONToastPayload(payload);
+    }
+    return null;
+  }
+  const candidates = [payload.toast, payload.showToast, payload.toastPayload];
+  for (const candidate of candidates) {
+    const normalised = normaliseJSONToastPayload(candidate);
+    if (normalised) {
+      return normalised;
+    }
+  }
+  if (payload.data && typeof payload.data === "object" && payload.data !== payload) {
+    const fromData = extractToastPayloadFromJSON(payload.data);
+    if (fromData) {
+      return fromData;
+    }
+  }
+  if (typeof payload.message === "string") {
+    return {
+      title: typeof payload.title === "string" ? payload.title : "",
+      message: payload.message,
+      tone: typeof payload.tone === "string" ? payload.tone : payload.level || "info",
+    };
+  }
+  return null;
+};
+
+const initHTMXToastBridge = (toastApi) => {
+  if (typeof window.htmx === "undefined" || !toastApi || typeof toastApi.show !== "function") {
+    return;
+  }
+  const bus = document.body;
+  if (!bus) {
+    return;
+  }
+  bus.addEventListener("htmx:afterRequest", (event) => {
+    if (!(event instanceof CustomEvent)) {
+      return;
+    }
+    const detail = event.detail;
+    if (!detail || !detail.xhr) {
+      return;
+    }
+    const { xhr } = detail;
+    if (hasHXToastHeader(xhr)) {
+      return;
+    }
+    const contentType = xhr.getResponseHeader("Content-Type") || "";
+    if (!/json/i.test(contentType)) {
+      return;
+    }
+    const text = xhr.responseText;
+    if (typeof text !== "string" || text.trim() === "") {
+      return;
+    }
+    const payload = safeParseJSON(text);
+    if (!payload) {
+      return;
+    }
+    const toastPayload = extractToastPayloadFromJSON(payload);
+    if (!toastPayload) {
+      return;
+    }
+    toastApi.show(toastPayload);
+  });
+};
+
 const toastToneClass = (tone) => {
   const key = typeof tone === "string" ? tone.toLowerCase() : "";
   switch (key) {
@@ -1982,6 +2104,55 @@ const toastToneClass = (tone) => {
     default:
       return "toast-info";
   }
+};
+
+const readToastString = (...candidates) => {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim() !== "") {
+      return candidate.trim();
+    }
+  }
+  return "";
+};
+
+const normaliseToastActions = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const actions = [];
+  value.forEach((action) => {
+    if (action == null) {
+      return;
+    }
+    if (typeof action === "string") {
+      const label = readToastString(action);
+      if (label) {
+        actions.push({ label, dismiss: true });
+      }
+      return;
+    }
+    if (typeof action !== "object") {
+      return;
+    }
+    const label = readToastString(action.label, action.text, action.title, action.name);
+    if (!label) {
+      return;
+    }
+    const href = readToastString(action.href, action.url, action.link);
+    const target = readToastString(action.target, action.targetAttr, action.window);
+    const rel = readToastString(action.rel);
+    const download = readToastString(action.download);
+    const eventName = readToastString(action.event, action.trigger, action.action);
+    const detail =
+      action.detail !== undefined
+        ? action.detail
+        : action.payload !== undefined
+          ? action.payload
+          : action.data;
+    const dismiss = action.dismiss !== false;
+    actions.push({ label, href, target, rel, download, eventName, detail, dismiss });
+  });
+  return actions;
 };
 
 const normaliseToastDetail = (detail) => {
@@ -1999,24 +2170,16 @@ const normaliseToastDetail = (detail) => {
       tone: "info",
       duration: 6000,
       dismissible: true,
+      actions: [],
     };
   }
   if (typeof detail !== "object") {
     return null;
   }
 
-  const readString = (...candidates) => {
-    for (const candidate of candidates) {
-      if (typeof candidate === "string" && candidate.trim() !== "") {
-        return candidate.trim();
-      }
-    }
-    return "";
-  };
-
-  const tone = readString(detail.tone, detail.type, detail.level, "info");
-  const title = readString(detail.title, detail.heading);
-  const message = readString(detail.message, detail.body, detail.description, detail.value, detail.text, detail.label);
+  const tone = readToastString(detail.tone, detail.type, detail.level, "info");
+  const title = readToastString(detail.title, detail.heading);
+  const message = readToastString(detail.message, detail.body, detail.description, detail.value, detail.text, detail.label);
 
   const readNumber = (...candidates) => {
     for (const candidate of candidates) {
@@ -2054,7 +2217,8 @@ const normaliseToastDetail = (detail) => {
   }
 
   const dismissible = detail.dismissible !== false;
-  const id = readString(detail.id);
+  const id = readToastString(detail.id);
+  const actions = normaliseToastActions(detail.actions);
   if (title === "" && message === "") {
     return null;
   }
@@ -2066,6 +2230,7 @@ const normaliseToastDetail = (detail) => {
     message,
     duration,
     dismissible,
+    actions,
   };
 };
 
@@ -2147,6 +2312,54 @@ const initToastStack = () => {
     return button;
   };
 
+  const renderToastAction = (action, toast) => {
+    if (!action || typeof action !== "object") {
+      return null;
+    }
+    const label = typeof action.label === "string" ? action.label : "";
+    if (!label) {
+      return null;
+    }
+    const dismissToast = () => {
+      if (action.dismiss !== false) {
+        hideToast(toast);
+      }
+    };
+    if (action.href) {
+      const link = document.createElement("a");
+      link.className = "toast-action";
+      link.textContent = label;
+      link.href = action.href;
+      if (action.target) {
+        link.target = action.target;
+      }
+      if (action.rel) {
+        link.rel = action.rel;
+      }
+      if (action.download) {
+        link.setAttribute("download", action.download);
+      }
+      link.addEventListener("click", () => {
+        dismissToast();
+      });
+      return link;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-action";
+    button.textContent = label;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (action.eventName) {
+        const detail = action.detail !== undefined ? action.detail : {};
+        document.body.dispatchEvent(new CustomEvent(action.eventName, { detail, bubbles: true }));
+      }
+      dismissToast();
+    });
+    return button;
+  };
+
   const renderToast = (config) => {
     const toneClass = toastToneClass(config.tone);
     const toast = document.createElement("div");
@@ -2179,6 +2392,20 @@ const initToastStack = () => {
       message.className = config.title ? "toast-body" : "toast-body";
       message.textContent = config.message;
       body.appendChild(message);
+    }
+
+    if (Array.isArray(config.actions) && config.actions.length > 0) {
+      const actions = document.createElement("div");
+      actions.className = "toast-actions";
+      config.actions.forEach((action) => {
+        const element = renderToastAction(action, toast);
+        if (element) {
+          actions.appendChild(element);
+        }
+      });
+      if (actions.childElementCount > 0) {
+        body.appendChild(actions);
+      }
     }
 
     toast.appendChild(body);
@@ -3621,6 +3848,7 @@ window.hankoAdmin = window.hankoAdmin || {
     initDashboardRefresh();
     initHXTriggerHandlers();
     const toast = initToastStack();
+    initHTMXToastBridge(toast);
     initUserMenu();
     initGlobalSearchInteractions();
     initOrdersInteractions(document);

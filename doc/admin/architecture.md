@@ -96,6 +96,13 @@ func TableFragment(w http.ResponseWriter, r *http.Request) error {
 - **CSRF**: All mutating forms include hidden token inserted via `templ` helper (`csrf.HiddenInput(r)`).
 - **Caching**: Use `hx-vals` for lightweight payloads (e.g., D&D updates in production board).
 
+### Toast Notifications
+
+- Mutating HTMX handlers should emit feedback with `HX-Trigger: {"showToast": {...}}` (the existing `"toast"` key also works for backwards compatibility). The payload accepts `message`, optional `title`, `tone` (`success`, `info`, `warning`, `danger`), `duration`, `autoHide`, and `actions`.
+- The shared helper `ui.triggerToast(w, message, tone)` wraps this header; prefer it to keep tone/message formatting consistent.
+- When a handler responds with JSON (for example `hx-swap="none"` endpoints), include the payload as `{ "toast": { ... } }` or `{ "showToast": { ... } }`. The frontend automatically inspects HTMX JSON responses and surfaces the toast when no `HX-Trigger` header is present.
+- `actions` are rendered as inline buttons/links inside the toast. Each action can specify `label`, `href`/`target` for navigation, or `event` + `payload` to dispatch a custom browser event after click. Actions dismiss the toast by default; set `"dismiss": false` to keep it open.
+
 ## Asset Pipeline
 
 1. Tailwind source lives under `admin/web/styles/tailwind.css`.
