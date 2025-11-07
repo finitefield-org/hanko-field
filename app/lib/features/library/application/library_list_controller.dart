@@ -218,7 +218,9 @@ class LibraryListController extends AsyncNotifier<LibraryListState> {
     } catch (error, stackTrace) {
       final fallback = state.asData?.value ?? current;
       state = AsyncValue.data(fallback.copyWith(isLoadingMore: false));
-      Error.throwWithStackTrace(error, stackTrace);
+      // Swallow pagination errors after resetting state to avoid surfacing
+      // uncaught async exceptions when loadMore is triggered via unawaited calls.
+      Zone.current.handleUncaughtError(error, stackTrace);
     }
   }
 
