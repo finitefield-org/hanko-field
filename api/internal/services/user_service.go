@@ -16,6 +16,7 @@ import (
 	firebaseauth "firebase.google.com/go/v4/auth"
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/auth"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 	"golang.org/x/text/language"
 	"google.golang.org/grpc/codes"
@@ -114,6 +115,7 @@ const (
 	maxFavorites              = 200
 	defaultUserSearchPageSize = 20
 	maxUserSearchPageSize     = 100
+	maxUserSearchQueryLength  = 200
 )
 
 var shareableDesignStatuses = map[string]struct{}{
@@ -887,9 +889,9 @@ func (s *userService) SearchProfiles(ctx context.Context, filter UserSearchFilte
 		return domain.CursorPage[UserAdminSummary]{}, ErrUserSearchUnavailable
 	}
 
-	query := strings.TrimSpace(filter.Query)
-	if query == "" {
-		return domain.CursorPage[UserAdminSummary]{}, ErrUserSearchInvalidQuery
+	query, err := validation.ValidateSearchQuery(filter.Query, maxUserSearchQueryLength)
+	if err != nil {
+		return domain.CursorPage[UserAdminSummary]{}, fmt.Errorf("%w: %v", ErrUserSearchInvalidQuery, err)
 	}
 
 	pageSize := filter.PageSize

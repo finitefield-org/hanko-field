@@ -13,13 +13,18 @@ import (
 
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/textutil"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 )
 
 const (
-	defaultContentLocale = "ja"
-	defaultGuidePageSize = 20
-	maxGuidePageSize     = 60
+	defaultContentLocale     = "ja"
+	defaultGuidePageSize     = 20
+	maxGuidePageSize         = 60
+	maxContentSlugLength     = 120
+	maxContentTitleLength    = 160
+	maxContentSummaryLength  = 600
+	maxContentCategoryLength = 80
 )
 
 // ContentCacheInvalidator purges CDN/cache entries for content pages.
@@ -200,11 +205,19 @@ func (s *contentService) UpsertGuide(ctx context.Context, cmd UpsertContentGuide
 
 	guide := cmd.Guide
 	guide.ID = strings.TrimSpace(guide.ID)
-	guide.Slug = strings.TrimSpace(guide.Slug)
+	slug, err := validation.NormalizeSlug(guide.Slug, maxContentSlugLength)
+	if err != nil {
+		return ContentGuide{}, fmt.Errorf("%w: %v", ErrContentPageInvalid, err)
+	}
+	guide.Slug = slug
 	guide.Locale = normalizeLocaleValue(guide.Locale)
-	guide.Category = strings.TrimSpace(guide.Category)
-	guide.Title = strings.TrimSpace(guide.Title)
-	guide.Summary = strings.TrimSpace(guide.Summary)
+	guide.Category = validation.SanitizePlainText(guide.Category, maxContentCategoryLength)
+	guide.Title = validation.SanitizePlainText(guide.Title, maxContentTitleLength)
+	if guide.Title == "" {
+		return ContentGuide{}, fmt.Errorf("%w: title is required", ErrContentPageInvalid)
+	}
+	guide.Summary = validation.SanitizePlainText(guide.Summary, maxContentSummaryLength)
+	guide.BodyHTML = validation.SanitizeGuideHTML(guide.BodyHTML)
 	guide.HeroImage = strings.TrimSpace(guide.HeroImage)
 	guide.Tags = normalizeStringSlice(guide.Tags)
 	guide.Status = strings.TrimSpace(guide.Status)
@@ -276,19 +289,20 @@ func (s *contentService) UpsertPage(ctx context.Context, cmd UpsertContentPageCo
 
 	page := cmd.Page
 	page.ID = strings.TrimSpace(page.ID)
-	page.Slug = strings.TrimSpace(page.Slug)
-	if page.Slug == "" {
-		return ContentPage{}, fmt.Errorf("%w: slug is required", ErrContentPageInvalid)
+	slug, err := validation.NormalizeSlug(page.Slug, maxContentSlugLength)
+	if err != nil {
+		return ContentPage{}, fmt.Errorf("%w: %v", ErrContentPageInvalid, err)
 	}
+	page.Slug = slug
 	page.Locale = normalizeLocaleValue(page.Locale)
 	if page.Locale == "" {
 		page.Locale = s.defaultLocale
 	}
-	page.Title = strings.TrimSpace(page.Title)
+	page.Title = validation.SanitizePlainText(page.Title, maxContentTitleLength)
 	if page.Title == "" {
 		return ContentPage{}, fmt.Errorf("%w: title is required", ErrContentPageInvalid)
 	}
-	page.BodyHTML = strings.TrimSpace(page.BodyHTML)
+	page.BodyHTML = validation.SanitizePageHTML(page.BodyHTML)
 	status, err := normalizePageStatus(strings.TrimSpace(page.Status))
 	if err != nil {
 		return ContentPage{}, err

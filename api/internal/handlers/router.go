@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/platform/validation"
 )
 
 // RouteRegistrar registers a set of routes against the provided router.
@@ -52,6 +54,7 @@ func NewRouter(opts ...Option) chi.Router {
 			middleware.RequestID,
 			middleware.RealIP,
 			middleware.Timeout(defaultTimeout),
+			requestValidationMiddleware,
 		},
 	}
 
@@ -122,6 +125,54 @@ func NewRouter(opts ...Option) chi.Router {
 	})
 
 	return r
+}
+
+func requestValidationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if err := validation.DetectInjection(r.URL.Path); errors.Is(err, validation.ErrPathTraversal) {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "path contains disallowed traversal sequences", http.StatusBadRequest))
+			return
+		}
+		if err := sanitizeRouteParams(r); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		}
+		if err := sanitizeQueryParams(r); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func sanitizeRouteParams(r *http.Request) error {
+	routeCtx := chi.RouteContext(r.Context())
+	if routeCtx == nil {
+		return nil
+	}
+	for idx, key := range routeCtx.URLParams.Keys {
+		value := routeCtx.URLParams.Values[idx]
+		sanitized, err := validation.SanitizePathParam(key, value, 256)
+		if err != nil {
+			return err
+		}
+		routeCtx.URLParams.Values[idx] = sanitized
+	}
+	return nil
+}
+
+func sanitizeQueryParams(r *http.Request) error {
+	values := r.URL.Query()
+	if len(values) == 0 {
+		return nil
+	}
+	sanitized, err := validation.SanitizeQueryValues(values, 0)
+	if err != nil {
+		return err
+	}
+	r.URL.RawQuery = sanitized.Encode()
+	return nil
 }
 
 // WithMiddlewares appends additional global middleware to the router.

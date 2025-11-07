@@ -8,6 +8,7 @@ import (
 	"time"
 
 	pstorage "github.com/hanko-field/api/internal/platform/storage"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 )
 
@@ -237,7 +238,13 @@ func (s *assetService) validateUploadInput(cmd SignedUploadCommand) (uploadParam
 	}
 
 	fileName := strings.TrimSpace(cmd.FileName)
-	if fileName == "" {
+	if fileName != "" {
+		safeName, err := validation.SanitizeFileName(fileName, 0)
+		if err != nil {
+			return uploadParams{}, fmt.Errorf("%w: %v", ErrAssetInvalidInput, err)
+		}
+		fileName = safeName
+	} else {
 		fileName = fmt.Sprintf("%s_%d", kind, time.Now().UnixNano())
 	}
 

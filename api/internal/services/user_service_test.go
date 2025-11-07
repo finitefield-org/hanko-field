@@ -1747,6 +1747,24 @@ func TestUserServiceSearchProfilesReturnsFlagsAndMetadata(t *testing.T) {
 	}
 }
 
+func TestUserServiceSearchProfilesRejectsSQLInjection(t *testing.T) {
+	ctx := context.Background()
+	repo := newMemoryUserRepo(time.Now)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	if _, err := svc.SearchProfiles(ctx, UserSearchFilter{Query: "' OR 1=1 --"}); err == nil || !errors.Is(err, ErrUserSearchInvalidQuery) {
+		t.Fatalf("expected ErrUserSearchInvalidQuery, got %v", err)
+	}
+}
+
 func TestUserServiceGetAdminDetailIncludesAuthState(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2024, 7, 20, 9, 0, 0, 0, time.UTC)

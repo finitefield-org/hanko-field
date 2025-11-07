@@ -150,6 +150,25 @@ func TestAssetService_IssueSignedUpload_InvalidInput(t *testing.T) {
 	}
 }
 
+func TestAssetServiceRejectsPathTraversalFilenames(t *testing.T) {
+	svc, err := NewAssetService(AssetServiceDeps{Repository: &stubAssetRepository{uploadResponse: domain.SignedAssetResponse{}}})
+	if err != nil {
+		t.Fatalf("NewAssetService error: %v", err)
+	}
+
+	_, err = svc.IssueSignedUpload(context.Background(), SignedUploadCommand{
+		ActorID:     "user",
+		Kind:        "png",
+		Purpose:     "preview",
+		FileName:    "../etc/passwd.png",
+		ContentType: "image/png",
+		SizeBytes:   1024,
+	})
+	if err == nil || !errors.Is(err, ErrAssetInvalidInput) {
+		t.Fatalf("expected ErrAssetInvalidInput for traversal filename, got %v", err)
+	}
+}
+
 func TestAssetService_IssueSignedUpload_RepositoryError(t *testing.T) {
 	repoErr := fakeRepositoryError{unavailable: true}
 	repo := &stubAssetRepository{

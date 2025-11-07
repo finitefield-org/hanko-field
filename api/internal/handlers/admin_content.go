@@ -12,6 +12,7 @@ import (
 
 	"github.com/hanko-field/api/internal/platform/auth"
 	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/services"
 )
 
@@ -248,7 +249,7 @@ func (req adminContentGuideRequest) toModel() (services.ContentGuide, error) {
 		Category:  strings.TrimSpace(req.Category),
 		Title:     strings.TrimSpace(req.Title),
 		Summary:   strings.TrimSpace(req.Summary),
-		BodyHTML:  sanitizeGuideHTML(req.BodyHTML),
+		BodyHTML:  validation.SanitizeGuideHTML(req.BodyHTML),
 		HeroImage: strings.TrimSpace(req.HeroImage),
 		Tags:      normalizeGuideTags(req.Tags),
 		Status:    strings.TrimSpace(req.Status),
@@ -292,7 +293,7 @@ func newAdminContentGuideResponse(guide services.ContentGuide) adminContentGuide
 		Category:    strings.TrimSpace(guide.Category),
 		Title:       strings.TrimSpace(guide.Title),
 		Summary:     strings.TrimSpace(guide.Summary),
-		BodyHTML:    sanitizeGuideHTML(guide.BodyHTML),
+		BodyHTML:    validation.SanitizeGuideHTML(guide.BodyHTML),
 		HeroImage:   strings.TrimSpace(guide.HeroImage),
 		Tags:        normalizeGuideTags(guide.Tags),
 		Status:      strings.TrimSpace(guide.Status),
@@ -344,7 +345,7 @@ func (req adminContentPageRequest) toModel() services.ContentPage {
 		Slug:     strings.TrimSpace(req.Slug),
 		Locale:   normalizeLocale(req.Locale),
 		Title:    strings.TrimSpace(req.Title),
-		BodyHTML: sanitizePageHTML(req.BodyHTML),
+		BodyHTML: validation.SanitizePageHTML(req.BodyHTML),
 		SEO:      req.SEO,
 		Status:   strings.TrimSpace(req.Status),
 	}

@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/microcosm-cc/bluemonday"
 
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/httpx"
 	"github.com/hanko-field/api/internal/platform/textutil"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 	"github.com/hanko-field/api/internal/services"
 )
@@ -46,11 +46,6 @@ const (
 	pageCacheControl          = "public, max-age=900"
 	priceDisplayModeInclusive = "tax_inclusive"
 	priceDisplayModeExclusive = "tax_exclusive"
-)
-
-var (
-	guideHTMLPolicy = newGuideHTMLPolicy()
-	pageHTMLPolicy  = guideHTMLPolicy
 )
 
 // AssetURLResolver resolves storage paths to externally accessible URLs (e.g. CDN or signed links).
@@ -1569,7 +1564,7 @@ func (h *PublicHandlers) buildGuideDetailPayload(ctx context.Context, guide serv
 	}
 	return guideDetailPayload{
 		guideSummaryPayload: summary,
-		BodyHTML:            sanitizeGuideHTML(guide.BodyHTML),
+		BodyHTML:            validation.SanitizeGuideHTML(guide.BodyHTML),
 	}, nil
 }
 
@@ -1580,29 +1575,11 @@ func buildContentPagePayload(page services.ContentPage) contentPagePayload {
 		Slug:        strings.TrimSpace(page.Slug),
 		Locale:      locale,
 		Title:       strings.TrimSpace(page.Title),
-		BodyHTML:    sanitizePageHTML(page.BodyHTML),
+		BodyHTML:    validation.SanitizePageHTML(page.BodyHTML),
 		SEO:         textutil.NormalizeStringMap(page.SEO),
 		IsPublished: page.IsPublished,
 		UpdatedAt:   formatTimestamp(page.UpdatedAt),
 	}
-}
-
-func sanitizeGuideHTML(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-	sanitized := strings.TrimSpace(guideHTMLPolicy.Sanitize(trimmed))
-	return sanitized
-}
-
-func sanitizePageHTML(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-	sanitized := strings.TrimSpace(pageHTMLPolicy.Sanitize(trimmed))
-	return sanitized
 }
 
 func normalizeGuideTags(tags []string) []string {
@@ -1784,15 +1761,6 @@ func matchesETag(r *http.Request, etag string) bool {
 		}
 	}
 	return false
-}
-
-func newGuideHTMLPolicy() *bluemonday.Policy {
-	policy := bluemonday.UGCPolicy()
-	policy.AllowElements("figure", "figcaption")
-	policy.AllowAttrs("class").OnElements("figure", "figcaption", "p", "span")
-	policy.AllowAttrs("loading").OnElements("img")
-	policy.RequireNoFollowOnLinks(true)
-	return policy
 }
 
 func formatTimestamp(ts time.Time) string {
