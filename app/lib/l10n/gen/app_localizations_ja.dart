@@ -560,6 +560,129 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryExportDownloadsLabel => '元データのダウンロードを許可';
 
   @override
+  String get libraryShareLinksTitle => '共有リンク';
+
+  @override
+  String get libraryShareLinksSectionActive => '発行中のリンク';
+
+  @override
+  String get libraryShareLinksEmptyTitle => '共有リンクはまだありません';
+
+  @override
+  String get libraryShareLinksEmptySubtitle => 'モックアップやファイルを見せるにはリンクを発行してください。';
+
+  @override
+  String get libraryShareLinksCreateCta => 'リンクを発行';
+
+  @override
+  String get libraryShareLinksCreateTooltip => '共有リンクを作成';
+
+  @override
+  String get libraryShareLinksHistoryTitle => '履歴';
+
+  @override
+  String libraryShareLinksHistorySummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '期限切れ/取り消し: # 件',
+      zero: '期限切れのリンクはありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryShareLinksHistoryAction => '履歴を見る';
+
+  @override
+  String get libraryShareLinksHistoryEmpty => '期限切れのリンクがここに表示されます。';
+
+  @override
+  String get libraryShareLinksCopyAction => 'リンクをコピー';
+
+  @override
+  String get libraryShareLinksShareAction => '共有する';
+
+  @override
+  String get libraryShareLinksExtendAction => '期限を延長';
+
+  @override
+  String get libraryShareLinksExtendSheetTitle => '有効期限を延長';
+
+  @override
+  String libraryShareLinksExtendOptionDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '# 日延長',
+      one: '# 日延長',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryShareLinksRevokeTooltip => 'リンクを取り消す';
+
+  @override
+  String libraryShareLinksExpiryLabel(Object date) {
+    return '$date に有効期限';
+  }
+
+  @override
+  String libraryShareLinksExpiredOn(Object date) {
+    return '$date に期限切れ';
+  }
+
+  @override
+  String libraryShareLinksRevokedOn(Object date) {
+    return '$date に取り消し';
+  }
+
+  @override
+  String get libraryShareLinksExpiryNever => '有効期限なし';
+
+  @override
+  String libraryShareLinksVisitsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# 回のアクセス',
+      zero: 'アクセスはまだありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryShareLinksUsageCap(int limit) {
+    return '最大 $limit 回';
+  }
+
+  @override
+  String libraryShareLinksLastOpened(Object timestamp) {
+    return '最終アクセス $timestamp';
+  }
+
+  @override
+  String get libraryShareLinksCreatedSnack => '共有リンクを発行しました。';
+
+  @override
+  String get libraryShareLinksExtendSnack => '有効期限を延長しました。';
+
+  @override
+  String get libraryShareLinksRevokeSnack => 'リンクを取り消しました。';
+
+  @override
+  String get libraryShareLinksErrorGeneric => '共有リンクを更新できませんでした。もう一度お試しください。';
+
+  @override
+  String libraryShareLinksShareSubject(String id) {
+    return '$id の共有リンク';
+  }
+
+  @override
+  String get libraryShareLinksHistorySheetTitle => '期限切れのリンク';
+
+  @override
   String get libraryExportDownloadsDescription => '受け手がフル解像度のファイルを保存できます。';
 
   @override

@@ -370,6 +370,192 @@
   "description": "ダウンロード許可トグルの説明"
 }
 
+, "libraryShareLinksTitle": "共有リンク"
+, "@libraryShareLinksTitle": {
+  "description": "Title for the library share links management screen"
+}
+
+, "libraryShareLinksSectionActive": "発行中のリンク"
+, "@libraryShareLinksSectionActive": {
+  "description": "Header label for active share links"
+}
+
+, "libraryShareLinksEmptyTitle": "共有リンクはまだありません"
+, "@libraryShareLinksEmptyTitle": {
+  "description": "Title for the empty state when no share links exist"
+}
+
+, "libraryShareLinksEmptySubtitle": "モックアップやファイルを見せるにはリンクを発行してください。"
+, "@libraryShareLinksEmptySubtitle": {
+  "description": "Subtitle explaining why no share links are listed"
+}
+
+, "libraryShareLinksCreateCta": "リンクを発行"
+, "@libraryShareLinksCreateCta": {
+  "description": "Primary CTA to create a share link"
+}
+
+, "libraryShareLinksCreateTooltip": "共有リンクを作成"
+, "@libraryShareLinksCreateTooltip": {
+  "description": "Tooltip for the create link icon button"
+}
+
+, "libraryShareLinksHistoryTitle": "履歴"
+, "@libraryShareLinksHistoryTitle": {
+  "description": "Title for the history card"
+}
+
+, "libraryShareLinksHistorySummary": "{count, plural, =0 {期限切れのリンクはありません} other {期限切れ/取り消し: # 件}}"
+, "@libraryShareLinksHistorySummary": {
+  "description": "Summary describing expired/revoked links",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "3"
+    }
+  }
+}
+
+, "libraryShareLinksHistoryAction": "履歴を見る"
+, "@libraryShareLinksHistoryAction": {
+  "description": "Button label to open the history sheet"
+}
+
+, "libraryShareLinksHistoryEmpty": "期限切れのリンクがここに表示されます。"
+, "@libraryShareLinksHistoryEmpty": {
+  "description": "Message shown when there is no history"
+}
+
+, "libraryShareLinksCopyAction": "リンクをコピー"
+, "@libraryShareLinksCopyAction": {
+  "description": "Button label to copy the share link"
+}
+
+, "libraryShareLinksShareAction": "共有する"
+, "@libraryShareLinksShareAction": {
+  "description": "Button label to trigger the share sheet"
+}
+
+, "libraryShareLinksExtendAction": "期限を延長"
+, "@libraryShareLinksExtendAction": {
+  "description": "Button label to extend link expiry"
+}
+
+, "libraryShareLinksExtendSheetTitle": "有効期限を延長"
+, "@libraryShareLinksExtendSheetTitle": {
+  "description": "Title for the extend expiry sheet"
+}
+
+, "libraryShareLinksExtendOptionDays": "{days, plural, one {# 日延長} other {# 日延長}}"
+, "@libraryShareLinksExtendOptionDays": {
+  "description": "Label for extend expiry options",
+  "placeholders": {
+    "days": {
+      "type": "int",
+      "example": "30"
+    }
+  }
+}
+
+, "libraryShareLinksRevokeTooltip": "リンクを取り消す"
+, "@libraryShareLinksRevokeTooltip": {
+  "description": "Tooltip for the revoke icon button"
+}
+
+, "libraryShareLinksExpiryLabel": "{date} に有効期限"
+, "@libraryShareLinksExpiryLabel": {
+  "description": "Label describing when the link expires",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksExpiredOn": "{date} に期限切れ"
+, "@libraryShareLinksExpiredOn": {
+  "description": "Subtitle for expired links",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksRevokedOn": "{date} に取り消し"
+, "@libraryShareLinksRevokedOn": {
+  "description": "Subtitle for revoked links",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksExpiryNever": "有効期限なし"
+, "@libraryShareLinksExpiryNever": {
+  "description": "Label shown when a link does not expire"
+}
+
+, "libraryShareLinksVisitsLabel": "{count, plural, =0 {アクセスはまだありません} other {# 回のアクセス}}"
+, "@libraryShareLinksVisitsLabel": {
+  "description": "Describes how many times a link was opened",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "12"
+    }
+  }
+}
+
+, "libraryShareLinksUsageCap": "最大 {limit} 回"
+, "@libraryShareLinksUsageCap": {
+  "description": "Indicates the maximum allowed visits",
+  "placeholders": {
+    "limit": {
+      "type": "int",
+      "example": "50"
+    }
+  }
+}
+
+, "libraryShareLinksLastOpened": "最終アクセス {timestamp}"
+, "@libraryShareLinksLastOpened": {
+  "description": "Describes when the link was last accessed",
+  "placeholders": {
+    "timestamp": {}
+  }
+}
+
+, "libraryShareLinksCreatedSnack": "共有リンクを発行しました。"
+, "@libraryShareLinksCreatedSnack": {
+  "description": "Snackbar shown after creating a link"
+}
+
+, "libraryShareLinksExtendSnack": "有効期限を延長しました。"
+, "@libraryShareLinksExtendSnack": {
+  "description": "Snackbar shown after extending a link"
+}
+
+, "libraryShareLinksRevokeSnack": "リンクを取り消しました。"
+, "@libraryShareLinksRevokeSnack": {
+  "description": "Snackbar shown after revoking a link"
+}
+
+, "libraryShareLinksErrorGeneric": "共有リンクを更新できませんでした。もう一度お試しください。"
+, "@libraryShareLinksErrorGeneric": {
+  "description": "Generic error message for share link actions"
+}
+
+, "libraryShareLinksShareSubject": "{id} の共有リンク"
+, "@libraryShareLinksShareSubject": {
+  "description": "Subject used when sharing a link",
+  "placeholders": {
+    "id": {
+      "type": "String",
+      "example": "JP-INK-01"
+    }
+  }
+}
+
+, "libraryShareLinksHistorySheetTitle": "期限切れのリンク"
+, "@libraryShareLinksHistorySheetTitle": {
+  "description": "Title for the bottom sheet listing expired links"
+}
 , "libraryExportLinkTitle": "共有リンク"
 , "@libraryExportLinkTitle": {
   "description": "共有リンクセクションのタイトル"

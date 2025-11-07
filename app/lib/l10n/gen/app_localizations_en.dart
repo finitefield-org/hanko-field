@@ -580,6 +580,133 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryExportDownloadsLabel => 'Allow original downloads';
 
   @override
+  String get libraryShareLinksTitle => 'Share links';
+
+  @override
+  String get libraryShareLinksSectionActive => 'Active links';
+
+  @override
+  String get libraryShareLinksEmptyTitle => 'No share links yet';
+
+  @override
+  String get libraryShareLinksEmptySubtitle =>
+      'Issue a link so teammates can view mockups and download files.';
+
+  @override
+  String get libraryShareLinksCreateCta => 'New share link';
+
+  @override
+  String get libraryShareLinksCreateTooltip => 'Create share link';
+
+  @override
+  String get libraryShareLinksHistoryTitle => 'History';
+
+  @override
+  String libraryShareLinksHistorySummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# links expired or were revoked',
+      one: '# link expired or was revoked',
+      zero: 'No expired links yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryShareLinksHistoryAction => 'View history';
+
+  @override
+  String get libraryShareLinksHistoryEmpty => 'Expired links will appear here.';
+
+  @override
+  String get libraryShareLinksCopyAction => 'Copy link';
+
+  @override
+  String get libraryShareLinksShareAction => 'Share';
+
+  @override
+  String get libraryShareLinksExtendAction => 'Extend expiry';
+
+  @override
+  String get libraryShareLinksExtendSheetTitle => 'Extend expiry';
+
+  @override
+  String libraryShareLinksExtendOptionDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return 'Add $days $_temp0';
+  }
+
+  @override
+  String get libraryShareLinksRevokeTooltip => 'Revoke link';
+
+  @override
+  String libraryShareLinksExpiryLabel(Object date) {
+    return 'Expires on $date';
+  }
+
+  @override
+  String libraryShareLinksExpiredOn(Object date) {
+    return 'Expired on $date';
+  }
+
+  @override
+  String libraryShareLinksRevokedOn(Object date) {
+    return 'Revoked on $date';
+  }
+
+  @override
+  String get libraryShareLinksExpiryNever => 'No expiry';
+
+  @override
+  String libraryShareLinksVisitsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# visits',
+      one: '# visit',
+      zero: 'No visits yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryShareLinksUsageCap(int limit) {
+    return 'Up to $limit visits';
+  }
+
+  @override
+  String libraryShareLinksLastOpened(Object timestamp) {
+    return 'Last opened $timestamp';
+  }
+
+  @override
+  String get libraryShareLinksCreatedSnack => 'Share link issued.';
+
+  @override
+  String get libraryShareLinksExtendSnack => 'Expiry extended.';
+
+  @override
+  String get libraryShareLinksRevokeSnack => 'Link revoked.';
+
+  @override
+  String get libraryShareLinksErrorGeneric =>
+      'Unable to update share links. Try again.';
+
+  @override
+  String libraryShareLinksShareSubject(String id) {
+    return 'Share link for $id';
+  }
+
+  @override
+  String get libraryShareLinksHistorySheetTitle => 'Expired links';
+
+  @override
   String get libraryExportDownloadsDescription =>
       'Let recipients download the full-resolution file.';
 

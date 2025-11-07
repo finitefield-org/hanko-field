@@ -1112,6 +1112,180 @@ abstract class AppLocalizations {
   /// **'Allow original downloads'**
   String get libraryExportDownloadsLabel;
 
+  /// Title for the library share links management screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share links'**
+  String get libraryShareLinksTitle;
+
+  /// Header label for active share links
+  ///
+  /// In en, this message translates to:
+  /// **'Active links'**
+  String get libraryShareLinksSectionActive;
+
+  /// Title for the empty state when no share links exist
+  ///
+  /// In en, this message translates to:
+  /// **'No share links yet'**
+  String get libraryShareLinksEmptyTitle;
+
+  /// Subtitle explaining why no share links are listed
+  ///
+  /// In en, this message translates to:
+  /// **'Issue a link so teammates can view mockups and download files.'**
+  String get libraryShareLinksEmptySubtitle;
+
+  /// Primary CTA to create a share link
+  ///
+  /// In en, this message translates to:
+  /// **'New share link'**
+  String get libraryShareLinksCreateCta;
+
+  /// Tooltip for the create link icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Create share link'**
+  String get libraryShareLinksCreateTooltip;
+
+  /// Title for the history card
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get libraryShareLinksHistoryTitle;
+
+  /// Summary describing expired/revoked links
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0 {No expired links yet} one {# link expired or was revoked} other {# links expired or were revoked}}'**
+  String libraryShareLinksHistorySummary(int count);
+
+  /// Button label to open the history sheet
+  ///
+  /// In en, this message translates to:
+  /// **'View history'**
+  String get libraryShareLinksHistoryAction;
+
+  /// Message shown when there is no history
+  ///
+  /// In en, this message translates to:
+  /// **'Expired links will appear here.'**
+  String get libraryShareLinksHistoryEmpty;
+
+  /// Button label to copy the share link
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get libraryShareLinksCopyAction;
+
+  /// Button label to trigger the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get libraryShareLinksShareAction;
+
+  /// Button label to extend link expiry
+  ///
+  /// In en, this message translates to:
+  /// **'Extend expiry'**
+  String get libraryShareLinksExtendAction;
+
+  /// Title for the extend expiry sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Extend expiry'**
+  String get libraryShareLinksExtendSheetTitle;
+
+  /// Label for extend expiry options
+  ///
+  /// In en, this message translates to:
+  /// **'Add {days} {days, plural, one {day} other {days}}'**
+  String libraryShareLinksExtendOptionDays(int days);
+
+  /// Tooltip for the revoke icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke link'**
+  String get libraryShareLinksRevokeTooltip;
+
+  /// Label describing when the link expires
+  ///
+  /// In en, this message translates to:
+  /// **'Expires on {date}'**
+  String libraryShareLinksExpiryLabel(Object date);
+
+  /// Subtitle for expired links
+  ///
+  /// In en, this message translates to:
+  /// **'Expired on {date}'**
+  String libraryShareLinksExpiredOn(Object date);
+
+  /// Subtitle for revoked links
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked on {date}'**
+  String libraryShareLinksRevokedOn(Object date);
+
+  /// Label shown when a link does not expire
+  ///
+  /// In en, this message translates to:
+  /// **'No expiry'**
+  String get libraryShareLinksExpiryNever;
+
+  /// Describes how many times a link was opened
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0 {No visits yet} one {# visit} other {# visits}}'**
+  String libraryShareLinksVisitsLabel(int count);
+
+  /// Indicates the maximum allowed visits
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {limit} visits'**
+  String libraryShareLinksUsageCap(int limit);
+
+  /// Describes when the link was last accessed
+  ///
+  /// In en, this message translates to:
+  /// **'Last opened {timestamp}'**
+  String libraryShareLinksLastOpened(Object timestamp);
+
+  /// Snackbar shown after creating a link
+  ///
+  /// In en, this message translates to:
+  /// **'Share link issued.'**
+  String get libraryShareLinksCreatedSnack;
+
+  /// Snackbar shown after extending a link
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry extended.'**
+  String get libraryShareLinksExtendSnack;
+
+  /// Snackbar shown after revoking a link
+  ///
+  /// In en, this message translates to:
+  /// **'Link revoked.'**
+  String get libraryShareLinksRevokeSnack;
+
+  /// Generic error message for share link actions
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update share links. Try again.'**
+  String get libraryShareLinksErrorGeneric;
+
+  /// Subject used when sharing a link
+  ///
+  /// In en, this message translates to:
+  /// **'Share link for {id}'**
+  String libraryShareLinksShareSubject(String id);
+
+  /// Title for the bottom sheet listing expired links
+  ///
+  /// In en, this message translates to:
+  /// **'Expired links'**
+  String get libraryShareLinksHistorySheetTitle;
+
   /// Helper text for download permissions
   ///
   /// In en, this message translates to:

@@ -117,6 +117,53 @@ class DesignVersionRestoredEvent extends AnalyticsEvent {
   }
 }
 
+class LibraryShareLinkActionEvent extends AnalyticsEvent {
+  const LibraryShareLinkActionEvent({
+    required this.designId,
+    required this.linkId,
+    required this.action,
+  });
+
+  final String designId;
+  final String linkId;
+  final String action;
+
+  @override
+  String get name => 'library_share_link_action';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'design_id': designId,
+    'link_id': linkId,
+    'action': action,
+  };
+
+  @override
+  void validate() {
+    if (designId.isEmpty || designId.length > 64) {
+      throw ArgumentError.value(
+        designId,
+        'designId',
+        'Design id must be 1-64 characters.',
+      );
+    }
+    if (linkId.isEmpty || linkId.length > 64) {
+      throw ArgumentError.value(
+        linkId,
+        'linkId',
+        'Link id must be 1-64 characters.',
+      );
+    }
+    if (action.isEmpty || action.length > 24) {
+      throw ArgumentError.value(
+        action,
+        'action',
+        'Action must be 1-24 characters.',
+      );
+    }
+  }
+}
+
 class ScreenViewAnalyticsEvent {
   const ScreenViewAnalyticsEvent({
     required this.screenName,

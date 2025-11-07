@@ -620,6 +620,193 @@
   "description": "Switch label for download permissions"
 }
 
+, "libraryShareLinksTitle": "Share links"
+, "@libraryShareLinksTitle": {
+  "description": "Title for the library share links management screen"
+}
+
+, "libraryShareLinksSectionActive": "Active links"
+, "@libraryShareLinksSectionActive": {
+  "description": "Header label for active share links"
+}
+
+, "libraryShareLinksEmptyTitle": "No share links yet"
+, "@libraryShareLinksEmptyTitle": {
+  "description": "Title for the empty state when no share links exist"
+}
+
+, "libraryShareLinksEmptySubtitle": "Issue a link so teammates can view mockups and download files."
+, "@libraryShareLinksEmptySubtitle": {
+  "description": "Subtitle explaining why no share links are listed"
+}
+
+, "libraryShareLinksCreateCta": "New share link"
+, "@libraryShareLinksCreateCta": {
+  "description": "Primary CTA to create a share link"
+}
+
+, "libraryShareLinksCreateTooltip": "Create share link"
+, "@libraryShareLinksCreateTooltip": {
+  "description": "Tooltip for the create link icon button"
+}
+
+, "libraryShareLinksHistoryTitle": "History"
+, "@libraryShareLinksHistoryTitle": {
+  "description": "Title for the history card"
+}
+
+, "libraryShareLinksHistorySummary": "{count, plural, =0 {No expired links yet} one {# link expired or was revoked} other {# links expired or were revoked}}"
+, "@libraryShareLinksHistorySummary": {
+  "description": "Summary describing expired/revoked links",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "3"
+    }
+  }
+}
+
+, "libraryShareLinksHistoryAction": "View history"
+, "@libraryShareLinksHistoryAction": {
+  "description": "Button label to open the history sheet"
+}
+
+, "libraryShareLinksHistoryEmpty": "Expired links will appear here."
+, "@libraryShareLinksHistoryEmpty": {
+  "description": "Message shown when there is no history"
+}
+
+, "libraryShareLinksCopyAction": "Copy link"
+, "@libraryShareLinksCopyAction": {
+  "description": "Button label to copy the share link"
+}
+
+, "libraryShareLinksShareAction": "Share"
+, "@libraryShareLinksShareAction": {
+  "description": "Button label to trigger the share sheet"
+}
+
+, "libraryShareLinksExtendAction": "Extend expiry"
+, "@libraryShareLinksExtendAction": {
+  "description": "Button label to extend link expiry"
+}
+
+, "libraryShareLinksExtendSheetTitle": "Extend expiry"
+, "@libraryShareLinksExtendSheetTitle": {
+  "description": "Title for the extend expiry sheet"
+}
+
+, "libraryShareLinksExtendOptionDays": "Add {days} {days, plural, one {day} other {days}}"
+, "@libraryShareLinksExtendOptionDays": {
+  "description": "Label for extend expiry options",
+  "placeholders": {
+    "days": {
+      "type": "int",
+      "example": "30"
+    }
+  }
+}
+
+, "libraryShareLinksRevokeTooltip": "Revoke link"
+, "@libraryShareLinksRevokeTooltip": {
+  "description": "Tooltip for the revoke icon button"
+}
+
+, "libraryShareLinksExpiryLabel": "Expires on {date}"
+, "@libraryShareLinksExpiryLabel": {
+  "description": "Label describing when the link expires",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksExpiredOn": "Expired on {date}"
+, "@libraryShareLinksExpiredOn": {
+  "description": "Subtitle for expired links",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksRevokedOn": "Revoked on {date}"
+, "@libraryShareLinksRevokedOn": {
+  "description": "Subtitle for revoked links",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryShareLinksExpiryNever": "No expiry"
+, "@libraryShareLinksExpiryNever": {
+  "description": "Label shown when a link does not expire"
+}
+
+, "libraryShareLinksVisitsLabel": "{count, plural, =0 {No visits yet} one {# visit} other {# visits}}"
+, "@libraryShareLinksVisitsLabel": {
+  "description": "Describes how many times a link was opened",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "12"
+    }
+  }
+}
+
+, "libraryShareLinksUsageCap": "Up to {limit} visits"
+, "@libraryShareLinksUsageCap": {
+  "description": "Indicates the maximum allowed visits",
+  "placeholders": {
+    "limit": {
+      "type": "int",
+      "example": "50"
+    }
+  }
+}
+
+, "libraryShareLinksLastOpened": "Last opened {timestamp}"
+, "@libraryShareLinksLastOpened": {
+  "description": "Describes when the link was last accessed",
+  "placeholders": {
+    "timestamp": {}
+  }
+}
+
+, "libraryShareLinksCreatedSnack": "Share link issued."
+, "@libraryShareLinksCreatedSnack": {
+  "description": "Snackbar shown after creating a link"
+}
+
+, "libraryShareLinksExtendSnack": "Expiry extended."
+, "@libraryShareLinksExtendSnack": {
+  "description": "Snackbar shown after extending a link"
+}
+
+, "libraryShareLinksRevokeSnack": "Link revoked."
+, "@libraryShareLinksRevokeSnack": {
+  "description": "Snackbar shown after revoking a link"
+}
+
+, "libraryShareLinksErrorGeneric": "Unable to update share links. Try again."
+, "@libraryShareLinksErrorGeneric": {
+  "description": "Generic error message for share link actions"
+}
+
+, "libraryShareLinksShareSubject": "Share link for {id}"
+, "@libraryShareLinksShareSubject": {
+  "description": "Subject used when sharing a link",
+  "placeholders": {
+    "id": {
+      "type": "String",
+      "example": "JP-INK-01"
+    }
+  }
+}
+
+, "libraryShareLinksHistorySheetTitle": "Expired links"
+, "@libraryShareLinksHistorySheetTitle": {
+  "description": "Title for the bottom sheet listing expired links"
+}
+
 , "libraryExportDownloadsDescription": "Let recipients download the full-resolution file."
 , "@libraryExportDownloadsDescription": {
   "description": "Helper text for download permissions"
