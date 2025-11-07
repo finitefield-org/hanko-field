@@ -2,17 +2,25 @@ package helpers
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/i18n"
 )
+
+var defaultLocale = i18n.Default().Canonicalize("ja-JP")
 
 // Currency formats amounts (in minor units) with the given ISO currency code.
 func Currency(amount int64, currency string) string {
+	return CurrencyLocalized(context.Background(), amount, currency)
+}
+
+// CurrencyLocalized formats currency using the locale derived from context.
+func CurrencyLocalized(ctx context.Context, amount int64, currency string) string {
 	symbol := currencySymbol(currency)
 
 	sign := ""
@@ -21,97 +29,79 @@ func Currency(amount int64, currency string) string {
 		amount = -amount
 	}
 
-	major := amount / 100
-	minor := amount % 100
-
-	return fmt.Sprintf("%s%s%d.%02d", sign, symbol, major, minor)
+	printer := i18n.PrinterFromContext(ctx)
+	value := float64(amount) / 100
+	return sign + symbol + printer.Sprintf("%.2f", value)
 }
 
 // Date formats the timestamp in the provided layout (defaults to 2006-01-02 15:04 MST).
 func Date(ts time.Time, layout string) string {
+	return DateLocalized(context.Background(), ts, layout)
+}
+
+var localizedLayouts = map[string]string{
+	"2006-01-02 15:04":     "admin.dates.format.full",
+	"2006-01-02":           "admin.dates.format.date",
+	"15:04":                "admin.dates.format.time",
+	"15:04:05":             "admin.dates.format.time_seconds",
+	"01/02 15:04":          "admin.dates.format.month_day",
+	"01/02 15:04:05":       "admin.dates.format.month_day_seconds",
+	"2006/01/02 15:04":     "admin.dates.format.full",
+	"2006/01/02":           "admin.dates.format.date",
+	"2006-01-02 15:04 MST": "admin.dates.format.full_tz",
+}
+
+// DateLocalized formats the timestamp according to the request locale.
+func DateLocalized(ctx context.Context, ts time.Time, layout string) string {
 	if layout == "" {
-		layout = "2006-01-02 15:04 MST"
+		layout = "2006-01-02 15:04"
+	}
+	if key, ok := localizedLayouts[layout]; ok {
+		if translated := i18n.TranslateContext(ctx, key); translated != "" && translated != key {
+			layout = translated
+		}
 	}
 	return ts.In(time.Local).Format(layout)
 }
 
 // Relative returns a coarse "time ago" string.
 func Relative(ts time.Time) string {
+	return RelativeLocalized(context.Background(), ts)
+}
+
+// RelativeLocalized renders a coarse relative time using the locale.
+func RelativeLocalized(ctx context.Context, ts time.Time) string {
 	now := time.Now()
 	diff := now.Sub(ts)
-	if diff < time.Minute {
-		return "just now"
+	switch {
+	case diff < time.Minute:
+		return i18n.TranslateContext(ctx, "admin.relative.just_now")
+	case diff < time.Hour:
+		return i18n.TranslateContext(ctx, "admin.relative.minutes", int(diff.Minutes()))
+	case diff < 24*time.Hour:
+		return i18n.TranslateContext(ctx, "admin.relative.hours", int(diff.Hours()))
+	default:
+		return DateLocalized(ctx, ts, "2006-01-02")
 	}
-	if diff < time.Hour {
-		return fmt.Sprintf("%dm ago", int(diff.Minutes()))
-	}
-	if diff < 24*time.Hour {
-		return fmt.Sprintf("%dh ago", int(diff.Hours()))
-	}
-	return ts.Format("2006-01-02")
 }
 
-// I18N is a placeholder translation helper.
-var translations = map[string]string{
-	"common.last_updated":                         "最終更新",
-	"admin.customers.title":                       "顧客一覧",
-	"admin.customers.description":                 "顧客の検索、セグメント確認、リスクフラグの把握を行います。",
-	"admin.customers.breadcrumb":                  "顧客",
-	"admin.customers.metrics.total.label":         "登録顧客",
-	"admin.customers.metrics.total.subtext":       "うち停止 %d",
-	"admin.customers.metrics.active_rate.label":   "アクティブ率",
-	"admin.customers.metrics.active_rate.subtext": "アクティブ %d",
-	"admin.customers.metrics.ltv.label":           "累計LTV",
-	"admin.customers.metrics.ltv.subtext":         "平均注文額 %s",
-	"admin.customers.metrics.high_value.label":    "ハイバリュー顧客",
-	"admin.customers.metrics.high_value.subtext":  "LTV 100万円以上",
-	"admin.customers.segments.heading":            "セグメント",
-	"admin.customers.segments.all":                "全て",
-	"admin.customers.segments.tooltip":            "%s セグメント",
-	"admin.customers.filters.search.label":        "検索",
-	"admin.customers.filters.search.placeholder":  "名前・メール・会社名で検索",
-	"admin.customers.filters.status.label":        "ステータス",
-	"admin.customers.filters.tier.label":          "ティア",
-	"admin.customers.filters.apply":               "適用",
-	"admin.customers.filters.reset":               "リセット",
-	"admin.customers.loading":                     "読み込み中…",
-	"admin.customers.status.all":                  "全て",
-	"admin.customers.status.active":               "アクティブ",
-	"admin.customers.status.invited":              "未アクティブ",
-	"admin.customers.status.deactivated":          "無効化",
-	"admin.customers.tier.all":                    "全てのティア",
-	"admin.customers.tier.vip":                    "VIP",
-	"admin.customers.tier.gold":                   "ゴールド",
-	"admin.customers.tier.silver":                 "シルバー",
-	"admin.customers.tier.bronze":                 "ブロンズ",
-	"admin.customers.tier.other":                  "その他",
-	"admin.customers.table.header.customer":       "顧客",
-	"admin.customers.table.header.orders":         "注文数",
-	"admin.customers.table.header.ltv":            "LTV",
-	"admin.customers.table.header.last_order":     "最終注文",
-	"admin.customers.table.header.flags":          "フラグ",
-	"admin.customers.table.header.actions":        "アクション",
-	"admin.customers.table.empty":                 "条件に一致する顧客はありません。フィルタを調整してください。",
-	"admin.customers.table.orders_count":          "%d件",
-	"admin.customers.table.no_orders":             "未注文",
-	"admin.customers.table.action.view":           "詳細",
-	"admin.customers.avatar.alt_named":            "%sのアバター",
-	"admin.customers.avatar.alt_generic":          "ユーザーのアバター",
-	"admin.customers.avatar.initials_fallback":    "??",
-	"admin.customers.risk.high":                   "ハイリスク",
-	"admin.customers.risk.medium":                 "注意",
-	"admin.customers.risk.low":                    "安定",
-}
-
+// I18N returns the default-locale translation for the given key.
 func I18N(key string, args ...any) string {
-	text, ok := translations[key]
-	if !ok {
-		text = key
+	return i18n.Default().Translate(defaultLocale, key, args...)
+}
+
+// Localize resolves the translation using the locale stored on the context.
+func Localize(ctx context.Context, key string, args ...any) string {
+	return i18n.TranslateContext(ctx, key, args...)
+}
+
+// LocaleCode returns the resolved locale for the current context.
+func LocaleCode(ctx context.Context) string {
+	locale := strings.TrimSpace(i18n.FromContext(ctx))
+	if locale == "" {
+		return defaultLocale
 	}
-	if len(args) == 0 {
-		return text
-	}
-	return fmt.Sprintf(text, args...)
+	return locale
 }
 
 func currencySymbol(code string) string {

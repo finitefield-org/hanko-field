@@ -35,6 +35,8 @@ func main() {
 	cfg := httpserver.Config{
 		Address:           getEnv("ADMIN_HTTP_ADDR", ":8080"),
 		BasePath:          getEnv("ADMIN_BASE_PATH", "/admin"),
+		DefaultLocale:     getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
+		SupportedLocales:  getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),
 		Authenticator:     buildAuthenticator(rootCtx),
 		CatalogService:    buildCatalogService(),
 		ProfileService:    buildProfileService(),
@@ -156,6 +158,24 @@ func getEnvInt(key string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func getEnvList(key string, fallback []string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return append([]string(nil), fallback...)
+	}
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	if len(values) == 0 && len(fallback) > 0 {
+		return append([]string(nil), fallback...)
+	}
+	return values
 }
 
 func buildAuthenticator(ctx context.Context) middleware.Authenticator {

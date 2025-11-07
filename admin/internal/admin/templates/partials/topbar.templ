@@ -170,6 +170,7 @@ templ TopbarActions() {
 		@NotificationsButton()
 	}
 	@WorkloadBadges()
+	@LanguageSwitcher()
 	@UserMenu()
 }
 
@@ -178,9 +179,32 @@ templ EnvironmentBadge() {
 		<span class="inline-flex" data-environment-badge>
 			<span class={ helpers.BadgeClass(environmentTone(env)) } title={ environmentDisplay(env) }>
 				<span aria-hidden="true">{ environmentLabel(env) }</span>
-				<span class="sr-only">環境: { environmentDisplay(env) }</span>
+				<span class="sr-only">{ helpers.Localize(ctx, "admin.topbar.environment") }: { environmentDisplay(env) }</span>
 			</span>
 		</span>
+	}
+}
+
+templ LanguageSwitcher() {
+	if base := helpers.BasePath(ctx); base != "" {
+		<form
+			class="hidden items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm md:inline-flex"
+			hx-post={ topbarRoute(base, "/preferences/locale") }
+			hx-trigger="change"
+			hx-target="this"
+			hx-swap="none"
+		>
+			<input type="hidden" name="csrf_token" value={ middleware.CSRFTokenFromContext(ctx) } />
+			<label for="locale-select" class="sr-only">{ helpers.Localize(ctx, "admin.topbar.language.label") }</label>
+			<select
+				id="locale-select"
+				name="locale"
+				class="bg-transparent text-sm font-medium focus:outline-none"
+			>
+				<option value="ja-JP" selected={ helpers.LocaleCode(ctx) == "ja-JP" }>{ helpers.Localize(ctx, "admin.topbar.language.japanese") }</option>
+				<option value="en-US" selected={ helpers.LocaleCode(ctx) == "en-US" }>{ helpers.Localize(ctx, "admin.topbar.language.english") }</option>
+			</select>
+		</form>
 	}
 }
 
@@ -194,7 +218,7 @@ templ SearchShortcut() {
 			hx-swap="innerHTML"
 			data-topbar-search-trigger
 			data-search-href={ topbarRoute(base, "/search") }
-			aria-label="検索を開く（/）"
+			aria-label={ helpers.Localize(ctx, "admin.topbar.search.aria") }
 		>
 			<span class="inline-flex items-center justify-center rounded-md bg-slate-100 p-1 text-sm text-slate-600 transition group-hover:bg-slate-200 group-hover:text-slate-900">
 				<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4">

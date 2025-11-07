@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/securecookie"
@@ -43,6 +44,7 @@ type Data struct {
 	User         *User           `json:"user,omitempty"`
 	FeatureFlags map[string]bool `json:"featureFlags,omitempty"`
 	RefreshToken string          `json:"refreshToken,omitempty"`
+	Locale       string          `json:"locale,omitempty"`
 }
 
 // Session holds mutable state for the current request lifecycle.
@@ -397,6 +399,21 @@ func (s *Session) SetFeatureFlags(flags map[string]bool) {
 // RefreshToken returns the stored refresh token (if any).
 func (s *Session) RefreshToken() string {
 	return s.data.RefreshToken
+}
+
+// Locale returns the stored locale preference.
+func (s *Session) Locale() string {
+	return s.data.Locale
+}
+
+// SetLocale updates the locale preference.
+func (s *Session) SetLocale(locale string) {
+	locale = strings.TrimSpace(locale)
+	if s.data.Locale == locale {
+		return
+	}
+	s.data.Locale = locale
+	s.dirty = true
 }
 
 // SetRefreshToken updates the stored refresh token for remember-me support.

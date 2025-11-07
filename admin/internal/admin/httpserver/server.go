@@ -38,6 +38,8 @@ type Config struct {
 	Address              string
 	BasePath             string
 	LoginPath            string
+	DefaultLocale        string
+	SupportedLocales     []string
 	Authenticator        custommw.Authenticator
 	AuditLogsService     adminaudit.Service
 	AssetsService        adminassets.Service
@@ -142,6 +144,10 @@ func New(cfg Config) *http.Server {
 		CSRF:          csrfCfg,
 		UI:            uiHandlers,
 		Environment:   environment,
+		Locale: custommw.LocaleConfig{
+			Default:   cfg.DefaultLocale,
+			Supported: cfg.SupportedLocales,
+		},
 	})
 
 	return &http.Server{
@@ -160,6 +166,7 @@ type routeOptions struct {
 	CSRF          custommw.CSRFConfig
 	UI            *ui.Handlers
 	Environment   string
+	Locale        custommw.LocaleConfig
 }
 
 func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
@@ -174,6 +181,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 		custommw.HTMX(),
 		custommw.NoStore(),
 		custommw.Environment(opts.Environment),
+		custommw.Locale(opts.Locale),
 	)
 
 	loginChain := router.With(shared...)
@@ -198,6 +206,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			protected.Get("/", uiHandlers.Dashboard)
 			protected.Get("/fragments/kpi", uiHandlers.DashboardKPIs)
 			protected.Get("/fragments/alerts", uiHandlers.DashboardAlerts)
+			protected.Post("/preferences/locale", uiHandlers.UpdateLocalePreference)
 			protected.Route("/profile", func(pr chi.Router) {
 				pr.Get("/", uiHandlers.ProfilePage)
 				pr.Get("/mfa/totp", uiHandlers.MFATOTPStart)
