@@ -515,6 +515,7 @@ func main() {
 	middlewares := []func(http.Handler) http.Handler{
 		observability.HTTPMetricsMiddleware(httpMetrics),
 		observability.InjectLoggerMiddleware(logger.Named("http")),
+		observability.CorrelationIDMiddleware(),
 		observability.TraceMiddleware(projectID),
 		observability.RecoveryMiddleware(logger.Named("http")),
 		observability.RequestLoggerMiddleware(projectID),

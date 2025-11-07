@@ -62,6 +62,7 @@ func TestRequestLoggerMiddlewareEnrichesContextAndLogsLifecycle(t *testing.T) {
 	ctx = requestctx.WithLogger(ctx, baseLogger)
 	ctx = requestctx.WithTrace(ctx, requestctx.TraceInfo{TraceID: "abc123", SpanID: "def456", ProjectID: "project-1"})
 	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req-789")
+	ctx = requestctx.WithCorrelationID(ctx, "corr-123")
 	ctx = auth.WithIdentity(ctx, &auth.Identity{UID: " user-01\t\n"})
 	req = req.WithContext(ctx)
 	req.RemoteAddr = "10.0.0.15:8080"
@@ -92,6 +93,9 @@ func TestRequestLoggerMiddlewareEnrichesContextAndLogsLifecycle(t *testing.T) {
 	if startFields["request_id"] != "req-789" {
 		t.Fatalf("expected request_id field, got %+v", startFields)
 	}
+	if startFields["correlation_id"] != "corr-123" {
+		t.Fatalf("expected correlation_id field, got %+v", startFields)
+	}
 	if startFields["route"] != "/orders/123" {
 		t.Fatalf("expected sanitized route, got %+v", startFields)
 	}
@@ -112,6 +116,9 @@ func TestRequestLoggerMiddlewareEnrichesContextAndLogsLifecycle(t *testing.T) {
 	}
 	if handlerFields := contextMap(handlerLog); handlerFields["route"] != "/orders/123" {
 		t.Fatalf("expected handler log to inherit context fields")
+	}
+	if handlerFields := contextMap(handlerLog); handlerFields["correlation_id"] != "corr-123" {
+		t.Fatalf("expected handler log to retain correlation id")
 	}
 
 	completed := entries[2]
@@ -212,6 +219,62 @@ func TestRecoveryMiddlewareFallsBackToProvidedLogger(t *testing.T) {
 
 	if len(recorded.All()) != 1 {
 		t.Fatalf("expected panic log using fallback logger")
+	}
+}
+
+func TestCorrelationIDMiddlewareHonorsHeader(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Correlation-ID", " corr-789 \n")
+	rr := httptest.NewRecorder()
+
+	handler := CorrelationIDMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := requestctx.CorrelationID(r.Context()); got != "corr-789" {
+			t.Fatalf("expected sanitized correlation id, got %q", got)
+		}
+	}))
+
+	handler.ServeHTTP(rr, req)
+
+	if header := rr.Header().Get("X-Correlation-ID"); header != "corr-789" {
+		t.Fatalf("expected response header to echo correlation id, got %q", header)
+	}
+}
+
+func TestCorrelationIDMiddlewareFallsBackToRequestID(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req-456")
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	handler := CorrelationIDMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := requestctx.CorrelationID(r.Context()); got != "req-456" {
+			t.Fatalf("expected fallback to request id, got %q", got)
+		}
+	}))
+
+	handler.ServeHTTP(rr, req)
+
+	if header := rr.Header().Get("X-Correlation-ID"); header != "req-456" {
+		t.Fatalf("expected header to surface fallback value, got %q", header)
+	}
+}
+
+func TestCorrelationIDMiddlewareGeneratesWhenAbsent(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+
+	handler := CorrelationIDMiddleware(WithCorrelationIDGenerator(func() string {
+		return "generated-123"
+	}))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := requestctx.CorrelationID(r.Context()); got != "generated-123" {
+			t.Fatalf("expected generated id, got %q", got)
+		}
+	}))
+
+	handler.ServeHTTP(rr, req)
+
+	if header := rr.Header().Get("X-Correlation-ID"); header != "generated-123" {
+		t.Fatalf("expected generated id to be returned to caller, got %q", header)
 	}
 }
 
