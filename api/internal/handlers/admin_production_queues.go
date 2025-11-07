@@ -24,18 +24,37 @@ const (
 
 // AdminProductionQueueHandlers exposes CRUD operations for production queue configurations.
 type AdminProductionQueueHandlers struct {
-	authn  *auth.Authenticator
-	queues services.ProductionQueueService
-	orders services.OrderService
+	authn         *auth.Authenticator
+	queues        services.ProductionQueueService
+	orders        services.OrderService
+	queueMetrics  services.QueueDepthRecorder
+	recordMetrics bool
 }
 
+// AdminProductionQueueOption customises handler construction.
+type AdminProductionQueueOption func(*AdminProductionQueueHandlers)
+
 // NewAdminProductionQueueHandlers constructs the handler set for production queue administration.
-func NewAdminProductionQueueHandlers(authn *auth.Authenticator, queues services.ProductionQueueService, orders services.OrderService) *AdminProductionQueueHandlers {
-	return &AdminProductionQueueHandlers{
+func NewAdminProductionQueueHandlers(authn *auth.Authenticator, queues services.ProductionQueueService, orders services.OrderService, opts ...AdminProductionQueueOption) *AdminProductionQueueHandlers {
+	handler := &AdminProductionQueueHandlers{
 		authn:  authn,
 		queues: queues,
 		orders: orders,
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(handler)
+		}
+	}
+	if handler.queueMetrics != nil {
+		handler.recordMetrics = true
+		if provider, ok := queues.(queueMetricsProvider); ok {
+			if provider.QueueMetricsRecorder() != nil {
+				handler.recordMetrics = false
+			}
+		}
+	}
+	return handler
 }
 
 // Routes registers production queue endpoints under /production-queues.
@@ -243,6 +262,7 @@ func (h *AdminProductionQueueHandlers) getQueueWIP(w http.ResponseWriter, r *htt
 		writeAdminProductionQueueError(ctx, w, err, "get_wip")
 		return
 	}
+	h.recordQueueDepth(ctx, summary)
 
 	writeJSONResponse(w, http.StatusOK, newAdminProductionQueueWIPResponse(summary))
 }
@@ -460,6 +480,29 @@ func newAdminProductionQueueWIPResponse(summary services.ProductionQueueWIPSumma
 		resp.GeneratedAt = summary.GeneratedAt
 	}
 	return resp
+}
+
+func (h *AdminProductionQueueHandlers) recordQueueDepth(ctx context.Context, summary services.ProductionQueueWIPSummary) {
+	if !h.recordMetrics || h.queueMetrics == nil {
+		return
+	}
+	queueID := strings.TrimSpace(summary.QueueID)
+	if queueID == "" {
+		return
+	}
+	h.queueMetrics.RecordQueueDepth(ctx, queueID, summary.Total, summary.StatusCounts)
+}
+
+// queueMetricsProvider allows detection of services that already emit queue metrics.
+type queueMetricsProvider interface {
+	QueueMetricsRecorder() services.QueueDepthRecorder
+}
+
+// WithProductionQueueMetrics configures an external recorder for queue depth metrics when the service does not emit them.
+func WithProductionQueueMetrics(metrics services.QueueDepthRecorder) AdminProductionQueueOption {
+	return func(h *AdminProductionQueueHandlers) {
+		h.queueMetrics = metrics
+	}
 }
 
 type adminQueueAssignRequest struct {

@@ -276,6 +276,73 @@ func TestAdminProductionQueueHandlers_GetQueueWIP_Success(t *testing.T) {
 	}
 }
 
+func TestAdminProductionQueueHandlers_GetQueueWIP_RecordsMetrics(t *testing.T) {
+	service := &stubAdminProductionQueueService{
+		wipResult: services.ProductionQueueWIPSummary{
+			QueueID: "pqu_depth",
+			StatusCounts: map[string]int{
+				"waiting": 2,
+			},
+			Total: 2,
+		},
+	}
+	recorder := &captureQueueDepthRecorder{}
+	handler := NewAdminProductionQueueHandlers(nil, service, nil, WithProductionQueueMetrics(recorder))
+
+	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_depth/wip", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_depth")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if len(recorder.records) != 1 {
+		t.Fatalf("expected 1 metrics record, got %d", len(recorder.records))
+	}
+	record := recorder.records[0]
+	if record.queueID != "pqu_depth" {
+		t.Fatalf("expected queue id pqu_depth, got %s", record.queueID)
+	}
+	if record.total != 2 {
+		t.Fatalf("expected total 2, got %d", record.total)
+	}
+	if record.counts["waiting"] != 2 {
+		t.Fatalf("expected waiting count 2, got %v", record.counts)
+	}
+}
+
+func TestAdminProductionQueueHandlers_GetQueueWIP_SkipsMetricsWhenServiceHandles(t *testing.T) {
+	internalRecorder := &captureQueueDepthRecorder{}
+	service := &stubAdminProductionQueueService{
+		wipResult: services.ProductionQueueWIPSummary{
+			QueueID: "pqu_depth",
+			Total:   1,
+		},
+		metrics: internalRecorder,
+	}
+	recorder := &captureQueueDepthRecorder{}
+	handler := NewAdminProductionQueueHandlers(nil, service, nil, WithProductionQueueMetrics(recorder))
+
+	req := httptest.NewRequest(http.MethodGet, "/production-queues/pqu_depth/wip", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("queueID", "pqu_depth")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+	req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "admin", Roles: []string{auth.RoleAdmin}}))
+	rec := httptest.NewRecorder()
+
+	handler.getQueueWIP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if len(recorder.records) != 0 {
+		t.Fatalf("expected no external metrics, got %d", len(recorder.records))
+	}
+}
+
 func TestAdminProductionQueueHandlers_GetQueueWIP_NotFound(t *testing.T) {
 	service := &stubAdminProductionQueueService{
 		wipErr: services.ErrProductionQueueNotFound,
@@ -475,6 +542,7 @@ type stubAdminProductionQueueService struct {
 	wipQueueID   string
 	wipResult    services.ProductionQueueWIPSummary
 	wipErr       error
+	metrics      services.QueueDepthRecorder
 }
 
 func (s *stubAdminProductionQueueService) ListQueues(ctx context.Context, filter services.ProductionQueueListFilter) (domain.CursorPage[services.ProductionQueue], error) {
@@ -525,4 +593,30 @@ func (s *stubAdminProductionQueueService) QueueWIPSummary(ctx context.Context, q
 		return services.ProductionQueueWIPSummary{}, s.wipErr
 	}
 	return s.wipResult, nil
+}
+
+func (s *stubAdminProductionQueueService) QueueMetricsRecorder() services.QueueDepthRecorder {
+	return s.metrics
+}
+
+type queueDepthRecord struct {
+	queueID string
+	total   int
+	counts  map[string]int
+}
+
+type captureQueueDepthRecorder struct {
+	records []queueDepthRecord
+}
+
+func (c *captureQueueDepthRecorder) RecordQueueDepth(_ context.Context, queueID string, total int, statusCounts map[string]int) {
+	cloned := make(map[string]int, len(statusCounts))
+	for key, value := range statusCounts {
+		cloned[key] = value
+	}
+	c.records = append(c.records, queueDepthRecord{
+		queueID: queueID,
+		total:   total,
+		counts:  cloned,
+	})
 }

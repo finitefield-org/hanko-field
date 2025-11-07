@@ -467,6 +467,7 @@ func main() {
 	if rateLimitWindow <= 0 {
 		rateLimitWindow = time.Minute
 	}
+	queueMetrics := observability.NewQueueDepthMetrics(logger.Named("metrics.production_queue"))
 
 	designService, err := services.NewDesignService(services.DesignServiceDeps{
 		Designs:             designRepo,
@@ -650,7 +651,7 @@ func main() {
 		OrderPageSize:        cfg.Inventory.LowStockOrderPageSize,
 		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
 	}))
-	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService)
+	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService, handlers.WithProductionQueueMetrics(queueMetrics))
 	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, auditService)
 	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, invoiceService)
 	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)

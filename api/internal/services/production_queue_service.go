@@ -223,6 +223,14 @@ func (s *productionQueueService) QueueWIPSummary(ctx context.Context, queueID st
 	return result, nil
 }
 
+// QueueMetricsRecorder exposes the recorder used for queue depth instrumentation.
+func (s *productionQueueService) QueueMetricsRecorder() QueueDepthRecorder {
+	if s == nil {
+		return nil
+	}
+	return s.metrics
+}
+
 func (s *productionQueueService) normalizeQueue(input ProductionQueue, now time.Time, existing *domain.ProductionQueue, isCreate bool) (domain.ProductionQueue, error) {
 	var queue domain.ProductionQueue
 	queue.Metadata = normalizeQueueMetadata(input.Metadata)
