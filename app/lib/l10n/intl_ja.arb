@@ -96,6 +96,101 @@
 , "libraryEmptyCta": "デザインを作成"
 , "libraryActionPreview": "プレビュー"
 , "libraryActionShare": "共有"
+, "libraryActionEdit": "編集"
+, "libraryActionExport": "書き出し"
+, "libraryActionDuplicate": "複製"
+, "libraryActionReorder": "再注文"
+
+, "libraryDetailTabDetails": "詳細"
+, "libraryDetailTabActivity": "アクティビティ"
+, "libraryDetailTabFiles": "ファイル"
+, "libraryDetailQuickActions": "クイックアクション"
+, "libraryDetailMetadataTitle": "デザイン情報"
+, "libraryDetailAiTitle": "AI評価"
+, "libraryDetailVersionTitle": "バージョン"
+, "libraryDetailUsageTitle": "利用履歴"
+, "libraryDetailFilesTitle": "ファイル"
+, "libraryDetailMetadataId": "デザインID"
+, "libraryDetailMetadataStatus": "ステータス"
+, "libraryDetailMetadataPersona": "ペルソナ"
+, "libraryDetailMetadataShape": "形状・サイズ"
+, "libraryDetailMetadataWriting": "書体"
+, "libraryDetailMetadataUpdated": "最終更新"
+, "libraryDetailMetadataCreated": "作成日"
+, "libraryDetailRegistrable": "登録可能"
+, "libraryDetailNotRegistrable": "調整が必要"
+, "libraryDetailAiScoreLabel": "AIスコア"
+, "libraryDetailAiDiagnosticsLabel": "診断メモ"
+, "libraryDetailAiDiagnosticsEmpty": "診断データはまだありません。"
+, "libraryDetailVersionCurrent": "現在のバージョン v{version}"
+, "@libraryDetailVersionCurrent": {
+  "placeholders": {
+    "version": { "type": "int" }
+  }
+}
+, "libraryDetailVersionCount": "{count}件のバージョン"
+, "@libraryDetailVersionCount": {
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+, "libraryDetailViewVersionsCta": "バージョン履歴を開く"
+, "libraryDetailUsageEmpty": "まだ利用履歴がありません。"
+, "libraryDetailUsageCreated": "ライブラリに保存"
+, "libraryDetailUsageUpdated": "v{version} に更新"
+, "@libraryDetailUsageUpdated": {
+  "placeholders": {
+    "version": { "type": "int" }
+  }
+}
+, "libraryDetailUsageOrdered": "注文で利用"
+, "libraryDetailUsageAiCheck": "AI評価 {score}"
+, "@libraryDetailUsageAiCheck": {
+  "placeholders": {
+    "score": {}
+  }
+}
+, "libraryDetailUsageVersionArchived": "保存済みバージョン v{version}"
+, "@libraryDetailUsageVersionArchived": {
+  "placeholders": {
+    "version": { "type": "int" }
+  }
+}
+, "libraryDetailFilesVector": "ベクターデータ（.svg）"
+, "libraryDetailFilesPreview": "プレビューPNG"
+, "libraryDetailFilesStampMock": "捺印モック"
+, "libraryDetailFilesUnavailable": "まだ生成されていません。"
+, "libraryDetailShareSubject": "印影デザイン {id}"
+, "@libraryDetailShareSubject": {
+  "placeholders": {
+    "id": {}
+  }
+}
+, "libraryDetailShareBody": "\"{name}\" の印影デザイン（ID: {id}）を共有します。"
+, "@libraryDetailShareBody": {
+  "placeholders": {
+    "name": {},
+    "id": {}
+  }
+}
+, "libraryDetailDuplicateSuccess": "{id} として複製しました"
+, "@libraryDetailDuplicateSuccess": {
+  "placeholders": {
+    "id": {}
+  }
+}
+, "libraryDetailDuplicateFailure": "複製に失敗しました。もう一度お試しください。"
+, "libraryDetailActionInProgress": "処理中..."
+, "libraryDetailErrorTitle": "デザインを読み込めませんでした"
+, "libraryDetailRetry": "再読み込み"
+, "libraryDetailShapeRound": "丸形"
+, "libraryDetailShapeSquare": "角形"
+, "libraryDetailWritingTensho": "篆書"
+, "libraryDetailWritingReisho": "隷書"
+, "libraryDetailWritingKaisho": "楷書"
+, "libraryDetailWritingGyosho": "行書"
+, "libraryDetailWritingKoentai": "古印体"
+, "libraryDetailWritingCustom": "カスタム"
 , "libraryLoadError": "ライブラリを読み込めませんでした。通信環境を確認して再試行してください。"
 , "libraryErrorTitle": "ライブラリを表示できません"
 , "libraryRetry": "再試行"

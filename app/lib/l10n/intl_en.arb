@@ -271,6 +271,117 @@
 
 , "libraryActionPreview": "Preview"
 , "libraryActionShare": "Share"
+, "libraryActionEdit": "Edit"
+, "libraryActionExport": "Export"
+, "libraryActionDuplicate": "Duplicate"
+, "libraryActionReorder": "Reorder"
+
+, "libraryDetailTabDetails": "Details"
+, "libraryDetailTabActivity": "Activity"
+, "libraryDetailTabFiles": "Files"
+, "libraryDetailQuickActions": "Quick actions"
+, "libraryDetailMetadataTitle": "Design metadata"
+, "libraryDetailAiTitle": "AI review"
+, "libraryDetailVersionTitle": "Versions"
+, "libraryDetailUsageTitle": "Usage history"
+, "libraryDetailFilesTitle": "Files"
+, "libraryDetailMetadataId": "Design ID"
+, "libraryDetailMetadataStatus": "Status"
+, "libraryDetailMetadataPersona": "Persona"
+, "libraryDetailMetadataShape": "Shape · Size"
+, "libraryDetailMetadataWriting": "Writing style"
+, "libraryDetailMetadataUpdated": "Last updated"
+, "libraryDetailMetadataCreated": "Created"
+, "libraryDetailRegistrable": "Registrable"
+, "libraryDetailNotRegistrable": "Needs tweaks"
+, "libraryDetailAiScoreLabel": "AI score"
+, "libraryDetailAiDiagnosticsLabel": "Diagnostics"
+, "libraryDetailAiDiagnosticsEmpty": "No diagnostics available yet."
+, "libraryDetailVersionCurrent": "Current version v{version}"
+, "@libraryDetailVersionCurrent": {
+  "description": "Label for the current version number",
+  "placeholders": {
+    "version": {
+      "type": "int"
+    }
+  }
+}
+, "libraryDetailVersionCount": "{count, plural, one {# total version} other {# total versions}}"
+, "@libraryDetailVersionCount": {
+  "description": "Summary of how many versions exist",
+  "placeholders": {
+    "count": {
+      "type": "int"
+    }
+  }
+}
+, "libraryDetailViewVersionsCta": "View version history"
+, "libraryDetailUsageEmpty": "No recorded usage yet."
+, "libraryDetailUsageCreated": "Created in library"
+, "libraryDetailUsageUpdated": "Updated to v{version}"
+, "@libraryDetailUsageUpdated": {
+  "description": "Timeline entry when a version update happens",
+  "placeholders": {
+    "version": {
+      "type": "int"
+    }
+  }
+}
+, "libraryDetailUsageOrdered": "Used in an order"
+, "libraryDetailUsageAiCheck": "AI review scored {score}"
+, "@libraryDetailUsageAiCheck": {
+  "description": "Timeline entry describing the AI score",
+  "placeholders": {
+    "score": {}
+  }
+}
+, "libraryDetailUsageVersionArchived": "Archived version v{version}"
+, "@libraryDetailUsageVersionArchived": {
+  "description": "Timeline entry indicating an archived version",
+  "placeholders": {
+    "version": {
+      "type": "int"
+    }
+  }
+}
+, "libraryDetailFilesVector": "Vector (.svg)"
+, "libraryDetailFilesPreview": "Preview PNG"
+, "libraryDetailFilesStampMock": "Stamp mock"
+, "libraryDetailFilesUnavailable": "File not generated yet."
+, "libraryDetailShareSubject": "Hanko design {id}"
+, "@libraryDetailShareSubject": {
+  "description": "Email subject when sharing a design",
+  "placeholders": {
+    "id": {}
+  }
+}
+, "libraryDetailShareBody": "Check \"{name}\" from my Hanko Field library (ID: {id})."
+, "@libraryDetailShareBody": {
+  "description": "Body content when sharing a design",
+  "placeholders": {
+    "name": {},
+    "id": {}
+  }
+}
+, "libraryDetailDuplicateSuccess": "Duplicated as {id}"
+, "@libraryDetailDuplicateSuccess": {
+  "description": "Snackbar message after duplicating a design",
+  "placeholders": {
+    "id": {}
+  }
+}
+, "libraryDetailDuplicateFailure": "Couldn't duplicate. Try again later."
+, "libraryDetailActionInProgress": "Processing..."
+, "libraryDetailErrorTitle": "Design unavailable"
+, "libraryDetailRetry": "Retry loading"
+, "libraryDetailShapeRound": "Round"
+, "libraryDetailShapeSquare": "Square"
+, "libraryDetailWritingTensho": "Tensho"
+, "libraryDetailWritingReisho": "Reisho"
+, "libraryDetailWritingKaisho": "Kaisho"
+, "libraryDetailWritingGyosho": "Gyosho"
+, "libraryDetailWritingKoentai": "Koentai"
+, "libraryDetailWritingCustom": "Custom"
 
 , "libraryLoadError": "We couldn't load your library. Check your connection and try again."
 , "libraryErrorTitle": "Library unavailable"

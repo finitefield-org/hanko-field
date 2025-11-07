@@ -524,6 +524,324 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get libraryActionShare;
 
+  /// No description provided for @libraryActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get libraryActionEdit;
+
+  /// No description provided for @libraryActionExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get libraryActionExport;
+
+  /// No description provided for @libraryActionDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get libraryActionDuplicate;
+
+  /// No description provided for @libraryActionReorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder'**
+  String get libraryActionReorder;
+
+  /// No description provided for @libraryDetailTabDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get libraryDetailTabDetails;
+
+  /// No description provided for @libraryDetailTabActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get libraryDetailTabActivity;
+
+  /// No description provided for @libraryDetailTabFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get libraryDetailTabFiles;
+
+  /// No description provided for @libraryDetailQuickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get libraryDetailQuickActions;
+
+  /// No description provided for @libraryDetailMetadataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Design metadata'**
+  String get libraryDetailMetadataTitle;
+
+  /// No description provided for @libraryDetailAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI review'**
+  String get libraryDetailAiTitle;
+
+  /// No description provided for @libraryDetailVersionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Versions'**
+  String get libraryDetailVersionTitle;
+
+  /// No description provided for @libraryDetailUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage history'**
+  String get libraryDetailUsageTitle;
+
+  /// No description provided for @libraryDetailFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get libraryDetailFilesTitle;
+
+  /// No description provided for @libraryDetailMetadataId.
+  ///
+  /// In en, this message translates to:
+  /// **'Design ID'**
+  String get libraryDetailMetadataId;
+
+  /// No description provided for @libraryDetailMetadataStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get libraryDetailMetadataStatus;
+
+  /// No description provided for @libraryDetailMetadataPersona.
+  ///
+  /// In en, this message translates to:
+  /// **'Persona'**
+  String get libraryDetailMetadataPersona;
+
+  /// No description provided for @libraryDetailMetadataShape.
+  ///
+  /// In en, this message translates to:
+  /// **'Shape · Size'**
+  String get libraryDetailMetadataShape;
+
+  /// No description provided for @libraryDetailMetadataWriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing style'**
+  String get libraryDetailMetadataWriting;
+
+  /// No description provided for @libraryDetailMetadataUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get libraryDetailMetadataUpdated;
+
+  /// No description provided for @libraryDetailMetadataCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get libraryDetailMetadataCreated;
+
+  /// No description provided for @libraryDetailRegistrable.
+  ///
+  /// In en, this message translates to:
+  /// **'Registrable'**
+  String get libraryDetailRegistrable;
+
+  /// No description provided for @libraryDetailNotRegistrable.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs tweaks'**
+  String get libraryDetailNotRegistrable;
+
+  /// No description provided for @libraryDetailAiScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI score'**
+  String get libraryDetailAiScoreLabel;
+
+  /// No description provided for @libraryDetailAiDiagnosticsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get libraryDetailAiDiagnosticsLabel;
+
+  /// No description provided for @libraryDetailAiDiagnosticsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No diagnostics available yet.'**
+  String get libraryDetailAiDiagnosticsEmpty;
+
+  /// Label for the current version number
+  ///
+  /// In en, this message translates to:
+  /// **'Current version v{version}'**
+  String libraryDetailVersionCurrent(int version);
+
+  /// Summary of how many versions exist
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# total version} other {# total versions}}'**
+  String libraryDetailVersionCount(int count);
+
+  /// No description provided for @libraryDetailViewVersionsCta.
+  ///
+  /// In en, this message translates to:
+  /// **'View version history'**
+  String get libraryDetailViewVersionsCta;
+
+  /// No description provided for @libraryDetailUsageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recorded usage yet.'**
+  String get libraryDetailUsageEmpty;
+
+  /// No description provided for @libraryDetailUsageCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created in library'**
+  String get libraryDetailUsageCreated;
+
+  /// Timeline entry when a version update happens
+  ///
+  /// In en, this message translates to:
+  /// **'Updated to v{version}'**
+  String libraryDetailUsageUpdated(int version);
+
+  /// No description provided for @libraryDetailUsageOrdered.
+  ///
+  /// In en, this message translates to:
+  /// **'Used in an order'**
+  String get libraryDetailUsageOrdered;
+
+  /// Timeline entry describing the AI score
+  ///
+  /// In en, this message translates to:
+  /// **'AI review scored {score}'**
+  String libraryDetailUsageAiCheck(Object score);
+
+  /// Timeline entry indicating an archived version
+  ///
+  /// In en, this message translates to:
+  /// **'Archived version v{version}'**
+  String libraryDetailUsageVersionArchived(int version);
+
+  /// No description provided for @libraryDetailFilesVector.
+  ///
+  /// In en, this message translates to:
+  /// **'Vector (.svg)'**
+  String get libraryDetailFilesVector;
+
+  /// No description provided for @libraryDetailFilesPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview PNG'**
+  String get libraryDetailFilesPreview;
+
+  /// No description provided for @libraryDetailFilesStampMock.
+  ///
+  /// In en, this message translates to:
+  /// **'Stamp mock'**
+  String get libraryDetailFilesStampMock;
+
+  /// No description provided for @libraryDetailFilesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'File not generated yet.'**
+  String get libraryDetailFilesUnavailable;
+
+  /// Email subject when sharing a design
+  ///
+  /// In en, this message translates to:
+  /// **'Hanko design {id}'**
+  String libraryDetailShareSubject(Object id);
+
+  /// Body content when sharing a design
+  ///
+  /// In en, this message translates to:
+  /// **'Check \"{name}\" from my Hanko Field library (ID: {id}).'**
+  String libraryDetailShareBody(Object name, Object id);
+
+  /// Snackbar message after duplicating a design
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicated as {id}'**
+  String libraryDetailDuplicateSuccess(Object id);
+
+  /// No description provided for @libraryDetailDuplicateFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t duplicate. Try again later.'**
+  String get libraryDetailDuplicateFailure;
+
+  /// No description provided for @libraryDetailActionInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get libraryDetailActionInProgress;
+
+  /// No description provided for @libraryDetailErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Design unavailable'**
+  String get libraryDetailErrorTitle;
+
+  /// No description provided for @libraryDetailRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry loading'**
+  String get libraryDetailRetry;
+
+  /// No description provided for @libraryDetailShapeRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get libraryDetailShapeRound;
+
+  /// No description provided for @libraryDetailShapeSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get libraryDetailShapeSquare;
+
+  /// No description provided for @libraryDetailWritingTensho.
+  ///
+  /// In en, this message translates to:
+  /// **'Tensho'**
+  String get libraryDetailWritingTensho;
+
+  /// No description provided for @libraryDetailWritingReisho.
+  ///
+  /// In en, this message translates to:
+  /// **'Reisho'**
+  String get libraryDetailWritingReisho;
+
+  /// No description provided for @libraryDetailWritingKaisho.
+  ///
+  /// In en, this message translates to:
+  /// **'Kaisho'**
+  String get libraryDetailWritingKaisho;
+
+  /// No description provided for @libraryDetailWritingGyosho.
+  ///
+  /// In en, this message translates to:
+  /// **'Gyosho'**
+  String get libraryDetailWritingGyosho;
+
+  /// No description provided for @libraryDetailWritingKoentai.
+  ///
+  /// In en, this message translates to:
+  /// **'Koentai'**
+  String get libraryDetailWritingKoentai;
+
+  /// No description provided for @libraryDetailWritingCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get libraryDetailWritingCustom;
+
   /// No description provided for @libraryLoadError.
   ///
   /// In en, this message translates to:

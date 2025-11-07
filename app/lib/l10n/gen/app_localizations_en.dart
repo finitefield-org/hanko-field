@@ -248,6 +248,188 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryActionShare => 'Share';
 
   @override
+  String get libraryActionEdit => 'Edit';
+
+  @override
+  String get libraryActionExport => 'Export';
+
+  @override
+  String get libraryActionDuplicate => 'Duplicate';
+
+  @override
+  String get libraryActionReorder => 'Reorder';
+
+  @override
+  String get libraryDetailTabDetails => 'Details';
+
+  @override
+  String get libraryDetailTabActivity => 'Activity';
+
+  @override
+  String get libraryDetailTabFiles => 'Files';
+
+  @override
+  String get libraryDetailQuickActions => 'Quick actions';
+
+  @override
+  String get libraryDetailMetadataTitle => 'Design metadata';
+
+  @override
+  String get libraryDetailAiTitle => 'AI review';
+
+  @override
+  String get libraryDetailVersionTitle => 'Versions';
+
+  @override
+  String get libraryDetailUsageTitle => 'Usage history';
+
+  @override
+  String get libraryDetailFilesTitle => 'Files';
+
+  @override
+  String get libraryDetailMetadataId => 'Design ID';
+
+  @override
+  String get libraryDetailMetadataStatus => 'Status';
+
+  @override
+  String get libraryDetailMetadataPersona => 'Persona';
+
+  @override
+  String get libraryDetailMetadataShape => 'Shape · Size';
+
+  @override
+  String get libraryDetailMetadataWriting => 'Writing style';
+
+  @override
+  String get libraryDetailMetadataUpdated => 'Last updated';
+
+  @override
+  String get libraryDetailMetadataCreated => 'Created';
+
+  @override
+  String get libraryDetailRegistrable => 'Registrable';
+
+  @override
+  String get libraryDetailNotRegistrable => 'Needs tweaks';
+
+  @override
+  String get libraryDetailAiScoreLabel => 'AI score';
+
+  @override
+  String get libraryDetailAiDiagnosticsLabel => 'Diagnostics';
+
+  @override
+  String get libraryDetailAiDiagnosticsEmpty => 'No diagnostics available yet.';
+
+  @override
+  String libraryDetailVersionCurrent(int version) {
+    return 'Current version v$version';
+  }
+
+  @override
+  String libraryDetailVersionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# total versions',
+      one: '# total version',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryDetailViewVersionsCta => 'View version history';
+
+  @override
+  String get libraryDetailUsageEmpty => 'No recorded usage yet.';
+
+  @override
+  String get libraryDetailUsageCreated => 'Created in library';
+
+  @override
+  String libraryDetailUsageUpdated(int version) {
+    return 'Updated to v$version';
+  }
+
+  @override
+  String get libraryDetailUsageOrdered => 'Used in an order';
+
+  @override
+  String libraryDetailUsageAiCheck(Object score) {
+    return 'AI review scored $score';
+  }
+
+  @override
+  String libraryDetailUsageVersionArchived(int version) {
+    return 'Archived version v$version';
+  }
+
+  @override
+  String get libraryDetailFilesVector => 'Vector (.svg)';
+
+  @override
+  String get libraryDetailFilesPreview => 'Preview PNG';
+
+  @override
+  String get libraryDetailFilesStampMock => 'Stamp mock';
+
+  @override
+  String get libraryDetailFilesUnavailable => 'File not generated yet.';
+
+  @override
+  String libraryDetailShareSubject(Object id) {
+    return 'Hanko design $id';
+  }
+
+  @override
+  String libraryDetailShareBody(Object name, Object id) {
+    return 'Check \"$name\" from my Hanko Field library (ID: $id).';
+  }
+
+  @override
+  String libraryDetailDuplicateSuccess(Object id) {
+    return 'Duplicated as $id';
+  }
+
+  @override
+  String get libraryDetailDuplicateFailure =>
+      'Couldn\'t duplicate. Try again later.';
+
+  @override
+  String get libraryDetailActionInProgress => 'Processing...';
+
+  @override
+  String get libraryDetailErrorTitle => 'Design unavailable';
+
+  @override
+  String get libraryDetailRetry => 'Retry loading';
+
+  @override
+  String get libraryDetailShapeRound => 'Round';
+
+  @override
+  String get libraryDetailShapeSquare => 'Square';
+
+  @override
+  String get libraryDetailWritingTensho => 'Tensho';
+
+  @override
+  String get libraryDetailWritingReisho => 'Reisho';
+
+  @override
+  String get libraryDetailWritingKaisho => 'Kaisho';
+
+  @override
+  String get libraryDetailWritingGyosho => 'Gyosho';
+
+  @override
+  String get libraryDetailWritingKoentai => 'Koentai';
+
+  @override
+  String get libraryDetailWritingCustom => 'Custom';
+
+  @override
   String get libraryLoadError =>
       'We couldn\'t load your library. Check your connection and try again.';
 

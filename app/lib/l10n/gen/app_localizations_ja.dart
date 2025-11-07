@@ -237,6 +237,181 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryActionShare => '共有';
 
   @override
+  String get libraryActionEdit => '編集';
+
+  @override
+  String get libraryActionExport => '書き出し';
+
+  @override
+  String get libraryActionDuplicate => '複製';
+
+  @override
+  String get libraryActionReorder => '再注文';
+
+  @override
+  String get libraryDetailTabDetails => '詳細';
+
+  @override
+  String get libraryDetailTabActivity => 'アクティビティ';
+
+  @override
+  String get libraryDetailTabFiles => 'ファイル';
+
+  @override
+  String get libraryDetailQuickActions => 'クイックアクション';
+
+  @override
+  String get libraryDetailMetadataTitle => 'デザイン情報';
+
+  @override
+  String get libraryDetailAiTitle => 'AI評価';
+
+  @override
+  String get libraryDetailVersionTitle => 'バージョン';
+
+  @override
+  String get libraryDetailUsageTitle => '利用履歴';
+
+  @override
+  String get libraryDetailFilesTitle => 'ファイル';
+
+  @override
+  String get libraryDetailMetadataId => 'デザインID';
+
+  @override
+  String get libraryDetailMetadataStatus => 'ステータス';
+
+  @override
+  String get libraryDetailMetadataPersona => 'ペルソナ';
+
+  @override
+  String get libraryDetailMetadataShape => '形状・サイズ';
+
+  @override
+  String get libraryDetailMetadataWriting => '書体';
+
+  @override
+  String get libraryDetailMetadataUpdated => '最終更新';
+
+  @override
+  String get libraryDetailMetadataCreated => '作成日';
+
+  @override
+  String get libraryDetailRegistrable => '登録可能';
+
+  @override
+  String get libraryDetailNotRegistrable => '調整が必要';
+
+  @override
+  String get libraryDetailAiScoreLabel => 'AIスコア';
+
+  @override
+  String get libraryDetailAiDiagnosticsLabel => '診断メモ';
+
+  @override
+  String get libraryDetailAiDiagnosticsEmpty => '診断データはまだありません。';
+
+  @override
+  String libraryDetailVersionCurrent(int version) {
+    return '現在のバージョン v$version';
+  }
+
+  @override
+  String libraryDetailVersionCount(int count) {
+    return '$count件のバージョン';
+  }
+
+  @override
+  String get libraryDetailViewVersionsCta => 'バージョン履歴を開く';
+
+  @override
+  String get libraryDetailUsageEmpty => 'まだ利用履歴がありません。';
+
+  @override
+  String get libraryDetailUsageCreated => 'ライブラリに保存';
+
+  @override
+  String libraryDetailUsageUpdated(int version) {
+    return 'v$version に更新';
+  }
+
+  @override
+  String get libraryDetailUsageOrdered => '注文で利用';
+
+  @override
+  String libraryDetailUsageAiCheck(Object score) {
+    return 'AI評価 $score';
+  }
+
+  @override
+  String libraryDetailUsageVersionArchived(int version) {
+    return '保存済みバージョン v$version';
+  }
+
+  @override
+  String get libraryDetailFilesVector => 'ベクターデータ（.svg）';
+
+  @override
+  String get libraryDetailFilesPreview => 'プレビューPNG';
+
+  @override
+  String get libraryDetailFilesStampMock => '捺印モック';
+
+  @override
+  String get libraryDetailFilesUnavailable => 'まだ生成されていません。';
+
+  @override
+  String libraryDetailShareSubject(Object id) {
+    return '印影デザイン $id';
+  }
+
+  @override
+  String libraryDetailShareBody(Object name, Object id) {
+    return '\"$name\" の印影デザイン（ID: $id）を共有します。';
+  }
+
+  @override
+  String libraryDetailDuplicateSuccess(Object id) {
+    return '$id として複製しました';
+  }
+
+  @override
+  String get libraryDetailDuplicateFailure => '複製に失敗しました。もう一度お試しください。';
+
+  @override
+  String get libraryDetailActionInProgress => '処理中...';
+
+  @override
+  String get libraryDetailErrorTitle => 'デザインを読み込めませんでした';
+
+  @override
+  String get libraryDetailRetry => '再読み込み';
+
+  @override
+  String get libraryDetailShapeRound => '丸形';
+
+  @override
+  String get libraryDetailShapeSquare => '角形';
+
+  @override
+  String get libraryDetailWritingTensho => '篆書';
+
+  @override
+  String get libraryDetailWritingReisho => '隷書';
+
+  @override
+  String get libraryDetailWritingKaisho => '楷書';
+
+  @override
+  String get libraryDetailWritingGyosho => '行書';
+
+  @override
+  String get libraryDetailWritingKoentai => '古印体';
+
+  @override
+  String get libraryDetailWritingCustom => 'カスタム';
+
+  @override
   String get libraryLoadError => 'ライブラリを読み込めませんでした。通信環境を確認して再試行してください。';
 
   @override

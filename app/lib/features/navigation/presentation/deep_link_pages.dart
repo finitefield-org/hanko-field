@@ -77,37 +77,6 @@ class ShopDetailPage extends StatelessWidget {
   }
 }
 
-/// 保存済み印影
-class LibraryEntryPage extends StatelessWidget {
-  const LibraryEntryPage({
-    required this.designId,
-    required this.subPage,
-    super.key,
-  });
-
-  final String designId;
-  final String subPage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('印影 $designId')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('マイ印鑑', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text('デザイン ID: $designId'),
-            if (subPage.isNotEmpty) Text('セクション: $subPage'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// プロフィール配下
 class ProfileSectionPage extends StatelessWidget {
   const ProfileSectionPage({required this.sectionSegments, super.key});
