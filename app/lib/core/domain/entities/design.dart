@@ -319,6 +319,7 @@ class Design {
     this.assets,
     this.hash,
     this.lastOrderedAt,
+    this.tags = const [],
   });
 
   final String id;
@@ -336,6 +337,7 @@ class Design {
   final DesignAssets? assets;
   final String? hash;
   final DateTime? lastOrderedAt;
+  final List<String> tags;
 
   Design copyWith({
     String? id,
@@ -353,6 +355,7 @@ class Design {
     DesignAssets? assets,
     String? hash,
     DateTime? lastOrderedAt,
+    List<String>? tags,
   }) {
     return Design(
       id: id ?? this.id,
@@ -370,6 +373,7 @@ class Design {
       assets: assets ?? this.assets,
       hash: hash ?? this.hash,
       lastOrderedAt: lastOrderedAt ?? this.lastOrderedAt,
+      tags: tags ?? this.tags,
     );
   }
 
@@ -391,7 +395,8 @@ class Design {
             other.ai == ai &&
             other.assets == assets &&
             other.hash == hash &&
-            other.lastOrderedAt == lastOrderedAt);
+            other.lastOrderedAt == lastOrderedAt &&
+            listEquals(other.tags, tags));
   }
 
   @override
@@ -412,6 +417,7 @@ class Design {
       assets,
       hash,
       lastOrderedAt,
+      Object.hashAll(tags),
     ]);
   }
 }

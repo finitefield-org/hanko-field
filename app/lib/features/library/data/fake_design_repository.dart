@@ -307,6 +307,9 @@ class FakeDesignRepository extends DesignRepository {
     final existing = await fetchDesign(designId);
     final duplicateId = '${existing.id}-COPY-${_now().millisecondsSinceEpoch}';
     final nextName = (name ?? existing.input?.rawName)?.trim();
+    final duplicateTags = tags.isEmpty
+        ? existing.tags
+        : List<String>.from(tags);
     final duplicate = existing.copyWith(
       id: duplicateId,
       version: 1,
@@ -321,6 +324,10 @@ class FakeDesignRepository extends DesignRepository {
                       rawName: nextName,
                     ))
                 .copyWith(rawName: nextName),
+      tags: duplicateTags,
+      ai: copyHistory ? existing.ai : null,
+      assets: copyAssets ? existing.assets : null,
+      lastOrderedAt: copyHistory ? existing.lastOrderedAt : null,
     );
     await createDesign(duplicate);
     return duplicate;
@@ -522,6 +529,7 @@ class FakeDesignRepository extends DesignRepository {
       assets: DesignAssets(previewPngUrl: stampUrl, stampMockUrl: stampUrl),
       hash: '$id-${updatedAt.millisecondsSinceEpoch}',
       lastOrderedAt: lastOrderedAt,
+      tags: [persona.name, status.name, sourceType.name],
     );
   }
 }

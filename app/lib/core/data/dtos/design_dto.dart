@@ -519,6 +519,7 @@ class DesignDto {
     this.assets,
     this.hash,
     this.lastOrderedAt,
+    this.tags = const [],
   });
 
   factory DesignDto.fromJson(Map<String, dynamic> json) {
@@ -544,6 +545,7 @@ class DesignDto {
           : DesignAssetsDto.fromJson(json['assets'] as Map<String, dynamic>),
       hash: json['hash'] as String?,
       lastOrderedAt: json['lastOrderedAt'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -568,6 +570,7 @@ class DesignDto {
           : DesignAssetsDto.fromDomain(domain.assets),
       hash: domain.hash,
       lastOrderedAt: domain.lastOrderedAt?.toIso8601String(),
+      tags: domain.tags,
     );
   }
 
@@ -586,6 +589,7 @@ class DesignDto {
   final DesignAssetsDto? assets;
   final String? hash;
   final String? lastOrderedAt;
+  final List<String> tags;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -604,6 +608,7 @@ class DesignDto {
       'assets': assets?.toJson(),
       'hash': hash,
       'lastOrderedAt': lastOrderedAt,
+      'tags': tags,
     };
   }
 
@@ -626,6 +631,7 @@ class DesignDto {
       lastOrderedAt: lastOrderedAt == null
           ? null
           : DateTime.parse(lastOrderedAt!),
+      tags: tags,
     );
   }
 }
