@@ -19,6 +19,7 @@ import 'package:app/features/design_creation/presentation/design_share_page.dart
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
+import 'package:app/features/library/presentation/library_duplicate_page.dart';
 import 'package:app/features/library/presentation/library_entry_screen.dart';
 import 'package:app/features/library/presentation/library_versions_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
@@ -346,6 +347,9 @@ class LibraryEntryRoute implements IndependentRoute {
       final primary = trailingSegments.first;
       if (primary == 'versions') {
         return LibraryDesignVersionsPage(designId: designId);
+      }
+      if (primary == 'duplicate') {
+        return LibraryDuplicatePage(designId: designId);
       }
     }
     return LibraryEntryScreen(

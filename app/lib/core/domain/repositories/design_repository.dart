@@ -22,7 +22,13 @@ abstract class DesignRepository with DesignDtoMapper {
   Future<void> deleteDesign(String designId);
 
   Future<List<Design>> fetchVersions(String designId);
-  Future<Design> duplicateDesign(String designId);
+  Future<Design> duplicateDesign(
+    String designId, {
+    String? name,
+    List<String> tags = const [],
+    bool copyHistory = true,
+    bool copyAssets = true,
+  });
   Future<void> requestAiSuggestions(
     String designId,
     Map<String, dynamic> payload,

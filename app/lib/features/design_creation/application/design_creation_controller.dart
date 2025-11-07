@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/design.dart';
+import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/services/permissions/storage_permission_service.dart';
 import 'package:app/features/design_creation/domain/design_creation_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,5 +121,56 @@ class DesignCreationController extends Notifier<DesignCreationState> {
     state = state.copyWith(
       styleDraft: currentStyle.copyWith(stroke: stroke, layout: layout),
     );
+  }
+
+  void hydrateFromDesign(Design design, {String? overrideName}) {
+    final nameOverride = overrideName?.trim();
+    final baseInput =
+        design.input ??
+        DesignInput(
+          sourceType: DesignSourceType.typed,
+          rawName: nameOverride?.isNotEmpty == true ? nameOverride! : design.id,
+        );
+    final updatedInput = nameOverride?.isNotEmpty == true
+        ? baseInput.copyWith(rawName: nameOverride)
+        : baseInput;
+    final persona = design.persona ?? UserPersona.japanese;
+    final split = _splitName(updatedInput.rawName, persona);
+    final draft = DesignNameDraft(
+      persona: persona,
+      surname: split.$1,
+      givenName: split.$2,
+      kanjiMapping: updatedInput.kanji,
+    );
+    state = DesignCreationState(
+      selectedMode: updatedInput.sourceType,
+      storagePermissionGranted: true,
+      nameDraft: draft,
+      pendingInput: updatedInput,
+      styleDraft: design.style,
+      selectedShape: design.shape,
+      selectedTemplatePreviewUrl: design.assets?.previewPngUrl,
+      selectedTemplateTitle: updatedInput.rawName,
+    );
+  }
+
+  (String, String) _splitName(String raw, UserPersona persona) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return ('', '');
+    }
+    if (persona == UserPersona.japanese) {
+      final delimiterIndex = trimmed.indexOf(RegExp(r'[\s・]'));
+      if (delimiterIndex != -1) {
+        final surname = trimmed.substring(0, delimiterIndex).trim();
+        final given = trimmed.substring(delimiterIndex + 1).trim();
+        return (surname, given);
+      }
+      return (trimmed, '');
+    }
+    final parts = trimmed.split(RegExp(r'\s+'));
+    final surname = parts.first;
+    final given = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    return (surname, given);
   }
 }

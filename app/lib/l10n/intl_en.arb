@@ -275,6 +275,69 @@
 , "libraryActionExport": "Export"
 , "libraryActionDuplicate": "Duplicate"
 , "libraryActionReorder": "Reorder"
+, "libraryDuplicateTitle": "Duplicate design"
+, "@libraryDuplicateTitle": {
+  "description": "Title for the duplicate design flow"
+}
+, "libraryDuplicateSubtitle": "Make a copy of {name} and jump back into the editor.",
+"@libraryDuplicateSubtitle": {
+  "description": "Subtitle shown when duplicating a known design",
+  "placeholders": {
+    "name": {}
+  }
+}
+, "libraryDuplicateSubtitleFallback": "Make a copy and continue editing."
+, "@libraryDuplicateSubtitleFallback": {
+  "description": "Fallback subtitle when the source design is not loaded yet"
+}
+, "libraryDuplicateNameLabel": "New design name"
+, "@libraryDuplicateNameLabel": {
+  "description": "Label for the duplicate name text field"
+}
+, "libraryDuplicateNameHint": "e.g. Yamada Co. round v2"
+, "@libraryDuplicateNameHint": {
+  "description": "Hint text for the duplicate name input"
+}
+, "libraryDuplicateNameError": "Enter a name for the duplicate."
+, "@libraryDuplicateNameError": {
+  "description": "Validation error for the name field"
+}
+, "libraryDuplicateTagsLabel": "Tags"
+, "@libraryDuplicateTagsLabel": {
+  "description": "Label for the tags field"
+}
+, "libraryDuplicateTagsHint": "personal, ai-ready, round"
+, "@libraryDuplicateTagsHint": {
+  "description": "Hint text explaining how to enter tags"
+}
+, "libraryDuplicateSuggestionsLabel": "Suggestions"
+, "@libraryDuplicateSuggestionsLabel": {
+  "description": "Label above assist chips for suggested tags"
+}
+, "libraryDuplicateCopyHistory": "Copy history"
+, "@libraryDuplicateCopyHistory": {
+  "description": "Switch label for copying history"
+}
+, "libraryDuplicateCopyHistoryDescription": "Include comments, usage events, and AI reports."
+, "@libraryDuplicateCopyHistoryDescription": {
+  "description": "Description for the copy history switch"
+}
+, "libraryDuplicateCopyAssets": "Copy assets"
+, "@libraryDuplicateCopyAssets": {
+  "description": "Switch label for copying assets"
+}
+, "libraryDuplicateCopyAssetsDescription": "Reuse exported files and editor adjustments."
+, "@libraryDuplicateCopyAssetsDescription": {
+  "description": "Description for the copy assets switch"
+}
+, "libraryDuplicateSubmit": "Duplicate and edit"
+, "@libraryDuplicateSubmit": {
+  "description": "Primary button label for the duplicate flow"
+}
+, "libraryDuplicateCancel": "Cancel"
+, "@libraryDuplicateCancel": {
+  "description": "Cancel button label for the duplicate flow"
+}
 
 , "libraryDetailTabDetails": "Details"
 , "libraryDetailTabActivity": "Activity"

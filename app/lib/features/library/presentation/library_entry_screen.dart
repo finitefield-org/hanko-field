@@ -7,7 +7,6 @@ import 'package:app/core/ui/widgets/app_button.dart';
 import 'package:app/core/ui/widgets/app_card.dart';
 import 'package:app/core/ui/widgets/app_empty_state.dart';
 import 'package:app/features/library/application/library_entry_detail_provider.dart';
-import 'package:app/features/library/data/design_repository_provider.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,7 +25,6 @@ class LibraryEntryScreen extends ConsumerStatefulWidget {
 
 class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
   late final int _initialTab;
-  bool _isDuplicating = false;
   bool _isExporting = false;
   bool _isReordering = false;
 
@@ -104,13 +102,10 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
                         detail: detail,
                         l10n: l10n,
                         onShare: () => _handleShare(detail, l10n),
-                        onDuplicate: _isDuplicating
-                            ? null
-                            : () => _handleDuplicate(detail, l10n),
+                        onDuplicate: () => _handleDuplicate(detail),
                         onReorder: _isReordering
                             ? null
                             : () => _handleReorder(detail, l10n),
-                        duplicating: _isDuplicating,
                         reordering: _isReordering,
                       ),
                     ),
@@ -184,34 +179,15 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
     messenger.showSnackBar(SnackBar(content: Text(l10n.libraryActionExport)));
   }
 
-  Future<void> _handleDuplicate(
-    LibraryDesignDetail detail,
-    AppLocalizations l10n,
-  ) async {
-    if (_isDuplicating) {
-      return;
-    }
-    setState(() {
-      _isDuplicating = true;
-    });
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final repository = ref.read(designRepositoryProvider);
-      final copy = await repository.duplicateDesign(detail.design.id);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.libraryDetailDuplicateSuccess(copy.id))),
-      );
-    } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.libraryDetailDuplicateFailure)),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isDuplicating = false;
-        });
-      }
-    }
+  void _handleDuplicate(LibraryDesignDetail detail) {
+    ref
+        .read(appStateProvider.notifier)
+        .push(
+          LibraryEntryRoute(
+            designId: detail.design.id,
+            trailing: const ['duplicate'],
+          ),
+        );
   }
 
   Future<void> _handleShare(
@@ -320,7 +296,6 @@ class _DesignHeroCard extends StatelessWidget {
     required this.onShare,
     required this.onDuplicate,
     required this.onReorder,
-    required this.duplicating,
     required this.reordering,
   });
 
@@ -329,7 +304,6 @@ class _DesignHeroCard extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback? onDuplicate;
   final VoidCallback? onReorder;
-  final bool duplicating;
   final bool reordering;
 
   @override
@@ -439,16 +413,8 @@ class _DesignHeroCard extends StatelessWidget {
               ),
               ActionChip(
                 onPressed: onDuplicate,
-                avatar: Icon(
-                  duplicating
-                      ? Icons.hourglass_top_rounded
-                      : Icons.copy_all_outlined,
-                ),
-                label: Text(
-                  duplicating
-                      ? l10n.libraryDetailActionInProgress
-                      : l10n.libraryActionDuplicate,
-                ),
+                avatar: const Icon(Icons.copy_all_outlined),
+                label: Text(l10n.libraryActionDuplicate),
               ),
               ActionChip(
                 onPressed: onReorder,

@@ -548,6 +548,96 @@ abstract class AppLocalizations {
   /// **'Reorder'**
   String get libraryActionReorder;
 
+  /// Title for the duplicate design flow
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate design'**
+  String get libraryDuplicateTitle;
+
+  /// Subtitle shown when duplicating a known design
+  ///
+  /// In en, this message translates to:
+  /// **'Make a copy of {name} and jump back into the editor.'**
+  String libraryDuplicateSubtitle(Object name);
+
+  /// Fallback subtitle when the source design is not loaded yet
+  ///
+  /// In en, this message translates to:
+  /// **'Make a copy and continue editing.'**
+  String get libraryDuplicateSubtitleFallback;
+
+  /// Label for the duplicate name text field
+  ///
+  /// In en, this message translates to:
+  /// **'New design name'**
+  String get libraryDuplicateNameLabel;
+
+  /// Hint text for the duplicate name input
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Yamada Co. round v2'**
+  String get libraryDuplicateNameHint;
+
+  /// Validation error for the name field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name for the duplicate.'**
+  String get libraryDuplicateNameError;
+
+  /// Label for the tags field
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get libraryDuplicateTagsLabel;
+
+  /// Hint text explaining how to enter tags
+  ///
+  /// In en, this message translates to:
+  /// **'personal, ai-ready, round'**
+  String get libraryDuplicateTagsHint;
+
+  /// Label above assist chips for suggested tags
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions'**
+  String get libraryDuplicateSuggestionsLabel;
+
+  /// Switch label for copying history
+  ///
+  /// In en, this message translates to:
+  /// **'Copy history'**
+  String get libraryDuplicateCopyHistory;
+
+  /// Description for the copy history switch
+  ///
+  /// In en, this message translates to:
+  /// **'Include comments, usage events, and AI reports.'**
+  String get libraryDuplicateCopyHistoryDescription;
+
+  /// Switch label for copying assets
+  ///
+  /// In en, this message translates to:
+  /// **'Copy assets'**
+  String get libraryDuplicateCopyAssets;
+
+  /// Description for the copy assets switch
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse exported files and editor adjustments.'**
+  String get libraryDuplicateCopyAssetsDescription;
+
+  /// Primary button label for the duplicate flow
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate and edit'**
+  String get libraryDuplicateSubmit;
+
+  /// Cancel button label for the duplicate flow
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get libraryDuplicateCancel;
+
   /// No description provided for @libraryDetailTabDetails.
   ///
   /// In en, this message translates to:

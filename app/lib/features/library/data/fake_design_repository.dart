@@ -296,16 +296,31 @@ class FakeDesignRepository extends DesignRepository {
   }
 
   @override
-  Future<Design> duplicateDesign(String designId) async {
+  Future<Design> duplicateDesign(
+    String designId, {
+    String? name,
+    List<String> tags = const [],
+    bool copyHistory = true,
+    bool copyAssets = true,
+  }) async {
     await Future<void>.delayed(_latency);
     final existing = await fetchDesign(designId);
     final duplicateId = '${existing.id}-COPY-${_now().millisecondsSinceEpoch}';
+    final nextName = (name ?? existing.input?.rawName)?.trim();
     final duplicate = existing.copyWith(
       id: duplicateId,
       version: 1,
       status: DesignStatus.draft,
       createdAt: _now(),
       updatedAt: _now(),
+      input: nextName == null
+          ? existing.input
+          : (existing.input ??
+                    DesignInput(
+                      sourceType: DesignSourceType.typed,
+                      rawName: nextName,
+                    ))
+                .copyWith(rawName: nextName),
     );
     await createDesign(duplicate);
     return duplicate;

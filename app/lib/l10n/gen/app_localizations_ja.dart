@@ -249,6 +249,56 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryActionReorder => '再注文';
 
   @override
+  String get libraryDuplicateTitle => 'Duplicate design';
+
+  @override
+  String libraryDuplicateSubtitle(Object name) {
+    return 'Make a copy of $name and jump back into the editor.';
+  }
+
+  @override
+  String get libraryDuplicateSubtitleFallback =>
+      'Make a copy and continue editing.';
+
+  @override
+  String get libraryDuplicateNameLabel => 'New design name';
+
+  @override
+  String get libraryDuplicateNameHint => 'e.g. Yamada Co. round v2';
+
+  @override
+  String get libraryDuplicateNameError => 'Enter a name for the duplicate.';
+
+  @override
+  String get libraryDuplicateTagsLabel => 'Tags';
+
+  @override
+  String get libraryDuplicateTagsHint => 'personal, ai-ready, round';
+
+  @override
+  String get libraryDuplicateSuggestionsLabel => 'Suggestions';
+
+  @override
+  String get libraryDuplicateCopyHistory => 'Copy history';
+
+  @override
+  String get libraryDuplicateCopyHistoryDescription =>
+      'Include comments, usage events, and AI reports.';
+
+  @override
+  String get libraryDuplicateCopyAssets => 'Copy assets';
+
+  @override
+  String get libraryDuplicateCopyAssetsDescription =>
+      'Reuse exported files and editor adjustments.';
+
+  @override
+  String get libraryDuplicateSubmit => 'Duplicate and edit';
+
+  @override
+  String get libraryDuplicateCancel => 'Cancel';
+
+  @override
   String get libraryDetailTabDetails => '詳細';
 
   @override
