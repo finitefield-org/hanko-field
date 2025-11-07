@@ -18,6 +18,8 @@ class LibraryShareLinksController extends Notifier<LibraryShareLinksState> {
 
   late final LibraryShareLinkRepository _repository;
   bool _initialized = false;
+  bool _isFetching = false;
+  Future<void>? _currentLoad;
 
   @override
   LibraryShareLinksState build() {
@@ -32,9 +34,26 @@ class LibraryShareLinksController extends Notifier<LibraryShareLinksState> {
   Future<void> refresh() => _load(force: true);
 
   Future<void> _load({bool force = false}) async {
-    if (state.isLoading && !force) {
-      return;
+    if (_isFetching) {
+      if (!force) {
+        return _currentLoad ?? Future.value();
+      }
+      await _currentLoad;
     }
+    _isFetching = true;
+    final loadFuture = _performFetch();
+    _currentLoad = loadFuture;
+    try {
+      await loadFuture;
+    } finally {
+      if (identical(_currentLoad, loadFuture)) {
+        _currentLoad = null;
+      }
+      _isFetching = false;
+    }
+  }
+
+  Future<void> _performFetch() async {
     state = state.copyWith(isLoading: true, clearFeedback: true);
     try {
       final links = await _repository.fetchLinks(designId);
