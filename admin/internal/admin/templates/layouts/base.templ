@@ -105,6 +105,76 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 
 		<div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
 		<div id="modal" class="modal hidden" hx-target="this" hx-swap="innerHTML" aria-hidden="true" data-modal-state="closed" data-modal-open="false"></div>
+		<div class="fixed inset-0 z-50 hidden flex items-start justify-center px-4 py-6 sm:px-6 lg:px-8" data-shortcut-overlay aria-hidden="true">
+			<div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-shortcut-overlay-dismiss></div>
+			<div
+				class="relative z-10 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="shortcut-overlay-title"
+				data-shortcut-panel
+				tabindex="-1"
+			>
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">キーボードショートカット</p>
+						<h2 id="shortcut-overlay-title" class="text-xl font-semibold text-slate-900">操作を素早く切り替える</h2>
+					</div>
+					<button
+						type="button"
+						class="rounded-full p-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500"
+						data-shortcut-overlay-close
+						aria-label="ショートカットヘルプを閉じる"
+					>
+						<span class="sr-only">閉じる</span>
+						<svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-5 w-5">
+							<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+					</button>
+				</div>
+				<p class="mt-3 text-sm text-slate-600">「?」を押すといつでもこのヘルプを開閉できます。</p>
+				<ul class="mt-6 space-y-3 text-sm text-slate-700">
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">/</kbd>
+						</div>
+						<span class="text-slate-600">検索バーにフォーカス</span>
+					</li>
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">f</kbd>
+						</div>
+						<span class="text-slate-600">フィルターバーにフォーカス</span>
+					</li>
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">j</kbd>
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">k</kbd>
+						</div>
+						<span class="text-slate-600">結果リストを移動</span>
+					</li>
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">o</kbd>
+						</div>
+						<span class="text-slate-600">選択中の詳細を開く</span>
+					</li>
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">g</kbd>
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">Shift+g</kbd>
+						</div>
+						<span class="text-slate-600">結果グループ/タブを切り替え</span>
+					</li>
+					<li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+						<div class="flex flex-wrap gap-2">
+							<kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">?</kbd>
+						</div>
+						<span class="text-slate-600">ショートカット一覧を表示/閉じる</span>
+					</li>
+				</ul>
+			</div>
+		</div>
 
 		<script src="/public/static/app.js" defer></script>
 	</body>

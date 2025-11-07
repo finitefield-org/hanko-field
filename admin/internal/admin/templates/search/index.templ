@@ -158,6 +158,7 @@ templ filterToolbar(data PageData) {
 						type="date"
 						value={ data.Query.StartDate }
 						class="w-36 rounded-lg border border-slate-300 px-3 py-1 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+						data-search-filter="start"
 					/>
 					<span class="text-sm text-slate-500">〜</span>
 					<input
@@ -166,6 +167,7 @@ templ filterToolbar(data PageData) {
 						type="date"
 						value={ data.Query.EndDate }
 						class="w-36 rounded-lg border border-slate-300 px-3 py-1 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+						data-search-filter="end"
 					/>
 				</div>
 				<div class="flex items-center gap-2">

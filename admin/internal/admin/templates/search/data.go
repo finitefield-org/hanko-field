@@ -217,8 +217,11 @@ func defaultPersonaOptions() []SelectOption {
 func defaultShortcutHints() []ShortcutHint {
 	return []ShortcutHint{
 		{Keys: []string{"/"}, Description: "検索バーにフォーカス"},
-		{Keys: []string{"↑", "↓"}, Description: "結果の移動"},
-		{Keys: []string{"↵"}, Description: "選択中の結果を開く"},
+		{Keys: []string{"f"}, Description: "フィルターバーにフォーカス"},
+		{Keys: []string{"j", "k"}, Description: "結果リストを移動"},
+		{Keys: []string{"o"}, Description: "選択中の詳細を開く"},
+		{Keys: []string{"g"}, Description: "結果グループ/タブを切り替え"},
+		{Keys: []string{"?"}, Description: "ショートカット一覧を表示"},
 	}
 }
 

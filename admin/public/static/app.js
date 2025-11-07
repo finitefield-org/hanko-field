@@ -60,6 +60,20 @@ const isVisible = (element) => {
   return element.getClientRects().length > 0;
 };
 
+const areShortcutsBlocked = () => {
+  const body = document.body;
+  if (!body) {
+    return false;
+  }
+  if (body.dataset.shortcutOverlay === "open") {
+    return true;
+  }
+  if (body.dataset.modalOpen === "true") {
+    return true;
+  }
+  return false;
+};
+
 const getFocusableElements = (root) => {
   if (!(root instanceof Element)) {
     return [];
@@ -2673,6 +2687,134 @@ const initSearchShortcut = (getModalRoot) => {
   }
 };
 
+const initShortcutOverlay = () => {
+  const overlay = document.querySelector("[data-shortcut-overlay]");
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+  const panel = overlay.querySelector("[data-shortcut-panel]");
+  const dismissors = overlay.querySelectorAll("[data-shortcut-overlay-dismiss]");
+  const closeButtons = overlay.querySelectorAll("[data-shortcut-overlay-close]");
+  let isOpen = false;
+  let lastActiveElement = null;
+
+  const setBodyState = (open) => {
+    const body = document.body;
+    if (!body) {
+      return;
+    }
+    if (open) {
+      body.dataset.shortcutOverlay = "open";
+    } else if (body.dataset.shortcutOverlay === "open") {
+      delete body.dataset.shortcutOverlay;
+    }
+  };
+
+  const focusPanel = () => {
+    const target = panel instanceof HTMLElement ? panel : overlay;
+    target.focus({ preventScroll: true });
+  };
+
+  const openOverlay = () => {
+    if (document.body && document.body.dataset.modalOpen === "true") {
+      return;
+    }
+    if (isOpen) {
+      focusPanel();
+      return;
+    }
+    isOpen = true;
+    lastActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    overlay.classList.remove("hidden");
+    overlay.setAttribute("aria-hidden", "false");
+    overlay.dataset.shortcutState = "open";
+    setBodyState(true);
+    focusPanel();
+  };
+
+  const closeOverlay = () => {
+    if (!isOpen) {
+      return;
+    }
+    isOpen = false;
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.dataset.shortcutState = "closed";
+    setBodyState(false);
+    const element = lastActiveElement;
+    lastActiveElement = null;
+    if (element instanceof HTMLElement) {
+      element.focus({ preventScroll: true });
+    }
+  };
+
+  const handleDismiss = (event) => {
+    event.preventDefault();
+    closeOverlay();
+  };
+
+  dismissors.forEach((element) => {
+    element.addEventListener("click", handleDismiss);
+  });
+  closeButtons.forEach((element) => {
+    element.addEventListener("click", handleDismiss);
+  });
+
+  overlay.addEventListener("keydown", (event) => {
+    if (!isOpen) {
+      return;
+    }
+    if (event.key === KEY_ESCAPE) {
+      event.preventDefault();
+      closeOverlay();
+      return;
+    }
+    if (event.key !== KEY_TAB) {
+      return;
+    }
+    const scope = panel instanceof HTMLElement ? panel : overlay;
+    const focusables = getFocusableElements(scope);
+    if (focusables.length === 0) {
+      event.preventDefault();
+      scope.focus({ preventScroll: true });
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (document.activeElement === last) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const wantsHelp = event.key === "?" || (event.key === "/" && event.shiftKey);
+    if (!wantsHelp) {
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (isOpen) {
+      event.preventDefault();
+      closeOverlay();
+      return;
+    }
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    openOverlay();
+  });
+};
+
 const initUserMenu = () => {
   const root = document.querySelector("[data-user-menu]");
   if (!root) {
@@ -2766,6 +2908,8 @@ const initGlobalSearchInteractions = () => {
   const ROOT_SELECTOR = "[data-search-root]";
   const RESULTS_SELECTOR = "[data-search-results]";
   const RESULT_ROW_SELECTOR = "[data-search-result]";
+  const GROUP_SELECTOR = "[data-search-group]";
+  const FILTER_SELECTOR = "[data-search-filter]";
   const controllers = new WeakMap();
 
   class SearchController {
@@ -2775,6 +2919,8 @@ const initGlobalSearchInteractions = () => {
       this.input = root.querySelector("[data-search-input]");
       this.results = [];
       this.activeRow = null;
+      this.filters = [];
+      this.groups = [];
       this.detail = root.querySelector("[data-search-detail]");
       this.detailEmpty = this.detail ? this.detail.querySelector("[data-search-detail-empty]") : null;
       this.detailContent = this.detail ? this.detail.querySelector("[data-search-detail-content]") : null;
@@ -2827,6 +2973,14 @@ const initGlobalSearchInteractions = () => {
       const container = this.root.querySelector(RESULTS_SELECTOR);
       const rows = container ? Array.from(container.querySelectorAll(RESULT_ROW_SELECTOR)) : [];
       this.results = rows.filter((row) => row instanceof HTMLElement);
+      this.filters = Array.from(this.root.querySelectorAll(FILTER_SELECTOR)).filter(
+        (element) => element instanceof HTMLElement,
+      );
+      this.groups = container
+        ? Array.from(container.querySelectorAll(GROUP_SELECTOR)).filter(
+            (group) => group instanceof HTMLElement && group.querySelector(RESULT_ROW_SELECTOR),
+          )
+        : [];
       if (this.results.length === 0) {
         this.setActive(null);
         return;
@@ -2868,6 +3022,48 @@ const initGlobalSearchInteractions = () => {
       this.setActive(nextRow);
       nextRow.focus({ preventScroll: false });
       nextRow.scrollIntoView({ block: "nearest" });
+    }
+
+    focusFilters() {
+      const targets = this.filters
+        .filter((element) => element.isConnected && isVisible(element) && !element.hasAttribute("disabled"))
+        .map((element) => element);
+      const first = targets[0];
+      if (!(first instanceof HTMLElement)) {
+        return;
+      }
+      first.focus({ preventScroll: true });
+      if (first instanceof HTMLInputElement || first instanceof HTMLTextAreaElement) {
+        first.select();
+      }
+    }
+
+    moveGroup(delta) {
+      if (!Number.isFinite(delta) || this.groups.length === 0) {
+        return;
+      }
+      const direction = delta >= 0 ? 1 : -1;
+      const currentIndex = this.activeRow
+        ? this.groups.findIndex((group) => group.contains(this.activeRow))
+        : -1;
+      let nextIndex = currentIndex === -1 ? (direction > 0 ? 0 : this.groups.length - 1) : currentIndex + direction;
+      if (nextIndex < 0) {
+        nextIndex = this.groups.length - 1;
+      }
+      if (nextIndex >= this.groups.length) {
+        nextIndex = 0;
+      }
+      const nextGroup = this.groups[nextIndex];
+      if (!nextGroup) {
+        return;
+      }
+      const firstRow = nextGroup.querySelector(RESULT_ROW_SELECTOR);
+      if (!(firstRow instanceof HTMLElement)) {
+        return;
+      }
+      this.setActive(firstRow);
+      firstRow.focus({ preventScroll: true });
+      firstRow.scrollIntoView({ block: "nearest" });
     }
 
     openActive() {
@@ -3046,6 +3242,13 @@ const initGlobalSearchInteractions = () => {
     if (!controller) {
       return;
     }
+    if (areShortcutsBlocked()) {
+      return;
+    }
+    const target = event.target;
+    const isEditable = isEditableTarget(target);
+    const hasModifier = event.altKey || event.ctrlKey || event.metaKey;
+    const normalizedKey = typeof event.key === "string" ? event.key.toLowerCase() : "";
     if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (isEditableTarget(event.target)) {
         return;
@@ -3054,9 +3257,17 @@ const initGlobalSearchInteractions = () => {
       controller.focusInput();
       return;
     }
+    if (normalizedKey === "f" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.focusFilters();
+      return;
+    }
     if (event.key === "ArrowDown") {
-      if (isEditableTarget(event.target)) {
-        if (event.target instanceof Element && event.target.closest(ROOT_SELECTOR)) {
+      if (isEditable) {
+        if (target instanceof Element && target.closest(ROOT_SELECTOR)) {
           return;
         }
         return;
@@ -3065,9 +3276,17 @@ const initGlobalSearchInteractions = () => {
       controller.move(1);
       return;
     }
+    if (normalizedKey === "j" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.move(1);
+      return;
+    }
     if (event.key === "ArrowUp") {
-      if (isEditableTarget(event.target)) {
-        if (event.target instanceof Element && event.target.closest(ROOT_SELECTOR)) {
+      if (isEditable) {
+        if (target instanceof Element && target.closest(ROOT_SELECTOR)) {
           return;
         }
         return;
@@ -3076,8 +3295,31 @@ const initGlobalSearchInteractions = () => {
       controller.move(-1);
       return;
     }
+    if (normalizedKey === "k" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.move(-1);
+      return;
+    }
+    if (normalizedKey === "g" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.moveGroup(event.shiftKey ? -1 : 1);
+      return;
+    }
+    if (normalizedKey === "o" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.openActive();
+      return;
+    }
     if (event.key === "Enter") {
-      const target = event.target;
       if (isEditableTarget(target)) {
         if (target instanceof Element && target.closest("[data-search-form]")) {
           return;
@@ -3955,6 +4197,7 @@ window.hankoAdmin = window.hankoAdmin || {
     });
 
     initSearchShortcut(modalRoot);
+    initShortcutOverlay();
     initNotificationsBadge();
     initWorkloadBadges();
     initNotificationsSelection();
