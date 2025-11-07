@@ -162,7 +162,7 @@
 - [x] [116 Document manual QA scenarios for admin workflows and edge cases.](./tasks/116-document-manual-qa-scenarios-for-admin-workflows-and-edge-cases.md)
 
 ## 11. Security & Compliance
-- [ ] [117 Define RBAC roles/permissions map for user vs staff vs admin endpoints.](./tasks/117-define-rbac-roles-permissions-map-for-user-vs-staff-vs-admin-endpoints.md)
+- [x] [117 Define RBAC roles/permissions map for user vs staff vs admin endpoints.](./tasks/117-define-rbac-roles-permissions-map-for-user-vs-staff-vs-admin-endpoints.md)
 - [ ] [118 Enforce validation and sanitization for all user inputs to prevent injection/abuse.](./tasks/118-enforce-validation-and-sanitization-for-all-user-inputs-to-prevent-injection-abu.md)
 - [ ] [119 Implement rate limiting/throttling strategy for sensitive endpoints.](./tasks/119-implement-rate-limiting-throttling-strategy-for-sensitive-endpoints.md)
 - [ ] [120 Ensure PII masking/anonymization processes meet compliance and logging policies.](./tasks/120-ensure-pii-masking-anonymization-processes-meet-compliance-and-logging-policies.md)
