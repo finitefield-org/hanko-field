@@ -203,7 +203,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		activity = nil
 	}
 
-	data := dashboardtpl.BuildPageData(custommw.BasePathFromContext(ctx), kpis, alerts, activity)
+	data := dashboardtpl.BuildPageData(ctx, custommw.BasePathFromContext(ctx), kpis, alerts, activity)
 	data.KPIFragment = kpiFragment
 	data.AlertsFragment = alertsFragment
 

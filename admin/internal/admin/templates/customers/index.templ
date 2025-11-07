@@ -20,7 +20,7 @@ templ pageBody(data PageData) {
 					<p class="text-sm text-slate-600">{ data.Description }</p>
 					if data.LastUpdated != "" && data.LastUpdated != "-" {
 						<p class="text-xs text-slate-400">
-							{ helpers.I18N("common.last_updated") }: { data.LastUpdated }
+							{ helpers.I18N(ctx, "common.last_updated") }: { data.LastUpdated }
 							if data.LastRelative != "" {
 								<span class="ml-2">({ data.LastRelative })</span>
 							}
@@ -49,7 +49,7 @@ templ pageBody(data PageData) {
 
 			if len(data.Segments) > 0 {
 				<div class="mt-6 flex flex-wrap items-center gap-2">
-					<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N("admin.customers.segments.heading") }</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N(ctx, "admin.customers.segments.heading") }</span>
 					for _, chip := range data.Segments {
 						<button
 							type="submit"
@@ -69,9 +69,9 @@ templ pageBody(data PageData) {
 						value=""
 						form="customers-filter"
 						class={ segmentChipClass(data.Query.Tier == "") }
-						title={ helpers.I18N("admin.customers.segments.tooltip", helpers.I18N("admin.customers.segments.all")) }
+						title={ helpers.I18N(ctx, "admin.customers.segments.tooltip", helpers.I18N(ctx, "admin.customers.segments.all")) }
 					>
-						{ helpers.I18N("admin.customers.segments.all") }
+						{ helpers.I18N(ctx, "admin.customers.segments.all") }
 					</button>
 				</div>
 			}
@@ -109,22 +109,22 @@ templ filterForm(data PageData) {
 
 		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 			<div class="flex flex-col gap-2">
-				<label for="customers-search" class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N("admin.customers.filters.search.label") }</label>
+				<label for="customers-search" class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N(ctx, "admin.customers.filters.search.label") }</label>
 				<div class="relative">
 					<input
 						id="customers-search"
 						name="q"
 						type="search"
 						value={ data.Query.Search }
-						placeholder={ helpers.I18N("admin.customers.filters.search.placeholder") }
+						placeholder={ helpers.I18N(ctx, "admin.customers.filters.search.placeholder") }
 						class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
 					/>
 					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
 				</div>
 			</div>
 			<div class="flex flex-col gap-2">
-				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N("admin.customers.filters.status.label") }</span>
-				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label={ helpers.I18N("admin.customers.filters.status.label") }>
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N(ctx, "admin.customers.filters.status.label") }</span>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label={ helpers.I18N(ctx, "admin.customers.filters.status.label") }>
 					for _, option := range data.Filters.Status {
 						<label class={ statusChipClass(option.Active, option.Tone) }>
 							<input
@@ -145,7 +145,7 @@ templ filterForm(data PageData) {
 				</div>
 			</div>
 			<div class="flex flex-col gap-2">
-				<label for="customers-tier" class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N("admin.customers.filters.tier.label") }</label>
+				<label for="customers-tier" class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N(ctx, "admin.customers.filters.tier.label") }</label>
 				<select
 					id="customers-tier"
 					name="tier"
@@ -163,7 +163,7 @@ templ filterForm(data PageData) {
 				</select>
 			</div>
 			<div class="flex items-end gap-3">
-				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>{ helpers.I18N("admin.customers.filters.apply") }</button>
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>{ helpers.I18N(ctx, "admin.customers.filters.apply") }</button>
 				<a
 					href={ data.ResetURL }
 					class={ helpers.ButtonClass("ghost", "sm", false, false) }
@@ -171,7 +171,7 @@ templ filterForm(data PageData) {
 					hx-target="#customers-table"
 					hx-push-url="true"
 				>
-					{ helpers.I18N("admin.customers.filters.reset") }
+					{ helpers.I18N(ctx, "admin.customers.filters.reset") }
 				</a>
 			</div>
 		</div>
@@ -180,7 +180,7 @@ templ filterForm(data PageData) {
 			id="customers-loading"
 			class="htmx-indicator text-xs text-slate-400"
 		>
-			{ helpers.I18N("admin.customers.loading") }
+			{ helpers.I18N(ctx, "admin.customers.loading") }
 		</div>
 	</form>
 }

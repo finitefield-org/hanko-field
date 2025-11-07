@@ -1,6 +1,7 @@
 package customers
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -245,7 +246,8 @@ type InfoRailItem struct {
 }
 
 // BuildDetailPageData assembles the detail page payload.
-func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTab string) DetailPageData {
+func BuildDetailPageData(ctx context.Context, basePath string, detail admincustomers.Detail, activeTab string) DetailPageData {
+	formatter := helpers.NewFormatter(ctx)
 	tab := strings.TrimSpace(strings.ToLower(activeTab))
 	if tab == "" {
 		tab = "overview"
@@ -264,7 +266,7 @@ func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTa
 	description := "注文履歴、支払い方法、サポートノートを確認できます。"
 
 	breadcrumbs := []partials.Breadcrumb{
-		{Label: helpers.I18N("admin.customers.breadcrumb"), Href: joinBase(basePath, "/customers")},
+		{Label: formatter.T("admin.customers.breadcrumb"), Href: joinBase(basePath, "/customers")},
 		{Label: displayName},
 	}
 
@@ -289,11 +291,11 @@ func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTa
 		Company:          profile.Company,
 		Location:         profile.Location,
 		CustomerID:       profile.ID,
-		StatusLabel:      statusLabel(profile.Status),
+		StatusLabel:      statusLabel(formatter, profile.Status),
 		StatusTone:       statusTone(profile.Status),
-		TierLabel:        tierLabel(profile.Tier),
+		TierLabel:        tierLabel(formatter, profile.Tier),
 		TierTone:         tierTone(profile.Tier),
-		RiskLabel:        riskLabel(profile.RiskLevel),
+		RiskLabel:        riskLabel(formatter, profile.RiskLevel),
 		RiskTone:         riskTone(profile.RiskLevel),
 		RiskDescription:  detail.InfoRail.RiskDescription,
 		JoinedLabel:      formatDate(profile.JoinedAt, "2006-01-02"),
@@ -326,7 +328,7 @@ func BuildDetailPageData(basePath string, detail admincustomers.Detail, activeTa
 	payments := buildPayments(detail)
 	notes := buildNotes(detail)
 	activity := buildActivity(detail)
-	infoRail := buildInfoRail(detail)
+	infoRail := buildInfoRail(formatter, detail)
 
 	lastUpdated := "-"
 	lastRelative := ""
@@ -549,7 +551,7 @@ func buildActivity(detail admincustomers.Detail) ActivityTabData {
 	return ActivityTabData{Items: items}
 }
 
-func buildInfoRail(detail admincustomers.Detail) InfoRailData {
+func buildInfoRail(formatter helpers.Formatter, detail admincustomers.Detail) InfoRailData {
 	rail := detail.InfoRail
 	sections := []InfoRailSection{}
 
@@ -579,7 +581,7 @@ func buildInfoRail(detail admincustomers.Detail) InfoRailData {
 	}
 
 	return InfoRailData{
-		RiskLabel:       riskLabel(nonEmpty(rail.RiskLevel, detail.Profile.RiskLevel)),
+		RiskLabel:       riskLabel(formatter, nonEmpty(rail.RiskLevel, detail.Profile.RiskLevel)),
 		RiskTone:        nonEmpty(rail.RiskTone, riskTone(detail.Profile.RiskLevel)),
 		RiskDescription: nonEmpty(rail.RiskDescription, "特記事項はありません。"),
 		Segments:        append([]string(nil), rail.Segments...),

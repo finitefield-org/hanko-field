@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
+	"sort"
 	"strings"
 
 	"finitefield.org/hanko-admin/internal/admin/i18n"
@@ -15,6 +17,8 @@ type LocaleConfig struct {
 	DisableAcceptLanguage bool
 }
 
+type supportedLocalesKey struct{}
+
 // Locale attaches the resolved locale to the request context and session.
 func Locale(cfg LocaleConfig) func(http.Handler) http.Handler {
 	catalog := i18n.Default()
@@ -27,6 +31,11 @@ func Locale(cfg LocaleConfig) func(http.Handler) http.Handler {
 	for _, locale := range supported {
 		allowed[catalog.Canonicalize(locale)] = struct{}{}
 	}
+	supportedList := make([]string, 0, len(allowed))
+	for locale := range allowed {
+		supportedList = append(supportedList, locale)
+	}
+	sort.Strings(supportedList)
 	queryParam := strings.TrimSpace(cfg.QueryParam)
 	if queryParam == "" {
 		queryParam = "lang"
@@ -70,8 +79,20 @@ func Locale(cfg LocaleConfig) func(http.Handler) http.Handler {
 			}
 
 			ctx = i18n.ContextWithLocale(ctx, locale)
+			ctx = context.WithValue(ctx, supportedLocalesKey{}, supportedList)
 			w.Header().Set("Content-Language", locale)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// SupportedLocalesFromContext returns the configured locale list for the current request.
+func SupportedLocalesFromContext(ctx context.Context) []string {
+	if ctx == nil {
+		return nil
+	}
+	if locales, ok := ctx.Value(supportedLocalesKey{}).([]string); ok {
+		return locales
+	}
+	return nil
 }

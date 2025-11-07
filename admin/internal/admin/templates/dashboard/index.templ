@@ -14,8 +14,8 @@ templ dashboardBody(data PageData) {
             <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 class="text-2xl font-semibold text-slate-900">{ helpers.I18N("admin.dashboard.title") }</h1>
-                        <p class="mt-2 max-w-xl text-sm text-slate-600">{ helpers.I18N("admin.dashboard.subtitle") }</p>
+                        <h1 class="text-2xl font-semibold text-slate-900">{ helpers.I18N(ctx, "admin.dashboard.title") }</h1>
+                        <p class="mt-2 max-w-xl text-sm text-slate-600">{ helpers.I18N(ctx, "admin.dashboard.subtitle") }</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button
@@ -25,7 +25,7 @@ templ dashboardBody(data PageData) {
                             data-dashboard-targets="#dashboard-kpi,#dashboard-alerts"
                         >
                             <span aria-hidden="true">⟳</span>
-                            <span class="ml-2">{ helpers.I18N("admin.dashboard.refresh") }</span>
+                            <span class="ml-2">{ helpers.I18N(ctx, "admin.dashboard.refresh") }</span>
                         </button>
                     </div>
                 </div>
@@ -59,8 +59,8 @@ templ dashboardBody(data PageData) {
         <aside class="xl:w-80 xl:shrink-0">
             <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N("admin.dashboard.activity.title") }</h2>
-                    <span class="text-xs text-slate-400">{ helpers.I18N("admin.dashboard.activity.recent") }</span>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{ helpers.I18N(ctx, "admin.dashboard.activity.title") }</h2>
+                    <span class="text-xs text-slate-400">{ helpers.I18N(ctx, "admin.dashboard.activity.recent") }</span>
                 </div>
                 @ActivityFeed(data.Activity)
             </div>
@@ -79,7 +79,7 @@ templ KPIFragment(data KPIFragmentData) {
     }
 
     if len(data.KPIs) == 0 {
-        @InlineNotice("info", helpers.I18N("admin.dashboard.kpi.empty"))
+        @InlineNotice("info", helpers.I18N(ctx, "admin.dashboard.kpi.empty"))
         return
     }
 
@@ -122,8 +122,8 @@ templ KPIFragment(data KPIFragmentData) {
 
 templ AlertsFragment(data AlertsFragmentData) {
     <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-900">{ helpers.I18N("admin.dashboard.alerts.title") }</h2>
-        <span class="text-xs text-slate-500">{ helpers.I18N("admin.dashboard.alerts.subtitle") }</span>
+        <h2 class="text-lg font-semibold text-slate-900">{ helpers.I18N(ctx, "admin.dashboard.alerts.title") }</h2>
+        <span class="text-xs text-slate-500">{ helpers.I18N(ctx, "admin.dashboard.alerts.subtitle") }</span>
     </div>
 
     if data.Error != "" {
@@ -137,7 +137,7 @@ templ AlertsFragment(data AlertsFragmentData) {
 
     if len(data.Alerts) == 0 {
         <div class="mt-4">
-            @InlineNotice("success", helpers.I18N("admin.dashboard.alerts.empty"))
+            @InlineNotice("success", helpers.I18N(ctx, "admin.dashboard.alerts.empty"))
         </div>
         return
     }
@@ -150,7 +150,7 @@ templ AlertsFragment(data AlertsFragmentData) {
                         <p class="text-sm font-semibold text-slate-900">{ alert.Title }</p>
                         <p class="mt-1 text-sm text-slate-600">{ alert.Message }</p>
                         <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
-                            <span class={ helpers.BadgeClass(alert.Severity) }>{ helpers.I18N("admin.dashboard.alerts.badge."+alert.Severity) }</span>
+                            <span class={ helpers.BadgeClass(alert.Severity) }>{ helpers.I18N(ctx, "admin.dashboard.alerts.badge."+alert.Severity) }</span>
                             if !alert.CreatedAt.IsZero() {
                                 <span>{ helpers.Relative(alert.CreatedAt) }</span>
                             }
@@ -172,7 +172,7 @@ templ AlertsFragment(data AlertsFragmentData) {
 templ ActivityFeed(items []ActivityItem) {
     if len(items) == 0 {
         <div class="mt-4">
-            @InlineNotice("info", helpers.I18N("admin.dashboard.activity.empty"))
+            @InlineNotice("info", helpers.I18N(ctx, "admin.dashboard.activity.empty"))
         </div>
         return
     }
@@ -191,7 +191,7 @@ templ ActivityFeed(items []ActivityItem) {
                             <span>{ helpers.Relative(item.Occurred) }</span>
                         }
                         if item.LinkURL != "" {
-                            <a href={ item.LinkURL } class="font-medium text-brand-600 hover:text-brand-500">{ helpers.I18N("admin.dashboard.activity.view") }</a>
+                            <a href={ item.LinkURL } class="font-medium text-brand-600 hover:text-brand-500">{ helpers.I18N(ctx, "admin.dashboard.activity.view") }</a>
                         }
                     </div>
                 </div>
@@ -254,5 +254,5 @@ func kpiTrendGlyph(trend string) string {
 }
 
 templ Index(data PageData) {
-    @layouts.Base(data.Title, breadcrumbItems(), dashboardBody(data))
+    @layouts.Base(data.Title, breadcrumbItems(ctx), dashboardBody(data))
 }

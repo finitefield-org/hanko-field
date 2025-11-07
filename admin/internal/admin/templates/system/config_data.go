@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"time"
@@ -80,7 +81,8 @@ type ConfigAuditChangeView struct {
 }
 
 // BuildEnvironmentSettingsPageData assembles the page payload from the domain model.
-func BuildEnvironmentSettingsPageData(basePath string, cfg adminsystem.EnvironmentConfig) EnvironmentSettingsPageData {
+func BuildEnvironmentSettingsPageData(ctx context.Context, basePath string, cfg adminsystem.EnvironmentConfig) EnvironmentSettingsPageData {
+	formatter := helpers.NewFormatter(ctx)
 	generated := cfg.GeneratedAt
 	if generated.IsZero() {
 		generated = time.Now()
@@ -189,7 +191,7 @@ func BuildEnvironmentSettingsPageData(basePath string, cfg adminsystem.Environme
 		Summary:         strings.TrimSpace(cfg.Summary),
 		ReadOnly:        cfg.ReadOnly,
 		Error:           "",
-		GeneratedLabel:  helpers.I18N("common.last_updated") + ": " + helpers.Relative(generated),
+		GeneratedLabel:  formatter.T("common.last_updated") + ": " + formatter.Relative(generated),
 		Metadata:        metadata,
 		Documents:       documents,
 		Categories:      categories,

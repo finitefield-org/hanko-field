@@ -14,6 +14,52 @@ import (
 
 var defaultLocale = i18n.Default().Canonicalize("ja-JP")
 
+// Formatter wraps context-aware translation and formatting helpers.
+type Formatter struct {
+	ctx context.Context
+}
+
+// NewFormatter constructs a Formatter bound to the provided context.
+func NewFormatter(ctx context.Context) Formatter {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if !i18n.HasLocale(ctx) {
+		ctx = i18n.ContextWithLocale(ctx, defaultLocale)
+	}
+	return Formatter{ctx: ctx}
+}
+
+// Context exposes the underlying context.
+func (f Formatter) Context() context.Context {
+	return f.ctx
+}
+
+// Locale returns the canonical locale for the formatter.
+func (f Formatter) Locale() string {
+	return LocaleCode(f.ctx)
+}
+
+// T translates the provided key using the formatter locale.
+func (f Formatter) T(key string, args ...any) string {
+	return i18n.TranslateContext(f.ctx, key, args...)
+}
+
+// Currency renders an amount using locale-specific formatting.
+func (f Formatter) Currency(amount int64, currency string) string {
+	return CurrencyLocalized(f.ctx, amount, currency)
+}
+
+// Date renders a timestamp in a locale-aware manner.
+func (f Formatter) Date(ts time.Time, layout string) string {
+	return DateLocalized(f.ctx, ts, layout)
+}
+
+// Relative renders a coarse time-ago string for the locale.
+func (f Formatter) Relative(ts time.Time) string {
+	return RelativeLocalized(f.ctx, ts)
+}
+
 // Currency formats amounts (in minor units) with the given ISO currency code.
 func Currency(amount int64, currency string) string {
 	return CurrencyLocalized(context.Background(), amount, currency)
@@ -85,14 +131,14 @@ func RelativeLocalized(ctx context.Context, ts time.Time) string {
 	}
 }
 
-// I18N returns the default-locale translation for the given key.
-func I18N(key string, args ...any) string {
-	return i18n.Default().Translate(defaultLocale, key, args...)
+// I18N returns the translation for the provided key using the supplied context.
+func I18N(ctx context.Context, key string, args ...any) string {
+	return NewFormatter(ctx).T(key, args...)
 }
 
 // Localize resolves the translation using the locale stored on the context.
 func Localize(ctx context.Context, key string, args ...any) string {
-	return i18n.TranslateContext(ctx, key, args...)
+	return I18N(ctx, key, args...)
 }
 
 // LocaleCode returns the resolved locale for the current context.
@@ -102,6 +148,19 @@ func LocaleCode(ctx context.Context) string {
 		return defaultLocale
 	}
 	return locale
+}
+
+// LocaleDisplayName returns a human-friendly label for the locale.
+func LocaleDisplayName(ctx context.Context, locale string) string {
+	normalized := strings.ToLower(strings.TrimSpace(locale))
+	if normalized == "" {
+		return ""
+	}
+	key := "admin.locale.name." + strings.ReplaceAll(normalized, "-", "_")
+	if label := i18n.TranslateContext(ctx, key); label != "" && label != key {
+		return label
+	}
+	return strings.ToUpper(locale)
 }
 
 func currencySymbol(code string) string {

@@ -137,6 +137,15 @@ func New(cfg Config) *http.Server {
 		SystemService:        cfg.SystemService,
 	})
 
+	defaultLocale := strings.TrimSpace(cfg.DefaultLocale)
+	if defaultLocale == "" {
+		defaultLocale = "ja-JP"
+	}
+	supportedLocales := cfg.SupportedLocales
+	if len(supportedLocales) == 0 {
+		supportedLocales = []string{defaultLocale}
+	}
+
 	mountAdminRoutes(router, basePath, routeOptions{
 		SessionStore:  sessionStore,
 		Authenticator: authenticator,
@@ -145,8 +154,8 @@ func New(cfg Config) *http.Server {
 		UI:            uiHandlers,
 		Environment:   environment,
 		Locale: custommw.LocaleConfig{
-			Default:   cfg.DefaultLocale,
-			Supported: cfg.SupportedLocales,
+			Default:   defaultLocale,
+			Supported: supportedLocales,
 		},
 	})
 

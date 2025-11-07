@@ -59,7 +59,7 @@ func (h *Handlers) ProductionQueuesSummaryPage(w http.ResponseWriter, r *http.Re
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)
-	data := productiontpl.BuildWIPSummaryPage(basePath, req.state, result, errMsg)
+	data := productiontpl.BuildWIPSummaryPage(ctx, basePath, req.state, result, errMsg)
 
 	templ.Handler(productiontpl.WIPSummary(data)).ServeHTTP(w, r)
 }

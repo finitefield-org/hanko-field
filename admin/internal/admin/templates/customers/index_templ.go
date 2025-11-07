@@ -101,9 +101,9 @@ func pageBody(data PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("common.last_updated"))
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "common.last_updated"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 23, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 23, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -116,7 +116,7 @@ func pageBody(data PageData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(data.LastUpdated)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 23, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 23, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -248,9 +248,9 @@ func pageBody(data PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 string
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.segments.heading"))
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.segments.heading"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 52, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 52, Col: 135}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -359,9 +359,9 @@ func pageBody(data PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var21 string
-			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.segments.tooltip", helpers.I18N("admin.customers.segments.all")))
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.segments.tooltip", helpers.I18N(ctx, "admin.customers.segments.all")))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 72, Col: 108}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 72, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -372,9 +372,9 @@ func pageBody(data PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var22 string
-			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.segments.all"))
+			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.segments.all"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 74, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 74, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -474,9 +474,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var27 string
-		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.search.label"))
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.search.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 112, Col: 157}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 112, Col: 162}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -500,9 +500,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var29 string
-		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.search.placeholder"))
+		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.search.placeholder"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 119, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 119, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -513,9 +513,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var30 string
-		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.status.label"))
+		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.status.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 126, Col: 133}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 126, Col: 138}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
@@ -526,9 +526,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var31 string
-		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.status.label"))
+		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.status.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 127, Col: 121}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 127, Col: 126}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -626,9 +626,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var37 string
-		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.tier.label"))
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.tier.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 148, Col: 153}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 148, Col: 158}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -736,9 +736,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var44 string
-		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.apply"))
+		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.apply"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 166, Col: 134}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 166, Col: 139}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 		if templ_7745c5c3_Err != nil {
@@ -797,9 +797,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var49 string
-		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.filters.reset"))
+		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.filters.reset"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 174, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 174, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 		if templ_7745c5c3_Err != nil {
@@ -810,9 +810,9 @@ func filterForm(data PageData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var50 string
-		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.loading"))
+		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.loading"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 183, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/index.templ`, Line: 183, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 		if templ_7745c5c3_Err != nil {

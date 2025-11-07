@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -66,9 +67,10 @@ type ActivityItem struct {
 }
 
 // BuildPageData prepares the template payload for SSR rendering.
-func BuildPageData(basePath string, kpis []admindashboard.KPI, alerts []admindashboard.Alert, activity []admindashboard.ActivityItem) PageData {
+func BuildPageData(ctx context.Context, basePath string, kpis []admindashboard.KPI, alerts []admindashboard.Alert, activity []admindashboard.ActivityItem) PageData {
+	formatter := helpers.NewFormatter(ctx)
 	return PageData{
-		Title:              "ダッシュボード",
+		Title:              formatter.T("admin.dashboard.title"),
 		KPIFragment:        KPIFragmentPayload(kpis),
 		AlertsFragment:     AlertsFragmentPayload(alerts),
 		Activity:           ActivityFeedPayload(activity),
@@ -162,8 +164,8 @@ func joinBase(base, suffix string) string {
 	return path
 }
 
-func breadcrumbItems() []partials.Breadcrumb {
-	return []partials.Breadcrumb{{Label: helpers.I18N("admin.dashboard.breadcrumb")}}
+func breadcrumbItems(ctx context.Context) []partials.Breadcrumb {
+	return []partials.Breadcrumb{{Label: helpers.I18N(ctx, "admin.dashboard.breadcrumb")}}
 }
 
 func sparklinePoints(values []float64) string {

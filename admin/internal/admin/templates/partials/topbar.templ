@@ -186,25 +186,28 @@ templ EnvironmentBadge() {
 }
 
 templ LanguageSwitcher() {
-	if base := helpers.BasePath(ctx); base != "" {
-		<form
-			class="hidden items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm md:inline-flex"
-			hx-post={ topbarRoute(base, "/preferences/locale") }
-			hx-trigger="change"
-			hx-target="this"
-			hx-swap="none"
-		>
-			<input type="hidden" name="csrf_token" value={ middleware.CSRFTokenFromContext(ctx) } />
-			<label for="locale-select" class="sr-only">{ helpers.Localize(ctx, "admin.topbar.language.label") }</label>
-			<select
-				id="locale-select"
-				name="locale"
-				class="bg-transparent text-sm font-medium focus:outline-none"
+	if locales := middleware.SupportedLocalesFromContext(ctx); len(locales) > 1 {
+		if base := helpers.BasePath(ctx); base != "" {
+			<form
+				class="hidden items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm md:inline-flex"
+				hx-post={ topbarRoute(base, "/preferences/locale") }
+				hx-trigger="change"
+				hx-target="this"
+				hx-swap="none"
 			>
-				<option value="ja-JP" selected={ helpers.LocaleCode(ctx) == "ja-JP" }>{ helpers.Localize(ctx, "admin.topbar.language.japanese") }</option>
-				<option value="en-US" selected={ helpers.LocaleCode(ctx) == "en-US" }>{ helpers.Localize(ctx, "admin.topbar.language.english") }</option>
-			</select>
-		</form>
+				<input type="hidden" name="csrf_token" value={ middleware.CSRFTokenFromContext(ctx) } />
+				<label for="locale-select" class="sr-only">{ helpers.Localize(ctx, "admin.topbar.language.label") }</label>
+				<select
+					id="locale-select"
+					name="locale"
+					class="bg-transparent text-sm font-medium focus:outline-none"
+				>
+					for _, code := range locales {
+						<option value={ code } selected={ strings.EqualFold(helpers.LocaleCode(ctx), code) }>{ helpers.LocaleDisplayName(ctx, code) }</option>
+					}
+				</select>
+			</form>
+		}
 	}
 }
 

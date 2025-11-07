@@ -29,7 +29,7 @@ func (h *Handlers) SystemEnvironmentSettingsPage(w http.ResponseWriter, r *http.
 	}
 
 	config, err := h.system.EnvironmentConfig(ctx, user.Token)
-	page := systemtpl.BuildEnvironmentSettingsPageData(custommw.BasePathFromContext(ctx), config)
+	page := systemtpl.BuildEnvironmentSettingsPageData(ctx, custommw.BasePathFromContext(ctx), config)
 	if err != nil {
 		log.Printf("system settings: fetch environment config failed: %v", err)
 		page.Error = "環境設定の取得に失敗しました。時間を置いて再度お試しください。"
@@ -86,7 +86,7 @@ func (h *Handlers) SystemTasksPage(w http.ResponseWriter, r *http.Request) {
 
 	drawer := systemtpl.TasksDrawerPayload(basePath, summary, detail, detailErr)
 	history := drawer.History
-	page := systemtpl.BuildTasksPageData(basePath, req.state, result, table, drawer, history)
+	page := systemtpl.BuildTasksPageData(ctx, basePath, req.state, result, table, drawer, history)
 
 	templ.Handler(systemtpl.TasksPage(page)).ServeHTTP(w, r)
 }
@@ -270,7 +270,7 @@ func (h *Handlers) SystemCountersPage(w http.ResponseWriter, r *http.Request) {
 	req.state.RawQuery = encodeSystemCountersQuery(req.state)
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := systemtpl.CountersTablePayload(basePath, req.state, result, selected, errMsg)
+	table := systemtpl.CountersTablePayload(ctx, basePath, req.state, result, selected, errMsg)
 
 	var detail adminsystem.CounterDetail
 	detailErr := ""
@@ -294,7 +294,7 @@ func (h *Handlers) SystemCountersPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	drawer := systemtpl.CountersDrawerPayload(basePath, req.state, detail, nil, detailErr)
-	page := systemtpl.BuildCountersPageData(basePath, req.state, result, table, drawer)
+	page := systemtpl.BuildCountersPageData(ctx, basePath, req.state, result, table, drawer)
 
 	templ.Handler(systemtpl.CountersPage(page)).ServeHTTP(w, r)
 }
@@ -322,7 +322,7 @@ func (h *Handlers) SystemCountersTable(w http.ResponseWriter, r *http.Request) {
 	req.state.RawQuery = encodeSystemCountersQuery(req.state)
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := systemtpl.CountersTablePayload(basePath, req.state, result, selected, errMsg)
+	table := systemtpl.CountersTablePayload(ctx, basePath, req.state, result, selected, errMsg)
 
 	if canonical := canonicalSystemCountersURL(basePath, req.state); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)

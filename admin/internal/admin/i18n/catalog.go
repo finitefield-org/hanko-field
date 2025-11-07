@@ -197,6 +197,15 @@ func FromContext(ctx context.Context) string {
 	return Default().Canonicalize("")
 }
 
+// HasLocale reports whether the context includes an explicit locale override.
+func HasLocale(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	_, ok := ctx.Value(localeContextKey{}).(string)
+	return ok
+}
+
 // TranslateContext is a convenience wrapper around Translate for contexts.
 func TranslateContext(ctx context.Context, key string, args ...any) string {
 	catalog := Default()

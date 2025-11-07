@@ -49,8 +49,8 @@ func (h *Handlers) CustomersPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := customerstpl.TablePayload(basePath, req.state, result, errMsg)
-	page := customerstpl.BuildPageData(basePath, req.state, result, table)
+	table := customerstpl.TablePayload(ctx, basePath, req.state, result, errMsg)
+	page := customerstpl.BuildPageData(ctx, basePath, req.state, result, table)
 
 	templ.Handler(customerstpl.Index(page)).ServeHTTP(w, r)
 }
@@ -75,7 +75,7 @@ func (h *Handlers) CustomersTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := customerstpl.TablePayload(basePath, req.state, result, errMsg)
+	table := customerstpl.TablePayload(ctx, basePath, req.state, result, errMsg)
 
 	if canonical := canonicalCustomersURL(basePath, req); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
@@ -116,7 +116,7 @@ func (h *Handlers) CustomerDetailPage(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	activeTab := normalizeCustomerDetailTab(r.URL.Query().Get("tab"))
-	page := customerstpl.BuildDetailPageData(basePath, detail, activeTab)
+	page := customerstpl.BuildDetailPageData(ctx, basePath, detail, activeTab)
 
 	if custommw.IsHTMXRequest(ctx) {
 		target := strings.TrimSpace(custommw.HTMXInfoFromContext(ctx).Target)
@@ -164,7 +164,7 @@ func (h *Handlers) CustomerDeactivateModal(w http.ResponseWriter, r *http.Reques
 	form := customerstpl.DeactivateFormState{
 		FieldErrors: make(map[string]string),
 	}
-	payload := customerstpl.DeactivateModalPayload(basePath, modal, csrf, form)
+	payload := customerstpl.DeactivateModalPayload(ctx, basePath, modal, csrf, form)
 
 	templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
 }
@@ -243,7 +243,7 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			return customerstpl.DeactivateModalMeta{}, err
 		}
-		return customerstpl.DeactivateModalMetaFromModal(basePath, modal), nil
+		return customerstpl.DeactivateModalMetaFromModal(ctx, basePath, modal), nil
 	}
 
 	if meta.CustomerName == "" || meta.TotalOrdersLabel == "" || meta.LifetimeValueLabel == "" || meta.StatusLabel == "" || meta.ConfirmationPhrase == "" {

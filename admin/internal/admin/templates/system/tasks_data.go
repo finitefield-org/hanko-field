@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -208,7 +209,8 @@ type TaskDrawerAction struct {
 }
 
 // BuildTasksPageData assembles the SSR payload for the tasks monitor.
-func BuildTasksPageData(basePath string, state TasksQueryState, result adminsystem.JobResult, table TasksTableData, drawer TasksDrawerData, history TaskHistoryChart) TasksPageData {
+func BuildTasksPageData(ctx context.Context, basePath string, state TasksQueryState, result adminsystem.JobResult, table TasksTableData, drawer TasksDrawerData, history TaskHistoryChart) TasksPageData {
+	formatter := helpers.NewFormatter(ctx)
 	return TasksPageData{
 		Title:          "タスク / ジョブ監視",
 		Description:    "スケジューラの実行状況、失敗、および手動オペレーションを可視化します。",
@@ -222,7 +224,7 @@ func BuildTasksPageData(basePath string, state TasksQueryState, result adminsyst
 		Table:          table,
 		Drawer:         drawer,
 		History:        history,
-		GeneratedLabel: fmt.Sprintf("%s: %s", helpers.I18N("common.last_updated"), helpers.Relative(result.GeneratedAt)),
+		GeneratedLabel: fmt.Sprintf("%s: %s", formatter.T("common.last_updated"), formatter.Relative(result.GeneratedAt)),
 	}
 }
 

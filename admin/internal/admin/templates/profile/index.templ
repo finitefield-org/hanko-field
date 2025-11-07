@@ -20,7 +20,7 @@ templ Index(data PageData) {
 	if data.ActiveTab == "" {
 		data.ActiveTab = "security"
 	}
-	@layouts.Base(helpers.I18N("admin.profile.title"), breadcrumbItems(), pageBody(data))
+	@layouts.Base(helpers.I18N(ctx, "admin.profile.title"), breadcrumbItems(), pageBody(data))
 }
 
 templ pageBody(data PageData) {

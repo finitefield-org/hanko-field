@@ -1,6 +1,7 @@
 package customers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -58,8 +59,8 @@ type DeactivateSuccessData struct {
 }
 
 // DeactivateModalPayload normalises service data for the modal template.
-func DeactivateModalPayload(basePath string, modal admincustomers.DeactivateModal, csrfToken string, form DeactivateFormState) DeactivateModalData {
-	meta := DeactivateModalMetaFromModal(basePath, modal)
+func DeactivateModalPayload(ctx context.Context, basePath string, modal admincustomers.DeactivateModal, csrfToken string, form DeactivateFormState) DeactivateModalData {
+	meta := DeactivateModalMetaFromModal(ctx, basePath, modal)
 	return meta.ToData(csrfToken, form)
 }
 
@@ -79,7 +80,8 @@ type DeactivateModalMeta struct {
 }
 
 // DeactivateModalMetaFromModal builds persistent modal metadata from service output.
-func DeactivateModalMetaFromModal(basePath string, modal admincustomers.DeactivateModal) DeactivateModalMeta {
+func DeactivateModalMetaFromModal(ctx context.Context, basePath string, modal admincustomers.DeactivateModal) DeactivateModalMeta {
+	formatter := helpers.NewFormatter(ctx)
 	totalOrders := fmt.Sprintf("%d件", modal.TotalOrders)
 	lifetime := helpers.Currency(modal.LifetimeValueMinor, modal.Currency)
 	lastOrder := "-"
@@ -94,7 +96,7 @@ func DeactivateModalMetaFromModal(basePath string, modal admincustomers.Deactiva
 			lastOrder = lastLabel
 		}
 	}
-	statusLabel := statusLabel(modal.Status)
+	statusLabel := statusLabel(formatter, modal.Status)
 	statusTone := statusTone(modal.Status)
 
 	actionURL := joinBase(basePath, fmt.Sprintf("/customers/%s:deactivate-and-mask", url.PathEscape(strings.TrimSpace(modal.CustomerID))))

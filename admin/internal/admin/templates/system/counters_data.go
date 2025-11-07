@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -154,7 +155,8 @@ type CountersNextResult struct {
 }
 
 // BuildCountersPageData assembles the counters page payload.
-func BuildCountersPageData(basePath string, state CountersQueryState, result adminsystem.CounterResult, table CountersTableData, drawer CountersDrawerData) CountersPageData {
+func BuildCountersPageData(ctx context.Context, basePath string, state CountersQueryState, result adminsystem.CounterResult, table CountersTableData, drawer CountersDrawerData) CountersPageData {
+	formatter := helpers.NewFormatter(ctx)
 	generated := result.GeneratedAt
 	if generated.IsZero() {
 		generated = time.Now()
@@ -162,26 +164,27 @@ func BuildCountersPageData(basePath string, state CountersQueryState, result adm
 	return CountersPageData{
 		Title:             "カウンタ管理",
 		Description:       "採番カウンタの現在値を確認し、必要に応じて手動で次番号を試験取得します。",
-		Breadcrumbs:       countersBreadcrumbs(basePath),
+		Breadcrumbs:       countersBreadcrumbs(formatter, basePath),
 		Alerts:            counterAlerts(result.Alerts),
 		Query:             state,
 		NamespaceSelector: buildNamespaceSelector(basePath, state.Namespace, result.Namespaces),
 		TableEndpoint:     joinBasePath(basePath, "/system/counters/table"),
 		Table:             table,
 		Drawer:            drawer,
-		GeneratedLabel:    fmt.Sprintf("%s: %s", helpers.I18N("common.last_updated"), helpers.Relative(generated)),
+		GeneratedLabel:    fmt.Sprintf("%s: %s", formatter.T("common.last_updated"), formatter.Relative(generated)),
 	}
 }
 
 // CountersTablePayload prepares the table fragment payload.
-func CountersTablePayload(basePath string, state CountersQueryState, result adminsystem.CounterResult, selected string, errMsg string) CountersTableData {
+func CountersTablePayload(ctx context.Context, basePath string, state CountersQueryState, result adminsystem.CounterResult, selected string, errMsg string) CountersTableData {
+	formatter := helpers.NewFormatter(ctx)
 	rows := make([]CountersTableRow, 0, len(result.Counters))
 	for _, counter := range result.Counters {
-		rows = append(rows, toCountersTableRow(basePath, counter, selected))
+		rows = append(rows, toCountersTableRow(formatter, basePath, counter, selected))
 	}
 	generated := ""
 	if !result.GeneratedAt.IsZero() {
-		generated = helpers.Date(result.GeneratedAt, "2006-01-02 15:04")
+		generated = formatter.Date(result.GeneratedAt, "2006-01-02 15:04")
 	}
 	empty := "表示できるカウンタがありません。フィルタを調整するかスコープを確認してください。"
 	return CountersTableData{
@@ -269,7 +272,7 @@ func CountersDrawerPayload(basePath string, state CountersQueryState, detail adm
 	}
 }
 
-func countersBreadcrumbs(basePath string) []partials.Breadcrumb {
+func countersBreadcrumbs(_ helpers.Formatter, basePath string) []partials.Breadcrumb {
 	return []partials.Breadcrumb{
 		{Label: "システム運用", Href: joinBasePath(basePath, "/system/tasks")},
 		{Label: "カウンタ", Href: joinBasePath(basePath, "/system/counters")},
@@ -325,7 +328,7 @@ func buildNamespaceSelector(basePath, selected string, options []adminsystem.Cou
 	return selector
 }
 
-func toCountersTableRow(basePath string, counter adminsystem.Counter, selected string) CountersTableRow {
+func toCountersTableRow(formatter helpers.Formatter, basePath string, counter adminsystem.Counter, selected string) CountersTableRow {
 	selected = strings.TrimSpace(selected)
 	name := strings.TrimSpace(counter.Name)
 	isSelected := selected != "" && strings.EqualFold(selected, name)
@@ -341,8 +344,8 @@ func toCountersTableRow(basePath string, counter adminsystem.Counter, selected s
 		ScopeLabel:         formatScopeLabel(counter.ScopeExample, counter.ScopeKeys),
 		Increment:          fmt.Sprintf("%d", fallbackInt(counter.Increment, 1)),
 		CurrentValue:       fmt.Sprintf("%d", counter.CurrentValue),
-		LastUpdated:        helpers.Relative(counter.LastUpdated),
-		LastUpdatedTooltip: formatTimestamp(counter.LastUpdated),
+		LastUpdated:        formatter.Relative(counter.LastUpdated),
+		LastUpdatedTooltip: formatter.Date(counter.LastUpdated, "2006-01-02 15:04"),
 		Tags:               append([]string(nil), counter.Tags...),
 		DrawerURL:          joinBasePath(basePath, fmt.Sprintf("/system/counters/%s/drawer", url.PathEscape(name))),
 		Selected:           isSelected,

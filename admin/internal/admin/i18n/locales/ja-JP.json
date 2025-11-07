@@ -85,5 +85,7 @@
   "admin.dates.format.time": "15:04",
   "admin.dates.format.time_seconds": "15:04:05",
   "admin.dates.format.month_day": "01/02 15:04",
-  "admin.dates.format.month_day_seconds": "01/02 15:04:05"
+  "admin.dates.format.month_day_seconds": "01/02 15:04:05",
+  "admin.locale.name.ja_jp": "日本語",
+  "admin.locale.name.en_us": "English"
 }

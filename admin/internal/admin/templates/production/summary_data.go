@@ -1,6 +1,7 @@
 package production
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/url"
@@ -130,7 +131,7 @@ type SummaryTableTotals struct {
 }
 
 // BuildWIPSummaryPage assembles the full WIP summary payload.
-func BuildWIPSummaryPage(basePath string, state SummaryQueryState, result adminproduction.QueueWIPSummaryResult, errMsg string) WIPSummaryPageData {
+func BuildWIPSummaryPage(ctx context.Context, basePath string, state SummaryQueryState, result adminproduction.QueueWIPSummaryResult, errMsg string) WIPSummaryPageData {
 	// Harmonise query state with service response.
 	state.Facility = normalizeFirstNonEmpty(state.Facility, result.State.Facility)
 	state.Shift = normalizeFirstNonEmpty(state.Shift, result.State.Shift)
@@ -145,9 +146,10 @@ func BuildWIPSummaryPage(basePath string, state SummaryQueryState, result adminp
 	filters := buildSummaryFilters(basePath, state, result.Filters)
 	table := buildSummaryTable(basePath, result.Table)
 
+	formatter := helpers.NewFormatter(ctx)
 	generated := ""
 	if !result.GeneratedAt.IsZero() {
-		generated = fmt.Sprintf("%s %s", helpers.I18N("common.last_updated"), result.GeneratedAt.In(time.Local).Format("15:04"))
+		generated = fmt.Sprintf("%s %s", formatter.T("common.last_updated"), result.GeneratedAt.In(time.Local).Format("15:04"))
 	}
 
 	refresh := ""

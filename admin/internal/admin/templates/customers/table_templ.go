@@ -65,9 +65,9 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.header.customer"))
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.header.customer"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 23, Col: 120}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 23, Col: 125}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -78,7 +78,7 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.SortableHeader(components.SortHeaderProps{
-			Label:            helpers.I18N("admin.customers.table.header.orders"),
+			Label:            helpers.I18N(ctx, "admin.customers.table.header.orders"),
 			SortKey:          "total_orders",
 			ActiveValue:      data.Sort.Active,
 			DefaultDirection: components.SortDirectionDesc,
@@ -100,7 +100,7 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.SortableHeader(components.SortHeaderProps{
-			Label:            helpers.I18N("admin.customers.table.header.ltv"),
+			Label:            helpers.I18N(ctx, "admin.customers.table.header.ltv"),
 			SortKey:          "lifetime_value",
 			ActiveValue:      data.Sort.Active,
 			DefaultDirection: components.SortDirectionDesc,
@@ -122,7 +122,7 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = components.SortableHeader(components.SortHeaderProps{
-			Label:            helpers.I18N("admin.customers.table.header.last_order"),
+			Label:            helpers.I18N(ctx, "admin.customers.table.header.last_order"),
 			SortKey:          "last_order",
 			ActiveValue:      data.Sort.Active,
 			DefaultDirection: components.SortDirectionDesc,
@@ -144,9 +144,9 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.header.flags"))
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.header.flags"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 75, Col: 117}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 75, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -157,9 +157,9 @@ func Table(data TableData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.header.actions"))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.header.actions"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 76, Col: 120}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 76, Col: 125}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -186,9 +186,9 @@ func Table(data TableData) templ.Component {
 				}
 			} else {
 				var templ_7745c5c3_Var7 string
-				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.empty"))
+				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.empty"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 86, Col: 54}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 86, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -242,9 +242,9 @@ func Table(data TableData) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var10 string
-					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(initials(row.DisplayName))
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(initials(row.DisplayName, helpers.I18N(ctx, "admin.customers.avatar.initials_fallback")))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 100, Col: 40}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 100, Col: 103}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -534,9 +534,9 @@ func Table(data TableData) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var29 string
-					templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.no_orders"))
+					templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.no_orders"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 144, Col: 96}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 144, Col: 101}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 					if templ_7745c5c3_Err != nil {
@@ -667,9 +667,9 @@ func Table(data TableData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var37 string
-				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N("admin.customers.table.action.view"))
+				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.I18N(ctx, "admin.customers.table.action.view"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 172, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `customers/table.templ`, Line: 172, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 				if templ_7745c5c3_Err != nil {
@@ -697,14 +697,14 @@ func Table(data TableData) templ.Component {
 	})
 }
 
-func initials(value string) string {
+func initials(value string, fallback string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	parts := strings.Fields(value)
 	if len(parts) == 0 {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	if len(parts) == 1 {
 		runes := []rune(parts[0])
@@ -727,7 +727,7 @@ func initials(value string) string {
 		}
 	}
 	if builder.Len() == 0 {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	return builder.String()
 }

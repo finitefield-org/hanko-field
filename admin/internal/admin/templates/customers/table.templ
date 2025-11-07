@@ -20,10 +20,10 @@ templ Table(data TableData) {
 			<table class="min-w-full divide-y divide-slate-200">
 				<thead class="bg-slate-50">
 					<tr class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-						<th scope="col" class="px-4 py-3 text-left text-slate-600">{ helpers.I18N("admin.customers.table.header.customer") }</th>
+						<th scope="col" class="px-4 py-3 text-left text-slate-600">{ helpers.I18N(ctx, "admin.customers.table.header.customer") }</th>
 						<th scope="col" class="px-4 py-3 text-right text-slate-600">
 							@components.SortableHeader(components.SortHeaderProps{
-								Label:            helpers.I18N("admin.customers.table.header.orders"),
+								Label:            helpers.I18N(ctx, "admin.customers.table.header.orders"),
 								SortKey:          "total_orders",
 								ActiveValue:      data.Sort.Active,
 								DefaultDirection: components.SortDirectionDesc,
@@ -40,7 +40,7 @@ templ Table(data TableData) {
 						</th>
 						<th scope="col" class="px-4 py-3 text-right text-slate-600">
 							@components.SortableHeader(components.SortHeaderProps{
-								Label:            helpers.I18N("admin.customers.table.header.ltv"),
+								Label:            helpers.I18N(ctx, "admin.customers.table.header.ltv"),
 								SortKey:          "lifetime_value",
 								ActiveValue:      data.Sort.Active,
 								DefaultDirection: components.SortDirectionDesc,
@@ -57,7 +57,7 @@ templ Table(data TableData) {
 						</th>
 						<th scope="col" class="px-4 py-3 text-left text-slate-600">
 							@components.SortableHeader(components.SortHeaderProps{
-								Label:            helpers.I18N("admin.customers.table.header.last_order"),
+								Label:            helpers.I18N(ctx, "admin.customers.table.header.last_order"),
 								SortKey:          "last_order",
 								ActiveValue:      data.Sort.Active,
 								DefaultDirection: components.SortDirectionDesc,
@@ -72,8 +72,8 @@ templ Table(data TableData) {
 								HxPushURL:        data.Sort.HxPushURL,
 							})
 						</th>
-						<th scope="col" class="px-4 py-3 text-left text-slate-600">{ helpers.I18N("admin.customers.table.header.flags") }</th>
-						<th scope="col" class="px-4 py-3 text-right text-slate-600">{ helpers.I18N("admin.customers.table.header.actions") }</th>
+						<th scope="col" class="px-4 py-3 text-left text-slate-600">{ helpers.I18N(ctx, "admin.customers.table.header.flags") }</th>
+						<th scope="col" class="px-4 py-3 text-right text-slate-600">{ helpers.I18N(ctx, "admin.customers.table.header.actions") }</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200 text-sm text-slate-700">
@@ -83,7 +83,7 @@ templ Table(data TableData) {
 								if data.EmptyMessage != "" {
 									{ data.EmptyMessage }
 								} else {
-									{ helpers.I18N("admin.customers.table.empty") }
+									{ helpers.I18N(ctx, "admin.customers.table.empty") }
 								}
 							</td>
 						</tr>
@@ -97,7 +97,7 @@ templ Table(data TableData) {
 												<img src={ row.AvatarURL } alt={ row.AvatarAlt } class="h-10 w-10 rounded-full object-cover" />
 											} else {
 												<span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-													{ initials(row.DisplayName) }
+													{ initials(row.DisplayName, helpers.I18N(ctx, "admin.customers.avatar.initials_fallback")) }
 												</span>
 											}
 										</div>
@@ -141,7 +141,7 @@ templ Table(data TableData) {
 											}
 										</div>
 									} else {
-										<span class="text-xs text-slate-400">{ helpers.I18N("admin.customers.table.no_orders") }</span>
+										<span class="text-xs text-slate-400">{ helpers.I18N(ctx, "admin.customers.table.no_orders") }</span>
 									}
 								</td>
 								<td class="px-4 py-4">
@@ -169,7 +169,7 @@ templ Table(data TableData) {
 										href={ row.DetailURL }
 										class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-700"
 									>
-										{ helpers.I18N("admin.customers.table.action.view") }
+										{ helpers.I18N(ctx, "admin.customers.table.action.view") }
 										<span aria-hidden="true">→</span>
 									</a>
 								</td>
@@ -184,14 +184,14 @@ templ Table(data TableData) {
 	</div>
 }
 
-func initials(value string) string {
+func initials(value string, fallback string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	parts := strings.Fields(value)
 	if len(parts) == 0 {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	if len(parts) == 1 {
 		runes := []rune(parts[0])
@@ -214,7 +214,7 @@ func initials(value string) string {
 		}
 	}
 	if builder.Len() == 0 {
-		return helpers.I18N("admin.customers.avatar.initials_fallback")
+		return fallback
 	}
 	return builder.String()
 }

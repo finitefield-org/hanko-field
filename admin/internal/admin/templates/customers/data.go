@@ -1,6 +1,7 @@
 package customers
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/url"
@@ -146,38 +147,40 @@ type BadgeView struct {
 }
 
 // BuildPageData assembles the full page payload.
-func BuildPageData(basePath string, state QueryState, result admincustomers.ListResult, table TableData) PageData {
+func BuildPageData(ctx context.Context, basePath string, state QueryState, result admincustomers.ListResult, table TableData) PageData {
+	formatter := helpers.NewFormatter(ctx)
 	lastUpdated, lastRelative := "-", ""
 	if !result.GeneratedAt.IsZero() {
-		lastUpdated = helpers.Date(result.GeneratedAt, "2006-01-02 15:04")
-		lastRelative = helpers.Relative(result.GeneratedAt)
+		lastUpdated = formatter.Date(result.GeneratedAt, "2006-01-02 15:04")
+		lastRelative = formatter.Relative(result.GeneratedAt)
 	}
 
 	return PageData{
-		Title:         helpers.I18N("admin.customers.title"),
-		Description:   helpers.I18N("admin.customers.description"),
-		Breadcrumbs:   []partials.Breadcrumb{{Label: helpers.I18N("admin.customers.breadcrumb")}},
+		Title:         formatter.T("admin.customers.title"),
+		Description:   formatter.T("admin.customers.description"),
+		Breadcrumbs:   []partials.Breadcrumb{{Label: formatter.T("admin.customers.breadcrumb")}},
 		TableEndpoint: joinBase(basePath, "/customers/table"),
 		ResetURL:      joinBase(basePath, "/customers"),
 		Query:         state,
-		Filters:       buildFilters(state, result.Filters),
+		Filters:       buildFilters(formatter, state, result.Filters),
 		Table:         table,
-		Metrics:       buildMetrics(result.Summary),
-		Segments:      buildSegments(state, result.Summary),
+		Metrics:       buildMetrics(formatter, result.Summary),
+		Segments:      buildSegments(formatter, state, result.Summary),
 		LastUpdated:   lastUpdated,
 		LastRelative:  lastRelative,
 	}
 }
 
 // TablePayload prepares the table fragment data.
-func TablePayload(basePath string, state QueryState, result admincustomers.ListResult, errMsg string) TableData {
+func TablePayload(ctx context.Context, basePath string, state QueryState, result admincustomers.ListResult, errMsg string) TableData {
+	formatter := helpers.NewFormatter(ctx)
 	base := joinBase(basePath, "/customers")
 	fragment := joinBase(basePath, "/customers/table")
-	rows := toTableRows(basePath, result.Customers)
+	rows := toTableRows(formatter, basePath, result.Customers)
 
 	empty := ""
 	if errMsg == "" && len(rows) == 0 {
-		empty = helpers.I18N("admin.customers.table.empty")
+		empty = formatter.T("admin.customers.table.empty")
 	}
 
 	total := result.Pagination.TotalItems
@@ -232,43 +235,43 @@ func TablePayload(basePath string, state QueryState, result admincustomers.ListR
 	return data
 }
 
-func buildMetrics(summary admincustomers.Summary) []MetricCard {
+func buildMetrics(formatter helpers.Formatter, summary admincustomers.Summary) []MetricCard {
 	if summary.TotalCustomers == 0 {
 		return []MetricCard{
-			{Label: helpers.I18N("admin.customers.metrics.total.label"), Value: "0"},
-			{Label: helpers.I18N("admin.customers.metrics.active_rate.label"), Value: "0%"},
-			{Label: helpers.I18N("admin.customers.metrics.ltv.label"), Value: helpers.Currency(0, "JPY")},
+			{Label: formatter.T("admin.customers.metrics.total.label"), Value: "0"},
+			{Label: formatter.T("admin.customers.metrics.active_rate.label"), Value: "0%"},
+			{Label: formatter.T("admin.customers.metrics.ltv.label"), Value: formatter.Currency(0, "JPY")},
 		}
 	}
 
 	metrics := []MetricCard{
 		{
-			Label:   helpers.I18N("admin.customers.metrics.total.label"),
+			Label:   formatter.T("admin.customers.metrics.total.label"),
 			Value:   strconv.Itoa(summary.TotalCustomers),
-			SubText: helpers.I18N("admin.customers.metrics.total.subtext", summary.DeactivatedCustomers),
+			SubText: formatter.T("admin.customers.metrics.total.subtext", summary.DeactivatedCustomers),
 			Tone:    "",
 			Icon:    "👥",
 		},
 		{
-			Label:   helpers.I18N("admin.customers.metrics.active_rate.label"),
+			Label:   formatter.T("admin.customers.metrics.active_rate.label"),
 			Value:   fmt.Sprintf("%d%%", int(math.Round(activeRate(summary)*100))),
-			SubText: helpers.I18N("admin.customers.metrics.active_rate.subtext", summary.ActiveCustomers),
+			SubText: formatter.T("admin.customers.metrics.active_rate.subtext", summary.ActiveCustomers),
 			Tone:    "success",
 			Icon:    "✅",
 		},
 		{
-			Label:   helpers.I18N("admin.customers.metrics.ltv.label"),
-			Value:   helpers.Currency(summary.TotalLifetimeMinor, summary.PrimaryCurrency),
-			SubText: helpers.I18N("admin.customers.metrics.ltv.subtext", helpers.Currency(int64(math.Round(summary.AverageOrderValue)), summary.PrimaryCurrency)),
+			Label:   formatter.T("admin.customers.metrics.ltv.label"),
+			Value:   formatter.Currency(summary.TotalLifetimeMinor, summary.PrimaryCurrency),
+			SubText: formatter.T("admin.customers.metrics.ltv.subtext", formatter.Currency(int64(math.Round(summary.AverageOrderValue)), summary.PrimaryCurrency)),
 			Tone:    "info",
 			Icon:    "💴",
 		},
 	}
 	if summary.HighValueCustomers > 0 {
 		metrics = append(metrics, MetricCard{
-			Label:   helpers.I18N("admin.customers.metrics.high_value.label"),
+			Label:   formatter.T("admin.customers.metrics.high_value.label"),
 			Value:   strconv.Itoa(summary.HighValueCustomers),
-			SubText: helpers.I18N("admin.customers.metrics.high_value.subtext"),
+			SubText: formatter.T("admin.customers.metrics.high_value.subtext"),
 			Tone:    "warning",
 			Icon:    "💎",
 		})
@@ -283,24 +286,24 @@ func activeRate(summary admincustomers.Summary) float64 {
 	return float64(summary.ActiveCustomers) / float64(summary.TotalCustomers)
 }
 
-func buildSegments(state QueryState, summary admincustomers.Summary) []SegmentChip {
+func buildSegments(formatter helpers.Formatter, state QueryState, summary admincustomers.Summary) []SegmentChip {
 	if len(summary.Segments) == 0 {
 		return nil
 	}
 	chips := make([]SegmentChip, 0, len(summary.Segments))
 	for _, segment := range summary.Segments {
-		label := helpers.I18N("admin.customers.tier." + segment.Key)
+		label := formatter.T("admin.customers.tier." + segment.Key)
 		if segment.Key == "all" {
-			label = helpers.I18N("admin.customers.segments.all")
+			label = formatter.T("admin.customers.segments.all")
 		} else if label == "admin.customers.tier."+segment.Key {
-			label = helpers.I18N("admin.customers.tier.other")
+			label = formatter.T("admin.customers.tier.other")
 		}
 		chips = append(chips, SegmentChip{
 			Key:     segment.Key,
 			Label:   label,
 			Count:   segment.Count,
 			Active:  state.Tier != "" && strings.EqualFold(state.Tier, segment.Key),
-			Tooltip: helpers.I18N("admin.customers.segments.tooltip", label),
+			Tooltip: formatter.T("admin.customers.segments.tooltip", label),
 		})
 	}
 	sort.SliceStable(chips, func(i, j int) bool {
@@ -309,15 +312,15 @@ func buildSegments(state QueryState, summary admincustomers.Summary) []SegmentCh
 	return chips
 }
 
-func buildFilters(state QueryState, filters admincustomers.FilterSummary) Filters {
+func buildFilters(formatter helpers.Formatter, state QueryState, filters admincustomers.FilterSummary) Filters {
 	statusOptions := []StatusFilterOption{
-		{Value: "", Label: helpers.I18N("admin.customers.status.all"), Tone: "", Count: totalStatusCount(filters.StatusOptions)},
+		{Value: "", Label: formatter.T("admin.customers.status.all"), Tone: "", Count: totalStatusCount(filters.StatusOptions)},
 	}
 	for _, option := range filters.StatusOptions {
 		tone := statusTone(option.Value)
 		statusOptions = append(statusOptions, StatusFilterOption{
 			Value:  string(option.Value),
-			Label:  helpers.I18N("admin.customers.status." + string(option.Value)),
+			Label:  formatter.T("admin.customers.status." + string(option.Value)),
 			Count:  option.Count,
 			Tone:   tone,
 			Active: state.Status == string(option.Value),
@@ -332,13 +335,13 @@ func buildFilters(state QueryState, filters admincustomers.FilterSummary) Filter
 	tierOptions := make([]TierFilterOption, 0, len(filters.TierOptions)+1)
 	tierOptions = append(tierOptions, TierFilterOption{
 		Value:    "",
-		Label:    helpers.I18N("admin.customers.tier.all"),
+		Label:    formatter.T("admin.customers.tier.all"),
 		Selected: state.Tier == "",
 	})
 	for _, option := range filters.TierOptions {
-		label := helpers.I18N("admin.customers.tier." + option.Value)
+		label := formatter.T("admin.customers.tier." + option.Value)
 		if label == "admin.customers.tier."+option.Value {
-			label = helpers.I18N("admin.customers.tier.other")
+			label = formatter.T("admin.customers.tier.other")
 		}
 		tierOptions = append(tierOptions, TierFilterOption{
 			Value:    option.Value,
@@ -375,15 +378,15 @@ func statusTone(status admincustomers.Status) string {
 	}
 }
 
-func toTableRows(basePath string, customers []admincustomers.Customer) []TableRow {
+func toTableRows(formatter helpers.Formatter, basePath string, customers []admincustomers.Customer) []TableRow {
 	rows := make([]TableRow, 0, len(customers))
 	for _, customer := range customers {
 		name := strings.TrimSpace(customer.DisplayName)
 		var avatarAlt string
 		if name != "" {
-			avatarAlt = helpers.I18N("admin.customers.avatar.alt_named", name)
+			avatarAlt = formatter.T("admin.customers.avatar.alt_named", name)
 		} else {
-			avatarAlt = helpers.I18N("admin.customers.avatar.alt_generic")
+			avatarAlt = formatter.T("admin.customers.avatar.alt_generic")
 		}
 
 		row := TableRow{
@@ -395,24 +398,24 @@ func toTableRows(basePath string, customers []admincustomers.Customer) []TableRo
 			AvatarURL:        customer.AvatarURL,
 			AvatarAlt:        avatarAlt,
 			DetailURL:        joinBase(basePath, "/customers/"+url.PathEscape(strings.TrimSpace(customer.ID))),
-			TotalOrdersLabel: helpers.I18N("admin.customers.table.orders_count", customer.TotalOrders),
-			LifetimeValue:    helpers.Currency(customer.LifetimeValueMinor, customer.Currency),
-			StatusLabel:      statusLabel(customer.Status),
+			TotalOrdersLabel: formatter.T("admin.customers.table.orders_count", customer.TotalOrders),
+			LifetimeValue:    formatter.Currency(customer.LifetimeValueMinor, customer.Currency),
+			StatusLabel:      statusLabel(formatter, customer.Status),
 			StatusTone:       statusTone(customer.Status),
-			TierLabel:        tierLabel(customer.Tier),
+			TierLabel:        tierLabel(formatter, customer.Tier),
 			TierTone:         tierTone(customer.Tier),
-			RiskLabel:        riskLabel(customer.RiskLevel),
+			RiskLabel:        riskLabel(formatter, customer.RiskLevel),
 			RiskTone:         riskTone(customer.RiskLevel),
 			Flags:            toFlagBadges(customer.Flags),
 			Tags:             append([]string(nil), customer.Tags...),
 		}
 
 		if !customer.LastOrderAt.IsZero() {
-			row.LastOrderLabel = helpers.Date(customer.LastOrderAt, "2006-01-02 15:04")
-			row.LastOrderRelative = helpers.Relative(customer.LastOrderAt)
+			row.LastOrderLabel = formatter.Date(customer.LastOrderAt, "2006-01-02 15:04")
+			row.LastOrderRelative = formatter.Relative(customer.LastOrderAt)
 			row.LastOrderNumber = customer.LastOrderNumber
 		} else {
-			row.LastOrderLabel = helpers.I18N("admin.customers.table.no_orders")
+			row.LastOrderLabel = formatter.T("admin.customers.table.no_orders")
 			row.LastOrderRelative = ""
 		}
 
@@ -421,31 +424,31 @@ func toTableRows(basePath string, customers []admincustomers.Customer) []TableRo
 	return rows
 }
 
-func statusLabel(status admincustomers.Status) string {
+func statusLabel(formatter helpers.Formatter, status admincustomers.Status) string {
 	switch status {
 	case admincustomers.StatusActive:
-		return helpers.I18N("admin.customers.status.active")
+		return formatter.T("admin.customers.status.active")
 	case admincustomers.StatusDeactivated:
-		return helpers.I18N("admin.customers.status.deactivated")
+		return formatter.T("admin.customers.status.deactivated")
 	case admincustomers.StatusInvited:
-		return helpers.I18N("admin.customers.status.invited")
+		return formatter.T("admin.customers.status.invited")
 	default:
 		return string(status)
 	}
 }
 
-func tierLabel(tier string) string {
+func tierLabel(formatter helpers.Formatter, tier string) string {
 	switch strings.ToLower(strings.TrimSpace(tier)) {
 	case "vip":
-		return helpers.I18N("admin.customers.tier.vip")
+		return formatter.T("admin.customers.tier.vip")
 	case "gold":
-		return helpers.I18N("admin.customers.tier.gold")
+		return formatter.T("admin.customers.tier.gold")
 	case "silver":
-		return helpers.I18N("admin.customers.tier.silver")
+		return formatter.T("admin.customers.tier.silver")
 	case "bronze":
-		return helpers.I18N("admin.customers.tier.bronze")
+		return formatter.T("admin.customers.tier.bronze")
 	default:
-		return helpers.I18N("admin.customers.tier.other")
+		return formatter.T("admin.customers.tier.other")
 	}
 }
 
@@ -464,14 +467,14 @@ func tierTone(tier string) string {
 	}
 }
 
-func riskLabel(level string) string {
+func riskLabel(formatter helpers.Formatter, level string) string {
 	switch strings.ToLower(level) {
 	case "high":
-		return helpers.I18N("admin.customers.risk.high")
+		return formatter.T("admin.customers.risk.high")
 	case "medium":
-		return helpers.I18N("admin.customers.risk.medium")
+		return formatter.T("admin.customers.risk.medium")
 	case "low":
-		return helpers.I18N("admin.customers.risk.low")
+		return formatter.T("admin.customers.risk.low")
 	default:
 		return ""
 	}
