@@ -9,6 +9,19 @@ if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").m
 
 const KEY_ESCAPE = "Escape";
 const KEY_TAB = "Tab";
+const selectableInputTypes = new Set(["", "text", "search", "url", "tel", "email", "password"]);
+
+const canSelectTextInput = (element) => {
+  if (element instanceof HTMLTextAreaElement) {
+    return true;
+  }
+  if (element instanceof HTMLInputElement) {
+    const inputType = (element.type || "").toLowerCase();
+    return selectableInputTypes.has(inputType);
+  }
+  return false;
+};
+
 const focusableSelectors = [
   "a[href]",
   "area[href]",
@@ -2998,7 +3011,7 @@ const initGlobalSearchInteractions = () => {
         return;
       }
       this.input.focus({ preventScroll: true });
-      if (this.input instanceof HTMLInputElement || this.input instanceof HTMLTextAreaElement) {
+      if (canSelectTextInput(this.input)) {
         this.input.select();
       }
     }
@@ -3033,7 +3046,7 @@ const initGlobalSearchInteractions = () => {
         return;
       }
       first.focus({ preventScroll: true });
-      if (first instanceof HTMLInputElement || first instanceof HTMLTextAreaElement) {
+      if (canSelectTextInput(first)) {
         first.select();
       }
     }
