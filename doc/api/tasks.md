@@ -159,7 +159,7 @@
 - [x] [113 Write integration tests exercising representative endpoint flows with emulators.](./tasks/113-write-integration-tests-exercising-representative-endpoint-flows-with-emulators.md)
 - [x] [114 Implement contract tests for webhooks to ensure payload parsing and idempotency.](./tasks/114-implement-contract-tests-for-webhooks-to-ensure-payload-parsing-and-idempotency.md)
 - [x] [115 Add load/performance test plan for critical paths (checkout, AI requests, stock reservations).](./tasks/115-add-load-performance-test-plan-for-critical-paths-checkout-ai-requests-stock-res.md)
-- [ ] [116 Document manual QA scenarios for admin workflows and edge cases.](./tasks/116-document-manual-qa-scenarios-for-admin-workflows-and-edge-cases.md)
+- [x] [116 Document manual QA scenarios for admin workflows and edge cases.](./tasks/116-document-manual-qa-scenarios-for-admin-workflows-and-edge-cases.md)
 
 ## 11. Security & Compliance
 - [ ] [117 Define RBAC roles/permissions map for user vs staff vs admin endpoints.](./tasks/117-define-rbac-roles-permissions-map-for-user-vs-staff-vs-admin-endpoints.md)
