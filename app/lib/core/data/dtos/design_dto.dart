@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/design.dart';
+import 'package:app/core/domain/entities/user.dart';
 
 DesignStatus _parseDesignStatus(String value) {
   switch (value) {
@@ -67,6 +68,22 @@ String _designShapeToJson(DesignShape shape) {
     case DesignShape.square:
       return 'square';
   }
+}
+
+UserPersona? _parseUserPersona(String? value) {
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+  for (final persona in UserPersona.values) {
+    if (persona.name == value) {
+      return persona;
+    }
+  }
+  return null;
+}
+
+String? _userPersonaToJson(UserPersona? persona) {
+  return persona?.name;
 }
 
 DesignWritingStyle _parseDesignWritingStyle(String value) {
@@ -496,6 +513,7 @@ class DesignDto {
     required this.version,
     required this.createdAt,
     required this.updatedAt,
+    this.persona,
     this.input,
     this.ai,
     this.assets,
@@ -514,6 +532,7 @@ class DesignDto {
       version: json['version'] as int,
       createdAt: json['createdAt'] as String,
       updatedAt: json['updatedAt'] as String,
+      persona: json['persona'] as String?,
       input: json['input'] == null
           ? null
           : DesignInputDto.fromJson(json['input'] as Map<String, dynamic>),
@@ -539,6 +558,7 @@ class DesignDto {
       version: domain.version,
       createdAt: domain.createdAt.toIso8601String(),
       updatedAt: domain.updatedAt.toIso8601String(),
+      persona: _userPersonaToJson(domain.persona),
       input: domain.input == null
           ? null
           : DesignInputDto.fromDomain(domain.input!),
@@ -560,6 +580,7 @@ class DesignDto {
   final int version;
   final String createdAt;
   final String updatedAt;
+  final String? persona;
   final DesignInputDto? input;
   final DesignAiMetadataDto? ai;
   final DesignAssetsDto? assets;
@@ -577,6 +598,7 @@ class DesignDto {
       'version': version,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'persona': persona,
       'input': input?.toJson(),
       'ai': ai?.toJson(),
       'assets': assets?.toJson(),
@@ -596,6 +618,7 @@ class DesignDto {
       version: version,
       createdAt: DateTime.parse(createdAt),
       updatedAt: DateTime.parse(updatedAt),
+      persona: _parseUserPersona(persona),
       input: input?.toDomain(),
       ai: ai?.toDomain(),
       assets: assets?.toDomain(),

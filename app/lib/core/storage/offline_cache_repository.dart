@@ -188,7 +188,11 @@ class OfflineCacheRepository {
 }
 
 class CachedDesignList {
-  CachedDesignList({required this.items, this.nextPageToken});
+  CachedDesignList({
+    required this.items,
+    this.nextPageToken,
+    this.appliedFilters,
+  });
 
   factory CachedDesignList.fromJson(Map<String, dynamic> json) {
     final list = (json['items'] as List<dynamic>? ?? <dynamic>[])
@@ -199,16 +203,21 @@ class CachedDesignList {
     return CachedDesignList(
       items: list,
       nextPageToken: json['nextPageToken'] as String?,
+      appliedFilters: json['filters'] == null
+          ? null
+          : Map<String, dynamic>.from(json['filters'] as Map),
     );
   }
 
   final List<DesignDto> items;
   final String? nextPageToken;
+  final Map<String, dynamic>? appliedFilters;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'items': items.map((dto) => dto.toJson()).toList(),
       'nextPageToken': nextPageToken,
+      if (appliedFilters != null) 'filters': appliedFilters,
     };
   }
 }

@@ -1,3 +1,4 @@
+import 'package:app/core/domain/entities/user.dart';
 import 'package:flutter/foundation.dart';
 
 enum DesignStatus { draft, ready, ordered, locked }
@@ -312,6 +313,7 @@ class Design {
     required this.version,
     required this.createdAt,
     required this.updatedAt,
+    this.persona,
     this.input,
     this.ai,
     this.assets,
@@ -328,6 +330,7 @@ class Design {
   final int version;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final UserPersona? persona;
   final DesignInput? input;
   final DesignAiMetadata? ai;
   final DesignAssets? assets;
@@ -344,6 +347,7 @@ class Design {
     int? version,
     DateTime? createdAt,
     DateTime? updatedAt,
+    UserPersona? persona,
     DesignInput? input,
     DesignAiMetadata? ai,
     DesignAssets? assets,
@@ -360,6 +364,7 @@ class Design {
       version: version ?? this.version,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      persona: persona ?? this.persona,
       input: input ?? this.input,
       ai: ai ?? this.ai,
       assets: assets ?? this.assets,
@@ -381,6 +386,7 @@ class Design {
             other.version == version &&
             other.createdAt == createdAt &&
             other.updatedAt == updatedAt &&
+            other.persona == persona &&
             other.input == input &&
             other.ai == ai &&
             other.assets == assets &&
@@ -400,6 +406,7 @@ class Design {
       version,
       createdAt,
       updatedAt,
+      persona,
       input,
       ai,
       assets,

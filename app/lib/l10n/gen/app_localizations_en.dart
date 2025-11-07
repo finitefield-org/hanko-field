@@ -134,6 +134,130 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get libraryListTitle => 'My Hanko Library';
+
+  @override
+  String get libraryListSubtitle =>
+      'Browse saved designs, filter by persona, and export assets anytime.';
+
+  @override
+  String get librarySearchPlaceholder => 'Search designs, IDs, or notes';
+
+  @override
+  String get librarySortRecent => 'Recent';
+
+  @override
+  String get librarySortAiScore => 'AI score';
+
+  @override
+  String get librarySortName => 'Name';
+
+  @override
+  String get libraryViewGrid => 'Grid';
+
+  @override
+  String get libraryViewList => 'List';
+
+  @override
+  String get libraryFilterStatusLabel => 'Status';
+
+  @override
+  String get libraryFilterPersonaLabel => 'Persona';
+
+  @override
+  String get libraryFilterDateLabel => 'Updated';
+
+  @override
+  String get libraryFilterAiLabel => 'AI score';
+
+  @override
+  String get libraryFilterHint =>
+      'Filters apply instantly while keeping results available offline.';
+
+  @override
+  String get libraryStatusAll => 'All';
+
+  @override
+  String get libraryPersonaAll => 'All personas';
+
+  @override
+  String get libraryPersonaJapanese => 'Domestic';
+
+  @override
+  String get libraryPersonaForeigner => 'International';
+
+  @override
+  String get libraryDateLast7Days => '7 days';
+
+  @override
+  String get libraryDateLast30Days => '30 days';
+
+  @override
+  String get libraryDateLast90Days => '90 days';
+
+  @override
+  String get libraryDateAnytime => 'Any time';
+
+  @override
+  String get libraryAiAll => 'Any';
+
+  @override
+  String get libraryAiHigh => '80+';
+
+  @override
+  String get libraryAiMedium => '60+';
+
+  @override
+  String get libraryAiLow => '40+';
+
+  @override
+  String get libraryAiScoreUnknown => 'AI score —';
+
+  @override
+  String libraryAiScoreValue(int score) {
+    return 'AI score $score';
+  }
+
+  @override
+  String libraryUpdatedOn(Object date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String libraryUpdatedAt(Object date) {
+    return 'Refreshed $date';
+  }
+
+  @override
+  String get libraryUpdatedNever => 'Not synced yet';
+
+  @override
+  String get libraryEmptyTitle => 'No saved seals yet';
+
+  @override
+  String get libraryEmptyMessage =>
+      'Create your first design or import a file to populate the library.';
+
+  @override
+  String get libraryEmptyCta => 'Start a new design';
+
+  @override
+  String get libraryActionPreview => 'Preview';
+
+  @override
+  String get libraryActionShare => 'Share';
+
+  @override
+  String get libraryLoadError =>
+      'We couldn\'t load your library. Check your connection and try again.';
+
+  @override
+  String get libraryErrorTitle => 'Library unavailable';
+
+  @override
+  String get libraryRetry => 'Retry';
+
+  @override
   String get homeWritingStyleTensho => 'Tensho';
 
   @override

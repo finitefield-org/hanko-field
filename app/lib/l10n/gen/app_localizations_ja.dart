@@ -126,6 +126,126 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get libraryListTitle => 'マイ印鑑ライブラリ';
+
+  @override
+  String get libraryListSubtitle => '保存した印影を並べ替え・フィルタして、いつでもエクスポートできます。';
+
+  @override
+  String get librarySearchPlaceholder => 'デザイン名・ID・メモを検索';
+
+  @override
+  String get librarySortRecent => '最近';
+
+  @override
+  String get librarySortAiScore => 'AIスコア';
+
+  @override
+  String get librarySortName => '名前';
+
+  @override
+  String get libraryViewGrid => 'グリッド';
+
+  @override
+  String get libraryViewList => 'リスト';
+
+  @override
+  String get libraryFilterStatusLabel => 'ステータス';
+
+  @override
+  String get libraryFilterPersonaLabel => 'ペルソナ';
+
+  @override
+  String get libraryFilterDateLabel => '更新日';
+
+  @override
+  String get libraryFilterAiLabel => 'AIスコア';
+
+  @override
+  String get libraryFilterHint => 'フィルタは即時に反映され、結果はオフラインでも保持されます。';
+
+  @override
+  String get libraryStatusAll => 'すべて';
+
+  @override
+  String get libraryPersonaAll => 'すべて';
+
+  @override
+  String get libraryPersonaJapanese => '国内';
+
+  @override
+  String get libraryPersonaForeigner => '国際';
+
+  @override
+  String get libraryDateLast7Days => '直近7日';
+
+  @override
+  String get libraryDateLast30Days => '直近30日';
+
+  @override
+  String get libraryDateLast90Days => '直近90日';
+
+  @override
+  String get libraryDateAnytime => '期間指定なし';
+
+  @override
+  String get libraryAiAll => '制限なし';
+
+  @override
+  String get libraryAiHigh => '80以上';
+
+  @override
+  String get libraryAiMedium => '60以上';
+
+  @override
+  String get libraryAiLow => '40以上';
+
+  @override
+  String get libraryAiScoreUnknown => 'AIスコア —';
+
+  @override
+  String libraryAiScoreValue(int score) {
+    return 'AIスコア $score';
+  }
+
+  @override
+  String libraryUpdatedOn(Object date) {
+    return '最終更新 $date';
+  }
+
+  @override
+  String libraryUpdatedAt(Object date) {
+    return '同期日時 $date';
+  }
+
+  @override
+  String get libraryUpdatedNever => '同期待ち';
+
+  @override
+  String get libraryEmptyTitle => '保存済みの印影がありません';
+
+  @override
+  String get libraryEmptyMessage => '新しく作成するか、既存のデザインを取り込んでライブラリを充実させましょう。';
+
+  @override
+  String get libraryEmptyCta => 'デザインを作成';
+
+  @override
+  String get libraryActionPreview => 'プレビュー';
+
+  @override
+  String get libraryActionShare => '共有';
+
+  @override
+  String get libraryLoadError => 'ライブラリを読み込めませんでした。通信環境を確認して再試行してください。';
+
+  @override
+  String get libraryErrorTitle => 'ライブラリを表示できません';
+
+  @override
+  String get libraryRetry => '再試行';
+
+  @override
   String get homeWritingStyleTensho => '篆書体';
 
   @override

@@ -11,7 +11,11 @@ mixin DesignDtoMapper {
 }
 
 abstract class DesignRepository with DesignDtoMapper {
-  Future<List<Design>> fetchDesigns({int? pageSize, String? pageToken});
+  Future<List<Design>> fetchDesigns({
+    int? pageSize,
+    String? pageToken,
+    Map<String, dynamic>? filters,
+  });
   Future<Design> fetchDesign(String designId);
   Future<Design> createDesign(Design design);
   Future<Design> updateDesign(Design design);

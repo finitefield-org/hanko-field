@@ -46,6 +46,59 @@
 , "homeShapeRound": "丸形"
 , "homeShapeSquare": "角形"
 
+, "libraryListTitle": "マイ印鑑ライブラリ"
+, "libraryListSubtitle": "保存した印影を並べ替え・フィルタして、いつでもエクスポートできます。"
+, "librarySearchPlaceholder": "デザイン名・ID・メモを検索"
+, "librarySortRecent": "最近"
+, "librarySortAiScore": "AIスコア"
+, "librarySortName": "名前"
+, "libraryViewGrid": "グリッド"
+, "libraryViewList": "リスト"
+, "libraryFilterStatusLabel": "ステータス"
+, "libraryFilterPersonaLabel": "ペルソナ"
+, "libraryFilterDateLabel": "更新日"
+, "libraryFilterAiLabel": "AIスコア"
+, "libraryFilterHint": "フィルタは即時に反映され、結果はオフラインでも保持されます。"
+, "libraryStatusAll": "すべて"
+, "libraryPersonaAll": "すべて"
+, "libraryPersonaJapanese": "国内"
+, "libraryPersonaForeigner": "国際"
+, "libraryDateLast7Days": "直近7日"
+, "libraryDateLast30Days": "直近30日"
+, "libraryDateLast90Days": "直近90日"
+, "libraryDateAnytime": "期間指定なし"
+, "libraryAiAll": "制限なし"
+, "libraryAiHigh": "80以上"
+, "libraryAiMedium": "60以上"
+, "libraryAiLow": "40以上"
+, "libraryAiScoreUnknown": "AIスコア —"
+, "libraryAiScoreValue": "AIスコア {score}"
+, "@libraryAiScoreValue": {
+  "placeholders": {
+    "score": { "type": "int" }
+  }
+}
+, "libraryUpdatedOn": "最終更新 {date}"
+, "@libraryUpdatedOn": {
+  "placeholders": {
+    "date": {}
+  }
+}
+, "libraryUpdatedAt": "同期日時 {date}"
+, "@libraryUpdatedAt": {
+  "placeholders": {
+    "date": {}
+  }
+}
+, "libraryUpdatedNever": "同期待ち"
+, "libraryEmptyTitle": "保存済みの印影がありません"
+, "libraryEmptyMessage": "新しく作成するか、既存のデザインを取り込んでライブラリを充実させましょう。"
+, "libraryEmptyCta": "デザインを作成"
+, "libraryActionPreview": "プレビュー"
+, "libraryActionShare": "共有"
+, "libraryLoadError": "ライブラリを読み込めませんでした。通信環境を確認して再試行してください。"
+, "libraryErrorTitle": "ライブラリを表示できません"
+, "libraryRetry": "再試行"
 , "designInputTitle": "お名前を入力"
 , "designInputSubtitle": "印影に刻む姓と名を入力してください。入力内容に合わせてプレビューが更新されます。"
 , "designInputPreviewTitle": "ライブプレビュー"

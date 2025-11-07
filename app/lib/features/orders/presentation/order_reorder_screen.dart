@@ -260,6 +260,9 @@ class _OrderReorderScreenState extends ConsumerState<OrderReorderScreen> {
       }
       messenger.showSnackBar(SnackBar(content: Text(parts.join(' • '))));
 
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _isSubmitting = false;
         _selectedLineIds = result.addedLineIds.toSet();

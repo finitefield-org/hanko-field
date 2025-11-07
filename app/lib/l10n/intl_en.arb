@@ -193,6 +193,89 @@
   }
 }
 
+, "libraryListTitle": "My Hanko Library"
+, "@libraryListTitle": {
+  "description": "Hero title for the library tab"
+}
+
+, "libraryListSubtitle": "Browse saved designs, filter by persona, and export assets anytime."
+, "@libraryListSubtitle": {
+  "description": "Subtitle explaining the library tab"
+}
+
+, "librarySearchPlaceholder": "Search designs, IDs, or notes"
+, "@librarySearchPlaceholder": {
+  "description": "Placeholder for the library search bar"
+}
+
+, "librarySortRecent": "Recent"
+, "librarySortAiScore": "AI score"
+, "librarySortName": "Name"
+
+, "libraryViewGrid": "Grid"
+, "libraryViewList": "List"
+
+, "libraryFilterStatusLabel": "Status"
+, "libraryFilterPersonaLabel": "Persona"
+, "libraryFilterDateLabel": "Updated"
+, "libraryFilterAiLabel": "AI score"
+, "libraryFilterHint": "Filters apply instantly while keeping results available offline."
+
+, "libraryStatusAll": "All"
+, "libraryPersonaAll": "All personas"
+, "libraryPersonaJapanese": "Domestic"
+, "libraryPersonaForeigner": "International"
+
+, "libraryDateLast7Days": "7 days"
+, "libraryDateLast30Days": "30 days"
+, "libraryDateLast90Days": "90 days"
+, "libraryDateAnytime": "Any time"
+
+, "libraryAiAll": "Any"
+, "libraryAiHigh": "80+"
+, "libraryAiMedium": "60+"
+, "libraryAiLow": "40+"
+
+, "libraryAiScoreUnknown": "AI score —"
+, "libraryAiScoreValue": "AI score {score}"
+, "@libraryAiScoreValue": {
+  "description": "Label describing the AI score with a rounded integer",
+  "placeholders": {
+    "score": {
+      "type": "int"
+    }
+  }
+}
+
+, "libraryUpdatedOn": "Updated {date}"
+, "@libraryUpdatedOn": {
+  "description": "Label for item-level updated timestamp",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryUpdatedAt": "Refreshed {date}"
+, "@libraryUpdatedAt": {
+  "description": "Chip showing when the library list last refreshed",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "libraryUpdatedNever": "Not synced yet"
+
+, "libraryEmptyTitle": "No saved seals yet"
+, "libraryEmptyMessage": "Create your first design or import a file to populate the library."
+, "libraryEmptyCta": "Start a new design"
+
+, "libraryActionPreview": "Preview"
+, "libraryActionShare": "Share"
+
+, "libraryLoadError": "We couldn't load your library. Check your connection and try again."
+, "libraryErrorTitle": "Library unavailable"
+, "libraryRetry": "Retry"
+
 , "homeWritingStyleTensho": "Tensho"
 , "@homeWritingStyleTensho": {
   "description": "Label for the Tensho writing style chip"

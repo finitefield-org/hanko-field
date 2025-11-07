@@ -5,6 +5,7 @@ import 'package:app/core/routing/app_tab.dart';
 import 'package:app/core/ui/widgets/app_help_overlay.dart';
 import 'package:app/core/ui/widgets/app_top_app_bar.dart';
 import 'package:app/features/home/presentation/home_screen.dart';
+import 'package:app/features/library/presentation/library_list_screen.dart';
 import 'package:app/features/orders/presentation/orders_list_screen.dart';
 import 'package:app/features/shop/presentation/shop_home_screen.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
@@ -74,39 +75,7 @@ class _TabBody extends StatelessWidget {
       case AppTab.orders:
         return const OrdersListScreen();
       case AppTab.library:
-        final subtitle = _composeSubtitle(
-          '保存済み印鑑の詳細',
-          experience?.librarySubtitle,
-        );
-        final chips = <String>[
-          if (experience != null) 'ペルソナ: ${experience.personaLabel}',
-        ];
-        final designs = ['JP-INK-01', 'JP-INK-02'];
-        return _buildList(
-          context,
-          title: tab.headline,
-          subtitle: subtitle,
-          chips: chips,
-          children: [
-            for (final designId in designs)
-              ListTile(
-                leading: const Icon(Icons.collections_bookmark_outlined),
-                title: Text('デザイン $designId'),
-                onTap: () => _push(ref, LibraryEntryRoute(designId: designId)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.logout_outlined),
-                  tooltip: 'エクスポート',
-                  onPressed: () => _push(
-                    ref,
-                    LibraryEntryRoute(
-                      designId: designId,
-                      trailing: const ['export'],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
+        return const LibraryListScreen();
       case AppTab.profile:
         final subtitle = _composeSubtitle(
           '設定ページも Deep Link へ対応',

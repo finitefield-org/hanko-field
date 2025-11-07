@@ -314,6 +314,234 @@ abstract class AppLocalizations {
   /// **'Updated on {date}'**
   String homeUpdatedOn(String date);
 
+  /// Hero title for the library tab
+  ///
+  /// In en, this message translates to:
+  /// **'My Hanko Library'**
+  String get libraryListTitle;
+
+  /// Subtitle explaining the library tab
+  ///
+  /// In en, this message translates to:
+  /// **'Browse saved designs, filter by persona, and export assets anytime.'**
+  String get libraryListSubtitle;
+
+  /// Placeholder for the library search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Search designs, IDs, or notes'**
+  String get librarySearchPlaceholder;
+
+  /// No description provided for @librarySortRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get librarySortRecent;
+
+  /// No description provided for @librarySortAiScore.
+  ///
+  /// In en, this message translates to:
+  /// **'AI score'**
+  String get librarySortAiScore;
+
+  /// No description provided for @librarySortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get librarySortName;
+
+  /// No description provided for @libraryViewGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get libraryViewGrid;
+
+  /// No description provided for @libraryViewList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get libraryViewList;
+
+  /// No description provided for @libraryFilterStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get libraryFilterStatusLabel;
+
+  /// No description provided for @libraryFilterPersonaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Persona'**
+  String get libraryFilterPersonaLabel;
+
+  /// No description provided for @libraryFilterDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated'**
+  String get libraryFilterDateLabel;
+
+  /// No description provided for @libraryFilterAiLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI score'**
+  String get libraryFilterAiLabel;
+
+  /// No description provided for @libraryFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters apply instantly while keeping results available offline.'**
+  String get libraryFilterHint;
+
+  /// No description provided for @libraryStatusAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get libraryStatusAll;
+
+  /// No description provided for @libraryPersonaAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All personas'**
+  String get libraryPersonaAll;
+
+  /// No description provided for @libraryPersonaJapanese.
+  ///
+  /// In en, this message translates to:
+  /// **'Domestic'**
+  String get libraryPersonaJapanese;
+
+  /// No description provided for @libraryPersonaForeigner.
+  ///
+  /// In en, this message translates to:
+  /// **'International'**
+  String get libraryPersonaForeigner;
+
+  /// No description provided for @libraryDateLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'7 days'**
+  String get libraryDateLast7Days;
+
+  /// No description provided for @libraryDateLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'30 days'**
+  String get libraryDateLast30Days;
+
+  /// No description provided for @libraryDateLast90Days.
+  ///
+  /// In en, this message translates to:
+  /// **'90 days'**
+  String get libraryDateLast90Days;
+
+  /// No description provided for @libraryDateAnytime.
+  ///
+  /// In en, this message translates to:
+  /// **'Any time'**
+  String get libraryDateAnytime;
+
+  /// No description provided for @libraryAiAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get libraryAiAll;
+
+  /// No description provided for @libraryAiHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'80+'**
+  String get libraryAiHigh;
+
+  /// No description provided for @libraryAiMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'60+'**
+  String get libraryAiMedium;
+
+  /// No description provided for @libraryAiLow.
+  ///
+  /// In en, this message translates to:
+  /// **'40+'**
+  String get libraryAiLow;
+
+  /// No description provided for @libraryAiScoreUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'AI score —'**
+  String get libraryAiScoreUnknown;
+
+  /// Label describing the AI score with a rounded integer
+  ///
+  /// In en, this message translates to:
+  /// **'AI score {score}'**
+  String libraryAiScoreValue(int score);
+
+  /// Label for item-level updated timestamp
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String libraryUpdatedOn(Object date);
+
+  /// Chip showing when the library list last refreshed
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshed {date}'**
+  String libraryUpdatedAt(Object date);
+
+  /// No description provided for @libraryUpdatedNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet'**
+  String get libraryUpdatedNever;
+
+  /// No description provided for @libraryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved seals yet'**
+  String get libraryEmptyTitle;
+
+  /// No description provided for @libraryEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first design or import a file to populate the library.'**
+  String get libraryEmptyMessage;
+
+  /// No description provided for @libraryEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new design'**
+  String get libraryEmptyCta;
+
+  /// No description provided for @libraryActionPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get libraryActionPreview;
+
+  /// No description provided for @libraryActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get libraryActionShare;
+
+  /// No description provided for @libraryLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load your library. Check your connection and try again.'**
+  String get libraryLoadError;
+
+  /// No description provided for @libraryErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Library unavailable'**
+  String get libraryErrorTitle;
+
+  /// No description provided for @libraryRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get libraryRetry;
+
   /// Label for the Tensho writing style chip
   ///
   /// In en, this message translates to:
