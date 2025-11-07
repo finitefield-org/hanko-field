@@ -1,4 +1,5 @@
 import 'package:app/core/domain/entities/user.dart';
+import 'package:app/features/guides/domain/guide_detail.dart';
 import 'package:app/features/guides/domain/guide_list_entry.dart';
 
 class GuideListRequest {
@@ -35,4 +36,48 @@ class GuidesRepositoryResult {
 
 abstract class GuidesRepository {
   Future<GuidesRepositoryResult> fetchGuides(GuideListRequest request);
+
+  Future<GuideDetailResult> fetchGuideDetail(GuideDetailRequest request);
+}
+
+class GuideDetailRequest {
+  GuideDetailRequest({
+    required this.slug,
+    required this.localeTag,
+    required this.persona,
+  });
+
+  final String slug;
+  final String localeTag;
+  final UserPersona persona;
+
+  GuideDetailRequest copyWith({
+    String? slug,
+    String? localeTag,
+    UserPersona? persona,
+  }) {
+    return GuideDetailRequest(
+      slug: slug ?? this.slug,
+      localeTag: localeTag ?? this.localeTag,
+      persona: persona ?? this.persona,
+    );
+  }
+}
+
+class GuideDetailResult {
+  const GuideDetailResult({
+    required this.detail,
+    required this.related,
+    required this.localeTag,
+    required this.persona,
+    required this.fetchedAt,
+    required this.fromCache,
+  });
+
+  final GuideDetail detail;
+  final List<GuideListEntry> related;
+  final String localeTag;
+  final UserPersona persona;
+  final DateTime fetchedAt;
+  final bool fromCache;
 }

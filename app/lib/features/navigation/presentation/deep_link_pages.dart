@@ -1,3 +1,4 @@
+import 'package:app/features/guides/presentation/guide_detail_screen.dart';
 import 'package:app/features/guides/presentation/guides_list_screen.dart';
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
 import 'package:app/features/shop/presentation/product_addons_screen.dart';
@@ -115,23 +116,8 @@ class GuidesPage extends StatelessWidget {
     if (sectionSegments.isEmpty) {
       return const GuidesListScreen();
     }
-    final title = sectionSegments.join(' / ');
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ガイド詳細 ($title)',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            const Text('詳細画面は今後のタスクで実装予定です。'),
-          ],
-        ),
-      ),
-    );
+    final slug = sectionSegments.isEmpty ? '' : sectionSegments.last;
+    final category = sectionSegments.length > 1 ? sectionSegments.first : null;
+    return GuideDetailScreen(slug: slug, categoryHint: category);
   }
 }

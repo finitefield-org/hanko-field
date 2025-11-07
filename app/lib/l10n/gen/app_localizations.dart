@@ -4735,6 +4735,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get guidesCategoryOther;
+
+  /// Label for the share button on the guide detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get guideDetailShareButtonLabel;
+
+  /// Label for the button that opens the guide in a browser
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get guideDetailOpenInBrowser;
+
+  /// Banner text shown when viewing cached guide content
+  ///
+  /// In en, this message translates to:
+  /// **'Showing offline copy from {timestamp}'**
+  String guideDetailCachedBanner(String timestamp);
+
+  /// Label that displays when the guide was last updated
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String guideDetailUpdatedLabel(String timestamp);
+
+  /// Label above the list of sources for a guide
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get guideDetailSourcesLabel;
+
+  /// Heading for related guide recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'Related guides'**
+  String get guideDetailRelatedTitle;
+
+  /// Title shown when the guide detail fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Guide unavailable'**
+  String get guideDetailErrorTitle;
+
+  /// Body text for the guide detail error state
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load this guide. Check your connection and try again.'**
+  String get guideDetailErrorMessage;
+
+  /// Tooltip when the user can bookmark/save the guide
+  ///
+  /// In en, this message translates to:
+  /// **'Save guide'**
+  String get guideDetailBookmarkTooltipSave;
+
+  /// Tooltip when the guide is already bookmarked
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from saved'**
+  String get guideDetailBookmarkTooltipRemove;
+
+  /// Snack bar message when bookmarking succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for offline reading.'**
+  String get guideDetailBookmarkSavedMessage;
+
+  /// Snack bar message when removing bookmark succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from saved guides.'**
+  String get guideDetailBookmarkRemovedMessage;
+
+  /// Message shared when the user taps Share on a guide
+  ///
+  /// In en, this message translates to:
+  /// **'Take a look at \"{title}\" from Hanko Field: {url}'**
+  String guideDetailShareMessage(String title, String url);
 }
 
 class _AppLocalizationsDelegate

@@ -4046,4 +4046,91 @@
 , "@guidesCategoryOther": {
   "description": "Label for the other guide category"
 }
+
+, "guideDetailShareButtonLabel": "Share"
+, "@guideDetailShareButtonLabel": {
+  "description": "Label for the share button on the guide detail screen"
+}
+
+, "guideDetailOpenInBrowser": "Open in browser"
+, "@guideDetailOpenInBrowser": {
+  "description": "Label for the button that opens the guide in a browser"
+}
+
+, "guideDetailCachedBanner": "Showing offline copy from {timestamp}"
+, "@guideDetailCachedBanner": {
+  "description": "Banner text shown when viewing cached guide content",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "May 24, 14:21"
+    }
+  }
+}
+
+, "guideDetailUpdatedLabel": "Updated {timestamp}"
+, "@guideDetailUpdatedLabel": {
+  "description": "Label that displays when the guide was last updated",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "May 12, 2024"
+    }
+  }
+}
+
+, "guideDetailSourcesLabel": "Sources"
+, "@guideDetailSourcesLabel": {
+  "description": "Label above the list of sources for a guide"
+}
+
+, "guideDetailRelatedTitle": "Related guides"
+, "@guideDetailRelatedTitle": {
+  "description": "Heading for related guide recommendations"
+}
+
+, "guideDetailErrorTitle": "Guide unavailable"
+, "@guideDetailErrorTitle": {
+  "description": "Title shown when the guide detail fails to load"
+}
+
+, "guideDetailErrorMessage": "We couldn’t load this guide. Check your connection and try again."
+, "@guideDetailErrorMessage": {
+  "description": "Body text for the guide detail error state"
+}
+
+, "guideDetailBookmarkTooltipSave": "Save guide"
+, "@guideDetailBookmarkTooltipSave": {
+  "description": "Tooltip when the user can bookmark/save the guide"
+}
+
+, "guideDetailBookmarkTooltipRemove": "Remove from saved"
+, "@guideDetailBookmarkTooltipRemove": {
+  "description": "Tooltip when the guide is already bookmarked"
+}
+
+, "guideDetailBookmarkSavedMessage": "Saved for offline reading."
+, "@guideDetailBookmarkSavedMessage": {
+  "description": "Snack bar message when bookmarking succeeds"
+}
+
+, "guideDetailBookmarkRemovedMessage": "Removed from saved guides."
+, "@guideDetailBookmarkRemovedMessage": {
+  "description": "Snack bar message when removing bookmark succeeds"
+}
+
+, "guideDetailShareMessage": "Take a look at \"{title}\" from Hanko Field: {url}"
+, "@guideDetailShareMessage": {
+  "description": "Message shared when the user taps Share on a guide",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "example": "Kanji Mapping Basics"
+    },
+    "url": {
+      "type": "String",
+      "example": "https://app.example.com/guides/kanji-mapping-basics"
+    }
+  }
+}
 }

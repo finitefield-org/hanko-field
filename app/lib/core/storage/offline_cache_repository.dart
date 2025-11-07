@@ -94,6 +94,28 @@ class OfflineCacheRepository {
     );
   }
 
+  Future<CacheReadResult<CachedGuideDetail>> readGuideDetail({
+    required String key,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.guides,
+      key: key,
+      decoder: (data) => CachedGuideDetail.fromJson(_asJson(data)),
+    );
+  }
+
+  Future<void> writeGuideDetail(
+    CachedGuideDetail payload, {
+    required String key,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.guides,
+      key: key,
+      encoder: (value) => value.toJson(),
+      value: payload,
+    );
+  }
+
   Future<CacheReadResult<KanjiCandidateResponse>> readKanjiCandidates({
     String key = LocalCacheStore.defaultEntryKey,
   }) {
@@ -498,6 +520,151 @@ class GuideCacheItem {
       'readingTimeMinutes': readingTimeMinutes,
       'tags': tags,
       'personas': personaTargets,
+    };
+  }
+}
+
+class CachedGuideDetail {
+  CachedGuideDetail({
+    required this.article,
+    required this.related,
+    this.updatedAt,
+  });
+
+  factory CachedGuideDetail.fromJson(Map<String, dynamic> json) {
+    return CachedGuideDetail(
+      article: CachedGuideArticle.fromJson(
+        Map<String, dynamic>.from(json['article'] as Map? ?? const {}),
+      ),
+      related: (json['related'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (item) =>
+                GuideCacheItem.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
+          .toList(),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+    );
+  }
+
+  final CachedGuideArticle article;
+  final List<GuideCacheItem> related;
+  final DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'article': article.toJson(),
+      'related': related.map((item) => item.toJson()).toList(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+class CachedGuideArticle {
+  CachedGuideArticle({
+    required this.id,
+    required this.slug,
+    required this.title,
+    required this.summary,
+    required this.body,
+    required this.bodyFormat,
+    required this.category,
+    required this.locale,
+    this.heroImage,
+    this.readingTimeMinutes,
+    this.authorName,
+    this.authorProfileUrl,
+    List<String>? tags,
+    List<String>? personaTargets,
+    List<String>? sources,
+    this.publishAt,
+    this.updatedAt,
+    this.version,
+    this.shareUrl,
+    this.featured = false,
+  }) : tags = tags ?? <String>[],
+       personaTargets = personaTargets ?? <String>[],
+       sources = sources ?? <String>[];
+
+  factory CachedGuideArticle.fromJson(Map<String, dynamic> json) {
+    return CachedGuideArticle(
+      id: json['id'] as String,
+      slug: json['slug'] as String,
+      title: json['title'] as String,
+      summary: json['summary'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      bodyFormat: json['bodyFormat'] as String? ?? 'markdown',
+      category: json['category'] as String? ?? 'other',
+      locale: json['locale'] as String? ?? 'en',
+      heroImage: json['heroImage'] as String?,
+      readingTimeMinutes: json['readingTimeMinutes'] as int?,
+      authorName: json['authorName'] as String?,
+      authorProfileUrl: json['authorProfileUrl'] as String?,
+      tags: (json['tags'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
+          .toList(),
+      personaTargets: (json['personas'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
+          .toList(),
+      sources: (json['sources'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
+          .toList(),
+      publishAt: json['publishAt'] == null
+          ? null
+          : DateTime.tryParse(json['publishAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+      version: json['version'] as String?,
+      shareUrl: json['shareUrl'] as String?,
+      featured: json['featured'] as bool? ?? false,
+    );
+  }
+
+  final String id;
+  final String slug;
+  final String title;
+  final String summary;
+  final String body;
+  final String bodyFormat;
+  final String category;
+  final String locale;
+  final String? heroImage;
+  final int? readingTimeMinutes;
+  final String? authorName;
+  final String? authorProfileUrl;
+  final List<String> tags;
+  final List<String> personaTargets;
+  final List<String> sources;
+  final DateTime? publishAt;
+  final DateTime? updatedAt;
+  final String? version;
+  final String? shareUrl;
+  final bool featured;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'slug': slug,
+      'title': title,
+      'summary': summary,
+      'body': body,
+      'bodyFormat': bodyFormat,
+      'category': category,
+      'locale': locale,
+      'heroImage': heroImage,
+      'readingTimeMinutes': readingTimeMinutes,
+      'authorName': authorName,
+      'authorProfileUrl': authorProfileUrl,
+      'tags': tags,
+      'personas': personaTargets,
+      'sources': sources,
+      'publishAt': publishAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'version': version,
+      'shareUrl': shareUrl,
+      'featured': featured,
     };
   }
 }

@@ -4,6 +4,7 @@ import 'package:app/core/domain/entities/content.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/features/guides/data/guides_repository.dart';
+import 'package:app/features/guides/domain/guide_detail.dart';
 import 'package:app/features/guides/domain/guide_list_entry.dart';
 
 class FakeGuidesRepository implements GuidesRepository {
@@ -57,6 +58,56 @@ class FakeGuidesRepository implements GuidesRepository {
     }
   }
 
+  @override
+  Future<GuideDetailResult> fetchGuideDetail(GuideDetailRequest request) async {
+    final cacheKey = _detailCacheKey(request);
+    final cached = await _readDetailCache(cacheKey: cacheKey, request: request);
+    try {
+      await Future<void>.delayed(_latency);
+      final article = _articles.firstWhere(
+        (candidate) => candidate.slug == request.slug,
+        orElse: () => throw StateError('Guide not found: ${request.slug}'),
+      );
+      final translation = _resolveTranslation(article, request.localeTag);
+      if (translation == null) {
+        throw StateError(
+          'Guide ${request.slug} missing translation for ${request.localeTag}',
+        );
+      }
+      final detail = _buildDetail(
+        article: article,
+        translation: translation,
+        localeTag: request.localeTag,
+      );
+      final related = _relatedEntries(
+        request: request,
+        excludeSlug: article.slug,
+        category: article.category,
+      );
+      final timestamp = _now();
+      await _cache.writeGuideDetail(
+        CachedGuideDetail(
+          article: _cacheArticleFromDetail(detail),
+          related: related.map(_cacheItemFromEntry).toList(),
+          updatedAt: timestamp,
+        ),
+        key: cacheKey,
+      );
+      return _buildDetailResult(
+        detail: detail,
+        related: related,
+        request: request,
+        fromCache: false,
+        timestamp: timestamp,
+      );
+    } catch (error) {
+      if (cached != null) {
+        return cached;
+      }
+      rethrow;
+    }
+  }
+
   Future<GuidesRepositoryResult?> _readCache({
     required String cacheKey,
     required GuideListRequest request,
@@ -78,6 +129,29 @@ class FakeGuidesRepository implements GuidesRepository {
     );
   }
 
+  Future<GuideDetailResult?> _readDetailCache({
+    required String cacheKey,
+    required GuideDetailRequest request,
+  }) async {
+    final cache = await _cache.readGuideDetail(key: cacheKey);
+    final snapshot = cache.value;
+    if (snapshot == null) {
+      return null;
+    }
+    final detail = _detailFromCache(snapshot.article);
+    final related = snapshot.related
+        .map(_entryFromCache)
+        .toList(growable: false);
+    final timestamp = snapshot.updatedAt ?? cache.lastUpdated ?? _now();
+    return _buildDetailResult(
+      detail: detail,
+      related: related,
+      request: request,
+      fromCache: true,
+      timestamp: timestamp,
+    );
+  }
+
   GuidesRepositoryResult _buildResult({
     required List<GuideListEntry> entries,
     required GuideListRequest request,
@@ -93,6 +167,23 @@ class FakeGuidesRepository implements GuidesRepository {
     return GuidesRepositoryResult(
       guides: entries,
       recommended: recommended,
+      localeTag: request.localeTag,
+      persona: request.persona,
+      fetchedAt: timestamp,
+      fromCache: fromCache,
+    );
+  }
+
+  GuideDetailResult _buildDetailResult({
+    required GuideDetail detail,
+    required List<GuideListEntry> related,
+    required GuideDetailRequest request,
+    required bool fromCache,
+    required DateTime timestamp,
+  }) {
+    return GuideDetailResult(
+      detail: detail,
+      related: related,
       localeTag: request.localeTag,
       persona: request.persona,
       fetchedAt: timestamp,
@@ -135,6 +226,62 @@ class FakeGuidesRepository implements GuidesRepository {
       return bUpdated.compareTo(aUpdated);
     });
     return result;
+  }
+
+  GuideDetail _buildDetail({
+    required GuideArticle article,
+    required GuideTranslation translation,
+    required String localeTag,
+  }) {
+    final personas = _personaTargetsFor(article.tags);
+    final format = _detectFormat(translation.body);
+    final summary = _summaryFor(translation);
+    final shareUrl =
+        'https://app.hanko-field.com/guides/${article.slug}?locale=$localeTag';
+    return GuideDetail(
+      id: article.id,
+      slug: article.slug,
+      title: translation.title,
+      summary: summary,
+      body: translation.body.trim(),
+      bodyFormat: format,
+      category: article.category,
+      locale: translation.locale,
+      heroImageUrl: article.heroImageUrl,
+      readingTimeMinutes: article.readingTimeMinutes,
+      author: article.author,
+      sources: article.sources,
+      tags: article.tags,
+      personaTargets: personas,
+      publishAt: article.publishAt,
+      updatedAt: article.updatedAt,
+      version: article.version,
+      shareUrl: shareUrl,
+      featured: article.tags.contains('recommended'),
+    );
+  }
+
+  List<GuideListEntry> _relatedEntries({
+    required GuideDetailRequest request,
+    required String excludeSlug,
+    required GuideCategory category,
+  }) {
+    final entries = _buildEntries(
+      GuideListRequest(localeTag: request.localeTag, persona: request.persona),
+    );
+    final prioritized = <GuideListEntry>[];
+    final others = <GuideListEntry>[];
+    for (final entry in entries) {
+      if (entry.slug == excludeSlug) {
+        continue;
+      }
+      if (entry.category == category) {
+        prioritized.add(entry);
+      } else {
+        others.add(entry);
+      }
+    }
+    return [...prioritized.take(3), ...others].take(6).toList(growable: false);
   }
 
   GuideTranslation? _resolveTranslation(
@@ -224,6 +371,70 @@ class FakeGuidesRepository implements GuidesRepository {
     );
   }
 
+  CachedGuideArticle _cacheArticleFromDetail(GuideDetail detail) {
+    return CachedGuideArticle(
+      id: detail.id,
+      slug: detail.slug,
+      title: detail.title,
+      summary: detail.summary,
+      body: detail.body,
+      bodyFormat: detail.bodyFormat.name,
+      category: detail.category.name,
+      locale: detail.locale,
+      heroImage: detail.heroImageUrl,
+      readingTimeMinutes: detail.readingTimeMinutes,
+      authorName: detail.author?.name,
+      authorProfileUrl: detail.author?.profileUrl,
+      tags: detail.tags,
+      personaTargets: detail.personaTargets
+          .map((persona) => persona.name)
+          .toList(growable: false),
+      sources: detail.sources,
+      publishAt: detail.publishAt,
+      updatedAt: detail.updatedAt,
+      version: detail.version,
+      shareUrl: detail.shareUrl,
+      featured: detail.featured,
+    );
+  }
+
+  GuideDetail _detailFromCache(CachedGuideArticle cached) {
+    final personas = <UserPersona>{
+      for (final raw in cached.personaTargets)
+        for (final persona in UserPersona.values)
+          if (persona.name == raw) persona,
+    };
+    final author = cached.authorName == null && cached.authorProfileUrl == null
+        ? null
+        : GuideAuthor(
+            name: cached.authorName,
+            profileUrl: cached.authorProfileUrl,
+          );
+    return GuideDetail(
+      id: cached.id,
+      slug: cached.slug,
+      title: cached.title,
+      summary: cached.summary,
+      body: cached.body,
+      bodyFormat: cached.bodyFormat == 'html'
+          ? GuideBodyFormat.html
+          : GuideBodyFormat.markdown,
+      category: _parseCategory(cached.category),
+      locale: cached.locale,
+      heroImageUrl: cached.heroImage,
+      readingTimeMinutes: cached.readingTimeMinutes,
+      author: author,
+      sources: cached.sources,
+      tags: cached.tags,
+      personaTargets: personas,
+      publishAt: cached.publishAt,
+      updatedAt: cached.updatedAt,
+      version: cached.version,
+      shareUrl: cached.shareUrl,
+      featured: cached.featured,
+    );
+  }
+
   static GuideCategory _parseCategory(String raw) {
     for (final category in GuideCategory.values) {
       if (category.name == raw) {
@@ -245,6 +456,17 @@ class FakeGuidesRepository implements GuidesRepository {
     return '${body.substring(0, 140)}...';
   }
 
+  static GuideBodyFormat _detectFormat(String body) {
+    final trimmed = body.trimLeft();
+    if (trimmed.startsWith('<') && trimmed.contains('>')) {
+      return GuideBodyFormat.html;
+    }
+    if (trimmed.contains('</p>') || trimmed.contains('<br')) {
+      return GuideBodyFormat.html;
+    }
+    return GuideBodyFormat.markdown;
+  }
+
   static String _languageOf(String localeTag) {
     final normalized = localeTag.toLowerCase();
     final dashIndex = normalized.indexOf('-');
@@ -256,6 +478,10 @@ class FakeGuidesRepository implements GuidesRepository {
 
   static String _cacheKey(GuideListRequest request) {
     return '${request.localeTag.toLowerCase()}-${request.persona.name}';
+  }
+
+  static String _detailCacheKey(GuideDetailRequest request) {
+    return 'detail-${request.slug}-${request.localeTag.toLowerCase()}-${request.persona.name}';
   }
 
   List<GuideArticle> _seedArticles() {

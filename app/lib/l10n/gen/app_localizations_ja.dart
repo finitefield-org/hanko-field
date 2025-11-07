@@ -2636,4 +2636,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guidesCategoryOther => 'その他';
+
+  @override
+  String get guideDetailShareButtonLabel => '共有';
+
+  @override
+  String get guideDetailOpenInBrowser => 'ブラウザで開く';
+
+  @override
+  String guideDetailCachedBanner(String timestamp) {
+    return 'オフラインコピー（$timestamp 保存）';
+  }
+
+  @override
+  String guideDetailUpdatedLabel(String timestamp) {
+    return '更新日 $timestamp';
+  }
+
+  @override
+  String get guideDetailSourcesLabel => '出典';
+
+  @override
+  String get guideDetailRelatedTitle => '関連記事';
+
+  @override
+  String get guideDetailErrorTitle => 'ガイドを表示できません';
+
+  @override
+  String get guideDetailErrorMessage => 'ガイドを読み込めませんでした。通信状況を確認して再度お試しください。';
+
+  @override
+  String get guideDetailBookmarkTooltipSave => 'あとで読む';
+
+  @override
+  String get guideDetailBookmarkTooltipRemove => '保存を解除';
+
+  @override
+  String get guideDetailBookmarkSavedMessage => 'オフライン用に保存しました。';
+
+  @override
+  String get guideDetailBookmarkRemovedMessage => '保存済みガイドから削除しました。';
+
+  @override
+  String guideDetailShareMessage(String title, String url) {
+    return '\"$title\"（Hanko Field）をチェック: $url';
+  }
 }

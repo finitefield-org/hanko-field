@@ -2739,4 +2739,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guidesCategoryOther => 'Other';
+
+  @override
+  String get guideDetailShareButtonLabel => 'Share';
+
+  @override
+  String get guideDetailOpenInBrowser => 'Open in browser';
+
+  @override
+  String guideDetailCachedBanner(String timestamp) {
+    return 'Showing offline copy from $timestamp';
+  }
+
+  @override
+  String guideDetailUpdatedLabel(String timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String get guideDetailSourcesLabel => 'Sources';
+
+  @override
+  String get guideDetailRelatedTitle => 'Related guides';
+
+  @override
+  String get guideDetailErrorTitle => 'Guide unavailable';
+
+  @override
+  String get guideDetailErrorMessage =>
+      'We couldn’t load this guide. Check your connection and try again.';
+
+  @override
+  String get guideDetailBookmarkTooltipSave => 'Save guide';
+
+  @override
+  String get guideDetailBookmarkTooltipRemove => 'Remove from saved';
+
+  @override
+  String get guideDetailBookmarkSavedMessage => 'Saved for offline reading.';
+
+  @override
+  String get guideDetailBookmarkRemovedMessage => 'Removed from saved guides.';
+
+  @override
+  String guideDetailShareMessage(String title, String url) {
+    return 'Take a look at \"$title\" from Hanko Field: $url';
+  }
 }

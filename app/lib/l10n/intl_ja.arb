@@ -2436,4 +2436,91 @@
 , "@guidesCategoryOther": {
   "description": "その他カテゴリのラベル"
 }
+
+, "guideDetailShareButtonLabel": "共有"
+, "@guideDetailShareButtonLabel": {
+  "description": "ガイド詳細画面の共有ボタンラベル"
+}
+
+, "guideDetailOpenInBrowser": "ブラウザで開く"
+, "@guideDetailOpenInBrowser": {
+  "description": "ブラウザでガイドを開くボタンのラベル"
+}
+
+, "guideDetailCachedBanner": "オフラインコピー（{timestamp} 保存）"
+, "@guideDetailCachedBanner": {
+  "description": "キャッシュ表示時のバナー文言",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "5月24日 14:21"
+    }
+  }
+}
+
+, "guideDetailUpdatedLabel": "更新日 {timestamp}"
+, "@guideDetailUpdatedLabel": {
+  "description": "ガイドの最終更新日を示すラベル",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "2024年5月12日"
+    }
+  }
+}
+
+, "guideDetailSourcesLabel": "出典"
+, "@guideDetailSourcesLabel": {
+  "description": "ガイドの出典リスト見出し"
+}
+
+, "guideDetailRelatedTitle": "関連記事"
+, "@guideDetailRelatedTitle": {
+  "description": "関連記事セクションの見出し"
+}
+
+, "guideDetailErrorTitle": "ガイドを表示できません"
+, "@guideDetailErrorTitle": {
+  "description": "ガイド詳細エラー時のタイトル"
+}
+
+, "guideDetailErrorMessage": "ガイドを読み込めませんでした。通信状況を確認して再度お試しください。"
+, "@guideDetailErrorMessage": {
+  "description": "ガイド詳細エラー時のメッセージ"
+}
+
+, "guideDetailBookmarkTooltipSave": "あとで読む"
+, "@guideDetailBookmarkTooltipSave": {
+  "description": "ブックマークできる状態のツールチップ"
+}
+
+, "guideDetailBookmarkTooltipRemove": "保存を解除"
+, "@guideDetailBookmarkTooltipRemove": {
+  "description": "ブックマーク済み状態のツールチップ"
+}
+
+, "guideDetailBookmarkSavedMessage": "オフライン用に保存しました。"
+, "@guideDetailBookmarkSavedMessage": {
+  "description": "ブックマーク保存時のスナックバー文言"
+}
+
+, "guideDetailBookmarkRemovedMessage": "保存済みガイドから削除しました。"
+, "@guideDetailBookmarkRemovedMessage": {
+  "description": "ブックマーク解除時のスナックバー文言"
+}
+
+, "guideDetailShareMessage": "\"{title}\"（Hanko Field）をチェック: {url}"
+, "@guideDetailShareMessage": {
+  "description": "ガイド共有時のメッセージ",
+  "placeholders": {
+    "title": {
+      "type": "String",
+      "example": "漢字マッピング入門"
+    },
+    "url": {
+      "type": "String",
+      "example": "https://app.example.com/guides/kanji-mapping-basics"
+    }
+  }
+}
 }
