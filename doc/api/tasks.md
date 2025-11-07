@@ -158,7 +158,7 @@
 - [x] [112 Write unit tests for middleware, services, and repositories (using Firestore emulator/mocks).](./tasks/112-write-unit-tests-for-middleware-services-and-repositories-using-firestore-emulat.md)
 - [x] [113 Write integration tests exercising representative endpoint flows with emulators.](./tasks/113-write-integration-tests-exercising-representative-endpoint-flows-with-emulators.md)
 - [x] [114 Implement contract tests for webhooks to ensure payload parsing and idempotency.](./tasks/114-implement-contract-tests-for-webhooks-to-ensure-payload-parsing-and-idempotency.md)
-- [ ] [115 Add load/performance test plan for critical paths (checkout, AI requests, stock reservations).](./tasks/115-add-load-performance-test-plan-for-critical-paths-checkout-ai-requests-stock-res.md)
+- [x] [115 Add load/performance test plan for critical paths (checkout, AI requests, stock reservations).](./tasks/115-add-load-performance-test-plan-for-critical-paths-checkout-ai-requests-stock-res.md)
 - [ ] [116 Document manual QA scenarios for admin workflows and edge cases.](./tasks/116-document-manual-qa-scenarios-for-admin-workflows-and-edge-cases.md)
 
 ## 11. Security & Compliance
