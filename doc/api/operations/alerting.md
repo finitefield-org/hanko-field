@@ -158,22 +158,27 @@ gcloud logging metrics create payments_mismatch_count \
 
 #### Runbook
 
-1. From the alert payload capture `orderId`, `cartId`, and PSP intent ID (all logged alongside
-   the event fields).
-2. Query the admin orders API for the latest payment summary and metadata:
+1. Capture the **userId**, **cartId**, and PSP status from the alert/underlying log entry
+   (`jsonPayload.userID`, `jsonPayload.cartID`, `jsonPayload.status`). These are the only
+   structured fields emitted by `checkout.payment_status_unhandled`.
+2. Retrieve the checkout metadata from the user’s cart (Firestore doc `carts/{userId}` or the
+   internal carts admin endpoint) and record the stored `checkout.intentId`, `checkout.orderId`,
+   and reservation ID if present.
+3. Query the admin orders API (if `orderId` exists) or the carts admin API to confirm the API’s
+   current understanding of the payment:
    ```bash
    curl -s -H "Authorization: Bearer $TOKEN" \
      "$API_BASE/api/v1/admin/orders/$ORDER_ID" | jq '.payments'
    ```
-3. Compare with Stripe’s source of truth:
+4. Compare with Stripe’s source of truth using the intent ID retrieved from the cart metadata:
    ```bash
    stripe payment_intents retrieve "$INTENT_ID"
    ```
-4. If Stripe reports `succeeded` but the order is still pending, replay the webhook via
-   `stripe events resend --event $EVENT_ID --webhook-endpoint-id $ENDPOINT_ID` (pointing at the
-   Cloud Run URL) to push the canonical payload back through the API.
-5. For statuses that Stripe marks as `requires_action` or any unexpected enum, add an incident
-   note to the order, mute the alert for two hours, and escalate to the payments team to
+5. If Stripe reports `succeeded` but the order/cart remains pending, replay the webhook via
+   `stripe events resend --event $EVENT_ID --webhook-endpoint-id $ENDPOINT_ID` (targeting the
+   Cloud Run endpoint) so the payment service reprocesses the payload.
+6. For statuses that Stripe marks as `requires_action` or any unexpected enum, add an incident
+   note to the order/cart, mute the alert for two hours, and escalate to the payments team to
    determine whether to cancel, capture manually, or write an ad-hoc migration script.
 
 #### Synthetic test
