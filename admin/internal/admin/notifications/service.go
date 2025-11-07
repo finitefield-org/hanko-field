@@ -92,9 +92,11 @@ type CountSummary struct {
 
 // BadgeCount represents counts surfaced in the top bar notification badge.
 type BadgeCount struct {
-	Total    int
-	Critical int
-	Warning  int
+	Total          int
+	Critical       int
+	Warning        int
+	ReviewsPending int
+	TasksPending   int
 }
 
 // Notification stores a single feed entry.

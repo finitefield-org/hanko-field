@@ -41,6 +41,13 @@ func TestTopbarActionsRenderForAdmin(t *testing.T) {
 	require.Equal(t, 1, notifications.Length(), "notifications badge should render for admin")
 	require.Equal(t, "/admin/notifications/badge", notifications.AttrOr("hx-get", ""))
 
+	workloads := doc.Find("[data-workload-badges]")
+	require.Equal(t, 1, workloads.Length(), "workload badges container should render for admin")
+	require.Equal(t, 1, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge placeholder should render")
+	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews badge placeholder should render")
+	require.Equal(t, 1, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge placeholder should render")
+	require.Equal(t, "true", doc.Find("[data-workload-badge='alerts']").AttrOr("data-empty", ""), "alerts badge should start empty")
+
 	userMenu := doc.Find("[data-user-menu]")
 	require.Equal(t, 1, userMenu.Length(), "user menu should render")
 	require.Equal(t, "/admin/logout", doc.Find("[data-user-menu-logout]").AttrOr("action", ""), "logout form should post to logout route")
@@ -61,6 +68,10 @@ func TestTopbarHidesRestrictedActions(t *testing.T) {
 
 	require.Equal(t, 0, doc.Find("[data-topbar-search-trigger]").Length(), "search shortcut must be hidden without capability")
 	require.Equal(t, 0, doc.Find("[data-notifications-root]").Length(), "notifications badge must be hidden without capability")
+	require.Equal(t, 1, doc.Find("[data-workload-badges]").Length(), "workload badges container should render when moderation capability is present")
+	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews workload badge should render for marketing role")
+	require.Equal(t, 0, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge must be hidden without notifications capability")
+	require.Equal(t, 0, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge must be hidden without system capability")
 
 	userSummary := doc.Find("[data-user-menu] .truncate.text-sm")
 	require.Equal(t, 1, userSummary.Length(), "user menu should still render for marketing role")

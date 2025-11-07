@@ -19,6 +19,23 @@ const focusableSelectors = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+const workloadLabels = {
+  alerts: "未対応アラート",
+  reviews: "レビュー審査の保留",
+  tasks: "未完了タスク",
+};
+
+const formatAccessibleCount = (value) => {
+  const numeric = Number.isFinite(value) ? Number(value) : 0;
+  if (numeric <= 0) {
+    return "0件";
+  }
+  if (numeric > 99) {
+    return "99件以上";
+  }
+  return `${numeric}件`;
+};
+
 const isEditableTarget = (element) => {
   if (!(element instanceof Element)) {
     return false;
@@ -120,7 +137,79 @@ const normalizeBadgeCounts = (raw) => {
   const total = parseNotificationInteger(raw.total ?? raw.Total);
   const critical = parseNotificationInteger(raw.critical ?? raw.Critical);
   const warning = parseNotificationInteger(raw.warning ?? raw.Warning);
-  return { total, critical, warning };
+  const reviews = parseNotificationInteger(
+    raw.reviews ?? raw.Reviews ?? raw.reviewsPending ?? raw.ReviewsPending ?? raw.reviews_pending,
+  );
+  const tasks = parseNotificationInteger(
+    raw.tasks ?? raw.Tasks ?? raw.tasksPending ?? raw.TasksPending ?? raw.tasks_pending,
+  );
+  return { total, critical, warning, reviews, tasks };
+};
+
+const updateBadgeElements = (selector, labelFallback, displayText, accessibleText, empty, numericValue) => {
+  document.querySelectorAll(selector).forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const label = (element.dataset.badgeLabel || labelFallback || "").trim();
+    element.textContent = displayText;
+    element.dataset.empty = empty ? "true" : "false";
+    element.dataset.count = String(numericValue ?? 0);
+    element.classList.toggle("hidden", empty);
+    if (label) {
+      const narration = `${label}: ${accessibleText}`;
+      element.setAttribute("aria-label", narration);
+      element.setAttribute("title", narration);
+    } else {
+      element.removeAttribute("aria-label");
+      element.setAttribute("title", accessibleText);
+    }
+  });
+};
+
+const updateBadgeAnnouncement = (selector, labelFallback, accessibleText) => {
+  document.querySelectorAll(selector).forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const label = (element.dataset.badgeLabel || labelFallback || "").trim();
+    element.textContent = label ? `${label}: ${accessibleText}` : accessibleText;
+  });
+};
+
+const updateWorkloadBadge = (key, count) => {
+  const numeric = Number.isFinite(count) ? Number(count) : 0;
+  const payload = formatNotificationCount(numeric);
+  const accessible = formatAccessibleCount(numeric);
+  const label = workloadLabels[key] || "";
+  const empty = payload.empty;
+
+  document.querySelectorAll(`[data-workload-item='${key}']`).forEach((element) => {
+    if (element instanceof HTMLElement) {
+      element.classList.toggle("hidden", empty);
+    }
+  });
+
+  document.querySelectorAll(`[data-nav-badge-container='${key}']`).forEach((element) => {
+    if (element instanceof HTMLElement) {
+      element.classList.toggle("hidden", empty);
+    }
+  });
+
+  updateBadgeElements(`[data-workload-badge='${key}']`, label, payload.display, accessible, empty, numeric);
+  updateBadgeElements(`[data-nav-badge='${key}']`, label, payload.display, accessible, empty, numeric);
+
+  updateBadgeAnnouncement(`[data-workload-announcer='${key}']`, label, accessible);
+  updateBadgeAnnouncement(`[data-nav-badge-announcer='${key}']`, label, accessible);
+};
+
+const updateWorkloadBadges = (counts) => {
+  if (!counts || typeof counts !== "object") {
+    return;
+  }
+  updateWorkloadBadge("alerts", counts.total);
+  updateWorkloadBadge("reviews", counts.reviews);
+  updateWorkloadBadge("tasks", counts.tasks);
 };
 
 const applyNotificationBadgeCounts = (counts) => {
@@ -140,9 +229,19 @@ const applyNotificationBadgeCounts = (counts) => {
     badge.dataset.empty = payload.empty ? "true" : "false";
     badge.dataset.critical = String(counts.critical ?? 0);
     badge.dataset.warning = String(counts.warning ?? 0);
-    badge.setAttribute("aria-label", `未対応通知: ${payload.display}`);
+    const accessible = formatAccessibleCount(counts.total);
+    const narration = `未対応アラート: ${accessible}`;
+    badge.setAttribute("aria-label", narration);
+    badge.setAttribute("title", narration);
+    badge.dataset.count = String(Number.isFinite(counts.total) ? Number(counts.total) : 0);
     applyNotificationBadgeState(root);
+    root.dataset.badgeTotal = String(Number.isFinite(counts.total) ? Number(counts.total) : 0);
+    root.dataset.badgeCritical = String(Number.isFinite(counts.critical) ? Number(counts.critical) : 0);
+    root.dataset.badgeWarning = String(Number.isFinite(counts.warning) ? Number(counts.warning) : 0);
+    root.dataset.badgeReviews = String(Number.isFinite(counts.reviews) ? Number(counts.reviews) : 0);
+    root.dataset.badgeTasks = String(Number.isFinite(counts.tasks) ? Number(counts.tasks) : 0);
   });
+  updateWorkloadBadges(counts);
 };
 
 const dispatchNotificationsEvent = (name, detail) => {
@@ -279,7 +378,14 @@ const initNotificationsBadge = () => {
     if (!(root instanceof Element)) {
       return;
     }
-    applyNotificationBadgeState(root);
+    const counts = {
+      total: parseNotificationInteger(root.dataset.badgeTotal),
+      critical: parseNotificationInteger(root.dataset.badgeCritical),
+      warning: parseNotificationInteger(root.dataset.badgeWarning),
+      reviews: parseNotificationInteger(root.dataset.badgeReviews),
+      tasks: parseNotificationInteger(root.dataset.badgeTasks),
+    };
+    applyNotificationBadgeCounts(counts);
     const streamURL = root.getAttribute("data-notifications-stream");
     if (typeof streamURL === "string" && streamURL.trim() !== "") {
       startNotificationsStream(streamURL.trim());

@@ -9,7 +9,9 @@ import (
 
 // StaticService provides canned responses for development, previews, and tests.
 type StaticService struct {
-	Notifications []Notification
+	Notifications  []Notification
+	PendingReviews int
+	PendingTasks   int
 }
 
 // NewStaticService builds a StaticService populated with representative notifications.
@@ -208,6 +210,8 @@ func NewStaticService() *StaticService {
 			resolvedNotification,
 			suppressed,
 		},
+		PendingReviews: 7,
+		PendingTasks:   4,
 	}
 }
 
@@ -262,6 +266,12 @@ func (s *StaticService) Badge(ctx context.Context, token string) (BadgeCount, er
 		case SeverityHigh, SeverityMedium:
 			result.Warning++
 		}
+	}
+	if s.PendingReviews > 0 {
+		result.ReviewsPending = s.PendingReviews
+	}
+	if s.PendingTasks > 0 {
+		result.TasksPending = s.PendingTasks
 	}
 	return result, nil
 }

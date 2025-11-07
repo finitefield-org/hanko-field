@@ -29,6 +29,8 @@ type badgeStreamPayload struct {
 	Total    int `json:"total"`
 	Critical int `json:"critical"`
 	Warning  int `json:"warning"`
+	Reviews  int `json:"reviews"`
+	Tasks    int `json:"tasks"`
 }
 
 type notificationStreamError struct {
@@ -123,6 +125,8 @@ func (h *Handlers) NotificationsStream(w http.ResponseWriter, r *http.Request) {
 			Total:    badgeCount.Total,
 			Critical: badgeCount.Critical,
 			Warning:  badgeCount.Warning,
+			Reviews:  badgeCount.ReviewsPending,
+			Tasks:    badgeCount.TasksPending,
 		}
 
 		badgeChanged := currentBadge != lastBadge

@@ -2,6 +2,7 @@ package partials
 
 import (
     "context"
+    "fmt"
     "strings"
 
     "finitefield.org/hanko-admin/internal/admin/navigation"
@@ -69,6 +70,29 @@ templ Sidebar(groups []navigation.MenuGroup) {
                                         <span class="text-base text-slate-400" aria-hidden="true">{ item.Icon }</span>
                                     }
                                     <span>{ item.Label }</span>
+                                    if key := strings.TrimSpace(item.BadgeKey); key != "" {
+                                        <span class="ml-auto flex items-center" data-nav-badge-container={ key }>
+                                            <span
+                                                class={ helpers.BadgeClass(item.BadgeTone) + " hidden text-[11px]" }
+                                                data-nav-badge={ key }
+                                                data-badge-label={ item.BadgeLabel }
+                                                data-empty="true"
+                                                aria-hidden="true"
+                                            >
+                                                0
+                                            </span>
+                                            <span
+                                                class="sr-only"
+                                                role="status"
+                                                aria-live="polite"
+                                                aria-atomic="true"
+                                                data-nav-badge-announcer={ key }
+                                                data-badge-label={ item.BadgeLabel }
+                                            >
+                                                { fmt.Sprintf("%s: 0件", item.BadgeLabel) }
+                                            </span>
+                                        </span>
+                                    }
                                 </a>
                             </li>
                         }

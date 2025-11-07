@@ -8,6 +8,8 @@ package notifications
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "strconv"
+
 func Badge(data BadgeData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -36,7 +38,7 @@ func Badge(data BadgeData) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.Endpoint)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 7, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 9, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -49,7 +51,7 @@ func Badge(data BadgeData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.StreamEndpoint)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 11, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 13, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -62,52 +64,117 @@ func Badge(data BadgeData) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.Href)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 12, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 14, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" data-badge-total=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var5 templ.SafeURL
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(data.Href)
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Total))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 15, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 15, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1\" data-notifications-button aria-label=\"通知センターを開く\"><span class=\"sr-only\">通知センターを開く</span> <svg viewBox=\"0 0 20 20\" fill=\"none\" aria-hidden=\"true\" class=\"h-5 w-5\"><path d=\"M10 2a4.5 4.5 0 0 1 4.5 4.5v1.085c0 .472.17.93.478 1.287l.83.953c.804.924.132 2.375-1.086 2.375H5.278c-1.218 0-1.89-1.451-1.086-2.375l.83-.953A1.999 1.999 0 0 0 5.5 7.585V6.5A4.5 4.5 0 0 1 10 2Zm0 16a2.5 2.5 0 0 1-2.45-2h4.9A2.5 2.5 0 0 1 10 18Z\" fill=\"currentColor\"></path></svg> <span class=\"absolute -top-1 -right-1 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-danger-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm transition\" aria-live=\"polite\" aria-atomic=\"true\" data-notification-count data-empty=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-badge-critical=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(boolAttr(data.Total == 0))
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Critical))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 29, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 16, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" data-badge-warning=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(badgeDisplay(data.Total))
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Warning))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `notifications/badge.templ`, Line: 31, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 17, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></a></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" data-badge-reviews=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.ReviewsPending))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 18, Col: 56}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-badge-tasks=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.TasksPending))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 19, Col: 52}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 templ.SafeURL
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(data.Href)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 22, Col: 19}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" class=\"relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1\" data-notifications-button aria-label=\"通知センターを開く\"><span class=\"sr-only\">通知センターを開く</span> <svg viewBox=\"0 0 20 20\" fill=\"none\" aria-hidden=\"true\" class=\"h-5 w-5\"><path d=\"M10 2a4.5 4.5 0 0 1 4.5 4.5v1.085c0 .472.17.93.478 1.287l.83.953c.804.924.132 2.375-1.086 2.375H5.278c-1.218 0-1.89-1.451-1.086-2.375l.83-.953A1.999 1.999 0 0 0 5.5 7.585V6.5A4.5 4.5 0 0 1 10 2Zm0 16a2.5 2.5 0 0 1-2.45-2h4.9A2.5 2.5 0 0 1 10 18Z\" fill=\"currentColor\"></path></svg> <span class=\"absolute -top-1 -right-1 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-danger-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm transition\" aria-live=\"polite\" aria-atomic=\"true\" data-notification-count data-empty=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(boolAttr(data.Total == 0))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 36, Col: 42}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(badgeDisplay(data.Total))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/admin/templates/notifications/badge.templ`, Line: 38, Col: 30}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

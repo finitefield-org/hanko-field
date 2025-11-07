@@ -169,6 +169,7 @@ templ TopbarActions() {
 	if helpers.HasCapability(ctx, string(rbac.CapNotificationsFeed)) {
 		@NotificationsButton()
 	}
+	@WorkloadBadges()
 	@UserMenu()
 }
 
@@ -240,6 +241,86 @@ templ NotificationsButton() {
 			</a>
 		</div>
 	}
+}
+
+templ WorkloadBadges() {
+	if !(helpers.HasCapability(ctx, string(rbac.CapNotificationsFeed)) || helpers.HasCapability(ctx, string(rbac.CapReviewsModerate)) || helpers.HasCapability(ctx, string(rbac.CapSystemTasks))) {
+		return
+	}
+	<div class="hidden items-center gap-3 lg:flex" data-workload-badges>
+		if helpers.HasCapability(ctx, string(rbac.CapReviewsModerate)) {
+			<span class="hidden items-center gap-1 text-xs font-medium text-slate-600" data-workload-item="reviews">
+				<span aria-hidden="true">レビュー</span>
+				<span
+					class={ helpers.BadgeClass("warning") + " text-[11px]" }
+					data-workload-badge="reviews"
+					data-badge-label="レビュー審査の保留"
+					data-empty="true"
+					aria-hidden="true"
+				>
+					0
+				</span>
+				<span
+					class="sr-only"
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					data-workload-announcer="reviews"
+					data-badge-label="レビュー審査の保留"
+				>
+					{ fmt.Sprintf("%s: 0件", "レビュー審査の保留") }
+				</span>
+			</span>
+		}
+		if helpers.HasCapability(ctx, string(rbac.CapNotificationsFeed)) {
+			<span class="hidden items-center gap-1 text-xs font-medium text-slate-600" data-workload-item="alerts">
+				<span aria-hidden="true">アラート</span>
+				<span
+					class={ helpers.BadgeClass("danger") + " text-[11px]" }
+					data-workload-badge="alerts"
+					data-badge-label="未対応アラート"
+					data-empty="true"
+					aria-hidden="true"
+				>
+					0
+				</span>
+				<span
+					class="sr-only"
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					data-workload-announcer="alerts"
+					data-badge-label="未対応アラート"
+				>
+					{ fmt.Sprintf("%s: 0件", "未対応アラート") }
+				</span>
+			</span>
+		}
+		if helpers.HasCapability(ctx, string(rbac.CapSystemTasks)) {
+			<span class="hidden items-center gap-1 text-xs font-medium text-slate-600" data-workload-item="tasks">
+				<span aria-hidden="true">タスク</span>
+				<span
+					class={ helpers.BadgeClass("info") + " text-[11px]" }
+					data-workload-badge="tasks"
+					data-badge-label="未完了タスク"
+					data-empty="true"
+					aria-hidden="true"
+				>
+					0
+				</span>
+				<span
+					class="sr-only"
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					data-workload-announcer="tasks"
+					data-badge-label="未完了タスク"
+				>
+					{ fmt.Sprintf("%s: 0件", "未完了タスク") }
+				</span>
+			</span>
+		}
+	</div>
 }
 
 templ UserMenu() {

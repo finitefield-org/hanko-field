@@ -111,6 +111,11 @@ func TestSidebarRenderingFiltersAndHighlights(t *testing.T) {
 	require.Equal(t, 1, ordersLink.Length(), "orders link should render")
 	require.Equal(t, "page", ordersLink.AttrOr("aria-current", ""), "active route highlights current page")
 	require.Contains(t, ordersLink.AttrOr("class", ""), "bg-slate-900", "active link should use highlighted class")
+
+	alertBadge := doc.Find("[data-nav-badge='alerts']")
+	require.Equal(t, 1, alertBadge.Length(), "notifications nav entry should include badge placeholder")
+	require.Equal(t, "true", alertBadge.AttrOr("data-empty", ""), "nav badge should start empty")
+	require.Equal(t, 0, doc.Find("[data-nav-badge='tasks']").Length(), "tasks badge must not render without capability")
 }
 
 func parseHTML(t *testing.T, body []byte) *goquery.Document {

@@ -25,6 +25,9 @@ type Item struct {
 	MatchPrefix  bool
 	External     bool
 	OpenInNewTab bool
+	BadgeKey     string
+	BadgeLabel   string
+	BadgeTone    string
 }
 
 // MenuGroup is the resolved output used by templates.
@@ -46,6 +49,9 @@ type MenuItem struct {
 	MatchPrefix  bool
 	External     bool
 	OpenInNewTab bool
+	BadgeKey     string
+	BadgeLabel   string
+	BadgeTone    string
 }
 
 // BuildMenu returns the sidebar configuration resolved for the provided base path.
@@ -61,6 +67,12 @@ func BuildMenu(basePath string) []MenuGroup {
 				pattern = raw.Path
 			}
 			pattern = join(base, pattern)
+			badgeKey := strings.TrimSpace(raw.BadgeKey)
+			badgeLabel := strings.TrimSpace(raw.BadgeLabel)
+			if badgeLabel == "" {
+				badgeLabel = strings.TrimSpace(raw.Label)
+			}
+			badgeTone := strings.TrimSpace(raw.BadgeTone)
 			items = append(items, MenuItem{
 				Key:          raw.Key,
 				Label:        raw.Label,
@@ -71,6 +83,9 @@ func BuildMenu(basePath string) []MenuGroup {
 				MatchPrefix:  raw.MatchPrefix,
 				External:     raw.External,
 				OpenInNewTab: raw.OpenInNewTab,
+				BadgeKey:     badgeKey,
+				BadgeLabel:   badgeLabel,
+				BadgeTone:    badgeTone,
 			})
 		}
 		menu = append(menu, MenuGroup{
@@ -114,6 +129,9 @@ var defaultMenu = []Group{
 				Path:        "/notifications",
 				Pattern:     "/notifications",
 				MatchPrefix: true,
+				BadgeKey:    "alerts",
+				BadgeLabel:  "未対応アラート",
+				BadgeTone:   "danger",
 			},
 		},
 	},
@@ -268,6 +286,9 @@ var defaultMenu = []Group{
 				Path:        "/reviews",
 				Pattern:     "/reviews",
 				MatchPrefix: true,
+				BadgeKey:    "reviews",
+				BadgeLabel:  "レビュー審査の保留",
+				BadgeTone:   "warning",
 			},
 		},
 	},
@@ -352,6 +373,9 @@ var defaultMenu = []Group{
 				Path:        "/system/tasks",
 				Pattern:     "/system/tasks",
 				MatchPrefix: true,
+				BadgeKey:    "tasks",
+				BadgeLabel:  "未完了タスク",
+				BadgeTone:   "info",
 			},
 			{
 				Key:         "system-counters",

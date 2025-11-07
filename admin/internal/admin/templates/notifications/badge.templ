@@ -1,5 +1,7 @@
 package notifications
 
+import "strconv"
+
 templ Badge(data BadgeData) {
 	<div
 		class="relative"
@@ -10,6 +12,11 @@ templ Badge(data BadgeData) {
 		hx-swap="outerHTML"
 		data-notifications-stream={ data.StreamEndpoint }
 		data-notifications-href={ data.Href }
+		data-badge-total={ strconv.Itoa(data.Total) }
+		data-badge-critical={ strconv.Itoa(data.Critical) }
+		data-badge-warning={ strconv.Itoa(data.Warning) }
+		data-badge-reviews={ strconv.Itoa(data.ReviewsPending) }
+		data-badge-tasks={ strconv.Itoa(data.TasksPending) }
 	>
 		<a
 			href={ data.Href }
