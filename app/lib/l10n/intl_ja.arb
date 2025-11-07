@@ -2268,4 +2268,172 @@
 , "@orderTrackingEventReturnToSender": {
   "description": "返送イベントのラベル"
 }
+
+, "guidesListTitle": "ガイド & 文化コンテンツ"
+, "@guidesListTitle": {
+  "description": "ガイド一覧画面のタイトル"
+}
+
+, "guidesRefreshTooltip": "ガイドを再読み込み"
+, "@guidesRefreshTooltip": {
+  "description": "ガイド画面の再読み込みアイコンのツールチップ"
+}
+
+, "guidesSearchHint": "ガイド・トピック・タグを検索"
+, "@guidesSearchHint": {
+  "description": "ガイド検索バーのプレースホルダー"
+}
+
+, "guidesClearSearchTooltip": "検索をクリア"
+, "@guidesClearSearchTooltip": {
+  "description": "検索クリアアイコンのツールチップ"
+}
+
+, "guidesFilterPersonaLabel": "ペルソナ"
+, "@guidesFilterPersonaLabel": {
+  "description": "ペルソナフィルターの見出し"
+}
+
+, "guidesFilterLocaleLabel": "言語"
+, "@guidesFilterLocaleLabel": {
+  "description": "言語フィルターの見出し"
+}
+
+, "guidesFilterTopicLabel": "トピック"
+, "@guidesFilterTopicLabel": {
+  "description": "トピックフィルターの見出し"
+}
+
+, "guidesTopicAllLabel": "すべて"
+, "@guidesTopicAllLabel": {
+  "description": "トピックフィルターを解除するチップのラベル"
+}
+
+, "guidesLastUpdatedLabel": "最終同期 {timestamp}"
+, "@guidesLastUpdatedLabel": {
+  "description": "ガイドの最終同期時間を示すラベル",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "5月24日 14:21"
+    }
+  }
+}
+
+, "guidesCachedBadge": "オフライン"
+, "@guidesCachedBadge": {
+  "description": "キャッシュデータであることを示すバッジ"
+}
+
+, "guidesRecommendedTitle": "おすすめ ({persona})"
+, "@guidesRecommendedTitle": {
+  "description": "おすすめガイドセクションの見出し",
+  "placeholders": {
+    "persona": {
+      "type": "String",
+      "example": "海外向け"
+    }
+  }
+}
+
+, "guidesRecommendedChip": "おすすめ"
+, "@guidesRecommendedChip": {
+  "description": "おすすめガイドに表示するチップのテキスト"
+}
+
+, "guidesEmptyTitle": "表示できるガイドがありません"
+, "@guidesEmptyTitle": {
+  "description": "フィルターでヒットしない場合のタイトル"
+}
+
+, "guidesEmptyMessage": "検索条件またはフィルターを調整してください。"
+, "@guidesEmptyMessage": {
+  "description": "ガイドの空状態メッセージ"
+}
+
+, "guidesClearFiltersButton": "フィルターをリセット"
+, "@guidesClearFiltersButton": {
+  "description": "フィルター解除ボタンのラベル"
+}
+
+, "guidesLoadErrorTitle": "ガイドを読み込めませんでした"
+, "@guidesLoadErrorTitle": {
+  "description": "ガイド読み込み失敗時のタイトル"
+}
+
+, "guidesLoadError": "通信状況を確認して、もう一度お試しください。"
+, "@guidesLoadError": {
+  "description": "ガイド読み込み失敗時の説明"
+}
+
+, "guidesRetryButtonLabel": "再試行"
+, "@guidesRetryButtonLabel": {
+  "description": "再試行ボタンのラベル"
+}
+
+, "guidesReadingTimeLabel": "{minutes} 分で読めます"
+, "@guidesReadingTimeLabel": {
+  "description": "ガイドの想定読了時間ラベル",
+  "placeholders": {
+    "minutes": {
+      "type": "int",
+      "example": "6"
+    }
+  }
+}
+
+, "guidesReadButton": "ガイドを開く"
+, "@guidesReadButton": {
+  "description": "ガイドオープンボタンのラベル"
+}
+
+, "guidesPersonaJapaneseLabel": "国内向け"
+, "@guidesPersonaJapaneseLabel": {
+  "description": "国内ペルソナのフィルターラベル"
+}
+
+, "guidesPersonaInternationalLabel": "海外向け"
+, "@guidesPersonaInternationalLabel": {
+  "description": "海外ペルソナのフィルターラベル"
+}
+
+, "guidesLocaleJapaneseLabel": "日本語"
+, "@guidesLocaleJapaneseLabel": {
+  "description": "日本語ロケールのチップラベル"
+}
+
+, "guidesLocaleEnglishLabel": "英語"
+, "@guidesLocaleEnglishLabel": {
+  "description": "英語ロケールのチップラベル"
+}
+
+, "guidesCategoryCulture": "文化"
+, "@guidesCategoryCulture": {
+  "description": "文化カテゴリのラベル"
+}
+
+, "guidesCategoryHowTo": "ハウツー"
+, "@guidesCategoryHowTo": {
+  "description": "ハウツーカテゴリのラベル"
+}
+
+, "guidesCategoryPolicy": "制度"
+, "@guidesCategoryPolicy": {
+  "description": "制度カテゴリのラベル"
+}
+
+, "guidesCategoryFaq": "FAQ"
+, "@guidesCategoryFaq": {
+  "description": "FAQカテゴリのラベル"
+}
+
+, "guidesCategoryNews": "アップデート"
+, "@guidesCategoryNews": {
+  "description": "ニュースカテゴリのラベル"
+}
+
+, "guidesCategoryOther": "その他"
+, "@guidesCategoryOther": {
+  "description": "その他カテゴリのラベル"
+}
 }

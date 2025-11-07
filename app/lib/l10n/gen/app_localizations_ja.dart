@@ -2540,4 +2540,100 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get orderTrackingEventReturnToSender => '差出人に返送';
+
+  @override
+  String get guidesListTitle => 'ガイド & 文化コンテンツ';
+
+  @override
+  String get guidesRefreshTooltip => 'ガイドを再読み込み';
+
+  @override
+  String get guidesSearchHint => 'ガイド・トピック・タグを検索';
+
+  @override
+  String get guidesClearSearchTooltip => '検索をクリア';
+
+  @override
+  String get guidesFilterPersonaLabel => 'ペルソナ';
+
+  @override
+  String get guidesFilterLocaleLabel => '言語';
+
+  @override
+  String get guidesFilterTopicLabel => 'トピック';
+
+  @override
+  String get guidesTopicAllLabel => 'すべて';
+
+  @override
+  String guidesLastUpdatedLabel(String timestamp) {
+    return '最終同期 $timestamp';
+  }
+
+  @override
+  String get guidesCachedBadge => 'オフライン';
+
+  @override
+  String guidesRecommendedTitle(String persona) {
+    return 'おすすめ ($persona)';
+  }
+
+  @override
+  String get guidesRecommendedChip => 'おすすめ';
+
+  @override
+  String get guidesEmptyTitle => '表示できるガイドがありません';
+
+  @override
+  String get guidesEmptyMessage => '検索条件またはフィルターを調整してください。';
+
+  @override
+  String get guidesClearFiltersButton => 'フィルターをリセット';
+
+  @override
+  String get guidesLoadErrorTitle => 'ガイドを読み込めませんでした';
+
+  @override
+  String get guidesLoadError => '通信状況を確認して、もう一度お試しください。';
+
+  @override
+  String get guidesRetryButtonLabel => '再試行';
+
+  @override
+  String guidesReadingTimeLabel(int minutes) {
+    return '$minutes 分で読めます';
+  }
+
+  @override
+  String get guidesReadButton => 'ガイドを開く';
+
+  @override
+  String get guidesPersonaJapaneseLabel => '国内向け';
+
+  @override
+  String get guidesPersonaInternationalLabel => '海外向け';
+
+  @override
+  String get guidesLocaleJapaneseLabel => '日本語';
+
+  @override
+  String get guidesLocaleEnglishLabel => '英語';
+
+  @override
+  String get guidesCategoryCulture => '文化';
+
+  @override
+  String get guidesCategoryHowTo => 'ハウツー';
+
+  @override
+  String get guidesCategoryPolicy => '制度';
+
+  @override
+  String get guidesCategoryFaq => 'FAQ';
+
+  @override
+  String get guidesCategoryNews => 'アップデート';
+
+  @override
+  String get guidesCategoryOther => 'その他';
 }

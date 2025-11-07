@@ -3878,4 +3878,172 @@
 , "@orderTrackingEventReturnToSender": {
   "description": "Event label when the shipment is being returned"
 }
+
+, "guidesListTitle": "Guides & Cultural Notes"
+, "@guidesListTitle": {
+  "description": "Title for the guides list screen"
+}
+
+, "guidesRefreshTooltip": "Refresh guides"
+, "@guidesRefreshTooltip": {
+  "description": "Tooltip for the refresh icon on the guides screen"
+}
+
+, "guidesSearchHint": "Search guides, topics, or tags"
+, "@guidesSearchHint": {
+  "description": "Placeholder text for the guides search bar"
+}
+
+, "guidesClearSearchTooltip": "Clear search"
+, "@guidesClearSearchTooltip": {
+  "description": "Tooltip for the clear search icon"
+}
+
+, "guidesFilterPersonaLabel": "Persona"
+, "@guidesFilterPersonaLabel": {
+  "description": "Label for the persona filter chips"
+}
+
+, "guidesFilterLocaleLabel": "Language"
+, "@guidesFilterLocaleLabel": {
+  "description": "Label for the locale filter chips"
+}
+
+, "guidesFilterTopicLabel": "Topic"
+, "@guidesFilterTopicLabel": {
+  "description": "Label for the topic filter chips"
+}
+
+, "guidesTopicAllLabel": "All topics"
+, "@guidesTopicAllLabel": {
+  "description": "Label for the chip that clears the topic filter"
+}
+
+, "guidesLastUpdatedLabel": "Synced {timestamp}"
+, "@guidesLastUpdatedLabel": {
+  "description": "Label showing when guides were last updated",
+  "placeholders": {
+    "timestamp": {
+      "type": "String",
+      "example": "May 24, 14:21"
+    }
+  }
+}
+
+, "guidesCachedBadge": "Offline copy"
+, "@guidesCachedBadge": {
+  "description": "Badge shown when data comes from cache"
+}
+
+, "guidesRecommendedTitle": "Recommended for {persona}"
+, "@guidesRecommendedTitle": {
+  "description": "Heading for the recommended guides section",
+  "placeholders": {
+    "persona": {
+      "type": "String",
+      "example": "International guests"
+    }
+  }
+}
+
+, "guidesRecommendedChip": "Recommended"
+, "@guidesRecommendedChip": {
+  "description": "Chip text shown on cards that are recommended"
+}
+
+, "guidesEmptyTitle": "No guides yet"
+, "@guidesEmptyTitle": {
+  "description": "Title for the empty state when no guides match filters"
+}
+
+, "guidesEmptyMessage": "Try adjusting your filters or search to discover more cultural notes."
+, "@guidesEmptyMessage": {
+  "description": "Description for the guides empty state"
+}
+
+, "guidesClearFiltersButton": "Clear filters"
+, "@guidesClearFiltersButton": {
+  "description": "Button label to clear guide filters"
+}
+
+, "guidesLoadErrorTitle": "Couldn’t load guides"
+, "@guidesLoadErrorTitle": {
+  "description": "Title for the guides error state"
+}
+
+, "guidesLoadError": "Something went wrong while fetching guides. Please try again."
+, "@guidesLoadError": {
+  "description": "Body text for the guides error message"
+}
+
+, "guidesRetryButtonLabel": "Retry"
+, "@guidesRetryButtonLabel": {
+  "description": "Retry button label for guides error state"
+}
+
+, "guidesReadingTimeLabel": "{minutes} min read"
+, "@guidesReadingTimeLabel": {
+  "description": "Label showing estimated reading time for a guide",
+  "placeholders": {
+    "minutes": {
+      "type": "int",
+      "example": "6"
+    }
+  }
+}
+
+, "guidesReadButton": "Read guide"
+, "@guidesReadButton": {
+  "description": "Button label for opening a guide"
+}
+
+, "guidesPersonaJapaneseLabel": "Domestic"
+, "@guidesPersonaJapaneseLabel": {
+  "description": "Label for the Japanese persona filter"
+}
+
+, "guidesPersonaInternationalLabel": "International"
+, "@guidesPersonaInternationalLabel": {
+  "description": "Label for the international persona filter"
+}
+
+, "guidesLocaleJapaneseLabel": "Japanese"
+, "@guidesLocaleJapaneseLabel": {
+  "description": "Label for the Japanese locale filter chip"
+}
+
+, "guidesLocaleEnglishLabel": "English"
+, "@guidesLocaleEnglishLabel": {
+  "description": "Label for the English locale filter chip"
+}
+
+, "guidesCategoryCulture": "Culture"
+, "@guidesCategoryCulture": {
+  "description": "Label for the culture guide category"
+}
+
+, "guidesCategoryHowTo": "How-to"
+, "@guidesCategoryHowTo": {
+  "description": "Label for the how-to guide category"
+}
+
+, "guidesCategoryPolicy": "Policy"
+, "@guidesCategoryPolicy": {
+  "description": "Label for the policy guide category"
+}
+
+, "guidesCategoryFaq": "FAQ"
+, "@guidesCategoryFaq": {
+  "description": "Label for the FAQ guide category"
+}
+
+, "guidesCategoryNews": "Updates"
+, "@guidesCategoryNews": {
+  "description": "Label for the news guide category"
+}
+
+, "guidesCategoryOther": "Other"
+, "@guidesCategoryOther": {
+  "description": "Label for the other guide category"
+}
 }

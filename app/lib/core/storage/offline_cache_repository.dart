@@ -439,42 +439,65 @@ class CachedGuideList {
 
 class GuideCacheItem {
   GuideCacheItem({
+    required this.id,
     required this.slug,
     required this.title,
     required this.summary,
+    required this.category,
+    required this.locale,
     required this.featured,
     this.heroImage,
+    this.readingTimeMinutes,
     List<String>? tags,
-  }) : tags = tags ?? <String>[];
+    List<String>? personaTargets,
+  }) : tags = tags ?? <String>[],
+       personaTargets = personaTargets ?? <String>[];
 
   factory GuideCacheItem.fromJson(Map<String, dynamic> json) {
     return GuideCacheItem(
+      id: json['id'] as String? ?? json['slug'] as String,
       slug: json['slug'] as String,
       title: json['title'] as String,
-      summary: json['summary'] as String,
+      summary: json['summary'] as String? ?? '',
+      category: json['category'] as String? ?? 'other',
+      locale: json['locale'] as String? ?? 'en',
       featured: json['featured'] as bool? ?? false,
       heroImage: json['heroImage'] as String?,
+      readingTimeMinutes: json['readingTimeMinutes'] as int?,
       tags: (json['tags'] as List<dynamic>? ?? <dynamic>[])
           .map((tag) => tag as String)
+          .toList(),
+      personaTargets: (json['personas'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
           .toList(),
     );
   }
 
+  final String id;
   final String slug;
   final String title;
   final String summary;
+  final String category;
+  final String locale;
   final bool featured;
   final String? heroImage;
+  final int? readingTimeMinutes;
   final List<String> tags;
+  final List<String> personaTargets;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
+      'id': id,
       'slug': slug,
       'title': title,
       'summary': summary,
+      'category': category,
+      'locale': locale,
       'featured': featured,
       'heroImage': heroImage,
+      'readingTimeMinutes': readingTimeMinutes,
       'tags': tags,
+      'personas': personaTargets,
     };
   }
 }

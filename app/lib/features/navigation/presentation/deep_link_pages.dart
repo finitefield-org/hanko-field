@@ -1,3 +1,4 @@
+import 'package:app/features/guides/presentation/guides_list_screen.dart';
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
 import 'package:app/features/shop/presentation/product_addons_screen.dart';
 import 'package:app/features/shop/presentation/product_detail_screen.dart';
@@ -111,7 +112,10 @@ class GuidesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = sectionSegments.isEmpty ? 'ガイド' : sectionSegments.join(' / ');
+    if (sectionSegments.isEmpty) {
+      return const GuidesListScreen();
+    }
+    final title = sectionSegments.join(' / ');
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: Padding(
@@ -119,15 +123,12 @@ class GuidesPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ガイドコンテンツ', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
             Text(
-              sectionSegments.isEmpty
-                  ? '文化・HowToガイドのエントリ一覧を表示します。'
-                  : '選択中のセクション: $title',
+              'ガイド詳細 ($title)',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            const Text('※ 本タスクではダミー表示です。'),
+            const Text('詳細画面は今後のタスクで実装予定です。'),
           ],
         ),
       ),

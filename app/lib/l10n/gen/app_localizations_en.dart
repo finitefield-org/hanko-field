@@ -2641,4 +2641,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderTrackingEventReturnToSender => 'Returned to sender';
+
+  @override
+  String get guidesListTitle => 'Guides & Cultural Notes';
+
+  @override
+  String get guidesRefreshTooltip => 'Refresh guides';
+
+  @override
+  String get guidesSearchHint => 'Search guides, topics, or tags';
+
+  @override
+  String get guidesClearSearchTooltip => 'Clear search';
+
+  @override
+  String get guidesFilterPersonaLabel => 'Persona';
+
+  @override
+  String get guidesFilterLocaleLabel => 'Language';
+
+  @override
+  String get guidesFilterTopicLabel => 'Topic';
+
+  @override
+  String get guidesTopicAllLabel => 'All topics';
+
+  @override
+  String guidesLastUpdatedLabel(String timestamp) {
+    return 'Synced $timestamp';
+  }
+
+  @override
+  String get guidesCachedBadge => 'Offline copy';
+
+  @override
+  String guidesRecommendedTitle(String persona) {
+    return 'Recommended for $persona';
+  }
+
+  @override
+  String get guidesRecommendedChip => 'Recommended';
+
+  @override
+  String get guidesEmptyTitle => 'No guides yet';
+
+  @override
+  String get guidesEmptyMessage =>
+      'Try adjusting your filters or search to discover more cultural notes.';
+
+  @override
+  String get guidesClearFiltersButton => 'Clear filters';
+
+  @override
+  String get guidesLoadErrorTitle => 'Couldn’t load guides';
+
+  @override
+  String get guidesLoadError =>
+      'Something went wrong while fetching guides. Please try again.';
+
+  @override
+  String get guidesRetryButtonLabel => 'Retry';
+
+  @override
+  String guidesReadingTimeLabel(int minutes) {
+    return '$minutes min read';
+  }
+
+  @override
+  String get guidesReadButton => 'Read guide';
+
+  @override
+  String get guidesPersonaJapaneseLabel => 'Domestic';
+
+  @override
+  String get guidesPersonaInternationalLabel => 'International';
+
+  @override
+  String get guidesLocaleJapaneseLabel => 'Japanese';
+
+  @override
+  String get guidesLocaleEnglishLabel => 'English';
+
+  @override
+  String get guidesCategoryCulture => 'Culture';
+
+  @override
+  String get guidesCategoryHowTo => 'How-to';
+
+  @override
+  String get guidesCategoryPolicy => 'Policy';
+
+  @override
+  String get guidesCategoryFaq => 'FAQ';
+
+  @override
+  String get guidesCategoryNews => 'Updates';
+
+  @override
+  String get guidesCategoryOther => 'Other';
 }

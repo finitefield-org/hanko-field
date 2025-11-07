@@ -4555,6 +4555,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Returned to sender'**
   String get orderTrackingEventReturnToSender;
+
+  /// Title for the guides list screen
+  ///
+  /// In en, this message translates to:
+  /// **'Guides & Cultural Notes'**
+  String get guidesListTitle;
+
+  /// Tooltip for the refresh icon on the guides screen
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh guides'**
+  String get guidesRefreshTooltip;
+
+  /// Placeholder text for the guides search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Search guides, topics, or tags'**
+  String get guidesSearchHint;
+
+  /// Tooltip for the clear search icon
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get guidesClearSearchTooltip;
+
+  /// Label for the persona filter chips
+  ///
+  /// In en, this message translates to:
+  /// **'Persona'**
+  String get guidesFilterPersonaLabel;
+
+  /// Label for the locale filter chips
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get guidesFilterLocaleLabel;
+
+  /// Label for the topic filter chips
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get guidesFilterTopicLabel;
+
+  /// Label for the chip that clears the topic filter
+  ///
+  /// In en, this message translates to:
+  /// **'All topics'**
+  String get guidesTopicAllLabel;
+
+  /// Label showing when guides were last updated
+  ///
+  /// In en, this message translates to:
+  /// **'Synced {timestamp}'**
+  String guidesLastUpdatedLabel(String timestamp);
+
+  /// Badge shown when data comes from cache
+  ///
+  /// In en, this message translates to:
+  /// **'Offline copy'**
+  String get guidesCachedBadge;
+
+  /// Heading for the recommended guides section
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended for {persona}'**
+  String guidesRecommendedTitle(String persona);
+
+  /// Chip text shown on cards that are recommended
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get guidesRecommendedChip;
+
+  /// Title for the empty state when no guides match filters
+  ///
+  /// In en, this message translates to:
+  /// **'No guides yet'**
+  String get guidesEmptyTitle;
+
+  /// Description for the guides empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your filters or search to discover more cultural notes.'**
+  String get guidesEmptyMessage;
+
+  /// Button label to clear guide filters
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get guidesClearFiltersButton;
+
+  /// Title for the guides error state
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t load guides'**
+  String get guidesLoadErrorTitle;
+
+  /// Body text for the guides error message
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while fetching guides. Please try again.'**
+  String get guidesLoadError;
+
+  /// Retry button label for guides error state
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get guidesRetryButtonLabel;
+
+  /// Label showing estimated reading time for a guide
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min read'**
+  String guidesReadingTimeLabel(int minutes);
+
+  /// Button label for opening a guide
+  ///
+  /// In en, this message translates to:
+  /// **'Read guide'**
+  String get guidesReadButton;
+
+  /// Label for the Japanese persona filter
+  ///
+  /// In en, this message translates to:
+  /// **'Domestic'**
+  String get guidesPersonaJapaneseLabel;
+
+  /// Label for the international persona filter
+  ///
+  /// In en, this message translates to:
+  /// **'International'**
+  String get guidesPersonaInternationalLabel;
+
+  /// Label for the Japanese locale filter chip
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese'**
+  String get guidesLocaleJapaneseLabel;
+
+  /// Label for the English locale filter chip
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get guidesLocaleEnglishLabel;
+
+  /// Label for the culture guide category
+  ///
+  /// In en, this message translates to:
+  /// **'Culture'**
+  String get guidesCategoryCulture;
+
+  /// Label for the how-to guide category
+  ///
+  /// In en, this message translates to:
+  /// **'How-to'**
+  String get guidesCategoryHowTo;
+
+  /// Label for the policy guide category
+  ///
+  /// In en, this message translates to:
+  /// **'Policy'**
+  String get guidesCategoryPolicy;
+
+  /// Label for the FAQ guide category
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get guidesCategoryFaq;
+
+  /// Label for the news guide category
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get guidesCategoryNews;
+
+  /// Label for the other guide category
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get guidesCategoryOther;
 }
 
 class _AppLocalizationsDelegate
