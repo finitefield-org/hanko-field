@@ -102,7 +102,7 @@
 
 ## 13. Notifications & Real-Time Feedback
 - [x] [Integrate WebSocket or polling mechanism for real-time updates (new orders, failed jobs, queue changes) within notifications center.](doc/admin/tasks/070-integrate-websocket-or-polling-mechanism-for-real-time-updates-new-orders-failed-jobs-queu.md)
-- [ ] [Provide badge counts on sidebar/top bar for pending reviews, alerts, and tasks.](doc/admin/tasks/071-provide-badge-counts-on-sidebar-top-bar-for-pending-reviews-alerts-and-tasks.md)
+- [x] [Provide badge counts on sidebar/top bar for pending reviews, alerts, and tasks.](doc/admin/tasks/071-provide-badge-counts-on-sidebar-top-bar-for-pending-reviews-alerts-and-tasks.md)
 - [ ] [Implement toast/alert patterns for success/failure responses from htmx requests using response headers or JSON payload.](doc/admin/tasks/072-implement-toast-alert-patterns-for-success-failure-responses-from-htmx-requests-using-resp.md)
 
 ## 14. Accessibility, Localization, and UX Enhancements
