@@ -123,7 +123,7 @@ func TestInternalCheckoutReserveStock_Concurrency(t *testing.T) {
 			defer wg.Done()
 			<-start
 
-			payload := cloneMap(payloadTemplate)
+			payload := cloneMapCopy(payloadTemplate)
 			payload["orderId"] = orderID
 
 			data, err := json.Marshal(payload)
@@ -377,18 +377,18 @@ func (m *recordingReservationMetrics) RecordFailure(_ context.Context, reason st
 	m.failures = append(m.failures, reason)
 }
 
-func cloneMap(in map[string]any) map[string]any {
+func cloneMapCopy(in map[string]any) map[string]any {
 	out := make(map[string]any, len(in))
 	for k, v := range in {
 		switch value := v.(type) {
 		case []map[string]any:
 			copied := make([]map[string]any, len(value))
 			for i, m := range value {
-				copied[i] = cloneMap(m)
+				copied[i] = cloneMapCopy(m)
 			}
 			out[k] = copied
 		case map[string]any:
-			out[k] = cloneMap(value)
+			out[k] = cloneMapCopy(value)
 		default:
 			out[k] = value
 		}
