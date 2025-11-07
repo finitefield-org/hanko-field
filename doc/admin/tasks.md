@@ -113,7 +113,7 @@
 
 ## 15. Quality Assurance & Documentation
 - [x] [Write end-to-end tests covering critical workflows (order status change, shipment label generation, promotion creation, review moderation).](doc/admin/tasks/077-write-end-to-end-tests-covering-critical-workflows-order-status-change-shipment-label-gene.md)
-- [ ] [Document admin console deployment checklist, including environment variables, Firebase auth setup, and CDN configuration.](doc/admin/tasks/078-document-admin-console-deployment-checklist-including-environment-variables-firebase-auth-.md)
+- [x] [Document admin console deployment checklist, including environment variables, Firebase auth setup, and CDN configuration.](doc/admin/tasks/078-document-admin-console-deployment-checklist-including-environment-variables-firebase-auth-.md)
 - [ ] [Create user guide for staff with screenshots/workflow instructions hosted in `doc/admin/guide.md`.](doc/admin/tasks/079-create-user-guide-for-staff-with-screenshots-workflow-instructions-hosted-in-doc-admin-gui.md)
 - [ ] [Establish bug reporting and feedback process linked from the admin UI (e.g., footer link to issue tracker).](doc/admin/tasks/080-establish-bug-reporting-and-feedback-process-linked-from-the-admin-ui-e-g-footer-link-to-i.md)
 
