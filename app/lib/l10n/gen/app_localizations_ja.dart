@@ -462,6 +462,132 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDetailWritingCustom => 'カスタム';
 
   @override
+  String get libraryExportTitle => 'デジタル書き出し';
+
+  @override
+  String get libraryExportHistoryTooltip => '過去の書き出しを確認';
+
+  @override
+  String get libraryExportHistoryTitle => '書き出し履歴';
+
+  @override
+  String get libraryExportGenerateCta => 'リンクを作成';
+
+  @override
+  String get libraryExportRevokeCta => 'すべてのリンクを無効化';
+
+  @override
+  String get libraryExportLinkReadySnack => 'リンクを作成しました';
+
+  @override
+  String get libraryExportRevokedSnack => 'リンクを無効化しました';
+
+  @override
+  String libraryExportShareSubject(String id) {
+    return '$id のデジタル書き出し';
+  }
+
+  @override
+  String get libraryExportCopySnack => 'リンクをコピーしました';
+
+  @override
+  String get libraryExportFormatLabel => 'ファイル形式';
+
+  @override
+  String get libraryExportFormatPng => 'PNG';
+
+  @override
+  String get libraryExportFormatSvg => 'SVG';
+
+  @override
+  String get libraryExportFormatPdf => 'PDF';
+
+  @override
+  String get libraryExportFormatPngUseMessaging => 'チャットのプレビューに最適';
+
+  @override
+  String get libraryExportFormatPngUseTransparent => '透過背景に対応';
+
+  @override
+  String get libraryExportFormatSvgUseVector => 'ベクター編集を保持';
+
+  @override
+  String get libraryExportFormatSvgUseCnc => 'レーザー/CNC向け';
+
+  @override
+  String get libraryExportFormatPdfUsePrint => '印刷用レイアウト';
+
+  @override
+  String get libraryExportFormatPdfUseArchive => 'アーカイブ品質';
+
+  @override
+  String get libraryExportScaleLabel => 'スケール';
+
+  @override
+  String get libraryExportScaleSubtitle => '書き出すファイルのサイズを選択してください。';
+
+  @override
+  String libraryExportScaleChip(int factor) {
+    return '$factor×';
+  }
+
+  @override
+  String get libraryExportWatermarkLabel => '透かしを重ねる';
+
+  @override
+  String get libraryExportWatermarkDescription => 'プレビューに斜めの透かしを追加します。';
+
+  @override
+  String get libraryExportExpiryLabel => 'リンクの有効期限';
+
+  @override
+  String libraryExportExpiryDescription(int days) {
+    return '$days日後に自動でダウンロードを停止します。';
+  }
+
+  @override
+  String get libraryExportExpiryDisabled => '期限なし';
+
+  @override
+  String get libraryExportExpiryPicker => '有効期限';
+
+  @override
+  String libraryExportExpiryDays(int days) {
+    return '$days日';
+  }
+
+  @override
+  String get libraryExportDownloadsLabel => '元データのダウンロードを許可';
+
+  @override
+  String get libraryExportDownloadsDescription => '受け手がフル解像度のファイルを保存できます。';
+
+  @override
+  String get libraryExportLinkTitle => '共有リンク';
+
+  @override
+  String get libraryExportLinkEmptyTitle => 'リンクがまだありません';
+
+  @override
+  String get libraryExportLinkEmptyMessage => '安全に共有するにはリンクを作成してください。';
+
+  @override
+  String get libraryExportShareLink => 'リンクを共有';
+
+  @override
+  String get libraryExportCopyLink => 'リンクをコピー';
+
+  @override
+  String libraryExportExpiresOn(String date) {
+    return '$dateに失効';
+  }
+
+  @override
+  String libraryExportLinkMeta(String format, String scale) {
+    return '$format・$scale';
+  }
+
+  @override
   String get libraryLoadError => 'ライブラリを読み込めませんでした。通信環境を確認して再試行してください。';
 
   @override

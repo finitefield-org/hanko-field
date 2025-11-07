@@ -446,6 +446,236 @@
 , "libraryDetailWritingKoentai": "Koentai"
 , "libraryDetailWritingCustom": "Custom"
 
+, "libraryExportTitle": "Digital export"
+, "@libraryExportTitle": {
+  "description": "Title for the library digital export screen"
+}
+
+, "libraryExportHistoryTooltip": "View previous exports"
+, "@libraryExportHistoryTooltip": {
+  "description": "Tooltip for the history icon in the library export screen"
+}
+
+, "libraryExportHistoryTitle": "Export history"
+, "@libraryExportHistoryTitle": {
+  "description": "Sheet title listing past exports"
+}
+
+, "libraryExportGenerateCta": "Generate link"
+, "@libraryExportGenerateCta": {
+  "description": "Primary CTA to generate a digital export link"
+}
+
+, "libraryExportRevokeCta": "Revoke all links"
+, "@libraryExportRevokeCta": {
+  "description": "Secondary CTA to revoke all digital export links"
+}
+
+, "libraryExportLinkReadySnack": "Link ready to share"
+, "@libraryExportLinkReadySnack": {
+  "description": "Snackbar shown when a link is generated"
+}
+
+, "libraryExportRevokedSnack": "All links revoked"
+, "@libraryExportRevokedSnack": {
+  "description": "Snackbar shown when links were revoked"
+}
+
+, "libraryExportShareSubject": "Digital export for {id}"
+, "@libraryExportShareSubject": {
+  "description": "Subject when sharing the digital export link",
+  "placeholders": {
+    "id": {
+      "type": "String",
+      "example": "JP-INK-01"
+    }
+  }
+}
+
+, "libraryExportCopySnack": "Link copied"
+, "@libraryExportCopySnack": {
+  "description": "Snackbar shown after copying the link"
+}
+
+, "libraryExportFormatLabel": "File format"
+, "@libraryExportFormatLabel": {
+  "description": "Label for the format segmented buttons"
+}
+
+, "libraryExportFormatPng": "PNG"
+, "@libraryExportFormatPng": {
+  "description": "PNG format label"
+}
+
+, "libraryExportFormatSvg": "SVG"
+, "@libraryExportFormatSvg": {
+  "description": "SVG format label"
+}
+
+, "libraryExportFormatPdf": "PDF"
+, "@libraryExportFormatPdf": {
+  "description": "PDF format label"
+}
+
+, "libraryExportFormatPngUseMessaging": "Great for chat previews"
+, "@libraryExportFormatPngUseMessaging": {
+  "description": "Assist chip describing PNG usage"
+}
+
+, "libraryExportFormatPngUseTransparent": "Supports transparency"
+, "@libraryExportFormatPngUseTransparent": {
+  "description": "Assist chip describing PNG transparency benefit"
+}
+
+, "libraryExportFormatSvgUseVector": "Keeps vectors editable"
+, "@libraryExportFormatSvgUseVector": {
+  "description": "Assist chip describing SVG vector benefit"
+}
+
+, "libraryExportFormatSvgUseCnc": "Laser/CNC friendly"
+, "@libraryExportFormatSvgUseCnc": {
+  "description": "Assist chip describing SVG CNC benefit"
+}
+
+, "libraryExportFormatPdfUsePrint": "Print-ready layout"
+, "@libraryExportFormatPdfUsePrint": {
+  "description": "Assist chip describing PDF print usage"
+}
+
+, "libraryExportFormatPdfUseArchive": "Archive quality"
+, "@libraryExportFormatPdfUseArchive": {
+  "description": "Assist chip describing PDF archive usage"
+}
+
+, "libraryExportScaleLabel": "Scale"
+, "@libraryExportScaleLabel": {
+  "description": "Label for the scale selection"
+}
+
+, "libraryExportScaleSubtitle": "Choose how large the exported file should be."
+, "@libraryExportScaleSubtitle": {
+  "description": "Helper text for the scale selection"
+}
+
+, "libraryExportScaleChip": "{factor}×"
+, "@libraryExportScaleChip": {
+  "description": "Label for a scale option chip",
+  "placeholders": {
+    "factor": {
+      "type": "int",
+      "example": "2"
+    }
+  }
+}
+
+, "libraryExportWatermarkLabel": "Apply watermark"
+, "@libraryExportWatermarkLabel": {
+  "description": "Switch label for watermark option"
+}
+
+, "libraryExportWatermarkDescription": "Adds a subtle diagonal watermark to previews."
+, "@libraryExportWatermarkDescription": {
+  "description": "Helper text for watermark toggle"
+}
+
+, "libraryExportExpiryLabel": "Link expires"
+, "@libraryExportExpiryLabel": {
+  "description": "Switch label for expiry option"
+}
+
+, "libraryExportExpiryDescription": "Automatically disables downloads after {days} days."
+, "@libraryExportExpiryDescription": {
+  "description": "Helper text when expiry is enabled",
+  "placeholders": {
+    "days": {
+      "type": "int",
+      "example": "7"
+    }
+  }
+}
+
+, "libraryExportExpiryDisabled": "Does not expire"
+, "@libraryExportExpiryDisabled": {
+  "description": "Helper text when expiry is disabled"
+}
+
+, "libraryExportExpiryPicker": "Expiry duration"
+, "@libraryExportExpiryPicker": {
+  "description": "Label for the expiry dropdown"
+}
+
+, "libraryExportExpiryDays": "{days} days"
+, "@libraryExportExpiryDays": {
+  "description": "Label for each expiry option",
+  "placeholders": {
+    "days": {
+      "type": "int",
+      "example": "30"
+    }
+  }
+}
+
+, "libraryExportDownloadsLabel": "Allow original downloads"
+, "@libraryExportDownloadsLabel": {
+  "description": "Switch label for download permissions"
+}
+
+, "libraryExportDownloadsDescription": "Let recipients download the full-resolution file."
+, "@libraryExportDownloadsDescription": {
+  "description": "Helper text for download permissions"
+}
+
+, "libraryExportLinkTitle": "Shareable link"
+, "@libraryExportLinkTitle": {
+  "description": "Section title for the generated link"
+}
+
+, "libraryExportLinkEmptyTitle": "No link yet"
+, "@libraryExportLinkEmptyTitle": {
+  "description": "Empty state title when no link exists"
+}
+
+, "libraryExportLinkEmptyMessage": "Generate a link to share digital files securely."
+, "@libraryExportLinkEmptyMessage": {
+  "description": "Empty state message when no link exists"
+}
+
+, "libraryExportShareLink": "Share link"
+, "@libraryExportShareLink": {
+  "description": "Button label to share the link"
+}
+
+, "libraryExportCopyLink": "Copy link"
+, "@libraryExportCopyLink": {
+  "description": "Button label to copy the link"
+}
+
+, "libraryExportExpiresOn": "Expires {date}"
+, "@libraryExportExpiresOn": {
+  "description": "Label showing expiry date",
+  "placeholders": {
+    "date": {
+      "type": "String",
+      "example": "Mar 5"
+    }
+  }
+}
+
+, "libraryExportLinkMeta": "{format} · {scale}"
+, "@libraryExportLinkMeta": {
+  "description": "Meta description combining format and scale",
+  "placeholders": {
+    "format": {
+      "type": "String",
+      "example": "PNG"
+    },
+    "scale": {
+      "type": "String",
+      "example": "2×"
+    }
+  }
+}
+
 , "libraryLoadError": "We couldn't load your library. Check your connection and try again."
 , "libraryErrorTitle": "Library unavailable"
 , "libraryRetry": "Retry"

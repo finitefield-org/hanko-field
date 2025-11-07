@@ -25,7 +25,6 @@ class LibraryEntryScreen extends ConsumerStatefulWidget {
 
 class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
   late final int _initialTab;
-  bool _isExporting = false;
   bool _isReordering = false;
 
   @override
@@ -75,18 +74,8 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
                       ),
                       IconButton(
                         tooltip: l10n.libraryActionExport,
-                        icon: _isExporting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.download_outlined),
-                        onPressed: _isExporting
-                            ? null
-                            : () => _handleExport(detail, l10n),
+                        icon: const Icon(Icons.download_outlined),
+                        onPressed: () => _handleExport(detail),
                       ),
                     ],
                   ),
@@ -134,7 +123,7 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
                   _ActivityTab(detail: detail),
                   _FilesTab(
                     detail: detail,
-                    onExport: () => _handleExport(detail, l10n),
+                    onExport: () => _handleExport(detail),
                   ),
                 ],
               ),
@@ -158,25 +147,15 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
     messenger.showSnackBar(SnackBar(content: Text(l10n.libraryActionEdit)));
   }
 
-  Future<void> _handleExport(
-    LibraryDesignDetail detail,
-    AppLocalizations l10n,
-  ) async {
-    if (_isExporting) {
-      return;
-    }
-    setState(() {
-      _isExporting = true;
-    });
-    final messenger = ScaffoldMessenger.of(context);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isExporting = false;
-    });
-    messenger.showSnackBar(SnackBar(content: Text(l10n.libraryActionExport)));
+  void _handleExport(LibraryDesignDetail detail) {
+    ref
+        .read(appStateProvider.notifier)
+        .push(
+          LibraryEntryRoute(
+            designId: detail.design.id,
+            trailing: const ['export'],
+          ),
+        );
   }
 
   void _handleDuplicate(LibraryDesignDetail detail) {

@@ -932,6 +932,234 @@ abstract class AppLocalizations {
   /// **'Custom'**
   String get libraryDetailWritingCustom;
 
+  /// Title for the library digital export screen
+  ///
+  /// In en, this message translates to:
+  /// **'Digital export'**
+  String get libraryExportTitle;
+
+  /// Tooltip for the history icon in the library export screen
+  ///
+  /// In en, this message translates to:
+  /// **'View previous exports'**
+  String get libraryExportHistoryTooltip;
+
+  /// Sheet title listing past exports
+  ///
+  /// In en, this message translates to:
+  /// **'Export history'**
+  String get libraryExportHistoryTitle;
+
+  /// Primary CTA to generate a digital export link
+  ///
+  /// In en, this message translates to:
+  /// **'Generate link'**
+  String get libraryExportGenerateCta;
+
+  /// Secondary CTA to revoke all digital export links
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke all links'**
+  String get libraryExportRevokeCta;
+
+  /// Snackbar shown when a link is generated
+  ///
+  /// In en, this message translates to:
+  /// **'Link ready to share'**
+  String get libraryExportLinkReadySnack;
+
+  /// Snackbar shown when links were revoked
+  ///
+  /// In en, this message translates to:
+  /// **'All links revoked'**
+  String get libraryExportRevokedSnack;
+
+  /// Subject when sharing the digital export link
+  ///
+  /// In en, this message translates to:
+  /// **'Digital export for {id}'**
+  String libraryExportShareSubject(String id);
+
+  /// Snackbar shown after copying the link
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get libraryExportCopySnack;
+
+  /// Label for the format segmented buttons
+  ///
+  /// In en, this message translates to:
+  /// **'File format'**
+  String get libraryExportFormatLabel;
+
+  /// PNG format label
+  ///
+  /// In en, this message translates to:
+  /// **'PNG'**
+  String get libraryExportFormatPng;
+
+  /// SVG format label
+  ///
+  /// In en, this message translates to:
+  /// **'SVG'**
+  String get libraryExportFormatSvg;
+
+  /// PDF format label
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get libraryExportFormatPdf;
+
+  /// Assist chip describing PNG usage
+  ///
+  /// In en, this message translates to:
+  /// **'Great for chat previews'**
+  String get libraryExportFormatPngUseMessaging;
+
+  /// Assist chip describing PNG transparency benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Supports transparency'**
+  String get libraryExportFormatPngUseTransparent;
+
+  /// Assist chip describing SVG vector benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps vectors editable'**
+  String get libraryExportFormatSvgUseVector;
+
+  /// Assist chip describing SVG CNC benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Laser/CNC friendly'**
+  String get libraryExportFormatSvgUseCnc;
+
+  /// Assist chip describing PDF print usage
+  ///
+  /// In en, this message translates to:
+  /// **'Print-ready layout'**
+  String get libraryExportFormatPdfUsePrint;
+
+  /// Assist chip describing PDF archive usage
+  ///
+  /// In en, this message translates to:
+  /// **'Archive quality'**
+  String get libraryExportFormatPdfUseArchive;
+
+  /// Label for the scale selection
+  ///
+  /// In en, this message translates to:
+  /// **'Scale'**
+  String get libraryExportScaleLabel;
+
+  /// Helper text for the scale selection
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how large the exported file should be.'**
+  String get libraryExportScaleSubtitle;
+
+  /// Label for a scale option chip
+  ///
+  /// In en, this message translates to:
+  /// **'{factor}×'**
+  String libraryExportScaleChip(int factor);
+
+  /// Switch label for watermark option
+  ///
+  /// In en, this message translates to:
+  /// **'Apply watermark'**
+  String get libraryExportWatermarkLabel;
+
+  /// Helper text for watermark toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Adds a subtle diagonal watermark to previews.'**
+  String get libraryExportWatermarkDescription;
+
+  /// Switch label for expiry option
+  ///
+  /// In en, this message translates to:
+  /// **'Link expires'**
+  String get libraryExportExpiryLabel;
+
+  /// Helper text when expiry is enabled
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically disables downloads after {days} days.'**
+  String libraryExportExpiryDescription(int days);
+
+  /// Helper text when expiry is disabled
+  ///
+  /// In en, this message translates to:
+  /// **'Does not expire'**
+  String get libraryExportExpiryDisabled;
+
+  /// Label for the expiry dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry duration'**
+  String get libraryExportExpiryPicker;
+
+  /// Label for each expiry option
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String libraryExportExpiryDays(int days);
+
+  /// Switch label for download permissions
+  ///
+  /// In en, this message translates to:
+  /// **'Allow original downloads'**
+  String get libraryExportDownloadsLabel;
+
+  /// Helper text for download permissions
+  ///
+  /// In en, this message translates to:
+  /// **'Let recipients download the full-resolution file.'**
+  String get libraryExportDownloadsDescription;
+
+  /// Section title for the generated link
+  ///
+  /// In en, this message translates to:
+  /// **'Shareable link'**
+  String get libraryExportLinkTitle;
+
+  /// Empty state title when no link exists
+  ///
+  /// In en, this message translates to:
+  /// **'No link yet'**
+  String get libraryExportLinkEmptyTitle;
+
+  /// Empty state message when no link exists
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a link to share digital files securely.'**
+  String get libraryExportLinkEmptyMessage;
+
+  /// Button label to share the link
+  ///
+  /// In en, this message translates to:
+  /// **'Share link'**
+  String get libraryExportShareLink;
+
+  /// Button label to copy the link
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get libraryExportCopyLink;
+
+  /// Label showing expiry date
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String libraryExportExpiresOn(String date);
+
+  /// Meta description combining format and scale
+  ///
+  /// In en, this message translates to:
+  /// **'{format} · {scale}'**
+  String libraryExportLinkMeta(String format, String scale);
+
   /// No description provided for @libraryLoadError.
   ///
   /// In en, this message translates to:

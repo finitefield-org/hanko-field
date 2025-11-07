@@ -480,6 +480,136 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryDetailWritingCustom => 'Custom';
 
   @override
+  String get libraryExportTitle => 'Digital export';
+
+  @override
+  String get libraryExportHistoryTooltip => 'View previous exports';
+
+  @override
+  String get libraryExportHistoryTitle => 'Export history';
+
+  @override
+  String get libraryExportGenerateCta => 'Generate link';
+
+  @override
+  String get libraryExportRevokeCta => 'Revoke all links';
+
+  @override
+  String get libraryExportLinkReadySnack => 'Link ready to share';
+
+  @override
+  String get libraryExportRevokedSnack => 'All links revoked';
+
+  @override
+  String libraryExportShareSubject(String id) {
+    return 'Digital export for $id';
+  }
+
+  @override
+  String get libraryExportCopySnack => 'Link copied';
+
+  @override
+  String get libraryExportFormatLabel => 'File format';
+
+  @override
+  String get libraryExportFormatPng => 'PNG';
+
+  @override
+  String get libraryExportFormatSvg => 'SVG';
+
+  @override
+  String get libraryExportFormatPdf => 'PDF';
+
+  @override
+  String get libraryExportFormatPngUseMessaging => 'Great for chat previews';
+
+  @override
+  String get libraryExportFormatPngUseTransparent => 'Supports transparency';
+
+  @override
+  String get libraryExportFormatSvgUseVector => 'Keeps vectors editable';
+
+  @override
+  String get libraryExportFormatSvgUseCnc => 'Laser/CNC friendly';
+
+  @override
+  String get libraryExportFormatPdfUsePrint => 'Print-ready layout';
+
+  @override
+  String get libraryExportFormatPdfUseArchive => 'Archive quality';
+
+  @override
+  String get libraryExportScaleLabel => 'Scale';
+
+  @override
+  String get libraryExportScaleSubtitle =>
+      'Choose how large the exported file should be.';
+
+  @override
+  String libraryExportScaleChip(int factor) {
+    return '$factor×';
+  }
+
+  @override
+  String get libraryExportWatermarkLabel => 'Apply watermark';
+
+  @override
+  String get libraryExportWatermarkDescription =>
+      'Adds a subtle diagonal watermark to previews.';
+
+  @override
+  String get libraryExportExpiryLabel => 'Link expires';
+
+  @override
+  String libraryExportExpiryDescription(int days) {
+    return 'Automatically disables downloads after $days days.';
+  }
+
+  @override
+  String get libraryExportExpiryDisabled => 'Does not expire';
+
+  @override
+  String get libraryExportExpiryPicker => 'Expiry duration';
+
+  @override
+  String libraryExportExpiryDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String get libraryExportDownloadsLabel => 'Allow original downloads';
+
+  @override
+  String get libraryExportDownloadsDescription =>
+      'Let recipients download the full-resolution file.';
+
+  @override
+  String get libraryExportLinkTitle => 'Shareable link';
+
+  @override
+  String get libraryExportLinkEmptyTitle => 'No link yet';
+
+  @override
+  String get libraryExportLinkEmptyMessage =>
+      'Generate a link to share digital files securely.';
+
+  @override
+  String get libraryExportShareLink => 'Share link';
+
+  @override
+  String get libraryExportCopyLink => 'Copy link';
+
+  @override
+  String libraryExportExpiresOn(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String libraryExportLinkMeta(String format, String scale) {
+    return '$format · $scale';
+  }
+
+  @override
   String get libraryLoadError =>
       'We couldn\'t load your library. Check your connection and try again.';
 
