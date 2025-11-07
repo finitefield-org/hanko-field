@@ -18,6 +18,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/dashboard"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
+	"finitefield.org/hanko-admin/internal/admin/i18n"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
@@ -137,13 +138,65 @@ func New(cfg Config) *http.Server {
 		SystemService:        cfg.SystemService,
 	})
 
-	defaultLocale := strings.TrimSpace(cfg.DefaultLocale)
-	if defaultLocale == "" {
-		defaultLocale = "ja-JP"
+	catalog := i18n.Default()
+
+	normalizeLocale := func(locale string) string {
+		return catalog.Canonicalize(locale)
 	}
-	supportedLocales := cfg.SupportedLocales
+
+	seenLocales := make(map[string]struct{})
+	addLocale := func(list *[]string, locale string) {
+		trimmed := strings.TrimSpace(locale)
+		if trimmed == "" {
+			return
+		}
+		canonical := normalizeLocale(trimmed)
+		if _, exists := seenLocales[canonical]; exists {
+			return
+		}
+		seenLocales[canonical] = struct{}{}
+		*list = append(*list, canonical)
+	}
+
+	var supportedLocales []string
+	for _, locale := range cfg.SupportedLocales {
+		addLocale(&supportedLocales, locale)
+	}
+
+	defaultLocale := strings.TrimSpace(cfg.DefaultLocale)
+	if defaultLocale != "" {
+		defaultLocale = normalizeLocale(defaultLocale)
+	}
+
 	if len(supportedLocales) == 0 {
-		supportedLocales = []string{defaultLocale}
+		if defaultLocale != "" {
+			addLocale(&supportedLocales, defaultLocale)
+		} else {
+			for _, locale := range catalog.SupportedLocales() {
+				addLocale(&supportedLocales, locale)
+			}
+		}
+	}
+
+	if len(supportedLocales) == 0 {
+		defaultLocale = normalizeLocale("ja-JP")
+		addLocale(&supportedLocales, defaultLocale)
+	}
+
+	if defaultLocale == "" {
+		defaultLocale = supportedLocales[0]
+	}
+
+	if _, ok := seenLocales[defaultLocale]; !ok {
+		supportedLocales = append([]string{defaultLocale}, supportedLocales...)
+		seenLocales[defaultLocale] = struct{}{}
+	} else if supportedLocales[0] != defaultLocale {
+		for i, locale := range supportedLocales {
+			if locale == defaultLocale {
+				supportedLocales = append([]string{defaultLocale}, append(append([]string(nil), supportedLocales[:i]...), supportedLocales[i+1:]...)...)
+				break
+			}
+		}
 	}
 
 	mountAdminRoutes(router, basePath, routeOptions{

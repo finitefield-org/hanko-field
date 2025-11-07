@@ -16,6 +16,7 @@ import (
 
 	admindashboard "finitefield.org/hanko-admin/internal/admin/dashboard"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
+	"finitefield.org/hanko-admin/internal/admin/i18n"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
@@ -78,9 +79,12 @@ func TestDashboardRendersForAuthenticatedUser(t *testing.T) {
 
 	doc := testutil.ParseHTML(t, body)
 
-	wantTitle := helpers.I18N(context.Background(), "admin.dashboard.title") + " | Hanko Admin"
+	pageLocale, _ := doc.Find("html").Attr("lang")
+	localeCtx := i18n.ContextWithLocale(context.Background(), pageLocale)
+	wantHeading := helpers.I18N(localeCtx, "admin.dashboard.title")
+	wantTitle := wantHeading + " | Hanko Admin"
 	require.Equal(t, wantTitle, doc.Find("title").First().Text())
-	require.Equal(t, helpers.I18N(context.Background(), "admin.dashboard.title"), doc.Find("h1").First().Text())
+	require.Equal(t, wantHeading, doc.Find("h1").First().Text())
 	require.Greater(t, doc.Find("#dashboard-kpi article").Length(), 0, "dashboard should render KPI cards")
 	require.Greater(t, doc.Find("#dashboard-alerts li").Length(), 0, "dashboard should render alerts list")
 	require.Equal(t, 1, doc.Find("[data-dashboard-refresh]").Length(), "refresh control should be present")
