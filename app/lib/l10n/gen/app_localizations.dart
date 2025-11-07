@@ -4813,6 +4813,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Take a look at \"{title}\" from Hanko Field: {url}'**
   String guideDetailShareMessage(String title, String url);
+
+  /// Snack bar message shown when launching a guide link fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t open the link. Please try again later.'**
+  String get guideDetailLinkOpenError;
 }
 
 class _AppLocalizationsDelegate

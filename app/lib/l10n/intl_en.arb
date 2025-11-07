@@ -4133,4 +4133,9 @@
     }
   }
 }
+
+, "guideDetailLinkOpenError": "Couldn’t open the link. Please try again later."
+, "@guideDetailLinkOpenError": {
+  "description": "Snack bar message shown when launching a guide link fails"
+}
 }

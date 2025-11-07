@@ -2523,4 +2523,9 @@
     }
   }
 }
+
+, "guideDetailLinkOpenError": "リンクを開けませんでした。時間をおいて再度お試しください。"
+, "@guideDetailLinkOpenError": {
+  "description": "リンクオープン失敗時に表示するスナックバー文言"
+}
 }

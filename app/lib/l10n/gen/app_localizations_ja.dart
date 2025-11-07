@@ -2681,4 +2681,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String guideDetailShareMessage(String title, String url) {
     return '\"$title\"（Hanko Field）をチェック: $url';
   }
+
+  @override
+  String get guideDetailLinkOpenError => 'リンクを開けませんでした。時間をおいて再度お試しください。';
 }

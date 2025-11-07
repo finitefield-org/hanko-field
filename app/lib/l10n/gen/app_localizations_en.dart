@@ -2785,4 +2785,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String guideDetailShareMessage(String title, String url) {
     return 'Take a look at \"$title\" from Hanko Field: $url';
   }
+
+  @override
+  String get guideDetailLinkOpenError =>
+      'Couldn’t open the link. Please try again later.';
 }

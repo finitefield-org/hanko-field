@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/domain/entities/content.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/routing/app_route_configuration.dart';
@@ -396,6 +398,10 @@ class _GuideBodySection extends StatelessWidget {
 class GuideBodyRenderer extends StatelessWidget {
   const GuideBodyRenderer({required this.detail, this.textStyle, super.key});
 
+  static final Uri _defaultGuideOrigin = Uri.parse(
+    'https://app.hanko-field.com/',
+  );
+
   final GuideDetail detail;
   final TextStyle? textStyle;
 
@@ -405,30 +411,71 @@ class GuideBodyRenderer extends StatelessWidget {
       return HtmlWidget(
         detail.body,
         textStyle: textStyle,
-        onTapUrl: (url) {
-          final uri = Uri.tryParse(url);
-          if (uri == null) {
-            return false;
-          }
-          return launchUrl(uri);
-        },
+        onTapUrl: (url) => _handleLinkTap(context, url),
       );
     }
     return MarkdownBody(
       data: detail.body,
       selectable: false,
       onTapLink: (_, href, __) {
-        if (href == null) return;
-        final uri = Uri.tryParse(href);
-        if (uri == null) {
-          return;
-        }
-        launchUrl(uri);
+        unawaited(_handleLinkTap(context, href));
       },
       styleSheet: MarkdownStyleSheet.fromTheme(
         Theme.of(context),
       ).copyWith(p: textStyle),
     );
+  }
+
+  Future<bool> _handleLinkTap(BuildContext context, String? link) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (link == null || link.isEmpty) {
+      _showLinkError(messenger, l10n);
+      return false;
+    }
+    final target = _resolveLinkUri(link);
+    if (target == null) {
+      _showLinkError(messenger, l10n);
+      return false;
+    }
+    final launched = await launchUrl(
+      target,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      _showLinkError(messenger, l10n);
+    }
+    return launched;
+  }
+
+  Uri? _resolveLinkUri(String link) {
+    final parsed = Uri.tryParse(link.trim());
+    if (parsed == null) {
+      return null;
+    }
+    if (parsed.hasScheme) {
+      return parsed;
+    }
+    final base = _originForDetail();
+    return base.resolveUri(parsed);
+  }
+
+  Uri _originForDetail() {
+    final share = detail.shareUrl;
+    if (share == null) {
+      return _defaultGuideOrigin;
+    }
+    final uri = Uri.tryParse(share);
+    if (uri == null || uri.scheme.isEmpty) {
+      return _defaultGuideOrigin;
+    }
+    return uri.replace(path: '/', query: null, fragment: null);
+  }
+
+  void _showLinkError(ScaffoldMessengerState messenger, AppLocalizations l10n) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.guideDetailLinkOpenError)));
   }
 }
 
