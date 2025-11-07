@@ -2,6 +2,7 @@ package httpserver_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -869,6 +870,211 @@ func TestOrdersProductionEventHandlesErrors(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(body), "指定されたステージに移動できません")
+}
+
+func TestShipmentsLabelGenerationFlow(t *testing.T) {
+	t.Parallel()
+
+	auth := &tokenAuthenticator{Token: "shipments-token"}
+	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
+	client := noRedirectClient(t)
+
+	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/shipments/batches", nil)
+	require.NoError(t, err)
+	seedReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	seedResp, err := client.Do(seedReq)
+	require.NoError(t, err)
+	seedResp.Body.Close()
+	require.Equal(t, http.StatusOK, seedResp.StatusCode)
+
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	require.NotEmpty(t, csrf)
+
+	regenForm := url.Values{}
+	regenForm.Set("batchID", "batch-2304")
+	regenReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/shipments/batches/regenerate", strings.NewReader(regenForm.Encode()))
+	require.NoError(t, err)
+	regenReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	regenReq.Header.Set("HX-Request", "true")
+	regenReq.Header.Set("HX-Target", "shipments-batches")
+	regenReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	regenReq.Header.Set("X-CSRF-Token", csrf)
+
+	regenResp, err := client.Do(regenReq)
+	require.NoError(t, err)
+	regenResp.Body.Close()
+	require.Equal(t, http.StatusNoContent, regenResp.StatusCode)
+	require.Equal(t, `{"toast":{"message":"バッチ batch-2304 のラベル再生成を開始しました。","tone":"success"}}`, regenResp.Header.Get("HX-Trigger"))
+	require.Equal(t, `{"shipments:select":{"id":"batch-2304"}}`, regenResp.Header.Get("HX-Trigger-After-Swap"))
+
+	orderReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1052/shipments", strings.NewReader(""))
+	require.NoError(t, err)
+	orderReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	orderReq.Header.Set("HX-Request", "true")
+	orderReq.Header.Set("HX-Target", "orders-table")
+	orderReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	orderReq.Header.Set("X-CSRF-Token", csrf)
+
+	orderResp, err := client.Do(orderReq)
+	require.NoError(t, err)
+	orderResp.Body.Close()
+	require.Equal(t, http.StatusNoContent, orderResp.StatusCode)
+	require.Equal(t, `{"toast":{"message":"注文 order-1052 の出荷ラベル生成をキューに投入しました。","tone":"info"}}`, orderResp.Header.Get("HX-Trigger"))
+}
+
+func TestPromotionsCreationFlow(t *testing.T) {
+	t.Parallel()
+
+	auth := &tokenAuthenticator{Token: "promotions-token"}
+	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
+	client := noRedirectClient(t)
+
+	pageReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/promotions", nil)
+	require.NoError(t, err)
+	pageReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	pageResp, err := client.Do(pageReq)
+	require.NoError(t, err)
+	pageResp.Body.Close()
+	require.Equal(t, http.StatusOK, pageResp.StatusCode)
+
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	require.NotEmpty(t, csrf)
+
+	now := time.Now().In(time.Local)
+	startDate := now.Format("2006-01-02")
+	startTime := now.Format("15:04")
+
+	form := url.Values{}
+	form.Set("name", "深夜フラッシュセール")
+	form.Set("description", "短時間の高コンバージョン施策")
+	form.Set("code", "NIGHTFLASH25")
+	form.Set("status", "active")
+	form.Set("type", "percentage")
+	form.Add("channels", "online_store")
+	form.Add("channels", "app")
+	form.Set("segment", "vip_retention")
+	form.Set("percentage", "25")
+	form.Set("startDate", startDate)
+	form.Set("startTime", startTime)
+	form.Set("usageLimit", "500")
+	form.Set("perCustomerLimit", "1")
+
+	createReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/promotions", strings.NewReader(form.Encode()))
+	require.NoError(t, err)
+	createReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	createReq.Header.Set("HX-Request", "true")
+	createReq.Header.Set("HX-Target", "modal")
+	createReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	createReq.Header.Set("X-CSRF-Token", csrf)
+
+	createResp, err := client.Do(createReq)
+	require.NoError(t, err)
+	createResp.Body.Close()
+	require.Equal(t, http.StatusNoContent, createResp.StatusCode)
+
+	triggerRaw := createResp.Header.Get("HX-Trigger")
+	require.NotEmpty(t, triggerRaw)
+
+	var triggerPayload map[string]any
+	require.NoError(t, json.Unmarshal([]byte(triggerRaw), &triggerPayload))
+
+	toast, ok := triggerPayload["toast"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "プロモーション「深夜フラッシュセール」を作成しました。", toast["message"])
+	require.Equal(t, "success", toast["tone"])
+
+	modalClose, ok := triggerPayload["modal:close"].(bool)
+	require.True(t, ok)
+	require.True(t, modalClose)
+
+	selectPayload, ok := triggerPayload["promotions:select"].(map[string]any)
+	require.True(t, ok)
+	selectedID, _ := selectPayload["id"].(string)
+	require.NotEmpty(t, selectedID)
+	require.True(t, strings.HasPrefix(selectedID, "promo-generated-"))
+
+	tableReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/promotions/table?selected="+url.QueryEscape(selectedID), nil)
+	require.NoError(t, err)
+	tableReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	tableReq.Header.Set("HX-Request", "true")
+	tableReq.Header.Set("HX-Target", "promotions-table")
+	tableResp, err := client.Do(tableReq)
+	require.NoError(t, err)
+	defer tableResp.Body.Close()
+	require.Equal(t, http.StatusOK, tableResp.StatusCode)
+
+	tableBody, err := io.ReadAll(tableResp.Body)
+	require.NoError(t, err)
+	doc := testutil.ParseHTML(t, tableBody)
+	row := doc.Find(`tr[data-promotion-id="` + selectedID + `"]`)
+	require.Equal(t, 1, row.Length())
+	require.Contains(t, row.Text(), "深夜フラッシュセール")
+	require.Contains(t, row.Text(), "NIGHTFLASH25")
+}
+
+func TestReviewsModerationFlow(t *testing.T) {
+	t.Parallel()
+
+	auth := &tokenAuthenticator{Token: "reviews-token"}
+	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
+	client := noRedirectClient(t)
+
+	pageURL := ts.URL + "/admin/reviews?moderation=pending"
+	pageReq, err := http.NewRequest(http.MethodGet, pageURL, nil)
+	require.NoError(t, err)
+	pageReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	pageResp, err := client.Do(pageReq)
+	require.NoError(t, err)
+	pageResp.Body.Close()
+	require.Equal(t, http.StatusOK, pageResp.StatusCode)
+
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	require.NotEmpty(t, csrf)
+
+	reviewID := "rvw-pending-1043"
+	form := url.Values{}
+	form.Set("decision", "approve")
+	form.Set("notes", "ブランドトーンを満たしているため公開します。")
+	form.Set("notifyCustomer", "true")
+	form.Set("selected", reviewID)
+
+	moderateReq, err := http.NewRequest(http.MethodPut, ts.URL+"/admin/reviews/"+reviewID+":moderate", strings.NewReader(form.Encode()))
+	require.NoError(t, err)
+	moderateReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	moderateReq.Header.Set("HX-Request", "true")
+	moderateReq.Header.Set("HX-Target", "modal")
+	moderateReq.Header.Set("HX-Current-URL", pageURL)
+	moderateReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	moderateReq.Header.Set("X-CSRF-Token", csrf)
+
+	moderateResp, err := client.Do(moderateReq)
+	require.NoError(t, err)
+	defer moderateResp.Body.Close()
+	require.Equal(t, http.StatusOK, moderateResp.StatusCode)
+	require.Equal(t, `{"toast":{"message":"レビューを承認しました。","tone":"success"},"modal:close":true}`, moderateResp.Header.Get("HX-Trigger"))
+
+	body, err := io.ReadAll(moderateResp.Body)
+	require.NoError(t, err)
+	doc := testutil.ParseHTML(t, body)
+
+	table := doc.Find("#reviews-table")
+	require.Equal(t, 1, table.Length())
+	swapAttr, exists := table.Attr("hx-swap-oob")
+	require.True(t, exists)
+	require.Equal(t, "true", swapAttr)
+
+	approvedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/reviews?moderation=approved", nil)
+	require.NoError(t, err)
+	approvedReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	approvedResp, err := client.Do(approvedReq)
+	require.NoError(t, err)
+	defer approvedResp.Body.Close()
+	require.Equal(t, http.StatusOK, approvedResp.StatusCode)
+
+	approvedBody, err := io.ReadAll(approvedResp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(approvedBody), "最高の仕上がりでした")
+	require.Contains(t, string(approvedBody), "公開済み")
 }
 
 func sampleBoardResult() adminproduction.BoardResult {
