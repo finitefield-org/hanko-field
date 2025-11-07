@@ -55,10 +55,22 @@ func SanitizePlainText(value string, limit int) string {
 	if limit <= 0 {
 		limit = defaultMaxPlainTextLength
 	}
-	if len(sanitized) > limit {
-		sanitized = sanitized[:limit]
-	}
+	sanitized = truncateRunes(sanitized, limit)
 	return sanitized
+}
+
+func truncateRunes(input string, limit int) string {
+	if limit <= 0 {
+		return input
+	}
+	count := 0
+	for idx := range input {
+		if count == limit {
+			return input[:idx]
+		}
+		count++
+	}
+	return input
 }
 
 // NormalizeSlug lowercases and validates slug values against a conservative pattern.
