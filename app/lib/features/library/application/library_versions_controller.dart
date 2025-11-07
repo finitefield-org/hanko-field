@@ -13,7 +13,11 @@ final libraryDesignVersionsControllerProvider =
       LibraryDesignVersionsController,
       DesignVersionHistoryState,
       String
-    >(LibraryDesignVersionsController.new);
+    >(
+      // Keep an explicit lambda to mirror Riverpod's documented family pattern.
+      // ignore: unnecessary_lambdas
+      (designId) => LibraryDesignVersionsController(designId),
+    );
 
 class LibraryDesignVersionsController
     extends Notifier<DesignVersionHistoryState> {
