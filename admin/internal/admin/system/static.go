@@ -25,6 +25,23 @@ type StaticService struct {
 	counterJobs    map[string][]CounterJob
 	counterNotes   map[string][]string
 	envConfig      EnvironmentConfig
+	feedback       []FeedbackRecord
+}
+
+// FeedbackRecord tracks submitted admin feedback for inspection and tests.
+type FeedbackRecord struct {
+	ID            string
+	Subject       string
+	Description   string
+	Expectation   string
+	CurrentURL    string
+	Browser       string
+	ConsoleLog    string
+	Contact       string
+	ReporterName  string
+	ReporterEmail string
+	ReferenceURL  string
+	CreatedAt     time.Time
 }
 
 // NewStaticService constructs a StaticService populated with representative failures.
@@ -1314,6 +1331,51 @@ func (s *StaticService) EnvironmentConfig(_ context.Context, _ string) (Environm
 		cfg.GeneratedAt = time.Now()
 	}
 	return cfg, nil
+}
+
+// SubmitFeedback records the feedback entry and fabricates a tracker URL.
+func (s *StaticService) SubmitFeedback(_ context.Context, _ string, submission FeedbackSubmission) (FeedbackReceipt, error) {
+	if s == nil {
+		return FeedbackReceipt{}, ErrNotConfigured
+	}
+
+	subject := strings.TrimSpace(submission.Subject)
+	description := strings.TrimSpace(submission.Description)
+	if subject == "" || description == "" {
+		return FeedbackReceipt{}, ErrFeedbackInvalid
+	}
+
+	now := time.Now()
+	id := fmt.Sprintf("FDBK-%d", now.UnixNano())
+	referenceURL := fmt.Sprintf("https://tracker.hanko.local/issues/%s", strings.ToLower(strings.ReplaceAll(id, "-", "")))
+
+	record := FeedbackRecord{
+		ID:            id,
+		Subject:       subject,
+		Description:   description,
+		Expectation:   strings.TrimSpace(submission.Expectation),
+		CurrentURL:    fallbackString(strings.TrimSpace(submission.CurrentURL), "/"),
+		Browser:       strings.TrimSpace(submission.Browser),
+		ConsoleLog:    strings.TrimSpace(submission.ConsoleLog),
+		Contact:       strings.TrimSpace(submission.Contact),
+		ReporterName:  strings.TrimSpace(submission.ReporterName),
+		ReporterEmail: strings.TrimSpace(submission.ReporterEmail),
+		ReferenceURL:  referenceURL,
+		CreatedAt:     now,
+	}
+
+	s.feedback = append([]FeedbackRecord{record}, s.feedback...)
+	if len(s.feedback) > 50 {
+		s.feedback = s.feedback[:50]
+	}
+
+	message := "プロダクトオペレーションチームが1営業日以内に確認します。"
+	return FeedbackReceipt{
+		ID:           id,
+		ReferenceURL: referenceURL,
+		SubmittedAt:  now,
+		Message:      message,
+	}, nil
 }
 
 func (s *StaticService) buildFilterSummary() FilterSummary {

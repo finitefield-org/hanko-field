@@ -9,6 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"strings"
+
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/navigation"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
@@ -43,7 +45,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.LocaleCode(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 12, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 14, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -56,7 +58,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 16, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 18, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -69,7 +71,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(middleware.CSRFTokenFromContext(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 18, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 20, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -82,7 +84,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.skip_to_content"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 36, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 38, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -95,7 +97,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.mobile_menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 39, Col: 188}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 41, Col: 188}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -108,7 +110,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.mobile_menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 43, Col: 108}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 45, Col: 108}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -121,7 +123,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.close_menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 45, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 47, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -142,7 +144,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.nav_label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 58, Col: 301}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 60, Col: 301}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -163,7 +165,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.open_menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 79, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 81, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -176,7 +178,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 86, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 88, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -206,12 +208,100 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></main></div></div><div id=\"toast-stack\" class=\"toast-stack\" aria-live=\"polite\" aria-atomic=\"false\"></div><div id=\"modal\" class=\"modal hidden\" hx-target=\"this\" hx-swap=\"innerHTML\" aria-hidden=\"true\" data-modal-state=\"closed\" data-modal-open=\"false\"></div><div class=\"fixed inset-0 z-50 hidden flex items-start justify-center px-4 py-6 sm:px-6 lg:px-8\" data-shortcut-overlay aria-hidden=\"true\"><div class=\"absolute inset-0 bg-slate-900/60 backdrop-blur-sm\" data-shortcut-overlay-dismiss></div><div class=\"relative z-10 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"shortcut-overlay-title\" data-shortcut-panel tabindex=\"-1\"><div class=\"flex items-start justify-between gap-4\"><div><p class=\"text-xs font-semibold uppercase tracking-wide text-slate-500\">キーボードショートカット</p><h2 id=\"shortcut-overlay-title\" class=\"text-xl font-semibold text-slate-900\">操作を素早く切り替える</h2></div><button type=\"button\" class=\"rounded-full p-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500\" data-shortcut-overlay-close aria-label=\"ショートカットヘルプを閉じる\"><span class=\"sr-only\">閉じる</span> <svg viewBox=\"0 0 20 20\" fill=\"none\" aria-hidden=\"true\" class=\"h-5 w-5\"><path d=\"M5 5l10 10M15 5L5 15\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg></button></div><p class=\"mt-3 text-sm text-slate-600\">「?」を押すといつでもこのヘルプを開閉できます。</p><ul class=\"mt-6 space-y-3 text-sm text-slate-700\"><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">/</kbd></div><span class=\"text-slate-600\">検索バーにフォーカス</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">f</kbd></div><span class=\"text-slate-600\">フィルターバーにフォーカス</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">j</kbd> <kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">k</kbd></div><span class=\"text-slate-600\">結果リストを移動</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">o</kbd></div><span class=\"text-slate-600\">選択中の詳細を開く</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">g</kbd> <kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">Shift+g</kbd></div><span class=\"text-slate-600\">結果グループ/タブを切り替え</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">?</kbd></div><span class=\"text-slate-600\">ショートカット一覧を表示/閉じる</span></li></ul></div></div><script src=\"/public/static/app.js\" defer></script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></main><footer class=\"border-t border-slate-200 bg-white\" aria-label=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.footer.support_prompt"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 105, Col: 121}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><div class=\"mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8\"><p class=\"text-xs text-slate-500\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.footer.support_prompt"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 108, Col: 62}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</p><div class=\"flex flex-wrap items-center gap-3\"><button type=\"button\" class=\"inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500\" hx-get=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(joinBaseFooter(helpers.BasePath(ctx), "/feedback/modal"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 114, Col: 74}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" hx-target=\"#modal\" hx-swap=\"innerHTML\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.footer.feedback_cta"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 118, Col: 61}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</button> <a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var16 templ.SafeURL
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(feedbackTrackerURL)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 121, Col: 34}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" target=\"_blank\" rel=\"noreferrer\" class=\"inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-900\"><span class=\"inline-flex h-2 w-2 rounded-full bg-slate-400\" aria-hidden=\"true\"></span> <span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var17 string
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.footer.tracker_link"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 127, Col: 67}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</span></a></div></div></footer></div></div><div id=\"toast-stack\" class=\"toast-stack\" aria-live=\"polite\" aria-atomic=\"false\"></div><div id=\"modal\" class=\"modal hidden\" hx-target=\"this\" hx-swap=\"innerHTML\" aria-hidden=\"true\" data-modal-state=\"closed\" data-modal-open=\"false\"></div><div class=\"fixed inset-0 z-50 hidden flex items-start justify-center px-4 py-6 sm:px-6 lg:px-8\" data-shortcut-overlay aria-hidden=\"true\"><div class=\"absolute inset-0 bg-slate-900/60 backdrop-blur-sm\" data-shortcut-overlay-dismiss></div><div class=\"relative z-10 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"shortcut-overlay-title\" data-shortcut-panel tabindex=\"-1\"><div class=\"flex items-start justify-between gap-4\"><div><p class=\"text-xs font-semibold uppercase tracking-wide text-slate-500\">キーボードショートカット</p><h2 id=\"shortcut-overlay-title\" class=\"text-xl font-semibold text-slate-900\">操作を素早く切り替える</h2></div><button type=\"button\" class=\"rounded-full p-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500\" data-shortcut-overlay-close aria-label=\"ショートカットヘルプを閉じる\"><span class=\"sr-only\">閉じる</span> <svg viewBox=\"0 0 20 20\" fill=\"none\" aria-hidden=\"true\" class=\"h-5 w-5\"><path d=\"M5 5l10 10M15 5L5 15\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg></button></div><p class=\"mt-3 text-sm text-slate-600\">「?」を押すといつでもこのヘルプを開閉できます。</p><ul class=\"mt-6 space-y-3 text-sm text-slate-700\"><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">/</kbd></div><span class=\"text-slate-600\">検索バーにフォーカス</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">f</kbd></div><span class=\"text-slate-600\">フィルターバーにフォーカス</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">j</kbd> <kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">k</kbd></div><span class=\"text-slate-600\">結果リストを移動</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">o</kbd></div><span class=\"text-slate-600\">選択中の詳細を開く</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">g</kbd> <kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">Shift+g</kbd></div><span class=\"text-slate-600\">結果グループ/タブを切り替え</span></li><li class=\"flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3\"><div class=\"flex flex-wrap gap-2\"><kbd class=\"rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm\">?</kbd></div><span class=\"text-slate-600\">ショートカット一覧を表示/閉じる</span></li></ul></div></div><script src=\"/public/static/app.js\" defer></script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		return nil
 	})
+}
+
+const feedbackTrackerURL = "https://github.com/hanko-field/hanko-field/issues"
+
+func joinBaseFooter(base, suffix string) string {
+	base = strings.TrimSpace(base)
+	if base == "" || base == "/" {
+		return "/" + strings.TrimPrefix(suffix, "/")
+	}
+	return strings.TrimRight(base, "/") + "/" + strings.TrimPrefix(suffix, "/")
 }
 
 var _ = templruntime.GeneratedTemplate

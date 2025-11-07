@@ -1,6 +1,8 @@
 package layouts
 
 import (
+	"strings"
+
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/navigation"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
@@ -100,6 +102,33 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 			@body
 		</div>
 	</main>
+					<footer class="border-t border-slate-200 bg-white" aria-label={ helpers.Localize(ctx, "admin.footer.support_prompt") }>
+						<div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+							<p class="text-xs text-slate-500">
+								{ helpers.Localize(ctx, "admin.footer.support_prompt") }
+							</p>
+							<div class="flex flex-wrap items-center gap-3">
+								<button
+									type="button"
+									class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+									hx-get={ joinBaseFooter(helpers.BasePath(ctx), "/feedback/modal") }
+									hx-target="#modal"
+									hx-swap="innerHTML"
+								>
+									{ helpers.Localize(ctx, "admin.footer.feedback_cta") }
+								</button>
+								<a
+									href={ feedbackTrackerURL }
+									target="_blank"
+									rel="noreferrer"
+									class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+								>
+									<span class="inline-flex h-2 w-2 rounded-full bg-slate-400" aria-hidden="true"></span>
+									<span>{ helpers.Localize(ctx, "admin.footer.tracker_link") }</span>
+								</a>
+							</div>
+						</div>
+					</footer>
 			</div>
 		</div>
 
@@ -179,4 +208,14 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 		<script src="/public/static/app.js" defer></script>
 	</body>
 	</html>
+}
+
+const feedbackTrackerURL = "https://github.com/hanko-field/hanko-field/issues"
+
+func joinBaseFooter(base, suffix string) string {
+	base = strings.TrimSpace(base)
+	if base == "" || base == "/" {
+		return "/" + strings.TrimPrefix(suffix, "/")
+	}
+	return strings.TrimRight(base, "/") + "/" + strings.TrimPrefix(suffix, "/")
 }

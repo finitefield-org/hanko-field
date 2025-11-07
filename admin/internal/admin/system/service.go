@@ -21,6 +21,9 @@ var ErrJobTriggerNotAllowed = errors.New("job manual trigger not supported")
 // ErrCounterNotFound indicates the requested counter could not be located.
 var ErrCounterNotFound = errors.New("counter not found")
 
+// ErrFeedbackInvalid indicates the feedback payload failed validation.
+var ErrFeedbackInvalid = errors.New("feedback submission invalid")
+
 // Service exposes operations for the system errors dashboard.
 type Service interface {
 	// ListFailures returns a filtered collection of recent failures along with dashboard metrics.
@@ -45,6 +48,8 @@ type Service interface {
 	NextCounter(ctx context.Context, token, name string, opts CounterNextOptions) (CounterNextOutcome, error)
 	// EnvironmentConfig returns a high-level summary of environment configuration and feature toggles.
 	EnvironmentConfig(ctx context.Context, token string) (EnvironmentConfig, error)
+	// SubmitFeedback captures a bug/feedback report from the admin UI and routes it to the underlying tracker.
+	SubmitFeedback(ctx context.Context, token string, submission FeedbackSubmission) (FeedbackReceipt, error)
 }
 
 // Source enumerates failure origins.
@@ -167,6 +172,27 @@ type Link struct {
 	Label string
 	URL   string
 	Icon  string
+}
+
+// FeedbackSubmission contains details provided by an administrator when reporting a bug.
+type FeedbackSubmission struct {
+	Subject       string
+	Description   string
+	Expectation   string
+	CurrentURL    string
+	Browser       string
+	ConsoleLog    string
+	Contact       string
+	ReporterName  string
+	ReporterEmail string
+}
+
+// FeedbackReceipt provides tracker metadata for a newly created feedback entry.
+type FeedbackReceipt struct {
+	ID           string
+	ReferenceURL string
+	SubmittedAt  time.Time
+	Message      string
 }
 
 // FailureDetail provides the drawer payload.

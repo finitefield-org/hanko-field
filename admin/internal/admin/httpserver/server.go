@@ -487,6 +487,8 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				or.Post("/staff/{memberID}:revoke", uiHandlers.OrgStaffRevokeSubmit)
 				or.Get("/roles", uiHandlers.OrgRolesPage)
 			})
+			RegisterFragment(protected, "/feedback/modal", uiHandlers.FeedbackModal)
+			protected.Post("/feedback", uiHandlers.FeedbackSubmit)
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
 			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
 			// Future admin routes will be registered here.
