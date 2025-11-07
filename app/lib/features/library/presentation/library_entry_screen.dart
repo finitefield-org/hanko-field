@@ -526,21 +526,31 @@ class _DetailsTab extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppTokens.spaceS),
-                    if (design.ai?.diagnostics.isNotEmpty ?? false)
-                      Wrap(
-                        spacing: AppTokens.spaceS,
-                        runSpacing: AppTokens.spaceS,
-                        children: design.ai!.diagnostics
-                            .map((diagnostic) => Chip(label: Text(diagnostic)))
-                            .toList(),
-                      )
-                    else
-                      Text(
-                        l10n.libraryDetailAiDiagnosticsEmpty,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final diagnostics = design.ai?.diagnostics;
+                        if (diagnostics != null && diagnostics.isNotEmpty) {
+                          return Wrap(
+                            spacing: AppTokens.spaceS,
+                            runSpacing: AppTokens.spaceS,
+                            children: diagnostics
+                                .map(
+                                  (diagnostic) => Chip(label: Text(diagnostic)),
+                                )
+                                .toList(),
+                          );
+                        }
+                        return Text(
+                          l10n.libraryDetailAiDiagnosticsEmpty,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
