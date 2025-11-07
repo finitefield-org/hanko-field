@@ -408,6 +408,46 @@ const initNotificationsBadge = () => {
   }
 };
 
+let workloadBadgesObserverAttached = false;
+
+const initWorkloadBadges = () => {
+  const initialize = (root) => {
+    if (!(root instanceof HTMLElement)) {
+      return;
+    }
+    const counts = {
+      total: parseNotificationInteger(root.dataset.badgeTotal),
+      critical: parseNotificationInteger(root.dataset.badgeCritical),
+      warning: parseNotificationInteger(root.dataset.badgeWarning),
+      reviews: parseNotificationInteger(root.dataset.badgeReviews),
+      tasks: parseNotificationInteger(root.dataset.badgeTasks),
+    };
+    updateWorkloadBadges(counts);
+    const hasNotificationsRoot = document.querySelector("[data-notifications-root]");
+    const streamURL = root.getAttribute("data-workload-stream");
+    if (!hasNotificationsRoot && typeof streamURL === "string" && streamURL.trim() !== "") {
+      startNotificationsStream(streamURL.trim());
+    }
+  };
+
+  document.querySelectorAll("[data-workload-badges]").forEach(initialize);
+
+  if (window.htmx && !workloadBadgesObserverAttached) {
+    workloadBadgesObserverAttached = true;
+
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.matches("[data-workload-badges]")) {
+        initialize(event.target);
+        return;
+      }
+      event.target.querySelectorAll?.("[data-workload-badges]").forEach(initialize);
+    });
+  }
+};
+
 const badgeClassForTone = (tone) => {
   const base = ["badge"];
   switch ((tone || "").toLowerCase()) {
@@ -3572,6 +3612,7 @@ window.hankoAdmin = window.hankoAdmin || {
 
     initSearchShortcut(modalRoot);
     initNotificationsBadge();
+    initWorkloadBadges();
     initNotificationsSelection();
     initGuidesModule();
     initShipmentsModule();

@@ -43,6 +43,8 @@ func TestTopbarActionsRenderForAdmin(t *testing.T) {
 
 	workloads := doc.Find("[data-workload-badges]")
 	require.Equal(t, 1, workloads.Length(), "workload badges container should render for admin")
+	require.Equal(t, "/admin/notifications/stream", workloads.AttrOr("data-workload-stream", ""))
+	require.Equal(t, "/admin/notifications/badge", workloads.AttrOr("data-workload-endpoint", ""))
 	require.Equal(t, 1, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge placeholder should render")
 	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews badge placeholder should render")
 	require.Equal(t, 1, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge placeholder should render")
@@ -69,6 +71,7 @@ func TestTopbarHidesRestrictedActions(t *testing.T) {
 	require.Equal(t, 0, doc.Find("[data-topbar-search-trigger]").Length(), "search shortcut must be hidden without capability")
 	require.Equal(t, 0, doc.Find("[data-notifications-root]").Length(), "notifications badge must be hidden without capability")
 	require.Equal(t, 1, doc.Find("[data-workload-badges]").Length(), "workload badges container should render when moderation capability is present")
+	require.Equal(t, "/admin/notifications/stream", doc.Find("[data-workload-badges]").AttrOr("data-workload-stream", ""))
 	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews workload badge should render for marketing role")
 	require.Equal(t, 0, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge must be hidden without notifications capability")
 	require.Equal(t, 0, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge must be hidden without system capability")
