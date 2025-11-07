@@ -92,5 +92,18 @@ func sanitizeCorrelationID(value string) string {
 	if value == "" {
 		return ""
 	}
-	return strings.TrimSpace(sanitizeString(value, 80))
+	sanitized := sanitizeString(value, 80)
+	if sanitized == "" {
+		return ""
+	}
+	sanitized = strings.Map(func(r rune) rune {
+		switch r {
+		case '\r', '\n', '\t':
+			return -1
+		default:
+			return r
+		}
+	}, sanitized)
+	sanitized = strings.TrimSpace(sanitized)
+	return sanitized
 }

@@ -278,6 +278,28 @@ func TestCorrelationIDMiddlewareGeneratesWhenAbsent(t *testing.T) {
 	}
 }
 
+func TestCorrelationIDMiddlewareStripsControlCharacters(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Correlation-ID", " legit\r\nX-Injected: evil ")
+	rr := httptest.NewRecorder()
+
+	handler := CorrelationIDMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := requestctx.CorrelationID(r.Context()); got != "legitX-Injected: evil" {
+			t.Fatalf("expected sanitized correlation id, got %q", got)
+		}
+	}))
+
+	handler.ServeHTTP(rr, req)
+
+	header := rr.Header().Get("X-Correlation-ID")
+	if header != "legitX-Injected: evil" {
+		t.Fatalf("expected stripped header value, got %q", header)
+	}
+	if strings.ContainsAny(header, "\r\n\t") {
+		t.Fatalf("expected header to be single line, got %q", header)
+	}
+}
+
 func contextMap(entry observer.LoggedEntry) map[string]any {
 	fields := make(map[string]any, len(entry.Context))
 	for _, field := range entry.Context {
