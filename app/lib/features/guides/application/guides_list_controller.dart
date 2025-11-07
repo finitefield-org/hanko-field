@@ -43,11 +43,22 @@ class GuidesListController extends AsyncNotifier<GuideListState> {
 
   Future<void> refresh() async {
     final current = state.asData?.value;
+    if (current != null) {
+      await _reloadWith(
+        locale: current.filter.locale,
+        persona: current.filter.persona,
+        topicOverride: current.filter.topic,
+        searchOverride: current.searchQuery,
+      );
+      return;
+    }
+    final experience = await ref.read(experienceGateProvider.future);
+    final locale = _resolveLocale(experience.locale);
     await _reloadWith(
-      locale: current?.filter.locale ?? _kSupportedGuideLocales.first,
-      persona: current?.filter.persona ?? UserPersona.japanese,
-      topicOverride: current?.filter.topic,
-      searchOverride: current?.searchQuery ?? '',
+      locale: locale,
+      persona: experience.persona,
+      topicOverride: null,
+      searchOverride: '',
     );
   }
 
