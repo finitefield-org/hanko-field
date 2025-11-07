@@ -1,77 +1,93 @@
 import 'package:app/core/theme/tokens.dart';
-import 'package:app/features/design_creation/application/design_version_history_controller.dart';
+import 'package:app/features/library/application/library_entry_detail_provider.dart';
+import 'package:app/features/library/application/library_versions_controller.dart';
 import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:app/shared/version_history/design_version_history_state.dart';
 import 'package:app/shared/version_history/widgets/design_version_history_sections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class DesignVersionHistoryPage extends ConsumerStatefulWidget {
-  const DesignVersionHistoryPage({super.key});
+class LibraryDesignVersionsPage extends ConsumerStatefulWidget {
+  const LibraryDesignVersionsPage({required this.designId, super.key});
+
+  final String designId;
 
   @override
-  ConsumerState<DesignVersionHistoryPage> createState() =>
-      _DesignVersionHistoryPageState();
+  ConsumerState<LibraryDesignVersionsPage> createState() =>
+      _LibraryDesignVersionsPageState();
 }
 
-class _DesignVersionHistoryPageState
-    extends ConsumerState<DesignVersionHistoryPage> {
+class _LibraryDesignVersionsPageState
+    extends ConsumerState<LibraryDesignVersionsPage> {
   bool _highlightChanges = true;
+  ProviderSubscription<DesignVersionHistoryState>? _subscription;
 
   @override
   void initState() {
     super.initState();
-    ref.listen<DesignVersionHistoryState>(
-      designVersionHistoryControllerProvider,
-      (previous, next) {
-        final messenger = ScaffoldMessenger.of(context);
-        if (next.errorMessage != null &&
-            next.errorMessage != previous?.errorMessage) {
-          messenger.showSnackBar(SnackBar(content: Text(next.errorMessage!)));
-        }
-        if (next.restoredVersion != null &&
-            next.restoredVersion != previous?.restoredVersion) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(
-                  context,
-                ).designVersionHistoryRestoredSnack(next.restoredVersion!),
-              ),
+    final provider = libraryDesignVersionsControllerProvider(widget.designId);
+    _subscription = ref.listenManual<DesignVersionHistoryState>(provider, (
+      previous,
+      next,
+    ) {
+      final messenger = ScaffoldMessenger.of(context);
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        messenger.showSnackBar(SnackBar(content: Text(next.errorMessage!)));
+      }
+      if (next.restoredVersion != null &&
+          next.restoredVersion != previous?.restoredVersion) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              ).designVersionHistoryRestoredSnack(next.restoredVersion!),
             ),
-          );
-        }
-        if (next.duplicatedDesignId != null &&
-            next.duplicatedDesignId != previous?.duplicatedDesignId) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(
-                  context,
-                ).designVersionHistoryDuplicatedSnack(next.duplicatedDesignId!),
-              ),
+          ),
+        );
+      }
+      if (next.duplicatedDesignId != null &&
+          next.duplicatedDesignId != previous?.duplicatedDesignId) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              ).designVersionHistoryDuplicatedSnack(next.duplicatedDesignId!),
             ),
-          );
-        }
-      },
-    );
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(designVersionHistoryControllerProvider);
-    final controller = ref.read(
-      designVersionHistoryControllerProvider.notifier,
-    );
+    final provider = libraryDesignVersionsControllerProvider(widget.designId);
+    final state = ref.watch(provider);
+    final controller = ref.read(provider.notifier);
     final diffEntries = controller.diffEntries();
     final filteredDiffs = _highlightChanges
         ? diffEntries.where((entry) => entry.changed).toList()
         : diffEntries;
+    final designName = ref
+        .watch(libraryDesignProvider(widget.designId))
+        .maybeWhen(
+          data: (design) => design.input?.rawName ?? design.id,
+          orElse: () => l10n.designVersionHistoryTitle,
+        );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.designVersionHistoryTitle),
+        title: Text(designName),
         actions: [
           IconButton(
             tooltip: _highlightChanges

@@ -1,5 +1,7 @@
 import 'package:app/core/domain/entities/design.dart';
 import 'package:app/core/domain/entities/user.dart';
+import 'package:app/core/routing/app_route_configuration.dart';
+import 'package:app/core/routing/app_state_notifier.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_button.dart';
 import 'package:app/core/ui/widgets/app_card.dart';
@@ -121,7 +123,19 @@ class _LibraryEntryScreenState extends ConsumerState<LibraryEntryScreen> {
               },
               body: TabBarView(
                 children: [
-                  _DetailsTab(detail: detail),
+                  _DetailsTab(
+                    detail: detail,
+                    onViewVersions: () {
+                      ref
+                          .read(appStateProvider.notifier)
+                          .push(
+                            LibraryEntryRoute(
+                              designId: detail.design.id,
+                              trailing: const ['versions'],
+                            ),
+                          );
+                    },
+                  ),
                   _ActivityTab(detail: detail),
                   _FilesTab(
                     detail: detail,
@@ -454,9 +468,10 @@ class _DesignHeroCard extends StatelessWidget {
 }
 
 class _DetailsTab extends StatelessWidget {
-  const _DetailsTab({required this.detail});
+  const _DetailsTab({required this.detail, required this.onViewVersions});
 
   final LibraryDesignDetail detail;
+  final VoidCallback onViewVersions;
 
   @override
   Widget build(BuildContext context) {
@@ -594,13 +609,7 @@ class _DetailsTab extends StatelessWidget {
                       label: l10n.libraryDetailViewVersionsCta,
                       variant: AppButtonVariant.secondary,
                       fullWidth: true,
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.libraryDetailViewVersionsCta),
-                          ),
-                        );
-                      },
+                      onPressed: onViewVersions,
                     ),
                   ],
                 ),

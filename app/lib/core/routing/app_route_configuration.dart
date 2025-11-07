@@ -20,6 +20,7 @@ import 'package:app/features/design_creation/presentation/design_style_selection
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
 import 'package:app/features/library/presentation/library_entry_screen.dart';
+import 'package:app/features/library/presentation/library_versions_page.dart';
 import 'package:app/features/navigation/presentation/deep_link_pages.dart';
 import 'package:app/features/notifications/presentation/notification_inbox_page.dart';
 import 'package:app/features/orders/presentation/order_details_screen.dart';
@@ -340,10 +341,18 @@ class LibraryEntryRoute implements IndependentRoute {
   final List<String> trailingSegments;
 
   @override
-  Widget get page => LibraryEntryScreen(
-    designId: designId,
-    subPage: trailingSegments.isEmpty ? null : trailingSegments.join('/'),
-  );
+  Widget get page {
+    if (trailingSegments.isNotEmpty) {
+      final primary = trailingSegments.first;
+      if (primary == 'versions') {
+        return LibraryDesignVersionsPage(designId: designId);
+      }
+    }
+    return LibraryEntryScreen(
+      designId: designId,
+      subPage: trailingSegments.isEmpty ? null : trailingSegments.join('/'),
+    );
+  }
 
   @override
   Object stackKey(AppTab tab, int index) =>

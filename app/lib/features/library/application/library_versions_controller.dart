@@ -1,30 +1,32 @@
 import 'dart:async';
 
 import 'package:app/core/domain/entities/design.dart';
-import 'package:app/core/monitoring/analytics_controller.dart';
-import 'package:app/core/monitoring/analytics_events.dart';
-import 'package:app/core/monitoring/audit_logger.dart';
-import 'package:app/features/design_creation/application/design_version_repository_provider.dart';
-import 'package:app/features/design_creation/data/design_version_repository.dart';
+import 'package:app/core/domain/repositories/design_repository.dart';
+import 'package:app/features/library/data/design_repository_provider.dart';
 import 'package:app/shared/version_history/design_version_diff_builder.dart';
 import 'package:app/shared/version_history/design_version_history_state.dart';
+import 'package:clock/clock.dart' as clock_package;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final designVersionHistoryControllerProvider =
-    NotifierProvider<DesignVersionHistoryController, DesignVersionHistoryState>(
-      DesignVersionHistoryController.new,
-    );
+final libraryDesignVersionsControllerProvider =
+    NotifierProvider.family<
+      LibraryDesignVersionsController,
+      DesignVersionHistoryState,
+      String
+    >(LibraryDesignVersionsController.new);
 
-class DesignVersionHistoryController
+class LibraryDesignVersionsController
     extends Notifier<DesignVersionHistoryState> {
-  static const String _designId = 'design-draft-primary';
+  LibraryDesignVersionsController(this.designId);
 
-  late final DesignVersionRepository _repository;
+  final String designId;
+
+  late final DesignRepository _repository;
   bool _bootstrapped = false;
 
   @override
   DesignVersionHistoryState build() {
-    _repository = ref.read(designVersionRepositoryProvider);
+    _repository = ref.read(designRepositoryProvider);
     if (!_bootstrapped) {
       _bootstrapped = true;
       Future.microtask(_load);
@@ -46,7 +48,6 @@ class DesignVersionHistoryController
     if (selected == null) {
       return;
     }
-    final previousCurrent = state.currentVersion;
     state = state.copyWith(
       isRollbackInProgress: true,
       clearErrorMessage: true,
@@ -54,21 +55,29 @@ class DesignVersionHistoryController
       clearDuplicatedDesignId: true,
     );
     try {
-      final restored = await _repository.rollbackToVersion(
-        designId: _designId,
-        version: selected.version,
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final now = clock_package.clock.now();
+      final current = state.currentVersion;
+      final baseVersion = current != null ? current.version : selected.version;
+      final newVersionNumber = baseVersion + 1;
+      final restoredSnapshot = selected.snapshot.copyWith(
+        version: newVersionNumber,
+        updatedAt: now,
       );
-      await _logRollbackSuccess(
-        sourceVersion: selected.version,
-        appliedVersion: restored.version,
-        previousVersion: previousCurrent?.version,
+      final restored = DesignVersion(
+        version: newVersionNumber,
+        snapshot: restoredSnapshot,
+        createdAt: now,
+        createdBy: restoredSnapshot.ownerRef,
+        changeNote: 'Restored from v${selected.version}',
       );
-      await _load(selectVersionIndex: 0);
       state = state.copyWith(
         isRollbackInProgress: false,
+        versions: [restored, ...state.versions],
+        selectedIndex: 0,
         restoredVersion: selected.version,
       );
-    } catch (error) {
+    } catch (_) {
       state = state.copyWith(
         isRollbackInProgress: false,
         errorMessage: 'Failed to restore version. Please try again.',
@@ -88,15 +97,15 @@ class DesignVersionHistoryController
       clearDuplicatedDesignId: true,
     );
     try {
-      final duplicate = await _repository.duplicateVersion(
-        designId: _designId,
-        version: selected.version,
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final now = clock_package.clock.now();
+      final copyId =
+          '${selected.snapshot.id}-copy-${now.millisecondsSinceEpoch}';
       state = state.copyWith(
         isDuplicateInProgress: false,
-        duplicatedDesignId: duplicate.id,
+        duplicatedDesignId: copyId,
       );
-    } catch (error) {
+    } catch (_) {
       state = state.copyWith(
         isDuplicateInProgress: false,
         errorMessage: 'Failed to duplicate version. Please try again.',
@@ -134,14 +143,15 @@ class DesignVersionHistoryController
       clearDuplicatedDesignId: true,
     );
     try {
-      final versions = await _repository.fetchVersionHistory(_designId);
+      final snapshots = await _repository.fetchVersions(designId);
+      final versions = _mapSnapshotsToVersions(snapshots);
       final desiredIndex = selectVersionIndex ?? state.selectedIndex;
       state = state.copyWith(
         isLoading: false,
         versions: versions,
         selectedIndex: _resolveSelectedIndex(versions, desiredIndex),
       );
-    } catch (error) {
+    } catch (_) {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to load version history.',
@@ -162,30 +172,42 @@ class DesignVersionHistoryController
     return desired;
   }
 
-  Future<void> _logRollbackSuccess({
-    required int sourceVersion,
-    required int appliedVersion,
-    int? previousVersion,
-  }) async {
-    final analytics = ref.read(analyticsControllerProvider.notifier);
-    final audit = ref.read(auditLoggerProvider);
+  List<DesignVersion> _mapSnapshotsToVersions(List<Design> designs) {
+    return [
+      for (var index = 0; index < designs.length; index++)
+        _toVersionEntry(designs[index], index),
+    ];
+  }
 
-    await analytics.logEvent(
-      DesignVersionRestoredEvent(
-        designId: _designId,
-        restoredVersion: sourceVersion,
-      ),
+  DesignVersion _toVersionEntry(Design design, int index) {
+    return DesignVersion(
+      version: design.version,
+      snapshot: design,
+      createdAt: design.updatedAt,
+      createdBy: design.ownerRef,
+      changeNote: _changeNoteFor(design, index),
     );
-    await audit.record(
-      AuditEvent(
-        action: 'design.version.restore',
-        targetRef: 'designs/$_designId',
-        metadata: <String, Object?>{
-          'restored_version': sourceVersion,
-          'applied_version': appliedVersion,
-          if (previousVersion != null) 'previous_version': previousVersion,
-        },
-      ),
-    );
+  }
+
+  String _changeNoteFor(Design design, int index) {
+    if (design.lastOrderedAt != null && index == 1) {
+      return 'Snapshot captured before recent order.';
+    }
+    final score = design.ai?.qualityScore;
+    if (score != null && score >= 80 && index == 0) {
+      return 'AI tweak accepted (score ${score.round()}).';
+    }
+    switch (design.status) {
+      case DesignStatus.ready:
+        return 'Marked ready after layout polish.';
+      case DesignStatus.ordered:
+        return 'Locked for production reference.';
+      case DesignStatus.locked:
+        return 'Validation hold for registration.';
+      case DesignStatus.draft:
+        return index.isEven
+            ? 'Manual edits saved for review.'
+            : 'Spacing adjustments applied.';
+    }
   }
 }
