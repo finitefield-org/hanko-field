@@ -441,6 +441,11 @@ func main() {
 	internalAuditHandlers := handlers.NewInternalAuditLogHandlers(auditService)
 
 	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
+	rateLimitMetrics := handlers.NewRateLimitMetrics(logger.Named("metrics.rate_limit"))
+	rateLimitWindow := cfg.RateLimits.Window
+	if rateLimitWindow <= 0 {
+		rateLimitWindow = time.Minute
+	}
 
 	designService, err := services.NewDesignService(services.DesignServiceDeps{
 		Designs:             designRepo,
@@ -454,7 +459,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise design service", zap.Error(err))
 	}
-	designHandlers := handlers.NewDesignHandlers(authenticator, designService)
+	designHandlers := handlers.NewDesignHandlers(
+		authenticator,
+		designService,
+		handlers.WithDesignRateLimitMetrics(rateLimitMetrics),
+		handlers.WithRegistrabilityRateLimit(cfg.RateLimits.RegistrabilityPerMinute, rateLimitWindow),
+		handlers.WithAISuggestionRateLimit(cfg.RateLimits.AISuggestionsPerMinute, rateLimitWindow),
+	)
 	reviewHandlers := handlers.NewReviewHandlers(authenticator, nil)
 	exportLogger := logger.Named("exports")
 	exportPublisher := services.NewNoopExportPublisher()
@@ -605,6 +616,8 @@ func main() {
 	publicHandlers := handlers.NewPublicHandlers(
 		handlers.WithPublicContentService(contentService),
 		handlers.WithPublicPromotionService(promotionService),
+		handlers.WithPublicPromotionRateLimit(cfg.RateLimits.PromotionLookupsPerMinute, rateLimitWindow),
+		handlers.WithPublicRateLimitMetrics(rateLimitMetrics),
 	)
 	opts = append(opts, handlers.WithPublicRoutes(publicHandlers.Routes))
 	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)

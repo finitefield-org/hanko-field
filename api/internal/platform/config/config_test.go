@@ -33,6 +33,21 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg.RateLimits.DefaultPerMinute != 120 {
 		t.Errorf("unexpected default rate limit: %d", cfg.RateLimits.DefaultPerMinute)
 	}
+	if cfg.RateLimits.AISuggestionsPerMinute != defaultRateLimitAISuggestions {
+		t.Errorf("unexpected ai suggestion rate limit: %d", cfg.RateLimits.AISuggestionsPerMinute)
+	}
+	if cfg.RateLimits.RegistrabilityPerMinute != defaultRateLimitRegistrability {
+		t.Errorf("unexpected registrability rate limit: %d", cfg.RateLimits.RegistrabilityPerMinute)
+	}
+	if cfg.RateLimits.PromotionLookupsPerMinute != defaultRateLimitPromotionLookup {
+		t.Errorf("unexpected promotion lookup rate limit: %d", cfg.RateLimits.PromotionLookupsPerMinute)
+	}
+	if cfg.RateLimits.LoginPerMinute != defaultRateLimitLogin {
+		t.Errorf("unexpected login rate limit: %d", cfg.RateLimits.LoginPerMinute)
+	}
+	if cfg.RateLimits.Window != defaultRateLimitWindow {
+		t.Errorf("unexpected rate limit window: %s", cfg.RateLimits.Window)
+	}
 	if len(cfg.Webhooks.AllowedHosts) != 0 {
 		t.Errorf("expected no allowed hosts, got %v", cfg.Webhooks.AllowedHosts)
 	}
@@ -102,6 +117,11 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 		"API_RATELIMIT_DEFAULT_PER_MIN":           "150",
 		"API_RATELIMIT_AUTH_PER_MIN":              "300",
 		"API_RATELIMIT_WEBHOOK_BURST":             "80",
+		"API_RATELIMIT_AI_PER_MIN":                "45",
+		"API_RATELIMIT_REGISTRABILITY_PER_MIN":    "12",
+		"API_RATELIMIT_PROMOTION_LOOKUP_PER_MIN":  "90",
+		"API_RATELIMIT_LOGIN_PER_MIN":             "40",
+		"API_RATELIMIT_WINDOW":                    "90s",
 		"API_FEATURE_AISUGGESTIONS":               "true",
 		"API_FEATURE_PROMOTIONS":                  "false",
 		"API_SECURITY_ENVIRONMENT":                "prod",
@@ -166,6 +186,21 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	}
 	if cfg.Webhooks.ReplayTTL != 10*time.Minute {
 		t.Errorf("expected replay ttl 10m, got %s", cfg.Webhooks.ReplayTTL)
+	}
+	if cfg.RateLimits.AISuggestionsPerMinute != 45 {
+		t.Errorf("unexpected ai limit %d", cfg.RateLimits.AISuggestionsPerMinute)
+	}
+	if cfg.RateLimits.RegistrabilityPerMinute != 12 {
+		t.Errorf("unexpected registrability limit %d", cfg.RateLimits.RegistrabilityPerMinute)
+	}
+	if cfg.RateLimits.PromotionLookupsPerMinute != 90 {
+		t.Errorf("unexpected promotion lookup limit %d", cfg.RateLimits.PromotionLookupsPerMinute)
+	}
+	if cfg.RateLimits.LoginPerMinute != 40 {
+		t.Errorf("unexpected login limit %d", cfg.RateLimits.LoginPerMinute)
+	}
+	if cfg.RateLimits.Window != 90*time.Second {
+		t.Errorf("unexpected rate limit window %s", cfg.RateLimits.Window)
 	}
 	if !cfg.Features.EnableAISuggestions {
 		t.Errorf("expected AISuggestions flag enabled")

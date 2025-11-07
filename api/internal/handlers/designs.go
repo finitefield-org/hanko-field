@@ -30,12 +30,25 @@ const (
 	maxAISuggestionPageSize      = 50
 )
 
+const (
+	defaultAISuggestionRateLimit   = 30
+	defaultDesignRateLimitWindow   = time.Minute
+	defaultRegistrabilityRateLimit = 5
+)
+
+const (
+	rateLimitEndpointAISuggestions  = "designs.ai_suggestions"
+	rateLimitEndpointRegistrability = "designs.registrability_check"
+)
+
 // DesignHandlers exposes design creation endpoints for authenticated users.
 type DesignHandlers struct {
 	authn                 *auth.Authenticator
 	designs               services.DesignService
 	resolveStorageURL     StorageURLResolver
 	registrabilityLimiter rateLimiter
+	aiSuggestionLimiter   rateLimiter
+	rateLimitMetrics      RateLimitMetrics
 }
 
 // StorageURLResolver resolves a bucket/object pair to a fully qualified URL.
@@ -52,12 +65,17 @@ func NewDesignHandlers(authn *auth.Authenticator, designs services.DesignService
 		authn:                 authn,
 		designs:               designs,
 		resolveStorageURL:     defaultStorageURLResolver,
-		registrabilityLimiter: newSimpleRateLimiter(5, time.Minute, nil),
+		registrabilityLimiter: newSimpleRateLimiter(defaultRegistrabilityRateLimit, defaultDesignRateLimitWindow, nil),
+		aiSuggestionLimiter:   newSimpleRateLimiter(defaultAISuggestionRateLimit, defaultDesignRateLimitWindow, nil),
+		rateLimitMetrics:      noopRateLimitMetrics{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(handler)
 		}
+	}
+	if handler.rateLimitMetrics == nil {
+		handler.rateLimitMetrics = noopRateLimitMetrics{}
 	}
 	return handler
 }
@@ -82,6 +100,30 @@ func WithRegistrabilityRateLimit(limit int, window time.Duration) DesignHandlerO
 			return
 		}
 		h.registrabilityLimiter = newSimpleRateLimiter(limit, window, nil)
+	}
+}
+
+// WithAISuggestionRateLimit overrides the per-user AI suggestion request limit.
+func WithAISuggestionRateLimit(limit int, window time.Duration) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if h == nil {
+			return
+		}
+		if limit <= 0 || window <= 0 {
+			h.aiSuggestionLimiter = nil
+			return
+		}
+		h.aiSuggestionLimiter = newSimpleRateLimiter(limit, window, nil)
+	}
+}
+
+// WithDesignRateLimitMetrics injects the metrics recorder for throttled design endpoints.
+func WithDesignRateLimitMetrics(metrics RateLimitMetrics) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if h == nil || metrics == nil {
+			return
+		}
+		h.rateLimitMetrics = metrics
 	}
 }
 
@@ -867,6 +909,13 @@ func (h *DesignHandlers) requestAISuggestion(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	requester := strings.TrimSpace(identity.UID)
+	if h.aiSuggestionLimiter != nil && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		if !h.aiSuggestionLimiter.Allow(requester) {
+			h.rateLimitMetrics.Record(ctx, rateLimitEndpointAISuggestions, rateLimitScopeUser)
+			httpx.WriteError(ctx, w, httpx.NewError("rate_limited", "too many AI suggestions requested", http.StatusTooManyRequests))
+			return
+		}
+	}
 
 	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
 	if designID == "" {
@@ -953,9 +1002,12 @@ func (h *DesignHandlers) checkRegistrability(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if h.registrabilityLimiter != nil && !h.registrabilityLimiter.Allow(userID) {
-		httpx.WriteError(ctx, w, httpx.NewError("rate_limited", "registrability checks throttled", http.StatusTooManyRequests))
-		return
+	if h.registrabilityLimiter != nil && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		if !h.registrabilityLimiter.Allow(userID) {
+			h.rateLimitMetrics.Record(ctx, rateLimitEndpointRegistrability, rateLimitScopeUser)
+			httpx.WriteError(ctx, w, httpx.NewError("rate_limited", "registrability checks throttled", http.StatusTooManyRequests))
+			return
+		}
 	}
 
 	cmd := services.RegistrabilityCheckCommand{

@@ -25,27 +25,28 @@ import (
 )
 
 const (
-	defaultTemplatePageSize   = 24
-	maxTemplatePageSize       = 100
-	defaultFontPageSize       = 50
-	maxFontPageSize           = 100
-	defaultMaterialPageSize   = 32
-	maxMaterialPageSize       = 100
-	defaultProductPageSize    = 24
-	maxProductPageSize        = 100
-	fontCacheControl          = "public, max-age=300"
-	materialCacheControl      = "public, max-age=900"
-	productCacheControl       = "public, max-age=300"
-	promotionCacheControl     = "public, max-age=120"
-	defaultMaterialLocale     = "ja"
-	defaultGuidePageSize      = 20
-	maxGuidePageSize          = 60
-	defaultGuideLocale        = "ja"
-	defaultPageLocale         = "ja"
-	guideCacheControl         = "public, max-age=900"
-	pageCacheControl          = "public, max-age=900"
-	priceDisplayModeInclusive = "tax_inclusive"
-	priceDisplayModeExclusive = "tax_exclusive"
+	defaultTemplatePageSize          = 24
+	maxTemplatePageSize              = 100
+	defaultFontPageSize              = 50
+	maxFontPageSize                  = 100
+	defaultMaterialPageSize          = 32
+	maxMaterialPageSize              = 100
+	defaultProductPageSize           = 24
+	maxProductPageSize               = 100
+	fontCacheControl                 = "public, max-age=300"
+	materialCacheControl             = "public, max-age=900"
+	productCacheControl              = "public, max-age=300"
+	promotionCacheControl            = "public, max-age=120"
+	defaultMaterialLocale            = "ja"
+	defaultGuidePageSize             = 20
+	maxGuidePageSize                 = 60
+	defaultGuideLocale               = "ja"
+	defaultPageLocale                = "ja"
+	guideCacheControl                = "public, max-age=900"
+	pageCacheControl                 = "public, max-age=900"
+	priceDisplayModeInclusive        = "tax_inclusive"
+	priceDisplayModeExclusive        = "tax_exclusive"
+	rateLimitEndpointPromotionLookup = "public.promotions.lookup"
 )
 
 // AssetURLResolver resolves storage paths to externally accessible URLs (e.g. CDN or signed links).
@@ -73,6 +74,7 @@ type PublicHandlers struct {
 	vectorResolver   AssetURLResolver
 	priceDisplayMode string
 	promotionLimiter rateLimiter
+	rateLimitMetrics RateLimitMetrics
 }
 
 // PublicOption customises construction of PublicHandlers.
@@ -137,6 +139,16 @@ func WithPublicPromotionRateLimit(limit int, window time.Duration) PublicOption 
 	}
 }
 
+// WithPublicRateLimitMetrics sets the metrics recorder for throttled public endpoints.
+func WithPublicRateLimitMetrics(metrics RateLimitMetrics) PublicOption {
+	return func(h *PublicHandlers) {
+		if h == nil || metrics == nil {
+			return
+		}
+		h.rateLimitMetrics = metrics
+	}
+}
+
 // NewPublicHandlers constructs handlers for public catalog endpoints.
 func NewPublicHandlers(opts ...PublicOption) *PublicHandlers {
 	handler := &PublicHandlers{
@@ -148,11 +160,15 @@ func NewPublicHandlers(opts ...PublicOption) *PublicHandlers {
 		}),
 		priceDisplayMode: priceDisplayModeInclusive,
 		promotionLimiter: newSimpleRateLimiter(30, time.Minute, nil),
+		rateLimitMetrics: noopRateLimitMetrics{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(handler)
 		}
+	}
+	if handler.rateLimitMetrics == nil {
+		handler.rateLimitMetrics = noopRateLimitMetrics{}
 	}
 	return handler
 }
@@ -578,6 +594,11 @@ func (h *PublicHandlers) getPublicPromotion(w http.ResponseWriter, r *http.Reque
 			key = "anonymous"
 		}
 		if !h.promotionLimiter.Allow(key) {
+			scope := rateLimitScopeIP
+			if key == "anonymous" {
+				scope = rateLimitScopeAnonymous
+			}
+			h.rateLimitMetrics.Record(r.Context(), rateLimitEndpointPromotionLookup, scope)
 			httpx.WriteError(r.Context(), w, httpx.NewError("rate_limited", "too many promotion lookups, slow down", http.StatusTooManyRequests))
 			return
 		}

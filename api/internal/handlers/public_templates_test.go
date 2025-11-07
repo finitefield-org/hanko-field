@@ -276,9 +276,11 @@ func TestPublicHandlers_GetPublicPromotion_InvalidCode(t *testing.T) {
 
 func TestPublicHandlers_GetPublicPromotion_RateLimited(t *testing.T) {
 	stub := &stubPromotionService{result: services.PromotionPublic{Code: "LIMIT"}}
+	metrics := &recordingRateLimitMetrics{}
 	handler := NewPublicHandlers(
 		WithPublicPromotionService(stub),
 		WithPublicPromotionRateLimit(1, time.Hour),
+		WithPublicRateLimitMetrics(metrics),
 	)
 	router := chi.NewRouter()
 	router.Route("/", handler.Routes)
@@ -297,6 +299,16 @@ func TestPublicHandlers_GetPublicPromotion_RateLimited(t *testing.T) {
 
 	if resp2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 got %d", resp2.Code)
+	}
+	records := metrics.Records()
+	if len(records) != 1 {
+		t.Fatalf("expected one metric record, got %d", len(records))
+	}
+	if records[0].endpoint != rateLimitEndpointPromotionLookup {
+		t.Fatalf("unexpected endpoint recorded %s", records[0].endpoint)
+	}
+	if records[0].scope != rateLimitScopeIP {
+		t.Fatalf("expected ip scope, got %s", records[0].scope)
 	}
 }
 

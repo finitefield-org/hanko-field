@@ -370,6 +370,63 @@ func TestDesignHandlers_RequestAISuggestion_ServiceError(t *testing.T) {
 	}
 }
 
+func TestDesignHandlers_RequestAISuggestion_RateLimited(t *testing.T) {
+	var calls int
+	stub := &stubDesignService{
+		aiRequestFn: func(_ context.Context, req services.AISuggestionRequest) (services.AISuggestion, error) {
+			calls++
+			if req.Method == "" || req.DesignID == "" {
+				t.Fatalf("expected method and design id to be set")
+			}
+			return services.AISuggestion{ID: "as_rate", Status: "queued"}, nil
+		},
+	}
+	metrics := &recordingRateLimitMetrics{}
+	handler := NewDesignHandlers(nil, stub, WithDesignRateLimitMetrics(metrics))
+	var limiterCalls int
+	handler.aiSuggestionLimiter = rateLimiterFunc(func(string) bool {
+		limiterCalls++
+		return limiterCalls == 1
+	})
+	if handler.aiSuggestionLimiter == nil {
+		t.Fatal("expected custom ai limiter to be set")
+	}
+	makeRequest := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/designs/dsg_ai/ai-suggestions", strings.NewReader(`{"method":"balance","model":"glyph"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(auth.WithIdentity(req.Context(), &auth.Identity{UID: "user-rate"}))
+		routeCtx := chi.NewRouteContext()
+		routeCtx.URLParams.Add("designID", "dsg_ai")
+		return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	}
+	resp1 := httptest.NewRecorder()
+	handler.requestAISuggestion(resp1, makeRequest())
+	if resp1.Code != http.StatusAccepted {
+		t.Fatalf("expected first request accepted, got %d", resp1.Code)
+	}
+	resp2 := httptest.NewRecorder()
+	handler.requestAISuggestion(resp2, makeRequest())
+	if resp2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected rate limited response, got %d (limiterCalls=%d)", resp2.Code, limiterCalls)
+	}
+	if calls != 1 {
+		t.Fatalf("expected design service called once, got %d", calls)
+	}
+	if limiterCalls != 2 {
+		t.Fatalf("expected limiter invoked twice, got %d", limiterCalls)
+	}
+	records := metrics.Records()
+	if len(records) != 1 {
+		t.Fatalf("expected one rate limit metric, got %d", len(records))
+	}
+	if records[0].endpoint != rateLimitEndpointAISuggestions {
+		t.Fatalf("unexpected endpoint recorded: %s", records[0].endpoint)
+	}
+	if records[0].scope != rateLimitScopeUser {
+		t.Fatalf("unexpected scope recorded: %s", records[0].scope)
+	}
+}
+
 func TestDesignHandlers_ListAISuggestions_Success(t *testing.T) {
 	now := time.Date(2025, 7, 1, 9, 0, 0, 0, time.UTC)
 	next := now.Add(2 * time.Minute)
@@ -1293,7 +1350,8 @@ func TestDesignHandlers_CheckRegistrability_Success(t *testing.T) {
 
 func TestDesignHandlers_CheckRegistrability_RateLimited(t *testing.T) {
 	stub := &stubDesignService{}
-	handler := NewDesignHandlers(nil, stub)
+	metrics := &recordingRateLimitMetrics{}
+	handler := NewDesignHandlers(nil, stub, WithDesignRateLimitMetrics(metrics))
 	handler.registrabilityLimiter = rateLimiterFunc(func(string) bool { return false })
 
 	req := httptest.NewRequest(http.MethodPost, "/designs/dsg_456:registrability-check", nil)
@@ -1307,6 +1365,16 @@ func TestDesignHandlers_CheckRegistrability_RateLimited(t *testing.T) {
 
 	if rec.Result().StatusCode != http.StatusTooManyRequests {
 		t.Fatalf("expected status 429, got %d", rec.Result().StatusCode)
+	}
+	records := metrics.Records()
+	if len(records) != 1 {
+		t.Fatalf("expected one metric record, got %d", len(records))
+	}
+	if records[0].endpoint != rateLimitEndpointRegistrability {
+		t.Fatalf("unexpected endpoint %s", records[0].endpoint)
+	}
+	if records[0].scope != rateLimitScopeUser {
+		t.Fatalf("unexpected scope %s", records[0].scope)
 	}
 }
 

@@ -16,28 +16,33 @@ import (
 )
 
 const (
-	defaultEnvFile               = ".env"
-	defaultPort                  = "8080"
-	defaultReadTimeout           = 15 * time.Second
-	defaultWriteTimeout          = 30 * time.Second
-	defaultIdleTimeout           = 120 * time.Second
-	defaultRateLimitDefault      = 120
-	defaultRateLimitAuth         = 240
-	defaultRateLimitWebhookBurst = 60
-	defaultWebhookReplayTTL      = 5 * time.Minute
-	defaultSecurityEnvironment   = "local"
-	defaultOIDCJWKSURL           = "https://www.googleapis.com/oauth2/v3/certs"
-	defaultSecurityIssuer        = "https://accounts.google.com"
-	defaultSecurityIAPIssuer     = "https://cloud.google.com/iap"
-	defaultHMACSignatureHeader   = "X-Signature"
-	defaultHMACTimestampHeader   = "X-Signature-Timestamp"
-	defaultHMACNonceHeader       = "X-Signature-Nonce"
-	defaultHMACClockSkew         = 5 * time.Minute
-	defaultHMACNonceTTL          = 5 * time.Minute
-	defaultIdempotencyHeader     = "Idempotency-Key"
-	defaultIdempotencyTTL        = 24 * time.Hour
-	defaultIdempotencyInterval   = time.Hour
-	defaultIdempotencyBatchSize  = 200
+	defaultEnvFile                  = ".env"
+	defaultPort                     = "8080"
+	defaultReadTimeout              = 15 * time.Second
+	defaultWriteTimeout             = 30 * time.Second
+	defaultIdleTimeout              = 120 * time.Second
+	defaultRateLimitDefault         = 120
+	defaultRateLimitAuth            = 240
+	defaultRateLimitWebhookBurst    = 60
+	defaultRateLimitAISuggestions   = 30
+	defaultRateLimitRegistrability  = 5
+	defaultRateLimitPromotionLookup = 60
+	defaultRateLimitLogin           = 20
+	defaultRateLimitWindow          = time.Minute
+	defaultWebhookReplayTTL         = 5 * time.Minute
+	defaultSecurityEnvironment      = "local"
+	defaultOIDCJWKSURL              = "https://www.googleapis.com/oauth2/v3/certs"
+	defaultSecurityIssuer           = "https://accounts.google.com"
+	defaultSecurityIAPIssuer        = "https://cloud.google.com/iap"
+	defaultHMACSignatureHeader      = "X-Signature"
+	defaultHMACTimestampHeader      = "X-Signature-Timestamp"
+	defaultHMACNonceHeader          = "X-Signature-Nonce"
+	defaultHMACClockSkew            = 5 * time.Minute
+	defaultHMACNonceTTL             = 5 * time.Minute
+	defaultIdempotencyHeader        = "Idempotency-Key"
+	defaultIdempotencyTTL           = 24 * time.Hour
+	defaultIdempotencyInterval      = time.Hour
+	defaultIdempotencyBatchSize     = 200
 )
 
 // Config captures all runtime configuration organised by concern.
@@ -108,9 +113,14 @@ type WebhookConfig struct {
 
 // RateLimitConfig controls request throttling.
 type RateLimitConfig struct {
-	DefaultPerMinute       int
-	AuthenticatedPerMinute int
-	WebhookBurst           int
+	DefaultPerMinute          int
+	AuthenticatedPerMinute    int
+	WebhookBurst              int
+	AISuggestionsPerMinute    int
+	RegistrabilityPerMinute   int
+	PromotionLookupsPerMinute int
+	LoginPerMinute            int
+	Window                    time.Duration
 }
 
 // FeatureFlags toggle optional behaviour without redeploying.
@@ -456,9 +466,14 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 			ReplayTTL:     durationWithDefault(lookup, "API_WEBHOOK_REPLAY_TTL", defaultWebhookReplayTTL),
 		},
 		RateLimits: RateLimitConfig{
-			DefaultPerMinute:       intWithDefault(lookup, "API_RATELIMIT_DEFAULT_PER_MIN", defaultRateLimitDefault),
-			AuthenticatedPerMinute: intWithDefault(lookup, "API_RATELIMIT_AUTH_PER_MIN", defaultRateLimitAuth),
-			WebhookBurst:           intWithDefault(lookup, "API_RATELIMIT_WEBHOOK_BURST", defaultRateLimitWebhookBurst),
+			DefaultPerMinute:          intWithDefault(lookup, "API_RATELIMIT_DEFAULT_PER_MIN", defaultRateLimitDefault),
+			AuthenticatedPerMinute:    intWithDefault(lookup, "API_RATELIMIT_AUTH_PER_MIN", defaultRateLimitAuth),
+			WebhookBurst:              intWithDefault(lookup, "API_RATELIMIT_WEBHOOK_BURST", defaultRateLimitWebhookBurst),
+			AISuggestionsPerMinute:    intWithDefault(lookup, "API_RATELIMIT_AI_PER_MIN", defaultRateLimitAISuggestions),
+			RegistrabilityPerMinute:   intWithDefault(lookup, "API_RATELIMIT_REGISTRABILITY_PER_MIN", defaultRateLimitRegistrability),
+			PromotionLookupsPerMinute: intWithDefault(lookup, "API_RATELIMIT_PROMOTION_LOOKUP_PER_MIN", defaultRateLimitPromotionLookup),
+			LoginPerMinute:            intWithDefault(lookup, "API_RATELIMIT_LOGIN_PER_MIN", defaultRateLimitLogin),
+			Window:                    durationWithDefault(lookup, "API_RATELIMIT_WINDOW", defaultRateLimitWindow),
 		},
 		Features: FeatureFlags{
 			EnableAISuggestions: boolWithDefault(lookup, "API_FEATURE_AISUGGESTIONS", false),
