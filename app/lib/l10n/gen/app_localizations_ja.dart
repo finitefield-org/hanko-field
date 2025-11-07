@@ -2684,4 +2684,84 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideDetailLinkOpenError => 'リンクを開けませんでした。時間をおいて再度お試しください。';
+
+  @override
+  String get kanjiDictionarySearchHint => '意味・読み・部首で検索';
+
+  @override
+  String get kanjiDictionaryClearSearch => '検索をクリア';
+
+  @override
+  String get kanjiDictionaryRefresh => '最新の情報に更新';
+
+  @override
+  String get kanjiDictionaryShowAllTooltip => 'すべての結果を表示';
+
+  @override
+  String get kanjiDictionaryShowFavoritesTooltip => 'ブックマークのみ表示';
+
+  @override
+  String get kanjiDictionaryHistorySection => '最近の検索';
+
+  @override
+  String get kanjiDictionaryRecentlyViewed => '最近チェックした漢字';
+
+  @override
+  String get kanjiDictionaryFiltersTitle => '条件で絞り込む';
+
+  @override
+  String get kanjiDictionaryGradeFilterLabel => '学年';
+
+  @override
+  String get kanjiDictionaryStrokeFilterLabel => '画数';
+
+  @override
+  String get kanjiDictionaryRadicalFilterLabel => '部首';
+
+  @override
+  String get kanjiDictionaryFeaturedTitle => 'おすすめの漢字';
+
+  @override
+  String get kanjiDictionaryEmptyFavoritesTitle => 'ブックマークがまだありません';
+
+  @override
+  String get kanjiDictionaryEmptyFavoritesMessage =>
+      '気に入った漢字にブックマークすると、ここからすぐ参照できます。';
+
+  @override
+  String get kanjiDictionaryEmptyResultsTitle => '一致する漢字が見つかりません';
+
+  @override
+  String get kanjiDictionaryEmptyResultsMessage =>
+      'キーワードやフィルター条件を変えて再度お試しください。';
+
+  @override
+  String get kanjiDictionaryViewDetails => '詳細を見る';
+
+  @override
+  String kanjiDictionaryStrokeCount(int count) {
+    return '$count画';
+  }
+
+  @override
+  String get kanjiDictionaryUsageExamples => '用例';
+
+  @override
+  String get kanjiDictionaryStrokeOrder => '書き順のポイント';
+
+  @override
+  String get kanjiDictionaryInsertAction => 'デザインに挿入';
+
+  @override
+  String get kanjiDictionaryInsertDisabled => 'デザイン作成を開始すると挿入できます';
+
+  @override
+  String get kanjiDictionaryPromoTitle => '漢字辞典';
+
+  @override
+  String get kanjiDictionaryPromoDescription =>
+      '意味やストーリーを調べて、印影デザインのヒントにしましょう。';
+
+  @override
+  String get kanjiDictionaryPromoCta => '漢字辞典を開く';
 }

@@ -80,6 +80,10 @@ class _GuidesListScreenState extends ConsumerState<GuidesListScreen> {
         .push(GuidesRoute(sectionSegments: [entry.slug]));
   }
 
+  void _openDictionary() {
+    ref.read(appStateProvider.notifier).push(const KanjiDictionaryRoute());
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -97,6 +101,7 @@ class _GuidesListScreenState extends ConsumerState<GuidesListScreen> {
               onSearchChanged: _handleSearchChanged,
               onSearchClear: _clearSearch,
               onGuideTap: _openGuide,
+              onOpenDictionary: _openDictionary,
             );
           },
           loading: () => const _GuidesListLoading(),
@@ -119,6 +124,7 @@ class _GuidesListBody extends ConsumerWidget {
     required this.onSearchChanged,
     required this.onSearchClear,
     required this.onGuideTap,
+    required this.onOpenDictionary,
   });
 
   final GuideListState state;
@@ -127,6 +133,7 @@ class _GuidesListBody extends ConsumerWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onSearchClear;
   final void Function(GuideListEntry entry) onGuideTap;
+  final VoidCallback onOpenDictionary;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -303,6 +310,18 @@ class _GuidesListBody extends ConsumerWidget {
             ),
           ),
         ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.spaceL,
+              vertical: AppTokens.spaceS,
+            ),
+            child: _KanjiDictionaryPromoCard(
+              l10n: l10n,
+              onTap: onOpenDictionary,
+            ),
+          ),
+        ),
         if (state.recommended.isNotEmpty)
           SliverToBoxAdapter(
             child: Padding(
@@ -413,6 +432,52 @@ class _FilterSection extends StatelessWidget {
         const SizedBox(height: AppTokens.spaceS),
         child,
       ],
+    );
+  }
+}
+
+class _KanjiDictionaryPromoCard extends StatelessWidget {
+  const _KanjiDictionaryPromoCard({required this.l10n, required this.onTap});
+
+  final AppLocalizations l10n;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: AppTokens.radiusL,
+        color: colorScheme.secondaryContainer,
+      ),
+      padding: const EdgeInsets.all(AppTokens.spaceL),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.translate, color: colorScheme.onSecondaryContainer),
+          const SizedBox(height: AppTokens.spaceS),
+          Text(
+            l10n.kanjiDictionaryPromoTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSecondaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceXS),
+          Text(
+            l10n.kanjiDictionaryPromoDescription,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSecondaryContainer.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceM),
+          FilledButton.icon(
+            onPressed: onTap,
+            icon: const Icon(Icons.menu_book_outlined),
+            label: Text(l10n.kanjiDictionaryPromoCta),
+          ),
+        ],
+      ),
     );
   }
 }

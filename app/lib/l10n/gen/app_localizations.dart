@@ -4819,6 +4819,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn’t open the link. Please try again later.'**
   String get guideDetailLinkOpenError;
+
+  /// Placeholder text for the dictionary search bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by meaning, reading, or radical'**
+  String get kanjiDictionarySearchHint;
+
+  /// Tooltip text for the clear search icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get kanjiDictionaryClearSearch;
+
+  /// Tooltip text for the refresh icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload results'**
+  String get kanjiDictionaryRefresh;
+
+  /// Tooltip for toggling back to all results from favorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all results'**
+  String get kanjiDictionaryShowAllTooltip;
+
+  /// Tooltip for enabling the favorites-only view.
+  ///
+  /// In en, this message translates to:
+  /// **'Show favorites only'**
+  String get kanjiDictionaryShowFavoritesTooltip;
+
+  /// Section title for recent search queries.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get kanjiDictionaryHistorySection;
+
+  /// Section title for recently viewed entries.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently viewed kanji'**
+  String get kanjiDictionaryRecentlyViewed;
+
+  /// Heading for the filter chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Refine results'**
+  String get kanjiDictionaryFiltersTitle;
+
+  /// Label for grade filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade'**
+  String get kanjiDictionaryGradeFilterLabel;
+
+  /// Label for stroke count filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Stroke count'**
+  String get kanjiDictionaryStrokeFilterLabel;
+
+  /// Label for radical filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Radical'**
+  String get kanjiDictionaryRadicalFilterLabel;
+
+  /// Title for the featured kanji carousel.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured kanji'**
+  String get kanjiDictionaryFeaturedTitle;
+
+  /// Empty state title when favorites-only view has no entries.
+  ///
+  /// In en, this message translates to:
+  /// **'No favorites yet'**
+  String get kanjiDictionaryEmptyFavoritesTitle;
+
+  /// Empty state body when favorites-only view has no entries.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark kanji to quickly reference them here.'**
+  String get kanjiDictionaryEmptyFavoritesMessage;
+
+  /// Empty state title when a search returns no matches.
+  ///
+  /// In en, this message translates to:
+  /// **'No kanji found'**
+  String get kanjiDictionaryEmptyResultsTitle;
+
+  /// Empty state body when a search returns no matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting filters or searching with a different keyword.'**
+  String get kanjiDictionaryEmptyResultsMessage;
+
+  /// Button label to open the kanji detail sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get kanjiDictionaryViewDetails;
+
+  /// Label showing the number of strokes for a kanji.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# stroke} other {# strokes}}'**
+  String kanjiDictionaryStrokeCount(int count);
+
+  /// Heading before the usage examples list.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage examples'**
+  String get kanjiDictionaryUsageExamples;
+
+  /// Heading before the stroke order hints.
+  ///
+  /// In en, this message translates to:
+  /// **'Stroke order tips'**
+  String get kanjiDictionaryStrokeOrder;
+
+  /// Button label to insert the kanji into the design flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert into design'**
+  String get kanjiDictionaryInsertAction;
+
+  /// Disabled button label when no design draft is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a design to insert kanji'**
+  String get kanjiDictionaryInsertDisabled;
+
+  /// Card title promoting the dictionary from the guides list.
+  ///
+  /// In en, this message translates to:
+  /// **'Kanji dictionary'**
+  String get kanjiDictionaryPromoTitle;
+
+  /// Card description promoting the dictionary.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse real kanji meanings, readings, and stories to inspire your seal design.'**
+  String get kanjiDictionaryPromoDescription;
+
+  /// CTA button label on the promo card.
+  ///
+  /// In en, this message translates to:
+  /// **'Open dictionary'**
+  String get kanjiDictionaryPromoCta;
 }
 
 class _AppLocalizationsDelegate

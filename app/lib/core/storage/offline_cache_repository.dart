@@ -156,6 +156,40 @@ class OfflineCacheRepository {
     );
   }
 
+  Future<CacheReadResult<List<String>>> readKanjiSearchHistory() {
+    return _store.read(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'searchHistory',
+      decoder: (data) => List<String>.from(List<dynamic>.from(data as List)),
+    );
+  }
+
+  Future<void> writeKanjiSearchHistory(List<String> history) {
+    return _store.write(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'searchHistory',
+      encoder: (value) => value,
+      value: history,
+    );
+  }
+
+  Future<CacheReadResult<List<String>>> readKanjiViewedEntries() {
+    return _store.read(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'viewedEntries',
+      decoder: (data) => List<String>.from(List<dynamic>.from(data as List)),
+    );
+  }
+
+  Future<void> writeKanjiViewedEntries(List<String> entryIds) {
+    return _store.write(
+      bucket: CacheBucket.kanjiCandidates,
+      key: 'viewedEntries',
+      encoder: (value) => value,
+      value: entryIds,
+    );
+  }
+
   Future<CacheReadResult<RegistrabilityCheckSnapshot>> readRegistrabilityCheck({
     String key = LocalCacheStore.defaultEntryKey,
   }) {

@@ -2789,4 +2789,91 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get guideDetailLinkOpenError =>
       'Couldn’t open the link. Please try again later.';
+
+  @override
+  String get kanjiDictionarySearchHint =>
+      'Search by meaning, reading, or radical';
+
+  @override
+  String get kanjiDictionaryClearSearch => 'Clear search';
+
+  @override
+  String get kanjiDictionaryRefresh => 'Reload results';
+
+  @override
+  String get kanjiDictionaryShowAllTooltip => 'Show all results';
+
+  @override
+  String get kanjiDictionaryShowFavoritesTooltip => 'Show favorites only';
+
+  @override
+  String get kanjiDictionaryHistorySection => 'Recent searches';
+
+  @override
+  String get kanjiDictionaryRecentlyViewed => 'Recently viewed kanji';
+
+  @override
+  String get kanjiDictionaryFiltersTitle => 'Refine results';
+
+  @override
+  String get kanjiDictionaryGradeFilterLabel => 'Grade';
+
+  @override
+  String get kanjiDictionaryStrokeFilterLabel => 'Stroke count';
+
+  @override
+  String get kanjiDictionaryRadicalFilterLabel => 'Radical';
+
+  @override
+  String get kanjiDictionaryFeaturedTitle => 'Featured kanji';
+
+  @override
+  String get kanjiDictionaryEmptyFavoritesTitle => 'No favorites yet';
+
+  @override
+  String get kanjiDictionaryEmptyFavoritesMessage =>
+      'Bookmark kanji to quickly reference them here.';
+
+  @override
+  String get kanjiDictionaryEmptyResultsTitle => 'No kanji found';
+
+  @override
+  String get kanjiDictionaryEmptyResultsMessage =>
+      'Try adjusting filters or searching with a different keyword.';
+
+  @override
+  String get kanjiDictionaryViewDetails => 'View details';
+
+  @override
+  String kanjiDictionaryStrokeCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# strokes',
+      one: '# stroke',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kanjiDictionaryUsageExamples => 'Usage examples';
+
+  @override
+  String get kanjiDictionaryStrokeOrder => 'Stroke order tips';
+
+  @override
+  String get kanjiDictionaryInsertAction => 'Insert into design';
+
+  @override
+  String get kanjiDictionaryInsertDisabled => 'Start a design to insert kanji';
+
+  @override
+  String get kanjiDictionaryPromoTitle => 'Kanji dictionary';
+
+  @override
+  String get kanjiDictionaryPromoDescription =>
+      'Browse real kanji meanings, readings, and stories to inspire your seal design.';
+
+  @override
+  String get kanjiDictionaryPromoCta => 'Open dictionary';
 }

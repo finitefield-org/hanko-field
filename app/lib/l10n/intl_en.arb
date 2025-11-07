@@ -4138,4 +4138,135 @@
 , "@guideDetailLinkOpenError": {
   "description": "Snack bar message shown when launching a guide link fails"
 }
+
+, "kanjiDictionarySearchHint": "Search by meaning, reading, or radical"
+, "@kanjiDictionarySearchHint": {
+  "description": "Placeholder text for the dictionary search bar."
+}
+
+, "kanjiDictionaryClearSearch": "Clear search"
+, "@kanjiDictionaryClearSearch": {
+  "description": "Tooltip text for the clear search icon."
+}
+
+, "kanjiDictionaryRefresh": "Reload results"
+, "@kanjiDictionaryRefresh": {
+  "description": "Tooltip text for the refresh icon."
+}
+
+, "kanjiDictionaryShowAllTooltip": "Show all results"
+, "@kanjiDictionaryShowAllTooltip": {
+  "description": "Tooltip for toggling back to all results from favorites."
+}
+
+, "kanjiDictionaryShowFavoritesTooltip": "Show favorites only"
+, "@kanjiDictionaryShowFavoritesTooltip": {
+  "description": "Tooltip for enabling the favorites-only view."
+}
+
+, "kanjiDictionaryHistorySection": "Recent searches"
+, "@kanjiDictionaryHistorySection": {
+  "description": "Section title for recent search queries."
+}
+
+, "kanjiDictionaryRecentlyViewed": "Recently viewed kanji"
+, "@kanjiDictionaryRecentlyViewed": {
+  "description": "Section title for recently viewed entries."
+}
+
+, "kanjiDictionaryFiltersTitle": "Refine results"
+, "@kanjiDictionaryFiltersTitle": {
+  "description": "Heading for the filter chips."
+}
+
+, "kanjiDictionaryGradeFilterLabel": "Grade"
+, "@kanjiDictionaryGradeFilterLabel": {
+  "description": "Label for grade filters."
+}
+
+, "kanjiDictionaryStrokeFilterLabel": "Stroke count"
+, "@kanjiDictionaryStrokeFilterLabel": {
+  "description": "Label for stroke count filters."
+}
+
+, "kanjiDictionaryRadicalFilterLabel": "Radical"
+, "@kanjiDictionaryRadicalFilterLabel": {
+  "description": "Label for radical filters."
+}
+
+, "kanjiDictionaryFeaturedTitle": "Featured kanji"
+, "@kanjiDictionaryFeaturedTitle": {
+  "description": "Title for the featured kanji carousel."
+}
+
+, "kanjiDictionaryEmptyFavoritesTitle": "No favorites yet"
+, "@kanjiDictionaryEmptyFavoritesTitle": {
+  "description": "Empty state title when favorites-only view has no entries."
+}
+
+, "kanjiDictionaryEmptyFavoritesMessage": "Bookmark kanji to quickly reference them here."
+, "@kanjiDictionaryEmptyFavoritesMessage": {
+  "description": "Empty state body when favorites-only view has no entries."
+}
+
+, "kanjiDictionaryEmptyResultsTitle": "No kanji found"
+, "@kanjiDictionaryEmptyResultsTitle": {
+  "description": "Empty state title when a search returns no matches."
+}
+
+, "kanjiDictionaryEmptyResultsMessage": "Try adjusting filters or searching with a different keyword."
+, "@kanjiDictionaryEmptyResultsMessage": {
+  "description": "Empty state body when a search returns no matches."
+}
+
+, "kanjiDictionaryViewDetails": "View details"
+, "@kanjiDictionaryViewDetails": {
+  "description": "Button label to open the kanji detail sheet."
+}
+
+, "kanjiDictionaryStrokeCount": "{count, plural, one {# stroke} other {# strokes}}"
+, "@kanjiDictionaryStrokeCount": {
+  "description": "Label showing the number of strokes for a kanji.",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "12"
+    }
+  }
+}
+
+, "kanjiDictionaryUsageExamples": "Usage examples"
+, "@kanjiDictionaryUsageExamples": {
+  "description": "Heading before the usage examples list."
+}
+
+, "kanjiDictionaryStrokeOrder": "Stroke order tips"
+, "@kanjiDictionaryStrokeOrder": {
+  "description": "Heading before the stroke order hints."
+}
+
+, "kanjiDictionaryInsertAction": "Insert into design"
+, "@kanjiDictionaryInsertAction": {
+  "description": "Button label to insert the kanji into the design flow."
+}
+
+, "kanjiDictionaryInsertDisabled": "Start a design to insert kanji"
+, "@kanjiDictionaryInsertDisabled": {
+  "description": "Disabled button label when no design draft is active."
+}
+
+, "kanjiDictionaryPromoTitle": "Kanji dictionary"
+, "@kanjiDictionaryPromoTitle": {
+  "description": "Card title promoting the dictionary from the guides list."
+}
+
+, "kanjiDictionaryPromoDescription": "Browse real kanji meanings, readings, and stories to inspire your seal design."
+, "@kanjiDictionaryPromoDescription": {
+  "description": "Card description promoting the dictionary."
+}
+
+, "kanjiDictionaryPromoCta": "Open dictionary"
+, "@kanjiDictionaryPromoCta": {
+  "description": "CTA button label on the promo card."
+}
 }

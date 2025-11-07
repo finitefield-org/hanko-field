@@ -74,6 +74,34 @@ class KanjiMappingRepository {
     return _cache.writeKanjiBookmarks(bookmarks);
   }
 
+  List<KanjiCandidate> allCandidates() => List.unmodifiable(_kanjiCorpus);
+
+  KanjiCandidate? candidateById(String id) {
+    for (final candidate in _kanjiCorpus) {
+      if (candidate.id == id) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  List<KanjiCandidate> candidatesByIds(Iterable<String> ids) {
+    final map = {for (final entry in _kanjiCorpus) entry.id: entry};
+    return ids
+        .map((id) => map[id])
+        .whereType<KanjiCandidate>()
+        .toList(growable: false);
+  }
+
+  List<KanjiCandidate> featuredCandidates({int limit = 6}) {
+    final sorted = List<KanjiCandidate>.from(_kanjiCorpus)
+      ..sort((a, b) => b.popularityScore.compareTo(a.popularityScore));
+    if (sorted.length <= limit) {
+      return sorted;
+    }
+    return sorted.sublist(0, limit);
+  }
+
   String _cacheKey(
     String query,
     Set<KanjiStrokeBucket> strokeFilters,
@@ -161,7 +189,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 5,
     strokeCount: 3,
     radicalCategory: KanjiRadicalCategory.water,
+    gradeLevel: KanjiGradeLevel.grade1,
     story: 'Represents flowing water, symbolising adaptability and calm.',
+    usageExamples: ['多摩川 — Tama River', '川遊び — Playing in the river'],
+    strokeOrderHints: [
+      '1. Draw the left vertical stroke downward.',
+      '2. Add the slightly longer middle stroke.',
+      '3. Finish with the right-most stroke.',
+    ],
   ),
   const KanjiCandidate(
     id: 'light',
@@ -171,7 +206,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 5,
     strokeCount: 6,
     radicalCategory: KanjiRadicalCategory.fire,
+    gradeLevel: KanjiGradeLevel.grade2,
     story: 'A classic seal character conveying brilliance and optimism.',
+    usageExamples: ['観光 — Sightseeing', '月光 — Moonlight'],
+    strokeOrderHints: [
+      '1. Start with the dot above.',
+      '2. Draw the central vertical line.',
+      '3. Sweep the legs outward from the center.',
+    ],
   ),
   const KanjiCandidate(
     id: 'harmony',
@@ -181,8 +223,15 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 5,
     strokeCount: 8,
     radicalCategory: KanjiRadicalCategory.speech,
+    gradeLevel: KanjiGradeLevel.grade2,
     story:
         'Symbolises harmony and Japanese style, popular for cross-cultural seals.',
+    usageExamples: ['平和 — Peace', '和食 — Japanese cuisine'],
+    strokeOrderHints: [
+      '1. Write the left “grain” radical from top to bottom.',
+      '2. Add the mouth component on the right.',
+      '3. Finish with the final sweeping stroke.',
+    ],
   ),
   const KanjiCandidate(
     id: 'forest',
@@ -192,7 +241,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 4,
     strokeCount: 12,
     radicalCategory: KanjiRadicalCategory.wood,
+    gradeLevel: KanjiGradeLevel.grade3,
     story: 'Three trees together evoke abundance and growth.',
+    usageExamples: ['森林 — Woodlands', '森羅万象 — All living things'],
+    strokeOrderHints: [
+      '1. Draw the first 木 on the left.',
+      '2. Mirror another 木 on the right.',
+      '3. Complete with the center tree strokes.',
+    ],
   ),
   const KanjiCandidate(
     id: 'heart',
@@ -202,7 +258,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 4,
     strokeCount: 7,
     radicalCategory: KanjiRadicalCategory.heart,
+    gradeLevel: KanjiGradeLevel.grade4,
     story: 'Combines “mind” with sound to indicate sincere aspiration.',
+    usageExamples: ['志望 — Aspiration', '有志 — Volunteers'],
+    strokeOrderHints: [
+      '1. Write the “samurai” component on top.',
+      '2. Add the horizontal line that anchors the heart.',
+      '3. Finish with the three heart dots.',
+    ],
   ),
   const KanjiCandidate(
     id: 'handcraft',
@@ -212,8 +275,15 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 3,
     strokeCount: 8,
     radicalCategory: KanjiRadicalCategory.hand,
+    gradeLevel: KanjiGradeLevel.jinmeiyo,
     story:
         'Depicts a hand carving into stone—great for creative professionals.',
+    usageExamples: ['開拓 — Development', '拓本 — Stone rubbing print'],
+    strokeOrderHints: [
+      '1. Start with the hand radical strokes on the left.',
+      '2. Build the right component from top to bottom.',
+      '3. Anchor with the bottom sweeping stroke.',
+    ],
   ),
   const KanjiCandidate(
     id: 'voice',
@@ -223,7 +293,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 4,
     strokeCount: 13,
     radicalCategory: KanjiRadicalCategory.speech,
+    gradeLevel: KanjiGradeLevel.grade6,
     story: 'Speech radical plus “to become” expresses honest words.',
+    usageExamples: ['誠実 — Sincerity', '真誠 — True heart'],
+    strokeOrderHints: [
+      '1. Write the speech radical starting with the vertical line.',
+      '2. Construct the right component from top to bottom.',
+      '3. Balance with the final sweeping stroke.',
+    ],
   ),
   const KanjiCandidate(
     id: 'flame',
@@ -233,7 +310,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 3,
     strokeCount: 8,
     radicalCategory: KanjiRadicalCategory.fire,
+    gradeLevel: KanjiGradeLevel.grade4,
     story: 'Two fires stacked intensify passion—dynamic and energetic.',
+    usageExamples: ['炎上 — Blazing up', '炎舞 — Flame dance'],
+    strokeOrderHints: [
+      '1. Draw the upper fire radical with three strokes.',
+      '2. Mirror the fire radical underneath.',
+      '3. Add the finishing dots for movement.',
+    ],
   ),
   const KanjiCandidate(
     id: 'graceful',
@@ -243,7 +327,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 5,
     strokeCount: 17,
     radicalCategory: KanjiRadicalCategory.person,
+    gradeLevel: KanjiGradeLevel.grade6,
     story: 'A person next to “graceful” evokes kindness with poise.',
+    usageExamples: ['優雅 — Elegance', '女優 — Actress'],
+    strokeOrderHints: [
+      '1. Begin with the person radical on the left.',
+      '2. Layer the complex right component from top to bottom.',
+      '3. Close with the heart dots to show compassion.',
+    ],
   ),
   const KanjiCandidate(
     id: 'azure',
@@ -253,7 +344,14 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 2,
     strokeCount: 13,
     radicalCategory: KanjiRadicalCategory.wood,
+    gradeLevel: KanjiGradeLevel.custom,
     story: 'Grass radical plus vivid colour—ideal for nature-inspired brands.',
+    usageExamples: ['蒼穹 — Azure sky', '蒼海 — Deep blue ocean'],
+    strokeOrderHints: [
+      '1. Write the grass radical on top.',
+      '2. Add the color component underneath.',
+      '3. Finish with the final sweeping stroke.',
+    ],
   ),
   const KanjiCandidate(
     id: 'resilient',
@@ -263,6 +361,13 @@ final List<KanjiCandidate> _kanjiCorpus = [
     popularityScore: 3,
     strokeCount: 15,
     radicalCategory: KanjiRadicalCategory.water,
+    gradeLevel: KanjiGradeLevel.jinmeiyo,
     story: 'Icy radical with noble posture, expressing calm determination.',
+    usageExamples: ['凛々しい — Gallant', '凛風 — Brisk, dignified breeze'],
+    strokeOrderHints: [
+      '1. Begin with the ice radical on the left.',
+      '2. Stack the central strokes to show stature.',
+      '3. End with the sweeping hook for balance.',
+    ],
   ),
 ];

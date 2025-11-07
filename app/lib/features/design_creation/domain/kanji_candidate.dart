@@ -10,8 +10,11 @@ class KanjiCandidate {
     required this.popularityScore,
     required this.strokeCount,
     required this.radicalCategory,
+    required this.gradeLevel,
     this.story,
     this.alternateForms = const [],
+    this.usageExamples = const [],
+    this.strokeOrderHints = const [],
   });
 
   final String id;
@@ -21,8 +24,11 @@ class KanjiCandidate {
   final int popularityScore;
   final int strokeCount;
   final KanjiRadicalCategory radicalCategory;
+  final KanjiGradeLevel gradeLevel;
   final String? story;
   final List<String> alternateForms;
+  final List<String> usageExamples;
+  final List<String> strokeOrderHints;
 
   bool get isFrequentlyUsed => popularityScore >= 4;
 
@@ -35,8 +41,11 @@ class KanjiCandidate {
       'popularity': popularityScore,
       'strokes': strokeCount,
       'radical': radicalCategory.name,
+      'gradeLevel': gradeLevel.name,
       'story': story,
       'alternateForms': alternateForms,
+      'usageExamples': usageExamples,
+      'strokeOrderHints': strokeOrderHints,
     };
   }
 
@@ -55,12 +64,47 @@ class KanjiCandidate {
       radicalCategory: KanjiRadicalCategory.values.byName(
         json['radical'] as String,
       ),
+      gradeLevel: json['gradeLevel'] == null
+          ? KanjiGradeLevel.custom
+          : KanjiGradeLevel.values.byName(json['gradeLevel'] as String),
       story: json['story'] as String?,
       alternateForms: (json['alternateForms'] as List<dynamic>? ?? const [])
           .map((value) => value as String)
           .toList(growable: false),
+      usageExamples: (json['usageExamples'] as List<dynamic>? ?? const [])
+          .map((value) => value as String)
+          .toList(growable: false),
+      strokeOrderHints: (json['strokeOrderHints'] as List<dynamic>? ?? const [])
+          .map((value) => value as String)
+          .toList(growable: false),
     );
   }
+}
+
+enum KanjiGradeLevel {
+  grade1('Grade 1'),
+  grade2('Grade 2'),
+  grade3('Grade 3'),
+  grade4('Grade 4'),
+  grade5('Grade 5'),
+  grade6('Grade 6'),
+  jinmeiyo('Jinmeiyō'),
+  custom('Custom');
+
+  const KanjiGradeLevel(this.label);
+
+  final String label;
+
+  String get analyticsId => switch (this) {
+    KanjiGradeLevel.grade1 => 'grade_1',
+    KanjiGradeLevel.grade2 => 'grade_2',
+    KanjiGradeLevel.grade3 => 'grade_3',
+    KanjiGradeLevel.grade4 => 'grade_4',
+    KanjiGradeLevel.grade5 => 'grade_5',
+    KanjiGradeLevel.grade6 => 'grade_6',
+    KanjiGradeLevel.jinmeiyo => 'grade_jinmeiyo',
+    KanjiGradeLevel.custom => 'grade_custom',
+  };
 }
 
 enum KanjiStrokeBucket {

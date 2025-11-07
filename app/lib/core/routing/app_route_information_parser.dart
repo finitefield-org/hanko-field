@@ -33,6 +33,14 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
       final route = CheckoutRoute(segments);
       return TabRoute(currentTab: AppTab.shop, stack: [route]);
     }
+    if (uri.pathSegments.first == 'kanji' &&
+        uri.pathSegments.length >= 2 &&
+        uri.pathSegments[1] == 'dictionary') {
+      return const TabRoute(
+        currentTab: AppTab.creation,
+        stack: [KanjiDictionaryRoute()],
+      );
+    }
     final firstSegment = uri.pathSegments.first;
     final remaining = uri.pathSegments.skip(1).toList();
     final routeSegments = _extractRouteSegments(remaining);
@@ -241,6 +249,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
               ? segments.sublist(1)
               : const <String>[],
         );
+      case 'kanji':
+        if (segments.length >= 2 && segments[1] == 'dictionary') {
+          return const KanjiDictionaryRoute();
+        }
+        break;
       case 'cart':
         return const CartRoute();
       case 'checkout':

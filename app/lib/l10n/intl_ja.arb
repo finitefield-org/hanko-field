@@ -2528,4 +2528,135 @@
 , "@guideDetailLinkOpenError": {
   "description": "リンクオープン失敗時に表示するスナックバー文言"
 }
+
+, "kanjiDictionarySearchHint": "意味・読み・部首で検索"
+, "@kanjiDictionarySearchHint": {
+  "description": "辞書画面の検索プレースホルダー"
+}
+
+, "kanjiDictionaryClearSearch": "検索をクリア"
+, "@kanjiDictionaryClearSearch": {
+  "description": "検索をクリアするアイコンのツールチップ"
+}
+
+, "kanjiDictionaryRefresh": "最新の情報に更新"
+, "@kanjiDictionaryRefresh": {
+  "description": "再読み込みアイコンのツールチップ"
+}
+
+, "kanjiDictionaryShowAllTooltip": "すべての結果を表示"
+, "@kanjiDictionaryShowAllTooltip": {
+  "description": "お気に入り表示を解除するトグルのツールチップ"
+}
+
+, "kanjiDictionaryShowFavoritesTooltip": "ブックマークのみ表示"
+, "@kanjiDictionaryShowFavoritesTooltip": {
+  "description": "お気に入りのみ表示するトグルのツールチップ"
+}
+
+, "kanjiDictionaryHistorySection": "最近の検索"
+, "@kanjiDictionaryHistorySection": {
+  "description": "最近の検索セクションのタイトル"
+}
+
+, "kanjiDictionaryRecentlyViewed": "最近チェックした漢字"
+, "@kanjiDictionaryRecentlyViewed": {
+  "description": "最近閲覧した漢字セクションのタイトル"
+}
+
+, "kanjiDictionaryFiltersTitle": "条件で絞り込む"
+, "@kanjiDictionaryFiltersTitle": {
+  "description": "フィルターヘッダー"
+}
+
+, "kanjiDictionaryGradeFilterLabel": "学年"
+, "@kanjiDictionaryGradeFilterLabel": {
+  "description": "学年フィルターラベル"
+}
+
+, "kanjiDictionaryStrokeFilterLabel": "画数"
+, "@kanjiDictionaryStrokeFilterLabel": {
+  "description": "画数フィルターラベル"
+}
+
+, "kanjiDictionaryRadicalFilterLabel": "部首"
+, "@kanjiDictionaryRadicalFilterLabel": {
+  "description": "部首フィルターラベル"
+}
+
+, "kanjiDictionaryFeaturedTitle": "おすすめの漢字"
+, "@kanjiDictionaryFeaturedTitle": {
+  "description": "おすすめカルーセルのタイトル"
+}
+
+, "kanjiDictionaryEmptyFavoritesTitle": "ブックマークがまだありません"
+, "@kanjiDictionaryEmptyFavoritesTitle": {
+  "description": "お気に入り表示で空のときのタイトル"
+}
+
+, "kanjiDictionaryEmptyFavoritesMessage": "気に入った漢字にブックマークすると、ここからすぐ参照できます。"
+, "@kanjiDictionaryEmptyFavoritesMessage": {
+  "description": "お気に入り表示で空のときのメッセージ"
+}
+
+, "kanjiDictionaryEmptyResultsTitle": "一致する漢字が見つかりません"
+, "@kanjiDictionaryEmptyResultsTitle": {
+  "description": "検索結果が空のときのタイトル"
+}
+
+, "kanjiDictionaryEmptyResultsMessage": "キーワードやフィルター条件を変えて再度お試しください。"
+, "@kanjiDictionaryEmptyResultsMessage": {
+  "description": "検索結果が空のときのメッセージ"
+}
+
+, "kanjiDictionaryViewDetails": "詳細を見る"
+, "@kanjiDictionaryViewDetails": {
+  "description": "詳細シートを開くボタンラベル"
+}
+
+, "kanjiDictionaryStrokeCount": "{count}画"
+, "@kanjiDictionaryStrokeCount": {
+  "description": "画数を表示するラベル",
+  "placeholders": {
+    "count": {
+      "type": "int",
+      "example": "12"
+    }
+  }
+}
+
+, "kanjiDictionaryUsageExamples": "用例"
+, "@kanjiDictionaryUsageExamples": {
+  "description": "用例セクションの見出し"
+}
+
+, "kanjiDictionaryStrokeOrder": "書き順のポイント"
+, "@kanjiDictionaryStrokeOrder": {
+  "description": "書き順ヒントの見出し"
+}
+
+, "kanjiDictionaryInsertAction": "デザインに挿入"
+, "@kanjiDictionaryInsertAction": {
+  "description": "デザインに反映するボタンラベル"
+}
+
+, "kanjiDictionaryInsertDisabled": "デザイン作成を開始すると挿入できます"
+, "@kanjiDictionaryInsertDisabled": {
+  "description": "デザイン草案がない場合に表示するラベル"
+}
+
+, "kanjiDictionaryPromoTitle": "漢字辞典"
+, "@kanjiDictionaryPromoTitle": {
+  "description": "ガイド一覧での辞典カードタイトル"
+}
+
+, "kanjiDictionaryPromoDescription": "意味やストーリーを調べて、印影デザインのヒントにしましょう。"
+, "@kanjiDictionaryPromoDescription": {
+  "description": "辞典カードの説明文"
+}
+
+, "kanjiDictionaryPromoCta": "漢字辞典を開く"
+, "@kanjiDictionaryPromoCta": {
+  "description": "辞典カードのCTAボタン"
+}
 }

@@ -19,6 +19,7 @@ import 'package:app/features/design_creation/presentation/design_share_page.dart
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
+import 'package:app/features/kanji_dictionary/presentation/kanji_dictionary_page.dart';
 import 'package:app/features/library/presentation/library_duplicate_page.dart';
 import 'package:app/features/library/presentation/library_entry_screen.dart';
 import 'package:app/features/library/presentation/library_export_page.dart';
@@ -418,6 +419,26 @@ class GuidesRoute implements IndependentRoute {
 
   @override
   String toString() => 'GuidesRoute(sectionSegments: $sectionSegments)';
+}
+
+class KanjiDictionaryRoute
+    implements IndependentRoute, StandaloneLocationRoute {
+  const KanjiDictionaryRoute();
+
+  @override
+  Widget get page => const KanjiDictionaryPage();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'kanji-dictionary-$index';
+
+  @override
+  List<String> get pathSegments => const ['kanji', 'dictionary'];
+
+  @override
+  String get standaloneLocation => 'kanji/dictionary';
+
+  @override
+  String toString() => 'KanjiDictionaryRoute()';
 }
 
 /// グローバル通知スタック
