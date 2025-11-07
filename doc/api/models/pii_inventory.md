@@ -9,25 +9,25 @@ Authoritative mapping of personal/sensitive fields handled by the API layer. Kee
 
 ## Core Entities
 
-| Entity | Field | Description | Class | Masking/Storage | Retention |
-| --- | --- | --- | --- | --- | --- |
-| users | displayName | User-provided name | P2 | `mask.Name` in logs; Firestore retains raw until deactivate request | Until user deletion + 30d backup |
-| users | email | Login + notification email | P2 | Stored raw (Firebase Auth canonical); Firestore copy masked after deactivate; logs use `mask.Email` | Active lifecycle + 30d backup |
-| users | phone | E.164 contact number | P2 | Stored raw; masked in logs/exports; hashed for analytics | Active lifecycle + 30d backup |
-| users | addressSnapshot.* | Default shipping | P2 | Persist raw for fulfillment; `mask.Address` for logs/exports | Order + 7y (regulatory) |
-| users | paymentRefs | PSP customer/payment ids | P3 | Token only; never log raw; hashed (HMAC) for analytics | Active lifecycle + 7y |
-| users | firebaseAuthUID | Auth identifier | P1 | Safe to log; still hashed for analytics joins | Indefinite while user exists |
-| orders | shippingAddress.* | Fulfillment destination | P2 | Raw in order doc; `mask.Address` for responses/logs; redacted after deactivate & SLA expiry | Order + 7y |
-| orders | contactEmail | Alternate email for order | P2 | Masked in logs/exports; hashed for dedupe | Order + 7y |
-| orders | notes | Free text from user | P2 | Strip PII server-side (validator) + `mask.Generic` if stored | Order + 7y |
-| payments | pspPayload | PSP response blob | P3 | Stored encrypted Storage object; Firestore only references IDs | 7y |
-| payments | billingAddress | Billing info | P2 | Stored raw in payment doc; masked elsewhere | Transaction + 7y |
-| auditLogs | actor.displayName | User/staff name | P2 | Mask before persistence (`displayNameMasked`); raw only in encrypted evidence file | 7y |
-| auditLogs | actor.ip | IP address | P2 | Store hashed IP; drop raw | 90d |
-| favorites | designNotes | Optional text | P1 | No PII expected; run validator to sanitize | Until delete |
-| carts | email | Guest checkout email | P2 | Mask in logs; auto-delete 30d after inactivity | 30d |
-| supportTickets | message | User-generated text | P2 | Stored raw; redaction pipeline scans weekly; logs store hashed reference only | 3y |
-| analytics exports | userKey | Derived key for cohorting | P2 | Use deterministic hash via `mask.Hash` | Until re-export |
+| Entity | Field | Description | Class | Lawful Basis | Storage Location(s) | Masking/Storage Notes | Retention |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| users | displayName | User-provided name | P2 | Contract (account provision) | Firestore `/users/{uid}` | `mask.Name` for logs/UI trace; raw only until deactivate | Until user deletion + 30d backup |
+| users | email | Login + notification email | P2 | Contract (auth + notices) | Firebase Auth, Firestore `/users/{uid}` | Log via `mask.Email`; Firestore copy scrubbed on deactivate | Active lifecycle + 30d backup |
+| users | phone | E.164 contact number | P2 | Contract (2FA/contact) | Firestore `/users/{uid}` | Mask in logs/exports; analytics uses `mask.Hash` | Active lifecycle + 30d backup |
+| users | addressSnapshot.* | Default shipping | P2 | Contract + Legal obligation (fulfillment) | Firestore `/users/{uid}/addressSnapshot` | Raw for fulfillment; `mask.Address` elsewhere | Order + 7y (regulatory) |
+| users | paymentRefs | PSP customer/payment ids | P3 | Contract + Legal obligation (financial) | Firestore `/users/{uid}`, PSP vault (Stripe) | Tokenized; never log; hashed for analytics joins | Active lifecycle + 7y |
+| users | firebaseAuthUID | Auth identifier | P1 | Legitimate interest (security) | Firebase Auth, Firestore references | Safe to log but hashed for analytics | Indefinite while user exists |
+| orders | shippingAddress.* | Fulfillment destination | P2 | Contract + Legal obligation | Firestore `/orders/{id}`, BigQuery exports | Mask in responses/logs; redacted post-deactivate SLA | Order + 7y |
+| orders | contactEmail | Alternate email for order | P2 | Contract (fulfillment comms) | Firestore `/orders/{id}`, BigQuery exports | `mask.Email` in logs/exports | Order + 7y |
+| orders | notes | Free text from user | P2 | Legitimate interest (support) | Firestore `/orders/{id}` | Validator strips PII; fallback `mask.Generic` | Order + 7y |
+| payments | pspPayload | PSP response blob | P3 | Legal obligation (financial records) | GCS `gs://hanko-field-$ENV-logs/payments`, encrypted | Stored encrypted; Firestore stores IDs only | 7y |
+| payments | billingAddress | Billing info | P2 | Legal obligation (tax/compliance) | Firestore `/payments/{id}` | Mask outside payment domain | Transaction + 7y |
+| auditLogs | actor.displayName | User/staff name | P2 | Legitimate interest (traceability) | Firestore `/auditLogs/{id}`, GCS evidence bundle | Store `displayNameMasked`; raw only in encrypted diff | 7y |
+| auditLogs | actor.ip | IP address | P2 | Legitimate interest (security monitoring) | Firestore `/auditLogs/{id}` | Store hashed IP; purge raw | 90d |
+| favorites | designNotes | Optional text | P1 | Legitimate interest (UX) | Firestore `/favorites/{id}` | Validator ensures no PII | Until delete |
+| carts | email | Guest checkout email | P2 | Contract (guest order) | Firestore `/carts/{id}` | Mask in logs; TTL cleanup | 30d |
+| supportTickets | message | User-generated text | P2 | Contract (support) + Consent (attachments) | Firestore `/supportTickets/{id}`, GCS attachments | Raw in ticket; weekly redaction scan; logs store hash | 3y |
+| analytics exports | userKey | Derived key for cohorting | P2 | Legitimate interest (analytics) | BigQuery `analytics_masked`, GCS exports | Deterministic hash via `mask.Hash`; no raw PII | Until re-export |
 
 ## Derived/Secondary Stores
 
