@@ -54,12 +54,12 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 				</div>
 			</div>
 
-			<div class="flex min-h-screen">
-				<aside class="relative hidden bg-white lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:shadow-none" role="complementary" aria-label={ helpers.Localize(ctx, "admin.layout.nav_label") }>
-					<div class="flex h-full flex-1 flex-col overflow-hidden">
-						<div class="flex-1 overflow-y-auto py-8">
-                            <div class="pr-2">
-                                @partials.Sidebar(navigation.BuildMenu(middleware.BasePathFromContext(ctx)))
+				<div class="flex min-h-screen">
+					<aside class="tablet-sidebar relative hidden bg-white tablet:flex tablet:w-20 tablet:flex-col tablet:border-r tablet:border-slate-200 tablet:shadow-lg xl:flex xl:w-72 xl:border-r xl:border-slate-200 xl:shadow-none" role="complementary" aria-label={ helpers.Localize(ctx, "admin.layout.nav_label") } data-tablet-sidebar>
+						<div class="flex h-full flex-1 flex-col overflow-hidden">
+							<div class="flex-1 overflow-y-auto py-8">
+	                            <div class="pr-2">
+	                                @partials.Sidebar(navigation.BuildMenu(middleware.BasePathFromContext(ctx)))
 							</div>
 						</div>
 					</div>
@@ -71,7 +71,7 @@ templ Base(title string, crumbs []partials.Breadcrumb, body templ.Component) {
 							<div class="flex items-center gap-3">
 								<button
 									type="button"
-									class="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 lg:hidden"
+									class="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 tablet:hidden lg:hidden"
 									data-sidebar-toggle
 									aria-controls="mobile-sidebar"
 									aria-expanded="false"

@@ -109,7 +109,7 @@
 - [x] [Audit templates for accessibility (semantic HTML, ARIA attributes, focus management for modals and drag/drop).](doc/admin/tasks/073-audit-templates-for-accessibility-semantic-html-aria-attributes-focus-management-for-modal.md)
 - [x] [Ensure internationalization support (i18n helper usage, date/number formatting, locale switch readiness).](doc/admin/tasks/074-ensure-internationalization-support-i18n-helper-usage-date-number-formatting-locale-switch.md)
 - [x] [Implement keyboard shortcuts (`/` search, `f` filter, `j/k` navigation, `o` open detail, `g` tab switch) with hint overlay.](doc/admin/tasks/075-implement-keyboard-shortcuts-search-f-filter-j-k-navigation-o-open-detail-g-tab-switch-wit.md)
-- [ ] [Ensure responsive behaviour for tablet view with collapsible sidebar and touch-friendly controls.](doc/admin/tasks/076-ensure-responsive-behaviour-for-tablet-view-with-collapsible-sidebar-and-touch-friendly-co.md)
+- [x] [Ensure responsive behaviour for tablet view with collapsible sidebar and touch-friendly controls.](doc/admin/tasks/076-ensure-responsive-behaviour-for-tablet-view-with-collapsible-sidebar-and-touch-friendly-co.md)
 
 ## 15. Quality Assurance & Documentation
 - [ ] [Write end-to-end tests covering critical workflows (order status change, shipment label generation, promotion creation, review moderation).](doc/admin/tasks/077-write-end-to-end-tests-covering-critical-workflows-order-status-change-shipment-label-gene.md)

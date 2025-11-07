@@ -135,20 +135,20 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></div></div><div class=\"flex min-h-screen\"><aside class=\"relative hidden bg-white lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:shadow-none\" role=\"complementary\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></div></div><div class=\"flex min-h-screen\"><aside class=\"tablet-sidebar relative hidden bg-white tablet:flex tablet:w-20 tablet:flex-col tablet:border-r tablet:border-slate-200 tablet:shadow-lg xl:flex xl:w-72 xl:border-r xl:border-slate-200 xl:shadow-none\" role=\"complementary\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(helpers.Localize(ctx, "admin.layout.nav_label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 58, Col: 200}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layouts/base.templ`, Line: 58, Col: 301}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><div class=\"flex h-full flex-1 flex-col overflow-hidden\"><div class=\"flex-1 overflow-y-auto py-8\"><div class=\"pr-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" data-tablet-sidebar><div class=\"flex h-full flex-1 flex-col overflow-hidden\"><div class=\"flex-1 overflow-y-auto py-8\"><div class=\"pr-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -156,7 +156,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div></div></aside><div class=\"flex min-w-0 flex-1 flex-col\"><header class=\"sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur\" role=\"banner\"><div class=\"mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-3\"><button type=\"button\" class=\"inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 lg:hidden\" data-sidebar-toggle aria-controls=\"mobile-sidebar\" aria-expanded=\"false\"><span class=\"sr-only\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div></div></aside><div class=\"flex min-w-0 flex-1 flex-col\"><header class=\"sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur\" role=\"banner\"><div class=\"mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-3\"><button type=\"button\" class=\"inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 tablet:hidden lg:hidden\" data-sidebar-toggle aria-controls=\"mobile-sidebar\" aria-expanded=\"false\"><span class=\"sr-only\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

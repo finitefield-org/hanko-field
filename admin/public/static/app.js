@@ -4147,6 +4147,47 @@ window.hankoAdmin = window.hankoAdmin || {
     const modal = createModalController();
     const modalRoot = () => modal.root;
     const sidebarRoot = () => document.getElementById("mobile-sidebar");
+    const tabletSidebarRoot = () => document.querySelector("[data-tablet-sidebar]");
+    const tabletSidebarStorageKey = "hanko-admin:tablet-sidebar-expanded";
+    const readTabletSidebarPreference = () => {
+      try {
+        return window.localStorage.getItem(tabletSidebarStorageKey) === "1";
+      } catch (error) {
+        return false;
+      }
+    };
+    const writeTabletSidebarPreference = (expanded) => {
+      try {
+        window.localStorage.setItem(tabletSidebarStorageKey, expanded ? "1" : "0");
+      } catch (error) {
+        // ignore persistence failures
+      }
+    };
+    const setTabletSidebarExpanded = (expanded, persist) => {
+      if (persist === undefined) {
+        persist = true;
+      }
+      const sidebar = tabletSidebarRoot();
+      if (!sidebar) {
+        return;
+      }
+      sidebar.classList.toggle("is-expanded", expanded);
+      document.querySelectorAll("[data-tablet-sidebar-toggle]").forEach((el) => {
+        el.setAttribute("aria-pressed", expanded ? "true" : "false");
+        el.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+      if (persist) {
+        writeTabletSidebarPreference(expanded);
+      }
+    };
+    const toggleTabletSidebar = () => {
+      const sidebar = tabletSidebarRoot();
+      if (!sidebar) {
+        return;
+      }
+      const nextState = !sidebar.classList.contains("is-expanded");
+      setTabletSidebarExpanded(nextState);
+    };
 
     const setSidebarState = (open) => {
       const sidebar = sidebarRoot();
@@ -4175,6 +4216,7 @@ window.hankoAdmin = window.hankoAdmin || {
 
     const closeSidebar = () => setSidebarState(false);
     const openSidebar = () => setSidebarState(true);
+    setTabletSidebarExpanded(readTabletSidebarPreference(), false);
 
     document.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
@@ -4191,6 +4233,12 @@ window.hankoAdmin = window.hankoAdmin || {
       if (sidebarDismiss) {
         event.preventDefault();
         closeSidebar();
+        return;
+      }
+      const tabletSidebarToggle = target.closest("[data-tablet-sidebar-toggle]");
+      if (tabletSidebarToggle) {
+        event.preventDefault();
+        toggleTabletSidebar();
       }
     });
 
@@ -4245,6 +4293,8 @@ window.hankoAdmin = window.hankoAdmin || {
 
     window.hankoAdmin.modal = modal;
     window.hankoAdmin.toast = toast;
+    window.hankoAdmin.toggleTabletSidebar = toggleTabletSidebar;
+    window.hankoAdmin.setTabletSidebarExpanded = setTabletSidebarExpanded;
   },
 };
 

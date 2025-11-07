@@ -242,6 +242,84 @@
     @apply px-4 py-3 align-middle;
   }
 
+  .tablet-sidebar {
+    transition: width 200ms ease, box-shadow 200ms ease;
+  }
+
+  @screen tablet {
+    .tablet-sidebar {
+      box-shadow: theme("boxShadow.surface");
+    }
+
+    .tablet-sidebar .sidebar-brand-title,
+    .tablet-sidebar .sidebar-brand-subtitle,
+    .tablet-sidebar .nav-group-label,
+    .tablet-sidebar .nav-link-label,
+    .tablet-sidebar .nav-link-badge {
+      display: none;
+    }
+
+    .tablet-sidebar .sidebar-brand-mark {
+      @apply inline-flex;
+    }
+
+    .tablet-sidebar .nav-link {
+      @apply justify-center;
+    }
+
+    .tablet-sidebar .nav-link-icon {
+      @apply text-lg;
+    }
+
+    .tablet-sidebar .sidebar-collapse-toggle svg {
+      transition: transform 150ms ease;
+    }
+
+    .tablet-sidebar.is-expanded {
+      width: theme("spacing.72");
+      box-shadow: none;
+    }
+
+    .tablet-sidebar.is-expanded .sidebar-brand-title,
+    .tablet-sidebar.is-expanded .sidebar-brand-subtitle,
+    .tablet-sidebar.is-expanded .nav-group-label {
+      display: block;
+    }
+
+    .tablet-sidebar.is-expanded .nav-link-badge {
+      display: flex;
+    }
+
+    .tablet-sidebar.is-expanded .sidebar-brand-mark {
+      display: none;
+    }
+
+    .tablet-sidebar.is-expanded .nav-link {
+      @apply justify-start;
+    }
+
+    .tablet-sidebar.is-expanded .nav-link-label {
+      @apply inline-flex;
+    }
+
+    .tablet-sidebar .sidebar-collapse-toggle[aria-pressed="true"] svg {
+      transform: scaleX(-1);
+    }
+
+    .table td {
+      @apply py-4 text-base;
+    }
+
+    .table tbody tr {
+      @apply text-base;
+    }
+
+    .table tbody tr a,
+    .table tbody tr button {
+      min-height: 44px;
+    }
+  }
+
   .modal {
     @apply fixed inset-0 z-50;
     pointer-events: none;

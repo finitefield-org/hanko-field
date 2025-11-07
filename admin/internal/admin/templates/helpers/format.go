@@ -179,9 +179,9 @@ func currencySymbol(code string) string {
 // NavClass returns sidebar link classes.
 func NavClass(active bool) string {
 	if active {
-		return "flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm"
+		return "nav-link flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm"
 	}
-	return "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+	return "nav-link flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
 }
 
 // BadgeClass maps semantic tones to utility classes.

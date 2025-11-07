@@ -12,6 +12,9 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      screens: {
+        tablet: { min: "768px", max: "1279px" }
+      },
       colors: {
         brand: {
           25: "#fff5f5",

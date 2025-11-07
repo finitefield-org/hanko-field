@@ -67,6 +67,7 @@
   "admin.layout.close_menu": "Close menu",
   "admin.layout.nav_label": "Admin navigation",
   "admin.layout.mobile_menu": "Menu",
+  "admin.layout.toggle_sidebar": "Toggle sidebar",
   "admin.topbar.environment": "Environment",
   "admin.topbar.language.label": "Language",
   "admin.topbar.language.japanese": "日本語",
