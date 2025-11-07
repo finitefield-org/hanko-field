@@ -166,7 +166,7 @@
 - [x] [118 Enforce validation and sanitization for all user inputs to prevent injection/abuse.](./tasks/118-enforce-validation-and-sanitization-for-all-user-inputs-to-prevent-injection-abu.md)
 - [x] [119 Implement rate limiting/throttling strategy for sensitive endpoints.](./tasks/119-implement-rate-limiting-throttling-strategy-for-sensitive-endpoints.md)
 - [x] [120 Ensure PII masking/anonymization processes meet compliance and logging policies.](./tasks/120-ensure-pii-masking-anonymization-processes-meet-compliance-and-logging-policies.md)
-- [ ] [121 Perform security review (HMAC secret rotation, OAuth scopes, firewall rules) before launch.](./tasks/121-perform-security-review-hmac-secret-rotation-oauth-scopes-firewall-rules-before-.md)
+- [x] [121 Perform security review (HMAC secret rotation, OAuth scopes, firewall rules) before launch.](./tasks/121-perform-security-review-hmac-secret-rotation-oauth-scopes-firewall-rules-before-.md)
 
 ## 12. Observability & Operations
 - [ ] [122 Expose metrics (latency, error rates, queue depth) via Cloud Monitoring.](./tasks/122-expose-metrics-latency-error-rates-queue-depth-via-cloud-monitoring.md)
