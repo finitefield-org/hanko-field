@@ -4736,6 +4736,162 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get guidesCategoryOther;
 
+  /// Title for the /howto screen
+  ///
+  /// In en, this message translates to:
+  /// **'How-to hub'**
+  String get howToScreenTitle;
+
+  /// Subtitle shown under the how-to screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Tutorial videos and articles in one place.'**
+  String get howToScreenSubtitle;
+
+  /// Tooltip for the refresh button on the how-to screen
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh tutorials'**
+  String get howToRefreshTooltip;
+
+  /// Tab label for displaying tutorial videos
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get howToVideosTabLabel;
+
+  /// Tab label for displaying how-to articles
+  ///
+  /// In en, this message translates to:
+  /// **'Articles'**
+  String get howToGuidesTabLabel;
+
+  /// Label describing tutorial completion progress
+  ///
+  /// In en, this message translates to:
+  /// **'Completed {completed} of {total}'**
+  String howToCompletionLabel(int completed, int total);
+
+  /// Badge label for featured tutorials
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get howToFeaturedLabel;
+
+  /// Label shown when a tutorial has been completed
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get howToCompletedLabel;
+
+  /// Title shown when there are no how-to articles
+  ///
+  /// In en, this message translates to:
+  /// **'No articles yet'**
+  String get howToGuidesEmptyTitle;
+
+  /// Message shown when there are no how-to articles
+  ///
+  /// In en, this message translates to:
+  /// **'New how-to articles will appear here soon.'**
+  String get howToGuidesEmptyMessage;
+
+  /// Error title when the how-to screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load tutorials'**
+  String get howToLoadErrorTitle;
+
+  /// Error message when the how-to screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get howToLoadErrorMessage;
+
+  /// Retry button label for the how-to screen error state
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get howToRetryButtonLabel;
+
+  /// Section label above the tutorial steps list
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get howToStepsLabel;
+
+  /// Button label to mark a tutorial as completed
+  ///
+  /// In en, this message translates to:
+  /// **'Mark complete'**
+  String get howToMarkComplete;
+
+  /// Button label to open a related article
+  ///
+  /// In en, this message translates to:
+  /// **'Open guide'**
+  String get howToOpenGuideLabel;
+
+  /// CTA label for navigating to the how-to hub from other screens
+  ///
+  /// In en, this message translates to:
+  /// **'Open how-to hub'**
+  String get howToEntryCtaLabel;
+
+  /// Difficulty label for beginner tutorials
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get howToDifficultyBeginner;
+
+  /// Difficulty label for intermediate tutorials
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get howToDifficultyIntermediate;
+
+  /// Difficulty label for advanced tutorials
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get howToDifficultyAdvanced;
+
+  /// Tooltip for the mute button on the video controls
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get howToMuteTooltip;
+
+  /// Tooltip for the unmute button on the video controls
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get howToUnmuteTooltip;
+
+  /// Tooltip for enabling video captions
+  ///
+  /// In en, this message translates to:
+  /// **'Show captions'**
+  String get howToShowCaptionsTooltip;
+
+  /// Tooltip for disabling video captions
+  ///
+  /// In en, this message translates to:
+  /// **'Hide captions'**
+  String get howToHideCaptionsTooltip;
+
+  /// Tooltip for the pause button on video controls
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get howToPauseTooltip;
+
+  /// Tooltip for the play button on video controls
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get howToPlayTooltip;
+
   /// Label for the share button on the guide detail screen
   ///
   /// In en, this message translates to:

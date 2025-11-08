@@ -2741,6 +2741,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guidesCategoryOther => 'Other';
 
   @override
+  String get howToScreenTitle => 'How-to hub';
+
+  @override
+  String get howToScreenSubtitle =>
+      'Tutorial videos and articles in one place.';
+
+  @override
+  String get howToRefreshTooltip => 'Refresh tutorials';
+
+  @override
+  String get howToVideosTabLabel => 'Videos';
+
+  @override
+  String get howToGuidesTabLabel => 'Articles';
+
+  @override
+  String howToCompletionLabel(int completed, int total) {
+    return 'Completed $completed of $total';
+  }
+
+  @override
+  String get howToFeaturedLabel => 'Featured';
+
+  @override
+  String get howToCompletedLabel => 'Completed';
+
+  @override
+  String get howToGuidesEmptyTitle => 'No articles yet';
+
+  @override
+  String get howToGuidesEmptyMessage =>
+      'New how-to articles will appear here soon.';
+
+  @override
+  String get howToLoadErrorTitle => 'Could not load tutorials';
+
+  @override
+  String get howToLoadErrorMessage => 'Check your connection and try again.';
+
+  @override
+  String get howToRetryButtonLabel => 'Retry';
+
+  @override
+  String get howToStepsLabel => 'Steps';
+
+  @override
+  String get howToMarkComplete => 'Mark complete';
+
+  @override
+  String get howToOpenGuideLabel => 'Open guide';
+
+  @override
+  String get howToEntryCtaLabel => 'Open how-to hub';
+
+  @override
+  String get howToDifficultyBeginner => 'Beginner';
+
+  @override
+  String get howToDifficultyIntermediate => 'Intermediate';
+
+  @override
+  String get howToDifficultyAdvanced => 'Advanced';
+
+  @override
+  String get howToMuteTooltip => 'Mute';
+
+  @override
+  String get howToUnmuteTooltip => 'Unmute';
+
+  @override
+  String get howToShowCaptionsTooltip => 'Show captions';
+
+  @override
+  String get howToHideCaptionsTooltip => 'Hide captions';
+
+  @override
+  String get howToPauseTooltip => 'Pause';
+
+  @override
+  String get howToPlayTooltip => 'Play';
+
+  @override
   String get guideDetailShareButtonLabel => 'Share';
 
   @override

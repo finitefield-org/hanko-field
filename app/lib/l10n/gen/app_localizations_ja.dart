@@ -2638,6 +2638,86 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guidesCategoryOther => 'その他';
 
   @override
+  String get howToScreenTitle => 'ハウツーハブ';
+
+  @override
+  String get howToScreenSubtitle => '動画と記事の使い方ガイドをまとめて確認できます。';
+
+  @override
+  String get howToRefreshTooltip => '最新のチュートリアルを読み込む';
+
+  @override
+  String get howToVideosTabLabel => '動画';
+
+  @override
+  String get howToGuidesTabLabel => '記事';
+
+  @override
+  String howToCompletionLabel(int completed, int total) {
+    return '$total 件中 $completed 件完了';
+  }
+
+  @override
+  String get howToFeaturedLabel => '注目';
+
+  @override
+  String get howToCompletedLabel => '完了済み';
+
+  @override
+  String get howToGuidesEmptyTitle => '公開中のハウツー記事はありません';
+
+  @override
+  String get howToGuidesEmptyMessage => 'まもなく新しいチュートリアルが追加されます。';
+
+  @override
+  String get howToLoadErrorTitle => '使い方コンテンツを読み込めませんでした';
+
+  @override
+  String get howToLoadErrorMessage => '通信状況を確認してもう一度お試しください。';
+
+  @override
+  String get howToRetryButtonLabel => '再試行';
+
+  @override
+  String get howToStepsLabel => '手順';
+
+  @override
+  String get howToMarkComplete => '完了にする';
+
+  @override
+  String get howToOpenGuideLabel => 'ガイドを開く';
+
+  @override
+  String get howToEntryCtaLabel => 'ハウツーハブを開く';
+
+  @override
+  String get howToDifficultyBeginner => '初級';
+
+  @override
+  String get howToDifficultyIntermediate => '中級';
+
+  @override
+  String get howToDifficultyAdvanced => '上級';
+
+  @override
+  String get howToMuteTooltip => 'ミュート';
+
+  @override
+  String get howToUnmuteTooltip => 'ミュート解除';
+
+  @override
+  String get howToShowCaptionsTooltip => '字幕を表示';
+
+  @override
+  String get howToHideCaptionsTooltip => '字幕を非表示';
+
+  @override
+  String get howToPauseTooltip => '一時停止';
+
+  @override
+  String get howToPlayTooltip => '再生';
+
+  @override
   String get guideDetailShareButtonLabel => '共有';
 
   @override

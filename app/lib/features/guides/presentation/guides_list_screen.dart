@@ -200,6 +200,22 @@ class _GuidesListBody extends ConsumerWidget {
         ),
         SliverToBoxAdapter(
           child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTokens.spaceL,
+              AppTokens.spaceL,
+              AppTokens.spaceL,
+              AppTokens.spaceS,
+            ),
+            child: _HowToPromoCard(
+              title: l10n.howToScreenTitle,
+              subtitle: l10n.howToScreenSubtitle,
+              onTap: () =>
+                  ref.read(appStateProvider.notifier).push(const HowToRoute()),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppTokens.spaceL,
               vertical: AppTokens.spaceM,
@@ -711,4 +727,57 @@ String _topicLabel(GuideCategory category, AppLocalizations l10n) {
 
 String _dateLocale(String localeTag) {
   return localeTag.replaceAll('-', '_');
+}
+
+class _HowToPromoCard extends StatelessWidget {
+  const _HowToPromoCard({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return AppCard(
+      variant: AppCardVariant.filled,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppTokens.spaceXS),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceM),
+                AppButton(
+                  label: l10n.howToEntryCtaLabel,
+                  size: AppButtonSize.small,
+                  onPressed: onTap,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppTokens.spaceM),
+          Icon(
+            Icons.play_circle_outline,
+            size: 48,
+            color: theme.colorScheme.primary,
+          ),
+        ],
+      ),
+    );
+  }
 }

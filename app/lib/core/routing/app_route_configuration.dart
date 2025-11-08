@@ -19,6 +19,7 @@ import 'package:app/features/design_creation/presentation/design_share_page.dart
 import 'package:app/features/design_creation/presentation/design_style_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_type_selection_page.dart';
 import 'package:app/features/design_creation/presentation/design_version_history_page.dart';
+import 'package:app/features/howto/presentation/howto_screen.dart';
 import 'package:app/features/kanji_dictionary/presentation/kanji_dictionary_page.dart';
 import 'package:app/features/library/presentation/library_duplicate_page.dart';
 import 'package:app/features/library/presentation/library_entry_screen.dart';
@@ -419,6 +420,25 @@ class GuidesRoute implements IndependentRoute {
 
   @override
   String toString() => 'GuidesRoute(sectionSegments: $sectionSegments)';
+}
+
+class HowToRoute implements IndependentRoute, StandaloneLocationRoute {
+  const HowToRoute();
+
+  @override
+  Widget get page => const HowToScreen();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'howto-$index';
+
+  @override
+  List<String> get pathSegments => const ['howto'];
+
+  @override
+  String get standaloneLocation => 'howto';
+
+  @override
+  String toString() => 'HowToRoute()';
 }
 
 class KanjiDictionaryRoute

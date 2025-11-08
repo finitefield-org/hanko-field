@@ -2437,6 +2437,144 @@
   "description": "その他カテゴリのラベル"
 }
 
+, "howToScreenTitle": "ハウツーハブ"
+, "@howToScreenTitle": {
+  "description": "/howto 画面のタイトル"
+}
+
+, "howToScreenSubtitle": "動画と記事の使い方ガイドをまとめて確認できます。"
+, "@howToScreenSubtitle": {
+  "description": "ハウツー画面のサブタイトル"
+}
+
+, "howToRefreshTooltip": "最新のチュートリアルを読み込む"
+, "@howToRefreshTooltip": {
+  "description": "ハウツー画面のリフレッシュボタンのツールチップ"
+}
+
+, "howToVideosTabLabel": "動画"
+, "@howToVideosTabLabel": {
+  "description": "チュートリアル動画を表示するタブのラベル"
+}
+
+, "howToGuidesTabLabel": "記事"
+, "@howToGuidesTabLabel": {
+  "description": "ハウツー記事を表示するタブのラベル"
+}
+
+, "howToCompletionLabel": "{total} 件中 {completed} 件完了"
+, "@howToCompletionLabel": {
+  "description": "チュートリアルの達成状況を示すラベル",
+  "placeholders": {
+    "completed": {
+      "type": "int"
+    },
+    "total": {
+      "type": "int"
+    }
+  }
+}
+
+, "howToFeaturedLabel": "注目"
+, "@howToFeaturedLabel": {
+  "description": "注目チュートリアルのバッジ"
+}
+
+, "howToCompletedLabel": "完了済み"
+, "@howToCompletedLabel": {
+  "description": "チュートリアルが完了済みであることを示すラベル"
+}
+
+, "howToGuidesEmptyTitle": "公開中のハウツー記事はありません"
+, "@howToGuidesEmptyTitle": {
+  "description": "ハウツー記事がないときのタイトル"
+}
+
+, "howToGuidesEmptyMessage": "まもなく新しいチュートリアルが追加されます。"
+, "@howToGuidesEmptyMessage": {
+  "description": "ハウツー記事がないときのメッセージ"
+}
+
+, "howToLoadErrorTitle": "使い方コンテンツを読み込めませんでした"
+, "@howToLoadErrorTitle": {
+  "description": "ハウツー画面の読み込み失敗時のタイトル"
+}
+
+, "howToLoadErrorMessage": "通信状況を確認してもう一度お試しください。"
+, "@howToLoadErrorMessage": {
+  "description": "ハウツー画面の読み込み失敗時のメッセージ"
+}
+
+, "howToRetryButtonLabel": "再試行"
+, "@howToRetryButtonLabel": {
+  "description": "ハウツー画面のリトライボタン"
+}
+
+, "howToStepsLabel": "手順"
+, "@howToStepsLabel": {
+  "description": "チュートリアル手順のセクションラベル"
+}
+
+, "howToMarkComplete": "完了にする"
+, "@howToMarkComplete": {
+  "description": "チュートリアルを完了扱いにするボタンのラベル"
+}
+
+, "howToOpenGuideLabel": "ガイドを開く"
+, "@howToOpenGuideLabel": {
+  "description": "関連ガイドを開くボタンのラベル"
+}
+
+, "howToEntryCtaLabel": "ハウツーハブを開く"
+, "@howToEntryCtaLabel": {
+  "description": "他画面からハウツーハブへ遷移するボタンのラベル"
+}
+
+, "howToDifficultyBeginner": "初級"
+, "@howToDifficultyBeginner": {
+  "description": "初級チュートリアルの難易度ラベル"
+}
+
+, "howToDifficultyIntermediate": "中級"
+, "@howToDifficultyIntermediate": {
+  "description": "中級チュートリアルの難易度ラベル"
+}
+
+, "howToDifficultyAdvanced": "上級"
+, "@howToDifficultyAdvanced": {
+  "description": "上級チュートリアルの難易度ラベル"
+}
+
+, "howToMuteTooltip": "ミュート"
+, "@howToMuteTooltip": {
+  "description": "動画コントロールのミュートボタンのツールチップ"
+}
+
+, "howToUnmuteTooltip": "ミュート解除"
+, "@howToUnmuteTooltip": {
+  "description": "動画コントロールのミュート解除ボタンのツールチップ"
+}
+
+, "howToShowCaptionsTooltip": "字幕を表示"
+, "@howToShowCaptionsTooltip": {
+  "description": "字幕を有効にするボタンのツールチップ"
+}
+
+, "howToHideCaptionsTooltip": "字幕を非表示"
+, "@howToHideCaptionsTooltip": {
+  "description": "字幕を無効にするボタンのツールチップ"
+}
+
+, "howToPauseTooltip": "一時停止"
+, "@howToPauseTooltip": {
+  "description": "動画の一時停止ボタンのツールチップ"
+}
+
+, "howToPlayTooltip": "再生"
+, "@howToPlayTooltip": {
+  "description": "動画の再生ボタンのツールチップ"
+}
+
 , "guideDetailShareButtonLabel": "共有"
 , "@guideDetailShareButtonLabel": {
   "description": "ガイド詳細画面の共有ボタンラベル"

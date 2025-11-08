@@ -249,6 +249,8 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
               ? segments.sublist(1)
               : const <String>[],
         );
+      case 'howto':
+        return const HowToRoute();
       case 'kanji':
         if (segments.length >= 2 && segments[1] == 'dictionary') {
           return const KanjiDictionaryRoute();

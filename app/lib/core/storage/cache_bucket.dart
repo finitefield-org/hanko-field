@@ -23,6 +23,13 @@ enum CacheBucket {
       staleGrace: Duration(days: 3),
     ),
   ),
+  learning(
+    boxName: 'cache.learning',
+    policy: CachePolicy(
+      timeToLive: Duration(days: 365),
+      staleGrace: Duration(days: 365),
+    ),
+  ),
   kanjiCandidates(
     boxName: 'cache.kanji_candidates',
     policy: CachePolicy(

@@ -560,6 +560,53 @@ class ShopGuideLinkTappedEvent extends AnalyticsEvent {
   }
 }
 
+class HowToTutorialCompletedEvent extends AnalyticsEvent {
+  const HowToTutorialCompletedEvent({
+    required this.tutorialId,
+    required this.topic,
+    required this.durationSeconds,
+  });
+
+  final String tutorialId;
+  final String topic;
+  final int durationSeconds;
+
+  @override
+  String get name => 'howto_tutorial_completed';
+
+  @override
+  AnalyticsParameters toParameters() => {
+    'tutorial_id': tutorialId,
+    'topic': topic,
+    'duration_seconds': durationSeconds,
+  };
+
+  @override
+  void validate() {
+    if (tutorialId.isEmpty || tutorialId.length > 64) {
+      throw ArgumentError.value(
+        tutorialId,
+        'tutorialId',
+        'Tutorial id must be 1-64 characters.',
+      );
+    }
+    if (topic.isEmpty || topic.length > 24) {
+      throw ArgumentError.value(
+        topic,
+        'topic',
+        'Topic must be 1-24 characters.',
+      );
+    }
+    if (durationSeconds <= 0) {
+      throw ArgumentError.value(
+        durationSeconds,
+        'durationSeconds',
+        'Duration must be positive.',
+      );
+    }
+  }
+}
+
 class DesignCreationModeSelectedEvent extends AnalyticsEvent {
   const DesignCreationModeSelectedEvent({required this.mode, this.filter});
 

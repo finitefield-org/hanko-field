@@ -4047,6 +4047,144 @@
   "description": "Label for the other guide category"
 }
 
+, "howToScreenTitle": "How-to hub"
+, "@howToScreenTitle": {
+  "description": "Title for the /howto screen"
+}
+
+, "howToScreenSubtitle": "Tutorial videos and articles in one place."
+, "@howToScreenSubtitle": {
+  "description": "Subtitle shown under the how-to screen title"
+}
+
+, "howToRefreshTooltip": "Refresh tutorials"
+, "@howToRefreshTooltip": {
+  "description": "Tooltip for the refresh button on the how-to screen"
+}
+
+, "howToVideosTabLabel": "Videos"
+, "@howToVideosTabLabel": {
+  "description": "Tab label for displaying tutorial videos"
+}
+
+, "howToGuidesTabLabel": "Articles"
+, "@howToGuidesTabLabel": {
+  "description": "Tab label for displaying how-to articles"
+}
+
+, "howToCompletionLabel": "Completed {completed} of {total}"
+, "@howToCompletionLabel": {
+  "description": "Label describing tutorial completion progress",
+  "placeholders": {
+    "completed": {
+      "type": "int"
+    },
+    "total": {
+      "type": "int"
+    }
+  }
+}
+
+, "howToFeaturedLabel": "Featured"
+, "@howToFeaturedLabel": {
+  "description": "Badge label for featured tutorials"
+}
+
+, "howToCompletedLabel": "Completed"
+, "@howToCompletedLabel": {
+  "description": "Label shown when a tutorial has been completed"
+}
+
+, "howToGuidesEmptyTitle": "No articles yet"
+, "@howToGuidesEmptyTitle": {
+  "description": "Title shown when there are no how-to articles"
+}
+
+, "howToGuidesEmptyMessage": "New how-to articles will appear here soon."
+, "@howToGuidesEmptyMessage": {
+  "description": "Message shown when there are no how-to articles"
+}
+
+, "howToLoadErrorTitle": "Could not load tutorials"
+, "@howToLoadErrorTitle": {
+  "description": "Error title when the how-to screen fails to load"
+}
+
+, "howToLoadErrorMessage": "Check your connection and try again."
+, "@howToLoadErrorMessage": {
+  "description": "Error message when the how-to screen fails to load"
+}
+
+, "howToRetryButtonLabel": "Retry"
+, "@howToRetryButtonLabel": {
+  "description": "Retry button label for the how-to screen error state"
+}
+
+, "howToStepsLabel": "Steps"
+, "@howToStepsLabel": {
+  "description": "Section label above the tutorial steps list"
+}
+
+, "howToMarkComplete": "Mark complete"
+, "@howToMarkComplete": {
+  "description": "Button label to mark a tutorial as completed"
+}
+
+, "howToOpenGuideLabel": "Open guide"
+, "@howToOpenGuideLabel": {
+  "description": "Button label to open a related article"
+}
+
+, "howToEntryCtaLabel": "Open how-to hub"
+, "@howToEntryCtaLabel": {
+  "description": "CTA label for navigating to the how-to hub from other screens"
+}
+
+, "howToDifficultyBeginner": "Beginner"
+, "@howToDifficultyBeginner": {
+  "description": "Difficulty label for beginner tutorials"
+}
+
+, "howToDifficultyIntermediate": "Intermediate"
+, "@howToDifficultyIntermediate": {
+  "description": "Difficulty label for intermediate tutorials"
+}
+
+, "howToDifficultyAdvanced": "Advanced"
+, "@howToDifficultyAdvanced": {
+  "description": "Difficulty label for advanced tutorials"
+}
+
+, "howToMuteTooltip": "Mute"
+, "@howToMuteTooltip": {
+  "description": "Tooltip for the mute button on the video controls"
+}
+
+, "howToUnmuteTooltip": "Unmute"
+, "@howToUnmuteTooltip": {
+  "description": "Tooltip for the unmute button on the video controls"
+}
+
+, "howToShowCaptionsTooltip": "Show captions"
+, "@howToShowCaptionsTooltip": {
+  "description": "Tooltip for enabling video captions"
+}
+
+, "howToHideCaptionsTooltip": "Hide captions"
+, "@howToHideCaptionsTooltip": {
+  "description": "Tooltip for disabling video captions"
+}
+
+, "howToPauseTooltip": "Pause"
+, "@howToPauseTooltip": {
+  "description": "Tooltip for the pause button on video controls"
+}
+
+, "howToPlayTooltip": "Play"
+, "@howToPlayTooltip": {
+  "description": "Tooltip for the play button on video controls"
+}
+
 , "guideDetailShareButtonLabel": "Share"
 , "@guideDetailShareButtonLabel": {
   "description": "Label for the share button on the guide detail screen"

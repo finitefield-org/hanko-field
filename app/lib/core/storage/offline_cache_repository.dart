@@ -190,6 +190,23 @@ class OfflineCacheRepository {
     );
   }
 
+  Future<CacheReadResult<Set<String>>> readHowToCompletions() {
+    return _store.read(
+      bucket: CacheBucket.learning,
+      key: 'howto.completions',
+      decoder: (data) => Set<String>.from(List<dynamic>.from(data as List)),
+    );
+  }
+
+  Future<void> writeHowToCompletions(Set<String> tutorialIds) {
+    return _store.write(
+      bucket: CacheBucket.learning,
+      key: 'howto.completions',
+      encoder: (value) => value.toList()..sort(),
+      value: tutorialIds,
+    );
+  }
+
   Future<CacheReadResult<RegistrabilityCheckSnapshot>> readRegistrabilityCheck({
     String key = LocalCacheStore.defaultEntryKey,
   }) {
