@@ -1,0 +1,228 @@
+package guides
+
+import (
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-guides-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+				</div>
+				<div class="flex flex-wrap items-center gap-2" id="guides-summary">
+					@summaryChips(data.Summary)
+				</div>
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterToolbar(data)
+			</div>
+		</section>
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="space-y-4">
+				<div id="guides-bulk-area">
+					@bulkSection(data.Bulk, data.CSRFToken)
+				</div>
+				<div
+					id="guides-table"
+					class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+					data-guides-table
+					data-fragment-path={ data.Table.FragmentPath }
+					data-fragment-query={ data.Table.RawQuery }
+				>
+					@Table(data.Table, data.CSRFToken)
+				</div>
+			</section>
+			<aside class="hidden xl:block">
+				<div class="sticky top-20 space-y-4" id="guides-drawer">
+					@Drawer(data.Drawer)
+				</div>
+			</aside>
+		</div>
+	</div>
+}
+
+templ summaryChips(data SummaryData) {
+	<div class="flex flex-wrap items-center gap-3">
+		<span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+			{ data.TotalLabel }
+		</span>
+		<span class="inline-flex items-center gap-2 rounded-full bg-success-50 px-3 py-1 text-sm font-medium text-success-700">
+			{ data.PublishedLabel }
+		</span>
+		<span class="inline-flex items-center gap-2 rounded-full bg-warning-50 px-3 py-1 text-sm font-medium text-warning-700">
+			{ data.ScheduledLabel }
+		</span>
+		<span class="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-sm font-medium text-slate-600">
+			{ data.DraftLabel }
+		</span>
+		<span class="inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
+			{ data.ArchivedLabel }
+		</span>
+	</div>
+	<div class="mt-3 flex flex-wrap items-center gap-2 text-sm" role="radiogroup" aria-label="ロケール">
+		for _, chip := range data.LocaleChips {
+			<a
+				href={ chip.URL }
+				class={ localeChipClass(chip.Active) }
+				data-locale={ chip.Value }
+				aria-pressed={ boolAttr(chip.Active) }
+			>
+				{ chip.Label }
+			</a>
+		}
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<form
+		id="guides-filter"
+		class="flex flex-col gap-4"
+		method="get"
+		hx-get={ data.TableEndpoint }
+		hx-target="#guides-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+		data-guides-filter
+	>
+		<input type="hidden" name="selected" value={ data.Table.SelectedID } data-guides-selected />
+		<input type="hidden" name="locale" value={ data.Query.Locale } />
+
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+			<div class="flex items-center gap-3">
+				<label class="sr-only" for="guides-search">検索</label>
+				<div class="relative">
+					<input
+						id="guides-search"
+						name="q"
+						type="search"
+						value={ data.Query.Search }
+						placeholder="ガイドを検索"
+						class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+				</div>
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+				<a href={ data.ResetURL } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<div class="flex items-center gap-2" role="radiogroup" aria-label="公開状態">
+					for _, segment := range data.Filters.StatusSegments {
+						<label class={ segmentedClass(segment.Active) }>
+							<input type="radio" name="status" value={ segment.Value } class="sr-only" checked?={ segment.Active } />
+							<span>{ segment.Label }</span>
+						</label>
+					}
+				</div>
+			</div>
+		</div>
+
+		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label for="guides-persona" class="text-xs font-semibold uppercase tracking-wide text-slate-500">ペルソナ</label>
+				<select
+					id="guides-persona"
+					name="persona"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range data.Filters.PersonaOptions {
+						<option value={ option.Value } selected?={ option.Active }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="guides-category" class="text-xs font-semibold uppercase tracking-wide text-slate-500">カテゴリ</label>
+				<select
+					id="guides-category"
+					name="category"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range data.Filters.CategoryOptions {
+						<option value={ option.Value } selected?={ option.Active }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="guides-schedule" class="text-xs font-semibold uppercase tracking-wide text-slate-500">公開予定</label>
+				<input
+					id="guides-schedule"
+					name="schedule"
+					type="date"
+					value={ data.Filters.ScheduleValue }
+					class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+			</div>
+		</div>
+	</form>
+}
+
+templ bulkSection(data BulkData, csrfToken string) {
+	<div
+		class="space-y-3"
+		data-guides-bulk
+		hidden?={ !data.Visible }
+		data-selected-count={ data.SelectedCount }
+	>
+		@components.BulkActionToolbar(data.Toolbar)
+		<div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+			<ol class="flex items-center gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500" data-guides-bulk-progress>
+				for idx, step := range data.Progress.Steps {
+					<li class={ bulkStepClass(step, idx, data.Progress.ActiveStep) }>{ step.Label }</li>
+				}
+			</ol>
+		</div>
+		<form id="guides-bulk-form" class="hidden" data-guides-bulk-form>
+			<input type="hidden" name="ids" value="" />
+			<input type="hidden" name="csrf_token" value={ csrfToken } />
+		</form>
+	</div>
+}
+
+func localeChipClass(active bool) string {
+	base := []string{"inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm transition"}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-600")
+	} else {
+		base = append(base, "border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-600")
+	}
+	return helpers.ClassList(base...)
+}
+
+func segmentedClass(active bool) string {
+	base := []string{"inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition"}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-600")
+	} else {
+		base = append(base, "border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-600")
+	}
+	return helpers.ClassList(base...)
+}
+
+func bulkStepClass(step BulkProgressStep, idx, active int) string {
+	base := []string{"rounded-full px-3 py-1"}
+	switch {
+	case step.Completed:
+		base = append(base, "bg-brand-600 text-white")
+	case step.Current || idx == active:
+		base = append(base, "bg-brand-100 text-brand-700")
+	default:
+		base = append(base, "bg-slate-100 text-slate-500")
+	}
+	return helpers.ClassList(base...)
+}
+
+func boolAttr(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
+}

@@ -1,0 +1,476 @@
+package productionqueues
+
+import (
+	templpkg "github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-production-queues-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					if data.Description != "" {
+						<p class="text-sm text-slate-600">{ data.Description }</p>
+					}
+				</div>
+				<div class="flex w-full flex-col gap-4 sm:items-end lg:w-auto">
+					if len(data.Analytics) > 0 {
+						@analyticsStrip(data.Analytics)
+					}
+					<div class="flex justify-end">
+						@components.ButtonWith("制作キューを追加", components.ButtonOptions{
+							Variant: "primary",
+							Attrs: templpkg.Attributes{
+								"hx-get":   helpers.BuildURL(data.Actions.NewQueueURL, data.Query.RawQuery),
+								"hx-target": "#modal",
+								"hx-swap":  "innerHTML",
+							},
+						})
+					</div>
+				</div>
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterForm(data)
+			</div>
+		</section>
+		if data.Error != "" {
+			<div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ data.Error }</div>
+		}
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="space-y-4">
+				@QueueTable(data.Table)
+			</section>
+			<aside class="hidden xl:block">
+				<div class="sticky top-20">
+					@Drawer(data.Drawer)
+				</div>
+			</aside>
+		</div>
+	</div>
+}
+
+templ analyticsStrip(cards []AnalyticsCard) {
+	<div class="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+		for _, card := range cards {
+			<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+				<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+					if card.Icon != "" {
+						<span aria-hidden="true">{ card.Icon }</span>
+					}
+					{ card.Label }
+				</div>
+				<div class="text-xl font-semibold text-slate-900">{ card.Value }</div>
+				if card.SubLabel != "" {
+					<div class="text-xs text-slate-500">{ card.SubLabel }</div>
+				}
+			</div>
+		}
+	</div>
+}
+
+templ filterForm(page PageData) {
+	<form
+		class="space-y-4"
+		method="get"
+		hx-get={ page.Filters.Endpoint }
+		hx-target="#production-queues-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+	>
+		<input type="hidden" name="selected" value={ page.Query.SelectedID } />
+		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="queue-filter-search">検索</label>
+				<div class="relative">
+					<input
+						id="queue-filter-search"
+						name="search"
+						type="search"
+						value={ page.Query.Search }
+						placeholder="キュー名・ワークショップ"
+						class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="queue-filter-workshop">工房</label>
+				<select
+					id="queue-filter-workshop"
+					name="workshop"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range page.Filters.Workshops {
+						<option value={ option.Value } selected?={ option.Active }>
+							if option.Count > 0 {
+								{ option.Label } ({ option.Count })
+							} else {
+								{ option.Label }
+							}
+						</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="queue-filter-status">ステータス</label>
+				<select
+					id="queue-filter-status"
+					name="status"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range page.Filters.Statuses {
+						<option value={ option.Value } selected?={ option.Active }>
+							if option.Count > 0 {
+								{ option.Label } ({ option.Count })
+							} else {
+								{ option.Label }
+							}
+						</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="queue-filter-product">プロダクトライン</label>
+				<select
+					id="queue-filter-product"
+					name="product_line"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range page.Filters.ProductLines {
+						<option value={ option.Value } selected?={ option.Active }>
+							if option.Count > 0 {
+								{ option.Label } ({ option.Count })
+							} else {
+								{ option.Label }
+							}
+						</option>
+					}
+				</select>
+			</div>
+		</div>
+		<div class="flex flex-wrap items-center gap-3">
+			<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+			<a href={ page.Filters.ResetURL } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			<div class="htmx-indicator text-xs text-slate-400">更新中…</div>
+		</div>
+	</form>
+}
+
+templ QueueTable(data QueueTableData) {
+	<div
+		id={ tableContainerID }
+		class="space-y-4"
+		data-production-queues-table
+		hx-target="this"
+		hx-swap={ data.HxSwap }
+		hx-trigger="refresh from:body"
+		hx-get={ helpers.BuildURL(data.FragmentPath, data.RawQuery) }
+	>
+		<div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+			<table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+				<thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+					<tr>
+						<th scope="col" class="px-4 py-3 text-left">キュー</th>
+						<th scope="col" class="px-4 py-3 text-left">容量</th>
+						<th scope="col" class="px-4 py-3 text-left">SLA</th>
+						<th scope="col" class="px-4 py-3 text-left">スループット</th>
+						<th scope="col" class="px-4 py-3 text-left">WIP</th>
+						<th scope="col" class="px-4 py-3 text-left">ステータス</th>
+						<th scope="col" class="px-4 py-3 text-right">操作</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-100">
+					if len(data.Rows) == 0 {
+						<tr>
+							<td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">{ data.EmptyMessage }</td>
+						</tr>
+					} else {
+						for _, row := range data.Rows {
+							<tr
+								class={ queueRowClass(row.Selected) }
+								aria-current?={ row.Selected }
+								hx-get={ helpers.BuildURL(row.DrawerURL, helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+								hx-target={ data.DrawerTarget }
+								hx-push-url={ helpers.BuildURL(joinBase(helpers.BasePath(ctx), "/production-queues"), helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+							>
+								<td class="px-4 py-3">
+									<div class="flex flex-col gap-1">
+										<div class="flex items-center gap-2">
+											<span class="font-semibold text-slate-900">{ row.Name }</span>
+											<span class={ helpers.BadgeClass(row.PriorityTone) }>{ row.PriorityLabel }</span>
+										</div>
+										<p class="text-xs text-slate-500">{ row.Workshop }</p>
+										if row.ProductLine != "" {
+											<p class="text-xs text-slate-500">{ row.ProductLine }</p>
+										}
+									</div>
+								</td>
+								<td class="px-4 py-3 text-slate-600">{ row.CapacityLabel }</td>
+								<td class="px-4 py-3 text-slate-600">{ row.SLALabel }</td>
+								<td class="px-4 py-3 text-slate-600">{ row.ThroughputLabel }</td>
+								<td class="px-4 py-3">
+									<span class={ helpers.BadgeClass(row.UtilisationTone) }>{ row.UtilisationLabel }</span>
+								</td>
+								<td class="px-4 py-3">
+									<span class={ helpers.BadgeClass(activeTone(row.Active)) }>{ row.ActiveLabel }</span>
+								</td>
+								<td class="px-4 py-3 text-right">
+									<div class="flex justify-end gap-2" hx-target={ data.HxTarget } hx-swap={ data.HxSwap }>
+					<button
+						type="button"
+						class={ helpers.ButtonClass("ghost", "xs", false, false) }
+						hx-post={ helpers.BuildURL(row.ToggleURL, helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+						hx-target={ data.HxTarget }
+						hx-swap={ data.HxSwap }
+						onclick="event.stopPropagation()"
+					>
+						if row.Active {
+							停止
+						} else {
+							稼働
+						}
+					</button>
+										<button
+											type="button"
+											class={ helpers.ButtonClass("ghost", "xs", false, false) }
+											hx-get={ helpers.BuildURL(row.EditURL, data.RawQuery) }
+											hx-target="#modal"
+											hx-swap="innerHTML"
+											onclick="event.stopPropagation()"
+										>
+											編集
+										</button>
+										<button
+											type="button"
+											class={ helpers.ButtonClass("ghost", "xs", false, false) }
+											hx-get={ helpers.BuildURL(row.DeleteURL, data.RawQuery) }
+											hx-target="#modal"
+											hx-swap="innerHTML"
+											onclick="event.stopPropagation()"
+										>
+											削除
+										</button>
+									</div>
+								</td>
+							</tr>
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+}
+
+templ TableFragment(data QueueTableData) {
+	@QueueTable(data)
+}
+
+templ TableWithDrawer(table QueueTableData, drawer DrawerData) {
+	@QueueTable(table)
+	@DrawerOOB(drawer)
+}
+
+templ Drawer(data DrawerData) {
+	@drawerContainer(data, false)
+}
+
+templ DrawerFragment(data DrawerData) {
+	@Drawer(data)
+}
+
+templ DrawerOOB(data DrawerData) {
+	@drawerContainer(data, true)
+}
+
+templ drawerContainer(data DrawerData, oob bool) {
+	<div
+		id={ drawerContainerID }
+		class="rounded-2xl border border-slate-200 bg-white shadow-sm"
+		hx-target="this"
+		hx-swap="innerHTML"
+		hx-swap-oob?={ oob }
+	>
+		if data.Empty {
+			<div class="p-6 text-sm text-slate-500">
+				<p>詳細を表示するにはキューを選択してください。</p>
+			</div>
+		} else {
+			@drawerContent(data.Queue, data.Actions)
+		}
+	</div>
+}
+
+templ drawerContent(queue DrawerQueue, actions DrawerActions) {
+	<div class="space-y-6 p-6">
+		<div class="flex items-start justify-between gap-3">
+			<div class="space-y-1">
+				<div class="flex items-center gap-2">
+					<h2 class="text-lg font-semibold text-slate-900">{ queue.Name }</h2>
+					<span class={ helpers.BadgeClass(queue.ActiveTone) }>{ queue.ActiveLabel }</span>
+				</div>
+				<p class="text-xs text-slate-500">
+					最終更新 { queue.UpdatedAt }
+					if queue.UpdatedRelative != "" {
+						<span class="ml-2">({ queue.UpdatedRelative })</span>
+					}
+				</p>
+			</div>
+			<div class="flex gap-2">
+				if actions.EditURL != "" {
+					@components.ButtonWith("編集", components.ButtonOptions{
+						Variant: "secondary",
+						Size:    "sm",
+						Attrs: templpkg.Attributes{
+							"hx-get":   actions.EditURL,
+							"hx-target": "#modal",
+							"hx-swap":  "innerHTML",
+						},
+					})
+				}
+				if actions.DeleteURL != "" {
+					@components.ButtonWith("削除", components.ButtonOptions{
+						Variant: "ghost",
+						Size:    "sm",
+						Attrs: templpkg.Attributes{
+							"hx-get":   actions.DeleteURL,
+							"hx-target": "#modal",
+							"hx-swap":  "innerHTML",
+						},
+					})
+				}
+			</div>
+		</div>
+
+		if queue.Description != "" {
+			<p class="text-sm text-slate-600">{ queue.Description }</p>
+		}
+
+		<div class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+			<div class="flex items-center justify-between">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">容量</span>
+				<span class="font-semibold text-slate-900">{ queue.CapacityLabel }</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">SLA目標</span>
+				<span class="font-semibold text-slate-900">{ queue.TargetSLALabel }</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">平均スループット</span>
+				<span class="font-semibold text-slate-900">{ queue.ThroughputLabel }</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">平均WIP</span>
+				<span class="font-semibold text-slate-900">{ queue.UtilisationLabel }</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">SLA達成率</span>
+				<span class="font-semibold text-slate-900">{ queue.SLAComplianceLabel }</span>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">ワークセンター</h3>
+			if len(queue.WorkCenters) == 0 {
+				<p class="text-sm text-slate-500">割り当て済みのワークセンターはありません。</p>
+			} else {
+				<ul class="space-y-2 text-sm text-slate-700">
+					for _, center := range queue.WorkCenters {
+						<li class="flex flex-col rounded-lg border border-slate-200 px-3 py-2">
+							<div class="flex items-center gap-2">
+								<span class="font-medium text-slate-900">{ center.Name }</span>
+								if center.Primary {
+									<span class={ helpers.BadgeClass("info") }>Primary</span>
+								}
+								if !center.Active {
+									<span class={ helpers.BadgeClass("warning") }>停止中</span>
+								}
+							</div>
+							if center.Location != "" || center.Capability != "" {
+								<p class="text-xs text-slate-500">
+									{ center.Location }
+									if center.Capability != "" && center.Location != "" {
+										<span> · </span>
+									}
+									{ center.Capability }
+								</p>
+							}
+						</li>
+					}
+				</ul>
+			}
+		</div>
+
+		<div class="space-y-3">
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">担当ロール</h3>
+			if len(queue.Roles) == 0 {
+				<p class="text-sm text-slate-500">割り当て済みの担当者はありません。</p>
+			} else {
+				<ul class="space-y-2 text-sm text-slate-700">
+					for _, role := range queue.Roles {
+						<li class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+							<span class="font-medium text-slate-900">{ role.Label }</span>
+							<span class="text-sm text-slate-600">{ role.HeadcountLabel }</span>
+						</li>
+					}
+				</ul>
+			}
+		</div>
+
+		<div class="space-y-3">
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステージ定義</h3>
+			if len(queue.Stages) == 0 {
+				<p class="text-sm text-slate-500">ステージ定義が見つかりません。</p>
+			} else {
+				<ol class="space-y-3 text-sm text-slate-700">
+					for _, stage := range queue.Stages {
+						<li class="rounded-lg border border-slate-200 px-3 py-2">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2 font-medium text-slate-900">
+									<span>{ stage.Label }</span>
+								</div>
+								<span class="text-xs text-slate-500">{ stage.WIPLabel }</span>
+							</div>
+							<p class="text-xs text-slate-500">{ stage.TargetSLALabel }</p>
+							if stage.Description != "" {
+								<p class="mt-1 text-sm text-slate-600">{ stage.Description }</p>
+							}
+						</li>
+					}
+				</ol>
+			}
+		</div>
+
+		if len(queue.Notes) > 0 {
+			<div class="space-y-2">
+				<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">メモ</h3>
+				<ul class="list-disc space-y-1 pl-5 text-sm text-slate-600">
+					for _, note := range queue.Notes {
+						<li>{ note }</li>
+					}
+				</ul>
+			</div>
+		}
+	</div>
+}
+
+func queueRowClass(selected bool) string {
+	classes := []string{
+		"cursor-pointer transition-colors",
+	}
+	if selected {
+		classes = append(classes, "bg-brand-50")
+	} else {
+		classes = append(classes, "hover:bg-slate-50")
+	}
+	return helpers.ClassList(classes...)
+}

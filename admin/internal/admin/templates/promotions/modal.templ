@@ -1,0 +1,313 @@
+package promotions
+
+import (
+	"strings"
+
+	templpkg "github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+const modalInputClass = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+
+templ Modal(data ModalData) {
+	@layouts.Modal(data.Title, modalBody(data))
+}
+
+templ modalBody(data ModalData) {
+	<form
+		class="space-y-6 text-sm text-slate-700"
+		hx-target="#modal"
+		hx-swap="innerHTML"
+		data-promotion-form
+		{ modalMethodAttrs(data.Method, data.ActionURL)... }
+	>
+		for _, hidden := range data.HiddenFields {
+			<input type="hidden" name={ hidden.Name } value={ hidden.Value } />
+		}
+		if data.Description != "" {
+			<p class="text-sm text-slate-600">{ data.Description }</p>
+		}
+		if data.Error != "" {
+			<div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{ data.Error }</div>
+		}
+		for _, section := range data.Sections {
+			@promotionModalSection(section, data.Conditions)
+		}
+		<div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+			<p class="text-xs text-slate-500">入力内容を確認して送信してください。保存後に一覧が更新されます。</p>
+			<div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+				<button type="button" class={ helpers.ButtonClass("ghost", "md", true, false) } data-modal-close>キャンセル</button>
+				<button type="submit" class={ helpers.ButtonClass(modalTone(data.SubmitTone), "md", true, false) }>{ data.SubmitLabel }</button>
+			</div>
+		</div>
+	</form>
+}
+
+templ promotionModalSection(section ModalSection, active map[string]string) {
+	<section
+		class="space-y-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xs"
+		data-promotion-section
+		hidden?={ sectionHidden(section, active) }
+		if section.ConditionKey != "" {
+			data-promotion-condition-key={ section.ConditionKey }
+		}
+		if section.ConditionValue != "" {
+			data-promotion-condition-value={ section.ConditionValue }
+		}
+		if section.HideWhenMissing {
+			data-promotion-hide-missing="true"
+		}
+	>
+		<div class="space-y-1">
+			<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ section.Title }</p>
+			if section.Description != "" {
+				<p class="text-xs text-slate-500">{ section.Description }</p>
+			}
+		</div>
+		<div class="grid gap-4 md:grid-cols-2">
+			for _, field := range section.Fields {
+				<div
+					class={ fieldContainerClass(field.FullWidth) }
+					data-promotion-field
+					hidden?={ fieldHidden(field, active) }
+					if field.ConditionKey != "" {
+						data-promotion-condition-key={ field.ConditionKey }
+					}
+					if field.ConditionValue != "" {
+						data-promotion-condition-value={ field.ConditionValue }
+					}
+				>
+					@promotionModalField(field)
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ promotionModalField(field ModalField) {
+	<label class="flex flex-col gap-1 text-sm text-slate-600">
+		<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+			{ field.Label }
+			if field.Required {
+				<span class="ml-1 text-rose-500">*</span>
+			}
+		</span>
+		@promotionModalInput(field)
+	</label>
+	if field.Hint != "" {
+		<p class="text-xs text-slate-500">{ field.Hint }</p>
+	}
+	if field.Error != "" {
+		<p class="text-xs text-rose-600">{ field.Error }</p>
+	}
+}
+
+templ promotionModalInput(field ModalField) {
+	if field.Prefix != "" || field.Suffix != "" {
+		<div class="flex items-center gap-2">
+			if field.Prefix != "" {
+				<span class="text-xs text-slate-500">{ field.Prefix }</span>
+			}
+			@promotionModalControl(field)
+			if field.Suffix != "" {
+				<span class="text-xs text-slate-500">{ field.Suffix }</span>
+			}
+		</div>
+		return
+	}
+	@promotionModalControl(field)
+}
+
+templ promotionModalControl(field ModalField) {
+	switch strings.ToLower(strings.TrimSpace(field.Type)) {
+	case "textarea":
+		<textarea
+			name={ field.Name }
+			class={ modalInputClass }
+			rows={ textareaRows(field.Rows) }
+			placeholder={ field.Placeholder }
+			required?={ field.Required }
+			if field.Attributes != nil {
+				{ field.Attributes... }
+			}
+		>{ field.Value }</textarea>
+	case "select", "multiselect":
+		<select
+			name={ field.Name }
+			class={ modalInputClass }
+			required?={ field.Required }
+			multiple?={ field.Multiple || strings.ToLower(strings.TrimSpace(field.Type)) == "multiselect" }
+			if field.Attributes != nil {
+				{ field.Attributes... }
+			}
+		>
+			if !(field.Multiple || strings.ToLower(strings.TrimSpace(field.Type)) == "multiselect") {
+				<option value="">選択してください</option>
+			}
+			for _, option := range field.Options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+	case "checkbox-group":
+		<div class="space-y-2">
+			for _, option := range field.Options {
+				<label class="flex items-start gap-2 text-sm text-slate-600">
+					<input
+						type="checkbox"
+						class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+						name={ field.Name }
+						value={ option.Value }
+						checked?={ option.Selected }
+						if field.Attributes != nil {
+							{ field.Attributes... }
+						}
+					/>
+					<span>
+						<span class="font-medium text-slate-700">{ option.Label }</span>
+						if option.Description != "" {
+							<span class="block text-xs text-slate-500">{ option.Description }</span>
+						}
+					</span>
+				</label>
+			}
+		</div>
+	case "radio":
+		<div class="space-y-2">
+			for _, option := range field.Options {
+				<label class="flex items-start gap-2 text-sm text-slate-600">
+					<input
+						type="radio"
+						class="mt-1 h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500"
+						name={ field.Name }
+						value={ option.Value }
+						checked?={ option.Selected }
+						if field.Attributes != nil {
+							{ field.Attributes... }
+						}
+					/>
+					<span>
+						<span class="font-medium text-slate-700">{ option.Label }</span>
+						if option.Description != "" {
+							<span class="block text-xs text-slate-500">{ option.Description }</span>
+						}
+					</span>
+				</label>
+			}
+		</div>
+	default:
+		<input
+			name={ field.Name }
+			class={ modalInputClass }
+			type={ inputType(field.Type) }
+			value={ field.Value }
+			placeholder={ field.Placeholder }
+			required?={ field.Required }
+			if field.Step != "" {
+				step={ field.Step }
+			}
+			if field.Min != "" {
+				min={ field.Min }
+			}
+			if field.Max != "" {
+				max={ field.Max }
+			}
+			if field.Attributes != nil {
+				{ field.Attributes... }
+			}
+		/>
+	}
+}
+
+func modalMethodAttrs(method string, action string) templpkg.Attributes {
+	switch strings.ToUpper(strings.TrimSpace(method)) {
+	case "PUT":
+		return templpkg.Attributes{"hx-put": action}
+	case "PATCH":
+		return templpkg.Attributes{"hx-patch": action}
+	case "DELETE":
+		return templpkg.Attributes{"hx-delete": action}
+	default:
+		return templpkg.Attributes{"hx-post": action}
+	}
+}
+
+func fieldContainerClass(full bool) string {
+	if full {
+		return "md:col-span-2"
+	}
+	return ""
+}
+
+func textareaRows(rows int) int {
+	if rows <= 0 {
+		return 3
+	}
+	return rows
+}
+
+func inputType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "number":
+		return "number"
+	case "date":
+		return "date"
+	case "time":
+		return "time"
+	case "datetime", "datetime-local":
+		return "datetime-local"
+	case "email":
+		return "email"
+	case "url":
+		return "url"
+	default:
+		return "text"
+	}
+}
+
+func modalTone(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "primary"
+	}
+	return strings.TrimSpace(value)
+}
+
+func sectionHidden(section ModalSection, active map[string]string) bool {
+	if section.ConditionKey == "" || section.ConditionValue == "" {
+		return false
+	}
+	current := strings.TrimSpace(activeValue(active, section.ConditionKey))
+	if current == "" {
+		return section.HideWhenMissing
+	}
+	return !conditionMatches(current, section.ConditionValue)
+}
+
+func fieldHidden(field ModalField, active map[string]string) bool {
+	if field.ConditionKey == "" || field.ConditionValue == "" {
+		return false
+	}
+	current := strings.TrimSpace(activeValue(active, field.ConditionKey))
+	if current == "" {
+		return false
+	}
+	return !conditionMatches(current, field.ConditionValue)
+}
+
+func activeValue(active map[string]string, key string) string {
+	if active == nil {
+		return ""
+	}
+	return active[strings.TrimSpace(key)]
+}
+
+func conditionMatches(current string, raw string) bool {
+	values := strings.Split(raw, ",")
+	for _, value := range values {
+		if strings.TrimSpace(value) == current {
+			return true
+		}
+	}
+	return false
+}

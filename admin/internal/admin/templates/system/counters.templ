@@ -1,0 +1,326 @@
+package system
+
+import (
+    "fmt"
+
+    "finitefield.org/hanko-admin/internal/admin/templates/helpers"
+    "finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ CountersPage(data CountersPageData) {
+    @layouts.Base(data.Title, data.Breadcrumbs, countersPageBody(data))
+}
+
+templ countersPageBody(data CountersPageData) {
+    <div class="space-y-6" data-system-counters-root>
+        <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="space-y-2">
+                    <h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+                    <p class="text-sm text-slate-600">{ data.Description }</p>
+                    if data.GeneratedLabel != "" {
+                        <p class="text-xs text-slate-400">{ data.GeneratedLabel }</p>
+                    }
+                </div>
+                @countersHeaderControls(data)
+            </div>
+
+            if len(data.Alerts) > 0 {
+                <div class="mt-6 space-y-3">
+                    for _, alert := range data.Alerts {
+                        @InlineAlert(alert)
+                    }
+                </div>
+            }
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <section>
+                <div
+                    id="system-counters-table"
+                    data-system-counters-table
+                    class="space-y-4"
+                    hx-get={ helpers.BuildURL(data.Table.FragmentPath, data.Query.RawQuery) }
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                    hx-trigger="refresh from:body, every 120s"
+                >
+                    @CountersTable(data.Table)
+                </div>
+            </section>
+            <aside>
+                <div class="sticky top-20 space-y-4">
+                    <div id="system-counter-drawer" data-system-counter-drawer>
+                        @CountersDrawer(data.Drawer, data.Query)
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+}
+
+templ countersHeaderControls(data CountersPageData) {
+    if len(data.NamespaceSelector.Options) == 0 {
+        return
+    }
+    <form
+        class="flex w-full flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:flex-row sm:items-end"
+        method="get"
+        action={ data.NamespaceSelector.Endpoint }
+        hx-get={ data.NamespaceSelector.Endpoint }
+        hx-target="#system-counters-table"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+    >
+        <div class="flex w-full flex-col gap-2 sm:w-auto">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="counter-namespace">ネームスペース</label>
+            <select id="counter-namespace" name="namespace" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200">
+                for _, option := range data.NamespaceSelector.Options {
+                    <option value={ option.ID } selected?={ option.Active }>
+                        { option.Label }
+                        if option.Sublabel != "" {
+                            <text> ({ option.Sublabel })</text>
+                        }
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="flex w-full flex-col gap-2">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="counter-search">検索</label>
+            <input
+                id="counter-search"
+                name="q"
+                type="search"
+                placeholder="カウンタ名・説明で検索"
+                value={ data.Query.Search }
+                class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            />
+        </div>
+        <div class="flex flex-col gap-2 sm:w-32">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" aria-hidden="true">&nbsp;</label>
+            <button type="submit" class={ helpers.ButtonClass("primary", "sm", true, false) }>更新</button>
+        </div>
+        <input type="hidden" name="scope" value={ data.Query.Scope } />
+        <input type="hidden" name="selected" value={ data.Query.Selected } />
+    </form>
+}
+
+templ CountersTable(data CountersTableData) {
+    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        if data.Error != "" {
+            <div class="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ data.Error }</div>
+        }
+        if len(data.Items) == 0 {
+            <div class="px-6 py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
+            return
+        }
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th scope="col" class="px-4 py-3 text-left">カウンタ</th>
+                        <th scope="col" class="px-4 py-3 text-left">スコープ</th>
+                        <th scope="col" class="px-4 py-3 text-left">現在値</th>
+                        <th scope="col" class="px-4 py-3 text-left">インクリメント</th>
+                        <th scope="col" class="px-4 py-3 text-left">最終更新</th>
+                        <th scope="col" class="px-4 py-3 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" data-raw-query={ data.RawQuery }>
+                    for _, row := range data.Items {
+                        <tr
+                            class={ row.RowClass }
+                            data-selected?={ row.Selected }
+                            hx-get={ helpers.BuildURL(row.DrawerURL, helpers.SetRawQuery(data.RawQuery, "selected", row.Name)) }
+                            hx-target="#system-counter-drawer"
+                            hx-swap="outerHTML"
+                            hx-push-url={ helpers.BuildURL(joinBase(helpers.BasePath(ctx), "/system/counters"), helpers.SetRawQuery(data.RawQuery, "selected", row.Name)) }
+                        >
+                            <td class="px-4 py-4 align-top">
+                                <div class="space-y-1">
+                                    <p class="text-sm font-semibold text-slate-900">{ row.Label }</p>
+                                    <p class="text-xs text-slate-500">{ fmt.Sprintf("%s · %s", row.Name, row.NamespaceLabel) }</p>
+                                    if len(row.Tags) > 0 {
+                                        <div class="flex flex-wrap gap-1">
+                                            for _, tag := range row.Tags {
+                                                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{ tag }</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">{ row.ScopeLabel }</td>
+                            <td class="px-4 py-4 align-top text-sm font-semibold text-slate-900">{ row.CurrentValue }</td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-700">{ row.Increment }</td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">
+                                <span title={ row.LastUpdatedTooltip }>{ row.LastUpdated }</span>
+                            </td>
+                            <td class="px-4 py-4 align-top text-right">
+                                <button type="button" class={ helpers.ButtonClass("ghost", "xs", false, false) } data-copy={ row.Name }>
+                                    <span aria-hidden="true">📋</span>
+                                    <span class="sr-only">コピー</span>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+templ CountersDrawer(data CountersDrawerData, query CountersQueryState) {
+    if data.Error != "" {
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-6 text-sm text-rose-700 shadow-sm">{ data.Error }</div>
+        return
+    }
+    if data.Empty {
+        <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500 shadow-sm">
+            カウンタを選択すると詳細が表示されます。
+        </div>
+        return
+    }
+
+    <div class="space-y-5 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <div class="space-y-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ fmt.Sprintf("%s · %s", data.Counter.NamespaceLabel, data.Counter.Name) }</p>
+            <h2 class="text-xl font-semibold text-slate-900">{ data.Counter.Label }</h2>
+            if data.Counter.Description != "" {
+                <p class="text-sm text-slate-600">{ data.Counter.Description }</p>
+            }
+            if data.Counter.Alert != nil {
+                @InlineAlert(*data.Counter.Alert)
+            }
+            <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div class="rounded-lg bg-slate-50 px-3 py-2">
+                    <dt class="text-xs text-slate-500">現在値</dt>
+                    <dd class="text-lg font-semibold text-slate-900">{ data.Counter.CurrentValue }</dd>
+                </div>
+                <div class="rounded-lg bg-slate-50 px-3 py-2">
+                    <dt class="text-xs text-slate-500">インクリメント</dt>
+                    <dd class="text-lg font-semibold text-slate-900">{ data.Counter.Increment }</dd>
+                </div>
+                <div class="rounded-lg bg-slate-50 px-3 py-2">
+                    <dt class="text-xs text-slate-500">最終更新</dt>
+                    <dd class="text-sm text-slate-700">{ data.Counter.LastUpdated }</dd>
+                </div>
+                if data.Counter.Owner != "" {
+                    <div class="rounded-lg bg-slate-50 px-3 py-2">
+                        <dt class="text-xs text-slate-500">担当</dt>
+                        <dd class="text-sm text-slate-700">{ data.Counter.Owner }</dd>
+                    </div>
+                }
+            </dl>
+            if data.Counter.ScopeKeys != "" {
+                <p class="text-xs text-slate-500">スコープキー: { data.Counter.ScopeKeys }</p>
+            }
+            if len(data.Counter.Tags) > 0 {
+                <div class="flex flex-wrap gap-1">
+                    for _, tag := range data.Counter.Tags {
+                        <span class="rounded-md bg-brand-50 px-2 py-0.5 text-xs text-brand-600">{ tag }</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-900">次番号テスト</h3>
+                if data.Result.Visible {
+                    <span class={ helpers.BadgeClass(data.Result.Tone) }>{ data.Result.Message } ({ data.Result.Value })</span>
+                }
+            </div>
+            <form
+                class="space-y-4"
+                method="post"
+                action={ data.Form.Action }
+                hx-post={ data.Form.Action }
+                hx-target="#system-counter-drawer"
+                hx-swap="outerHTML"
+            >
+                <input type="hidden" name="namespace" value={ data.Form.Namespace } />
+                <input type="hidden" name="selected" value={ data.Form.Name } />
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="counter-scope">スコープ (JSON オブジェクト)</label>
+                <textarea
+                    id="counter-scope"
+                    name="scope"
+                    rows="3"
+                    placeholder={ data.Form.ScopePlaceholder }
+                    spellcheck="false"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                >{ data.Form.ScopeValue }</textarea>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-slate-600" for="counter-amount">回数</label>
+                        <input
+                            id="counter-amount"
+                            name="amount"
+                            type="number"
+                            step="1"
+                            class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                            value={ data.Form.Amount }
+                        />
+                    </div>
+                    <button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>次の番号を取得</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="space-y-2">
+            <h3 class="text-sm font-semibold text-slate-900">最近の操作</h3>
+            if len(data.History) == 0 {
+                <p class="text-xs text-slate-500">履歴はまだありません。</p>
+            } else {
+                <ul class="space-y-3">
+                    for _, item := range data.History {
+                        <li class="rounded-lg border border-slate-200 px-3 py-3 shadow-sm">
+                            <div class="flex items-center justify-between text-xs text-slate-500">
+                                <span>{ item.Relative }</span>
+                                <span>{ item.Timestamp }</span>
+                            </div>
+                            <p class="mt-1 text-sm font-semibold text-slate-900">{ item.Message }</p>
+                            <p class="text-xs text-slate-500">{ fmt.Sprintf("Δ%s → %s", item.Delta, item.Value) }</p>
+                            if item.ScopeLabel != "" && item.ScopeLabel != "-" {
+                                <p class="text-xs text-slate-500">スコープ: { item.ScopeLabel }</p>
+                            }
+                            <p class="text-xs text-slate-400">{ fmt.Sprintf("%s · %s", item.Actor, item.Source) }</p>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="space-y-2">
+            <h3 class="text-sm font-semibold text-slate-900">関連ジョブ</h3>
+            if len(data.Jobs) == 0 {
+                <p class="text-xs text-slate-500">関連ジョブが設定されていません。</p>
+            } else {
+                <ul class="space-y-2 text-sm">
+                    for _, job := range data.Jobs {
+                        <li class="rounded-lg border border-slate-200 px-3 py-3 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <a href={ job.URL } class="font-semibold text-brand-600 hover:text-brand-500">{ job.Name }</a>
+                                <span class={ helpers.BadgeClass(job.StatusTone) }>{ job.StatusLabel }</span>
+                            </div>
+                            if job.Description != "" {
+                                <p class="mt-1 text-xs text-slate-500">{ job.Description }</p>
+                            }
+                            <p class="mt-1 text-xs text-slate-400">最終実行 { job.LastRun }</p>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        if len(data.Notes) > 0 {
+            <section class="space-y-2">
+                <h3 class="text-sm font-semibold text-slate-900">運用メモ</h3>
+                <ul class="space-y-1 text-xs text-slate-500">
+                    for _, note := range data.Notes {
+                        <li class="rounded-lg bg-slate-50 px-3 py-2">{ note }</li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+}

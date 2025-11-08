@@ -1,0 +1,13 @@
+package layouts
+
+import "finitefield.org/hanko-admin/internal/admin/templates/partials"
+
+templ Preview(title string, crumbs []partials.Breadcrumb, body templ.Component) {
+	@Base(title, crumbs, previewBody(body))
+}
+
+templ previewBody(body templ.Component) {
+	<div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-10">
+		@body
+	</div>
+}

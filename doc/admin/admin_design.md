@@ -112,9 +112,10 @@ Cloud Run で実行します。
 * 制作キュー設定：`/admin/production-queues`
 
   * 新規/編集：モーダル → `POST/PUT /admin/production-queues*`
-* スタッフ・ロール：`/admin/org/staff`, ` /admin/org/roles`（RBAC UI）
+* スタッフ・ロール：`/admin/org/staff`, `/admin/org/roles`（RBAC UI）
 
-  * （APIは今後追加でもOK。先行はFirebase Console管理でも可）
+  * 当面は Firebase Console（Authentication → Users）で招待／ロール付与を行い、管理者ロール（CapStaffManage）のみがページにアクセスできる。
+  * API 実装後にスタッフ一覧・権限マトリクス UI を差し替える（タスク 058 を参照）。
 
 ---
 

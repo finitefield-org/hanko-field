@@ -1,0 +1,224 @@
+package reviews
+
+import (
+	"fmt"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+)
+
+templ TableFragment(table TableData, detail DetailData) {
+	@TableSection(table)
+	<div id="reviews-detail" hx-swap-oob="true">
+		@DetailPane(detail)
+	</div>
+}
+
+templ TableSection(table TableData) {
+	<div class="divide-y divide-slate-200">
+		<header class="flex items-center justify-between gap-3 px-5 py-4">
+			<div>
+				<h2 class="text-base font-semibold text-slate-900">レビュー一覧</h2>
+				if table.LastUpdated != "" {
+					<p class="text-xs text-slate-500">更新 { table.LastUpdated }
+						if table.LastRelative != "" {
+							<span> ({ table.LastRelative })</span>
+						}
+					</p>
+				}
+			</div>
+			if table.Error != "" {
+				<span class="text-sm font-medium text-rose-600">{ table.Error }</span>
+			} else if table.Pagination.Info.TotalItems != nil {
+				<span class="text-xs text-slate-400">全 { fmt.Sprintf("%d", *table.Pagination.Info.TotalItems) } 件</span>
+			} else {
+				<span class="text-xs text-slate-400">ページ { fmt.Sprintf("%d", table.Pagination.Info.Current) }</span>
+			}
+		</header>
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full divide-y divide-slate-200 text-sm">
+				<thead class="bg-slate-50">
+					<tr>
+						<th scope="col" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">レビュー</th>
+						<th scope="col" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">顧客</th>
+						<th scope="col" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">商品</th>
+						<th scope="col" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">チャネル</th>
+						<th scope="col" class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">フラグ</th>
+						<th scope="col" class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">提出</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-100 bg-white">
+					if len(table.Rows) == 0 {
+						<tr>
+							<td colspan="6" class="px-5 py-6 text-center text-sm text-slate-500">
+								if table.Error != "" {
+									{ table.Error }
+								} else if table.EmptyMessage != "" {
+									{ table.EmptyMessage }
+								} else {
+									レビューがありません。
+								}
+							</td>
+						</tr>
+					} else {
+						for _, row := range table.Rows {
+							@tableRow(row)
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+
+		<footer class="px-5 py-4">
+			@components.Pagination(table.Pagination)
+		</footer>
+	</div>
+}
+
+templ tableRow(row TableRow) {
+	<tr
+		class={ tableRowClass(row.Selected) }
+		hx-get={ row.SelectURL }
+		hx-target="#reviews-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+	>
+		<td class="px-5 py-4 align-top">
+			<div class="flex flex-col gap-1">
+				<div class="flex items-center gap-2">
+					@ratingStars(row.Rating)
+					<span class="text-xs text-slate-400">{ row.RatingLabel }</span>
+				</div>
+				<p class="font-semibold text-slate-900">{ row.Title }</p>
+				<p class="text-sm text-slate-600">{ row.Excerpt }</p>
+				<div class="flex items-center gap-2 text-xs text-slate-400">
+					if row.AttachmentsCount > 0 {
+						<span>📎 { fmt.Sprintf("%d件", row.AttachmentsCount) }</span>
+					}
+					if row.Reported {
+						<span>🚩 通報あり</span>
+					}
+				</div>
+			</div>
+		</td>
+		<td class="px-5 py-4 align-top">
+			<div class="flex items-center gap-3">
+				if row.CustomerAvatar != "" {
+					<img src={ row.CustomerAvatar } alt={ fmt.Sprintf("%sの写真", row.CustomerName) } class="h-9 w-9 rounded-full ring-2 ring-white" />
+				} else {
+					<div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">👤</div>
+				}
+				<div class="flex flex-col">
+					<span class="font-medium text-slate-900">{ row.CustomerName }</span>
+					if row.CustomerLocation != "" {
+						<span class="text-xs text-slate-500">{ row.CustomerLocation }</span>
+					}
+				</div>
+			</div>
+		</td>
+		<td class="px-5 py-4 align-top">
+			<div class="flex items-center gap-3">
+				if row.ProductImage != "" {
+					<img src={ row.ProductImage } alt={ row.ProductName } class="h-12 w-12 rounded-md border border-slate-200 object-cover" />
+				}
+				<div class="flex flex-col">
+					<a href={ row.ProductURL } class="text-sm font-medium text-brand-600 hover:underline">{ row.ProductName }</a>
+					if row.ProductVariant != "" {
+						<span class="text-xs text-slate-500">{ row.ProductVariant }</span>
+					}
+					<span class="text-xs text-slate-400">注文 #{ row.OrderNumber }</span>
+				</div>
+			</div>
+		</td>
+		<td class="px-5 py-4 align-top">
+			<div class={ channelBadgeClass(row.ChannelTone) }>
+				if row.ChannelIcon != "" {
+					<span aria-hidden="true" class="mr-1">{ row.ChannelIcon }</span>
+				}
+				{ row.ChannelLabel }
+			</div>
+		</td>
+		<td class="px-5 py-4 align-top">
+			<div class="flex flex-wrap gap-1.5">
+				if len(row.Flags) == 0 {
+					<span class="text-xs text-slate-400">－</span>
+				} else {
+					for _, flag := range row.Flags {
+						<span class={ flagBadgeClass(flag.Tone) } title={ flag.Tooltip }>
+							if flag.Icon != "" {
+								<span aria-hidden="true" class="mr-1">{ flag.Icon }</span>
+							}
+							{ flag.Label }
+						</span>
+					}
+				}
+			</div>
+		</td>
+		<td class="px-5 py-4 text-right align-top">
+			<div class="flex flex-col items-end gap-1">
+				<span class="text-sm font-medium text-slate-900">{ row.SubmittedRelative }</span>
+				<span class="text-xs text-slate-400">{ row.SubmittedAt }</span>
+				<span class={ moderationBadgeClass(row.ModerationTone) }>{ row.ModerationLabel }</span>
+			</div>
+		</td>
+	</tr>
+}
+
+templ ratingStars(rating int) {
+	<div class="flex items-center gap-0.5 text-amber-500">
+		for i := 0; i < rating; i++ {
+			<span aria-hidden="true">★</span>
+		}
+		for j := rating; j < 5; j++ {
+			<span aria-hidden="true" class="text-slate-300">★</span>
+		}
+	</div>
+}
+
+func tableRowClass(selected bool) string {
+	base := []string{"transition hover:bg-slate-50 cursor-pointer"}
+	if selected {
+		base = append(base, "bg-brand-50/70 hover:bg-brand-50")
+	}
+	return helpers.ClassList(base...)
+}
+
+func channelBadgeClass(tone string) string {
+	switch tone {
+	case "success":
+		return "inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700"
+	case "info":
+		return "inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700"
+	case "danger":
+		return "inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-700"
+	default:
+		return "inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700"
+	}
+}
+
+func flagBadgeClass(tone string) string {
+	switch tone {
+	case "danger":
+		return "inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700"
+	case "warning":
+		return "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700"
+	case "info":
+		return "inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-700"
+	default:
+		return "inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700"
+	}
+}
+
+func moderationBadgeClass(tone string) string {
+	switch tone {
+	case "success":
+		return "inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700"
+	case "warning":
+		return "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700"
+	case "danger":
+		return "inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700"
+	default:
+		return "inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700"
+	}
+}

@@ -23,3 +23,24 @@ scheduler_jobs = {
     time_zone            = "Asia/Tokyo"
   }
 }
+
+admin_alert_notification_emails = [
+  "ops-alerts+dev@hanko-field.com",
+]
+
+admin_uptime_check_host = "admin.dev.hanko-field.com"
+
+admin_uptime_endpoints = {
+  login = {
+    path          = "/admin/login"
+    content_match = "Hanko Admin"
+  }
+  orders = {
+    path          = "/admin/uptime/orders"
+    content_match = "\"component\":\"orders\""
+  }
+  notifications = {
+    path          = "/admin/uptime/notifications"
+    content_match = "\"component\":\"notifications\""
+  }
+}

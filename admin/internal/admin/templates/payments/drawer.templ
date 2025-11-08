@@ -1,0 +1,208 @@
+package payments
+
+import (
+	templpkg "github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+)
+
+templ Drawer(data DrawerData) {
+	if data.Empty {
+		<div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 shadow-sm">
+			トランザクションを選択すると、詳細と調整履歴が表示されます。
+		</div>
+		return
+	}
+
+	<div class="space-y-5">
+		<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+			<div class="flex flex-col gap-2">
+				<div class="flex items-center justify-between gap-2">
+					<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
+					<div class="flex items-center gap-2">
+						if data.RefundURL != "" {
+							@components.ButtonWith("返金を登録", components.ButtonOptions{
+								Variant: "secondary",
+								Size:    "sm",
+								Type:    "button",
+								Attrs: templpkg.Attributes{
+									"hx-get":   data.RefundURL,
+									"hx-target": "#modal",
+									"hx-swap":  "innerHTML",
+								},
+							})
+						}
+						if data.PSPDashboardURL != "" {
+							@components.ButtonWith("PSPで開く", components.ButtonOptions{
+								Variant: "outline",
+								Size:    "sm",
+								Attrs: templpkg.Attributes{
+									"href": data.PSPDashboardURL,
+									"target": "_blank",
+									"rel":   "noopener noreferrer",
+								},
+							})
+						}
+					</div>
+				</div>
+				<h2 class="text-lg font-semibold text-slate-900">{ data.TransactionID }</h2>
+				<dl class="grid grid-cols-2 gap-2 text-xs text-slate-500">
+					<div>
+						<dt class="font-medium text-slate-600">金額</dt>
+						<dd class="text-sm font-semibold text-slate-900">{ data.AmountLabel }</dd>
+					</div>
+					<div>
+						<dt class="font-medium text-slate-600">ネット入金</dt>
+						<dd class="text-sm text-slate-900">{ data.NetLabel }</dd>
+					</div>
+					<div>
+						<dt class="font-medium text-slate-600">手数料</dt>
+						<dd>{ data.FeeLabel }</dd>
+					</div>
+					<div>
+						<dt class="font-medium text-slate-600">PSP</dt>
+						<dd>{ data.ProviderLabel }</dd>
+					</div>
+					<div>
+						<dt class="font-medium text-slate-600">注文</dt>
+						<dd>
+							<a href={ data.OrderURL } class="text-brand-600 hover:text-brand-700">
+								{ data.OrderNumber }
+							</a>
+						</dd>
+					</div>
+					<div>
+						<dt class="font-medium text-slate-600">支払方法</dt>
+						<dd>{ data.PaymentMethod }</dd>
+					</div>
+				</dl>
+			</div>
+		</section>
+
+		if len(data.Timeline) > 0 {
+			<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-slate-800">イベントタイムライン</h3>
+				<ol class="space-y-3 text-sm text-slate-700">
+					for _, event := range data.Timeline {
+						<li class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+							<div class="flex items-center justify-between gap-2 text-xs text-slate-500">
+								<span>{ event.Timestamp }</span>
+								<span>{ event.Relative }</span>
+							</div>
+							<p class="mt-1 font-semibold text-slate-900">
+								if event.Icon != "" {
+									<span aria-hidden="true">{ event.Icon }</span>{" "}
+								}
+								{ event.Label }
+							</p>
+							if event.Description != "" {
+								<p class="text-xs text-slate-600">{ event.Description }</p>
+							}
+						</li>
+					}
+				</ol>
+			</section>
+		}
+
+		if len(data.Breakdown) > 0 {
+			<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-slate-800">金額内訳</h3>
+				<ul class="space-y-2 text-sm">
+					for _, item := range data.Breakdown {
+						<li class="flex items-center justify-between gap-2">
+							<span class="text-slate-600">{ item.Label }</span>
+							<span class={ breakdownClass(item.Tone) }>{ item.Value }</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.Adjustments) > 0 {
+			<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-slate-800">調整履歴</h3>
+				<ul class="space-y-3 text-sm text-slate-700">
+					for _, adj := range data.Adjustments {
+						<li class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+							<div class="flex items-center justify-between gap-2">
+								<span class="font-semibold text-slate-900">{ adj.Label }</span>
+								<span class={ helpers.BadgeClass(adj.StatusTone) }>{ adj.Status }</span>
+							</div>
+							<p class="mt-1 text-sm text-slate-600">{ adj.Amount }</p>
+							<p class="text-xs text-slate-500">{ adj.Timestamp } · { adj.Actor }</p>
+							if adj.Reason != "" {
+								<p class="text-xs text-slate-500">理由: { adj.Reason }</p>
+							}
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.Disputes) > 0 {
+			<section class="space-y-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-rose-700">異議申し立て</h3>
+				<ul class="space-y-3 text-sm text-rose-700">
+					for _, dispute := range data.Disputes {
+						<li class="rounded-lg border border-rose-200 bg-white/60 px-3 py-2">
+							<div class="flex items-center justify-between gap-2">
+								<span class="font-semibold">{ dispute.Label }</span>
+								<span class={ helpers.BadgeClass(dispute.StatusTone) }>{ dispute.Status }</span>
+							</div>
+							<p class="mt-1 text-sm text-rose-700">{ dispute.Amount }</p>
+							if dispute.ResponseDue != "" {
+								<p class="text-xs">回答期限: { dispute.ResponseDue }</p>
+							}
+							if dispute.MoreInfoURL != "" {
+								<a href={ dispute.MoreInfoURL } class="text-xs text-brand-600 hover:text-brand-700" target="_blank" rel="noopener noreferrer">
+									詳細を確認
+								</a>
+							}
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.Notes) > 0 {
+			<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-slate-800">メモ</h3>
+				<ul class="space-y-3 text-sm text-slate-700">
+					for _, note := range data.Notes {
+						<li class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+							<p class="font-semibold text-slate-900">{ note.Author }</p>
+							<p class="text-xs text-slate-500">{ note.Timestamp }</p>
+							<p class="mt-1 text-sm text-slate-700 whitespace-pre-line">{ note.Message }</p>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
+		if len(data.Payload) > 0 {
+			<section class="space-y-3 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+				<h3 class="text-sm font-semibold text-slate-800">PSP Raw Payload</h3>
+				<dl class="grid grid-cols-1 gap-2 text-xs text-slate-600">
+					for _, field := range data.Payload {
+						<div class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+							<dt class="font-semibold text-slate-700">{ field.Key }</dt>
+							<dd class="font-mono text-xs text-slate-600 break-words">{ field.Value }</dd>
+						</div>
+					}
+				</dl>
+			</section>
+		}
+	</div>
+}
+
+func breakdownClass(tone string) string {
+	switch tone {
+	case "success":
+		return "text-sm font-semibold text-emerald-700"
+	case "danger":
+		return "text-sm font-semibold text-rose-700"
+	default:
+		return "text-sm font-semibold text-slate-700"
+	}
+}

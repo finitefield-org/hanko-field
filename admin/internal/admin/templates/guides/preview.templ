@@ -1,0 +1,253 @@
+package guides
+
+import (
+	"fmt"
+	"strings"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ PreviewPage(data PreviewPageData) {
+	@layouts.Preview(data.PageTitle, data.Breadcrumbs, previewBody(data))
+}
+
+templ previewBody(data PreviewPageData) {
+	<div class="space-y-6">
+		@previewHeader(data.Header)
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="space-y-4">
+				@previewViewport(data.Viewer)
+			</section>
+			<aside class="space-y-4">
+				@previewSidebar(data.Sidebar, data.Header.ShareURL)
+			</aside>
+		</div>
+		@previewActionBar(data.Feedback)
+	</div>
+}
+
+templ previewHeader(header PreviewHeaderData) {
+	<section class="sticky top-20 z-10 rounded-2xl border border-slate-200 bg-white/90 px-6 py-5 shadow-sm backdrop-blur">
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+			<div class="space-y-2">
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ガイドプレビュー</p>
+				<h1 class="text-3xl font-semibold text-slate-900">{ header.Title }</h1>
+				if header.Subtitle != "" {
+					<p class="max-w-2xl text-sm text-slate-600">{ header.Subtitle }</p>
+				}
+				<div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+					<span class={ helpers.BadgeClass(header.StatusTone) }>{ header.StatusLabel }</span>
+					if header.UpdatedRelative != "" {
+						<span>最終更新 { header.UpdatedRelative }</span>
+					}
+					if header.UpdatedAt != "" {
+						<span class="hidden md:inline text-slate-400">({ header.UpdatedAt })</span>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col items-stretch gap-4 lg:items-end">
+				if len(header.LocaleOptions) > 0 {
+					<div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1 text-sm font-medium text-slate-600" role="tablist" aria-label="ロケール選択">
+						for _, option := range header.LocaleOptions {
+							<a
+								href={ option.URL }
+								class={ previewLocaleClass(option.Active) }
+								role="tab"
+								aria-selected={ boolAttr(option.Active) }
+							>
+								{ option.Label }
+							</a>
+						}
+					</div>
+				}
+				<div class="flex flex-wrap justify-end gap-2 text-sm">
+					if header.ShareURL != "" {
+						<a href={ header.ShareURL } target="_blank" rel="noreferrer" class="btn btn-secondary btn-sm">
+							<span>共有リンク</span>
+							<span aria-hidden="true">↗</span>
+						</a>
+					}
+					if header.ExternalURL != "" {
+						<a href={ header.ExternalURL } target="_blank" rel="noreferrer" class="btn btn-ghost btn-sm">
+							公開ページを開く
+						</a>
+					}
+				</div>
+			</div>
+		</div>
+	</section>
+}
+
+templ previewViewport(viewer PreviewContentData) {
+	<div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+		<div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-3">
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">プレビュー</p>
+				if viewer.Language != "" {
+					<p class="text-xs text-slate-400">閲覧中の言語: { viewer.Language }</p>
+				}
+			</div>
+			if len(viewer.DeviceModes) > 0 {
+				<div class="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-semibold text-slate-600">
+					for _, mode := range viewer.DeviceModes {
+						<button type="button" class={ previewModeClass(mode.Active) } disabled?={ mode.Active }>
+							{ mode.Label }
+						</button>
+					}
+				</div>
+			}
+		</div>
+		<div class="space-y-6 px-6 py-6">
+			if viewer.HeroImageURL != "" {
+				<div class="overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200">
+					<img src={ viewer.HeroImageURL } alt="" class="h-64 w-full object-cover" />
+				</div>
+			}
+			<article class="prose prose-slate max-w-none">
+				@viewer.Body
+			</article>
+		</div>
+	</div>
+}
+
+templ previewSidebar(sidebar PreviewSidebarData, shareURL string) {
+	<div class="space-y-4">
+		<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+			<h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">メタデータ</h2>
+			<dl class="mt-4 space-y-3 text-sm text-slate-600">
+				if sidebar.Summary != "" {
+					<div class="space-y-1">
+						<dt class="font-medium text-slate-500">概要</dt>
+						<dd class="leading-relaxed">{ sidebar.Summary }</dd>
+					</div>
+				}
+				if sidebar.PersonaLabel != "" {
+					@metaRow("ペルソナ", sidebar.PersonaLabel)
+				}
+				if sidebar.CategoryLabel != "" {
+					@metaRow("カテゴリ", sidebar.CategoryLabel)
+				}
+				if sidebar.LocaleLabel != "" {
+					@metaRow("言語", sidebar.LocaleLabel)
+				}
+				if sidebar.Author != "" {
+					@metaRow("オーナー", sidebar.Author)
+				}
+				if sidebar.ReadingTime != "" {
+					@metaRow("想定読了", sidebar.ReadingTime)
+				}
+				if sidebar.WordCount > 0 {
+					@metaRow("語数", fmt.Sprintf("%d 語", sidebar.WordCount))
+				}
+				if sidebar.PublishedLabel != "" {
+					@metaRow("公開済み", sidebar.PublishedLabel)
+				}
+				if sidebar.ScheduleLabel != "" {
+					@metaRow("公開予定", sidebar.ScheduleLabel)
+				}
+				if sidebar.UpdatedDisplay != "" {
+					@metaRow(sidebar.UpdatedLabel, sidebar.UpdatedDisplay)
+				}
+				if shareURL != "" {
+					<div class="space-y-1">
+						<dt class="font-medium text-slate-500">共有URL</dt>
+						<dd class="break-all rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">{ shareURL }</dd>
+					</div>
+				}
+				if len(sidebar.Tags) > 0 {
+					<div class="space-y-1">
+						<dt class="font-medium text-slate-500">タグ</dt>
+						<dd class="flex flex-wrap gap-2">
+							for _, tag := range sidebar.Tags {
+								<span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{ tag }</span>
+							}
+						</dd>
+					</div>
+				}
+			</dl>
+		</section>
+		if len(sidebar.Notes) > 0 {
+			<section class="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+				<h2 class="text-sm font-semibold uppercase tracking-wide text-amber-700">レビューメモ</h2>
+				<ul class="mt-4 space-y-3 text-sm text-amber-900">
+					for _, note := range sidebar.Notes {
+						<li class="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-amber-100">{ note }</li>
+					}
+				</ul>
+			</section>
+		}
+		if len(sidebar.Upcoming) > 0 {
+			<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+				<h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">今後の予定</h2>
+				<ol class="mt-4 space-y-4">
+					for _, event := range sidebar.Upcoming {
+						<li class="flex gap-3 rounded-xl border border-slate-200 px-4 py-3">
+							if strings.TrimSpace(event.Icon) != "" {
+								<span class="text-xl">{ event.Icon }</span>
+							}
+							<div class="space-y-1 text-sm">
+								<p class="font-semibold text-slate-800">{ event.Title }</p>
+								if event.Description != "" {
+									<p class="text-slate-600">{ event.Description }</p>
+								}
+								<p class="text-xs text-slate-500">{ event.OccursLabel } · { event.Relative }</p>
+							</div>
+						</li>
+					}
+				</ol>
+			</section>
+		}
+	</div>
+}
+
+templ previewActionBar(feedback PreviewFeedbackData) {
+	<section class="sticky bottom-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+		<div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+			<div class="w-full md:max-w-xl">
+				<label for="preview-feedback" class="text-sm font-semibold text-slate-700">フィードバック</label>
+				<textarea
+					id="preview-feedback"
+					rows="2"
+					class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 shadow-inner focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+					placeholder={ feedback.CommentPlaceholder }
+				></textarea>
+			</div>
+			<div class="flex shrink-0 items-center gap-2">
+				if feedback.RequestChangesURL != "" {
+					<a href={ feedback.RequestChangesURL } class="btn btn-outline btn-md">修正依頼</a>
+				}
+				if feedback.ApproveURL != "" {
+					<a href={ feedback.ApproveURL } class="btn btn-primary btn-md">承認</a>
+				}
+			</div>
+		</div>
+	</section>
+}
+
+templ metaRow(label string, value string) {
+	<div class="flex items-start justify-between gap-3">
+		<dt class="font-medium text-slate-500">{ label }</dt>
+		<dd class="text-right text-slate-700">{ value }</dd>
+	</div>
+}
+
+func previewLocaleClass(active bool) string {
+	base := []string{"rounded-full px-4 py-1 transition-colors"}
+	if active {
+		base = append(base, "bg-white text-slate-900 shadow-sm")
+	} else {
+		base = append(base, "text-slate-500 hover:text-slate-900")
+	}
+	return helpers.ClassList(base...)
+}
+
+func previewModeClass(active bool) string {
+	classes := []string{"rounded-full px-3 py-1"}
+	if active {
+		classes = append(classes, "bg-white text-slate-900 shadow-sm")
+	} else {
+		classes = append(classes, "text-slate-500")
+	}
+	return helpers.ClassList(classes...)
+}
