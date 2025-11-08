@@ -294,7 +294,7 @@ func Base(title string, crumbs []partials.Breadcrumb, body templ.Component) temp
 	})
 }
 
-const feedbackTrackerURL = "https://github.com/hanko-field/hanko-field/issues"
+const feedbackTrackerURL = "https://github.com/finitefield/hanko-field/issues"
 
 func joinBaseFooter(base, suffix string) string {
 	base = strings.TrimSpace(base)
