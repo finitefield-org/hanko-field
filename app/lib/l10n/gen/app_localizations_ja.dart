@@ -2879,6 +2879,72 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ / チャット / お問い合わせ';
 
   @override
+  String get profileAddressesTitle => '住所帳';
+
+  @override
+  String get profileAddressesAddTooltip => '住所を追加';
+
+  @override
+  String get profileAddressesDeleteConfirmTitle => '住所を削除しますか？';
+
+  @override
+  String profileAddressesDeleteConfirmBody(String name) {
+    return '$name の住所を削除しますか？';
+  }
+
+  @override
+  String get profileAddressesDeleteConfirmAction => '削除';
+
+  @override
+  String get profileAddressesDeleteConfirmCancel => 'キャンセル';
+
+  @override
+  String get profileAddressesLoadError => '住所帳を読み込めません。';
+
+  @override
+  String get profileAddressesRetryLabel => '再試行';
+
+  @override
+  String get profileAddressesEmptyTitle => '住所が登録されていません';
+
+  @override
+  String get profileAddressesEmptyBody => '配送先・請求先の住所を登録すると注文時に再利用できます。';
+
+  @override
+  String get profileAddressesEmptyAction => '住所を追加';
+
+  @override
+  String get profileAddressesSyncTitle => '配送同期';
+
+  @override
+  String get profileAddressesSyncNever => 'まだ同期していません。最新の配送データを取得してください。';
+
+  @override
+  String profileAddressesSyncStatus(String timestamp) {
+    return '最終同期 $timestamp';
+  }
+
+  @override
+  String get profileAddressesSyncAction => '今すぐ同期';
+
+  @override
+  String profileAddressesPhoneLabel(String value) {
+    return '電話番号: $value';
+  }
+
+  @override
+  String get profileAddressesDefaultLabel => '既定';
+
+  @override
+  String get profileAddressesSetDefaultTooltip => '既定に設定';
+
+  @override
+  String get profileAddressesEditTooltip => '編集';
+
+  @override
+  String get profileAddressesDeleteTooltip => '削除';
+
+  @override
   String get profileHomeAvatarButtonTooltip => 'プロフィール写真を変更';
 
   @override

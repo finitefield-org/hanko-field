@@ -2853,6 +2853,115 @@
   "description": "サポートクイックアクションのサブタイトル"
 }
 
+, "profileAddressesTitle": "住所帳"
+, "@profileAddressesTitle": {
+  "description": "プロフィール住所画面のタイトル"
+}
+
+, "profileAddressesAddTooltip": "住所を追加"
+, "@profileAddressesAddTooltip": {
+  "description": "住所追加アイコンボタンのツールチップ"
+}
+
+, "profileAddressesDeleteConfirmTitle": "住所を削除しますか？"
+, "@profileAddressesDeleteConfirmTitle": {
+  "description": "住所削除ダイアログのタイトル"
+}
+
+, "profileAddressesDeleteConfirmBody": "{name} の住所を削除しますか？"
+, "@profileAddressesDeleteConfirmBody": {
+  "description": "住所削除ダイアログの本文",
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+
+, "profileAddressesDeleteConfirmAction": "削除"
+, "@profileAddressesDeleteConfirmAction": {
+  "description": "住所削除を確定するボタンラベル"
+}
+
+, "profileAddressesDeleteConfirmCancel": "キャンセル"
+, "@profileAddressesDeleteConfirmCancel": {
+  "description": "住所削除をキャンセルするボタンラベル"
+}
+
+, "profileAddressesLoadError": "住所帳を読み込めません。"
+, "@profileAddressesLoadError": {
+  "description": "住所画面の読み込み失敗メッセージ"
+}
+
+, "profileAddressesRetryLabel": "再試行"
+, "@profileAddressesRetryLabel": {
+  "description": "エラービューの再試行ボタン"
+}
+
+, "profileAddressesEmptyTitle": "住所が登録されていません"
+, "@profileAddressesEmptyTitle": {
+  "description": "住所画面の空状態見出し"
+}
+
+, "profileAddressesEmptyBody": "配送先・請求先の住所を登録すると注文時に再利用できます。"
+, "@profileAddressesEmptyBody": {
+  "description": "空状態で表示する説明文"
+}
+
+, "profileAddressesEmptyAction": "住所を追加"
+, "@profileAddressesEmptyAction": {
+  "description": "空状態のCTAボタン"
+}
+
+, "profileAddressesSyncTitle": "配送同期"
+, "@profileAddressesSyncTitle": {
+  "description": "配送同期バナーのタイトル"
+}
+
+, "profileAddressesSyncNever": "まだ同期していません。最新の配送データを取得してください。"
+, "@profileAddressesSyncNever": {
+  "description": "同期履歴がない場合のメッセージ"
+}
+
+, "profileAddressesSyncStatus": "最終同期 {timestamp}"
+, "@profileAddressesSyncStatus": {
+  "description": "最後に同期した日時を示すメッセージ",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileAddressesSyncAction": "今すぐ同期"
+, "@profileAddressesSyncAction": {
+  "description": "同期ボタンのラベル"
+}
+
+, "profileAddressesPhoneLabel": "電話番号: {value}"
+, "@profileAddressesPhoneLabel": {
+  "description": "住所カード内の電話番号ラベル",
+  "placeholders": {
+    "value": { "type": "String" }
+  }
+}
+
+, "profileAddressesDefaultLabel": "既定"
+, "@profileAddressesDefaultLabel": {
+  "description": "既定住所チップのラベル"
+}
+
+, "profileAddressesSetDefaultTooltip": "既定に設定"
+, "@profileAddressesSetDefaultTooltip": {
+  "description": "既定住所に設定するツールチップ"
+}
+
+, "profileAddressesEditTooltip": "編集"
+, "@profileAddressesEditTooltip": {
+  "description": "編集アイコンのツールチップ"
+}
+
+, "profileAddressesDeleteTooltip": "削除"
+, "@profileAddressesDeleteTooltip": {
+  "description": "削除アイコンのツールチップ"
+}
+
 , "profileHomeAvatarButtonTooltip": "プロフィール写真を変更"
 , "@profileHomeAvatarButtonTooltip": {
   "description": "写真変更ボタンのツールチップ"

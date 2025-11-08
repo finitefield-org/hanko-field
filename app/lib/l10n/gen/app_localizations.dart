@@ -5192,6 +5192,126 @@ abstract class AppLocalizations {
   /// **'FAQ, chat, concierge'**
   String get profileHomeQuickLinkSupportSubtitle;
 
+  /// App bar title for the profile addresses screen
+  ///
+  /// In en, this message translates to:
+  /// **'Addresses'**
+  String get profileAddressesTitle;
+
+  /// Tooltip for the add address icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Add address'**
+  String get profileAddressesAddTooltip;
+
+  /// Title for the delete confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete address?'**
+  String get profileAddressesDeleteConfirmTitle;
+
+  /// Body text for the delete confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from your saved addresses?'**
+  String profileAddressesDeleteConfirmBody(String name);
+
+  /// Action label for confirming deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get profileAddressesDeleteConfirmAction;
+
+  /// Action label for cancelling deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get profileAddressesDeleteConfirmCancel;
+
+  /// Headline shown when the addresses screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Addresses can\'t be loaded right now.'**
+  String get profileAddressesLoadError;
+
+  /// Retry button label on the error view
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileAddressesRetryLabel;
+
+  /// Headline for the empty state on the addresses screen
+  ///
+  /// In en, this message translates to:
+  /// **'No addresses yet'**
+  String get profileAddressesEmptyTitle;
+
+  /// Supporting copy for the empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Add shipping and billing addresses to reuse them across orders.'**
+  String get profileAddressesEmptyBody;
+
+  /// CTA button label in the empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Add address'**
+  String get profileAddressesEmptyAction;
+
+  /// Title for the shipping sync status banner
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping sync'**
+  String get profileAddressesSyncTitle;
+
+  /// Message shown when addresses have never been synced
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet. Refresh to pull the latest data from shipping.'**
+  String get profileAddressesSyncNever;
+
+  /// Message indicating when the addresses were last synced
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {timestamp}'**
+  String profileAddressesSyncStatus(String timestamp);
+
+  /// Button label to trigger syncing addresses
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get profileAddressesSyncAction;
+
+  /// Label displaying the phone number within an address card
+  ///
+  /// In en, this message translates to:
+  /// **'Phone: {value}'**
+  String profileAddressesPhoneLabel(String value);
+
+  /// Chip label indicating the default address
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get profileAddressesDefaultLabel;
+
+  /// Tooltip for selecting a new default address
+  ///
+  /// In en, this message translates to:
+  /// **'Set as default'**
+  String get profileAddressesSetDefaultTooltip;
+
+  /// Tooltip for the edit icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get profileAddressesEditTooltip;
+
+  /// Tooltip for the delete icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get profileAddressesDeleteTooltip;
+
   /// Tooltip for the avatar change button
   ///
   /// In en, this message translates to:

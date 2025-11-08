@@ -4463,6 +4463,115 @@
   "description": "Subtitle for the support quick action card"
 }
 
+, "profileAddressesTitle": "Addresses"
+, "@profileAddressesTitle": {
+  "description": "App bar title for the profile addresses screen"
+}
+
+, "profileAddressesAddTooltip": "Add address"
+, "@profileAddressesAddTooltip": {
+  "description": "Tooltip for the add address icon button"
+}
+
+, "profileAddressesDeleteConfirmTitle": "Delete address?"
+, "@profileAddressesDeleteConfirmTitle": {
+  "description": "Title for the delete confirmation dialog"
+}
+
+, "profileAddressesDeleteConfirmBody": "Remove {name} from your saved addresses?"
+, "@profileAddressesDeleteConfirmBody": {
+  "description": "Body text for the delete confirmation dialog",
+  "placeholders": {
+    "name": { "type": "String" }
+  }
+}
+
+, "profileAddressesDeleteConfirmAction": "Delete"
+, "@profileAddressesDeleteConfirmAction": {
+  "description": "Action label for confirming deletion"
+}
+
+, "profileAddressesDeleteConfirmCancel": "Cancel"
+, "@profileAddressesDeleteConfirmCancel": {
+  "description": "Action label for cancelling deletion"
+}
+
+, "profileAddressesLoadError": "Addresses can't be loaded right now."
+, "@profileAddressesLoadError": {
+  "description": "Headline shown when the addresses screen fails to load"
+}
+
+, "profileAddressesRetryLabel": "Try again"
+, "@profileAddressesRetryLabel": {
+  "description": "Retry button label on the error view"
+}
+
+, "profileAddressesEmptyTitle": "No addresses yet"
+, "@profileAddressesEmptyTitle": {
+  "description": "Headline for the empty state on the addresses screen"
+}
+
+, "profileAddressesEmptyBody": "Add shipping and billing addresses to reuse them across orders."
+, "@profileAddressesEmptyBody": {
+  "description": "Supporting copy for the empty state"
+}
+
+, "profileAddressesEmptyAction": "Add address"
+, "@profileAddressesEmptyAction": {
+  "description": "CTA button label in the empty state"
+}
+
+, "profileAddressesSyncTitle": "Shipping sync"
+, "@profileAddressesSyncTitle": {
+  "description": "Title for the shipping sync status banner"
+}
+
+, "profileAddressesSyncNever": "Not synced yet. Refresh to pull the latest data from shipping."
+, "@profileAddressesSyncNever": {
+  "description": "Message shown when addresses have never been synced"
+}
+
+, "profileAddressesSyncStatus": "Last synced {timestamp}"
+, "@profileAddressesSyncStatus": {
+  "description": "Message indicating when the addresses were last synced",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileAddressesSyncAction": "Sync now"
+, "@profileAddressesSyncAction": {
+  "description": "Button label to trigger syncing addresses"
+}
+
+, "profileAddressesPhoneLabel": "Phone: {value}"
+, "@profileAddressesPhoneLabel": {
+  "description": "Label displaying the phone number within an address card",
+  "placeholders": {
+    "value": { "type": "String" }
+  }
+}
+
+, "profileAddressesDefaultLabel": "Default"
+, "@profileAddressesDefaultLabel": {
+  "description": "Chip label indicating the default address"
+}
+
+, "profileAddressesSetDefaultTooltip": "Set as default"
+, "@profileAddressesSetDefaultTooltip": {
+  "description": "Tooltip for selecting a new default address"
+}
+
+, "profileAddressesEditTooltip": "Edit"
+, "@profileAddressesEditTooltip": {
+  "description": "Tooltip for the edit icon button"
+}
+
+, "profileAddressesDeleteTooltip": "Delete"
+, "@profileAddressesDeleteTooltip": {
+  "description": "Tooltip for the delete icon button"
+}
+
 , "profileHomeAvatarButtonTooltip": "Update profile photo"
 , "@profileHomeAvatarButtonTooltip": {
   "description": "Tooltip for the avatar change button"

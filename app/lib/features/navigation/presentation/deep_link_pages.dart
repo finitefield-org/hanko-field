@@ -1,5 +1,6 @@
 import 'package:app/features/guides/presentation/guide_detail_screen.dart';
 import 'package:app/features/guides/presentation/guides_list_screen.dart';
+import 'package:app/features/profile/presentation/profile_addresses_screen.dart';
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
 import 'package:app/features/shop/presentation/product_addons_screen.dart';
 import 'package:app/features/shop/presentation/product_detail_screen.dart';
@@ -88,6 +89,26 @@ class ProfileSectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = sectionSegments.join(' / ');
+    if (sectionSegments.isEmpty) {
+      return _ProfileSectionFallback(title: title);
+    }
+    final primary = sectionSegments.first;
+    switch (primary) {
+      case 'addresses':
+        return const ProfileAddressesScreen();
+      default:
+        return _ProfileSectionFallback(title: title);
+    }
+  }
+}
+
+class _ProfileSectionFallback extends StatelessWidget {
+  const _ProfileSectionFallback({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('プロフィール: $title')),
       body: Padding(

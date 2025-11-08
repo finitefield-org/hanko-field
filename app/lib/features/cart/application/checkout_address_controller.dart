@@ -20,6 +20,7 @@ class CheckoutAddressState {
   CheckoutAddressState({
     required this.addresses,
     required this.selectedAddressId,
+    this.lastSyncedAt,
     this.isRefreshing = false,
     this.isSaving = false,
     this.savingAddressId,
@@ -32,6 +33,7 @@ class CheckoutAddressState {
 
   final UnmodifiableListView<UserAddress> addresses;
   final String? selectedAddressId;
+  final DateTime? lastSyncedAt;
   final bool isRefreshing;
   final bool isSaving;
   final String? savingAddressId;
@@ -44,6 +46,7 @@ class CheckoutAddressState {
   CheckoutAddressState copyWith({
     List<UserAddress>? addresses,
     Object? selectedAddressId = _sentinel,
+    Object? lastSyncedAt = _sentinel,
     bool? isRefreshing,
     bool? isSaving,
     Object? savingAddressId = _sentinel,
@@ -60,6 +63,9 @@ class CheckoutAddressState {
       selectedAddressId: identical(selectedAddressId, _sentinel)
           ? this.selectedAddressId
           : selectedAddressId as String?,
+      lastSyncedAt: identical(lastSyncedAt, _sentinel)
+          ? this.lastSyncedAt
+          : lastSyncedAt as DateTime?,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSaving: isSaving ?? this.isSaving,
       savingAddressId: identical(savingAddressId, _sentinel)
@@ -98,6 +104,7 @@ class CheckoutAddressController extends AsyncNotifier<CheckoutAddressState> {
     return CheckoutAddressState(
       addresses: UnmodifiableListView<UserAddress>(sorted),
       selectedAddressId: selected?.id,
+      lastSyncedAt: DateTime.now(),
     );
   }
 
@@ -130,6 +137,7 @@ class CheckoutAddressController extends AsyncNotifier<CheckoutAddressState> {
         CheckoutAddressState(
           addresses: UnmodifiableListView<UserAddress>(sorted),
           selectedAddressId: selected?.id,
+          lastSyncedAt: DateTime.now(),
         ),
       );
     } catch (error, stackTrace) {
@@ -178,6 +186,69 @@ class CheckoutAddressController extends AsyncNotifier<CheckoutAddressState> {
         clearError: true,
       ),
     );
+  }
+
+  Future<bool> setDefaultAddress(String addressId) async {
+    final current = state.value;
+    if (current == null ||
+        state.isLoading ||
+        current.isSaving ||
+        current.deletingAddressIds.contains(addressId)) {
+      return false;
+    }
+    final target = _findAddress(current.addresses, addressId);
+    if (target == null || target.isDefault) {
+      return target != null;
+    }
+    state = AsyncValue.data(
+      current.copyWith(
+        isSaving: true,
+        savingAddressId: addressId,
+        clearFeedback: true,
+        clearError: true,
+      ),
+    );
+    try {
+      final optimistic = target.copyWith(
+        isDefault: true,
+        updatedAt: DateTime.now(),
+      );
+      final saved = await _repository.upsertAddress(optimistic);
+      final merged = _mergeAddresses(current.addresses, saved);
+      final normalized = [
+        for (final address in merged)
+          address.id == saved.id
+              ? saved.copyWith(isDefault: true)
+              : address.copyWith(isDefault: false),
+      ];
+      final sorted = _sortAddresses(normalized);
+      _checkoutState.setSelectedAddress(saved);
+      state = AsyncValue.data(
+        current.copyWith(
+          addresses: sorted,
+          selectedAddressId: saved.id,
+          isSaving: false,
+          savingAddressId: null,
+          feedbackMessage: _localized(
+            '既定の住所を更新しました',
+            'Default address updated.',
+          ),
+        ),
+      );
+      return true;
+    } catch (error) {
+      state = AsyncValue.data(
+        current.copyWith(
+          isSaving: false,
+          savingAddressId: null,
+          errorMessage: _localized(
+            '既定住所の更新に失敗しました',
+            'Failed to update default address.',
+          ),
+        ),
+      );
+      return false;
+    }
   }
 
   Future<UserAddress?> saveAddress(CheckoutAddressDraft draft) async {

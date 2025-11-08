@@ -2994,6 +2994,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ, chat, concierge';
 
   @override
+  String get profileAddressesTitle => 'Addresses';
+
+  @override
+  String get profileAddressesAddTooltip => 'Add address';
+
+  @override
+  String get profileAddressesDeleteConfirmTitle => 'Delete address?';
+
+  @override
+  String profileAddressesDeleteConfirmBody(String name) {
+    return 'Remove $name from your saved addresses?';
+  }
+
+  @override
+  String get profileAddressesDeleteConfirmAction => 'Delete';
+
+  @override
+  String get profileAddressesDeleteConfirmCancel => 'Cancel';
+
+  @override
+  String get profileAddressesLoadError =>
+      'Addresses can\'t be loaded right now.';
+
+  @override
+  String get profileAddressesRetryLabel => 'Try again';
+
+  @override
+  String get profileAddressesEmptyTitle => 'No addresses yet';
+
+  @override
+  String get profileAddressesEmptyBody =>
+      'Add shipping and billing addresses to reuse them across orders.';
+
+  @override
+  String get profileAddressesEmptyAction => 'Add address';
+
+  @override
+  String get profileAddressesSyncTitle => 'Shipping sync';
+
+  @override
+  String get profileAddressesSyncNever =>
+      'Not synced yet. Refresh to pull the latest data from shipping.';
+
+  @override
+  String profileAddressesSyncStatus(String timestamp) {
+    return 'Last synced $timestamp';
+  }
+
+  @override
+  String get profileAddressesSyncAction => 'Sync now';
+
+  @override
+  String profileAddressesPhoneLabel(String value) {
+    return 'Phone: $value';
+  }
+
+  @override
+  String get profileAddressesDefaultLabel => 'Default';
+
+  @override
+  String get profileAddressesSetDefaultTooltip => 'Set as default';
+
+  @override
+  String get profileAddressesEditTooltip => 'Edit';
+
+  @override
+  String get profileAddressesDeleteTooltip => 'Delete';
+
+  @override
   String get profileHomeAvatarButtonTooltip => 'Update profile photo';
 
   @override
