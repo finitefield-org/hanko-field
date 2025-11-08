@@ -53,9 +53,21 @@ task deps
    API_FIREBASE_CREDENTIALS_FILE=$HOME/.config/gcloud/application_default_credentials.json
    API_SECURITY_ENVIRONMENT=local
    GOOGLE_CLOUD_PROJECT=hanko-field-dev
+   API_STORAGE_SIGNER_KEY=secret://storage/signer
+   API_PSP_STRIPE_API_KEY=secret://stripe/api
+   API_PSP_STRIPE_WEBHOOK_SECRET=secret://stripe/webhook
+   API_WEBHOOK_SIGNING_SECRET=secret://webhooks/signing
+   API_SECRET_FALLBACK_FILE=.secrets.local
    ```
-   - Add any `secret://` references you need; `doc/api/configuration.md` lists every key.
-   - For local-only secrets, place plaintext values in `.secrets.local` and set `API_SECRET_FALLBACK_FILE=.secrets.local`.
+   - The `secret://...` placeholders satisfy the required secret list (`Storage.SignerKey`, `PSP.StripeAPIKey`, `PSP.StripeWebhookSecret`, `Webhooks.SigningSecret`). Populate them either via GCP Secret Manager or the fallback file below.
+   - For local-only secrets, place plaintext values in `.secrets.local` (example below) so the resolver can hydrate them without hitting Secret Manager.
+     ```ini
+     # api/.secrets.local
+     secret://storage/signer=@./secrets/dev-storage-signer.json
+     secret://stripe/api=sk_test_xxx
+     secret://stripe/webhook=whsec_xxx
+     secret://webhooks/signing=local-webhook-secret
+     ```
 3. **Optional direnv**: run `direnv allow` so entering `api/` loads the `.env` file automatically.
 
 ## 5. Start Supporting Services (Firestore emulator)
