@@ -15,7 +15,7 @@ import (
 )
 
 func TestOrdersProbeSuccess(t *testing.T) {
-	handlers := newUptimeHandlers(UptimeProbeConfig{Enabled: true}, uptimeDependencies{
+	handlers := newUptimeHandlers(UptimeProbeConfig{Enabled: true, ServiceToken: "secret"}, uptimeDependencies{
 		Orders:        adminorders.NewStaticService(),
 		Notifications: adminnotifications.NewStaticService(),
 	})
@@ -27,6 +27,7 @@ func TestOrdersProbeSuccess(t *testing.T) {
 	mountUptimeRoutes(router, "/admin", handlers)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/orders", nil)
+	req.Header.Set(uptimeAuthHeader, "secret")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 
@@ -51,7 +52,7 @@ func TestOrdersProbeSuccess(t *testing.T) {
 }
 
 func TestNotificationsProbeFailure(t *testing.T) {
-	handlers := newUptimeHandlers(UptimeProbeConfig{Enabled: true}, uptimeDependencies{
+	handlers := newUptimeHandlers(UptimeProbeConfig{Enabled: true, ServiceToken: "secret"}, uptimeDependencies{
 		Orders:        adminorders.NewStaticService(),
 		Notifications: failingNotificationsService{},
 	})
@@ -59,6 +60,7 @@ func TestNotificationsProbeFailure(t *testing.T) {
 	mountUptimeRoutes(router, "/admin", handlers)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/notifications", nil)
+	req.Header.Set(uptimeAuthHeader, "secret")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 
@@ -79,6 +81,22 @@ func TestNotificationsProbeFailure(t *testing.T) {
 	}
 	if payload["error"] == nil {
 		t.Fatalf("expected error message in payload: %+v", payload)
+	}
+}
+
+func TestUptimeProbeUnauthorized(t *testing.T) {
+	handlers := newUptimeHandlers(UptimeProbeConfig{Enabled: true, ServiceToken: "secret"}, uptimeDependencies{
+		Orders: adminorders.NewStaticService(),
+	})
+	router := chi.NewRouter()
+	mountUptimeRoutes(router, "/admin", handlers)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/orders", nil)
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", res.Code)
 	}
 }
 

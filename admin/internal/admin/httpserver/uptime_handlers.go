@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -35,6 +36,8 @@ type uptimeHandlers struct {
 	orders        adminorders.Service
 	notifications adminnotifications.Service
 }
+
+const uptimeAuthHeader = "X-Hanko-Uptime-Token"
 
 func newUptimeHandlers(cfg UptimeProbeConfig, deps uptimeDependencies) *uptimeHandlers {
 	if !cfg.Enabled {
@@ -83,6 +86,9 @@ func mountUptimeRoutes(router chi.Router, base string, handlers *uptimeHandlers)
 }
 
 func (h *uptimeHandlers) ordersProbe(w http.ResponseWriter, r *http.Request) {
+	if !h.authorize(w, r) {
+		return
+	}
 	h.runProbe(w, r, "orders", func(ctx context.Context) (map[string]any, error) {
 		if h.orders == nil {
 			return nil, errors.New("orders service unavailable")
@@ -103,6 +109,9 @@ func (h *uptimeHandlers) ordersProbe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *uptimeHandlers) notificationsProbe(w http.ResponseWriter, r *http.Request) {
+	if !h.authorize(w, r) {
+		return
+	}
 	h.runProbe(w, r, "notifications", func(ctx context.Context) (map[string]any, error) {
 		if h.notifications == nil {
 			return nil, errors.New("notifications service unavailable")
@@ -157,4 +166,41 @@ func (h *uptimeHandlers) writeProbeResponse(w http.ResponseWriter, status int, c
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(details)
+}
+
+func (h *uptimeHandlers) authorize(w http.ResponseWriter, r *http.Request) bool {
+	if h == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return false
+	}
+	if h.token == "" {
+		return true
+	}
+	token := strings.TrimSpace(r.Header.Get(uptimeAuthHeader))
+	if token == "" {
+		token = parseBearerToken(r.Header.Get("Authorization"))
+	}
+	if token == "" {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return false
+	}
+	if subtle.ConstantTimeCompare([]byte(token), []byte(h.token)) != 1 {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
+func parseBearerToken(header string) string {
+	if header == "" {
+		return ""
+	}
+	head := strings.TrimSpace(header)
+	if len(head) < 7 {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(head), "bearer ") {
+		return strings.TrimSpace(head[7:])
+	}
+	return ""
 }
