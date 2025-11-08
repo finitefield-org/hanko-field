@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	cloudstorage "cloud.google.com/go/storage"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -21,15 +23,20 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/hanko-field/api/internal/handlers"
+	"github.com/hanko-field/api/internal/payments"
 	"github.com/hanko-field/api/internal/platform/auth"
 	"github.com/hanko-field/api/internal/platform/config"
 	pfirestore "github.com/hanko-field/api/internal/platform/firestore"
 	"github.com/hanko-field/api/internal/platform/idempotency"
 	"github.com/hanko-field/api/internal/platform/observability"
 	"github.com/hanko-field/api/internal/platform/secrets"
+	platformstorage "github.com/hanko-field/api/internal/platform/storage"
+	"github.com/hanko-field/api/internal/platform/webhook"
 	"github.com/hanko-field/api/internal/repositories"
 	firestoreRepo "github.com/hanko-field/api/internal/repositories/firestore"
 	"github.com/hanko-field/api/internal/services"
+
+	"github.com/oklog/ulid/v2"
 )
 
 func main() {
@@ -77,6 +84,27 @@ func main() {
 	}
 
 	buildInfo := buildInfoFromEnv(envValues, cfg, startedAt)
+	projectID := traceProjectID(cfg)
+
+	metricsShutdown, err := observability.InitMetrics(ctx, observability.MetricsOptions{
+		ProjectID:      projectID,
+		ServiceName:    "hanko-field-api",
+		ServiceVersion: buildInfo.Version,
+		Environment:    buildInfo.Environment,
+	})
+	if err != nil {
+		logger.Warn("metrics initialisation failed", zap.Error(err))
+	}
+	defer func() {
+		if metricsShutdown == nil {
+			return
+		}
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := metricsShutdown(shutdownCtx); err != nil {
+			logger.Warn("metrics shutdown error", zap.Error(err))
+		}
+	}()
 
 	firestoreProvider := pfirestore.NewProvider(cfg.Firestore)
 	firestoreClient, err := firestoreProvider.Client(ctx)
@@ -91,7 +119,47 @@ func main() {
 		}
 	}()
 
-	systemService, err := newSystemService(ctx, firestoreClient, fetcher, buildInfo)
+	storageClient, err := cloudstorage.NewClient(ctx)
+	if err != nil {
+		logger.Fatal("failed to initialise storage client", zap.Error(err))
+	}
+	defer func() {
+		if err := storageClient.Close(); err != nil {
+			logger.Warn("storage close error", zap.Error(err))
+		}
+	}()
+
+	assetCopier, err := platformstorage.NewCopier(storageClient)
+	if err != nil {
+		logger.Fatal("failed to initialise storage copier", zap.Error(err))
+	}
+
+	signerKey := strings.TrimSpace(cfg.Storage.SignedURLKey)
+	if signerKey == "" {
+		logger.Fatal("storage signer key is required")
+	}
+	signer, err := platformstorage.NewServiceAccountSignerFromJSON([]byte(signerKey))
+	if err != nil {
+		logger.Fatal("failed to parse storage signer key", zap.Error(err))
+	}
+	signedURLClient, err := platformstorage.NewClient(signer)
+	if err != nil {
+		logger.Fatal("failed to initialise signed url client", zap.Error(err))
+	}
+
+	counterRepo, err := firestoreRepo.NewCounterRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise counter repository", zap.Error(err))
+	}
+	counterService, err := services.NewCounterService(services.CounterServiceDeps{
+		Repository: counterRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise counter service", zap.Error(err))
+	}
+
+	systemService, err := newSystemService(ctx, firestoreClient, fetcher, buildInfo, counterService)
 	if err != nil {
 		logger.Warn("health: system service init failed", zap.Error(err))
 	}
@@ -146,20 +214,308 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to initialise user repository", zap.Error(err))
 	}
+	addressRepo, err := firestoreRepo.NewAddressRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise address repository", zap.Error(err))
+	}
+	favoriteRepo, err := firestoreRepo.NewFavoriteRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise favorite repository", zap.Error(err))
+	}
+	cartRepo, err := firestoreRepo.NewCartRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise cart repository", zap.Error(err))
+	}
+	inventoryRepo, err := firestoreRepo.NewInventoryRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise inventory repository", zap.Error(err))
+	}
+	nameMappingRepo, err := firestoreRepo.NewNameMappingRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise name mapping repository", zap.Error(err))
+	}
+	registrabilityRepo, err := firestoreRepo.NewDesignRegistrabilityRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise registrability repository", zap.Error(err))
+	}
+	designRepo, err := firestoreRepo.NewDesignRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise design repository", zap.Error(err))
+	}
+	designVersionRepo, err := firestoreRepo.NewDesignVersionRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise design version repository", zap.Error(err))
+	}
+	designFinder := newFirestoreDesignFinder(firestoreProvider)
+	paymentRepo, err := firestoreRepo.NewPaymentMethodRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise payment method repository", zap.Error(err))
+	}
+	assetRepo, err := firestoreRepo.NewAssetRepository(firestoreProvider, signedURLClient, cfg.Storage.AssetsBucket)
+	if err != nil {
+		logger.Fatal("failed to initialise asset repository", zap.Error(err))
+	}
+	contentRepo, err := firestoreRepo.NewContentRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise content repository", zap.Error(err))
+	}
+	promotionRepo, err := firestoreRepo.NewPromotionRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise promotion repository", zap.Error(err))
+	}
+	promotionUsageRepo, err := firestoreRepo.NewPromotionUsageRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise promotion usage repository", zap.Error(err))
+	}
+	auditRepo, err := firestoreRepo.NewAuditLogRepository(firestoreProvider)
+	if err != nil {
+		logger.Fatal("failed to initialise audit log repository", zap.Error(err))
+	}
+	auditService, err := services.NewAuditLogService(services.AuditLogServiceDeps{
+		Repository: auditRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise audit log service", zap.Error(err))
+	}
+
+	if strings.TrimSpace(cfg.PSP.StripeAPIKey) == "" {
+		logger.Fatal("stripe api key is required for payment method management")
+	}
+	stripeVerifier, err := payments.NewStripePaymentMethodVerifier(payments.StripeProviderConfig{
+		APIKey: cfg.PSP.StripeAPIKey,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise stripe payment verifier", zap.Error(err))
+	}
+	paymentVerifier := &providerPaymentVerifier{stripe: stripeVerifier}
+
+	inventoryService, err := services.NewInventoryService(services.InventoryServiceDeps{
+		Inventory: inventoryRepo,
+		Clock:     time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise inventory service", zap.Error(err))
+	}
+
+	paymentsLogger := logger.Named("payments")
+	stripeProvider, err := payments.NewStripeProvider(payments.StripeProviderConfig{
+		APIKey: cfg.PSP.StripeAPIKey,
+		Logger: func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			paymentsLogger.Debug("stripe log", zFields...)
+		},
+		Clock: time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise stripe payment provider", zap.Error(err))
+	}
+
+	paymentManager, err := payments.NewManager(map[string]payments.Provider{
+		"stripe": stripeProvider,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise payment manager", zap.Error(err))
+	}
+
 	userService, err := services.NewUserService(services.UserServiceDeps{
-		Users:    userRepo,
-		Audit:    nil,
-		Firebase: firebaseVerifier,
-		Clock:    time.Now,
+		Users:           userRepo,
+		Addresses:       addressRepo,
+		PaymentMethods:  paymentRepo,
+		PaymentVerifier: paymentVerifier,
+		Favorites:       favoriteRepo,
+		Designs:         designFinder,
+		Audit:           auditService,
+		Firebase:        firebaseVerifier,
+		Clock:           time.Now,
 	})
 	if err != nil {
 		logger.Fatal("failed to initialise user service", zap.Error(err))
 	}
 	meHandlers := handlers.NewMeHandlers(authenticator, userService)
+	assetService, err := services.NewAssetService(services.AssetServiceDeps{
+		Repository: assetRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise asset service", zap.Error(err))
+	}
+	assetHandlers := handlers.NewAssetHandlers(authenticator, assetService)
 
-	projectID := traceProjectID(cfg)
+	cartLogger := logger.Named("cart")
+	cartService, err := services.NewCartService(services.CartServiceDeps{
+		Repository:      cartRepo,
+		Clock:           time.Now,
+		DefaultCurrency: "JPY",
+		Logger: func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			cartLogger.Debug("cart log", zFields...)
+		},
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise cart service", zap.Error(err))
+	}
+	cartHandlers := handlers.NewCartHandlers(authenticator, cartService)
+
+	var (
+		orderService    services.OrderService
+		shipmentService services.ShipmentService
+		exportService   services.ExportService
+		paymentService  services.PaymentService
+		jobDispatcher   services.BackgroundJobDispatcher
+		invoiceService  services.InvoiceService
+	)
+
+	checkoutLogger := logger.Named("checkout")
+	checkoutWorkflowDispatcher := services.CheckoutWorkflowDispatcherFunc(func(ctx context.Context, payload services.CheckoutWorkflowPayload) (string, error) {
+		workflowID := ulid.Make().String()
+		fields := map[string]any{
+			"workflowId":  workflowID,
+			"userId":      strings.TrimSpace(payload.UserID),
+			"cartId":      strings.TrimSpace(payload.CartID),
+			"sessionId":   strings.TrimSpace(payload.SessionID),
+			"intentId":    strings.TrimSpace(payload.PaymentIntentID),
+			"orderId":     strings.TrimSpace(payload.OrderID),
+			"status":      strings.TrimSpace(payload.Status),
+			"reservation": strings.TrimSpace(payload.ReservationID),
+		}
+		checkoutLogger.Debug("checkout workflow dispatched", zap.Any("payload", fields))
+		return workflowID, nil
+	})
+	checkoutService, err := services.NewCheckoutService(services.CheckoutServiceDeps{
+		Carts:     cartRepo,
+		Inventory: inventoryService,
+		Payments:  paymentManager,
+		Workflow:  checkoutWorkflowDispatcher,
+		Clock:     time.Now,
+		Logger: func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			checkoutLogger.Debug("checkout log", zFields...)
+		},
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise checkout service", zap.Error(err))
+	}
+	checkoutHandlers := handlers.NewCheckoutHandlers(authenticator, checkoutService)
+
+	nameMappingLogger := logger.Named("name_mapping")
+	nameMappingService, err := services.NewNameMappingService(services.NameMappingServiceDeps{
+		Repository: nameMappingRepo,
+		Users:      userRepo,
+		Clock:      time.Now,
+		Logger: func(_ context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			nameMappingLogger.Debug("name mapping log", zFields...)
+		},
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise name mapping service", zap.Error(err))
+	}
+	nameMappingHandlers := handlers.NewNameMappingHandlers(authenticator, nameMappingService)
+
+	contentService, err := services.NewContentService(services.ContentServiceDeps{
+		Repository: contentRepo,
+		Clock:      time.Now,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise content service", zap.Error(err))
+	}
+	promotionService, err := services.NewPromotionService(services.PromotionServiceDeps{
+		Promotions:         promotionRepo,
+		Usage:              promotionUsageRepo,
+		Users:              userService,
+		Audit:              auditService,
+		Clock:              time.Now,
+		UserLookupInterval: 50 * time.Millisecond,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise promotion service", zap.Error(err))
+	}
+	internalCheckoutHandlers := handlers.NewInternalCheckoutHandlers(
+		inventoryService,
+		handlers.WithInternalCheckoutMetrics(handlers.NewCheckoutReservationMetrics(logger.Named("metrics.checkout"))),
+		handlers.WithInternalCheckoutOrders(orderService),
+		handlers.WithInternalCheckoutPromotions(promotionService),
+	)
+	internalPromotionHandlers := handlers.NewInternalPromotionHandlers(promotionService)
+	internalInvoiceHandlers := handlers.NewInternalInvoiceHandlers(invoiceService)
+	internalMaintenanceHandlers := handlers.NewInternalMaintenanceHandlers(
+		inventoryService,
+		handlers.WithMaintenanceMetrics(handlers.NewMaintenanceCleanupMetrics(logger.Named("metrics.maintenance"))),
+	)
+	internalAuditHandlers := handlers.NewInternalAuditLogHandlers(auditService)
+
+	registrabilityEvaluator := services.NewHeuristicRegistrabilityEvaluator(time.Now)
+	rateLimitMetrics := handlers.NewRateLimitMetrics(logger.Named("metrics.rate_limit"))
+	rateLimitWindow := cfg.RateLimits.Window
+	if rateLimitWindow <= 0 {
+		rateLimitWindow = time.Minute
+	}
+	queueMetrics := observability.NewQueueDepthMetrics(logger.Named("metrics.production_queue"))
+
+	designService, err := services.NewDesignService(services.DesignServiceDeps{
+		Designs:             designRepo,
+		Versions:            designVersionRepo,
+		AssetCopier:         assetCopier,
+		AssetsBucket:        cfg.Storage.AssetsBucket,
+		Clock:               time.Now,
+		Registrability:      registrabilityEvaluator,
+		RegistrabilityCache: registrabilityRepo,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise design service", zap.Error(err))
+	}
+	designHandlers := handlers.NewDesignHandlers(
+		authenticator,
+		designService,
+		handlers.WithDesignRateLimitMetrics(rateLimitMetrics),
+		handlers.WithRegistrabilityRateLimit(cfg.RateLimits.RegistrabilityPerMinute, rateLimitWindow),
+		handlers.WithAISuggestionRateLimit(cfg.RateLimits.AISuggestionsPerMinute, rateLimitWindow),
+	)
+	reviewHandlers := handlers.NewReviewHandlers(authenticator, nil)
+	exportLogger := logger.Named("exports")
+	exportPublisher := services.NewNoopExportPublisher()
+	exportService, err = services.NewExportService(services.ExportServiceDeps{
+		Publisher: exportPublisher,
+		Clock:     time.Now,
+		IDGenerator: func() string {
+			return ulid.Make().String()
+		},
+		Logger: func(ctx context.Context, event string, fields map[string]any) {
+			zFields := make([]zap.Field, 0, len(fields)+1)
+			zFields = append(zFields, zap.String("event", event))
+			for k, v := range fields {
+				zFields = append(zFields, zap.Any(k, v))
+			}
+			exportLogger.Debug("export log", zFields...)
+		},
+	})
+	if err != nil {
+		logger.Fatal("failed to initialise export service", zap.Error(err))
+	}
+	orderHandlers := handlers.NewOrderHandlers(authenticator, orderService)
+
+	httpMetrics := observability.NewHTTPMetrics(logger.Named("metrics.http"))
 	middlewares := []func(http.Handler) http.Handler{
+		observability.HTTPMetricsMiddleware(httpMetrics),
 		observability.InjectLoggerMiddleware(logger.Named("http")),
+		observability.CorrelationIDMiddleware(),
 		observability.TraceMiddleware(projectID),
 		observability.RecoveryMiddleware(logger.Named("http")),
 		observability.RequestLoggerMiddleware(projectID),
@@ -171,18 +527,179 @@ func main() {
 		handlers.WithHealthSystemService(systemService),
 	)
 
+	stripeWebhookSecret := strings.TrimSpace(cfg.PSP.StripeWebhookSecret)
+	paymentWebhookHandlers := handlers.NewPaymentWebhookHandlers(paymentService, func(context.Context) (string, error) {
+		if stripeWebhookSecret == "" {
+			return "", errors.New("stripe webhook secret not configured")
+		}
+		return stripeWebhookSecret, nil
+	})
+
+	lowerSecrets := make(map[string]string, len(cfg.Security.HMAC.Secrets))
+	for key, value := range cfg.Security.HMAC.Secrets {
+		normalized := strings.ToLower(strings.TrimSpace(key))
+		if normalized == "" {
+			continue
+		}
+		lowerSecrets[normalized] = strings.TrimSpace(value)
+	}
+	lookupSecret := func(keys ...string) string {
+		for _, key := range keys {
+			normalized := strings.ToLower(strings.TrimSpace(key))
+			if normalized == "" {
+				continue
+			}
+			if secret, ok := lowerSecrets[normalized]; ok && secret != "" {
+				return secret
+			}
+		}
+		return ""
+	}
+	carrierCIDRs := func(values []string, carrier string) []string {
+		prefix := strings.ToLower(strings.TrimSpace(carrier)) + ":"
+		result := make([]string, 0, len(values))
+		for _, raw := range values {
+			value := strings.TrimSpace(raw)
+			if value == "" {
+				continue
+			}
+			lower := strings.ToLower(value)
+			if strings.HasPrefix(lower, prefix) {
+				result = append(result, strings.TrimSpace(value[len(prefix):]))
+			}
+		}
+		return result
+	}
+
+	shippingOpts := make([]handlers.ShippingWebhookOption, 0, 4)
+	if secret := lookupSecret("shipping/dhl", "shipping"); secret != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierHMACSecret("dhl", secret))
+	}
+	if secret := lookupSecret("shipping/ups", "shipping"); secret != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierHMACSecret("ups", secret))
+	}
+	if token := lookupSecret("shipping/yamato"); token != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAuthToken("yamato", token))
+	}
+	if token := lookupSecret("shipping/fedex"); token != "" {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAuthToken("fedex", token))
+	}
+	if cidrs := carrierCIDRs(cfg.Webhooks.AllowedHosts, "jp-post"); len(cidrs) > 0 {
+		shippingOpts = append(shippingOpts, handlers.WithCarrierAllowedCIDRs("jp-post", cidrs...))
+	}
+	shippingWebhookHandlers := handlers.NewShippingWebhookHandlers(shipmentService, shippingOpts...)
+
+	var aiWebhookHandlers *handlers.AIWorkerWebhookHandlers
+	if jobDispatcher != nil {
+		aiWebhookLogger := logger.Named("webhooks.ai")
+		aiWebhookHandlers = handlers.NewAIWorkerWebhookHandlers(
+			jobDispatcher,
+			services.NewNoopAISuggestionNotifier(),
+			handlers.WithAIWorkerWebhookLogger(func(ctx context.Context, event string, fields map[string]any) {
+				zFields := make([]zap.Field, 0, len(fields)+1)
+				zFields = append(zFields, zap.String("event", event))
+				for k, v := range fields {
+					zFields = append(zFields, zap.Any(k, v))
+				}
+				aiWebhookLogger.Debug("ai worker webhook", zFields...)
+			}),
+		)
+	}
+
+	webhookSecurityLogger := logger.Named("webhooks.security")
+	webhookNetworks := parseWebhookNetworks(webhookSecurityLogger, cfg.Webhooks.AllowedCIDRs)
+	webhookSecurityMetrics := webhook.NewMetricsRecorder(webhookSecurityLogger)
+	webhookReplayStore := webhook.NewInMemoryReplayStore()
+	webhookSecurityMiddleware := webhook.NewSecurityMiddleware(webhook.SecurityConfig{
+		AllowedNetworks: webhookNetworks,
+		ReplayStore:     webhookReplayStore,
+		ReplayTTL:       cfg.Webhooks.ReplayTTL,
+		Logger:          webhookSecurityLogger,
+		Metrics:         webhookSecurityMetrics,
+	})
+
 	var opts []handlers.Option
 	opts = append(opts, handlers.WithMiddlewares(middlewares...))
 	opts = append(opts, handlers.WithHealthHandlers(healthHandlers))
 	opts = append(opts, handlers.WithMeRoutes(meHandlers.Routes))
-	publicHandlers := handlers.NewPublicHandlers()
+	opts = append(opts, handlers.WithDesignRoutes(designHandlers.Routes))
+	opts = append(opts, handlers.WithReviewRoutes(reviewHandlers.Routes))
+	opts = append(opts, handlers.WithOrderRoutes(orderHandlers.Routes))
+	opts = append(opts, handlers.WithNameMappingRoutes(nameMappingHandlers.Routes))
+	opts = append(opts, handlers.WithCartRoutes(cartHandlers.Routes))
+	opts = append(opts, handlers.WithAdditionalRoutes(cartHandlers.RegisterStandaloneRoutes))
+	opts = append(opts, handlers.WithAdditionalRoutes(assetHandlers.Routes))
+	opts = append(opts, handlers.WithAdditionalRoutes(checkoutHandlers.Routes))
+	opts = append(opts, handlers.WithInternalRoutes(handlers.CombineRouteRegistrars(
+		internalCheckoutHandlers.Routes,
+		internalPromotionHandlers.Routes,
+		internalInvoiceHandlers.Routes,
+		internalMaintenanceHandlers.Routes,
+		internalAuditHandlers.Routes,
+	)))
+	publicHandlers := handlers.NewPublicHandlers(
+		handlers.WithPublicContentService(contentService),
+		handlers.WithPublicPromotionService(promotionService),
+		handlers.WithPublicPromotionRateLimit(cfg.RateLimits.PromotionLookupsPerMinute, rateLimitWindow),
+		handlers.WithPublicRateLimitMetrics(rateLimitMetrics),
+	)
 	opts = append(opts, handlers.WithPublicRoutes(publicHandlers.Routes))
+	adminCatalogHandlers := handlers.NewAdminCatalogHandlers(authenticator, nil)
+	adminContentHandlers := handlers.NewAdminContentHandlers(authenticator, contentService)
+	adminPromotionHandlers := handlers.NewAdminPromotionHandlers(authenticator, promotionService)
+	adminInventoryHandlers := handlers.NewAdminInventoryHandlers(authenticator, inventoryService, nil, orderService, handlers.WithAdminInventoryConfig(handlers.AdminInventoryConfig{
+		VelocityLookbackDays: cfg.Inventory.LowStockVelocityLookbackDays,
+		OrderPageSize:        cfg.Inventory.LowStockOrderPageSize,
+		MaxOrderPages:        cfg.Inventory.LowStockMaxOrderPages,
+	}))
+	adminProductionQueueHandlers := handlers.NewAdminProductionQueueHandlers(authenticator, nil, orderService, handlers.WithProductionQueueMetrics(queueMetrics))
+	adminUserHandlers := handlers.NewAdminUserHandlers(authenticator, userService, orderService, auditService)
+	adminInvoiceHandlers := handlers.NewAdminInvoiceHandlers(authenticator, invoiceService)
+	adminReviewHandlers := handlers.NewAdminReviewHandlers(authenticator, nil, auditService)
+	adminAuditHandlers := handlers.NewAdminAuditHandlers(authenticator, auditService)
+	adminCounterHandlers := handlers.NewAdminCounterHandlers(authenticator, counterService, auditService, handlers.WithAdminCounterAllowedScopes("orders", "invoices"))
+	adminOperationsHandlers := handlers.NewAdminOperationsHandlers(authenticator, exportService)
+	adminSystemHandlers := handlers.NewAdminSystemHandlers(authenticator, systemService)
+
+	adminRegistrars := []handlers.RouteRegistrar{
+		adminCatalogHandlers.Routes,
+		adminContentHandlers.Routes,
+		adminPromotionHandlers.Routes,
+		adminInventoryHandlers.Routes,
+		adminProductionQueueHandlers.Routes,
+		adminInvoiceHandlers.Routes,
+		adminOperationsHandlers.Routes,
+		adminSystemHandlers.Routes,
+		adminCounterHandlers.Routes,
+		adminReviewHandlers.Routes,
+		adminUserHandlers.Routes,
+		adminAuditHandlers.Routes,
+	}
+	if orderService != nil {
+		adminOrderHandlers := handlers.NewAdminOrderHandlers(authenticator, orderService, shipmentService, nil, nil)
+		adminRegistrars = append(adminRegistrars, adminOrderHandlers.Routes)
+	}
+
+	opts = append(opts, handlers.WithAdminRoutes(
+		handlers.CombineRouteRegistrars(adminRegistrars...),
+	))
 	if oidcMiddleware != nil {
 		opts = append(opts, handlers.WithInternalMiddlewares(oidcMiddleware))
 	}
 	if hmacMiddleware != nil {
 		opts = append(opts, handlers.WithWebhookMiddlewares(hmacMiddleware))
 	}
+	if webhookSecurityMiddleware != nil {
+		opts = append(opts, handlers.WithWebhookMiddlewares(webhookSecurityMiddleware))
+	}
+	webhookRegistrars := []handlers.RouteRegistrar{paymentWebhookHandlers.Routes}
+	if shippingWebhookHandlers != nil {
+		webhookRegistrars = append(webhookRegistrars, shippingWebhookHandlers.Routes)
+	}
+	if aiWebhookHandlers != nil {
+		webhookRegistrars = append(webhookRegistrars, aiWebhookHandlers.Routes)
+	}
+	opts = append(opts, handlers.WithWebhookRoutes(handlers.CombineRouteRegistrars(webhookRegistrars...)))
 
 	router := handlers.NewRouter(opts...)
 	server := &http.Server{
@@ -241,7 +758,7 @@ func buildInfoFromEnv(env map[string]string, cfg config.Config, started time.Tim
 	}
 }
 
-func newSystemService(ctx context.Context, client *firestore.Client, fetcher *secrets.Fetcher, build services.BuildInfo) (services.SystemService, error) {
+func newSystemService(ctx context.Context, client *firestore.Client, fetcher *secrets.Fetcher, build services.BuildInfo, counters services.CounterService) (services.SystemService, error) {
 	checks := make([]repositories.DependencyCheck, 0, 4)
 	if client != nil {
 		c := client
@@ -289,6 +806,9 @@ func newSystemService(ctx context.Context, client *firestore.Client, fetcher *se
 		HealthRepository: repo,
 		Clock:            time.Now,
 		Build:            build,
+		Counters:         counters,
+		Errors:           services.NewNoopSystemErrorStore(),
+		Tasks:            services.NewNoopSystemTaskStore(),
 	})
 }
 
@@ -346,6 +866,43 @@ func buildHMACMiddleware(logger *zap.Logger, cfg config.Config) func(http.Handle
 
 	resolver := webhookSecretResolver(secrets)
 	return validator.RequireHMACResolver(resolver)
+}
+
+func parseWebhookNetworks(logger *zap.Logger, values []string) []*net.IPNet {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	networks := make([]*net.IPNet, 0, len(values))
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if value == "" {
+			continue
+		}
+		if strings.Contains(value, "/") {
+			_, network, err := net.ParseCIDR(value)
+			if err != nil {
+				logger.Warn("webhook security: invalid cidr entry", zap.String("value", value), zap.Error(err))
+				continue
+			}
+			networks = append(networks, network)
+			continue
+		}
+		ip := net.ParseIP(value)
+		if ip == nil {
+			logger.Warn("webhook security: invalid ip entry", zap.String("value", value))
+			continue
+		}
+		bits := 32
+		if ip.To4() == nil {
+			bits = 128
+		}
+		network := &net.IPNet{
+			IP:   ip,
+			Mask: net.CIDRMask(bits, bits),
+		}
+		networks = append(networks, network)
+	}
+	return networks
 }
 
 type staticSecretProvider struct {
@@ -456,6 +1013,7 @@ func newSecretFetcher(ctx context.Context, logger *zap.Logger, env map[string]st
 
 func requiredSecretNames(env map[string]string) []string {
 	required := []string{
+		"Storage.SignerKey",
 		"PSP.StripeAPIKey",
 		"PSP.StripeWebhookSecret",
 		"Webhooks.SigningSecret",
@@ -603,4 +1161,113 @@ func uniqueStrings(values []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+type providerPaymentVerifier struct {
+	stripe *payments.StripePaymentMethodVerifier
+}
+
+func (p *providerPaymentVerifier) VerifyPaymentMethod(ctx context.Context, provider string, token string) (services.PaymentMethodMetadata, error) {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "stripe":
+		if p.stripe == nil {
+			return services.PaymentMethodMetadata{}, fmt.Errorf("stripe payment verifier unavailable")
+		}
+		details, err := p.stripe.Lookup(ctx, token)
+		if err != nil {
+			return services.PaymentMethodMetadata{}, err
+		}
+		return services.PaymentMethodMetadata{
+			Token:    details.Token,
+			Brand:    details.Brand,
+			Last4:    details.Last4,
+			ExpMonth: details.ExpMonth,
+			ExpYear:  details.ExpYear,
+		}, nil
+	default:
+		return services.PaymentMethodMetadata{}, fmt.Errorf("unsupported payment provider %q", provider)
+	}
+}
+
+type firestoreDesignFinder struct {
+	provider *pfirestore.Provider
+}
+
+func newFirestoreDesignFinder(provider *pfirestore.Provider) services.DesignFinder {
+	if provider == nil {
+		return nil
+	}
+	return &firestoreDesignFinder{provider: provider}
+}
+
+func (f *firestoreDesignFinder) FindByID(ctx context.Context, designID string) (services.Design, error) {
+	if f == nil || f.provider == nil {
+		return services.Design{}, fmt.Errorf("design finder not configured")
+	}
+	trimmed := strings.TrimSpace(designID)
+	if trimmed == "" {
+		return services.Design{}, &favoriteNotFoundError{err: errors.New("design id required")}
+	}
+	client, err := f.provider.Client(ctx)
+	if err != nil {
+		return services.Design{}, err
+	}
+	snap, err := client.Collection("designs").Doc(trimmed).Get(ctx)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return services.Design{}, &favoriteNotFoundError{err: err}
+		}
+		return services.Design{}, err
+	}
+
+	data := snap.Data()
+	ownerRef, _ := data["ownerRef"].(string)
+	statusValue, _ := data["status"].(string)
+	locale, _ := data["locale"].(string)
+	template := ""
+	if style, ok := data["style"].(map[string]any); ok {
+		if ref, ok := style["templateRef"].(string); ok {
+			template = ref
+		}
+	}
+
+	var snapshot map[string]any
+	if raw, ok := data["snapshot"].(map[string]any); ok && len(raw) > 0 {
+		snapshot = raw
+	}
+
+	updatedAt := snap.UpdateTime
+	if ts, ok := data["updatedAt"].(time.Time); ok && !ts.IsZero() {
+		updatedAt = ts
+	}
+
+	design := services.Design{
+		ID:        trimmed,
+		OwnerID:   extractOwnerID(ownerRef),
+		Status:    services.DesignStatus(strings.TrimSpace(statusValue)),
+		Template:  template,
+		Locale:    locale,
+		Snapshot:  snapshot,
+		UpdatedAt: updatedAt,
+	}
+	return design, nil
+}
+
+type favoriteNotFoundError struct {
+	err error
+}
+
+func (e *favoriteNotFoundError) Error() string       { return e.err.Error() }
+func (e *favoriteNotFoundError) Unwrap() error       { return e.err }
+func (e *favoriteNotFoundError) IsNotFound() bool    { return true }
+func (e *favoriteNotFoundError) IsConflict() bool    { return false }
+func (e *favoriteNotFoundError) IsUnavailable() bool { return false }
+
+func extractOwnerID(ref string) string {
+	trimmed := strings.TrimSpace(ref)
+	trimmed = strings.TrimPrefix(trimmed, "/")
+	if strings.HasPrefix(trimmed, "users/") {
+		return trimmed[len("users/"):]
+	}
+	return trimmed
 }

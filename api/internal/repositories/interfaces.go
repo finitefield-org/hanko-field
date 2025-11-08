@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	domain "github.com/hanko-field/api/internal/domain"
@@ -13,6 +14,7 @@ type Registry interface {
 
 	Designs() DesignRepository
 	DesignVersions() DesignVersionRepository
+	Registrability() RegistrabilityRepository
 	AISuggestions() AISuggestionRepository
 	AIJobs() AIJobRepository
 	Carts() CartRepository
@@ -24,6 +26,7 @@ type Registry interface {
 	OrderProductionEvents() OrderProductionEventRepository
 	Promotions() PromotionRepository
 	PromotionUsage() PromotionUsageRepository
+	ProductionQueues() ProductionQueueRepository
 	Users() UserRepository
 	Addresses() AddressRepository
 	PaymentMethods() PaymentMethodRepository
@@ -32,6 +35,9 @@ type Registry interface {
 	Content() ContentRepository
 	Assets() AssetRepository
 	AuditLogs() AuditLogRepository
+	NameMappings() NameMappingRepository
+	Invoices() InvoiceRepository
+	InvoiceBatches() InvoiceBatchRepository
 	Counters() CounterRepository
 	Health() HealthRepository
 	UnitOfWork
@@ -63,6 +69,13 @@ type DesignRepository interface {
 type DesignVersionRepository interface {
 	Append(ctx context.Context, version domain.DesignVersion) error
 	ListByDesign(ctx context.Context, designID string, pager domain.Pagination) (domain.CursorPage[domain.DesignVersion], error)
+	FindByID(ctx context.Context, designID string, versionID string) (domain.DesignVersion, error)
+}
+
+// RegistrabilityRepository persists registrability assessment results for designs.
+type RegistrabilityRepository interface {
+	Get(ctx context.Context, designID string) (domain.RegistrabilityCheckResult, error)
+	Save(ctx context.Context, result domain.RegistrabilityCheckResult) error
 }
 
 // AISuggestionRepository stores AI suggestion records and status transitions.
@@ -70,7 +83,7 @@ type AISuggestionRepository interface {
 	Insert(ctx context.Context, suggestion domain.AISuggestion) error
 	FindByID(ctx context.Context, designID string, suggestionID string) (domain.AISuggestion, error)
 	UpdateStatus(ctx context.Context, designID string, suggestionID string, status string, metadata map[string]any) (domain.AISuggestion, error)
-	ListByDesign(ctx context.Context, designID string, pager domain.Pagination) (domain.CursorPage[domain.AISuggestion], error)
+	ListByDesign(ctx context.Context, designID string, filter AISuggestionListFilter) (domain.CursorPage[domain.AISuggestion], error)
 }
 
 // AIJobRepository persists AI job metadata and lifecycle state.
@@ -96,7 +109,7 @@ type AIJobStatusUpdate struct {
 
 // CartRepository owns cart header + items persistence with optimistic locking guarantees.
 type CartRepository interface {
-	UpsertCart(ctx context.Context, cart domain.Cart) (domain.Cart, error)
+	UpsertCart(ctx context.Context, cart domain.Cart, expectedUpdate *time.Time) (domain.Cart, error)
 	GetCart(ctx context.Context, userID string) (domain.Cart, error)
 	ReplaceItems(ctx context.Context, userID string, items []domain.CartItem) (domain.Cart, error)
 }
@@ -106,8 +119,11 @@ type InventoryRepository interface {
 	Reserve(ctx context.Context, req InventoryReserveRequest) (InventoryReserveResult, error)
 	Commit(ctx context.Context, req InventoryCommitRequest) (InventoryCommitResult, error)
 	Release(ctx context.Context, req InventoryReleaseRequest) (InventoryReleaseResult, error)
+	ListExpiredReservations(ctx context.Context, query InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error)
 	GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error)
 	ListLowStock(ctx context.Context, query InventoryLowStockQuery) (domain.CursorPage[domain.InventoryStock], error)
+	ConfigureSafetyStock(ctx context.Context, cfg InventorySafetyStockConfig) (domain.InventoryStock, error)
+	UpdateSafetyNotification(ctx context.Context, sku string, notifiedAt time.Time) (domain.InventoryStock, error)
 }
 
 // InventoryReserveRequest encapsulates reservation creation metadata for the repository.
@@ -148,11 +164,26 @@ type InventoryReleaseResult struct {
 	Stocks      map[string]domain.InventoryStock
 }
 
+// InventoryExpiredReservationQuery locates reservations that should be released.
+type InventoryExpiredReservationQuery struct {
+	Before time.Time
+	Limit  int
+}
+
 // InventoryLowStockQuery controls pagination and threshold filtering for low stock listings.
 type InventoryLowStockQuery struct {
 	Threshold int
 	PageSize  int
 	PageToken string
+}
+
+// InventorySafetyStockConfig updates or creates a stock document with a new safety threshold.
+type InventorySafetyStockConfig struct {
+	SKU           string
+	ProductRef    string
+	SafetyStock   int
+	InitialOnHand *int
+	Now           time.Time
 }
 
 // OrderRepository persists order headers and provides query helpers for users and admins.
@@ -162,6 +193,29 @@ type OrderRepository interface {
 	FindByID(ctx context.Context, orderID string) (domain.Order, error)
 	List(ctx context.Context, filter OrderListFilter) (domain.CursorPage[domain.Order], error)
 }
+
+// InvoiceRepository persists invoice records linked to orders.
+type InvoiceRepository interface {
+	Insert(ctx context.Context, invoice domain.Invoice) (domain.Invoice, error)
+	FindByOrderID(ctx context.Context, orderID string) ([]domain.Invoice, error)
+}
+
+// InvoiceBatchRepository tracks invoice batch runs for operations.
+type InvoiceBatchRepository interface {
+	Insert(ctx context.Context, job domain.InvoiceBatchJob) (domain.InvoiceBatchJob, error)
+}
+
+// OrderSort enumerates supported sort fields for admin and user order listings.
+type OrderSort string
+
+const (
+	// OrderSortCreatedAt orders results by creation timestamp (newest first by default).
+	OrderSortCreatedAt OrderSort = "createdAt"
+	// OrderSortUpdatedAt orders results by last update timestamp.
+	OrderSortUpdatedAt OrderSort = "updatedAt"
+	// OrderSortPlacedAt orders results by placed timestamp (checkout completion).
+	OrderSortPlacedAt OrderSort = "placedAt"
+)
 
 // OrderPaymentRepository stores payment records underneath an order document.
 type OrderPaymentRepository interface {
@@ -175,6 +229,7 @@ type OrderShipmentRepository interface {
 	Insert(ctx context.Context, shipment domain.Shipment) error
 	Update(ctx context.Context, shipment domain.Shipment) error
 	List(ctx context.Context, orderID string) ([]domain.Shipment, error)
+	FindByTracking(ctx context.Context, trackingCode string) (domain.Shipment, error)
 }
 
 // ReviewRepository stores product reviews and their moderation meta.
@@ -183,8 +238,18 @@ type ReviewRepository interface {
 	FindByID(ctx context.Context, reviewID string) (domain.Review, error)
 	FindByOrder(ctx context.Context, orderID string) (domain.Review, error)
 	ListByUser(ctx context.Context, userID string, pager domain.Pagination) (domain.CursorPage[domain.Review], error)
+	List(ctx context.Context, filter ReviewListFilter) (domain.CursorPage[domain.Review], error)
 	UpdateStatus(ctx context.Context, reviewID string, status domain.ReviewStatus, update ReviewModerationUpdate) (domain.Review, error)
 	UpdateReply(ctx context.Context, reviewID string, reply *domain.ReviewReply, updatedAt time.Time) (domain.Review, error)
+}
+
+// ReviewListFilter filters review listings for moderation workflows.
+type ReviewListFilter struct {
+	ReviewID   string
+	Status     []domain.ReviewStatus
+	OrderRef   string
+	UserRef    string
+	Pagination domain.Pagination
 }
 
 // OrderProductionEventRepository stores production timeline events for an order.
@@ -198,6 +263,7 @@ type PromotionRepository interface {
 	Insert(ctx context.Context, promotion domain.Promotion) error
 	Update(ctx context.Context, promotion domain.Promotion) error
 	Delete(ctx context.Context, promotionID string) error
+	Get(ctx context.Context, promotionID string) (domain.Promotion, error)
 	FindByCode(ctx context.Context, code string) (domain.Promotion, error)
 	List(ctx context.Context, filter PromotionListFilter) (domain.CursorPage[domain.Promotion], error)
 }
@@ -205,21 +271,54 @@ type PromotionRepository interface {
 // PromotionUsageRepository records per-user usage counts to enforce limits.
 type PromotionUsageRepository interface {
 	IncrementUsage(ctx context.Context, promoID string, userID string, now time.Time) (domain.PromotionUsage, error)
+	GetUsage(ctx context.Context, promoID string, userID string) (domain.PromotionUsage, error)
 	RemoveUsage(ctx context.Context, promoID string, userID string) error
-	ListUsage(ctx context.Context, promoID string, pager domain.Pagination) (domain.CursorPage[domain.PromotionUsage], error)
+	ListUsage(ctx context.Context, query PromotionUsageListQuery) (domain.CursorPage[domain.PromotionUsage], error)
 }
+
+var ErrPromotionUsageInvalidPageToken = errors.New("promotion usage repository: invalid page token")
+
+var (
+	ErrPromotionUsageLimitExceeded        = errors.New("promotion usage repository: usage limit exceeded")
+	ErrPromotionUsagePerUserLimitExceeded = errors.New("promotion usage repository: per-user usage limit exceeded")
+	ErrPromotionUsageBlocked              = errors.New("promotion usage repository: user usage blocked")
+)
+
+// PromotionUsageListQuery filters and paginates per-user usage aggregates.
+type PromotionUsageListQuery struct {
+	PromotionID string
+	MinTimes    int
+	Pagination  domain.Pagination
+	SortBy      PromotionUsageSort
+	SortDesc    bool
+}
+
+// PromotionUsageSort enumerates supported sort fields.
+type PromotionUsageSort string
+
+const (
+	// PromotionUsageSortLastUsed orders usage records by most recent application.
+	PromotionUsageSortLastUsed PromotionUsageSort = "lastUsedAt"
+	// PromotionUsageSortTimes orders usage records by total usage count.
+	PromotionUsageSortTimes PromotionUsageSort = "times"
+)
 
 // UserRepository stores user profiles and supports masking/deactivation flows.
 type UserRepository interface {
 	FindByID(ctx context.Context, userID string) (domain.UserProfile, error)
 	UpdateProfile(ctx context.Context, profile domain.UserProfile) (domain.UserProfile, error)
+	Search(ctx context.Context, filter UserSearchFilter) (domain.CursorPage[domain.UserProfile], error)
 }
 
 // AddressRepository stores shipping addresses per user.
 type AddressRepository interface {
 	List(ctx context.Context, userID string) ([]domain.Address, error)
-	Upsert(ctx context.Context, userID string, addressID *string, addr domain.Address, isDefault bool) (domain.Address, error)
+	Upsert(ctx context.Context, userID string, addressID *string, addr domain.Address) (domain.Address, error)
 	Delete(ctx context.Context, userID string, addressID string) error
+	Get(ctx context.Context, userID string, addressID string) (domain.Address, error)
+	FindByHash(ctx context.Context, userID string, hash string) (domain.Address, bool, error)
+	HasAny(ctx context.Context, userID string) (bool, error)
+	SetDefaultFlags(ctx context.Context, userID string, addressID string, shipping, billing *bool) (domain.Address, error)
 }
 
 // PaymentMethodRepository stores PSP reference tokens per user.
@@ -227,13 +326,31 @@ type PaymentMethodRepository interface {
 	List(ctx context.Context, userID string) ([]domain.PaymentMethod, error)
 	Insert(ctx context.Context, userID string, method domain.PaymentMethod) (domain.PaymentMethod, error)
 	Delete(ctx context.Context, userID string, paymentMethodID string) error
+	Get(ctx context.Context, userID string, paymentMethodID string) (domain.PaymentMethod, error)
+	SetDefault(ctx context.Context, userID string, paymentMethodID string) (domain.PaymentMethod, error)
 }
 
 // FavoriteRepository tracks favorite designs per user.
 type FavoriteRepository interface {
 	List(ctx context.Context, userID string, pager domain.Pagination) (domain.CursorPage[domain.FavoriteDesign], error)
-	Put(ctx context.Context, userID string, designID string, addedAt time.Time) error
+	Put(ctx context.Context, userID string, designID string, addedAt time.Time, limit int) (bool, error)
 	Delete(ctx context.Context, userID string, designID string) error
+}
+
+// UserSearchFilter controls flexible lookup queries for admin/staff tooling.
+type UserSearchFilter struct {
+	Query           string
+	Limit           int
+	PageToken       string
+	IncludeInactive bool
+}
+
+// NameMappingRepository persists transliteration results and selection state.
+type NameMappingRepository interface {
+	Insert(ctx context.Context, mapping domain.NameMapping) error
+	Update(ctx context.Context, mapping domain.NameMapping) error
+	FindByID(ctx context.Context, mappingID string) (domain.NameMapping, error)
+	FindByLookup(ctx context.Context, userID string, latin string, locale string) (domain.NameMapping, error)
 }
 
 // CatalogRepository bundles template/font/material/product storage with shared transactions.
@@ -243,6 +360,7 @@ type CatalogRepository interface {
 	GetTemplate(ctx context.Context, templateID string) (domain.Template, error)
 	UpsertTemplate(ctx context.Context, template domain.Template) (domain.Template, error)
 	DeleteTemplate(ctx context.Context, templateID string) error
+	AppendTemplateVersion(ctx context.Context, version domain.TemplateVersion) error
 
 	// ListFonts returns a paginated collection of fonts respecting the provided filter.
 	ListFonts(ctx context.Context, filter FontFilter) (domain.CursorPage[domain.FontSummary], error)
@@ -257,13 +375,15 @@ type CatalogRepository interface {
 	ListMaterials(ctx context.Context, filter MaterialFilter) (domain.CursorPage[domain.MaterialSummary], error)
 	GetPublishedMaterial(ctx context.Context, materialID string) (domain.Material, error)
 	GetMaterial(ctx context.Context, materialID string) (domain.Material, error)
+	CreateMaterial(ctx context.Context, material domain.MaterialSummary) (domain.MaterialSummary, error)
 	UpsertMaterial(ctx context.Context, material domain.MaterialSummary) (domain.MaterialSummary, error)
 	DeleteMaterial(ctx context.Context, materialID string) error
 
 	ListProducts(ctx context.Context, filter ProductFilter) (domain.CursorPage[domain.ProductSummary], error)
 	GetPublishedProduct(ctx context.Context, productID string) (domain.Product, error)
 	GetProduct(ctx context.Context, productID string) (domain.Product, error)
-	UpsertProduct(ctx context.Context, product domain.ProductSummary) (domain.ProductSummary, error)
+	FindProductBySKU(ctx context.Context, sku string) (domain.Product, error)
+	UpsertProduct(ctx context.Context, product domain.Product) (domain.Product, error)
 	DeleteProduct(ctx context.Context, productID string) error
 }
 
@@ -276,6 +396,7 @@ type ContentRepository interface {
 	GetGuide(ctx context.Context, guideID string) (domain.ContentGuide, error)
 
 	GetPage(ctx context.Context, slug string, locale string) (domain.ContentPage, error)
+	GetPageByID(ctx context.Context, pageID string) (domain.ContentPage, error)
 	UpsertPage(ctx context.Context, page domain.ContentPage) (domain.ContentPage, error)
 	DeletePage(ctx context.Context, pageID string) error
 }
@@ -307,19 +428,53 @@ type HealthRepository interface {
 // Filter DTOs shared across repositories ------------------------------------
 
 type DesignListFilter struct {
+	Status       []string
+	Types        []string
+	UpdatedAfter *time.Time
+	Pagination   domain.Pagination
+}
+
+type AISuggestionListFilter struct {
 	Status     []string
 	Pagination domain.Pagination
 }
 
 type OrderListFilter struct {
-	UserID     string
-	Status     []string
-	DateRange  domain.RangeQuery[time.Time]
-	Pagination domain.Pagination
+	UserID           string
+	Status           []string
+	PaymentStatuses  []string
+	ProductionQueues []string
+	Channels         []string
+	CustomerEmail    string
+	PromotionCode    string
+	DateRange        domain.RangeQuery[time.Time]
+	SortBy           OrderSort
+	SortOrder        domain.SortOrder
+	Pagination       domain.Pagination
 }
 
 type PromotionListFilter struct {
 	Status     []string
+	Kinds      []string
+	ActiveOn   *time.Time
+	Pagination domain.Pagination
+}
+
+// ProductionQueueRepository manages persistence for production queue configurations.
+type ProductionQueueRepository interface {
+	List(ctx context.Context, filter ProductionQueueListFilter) (domain.CursorPage[domain.ProductionQueue], error)
+	Get(ctx context.Context, queueID string) (domain.ProductionQueue, error)
+	Insert(ctx context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error)
+	Update(ctx context.Context, queue domain.ProductionQueue, expectedUpdatedAt time.Time) (domain.ProductionQueue, error)
+	Delete(ctx context.Context, queueID string) error
+	HasActiveAssignments(ctx context.Context, queueID string) (bool, error)
+	QueueWIPSummary(ctx context.Context, queueID string) (domain.ProductionQueueWIPSummary, error)
+}
+
+// ProductionQueueListFilter controls filtering and pagination for queue listings.
+type ProductionQueueListFilter struct {
+	Status     []string
+	Priorities []string
 	Pagination domain.Pagination
 }
 

@@ -276,9 +276,11 @@ func TestPublicHandlers_GetPublicPromotion_InvalidCode(t *testing.T) {
 
 func TestPublicHandlers_GetPublicPromotion_RateLimited(t *testing.T) {
 	stub := &stubPromotionService{result: services.PromotionPublic{Code: "LIMIT"}}
+	metrics := &recordingRateLimitMetrics{}
 	handler := NewPublicHandlers(
 		WithPublicPromotionService(stub),
 		WithPublicPromotionRateLimit(1, time.Hour),
+		WithPublicRateLimitMetrics(metrics),
 	)
 	router := chi.NewRouter()
 	router.Route("/", handler.Routes)
@@ -297,6 +299,16 @@ func TestPublicHandlers_GetPublicPromotion_RateLimited(t *testing.T) {
 
 	if resp2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 got %d", resp2.Code)
+	}
+	records := metrics.Records()
+	if len(records) != 1 {
+		t.Fatalf("expected one metric record, got %d", len(records))
+	}
+	if records[0].endpoint != rateLimitEndpointPromotionLookup {
+		t.Fatalf("unexpected endpoint recorded %s", records[0].endpoint)
+	}
+	if records[0].scope != rateLimitScopeIP {
+		t.Fatalf("expected ip scope, got %s", records[0].scope)
 	}
 }
 
@@ -325,8 +337,10 @@ func TestPublicHandlers_ListFonts(t *testing.T) {
 			Items: []services.FontSummary{
 				{
 					ID:               "font_001",
+					Slug:             "tensho-regular",
 					DisplayName:      "Tensho Regular",
 					Family:           "Tensho",
+					Weight:           "regular",
 					Scripts:          []string{"kanji", "kana"},
 					PreviewImagePath: "fonts/font_001.png",
 					LetterSpacing:    0.05,
@@ -334,8 +348,9 @@ func TestPublicHandlers_ListFonts(t *testing.T) {
 					IsPublished:      true,
 					SupportedWeights: []string{"400", "700"},
 					License: services.FontLicense{
-						Name: "Commercial",
-						URL:  "https://example.com/license",
+						Name:          "Commercial",
+						URL:           "https://example.com/license",
+						AllowedUsages: []string{"app", "print"},
 					},
 					CreatedAt: createdAt,
 					UpdatedAt: updatedAt,
@@ -385,6 +400,12 @@ func TestPublicHandlers_ListFonts(t *testing.T) {
 	if item.ID != "font_001" {
 		t.Fatalf("expected font id font_001 got %s", item.ID)
 	}
+	if item.Slug != "tensho-regular" {
+		t.Fatalf("expected slug tensho-regular got %s", item.Slug)
+	}
+	if item.Weight != "regular" {
+		t.Fatalf("expected weight regular got %s", item.Weight)
+	}
 	if item.PreviewURL != "https://cdn.example.com/fonts/font_001.png" {
 		t.Fatalf("expected resolved preview url got %s", item.PreviewURL)
 	}
@@ -396,6 +417,9 @@ func TestPublicHandlers_ListFonts(t *testing.T) {
 	}
 	if item.License.URL != "https://example.com/license" {
 		t.Fatalf("expected license url preserved got %s", item.License.URL)
+	}
+	if len(item.License.AllowedUsages) != 2 || item.License.AllowedUsages[0] != "app" {
+		t.Fatalf("expected allowed usages propagated got %#v", item.License.AllowedUsages)
 	}
 
 	if stubService.fontListFilter.Script == nil || *stubService.fontListFilter.Script != "kanji" {
@@ -431,8 +455,10 @@ func TestPublicHandlers_GetFont(t *testing.T) {
 	font := services.Font{
 		FontSummary: services.FontSummary{
 			ID:               "font_002",
+			Slug:             "kana-regular",
 			DisplayName:      "Kana Script",
 			Family:           "Kana",
+			Weight:           "regular",
 			Scripts:          []string{"kana"},
 			PreviewImagePath: "fonts/font_002.png",
 			LetterSpacing:    0.1,
@@ -440,8 +466,9 @@ func TestPublicHandlers_GetFont(t *testing.T) {
 			IsPublished:      true,
 			SupportedWeights: []string{"400"},
 			License: services.FontLicense{
-				Name: "Commercial",
-				URL:  "https://example.com/license",
+				Name:          "Commercial",
+				URL:           "https://example.com/license",
+				AllowedUsages: []string{"svg"},
 			},
 			CreatedAt: time.Date(2024, time.April, 3, 0, 0, 0, 0, time.UTC),
 			UpdatedAt: time.Date(2024, time.April, 4, 0, 0, 0, 0, time.UTC),
@@ -477,6 +504,15 @@ func TestPublicHandlers_GetFont(t *testing.T) {
 	}
 	if payload.PreviewURL != "https://cdn/fonts/font_002.png" {
 		t.Fatalf("expected resolved preview url got %s", payload.PreviewURL)
+	}
+	if payload.Slug != "kana-regular" {
+		t.Fatalf("expected slug kana-regular got %s", payload.Slug)
+	}
+	if payload.License.URL != "https://example.com/license" {
+		t.Fatalf("expected license url got %s", payload.License.URL)
+	}
+	if len(payload.License.AllowedUsages) != 1 || payload.License.AllowedUsages[0] != "svg" {
+		t.Fatalf("expected license usages got %#v", payload.License.AllowedUsages)
 	}
 	if stubService.fontGetID != "font_002" {
 		t.Fatalf("expected service to receive trimmed id font_002 got %s", stubService.fontGetID)
@@ -1337,12 +1373,13 @@ func TestPublicHandlers_GetPage_ReturnsNotFoundForUnpublished(t *testing.T) {
 
 	stub := &stubContentService{
 		pageDetail: services.ContentPage{
-			ID:          "page_1",
-			Slug:        "about",
-			Locale:      "ja",
-			Title:       "About",
-			Status:      "draft",
-			IsPublished: false,
+			ID:           "page_1",
+			Slug:         "about",
+			Locale:       "ja",
+			Title:        "About",
+			Status:       "draft",
+			IsPublished:  false,
+			PreviewToken: "token-123",
 		},
 	}
 
@@ -1357,6 +1394,40 @@ func TestPublicHandlers_GetPage_ReturnsNotFoundForUnpublished(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 got %d", rec.Code)
+	}
+}
+
+func TestPublicHandlers_GetPage_AllowsPreviewToken(t *testing.T) {
+	t.Helper()
+
+	stub := &stubContentService{
+		pageDetail: services.ContentPage{
+			ID:           "page_2",
+			Slug:         "about",
+			Locale:       "ja",
+			Title:        "About Preview",
+			BodyHTML:     "<p>draft</p>",
+			Status:       "draft",
+			IsPublished:  false,
+			PreviewToken: "token-abc",
+		},
+	}
+
+	handler := NewPublicHandlers(WithPublicContentService(stub))
+	router := chi.NewRouter()
+	router.Route("/", handler.Routes)
+
+	req := httptest.NewRequest(http.MethodGet, "/content/pages/about?preview_token=token-abc", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", rec.Code)
+	}
+
+	if cache := rec.Header().Get("Cache-Control"); cache != "no-store" {
+		t.Fatalf("expected no-store cache control, got %q", cache)
 	}
 }
 
@@ -1415,6 +1486,10 @@ func (s *stubContentService) UpsertPage(context.Context, services.UpsertContentP
 	return services.ContentPage{}, errors.New("not implemented")
 }
 
+func (s *stubContentService) DeletePage(context.Context, services.DeleteContentPageCommand) error {
+	return errors.New("not implemented")
+}
+
 type stubCatalogService struct {
 	listFilter         services.TemplateFilter
 	listResponse       domain.CursorPage[domain.TemplateSummary]
@@ -1441,6 +1516,27 @@ type stubCatalogService struct {
 	productGetID   string
 	productGetProd services.Product
 	productGetErr  error
+
+	adminUpsertCmd          services.UpsertTemplateCommand
+	adminUpsertResp         services.Template
+	adminUpsertErr          error
+	adminDeleteCmd          services.DeleteTemplateCommand
+	adminDeleteErr          error
+	adminFontUpsertCmd      services.UpsertFontCommand
+	adminFontUpsertResp     services.FontSummary
+	adminFontUpsertErr      error
+	adminFontDeleteID       string
+	adminFontDeleteErr      error
+	adminMaterialUpsertCmd  services.UpsertMaterialCommand
+	adminMaterialUpsertResp services.MaterialSummary
+	adminMaterialUpsertErr  error
+	adminMaterialDeleteCmd  services.DeleteMaterialCommand
+	adminMaterialDeleteErr  error
+	adminProductUpsertCmd   services.UpsertProductCommand
+	adminProductUpsertResp  services.Product
+	adminProductUpsertErr   error
+	adminProductDeleteCmd   services.DeleteProductCommand
+	adminProductDeleteErr   error
 }
 
 func (s *stubCatalogService) ListTemplates(_ context.Context, filter services.TemplateFilter) (domain.CursorPage[domain.TemplateSummary], error) {
@@ -1456,12 +1552,20 @@ func (s *stubCatalogService) GetTemplate(_ context.Context, templateID string) (
 	return services.Template(s.getTemplate), nil
 }
 
-func (s *stubCatalogService) UpsertTemplate(context.Context, services.UpsertTemplateCommand) (services.Template, error) {
-	return services.Template{}, errors.New("not implemented")
+func (s *stubCatalogService) UpsertTemplate(_ context.Context, cmd services.UpsertTemplateCommand) (services.Template, error) {
+	s.adminUpsertCmd = cmd
+	if s.adminUpsertErr != nil {
+		return services.Template{}, s.adminUpsertErr
+	}
+	if s.adminUpsertResp.ID != "" {
+		return s.adminUpsertResp, nil
+	}
+	return cmd.Template, nil
 }
 
-func (s *stubCatalogService) DeleteTemplate(context.Context, string) error {
-	return errors.New("not implemented")
+func (s *stubCatalogService) DeleteTemplate(_ context.Context, cmd services.DeleteTemplateCommand) error {
+	s.adminDeleteCmd = cmd
+	return s.adminDeleteErr
 }
 
 func (s *stubCatalogService) ListFonts(_ context.Context, filter services.FontFilter) (domain.CursorPage[services.FontSummary], error) {
@@ -1477,12 +1581,20 @@ func (s *stubCatalogService) GetFont(_ context.Context, fontID string) (services
 	return s.fontGetFont, nil
 }
 
-func (s *stubCatalogService) UpsertFont(context.Context, services.UpsertFontCommand) (services.FontSummary, error) {
-	return services.FontSummary{}, errors.New("not implemented")
+func (s *stubCatalogService) UpsertFont(_ context.Context, cmd services.UpsertFontCommand) (services.FontSummary, error) {
+	s.adminFontUpsertCmd = cmd
+	if s.adminFontUpsertErr != nil {
+		return services.FontSummary{}, s.adminFontUpsertErr
+	}
+	if s.adminFontUpsertResp.ID != "" {
+		return s.adminFontUpsertResp, nil
+	}
+	return cmd.Font, nil
 }
 
-func (s *stubCatalogService) DeleteFont(context.Context, string) error {
-	return errors.New("not implemented")
+func (s *stubCatalogService) DeleteFont(_ context.Context, fontID string) error {
+	s.adminFontDeleteID = fontID
+	return s.adminFontDeleteErr
 }
 
 func (s *stubCatalogService) ListMaterials(_ context.Context, filter services.MaterialFilter) (domain.CursorPage[services.MaterialSummary], error) {
@@ -1498,12 +1610,20 @@ func (s *stubCatalogService) GetMaterial(_ context.Context, materialID string) (
 	return s.materialGetMat, nil
 }
 
-func (s *stubCatalogService) UpsertMaterial(context.Context, services.UpsertMaterialCommand) (services.MaterialSummary, error) {
-	return services.MaterialSummary{}, errors.New("not implemented")
+func (s *stubCatalogService) UpsertMaterial(_ context.Context, cmd services.UpsertMaterialCommand) (services.MaterialSummary, error) {
+	s.adminMaterialUpsertCmd = cmd
+	if s.adminMaterialUpsertErr != nil {
+		return services.MaterialSummary{}, s.adminMaterialUpsertErr
+	}
+	if s.adminMaterialUpsertResp.ID != "" {
+		return s.adminMaterialUpsertResp, nil
+	}
+	return cmd.Material, nil
 }
 
-func (s *stubCatalogService) DeleteMaterial(context.Context, string) error {
-	return errors.New("not implemented")
+func (s *stubCatalogService) DeleteMaterial(_ context.Context, cmd services.DeleteMaterialCommand) error {
+	s.adminMaterialDeleteCmd = cmd
+	return s.adminMaterialDeleteErr
 }
 
 func (s *stubCatalogService) ListProducts(_ context.Context, filter services.ProductFilter) (domain.CursorPage[services.ProductSummary], error) {
@@ -1519,12 +1639,20 @@ func (s *stubCatalogService) GetProduct(_ context.Context, productID string) (se
 	return s.productGetProd, nil
 }
 
-func (s *stubCatalogService) UpsertProduct(context.Context, services.UpsertProductCommand) (services.ProductSummary, error) {
-	return services.ProductSummary{}, errors.New("not implemented")
+func (s *stubCatalogService) UpsertProduct(_ context.Context, cmd services.UpsertProductCommand) (services.Product, error) {
+	s.adminProductUpsertCmd = cmd
+	if s.adminProductUpsertErr != nil {
+		return services.Product{}, s.adminProductUpsertErr
+	}
+	if s.adminProductUpsertResp.ID != "" {
+		return s.adminProductUpsertResp, nil
+	}
+	return cmd.Product, nil
 }
 
-func (s *stubCatalogService) DeleteProduct(context.Context, string) error {
-	return errors.New("not implemented")
+func (s *stubCatalogService) DeleteProduct(_ context.Context, cmd services.DeleteProductCommand) error {
+	s.adminProductDeleteCmd = cmd
+	return s.adminProductDeleteErr
 }
 
 type stubPromotionService struct {
@@ -1549,6 +1677,10 @@ func (s *stubPromotionService) ValidatePromotion(context.Context, services.Valid
 	return services.PromotionValidationResult{}, errors.New("not implemented")
 }
 
+func (s *stubPromotionService) ValidatePromotionDefinition(context.Context, services.Promotion) (services.PromotionDefinitionValidationResult, error) {
+	return services.PromotionDefinitionValidationResult{}, errors.New("not implemented")
+}
+
 func (s *stubPromotionService) ListPromotions(context.Context, services.PromotionListFilter) (domain.CursorPage[services.Promotion], error) {
 	return domain.CursorPage[services.Promotion]{}, errors.New("not implemented")
 }
@@ -1561,12 +1693,20 @@ func (s *stubPromotionService) UpdatePromotion(context.Context, services.UpsertP
 	return services.Promotion{}, errors.New("not implemented")
 }
 
-func (s *stubPromotionService) DeletePromotion(context.Context, string) error {
+func (s *stubPromotionService) DeletePromotion(context.Context, string, string) error {
 	return errors.New("not implemented")
 }
 
-func (s *stubPromotionService) ListPromotionUsage(context.Context, services.PromotionUsageFilter) (domain.CursorPage[services.PromotionUsage], error) {
-	return domain.CursorPage[services.PromotionUsage]{}, errors.New("not implemented")
+func (s *stubPromotionService) ListPromotionUsage(context.Context, services.PromotionUsageFilter) (services.PromotionUsagePage, error) {
+	return services.PromotionUsagePage{}, errors.New("not implemented")
+}
+
+func (s *stubPromotionService) ApplyPromotion(context.Context, services.PromotionApplyCommand) (services.PromotionApplyResult, error) {
+	return services.PromotionApplyResult{}, errors.New("not implemented")
+}
+
+func (s *stubPromotionService) RollbackUsage(context.Context, services.PromotionUsageReleaseCommand) error {
+	return nil
 }
 
 type stubRepoError struct {

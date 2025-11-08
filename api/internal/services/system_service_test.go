@@ -53,6 +53,28 @@ func (s *stubCounterService) NextOrderNumber(context.Context) (string, error) { 
 
 func (s *stubCounterService) NextInvoiceNumber(context.Context) (string, error) { return "", nil }
 
+type stubSystemErrorStore struct {
+	filter SystemErrorFilter
+	result domain.CursorPage[domain.SystemError]
+	err    error
+}
+
+func (s *stubSystemErrorStore) ListSystemErrors(ctx context.Context, filter SystemErrorFilter) (domain.CursorPage[domain.SystemError], error) {
+	s.filter = filter
+	return s.result, s.err
+}
+
+type stubSystemTaskStore struct {
+	filter SystemTaskFilter
+	result domain.CursorPage[domain.SystemTask]
+	err    error
+}
+
+func (s *stubSystemTaskStore) ListSystemTasks(ctx context.Context, filter SystemTaskFilter) (domain.CursorPage[domain.SystemTask], error) {
+	s.filter = filter
+	return s.result, s.err
+}
+
 func TestSystemServiceHealthReportEnrichesMetadata(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	now := start.Add(5 * time.Minute)
@@ -238,6 +260,167 @@ func TestSystemServiceNextCounterValueInvalidID(t *testing.T) {
 	}
 }
 
+func TestSystemServiceListSystemErrorsNormalisesFilter(t *testing.T) {
+	repo := &stubHealthRepository{}
+	errorStore := &stubSystemErrorStore{
+		result: domain.CursorPage[domain.SystemError]{
+			Items: []domain.SystemError{{ID: "err_1"}},
+		},
+	}
+
+	svc, err := NewSystemService(SystemServiceDeps{
+		HealthRepository: repo,
+		Errors:           errorStore,
+	})
+	if err != nil {
+		t.Fatalf("NewSystemService: %v", err)
+	}
+
+	from := time.Date(2024, 1, 1, 10, 0, 0, 0, time.FixedZone("JST", 9*3600))
+	to := from.Add(2 * time.Hour)
+	filter := SystemErrorFilter{
+		Sources:    []string{" Queue.Errors ", ""},
+		JobTypes:   []string{" Export.BigQuery "},
+		Statuses:   []string{" FAILED ", "failed"},
+		Severities: []string{" Critical "},
+		Search:     "  export failure  ",
+		DateRange: domain.RangeQuery[time.Time]{
+			From: &from,
+			To:   &to,
+		},
+		Pagination: Pagination{
+			PageSize:  75,
+			PageToken: " token ",
+		},
+	}
+
+	result, err := svc.ListSystemErrors(context.Background(), filter)
+	if err != nil {
+		t.Fatalf("ListSystemErrors: %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].ID != "err_1" {
+		t.Fatalf("unexpected result: %+v", result.Items)
+	}
+
+	if got := errorStore.filter.Sources; len(got) != 1 || got[0] != "queue.errors" {
+		t.Fatalf("expected normalised sources, got %v", got)
+	}
+	if got := errorStore.filter.JobTypes; len(got) != 1 || got[0] != "export.bigquery" {
+		t.Fatalf("expected normalised job types, got %v", got)
+	}
+	if got := errorStore.filter.Statuses; len(got) != 1 || got[0] != "failed" {
+		t.Fatalf("expected normalised statuses, got %v", got)
+	}
+	if got := errorStore.filter.Severities; len(got) != 1 || got[0] != "critical" {
+		t.Fatalf("expected normalised severities, got %v", got)
+	}
+	if errorStore.filter.Search != "export failure" {
+		t.Fatalf("expected trimmed search, got %q", errorStore.filter.Search)
+	}
+	if errorStore.filter.DateRange.From == nil || !errorStore.filter.DateRange.From.Equal(from.UTC()) {
+		t.Fatalf("expected utc from, got %+v", errorStore.filter.DateRange.From)
+	}
+	if errorStore.filter.DateRange.To == nil || !errorStore.filter.DateRange.To.Equal(to.UTC()) {
+		t.Fatalf("expected utc to, got %+v", errorStore.filter.DateRange.To)
+	}
+	if errorStore.filter.Pagination.PageToken != "token" {
+		t.Fatalf("expected trimmed page token, got %q", errorStore.filter.Pagination.PageToken)
+	}
+	if errorStore.filter.Pagination.PageSize != 75 {
+		t.Fatalf("expected page size 75, got %d", errorStore.filter.Pagination.PageSize)
+	}
+}
+
+func TestSystemServiceListSystemErrorsMissingStore(t *testing.T) {
+	repo := &stubHealthRepository{}
+	svc, err := NewSystemService(SystemServiceDeps{HealthRepository: repo})
+	if err != nil {
+		t.Fatalf("NewSystemService: %v", err)
+	}
+
+	_, err = svc.ListSystemErrors(context.Background(), SystemErrorFilter{})
+	if err == nil {
+		t.Fatalf("expected error when error store missing")
+	}
+}
+
+func TestSystemServiceListSystemTasksNormalisesFilter(t *testing.T) {
+	repo := &stubHealthRepository{}
+	taskStore := &stubSystemTaskStore{
+		result: domain.CursorPage[domain.SystemTask]{
+			Items: []domain.SystemTask{{ID: "task_1"}},
+		},
+	}
+
+	svc, err := NewSystemService(SystemServiceDeps{
+		HealthRepository: repo,
+		Tasks:            taskStore,
+	})
+	if err != nil {
+		t.Fatalf("NewSystemService: %v", err)
+	}
+
+	from := time.Date(2024, 5, 1, 15, 0, 0, 0, time.FixedZone("PDT", -7*3600))
+	filter := SystemTaskFilter{
+		Statuses: []SystemTaskStatus{" PENDING ", "unknown", SystemTaskStatusCompleted},
+		Kinds:    []string{" Export.BigQuery ", " "},
+		DateRange: domain.RangeQuery[time.Time]{
+			From: &from,
+		},
+		RequestedBy: " admin@example.com ",
+		Pagination: Pagination{
+			PageSize:  25,
+			PageToken: " next ",
+		},
+	}
+
+	result, err := svc.ListSystemTasks(context.Background(), filter)
+	if err != nil {
+		t.Fatalf("ListSystemTasks: %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].ID != "task_1" {
+		t.Fatalf("unexpected result: %+v", result.Items)
+	}
+
+	if got := taskStore.filter.Statuses; len(got) != 2 ||
+		got[0] != SystemTaskStatusPending || got[1] != SystemTaskStatusCompleted {
+		t.Fatalf("expected normalised statuses, got %v", got)
+	}
+	if got := taskStore.filter.Kinds; len(got) != 1 || got[0] != "export.bigquery" {
+		t.Fatalf("expected normalised kinds, got %v", got)
+	}
+	if taskStore.filter.RequestedBy != "admin@example.com" {
+		t.Fatalf("expected trimmed requestedBy, got %q", taskStore.filter.RequestedBy)
+	}
+	if taskStore.filter.DateRange.From == nil || !taskStore.filter.DateRange.From.Equal(from.UTC()) {
+		t.Fatalf("expected utc from, got %+v", taskStore.filter.DateRange.From)
+	}
+	if taskStore.filter.DateRange.To != nil {
+		t.Fatalf("expected nil to, got %+v", taskStore.filter.DateRange.To)
+	}
+	if taskStore.filter.Pagination.PageToken != "next" {
+		t.Fatalf("expected trimmed token, got %q", taskStore.filter.Pagination.PageToken)
+	}
+	if taskStore.filter.Pagination.PageSize != 25 {
+		t.Fatalf("expected page size 25, got %d", taskStore.filter.Pagination.PageSize)
+	}
+}
+
+func TestSystemServiceListSystemTasksMissingStore(t *testing.T) {
+	repo := &stubHealthRepository{}
+	svc, err := NewSystemService(SystemServiceDeps{HealthRepository: repo})
+	if err != nil {
+		t.Fatalf("NewSystemService: %v", err)
+	}
+
+	_, err = svc.ListSystemTasks(context.Background(), SystemTaskFilter{})
+	if err == nil {
+		t.Fatalf("expected error when task store missing")
+	}
+}
+
 var _ repositories.HealthRepository = (*stubHealthRepository)(nil)
 var _ AuditLogService = (*stubAuditService)(nil)
 var _ CounterService = (*stubCounterService)(nil)
+var _ SystemErrorStore = (*stubSystemErrorStore)(nil)
+var _ SystemTaskStore = (*stubSystemTaskStore)(nil)

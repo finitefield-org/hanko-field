@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	firebase "firebase.google.com/go/v4"
@@ -85,12 +86,39 @@ func (v *FirebaseVerifier) GetUser(ctx context.Context, uid string) (*firebaseau
 		return nil, errors.New("firebase verifier not initialised")
 	}
 
+	uid = strings.TrimSpace(uid)
+	if uid == "" {
+		return nil, errors.New("firebase uid is required")
+	}
+
 	ctx, cancel := v.contextWithTimeout(ctx)
 	if cancel != nil {
 		defer cancel()
 	}
 
 	return v.client.GetUser(ctx, uid)
+}
+
+// DisableUser revokes authentication by disabling the Firebase account and revoking refresh tokens.
+func (v *FirebaseVerifier) DisableUser(ctx context.Context, uid string) error {
+	if v == nil || v.client == nil {
+		return errors.New("firebase verifier not initialised")
+	}
+
+	uid = strings.TrimSpace(uid)
+	if uid == "" {
+		return errors.New("firebase uid is required")
+	}
+
+	ctx, cancel := v.contextWithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	if _, err := v.client.UpdateUser(ctx, uid, (&firebaseauth.UserToUpdate{}).Disabled(true)); err != nil {
+		return err
+	}
+	return v.client.RevokeRefreshTokens(ctx, uid)
 }
 
 func (v *FirebaseVerifier) contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {

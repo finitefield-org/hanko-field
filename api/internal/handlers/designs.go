@@ -1,0 +1,1952 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"maps"
+	"net/http"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/hanko-field/api/internal/platform/auth"
+	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/services"
+)
+
+const maxDesignRequestBody = 256 * 1024
+const (
+	defaultDesignPageSize        = 20
+	maxDesignPageSize            = 100
+	defaultDesignVersionPageSize = 20
+	maxDesignVersionPageSize     = 100
+	defaultAISuggestionPageSize  = 20
+	maxAISuggestionPageSize      = 50
+)
+
+const (
+	defaultAISuggestionRateLimit   = 30
+	defaultDesignRateLimitWindow   = time.Minute
+	defaultRegistrabilityRateLimit = 5
+)
+
+const (
+	rateLimitEndpointAISuggestions  = "designs.ai_suggestions"
+	rateLimitEndpointRegistrability = "designs.registrability_check"
+)
+
+// DesignHandlers exposes design creation endpoints for authenticated users.
+type DesignHandlers struct {
+	authn                 *auth.Authenticator
+	designs               services.DesignService
+	resolveStorageURL     StorageURLResolver
+	registrabilityLimiter rateLimiter
+	aiSuggestionLimiter   rateLimiter
+	rateLimitMetrics      RateLimitMetrics
+}
+
+// StorageURLResolver resolves a bucket/object pair to a fully qualified URL.
+type StorageURLResolver func(bucket, object string) string
+
+// DesignHandlerOption mutates handler configuration during construction.
+type DesignHandlerOption func(*DesignHandlers)
+
+const defaultStorageBaseURL = "https://storage.googleapis.com"
+
+// NewDesignHandlers constructs a new DesignHandlers instance.
+func NewDesignHandlers(authn *auth.Authenticator, designs services.DesignService, opts ...DesignHandlerOption) *DesignHandlers {
+	handler := &DesignHandlers{
+		authn:                 authn,
+		designs:               designs,
+		resolveStorageURL:     defaultStorageURLResolver,
+		registrabilityLimiter: newSimpleRateLimiter(defaultRegistrabilityRateLimit, defaultDesignRateLimitWindow, nil),
+		aiSuggestionLimiter:   newSimpleRateLimiter(defaultAISuggestionRateLimit, defaultDesignRateLimitWindow, nil),
+		rateLimitMetrics:      noopRateLimitMetrics{},
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(handler)
+		}
+	}
+	if handler.rateLimitMetrics == nil {
+		handler.rateLimitMetrics = noopRateLimitMetrics{}
+	}
+	return handler
+}
+
+// WithStorageURLResolver overrides the storage URL resolver used by the handler.
+func WithStorageURLResolver(resolver StorageURLResolver) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if resolver != nil {
+			h.resolveStorageURL = resolver
+		}
+	}
+}
+
+// WithRegistrabilityRateLimit overrides the per-user registrability check rate limit.
+func WithRegistrabilityRateLimit(limit int, window time.Duration) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if h == nil {
+			return
+		}
+		if limit <= 0 || window <= 0 {
+			h.registrabilityLimiter = nil
+			return
+		}
+		h.registrabilityLimiter = newSimpleRateLimiter(limit, window, nil)
+	}
+}
+
+// WithAISuggestionRateLimit overrides the per-user AI suggestion request limit.
+func WithAISuggestionRateLimit(limit int, window time.Duration) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if h == nil {
+			return
+		}
+		if limit <= 0 || window <= 0 {
+			h.aiSuggestionLimiter = nil
+			return
+		}
+		h.aiSuggestionLimiter = newSimpleRateLimiter(limit, window, nil)
+	}
+}
+
+// WithDesignRateLimitMetrics injects the metrics recorder for throttled design endpoints.
+func WithDesignRateLimitMetrics(metrics RateLimitMetrics) DesignHandlerOption {
+	return func(h *DesignHandlers) {
+		if h == nil || metrics == nil {
+			return
+		}
+		h.rateLimitMetrics = metrics
+	}
+}
+
+// Routes registers the /designs endpoints.
+func (h *DesignHandlers) Routes(r chi.Router) {
+	if r == nil {
+		return
+	}
+	if h.authn != nil {
+		r.Use(h.authn.RequireFirebaseAuth())
+	}
+	r.Get("/", h.listDesigns)
+	r.Post("/", h.createDesign)
+	r.Post("/{designID}/duplicate", h.duplicateDesign)
+	r.Get("/{designID}/ai-suggestions", h.listAISuggestions)
+	r.Post("/{designID}/ai-suggestions", h.requestAISuggestion)
+	r.Post("/{designID}/ai-suggestions/{suggestionID}:accept", h.acceptAISuggestion)
+	r.Post("/{designID}/ai-suggestions/{suggestionID}:reject", h.rejectAISuggestion)
+	r.Get("/{designID}/ai-suggestions/{suggestionID}", h.getAISuggestion)
+	r.Post("/{designID}:registrability-check", h.checkRegistrability)
+	r.Get("/{designID}/versions", h.listDesignVersions)
+	r.Get("/{designID}/versions/{versionID}", h.getDesignVersion)
+	r.Get("/{designID}", h.getDesign)
+	r.Put("/{designID}", h.updateDesign)
+	r.Delete("/{designID}", h.deleteDesign)
+}
+
+func (h *DesignHandlers) listDesigns(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	requestedOwner := firstNonEmpty(
+		strings.TrimSpace(r.URL.Query().Get("user")),
+		strings.TrimSpace(r.URL.Query().Get("user_id")),
+	)
+	if requestedOwner != "" && !strings.EqualFold(requestedOwner, ownerID) {
+		if !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+			httpx.WriteError(ctx, w, httpx.NewError("forbidden", "insufficient permissions", http.StatusForbidden))
+			return
+		}
+		ownerID = requestedOwner
+	}
+
+	statusFilters := parseFilterValues(r.URL.Query()["status"])
+	typeFilters := parseFilterValues(r.URL.Query()["type"])
+
+	var updatedAfter *time.Time
+	if updatedRaw := strings.TrimSpace(r.URL.Query().Get("updatedAfter")); updatedRaw != "" {
+		parsed, err := parseTimeParam(updatedRaw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", fmt.Sprintf("invalid updatedAfter: %v", err), http.StatusBadRequest))
+			return
+		}
+		updatedAfter = &parsed
+	}
+
+	pageSize := defaultDesignPageSize
+	if sizeRaw := strings.TrimSpace(r.URL.Query().Get("page_size")); sizeRaw != "" {
+		size, err := strconv.Atoi(sizeRaw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "page_size must be an integer", http.StatusBadRequest))
+			return
+		}
+		if size < 0 {
+			size = defaultDesignPageSize
+		}
+		if size > maxDesignPageSize {
+			size = maxDesignPageSize
+		}
+		if size == 0 {
+			pageSize = defaultDesignPageSize
+		} else {
+			pageSize = size
+		}
+	}
+
+	filter := services.DesignListFilter{
+		OwnerID:      ownerID,
+		Status:       statusFilters,
+		Types:        typeFilters,
+		UpdatedAfter: updatedAfter,
+		Pagination: services.Pagination{
+			PageSize:  pageSize,
+			PageToken: strings.TrimSpace(r.URL.Query().Get("page_token")),
+		},
+	}
+
+	page, err := h.designs.ListDesigns(ctx, filter)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	items := make([]designPayload, 0, len(page.Items))
+	for _, design := range page.Items {
+		items = append(items, buildDesignPayload(design))
+	}
+
+	response := designListResponse{
+		Items:         items,
+		NextPageToken: page.NextPageToken,
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *DesignHandlers) getDesign(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	includeHistory := false
+	if flagRaw := strings.TrimSpace(r.URL.Query().Get("includeHistory")); flagRaw != "" {
+		value, err := strconv.ParseBool(flagRaw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "includeHistory must be a boolean", http.StatusBadRequest))
+			return
+		}
+		includeHistory = value
+	}
+
+	opts := services.DesignReadOptions{}
+	if includeHistory {
+		opts.IncludeVersions = true
+	}
+
+	design, err := h.designs.GetDesign(ctx, designID, opts)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	if ownerID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !strings.EqualFold(design.OwnerID, ownerID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	payload := buildDesignPayload(design)
+	if includeHistory && len(design.Versions) > 0 {
+		payload.Versions = make([]designVersionPayload, 0, len(design.Versions))
+		for _, version := range design.Versions {
+			payload.Versions = append(payload.Versions, buildDesignVersionPayload(version, true))
+		}
+	}
+
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) listAISuggestions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	pageSize := defaultAISuggestionPageSize
+	if raw := strings.TrimSpace(r.URL.Query().Get("page_size")); raw != "" {
+		size, err := strconv.Atoi(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "page_size must be an integer", http.StatusBadRequest))
+			return
+		}
+		if size < 0 {
+			size = defaultAISuggestionPageSize
+		}
+		if size > maxAISuggestionPageSize {
+			size = maxAISuggestionPageSize
+		}
+		if size == 0 {
+			pageSize = defaultAISuggestionPageSize
+		} else {
+			pageSize = size
+		}
+	}
+
+	statusFilters := parseFilterValues(r.URL.Query()["status"])
+
+	design, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	if ownerID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !strings.EqualFold(design.OwnerID, ownerID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	filter := services.AISuggestionFilter{
+		Status: statusFilters,
+		Pagination: services.Pagination{
+			PageSize:  pageSize,
+			PageToken: strings.TrimSpace(r.URL.Query().Get("page_token")),
+		},
+	}
+
+	page, err := h.designs.ListAISuggestions(ctx, designID, filter)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	items := make([]aiSuggestionPayload, 0, len(page.Items))
+	for _, suggestion := range page.Items {
+		items = append(items, h.buildAISuggestionPayload(suggestion))
+	}
+
+	response := aiSuggestionListResponse{
+		Items:         items,
+		NextPageToken: page.NextPageToken,
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *DesignHandlers) getAISuggestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	suggestionID := strings.TrimSpace(chi.URLParam(r, "suggestionID"))
+	if suggestionID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "suggestion id is required", http.StatusBadRequest))
+		return
+	}
+
+	design, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	if ownerID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !strings.EqualFold(design.OwnerID, ownerID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	suggestion, err := h.designs.GetAISuggestion(ctx, designID, suggestionID)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	payload := h.buildAISuggestionPayload(suggestion)
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) acceptAISuggestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+	suggestionID := strings.TrimSpace(chi.URLParam(r, "suggestionID"))
+	if suggestionID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "suggestion id is required", http.StatusBadRequest))
+		return
+	}
+
+	result, err := h.designs.UpdateAISuggestionStatus(ctx, services.AISuggestionStatusCommand{
+		DesignID:     designID,
+		SuggestionID: suggestionID,
+		Action:       "accept",
+		ActorID:      strings.TrimSpace(identity.UID),
+	})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	payload := h.buildAISuggestionPayload(result)
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) rejectAISuggestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+	suggestionID := strings.TrimSpace(chi.URLParam(r, "suggestionID"))
+	if suggestionID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "suggestion id is required", http.StatusBadRequest))
+		return
+	}
+
+	var (
+		reasonValue      *string
+		normalizedReason string
+	)
+	if r.Body != nil {
+		data, err := io.ReadAll(io.LimitReader(r.Body, maxDesignRequestBody+1))
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "unable to read request body", http.StatusBadRequest))
+			return
+		}
+		if int64(len(data)) > maxDesignRequestBody {
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body too large", http.StatusRequestEntityTooLarge))
+			return
+		}
+		if trimmed := strings.TrimSpace(string(data)); trimmed != "" {
+			var req aiSuggestionDecisionRequest
+			if err := json.Unmarshal(data, &req); err != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON payload", http.StatusBadRequest))
+				return
+			}
+			if req.Reason != nil {
+				if reason := strings.TrimSpace(*req.Reason); reason != "" {
+					normalizedReason = strings.ToLower(reason)
+					reasonValue = &normalizedReason
+				}
+			}
+		}
+	}
+
+	result, err := h.designs.UpdateAISuggestionStatus(ctx, services.AISuggestionStatusCommand{
+		DesignID:     designID,
+		SuggestionID: suggestionID,
+		Action:       "reject",
+		ActorID:      strings.TrimSpace(identity.UID),
+		Reason:       reasonValue,
+	})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	payload := h.buildAISuggestionPayload(result)
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) listDesignVersions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	includeAssets := false
+	if raw := strings.TrimSpace(r.URL.Query().Get("includeAssets")); raw != "" {
+		flag, err := strconv.ParseBool(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "includeAssets must be a boolean", http.StatusBadRequest))
+			return
+		}
+		includeAssets = flag
+	}
+
+	pageSize := defaultDesignVersionPageSize
+	if raw := strings.TrimSpace(r.URL.Query().Get("page_size")); raw != "" {
+		size, err := strconv.Atoi(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "page_size must be an integer", http.StatusBadRequest))
+			return
+		}
+		if size < 0 {
+			size = defaultDesignVersionPageSize
+		}
+		if size > maxDesignVersionPageSize {
+			size = maxDesignVersionPageSize
+		}
+		if size == 0 {
+			pageSize = defaultDesignVersionPageSize
+		} else {
+			pageSize = size
+		}
+	}
+
+	design, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	if ownerID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !strings.EqualFold(design.OwnerID, ownerID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	filter := services.DesignVersionListFilter{
+		Pagination: services.Pagination{
+			PageSize:  pageSize,
+			PageToken: strings.TrimSpace(r.URL.Query().Get("page_token")),
+		},
+		IncludeAssets: includeAssets,
+	}
+
+	page, err := h.designs.ListDesignVersions(ctx, designID, filter)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	items := make([]designVersionPayload, 0, len(page.Items))
+	for _, version := range page.Items {
+		items = append(items, buildDesignVersionPayload(version, includeAssets))
+	}
+
+	response := designVersionListResponse{
+		Items:         items,
+		NextPageToken: page.NextPageToken,
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *DesignHandlers) getDesignVersion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+	versionID := strings.TrimSpace(chi.URLParam(r, "versionID"))
+	if versionID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "version id is required", http.StatusBadRequest))
+		return
+	}
+
+	includeAssets := false
+	if raw := strings.TrimSpace(r.URL.Query().Get("includeAssets")); raw != "" {
+		flag, err := strconv.ParseBool(raw)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "includeAssets must be a boolean", http.StatusBadRequest))
+			return
+		}
+		includeAssets = flag
+	}
+
+	design, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	ownerID := strings.TrimSpace(identity.UID)
+	if ownerID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	if !strings.EqualFold(design.OwnerID, ownerID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	version, err := h.designs.GetDesignVersion(ctx, designID, versionID, services.DesignVersionReadOptions{
+		IncludeAssets: includeAssets,
+	})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	payload := buildDesignVersionPayload(version, includeAssets)
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) updateDesign(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	existing, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+	if !strings.EqualFold(existing.OwnerID, identity.UID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxDesignRequestBody)
+	if err != nil {
+		status := http.StatusBadRequest
+		code := "invalid_request"
+		if errors.Is(err, errBodyTooLarge) {
+			status = http.StatusRequestEntityTooLarge
+			code = "payload_too_large"
+		}
+		httpx.WriteError(ctx, w, httpx.NewError(code, err.Error(), status))
+		return
+	}
+
+	req, err := decodeUpdateDesignRequest(body)
+	if err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	}
+
+	var expectedUpdatedAt *time.Time
+	if header := strings.TrimSpace(r.Header.Get("If-Unmodified-Since")); header != "" {
+		ts, err := parseTimeParam(header)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "If-Unmodified-Since must be RFC3339 timestamp", http.StatusBadRequest))
+			return
+		}
+		expectedUpdatedAt = &ts
+	}
+
+	cmd := services.UpdateDesignCommand{
+		DesignID:          designID,
+		UpdatedBy:         identity.UID,
+		Label:             req.Label,
+		Status:            req.Status,
+		ThumbnailURL:      req.ThumbnailURL,
+		Snapshot:          cloneMap(req.Snapshot),
+		ExpectedUpdatedAt: expectedUpdatedAt,
+	}
+
+	updated, err := h.designs.UpdateDesign(ctx, cmd)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	payload := buildDesignPayload(updated)
+	writeJSONResponse(w, http.StatusOK, payload)
+}
+
+func (h *DesignHandlers) deleteDesign(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	existing, err := h.designs.GetDesign(ctx, designID, services.DesignReadOptions{})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+	if !strings.EqualFold(existing.OwnerID, identity.UID) && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+		return
+	}
+
+	var expectedUpdatedAt *time.Time
+	if header := strings.TrimSpace(r.Header.Get("If-Unmodified-Since")); header != "" {
+		ts, err := parseTimeParam(header)
+		if err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "If-Unmodified-Since must be RFC3339 timestamp", http.StatusBadRequest))
+			return
+		}
+		expectedUpdatedAt = &ts
+	}
+
+	err = h.designs.DeleteDesign(ctx, services.DeleteDesignCommand{
+		DesignID:          designID,
+		RequestedBy:       identity.UID,
+		SoftDelete:        true,
+		ExpectedUpdatedAt: expectedUpdatedAt,
+	})
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *DesignHandlers) duplicateDesign(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	requester := strings.TrimSpace(identity.UID)
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	var override *string
+	if r.Body != nil {
+		body, err := readLimitedBody(r, maxDesignRequestBody)
+		if err != nil {
+			if errors.Is(err, errEmptyBody) {
+				// No overrides provided; continue with defaults.
+			} else {
+				status := http.StatusBadRequest
+				code := "invalid_request"
+				if errors.Is(err, errBodyTooLarge) {
+					status = http.StatusRequestEntityTooLarge
+					code = "payload_too_large"
+				}
+				httpx.WriteError(ctx, w, httpx.NewError(code, err.Error(), status))
+				return
+			}
+		} else if len(body) > 0 {
+			var req duplicateDesignRequest
+			if err := json.Unmarshal(body, &req); err != nil {
+				httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON payload", http.StatusBadRequest))
+				return
+			}
+			if req.Label != nil {
+				if trimmed := strings.TrimSpace(*req.Label); trimmed != "" {
+					value := trimmed
+					override = &value
+				}
+			}
+		}
+	}
+
+	cmd := services.DuplicateDesignCommand{
+		SourceDesignID: designID,
+		RequestedBy:    requester,
+	}
+	if override != nil {
+		cmd.OverrideName = override
+	}
+
+	duplicate, err := h.designs.DuplicateDesign(ctx, cmd)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	response := createDesignResponse{
+		Design: buildDesignPayload(duplicate),
+	}
+	writeJSONResponse(w, http.StatusCreated, response)
+}
+
+func (h *DesignHandlers) requestAISuggestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+	requester := strings.TrimSpace(identity.UID)
+	if h.aiSuggestionLimiter != nil && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		if !h.aiSuggestionLimiter.Allow(requester) {
+			h.rateLimitMetrics.Record(ctx, rateLimitEndpointAISuggestions, rateLimitScopeUser)
+			httpx.WriteError(ctx, w, httpx.NewError("rate_limited", "too many AI suggestions requested", http.StatusTooManyRequests))
+			return
+		}
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	body, err := readLimitedBody(r, maxDesignRequestBody)
+	if err != nil {
+		switch {
+		case errors.Is(err, errEmptyBody):
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "request body is required", http.StatusBadRequest))
+		case errors.Is(err, errBodyTooLarge):
+			httpx.WriteError(ctx, w, httpx.NewError("payload_too_large", "request body too large", http.StatusRequestEntityTooLarge))
+		default:
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		}
+		return
+	}
+
+	var payload aiSuggestionRequest
+	if err := json.Unmarshal(body, &payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid JSON payload", http.StatusBadRequest))
+		return
+	}
+
+	cmd := services.AISuggestionRequest{
+		DesignID:   designID,
+		Method:     strings.TrimSpace(payload.Method),
+		Model:      strings.TrimSpace(payload.Model),
+		ActorID:    requester,
+		Parameters: cloneMap(payload.Parameters),
+		Metadata:   cloneMap(payload.Metadata),
+	}
+	if payload.Prompt != nil {
+		cmd.Prompt = strings.TrimSpace(*payload.Prompt)
+	}
+	if payload.IdempotencyKey != nil {
+		cmd.IdempotencyKey = strings.TrimSpace(*payload.IdempotencyKey)
+	}
+	if payload.Priority != nil {
+		cmd.Priority = *payload.Priority
+	}
+
+	result, err := h.designs.RequestAISuggestion(ctx, cmd)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	location := fmt.Sprintf("%s/%s", strings.TrimSuffix(r.URL.Path, "/"), result.ID)
+	w.Header().Set("Location", location)
+
+	response := aiSuggestionResponse{
+		SuggestionID: result.ID,
+		Status:       strings.TrimSpace(result.Status),
+		PollingURL:   location,
+	}
+	writeJSONResponse(w, http.StatusAccepted, response)
+}
+
+func (h *DesignHandlers) checkRegistrability(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	designID := strings.TrimSpace(chi.URLParam(r, "designID"))
+	if designID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "design id is required", http.StatusBadRequest))
+		return
+	}
+
+	userID := strings.TrimSpace(identity.UID)
+	if userID == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	if h.registrabilityLimiter != nil && !identity.HasAnyRole(auth.RoleStaff, auth.RoleAdmin) {
+		if !h.registrabilityLimiter.Allow(userID) {
+			h.rateLimitMetrics.Record(ctx, rateLimitEndpointRegistrability, rateLimitScopeUser)
+			httpx.WriteError(ctx, w, httpx.NewError("rate_limited", "registrability checks throttled", http.StatusTooManyRequests))
+			return
+		}
+	}
+
+	cmd := services.RegistrabilityCheckCommand{
+		DesignID: designID,
+		UserID:   userID,
+		Locale:   strings.TrimSpace(r.URL.Query().Get("locale")),
+	}
+
+	result, err := h.designs.RequestRegistrabilityCheck(ctx, cmd)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	response := registrabilityCheckResponse{
+		Status:      strings.TrimSpace(result.Status),
+		Registrable: result.Passed,
+		Diagnostics: cloneStrings(result.Reasons),
+	}
+	if result.Score != nil {
+		response.Score = result.Score
+	}
+	if !result.RequestedAt.IsZero() {
+		response.RequestedAt = formatTime(result.RequestedAt)
+	}
+	if result.ExpiresAt != nil && !result.ExpiresAt.IsZero() {
+		response.ExpiresAt = formatTime(*result.ExpiresAt)
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+func (h *DesignHandlers) createDesign(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if h.designs == nil {
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+		return
+	}
+
+	identity, ok := auth.IdentityFromContext(ctx)
+	if !ok || identity == nil || strings.TrimSpace(identity.UID) == "" {
+		httpx.WriteError(ctx, w, httpx.NewError("unauthenticated", "authentication required", http.StatusUnauthorized))
+		return
+	}
+
+	reader := http.MaxBytesReader(w, r.Body, maxDesignRequestBody)
+	defer reader.Close()
+
+	decoder := json.NewDecoder(reader)
+	decoder.DisallowUnknownFields()
+
+	var payload createDesignRequest
+	if err := decoder.Decode(&payload); err != nil {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest))
+		return
+	}
+	if decoder.More() {
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "invalid request body: extraneous data", http.StatusBadRequest))
+		return
+	}
+
+	idempotency := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	cmd := payload.toCommand(identity.UID, identity.UID, idempotency)
+
+	design, err := h.designs.CreateDesign(ctx, cmd)
+	if err != nil {
+		h.writeDesignError(ctx, w, err)
+		return
+	}
+
+	location := fmt.Sprintf("%s/%s", strings.TrimSuffix(r.URL.Path, "/"), design.ID)
+	w.Header().Set("Location", location)
+
+	response := createDesignResponse{
+		Design: buildDesignPayload(design),
+	}
+	writeJSONResponse(w, http.StatusCreated, response)
+}
+
+func (h *DesignHandlers) writeDesignError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, services.ErrDesignInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+	case errors.Is(err, services.ErrDesignConflict):
+		httpx.WriteError(ctx, w, httpx.NewError("design_conflict", "design conflict", http.StatusConflict))
+	case errors.Is(err, services.ErrDesignNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError("design_not_found", "design not found", http.StatusNotFound))
+	case errors.Is(err, services.ErrDesignNotImplemented):
+		httpx.WriteError(ctx, w, httpx.NewError("not_implemented", "feature not enabled", http.StatusNotImplemented))
+	case errors.Is(err, services.ErrDesignRepositoryUnavailable), errors.Is(err, services.ErrDesignRendererUnavailable):
+		httpx.WriteError(ctx, w, httpx.NewError("service_unavailable", "design service unavailable", http.StatusServiceUnavailable))
+	default:
+		httpx.WriteError(ctx, w, httpx.NewError("internal_error", "internal server error", http.StatusInternalServerError))
+	}
+}
+
+type aiSuggestionRequest struct {
+	Method         string         `json:"method"`
+	Model          string         `json:"model"`
+	Prompt         *string        `json:"prompt"`
+	Parameters     map[string]any `json:"parameters"`
+	Metadata       map[string]any `json:"metadata"`
+	IdempotencyKey *string        `json:"idempotency_key"`
+	Priority       *int           `json:"priority"`
+}
+
+type aiSuggestionResponse struct {
+	SuggestionID string `json:"suggestionId"`
+	Status       string `json:"status"`
+	PollingURL   string `json:"pollingUrl"`
+}
+
+type registrabilityCheckResponse struct {
+	Status      string   `json:"status"`
+	Registrable bool     `json:"registrable"`
+	Score       *float64 `json:"score,omitempty"`
+	Diagnostics []string `json:"diagnostics,omitempty"`
+	RequestedAt string   `json:"requested_at,omitempty"`
+	ExpiresAt   string   `json:"expires_at,omitempty"`
+}
+
+type aiSuggestionDecisionRequest struct {
+	Reason *string `json:"reason"`
+}
+
+type aiSuggestionListResponse struct {
+	Items         []aiSuggestionPayload `json:"items"`
+	NextPageToken string                `json:"next_page_token,omitempty"`
+}
+
+type aiSuggestionPayload struct {
+	SuggestionID    string                          `json:"suggestion_id"`
+	DesignID        string                          `json:"design_id,omitempty"`
+	Method          string                          `json:"method,omitempty"`
+	Model           string                          `json:"model,omitempty"`
+	Status          string                          `json:"status"`
+	StatusCategory  string                          `json:"status_category"`
+	JobID           string                          `json:"job_id,omitempty"`
+	JobRef          string                          `json:"job_ref,omitempty"`
+	Prompt          string                          `json:"prompt,omitempty"`
+	Parameters      map[string]any                  `json:"parameters,omitempty"`
+	Metadata        map[string]any                  `json:"metadata,omitempty"`
+	Summary         *aiSuggestionSummaryPayload     `json:"summary,omitempty"`
+	Preview         *aiSuggestionPreviewPayload     `json:"preview,omitempty"`
+	Diagnostics     []aiSuggestionDiagnosticPayload `json:"diagnostics,omitempty"`
+	Tags            []string                        `json:"tags,omitempty"`
+	Delta           map[string]any                  `json:"delta,omitempty"`
+	Result          map[string]any                  `json:"result,omitempty"`
+	Registrability  *bool                           `json:"registrability,omitempty"`
+	AcceptedAt      string                          `json:"accepted_at,omitempty"`
+	AcceptedBy      string                          `json:"accepted_by,omitempty"`
+	RejectionReason string                          `json:"rejection_reason,omitempty"`
+	CreatedAt       string                          `json:"created_at,omitempty"`
+	UpdatedAt       string                          `json:"updated_at,omitempty"`
+	ExpiresAt       string                          `json:"expires_at,omitempty"`
+	Payload         map[string]any                  `json:"payload,omitempty"`
+}
+
+type aiSuggestionSummaryPayload struct {
+	Score    *float64           `json:"score,omitempty"`
+	Scores   map[string]float64 `json:"scores,omitempty"`
+	QueuedAt string             `json:"queued_at,omitempty"`
+}
+
+type aiSuggestionPreviewPayload struct {
+	PreviewURL       string `json:"preview_url,omitempty"`
+	SignedPreviewURL string `json:"signed_preview_url,omitempty"`
+	DiffURL          string `json:"diff_url,omitempty"`
+	SvgURL           string `json:"svg_url,omitempty"`
+	AssetRef         string `json:"asset_ref,omitempty"`
+	Bucket           string `json:"bucket,omitempty"`
+	ObjectPath       string `json:"object_path,omitempty"`
+	ThumbnailURL     string `json:"thumbnail_url,omitempty"`
+}
+
+type aiSuggestionDiagnosticPayload struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity,omitempty"`
+	Detail   string `json:"detail,omitempty"`
+}
+
+type duplicateDesignRequest struct {
+	Label *string `json:"label"`
+}
+
+type createDesignRequest struct {
+	Label           *string            `json:"label"`
+	Type            string             `json:"type"`
+	TextLines       []string           `json:"text_lines"`
+	FontID          *string            `json:"font_id"`
+	MaterialID      *string            `json:"material_id"`
+	TemplateID      *string            `json:"template_id"`
+	Locale          *string            `json:"locale"`
+	Shape           *string            `json:"shape"`
+	SizeMM          *float64           `json:"size_mm"`
+	RawName         *string            `json:"raw_name"`
+	KanjiValue      *string            `json:"kanji_value"`
+	KanjiMappingRef *string            `json:"kanji_mapping_ref"`
+	UploadAsset     *assetInputPayload `json:"upload_asset"`
+	LogoAsset       *assetInputPayload `json:"logo_asset"`
+	Snapshot        map[string]any     `json:"snapshot"`
+	Metadata        map[string]any     `json:"metadata"`
+}
+
+type assetInputPayload struct {
+	AssetID     string `json:"asset_id"`
+	Bucket      string `json:"bucket"`
+	ObjectPath  string `json:"object_path"`
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	SizeBytes   int64  `json:"size_bytes"`
+	Checksum    string `json:"checksum"`
+}
+
+func (p *assetInputPayload) toInput() *services.DesignAssetInput {
+	if p == nil {
+		return nil
+	}
+	return &services.DesignAssetInput{
+		AssetID:     p.AssetID,
+		Bucket:      p.Bucket,
+		ObjectPath:  p.ObjectPath,
+		FileName:    p.FileName,
+		ContentType: p.ContentType,
+		SizeBytes:   p.SizeBytes,
+		Checksum:    p.Checksum,
+	}
+}
+
+func (req *createDesignRequest) toCommand(ownerID, actorID, idempotency string) services.CreateDesignCommand {
+	cmd := services.CreateDesignCommand{
+		OwnerID:        ownerID,
+		ActorID:        actorID,
+		Type:           services.DesignType(strings.TrimSpace(req.Type)),
+		TextLines:      append([]string(nil), req.TextLines...),
+		IdempotencyKey: idempotency,
+		Snapshot:       cloneMap(req.Snapshot),
+		Metadata:       cloneMap(req.Metadata),
+	}
+	if req.Label != nil {
+		cmd.Label = strings.TrimSpace(*req.Label)
+	}
+	if req.FontID != nil {
+		cmd.FontID = strings.TrimSpace(*req.FontID)
+	}
+	if req.MaterialID != nil {
+		cmd.MaterialID = strings.TrimSpace(*req.MaterialID)
+	}
+	if req.TemplateID != nil {
+		cmd.TemplateID = strings.TrimSpace(*req.TemplateID)
+	}
+	if req.Locale != nil {
+		cmd.Locale = strings.TrimSpace(*req.Locale)
+	}
+	if req.Shape != nil {
+		cmd.Shape = strings.TrimSpace(*req.Shape)
+	}
+	if req.SizeMM != nil {
+		cmd.SizeMM = *req.SizeMM
+	}
+	if req.RawName != nil {
+		cmd.RawName = strings.TrimSpace(*req.RawName)
+	}
+	if req.KanjiValue != nil {
+		value := strings.TrimSpace(*req.KanjiValue)
+		cmd.KanjiValue = &value
+	}
+	if req.KanjiMappingRef != nil {
+		value := strings.TrimSpace(*req.KanjiMappingRef)
+		cmd.KanjiMappingRef = &value
+	}
+	if input := req.UploadAsset; input != nil {
+		cmd.Upload = input.toInput()
+	}
+	if input := req.LogoAsset; input != nil {
+		cmd.Logo = input.toInput()
+	}
+	return cmd
+}
+
+type createDesignResponse struct {
+	Design designPayload `json:"design"`
+}
+
+type designPayload struct {
+	ID               string                 `json:"id"`
+	Label            string                 `json:"label"`
+	Type             string                 `json:"type"`
+	TextLines        []string               `json:"text_lines"`
+	FontID           string                 `json:"font_id,omitempty"`
+	MaterialID       string                 `json:"material_id,omitempty"`
+	TemplateID       string                 `json:"template_id,omitempty"`
+	Locale           string                 `json:"locale,omitempty"`
+	Shape            string                 `json:"shape,omitempty"`
+	SizeMM           float64                `json:"size_mm,omitempty"`
+	Status           string                 `json:"status"`
+	ThumbnailURL     string                 `json:"thumbnail_url,omitempty"`
+	CurrentVersionID string                 `json:"current_version_id"`
+	Assets           designAssetsPayload    `json:"assets"`
+	Source           designSourcePayload    `json:"source"`
+	Snapshot         map[string]any         `json:"snapshot,omitempty"`
+	CreatedAt        string                 `json:"created_at,omitempty"`
+	UpdatedAt        string                 `json:"updated_at,omitempty"`
+	Versions         []designVersionPayload `json:"versions,omitempty"`
+}
+
+type designVersionPayload struct {
+	ID        string               `json:"id"`
+	Version   int                  `json:"version"`
+	Snapshot  map[string]any       `json:"snapshot,omitempty"`
+	Assets    *designAssetsPayload `json:"assets,omitempty"`
+	CreatedAt string               `json:"created_at,omitempty"`
+	CreatedBy string               `json:"created_by,omitempty"`
+}
+
+type designListResponse struct {
+	Items         []designPayload `json:"items"`
+	NextPageToken string          `json:"next_page_token,omitempty"`
+}
+
+type designVersionListResponse struct {
+	Items         []designVersionPayload `json:"items"`
+	NextPageToken string                 `json:"next_page_token,omitempty"`
+}
+
+type designAssetsPayload struct {
+	SourcePath  string `json:"source_path,omitempty"`
+	VectorPath  string `json:"vector_path,omitempty"`
+	PreviewPath string `json:"preview_path,omitempty"`
+	PreviewURL  string `json:"preview_url,omitempty"`
+}
+
+type designSourcePayload struct {
+	Type        string           `json:"type"`
+	RawName     string           `json:"raw_name,omitempty"`
+	TextLines   []string         `json:"text_lines,omitempty"`
+	UploadAsset *assetRefPayload `json:"upload_asset,omitempty"`
+	LogoAsset   *assetRefPayload `json:"logo_asset,omitempty"`
+}
+
+type assetRefPayload struct {
+	AssetID     string `json:"asset_id,omitempty"`
+	Bucket      string `json:"bucket,omitempty"`
+	ObjectPath  string `json:"object_path,omitempty"`
+	FileName    string `json:"file_name,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	SizeBytes   int64  `json:"size_bytes,omitempty"`
+	Checksum    string `json:"checksum,omitempty"`
+}
+
+func (h *DesignHandlers) buildAISuggestionPayload(suggestion services.AISuggestion) aiSuggestionPayload {
+	status := strings.TrimSpace(suggestion.Status)
+	if status == "" {
+		status = "queued"
+	}
+
+	payload := aiSuggestionPayload{
+		SuggestionID:   suggestion.ID,
+		DesignID:       strings.TrimSpace(suggestion.DesignID),
+		Method:         strings.TrimSpace(suggestion.Method),
+		Status:         status,
+		StatusCategory: deriveSuggestionStatusCategory(status),
+	}
+
+	if !suggestion.CreatedAt.IsZero() {
+		payload.CreatedAt = formatTime(suggestion.CreatedAt)
+	}
+	if !suggestion.UpdatedAt.IsZero() {
+		payload.UpdatedAt = formatTime(suggestion.UpdatedAt)
+	}
+	if suggestion.ExpiresAt != nil && !suggestion.ExpiresAt.IsZero() {
+		payload.ExpiresAt = formatTime(*suggestion.ExpiresAt)
+	}
+
+	raw := cloneMap(suggestion.Payload)
+	if raw != nil {
+		payload.Payload = raw
+	}
+
+	var result map[string]any
+	if raw != nil {
+		if res := mapFromAny(raw["result"]); res != nil && len(res) > 0 {
+			payload.Result = cloneMap(res)
+			result = payload.Result
+		}
+	}
+
+	payload.Method = firstNonEmpty(
+		payload.Method,
+		stringFromAny(valueFromMaps("method", raw, result)),
+	)
+	payload.Model = firstNonEmpty(
+		payload.Model,
+		stringFromAny(valueFromMaps("model", raw, result)),
+	)
+	payload.Prompt = firstNonEmpty(
+		payload.Prompt,
+		stringFromAny(valueFromMaps("prompt", raw, result)),
+	)
+
+	if params := cloneMap(mapFromAny(valueFromMaps("parameters", raw, result))); len(params) > 0 {
+		payload.Parameters = params
+	}
+	if metadata := cloneMap(mapFromAny(valueFromMaps("metadata", raw, result))); len(metadata) > 0 {
+		payload.Metadata = metadata
+	}
+	if delta := cloneMap(mapFromAny(valueFromMaps("delta", raw, result))); len(delta) > 0 {
+		payload.Delta = delta
+	}
+	if tags := stringSliceFromAny(valueFromMaps("tags", raw, result)); len(tags) > 0 {
+		payload.Tags = tags
+	}
+	if val, ok := boolFromAny(valueFromMaps("registrability", raw, result)); ok {
+		payload.Registrability = &val
+	}
+	if acceptedAt := stringFromAny(valueFromMaps("acceptedAt", raw, result)); acceptedAt != "" {
+		payload.AcceptedAt = acceptedAt
+	}
+	if acceptedBy := stringFromAny(valueFromMaps("acceptedBy", raw, result)); acceptedBy != "" {
+		payload.AcceptedBy = acceptedBy
+	}
+	if reason := stringFromAny(valueFromMaps("rejectionReason", raw, result)); reason != "" {
+		payload.RejectionReason = reason
+	}
+
+	if jobID := stringFromAny(valueFromMaps("jobId", raw, result)); jobID != "" {
+		payload.JobID = jobID
+	}
+	if jobRef := stringFromAny(valueFromMaps("jobRef", raw, result)); jobRef != "" {
+		payload.JobRef = jobRef
+	}
+	if payload.JobRef == "" && payload.JobID != "" {
+		payload.JobRef = fmt.Sprintf("/aiJobs/%s", payload.JobID)
+	}
+
+	if summary := buildAISuggestionSummary(raw, result); summary != nil {
+		payload.Summary = summary
+	}
+
+	if diagnostics := diagnosticsFromAny(valueFromMaps("diagnostics", raw, result)); len(diagnostics) > 0 {
+		payload.Diagnostics = diagnostics
+	}
+
+	if preview := h.extractSuggestionPreviewFromSources(raw, result); preview != nil {
+		payload.Preview = preview
+	}
+
+	if payload.Summary != nil && payload.Summary.Score == nil && len(payload.Summary.Scores) == 0 && payload.Summary.QueuedAt == "" {
+		payload.Summary = nil
+	}
+
+	return payload
+}
+
+func buildDesignPayload(design services.Design) designPayload {
+	payload := designPayload{
+		ID:               design.ID,
+		Label:            design.Label,
+		Type:             string(design.Type),
+		TextLines:        cloneStrings(design.TextLines),
+		FontID:           design.FontID,
+		MaterialID:       design.MaterialID,
+		TemplateID:       design.Template,
+		Locale:           design.Locale,
+		Shape:            design.Shape,
+		SizeMM:           design.SizeMM,
+		Status:           string(design.Status),
+		ThumbnailURL:     design.ThumbnailURL,
+		CurrentVersionID: design.CurrentVersionID,
+		Assets: designAssetsPayload{
+			SourcePath:  design.Assets.SourcePath,
+			VectorPath:  design.Assets.VectorPath,
+			PreviewPath: design.Assets.PreviewPath,
+			PreviewURL:  design.Assets.PreviewURL,
+		},
+		Source: designSourcePayload{
+			Type:        string(design.Source.Type),
+			RawName:     design.Source.RawName,
+			TextLines:   cloneStrings(design.Source.TextLines),
+			UploadAsset: assetRefPayloadFrom(design.Source.UploadAsset),
+			LogoAsset:   assetRefPayloadFrom(design.Source.LogoAsset),
+		},
+		CreatedAt: formatTime(design.CreatedAt),
+		UpdatedAt: formatTime(design.UpdatedAt),
+	}
+	if len(design.Snapshot) > 0 {
+		payload.Snapshot = cloneMap(design.Snapshot)
+	}
+	return payload
+}
+
+func buildDesignVersionPayload(version services.DesignVersion, includeAssets bool) designVersionPayload {
+	payload := designVersionPayload{
+		ID:      version.ID,
+		Version: version.Version,
+	}
+	if len(version.Snapshot) > 0 {
+		snapshot := cloneMap(version.Snapshot)
+		if snapshot != nil && !includeAssets {
+			delete(snapshot, "assets")
+			if len(snapshot) == 0 {
+				snapshot = nil
+			}
+		}
+		if snapshot != nil {
+			payload.Snapshot = snapshot
+		}
+		if includeAssets {
+			if assets := designAssetsPayloadFromSnapshot(version.Snapshot); assets != nil {
+				payload.Assets = assets
+			}
+		}
+	} else if includeAssets {
+		if assets := designAssetsPayloadFromSnapshot(version.Snapshot); assets != nil {
+			payload.Assets = assets
+		}
+	}
+	if !version.CreatedAt.IsZero() {
+		payload.CreatedAt = formatTime(version.CreatedAt)
+	}
+	if strings.TrimSpace(version.CreatedBy) != "" {
+		payload.CreatedBy = strings.TrimSpace(version.CreatedBy)
+	}
+	return payload
+}
+
+func designAssetsPayloadFromSnapshot(snapshot map[string]any) *designAssetsPayload {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	raw, ok := snapshot["assets"]
+	if !ok {
+		return nil
+	}
+	assetsMap, ok := raw.(map[string]any)
+	if !ok || len(assetsMap) == 0 {
+		return nil
+	}
+	payload := &designAssetsPayload{
+		SourcePath:  stringFromAny(assetsMap["sourcePath"]),
+		VectorPath:  stringFromAny(assetsMap["vectorPath"]),
+		PreviewPath: stringFromAny(assetsMap["previewPath"]),
+		PreviewURL:  stringFromAny(assetsMap["previewUrl"]),
+	}
+	if payload.SourcePath == "" && payload.VectorPath == "" && payload.PreviewPath == "" && payload.PreviewURL == "" {
+		return nil
+	}
+	return payload
+}
+
+func assetRefPayloadFrom(ref *services.DesignAssetReference) *assetRefPayload {
+	if ref == nil {
+		return nil
+	}
+	return &assetRefPayload{
+		AssetID:     ref.AssetID,
+		Bucket:      ref.Bucket,
+		ObjectPath:  ref.ObjectPath,
+		FileName:    ref.FileName,
+		ContentType: ref.ContentType,
+		SizeBytes:   ref.SizeBytes,
+		Checksum:    ref.Checksum,
+	}
+}
+
+func cloneStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return slices.Clone(values)
+}
+
+func cloneMap(src map[string]any) map[string]any {
+	if len(src) == 0 {
+		return nil
+	}
+	return maps.Clone(src)
+}
+
+func stringFromAny(value any) string {
+	if value == nil {
+		return ""
+	}
+	if s, ok := value.(string); ok {
+		return strings.TrimSpace(s)
+	}
+	return ""
+}
+
+func parseFilterValues(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	filters := make([]string, 0, len(values))
+	for _, raw := range values {
+		for _, part := range strings.Split(raw, ",") {
+			trimmed := strings.ToLower(strings.TrimSpace(part))
+			if trimmed == "" {
+				continue
+			}
+			if _, exists := seen[trimmed]; exists {
+				continue
+			}
+			seen[trimmed] = struct{}{}
+			filters = append(filters, trimmed)
+		}
+	}
+	return filters
+}
+
+func valueFromMaps(key string, sources ...map[string]any) any {
+	for _, src := range sources {
+		if len(src) == 0 {
+			continue
+		}
+		if val, ok := src[key]; ok {
+			return val
+		}
+	}
+	return nil
+}
+
+func buildAISuggestionSummary(primary map[string]any, secondary map[string]any) *aiSuggestionSummaryPayload {
+	scoreValue, hasScore := floatFromAny(valueFromMaps("score", primary, secondary))
+	scores := extractScores(valueFromMaps("scores", primary, secondary))
+	queuedAt := stringFromAny(valueFromMaps("queuedAt", primary, secondary))
+
+	if !hasScore && len(scores) == 0 && queuedAt == "" {
+		return nil
+	}
+
+	summary := &aiSuggestionSummaryPayload{
+		Scores:   scores,
+		QueuedAt: queuedAt,
+	}
+	if hasScore {
+		summary.Score = &scoreValue
+	}
+	return summary
+}
+
+func extractScores(value any) map[string]float64 {
+	src := mapFromAny(value)
+	if len(src) == 0 {
+		return nil
+	}
+	scores := make(map[string]float64)
+	for key, raw := range src {
+		if score, ok := floatFromAny(raw); ok {
+			scores[key] = score
+		}
+	}
+	if len(scores) == 0 {
+		return nil
+	}
+	return scores
+}
+
+func floatFromAny(value any) (float64, bool) {
+	switch v := value.(type) {
+	case nil:
+		return 0, false
+	case float64:
+		return v, true
+	case float32:
+		return float64(v), true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case uint:
+		return float64(v), true
+	case uint64:
+		return float64(v), true
+	case uint32:
+		return float64(v), true
+	case json.Number:
+		if f, err := v.Float64(); err == nil {
+			return f, true
+		}
+	case string:
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			if f, err := strconv.ParseFloat(trimmed, 64); err == nil {
+				return f, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func boolFromAny(value any) (bool, bool) {
+	switch v := value.(type) {
+	case nil:
+		return false, false
+	case bool:
+		return v, true
+	case string:
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			if parsed, err := strconv.ParseBool(trimmed); err == nil {
+				return parsed, true
+			}
+		}
+	}
+	return false, false
+}
+
+func stringSliceFromAny(value any) []string {
+	switch v := value.(type) {
+	case nil:
+		return nil
+	case []string:
+		if len(v) == 0 {
+			return nil
+		}
+		return slices.Clone(v)
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s := stringFromAny(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		if len(out) == 0 {
+			return nil
+		}
+		return out
+	}
+	return nil
+}
+
+func diagnosticsFromAny(value any) []aiSuggestionDiagnosticPayload {
+	if value == nil {
+		return nil
+	}
+	var items []aiSuggestionDiagnosticPayload
+	switch v := value.(type) {
+	case []aiSuggestionDiagnosticPayload:
+		if len(v) == 0 {
+			return nil
+		}
+		items = append(items, v...)
+	case []map[string]any:
+		for _, entry := range v {
+			if diag := diagnosticFromMap(entry); diag != nil {
+				items = append(items, *diag)
+			}
+		}
+	case []any:
+		for _, entry := range v {
+			if diag := diagnosticFromMap(mapFromAny(entry)); diag != nil {
+				items = append(items, *diag)
+			}
+		}
+	default:
+		if diag := diagnosticFromMap(mapFromAny(v)); diag != nil {
+			items = append(items, *diag)
+		}
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return items
+}
+
+func diagnosticFromMap(data map[string]any) *aiSuggestionDiagnosticPayload {
+	if len(data) == 0 {
+		return nil
+	}
+	code := stringFromAny(data["code"])
+	if code == "" {
+		return nil
+	}
+	diag := aiSuggestionDiagnosticPayload{
+		Code:     code,
+		Severity: stringFromAny(data["severity"]),
+		Detail:   stringFromAny(data["detail"]),
+	}
+	return &diag
+}
+
+func (h *DesignHandlers) extractSuggestionPreviewFromSources(sources ...map[string]any) *aiSuggestionPreviewPayload {
+	for _, src := range sources {
+		if preview := h.extractSuggestionPreview(src); preview != nil {
+			return preview
+		}
+	}
+	return nil
+}
+
+func (h *DesignHandlers) extractSuggestionPreview(source map[string]any) *aiSuggestionPreviewPayload {
+	if len(source) == 0 {
+		return nil
+	}
+	previewMap := mapFromAny(source["preview"])
+	if len(previewMap) == 0 {
+		if direct := stringFromAny(source["previewUrl"]); direct != "" {
+			previewMap = map[string]any{"previewUrl": direct}
+		}
+	}
+	if len(previewMap) == 0 {
+		return nil
+	}
+	payload := &aiSuggestionPreviewPayload{
+		PreviewURL:       stringFromAny(previewMap["previewUrl"]),
+		SignedPreviewURL: stringFromAny(previewMap["signedPreviewUrl"]),
+		DiffURL:          stringFromAny(previewMap["diffUrl"]),
+		SvgURL:           stringFromAny(previewMap["svgUrl"]),
+		AssetRef:         stringFromAny(previewMap["assetRef"]),
+		Bucket:           stringFromAny(previewMap["bucket"]),
+		ObjectPath:       stringFromAny(previewMap["objectPath"]),
+		ThumbnailURL:     stringFromAny(previewMap["thumbnailUrl"]),
+	}
+	if payload.SignedPreviewURL == "" {
+		payload.SignedPreviewURL = stringFromAny(previewMap["signedUrl"])
+	}
+	if payload.PreviewURL == "" && payload.SignedPreviewURL != "" {
+		payload.PreviewURL = payload.SignedPreviewURL
+	}
+	if payload.PreviewURL == "" && payload.Bucket != "" && payload.ObjectPath != "" {
+		if url := h.buildStorageURL(payload.Bucket, payload.ObjectPath); url != "" {
+			payload.PreviewURL = url
+			if payload.SignedPreviewURL == "" {
+				payload.SignedPreviewURL = url
+			}
+		}
+	}
+	if payload.SignedPreviewURL == "" && payload.PreviewURL != "" {
+		payload.SignedPreviewURL = payload.PreviewURL
+	}
+	if payload.PreviewURL == "" {
+		return nil
+	}
+	return payload
+}
+
+func (h *DesignHandlers) buildStorageURL(bucket, object string) string {
+	resolver := defaultStorageURLResolver
+	if h != nil && h.resolveStorageURL != nil {
+		resolver = h.resolveStorageURL
+	}
+	return resolver(bucket, object)
+}
+
+func defaultStorageURLResolver(bucket, object string) string {
+	bucket = strings.TrimSpace(bucket)
+	object = strings.TrimSpace(object)
+	if bucket == "" || object == "" {
+		return ""
+	}
+	object = strings.TrimPrefix(object, "/")
+	base := strings.TrimRight(strings.TrimSpace(defaultStorageBaseURL), "/")
+	if base == "" {
+		base = "https://storage.googleapis.com"
+	}
+	return fmt.Sprintf("%s/%s/%s", base, bucket, object)
+}
+
+func mapFromAny(value any) map[string]any {
+	if value == nil {
+		return nil
+	}
+	switch v := value.(type) {
+	case map[string]any:
+		return v
+	default:
+		return nil
+	}
+}
+
+func deriveSuggestionStatusCategory(status string) string {
+	current := strings.ToLower(strings.TrimSpace(status))
+	switch current {
+	case "queued", "pending", "in_progress":
+		return "queued"
+	case "proposed", "accepted", "applied", "succeeded", "completed":
+		return "completed"
+	case "rejected", "expired", "failed", "canceled":
+		return "rejected"
+	case "":
+		return "queued"
+	default:
+		return current
+	}
+}
+
+func parseTimeParam(value string) (time.Time, error) {
+	if value == "" {
+		return time.Time{}, errors.New("timestamp is empty")
+	}
+	if ts, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return ts.UTC(), nil
+	}
+	if ts, err := time.Parse(time.RFC3339, value); err == nil {
+		return ts.UTC(), nil
+	}
+	return time.Time{}, fmt.Errorf("must be RFC3339 timestamp")
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+type updateDesignRequest struct {
+	Label        *string        `json:"label"`
+	Status       *string        `json:"status"`
+	ThumbnailURL *string        `json:"thumbnail_url"`
+	Snapshot     map[string]any `json:"snapshot"`
+}
+
+func decodeUpdateDesignRequest(body []byte) (updateDesignRequest, error) {
+	if len(body) == 0 {
+		return updateDesignRequest{}, errors.New("request body is required")
+	}
+	var req updateDesignRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		return updateDesignRequest{}, err
+	}
+	if req.Status != nil {
+		value := strings.TrimSpace(*req.Status)
+		req.Status = &value
+	}
+	if req.Label != nil {
+		value := strings.TrimSpace(*req.Label)
+		req.Label = &value
+	}
+	if req.ThumbnailURL != nil {
+		value := strings.TrimSpace(*req.ThumbnailURL)
+		req.ThumbnailURL = &value
+	}
+	if req.Snapshot != nil && len(req.Snapshot) == 0 {
+		req.Snapshot = nil
+	}
+	return req, nil
+}

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -292,11 +293,14 @@ type stubContentRepository struct {
 		locale string
 	}
 	pages        map[string]domain.ContentPage
+	pagesByID    map[string]domain.ContentPage
 	pageErr      error
 	getPageCalls []struct {
 		slug   string
 		locale string
 	}
+	getPageByIDCalls []string
+	deletePageIDs    []string
 }
 
 func (s *stubContentRepository) ListGuides(_ context.Context, filter repositories.ContentGuideFilter) (domain.CursorPage[domain.ContentGuide], error) {
@@ -361,17 +365,45 @@ func (s *stubContentRepository) GetPage(_ context.Context, slug string, locale s
 	return domain.ContentPage{}, stubRepoError{notFound: true}
 }
 
+func (s *stubContentRepository) GetPageByID(_ context.Context, pageID string) (domain.ContentPage, error) {
+	if s.pagesByID == nil {
+		s.pagesByID = make(map[string]domain.ContentPage)
+	}
+	trimmed := strings.TrimSpace(pageID)
+	s.getPageByIDCalls = append(s.getPageByIDCalls, trimmed)
+	if page, ok := s.pagesByID[trimmed]; ok {
+		return page, nil
+	}
+	if s.pageErr != nil {
+		return domain.ContentPage{}, s.pageErr
+	}
+	return domain.ContentPage{}, stubRepoError{notFound: true}
+}
+
 func (s *stubContentRepository) UpsertPage(_ context.Context, page domain.ContentPage) (domain.ContentPage, error) {
 	if s.pages == nil {
 		s.pages = make(map[string]domain.ContentPage)
 	}
+	if s.pagesByID == nil {
+		s.pagesByID = make(map[string]domain.ContentPage)
+	}
 	key := normalizeLocaleValue(page.Locale) + "|" + strings.TrimSpace(page.Slug)
 	s.pages[key] = page
+	s.pagesByID[strings.TrimSpace(page.ID)] = page
 	return page, nil
 }
 
-func (s *stubContentRepository) DeletePage(context.Context, string) error {
-	return errors.New("not implemented")
+func (s *stubContentRepository) DeletePage(_ context.Context, pageID string) error {
+	trimmed := strings.TrimSpace(pageID)
+	s.deletePageIDs = append(s.deletePageIDs, trimmed)
+	delete(s.pagesByID, trimmed)
+	for key, page := range s.pages {
+		if strings.TrimSpace(page.ID) == trimmed {
+			delete(s.pages, key)
+			break
+		}
+	}
+	return nil
 }
 
 type stubRepoError struct {
@@ -393,4 +425,202 @@ func (e stubRepoError) IsConflict() bool {
 
 func (e stubRepoError) IsUnavailable() bool {
 	return e.unavailable
+}
+
+func TestContentService_UpsertPageEnforcesSlugUniqueness(t *testing.T) {
+	t.Helper()
+
+	now := time.Date(2024, time.May, 1, 10, 0, 0, 0, time.UTC)
+	existing := domain.ContentPage{
+		ID:        "page_existing",
+		Slug:      "about",
+		Locale:    "ja",
+		Title:     "About",
+		BodyHTML:  "<p>hello</p>",
+		Status:    "draft",
+		UpdatedAt: now,
+	}
+	repo := &stubContentRepository{
+		pages: map[string]domain.ContentPage{
+			"ja|about": existing,
+		},
+		pagesByID: map[string]domain.ContentPage{
+			"page_existing": existing,
+		},
+	}
+
+	svc, err := NewContentService(ContentServiceDeps{
+		Repository:    repo,
+		DefaultLocale: "ja",
+		Clock:         func() time.Time { return now },
+		IDGenerator:   func() string { return "new-page-id" },
+	})
+	if err != nil {
+		t.Fatalf("NewContentService: %v", err)
+	}
+
+	_, err = svc.UpsertPage(context.Background(), UpsertContentPageCommand{
+		ActorID: "admin",
+		Page: ContentPage{
+			Slug:     "about",
+			Locale:   "ja",
+			Title:    "About (duplicate)",
+			BodyHTML: "<p>dup</p>",
+			Status:   "draft",
+		},
+	})
+	if !errors.Is(err, ErrContentPageConflict) {
+		t.Fatalf("expected ErrContentPageConflict, got %v", err)
+	}
+}
+
+func TestContentService_UpsertPageGeneratesPreviewTokenAndAudit(t *testing.T) {
+	t.Helper()
+
+	now := time.Date(2024, time.June, 1, 12, 0, 0, 0, time.UTC)
+	repo := &stubContentRepository{}
+	audit := &captureAuditLogService{}
+	cache := &captureContentCache{}
+	tokenSeq := 0
+
+	svc, err := NewContentService(ContentServiceDeps{
+		Repository:    repo,
+		DefaultLocale: "ja",
+		Clock:         func() time.Time { return now },
+		Audit:         audit,
+		Cache:         cache,
+		IDGenerator:   func() string { return "page_001" },
+		PreviewTokenGenerator: func() (string, error) {
+			tokenSeq++
+			return fmt.Sprintf("token-%d", tokenSeq), nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewContentService: %v", err)
+	}
+
+	result, err := svc.UpsertPage(context.Background(), UpsertContentPageCommand{
+		ActorID: "admin",
+		Page: ContentPage{
+			Slug:     "company",
+			Locale:   "ja",
+			Title:    "Company",
+			BodyHTML: "<p>draft</p>",
+			Status:   "draft",
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpsertPage draft: %v", err)
+	}
+	if result.PreviewToken != "token-1" {
+		t.Fatalf("expected preview token token-1, got %q", result.PreviewToken)
+	}
+	if len(audit.records) != 1 || audit.records[0].Action != "content.page.create" {
+		t.Fatalf("expected create audit record, got %#v", audit.records)
+	}
+	if len(cache.keys) != 0 {
+		t.Fatalf("expected no cache invalidations for draft, got %#v", cache.keys)
+	}
+
+	updated, err := svc.UpsertPage(context.Background(), UpsertContentPageCommand{
+		ActorID: "admin",
+		Page: ContentPage{
+			ID:       result.ID,
+			Slug:     "company",
+			Locale:   "ja",
+			Title:    "Company",
+			BodyHTML: "<p>published</p>",
+			Status:   "published",
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpsertPage publish: %v", err)
+	}
+	if !updated.IsPublished {
+		t.Fatalf("expected published page")
+	}
+	if len(audit.records) != 2 || audit.records[1].Action != "content.page.update" {
+		t.Fatalf("expected update audit record, got %#v", audit.records)
+	}
+	if len(cache.keys) != 1 {
+		t.Fatalf("expected cache invalidation, got %#v", cache.keys)
+	}
+	if cache.keys[0].Slug != "company" || cache.keys[0].Locale != "ja" {
+		t.Fatalf("unexpected cache key: %#v", cache.keys[0])
+	}
+}
+
+func TestContentService_DeletePageInvalidatesAndAudits(t *testing.T) {
+	t.Helper()
+
+	now := time.Date(2024, time.July, 1, 9, 0, 0, 0, time.UTC)
+	page := domain.ContentPage{
+		ID:          "page_del",
+		Slug:        "legal",
+		Locale:      "en",
+		Title:       "Legal",
+		BodyHTML:    "<p>policy</p>",
+		Status:      "published",
+		IsPublished: true,
+		UpdatedAt:   now,
+	}
+	repo := &stubContentRepository{
+		pages: map[string]domain.ContentPage{
+			"en|legal": page,
+		},
+		pagesByID: map[string]domain.ContentPage{
+			"page_del": page,
+		},
+	}
+	audit := &captureAuditLogService{}
+	cache := &captureContentCache{}
+
+	svc, err := NewContentService(ContentServiceDeps{
+		Repository:    repo,
+		DefaultLocale: "ja",
+		Clock:         func() time.Time { return now },
+		Audit:         audit,
+		Cache:         cache,
+	})
+	if err != nil {
+		t.Fatalf("NewContentService: %v", err)
+	}
+
+	err = svc.DeletePage(context.Background(), DeleteContentPageCommand{
+		PageID:  "page_del",
+		ActorID: "admin",
+	})
+	if err != nil {
+		t.Fatalf("DeletePage: %v", err)
+	}
+	if len(audit.records) != 1 || audit.records[0].Action != "content.page.delete" {
+		t.Fatalf("expected delete audit record, got %#v", audit.records)
+	}
+	if len(cache.keys) != 1 || cache.keys[0].Slug != "legal" {
+		t.Fatalf("expected cache invalidation for legal, got %#v", cache.keys)
+	}
+	if len(repo.deletePageIDs) != 1 || repo.deletePageIDs[0] != "page_del" {
+		t.Fatalf("expected repository delete call, got %#v", repo.deletePageIDs)
+	}
+}
+
+type captureAuditLogService struct {
+	records []AuditLogRecord
+}
+
+func (c *captureAuditLogService) Record(_ context.Context, record AuditLogRecord) {
+	c.records = append(c.records, record)
+}
+
+func (c *captureAuditLogService) List(context.Context, AuditLogFilter) (domain.CursorPage[domain.AuditLogEntry], error) {
+	return domain.CursorPage[domain.AuditLogEntry]{}, nil
+}
+
+type captureContentCache struct {
+	keys []ContentCacheKey
+}
+
+func (c *captureContentCache) InvalidatePages(_ context.Context, pages []ContentCacheKey) error {
+	c.keys = append(c.keys, pages...)
+	return nil
 }

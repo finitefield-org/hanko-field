@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/hanko-field/api/internal/platform/httpx"
+	"github.com/hanko-field/api/internal/platform/validation"
 )
 
 // RouteRegistrar registers a set of routes against the provided router.
@@ -22,11 +24,14 @@ type routerConfig struct {
 	public   RouteRegistrar
 	me       RouteRegistrar
 	designs  RouteRegistrar
+	nameMaps RouteRegistrar
 	cart     RouteRegistrar
+	reviews  RouteRegistrar
 	orders   RouteRegistrar
 	admin    RouteRegistrar
 	webhooks RouteRegistrar
 	internal RouteRegistrar
+	extras   []RouteRegistrar
 
 	webhookMiddlewares  []func(http.Handler) http.Handler
 	internalMiddlewares []func(http.Handler) http.Handler
@@ -49,6 +54,7 @@ func NewRouter(opts ...Option) chi.Router {
 			middleware.RequestID,
 			middleware.RealIP,
 			middleware.Timeout(defaultTimeout),
+			requestValidationMiddleware,
 		},
 	}
 
@@ -98,14 +104,75 @@ func NewRouter(opts ...Option) chi.Router {
 		mount("/public", cfg.public, "public", nil)
 		mount("/me", cfg.me, "me", nil)
 		mount("/designs", cfg.designs, "designs", nil)
+		if cfg.nameMaps != nil {
+			cfg.nameMaps(api)
+		} else {
+			registerNotImplementedRoute(api, "/name-mappings:convert", "nameMappings")
+			registerNotImplementedRoute(api, "/name-mappings/{mappingId}:select", "nameMappings")
+		}
 		mount("/cart", cfg.cart, "cart", nil)
+		mount("/reviews", cfg.reviews, "reviews", nil)
 		mount("/orders", cfg.orders, "orders", nil)
 		mount("/admin", cfg.admin, "admin", nil)
 		mount("/webhooks", cfg.webhooks, "webhooks", cfg.webhookMiddlewares)
 		mount("/internal", cfg.internal, "internal", cfg.internalMiddlewares)
+
+		for _, extra := range cfg.extras {
+			if extra != nil {
+				extra(api)
+			}
+		}
 	})
 
 	return r
+}
+
+func requestValidationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if err := validation.DetectInjection(r.URL.Path); errors.Is(err, validation.ErrPathTraversal) {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", "path contains disallowed traversal sequences", http.StatusBadRequest))
+			return
+		}
+		if err := sanitizeRouteParams(r); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		}
+		if err := sanitizeQueryParams(r); err != nil {
+			httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func sanitizeRouteParams(r *http.Request) error {
+	routeCtx := chi.RouteContext(r.Context())
+	if routeCtx == nil {
+		return nil
+	}
+	for idx, key := range routeCtx.URLParams.Keys {
+		value := routeCtx.URLParams.Values[idx]
+		sanitized, err := validation.SanitizePathParam(key, value, 256)
+		if err != nil {
+			return err
+		}
+		routeCtx.URLParams.Values[idx] = sanitized
+	}
+	return nil
+}
+
+func sanitizeQueryParams(r *http.Request) error {
+	values := r.URL.Query()
+	if len(values) == 0 {
+		return nil
+	}
+	sanitized, err := validation.SanitizeQueryValues(values, 0)
+	if err != nil {
+		return err
+	}
+	r.URL.RawQuery = sanitized.Encode()
+	return nil
 }
 
 // WithMiddlewares appends additional global middleware to the router.
@@ -143,10 +210,33 @@ func WithDesignRoutes(reg RouteRegistrar) Option {
 	}
 }
 
+// WithNameMappingRoutes configures the registrar responsible for name mapping endpoints.
+func WithNameMappingRoutes(reg RouteRegistrar) Option {
+	return func(cfg *routerConfig) {
+		cfg.nameMaps = reg
+	}
+}
+
 // WithCartRoutes configures the registrar responsible for cart endpoints.
 func WithCartRoutes(reg RouteRegistrar) Option {
 	return func(cfg *routerConfig) {
 		cfg.cart = reg
+	}
+}
+
+// WithReviewRoutes configures the registrar responsible for review endpoints.
+func WithReviewRoutes(reg RouteRegistrar) Option {
+	return func(cfg *routerConfig) {
+		cfg.reviews = reg
+	}
+}
+
+// WithAdditionalRoutes registers extra routes under the API base path.
+func WithAdditionalRoutes(reg RouteRegistrar) Option {
+	return func(cfg *routerConfig) {
+		if reg != nil {
+			cfg.extras = append(cfg.extras, reg)
+		}
 	}
 }
 
@@ -161,6 +251,17 @@ func WithOrderRoutes(reg RouteRegistrar) Option {
 func WithAdminRoutes(reg RouteRegistrar) Option {
 	return func(cfg *routerConfig) {
 		cfg.admin = reg
+	}
+}
+
+// CombineRouteRegistrars merges multiple registrars into one, preserving order.
+func CombineRouteRegistrars(regs ...RouteRegistrar) RouteRegistrar {
+	return func(r chi.Router) {
+		for _, reg := range regs {
+			if reg != nil {
+				reg(r)
+			}
+		}
 	}
 }
 
@@ -200,4 +301,11 @@ func registerNotImplemented(r chi.Router, name string) {
 	r.HandleFunc("/", handler)
 	r.NotFound(handler)
 	r.MethodNotAllowed(handler)
+}
+
+func registerNotImplementedRoute(r chi.Router, path string, name string) {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		httpx.WriteError(req.Context(), w, httpx.NewError("not_implemented", fmt.Sprintf("%s routes not implemented", name), http.StatusNotImplemented))
+	}
+	r.HandleFunc(path, handler)
 }

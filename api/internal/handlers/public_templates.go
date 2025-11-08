@@ -12,46 +12,41 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/microcosm-cc/bluemonday"
 
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/httpx"
 	"github.com/hanko-field/api/internal/platform/textutil"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 	"github.com/hanko-field/api/internal/services"
 )
 
 const (
-	defaultTemplatePageSize   = 24
-	maxTemplatePageSize       = 100
-	defaultFontPageSize       = 50
-	maxFontPageSize           = 100
-	defaultMaterialPageSize   = 32
-	maxMaterialPageSize       = 100
-	defaultProductPageSize    = 24
-	maxProductPageSize        = 100
-	fontCacheControl          = "public, max-age=300"
-	materialCacheControl      = "public, max-age=900"
-	productCacheControl       = "public, max-age=300"
-	promotionCacheControl     = "public, max-age=120"
-	defaultMaterialLocale     = "ja"
-	defaultGuidePageSize      = 20
-	maxGuidePageSize          = 60
-	defaultGuideLocale        = "ja"
-	defaultPageLocale         = "ja"
-	guideCacheControl         = "public, max-age=900"
-	pageCacheControl          = "public, max-age=900"
-	priceDisplayModeInclusive = "tax_inclusive"
-	priceDisplayModeExclusive = "tax_exclusive"
-)
-
-var (
-	guideHTMLPolicy = newGuideHTMLPolicy()
-	pageHTMLPolicy  = guideHTMLPolicy
+	defaultTemplatePageSize          = 24
+	maxTemplatePageSize              = 100
+	defaultFontPageSize              = 50
+	maxFontPageSize                  = 100
+	defaultMaterialPageSize          = 32
+	maxMaterialPageSize              = 100
+	defaultProductPageSize           = 24
+	maxProductPageSize               = 100
+	fontCacheControl                 = "public, max-age=300"
+	materialCacheControl             = "public, max-age=900"
+	productCacheControl              = "public, max-age=300"
+	promotionCacheControl            = "public, max-age=120"
+	defaultMaterialLocale            = "ja"
+	defaultGuidePageSize             = 20
+	maxGuidePageSize                 = 60
+	defaultGuideLocale               = "ja"
+	defaultPageLocale                = "ja"
+	guideCacheControl                = "public, max-age=900"
+	pageCacheControl                 = "public, max-age=900"
+	priceDisplayModeInclusive        = "tax_inclusive"
+	priceDisplayModeExclusive        = "tax_exclusive"
+	rateLimitEndpointPromotionLookup = "public.promotions.lookup"
 )
 
 // AssetURLResolver resolves storage paths to externally accessible URLs (e.g. CDN or signed links).
@@ -79,6 +74,7 @@ type PublicHandlers struct {
 	vectorResolver   AssetURLResolver
 	priceDisplayMode string
 	promotionLimiter rateLimiter
+	rateLimitMetrics RateLimitMetrics
 }
 
 // PublicOption customises construction of PublicHandlers.
@@ -143,6 +139,16 @@ func WithPublicPromotionRateLimit(limit int, window time.Duration) PublicOption 
 	}
 }
 
+// WithPublicRateLimitMetrics sets the metrics recorder for throttled public endpoints.
+func WithPublicRateLimitMetrics(metrics RateLimitMetrics) PublicOption {
+	return func(h *PublicHandlers) {
+		if h == nil || metrics == nil {
+			return
+		}
+		h.rateLimitMetrics = metrics
+	}
+}
+
 // NewPublicHandlers constructs handlers for public catalog endpoints.
 func NewPublicHandlers(opts ...PublicOption) *PublicHandlers {
 	handler := &PublicHandlers{
@@ -154,11 +160,15 @@ func NewPublicHandlers(opts ...PublicOption) *PublicHandlers {
 		}),
 		priceDisplayMode: priceDisplayModeInclusive,
 		promotionLimiter: newSimpleRateLimiter(30, time.Minute, nil),
+		rateLimitMetrics: noopRateLimitMetrics{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(handler)
 		}
+	}
+	if handler.rateLimitMetrics == nil {
+		handler.rateLimitMetrics = noopRateLimitMetrics{}
 	}
 	return handler
 }
@@ -301,16 +311,19 @@ func (h *PublicHandlers) listFonts(w http.ResponseWriter, r *http.Request) {
 		}
 		items = append(items, fontPayload{
 			ID:               font.ID,
+			Slug:             fallbackNonEmpty(font.Slug, font.ID),
 			DisplayName:      font.DisplayName,
 			Family:           font.Family,
+			Weight:           font.Weight,
 			Scripts:          copyStringSlice(font.Scripts),
 			PreviewURL:       previewURL,
 			LetterSpacing:    font.LetterSpacing,
 			IsPremium:        font.IsPremium,
 			SupportedWeights: copyStringSlice(font.SupportedWeights),
 			License: fontLicensePayload{
-				Name: font.License.Name,
-				URL:  strings.TrimSpace(font.License.URL),
+				Name:          font.License.Name,
+				URL:           strings.TrimSpace(font.License.URL),
+				AllowedUsages: copyStringSlice(font.License.AllowedUsages),
 			},
 			CreatedAt: formatTimestamp(font.CreatedAt),
 			UpdatedAt: formatTimestamp(font.UpdatedAt),
@@ -355,16 +368,19 @@ func (h *PublicHandlers) getFont(w http.ResponseWriter, r *http.Request) {
 
 	payload := fontPayload{
 		ID:               font.ID,
+		Slug:             fallbackNonEmpty(font.Slug, font.ID),
 		DisplayName:      font.DisplayName,
 		Family:           font.Family,
+		Weight:           font.Weight,
 		Scripts:          copyStringSlice(font.Scripts),
 		PreviewURL:       previewURL,
 		LetterSpacing:    font.LetterSpacing,
 		IsPremium:        font.IsPremium,
 		SupportedWeights: copyStringSlice(font.SupportedWeights),
 		License: fontLicensePayload{
-			Name: font.License.Name,
-			URL:  strings.TrimSpace(font.License.URL),
+			Name:          font.License.Name,
+			URL:           strings.TrimSpace(font.License.URL),
+			AllowedUsages: copyStringSlice(font.License.AllowedUsages),
 		},
 		CreatedAt: formatTimestamp(font.CreatedAt),
 		UpdatedAt: formatTimestamp(font.UpdatedAt),
@@ -578,6 +594,11 @@ func (h *PublicHandlers) getPublicPromotion(w http.ResponseWriter, r *http.Reque
 			key = "anonymous"
 		}
 		if !h.promotionLimiter.Allow(key) {
+			scope := rateLimitScopeIP
+			if key == "anonymous" {
+				scope = rateLimitScopeAnonymous
+			}
+			h.rateLimitMetrics.Record(r.Context(), rateLimitEndpointPromotionLookup, scope)
 			httpx.WriteError(r.Context(), w, httpx.NewError("rate_limited", "too many promotion lookups, slow down", http.StatusTooManyRequests))
 			return
 		}
@@ -633,6 +654,7 @@ func (h *PublicHandlers) getPage(w http.ResponseWriter, r *http.Request) {
 	if locale == "" {
 		locale = defaultPageLocale
 	}
+	previewToken := strings.TrimSpace(r.URL.Query().Get("preview_token"))
 
 	page, err := h.content.GetPage(r.Context(), slug, locale)
 	if err != nil {
@@ -640,22 +662,28 @@ func (h *PublicHandlers) getPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	matchedPreview := previewToken != "" && previewToken == strings.TrimSpace(page.PreviewToken)
 	if !page.IsPublished {
-		httpx.WriteError(r.Context(), w, httpx.NewError("page_not_found", "page not found", http.StatusNotFound))
-		return
-	}
-
-	payload := buildContentPagePayload(page)
-
-	w.Header().Set("Cache-Control", pageCacheControl)
-	if etag := computePageETag(page, slug); etag != "" {
-		w.Header().Set("ETag", etag)
-		if matchesETag(r, etag) {
-			w.WriteHeader(http.StatusNotModified)
+		if !matchedPreview {
+			httpx.WriteError(r.Context(), w, httpx.NewError("page_not_found", "page not found", http.StatusNotFound))
 			return
 		}
 	}
 
+	payload := buildContentPagePayload(page)
+
+	if matchedPreview && !page.IsPublished {
+		w.Header().Set("Cache-Control", "no-store")
+	} else {
+		w.Header().Set("Cache-Control", pageCacheControl)
+		if etag := computePageETag(page, slug); etag != "" {
+			w.Header().Set("ETag", etag)
+			if matchesETag(r, etag) {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, payload)
 }
 
@@ -1245,6 +1273,18 @@ func writeCatalogError(ctx context.Context, w http.ResponseWriter, err error, re
 	case errors.Is(err, services.ErrCatalogRepositoryMissing):
 		httpx.WriteError(ctx, w, httpx.NewError("catalog_unavailable", "catalog service is unavailable", http.StatusServiceUnavailable))
 		return
+	case errors.Is(err, services.ErrCatalogInvalidInput):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_invalid", codePrefix), err.Error(), http.StatusBadRequest))
+		return
+	case errors.Is(err, services.ErrCatalogFontConflict), errors.Is(err, services.ErrCatalogFontInUse):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_conflict", codePrefix), err.Error(), http.StatusConflict))
+		return
+	case errors.Is(err, services.ErrCatalogMaterialConflict):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_conflict", codePrefix), err.Error(), http.StatusConflict))
+		return
+	case errors.Is(err, services.ErrCatalogProductConflict):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_conflict", codePrefix), err.Error(), http.StatusConflict))
+		return
 	}
 
 	var repoErr repositories.RepositoryError
@@ -1277,6 +1317,15 @@ func writeContentError(ctx context.Context, w http.ResponseWriter, err error, re
 	switch {
 	case errors.Is(err, services.ErrContentRepositoryMissing):
 		httpx.WriteError(ctx, w, httpx.NewError("content_unavailable", "content service is unavailable", http.StatusServiceUnavailable))
+		return
+	case errors.Is(err, services.ErrContentPageInvalid):
+		httpx.WriteError(ctx, w, httpx.NewError("invalid_request", err.Error(), http.StatusBadRequest))
+		return
+	case errors.Is(err, services.ErrContentPageConflict):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_conflict", resource), fmt.Sprintf("%s already exists", resource), http.StatusConflict))
+		return
+	case errors.Is(err, services.ErrContentPageNotFound):
+		httpx.WriteError(ctx, w, httpx.NewError(fmt.Sprintf("%s_not_found", resource), fmt.Sprintf("%s not found", resource), http.StatusNotFound))
 		return
 	}
 
@@ -1365,8 +1414,10 @@ type fontListResponse struct {
 
 type fontPayload struct {
 	ID               string             `json:"id"`
+	Slug             string             `json:"slug,omitempty"`
 	DisplayName      string             `json:"display_name"`
 	Family           string             `json:"family"`
+	Weight           string             `json:"weight,omitempty"`
 	Scripts          []string           `json:"scripts,omitempty"`
 	PreviewURL       string             `json:"preview_url,omitempty"`
 	LetterSpacing    float64            `json:"letter_spacing"`
@@ -1378,8 +1429,9 @@ type fontPayload struct {
 }
 
 type fontLicensePayload struct {
-	Name string `json:"name,omitempty"`
-	URL  string `json:"url,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	URL           string   `json:"url,omitempty"`
+	AllowedUsages []string `json:"allowed_usages,omitempty"`
 }
 
 type materialListResponse struct {
@@ -1533,7 +1585,7 @@ func (h *PublicHandlers) buildGuideDetailPayload(ctx context.Context, guide serv
 	}
 	return guideDetailPayload{
 		guideSummaryPayload: summary,
-		BodyHTML:            sanitizeGuideHTML(guide.BodyHTML),
+		BodyHTML:            validation.SanitizeGuideHTML(guide.BodyHTML),
 	}, nil
 }
 
@@ -1544,29 +1596,11 @@ func buildContentPagePayload(page services.ContentPage) contentPagePayload {
 		Slug:        strings.TrimSpace(page.Slug),
 		Locale:      locale,
 		Title:       strings.TrimSpace(page.Title),
-		BodyHTML:    sanitizePageHTML(page.BodyHTML),
+		BodyHTML:    validation.SanitizePageHTML(page.BodyHTML),
 		SEO:         textutil.NormalizeStringMap(page.SEO),
 		IsPublished: page.IsPublished,
 		UpdatedAt:   formatTimestamp(page.UpdatedAt),
 	}
-}
-
-func sanitizeGuideHTML(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-	sanitized := strings.TrimSpace(guideHTMLPolicy.Sanitize(trimmed))
-	return sanitized
-}
-
-func sanitizePageHTML(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-	sanitized := strings.TrimSpace(pageHTMLPolicy.Sanitize(trimmed))
-	return sanitized
 }
 
 func normalizeGuideTags(tags []string) []string {
@@ -1750,15 +1784,6 @@ func matchesETag(r *http.Request, etag string) bool {
 	return false
 }
 
-func newGuideHTMLPolicy() *bluemonday.Policy {
-	policy := bluemonday.UGCPolicy()
-	policy.AllowElements("figure", "figcaption")
-	policy.AllowAttrs("class").OnElements("figure", "figcaption", "p", "span")
-	policy.AllowAttrs("loading").OnElements("img")
-	policy.RequireNoFollowOnLinks(true)
-	return policy
-}
-
 func formatTimestamp(ts time.Time) string {
 	if ts.IsZero() {
 		return ""
@@ -1776,76 +1801,6 @@ func copyIntSlice(in []int) []int {
 	out := make([]int, len(in))
 	copy(out, in)
 	return out
-}
-
-type rateLimiter interface {
-	Allow(key string) bool
-}
-
-type simpleRateLimiter struct {
-	limit  int
-	window time.Duration
-	clock  func() time.Time
-	mu     sync.Mutex
-	store  map[string]rateEntry
-}
-
-type rateEntry struct {
-	count int
-	reset time.Time
-}
-
-func newSimpleRateLimiter(limit int, window time.Duration, clock func() time.Time) rateLimiter {
-	if limit <= 0 || window <= 0 {
-		return nil
-	}
-	if clock == nil {
-		clock = time.Now
-	}
-	return &simpleRateLimiter{
-		limit:  limit,
-		window: window,
-		clock:  clock,
-		store:  make(map[string]rateEntry),
-	}
-}
-
-func (l *simpleRateLimiter) Allow(key string) bool {
-	if l == nil {
-		return true
-	}
-	key = strings.TrimSpace(key)
-	if key == "" {
-		key = "anonymous"
-	}
-	now := l.clock()
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	entry, ok := l.store[key]
-	if !ok || now.After(entry.reset) {
-		l.store[key] = rateEntry{count: 1, reset: now.Add(l.window)}
-		l.pruneExpiredLocked(now)
-		return true
-	}
-
-	if entry.count >= l.limit {
-		return false
-	}
-	entry.count++
-	l.store[key] = entry
-	return true
-}
-
-func (l *simpleRateLimiter) pruneExpiredLocked(now time.Time) {
-	if len(l.store) == 0 {
-		return
-	}
-	for key, entry := range l.store {
-		if now.After(entry.reset) {
-			delete(l.store, key)
-		}
-	}
 }
 
 func isAbsoluteURL(raw string) bool {

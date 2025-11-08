@@ -25,6 +25,8 @@ type SystemServiceDeps struct {
 	Build            BuildInfo
 	Audit            AuditLogService
 	Counters         CounterService
+	Errors           SystemErrorStore
+	Tasks            SystemTaskStore
 }
 
 type systemService struct {
@@ -33,6 +35,8 @@ type systemService struct {
 	build      BuildInfo
 	audit      AuditLogService
 	counters   CounterService
+	errors     SystemErrorStore
+	tasks      SystemTaskStore
 }
 
 var _ SystemService = (*systemService)(nil)
@@ -61,6 +65,8 @@ func NewSystemService(deps SystemServiceDeps) (SystemService, error) {
 		build:    build,
 		audit:    deps.Audit,
 		counters: deps.Counters,
+		errors:   deps.Errors,
+		tasks:    deps.Tasks,
 	}, nil
 }
 
@@ -103,6 +109,28 @@ func (s *systemService) ListAuditLogs(ctx context.Context, filter AuditLogFilter
 		return domain.CursorPage[domain.AuditLogEntry]{}, errors.New("system service: audit service not configured")
 	}
 	return s.audit.List(ctx, filter)
+}
+
+func (s *systemService) ListSystemErrors(ctx context.Context, filter SystemErrorFilter) (domain.CursorPage[domain.SystemError], error) {
+	if ctx == nil {
+		return domain.CursorPage[domain.SystemError]{}, errors.New("system service: context is required")
+	}
+	if s.errors == nil {
+		return domain.CursorPage[domain.SystemError]{}, errors.New("system service: error store not configured")
+	}
+	normalised := normaliseSystemErrorFilter(filter)
+	return s.errors.ListSystemErrors(ctx, normalised)
+}
+
+func (s *systemService) ListSystemTasks(ctx context.Context, filter SystemTaskFilter) (domain.CursorPage[domain.SystemTask], error) {
+	if ctx == nil {
+		return domain.CursorPage[domain.SystemTask]{}, errors.New("system service: context is required")
+	}
+	if s.tasks == nil {
+		return domain.CursorPage[domain.SystemTask]{}, errors.New("system service: task store not configured")
+	}
+	normalised := normaliseSystemTaskFilter(filter)
+	return s.tasks.ListSystemTasks(ctx, normalised)
 }
 
 func (s *systemService) NextCounterValue(ctx context.Context, cmd CounterCommand) (int64, error) {
@@ -167,4 +195,102 @@ func parseCounterID(counterID string) (string, string, error) {
 		return "", "", errors.New("system service: counter id must be in scope:name format")
 	}
 	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), nil
+}
+
+func normaliseSystemErrorFilter(filter SystemErrorFilter) SystemErrorFilter {
+	result := filter
+	result.Sources = sanitiseStringSlice(filter.Sources)
+	result.JobTypes = sanitiseStringSlice(filter.JobTypes)
+	result.Statuses = sanitiseStringSlice(filter.Statuses)
+	result.Severities = sanitiseStringSlice(filter.Severities)
+	result.Search = strings.TrimSpace(filter.Search)
+	result.DateRange = normaliseTimeRange(filter.DateRange)
+	result.Pagination = normalisePagination(filter.Pagination)
+	return result
+}
+
+func normaliseSystemTaskFilter(filter SystemTaskFilter) SystemTaskFilter {
+	result := filter
+	result.Statuses = sanitiseTaskStatuses(filter.Statuses)
+	result.Kinds = sanitiseStringSlice(filter.Kinds)
+	result.RequestedBy = strings.TrimSpace(filter.RequestedBy)
+	result.DateRange = normaliseTimeRange(filter.DateRange)
+	result.Pagination = normalisePagination(filter.Pagination)
+	return result
+}
+
+func sanitiseStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		token := strings.ToLower(strings.TrimSpace(value))
+		if token == "" {
+			continue
+		}
+		if _, ok := seen[token]; ok {
+			continue
+		}
+		seen[token] = struct{}{}
+		result = append(result, token)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func sanitiseTaskStatuses(statuses []SystemTaskStatus) []SystemTaskStatus {
+	if len(statuses) == 0 {
+		return nil
+	}
+	allowed := map[SystemTaskStatus]struct{}{
+		SystemTaskStatusPending:   {},
+		SystemTaskStatusRunning:   {},
+		SystemTaskStatusCompleted: {},
+		SystemTaskStatusFailed:    {},
+	}
+	seen := make(map[SystemTaskStatus]struct{}, len(statuses))
+	result := make([]SystemTaskStatus, 0, len(statuses))
+	for _, status := range statuses {
+		normalized := SystemTaskStatus(strings.ToLower(strings.TrimSpace(string(status))))
+		if normalized == "" {
+			continue
+		}
+		if _, ok := allowed[normalized]; !ok {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func normaliseTimeRange(r domain.RangeQuery[time.Time]) domain.RangeQuery[time.Time] {
+	var result domain.RangeQuery[time.Time]
+	if r.From != nil && !r.From.IsZero() {
+		from := r.From.UTC()
+		result.From = &from
+	}
+	if r.To != nil && !r.To.IsZero() {
+		to := r.To.UTC()
+		result.To = &to
+	}
+	return result
+}
+
+func normalisePagination(p Pagination) Pagination {
+	if p.PageSize < 0 {
+		p.PageSize = 0
+	}
+	p.PageToken = strings.TrimSpace(p.PageToken)
+	return p
 }

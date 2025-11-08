@@ -49,6 +49,15 @@ variable "ingress" {
   default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 }
 
+variable "api_oidc_audience" {
+  description = "Audience expected for OIDC tokens hitting internal maintenance endpoints (typically the HTTPS base URL exposed via Cloud Run or load balancer)."
+  type        = string
+  validation {
+    condition     = trimspace(var.api_oidc_audience) != ""
+    error_message = "api_oidc_audience must be a non-empty URL matching the internal endpoint base."
+  }
+}
+
 variable "psp_topics" {
   description = "Map of Pub/Sub topic definitions"
   type = map(object({
@@ -121,27 +130,17 @@ variable "storage_buckets" {
 }
 
 variable "scheduler_jobs" {
-  description = "Cloud Scheduler job definitions"
+  description = "Overrides for Cloud Scheduler job definitions keyed by logical name."
   type = map(object({
-    schedule              = string
-    http_method           = optional(string, "POST")
-    uri                   = string
-    oidc_service_account  = string
-    body                  = optional(string)
-    time_zone             = optional(string, "Asia/Tokyo")
+    schedule             = optional(string)
+    http_method          = optional(string)
+    uri                  = optional(string)
+    oidc_service_account = optional(string)
+    body                 = optional(string)
+    time_zone            = optional(string)
+    audience             = optional(string)
   }))
-  default = {
-    cleanup_reservations = {
-      schedule             = "*/15 * * * *"
-      uri                  = "https://api-cleanup-placeholder/run"
-      oidc_service_account = "svc-api-scheduler"
-    }
-    stock_safety_notify = {
-      schedule             = "0 * * * *"
-      uri                  = "https://api-stock-placeholder/run"
-      oidc_service_account = "svc-api-scheduler"
-    }
-  }
+  default = {}
 }
 
 variable "secret_ids" {

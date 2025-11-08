@@ -345,6 +345,10 @@ func (f *fakePromotionService) ValidatePromotion(ctx context.Context, cmd Valida
 	return PromotionValidationResult{Code: cmd.Code, Eligible: false}, nil
 }
 
+func (f *fakePromotionService) ValidatePromotionDefinition(context.Context, Promotion) (PromotionDefinitionValidationResult, error) {
+	panic("unexpected call")
+}
+
 func (f *fakePromotionService) ListPromotions(context.Context, PromotionListFilter) (domain.CursorPage[Promotion], error) {
 	panic("unexpected call")
 }
@@ -357,12 +361,20 @@ func (f *fakePromotionService) UpdatePromotion(context.Context, UpsertPromotionC
 	panic("unexpected call")
 }
 
-func (f *fakePromotionService) DeletePromotion(context.Context, string) error {
+func (f *fakePromotionService) DeletePromotion(context.Context, string, string) error {
 	panic("unexpected call")
 }
 
-func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (domain.CursorPage[PromotionUsage], error) {
+func (f *fakePromotionService) ListPromotionUsage(context.Context, PromotionUsageFilter) (PromotionUsagePage, error) {
 	panic("unexpected call")
+}
+
+func (f *fakePromotionService) ApplyPromotion(context.Context, PromotionApplyCommand) (PromotionApplyResult, error) {
+	panic("unexpected call")
+}
+
+func (f *fakePromotionService) RollbackUsage(context.Context, PromotionUsageReleaseCommand) error {
+	return nil
 }
 
 type fakeTaxCalculator struct {

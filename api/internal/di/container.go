@@ -19,6 +19,7 @@ type Services struct {
 	Cart       services.CartService
 	Checkout   services.CheckoutService
 	Orders     services.OrderService
+	Invoices   services.InvoiceService
 	Reviews    services.ReviewService
 	Counters   services.CounterService
 	Payments   services.PaymentService
@@ -96,6 +97,7 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 			Addresses:      reg.Addresses(),
 			PaymentMethods: reg.PaymentMethods(),
 			Favorites:      reg.Favorites(),
+			Designs:        reg.Designs(),
 			Audit:          svc.Audit,
 			Firebase:       firebase,
 			Clock:          time.Now,
@@ -119,8 +121,12 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 
 	if promotionsRepo := reg.Promotions(); promotionsRepo != nil {
 		promotionSvc, err := services.NewPromotionService(services.PromotionServiceDeps{
-			Promotions: promotionsRepo,
-			Clock:      time.Now,
+			Promotions:         promotionsRepo,
+			Usage:              reg.PromotionUsage(),
+			Users:              svc.Users,
+			Audit:              svc.Audit,
+			Clock:              time.Now,
+			UserLookupInterval: 50 * time.Millisecond,
 		})
 		if err != nil {
 			return Services{}, fmt.Errorf("build promotion service: %w", err)
@@ -130,8 +136,10 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 
 	if catalogRepo := reg.Catalog(); catalogRepo != nil {
 		catalogSvc, err := services.NewCatalogService(services.CatalogServiceDeps{
-			Catalog: catalogRepo,
-			Clock:   time.Now,
+			Catalog:   catalogRepo,
+			Audit:     svc.Audit,
+			Inventory: svc.Inventory,
+			Clock:     time.Now,
 		})
 		if err != nil {
 			return Services{}, fmt.Errorf("build catalog service: %w", err)
@@ -172,6 +180,8 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 			},
 			Audit:    svc.Audit,
 			Counters: svc.Counters,
+			Errors:   services.NewNoopSystemErrorStore(),
+			Tasks:    services.NewNoopSystemTaskStore(),
 		})
 		if err != nil {
 			return Services{}, fmt.Errorf("build system service: %w", err)
@@ -195,6 +205,21 @@ func buildServices(ctx context.Context, reg repositories.Registry, cfg config.Co
 			return Services{}, fmt.Errorf("build order service: %w", err)
 		}
 		svc.Orders = orderSvc
+	}
+
+	if ordersRepo != nil {
+		if shipmentRepo := reg.OrderShipments(); shipmentRepo != nil {
+			shipmentSvc, err := services.NewShipmentService(services.ShipmentServiceDeps{
+				Orders:     ordersRepo,
+				Shipments:  shipmentRepo,
+				UnitOfWork: reg,
+				Clock:      time.Now,
+			})
+			if err != nil {
+				return Services{}, fmt.Errorf("build shipment service: %w", err)
+			}
+			svc.Shipments = shipmentSvc
+		}
 	}
 
 	if reviewRepo := reg.Reviews(); reviewRepo != nil && ordersRepo != nil {
