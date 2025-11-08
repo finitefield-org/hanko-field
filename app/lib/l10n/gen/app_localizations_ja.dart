@@ -2844,4 +2844,77 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get kanjiDictionaryPromoCta => '漢字辞典を開く';
+
+  @override
+  String get profileHomeLoadError => 'プロフィール情報を読み込めませんでした。';
+
+  @override
+  String get profileHomeRetryLabel => '再試行';
+
+  @override
+  String get profileHomeQuickLinksTitle => 'クイックリンク';
+
+  @override
+  String get profileHomeQuickLinkAddressesTitle => '住所帳';
+
+  @override
+  String get profileHomeQuickLinkAddressesSubtitle => '配送先と請求先';
+
+  @override
+  String get profileHomeQuickLinkPaymentsTitle => '支払方法';
+
+  @override
+  String get profileHomeQuickLinkPaymentsSubtitle => 'カード / ウォレット / 請求書';
+
+  @override
+  String get profileHomeQuickLinkNotificationsTitle => '通知設定';
+
+  @override
+  String get profileHomeQuickLinkNotificationsSubtitle => 'プッシュ・メール・SMS';
+
+  @override
+  String get profileHomeQuickLinkSupportTitle => 'サポート';
+
+  @override
+  String get profileHomeQuickLinkSupportSubtitle => 'FAQ / チャット / お問い合わせ';
+
+  @override
+  String get profileHomeAvatarButtonTooltip => 'プロフィール写真を変更';
+
+  @override
+  String get profileHomeFallbackDisplayName => 'ゲスト';
+
+  @override
+  String get profileHomeHeaderDescription => '本人情報・セキュリティ・通知などの設定をここから管理できます。';
+
+  @override
+  String get profileHomeAvatarUpdateMessage => '写真アップロードはまもなく対応予定です。';
+
+  @override
+  String get profileHomeMembershipActive => 'アクティブ会員';
+
+  @override
+  String get profileHomeMembershipSuspended => '利用一時停止';
+
+  @override
+  String get profileHomeMembershipStaff => 'チームアカウント';
+
+  @override
+  String get profileHomeMembershipAdmin => '管理者アカウント';
+
+  @override
+  String get profileHomePersonaTitle => 'ペルソナモード';
+
+  @override
+  String get profileHomePersonaSubtitle =>
+      '国内向け/海外向けの案内を切り替えて、文言やチェックリストを最適化します。';
+
+  @override
+  String get profileHomePersonaDomestic => '国内向け';
+
+  @override
+  String get profileHomePersonaInternational => '海外向け';
+
+  @override
+  String get profileHomePersonaUpdateError => 'ペルソナを更新できませんでした。もう一度お試しください。';
 }

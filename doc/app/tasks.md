@@ -85,7 +85,7 @@
 - [x] [Build how-to screen (`/howto`) aggregating tutorials/videos with embedded players.](doc/app/tasks/062-build-how-to-screen-howto-aggregating-tutorials-videos-with-embedded-players.md)
 
 ## 11. Profile & Settings
-- [ ] [Implement profile home (`/profile`) showing avatar, display name, persona toggle, quick links.](doc/app/tasks/063-implement-profile-home-profile-showing-avatar-display-name-persona-toggle-quick-links.md)
+- [x] [Implement profile home (`/profile`) showing avatar, display name, persona toggle, quick links.](doc/app/tasks/063-implement-profile-home-profile-showing-avatar-display-name-persona-toggle-quick-links.md)
 - [ ] [Build addresses management (`/profile/addresses`) with CRUD, defaults, and shipping sync.](doc/app/tasks/064-build-addresses-management-profile-addresses-with-crud-defaults-and-shipping-sync.md)
 - [ ] [Implement payment methods management (`/profile/payments`) referencing PSP tokens, default selection, and removal.](doc/app/tasks/065-implement-payment-methods-management-profile-payments-referencing-psp-tokens-default-selec.md)
 - [ ] [Build notifications settings (`/profile/notifications`) for push/email categories and scheduling.](doc/app/tasks/066-build-notifications-settings-profile-notifications-for-push-email-categories-and-schedulin.md)

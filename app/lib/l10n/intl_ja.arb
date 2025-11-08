@@ -2797,4 +2797,124 @@
 , "@kanjiDictionaryPromoCta": {
   "description": "辞典カードのCTAボタン"
 }
+
+, "profileHomeLoadError": "プロフィール情報を読み込めませんでした。"
+, "@profileHomeLoadError": {
+  "description": "プロフィール画面の読み込みエラー"
+}
+
+, "profileHomeRetryLabel": "再試行"
+, "@profileHomeRetryLabel": {
+  "description": "プロフィール画面の再試行ボタンラベル"
+}
+
+, "profileHomeQuickLinksTitle": "クイックリンク"
+, "@profileHomeQuickLinksTitle": {
+  "description": "クイックリンク見出し"
+}
+
+, "profileHomeQuickLinkAddressesTitle": "住所帳"
+, "@profileHomeQuickLinkAddressesTitle": {
+  "description": "住所帳クイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkAddressesSubtitle": "配送先と請求先"
+, "@profileHomeQuickLinkAddressesSubtitle": {
+  "description": "住所帳クイックアクションのサブタイトル"
+}
+
+, "profileHomeQuickLinkPaymentsTitle": "支払方法"
+, "@profileHomeQuickLinkPaymentsTitle": {
+  "description": "支払方法クイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkPaymentsSubtitle": "カード / ウォレット / 請求書"
+, "@profileHomeQuickLinkPaymentsSubtitle": {
+  "description": "支払方法クイックアクションのサブタイトル"
+}
+
+, "profileHomeQuickLinkNotificationsTitle": "通知設定"
+, "@profileHomeQuickLinkNotificationsTitle": {
+  "description": "通知設定クイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkNotificationsSubtitle": "プッシュ・メール・SMS"
+, "@profileHomeQuickLinkNotificationsSubtitle": {
+  "description": "通知設定クイックアクションのサブタイトル"
+}
+
+, "profileHomeQuickLinkSupportTitle": "サポート"
+, "@profileHomeQuickLinkSupportTitle": {
+  "description": "サポートクイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkSupportSubtitle": "FAQ / チャット / お問い合わせ"
+, "@profileHomeQuickLinkSupportSubtitle": {
+  "description": "サポートクイックアクションのサブタイトル"
+}
+
+, "profileHomeAvatarButtonTooltip": "プロフィール写真を変更"
+, "@profileHomeAvatarButtonTooltip": {
+  "description": "写真変更ボタンのツールチップ"
+}
+
+, "profileHomeFallbackDisplayName": "ゲスト"
+, "@profileHomeFallbackDisplayName": {
+  "description": "表示名がない場合のフォールバック"
+}
+
+, "profileHomeHeaderDescription": "本人情報・セキュリティ・通知などの設定をここから管理できます。"
+, "@profileHomeHeaderDescription": {
+  "description": "プロフィールヘッダー下の説明文"
+}
+
+, "profileHomeAvatarUpdateMessage": "写真アップロードはまもなく対応予定です。"
+, "@profileHomeAvatarUpdateMessage": {
+  "description": "写真変更をタップしたときのスナックバー"
+}
+
+, "profileHomeMembershipActive": "アクティブ会員"
+, "@profileHomeMembershipActive": {
+  "description": "会員ステータス: アクティブ"
+}
+
+, "profileHomeMembershipSuspended": "利用一時停止"
+, "@profileHomeMembershipSuspended": {
+  "description": "会員ステータス: 停止"
+}
+
+, "profileHomeMembershipStaff": "チームアカウント"
+, "@profileHomeMembershipStaff": {
+  "description": "会員ステータス: スタッフ"
+}
+
+, "profileHomeMembershipAdmin": "管理者アカウント"
+, "@profileHomeMembershipAdmin": {
+  "description": "会員ステータス: 管理者"
+}
+
+, "profileHomePersonaTitle": "ペルソナモード"
+, "@profileHomePersonaTitle": {
+  "description": "ペルソナ切替カードのタイトル"
+}
+
+, "profileHomePersonaSubtitle": "国内向け/海外向けの案内を切り替えて、文言やチェックリストを最適化します。"
+, "@profileHomePersonaSubtitle": {
+  "description": "ペルソナ切替カードの説明"
+}
+
+, "profileHomePersonaDomestic": "国内向け"
+, "@profileHomePersonaDomestic": {
+  "description": "国内ペルソナラベル"
+}
+
+, "profileHomePersonaInternational": "海外向け"
+, "@profileHomePersonaInternational": {
+  "description": "海外ペルソナラベル"
+}
+
+, "profileHomePersonaUpdateError": "ペルソナを更新できませんでした。もう一度お試しください。"
+, "@profileHomePersonaUpdateError": {
+  "description": "ペルソナ更新失敗時のメッセージ"
+}
 }

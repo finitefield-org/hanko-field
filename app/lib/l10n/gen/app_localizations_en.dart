@@ -2958,4 +2958,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kanjiDictionaryPromoCta => 'Open dictionary';
+
+  @override
+  String get profileHomeLoadError => 'Profile can\'t be loaded right now.';
+
+  @override
+  String get profileHomeRetryLabel => 'Try again';
+
+  @override
+  String get profileHomeQuickLinksTitle => 'Quick links';
+
+  @override
+  String get profileHomeQuickLinkAddressesTitle => 'Addresses';
+
+  @override
+  String get profileHomeQuickLinkAddressesSubtitle => 'Shipping and billing';
+
+  @override
+  String get profileHomeQuickLinkPaymentsTitle => 'Payment methods';
+
+  @override
+  String get profileHomeQuickLinkPaymentsSubtitle =>
+      'Cards, wallets, corporate billing';
+
+  @override
+  String get profileHomeQuickLinkNotificationsTitle => 'Notifications';
+
+  @override
+  String get profileHomeQuickLinkNotificationsSubtitle => 'Push, email, SMS';
+
+  @override
+  String get profileHomeQuickLinkSupportTitle => 'Support';
+
+  @override
+  String get profileHomeQuickLinkSupportSubtitle => 'FAQ, chat, concierge';
+
+  @override
+  String get profileHomeAvatarButtonTooltip => 'Update profile photo';
+
+  @override
+  String get profileHomeFallbackDisplayName => 'Hanko guest';
+
+  @override
+  String get profileHomeHeaderDescription =>
+      'Manage your identity, security, and preferences from one place.';
+
+  @override
+  String get profileHomeAvatarUpdateMessage => 'Photo uploads are coming soon.';
+
+  @override
+  String get profileHomeMembershipActive => 'Active membership';
+
+  @override
+  String get profileHomeMembershipSuspended => 'Suspended';
+
+  @override
+  String get profileHomeMembershipStaff => 'Team workspace';
+
+  @override
+  String get profileHomeMembershipAdmin => 'Admin workspace';
+
+  @override
+  String get profileHomePersonaTitle => 'Persona mode';
+
+  @override
+  String get profileHomePersonaSubtitle =>
+      'Switch between domestic and international guidance to personalize copy, forms, and offers.';
+
+  @override
+  String get profileHomePersonaDomestic => 'Domestic';
+
+  @override
+  String get profileHomePersonaInternational => 'International';
+
+  @override
+  String get profileHomePersonaUpdateError =>
+      'Unable to update persona. Please try again.';
 }

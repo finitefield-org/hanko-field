@@ -4407,4 +4407,124 @@
 , "@kanjiDictionaryPromoCta": {
   "description": "CTA button label on the promo card."
 }
+
+, "profileHomeLoadError": "Profile can't be loaded right now."
+, "@profileHomeLoadError": {
+  "description": "Error message shown when the profile home screen fails to load"
+}
+
+, "profileHomeRetryLabel": "Try again"
+, "@profileHomeRetryLabel": {
+  "description": "Retry button label on the profile home error view"
+}
+
+, "profileHomeQuickLinksTitle": "Quick links"
+, "@profileHomeQuickLinksTitle": {
+  "description": "Heading above the quick link cards on profile home"
+}
+
+, "profileHomeQuickLinkAddressesTitle": "Addresses"
+, "@profileHomeQuickLinkAddressesTitle": {
+  "description": "Title for the addresses quick action card"
+}
+
+, "profileHomeQuickLinkAddressesSubtitle": "Shipping and billing"
+, "@profileHomeQuickLinkAddressesSubtitle": {
+  "description": "Subtitle for the addresses quick action card"
+}
+
+, "profileHomeQuickLinkPaymentsTitle": "Payment methods"
+, "@profileHomeQuickLinkPaymentsTitle": {
+  "description": "Title for the payments quick action card"
+}
+
+, "profileHomeQuickLinkPaymentsSubtitle": "Cards, wallets, corporate billing"
+, "@profileHomeQuickLinkPaymentsSubtitle": {
+  "description": "Subtitle for the payments quick action card"
+}
+
+, "profileHomeQuickLinkNotificationsTitle": "Notifications"
+, "@profileHomeQuickLinkNotificationsTitle": {
+  "description": "Title for the notifications quick action card"
+}
+
+, "profileHomeQuickLinkNotificationsSubtitle": "Push, email, SMS"
+, "@profileHomeQuickLinkNotificationsSubtitle": {
+  "description": "Subtitle for the notifications quick action card"
+}
+
+, "profileHomeQuickLinkSupportTitle": "Support"
+, "@profileHomeQuickLinkSupportTitle": {
+  "description": "Title for the support quick action card"
+}
+
+, "profileHomeQuickLinkSupportSubtitle": "FAQ, chat, concierge"
+, "@profileHomeQuickLinkSupportSubtitle": {
+  "description": "Subtitle for the support quick action card"
+}
+
+, "profileHomeAvatarButtonTooltip": "Update profile photo"
+, "@profileHomeAvatarButtonTooltip": {
+  "description": "Tooltip for the avatar change button"
+}
+
+, "profileHomeFallbackDisplayName": "Hanko guest"
+, "@profileHomeFallbackDisplayName": {
+  "description": "Fallback display name when the profile has no name"
+}
+
+, "profileHomeHeaderDescription": "Manage your identity, security, and preferences from one place."
+, "@profileHomeHeaderDescription": {
+  "description": "Supporting text under the profile header card"
+}
+
+, "profileHomeAvatarUpdateMessage": "Photo uploads are coming soon."
+, "@profileHomeAvatarUpdateMessage": {
+  "description": "Snack bar message shown when tapping change photo"
+}
+
+, "profileHomeMembershipActive": "Active membership"
+, "@profileHomeMembershipActive": {
+  "description": "Chip label when the membership is active"
+}
+
+, "profileHomeMembershipSuspended": "Suspended"
+, "@profileHomeMembershipSuspended": {
+  "description": "Chip label when the membership is suspended"
+}
+
+, "profileHomeMembershipStaff": "Team workspace"
+, "@profileHomeMembershipStaff": {
+  "description": "Chip label when the user has a staff role"
+}
+
+, "profileHomeMembershipAdmin": "Admin workspace"
+, "@profileHomeMembershipAdmin": {
+  "description": "Chip label when the user has an admin role"
+}
+
+, "profileHomePersonaTitle": "Persona mode"
+, "@profileHomePersonaTitle": {
+  "description": "Title for the persona segmented button card"
+}
+
+, "profileHomePersonaSubtitle": "Switch between domestic and international guidance to personalize copy, forms, and offers."
+, "@profileHomePersonaSubtitle": {
+  "description": "Helper text describing what the persona toggle does"
+}
+
+, "profileHomePersonaDomestic": "Domestic"
+, "@profileHomePersonaDomestic": {
+  "description": "Label for the domestic persona option"
+}
+
+, "profileHomePersonaInternational": "International"
+, "@profileHomePersonaInternational": {
+  "description": "Label for the international persona option"
+}
+
+, "profileHomePersonaUpdateError": "Unable to update persona. Please try again."
+, "@profileHomePersonaUpdateError": {
+  "description": "Error message shown when persona update fails"
+}
 }

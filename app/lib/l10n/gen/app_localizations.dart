@@ -5125,6 +5125,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open dictionary'**
   String get kanjiDictionaryPromoCta;
+
+  /// Error message shown when the profile home screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Profile can\'t be loaded right now.'**
+  String get profileHomeLoadError;
+
+  /// Retry button label on the profile home error view
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileHomeRetryLabel;
+
+  /// Heading above the quick link cards on profile home
+  ///
+  /// In en, this message translates to:
+  /// **'Quick links'**
+  String get profileHomeQuickLinksTitle;
+
+  /// Title for the addresses quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Addresses'**
+  String get profileHomeQuickLinkAddressesTitle;
+
+  /// Subtitle for the addresses quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping and billing'**
+  String get profileHomeQuickLinkAddressesSubtitle;
+
+  /// Title for the payments quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Payment methods'**
+  String get profileHomeQuickLinkPaymentsTitle;
+
+  /// Subtitle for the payments quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Cards, wallets, corporate billing'**
+  String get profileHomeQuickLinkPaymentsSubtitle;
+
+  /// Title for the notifications quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get profileHomeQuickLinkNotificationsTitle;
+
+  /// Subtitle for the notifications quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Push, email, SMS'**
+  String get profileHomeQuickLinkNotificationsSubtitle;
+
+  /// Title for the support quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get profileHomeQuickLinkSupportTitle;
+
+  /// Subtitle for the support quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ, chat, concierge'**
+  String get profileHomeQuickLinkSupportSubtitle;
+
+  /// Tooltip for the avatar change button
+  ///
+  /// In en, this message translates to:
+  /// **'Update profile photo'**
+  String get profileHomeAvatarButtonTooltip;
+
+  /// Fallback display name when the profile has no name
+  ///
+  /// In en, this message translates to:
+  /// **'Hanko guest'**
+  String get profileHomeFallbackDisplayName;
+
+  /// Supporting text under the profile header card
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your identity, security, and preferences from one place.'**
+  String get profileHomeHeaderDescription;
+
+  /// Snack bar message shown when tapping change photo
+  ///
+  /// In en, this message translates to:
+  /// **'Photo uploads are coming soon.'**
+  String get profileHomeAvatarUpdateMessage;
+
+  /// Chip label when the membership is active
+  ///
+  /// In en, this message translates to:
+  /// **'Active membership'**
+  String get profileHomeMembershipActive;
+
+  /// Chip label when the membership is suspended
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get profileHomeMembershipSuspended;
+
+  /// Chip label when the user has a staff role
+  ///
+  /// In en, this message translates to:
+  /// **'Team workspace'**
+  String get profileHomeMembershipStaff;
+
+  /// Chip label when the user has an admin role
+  ///
+  /// In en, this message translates to:
+  /// **'Admin workspace'**
+  String get profileHomeMembershipAdmin;
+
+  /// Title for the persona segmented button card
+  ///
+  /// In en, this message translates to:
+  /// **'Persona mode'**
+  String get profileHomePersonaTitle;
+
+  /// Helper text describing what the persona toggle does
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between domestic and international guidance to personalize copy, forms, and offers.'**
+  String get profileHomePersonaSubtitle;
+
+  /// Label for the domestic persona option
+  ///
+  /// In en, this message translates to:
+  /// **'Domestic'**
+  String get profileHomePersonaDomestic;
+
+  /// Label for the international persona option
+  ///
+  /// In en, this message translates to:
+  /// **'International'**
+  String get profileHomePersonaInternational;
+
+  /// Error message shown when persona update fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update persona. Please try again.'**
+  String get profileHomePersonaUpdateError;
 }
 
 class _AppLocalizationsDelegate
