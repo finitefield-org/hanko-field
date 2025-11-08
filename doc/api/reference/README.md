@@ -4,7 +4,7 @@
 
 Comprehensive endpoint catalog derived from `doc/api/api.yaml`. Use the generator script whenever the OpenAPI spec changes to keep docs current.
 
-*Last updated:* 2025-11-07 17:11:20Z
+*Spec version:* 1.0.0
 
 ## Usage & Conventions
 
@@ -123,7 +123,19 @@ curl -X GET "$BASE_URL/content/pages/slug"
 ```json
 {
   "items": [
-    "..."
+    {
+      "family": "string",
+      "writing": "tensho",
+      "license": {
+        "type": "...",
+        "uri": "...",
+        "text": "...",
+        "restrictions": "...",
+        "embeddable": "..."
+      },
+      "isPublic": true,
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -153,7 +165,7 @@ curl -X GET "$BASE_URL/fonts"
     "uri": "https://example.com/resource",
     "text": "string",
     "restrictions": [
-      "..."
+      "string"
     ],
     "embeddable": true
   },
@@ -191,7 +203,13 @@ curl -X GET "$BASE_URL/healthz"
 ```json
 {
   "items": [
-    "..."
+    {
+      "name": "string",
+      "type": "horn",
+      "isActive": true,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "finish": "matte"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -244,7 +262,21 @@ curl -X GET "$BASE_URL/materials/material_id"
 ```json
 {
   "items": [
-    "..."
+    {
+      "sku": "string",
+      "materialRef": "string",
+      "shape": "round",
+      "size": {
+        "mm": "..."
+      },
+      "basePrice": {
+        "amount": "...",
+        "currency": "..."
+      },
+      "stockPolicy": "madeToOrder",
+      "isActive": true,
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -343,7 +375,22 @@ curl -X GET "$BASE_URL/readyz"
 ```json
 {
   "items": [
-    "..."
+    {
+      "name": "string",
+      "shape": "round",
+      "writing": "tensho",
+      "constraints": {
+        "sizeMm": "...",
+        "strokeWeight": "...",
+        "margin": "...",
+        "glyph": "...",
+        "registrability": "..."
+      },
+      "isPublic": true,
+      "sort": 123,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -371,28 +418,32 @@ curl -X GET "$BASE_URL/templates"
   "writing": "tensho",
   "constraints": {
     "sizeMm": {
-      "min": "...",
-      "max": "...",
-      "step": "..."
+      "min": 12.34,
+      "max": 12.34,
+      "step": 12.34
     },
     "strokeWeight": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "margin": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "glyph": {
-      "maxChars": "...",
-      "allowRepeat": "...",
-      "allowedScripts": "...",
-      "prohibitedChars": "..."
+      "maxChars": 123,
+      "allowRepeat": true,
+      "allowedScripts": [
+        "..."
+      ],
+      "prohibitedChars": [
+        "..."
+      ]
     },
     "registrability": {
-      "jpJitsuinAllowed": "...",
-      "bankInAllowed": "...",
-      "notes": "..."
+      "jpJitsuinAllowed": true,
+      "bankInAllowed": true,
+      "notes": "string"
     }
   },
   "isPublic": true,
@@ -612,7 +663,7 @@ JSON
     "addedAt": "2024-01-01T00:00:00Z",
     "note": "string",
     "tags": [
-      "..."
+      "string"
     ]
   }
 ]
@@ -794,9 +845,11 @@ JSON
   },
   "candidates": [
     {
-      "kanji": "...",
-      "meanings": "...",
-      "score": "..."
+      "kanji": "string",
+      "meanings": [
+        "..."
+      ],
+      "score": 12.34
     }
   ],
   "selected": "string",
@@ -834,7 +887,24 @@ User-owned design lifecycle plus AI suggestion orchestration.
 ```json
 {
   "items": [
-    "..."
+    {
+      "ownerRef": "string",
+      "status": "draft",
+      "shape": "round",
+      "size": {
+        "mm": "..."
+      },
+      "style": {
+        "writing": "...",
+        "fontRef": "...",
+        "templateRef": "...",
+        "stroke": "...",
+        "layout": "..."
+      },
+      "version": 123,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -865,12 +935,12 @@ curl -X GET "$BASE_URL/designs"
     "fontRef": "string",
     "templateRef": "string",
     "stroke": {
-      "weight": "...",
-      "contrast": "..."
+      "weight": 12.34,
+      "contrast": 12.34
     },
     "layout": {
-      "grid": "...",
-      "margin": "..."
+      "grid": "string",
+      "margin": 12.34
     }
   },
   "version": 123,
@@ -901,12 +971,12 @@ curl -X POST "$BASE_URL/designs"
     "fontRef": "string",
     "templateRef": "string",
     "stroke": {
-      "weight": "...",
-      "contrast": "..."
+      "weight": 12.34,
+      "contrast": 12.34
     },
     "layout": {
-      "grid": "...",
-      "margin": "..."
+      "grid": "string",
+      "margin": 12.34
     }
   },
   "version": 123,
@@ -957,12 +1027,12 @@ curl -X DELETE "$BASE_URL/designs/design_id"
     "fontRef": "string",
     "templateRef": "string",
     "stroke": {
-      "weight": "...",
-      "contrast": "..."
+      "weight": 12.34,
+      "contrast": 12.34
     },
     "layout": {
-      "grid": "...",
-      "margin": "..."
+      "grid": "string",
+      "margin": 12.34
     }
   },
   "version": 123,
@@ -1002,12 +1072,12 @@ curl -X GET "$BASE_URL/designs/design_id"
     "fontRef": "string",
     "templateRef": "string",
     "stroke": {
-      "weight": "...",
-      "contrast": "..."
+      "weight": 12.34,
+      "contrast": 12.34
     },
     "layout": {
-      "grid": "...",
-      "margin": "..."
+      "grid": "string",
+      "margin": 12.34
     }
   },
   "version": 123,
@@ -1038,12 +1108,12 @@ curl -X PUT "$BASE_URL/designs/design_id"
     "fontRef": "string",
     "templateRef": "string",
     "stroke": {
-      "weight": "...",
-      "contrast": "..."
+      "weight": 12.34,
+      "contrast": 12.34
     },
     "layout": {
-      "grid": "...",
-      "margin": "..."
+      "grid": "string",
+      "margin": 12.34
     }
   },
   "version": 123,
@@ -1071,10 +1141,10 @@ JSON
     "baseHash": "string",
     "score": 12.34,
     "preview": {
-      "previewUrl": "...",
-      "diffUrl": "...",
-      "assetRef": "...",
-      "svgUrl": "..."
+      "previewUrl": "https://example.com/resource",
+      "diffUrl": "https://example.com/resource",
+      "assetRef": "string",
+      "svgUrl": "https://example.com/resource"
     },
     "status": "proposed",
     "createdAt": "2024-01-01T00:00:00Z",
@@ -1208,7 +1278,24 @@ curl -X POST "$BASE_URL/designs/design_id/ai-suggestions/suggestion_id:reject"
 [
   {
     "version": 123,
-    "snapshot": "...",
+    "snapshot": {
+      "ownerRef": "string",
+      "status": "draft",
+      "shape": "round",
+      "size": {
+        "mm": "..."
+      },
+      "style": {
+        "writing": "...",
+        "fontRef": "...",
+        "templateRef": "...",
+        "stroke": "...",
+        "layout": "..."
+      },
+      "version": 123,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
     "createdAt": "2024-01-01T00:00:00Z",
     "createdBy": "string",
     "changeNote": "string"
@@ -1322,13 +1409,13 @@ JSON
     "productRef": "string",
     "qty": 123,
     "unitPrice": {
-      "amount": "...",
-      "currency": "..."
+      "amount": 123,
+      "currency": "string"
     },
     "snapshot": {
-      "designHash": "...",
-      "designSizeMm": "...",
-      "shape": "..."
+      "designHash": "string",
+      "designSizeMm": 12.34,
+      "shape": "round"
     },
     "createdAt": "2024-01-01T00:00:00Z"
   }
@@ -1359,7 +1446,7 @@ curl -X GET "$BASE_URL/cart/items"
   "snapshot": {
     "designHash": "string",
     "designSizeMm": 12.34,
-    "shape": "..."
+    "shape": "round"
   },
   "createdAt": "2024-01-01T00:00:00Z"
 }
@@ -1386,7 +1473,7 @@ curl -X POST "$BASE_URL/cart/items"
   "snapshot": {
     "designHash": "string",
     "designSizeMm": 12.34,
-    "shape": "..."
+    "shape": "round"
   },
   "createdAt": "2024-01-01T00:00:00Z"
 }
@@ -1433,7 +1520,7 @@ curl -X DELETE "$BASE_URL/cart/items/item_id"
   "snapshot": {
     "designHash": "string",
     "designSizeMm": 12.34,
-    "shape": "..."
+    "shape": "round"
   },
   "createdAt": "2024-01-01T00:00:00Z"
 }
@@ -1460,7 +1547,7 @@ curl -X PUT "$BASE_URL/cart/items/item_id"
   "snapshot": {
     "designHash": "string",
     "designSizeMm": 12.34,
-    "shape": "..."
+    "shape": "round"
   },
   "createdAt": "2024-01-01T00:00:00Z"
 }
@@ -1594,7 +1681,28 @@ Customer-facing order, payment, shipment, and reorder operations scoped to the c
 ```json
 {
   "items": [
-    "..."
+    {
+      "userRef": "string",
+      "status": "pending",
+      "currency": "string",
+      "amounts": {
+        "subtotal": "...",
+        "tax": "...",
+        "shipping": "...",
+        "total": "...",
+        "discount": "..."
+      },
+      "items": [
+        "..."
+      ],
+      "shipping": {
+        "address": "...",
+        "method": "...",
+        "requestedAt": "...",
+        "tracking": "..."
+      },
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -1630,16 +1738,29 @@ curl -X GET "$BASE_URL/orders"
   },
   "items": [
     {
-      "lineId": "...",
-      "productRef": "...",
-      "sku": "...",
-      "qty": "...",
-      "unitPrice": "...",
-      "designSnapshot": "..."
+      "lineId": "string",
+      "productRef": "string",
+      "sku": "string",
+      "qty": 123,
+      "unitPrice": 123,
+      "designSnapshot": {
+        "designId": "...",
+        "hash": "...",
+        "svg": "...",
+        "shape": "...",
+        "sizeMm": "...",
+        "writing": "..."
+      }
     }
   ],
   "shipping": {
-    "address": "...",
+    "address": {
+      "recipient": "string",
+      "line1": "string",
+      "city": "string",
+      "postalCode": "string",
+      "country": "string"
+    },
     "method": "intl",
     "requestedAt": "2024-01-01T00:00:00Z",
     "tracking": {}
@@ -1976,7 +2097,7 @@ Staff/admin-only catalog, promotion, content, order, production, counter, and au
     "uri": "https://example.com/resource",
     "text": "string",
     "restrictions": [
-      "..."
+      "string"
     ],
     "embeddable": true
   },
@@ -2003,7 +2124,7 @@ curl -X POST "$BASE_URL/admin/catalog/fonts"
     "uri": "https://example.com/resource",
     "text": "string",
     "restrictions": [
-      "..."
+      "string"
     ],
     "embeddable": true
   },
@@ -2050,7 +2171,7 @@ curl -X DELETE "$BASE_URL/admin/catalog/fonts/font_id"
     "uri": "https://example.com/resource",
     "text": "string",
     "restrictions": [
-      "..."
+      "string"
     ],
     "embeddable": true
   },
@@ -2077,7 +2198,7 @@ curl -X PUT "$BASE_URL/admin/catalog/fonts/font_id"
     "uri": "https://example.com/resource",
     "text": "string",
     "restrictions": [
-      "..."
+      "string"
     ],
     "embeddable": true
   },
@@ -2317,28 +2438,32 @@ JSON
   "writing": "tensho",
   "constraints": {
     "sizeMm": {
-      "min": "...",
-      "max": "...",
-      "step": "..."
+      "min": 12.34,
+      "max": 12.34,
+      "step": 12.34
     },
     "strokeWeight": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "margin": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "glyph": {
-      "maxChars": "...",
-      "allowRepeat": "...",
-      "allowedScripts": "...",
-      "prohibitedChars": "..."
+      "maxChars": 123,
+      "allowRepeat": true,
+      "allowedScripts": [
+        "..."
+      ],
+      "prohibitedChars": [
+        "..."
+      ]
     },
     "registrability": {
-      "jpJitsuinAllowed": "...",
-      "bankInAllowed": "...",
-      "notes": "..."
+      "jpJitsuinAllowed": true,
+      "bankInAllowed": true,
+      "notes": "string"
     }
   },
   "isPublic": true,
@@ -2364,28 +2489,32 @@ curl -X POST "$BASE_URL/admin/catalog/templates"
   "writing": "tensho",
   "constraints": {
     "sizeMm": {
-      "min": "...",
-      "max": "...",
-      "step": "..."
+      "min": 12.34,
+      "max": 12.34,
+      "step": 12.34
     },
     "strokeWeight": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "margin": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "glyph": {
-      "maxChars": "...",
-      "allowRepeat": "...",
-      "allowedScripts": "...",
-      "prohibitedChars": "..."
+      "maxChars": 123,
+      "allowRepeat": true,
+      "allowedScripts": [
+        "..."
+      ],
+      "prohibitedChars": [
+        "..."
+      ]
     },
     "registrability": {
-      "jpJitsuinAllowed": "...",
-      "bankInAllowed": "...",
-      "notes": "..."
+      "jpJitsuinAllowed": true,
+      "bankInAllowed": true,
+      "notes": "string"
     }
   },
   "isPublic": true,
@@ -2431,28 +2560,32 @@ curl -X DELETE "$BASE_URL/admin/catalog/templates/template_id"
   "writing": "tensho",
   "constraints": {
     "sizeMm": {
-      "min": "...",
-      "max": "...",
-      "step": "..."
+      "min": 12.34,
+      "max": 12.34,
+      "step": 12.34
     },
     "strokeWeight": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "margin": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "glyph": {
-      "maxChars": "...",
-      "allowRepeat": "...",
-      "allowedScripts": "...",
-      "prohibitedChars": "..."
+      "maxChars": 123,
+      "allowRepeat": true,
+      "allowedScripts": [
+        "..."
+      ],
+      "prohibitedChars": [
+        "..."
+      ]
     },
     "registrability": {
-      "jpJitsuinAllowed": "...",
-      "bankInAllowed": "...",
-      "notes": "..."
+      "jpJitsuinAllowed": true,
+      "bankInAllowed": true,
+      "notes": "string"
     }
   },
   "isPublic": true,
@@ -2478,28 +2611,32 @@ curl -X PUT "$BASE_URL/admin/catalog/templates/template_id"
   "writing": "tensho",
   "constraints": {
     "sizeMm": {
-      "min": "...",
-      "max": "...",
-      "step": "..."
+      "min": 12.34,
+      "max": 12.34,
+      "step": 12.34
     },
     "strokeWeight": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "margin": {
-      "min": "...",
-      "max": "..."
+      "min": 12.34,
+      "max": 12.34
     },
     "glyph": {
-      "maxChars": "...",
-      "allowRepeat": "...",
-      "allowedScripts": "...",
-      "prohibitedChars": "..."
+      "maxChars": 123,
+      "allowRepeat": true,
+      "allowedScripts": [
+        "..."
+      ],
+      "prohibitedChars": [
+        "..."
+      ]
     },
     "registrability": {
-      "jpJitsuinAllowed": "...",
-      "bankInAllowed": "...",
-      "notes": "..."
+      "jpJitsuinAllowed": true,
+      "bankInAllowed": true,
+      "notes": "string"
     }
   },
   "isPublic": true,
@@ -2777,7 +2914,28 @@ JSON
 ```json
 {
   "items": [
-    "..."
+    {
+      "userRef": "string",
+      "status": "pending",
+      "currency": "string",
+      "amounts": {
+        "subtotal": "...",
+        "tax": "...",
+        "shipping": "...",
+        "total": "...",
+        "discount": "..."
+      },
+      "items": [
+        "..."
+      ],
+      "shipping": {
+        "address": "...",
+        "method": "...",
+        "requestedAt": "...",
+        "tracking": "..."
+      },
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
   ],
   "nextPageToken": "string"
 }
@@ -3177,7 +3335,7 @@ JSON
     "lastUsedAt": "2024-01-01T00:00:00Z",
     "firstUsedAt": "2024-01-01T00:00:00Z",
     "orderRefs": [
-      "..."
+      "string"
     ]
   }
 ]
@@ -3421,9 +3579,9 @@ JSON
   "status": "reserved",
   "lines": [
     {
-      "productRef": "...",
-      "sku": "...",
-      "qty": "..."
+      "productRef": "string",
+      "sku": "string",
+      "qty": 123
     }
   ],
   "expiresAt": "2024-01-01T00:00:00Z",
@@ -3447,9 +3605,9 @@ curl -X POST "$BASE_URL/internal/checkout/reserve-stock"
   "status": "reserved",
   "lines": [
     {
-      "productRef": "...",
-      "sku": "...",
-      "qty": "..."
+      "productRef": "string",
+      "sku": "string",
+      "qty": 123
     }
   ],
   "expiresAt": "2024-01-01T00:00:00Z",

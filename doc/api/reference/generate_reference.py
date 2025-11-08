@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -85,6 +84,7 @@ def group_operations(spec: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
 
 def render_markdown(spec: Dict[str, Any], domains: Dict[str, List[Dict[str, Any]]]) -> str:
     lines: List[str] = []
+    version = spec.get('info', {}).get('version', 'unversioned')
     lines.append('# Hanko Field API Reference')
     lines.append('')
     lines.append('<!-- AUTO-GENERATED via doc/api/reference/generate_reference.py -->')
@@ -92,7 +92,7 @@ def render_markdown(spec: Dict[str, Any], domains: Dict[str, List[Dict[str, Any]
     lines.append('Comprehensive endpoint catalog derived from `doc/api/api.yaml`. '
                  'Use the generator script whenever the OpenAPI spec changes to keep docs current.')
     lines.append('')
-    lines.append(f"*Last updated:* {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')}")
+    lines.append(f'*Spec version:* {version}')
     lines.append('')
     lines.extend(render_overview(spec))
     for domain, ops in domains.items():
@@ -294,7 +294,8 @@ def example_for_schema(spec: Dict[str, Any], schema: Any, depth: int = 0) -> Any
     if depth > MAX_DEPTH or not isinstance(schema, dict):
         return '...'
     if '$ref' in schema:
-        return example_for_schema(spec, resolve_ref(spec, schema['$ref']), depth + 1)
+        # Resolving a component reference does not increase nesting depth.
+        return example_for_schema(spec, resolve_ref(spec, schema['$ref']), depth)
     if 'example' in schema:
         return schema['example']
     if 'enum' in schema:
