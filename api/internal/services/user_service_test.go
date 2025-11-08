@@ -4,17 +4,43 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	firebaseauth "firebase.google.com/go/v4/auth"
 	domain "github.com/hanko-field/api/internal/domain"
+	"github.com/hanko-field/api/internal/platform/textutil"
 	"github.com/hanko-field/api/internal/repositories"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type memoryUserRepo struct {
 	store map[string]domain.UserProfile
 	clock func() time.Time
+}
+
+type memoryAddressRepo struct {
+	store map[string]map[string]domain.Address
+	clock func() time.Time
+	seq   int
+}
+
+type memoryPaymentMethodRepo struct {
+	store map[string]map[string]domain.PaymentMethod
+	clock func() time.Time
+	seq   int
+}
+
+type memoryFavoriteRepo struct {
+	store map[string]map[string]domain.FavoriteDesign
+}
+
+type memoryDesignRepo struct {
+	store map[string]domain.Design
 }
 
 type repoErr struct {
@@ -33,6 +59,32 @@ func newMemoryUserRepo(clock func() time.Time) *memoryUserRepo {
 	return &memoryUserRepo{
 		store: make(map[string]domain.UserProfile),
 		clock: clock,
+	}
+}
+
+func newMemoryAddressRepo(clock func() time.Time) *memoryAddressRepo {
+	return &memoryAddressRepo{
+		store: make(map[string]map[string]domain.Address),
+		clock: clock,
+	}
+}
+
+func newMemoryPaymentMethodRepo(clock func() time.Time) *memoryPaymentMethodRepo {
+	return &memoryPaymentMethodRepo{
+		store: make(map[string]map[string]domain.PaymentMethod),
+		clock: clock,
+	}
+}
+
+func newMemoryFavoriteRepo() *memoryFavoriteRepo {
+	return &memoryFavoriteRepo{
+		store: make(map[string]map[string]domain.FavoriteDesign),
+	}
+}
+
+func newMemoryDesignRepo() *memoryDesignRepo {
+	return &memoryDesignRepo{
+		store: make(map[string]domain.Design),
 	}
 }
 
@@ -61,6 +113,474 @@ func (m *memoryUserRepo) UpdateProfile(_ context.Context, profile domain.UserPro
 	return cloneProfile(profile), nil
 }
 
+func (m *memoryUserRepo) Search(_ context.Context, filter repositories.UserSearchFilter) (domain.CursorPage[domain.UserProfile], error) {
+	query := strings.TrimSpace(filter.Query)
+	if query == "" {
+		return domain.CursorPage[domain.UserProfile]{}, errors.New("query required")
+	}
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = len(m.store)
+	}
+
+	lower := strings.ToLower(query)
+	results := make([]domain.UserProfile, 0, limit)
+	for _, profile := range m.store {
+		if !filter.IncludeInactive && !profile.IsActive {
+			continue
+		}
+		if matchUserSearch(profile, query, lower) {
+			results = append(results, cloneProfile(profile))
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		switch {
+		case results[i].UpdatedAt.Equal(results[j].UpdatedAt):
+			return results[i].ID < results[j].ID
+		default:
+			return results[i].UpdatedAt.After(results[j].UpdatedAt)
+		}
+	})
+	if len(results) > limit {
+		results = results[:limit]
+	}
+	return domain.CursorPage[domain.UserProfile]{Items: results}, nil
+}
+
+func (m *memoryAddressRepo) List(_ context.Context, userID string) ([]domain.Address, error) {
+	if m.store == nil {
+		m.store = make(map[string]map[string]domain.Address)
+	}
+	entries := m.store[userID]
+	result := make([]domain.Address, 0, len(entries))
+	for _, addr := range entries {
+		result = append(result, addr)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].UpdatedAt.After(result[j].UpdatedAt)
+	})
+	return result, nil
+}
+
+func (m *memoryAddressRepo) Upsert(_ context.Context, userID string, addressID *string, addr domain.Address) (domain.Address, error) {
+	if m.store == nil {
+		m.store = make(map[string]map[string]domain.Address)
+	}
+	bucket := m.store[userID]
+	if bucket == nil {
+		bucket = make(map[string]domain.Address)
+		m.store[userID] = bucket
+	}
+
+	id := ""
+	if addressID != nil {
+		id = strings.TrimSpace(*addressID)
+	}
+	if id == "" {
+		if strings.TrimSpace(addr.ID) != "" {
+			id = strings.TrimSpace(addr.ID)
+		} else {
+			m.seq++
+			id = fmt.Sprintf("addr-%d", m.seq)
+		}
+	}
+
+	existing, found := bucket[id]
+	if !found {
+		if addr.CreatedAt.IsZero() {
+			addr.CreatedAt = m.clock().UTC()
+		} else {
+			addr.CreatedAt = addr.CreatedAt.UTC()
+		}
+	} else {
+		if addr.CreatedAt.IsZero() {
+			addr.CreatedAt = existing.CreatedAt
+		}
+	}
+	addr.ID = id
+	addr.UpdatedAt = m.clock().UTC()
+	if addr.NormalizedHash == "" {
+		addr.NormalizedHash = addressFingerprint(addr)
+	}
+
+	bucket[id] = addr
+
+	if addr.DefaultShipping {
+		for key, other := range bucket {
+			if key == id {
+				continue
+			}
+			if other.DefaultShipping {
+				other.DefaultShipping = false
+				bucket[key] = other
+			}
+		}
+	}
+	if addr.DefaultBilling {
+		for key, other := range bucket {
+			if key == id {
+				continue
+			}
+			if other.DefaultBilling {
+				other.DefaultBilling = false
+				bucket[key] = other
+			}
+		}
+	}
+
+	return addr, nil
+}
+
+func (m *memoryAddressRepo) Delete(_ context.Context, userID string, addressID string) error {
+	if m.store == nil {
+		return nil
+	}
+	if bucket := m.store[userID]; bucket != nil {
+		delete(bucket, addressID)
+	}
+	return nil
+}
+
+func (m *memoryAddressRepo) Get(_ context.Context, userID string, addressID string) (domain.Address, error) {
+	if bucket := m.store[userID]; bucket != nil {
+		if addr, ok := bucket[addressID]; ok {
+			return addr, nil
+		}
+	}
+	return domain.Address{}, errors.New("not found")
+}
+
+func (m *memoryAddressRepo) FindByHash(_ context.Context, userID string, hash string) (domain.Address, bool, error) {
+	bucket := m.store[userID]
+	if bucket == nil {
+		return domain.Address{}, false, nil
+	}
+	for _, addr := range bucket {
+		if addr.NormalizedHash == hash {
+			return addr, true, nil
+		}
+	}
+	return domain.Address{}, false, nil
+}
+
+func (m *memoryAddressRepo) HasAny(_ context.Context, userID string) (bool, error) {
+	bucket := m.store[userID]
+	return bucket != nil && len(bucket) > 0, nil
+}
+
+func (m *memoryAddressRepo) SetDefaultFlags(_ context.Context, userID string, addressID string, shipping, billing *bool) (domain.Address, error) {
+	bucket := m.store[userID]
+	if bucket == nil {
+		return domain.Address{}, errors.New("not found")
+	}
+	addr, ok := bucket[addressID]
+	if !ok {
+		return domain.Address{}, errors.New("not found")
+	}
+	if shipping != nil && *shipping {
+		for key, other := range bucket {
+			if key == addressID {
+				continue
+			}
+			if other.DefaultShipping {
+				other.DefaultShipping = false
+				bucket[key] = other
+			}
+		}
+		addr.DefaultShipping = true
+	}
+	if billing != nil && *billing {
+		for key, other := range bucket {
+			if key == addressID {
+				continue
+			}
+			if other.DefaultBilling {
+				other.DefaultBilling = false
+				bucket[key] = other
+			}
+		}
+		addr.DefaultBilling = true
+	}
+	addr.UpdatedAt = m.clock().UTC()
+	bucket[addressID] = addr
+	return addr, nil
+}
+
+func (m *memoryPaymentMethodRepo) List(_ context.Context, userID string) ([]domain.PaymentMethod, error) {
+	if m.store == nil {
+		return nil, nil
+	}
+	bucket := m.store[userID]
+	result := make([]domain.PaymentMethod, 0, len(bucket))
+	for _, pm := range bucket {
+		result = append(result, clonePaymentMethod(pm))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		switch {
+		case result[i].CreatedAt.After(result[j].CreatedAt):
+			return true
+		case result[i].CreatedAt.Before(result[j].CreatedAt):
+			return false
+		default:
+			return result[i].ID < result[j].ID
+		}
+	})
+	return result, nil
+}
+
+func (m *memoryPaymentMethodRepo) Insert(_ context.Context, userID string, method domain.PaymentMethod) (domain.PaymentMethod, error) {
+	if m.store == nil {
+		m.store = make(map[string]map[string]domain.PaymentMethod)
+	}
+	bucket := m.store[userID]
+	if bucket == nil {
+		bucket = make(map[string]domain.PaymentMethod)
+		m.store[userID] = bucket
+	}
+
+	token := strings.TrimSpace(method.Token)
+	for _, existing := range bucket {
+		if strings.TrimSpace(existing.Token) == token {
+			return domain.PaymentMethod{}, &repoErr{err: errors.New("duplicate token"), conflict: true}
+		}
+	}
+
+	id := strings.TrimSpace(method.ID)
+	if id == "" {
+		m.seq++
+		id = fmt.Sprintf("pm-%d", m.seq)
+	}
+
+	now := m.clock().UTC()
+	if method.CreatedAt.IsZero() {
+		method.CreatedAt = now
+	} else {
+		method.CreatedAt = method.CreatedAt.UTC()
+	}
+	method.UpdatedAt = now
+	method.ID = id
+
+	if method.IsDefault {
+		for key, other := range bucket {
+			if other.IsDefault {
+				other.IsDefault = false
+				bucket[key] = other
+			}
+		}
+	}
+
+	bucket[id] = clonePaymentMethod(method)
+	return clonePaymentMethod(method), nil
+}
+
+func (m *memoryPaymentMethodRepo) Delete(_ context.Context, userID string, paymentMethodID string) error {
+	if m.store == nil {
+		return nil
+	}
+	if bucket := m.store[userID]; bucket != nil {
+		delete(bucket, paymentMethodID)
+	}
+	return nil
+}
+
+func (m *memoryPaymentMethodRepo) Get(_ context.Context, userID string, paymentMethodID string) (domain.PaymentMethod, error) {
+	if m.store == nil {
+		return domain.PaymentMethod{}, errors.New("not found")
+	}
+	if bucket := m.store[userID]; bucket != nil {
+		if pm, ok := bucket[paymentMethodID]; ok {
+			return clonePaymentMethod(pm), nil
+		}
+	}
+	return domain.PaymentMethod{}, errors.New("not found")
+}
+
+func (m *memoryPaymentMethodRepo) SetDefault(_ context.Context, userID string, paymentMethodID string) (domain.PaymentMethod, error) {
+	bucket := m.store[userID]
+	if bucket == nil {
+		return domain.PaymentMethod{}, errors.New("not found")
+	}
+	target, ok := bucket[paymentMethodID]
+	if !ok {
+		return domain.PaymentMethod{}, errors.New("not found")
+	}
+	for key, pm := range bucket {
+		if key == paymentMethodID {
+			continue
+		}
+		if pm.IsDefault {
+			pm.IsDefault = false
+			pm.UpdatedAt = m.clock().UTC()
+			bucket[key] = pm
+		}
+	}
+	target.IsDefault = true
+	target.UpdatedAt = m.clock().UTC()
+	bucket[paymentMethodID] = target
+	return clonePaymentMethod(target), nil
+}
+
+func clonePaymentMethod(method domain.PaymentMethod) domain.PaymentMethod {
+	copied := method
+	return copied
+}
+
+func (m *memoryFavoriteRepo) List(_ context.Context, userID string, pager domain.Pagination) (domain.CursorPage[domain.FavoriteDesign], error) {
+	bucket := m.store[userID]
+	if bucket == nil {
+		return domain.CursorPage[domain.FavoriteDesign]{}, nil
+	}
+	items := make([]domain.FavoriteDesign, 0, len(bucket))
+	for _, fav := range bucket {
+		items = append(items, fav)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].AddedAt.Equal(items[j].AddedAt) {
+			return items[i].DesignID > items[j].DesignID
+		}
+		return items[i].AddedAt.After(items[j].AddedAt)
+	})
+	if pager.PageSize > 0 && pager.PageSize < len(items) {
+		items = items[:pager.PageSize]
+	}
+	result := make([]domain.FavoriteDesign, len(items))
+	copy(result, items)
+	return domain.CursorPage[domain.FavoriteDesign]{
+		Items: result,
+	}, nil
+}
+
+func (m *memoryFavoriteRepo) Put(_ context.Context, userID string, designID string, addedAt time.Time, limit int) (bool, error) {
+	if m.store == nil {
+		m.store = make(map[string]map[string]domain.FavoriteDesign)
+	}
+	bucket := m.store[userID]
+	if bucket == nil {
+		bucket = make(map[string]domain.FavoriteDesign)
+		m.store[userID] = bucket
+	}
+	if _, ok := bucket[designID]; ok {
+		return false, nil
+	}
+	if limit > 0 && len(bucket) >= limit {
+		return false, status.Error(codes.FailedPrecondition, "favorite limit reached")
+	}
+	bucket[designID] = domain.FavoriteDesign{DesignID: designID, AddedAt: addedAt.UTC()}
+	return true, nil
+}
+
+func (m *memoryFavoriteRepo) Delete(_ context.Context, userID string, designID string) error {
+	if m.store == nil {
+		return nil
+	}
+	if bucket := m.store[userID]; bucket != nil {
+		delete(bucket, designID)
+	}
+	return nil
+}
+
+func (m *memoryDesignRepo) Insert(_ context.Context, design domain.Design) error {
+	if m.store == nil {
+		m.store = make(map[string]domain.Design)
+	}
+	m.store[design.ID] = cloneDesign(design)
+	return nil
+}
+
+func (m *memoryDesignRepo) Update(_ context.Context, design domain.Design) error {
+	if m.store == nil {
+		return errors.New("not found")
+	}
+	m.store[design.ID] = cloneDesign(design)
+	return nil
+}
+
+func (m *memoryDesignRepo) SoftDelete(_ context.Context, designID string, _ time.Time) error {
+	if m.store != nil {
+		delete(m.store, designID)
+	}
+	return nil
+}
+
+func (m *memoryDesignRepo) FindByID(_ context.Context, designID string) (domain.Design, error) {
+	design, ok := m.store[designID]
+	if !ok {
+		return domain.Design{}, &repoErr{err: fmt.Errorf("design %s not found", designID), notFound: true}
+	}
+	return cloneDesign(design), nil
+}
+
+func (m *memoryDesignRepo) ListByOwner(_ context.Context, ownerID string, filter repositories.DesignListFilter) (domain.CursorPage[domain.Design], error) {
+	items := make([]domain.Design, 0)
+	statusAllow := make(map[string]struct{})
+	if len(filter.Status) > 0 {
+		for _, status := range filter.Status {
+			statusAllow[strings.ToLower(strings.TrimSpace(status))] = struct{}{}
+		}
+	}
+	typeAllow := make(map[string]struct{})
+	if len(filter.Types) > 0 {
+		for _, t := range filter.Types {
+			typeAllow[strings.ToLower(strings.TrimSpace(t))] = struct{}{}
+		}
+	}
+	var updatedAfter *time.Time
+	if filter.UpdatedAfter != nil {
+		value := filter.UpdatedAfter.UTC()
+		if !value.IsZero() {
+			updatedAfter = &value
+		}
+	}
+	for _, design := range m.store {
+		if design.OwnerID != ownerID {
+			continue
+		}
+		if len(statusAllow) > 0 {
+			if _, ok := statusAllow[strings.ToLower(string(design.Status))]; !ok {
+				continue
+			}
+		}
+		if len(typeAllow) > 0 {
+			if _, ok := typeAllow[strings.ToLower(string(design.Type))]; !ok {
+				continue
+			}
+		}
+		if updatedAfter != nil && !design.UpdatedAt.After(*updatedAfter) {
+			continue
+		}
+		items = append(items, cloneDesign(design))
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+	})
+	limit := filter.Pagination.PageSize
+	if limit <= 0 || limit > len(items) {
+		limit = len(items)
+	}
+	if limit < len(items) {
+		items = items[:limit]
+	}
+	return domain.CursorPage[domain.Design]{Items: items}, nil
+}
+
+func cloneDesign(design domain.Design) domain.Design {
+	copy := design
+	if design.Snapshot != nil {
+		copy.Snapshot = maps.Clone(design.Snapshot)
+	}
+	if len(design.Versions) > 0 {
+		copy.Versions = make([]domain.DesignVersion, len(design.Versions))
+		for i, version := range design.Versions {
+			copy.Versions[i] = version
+			if version.Snapshot != nil {
+				copy.Versions[i].Snapshot = maps.Clone(version.Snapshot)
+			}
+		}
+	}
+	return copy
+}
+
 type captureAuditService struct {
 	records []AuditLogRecord
 }
@@ -74,7 +594,9 @@ func (c *captureAuditService) List(_ context.Context, _ AuditLogFilter) (domain.
 }
 
 type stubFirebase struct {
-	records map[string]*firebaseauth.UserRecord
+	records   map[string]*firebaseauth.UserRecord
+	disableFn func(ctx context.Context, uid string) error
+	disabled  []string
 }
 
 func (s *stubFirebase) GetUser(_ context.Context, uid string) (*firebaseauth.UserRecord, error) {
@@ -83,6 +605,55 @@ func (s *stubFirebase) GetUser(_ context.Context, uid string) (*firebaseauth.Use
 		return nil, fmt.Errorf("firebase user %s not found", uid)
 	}
 	return record, nil
+}
+
+func (s *stubFirebase) DisableUser(ctx context.Context, uid string) error {
+	if s == nil {
+		return nil
+	}
+	if s.disableFn != nil {
+		return s.disableFn(ctx, uid)
+	}
+	s.disabled = append(s.disabled, uid)
+	return nil
+}
+
+type stubPaymentVerifier struct {
+	verifyFunc func(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error)
+}
+
+func (s *stubPaymentVerifier) VerifyPaymentMethod(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error) {
+	if s != nil && s.verifyFunc != nil {
+		return s.verifyFunc(ctx, provider, token)
+	}
+	return PaymentMethodMetadata{}, errors.New("not implemented")
+}
+
+type stubInvoiceChecker struct {
+	checkFunc func(ctx context.Context, userID string) (bool, error)
+}
+
+func (s *stubInvoiceChecker) HasOutstandingInvoices(ctx context.Context, userID string) (bool, error) {
+	if s != nil && s.checkFunc != nil {
+		return s.checkFunc(ctx, userID)
+	}
+	return false, nil
+}
+
+type stubUserLifecycleNotifier struct {
+	notifications []UserDeactivatedNotification
+	err           error
+}
+
+func (s *stubUserLifecycleNotifier) NotifyUserDeactivated(_ context.Context, notification UserDeactivatedNotification) error {
+	if s == nil {
+		return nil
+	}
+	if s.err != nil {
+		return s.err
+	}
+	s.notifications = append(s.notifications, notification)
+	return nil
 }
 
 func TestUserServiceGetProfileSeedsFromFirebase(t *testing.T) {
@@ -146,6 +717,172 @@ func TestUserServiceGetProfileSeedsFromFirebase(t *testing.T) {
 	}
 	if len(profile.ProviderData) == 0 {
 		t.Fatalf("expected provider data to be captured")
+	}
+}
+
+func TestUserServiceUpsertAddressCreatesDefaults(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		ts := current
+		current = current.Add(time.Second)
+		return ts
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	addressRepo := newMemoryAddressRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Addresses: addressRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	saved, err := svc.UpsertAddress(ctx, UpsertAddressCommand{
+		UserID: "user-a",
+		Address: Address{
+			Recipient:  "Hanako",
+			Line1:      "1-2-3",
+			City:       "Chiyoda",
+			PostalCode: "1000001",
+			Country:    "jp",
+		},
+	})
+	if err != nil {
+		t.Fatalf("upsert address: %v", err)
+	}
+	if !saved.DefaultShipping || !saved.DefaultBilling {
+		t.Fatalf("expected defaults set, got shipping=%v billing=%v", saved.DefaultShipping, saved.DefaultBilling)
+	}
+}
+
+func TestUserServiceUpsertAddressDeduplicates(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 6, 5, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		ts := current
+		current = current.Add(time.Second)
+		return ts
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	addressRepo := newMemoryAddressRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Addresses: addressRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	first, err := svc.UpsertAddress(ctx, UpsertAddressCommand{
+		UserID: "user-b",
+		Address: Address{
+			Recipient:  "Taro",
+			Line1:      "4-5-6",
+			City:       "Minato",
+			PostalCode: "1050001",
+			Country:    "JP",
+		},
+	})
+	if err != nil {
+		t.Fatalf("upsert initial: %v", err)
+	}
+
+	second, err := svc.UpsertAddress(ctx, UpsertAddressCommand{
+		UserID: "user-b",
+		Address: Address{
+			Recipient:  "taro",
+			Line1:      "4-5-6",
+			City:       "minato",
+			PostalCode: "105-0001",
+			Country:    "jp",
+		},
+	})
+	if err != nil {
+		t.Fatalf("upsert duplicate: %v", err)
+	}
+	if second.ID != first.ID {
+		t.Fatalf("expected duplicate to reuse id %s, got %s", first.ID, second.ID)
+	}
+}
+
+func TestUserServiceDeleteAddressPromotesDefault(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 7, 1, 8, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		ts := current
+		current = current.Add(time.Second)
+		return ts
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	addressRepo := newMemoryAddressRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Addresses: addressRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	first, err := svc.UpsertAddress(ctx, UpsertAddressCommand{
+		UserID: "user-c",
+		Address: Address{
+			Recipient:  "Ichiro",
+			Line1:      "7-8-9",
+			City:       "Nagoya",
+			PostalCode: "4600001",
+			Country:    "JP",
+		},
+	})
+	if err != nil {
+		t.Fatalf("upsert first: %v", err)
+	}
+
+	second, err := svc.UpsertAddress(ctx, UpsertAddressCommand{
+		UserID: "user-c",
+		Address: Address{
+			Recipient:  "Jiro",
+			Line1:      "10-11-12",
+			City:       "Osaka",
+			PostalCode: "5300001",
+			Country:    "JP",
+		},
+	})
+	if err != nil {
+		t.Fatalf("upsert second: %v", err)
+	}
+
+	if err := svc.DeleteAddress(ctx, DeleteAddressCommand{UserID: "user-c", AddressID: first.ID}); err != nil {
+		t.Fatalf("delete address: %v", err)
+	}
+
+	addresses, err := svc.ListAddresses(ctx, "user-c")
+	if err != nil {
+		t.Fatalf("list addresses: %v", err)
+	}
+	if len(addresses) != 1 {
+		t.Fatalf("expected 1 address, got %d", len(addresses))
+	}
+	if !addresses[0].DefaultShipping || !addresses[0].DefaultBilling {
+		t.Fatalf("expected remaining address to be default, got shipping=%v billing=%v", addresses[0].DefaultShipping, addresses[0].DefaultBilling)
+	}
+	if addresses[0].ID != second.ID {
+		t.Fatalf("expected remaining address %s, got %s", second.ID, addresses[0].ID)
 	}
 }
 
@@ -324,6 +1061,161 @@ func TestUserServiceMaskProfile(t *testing.T) {
 	}
 }
 
+func TestUserServiceDeactivateAndMask(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 10, 1, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	repo := newMemoryUserRepo(clock)
+	payments := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	audits := &captureAuditService{}
+	notifier := &stubUserLifecycleNotifier{}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:          repo,
+		PaymentMethods: payments,
+		Audit:          audits,
+		Firebase:       firebase,
+		Lifecycle:      notifier,
+		Clock:          clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	originalProfile := domain.UserProfile{
+		ID:                "user-mask",
+		DisplayName:       "Original User",
+		Email:             "original@example.com",
+		PhoneNumber:       "+819012345678",
+		Roles:             []string{"user", "vip"},
+		NotificationPrefs: domain.NotificationPreferences{"email": true, "sms": true},
+		PreferredLanguage: "ja",
+		Locale:            "ja-JP",
+		ProviderData: []domain.AuthProvider{
+			{ProviderID: "google.com", UID: "google-uid", Email: "original@example.com"},
+		},
+		IsActive: true,
+	}
+	if _, err := repo.UpdateProfile(ctx, originalProfile); err != nil {
+		t.Fatalf("seed profile: %v", err)
+	}
+
+	method, err := payments.Insert(ctx, "user-mask", domain.PaymentMethod{
+		ID:        "pm-existing",
+		Provider:  "stripe",
+		Token:     "tok_test_1234",
+		Brand:     "visa",
+		Last4:     "1234",
+		ExpMonth:  12,
+		ExpYear:   2030,
+		IsDefault: true,
+	})
+	if err != nil {
+		t.Fatalf("seed payment method: %v", err)
+	}
+
+	result, err := svc.DeactivateAndMask(ctx, DeactivateAndMaskCommand{
+		UserID:  "user-mask",
+		ActorID: "admin-user",
+		Reason:  "right to be forgotten",
+	})
+	if err != nil {
+		t.Fatalf("deactivate and mask: %v", err)
+	}
+
+	if result.IsActive {
+		t.Fatalf("expected user to be inactive")
+	}
+	if result.PiiMaskedAt == nil {
+		t.Fatalf("expected piiMaskedAt to be set")
+	}
+	if !strings.HasPrefix(result.Email, "masked+user-mask") {
+		t.Fatalf("expected masked email, got %s", result.Email)
+	}
+	if result.PhoneNumber != "" {
+		t.Fatalf("expected phone cleared, got %s", result.PhoneNumber)
+	}
+	if len(result.Roles) != 0 {
+		t.Fatalf("expected roles cleared, got %v", result.Roles)
+	}
+	if len(result.NotificationPrefs) != 0 {
+		t.Fatalf("expected notification prefs cleared")
+	}
+
+	remaining, err := payments.List(ctx, "user-mask")
+	if err != nil {
+		t.Fatalf("list payment methods: %v", err)
+	}
+	if len(remaining) != 0 {
+		t.Fatalf("expected payment methods detached, got %d", len(remaining))
+	}
+
+	if len(firebase.disabled) != 1 || firebase.disabled[0] != "user-mask" {
+		t.Fatalf("expected firebase disable call for user-mask, got %v", firebase.disabled)
+	}
+
+	if len(audits.records) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(audits.records))
+	}
+	record := audits.records[0]
+	if record.Action != auditActionProfileDeactivateMask {
+		t.Fatalf("unexpected audit action %s", record.Action)
+	}
+	if record.Metadata == nil {
+		t.Fatalf("expected metadata in audit record")
+	}
+	detached, ok := record.Metadata["detachedPaymentMethods"].([]string)
+	if !ok || len(detached) != 1 || detached[0] != strings.TrimSpace(method.ID) {
+		t.Fatalf("expected detached methods metadata, got %#v", record.Metadata["detachedPaymentMethods"])
+	}
+
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected single lifecycle notification, got %d", len(notifier.notifications))
+	}
+	notification := notifier.notifications[0]
+	if notification.UserID != "user-mask" {
+		t.Fatalf("unexpected notification user id %s", notification.UserID)
+	}
+	if notification.ActorID != "admin-user" {
+		t.Fatalf("unexpected actor id %s", notification.ActorID)
+	}
+	if notification.OriginalEmail != "original@example.com" {
+		t.Fatalf("unexpected original email %s", notification.OriginalEmail)
+	}
+	if notification.MaskedEmail != result.Email {
+		t.Fatalf("unexpected masked email %s", notification.MaskedEmail)
+	}
+	if notification.Reason != "right to be forgotten" {
+		t.Fatalf("unexpected reason %s", notification.Reason)
+	}
+
+	second, err := svc.DeactivateAndMask(ctx, DeactivateAndMaskCommand{
+		UserID:  "user-mask",
+		ActorID: "admin-user",
+		Reason:  "duplicate request",
+	})
+	if err != nil {
+		t.Fatalf("second deactivate call: %v", err)
+	}
+	if second.PiiMaskedAt == nil || !second.PiiMaskedAt.Equal(*result.PiiMaskedAt) {
+		t.Fatalf("expected piiMaskedAt unchanged, got %v vs %v", second.PiiMaskedAt, result.PiiMaskedAt)
+	}
+	if len(audits.records) != 1 {
+		t.Fatalf("expected no additional audit records on idempotent call, got %d", len(audits.records))
+	}
+	if len(notifier.notifications) != 1 {
+		t.Fatalf("expected no additional notifications, got %d", len(notifier.notifications))
+	}
+	if len(firebase.disabled) != 2 {
+		t.Fatalf("expected firebase disable invoked twice for idempotency, got %v", firebase.disabled)
+	}
+}
 func TestUserServiceSetUserActiveConflict(t *testing.T) {
 	ctx := context.Background()
 	current := time.Date(2024, 8, 1, 12, 0, 0, 0, time.UTC)
@@ -363,8 +1255,597 @@ func TestUserServiceSetUserActiveConflict(t *testing.T) {
 	}
 }
 
+func TestUserServicePaymentMethodsLifecycle(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 9, 1, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	paymentRepo := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	verifier := &stubPaymentVerifier{
+		verifyFunc: func(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error) {
+			return PaymentMethodMetadata{
+				Token:    token,
+				Brand:    "visa",
+				Last4:    token[len(token)-4:],
+				ExpMonth: 12,
+				ExpYear:  2030,
+			}, nil
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:           userRepo,
+		PaymentMethods:  paymentRepo,
+		PaymentVerifier: verifier,
+		Firebase:        firebase,
+		Clock:           clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	first, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{
+		UserID:   "user-pay",
+		Provider: "Stripe",
+		Token:    "pm_1000",
+	})
+	if err != nil {
+		t.Fatalf("add payment method: %v", err)
+	}
+	if !first.IsDefault {
+		t.Fatalf("expected first method to be default")
+	}
+	if first.Brand != "visa" || first.Last4 != "1000" {
+		t.Fatalf("expected metadata populated, got brand=%s last4=%s", first.Brand, first.Last4)
+	}
+
+	second, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{
+		UserID:   "user-pay",
+		Provider: "stripe",
+		Token:    "pm_2000",
+	})
+	if err != nil {
+		t.Fatalf("add second payment method: %v", err)
+	}
+	if second.IsDefault {
+		t.Fatalf("expected second method not default by default")
+	}
+
+	third, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{
+		UserID:      "user-pay",
+		Provider:    "stripe",
+		Token:       "pm_3000",
+		MakeDefault: true,
+	})
+	if err != nil {
+		t.Fatalf("add third payment method: %v", err)
+	}
+	if !third.IsDefault {
+		t.Fatalf("expected make_default to mark card as default")
+	}
+
+	methods, err := svc.ListPaymentMethods(ctx, "user-pay")
+	if err != nil {
+		t.Fatalf("list payment methods: %v", err)
+	}
+	if len(methods) != 3 {
+		t.Fatalf("expected 3 methods, got %d", len(methods))
+	}
+	if methods[0].ID != third.ID {
+		t.Fatalf("expected default method first, got %s", methods[0].ID)
+	}
+}
+
+func TestUserServiceAddPaymentMethodDuplicate(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 9, 2, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	paymentRepo := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	verifier := &stubPaymentVerifier{
+		verifyFunc: func(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error) {
+			return PaymentMethodMetadata{Token: token}, nil
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:           userRepo,
+		PaymentMethods:  paymentRepo,
+		PaymentVerifier: verifier,
+		Firebase:        firebase,
+		Clock:           clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	if _, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{
+		UserID:   "user-dup",
+		Provider: "stripe",
+		Token:    "pm_dup",
+	}); err != nil {
+		t.Fatalf("seed payment method: %v", err)
+	}
+
+	_, err = svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{
+		UserID:   "user-dup",
+		Provider: "stripe",
+		Token:    "pm_dup",
+	})
+	if !errors.Is(err, errPaymentMethodDuplicate) {
+		t.Fatalf("expected duplicate error, got %v", err)
+	}
+}
+
+func TestUserServiceRemovePaymentMethodReassignsDefault(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 9, 3, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	paymentRepo := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	verifier := &stubPaymentVerifier{
+		verifyFunc: func(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error) {
+			return PaymentMethodMetadata{Token: token}, nil
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:           userRepo,
+		PaymentMethods:  paymentRepo,
+		PaymentVerifier: verifier,
+		Firebase:        firebase,
+		Clock:           clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	first, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{UserID: "user-rem", Provider: "stripe", Token: "pm_one"})
+	if err != nil {
+		t.Fatalf("add first: %v", err)
+	}
+	second, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{UserID: "user-rem", Provider: "stripe", Token: "pm_two"})
+	if err != nil {
+		t.Fatalf("add second: %v", err)
+	}
+	third, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{UserID: "user-rem", Provider: "stripe", Token: "pm_three", MakeDefault: true})
+	if err != nil {
+		t.Fatalf("add third: %v", err)
+	}
+
+	if err := svc.RemovePaymentMethod(ctx, RemovePaymentMethodCommand{
+		UserID:          "user-rem",
+		PaymentMethodID: third.ID,
+	}); err != nil {
+		t.Fatalf("remove default: %v", err)
+	}
+
+	methods, err := svc.ListPaymentMethods(ctx, "user-rem")
+	if err != nil {
+		t.Fatalf("list methods: %v", err)
+	}
+	if len(methods) != 2 {
+		t.Fatalf("expected 2 methods, got %d", len(methods))
+	}
+	if !methods[0].IsDefault {
+		t.Fatalf("expected default reassigned, got %+v", methods[0])
+	}
+	if methods[0].ID != first.ID && methods[0].ID != second.ID {
+		t.Fatalf("unexpected default id %s", methods[0].ID)
+	}
+}
+
+func TestUserServiceRemovePaymentMethodBlockedByInvoices(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 9, 4, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	paymentRepo := newMemoryPaymentMethodRepo(clock)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+	verifier := &stubPaymentVerifier{
+		verifyFunc: func(ctx context.Context, provider string, token string) (PaymentMethodMetadata, error) {
+			return PaymentMethodMetadata{Token: token}, nil
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:           userRepo,
+		PaymentMethods:  paymentRepo,
+		PaymentVerifier: verifier,
+		Invoices: &stubInvoiceChecker{
+			checkFunc: func(ctx context.Context, userID string) (bool, error) {
+				return true, nil
+			},
+		},
+		Firebase: firebase,
+		Clock:    clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	first, err := svc.AddPaymentMethod(ctx, AddPaymentMethodCommand{UserID: "user-inv", Provider: "stripe", Token: "pm_inv"})
+	if err != nil {
+		t.Fatalf("add method: %v", err)
+	}
+
+	err = svc.RemovePaymentMethod(ctx, RemovePaymentMethodCommand{
+		UserID:          "user-inv",
+		PaymentMethodID: first.ID,
+	})
+	if !errors.Is(err, errPaymentMethodInUse) {
+		t.Fatalf("expected in-use error, got %v", err)
+	}
+}
+
 func ptr[T any](value T) *T {
 	return &value
+}
+
+func TestUserServiceToggleFavoriteAddAndList(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 10, 1, 11, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Second)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	favoriteRepo := newMemoryFavoriteRepo()
+	designRepo := newMemoryDesignRepo()
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	if err := designRepo.Insert(ctx, domain.Design{ID: "design-1", OwnerID: "user-fav", Status: "draft", UpdatedAt: clock()}); err != nil {
+		t.Fatalf("insert design: %v", err)
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Favorites: favoriteRepo,
+		Designs:   designRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	if err := svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-fav", DesignID: "design-1", Mark: true}); err != nil {
+		t.Fatalf("toggle favorite add: %v", err)
+	}
+
+	page, err := svc.ListFavorites(ctx, "user-fav", Pagination{})
+	if err != nil {
+		t.Fatalf("list favorites: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected 1 favorite, got %d", len(page.Items))
+	}
+	fav := page.Items[0]
+	if fav.DesignID != "design-1" {
+		t.Fatalf("unexpected design id %s", fav.DesignID)
+	}
+	if fav.Design == nil || fav.Design.ID != "design-1" {
+		t.Fatalf("expected design metadata included, got %+v", fav.Design)
+	}
+
+	// idempotent add should not error or duplicate
+	if err := svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-fav", DesignID: "design-1", Mark: true}); err != nil {
+		t.Fatalf("toggle favorite idempotent add: %v", err)
+	}
+	page, err = svc.ListFavorites(ctx, "user-fav", Pagination{})
+	if err != nil {
+		t.Fatalf("list favorites: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected 1 favorite after duplicate add, got %d", len(page.Items))
+	}
+
+	// removal should succeed silently
+	if err := svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-fav", DesignID: "design-1", Mark: false}); err != nil {
+		t.Fatalf("toggle favorite remove: %v", err)
+	}
+	page, err = svc.ListFavorites(ctx, "user-fav", Pagination{})
+	if err != nil {
+		t.Fatalf("list favorites: %v", err)
+	}
+	if len(page.Items) != 0 {
+		t.Fatalf("expected favorites cleared, got %d", len(page.Items))
+	}
+}
+
+func TestUserServiceToggleFavoriteLimit(t *testing.T) {
+	ctx := context.Background()
+	current := time.Date(2024, 10, 2, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time {
+		now := current
+		current = current.Add(time.Minute)
+		return now
+	}
+
+	userRepo := newMemoryUserRepo(clock)
+	favoriteRepo := newMemoryFavoriteRepo()
+	designRepo := newMemoryDesignRepo()
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	for i := 0; i < 200; i++ {
+		designID := fmt.Sprintf("design-%03d", i)
+		designRepo.Insert(ctx, domain.Design{ID: designID, OwnerID: "user-limit", Status: "draft", UpdatedAt: clock()})
+		_, _ = favoriteRepo.Put(ctx, "user-limit", designID, clock(), 200)
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Favorites: favoriteRepo,
+		Designs:   designRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	designRepo.Insert(ctx, domain.Design{ID: "design-extra", OwnerID: "user-limit", Status: "draft", UpdatedAt: clock()})
+
+	err = svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-limit", DesignID: "design-extra", Mark: true})
+	if !errors.Is(err, ErrUserFavoriteLimitExceeded) {
+		t.Fatalf("expected favorite limit error, got %v", err)
+	}
+}
+
+func TestUserServiceToggleFavoriteShareable(t *testing.T) {
+	ctx := context.Background()
+	clock := func() time.Time { return time.Date(2024, 10, 3, 8, 0, 0, 0, time.UTC) }
+
+	userRepo := newMemoryUserRepo(clock)
+	favoriteRepo := newMemoryFavoriteRepo()
+	designRepo := newMemoryDesignRepo()
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	designRepo.Insert(ctx, domain.Design{ID: "shared-design", OwnerID: "other", Status: "ready", UpdatedAt: clock()})
+	designRepo.Insert(ctx, domain.Design{ID: "private-design", OwnerID: "other", Status: "draft", UpdatedAt: clock()})
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:     userRepo,
+		Favorites: favoriteRepo,
+		Designs:   designRepo,
+		Firebase:  firebase,
+		Clock:     clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	if err := svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-share", DesignID: "shared-design", Mark: true}); err != nil {
+		t.Fatalf("toggle favorite shareable: %v", err)
+	}
+
+	err = svc.ToggleFavorite(ctx, ToggleFavoriteCommand{UserID: "user-share", DesignID: "private-design", Mark: true})
+	if !errors.Is(err, ErrUserFavoriteDesignForbidden) {
+		t.Fatalf("expected forbidden error, got %v", err)
+	}
+}
+
+func TestUserServiceSearchProfilesReturnsFlagsAndMetadata(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2024, 7, 10, 12, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return base }
+
+	repo := newMemoryUserRepo(clock)
+	repo.store["user-active"] = domain.UserProfile{
+		ID:           "user-active",
+		DisplayName:  "Alice Hanko",
+		Email:        "alice@example.com",
+		PhoneNumber:  "+819012345678",
+		IsActive:     true,
+		Roles:        []string{"user"},
+		CreatedAt:    base.Add(-48 * time.Hour),
+		UpdatedAt:    base.Add(-24 * time.Hour),
+		LastSyncTime: base.Add(-24 * time.Hour),
+	}
+	maskedAt := base.Add(-72 * time.Hour)
+	repo.store["user-masked"] = domain.UserProfile{
+		ID:           "user-masked",
+		DisplayName:  "Masked Patron",
+		Email:        "masked+user@example.com",
+		PhoneNumber:  "+81 90-0000-0000",
+		IsActive:     false,
+		PiiMaskedAt:  &maskedAt,
+		Roles:        []string{"user"},
+		CreatedAt:    base.Add(-96 * time.Hour),
+		UpdatedAt:    base.Add(-90 * time.Hour),
+		LastSyncTime: base.Add(-90 * time.Hour),
+	}
+
+	loginActive := base.Add(-6 * time.Hour)
+	loginMasked := base.Add(-100 * time.Hour)
+	firebase := &stubFirebase{
+		records: map[string]*firebaseauth.UserRecord{
+			"user-active": {
+				UserInfo: &firebaseauth.UserInfo{UID: "user-active", Email: "alice@example.com"},
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp: loginActive.UnixMilli(),
+				},
+			},
+			"user-masked": {
+				UserInfo: &firebaseauth.UserInfo{UID: "user-masked", Email: "masked+user@example.com"},
+				Disabled: true,
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp: loginMasked.UnixMilli(),
+				},
+			},
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+		Clock:    clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	page, err := svc.SearchProfiles(ctx, UserSearchFilter{Query: "Alice"})
+	if err != nil {
+		t.Fatalf("search profiles: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected one result, got %d", len(page.Items))
+	}
+	item := page.Items[0]
+	if item.Profile.ID != "user-active" {
+		t.Fatalf("expected user-active, got %s", item.Profile.ID)
+	}
+	if item.LastLoginAt == nil || !item.LastLoginAt.Equal(loginActive.UTC()) {
+		t.Fatalf("expected last login %v, got %v", loginActive.UTC(), item.LastLoginAt)
+	}
+	if len(item.Flags) != 0 {
+		t.Fatalf("expected no flags, got %v", item.Flags)
+	}
+
+	page, err = svc.SearchProfiles(ctx, UserSearchFilter{Query: "masked", IncludeInactive: true})
+	if err != nil {
+		t.Fatalf("search masked: %v", err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("expected one masked result, got %d", len(page.Items))
+	}
+	masked := page.Items[0]
+	if masked.Profile.ID != "user-masked" {
+		t.Fatalf("expected user-masked, got %s", masked.Profile.ID)
+	}
+	if masked.LastLoginAt == nil || !masked.LastLoginAt.Equal(loginMasked.UTC()) {
+		t.Fatalf("expected masked login %v, got %v", loginMasked.UTC(), masked.LastLoginAt)
+	}
+	if !containsFlag(masked.Flags, "pii_masked") || !containsFlag(masked.Flags, "inactive") || !containsFlag(masked.Flags, "auth_disabled") {
+		t.Fatalf("expected flags [pii_masked inactive auth_disabled], got %v", masked.Flags)
+	}
+}
+
+func TestUserServiceSearchProfilesRejectsSQLInjection(t *testing.T) {
+	ctx := context.Background()
+	repo := newMemoryUserRepo(time.Now)
+	firebase := &stubFirebase{records: map[string]*firebaseauth.UserRecord{}}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	if _, err := svc.SearchProfiles(ctx, UserSearchFilter{Query: "' OR 1=1 --"}); err == nil || !errors.Is(err, ErrUserSearchInvalidQuery) {
+		t.Fatalf("expected ErrUserSearchInvalidQuery, got %v", err)
+	}
+}
+
+func TestUserServiceGetAdminDetailIncludesAuthState(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 7, 20, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return now }
+
+	repo := newMemoryUserRepo(clock)
+	repo.store["user-auth"] = domain.UserProfile{
+		ID:           "user-auth",
+		DisplayName:  "Detail User",
+		Email:        "detail@example.com",
+		IsActive:     false,
+		Roles:        []string{"user"},
+		CreatedAt:    now.Add(-30 * 24 * time.Hour),
+		UpdatedAt:    now.Add(-10 * time.Hour),
+		LastSyncTime: now.Add(-10 * time.Hour),
+	}
+
+	login := now.Add(-2 * time.Hour)
+	refresh := now.Add(-1 * time.Hour)
+	tokensValid := now.Add(-5 * time.Hour)
+	firebase := &stubFirebase{
+		records: map[string]*firebaseauth.UserRecord{
+			"user-auth": {
+				UserInfo: &firebaseauth.UserInfo{
+					UID:   "user-auth",
+					Email: "detail@example.com",
+				},
+				Disabled:      true,
+				EmailVerified: true,
+				UserMetadata: &firebaseauth.UserMetadata{
+					LastLogInTimestamp:   login.UnixMilli(),
+					LastRefreshTimestamp: refresh.UnixMilli(),
+				},
+				TokensValidAfterMillis: tokensValid.UnixMilli(),
+			},
+		},
+	}
+
+	svc, err := NewUserService(UserServiceDeps{
+		Users:    repo,
+		Firebase: firebase,
+		Clock:    clock,
+	})
+	if err != nil {
+		t.Fatalf("new user service: %v", err)
+	}
+
+	detail, err := svc.GetAdminDetail(ctx, "user-auth")
+	if err != nil {
+		t.Fatalf("get admin detail: %v", err)
+	}
+	if detail.Profile.ID != "user-auth" {
+		t.Fatalf("unexpected profile id %s", detail.Profile.ID)
+	}
+	if !detail.EmailVerified {
+		t.Fatalf("expected email verified")
+	}
+	if !detail.AuthDisabled {
+		t.Fatalf("expected auth disabled true")
+	}
+	if detail.LastLoginAt == nil || !detail.LastLoginAt.Equal(login.UTC()) {
+		t.Fatalf("expected login time %v, got %v", login.UTC(), detail.LastLoginAt)
+	}
+	if detail.LastRefreshAt == nil || !detail.LastRefreshAt.Equal(refresh.UTC()) {
+		t.Fatalf("expected refresh time %v, got %v", refresh.UTC(), detail.LastRefreshAt)
+	}
+	if detail.TokensValidAt == nil || !detail.TokensValidAt.Equal(tokensValid.UTC()) {
+		t.Fatalf("expected tokens valid time %v, got %v", tokensValid.UTC(), detail.TokensValidAt)
+	}
+	if !containsFlag(detail.Flags, "inactive") || !containsFlag(detail.Flags, "auth_disabled") {
+		t.Fatalf("expected flags include inactive and auth_disabled, got %v", detail.Flags)
+	}
+}
+
+func containsFlag(flags []string, target string) bool {
+	for _, flag := range flags {
+		if flag == target {
+			return true
+		}
+	}
+	return false
 }
 
 func cloneProfile(profile domain.UserProfile) domain.UserProfile {
@@ -386,7 +1867,31 @@ func cloneProfile(profile domain.UserProfile) domain.UserProfile {
 		t := *profile.PiiMaskedAt
 		copy.PiiMaskedAt = &t
 	}
+	if profile.NameMappingRef != nil {
+		value := *profile.NameMappingRef
+		copy.NameMappingRef = &value
+	}
 	return copy
+}
+
+func matchUserSearch(profile domain.UserProfile, rawQuery, lowerQuery string) bool {
+	if strings.EqualFold(profile.ID, rawQuery) {
+		return true
+	}
+	if strings.EqualFold(profile.Email, rawQuery) || strings.EqualFold(profile.Email, lowerQuery) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(profile.DisplayName), lowerQuery) {
+		return true
+	}
+
+	phoneQuery := textutil.NormalizePhone(rawQuery)
+	if phoneQuery != "" {
+		if textutil.NormalizePhone(profile.PhoneNumber) == phoneQuery {
+			return true
+		}
+	}
+	return false
 }
 
 var _ repositories.UserRepository = (*memoryUserRepo)(nil)

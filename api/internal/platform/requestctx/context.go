@@ -2,6 +2,7 @@ package requestctx
 
 import (
 	"context"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -9,8 +10,9 @@ import (
 type contextKey string
 
 const (
-	loggerContextKey contextKey = "github.com/hanko-field/api/internal/platform/requestctx/logger"
-	traceContextKey  contextKey = "github.com/hanko-field/api/internal/platform/requestctx/trace"
+	loggerContextKey      contextKey = "github.com/hanko-field/api/internal/platform/requestctx/logger"
+	traceContextKey       contextKey = "github.com/hanko-field/api/internal/platform/requestctx/trace"
+	correlationContextKey contextKey = "github.com/hanko-field/api/internal/platform/requestctx/correlation"
 )
 
 var noopLogger = zap.NewNop()
@@ -75,4 +77,27 @@ func TraceID(ctx context.Context) string {
 		return ""
 	}
 	return info.TraceID
+}
+
+// WithCorrelationID stores the correlation identifier on the context.
+func WithCorrelationID(ctx context.Context, id string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, correlationContextKey, id)
+}
+
+// CorrelationID retrieves the correlation identifier from context when available.
+func CorrelationID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if id, ok := ctx.Value(correlationContextKey).(string); ok {
+		return strings.TrimSpace(id)
+	}
+	return ""
 }

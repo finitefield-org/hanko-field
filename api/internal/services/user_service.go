@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"maps"
@@ -14,46 +16,146 @@ import (
 	firebaseauth "firebase.google.com/go/v4/auth"
 	domain "github.com/hanko-field/api/internal/domain"
 	"github.com/hanko-field/api/internal/platform/auth"
+	"github.com/hanko-field/api/internal/platform/validation"
 	"github.com/hanko-field/api/internal/repositories"
 	"golang.org/x/text/language"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
-	errUserIDRequired               = errors.New("user: user id is required")
-	errActorIDRequired              = errors.New("user: actor id is required")
-	errInvalidDisplayName           = errors.New("user: invalid display name")
-	errInvalidLanguageTag           = errors.New("user: invalid language tag")
-	errProfileConflict              = errors.New("user: profile has been modified")
-	errAddressRepositoryUnavailable = errors.New("user: address repository not configured")
-	errPaymentMethodsNotImplemented = errors.New("user: payment method operations not yet implemented")
-	errFavoritesNotImplemented      = errors.New("user: favorites operations not yet implemented")
-	emailMaskSuffix                 = "@hanko-field.invalid"
-	notificationKeyPattern          = regexp.MustCompile(`^[a-z0-9_.-]{1,40}$`)
-	auditActionProfileUpdate        = "user.profile.update"
-	auditActionProfileMask          = "user.profile.mask"
-	auditActionProfileActivate      = "user.profile.activate"
-	auditActionProfileDeactivate    = "user.profile.deactivate"
+	errUserIDRequired                 = errors.New("user: user id is required")
+	errActorIDRequired                = errors.New("user: actor id is required")
+	errInvalidDisplayName             = errors.New("user: invalid display name")
+	errInvalidLanguageTag             = errors.New("user: invalid language tag")
+	errInvalidNotificationKey         = errors.New("user: invalid notification key")
+	errProfileConflict                = errors.New("user: profile has been modified")
+	errAddressRepositoryUnavailable   = errors.New("user: address repository not configured")
+	errAddressIDRequired              = errors.New("user: address id is required")
+	errAddressNotFound                = errors.New("user: address not found")
+	errInvalidAddressRecipient        = errors.New("user: invalid address recipient")
+	errInvalidAddressLine1            = errors.New("user: invalid address line1")
+	errInvalidAddressCity             = errors.New("user: invalid address city")
+	errInvalidAddressCountry          = errors.New("user: invalid address country")
+	errInvalidAddressPostalCode       = errors.New("user: invalid address postal code")
+	errInvalidAddressPhone            = errors.New("user: invalid address phone")
+	errPaymentRepositoryUnavailable   = errors.New("user: payment method repository not configured")
+	errPaymentVerifierUnavailable     = errors.New("user: payment method verifier not configured")
+	errPaymentProviderRequired        = errors.New("user: payment provider is required")
+	errPaymentTokenRequired           = errors.New("user: payment token is required")
+	errPaymentMethodNotFound          = errors.New("user: payment method not found")
+	errPaymentMethodDuplicate         = errors.New("user: payment method already exists")
+	errPaymentMethodInUse             = errors.New("user: payment method has outstanding invoices")
+	errFavoritesRepositoryUnavailable = errors.New("user: favorites repository not configured")
+	errFavoriteDesignRequired         = errors.New("user: design id is required")
+	errFavoriteLimitExceeded          = errors.New("user: favorite limit reached")
+	errFavoriteDesignNotFound         = errors.New("user: design not found")
+	errFavoriteDesignForbidden        = errors.New("user: design is not shareable or owned by user")
+	errDesignRepositoryUnavailable    = errors.New("user: design repository not configured")
+	errUserSearchNotSupported         = errors.New("user: search repository not configured")
+	errUserSearchQueryRequired        = errors.New("user: search query is required")
+	emailMaskSuffix                   = "@hanko-field.invalid"
+	notificationKeyPattern            = regexp.MustCompile(`^[a-z0-9_.-]{1,40}$`)
+	addressPhonePattern               = regexp.MustCompile(`^[0-9+()\-\s]{6,20}$`)
+	addressCountryPattern             = regexp.MustCompile(`^[A-Za-z]{2}$`)
+	addressPostalPattern              = regexp.MustCompile(`^[0-9A-Za-z\-\s]{3,16}$`)
+	auditActionProfileDeactivateMask  = "user.profile.deactivate_mask"
+	auditActionProfileUpdate          = "user.profile.update"
+	auditActionProfileMask            = "user.profile.mask"
+	auditActionProfileActivate        = "user.profile.activate"
+	auditActionProfileDeactivate      = "user.profile.deactivate"
 )
+
+var (
+	// ErrUserProfileConflict indicates the profile has been modified by another concurrent actor.
+	ErrUserProfileConflict = errProfileConflict
+	// ErrUserInvalidDisplayName indicates the supplied display name failed validation.
+	ErrUserInvalidDisplayName = errInvalidDisplayName
+	// ErrUserInvalidLanguageTag indicates the supplied language or locale tag is invalid.
+	ErrUserInvalidLanguageTag = errInvalidLanguageTag
+	// ErrUserInvalidNotificationKey indicates a notification preference key did not meet validation rules.
+	ErrUserInvalidNotificationKey = errInvalidNotificationKey
+	// ErrUserAddressNotFound indicates the requested address does not exist.
+	ErrUserAddressNotFound = errAddressNotFound
+	// ErrUserInvalidAddressRecipient indicates the address recipient failed validation.
+	ErrUserInvalidAddressRecipient = errInvalidAddressRecipient
+	// ErrUserInvalidAddressLine1 indicates the primary address line failed validation.
+	ErrUserInvalidAddressLine1 = errInvalidAddressLine1
+	// ErrUserInvalidAddressCity indicates the city component failed validation.
+	ErrUserInvalidAddressCity = errInvalidAddressCity
+	// ErrUserInvalidAddressCountry indicates the country component failed validation.
+	ErrUserInvalidAddressCountry = errInvalidAddressCountry
+	// ErrUserInvalidAddressPostalCode indicates the postal code failed validation.
+	ErrUserInvalidAddressPostalCode = errInvalidAddressPostalCode
+	// ErrUserInvalidAddressPhone indicates the phone number failed validation.
+	ErrUserInvalidAddressPhone = errInvalidAddressPhone
+	// ErrUserPaymentMethodNotFound indicates the requested payment method does not exist.
+	ErrUserPaymentMethodNotFound = errPaymentMethodNotFound
+	// ErrUserPaymentMethodDuplicate indicates the PSP token already exists for the user.
+	ErrUserPaymentMethodDuplicate = errPaymentMethodDuplicate
+	// ErrUserPaymentMethodInUse indicates the payment method cannot be removed due to outstanding invoices.
+	ErrUserPaymentMethodInUse = errPaymentMethodInUse
+	// ErrUserPaymentProviderRequired indicates the provider input was empty.
+	ErrUserPaymentProviderRequired = errPaymentProviderRequired
+	// ErrUserPaymentTokenRequired indicates the token input was empty.
+	ErrUserPaymentTokenRequired = errPaymentTokenRequired
+	// ErrUserFavoriteLimitExceeded indicates the user has reached the maximum favorites allowed.
+	ErrUserFavoriteLimitExceeded = errFavoriteLimitExceeded
+	// ErrUserFavoriteDesignNotFound indicates the referenced design was not found or inaccessible.
+	ErrUserFavoriteDesignNotFound = errFavoriteDesignNotFound
+	// ErrUserFavoriteDesignForbidden indicates the design is not owned or shareable.
+	ErrUserFavoriteDesignForbidden = errFavoriteDesignForbidden
+	// ErrUserSearchUnavailable indicates no search backend is configured.
+	ErrUserSearchUnavailable = errUserSearchNotSupported
+	// ErrUserSearchInvalidQuery indicates the supplied search query failed validation.
+	ErrUserSearchInvalidQuery = errUserSearchQueryRequired
+)
+
+const (
+	maxFavorites              = 200
+	defaultUserSearchPageSize = 20
+	maxUserSearchPageSize     = 100
+	maxUserSearchQueryLength  = 200
+)
+
+var shareableDesignStatuses = map[string]struct{}{
+	"ready":   {},
+	"ordered": {},
+	"locked":  {},
+}
+
+type firebaseUserClient interface {
+	auth.UserGetter
+	DisableUser(ctx context.Context, uid string) error
+}
 
 // UserServiceDeps bundles the dependencies required to construct a user service instance.
 type UserServiceDeps struct {
-	Users          repositories.UserRepository
-	Addresses      repositories.AddressRepository
-	PaymentMethods repositories.PaymentMethodRepository
-	Favorites      repositories.FavoriteRepository
-	Audit          AuditLogService
-	Firebase       auth.UserGetter
-	Clock          func() time.Time
+	Users           repositories.UserRepository
+	Addresses       repositories.AddressRepository
+	PaymentMethods  repositories.PaymentMethodRepository
+	PaymentVerifier PaymentMethodVerifier
+	Invoices        OutstandingInvoiceChecker
+	Favorites       repositories.FavoriteRepository
+	Designs         DesignFinder
+	Audit           AuditLogService
+	Firebase        firebaseUserClient
+	Lifecycle       UserLifecycleNotifier
+	Clock           func() time.Time
 }
 
 type userService struct {
-	users          repositories.UserRepository
-	addresses      repositories.AddressRepository
-	paymentMethods repositories.PaymentMethodRepository
-	favorites      repositories.FavoriteRepository
-	audit          AuditLogService
-	firebase       auth.UserGetter
-	clock          func() time.Time
+	users           repositories.UserRepository
+	addresses       repositories.AddressRepository
+	paymentMethods  repositories.PaymentMethodRepository
+	paymentVerifier PaymentMethodVerifier
+	invoices        OutstandingInvoiceChecker
+	favorites       repositories.FavoriteRepository
+	designs         DesignFinder
+	audit           AuditLogService
+	firebase        firebaseUserClient
+	lifecycle       UserLifecycleNotifier
+	clock           func() time.Time
 }
 
 // NewUserService wires dependencies into a concrete UserService implementation.
@@ -71,12 +173,16 @@ func NewUserService(deps UserServiceDeps) (UserService, error) {
 	}
 
 	return &userService{
-		users:          deps.Users,
-		addresses:      deps.Addresses,
-		paymentMethods: deps.PaymentMethods,
-		favorites:      deps.Favorites,
-		audit:          deps.Audit,
-		firebase:       deps.Firebase,
+		users:           deps.Users,
+		addresses:       deps.Addresses,
+		paymentMethods:  deps.PaymentMethods,
+		paymentVerifier: deps.PaymentVerifier,
+		invoices:        deps.Invoices,
+		favorites:       deps.Favorites,
+		designs:         deps.Designs,
+		audit:           deps.Audit,
+		firebase:        deps.Firebase,
+		lifecycle:       deps.Lifecycle,
 		clock: func() time.Time {
 			return clock().UTC()
 		},
@@ -178,6 +284,105 @@ func (s *userService) MaskProfile(ctx context.Context, cmd MaskProfileCommand) (
 	return saved, nil
 }
 
+func (s *userService) DeactivateAndMask(ctx context.Context, cmd DeactivateAndMaskCommand) (UserProfile, error) {
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return UserProfile{}, errUserIDRequired
+	}
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return UserProfile{}, errActorIDRequired
+	}
+
+	profile, err := s.getProfile(ctx, userID, true)
+	if err != nil {
+		return UserProfile{}, err
+	}
+
+	now := s.clock()
+	desired, changed := projectMaskedProfile(profile, now)
+	desired.LastSyncTime = profile.LastSyncTime
+
+	if s.firebase == nil {
+		return UserProfile{}, errors.New("user: firebase user getter is required")
+	}
+	if err := s.firebase.DisableUser(ctx, userID); err != nil {
+		return UserProfile{}, err
+	}
+
+	detached, err := s.detachAllPaymentMethods(ctx, userID)
+	if err != nil {
+		return UserProfile{}, err
+	}
+
+	saved := profile
+	if changed {
+		saved, err = s.users.UpdateProfile(ctx, desired)
+		if err != nil {
+			return UserProfile{}, mapConflictError(err)
+		}
+	}
+
+	notify := changed || len(detached) > 0
+	if notify {
+		changes := map[string]any{
+			"masked":     true,
+			"occurredAt": now.Format(time.RFC3339Nano),
+		}
+		if trimmed := strings.TrimSpace(cmd.Reason); trimmed != "" {
+			changes["reason"] = trimmed
+		}
+		if changed {
+			if profile.DisplayName != saved.DisplayName {
+				changes["displayName"] = diffValue(profile.DisplayName, saved.DisplayName)
+			}
+			if strings.TrimSpace(profile.Email) != strings.TrimSpace(saved.Email) {
+				changes["email"] = diffValue(strings.TrimSpace(profile.Email), strings.TrimSpace(saved.Email))
+			}
+			if strings.TrimSpace(profile.PhoneNumber) != strings.TrimSpace(saved.PhoneNumber) {
+				changes["phoneNumber"] = diffValue(strings.TrimSpace(profile.PhoneNumber), strings.TrimSpace(saved.PhoneNumber))
+			}
+			if profile.IsActive != saved.IsActive {
+				changes["isActive"] = diffValue(profile.IsActive, saved.IsActive)
+			}
+			if !slices.Equal(profile.Roles, saved.Roles) {
+				changes["roles"] = diffValue(cloneStringsSafe(profile.Roles), cloneStringsSafe(saved.Roles))
+			}
+			if !equalNotificationPrefs(profile.NotificationPrefs, saved.NotificationPrefs) {
+				changes["notificationPrefs"] = diffValue(cloneNotificationPrefs(profile.NotificationPrefs), cloneNotificationPrefs(saved.NotificationPrefs))
+			}
+			if !timePointersEqual(profile.PiiMaskedAt, saved.PiiMaskedAt) {
+				changes["piiMaskedAt"] = diffValue(timePointerValue(profile.PiiMaskedAt), timePointerValue(saved.PiiMaskedAt))
+			}
+		}
+		if len(detached) > 0 {
+			changes["detachedPaymentMethods"] = detached
+		}
+		if err := s.appendAudit(ctx, auditActionProfileDeactivateMask, actorID, saved.ID, changes); err != nil {
+			return UserProfile{}, err
+		}
+	}
+
+	if s.lifecycle != nil && notify {
+		notification := UserDeactivatedNotification{
+			UserID:        saved.ID,
+			ActorID:       actorID,
+			Reason:        strings.TrimSpace(cmd.Reason),
+			OccurredAt:    now,
+			OriginalEmail: strings.TrimSpace(profile.Email),
+			OriginalPhone: strings.TrimSpace(profile.PhoneNumber),
+			OriginalName:  strings.TrimSpace(profile.DisplayName),
+			MaskedEmail:   strings.TrimSpace(saved.Email),
+			MaskedName:    strings.TrimSpace(saved.DisplayName),
+		}
+		if err := s.lifecycle.NotifyUserDeactivated(ctx, notification); err != nil {
+			return UserProfile{}, err
+		}
+	}
+
+	return saved, nil
+}
+
 func (s *userService) SetUserActive(ctx context.Context, cmd SetUserActiveCommand) (UserProfile, error) {
 	if strings.TrimSpace(cmd.UserID) == "" {
 		return UserProfile{}, errUserIDRequired
@@ -229,42 +434,563 @@ func (s *userService) ListAddresses(ctx context.Context, userID string) ([]Addre
 	if s.addresses == nil {
 		return nil, errAddressRepositoryUnavailable
 	}
-	return s.addresses.List(ctx, userID)
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, errUserIDRequired
+	}
+	items, err := s.addresses.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range items {
+		if items[i].NormalizedHash == "" {
+			items[i].NormalizedHash = addressFingerprint(items[i])
+		}
+	}
+	return items, nil
 }
 
 func (s *userService) UpsertAddress(ctx context.Context, cmd UpsertAddressCommand) (Address, error) {
 	if s.addresses == nil {
 		return Address{}, errAddressRepositoryUnavailable
 	}
-	address, err := s.addresses.Upsert(ctx, cmd.UserID, cmd.AddressID, cmd.Address, cmd.IsDefault)
-	return address, err
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return Address{}, errUserIDRequired
+	}
+
+	targetID := ""
+	if cmd.AddressID != nil {
+		targetID = strings.TrimSpace(*cmd.AddressID)
+	}
+
+	var existing Address
+	var err error
+	if targetID != "" {
+		existing, err = s.addresses.Get(ctx, userID, targetID)
+		if err != nil {
+			if isNotFound(err) {
+				return Address{}, errAddressNotFound
+			}
+			return Address{}, err
+		}
+	}
+
+	addressInput, err := sanitizeAddress(cmd.Address)
+	if err != nil {
+		return Address{}, err
+	}
+
+	fingerprint := addressFingerprint(addressInput)
+
+	if targetID == "" {
+		if duplicate, found, err := s.addresses.FindByHash(ctx, userID, fingerprint); err != nil {
+			return Address{}, err
+		} else if found {
+			targetID = duplicate.ID
+			existing = duplicate
+		}
+	}
+
+	hasAny, err := s.addresses.HasAny(ctx, userID)
+	if err != nil {
+		return Address{}, err
+	}
+
+	finalAddress := mergeAddress(existing, addressInput)
+	finalAddress.ID = targetID
+	finalAddress.NormalizedHash = fingerprint
+
+	defaultShipping := existing.DefaultShipping
+	if cmd.DefaultShipping != nil {
+		defaultShipping = *cmd.DefaultShipping
+	} else if targetID == "" && !hasAny {
+		defaultShipping = true
+	}
+
+	defaultBilling := existing.DefaultBilling
+	if cmd.DefaultBilling != nil {
+		defaultBilling = *cmd.DefaultBilling
+	} else if targetID == "" && !hasAny {
+		defaultBilling = true
+	}
+
+	finalAddress.DefaultShipping = defaultShipping
+	finalAddress.DefaultBilling = defaultBilling
+
+	var addressIDPtr *string
+	if targetID != "" {
+		addressIDPtr = &targetID
+	}
+
+	saved, err := s.addresses.Upsert(ctx, userID, addressIDPtr, finalAddress)
+	if err != nil {
+		return Address{}, err
+	}
+	if saved.NormalizedHash == "" {
+		saved.NormalizedHash = addressFingerprint(saved)
+	}
+	return saved, nil
 }
 
 func (s *userService) DeleteAddress(ctx context.Context, cmd DeleteAddressCommand) error {
 	if s.addresses == nil {
 		return errAddressRepositoryUnavailable
 	}
-	return s.addresses.Delete(ctx, cmd.UserID, cmd.AddressID)
+	userID := strings.TrimSpace(cmd.UserID)
+	addressID := strings.TrimSpace(cmd.AddressID)
+	if userID == "" {
+		return errUserIDRequired
+	}
+	if addressID == "" {
+		return errAddressIDRequired
+	}
+
+	target, err := s.addresses.Get(ctx, userID, addressID)
+	if err != nil {
+		if isNotFound(err) {
+			return errAddressNotFound
+		}
+		return err
+	}
+
+	if err := s.addresses.Delete(ctx, userID, addressID); err != nil {
+		return err
+	}
+
+	if !(target.DefaultShipping || target.DefaultBilling) {
+		return nil
+	}
+
+	addresses, err := s.addresses.List(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	var replacementID string
+	if cmd.ReplacementID != nil {
+		id := strings.TrimSpace(*cmd.ReplacementID)
+		if id != "" {
+			for _, addr := range addresses {
+				if strings.EqualFold(addr.ID, id) {
+					replacementID = addr.ID
+					break
+				}
+			}
+			if replacementID == "" {
+				return errAddressNotFound
+			}
+		}
+	}
+
+	if replacementID == "" {
+		for _, addr := range addresses {
+			if strings.EqualFold(addr.ID, addressID) {
+				continue
+			}
+			replacementID = addr.ID
+			break
+		}
+	}
+
+	if replacementID == "" {
+		return nil
+	}
+
+	var shippingPtr, billingPtr *bool
+	if target.DefaultShipping {
+		val := true
+		shippingPtr = &val
+	}
+	if target.DefaultBilling {
+		val := true
+		billingPtr = &val
+	}
+
+	if _, err := s.addresses.SetDefaultFlags(ctx, userID, replacementID, shippingPtr, billingPtr); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *userService) ListPaymentMethods(ctx context.Context, userID string) ([]PaymentMethod, error) {
-	return nil, errPaymentMethodsNotImplemented
+	if s.paymentMethods == nil {
+		return nil, errPaymentRepositoryUnavailable
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, errUserIDRequired
+	}
+	items, err := s.paymentMethods.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	copied := append([]PaymentMethod(nil), items...)
+	slices.SortStableFunc(copied, func(a, b PaymentMethod) int {
+		if a.IsDefault && !b.IsDefault {
+			return -1
+		}
+		if !a.IsDefault && b.IsDefault {
+			return 1
+		}
+		switch {
+		case a.CreatedAt.After(b.CreatedAt):
+			return -1
+		case a.CreatedAt.Before(b.CreatedAt):
+			return 1
+		default:
+			return strings.Compare(a.ID, b.ID)
+		}
+	})
+	return copied, nil
 }
 
 func (s *userService) AddPaymentMethod(ctx context.Context, cmd AddPaymentMethodCommand) (PaymentMethod, error) {
-	return PaymentMethod{}, errPaymentMethodsNotImplemented
+	if s.paymentMethods == nil {
+		return PaymentMethod{}, errPaymentRepositoryUnavailable
+	}
+	if s.paymentVerifier == nil {
+		return PaymentMethod{}, errPaymentVerifierUnavailable
+	}
+
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return PaymentMethod{}, errUserIDRequired
+	}
+
+	provider := normaliseProvider(cmd.Provider)
+	if provider == "" {
+		return PaymentMethod{}, errPaymentProviderRequired
+	}
+
+	token := strings.TrimSpace(cmd.Token)
+	if token == "" {
+		return PaymentMethod{}, errPaymentTokenRequired
+	}
+
+	meta, err := s.paymentVerifier.VerifyPaymentMethod(ctx, provider, token)
+	if err != nil {
+		return PaymentMethod{}, err
+	}
+
+	if trimmed := strings.TrimSpace(meta.Token); trimmed != "" {
+		token = trimmed
+	}
+
+	existing, err := s.paymentMethods.List(ctx, userID)
+	if err != nil {
+		return PaymentMethod{}, err
+	}
+	for _, method := range existing {
+		if strings.TrimSpace(method.Token) == token {
+			return PaymentMethod{}, errPaymentMethodDuplicate
+		}
+	}
+
+	now := s.clock()
+	method := PaymentMethod{
+		Provider:  provider,
+		Token:     token,
+		Brand:     strings.TrimSpace(meta.Brand),
+		Last4:     strings.TrimSpace(meta.Last4),
+		ExpMonth:  meta.ExpMonth,
+		ExpYear:   meta.ExpYear,
+		IsDefault: cmd.MakeDefault,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if len(existing) == 0 {
+		method.IsDefault = true
+	}
+
+	saved, err := s.paymentMethods.Insert(ctx, userID, method)
+	if err != nil {
+		if isConflict(err) {
+			return PaymentMethod{}, errPaymentMethodDuplicate
+		}
+		return PaymentMethod{}, err
+	}
+	return saved, nil
 }
 
 func (s *userService) RemovePaymentMethod(ctx context.Context, cmd RemovePaymentMethodCommand) error {
-	return errPaymentMethodsNotImplemented
+	if s.paymentMethods == nil {
+		return errPaymentRepositoryUnavailable
+	}
+
+	userID := strings.TrimSpace(cmd.UserID)
+	paymentMethodID := strings.TrimSpace(cmd.PaymentMethodID)
+	if userID == "" {
+		return errUserIDRequired
+	}
+	if paymentMethodID == "" {
+		return errPaymentMethodNotFound
+	}
+
+	method, err := s.paymentMethods.Get(ctx, userID, paymentMethodID)
+	if err != nil {
+		if isNotFound(err) {
+			return errPaymentMethodNotFound
+		}
+		return err
+	}
+
+	if s.invoices != nil {
+		blocked, err := s.invoices.HasOutstandingInvoices(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if blocked {
+			return errPaymentMethodInUse
+		}
+	}
+
+	if err := s.paymentMethods.Delete(ctx, userID, paymentMethodID); err != nil {
+		if isNotFound(err) {
+			return errPaymentMethodNotFound
+		}
+		return err
+	}
+
+	if !method.IsDefault {
+		return nil
+	}
+
+	remaining, err := s.paymentMethods.List(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if len(remaining) == 0 {
+		return nil
+	}
+
+	next, ok := selectNextDefault(remaining)
+	if !ok {
+		return nil
+	}
+
+	if _, err := s.paymentMethods.SetDefault(ctx, userID, next.ID); err != nil {
+		if isNotFound(err) {
+			return errPaymentMethodNotFound
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (s *userService) ListFavorites(ctx context.Context, userID string, pager Pagination) (domain.CursorPage[FavoriteDesign], error) {
-	return domain.CursorPage[FavoriteDesign]{}, errFavoritesNotImplemented
+	if s.favorites == nil {
+		return domain.CursorPage[FavoriteDesign]{}, errFavoritesRepositoryUnavailable
+	}
+
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return domain.CursorPage[FavoriteDesign]{}, errUserIDRequired
+	}
+
+	pageRequest := pager
+	if pageRequest.PageSize <= 0 || pageRequest.PageSize > maxFavorites {
+		pageRequest.PageSize = maxFavorites
+	}
+
+	repoPage, err := s.favorites.List(ctx, userID, pageRequest)
+	if err != nil {
+		return domain.CursorPage[FavoriteDesign]{}, err
+	}
+
+	items := make([]FavoriteDesign, 0, len(repoPage.Items))
+	lookup := map[string]*Design{}
+
+	for _, fav := range repoPage.Items {
+		fd := FavoriteDesign{
+			DesignID: fav.DesignID,
+			AddedAt:  fav.AddedAt,
+		}
+		if s.designs != nil {
+			if cached, ok := lookup[fav.DesignID]; ok {
+				fd.Design = cached
+			} else {
+				design, err := s.designs.FindByID(ctx, fav.DesignID)
+				if err != nil {
+					if isNotFound(err) {
+						if delErr := s.favorites.Delete(ctx, userID, fav.DesignID); delErr != nil && !isNotFound(delErr) {
+							return domain.CursorPage[FavoriteDesign]{}, delErr
+						}
+						continue
+					}
+					return domain.CursorPage[FavoriteDesign]{}, err
+				}
+				copy := design
+				lookup[fav.DesignID] = &copy
+				fd.Design = &copy
+			}
+		}
+		items = append(items, fd)
+	}
+
+	return domain.CursorPage[FavoriteDesign]{
+		Items:         items,
+		NextPageToken: repoPage.NextPageToken,
+	}, nil
 }
 
 func (s *userService) ToggleFavorite(ctx context.Context, cmd ToggleFavoriteCommand) error {
-	return errFavoritesNotImplemented
+	if s.favorites == nil {
+		return errFavoritesRepositoryUnavailable
+	}
+
+	userID := strings.TrimSpace(cmd.UserID)
+	if userID == "" {
+		return errUserIDRequired
+	}
+
+	designID := strings.TrimSpace(cmd.DesignID)
+	if designID == "" {
+		return errFavoriteDesignRequired
+	}
+
+	if cmd.Mark {
+		if s.designs == nil {
+			return errDesignRepositoryUnavailable
+		}
+		design, err := s.designs.FindByID(ctx, designID)
+		if err != nil {
+			if isNotFound(err) {
+				return ErrUserFavoriteDesignNotFound
+			}
+			return err
+		}
+		if !s.canFavoriteDesign(userID, design) {
+			return ErrUserFavoriteDesignForbidden
+		}
+		_, err = s.favorites.Put(ctx, userID, designID, s.clock(), maxFavorites)
+		if err != nil {
+			if isFailedPrecondition(err) {
+				return ErrUserFavoriteLimitExceeded
+			}
+			return err
+		}
+		return nil
+	}
+
+	if err := s.favorites.Delete(ctx, userID, designID); err != nil {
+		if isNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *userService) SearchProfiles(ctx context.Context, filter UserSearchFilter) (domain.CursorPage[UserAdminSummary], error) {
+	if s.users == nil {
+		return domain.CursorPage[UserAdminSummary]{}, ErrUserSearchUnavailable
+	}
+
+	query, err := validation.ValidateSearchQuery(filter.Query, maxUserSearchQueryLength)
+	if err != nil {
+		return domain.CursorPage[UserAdminSummary]{}, fmt.Errorf("%w: %v", ErrUserSearchInvalidQuery, err)
+	}
+
+	pageSize := filter.PageSize
+	switch {
+	case pageSize <= 0:
+		pageSize = defaultUserSearchPageSize
+	case pageSize > maxUserSearchPageSize:
+		pageSize = maxUserSearchPageSize
+	}
+
+	repoFilter := repositories.UserSearchFilter{
+		Query:           query,
+		Limit:           pageSize,
+		PageToken:       strings.TrimSpace(filter.PageToken),
+		IncludeInactive: filter.IncludeInactive,
+	}
+
+	page, err := s.users.Search(ctx, repoFilter)
+	if err != nil {
+		return domain.CursorPage[UserAdminSummary]{}, err
+	}
+
+	summaries := make([]UserAdminSummary, 0, len(page.Items))
+	for _, profile := range page.Items {
+		var record *firebaseauth.UserRecord
+		if s.firebase != nil {
+			fetched, err := s.firebase.GetUser(ctx, profile.ID)
+			if err != nil {
+				return domain.CursorPage[UserAdminSummary]{}, fmt.Errorf("fetch firebase user %s: %w", profile.ID, err)
+			}
+			record = fetched
+		}
+		summaries = append(summaries, s.buildAdminSummary(profile, record))
+	}
+
+	return domain.CursorPage[UserAdminSummary]{
+		Items:         summaries,
+		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+func (s *userService) GetAdminDetail(ctx context.Context, userID string) (UserAdminDetail, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return UserAdminDetail{}, errUserIDRequired
+	}
+
+	profile, record, err := s.loadProfileWithRecord(ctx, userID)
+	if err != nil {
+		return UserAdminDetail{}, err
+	}
+
+	detail := UserAdminDetail{
+		Profile:       profile,
+		EmailVerified: record.EmailVerified,
+		AuthDisabled:  record.Disabled,
+	}
+	detail.Flags = s.userAdminFlags(profile, record)
+
+	if record.UserMetadata != nil {
+		detail.LastLoginAt = firebaseTimestampPtr(record.UserMetadata.LastLogInTimestamp)
+		detail.LastRefreshAt = firebaseTimestampPtr(record.UserMetadata.LastRefreshTimestamp)
+	}
+	detail.TokensValidAt = firebaseTimestampPtr(record.TokensValidAfterMillis)
+
+	return detail, nil
+}
+
+func (s *userService) loadProfileWithRecord(ctx context.Context, userID string) (domain.UserProfile, *firebaseauth.UserRecord, error) {
+	if strings.TrimSpace(userID) == "" {
+		return domain.UserProfile{}, nil, errUserIDRequired
+	}
+
+	profile, err := s.users.FindByID(ctx, userID)
+	if err != nil && !isNotFound(err) {
+		return domain.UserProfile{}, nil, err
+	}
+
+	if s.firebase == nil {
+		return domain.UserProfile{}, nil, errors.New("user: firebase user getter is required")
+	}
+
+	record, err := s.firebase.GetUser(ctx, userID)
+	if err != nil {
+		return domain.UserProfile{}, nil, fmt.Errorf("fetch firebase user: %w", err)
+	}
+
+	if isNotFound(err) || profile.ID == "" {
+		now := s.clock()
+		fresh := profileFromFirebase(record, now)
+		fresh.ID = userID
+		saved, saveErr := s.users.UpdateProfile(ctx, fresh)
+		if saveErr != nil {
+			return domain.UserProfile{}, nil, saveErr
+		}
+		profile = saved
+	}
+
+	return profile, record, nil
 }
 
 func (s *userService) getProfile(ctx context.Context, userID string, seed bool) (domain.UserProfile, error) {
@@ -337,7 +1063,7 @@ func (s *userService) applyProfileUpdates(existing domain.UserProfile, cmd Updat
 		}
 	}
 
-	if cmd.NotificationPrefs != nil {
+	if cmd.NotificationPrefs != nil || cmd.NotificationPrefsSet {
 		prefs, err := normaliseNotificationPrefs(cmd.NotificationPrefs)
 		if err != nil {
 			return domain.UserProfile{}, nil, err
@@ -348,8 +1074,11 @@ func (s *userService) applyProfileUpdates(existing domain.UserProfile, cmd Updat
 		}
 	}
 
-	if cmd.AvatarAssetID != nil {
-		trimmed := strings.TrimSpace(*cmd.AvatarAssetID)
+	if cmd.AvatarAssetID != nil || cmd.AvatarAssetIDSet {
+		trimmed := ""
+		if cmd.AvatarAssetID != nil {
+			trimmed = strings.TrimSpace(*cmd.AvatarAssetID)
+		}
 		var newValue *string
 		if trimmed != "" {
 			value := trimmed
@@ -429,7 +1158,7 @@ func normaliseNotificationPrefs(prefs map[string]bool) (domain.NotificationPrefe
 			continue
 		}
 		if !notificationKeyPattern.MatchString(trimmed) {
-			return nil, fmt.Errorf("user: invalid notification key %q", key)
+			return nil, fmt.Errorf("%w %q", errInvalidNotificationKey, key)
 		}
 		normalised[trimmed] = value
 	}
@@ -444,6 +1173,52 @@ func equalNotificationPrefs(a, b domain.NotificationPreferences) bool {
 		return true
 	}
 	return maps.Equal(map[string]bool(a), map[string]bool(b))
+}
+
+func (s *userService) buildAdminSummary(profile domain.UserProfile, record *firebaseauth.UserRecord) UserAdminSummary {
+	summary := UserAdminSummary{
+		Profile: profile,
+		Flags:   s.userAdminFlags(profile, record),
+	}
+	if record != nil && record.UserMetadata != nil {
+		summary.LastLoginAt = firebaseTimestampPtr(record.UserMetadata.LastLogInTimestamp)
+	}
+	return summary
+}
+
+func (s *userService) userAdminFlags(profile domain.UserProfile, record *firebaseauth.UserRecord) []string {
+	flags := make([]string, 0, 3)
+	if profile.PiiMaskedAt != nil {
+		flags = appendFlag(flags, "pii_masked")
+	}
+	if !profile.IsActive {
+		flags = appendFlag(flags, "inactive")
+	}
+	if record != nil && record.Disabled {
+		flags = appendFlag(flags, "auth_disabled")
+	}
+	return flags
+}
+
+func appendFlag(flags []string, value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return flags
+	}
+	for _, existing := range flags {
+		if strings.EqualFold(existing, value) {
+			return flags
+		}
+	}
+	return append(flags, value)
+}
+
+func firebaseTimestampPtr(ms int64) *time.Time {
+	if ms <= 0 {
+		return nil
+	}
+	t := time.Unix(0, ms*int64(time.Millisecond)).UTC()
+	return &t
 }
 
 func cloneNotificationPrefs(prefs domain.NotificationPreferences) domain.NotificationPreferences {
@@ -479,6 +1254,126 @@ func diffValue(from, to any) map[string]any {
 		"from": from,
 		"to":   to,
 	}
+}
+
+func projectMaskedProfile(profile domain.UserProfile, now time.Time) (domain.UserProfile, bool) {
+	masked := profile
+	changed := false
+
+	if masked.DisplayName != "Masked User" {
+		masked.DisplayName = "Masked User"
+		changed = true
+	}
+
+	maskedEmail := fmt.Sprintf("masked+%s%s", profile.ID, emailMaskSuffix)
+	if strings.TrimSpace(masked.Email) != maskedEmail {
+		masked.Email = maskedEmail
+		changed = true
+	}
+
+	if strings.TrimSpace(masked.PhoneNumber) != "" {
+		masked.PhoneNumber = ""
+		changed = true
+	}
+	if strings.TrimSpace(masked.PhotoURL) != "" {
+		masked.PhotoURL = ""
+		changed = true
+	}
+	if masked.AvatarAssetID != nil {
+		masked.AvatarAssetID = nil
+		changed = true
+	}
+	if len(masked.NotificationPrefs) > 0 {
+		masked.NotificationPrefs = nil
+		changed = true
+	}
+	if strings.TrimSpace(masked.PreferredLanguage) != "" {
+		masked.PreferredLanguage = ""
+		changed = true
+	}
+	if strings.TrimSpace(masked.Locale) != "" {
+		masked.Locale = ""
+		changed = true
+	}
+	if len(masked.ProviderData) > 0 {
+		masked.ProviderData = nil
+		changed = true
+	}
+	if len(masked.Roles) > 0 {
+		masked.Roles = nil
+		changed = true
+	}
+	if masked.IsActive {
+		masked.IsActive = false
+		changed = true
+	}
+
+	if profile.PiiMaskedAt == nil {
+		maskedAt := now
+		masked.PiiMaskedAt = &maskedAt
+		changed = true
+	} else {
+		existing := profile.PiiMaskedAt.UTC()
+		masked.PiiMaskedAt = &existing
+	}
+
+	return masked, changed
+}
+
+func (s *userService) detachAllPaymentMethods(ctx context.Context, userID string) ([]string, error) {
+	if s.paymentMethods == nil {
+		return nil, nil
+	}
+	methods, err := s.paymentMethods.List(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(methods) == 0 {
+		return nil, nil
+	}
+
+	detached := make([]string, 0, len(methods))
+	var errs []error
+	for _, method := range methods {
+		trimmedID := strings.TrimSpace(method.ID)
+		if err := s.paymentMethods.Delete(ctx, userID, method.ID); err != nil {
+			if isNotFound(err) {
+				continue
+			}
+			errs = append(errs, fmt.Errorf("detach payment method %s: %w", trimmedID, err))
+			continue
+		}
+		detached = append(detached, trimmedID)
+	}
+
+	if len(errs) > 0 {
+		return detached, errors.Join(errs...)
+	}
+	return detached, nil
+}
+
+func cloneStringsSafe(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return slices.Clone(values)
+}
+
+func timePointersEqual(a, b *time.Time) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.UTC().Equal(b.UTC())
+}
+
+func timePointerValue(value *time.Time) any {
+	if value == nil {
+		return nil
+	}
+	return value.UTC().Format(time.RFC3339Nano)
 }
 
 func splitAuditChanges(changes map[string]any) (map[string]AuditLogDiff, []string, map[string]any) {
@@ -521,6 +1416,188 @@ func isSensitiveAuditField(field string) bool {
 	default:
 		return false
 	}
+}
+
+func sanitizeAddress(addr Address) (Address, error) {
+	sanitized := Address{
+		ID:              strings.TrimSpace(addr.ID),
+		Label:           strings.TrimSpace(addr.Label),
+		Recipient:       strings.TrimSpace(addr.Recipient),
+		Company:         strings.TrimSpace(addr.Company),
+		Line1:           strings.TrimSpace(addr.Line1),
+		City:            strings.TrimSpace(addr.City),
+		PostalCode:      strings.TrimSpace(addr.PostalCode),
+		Country:         strings.ToUpper(strings.TrimSpace(addr.Country)),
+		DefaultShipping: addr.DefaultShipping,
+		DefaultBilling:  addr.DefaultBilling,
+	}
+	sanitized.Line2 = normalizeOptionalString(addr.Line2)
+	sanitized.State = normalizeOptionalString(addr.State)
+	sanitized.Phone = normalizeOptionalString(addr.Phone)
+	if !addr.CreatedAt.IsZero() {
+		sanitized.CreatedAt = addr.CreatedAt.UTC()
+	}
+	if !addr.UpdatedAt.IsZero() {
+		sanitized.UpdatedAt = addr.UpdatedAt.UTC()
+	}
+
+	if sanitized.Recipient == "" {
+		return Address{}, errInvalidAddressRecipient
+	}
+	if utf8.RuneCountInString(sanitized.Recipient) > 200 {
+		return Address{}, errInvalidAddressRecipient
+	}
+	if sanitized.Line1 == "" {
+		return Address{}, errInvalidAddressLine1
+	}
+	if sanitized.City == "" {
+		return Address{}, errInvalidAddressCity
+	}
+	if sanitized.Country == "" || !addressCountryPattern.MatchString(sanitized.Country) {
+		return Address{}, errInvalidAddressCountry
+	}
+	postal, err := canonicalisePostalCode(sanitized.Country, sanitized.PostalCode)
+	if err != nil {
+		return Address{}, err
+	}
+	sanitized.PostalCode = postal
+
+	if sanitized.Phone != nil {
+		phone := strings.TrimSpace(*sanitized.Phone)
+		if phone == "" {
+			sanitized.Phone = nil
+		} else {
+			if !addressPhonePattern.MatchString(phone) {
+				return Address{}, errInvalidAddressPhone
+			}
+			sanitized.Phone = &phone
+		}
+	}
+
+	return sanitized, nil
+}
+
+func canonicalisePostalCode(country, postal string) (string, error) {
+	trimmed := strings.TrimSpace(postal)
+	if trimmed == "" {
+		return "", errInvalidAddressPostalCode
+	}
+	switch strings.ToUpper(strings.TrimSpace(country)) {
+	case "JP":
+		digits := strings.ReplaceAll(strings.ReplaceAll(trimmed, "-", ""), " ", "")
+		if len(digits) != 7 || !allDigits(digits) {
+			return "", errInvalidAddressPostalCode
+		}
+		return digits[:3] + "-" + digits[3:], nil
+	default:
+		if !addressPostalPattern.MatchString(trimmed) {
+			return "", errInvalidAddressPostalCode
+		}
+		return trimmed, nil
+	}
+}
+
+func allDigits(value string) bool {
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func mergeAddress(existing, input Address) Address {
+	if existing.ID == "" {
+		existing.CreatedAt = input.CreatedAt
+	}
+	result := existing
+	result.Label = input.Label
+	result.Recipient = input.Recipient
+	result.Company = input.Company
+	result.Line1 = input.Line1
+	result.Line2 = input.Line2
+	result.City = input.City
+	result.State = input.State
+	result.PostalCode = input.PostalCode
+	result.Country = input.Country
+	result.Phone = input.Phone
+	result.UpdatedAt = input.UpdatedAt
+	if result.CreatedAt.IsZero() {
+		result.CreatedAt = input.CreatedAt
+	}
+	result.DefaultShipping = input.DefaultShipping
+	result.DefaultBilling = input.DefaultBilling
+	result.NormalizedHash = input.NormalizedHash
+	return result
+}
+
+func addressFingerprint(addr Address) string {
+	parts := []string{
+		strings.ToLower(strings.TrimSpace(addr.Recipient)),
+		strings.ToLower(strings.TrimSpace(addr.Company)),
+		strings.ToLower(strings.TrimSpace(addr.Line1)),
+		strings.ToLower(stringFromPointer(addr.Line2)),
+		strings.ToLower(strings.TrimSpace(addr.City)),
+		strings.ToLower(stringFromPointer(addr.State)),
+		strings.ToLower(strings.TrimSpace(addr.PostalCode)),
+		strings.ToLower(strings.TrimSpace(addr.Country)),
+	}
+	input := strings.Join(parts, "|")
+	sum := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(sum[:])
+}
+
+func stringFromPointer(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+func normaliseProvider(provider string) string {
+	return strings.ToLower(strings.TrimSpace(provider))
+}
+
+func selectNextDefault(methods []PaymentMethod) (PaymentMethod, bool) {
+	for _, method := range methods {
+		if method.IsDefault {
+			return method, true
+		}
+	}
+	if len(methods) == 0 {
+		return PaymentMethod{}, false
+	}
+	candidate := methods[0]
+	for _, method := range methods[1:] {
+		if method.CreatedAt.After(candidate.CreatedAt) {
+			candidate = method
+			continue
+		}
+		if method.CreatedAt.Equal(candidate.CreatedAt) && strings.Compare(method.ID, candidate.ID) < 0 {
+			candidate = method
+		}
+	}
+	return candidate, true
+}
+
+func (s *userService) canFavoriteDesign(userID string, design Design) bool {
+	if strings.EqualFold(strings.TrimSpace(design.OwnerID), strings.TrimSpace(userID)) {
+		return true
+	}
+	status := strings.ToLower(strings.TrimSpace(string(design.Status)))
+	_, ok := shareableDesignStatuses[status]
+	return ok
 }
 
 func profileFromFirebase(record *firebaseauth.UserRecord, now time.Time) domain.UserProfile {
@@ -674,6 +1751,16 @@ func isConflict(err error) bool {
 	var repoErr repositories.RepositoryError
 	if errors.As(err, &repoErr) {
 		return repoErr.IsConflict()
+	}
+	return false
+}
+
+func isFailedPrecondition(err error) bool {
+	if err == nil {
+		return false
+	}
+	if st, ok := status.FromError(err); ok {
+		return st.Code() == codes.FailedPrecondition
 	}
 	return false
 }

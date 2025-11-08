@@ -13,6 +13,7 @@ func TestLoadWithDefaults(t *testing.T) {
 	env := map[string]string{
 		"API_FIREBASE_PROJECT_ID":   "hf-dev",
 		"API_STORAGE_ASSETS_BUCKET": "hanko-assets-dev",
+		"API_STORAGE_SIGNER_KEY":    "dev-signer",
 	}
 
 	cfg, err := Load(context.Background(), WithEnvMap(env), WithoutSystemEnv(), WithEnvFile(""))
@@ -32,8 +33,29 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg.RateLimits.DefaultPerMinute != 120 {
 		t.Errorf("unexpected default rate limit: %d", cfg.RateLimits.DefaultPerMinute)
 	}
+	if cfg.RateLimits.AISuggestionsPerMinute != defaultRateLimitAISuggestions {
+		t.Errorf("unexpected ai suggestion rate limit: %d", cfg.RateLimits.AISuggestionsPerMinute)
+	}
+	if cfg.RateLimits.RegistrabilityPerMinute != defaultRateLimitRegistrability {
+		t.Errorf("unexpected registrability rate limit: %d", cfg.RateLimits.RegistrabilityPerMinute)
+	}
+	if cfg.RateLimits.PromotionLookupsPerMinute != defaultRateLimitPromotionLookup {
+		t.Errorf("unexpected promotion lookup rate limit: %d", cfg.RateLimits.PromotionLookupsPerMinute)
+	}
+	if cfg.RateLimits.LoginPerMinute != defaultRateLimitLogin {
+		t.Errorf("unexpected login rate limit: %d", cfg.RateLimits.LoginPerMinute)
+	}
+	if cfg.RateLimits.Window != defaultRateLimitWindow {
+		t.Errorf("unexpected rate limit window: %s", cfg.RateLimits.Window)
+	}
 	if len(cfg.Webhooks.AllowedHosts) != 0 {
 		t.Errorf("expected no allowed hosts, got %v", cfg.Webhooks.AllowedHosts)
+	}
+	if len(cfg.Webhooks.AllowedCIDRs) != 0 {
+		t.Errorf("expected no allowed cidrs, got %v", cfg.Webhooks.AllowedCIDRs)
+	}
+	if cfg.Webhooks.ReplayTTL != defaultWebhookReplayTTL {
+		t.Errorf("expected default webhook replay ttl %s, got %s", defaultWebhookReplayTTL, cfg.Webhooks.ReplayTTL)
 	}
 	if cfg.Security.Environment != "local" {
 		t.Errorf("expected default security environment local, got %s", cfg.Security.Environment)
@@ -59,44 +81,64 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg.Idempotency.CleanupBatchSize != defaultIdempotencyBatchSize {
 		t.Errorf("unexpected default cleanup batch size: %d", cfg.Idempotency.CleanupBatchSize)
 	}
+	if cfg.Inventory.LowStockVelocityLookbackDays != defaultInventoryLowStockLookbackDays {
+		t.Errorf("unexpected default inventory lookback: %d", cfg.Inventory.LowStockVelocityLookbackDays)
+	}
+	if cfg.Inventory.LowStockOrderPageSize != defaultInventoryLowStockOrderPage {
+		t.Errorf("unexpected default inventory order page size: %d", cfg.Inventory.LowStockOrderPageSize)
+	}
+	if cfg.Inventory.LowStockMaxOrderPages != defaultInventoryLowStockMaxPages {
+		t.Errorf("unexpected default inventory max order pages: %d", cfg.Inventory.LowStockMaxOrderPages)
+	}
 }
 
 func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	env := map[string]string{
-		"API_SERVER_PORT":                    "9090",
-		"API_SERVER_READ_TIMEOUT":            "20s",
-		"API_SERVER_WRITE_TIMEOUT":           "25s",
-		"API_SERVER_IDLE_TIMEOUT":            "2m",
-		"API_FIREBASE_PROJECT_ID":            "hf-prod",
-		"API_FIRESTORE_PROJECT_ID":           "hf-fire",
-		"API_STORAGE_ASSETS_BUCKET":          "assets-prod",
-		"API_STORAGE_LOGS_BUCKET":            "logs-prod",
-		"API_STORAGE_EXPORTS_BUCKET":         "exports-prod",
-		"API_PSP_STRIPE_API_KEY":             "secret://stripe/api",
-		"API_PSP_STRIPE_WEBHOOK_SECRET":      "secret://stripe/webhook",
-		"API_PSP_PAYPAL_CLIENT_ID":           "paypal-client",
-		"API_PSP_PAYPAL_SECRET":              "secret://paypal/secret",
-		"API_AI_SUGGESTION_ENDPOINT":         "https://ai.example.com",
-		"API_AI_AUTH_TOKEN":                  "secret://ai/token",
-		"API_WEBHOOK_SIGNING_SECRET":         "secret://webhook/secret",
-		"API_WEBHOOK_ALLOWED_HOSTS":          "https://example.com, https://foo.bar",
-		"API_RATELIMIT_DEFAULT_PER_MIN":      "150",
-		"API_RATELIMIT_AUTH_PER_MIN":         "300",
-		"API_RATELIMIT_WEBHOOK_BURST":        "80",
-		"API_FEATURE_AISUGGESTIONS":          "true",
-		"API_FEATURE_PROMOTIONS":             "false",
-		"API_SECURITY_ENVIRONMENT":           "prod",
-		"API_SECURITY_OIDC_AUDIENCE":         "https://service.example.com",
-		"API_SECURITY_OIDC_ISSUERS":          "https://accounts.google.com, https://cloud.google.com/iap",
-		"API_SECURITY_OIDC_JWKS_URL":         "https://example.com/jwks.json",
-		"API_SECURITY_HMAC_SECRETS":          "payments/stripe=secret://hmac/stripe,shipping=shipping-secret",
-		"API_SECURITY_HMAC_HEADER_SIGNATURE": "X-Custom-Signature",
-		"API_SECURITY_HMAC_CLOCK_SKEW":       "3m",
-		"API_SECURITY_HMAC_NONCE_TTL":        "10m",
-		"API_IDEMPOTENCY_HEADER":             "X-Idem-Key",
-		"API_IDEMPOTENCY_TTL":                "48h",
-		"API_IDEMPOTENCY_CLEANUP_INTERVAL":   "30m",
-		"API_IDEMPOTENCY_CLEANUP_BATCH":      "500",
+		"API_SERVER_PORT":                         "9090",
+		"API_SERVER_READ_TIMEOUT":                 "20s",
+		"API_SERVER_WRITE_TIMEOUT":                "25s",
+		"API_SERVER_IDLE_TIMEOUT":                 "2m",
+		"API_FIREBASE_PROJECT_ID":                 "hf-prod",
+		"API_FIRESTORE_PROJECT_ID":                "hf-fire",
+		"API_STORAGE_ASSETS_BUCKET":               "assets-prod",
+		"API_STORAGE_LOGS_BUCKET":                 "logs-prod",
+		"API_STORAGE_EXPORTS_BUCKET":              "exports-prod",
+		"API_STORAGE_SIGNER_KEY":                  "secret://storage/signer",
+		"API_PSP_STRIPE_API_KEY":                  "secret://stripe/api",
+		"API_PSP_STRIPE_WEBHOOK_SECRET":           "secret://stripe/webhook",
+		"API_PSP_PAYPAL_CLIENT_ID":                "paypal-client",
+		"API_PSP_PAYPAL_SECRET":                   "secret://paypal/secret",
+		"API_AI_SUGGESTION_ENDPOINT":              "https://ai.example.com",
+		"API_AI_AUTH_TOKEN":                       "secret://ai/token",
+		"API_WEBHOOK_SIGNING_SECRET":              "secret://webhook/secret",
+		"API_WEBHOOK_ALLOWED_HOSTS":               "https://example.com, https://foo.bar",
+		"API_WEBHOOK_ALLOWED_CIDRS":               "203.0.113.0/24, 198.51.100.5/32",
+		"API_WEBHOOK_REPLAY_TTL":                  "10m",
+		"API_RATELIMIT_DEFAULT_PER_MIN":           "150",
+		"API_RATELIMIT_AUTH_PER_MIN":              "300",
+		"API_RATELIMIT_WEBHOOK_BURST":             "80",
+		"API_RATELIMIT_AI_PER_MIN":                "45",
+		"API_RATELIMIT_REGISTRABILITY_PER_MIN":    "12",
+		"API_RATELIMIT_PROMOTION_LOOKUP_PER_MIN":  "90",
+		"API_RATELIMIT_LOGIN_PER_MIN":             "40",
+		"API_RATELIMIT_WINDOW":                    "90s",
+		"API_FEATURE_AISUGGESTIONS":               "true",
+		"API_FEATURE_PROMOTIONS":                  "false",
+		"API_SECURITY_ENVIRONMENT":                "prod",
+		"API_SECURITY_OIDC_AUDIENCE":              "https://service.example.com",
+		"API_SECURITY_OIDC_ISSUERS":               "https://accounts.google.com, https://cloud.google.com/iap",
+		"API_SECURITY_OIDC_JWKS_URL":              "https://example.com/jwks.json",
+		"API_SECURITY_HMAC_SECRETS":               "payments/stripe=secret://hmac/stripe,shipping=shipping-secret",
+		"API_SECURITY_HMAC_HEADER_SIGNATURE":      "X-Custom-Signature",
+		"API_SECURITY_HMAC_CLOCK_SKEW":            "3m",
+		"API_SECURITY_HMAC_NONCE_TTL":             "10m",
+		"API_IDEMPOTENCY_HEADER":                  "X-Idem-Key",
+		"API_IDEMPOTENCY_TTL":                     "48h",
+		"API_IDEMPOTENCY_CLEANUP_INTERVAL":        "30m",
+		"API_IDEMPOTENCY_CLEANUP_BATCH":           "500",
+		"API_INVENTORY_LOW_STOCK_LOOKBACK_DAYS":   "21",
+		"API_INVENTORY_LOW_STOCK_ORDER_PAGE_SIZE": "250",
+		"API_INVENTORY_LOW_STOCK_MAX_ORDER_PAGES": "10",
 	}
 
 	secrets := map[string]string{
@@ -106,6 +148,7 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 		"secret://ai/token":       "ai-token",
 		"secret://webhook/secret": "webhook-secret",
 		"secret://hmac/stripe":    "stripe-hmac",
+		"secret://storage/signer": "signer-json",
 	}
 
 	resolver := SecretResolverFunc(func(_ context.Context, ref string) (string, error) {
@@ -135,6 +178,30 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	if len(cfg.Webhooks.AllowedHosts) != 2 {
 		t.Fatalf("expected 2 allowed hosts, got %v", cfg.Webhooks.AllowedHosts)
 	}
+	if len(cfg.Webhooks.AllowedCIDRs) != 2 {
+		t.Fatalf("expected 2 allowed cidrs, got %v", cfg.Webhooks.AllowedCIDRs)
+	}
+	if cfg.Webhooks.AllowedCIDRs[0] != "203.0.113.0/24" {
+		t.Errorf("unexpected allowed cidr %s", cfg.Webhooks.AllowedCIDRs[0])
+	}
+	if cfg.Webhooks.ReplayTTL != 10*time.Minute {
+		t.Errorf("expected replay ttl 10m, got %s", cfg.Webhooks.ReplayTTL)
+	}
+	if cfg.RateLimits.AISuggestionsPerMinute != 45 {
+		t.Errorf("unexpected ai limit %d", cfg.RateLimits.AISuggestionsPerMinute)
+	}
+	if cfg.RateLimits.RegistrabilityPerMinute != 12 {
+		t.Errorf("unexpected registrability limit %d", cfg.RateLimits.RegistrabilityPerMinute)
+	}
+	if cfg.RateLimits.PromotionLookupsPerMinute != 90 {
+		t.Errorf("unexpected promotion lookup limit %d", cfg.RateLimits.PromotionLookupsPerMinute)
+	}
+	if cfg.RateLimits.LoginPerMinute != 40 {
+		t.Errorf("unexpected login limit %d", cfg.RateLimits.LoginPerMinute)
+	}
+	if cfg.RateLimits.Window != 90*time.Second {
+		t.Errorf("unexpected rate limit window %s", cfg.RateLimits.Window)
+	}
 	if !cfg.Features.EnableAISuggestions {
 		t.Errorf("expected AISuggestions flag enabled")
 	}
@@ -155,6 +222,9 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	}
 	if cfg.Security.HMAC.Secrets["shipping"] != "shipping-secret" {
 		t.Errorf("expected shipping secret fallback, got %s", cfg.Security.HMAC.Secrets["shipping"])
+	}
+	if cfg.Storage.SignedURLKey != "signer-json" {
+		t.Errorf("expected resolved signer key, got %q", cfg.Storage.SignedURLKey)
 	}
 	if cfg.Security.HMAC.SignatureHeader != "X-Custom-Signature" {
 		t.Errorf("unexpected signature header %s", cfg.Security.HMAC.SignatureHeader)
@@ -177,12 +247,21 @@ func TestLoadWithOverridesAndSecrets(t *testing.T) {
 	if cfg.Idempotency.CleanupBatchSize != 500 {
 		t.Errorf("unexpected cleanup batch size %d", cfg.Idempotency.CleanupBatchSize)
 	}
+	if cfg.Inventory.LowStockVelocityLookbackDays != 21 {
+		t.Errorf("unexpected inventory lookback %d", cfg.Inventory.LowStockVelocityLookbackDays)
+	}
+	if cfg.Inventory.LowStockOrderPageSize != 250 {
+		t.Errorf("unexpected inventory order page size %d", cfg.Inventory.LowStockOrderPageSize)
+	}
+	if cfg.Inventory.LowStockMaxOrderPages != 10 {
+		t.Errorf("unexpected inventory max order pages %d", cfg.Inventory.LowStockMaxOrderPages)
+	}
 }
 
 func TestLoadDotEnvFallback(t *testing.T) {
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env.test")
-	content := "API_SERVER_PORT=7070\nAPI_FIREBASE_PROJECT_ID=hf-dot\nAPI_STORAGE_ASSETS_BUCKET=assets-dot\n"
+	content := "API_SERVER_PORT=7070\nAPI_FIREBASE_PROJECT_ID=hf-dot\nAPI_STORAGE_ASSETS_BUCKET=assets-dot\nAPI_STORAGE_SIGNER_KEY=dot-signer\n"
 	if err := os.WriteFile(envPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to write dotenv file: %v", err)
 	}
@@ -214,6 +293,7 @@ func TestLoadSecretResolverError(t *testing.T) {
 	env := map[string]string{
 		"API_FIREBASE_PROJECT_ID":   "hf-dev",
 		"API_STORAGE_ASSETS_BUCKET": "assets",
+		"API_STORAGE_SIGNER_KEY":    "signer",
 		"API_PSP_STRIPE_API_KEY":    "secret://missing",
 	}
 
@@ -269,6 +349,7 @@ func TestLoadMissingRequiredSecrets(t *testing.T) {
 	env := map[string]string{
 		"API_FIREBASE_PROJECT_ID":   "hf-dev",
 		"API_STORAGE_ASSETS_BUCKET": "assets",
+		"API_STORAGE_SIGNER_KEY":    "signer",
 	}
 
 	_, err := Load(context.Background(),
@@ -294,6 +375,7 @@ func TestLoadMissingRequiredSecretsPanic(t *testing.T) {
 	env := map[string]string{
 		"API_FIREBASE_PROJECT_ID":   "hf-dev",
 		"API_STORAGE_ASSETS_BUCKET": "assets",
+		"API_STORAGE_SIGNER_KEY":    "signer",
 	}
 
 	defer func() {
@@ -323,6 +405,7 @@ func TestLoadSupportsLegacySecretScheme(t *testing.T) {
 	env := map[string]string{
 		"API_FIREBASE_PROJECT_ID":    "hf-dev",
 		"API_STORAGE_ASSETS_BUCKET":  "assets",
+		"API_STORAGE_SIGNER_KEY":     "signer",
 		"API_WEBHOOK_SIGNING_SECRET": "sm://webhook/secret",
 	}
 

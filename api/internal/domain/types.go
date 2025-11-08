@@ -36,22 +36,93 @@ const (
 	TemplateSortCreatedAt TemplateSort = "createdAt"
 )
 
+// DesignType enumerates the supported design creation variants.
+type DesignType string
+
+const (
+	// DesignTypeTyped represents designs created from typed text input.
+	DesignTypeTyped DesignType = "typed"
+	// DesignTypeUploaded represents designs created from user-uploaded artwork.
+	DesignTypeUploaded DesignType = "uploaded"
+	// DesignTypeLogo represents designs created from user-provided logos or library selections.
+	DesignTypeLogo DesignType = "logo"
+)
+
+// DesignStatus indicates the current lifecycle state of a design.
+type DesignStatus string
+
+const (
+	// DesignStatusDraft indicates the design is still being edited.
+	DesignStatusDraft DesignStatus = "draft"
+	// DesignStatusReady indicates the design is ready for ordering or export.
+	DesignStatusReady DesignStatus = "ready"
+	// DesignStatusOrdered indicates the design has been used in an order.
+	DesignStatusOrdered DesignStatus = "ordered"
+	// DesignStatusLocked indicates the design can no longer be modified.
+	DesignStatusLocked DesignStatus = "locked"
+	// DesignStatusDeleted indicates the design has been soft deleted.
+	DesignStatusDeleted DesignStatus = "deleted"
+)
+
+// DesignSource captures the variant-specific input that produced the design.
+type DesignSource struct {
+	Type        DesignType
+	RawName     string
+	TextLines   []string
+	UploadAsset *DesignAssetReference
+	LogoAsset   *DesignAssetReference
+}
+
+// DesignAssetReference stores metadata describing a file tracked alongside the design.
+type DesignAssetReference struct {
+	AssetID     string
+	Bucket      string
+	ObjectPath  string
+	ContentType string
+	SizeBytes   int64
+	FileName    string
+	Checksum    string
+}
+
+// DesignAssets tracks generated preview/vector resources in storage.
+type DesignAssets struct {
+	SourcePath  string
+	VectorPath  string
+	PreviewPath string
+	PreviewURL  string
+}
+
 // Design encapsulates user-created seal design metadata shared across layers.
 type Design struct {
-	ID        string
-	OwnerID   string
-	Status    string
-	Template  string
-	Locale    string
-	Snapshot  map[string]any
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID               string
+	OwnerID          string
+	Label            string
+	Type             DesignType
+	TextLines        []string
+	FontID           string
+	MaterialID       string
+	Template         string
+	Locale           string
+	Shape            string
+	SizeMM           float64
+	Source           DesignSource
+	Assets           DesignAssets
+	Status           DesignStatus
+	ThumbnailURL     string
+	Version          int
+	CurrentVersionID string
+	Snapshot         map[string]any
+	Versions         []DesignVersion
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	LastOrderedAt    *time.Time
 }
 
 // DesignVersion stores historical snapshots for audits and reverts.
 type DesignVersion struct {
 	ID        string
 	DesignID  string
+	Version   int
 	Snapshot  map[string]any
 	CreatedAt time.Time
 	CreatedBy string
@@ -127,16 +198,21 @@ type AIJob struct {
 
 // Cart aggregates the mutable shopping cart state for a user.
 type Cart struct {
-	ID              string
-	UserID          string
-	Currency        string
-	BillingAddress  *Address
-	ShippingAddress *Address
-	Promotion       *CartPromotion
-	Items           []CartItem
-	Estimate        *CartEstimate
-	Metadata        map[string]any
-	UpdatedAt       time.Time
+	ID                string
+	UserID            string
+	Currency          string
+	BillingAddressID  string
+	ShippingAddressID string
+	BillingAddress    *Address
+	ShippingAddress   *Address
+	Promotion         *CartPromotion
+	Items             []CartItem
+	Estimate          *CartEstimate
+	Notes             string
+	PromotionHint     string
+	Metadata          map[string]any
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // CartPromotion captures the applied promotion snapshot.
@@ -281,6 +357,8 @@ type OrderFulfillment struct {
 // OrderProduction stores production assignment metadata for an order.
 type OrderProduction struct {
 	QueueRef        *string
+	AssignedAt      *time.Time
+	AssignedBy      *string
 	AssignedStation *string
 	OperatorRef     *string
 	LastEventType   string
@@ -342,11 +420,23 @@ type Shipment struct {
 	ID           string
 	OrderID      string
 	Carrier      string
+	Service      string
 	TrackingCode string
 	Status       string
+	ETA          *time.Time
+	LabelURL     *string
+	Documents    []string
+	Items        []ShipmentItem
 	Events       []ShipmentEvent
+	Notes        string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// ShipmentItem links order line items to the quantities fulfilled in a shipment.
+type ShipmentItem struct {
+	LineItemSKU string
+	Quantity    int
 }
 
 // ShipmentEvent stores timestamped updates from carriers or operations.
@@ -354,6 +444,137 @@ type ShipmentEvent struct {
 	Status     string
 	OccurredAt time.Time
 	Details    map[string]any
+}
+
+// InvoiceStatus captures lifecycle states for invoices.
+type InvoiceStatus string
+
+const (
+	// InvoiceStatusDraft indicates the invoice has been prepared but not finalised.
+	InvoiceStatusDraft InvoiceStatus = "draft"
+	// InvoiceStatusIssued indicates the invoice has been generated and stored.
+	InvoiceStatusIssued InvoiceStatus = "issued"
+	// InvoiceStatusSent indicates the invoice has been dispatched to the recipient.
+	InvoiceStatusSent InvoiceStatus = "sent"
+	// InvoiceStatusPaid marks the invoice as fully settled.
+	InvoiceStatusPaid InvoiceStatus = "paid"
+	// InvoiceStatusVoid marks the invoice as voided or cancelled.
+	InvoiceStatusVoid InvoiceStatus = "void"
+)
+
+// InvoiceLineItem represents a single row within an invoice document.
+type InvoiceLineItem struct {
+	Description string
+	Amount      int64
+}
+
+// Invoice stores issued invoice metadata and references to generated assets.
+type Invoice struct {
+	ID            string
+	InvoiceNumber string
+	OrderRef      string
+	Status        InvoiceStatus
+	Currency      string
+	Amount        int64
+	DueDate       *time.Time
+	SentAt        *time.Time
+	PaidAt        *time.Time
+	VoidedAt      *time.Time
+	PDFAssetRef   *string
+	LineItems     []InvoiceLineItem
+	Metadata      map[string]any
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// InvoiceBatchSummary aggregates issuance results for reporting.
+type InvoiceBatchSummary struct {
+	TotalOrders int
+	Issued      int
+	Failed      int
+}
+
+// InvoiceBatchJobStatus enumerates invoice batch job lifecycle states.
+type InvoiceBatchJobStatus string
+
+const (
+	// InvoiceBatchJobStatusQueued indicates the job has been enqueued.
+	InvoiceBatchJobStatusQueued InvoiceBatchJobStatus = "queued"
+	// InvoiceBatchJobStatusProcessing indicates the job is currently processing.
+	InvoiceBatchJobStatusProcessing InvoiceBatchJobStatus = "processing"
+	// InvoiceBatchJobStatusSucceeded indicates the job completed successfully.
+	InvoiceBatchJobStatusSucceeded InvoiceBatchJobStatus = "succeeded"
+	// InvoiceBatchJobStatusFailed indicates the job failed.
+	InvoiceBatchJobStatusFailed InvoiceBatchJobStatus = "failed"
+)
+
+// InvoiceBatchJob records a bulk invoice issuance request for tracking.
+type InvoiceBatchJob struct {
+	ID          string
+	RequestedBy string
+	Status      InvoiceBatchJobStatus
+	OrderIDs    []string
+	Filters     map[string]any
+	Metadata    map[string]any
+	Summary     InvoiceBatchSummary
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// SystemTaskStatus describes the lifecycle state of a long-running background task.
+type SystemTaskStatus string
+
+const (
+	// SystemTaskStatusPending indicates the task has been accepted but not yet started.
+	SystemTaskStatusPending SystemTaskStatus = "pending"
+	// SystemTaskStatusRunning indicates the task is currently being processed.
+	SystemTaskStatusRunning SystemTaskStatus = "running"
+	// SystemTaskStatusCompleted indicates the task finished successfully.
+	SystemTaskStatusCompleted SystemTaskStatus = "completed"
+	// SystemTaskStatusFailed indicates the task finished with an error.
+	SystemTaskStatusFailed SystemTaskStatus = "failed"
+)
+
+// SystemTask records asynchronous operations for progress tracking in admin tools.
+type SystemTask struct {
+	ID             string
+	Kind           string
+	Status         SystemTaskStatus
+	RequestedBy    string
+	IdempotencyKey string
+	Parameters     map[string]any
+	Metadata       map[string]any
+	ResultRef      *string
+	ErrorMessage   *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	StartedAt      *time.Time
+	CompletedAt    *time.Time
+}
+
+// SystemError surfaces failed background jobs or system failures for operational monitoring.
+type SystemError struct {
+	ID              string
+	Source          string
+	Queue           string
+	Kind            string
+	JobType         string
+	Status          string
+	Severity        string
+	Code            string
+	Message         string
+	SafeMessage     string
+	Occurrences     int
+	Retryable       bool
+	RetryEndpoint   *string
+	RetryMethod     string
+	TaskRef         *string
+	Metadata        map[string]any
+	Sensitive       map[string]any
+	FirstOccurredAt time.Time
+	LastOccurredAt  time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ReviewStatus indicates the moderation state of a review.
@@ -394,15 +615,55 @@ type ReviewReply struct {
 
 // Promotion describes promotional rules persisted by admin services.
 type Promotion struct {
-	ID          string
-	Code        string
-	Name        string
-	Description string
-	Status      string
-	StartsAt    time.Time
-	EndsAt      time.Time
-	UsageLimit  *int
-	Metadata    map[string]any
+	ID                string
+	Code              string
+	Name              string
+	Description       string
+	DescriptionPublic string
+	Status            string
+	Kind              string
+	Value             float64
+	Currency          string
+	IsActive          bool
+	StartsAt          time.Time
+	EndsAt            time.Time
+	UsageLimit        int
+	UsageCount        int
+	LimitPerUser      int
+	Notes             string
+	Stacking          PromotionStacking
+	Conditions        PromotionConditions
+	Metadata          map[string]any
+	EligibleAudiences []string
+	InternalOnly      bool
+	RequiresAuth      bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// PromotionStacking stores coupon stacking behavior flags.
+type PromotionStacking struct {
+	Combinable    bool
+	WithSalePrice bool
+	MaxStack      *int
+}
+
+// PromotionConditions stores rule constraints that determine eligibility.
+type PromotionConditions struct {
+	MinSubtotal     *int64
+	CountryIn       []string
+	CurrencyIn      []string
+	ShapeIn         []string
+	SizeMMBetween   *PromotionSizeRange
+	ProductRefsIn   []string
+	MaterialRefsIn  []string
+	NewCustomerOnly *bool
+}
+
+// PromotionSizeRange defines size boundaries used by promotion conditions.
+type PromotionSizeRange struct {
+	Min *float64
+	Max *float64
 }
 
 // PromotionValidationResult is returned when a promotion is evaluated for a cart or order.
@@ -413,24 +674,46 @@ type PromotionValidationResult struct {
 	DiscountAmount int64
 }
 
+// PromotionPublic describes exposure-safe fields returned to unauthenticated clients.
+type PromotionPublic struct {
+	Code              string
+	IsAvailable       bool
+	StartsAt          time.Time
+	EndsAt            time.Time
+	DescriptionPublic string
+	EligibleAudiences []string
+}
+
 // RegistrabilityCheckResult stores outcomes from external name seal registrability checks.
 type RegistrabilityCheckResult struct {
 	DesignID    string
+	Status      string
 	Passed      bool
+	Score       *float64
 	Reasons     []string
 	RequestedAt time.Time
+	ExpiresAt   *time.Time
+	Metadata    map[string]any
 }
 
 // Address represents postal address structures shared by user and order layers.
 type Address struct {
-	Recipient  string
-	Line1      string
-	Line2      *string
-	City       string
-	State      *string
-	PostalCode string
-	Country    string
-	Phone      *string
+	ID              string
+	Label           string
+	Recipient       string
+	Company         string
+	Line1           string
+	Line2           *string
+	City            string
+	State           *string
+	PostalCode      string
+	Country         string
+	Phone           *string
+	DefaultShipping bool
+	DefaultBilling  bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	NormalizedHash  string
 }
 
 // NotificationPreferences stores per-channel notification opt-in flags.
@@ -464,6 +747,7 @@ type UserProfile struct {
 	UpdatedAt         time.Time
 	PiiMaskedAt       *time.Time
 	LastSyncTime      time.Time
+	NameMappingRef    *string
 }
 
 // FavoriteDesign ties a user to a design ID for fast lookups.
@@ -472,23 +756,28 @@ type FavoriteDesign struct {
 	AddedAt  time.Time
 }
 
-// PromotionUsage aggregates per-user promotion usage metrics.
 type PromotionUsage struct {
-	UserID   string
-	Times    int
-	LastUsed time.Time
+	UserID    string
+	Times     int
+	LastUsed  time.Time
+	FirstUsed *time.Time
+	OrderRefs []string
+	Blocked   bool
+	Notes     string
 }
 
 // PaymentMethod stores PSP-backed payment references without sensitive card data.
 type PaymentMethod struct {
 	ID        string
 	Provider  string
-	Reference string
+	Token     string
 	Brand     string
 	Last4     string
 	ExpMonth  int
 	ExpYear   int
+	IsDefault bool
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // InventoryReservationLine stores per-SKU quantities for a reservation.
@@ -516,26 +805,28 @@ type InventoryReservation struct {
 
 // InventoryStock represents current stock metrics tracked per SKU.
 type InventoryStock struct {
-	SKU         string
-	ProductRef  string
-	OnHand      int
-	Reserved    int
-	Available   int
-	SafetyStock int
-	SafetyDelta int
-	UpdatedAt   time.Time
+	SKU                      string
+	ProductRef               string
+	OnHand                   int
+	Reserved                 int
+	Available                int
+	SafetyStock              int
+	SafetyDelta              int
+	UpdatedAt                time.Time
+	LastSafetyNotificationAt *time.Time
 }
 
 // InventorySnapshot exposes aggregated stock levels for admin surfaces.
 type InventorySnapshot struct {
-	SKU         string
-	ProductRef  string
-	OnHand      int
-	Reserved    int
-	Available   int
-	SafetyStock int
-	SafetyDelta int
-	UpdatedAt   time.Time
+	SKU                      string
+	ProductRef               string
+	OnHand                   int
+	Reserved                 int
+	Available                int
+	SafetyStock              int
+	SafetyDelta              int
+	UpdatedAt                time.Time
+	LastSafetyNotificationAt *time.Time
 }
 
 // InventoryStockEvent captures stock adjustments for downstream analytics/audit.
@@ -557,15 +848,16 @@ type InventoryStockEvent struct {
 
 // ContentPage describes CMS-managed content accessible via public endpoints.
 type ContentPage struct {
-	ID          string
-	Slug        string
-	Locale      string
-	Title       string
-	BodyHTML    string
-	SEO         map[string]string
-	Status      string
-	IsPublished bool
-	UpdatedAt   time.Time
+	ID           string
+	Slug         string
+	Locale       string
+	Title        string
+	BodyHTML     string
+	SEO          map[string]string
+	Status       string
+	IsPublished  bool
+	PreviewToken string
+	UpdatedAt    time.Time
 }
 
 // ContentGuide captures localized guide metadata for CMS flows.
@@ -597,6 +889,8 @@ type TemplateSummary struct {
 	PreviewImagePath string
 	Popularity       int
 	IsPublished      bool
+	PublishedAt      time.Time
+	Version          int
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -605,19 +899,45 @@ type TemplateSummary struct {
 type Template struct {
 	TemplateSummary
 	SVGPath string
+	Draft   TemplateDraft
+}
+
+// TemplateDraft contains internal-only fields for unpublished iterations.
+type TemplateDraft struct {
+	Notes            string
+	PreviewImagePath string
+	PreviewSVGPath   string
+	Metadata         map[string]any
+	UpdatedAt        time.Time
+	UpdatedBy        string
+}
+
+// TemplateVersion preserves a snapshot of a template whenever staff make changes.
+type TemplateVersion struct {
+	ID         string
+	TemplateID string
+	Version    int
+	Snapshot   Template
+	Draft      TemplateDraft
+	CreatedAt  time.Time
+	CreatedBy  string
 }
 
 // FontLicense captures public licensing metadata for fonts.
 type FontLicense struct {
 	Name string
 	URL  string
+	// AllowedUsages enumerates permitted contexts for this font (e.g. "app", "print").
+	AllowedUsages []string
 }
 
 // FontSummary captures metadata required by rendering services.
 type FontSummary struct {
 	ID               string
+	Slug             string
 	DisplayName      string
 	Family           string
+	Weight           string
 	Scripts          []string
 	PreviewImagePath string
 	LetterSpacing    float64
@@ -641,6 +961,28 @@ type MaterialTranslation struct {
 	Description string
 }
 
+// MaterialProcurement captures supplier and purchase metadata for a material.
+type MaterialProcurement struct {
+	SupplierRef          string
+	SupplierName         string
+	ContactEmail         string
+	ContactPhone         string
+	LeadTimeDays         int
+	MinimumOrderQuantity int
+	UnitCostCents        int64
+	Currency             string
+	Notes                string
+}
+
+// MaterialInventory stores safety stock and SKU level configuration.
+type MaterialInventory struct {
+	SKU             string
+	SafetyStock     int
+	ReorderPoint    int
+	ReorderQuantity int
+	Warehouse       string
+}
+
 // MaterialSummary stores material metadata for product configuration and public listings.
 type MaterialSummary struct {
 	ID               string
@@ -654,6 +996,8 @@ type MaterialSummary struct {
 	PreviewImagePath string
 	DefaultLocale    string
 	Translations     map[string]MaterialTranslation
+	Procurement      MaterialProcurement
+	Inventory        MaterialInventory
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -701,12 +1045,37 @@ type ProductSummary struct {
 type Product struct {
 	ProductSummary
 	PriceTiers []ProductPriceTier
+	Variants   []ProductVariant
+	Inventory  ProductInventorySettings
 }
 
 // ProductPriceTier describes unit pricing for volume tiers.
 type ProductPriceTier struct {
 	MinQuantity int
 	UnitPrice   int64
+}
+
+// ProductVariant groups a set of selectable options such as size or color.
+type ProductVariant struct {
+	Name    string
+	Label   string
+	Options []ProductVariantOption
+}
+
+// ProductVariantOption represents a single selectable value under a variant group.
+type ProductVariantOption struct {
+	Value        string
+	Label        string
+	PriceDelta   int64
+	ImagePath    string
+	IsDefault    bool
+	Availability string
+}
+
+// ProductInventorySettings stores admin-managed inventory configuration.
+type ProductInventorySettings struct {
+	InitialStock int
+	SafetyStock  int
 }
 
 const (

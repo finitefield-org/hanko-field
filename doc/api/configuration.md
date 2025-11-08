@@ -29,7 +29,9 @@ Missing required values cause the loader to return a `ValidationError` containin
 | `API_AI_SUGGESTION_ENDPOINT` | _empty_ | No | Base URL for the AI suggestion worker. |
 | `API_AI_AUTH_TOKEN` | _empty_ | No | Token for authenticating with AI workers; supports `secret://`. |
 | `API_WEBHOOK_SIGNING_SECRET` | _empty_ | No | Shared secret for verifying inbound webhooks (`secret://` supported). |
-| `API_WEBHOOK_ALLOWED_HOSTS` | _empty_ | No | Comma-separated allowlist for webhook source hosts. |
+| `API_WEBHOOK_ALLOWED_HOSTS` | _empty_ | No | Comma-separated allowlist for webhook source hosts (used for per-provider overrides). |
+| `API_WEBHOOK_ALLOWED_CIDRS` | _empty_ | No | Comma-separated CIDR blocks permitted to call webhook endpoints. |
+| `API_WEBHOOK_REPLAY_TTL` | `5m` | No | Duration to retain webhook signatures for replay protection. |
 | `API_RATELIMIT_DEFAULT_PER_MIN` | `120` | No | Anonymous requests per minute. |
 | `API_RATELIMIT_AUTH_PER_MIN` | `240` | No | Authenticated requests per minute. |
 | `API_RATELIMIT_WEBHOOK_BURST` | `60` | No | Burst allowance for webhook endpoints. |

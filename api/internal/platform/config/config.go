@@ -16,27 +16,33 @@ import (
 )
 
 const (
-	defaultEnvFile               = ".env"
-	defaultPort                  = "8080"
-	defaultReadTimeout           = 15 * time.Second
-	defaultWriteTimeout          = 30 * time.Second
-	defaultIdleTimeout           = 120 * time.Second
-	defaultRateLimitDefault      = 120
-	defaultRateLimitAuth         = 240
-	defaultRateLimitWebhookBurst = 60
-	defaultSecurityEnvironment   = "local"
-	defaultOIDCJWKSURL           = "https://www.googleapis.com/oauth2/v3/certs"
-	defaultSecurityIssuer        = "https://accounts.google.com"
-	defaultSecurityIAPIssuer     = "https://cloud.google.com/iap"
-	defaultHMACSignatureHeader   = "X-Signature"
-	defaultHMACTimestampHeader   = "X-Signature-Timestamp"
-	defaultHMACNonceHeader       = "X-Signature-Nonce"
-	defaultHMACClockSkew         = 5 * time.Minute
-	defaultHMACNonceTTL          = 5 * time.Minute
-	defaultIdempotencyHeader     = "Idempotency-Key"
-	defaultIdempotencyTTL        = 24 * time.Hour
-	defaultIdempotencyInterval   = time.Hour
-	defaultIdempotencyBatchSize  = 200
+	defaultEnvFile                  = ".env"
+	defaultPort                     = "8080"
+	defaultReadTimeout              = 15 * time.Second
+	defaultWriteTimeout             = 30 * time.Second
+	defaultIdleTimeout              = 120 * time.Second
+	defaultRateLimitDefault         = 120
+	defaultRateLimitAuth            = 240
+	defaultRateLimitWebhookBurst    = 60
+	defaultRateLimitAISuggestions   = 30
+	defaultRateLimitRegistrability  = 5
+	defaultRateLimitPromotionLookup = 60
+	defaultRateLimitLogin           = 20
+	defaultRateLimitWindow          = time.Minute
+	defaultWebhookReplayTTL         = 5 * time.Minute
+	defaultSecurityEnvironment      = "local"
+	defaultOIDCJWKSURL              = "https://www.googleapis.com/oauth2/v3/certs"
+	defaultSecurityIssuer           = "https://accounts.google.com"
+	defaultSecurityIAPIssuer        = "https://cloud.google.com/iap"
+	defaultHMACSignatureHeader      = "X-Signature"
+	defaultHMACTimestampHeader      = "X-Signature-Timestamp"
+	defaultHMACNonceHeader          = "X-Signature-Nonce"
+	defaultHMACClockSkew            = 5 * time.Minute
+	defaultHMACNonceTTL             = 5 * time.Minute
+	defaultIdempotencyHeader        = "Idempotency-Key"
+	defaultIdempotencyTTL           = 24 * time.Hour
+	defaultIdempotencyInterval      = time.Hour
+	defaultIdempotencyBatchSize     = 200
 )
 
 // Config captures all runtime configuration organised by concern.
@@ -52,6 +58,7 @@ type Config struct {
 	Features    FeatureFlags
 	Security    SecurityConfig
 	Idempotency IdempotencyConfig
+	Inventory   InventoryConfig
 }
 
 // ServerConfig configures HTTP server parameters.
@@ -79,6 +86,7 @@ type StorageConfig struct {
 	AssetsBucket  string
 	LogsBucket    string
 	ExportsBucket string
+	SignedURLKey  string
 }
 
 // PSPConfig collects secrets for payment providers.
@@ -99,13 +107,20 @@ type AIConfig struct {
 type WebhookConfig struct {
 	SigningSecret string
 	AllowedHosts  []string
+	AllowedCIDRs  []string
+	ReplayTTL     time.Duration
 }
 
 // RateLimitConfig controls request throttling.
 type RateLimitConfig struct {
-	DefaultPerMinute       int
-	AuthenticatedPerMinute int
-	WebhookBurst           int
+	DefaultPerMinute          int
+	AuthenticatedPerMinute    int
+	WebhookBurst              int
+	AISuggestionsPerMinute    int
+	RegistrabilityPerMinute   int
+	PromotionLookupsPerMinute int
+	LoginPerMinute            int
+	Window                    time.Duration
 }
 
 // FeatureFlags toggle optional behaviour without redeploying.
@@ -146,6 +161,19 @@ type IdempotencyConfig struct {
 	CleanupInterval  time.Duration
 	CleanupBatchSize int
 }
+
+// InventoryConfig controls admin inventory endpoint behaviour.
+type InventoryConfig struct {
+	LowStockVelocityLookbackDays int
+	LowStockOrderPageSize        int
+	LowStockMaxOrderPages        int
+}
+
+const (
+	defaultInventoryLowStockLookbackDays = 14
+	defaultInventoryLowStockOrderPage    = 200
+	defaultInventoryLowStockMaxPages     = 20
+)
 
 // SecretResolver resolves references to external secrets (e.g. Secret Manager URIs).
 type SecretResolver interface {
@@ -419,6 +447,7 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 			AssetsBucket:  stringWithDefault(lookup, "API_STORAGE_ASSETS_BUCKET", ""),
 			LogsBucket:    stringWithDefault(lookup, "API_STORAGE_LOGS_BUCKET", ""),
 			ExportsBucket: stringWithDefault(lookup, "API_STORAGE_EXPORTS_BUCKET", ""),
+			SignedURLKey:  stringWithDefault(lookup, "API_STORAGE_SIGNER_KEY", ""),
 		},
 		PSP: PSPConfig{
 			StripeAPIKey:        stringWithDefault(lookup, "API_PSP_STRIPE_API_KEY", ""),
@@ -433,11 +462,18 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 		Webhooks: WebhookConfig{
 			SigningSecret: stringWithDefault(lookup, "API_WEBHOOK_SIGNING_SECRET", ""),
 			AllowedHosts:  csvWithDefault(lookup, "API_WEBHOOK_ALLOWED_HOSTS"),
+			AllowedCIDRs:  csvWithDefault(lookup, "API_WEBHOOK_ALLOWED_CIDRS"),
+			ReplayTTL:     durationWithDefault(lookup, "API_WEBHOOK_REPLAY_TTL", defaultWebhookReplayTTL),
 		},
 		RateLimits: RateLimitConfig{
-			DefaultPerMinute:       intWithDefault(lookup, "API_RATELIMIT_DEFAULT_PER_MIN", defaultRateLimitDefault),
-			AuthenticatedPerMinute: intWithDefault(lookup, "API_RATELIMIT_AUTH_PER_MIN", defaultRateLimitAuth),
-			WebhookBurst:           intWithDefault(lookup, "API_RATELIMIT_WEBHOOK_BURST", defaultRateLimitWebhookBurst),
+			DefaultPerMinute:          intWithDefault(lookup, "API_RATELIMIT_DEFAULT_PER_MIN", defaultRateLimitDefault),
+			AuthenticatedPerMinute:    intWithDefault(lookup, "API_RATELIMIT_AUTH_PER_MIN", defaultRateLimitAuth),
+			WebhookBurst:              intWithDefault(lookup, "API_RATELIMIT_WEBHOOK_BURST", defaultRateLimitWebhookBurst),
+			AISuggestionsPerMinute:    intWithDefault(lookup, "API_RATELIMIT_AI_PER_MIN", defaultRateLimitAISuggestions),
+			RegistrabilityPerMinute:   intWithDefault(lookup, "API_RATELIMIT_REGISTRABILITY_PER_MIN", defaultRateLimitRegistrability),
+			PromotionLookupsPerMinute: intWithDefault(lookup, "API_RATELIMIT_PROMOTION_LOOKUP_PER_MIN", defaultRateLimitPromotionLookup),
+			LoginPerMinute:            intWithDefault(lookup, "API_RATELIMIT_LOGIN_PER_MIN", defaultRateLimitLogin),
+			Window:                    durationWithDefault(lookup, "API_RATELIMIT_WINDOW", defaultRateLimitWindow),
 		},
 		Features: FeatureFlags{
 			EnableAISuggestions: boolWithDefault(lookup, "API_FEATURE_AISUGGESTIONS", false),
@@ -465,6 +501,11 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 			TTL:              durationWithDefault(lookup, "API_IDEMPOTENCY_TTL", defaultIdempotencyTTL),
 			CleanupInterval:  durationWithDefault(lookup, "API_IDEMPOTENCY_CLEANUP_INTERVAL", defaultIdempotencyInterval),
 			CleanupBatchSize: intWithDefault(lookup, "API_IDEMPOTENCY_CLEANUP_BATCH", defaultIdempotencyBatchSize),
+		},
+		Inventory: InventoryConfig{
+			LowStockVelocityLookbackDays: intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_LOOKBACK_DAYS", defaultInventoryLowStockLookbackDays),
+			LowStockOrderPageSize:        intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_ORDER_PAGE_SIZE", defaultInventoryLowStockOrderPage),
+			LowStockMaxOrderPages:        intWithDefault(lookup, "API_INVENTORY_LOW_STOCK_MAX_ORDER_PAGES", defaultInventoryLowStockMaxPages),
 		},
 	}
 
@@ -513,6 +554,7 @@ func Load(ctx context.Context, opts ...Option) (Config, error) {
 		name  string
 		field *string
 	}{
+		{"Storage.SignerKey", &cfg.Storage.SignedURLKey},
 		{"PSP.StripeAPIKey", &cfg.PSP.StripeAPIKey},
 		{"PSP.StripeWebhookSecret", &cfg.PSP.StripeWebhookSecret},
 		{"PSP.PayPalSecret", &cfg.PSP.PayPalSecret},
@@ -573,6 +615,9 @@ func validateConfig(cfg Config) error {
 	}
 	if cfg.Storage.AssetsBucket == "" {
 		missing = append(missing, "Storage.AssetsBucket")
+	}
+	if strings.TrimSpace(cfg.Storage.SignedURLKey) == "" {
+		missing = append(missing, "Storage.SignerKey")
 	}
 	if strings.TrimSpace(cfg.Idempotency.Header) == "" {
 		missing = append(missing, "Idempotency.Header")

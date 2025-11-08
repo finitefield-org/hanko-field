@@ -19,6 +19,9 @@ const (
 	eventInventoryCommit  = "inventory.commit"
 	eventInventoryRelease = "inventory.release"
 
+	defaultExpiredReleaseBatchSize = 100
+	maxExpiredReleaseBatchSize     = 500
+
 	statusReserved  = "reserved"
 	statusCommitted = "committed"
 	statusReleased  = "released"
@@ -180,6 +183,19 @@ func (s *inventoryService) CommitReservation(ctx context.Context, cmd InventoryC
 	return result.Reservation, nil
 }
 
+func (s *inventoryService) GetReservation(ctx context.Context, reservationID string) (InventoryReservation, error) {
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		return InventoryReservation{}, fmt.Errorf("%w: reservation id is required", ErrInventoryInvalidInput)
+	}
+
+	reservation, err := s.repo.GetReservation(ctx, reservationID)
+	if err != nil {
+		return InventoryReservation{}, s.mapRepositoryError(err)
+	}
+	return InventoryReservation(reservation), nil
+}
+
 func (s *inventoryService) ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error) {
 	reservationID := strings.TrimSpace(cmd.ReservationID)
 	if reservationID == "" {
@@ -219,6 +235,124 @@ func (s *inventoryService) ReleaseReservation(ctx context.Context, cmd Inventory
 	return result.Reservation, nil
 }
 
+func (s *inventoryService) ReleaseExpiredReservations(ctx context.Context, cmd ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error) {
+	limit := cmd.Limit
+	if limit <= 0 {
+		limit = defaultExpiredReleaseBatchSize
+	}
+	if limit > maxExpiredReleaseBatchSize {
+		limit = maxExpiredReleaseBatchSize
+	}
+
+	now := s.now()
+	actorID := strings.TrimSpace(cmd.ActorID)
+	if actorID == "" {
+		return InventoryReleaseExpiredResult{}, fmt.Errorf("%w: actor id is required", ErrInventoryInvalidInput)
+	}
+	reservations, err := s.repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now,
+		Limit:  limit,
+	})
+	if err != nil {
+		return InventoryReleaseExpiredResult{}, s.mapRepositoryError(err)
+	}
+
+	result := InventoryReleaseExpiredResult{
+		CheckedCount: len(reservations),
+	}
+	if len(reservations) == 0 {
+		return result, nil
+	}
+
+	reason := strings.TrimSpace(cmd.Reason)
+	if reason == "" {
+		reason = "expired_manual_release"
+	}
+
+	skuSet := make(map[string]struct{})
+	result.ReservationIDs = make([]string, 0, len(reservations))
+	for _, reservation := range reservations {
+		current, fetchErr := s.repo.GetReservation(ctx, reservation.ID)
+		if fetchErr != nil {
+			mapped := s.mapRepositoryError(fetchErr)
+			if errors.Is(mapped, ErrInventoryReservationNotFound) {
+				result.NotFoundCount++
+				continue
+			}
+			return InventoryReleaseExpiredResult{}, mapped
+		}
+		if current.Status != statusReserved {
+			result.AlreadyReleasedCount++
+			result.AlreadyReleasedIDs = append(result.AlreadyReleasedIDs, current.ID)
+			continue
+		}
+		if !current.ExpiresAt.Before(now) {
+			result.SkippedCount++
+			result.SkippedIDs = append(result.SkippedIDs, current.ID)
+			continue
+		}
+
+		released, releaseErr := s.ReleaseReservation(ctx, InventoryReleaseCommand{
+			ReservationID: reservation.ID,
+			Reason:        reason,
+			ActorID:       actorID,
+		})
+		if releaseErr != nil {
+			switch {
+			case errors.Is(releaseErr, ErrInventoryInvalidState):
+				result.AlreadyReleasedCount++
+				result.AlreadyReleasedIDs = append(result.AlreadyReleasedIDs, reservation.ID)
+				continue
+			case errors.Is(releaseErr, ErrInventoryReservationNotFound):
+				result.NotFoundCount++
+				continue
+			default:
+				return InventoryReleaseExpiredResult{}, releaseErr
+			}
+		}
+		result.ReleasedCount++
+		result.ReservationIDs = append(result.ReservationIDs, released.ID)
+		for _, line := range released.Lines {
+			sku := strings.TrimSpace(line.SKU)
+			if sku == "" {
+				continue
+			}
+			skuSet[sku] = struct{}{}
+		}
+	}
+
+	if len(skuSet) > 0 {
+		result.SKUs = make([]string, 0, len(skuSet))
+		for sku := range skuSet {
+			result.SKUs = append(result.SKUs, sku)
+		}
+		sort.Strings(result.SKUs)
+	}
+
+	if s.logger != nil {
+		fields := map[string]any{
+			"released": result.ReleasedCount,
+			"checked":  result.CheckedCount,
+			"limit":    limit,
+		}
+		if actorID != "" {
+			fields["actorId"] = actorID
+		}
+		if result.AlreadyReleasedCount > 0 {
+			fields["alreadyReleased"] = result.AlreadyReleasedCount
+		}
+		if result.NotFoundCount > 0 {
+			fields["notFound"] = result.NotFoundCount
+		}
+		if result.SkippedCount > 0 {
+			fields["skipped"] = result.SkippedCount
+		}
+		s.logger(ctx, "inventory.releaseExpired", fields)
+	}
+
+	return result, nil
+}
+
 func (s *inventoryService) ListLowStock(ctx context.Context, filter InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error) {
 	req := repositories.InventoryLowStockQuery{
 		Threshold: filter.Threshold,
@@ -234,14 +368,15 @@ func (s *inventoryService) ListLowStock(ctx context.Context, filter InventoryLow
 	snapshots := make([]InventorySnapshot, len(page.Items))
 	for i, stock := range page.Items {
 		snapshots[i] = InventorySnapshot{
-			SKU:         stock.SKU,
-			ProductRef:  stock.ProductRef,
-			OnHand:      stock.OnHand,
-			Reserved:    stock.Reserved,
-			Available:   stock.Available,
-			SafetyStock: stock.SafetyStock,
-			SafetyDelta: stock.SafetyDelta,
-			UpdatedAt:   stock.UpdatedAt,
+			SKU:                      stock.SKU,
+			ProductRef:               stock.ProductRef,
+			OnHand:                   stock.OnHand,
+			Reserved:                 stock.Reserved,
+			Available:                stock.Available,
+			SafetyStock:              stock.SafetyStock,
+			SafetyDelta:              stock.SafetyDelta,
+			UpdatedAt:                stock.UpdatedAt,
+			LastSafetyNotificationAt: cloneTimePointer(stock.LastSafetyNotificationAt),
 		}
 	}
 
@@ -249,6 +384,70 @@ func (s *inventoryService) ListLowStock(ctx context.Context, filter InventoryLow
 		Items:         snapshots,
 		NextPageToken: page.NextPageToken,
 	}, nil
+}
+
+func (s *inventoryService) ConfigureSafetyStock(ctx context.Context, cmd ConfigureSafetyStockCommand) (InventoryStock, error) {
+	sku := strings.TrimSpace(cmd.SKU)
+	if sku == "" {
+		return InventoryStock{}, fmt.Errorf("%w: sku is required", ErrInventoryInvalidInput)
+	}
+	productRef := strings.TrimSpace(cmd.ProductRef)
+	if productRef == "" {
+		return InventoryStock{}, fmt.Errorf("%w: product ref is required", ErrInventoryInvalidInput)
+	}
+	if cmd.SafetyStock < 0 {
+		return InventoryStock{}, fmt.Errorf("%w: safety stock must be >= 0", ErrInventoryInvalidInput)
+	}
+	if cmd.InitialOnHand != nil && *cmd.InitialOnHand < 0 {
+		return InventoryStock{}, fmt.Errorf("%w: initial stock must be >= 0", ErrInventoryInvalidInput)
+	}
+	now := s.now()
+	stock, err := s.repo.ConfigureSafetyStock(ctx, repositories.InventorySafetyStockConfig{
+		SKU:           sku,
+		ProductRef:    productRef,
+		SafetyStock:   cmd.SafetyStock,
+		InitialOnHand: cmd.InitialOnHand,
+		Now:           now,
+	})
+	if err != nil {
+		return InventoryStock{}, s.mapRepositoryError(err)
+	}
+	if s.logger != nil {
+		fields := map[string]any{
+			"sku":         sku,
+			"productRef":  productRef,
+			"safetyStock": stock.SafetyStock,
+		}
+		if cmd.InitialOnHand != nil {
+			fields["initialOnHand"] = *cmd.InitialOnHand
+		}
+		s.logger(ctx, "inventory.configureSafety", fields)
+	}
+	return InventoryStock(stock), nil
+}
+
+func (s *inventoryService) RecordSafetyNotification(ctx context.Context, cmd RecordSafetyNotificationCommand) (InventoryStock, error) {
+	sku := strings.TrimSpace(cmd.SKU)
+	if sku == "" {
+		return InventoryStock{}, fmt.Errorf("%w: sku is required", ErrInventoryInvalidInput)
+	}
+	notifiedAt := cmd.NotifiedAt
+	if notifiedAt.IsZero() {
+		notifiedAt = s.now()
+	} else {
+		notifiedAt = notifiedAt.UTC()
+	}
+	stock, err := s.repo.UpdateSafetyNotification(ctx, sku, notifiedAt)
+	if err != nil {
+		return InventoryStock{}, s.mapRepositoryError(err)
+	}
+	if s.logger != nil {
+		s.logger(ctx, "inventory.stockSafetyNotified", map[string]any{
+			"sku":        sku,
+			"notifiedAt": notifiedAt,
+		})
+	}
+	return InventoryStock(stock), nil
 }
 
 func (s *inventoryService) now() time.Time {

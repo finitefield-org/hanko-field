@@ -191,6 +191,53 @@ func TestInventoryRepositoryIntegration(t *testing.T) {
 		t.Fatalf("expected released status, got %s", releaseResult.Reservation.Status)
 	}
 
+	expiredReservation := domain.InventoryReservation{
+		ID:        "sr_expired_manual",
+		OrderRef:  "/orders/o_expired",
+		UserRef:   "/users/u_test",
+		Lines:     []domain.InventoryReservationLine{{ProductRef: "/products/prod_001", SKU: "SKU-001", Quantity: 1}},
+		ExpiresAt: now.Add(-time.Minute),
+		CreatedAt: now.Add(-2 * time.Minute),
+		UpdatedAt: now.Add(-2 * time.Minute),
+	}
+
+	if _, err := repo.Reserve(ctx, repositories.InventoryReserveRequest{
+		Reservation: expiredReservation,
+		Now:         now.Add(-2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("reserve expired: %v", err)
+	}
+
+	expired, err := repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now.Add(time.Minute),
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("list expired reservations: %v", err)
+	}
+	if len(expired) != 1 || expired[0].ID != expiredReservation.ID {
+		t.Fatalf("expected expired reservation %s, got %+v", expiredReservation.ID, expired)
+	}
+
+	if _, err := repo.Release(ctx, repositories.InventoryReleaseRequest{
+		ReservationID: expiredReservation.ID,
+		Reason:        "manual_expired_cleanup",
+		Now:           now.Add(time.Minute),
+	}); err != nil {
+		t.Fatalf("release expired: %v", err)
+	}
+
+	expired, err = repo.ListExpiredReservations(ctx, repositories.InventoryExpiredReservationQuery{
+		Before: now.Add(2 * time.Minute),
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("list expired after release: %v", err)
+	}
+	if len(expired) != 0 {
+		t.Fatalf("expected no expired reservations after release, got %d", len(expired))
+	}
+
 	lowPage, err := repo.ListLowStock(ctx, repositories.InventoryLowStockQuery{Threshold: 0, PageSize: 10})
 	if err != nil {
 		t.Fatalf("list low stock: %v", err)
@@ -201,6 +248,59 @@ func TestInventoryRepositoryIntegration(t *testing.T) {
 	}
 	if lowPage.Items[0].SafetyDelta >= 0 {
 		t.Fatalf("expected negative safety delta, got %d", lowPage.Items[0].SafetyDelta)
+	}
+
+	notifiedAt := now.Add(2 * time.Hour).UTC()
+	updatedStock, err := repo.UpdateSafetyNotification(ctx, "SKU-001", notifiedAt)
+	if err != nil {
+		t.Fatalf("update safety notification: %v", err)
+	}
+	if updatedStock.LastSafetyNotificationAt == nil {
+		t.Fatalf("expected last safety notification timestamp to be set")
+	}
+	if !updatedStock.LastSafetyNotificationAt.Equal(notifiedAt) {
+		t.Fatalf("expected last safety notification %s got %s", notifiedAt, updatedStock.LastSafetyNotificationAt)
+	}
+
+	snap, err := client.Collection(inventoryCollection).Doc("SKU-001").Get(ctx)
+	if err != nil {
+		t.Fatalf("fetch stock document: %v", err)
+	}
+	var persisted stockDocument
+	if err := snap.DataTo(&persisted); err != nil {
+		t.Fatalf("decode stock document: %v", err)
+	}
+	if persisted.LastSafetyNotificationAt == nil || !persisted.LastSafetyNotificationAt.Equal(notifiedAt) {
+		t.Fatalf("firestore last safety notification mismatch, expected %s got %#v", notifiedAt, persisted.LastSafetyNotificationAt)
+	}
+
+	initial := 12
+	configured, err := repo.ConfigureSafetyStock(ctx, repositories.InventorySafetyStockConfig{
+		SKU:           "SKU-001",
+		ProductRef:    "/materials/mat_wood",
+		SafetyStock:   8,
+		InitialOnHand: &initial,
+		Now:           now.Add(5 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("configure safety stock existing: %v", err)
+	}
+	if configured.SafetyStock != 8 {
+		t.Fatalf("expected updated safety stock 8 got %d", configured.SafetyStock)
+	}
+	newInitial := 5
+	created, err := repo.ConfigureSafetyStock(ctx, repositories.InventorySafetyStockConfig{
+		SKU:           "MAT-002",
+		ProductRef:    "/materials/mat_002",
+		SafetyStock:   4,
+		InitialOnHand: &newInitial,
+		Now:           now.Add(6 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("configure safety stock new: %v", err)
+	}
+	if created.SKU != "MAT-002" || created.SafetyStock != 4 || created.OnHand != 5 {
+		t.Fatalf("expected new stock for MAT-002, got %+v", created)
 	}
 }
 

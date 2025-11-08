@@ -49,11 +49,16 @@ func RequestLoggerMiddleware(projectID string) func(http.Handler) http.Handler {
 			baseLogger := requestctx.Logger(ctx)
 			traceInfo, _ := requestctx.Trace(ctx)
 			requestID := middleware.GetReqID(ctx)
+			correlationID := requestctx.CorrelationID(ctx)
+			if correlationID == "" {
+				correlationID = requestID
+			}
 			userID := sanitizedUserID(ctx)
 			route := routePattern(r)
 			method := SanitizeMethod(r.Method)
 			logger := WithRequestFields(baseLogger,
 				zap.String("request_id", requestID),
+				zap.String("correlation_id", correlationID),
 				zap.String("method", method),
 				zap.String("route", SanitizeRoute(route)),
 				zap.String("trace_id", traceInfo.TraceID),

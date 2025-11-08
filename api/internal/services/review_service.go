@@ -190,6 +190,34 @@ func (s *reviewService) ListByUser(ctx context.Context, cmd ListUserReviewsComma
 	}, nil
 }
 
+func (s *reviewService) ListReviews(ctx context.Context, filter ReviewListFilter) (domain.CursorPage[Review], error) {
+	if len(filter.Status) > 0 {
+		for _, status := range filter.Status {
+			if !isValidReviewStatus(status) {
+				return domain.CursorPage[Review]{}, fmt.Errorf("%w: unsupported moderation status %s", ErrReviewInvalidInput, status)
+			}
+		}
+	}
+
+	repoFilter := repositories.ReviewListFilter{
+		ReviewID:   strings.TrimSpace(filter.ReviewID),
+		Status:     cloneReviewStatuses(filter.Status),
+		OrderRef:   strings.TrimSpace(filter.OrderRef),
+		UserRef:    strings.TrimSpace(filter.UserRef),
+		Pagination: filter.Pagination,
+	}
+
+	page, err := s.reviews.List(ctx, repoFilter)
+	if err != nil {
+		return domain.CursorPage[Review]{}, s.mapReviewError(err)
+	}
+
+	return domain.CursorPage[Review]{
+		Items:         page.Items,
+		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
 func (s *reviewService) Moderate(ctx context.Context, cmd ModerateReviewCommand) (Review, error) {
 	if err := s.validateModerationCommand(cmd); err != nil {
 		return Review{}, err
@@ -466,4 +494,22 @@ func sanitizeReviewText(input string) string {
 
 	result := strings.Join(lines, "\n")
 	return strings.TrimSpace(result)
+}
+
+func cloneReviewStatuses(statuses []domain.ReviewStatus) []domain.ReviewStatus {
+	if len(statuses) == 0 {
+		return nil
+	}
+	out := make([]domain.ReviewStatus, len(statuses))
+	copy(out, statuses)
+	return out
+}
+
+func isValidReviewStatus(status domain.ReviewStatus) bool {
+	switch status {
+	case domain.ReviewStatusPending, domain.ReviewStatusApproved, domain.ReviewStatusRejected:
+		return true
+	default:
+		return false
+	}
 }

@@ -13,14 +13,21 @@ variable "service_account_email" {
   description = "Service account used for OIDC invocation"
 }
 
+variable "default_audience" {
+  type        = string
+  description = "Default OIDC audience applied when a job does not specify one"
+  default     = null
+}
+
 variable "jobs" {
   description = "Scheduler jobs keyed by name"
   type = map(object({
-    schedule             = string
+    schedule             = optional(string)
     http_method          = optional(string, "POST")
-    uri                  = string
+    uri                  = optional(string)
     body                 = optional(string)
     time_zone            = optional(string, "UTC")
-    oidc_service_account = string
+    oidc_service_account = optional(string)
+    audience             = optional(string)
   }))
 }
