@@ -62,13 +62,15 @@ impacting staging/prod traffic.
 5. **Document** – Share the deployed URL plus feature flag states in the ticket.
 
 ### Rollback / Cleanup
-- Dev deploys usually target a `dev` traffic tag. To revert, point the tag back to the
-  previous image or delete the ad-hoc revision:
+- Dev deploys usually target only the `dev` tag. To revert, shift traffic back to the previous
+  revision captured during deployment (for example, with
+  `gcloud run revisions list --tag=dev --limit=2` to grab the name) and send 100% of traffic to
+  it:
   ```bash
   gcloud run services update-traffic api-service \
     --project=${DEV_PROJECT} \
     --region=${CLOUD_RUN_REGION} \
-    --to-tags dev=0,staging=100
+    --to-revisions ${PREVIOUS_REVISION}=100
   ```
 - Remove temporary feature flags/config after validation so staging inherits a clean diff.
 
@@ -100,7 +102,7 @@ impacting staging/prod traffic.
    gcloud run services update-traffic api-service \
      --project=${STAGING_PROJECT} \
      --region=${CLOUD_RUN_REGION} \
-     --to-revisions ${PREVIOUS_REVISION}=100 --tag=staging
+     --to-revisions ${PREVIOUS_REVISION}=100
    ```
 3. Rerun the staging smoke workflow (manually dispatch `build-and-deploy-staging` on an
    earlier commit) to ensure the environment is healthy.
@@ -136,7 +138,7 @@ impacting staging/prod traffic.
    gcloud run services update-traffic api-service \
      --project=${PROD_PROJECT} \
      --region=${CLOUD_RUN_REGION} \
-     --to-revisions ${PREVIOUS_REVISION}=100 --tag=production
+     --to-revisions ${PREVIOUS_REVISION}=100
    ```
 3. Re-run smoke + manual scenario to verify stability, then freeze further deploys until RCA.
 4. If data/secret changes accompanied the deploy:
