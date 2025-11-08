@@ -5389,6 +5389,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to update persona. Please try again.'**
   String get profileHomePersonaUpdateError;
+
+  /// App bar title for the profile payments screen
+  ///
+  /// In en, this message translates to:
+  /// **'Payment methods'**
+  String get profilePaymentsTitle;
+
+  /// Tooltip for the add payment icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Add payment method'**
+  String get profilePaymentsAddTooltip;
+
+  /// Message shown when international personas reach the storage limit
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the maximum number of stored payment methods.'**
+  String get profilePaymentsLimitReachedInternational;
+
+  /// Message shown when domestic personas reach the storage limit
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot add more payment methods right now.'**
+  String get profilePaymentsLimitReachedDomestic;
+
+  /// Title for the add payment method dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Add payment method'**
+  String get profilePaymentsAddDialogTitle;
+
+  /// Tooltip for closing the add payment method dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get profilePaymentsAddDialogClose;
+
+  /// Confirmation dialog title before removing a payment method
+  ///
+  /// In en, this message translates to:
+  /// **'Remove payment method?'**
+  String get profilePaymentsDeleteConfirmTitle;
+
+  /// Body copy for the delete confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {brand} ending in {last4}?'**
+  String profilePaymentsDeleteConfirmBody(String brand, String last4);
+
+  /// Fallback label when the brand name is missing
+  ///
+  /// In en, this message translates to:
+  /// **'this method'**
+  String get profilePaymentsDeleteUnknownBrand;
+
+  /// Primary action label when confirming deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get profilePaymentsDeleteConfirmAction;
+
+  /// Cancel action label when confirming deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get profilePaymentsDeleteConfirmCancel;
+
+  /// Badge label shown on the default payment method
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get profilePaymentsDefaultBadge;
+
+  /// Tooltip for the delete icon button on each payment method
+  ///
+  /// In en, this message translates to:
+  /// **'Remove method'**
+  String get profilePaymentsDeleteTooltip;
+
+  /// Label showing the PSP token reference
+  ///
+  /// In en, this message translates to:
+  /// **'PSP token: {token}'**
+  String profilePaymentsTokenLabel(String token);
+
+  /// Message shown when the PSP token cannot be located
+  ///
+  /// In en, this message translates to:
+  /// **'Token not available'**
+  String get profilePaymentsTokenUnavailable;
+
+  /// Status text while reading the PSP token
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching PSP token…'**
+  String get profilePaymentsTokenLoading;
+
+  /// Error text when PSP token retrieval fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to read PSP token.'**
+  String get profilePaymentsTokenError;
+
+  /// Security card title for international personas
+  ///
+  /// In en, this message translates to:
+  /// **'Your cards stay encrypted'**
+  String get profilePaymentsSecurityTitleIntl;
+
+  /// Security card title for domestic personas
+  ///
+  /// In en, this message translates to:
+  /// **'Card vaulting compliance'**
+  String get profilePaymentsSecurityTitleDomestic;
+
+  /// Security body copy for international personas
+  ///
+  /// In en, this message translates to:
+  /// **'We only store PSP tokens and never retain raw card numbers. Rotate credentials and audit access regularly.'**
+  String get profilePaymentsSecurityBodyIntl;
+
+  /// Security body copy for domestic personas
+  ///
+  /// In en, this message translates to:
+  /// **'Card numbers are tokenized inside Japanese PSPs and every change is logged for compliance. Schedule periodic reviews with your finance team.'**
+  String get profilePaymentsSecurityBodyDomestic;
+
+  /// Assist chip label linking to token documentation
+  ///
+  /// In en, this message translates to:
+  /// **'PSP tokens'**
+  String get profilePaymentsSecurityChipTokens;
+
+  /// Assist chip label linking to the FAQ
+  ///
+  /// In en, this message translates to:
+  /// **'Security FAQ'**
+  String get profilePaymentsSecurityChipFaq;
+
+  /// Assist chip label linking to support
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get profilePaymentsSecurityChipSupport;
+
+  /// Snack bar message shown while links are under construction
+  ///
+  /// In en, this message translates to:
+  /// **'Security link ({destination}) is coming soon.'**
+  String profilePaymentsSecurityLinkComingSoon(String destination);
+
+  /// Headline for the empty state on the payments page
+  ///
+  /// In en, this message translates to:
+  /// **'No saved payment methods'**
+  String get profilePaymentsEmptyTitle;
+
+  /// Supporting text for the empty payments state
+  ///
+  /// In en, this message translates to:
+  /// **'Add a card, wallet, or billing profile to speed up checkout.'**
+  String get profilePaymentsEmptyMessage;
+
+  /// CTA label for adding a new payment method from the empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Add payment method'**
+  String get profilePaymentsEmptyCta;
+
+  /// Error message shown when the payments screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load payment methods ({message}).'**
+  String profilePaymentsErrorMessage(String message);
+
+  /// Retry button label on the payments error view
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get profilePaymentsErrorRetry;
 }
 
 class _AppLocalizationsDelegate

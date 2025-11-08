@@ -1,6 +1,7 @@
 import 'package:app/features/guides/presentation/guide_detail_screen.dart';
 import 'package:app/features/guides/presentation/guides_list_screen.dart';
 import 'package:app/features/profile/presentation/profile_addresses_screen.dart';
+import 'package:app/features/profile/presentation/profile_payments_screen.dart';
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
 import 'package:app/features/shop/presentation/product_addons_screen.dart';
 import 'package:app/features/shop/presentation/product_detail_screen.dart';
@@ -96,6 +97,8 @@ class ProfileSectionPage extends StatelessWidget {
     switch (primary) {
       case 'addresses':
         return const ProfileAddressesScreen();
+      case 'payments':
+        return const ProfilePaymentsScreen();
       default:
         return _ProfileSectionFallback(title: title);
     }

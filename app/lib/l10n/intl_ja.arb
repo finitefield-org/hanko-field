@@ -3026,4 +3026,167 @@
 , "@profileHomePersonaUpdateError": {
   "description": "ペルソナ更新失敗時のメッセージ"
 }
+
+, "profilePaymentsTitle": "お支払い方法"
+, "@profilePaymentsTitle": {
+  "description": "プロフィール > お支払い方法画面のタイトル"
+}
+
+, "profilePaymentsAddTooltip": "支払い方法を追加"
+, "@profilePaymentsAddTooltip": {
+  "description": "お支払い方法画面の追加ボタンのツールチップ"
+}
+
+, "profilePaymentsLimitReachedInternational": "登録できるお支払い方法の上限に達しています。"
+, "@profilePaymentsLimitReachedInternational": {
+  "description": "国際ペルソナ向けの上限到達メッセージ"
+}
+
+, "profilePaymentsLimitReachedDomestic": "これ以上お支払い方法を追加できません。"
+, "@profilePaymentsLimitReachedDomestic": {
+  "description": "国内ペルソナ向けの上限到達メッセージ"
+}
+
+, "profilePaymentsAddDialogTitle": "お支払い方法を追加"
+, "@profilePaymentsAddDialogTitle": {
+  "description": "お支払い方法追加ダイアログのタイトル"
+}
+
+, "profilePaymentsAddDialogClose": "閉じる"
+, "@profilePaymentsAddDialogClose": {
+  "description": "お支払い方法追加ダイアログを閉じるボタン"
+}
+
+, "profilePaymentsDeleteConfirmTitle": "お支払い方法を削除しますか？"
+, "@profilePaymentsDeleteConfirmTitle": {
+  "description": "お支払い方法削除確認ダイアログのタイトル"
+}
+
+, "profilePaymentsDeleteConfirmBody": "{brand}（下4桁 {last4}）を削除しますか？"
+, "@profilePaymentsDeleteConfirmBody": {
+  "description": "お支払い方法削除確認ダイアログの本文",
+  "placeholders": {
+    "brand": { "type": "String" },
+    "last4": { "type": "String" }
+  }
+}
+
+, "profilePaymentsDeleteUnknownBrand": "この方法"
+, "@profilePaymentsDeleteUnknownBrand": {
+  "description": "ブランドが無い場合に表示する削除対象名"
+}
+
+, "profilePaymentsDeleteConfirmAction": "削除"
+, "@profilePaymentsDeleteConfirmAction": {
+  "description": "お支払い方法削除確認の実行ボタン"
+}
+
+, "profilePaymentsDeleteConfirmCancel": "キャンセル"
+, "@profilePaymentsDeleteConfirmCancel": {
+  "description": "お支払い方法削除確認のキャンセルボタン"
+}
+
+, "profilePaymentsDefaultBadge": "デフォルト"
+, "@profilePaymentsDefaultBadge": {
+  "description": "デフォルトのお支払い方法に表示するバッジ"
+}
+
+, "profilePaymentsDeleteTooltip": "この方法を削除"
+, "@profilePaymentsDeleteTooltip": {
+  "description": "お支払い方法削除アイコンのツールチップ"
+}
+
+, "profilePaymentsTokenLabel": "PSPトークン: {token}"
+, "@profilePaymentsTokenLabel": {
+  "description": "PSPトークン参照を表示するラベル",
+  "placeholders": {
+    "token": { "type": "String" }
+  }
+}
+
+, "profilePaymentsTokenUnavailable": "トークン情報が見つかりません"
+, "@profilePaymentsTokenUnavailable": {
+  "description": "PSPトークンが見つからない場合の表示"
+}
+
+, "profilePaymentsTokenLoading": "PSPトークンを取得しています…"
+, "@profilePaymentsTokenLoading": {
+  "description": "PSPトークン読込中の表示"
+}
+
+, "profilePaymentsTokenError": "PSPトークンを読み取れませんでした。"
+, "@profilePaymentsTokenError": {
+  "description": "PSPトークン取得失敗時の表示"
+}
+
+, "profilePaymentsSecurityTitleIntl": "カード情報は暗号化されています"
+, "@profilePaymentsSecurityTitleIntl": {
+  "description": "国際ペルソナ向けセキュリティカードのタイトル"
+}
+
+, "profilePaymentsSecurityTitleDomestic": "カード保管のコンプライアンス"
+, "@profilePaymentsSecurityTitleDomestic": {
+  "description": "国内ペルソナ向けセキュリティカードのタイトル"
+}
+
+, "profilePaymentsSecurityBodyIntl": "PSPトークンのみを保存し、カード番号は保持しません。資格情報の更新とアクセス監査を定期的に実施してください。"
+, "@profilePaymentsSecurityBodyIntl": {
+  "description": "国際ペルソナ向けセキュリティ説明"
+}
+
+, "profilePaymentsSecurityBodyDomestic": "国内PSPでトークン化し、すべての変更を記録しています。財務チームと定期的にレビューしましょう。"
+, "@profilePaymentsSecurityBodyDomestic": {
+  "description": "国内ペルソナ向けセキュリティ説明"
+}
+
+, "profilePaymentsSecurityChipTokens": "PSPトークン"
+, "@profilePaymentsSecurityChipTokens": {
+  "description": "PSPトークン関連チップのラベル"
+}
+
+, "profilePaymentsSecurityChipFaq": "セキュリティFAQ"
+, "@profilePaymentsSecurityChipFaq": {
+  "description": "FAQ導線のチップラベル"
+}
+
+, "profilePaymentsSecurityChipSupport": "サポートに連絡"
+, "@profilePaymentsSecurityChipSupport": {
+  "description": "サポート導線のチップラベル"
+}
+
+, "profilePaymentsSecurityLinkComingSoon": "セキュリティリンク（{destination}）はまもなく公開予定です。"
+, "@profilePaymentsSecurityLinkComingSoon": {
+  "description": "セキュリティ関連リンクが未実装のときのメッセージ",
+  "placeholders": {
+    "destination": { "type": "String" }
+  }
+}
+
+, "profilePaymentsEmptyTitle": "保存済みのお支払い方法がありません"
+, "@profilePaymentsEmptyTitle": {
+  "description": "お支払い方法画面の空状態タイトル"
+}
+
+, "profilePaymentsEmptyMessage": "カードやウォレット、請求プロファイルを登録するとチェックアウトがスムーズになります。"
+, "@profilePaymentsEmptyMessage": {
+  "description": "お支払い方法画面の空状態説明"
+}
+
+, "profilePaymentsEmptyCta": "お支払い方法を追加"
+, "@profilePaymentsEmptyCta": {
+  "description": "お支払い方法空状態のCTAラベル"
+}
+
+, "profilePaymentsErrorMessage": "お支払い方法を読み込めません（{message}）"
+, "@profilePaymentsErrorMessage": {
+  "description": "お支払い方法画面のエラーメッセージ",
+  "placeholders": {
+    "message": { "type": "String" }
+  }
+}
+
+, "profilePaymentsErrorRetry": "再試行"
+, "@profilePaymentsErrorRetry": {
+  "description": "お支払い方法エラー画面の再試行ボタン"
+}
 }

@@ -30,7 +30,11 @@ class CheckoutPaymentState {
     this.canAddNewMethod = true,
     this.feedbackMessage,
     this.errorMessage,
-  }) : methods = UnmodifiableListView<CheckoutPaymentMethodSummary>(methods);
+    Set<String>? removingMethodIds,
+  }) : methods = UnmodifiableListView<CheckoutPaymentMethodSummary>(methods),
+       removingMethodIds = UnmodifiableSetView<String>(
+         removingMethodIds ?? const <String>{},
+       );
 
   final UnmodifiableListView<CheckoutPaymentMethodSummary> methods;
   final String? selectedMethodId;
@@ -40,6 +44,7 @@ class CheckoutPaymentState {
   final bool canAddNewMethod;
   final String? feedbackMessage;
   final String? errorMessage;
+  final UnmodifiableSetView<String> removingMethodIds;
 
   bool get hasMethods => methods.isNotEmpty;
 
@@ -66,6 +71,7 @@ class CheckoutPaymentState {
     bool clearFeedback = false,
     String? errorMessage,
     bool clearError = false,
+    Set<String>? removingMethodIds,
   }) {
     return CheckoutPaymentState(
       methods: methods ?? this.methods,
@@ -80,6 +86,9 @@ class CheckoutPaymentState {
           ? null
           : (feedbackMessage ?? this.feedbackMessage),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      removingMethodIds: removingMethodIds == null
+          ? this.removingMethodIds
+          : UnmodifiableSetView<String>(removingMethodIds),
     );
   }
 }
@@ -274,6 +283,77 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
     }
   }
 
+  Future<void> removeMethod(String methodId) async {
+    final current = state.value;
+    if (current == null || current.removingMethodIds.contains(methodId)) {
+      return;
+    }
+    final methodIndex = _rawMethods.indexWhere(
+      (element) => element.id == methodId,
+    );
+    if (methodIndex == -1) {
+      state = AsyncValue.data(
+        current.copyWith(
+          errorMessage: _localized(
+            'お支払い方法が見つかりません。',
+            'Payment method not found.',
+          ),
+          clearFeedback: true,
+        ),
+      );
+      return;
+    }
+
+    final removing = {...current.removingMethodIds, methodId};
+    state = AsyncValue.data(
+      current.copyWith(
+        isProcessing: true,
+        removingMethodIds: removing,
+        clearFeedback: true,
+        clearError: true,
+      ),
+    );
+
+    try {
+      final method = _rawMethods[methodIndex];
+      if (!_isLocalId(method.id)) {
+        await _userRepository.removePaymentMethod(methodId);
+      }
+      await _secureStorage.delete(key: _tokenStorageKey(methodId));
+      final remaining = [..._rawMethods]..removeAt(methodIndex);
+      final preserveSelection = current.selectedMethodId == methodId
+          ? null
+          : current.selectedMethodId;
+      final nextState = await _synthesiseState(
+        methods: remaining,
+        preserveSelectionId: preserveSelection,
+      );
+      state = AsyncValue.data(
+        nextState.copyWith(
+          isProcessing: false,
+          removingMethodIds: const <String>{},
+          feedbackMessage: _localized(
+            'お支払い方法を削除しました。',
+            'Payment method removed.',
+          ),
+        ),
+      );
+    } catch (error) {
+      final updatedRemoving = {...current.removingMethodIds}..remove(methodId);
+      state = AsyncValue.data(
+        current.copyWith(
+          isProcessing: false,
+          removingMethodIds: updatedRemoving,
+          errorMessage: _localized(
+            'お支払い方法の削除に失敗しました。',
+            'Failed to remove payment method.',
+          ),
+          clearFeedback: true,
+        ),
+      );
+    }
+  }
+
   Future<String?> readToken(String methodId) {
     return _secureStorage.read(key: _tokenStorageKey(methodId));
   }
@@ -306,6 +386,7 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
       methods: summaries,
       selectedMethodId: resolvedSelectionId,
       canAddNewMethod: canAdd,
+      removingMethodIds: const <String>{},
     );
   }
 
@@ -408,6 +489,8 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
 
   String _tokenStorageKey(String methodId) =>
       'checkout.payment.token.$methodId';
+
+  bool _isLocalId(String methodId) => methodId.startsWith('local-pay-');
 
   String _generateLocalId() {
     final rand = Random();

@@ -3103,4 +3103,107 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileHomePersonaUpdateError =>
       'Unable to update persona. Please try again.';
+
+  @override
+  String get profilePaymentsTitle => 'Payment methods';
+
+  @override
+  String get profilePaymentsAddTooltip => 'Add payment method';
+
+  @override
+  String get profilePaymentsLimitReachedInternational =>
+      'You have reached the maximum number of stored payment methods.';
+
+  @override
+  String get profilePaymentsLimitReachedDomestic =>
+      'You cannot add more payment methods right now.';
+
+  @override
+  String get profilePaymentsAddDialogTitle => 'Add payment method';
+
+  @override
+  String get profilePaymentsAddDialogClose => 'Close';
+
+  @override
+  String get profilePaymentsDeleteConfirmTitle => 'Remove payment method?';
+
+  @override
+  String profilePaymentsDeleteConfirmBody(String brand, String last4) {
+    return 'Remove $brand ending in $last4?';
+  }
+
+  @override
+  String get profilePaymentsDeleteUnknownBrand => 'this method';
+
+  @override
+  String get profilePaymentsDeleteConfirmAction => 'Remove';
+
+  @override
+  String get profilePaymentsDeleteConfirmCancel => 'Cancel';
+
+  @override
+  String get profilePaymentsDefaultBadge => 'Default';
+
+  @override
+  String get profilePaymentsDeleteTooltip => 'Remove method';
+
+  @override
+  String profilePaymentsTokenLabel(String token) {
+    return 'PSP token: $token';
+  }
+
+  @override
+  String get profilePaymentsTokenUnavailable => 'Token not available';
+
+  @override
+  String get profilePaymentsTokenLoading => 'Fetching PSP token…';
+
+  @override
+  String get profilePaymentsTokenError => 'Unable to read PSP token.';
+
+  @override
+  String get profilePaymentsSecurityTitleIntl => 'Your cards stay encrypted';
+
+  @override
+  String get profilePaymentsSecurityTitleDomestic => 'Card vaulting compliance';
+
+  @override
+  String get profilePaymentsSecurityBodyIntl =>
+      'We only store PSP tokens and never retain raw card numbers. Rotate credentials and audit access regularly.';
+
+  @override
+  String get profilePaymentsSecurityBodyDomestic =>
+      'Card numbers are tokenized inside Japanese PSPs and every change is logged for compliance. Schedule periodic reviews with your finance team.';
+
+  @override
+  String get profilePaymentsSecurityChipTokens => 'PSP tokens';
+
+  @override
+  String get profilePaymentsSecurityChipFaq => 'Security FAQ';
+
+  @override
+  String get profilePaymentsSecurityChipSupport => 'Contact support';
+
+  @override
+  String profilePaymentsSecurityLinkComingSoon(String destination) {
+    return 'Security link ($destination) is coming soon.';
+  }
+
+  @override
+  String get profilePaymentsEmptyTitle => 'No saved payment methods';
+
+  @override
+  String get profilePaymentsEmptyMessage =>
+      'Add a card, wallet, or billing profile to speed up checkout.';
+
+  @override
+  String get profilePaymentsEmptyCta => 'Add payment method';
+
+  @override
+  String profilePaymentsErrorMessage(String message) {
+    return 'We couldn\'t load payment methods ($message).';
+  }
+
+  @override
+  String get profilePaymentsErrorRetry => 'Retry';
 }

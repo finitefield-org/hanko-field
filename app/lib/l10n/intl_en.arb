@@ -4636,4 +4636,167 @@
 , "@profileHomePersonaUpdateError": {
   "description": "Error message shown when persona update fails"
 }
+
+, "profilePaymentsTitle": "Payment methods"
+, "@profilePaymentsTitle": {
+  "description": "App bar title for the profile payments screen"
+}
+
+, "profilePaymentsAddTooltip": "Add payment method"
+, "@profilePaymentsAddTooltip": {
+  "description": "Tooltip for the add payment icon button"
+}
+
+, "profilePaymentsLimitReachedInternational": "You have reached the maximum number of stored payment methods."
+, "@profilePaymentsLimitReachedInternational": {
+  "description": "Message shown when international personas reach the storage limit"
+}
+
+, "profilePaymentsLimitReachedDomestic": "You cannot add more payment methods right now."
+, "@profilePaymentsLimitReachedDomestic": {
+  "description": "Message shown when domestic personas reach the storage limit"
+}
+
+, "profilePaymentsAddDialogTitle": "Add payment method"
+, "@profilePaymentsAddDialogTitle": {
+  "description": "Title for the add payment method dialog"
+}
+
+, "profilePaymentsAddDialogClose": "Close"
+, "@profilePaymentsAddDialogClose": {
+  "description": "Tooltip for closing the add payment method dialog"
+}
+
+, "profilePaymentsDeleteConfirmTitle": "Remove payment method?"
+, "@profilePaymentsDeleteConfirmTitle": {
+  "description": "Confirmation dialog title before removing a payment method"
+}
+
+, "profilePaymentsDeleteConfirmBody": "Remove {brand} ending in {last4}?"
+, "@profilePaymentsDeleteConfirmBody": {
+  "description": "Body copy for the delete confirmation dialog",
+  "placeholders": {
+    "brand": { "type": "String" },
+    "last4": { "type": "String" }
+  }
+}
+
+, "profilePaymentsDeleteUnknownBrand": "this method"
+, "@profilePaymentsDeleteUnknownBrand": {
+  "description": "Fallback label when the brand name is missing"
+}
+
+, "profilePaymentsDeleteConfirmAction": "Remove"
+, "@profilePaymentsDeleteConfirmAction": {
+  "description": "Primary action label when confirming deletion"
+}
+
+, "profilePaymentsDeleteConfirmCancel": "Cancel"
+, "@profilePaymentsDeleteConfirmCancel": {
+  "description": "Cancel action label when confirming deletion"
+}
+
+, "profilePaymentsDefaultBadge": "Default"
+, "@profilePaymentsDefaultBadge": {
+  "description": "Badge label shown on the default payment method"
+}
+
+, "profilePaymentsDeleteTooltip": "Remove method"
+, "@profilePaymentsDeleteTooltip": {
+  "description": "Tooltip for the delete icon button on each payment method"
+}
+
+, "profilePaymentsTokenLabel": "PSP token: {token}"
+, "@profilePaymentsTokenLabel": {
+  "description": "Label showing the PSP token reference",
+  "placeholders": {
+    "token": { "type": "String" }
+  }
+}
+
+, "profilePaymentsTokenUnavailable": "Token not available"
+, "@profilePaymentsTokenUnavailable": {
+  "description": "Message shown when the PSP token cannot be located"
+}
+
+, "profilePaymentsTokenLoading": "Fetching PSP token…"
+, "@profilePaymentsTokenLoading": {
+  "description": "Status text while reading the PSP token"
+}
+
+, "profilePaymentsTokenError": "Unable to read PSP token."
+, "@profilePaymentsTokenError": {
+  "description": "Error text when PSP token retrieval fails"
+}
+
+, "profilePaymentsSecurityTitleIntl": "Your cards stay encrypted"
+, "@profilePaymentsSecurityTitleIntl": {
+  "description": "Security card title for international personas"
+}
+
+, "profilePaymentsSecurityTitleDomestic": "Card vaulting compliance"
+, "@profilePaymentsSecurityTitleDomestic": {
+  "description": "Security card title for domestic personas"
+}
+
+, "profilePaymentsSecurityBodyIntl": "We only store PSP tokens and never retain raw card numbers. Rotate credentials and audit access regularly."
+, "@profilePaymentsSecurityBodyIntl": {
+  "description": "Security body copy for international personas"
+}
+
+, "profilePaymentsSecurityBodyDomestic": "Card numbers are tokenized inside Japanese PSPs and every change is logged for compliance. Schedule periodic reviews with your finance team."
+, "@profilePaymentsSecurityBodyDomestic": {
+  "description": "Security body copy for domestic personas"
+}
+
+, "profilePaymentsSecurityChipTokens": "PSP tokens"
+, "@profilePaymentsSecurityChipTokens": {
+  "description": "Assist chip label linking to token documentation"
+}
+
+, "profilePaymentsSecurityChipFaq": "Security FAQ"
+, "@profilePaymentsSecurityChipFaq": {
+  "description": "Assist chip label linking to the FAQ"
+}
+
+, "profilePaymentsSecurityChipSupport": "Contact support"
+, "@profilePaymentsSecurityChipSupport": {
+  "description": "Assist chip label linking to support"
+}
+
+, "profilePaymentsSecurityLinkComingSoon": "Security link ({destination}) is coming soon."
+, "@profilePaymentsSecurityLinkComingSoon": {
+  "description": "Snack bar message shown while links are under construction",
+  "placeholders": {
+    "destination": { "type": "String" }
+  }
+}
+
+, "profilePaymentsEmptyTitle": "No saved payment methods"
+, "@profilePaymentsEmptyTitle": {
+  "description": "Headline for the empty state on the payments page"
+}
+
+, "profilePaymentsEmptyMessage": "Add a card, wallet, or billing profile to speed up checkout."
+, "@profilePaymentsEmptyMessage": {
+  "description": "Supporting text for the empty payments state"
+}
+
+, "profilePaymentsEmptyCta": "Add payment method"
+, "@profilePaymentsEmptyCta": {
+  "description": "CTA label for adding a new payment method from the empty state"
+}
+
+, "profilePaymentsErrorMessage": "We couldn't load payment methods ({message})."
+, "@profilePaymentsErrorMessage": {
+  "description": "Error message shown when the payments screen fails to load",
+  "placeholders": {
+    "message": { "type": "String" }
+  }
+}
+
+, "profilePaymentsErrorRetry": "Retry"
+, "@profilePaymentsErrorRetry": {
+  "description": "Retry button label on the payments error view"
+}
 }

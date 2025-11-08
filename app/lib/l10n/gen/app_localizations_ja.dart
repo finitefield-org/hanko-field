@@ -2983,4 +2983,106 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileHomePersonaUpdateError => 'ペルソナを更新できませんでした。もう一度お試しください。';
+
+  @override
+  String get profilePaymentsTitle => 'お支払い方法';
+
+  @override
+  String get profilePaymentsAddTooltip => '支払い方法を追加';
+
+  @override
+  String get profilePaymentsLimitReachedInternational =>
+      '登録できるお支払い方法の上限に達しています。';
+
+  @override
+  String get profilePaymentsLimitReachedDomestic => 'これ以上お支払い方法を追加できません。';
+
+  @override
+  String get profilePaymentsAddDialogTitle => 'お支払い方法を追加';
+
+  @override
+  String get profilePaymentsAddDialogClose => '閉じる';
+
+  @override
+  String get profilePaymentsDeleteConfirmTitle => 'お支払い方法を削除しますか？';
+
+  @override
+  String profilePaymentsDeleteConfirmBody(String brand, String last4) {
+    return '$brand（下4桁 $last4）を削除しますか？';
+  }
+
+  @override
+  String get profilePaymentsDeleteUnknownBrand => 'この方法';
+
+  @override
+  String get profilePaymentsDeleteConfirmAction => '削除';
+
+  @override
+  String get profilePaymentsDeleteConfirmCancel => 'キャンセル';
+
+  @override
+  String get profilePaymentsDefaultBadge => 'デフォルト';
+
+  @override
+  String get profilePaymentsDeleteTooltip => 'この方法を削除';
+
+  @override
+  String profilePaymentsTokenLabel(String token) {
+    return 'PSPトークン: $token';
+  }
+
+  @override
+  String get profilePaymentsTokenUnavailable => 'トークン情報が見つかりません';
+
+  @override
+  String get profilePaymentsTokenLoading => 'PSPトークンを取得しています…';
+
+  @override
+  String get profilePaymentsTokenError => 'PSPトークンを読み取れませんでした。';
+
+  @override
+  String get profilePaymentsSecurityTitleIntl => 'カード情報は暗号化されています';
+
+  @override
+  String get profilePaymentsSecurityTitleDomestic => 'カード保管のコンプライアンス';
+
+  @override
+  String get profilePaymentsSecurityBodyIntl =>
+      'PSPトークンのみを保存し、カード番号は保持しません。資格情報の更新とアクセス監査を定期的に実施してください。';
+
+  @override
+  String get profilePaymentsSecurityBodyDomestic =>
+      '国内PSPでトークン化し、すべての変更を記録しています。財務チームと定期的にレビューしましょう。';
+
+  @override
+  String get profilePaymentsSecurityChipTokens => 'PSPトークン';
+
+  @override
+  String get profilePaymentsSecurityChipFaq => 'セキュリティFAQ';
+
+  @override
+  String get profilePaymentsSecurityChipSupport => 'サポートに連絡';
+
+  @override
+  String profilePaymentsSecurityLinkComingSoon(String destination) {
+    return 'セキュリティリンク（$destination）はまもなく公開予定です。';
+  }
+
+  @override
+  String get profilePaymentsEmptyTitle => '保存済みのお支払い方法がありません';
+
+  @override
+  String get profilePaymentsEmptyMessage =>
+      'カードやウォレット、請求プロファイルを登録するとチェックアウトがスムーズになります。';
+
+  @override
+  String get profilePaymentsEmptyCta => 'お支払い方法を追加';
+
+  @override
+  String profilePaymentsErrorMessage(String message) {
+    return 'お支払い方法を読み込めません（$message）';
+  }
+
+  @override
+  String get profilePaymentsErrorRetry => '再試行';
 }
