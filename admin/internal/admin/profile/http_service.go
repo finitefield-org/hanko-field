@@ -12,6 +12,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"finitefield.org/hanko-admin/internal/admin/observability"
 )
 
 // HTTPClient matches the subset of http.Client used by HTTPService.
@@ -253,6 +255,7 @@ func (s *HTTPService) newRequest(ctx context.Context, method, endpoint string, b
 			req.Header.Set("Content-Type", "application/json")
 		}
 	}
+	observability.PropagateTraceHeaders(ctx, req)
 	return req, nil
 }
 

@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"finitefield.org/hanko-admin/internal/admin/observability"
 )
 
 // HTTPClient describes the subset of http.Client used by HTTPService.
@@ -221,6 +223,7 @@ func (s *HTTPService) newRequest(ctx context.Context, method, endpoint string, q
 		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
 	}
 	req.Header.Set("Accept", "application/json")
+	observability.PropagateTraceHeaders(ctx, req)
 	return req, nil
 }
 

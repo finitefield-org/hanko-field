@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	adminaudit "finitefield.org/hanko-admin/internal/admin/auditlogs"
@@ -67,6 +68,7 @@ type Config struct {
 	CSRFHeaderName       string
 	Environment          string
 	Metrics              *observability.Metrics
+	Logger               *zap.Logger
 }
 
 // SessionConfig represents optional overrides for the admin session manager.
@@ -89,7 +91,11 @@ func New(cfg Config) *http.Server {
 	router := chi.NewRouter()
 	router.Use(chimw.RequestID)
 	router.Use(chimw.RealIP)
-	router.Use(chimw.Logger)
+	logger := cfg.Logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	router.Use(custommw.RequestLogger(logger))
 	router.Use(chimw.Recoverer)
 	router.Use(chimw.Timeout(60 * time.Second))
 

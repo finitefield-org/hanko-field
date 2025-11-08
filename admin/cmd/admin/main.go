@@ -14,6 +14,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
+	"go.uber.org/zap"
 
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/httpserver"
@@ -30,6 +31,16 @@ import (
 
 func main() {
 	rootCtx := context.Background()
+	appLogger, err := observability.NewLogger()
+	if err != nil {
+		log.Fatalf("admin: failed to initialise logger: %v", err)
+	}
+	defer func() {
+		if syncErr := appLogger.Sync(); syncErr != nil {
+			log.Printf("admin: logger sync failed: %v", syncErr)
+		}
+	}()
+
 	shipmentsService, shipmentsClose := buildShipmentsService(rootCtx)
 	defer shipmentsClose()
 
@@ -48,6 +59,7 @@ func main() {
 		ReviewsService:    buildReviewsService(),
 		OrgService:        buildOrgService(),
 		Environment:       getEnv("ADMIN_ENVIRONMENT", "Development"),
+		Logger:            appLogger,
 		Session: httpserver.SessionConfig{
 			CookieName:       getEnv("ADMIN_SESSION_COOKIE_NAME", ""),
 			CookieDomain:     os.Getenv("ADMIN_SESSION_COOKIE_DOMAIN"),
@@ -89,7 +101,10 @@ func main() {
 		}
 	}()
 
-	log.Printf("admin server listening on %s (base path %s)", cfg.Address, cfg.BasePath)
+	appLogger.Info("admin server listening",
+		zap.String("addr", cfg.Address),
+		zap.String("base_path", cfg.BasePath),
+	)
 
 	<-ctx.Done()
 
@@ -97,7 +112,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("graceful shutdown failed: %v", err)
+		appLogger.Error("graceful shutdown failed", zap.Error(err))
 		cancel()
 		stop()
 		os.Exit(1)
