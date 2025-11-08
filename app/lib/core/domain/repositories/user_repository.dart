@@ -31,6 +31,7 @@ abstract class UserRepository with UserDtoMapper {
   Future<void> deleteAddress(String addressId);
 
   Future<List<UserPaymentMethod>> fetchPaymentMethods();
+  Future<UserPaymentMethod> addPaymentMethod(UserPaymentMethod method);
   Future<void> removePaymentMethod(String methodId);
 
   Future<List<UserFavoriteDesign>> fetchFavorites();

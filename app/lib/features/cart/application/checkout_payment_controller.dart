@@ -248,10 +248,11 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
         createdAt: now,
         updatedAt: now,
       );
-      final merged = [..._rawMethods, method];
+      final savedMethod = await _userRepository.addPaymentMethod(method);
+      final merged = [..._rawMethods, savedMethod];
       final nextState = await _synthesiseState(
         methods: merged,
-        preserveSelectionId: method.id,
+        preserveSelectionId: savedMethod.id,
       );
       state = AsyncValue.data(
         nextState.copyWith(
@@ -328,10 +329,12 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
         methods: remaining,
         preserveSelectionId: preserveSelection,
       );
+      final latestRemoving = {...state.value?.removingMethodIds ?? removing}
+        ..remove(methodId);
       state = AsyncValue.data(
         nextState.copyWith(
           isProcessing: false,
-          removingMethodIds: const <String>{},
+          removingMethodIds: latestRemoving,
           feedbackMessage: _localized(
             'お支払い方法を削除しました。',
             'Payment method removed.',
@@ -339,9 +342,11 @@ class CheckoutPaymentController extends AsyncNotifier<CheckoutPaymentState> {
         ),
       );
     } catch (error) {
-      final updatedRemoving = {...current.removingMethodIds}..remove(methodId);
+      final latestState = state.value ?? current;
+      final updatedRemoving = {...latestState.removingMethodIds}
+        ..remove(methodId);
       state = AsyncValue.data(
-        current.copyWith(
+        latestState.copyWith(
           isProcessing: false,
           removingMethodIds: updatedRemoving,
           errorMessage: _localized(

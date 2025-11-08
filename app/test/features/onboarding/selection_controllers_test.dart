@@ -474,6 +474,11 @@ class FakeUserRepository extends UserRepository {
   }
 
   @override
+  Future<UserPaymentMethod> addPaymentMethod(UserPaymentMethod method) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> removePaymentMethod(String methodId) {
     throw UnimplementedError();
   }

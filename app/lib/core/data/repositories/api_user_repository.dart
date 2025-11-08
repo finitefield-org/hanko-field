@@ -84,6 +84,17 @@ class ApiUserRepository extends UserRepository {
   }
 
   @override
+  Future<UserPaymentMethod> addPaymentMethod(UserPaymentMethod method) async {
+    final dto = mapPaymentMethodToDto(method);
+    final response = await _client.post<Map<String, dynamic>>(
+      '/me/payment-methods',
+      data: dto.toJson(),
+      parser: _expectMap,
+    );
+    return mapPaymentMethod(UserPaymentMethodDto.fromJson(response));
+  }
+
+  @override
   Future<void> removePaymentMethod(String methodId) {
     return _client.delete<void>('/me/payment-methods/$methodId');
   }
