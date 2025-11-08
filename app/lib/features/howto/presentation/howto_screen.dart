@@ -475,6 +475,8 @@ class _HowToVideoCard extends StatefulWidget {
   State<_HowToVideoCard> createState() => _HowToVideoCardState();
 }
 
+const Duration _kHowToAutoCompleteThreshold = Duration(milliseconds: 400);
+
 class _HowToVideoCardState extends State<_HowToVideoCard> {
   late VideoPlayerController _controller;
   late Future<void> _initializeFuture;
@@ -496,12 +498,10 @@ class _HowToVideoCardState extends State<_HowToVideoCard> {
       unawaited(_controller.dispose());
       _initController();
     }
-    if (!widget.completed) {
-      _reportedCompletion = false;
-    }
   }
 
   void _initController() {
+    _reportedCompletion = false;
     _controller = VideoPlayerController.networkUrl(
       Uri.parse(widget.tutorial.videoUrl),
     );
@@ -517,14 +517,24 @@ class _HowToVideoCardState extends State<_HowToVideoCard> {
 
   void _handleProgress() {
     final value = _controller.value;
-    if (!value.isInitialized || _reportedCompletion) {
+    if (!value.isInitialized) {
       return;
     }
     final duration = value.duration;
     if (duration == Duration.zero) {
       return;
     }
-    if (value.position >= duration - const Duration(milliseconds: 400)) {
+    final completionWindowStart = duration > _kHowToAutoCompleteThreshold
+        ? duration - _kHowToAutoCompleteThreshold
+        : Duration.zero;
+    final position = value.position;
+    if (_reportedCompletion && position < completionWindowStart) {
+      _reportedCompletion = false;
+    }
+    if (_reportedCompletion || position < completionWindowStart) {
+      return;
+    }
+    if (position >= completionWindowStart) {
       _reportedCompletion = true;
       widget.onMarkCompleted();
     }

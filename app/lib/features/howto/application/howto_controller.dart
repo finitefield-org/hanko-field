@@ -27,6 +27,7 @@ class HowToController extends AsyncNotifier<HowToState> {
       ref.read(howToProgressRepositoryProvider);
   AnalyticsController get _analytics =>
       ref.read(analyticsControllerProvider.notifier);
+  Set<String> _storedCompletionIds = const {};
 
   @override
   FutureOr<HowToState> build() async {
@@ -81,21 +82,29 @@ class HowToController extends AsyncNotifier<HowToState> {
     if (current == null) {
       return;
     }
-    final alreadyCompleted = current.completedTutorialIds.contains(tutorialId);
-    if (alreadyCompleted == completed) {
+    final alreadyStored = _storedCompletionIds.contains(tutorialId);
+    if (alreadyStored == completed) {
       return;
     }
-    final nextCompleted = completed
-        ? (<String>{...current.completedTutorialIds}..add(tutorialId))
-        : (<String>{...current.completedTutorialIds}..remove(tutorialId));
+    final previousStored = _storedCompletionIds;
+    final updatedStored = <String>{..._storedCompletionIds};
+    if (completed) {
+      updatedStored.add(tutorialId);
+    } else {
+      updatedStored.remove(tutorialId);
+    }
+    _storedCompletionIds = updatedStored;
+    final availableIds = _availableTutorialIds(current.groups);
+    final nextCompleted = updatedStored.where(availableIds.contains).toSet();
     final nextState = current.copyWith(completedTutorialIds: nextCompleted);
     state = AsyncValue.data(nextState);
     try {
-      await _progressRepository.saveCompletedTutorialIds(nextCompleted);
+      await _progressRepository.saveCompletedTutorialIds(updatedStored);
       if (completed) {
         await _logCompletionEvent(tutorialId);
       }
     } catch (error, stackTrace) {
+      _storedCompletionIds = previousStored;
       state = AsyncValue.data(current);
       Error.throwWithStackTrace(error, stackTrace);
     }
@@ -132,6 +141,7 @@ class HowToController extends AsyncNotifier<HowToState> {
     );
     final result = await _repository.fetchContent(request);
     final progress = await _progressRepository.loadCompletedTutorialIds();
+    _storedCompletionIds = {...progress};
     final guidesResult = await _guidesRepository.fetchGuides(
       GuideListRequest(
         localeTag: experience.locale.toLanguageTag(),
@@ -149,6 +159,13 @@ class HowToController extends AsyncNotifier<HowToState> {
             return a.featured ? -1 : 1;
           });
 
+    final availableTutorialIds = <String>{
+      ..._availableTutorialIds(result.groups),
+    };
+    final filteredProgress = _storedCompletionIds
+        .where(availableTutorialIds.contains)
+        .toSet();
+
     final currentSegment = reuseSegment
         ? state.asData?.value.selectedSegment ?? HowToSegment.videos
         : HowToSegment.videos;
@@ -156,12 +173,19 @@ class HowToController extends AsyncNotifier<HowToState> {
     return HowToState(
       groups: result.groups,
       guides: howToGuides,
-      completedTutorialIds: progress,
+      completedTutorialIds: filteredProgress,
       selectedSegment: currentSegment,
       lastUpdated: result.fetchedAt,
       fromCache: result.fromCache,
       isRefreshing: false,
     );
+  }
+
+  Set<String> _availableTutorialIds(List<HowToTopicGroup> groups) {
+    return {
+      for (final group in groups)
+        for (final tutorial in group.tutorials) tutorial.id,
+    };
   }
 }
 
