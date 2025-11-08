@@ -175,7 +175,7 @@
 - [x] [125 Document on-call runbooks for incident handling and operational tasks.](./tasks/125-document-on-call-runbooks-for-incident-handling-and-operational-tasks.md)
 
 ## 13. Documentation & Support
-- [ ] [126 Document endpoint reference with request/response examples and auth requirements.](./tasks/126-document-endpoint-reference-with-request-response-examples-and-auth-requirements.md)
+- [x] [126 Document endpoint reference with request/response examples and auth requirements.](./tasks/126-document-endpoint-reference-with-request-response-examples-and-auth-requirements.md)
 - [ ] [127 Provide onboarding guide for developers (local setup, emulators, testing commands).](./tasks/127-provide-onboarding-guide-for-developers-local-setup-emulators-testing-commands.md)
 - [ ] [128 Document deployment checklist and rollback procedures.](./tasks/128-document-deployment-checklist-and-rollback-procedures.md)
 - [ ] [129 Provide post-launch task list for monitoring and iterative improvements.](./tasks/129-provide-post-launch-task-list-for-monitoring-and-iterative-improvements.md)
