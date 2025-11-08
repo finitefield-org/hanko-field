@@ -45,6 +45,10 @@ Environment variables:
 - `ADMIN_SHIPMENTS_TRACKING_ALERTS_LIMIT` – maximum number of alert banners to render (default `5`)
 - `ADMIN_SHIPMENTS_TRACKING_CACHE_TTL` – in-memory cache duration for the tracking dataset (default `15s`)
 - `ADMIN_SHIPMENTS_TRACKING_REFRESH_INTERVAL` – fallback auto-refresh interval exposed to the UI when metadata does not supply one (default `30s`)
+- `ADMIN_METRICS_ENABLED` – toggles Cloud Monitoring export for admin metrics (default `true` when a project ID is available)
+- `ADMIN_METRICS_PROJECT_ID` – overrides the project used for Cloud Monitoring (falls back to `GOOGLE_CLOUD_PROJECT` / `GCP_PROJECT`)
+- `ADMIN_METRICS_SERVICE_NAME` / `ADMIN_METRICS_SERVICE_VERSION` – optional overrides for the resource labels attached to emitted metrics
+- `ADMIN_METRICS_EXPORT_INTERVAL` – interval for flushing metrics to Cloud Monitoring (default `60s`)
 
 Run `make ensure-tailwind` after changing `TAILWIND_VERSION` in the `Makefile`; the rule verifies the installed binary matches the requested version and re-downloads if needed.
 

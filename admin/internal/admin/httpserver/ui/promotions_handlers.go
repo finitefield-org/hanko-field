@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
+	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	promotionstpl "finitefield.org/hanko-admin/internal/admin/templates/promotions"
@@ -344,28 +345,38 @@ func (h *Handlers) PromotionsValidateSubmit(w http.ResponseWriter, r *http.Reque
 // PromotionsCreate handles creation submissions.
 func (h *Handlers) PromotionsCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	metricResult := observability.MutationResultSuccess
+	defer func() {
+		h.recordPromotionCreated(ctx, metricResult)
+	}()
+
 	user, ok := custommw.UserFromContext(ctx)
 	if !ok || user == nil {
+		metricResult = observability.MutationResultUnauthorized
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
+		metricResult = observability.MutationResultInvalidRequest
 		http.Error(w, "フォームの解析に失敗しました。", http.StatusBadRequest)
 		return
 	}
 
 	input, state, fieldErrors := parsePromotionForm(r.PostForm, false)
 	if len(fieldErrors) > 0 {
+		metricResult = observability.MutationResultValidationError
 		reRenderPromotionModal(w, r, promotionModalModeNew, state, fieldErrors, "入力内容を確認してください。", http.MethodPost, "")
 		return
 	}
 
 	created, err := h.promotions.Create(ctx, user.Token, input)
 	if err != nil {
+		metricResult = classifyPromotionMutationError(err)
 		handlePromotionMutationError(w, r, promotionModalModeNew, "", input, state, err)
 		return
 	}
 
+	metricResult = observability.MutationResultSuccess
 	triggerPromotionsRefresh(w, fmt.Sprintf("プロモーション「%s」を作成しました。", strings.TrimSpace(input.Name)), "success", created.ID)
 }
 
@@ -457,6 +468,18 @@ func methodForMode(mode promotionModalMode) string {
 		return http.MethodPut
 	}
 	return http.MethodPost
+}
+
+func classifyPromotionMutationError(err error) observability.MutationResult {
+	var validationErr *adminpromotions.PromotionValidationError
+	switch {
+	case errors.As(err, &validationErr):
+		return observability.MutationResultValidationError
+	case errors.Is(err, adminpromotions.ErrPromotionNotFound):
+		return observability.MutationResultNotFound
+	default:
+		return observability.MutationResultBackendError
+	}
 }
 
 func buildPromotionsRequest(r *http.Request) promotionsRequest {

@@ -18,6 +18,7 @@ import (
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/httpserver"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
+	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
@@ -63,6 +64,18 @@ func main() {
 
 	if cfg.Authenticator == nil {
 		log.Fatal("admin: authenticator not configured; refusing to start")
+	}
+
+	metrics := buildMetrics(rootCtx, cfg.Environment)
+	if metrics != nil {
+		cfg.Metrics = metrics
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := metrics.Shutdown(ctx); err != nil {
+				log.Printf("metrics: shutdown failed: %v", err)
+			}
+		}()
 	}
 
 	srv := httpserver.New(cfg)
@@ -176,6 +189,33 @@ func getEnvList(key string, fallback []string) []string {
 		return append([]string(nil), fallback...)
 	}
 	return values
+}
+
+func buildMetrics(ctx context.Context, environment string) *observability.Metrics {
+	enabled := getEnvBool("ADMIN_METRICS_ENABLED", true)
+	cfg := observability.Config{
+		Enabled:        enabled,
+		ProjectID:      firstNonEmpty(os.Getenv("ADMIN_METRICS_PROJECT_ID"), os.Getenv("GOOGLE_CLOUD_PROJECT"), os.Getenv("GCP_PROJECT")),
+		ServiceName:    getEnv("ADMIN_METRICS_SERVICE_NAME", "hanko-admin"),
+		ServiceVersion: firstNonEmpty(os.Getenv("ADMIN_METRICS_SERVICE_VERSION"), os.Getenv("K_REVISION")),
+		Environment:    environment,
+		ExportInterval: getEnvDuration("ADMIN_METRICS_EXPORT_INTERVAL", 0),
+	}
+	metrics, err := observability.NewMetrics(ctx, cfg)
+	if err != nil {
+		log.Printf("metrics: init failed: %v", err)
+		return nil
+	}
+	return metrics
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func buildAuthenticator(ctx context.Context) middleware.Authenticator {

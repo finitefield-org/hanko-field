@@ -20,6 +20,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/httpserver/ui"
 	"finitefield.org/hanko-admin/internal/admin/i18n"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
+	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	adminpayments "finitefield.org/hanko-admin/internal/admin/payments"
@@ -65,6 +66,7 @@ type Config struct {
 	CSRFCookieSecure     bool
 	CSRFHeaderName       string
 	Environment          string
+	Metrics              *observability.Metrics
 }
 
 // SessionConfig represents optional overrides for the admin session manager.
@@ -136,6 +138,7 @@ func New(cfg Config) *http.Server {
 		ReviewsService:       cfg.ReviewsService,
 		OrgService:           cfg.OrgService,
 		SystemService:        cfg.SystemService,
+		Metrics:              cfg.Metrics,
 	})
 
 	catalog := i18n.Default()
@@ -210,6 +213,7 @@ func New(cfg Config) *http.Server {
 			Default:   defaultLocale,
 			Supported: supportedLocales,
 		},
+		Metrics: cfg.Metrics,
 	})
 
 	return &http.Server{
@@ -229,6 +233,7 @@ type routeOptions struct {
 	UI            *ui.Handlers
 	Environment   string
 	Locale        custommw.LocaleConfig
+	Metrics       *observability.Metrics
 }
 
 func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
@@ -241,6 +246,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 	shared = append(shared,
 		custommw.RequestInfoMiddleware(base),
 		custommw.HTMX(),
+		custommw.Metrics(opts.Metrics),
 		custommw.NoStore(),
 		custommw.Environment(opts.Environment),
 		custommw.Locale(opts.Locale),

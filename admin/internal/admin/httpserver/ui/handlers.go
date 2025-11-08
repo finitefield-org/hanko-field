@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	adminfinance "finitefield.org/hanko-admin/internal/admin/finance"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
+	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	adminpayments "finitefield.org/hanko-admin/internal/admin/payments"
@@ -52,6 +54,7 @@ type Dependencies struct {
 	ReviewsService       adminreviews.Service
 	OrgService           adminorg.Service
 	SystemService        adminsystem.Service
+	Metrics              *observability.Metrics
 }
 
 // Handlers exposes HTTP handlers for admin UI pages and fragments.
@@ -74,6 +77,7 @@ type Handlers struct {
 	reviews       adminreviews.Service
 	org           adminorg.Service
 	system        adminsystem.Service
+	metrics       *observability.Metrics
 }
 
 // NewHandlers wires the UI handler set.
@@ -150,6 +154,7 @@ func NewHandlers(deps Dependencies) *Handlers {
 	if systemService == nil {
 		systemService = adminsystem.NewStaticService()
 	}
+	metrics := deps.Metrics
 	return &Handlers{
 		auditlogs:     auditLogsService,
 		assets:        assetsService,
@@ -169,7 +174,22 @@ func NewHandlers(deps Dependencies) *Handlers {
 		reviews:       reviewsService,
 		org:           orgService,
 		system:        systemService,
+		metrics:       metrics,
 	}
+}
+
+func (h *Handlers) recordOrderStatusChange(ctx context.Context, nextStatus string, result observability.MutationResult) {
+	if h == nil || h.metrics == nil {
+		return
+	}
+	h.metrics.RecordOrderStatusChange(ctx, nextStatus, result)
+}
+
+func (h *Handlers) recordPromotionCreated(ctx context.Context, result observability.MutationResult) {
+	if h == nil || h.metrics == nil {
+		return
+	}
+	h.metrics.RecordPromotionCreated(ctx, result)
 }
 
 // Dashboard renders the admin dashboard.

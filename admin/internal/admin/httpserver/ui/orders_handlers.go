@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
+	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	orderstpl "finitefield.org/hanko-admin/internal/admin/templates/orders"
 )
@@ -275,24 +276,33 @@ func (h *Handlers) OrdersStatusModal(w http.ResponseWriter, r *http.Request) {
 // OrdersStatusUpdate handles status transition submissions for a single order.
 func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	metricResult := observability.MutationResultSuccess
+	var statusValue string
+	defer func() {
+		h.recordOrderStatusChange(ctx, statusValue, metricResult)
+	}()
+
 	user, ok := custommw.UserFromContext(ctx)
 	if !ok || user == nil {
+		metricResult = observability.MutationResultUnauthorized
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
 	if orderID == "" {
+		metricResult = observability.MutationResultInvalidRequest
 		http.Error(w, "注文IDが不正です。", http.StatusBadRequest)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
+		metricResult = observability.MutationResultInvalidRequest
 		http.Error(w, "リクエストの解析に失敗しました。", http.StatusBadRequest)
 		return
 	}
 
-	statusValue := strings.TrimSpace(r.FormValue("status"))
+	statusValue = strings.TrimSpace(r.FormValue("status"))
 	note := strings.TrimSpace(r.FormValue("note"))
 	notify := parseCheckbox(r.FormValue("notifyCustomer"))
 
@@ -308,10 +318,12 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var transitionErr *adminorders.StatusTransitionError
 		if errors.Is(err, adminorders.ErrOrderNotFound) {
+			metricResult = observability.MutationResultNotFound
 			http.Error(w, "指定された注文が見つかりません。", http.StatusNotFound)
 			return
 		}
 		if errors.As(err, &transitionErr) {
+			metricResult = observability.MutationResultValidationError
 			modal, modalErr := h.orders.StatusModal(ctx, user.Token, orderID)
 			if modalErr != nil {
 				log.Printf("orders: reload status modal after error failed: %v", modalErr)
@@ -330,6 +342,7 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("orders: status update failed: %v", err)
+		metricResult = observability.MutationResultBackendError
 		http.Error(w, "ステータス更新に失敗しました。", http.StatusBadGateway)
 		return
 	}
