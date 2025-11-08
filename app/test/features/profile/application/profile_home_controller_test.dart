@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/data/repositories/api_user_repository.dart';
 import 'package:app/core/domain/entities/user.dart';
@@ -66,6 +68,43 @@ void main() {
     final state = container.read(profileHomeControllerProvider).value!;
     expect(state.profile.persona, UserPersona.japanese);
     expect(state.isSavingPersona, isFalse);
+  });
+
+  test('changePersona preserves concurrent updates', () async {
+    final container = _buildContainer(
+      profile: _buildProfile(),
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    final completer = Completer<UserProfile>();
+    when(
+      () => repository.updateProfile(any()),
+    ).thenAnswer((_) => completer.future);
+
+    final controller = container.read(profileHomeControllerProvider.notifier);
+    await container.read(profileHomeControllerProvider.future);
+
+    final saveFuture = controller.changePersona(UserPersona.foreigner);
+    final optimisticState = controller.state.asData!.value;
+    final updatedIdentity = optimisticState.identity?.copyWith(
+      email: 'refreshed@example.com',
+    );
+
+    controller.state = AsyncData(
+      optimisticState.copyWith(identity: updatedIdentity),
+    );
+
+    completer.complete(
+      optimisticState.profile.copyWith(persona: UserPersona.foreigner),
+    );
+
+    await saveFuture;
+
+    final resolved = container.read(profileHomeControllerProvider).value!;
+    expect(resolved.identity?.email, 'refreshed@example.com');
+    expect(resolved.profile.persona, UserPersona.foreigner);
+    expect(resolved.isSavingPersona, isFalse);
   });
 }
 

@@ -65,13 +65,12 @@ class ProfileHomeController extends AsyncNotifier<ProfileHomeState> {
 
     final previousProfile = current.profile;
     final optimisticProfile = previousProfile.copyWith(persona: persona);
-    state = AsyncData(
-      current.copyWith(
-        profile: optimisticProfile,
-        membershipStatus: _membershipFromProfile(optimisticProfile),
-        isSavingPersona: true,
-      ),
+    final optimisticState = current.copyWith(
+      profile: optimisticProfile,
+      membershipStatus: _membershipFromProfile(optimisticProfile),
+      isSavingPersona: true,
     );
+    state = AsyncData(optimisticState);
 
     try {
       final repository = ref.read(userRepositoryProvider);
@@ -79,8 +78,9 @@ class ProfileHomeController extends AsyncNotifier<ProfileHomeState> {
       if (!ref.mounted) {
         return;
       }
+      final latestState = state.asData?.value ?? optimisticState;
       state = AsyncData(
-        current.copyWith(
+        latestState.copyWith(
           profile: savedProfile,
           membershipStatus: _membershipFromProfile(savedProfile),
           isSavingPersona: false,
@@ -90,10 +90,17 @@ class ProfileHomeController extends AsyncNotifier<ProfileHomeState> {
       ref.invalidate(experienceGateProvider);
     } catch (error, stackTrace) {
       if (ref.mounted) {
+        final latestState = state.asData?.value ?? optimisticState;
+        final shouldRestorePrevious =
+            latestState.profile.id == previousProfile.id &&
+            latestState.profile.persona == persona;
+        final resolvedProfile = shouldRestorePrevious
+            ? previousProfile
+            : latestState.profile;
         state = AsyncData(
-          current.copyWith(
-            profile: previousProfile,
-            membershipStatus: _membershipFromProfile(previousProfile),
+          latestState.copyWith(
+            profile: resolvedProfile,
+            membershipStatus: _membershipFromProfile(resolvedProfile),
             isSavingPersona: false,
           ),
         );
