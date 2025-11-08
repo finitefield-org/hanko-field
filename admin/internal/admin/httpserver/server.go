@@ -69,6 +69,7 @@ type Config struct {
 	Environment          string
 	Metrics              *observability.Metrics
 	Logger               *zap.Logger
+	UptimeProbes         UptimeProbeConfig
 }
 
 // SessionConfig represents optional overrides for the admin session manager.
@@ -147,6 +148,11 @@ func New(cfg Config) *http.Server {
 		Metrics:              cfg.Metrics,
 	})
 
+	uptimeHandlers := newUptimeHandlers(cfg.UptimeProbes, uptimeDependencies{
+		Orders:        cfg.OrdersService,
+		Notifications: cfg.NotificationsService,
+	})
+
 	catalog := i18n.Default()
 
 	normalizeLocale := func(locale string) string {
@@ -220,6 +226,7 @@ func New(cfg Config) *http.Server {
 			Supported: supportedLocales,
 		},
 		Metrics: cfg.Metrics,
+		Uptime:  uptimeHandlers,
 	})
 
 	return &http.Server{
@@ -240,6 +247,7 @@ type routeOptions struct {
 	Environment   string
 	Locale        custommw.LocaleConfig
 	Metrics       *observability.Metrics
+	Uptime        *uptimeHandlers
 }
 
 func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
@@ -267,6 +275,8 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 	if uiHandlers == nil {
 		uiHandlers = ui.NewHandlers(ui.Dependencies{})
 	}
+
+	mountUptimeRoutes(router, base, opts.Uptime)
 
 	router.Route(base, func(r chi.Router) {
 		for _, mw := range shared {

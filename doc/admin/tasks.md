@@ -120,5 +120,5 @@
 ## 16. Observability & Maintenance
 - [x] [Instrument server metrics (page render time, htmx fragment duration, error rates) and expose to Cloud Monitoring.](doc/admin/tasks/081-instrument-server-metrics-page-render-time-htmx-fragment-duration-error-rates-and-expose-t.md)
 - [x] [Configure structured logging with request IDs correlating to backend API calls.](doc/admin/tasks/082-configure-structured-logging-with-request-ids-correlating-to-backend-api-calls.md)
-- [ ] [Set up uptime checks and alerts for critical admin endpoints (login, orders list, notifications).](doc/admin/tasks/083-set-up-uptime-checks-and-alerts-for-critical-admin-endpoints-login-orders-list-notificatio.md)
+- [x] [Set up uptime checks and alerts for critical admin endpoints (login, orders list, notifications).](doc/admin/tasks/083-set-up-uptime-checks-and-alerts-for-critical-admin-endpoints-login-orders-list-notificatio.md)
 - [ ] [Plan ongoing data retention/cleanup jobs for historical audit logs and UI caches.](doc/admin/tasks/084-plan-ongoing-data-retention-cleanup-jobs-for-historical-audit-logs-and-ui-caches.md)

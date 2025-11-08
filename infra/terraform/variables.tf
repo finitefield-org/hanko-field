@@ -191,3 +191,30 @@ variable "service_accounts" {
     }
   }
 }
+
+variable "admin_alert_notification_emails" {
+	description = "Email recipients for admin uptime alert policies"
+	type        = list(string)
+	default     = []
+}
+
+variable "admin_uptime_check_host" {
+	description = "Host name used for admin uptime checks"
+	type        = string
+	default     = ""
+}
+
+variable "admin_uptime_endpoints" {
+	description = "Map of admin endpoints to probe via Cloud Monitoring"
+	type = map(object({
+		path          = string
+		content_match = string
+	}))
+	default = {}
+}
+
+variable "admin_uptime_regions" {
+	description = "Regions to run admin uptime checks from"
+	type        = list(string)
+	default     = ["asia-pacific1", "us-central1"]
+}

@@ -19,6 +19,7 @@ import (
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/httpserver"
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
+	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
@@ -45,21 +46,22 @@ func main() {
 	defer shipmentsClose()
 
 	cfg := httpserver.Config{
-		Address:           getEnv("ADMIN_HTTP_ADDR", ":8080"),
-		BasePath:          getEnv("ADMIN_BASE_PATH", "/admin"),
-		DefaultLocale:     getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
-		SupportedLocales:  getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),
-		Authenticator:     buildAuthenticator(rootCtx),
-		CatalogService:    buildCatalogService(),
-		ProfileService:    buildProfileService(),
-		SearchService:     buildSearchService(),
-		OrdersService:     buildOrdersService(),
-		ProductionService: buildProductionService(),
-		ShipmentsService:  shipmentsService,
-		ReviewsService:    buildReviewsService(),
-		OrgService:        buildOrgService(),
-		Environment:       getEnv("ADMIN_ENVIRONMENT", "Development"),
-		Logger:            appLogger,
+		Address:              getEnv("ADMIN_HTTP_ADDR", ":8080"),
+		BasePath:             getEnv("ADMIN_BASE_PATH", "/admin"),
+		DefaultLocale:        getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
+		SupportedLocales:     getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),
+		Authenticator:        buildAuthenticator(rootCtx),
+		CatalogService:       buildCatalogService(),
+		ProfileService:       buildProfileService(),
+		SearchService:        buildSearchService(),
+		NotificationsService: buildNotificationsService(),
+		OrdersService:        buildOrdersService(),
+		ProductionService:    buildProductionService(),
+		ShipmentsService:     shipmentsService,
+		ReviewsService:       buildReviewsService(),
+		OrgService:           buildOrgService(),
+		Environment:          getEnv("ADMIN_ENVIRONMENT", "Development"),
+		Logger:               appLogger,
 		Session: httpserver.SessionConfig{
 			CookieName:       getEnv("ADMIN_SESSION_COOKIE_NAME", ""),
 			CookieDomain:     os.Getenv("ADMIN_SESSION_COOKIE_DOMAIN"),
@@ -73,6 +75,12 @@ func main() {
 		},
 	}
 	cfg.Session.CookiePath = cfg.BasePath
+
+	cfg.UptimeProbes = httpserver.UptimeProbeConfig{
+		Enabled:      getEnvBool("ADMIN_UPTIME_ENABLED", true),
+		Timeout:      getEnvDuration("ADMIN_UPTIME_TIMEOUT", 5*time.Second),
+		ServiceToken: strings.TrimSpace(os.Getenv("ADMIN_UPTIME_SERVICE_TOKEN")),
+	}
 
 	if cfg.Authenticator == nil {
 		log.Fatal("admin: authenticator not configured; refusing to start")
@@ -294,6 +302,10 @@ func buildSearchService() search.Service {
 		log.Printf("admin: ADMIN_SEARCH_API_BASE_URL is set (%s) but no HTTP client is implemented yet; using static search dataset", base)
 	}
 	return search.NewStaticService()
+}
+
+func buildNotificationsService() adminnotifications.Service {
+	return adminnotifications.NewStaticService()
 }
 
 func buildOrdersService() adminorders.Service {

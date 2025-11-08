@@ -56,6 +56,9 @@ Configure in Cloud Run (or IaC) and keep secrets (marked 🔒) in Secret Manager
 | `ADMIN_SHIPMENTS_TRACKING_REFRESH_INTERVAL` | UI auto-refresh fallback. | No | `30s` |
 | `ASSETS_CDN_BASE_URL` | HTTPS origin for static assets (if split from Cloud Run). | No | `https://cdn.hanko-field.com/admin` |
 | `LOG_LEVEL` | `info` / `debug`. Keep `debug` off in prod. | No | `info` |
+| `ADMIN_UPTIME_ENABLED` | Enables `/admin/uptime/*` probes used by Cloud Monitoring. | No | `true` |
+| `ADMIN_UPTIME_TIMEOUT` | Timeout per probe when calling downstream services. | No | `3s` |
+| `ADMIN_UPTIME_SERVICE_TOKEN` 🔒 | Optional bearer token used when probes call protected APIs. Store in Secret Manager. | No | `projects/.../secrets/admin-uptime-token` |
 
 ### Secrets handling
 
