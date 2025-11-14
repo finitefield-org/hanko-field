@@ -3315,4 +3315,104 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profilePaymentsErrorRetry => '再試行';
+
+  @override
+  String get profileSupportTitle => 'サポート';
+
+  @override
+  String get profileSupportSearchTooltip => 'サポートを検索';
+
+  @override
+  String get profileSupportHelpCenterTitle => 'お困りですか？';
+
+  @override
+  String get profileSupportHelpCenterSubtitle => 'FAQ やチャット、コンシェルジュへの連絡はこちら';
+
+  @override
+  String profileSupportUpdatedLabel(String timestamp) {
+    return '最終更新 $timestamp';
+  }
+
+  @override
+  String get profileSupportLoadError => 'サポート情報を読み込めませんでした。';
+
+  @override
+  String get profileSupportRetryLabel => '再試行';
+
+  @override
+  String get profileSupportQuickFaqTitle => 'FAQ・ガイド';
+
+  @override
+  String get profileSupportQuickFaqSubtitle => '利用規約 / 配送 / カスタム';
+
+  @override
+  String get profileSupportQuickChatTitle => 'ライブチャット';
+
+  @override
+  String get profileSupportQuickChatSubtitle => '平均返信 2 分';
+
+  @override
+  String get profileSupportQuickCallTitle => 'コンシェルジュ通話';
+
+  @override
+  String get profileSupportQuickCallSubtitle => 'フォーム送信や折り返し依頼';
+
+  @override
+  String get profileSupportRecentTicketsTitle => '最近のチケット';
+
+  @override
+  String get profileSupportRecentTicketsSubtitle => '進行中のサポートの状況を確認できます。';
+
+  @override
+  String get profileSupportEmptyTicketsTitle => 'チケットはまだありません';
+
+  @override
+  String get profileSupportEmptyTicketsSubtitle => 'カスタム相談があればチケットを作成してください。';
+
+  @override
+  String get profileSupportCreateTicketLabel => 'チケットを作成';
+
+  @override
+  String get profileSupportCreateTicketSuccess => 'チケットを作成しました。まもなくご連絡します。';
+
+  @override
+  String get profileSupportCreateTicketError => 'チケットを作成できませんでした。もう一度お試しください。';
+
+  @override
+  String get profileSupportTicketQuickSubject => 'コンシェルジュ相談';
+
+  @override
+  String profileSupportTicketSubtitle(String timestamp, String reference) {
+    return '更新 $timestamp ・ $reference';
+  }
+
+  @override
+  String get profileSupportStatusOpen => '対応中';
+
+  @override
+  String get profileSupportStatusWaiting => 'お客様からの返信待ち';
+
+  @override
+  String get profileSupportStatusResolved => '解決済み';
+
+  @override
+  String get profileSupportActionError => 'リンクを開けませんでした。もう一度お試しください。';
+
+  @override
+  String get profileSupportSearchPlaceholder => 'FAQ やチケットを検索';
+
+  @override
+  String get profileSupportSearchEmpty => '該当する結果がありません';
+
+  @override
+  String get profileSupportTicketDetailBody =>
+      'チャットとメールで更新をお送りします。追記は会話に返信してください。';
+
+  @override
+  String get profileSupportTicketDetailAction => '会話を開く';
+
+  @override
+  String profileSupportTicketDetailFollowup(String reference) {
+    return '$reference の更新をお送りします。';
+  }
 }

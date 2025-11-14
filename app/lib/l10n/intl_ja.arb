@@ -3551,4 +3551,169 @@
 , "@profilePaymentsErrorRetry": {
   "description": "お支払い方法エラー画面の再試行ボタン"
 }
+
+, "profileSupportTitle": "サポート"
+, "@profileSupportTitle": {
+  "description": "Title for the profile support screen"
+}
+
+, "profileSupportSearchTooltip": "サポートを検索"
+, "@profileSupportSearchTooltip": {
+  "description": "Tooltip for the search icon on the support screen app bar"
+}
+
+, "profileSupportHelpCenterTitle": "お困りですか？"
+, "@profileSupportHelpCenterTitle": {
+  "description": "Headline above the support quick actions grid"
+}
+
+, "profileSupportHelpCenterSubtitle": "FAQ やチャット、コンシェルジュへの連絡はこちら"
+, "@profileSupportHelpCenterSubtitle": {
+  "description": "Supporting copy under the help center headline"
+}
+
+, "profileSupportUpdatedLabel": "最終更新 {timestamp}"
+, "@profileSupportUpdatedLabel": {
+  "description": "Label showing the last updated timestamp for support content",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileSupportLoadError": "サポート情報を読み込めませんでした。"
+, "@profileSupportLoadError": {
+  "description": "Error message displayed when the support screen fails to load"
+}
+
+, "profileSupportRetryLabel": "再試行"
+, "@profileSupportRetryLabel": {
+  "description": "Label for retry buttons on the support screen"
+}
+
+, "profileSupportQuickFaqTitle": "FAQ・ガイド"
+, "@profileSupportQuickFaqTitle": {
+  "description": "Title for the FAQ quick action card"
+}
+
+, "profileSupportQuickFaqSubtitle": "利用規約 / 配送 / カスタム"
+, "@profileSupportQuickFaqSubtitle": {
+  "description": "Supporting text for the FAQ quick action card"
+}
+
+, "profileSupportQuickChatTitle": "ライブチャット"
+, "@profileSupportQuickChatTitle": {
+  "description": "Title for the chat quick action card"
+}
+
+, "profileSupportQuickChatSubtitle": "平均返信 2 分"
+, "@profileSupportQuickChatSubtitle": {
+  "description": "Supporting text for the chat quick action card"
+}
+
+, "profileSupportQuickCallTitle": "コンシェルジュ通話"
+, "@profileSupportQuickCallTitle": {
+  "description": "Title for the call quick action card"
+}
+
+, "profileSupportQuickCallSubtitle": "フォーム送信や折り返し依頼"
+, "@profileSupportQuickCallSubtitle": {
+  "description": "Supporting text for the call quick action card"
+}
+
+, "profileSupportRecentTicketsTitle": "最近のチケット"
+, "@profileSupportRecentTicketsTitle": {
+  "description": "Heading for the recent tickets section"
+}
+
+, "profileSupportRecentTicketsSubtitle": "進行中のサポートの状況を確認できます。"
+, "@profileSupportRecentTicketsSubtitle": {
+  "description": "Supporting text describing the recent tickets section"
+}
+
+, "profileSupportEmptyTicketsTitle": "チケットはまだありません"
+, "@profileSupportEmptyTicketsTitle": {
+  "description": "Headline for the empty tickets placeholder"
+}
+
+, "profileSupportEmptyTicketsSubtitle": "カスタム相談があればチケットを作成してください。"
+, "@profileSupportEmptyTicketsSubtitle": {
+  "description": "Supporting text for the empty tickets placeholder"
+}
+
+, "profileSupportCreateTicketLabel": "チケットを作成"
+, "@profileSupportCreateTicketLabel": {
+  "description": "CTA label for the create ticket button"
+}
+
+, "profileSupportCreateTicketSuccess": "チケットを作成しました。まもなくご連絡します。"
+, "@profileSupportCreateTicketSuccess": {
+  "description": "Snack bar message shown when a ticket is created successfully"
+}
+
+, "profileSupportCreateTicketError": "チケットを作成できませんでした。もう一度お試しください。"
+, "@profileSupportCreateTicketError": {
+  "description": "Snack bar message shown when creating a ticket fails"
+}
+
+, "profileSupportTicketQuickSubject": "コンシェルジュ相談"
+, "@profileSupportTicketQuickSubject": {
+  "description": "Subject used for the quick create ticket action"
+}
+
+, "profileSupportTicketSubtitle": "更新 {timestamp} ・ {reference}"
+, "@profileSupportTicketSubtitle": {
+  "description": "Subtitle format for ticket list items",
+  "placeholders": {
+    "timestamp": { "type": "String" },
+    "reference": { "type": "String" }
+  }
+}
+
+, "profileSupportStatusOpen": "対応中"
+, "@profileSupportStatusOpen": {
+  "description": "Label for open ticket status"
+}
+
+, "profileSupportStatusWaiting": "お客様からの返信待ち"
+, "@profileSupportStatusWaiting": {
+  "description": "Label for waiting on customer ticket status"
+}
+
+, "profileSupportStatusResolved": "解決済み"
+, "@profileSupportStatusResolved": {
+  "description": "Label for resolved ticket status"
+}
+
+, "profileSupportActionError": "リンクを開けませんでした。もう一度お試しください。"
+, "@profileSupportActionError": {
+  "description": "Snack bar message shown when quick actions fail to open"
+}
+
+, "profileSupportSearchPlaceholder": "FAQ やチケットを検索"
+, "@profileSupportSearchPlaceholder": {
+  "description": "Hint text inside the support search UI"
+}
+
+, "profileSupportSearchEmpty": "該当する結果がありません"
+, "@profileSupportSearchEmpty": {
+  "description": "Message shown when the support search has no matches"
+}
+
+, "profileSupportTicketDetailBody": "チャットとメールで更新をお送りします。追記は会話に返信してください。"
+, "@profileSupportTicketDetailBody": {
+  "description": "Body copy inside the ticket detail bottom sheet"
+}
+
+, "profileSupportTicketDetailAction": "会話を開く"
+, "@profileSupportTicketDetailAction": {
+  "description": "Button label in the ticket detail bottom sheet"
+}
+
+, "profileSupportTicketDetailFollowup": "{reference} の更新をお送りします。"
+, "@profileSupportTicketDetailFollowup": {
+  "description": "Snack bar message shown after closing the ticket detail sheet",
+  "placeholders": {
+    "reference": { "type": "String" }
+  }
+}
 }

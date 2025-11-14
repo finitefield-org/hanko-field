@@ -5977,6 +5977,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get profilePaymentsErrorRetry;
+
+  /// Title for the profile support screen
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get profileSupportTitle;
+
+  /// Tooltip for the search icon on the support screen app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Search help content'**
+  String get profileSupportSearchTooltip;
+
+  /// Headline above the support quick actions grid
+  ///
+  /// In en, this message translates to:
+  /// **'How can we help?'**
+  String get profileSupportHelpCenterTitle;
+
+  /// Supporting copy under the help center headline
+  ///
+  /// In en, this message translates to:
+  /// **'Find answers, chat with us, or request concierge callbacks.'**
+  String get profileSupportHelpCenterSubtitle;
+
+  /// Label showing the last updated timestamp for support content
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String profileSupportUpdatedLabel(String timestamp);
+
+  /// Error message displayed when the support screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load support resources.'**
+  String get profileSupportLoadError;
+
+  /// Label for retry buttons on the support screen
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileSupportRetryLabel;
+
+  /// Title for the FAQ quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ & guides'**
+  String get profileSupportQuickFaqTitle;
+
+  /// Supporting text for the FAQ quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Policies, delivery, personalization'**
+  String get profileSupportQuickFaqSubtitle;
+
+  /// Title for the chat quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Live chat'**
+  String get profileSupportQuickChatTitle;
+
+  /// Supporting text for the chat quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Average reply under 2 min'**
+  String get profileSupportQuickChatSubtitle;
+
+  /// Title for the call quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Concierge call'**
+  String get profileSupportQuickCallTitle;
+
+  /// Supporting text for the call quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Request callbacks and forms'**
+  String get profileSupportQuickCallSubtitle;
+
+  /// Heading for the recent tickets section
+  ///
+  /// In en, this message translates to:
+  /// **'Recent tickets'**
+  String get profileSupportRecentTicketsTitle;
+
+  /// Supporting text describing the recent tickets section
+  ///
+  /// In en, this message translates to:
+  /// **'Track responses and follow up on open support conversations.'**
+  String get profileSupportRecentTicketsSubtitle;
+
+  /// Headline for the empty tickets placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'No tickets yet'**
+  String get profileSupportEmptyTicketsTitle;
+
+  /// Supporting text for the empty tickets placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Create a ticket to reach our concierge team for custom requests.'**
+  String get profileSupportEmptyTicketsSubtitle;
+
+  /// CTA label for the create ticket button
+  ///
+  /// In en, this message translates to:
+  /// **'Create support ticket'**
+  String get profileSupportCreateTicketLabel;
+
+  /// Snack bar message shown when a ticket is created successfully
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket created. We’ll reply shortly.'**
+  String get profileSupportCreateTicketSuccess;
+
+  /// Snack bar message shown when creating a ticket fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t create a ticket. Please try again.'**
+  String get profileSupportCreateTicketError;
+
+  /// Subject used for the quick create ticket action
+  ///
+  /// In en, this message translates to:
+  /// **'Concierge request'**
+  String get profileSupportTicketQuickSubject;
+
+  /// Subtitle format for ticket list items
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp} • {reference}'**
+  String profileSupportTicketSubtitle(String timestamp, String reference);
+
+  /// Label for open ticket status
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get profileSupportStatusOpen;
+
+  /// Label for waiting on customer ticket status
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for you'**
+  String get profileSupportStatusWaiting;
+
+  /// Label for resolved ticket status
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get profileSupportStatusResolved;
+
+  /// Snack bar message shown when quick actions fail to open
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open the link. Please try again.'**
+  String get profileSupportActionError;
+
+  /// Hint text inside the support search UI
+  ///
+  /// In en, this message translates to:
+  /// **'Search FAQ or tickets'**
+  String get profileSupportSearchPlaceholder;
+
+  /// Message shown when the support search has no matches
+  ///
+  /// In en, this message translates to:
+  /// **'No support results found'**
+  String get profileSupportSearchEmpty;
+
+  /// Body copy inside the ticket detail bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll notify you in chat and email. Reply in the conversation if you have new info.'**
+  String get profileSupportTicketDetailBody;
+
+  /// Button label in the ticket detail bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Open conversation'**
+  String get profileSupportTicketDetailAction;
+
+  /// Snack bar message shown after closing the ticket detail sheet
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll keep you updated on {reference}.'**
+  String profileSupportTicketDetailFollowup(String reference);
 }
 
 class _AppLocalizationsDelegate

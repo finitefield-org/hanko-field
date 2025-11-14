@@ -5,6 +5,7 @@ import 'package:app/features/profile/presentation/profile_legal_screen.dart';
 import 'package:app/features/profile/presentation/profile_locale_screen.dart';
 import 'package:app/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:app/features/profile/presentation/profile_payments_screen.dart';
+import 'package:app/features/profile/presentation/profile_support_screen.dart';
 import 'package:app/features/shop/presentation/material_detail_screen.dart';
 import 'package:app/features/shop/presentation/product_addons_screen.dart';
 import 'package:app/features/shop/presentation/product_detail_screen.dart';
@@ -108,6 +109,8 @@ class ProfileSectionPage extends StatelessWidget {
         return const ProfileLocaleScreen();
       case 'legal':
         return const ProfileLegalScreen();
+      case 'support':
+        return const ProfileSupportScreen();
       default:
         return _ProfileSectionFallback(title: title);
     }

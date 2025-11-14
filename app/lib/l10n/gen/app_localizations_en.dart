@@ -3444,4 +3444,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilePaymentsErrorRetry => 'Retry';
+
+  @override
+  String get profileSupportTitle => 'Support';
+
+  @override
+  String get profileSupportSearchTooltip => 'Search help content';
+
+  @override
+  String get profileSupportHelpCenterTitle => 'How can we help?';
+
+  @override
+  String get profileSupportHelpCenterSubtitle =>
+      'Find answers, chat with us, or request concierge callbacks.';
+
+  @override
+  String profileSupportUpdatedLabel(String timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String get profileSupportLoadError => 'We couldn’t load support resources.';
+
+  @override
+  String get profileSupportRetryLabel => 'Try again';
+
+  @override
+  String get profileSupportQuickFaqTitle => 'FAQ & guides';
+
+  @override
+  String get profileSupportQuickFaqSubtitle =>
+      'Policies, delivery, personalization';
+
+  @override
+  String get profileSupportQuickChatTitle => 'Live chat';
+
+  @override
+  String get profileSupportQuickChatSubtitle => 'Average reply under 2 min';
+
+  @override
+  String get profileSupportQuickCallTitle => 'Concierge call';
+
+  @override
+  String get profileSupportQuickCallSubtitle => 'Request callbacks and forms';
+
+  @override
+  String get profileSupportRecentTicketsTitle => 'Recent tickets';
+
+  @override
+  String get profileSupportRecentTicketsSubtitle =>
+      'Track responses and follow up on open support conversations.';
+
+  @override
+  String get profileSupportEmptyTicketsTitle => 'No tickets yet';
+
+  @override
+  String get profileSupportEmptyTicketsSubtitle =>
+      'Create a ticket to reach our concierge team for custom requests.';
+
+  @override
+  String get profileSupportCreateTicketLabel => 'Create support ticket';
+
+  @override
+  String get profileSupportCreateTicketSuccess =>
+      'Ticket created. We’ll reply shortly.';
+
+  @override
+  String get profileSupportCreateTicketError =>
+      'Couldn’t create a ticket. Please try again.';
+
+  @override
+  String get profileSupportTicketQuickSubject => 'Concierge request';
+
+  @override
+  String profileSupportTicketSubtitle(String timestamp, String reference) {
+    return 'Updated $timestamp • $reference';
+  }
+
+  @override
+  String get profileSupportStatusOpen => 'Open';
+
+  @override
+  String get profileSupportStatusWaiting => 'Waiting for you';
+
+  @override
+  String get profileSupportStatusResolved => 'Resolved';
+
+  @override
+  String get profileSupportActionError =>
+      'Unable to open the link. Please try again.';
+
+  @override
+  String get profileSupportSearchPlaceholder => 'Search FAQ or tickets';
+
+  @override
+  String get profileSupportSearchEmpty => 'No support results found';
+
+  @override
+  String get profileSupportTicketDetailBody =>
+      'We’ll notify you in chat and email. Reply in the conversation if you have new info.';
+
+  @override
+  String get profileSupportTicketDetailAction => 'Open conversation';
+
+  @override
+  String profileSupportTicketDetailFollowup(String reference) {
+    return 'We’ll keep you updated on $reference.';
+  }
 }
