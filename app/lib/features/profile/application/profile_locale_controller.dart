@@ -61,6 +61,8 @@ class ProfileLocaleState {
       localeSource == AppLocaleSource.system &&
       savedLocaleTag == systemLocale.toLanguageTag();
 
+  static const _sentinel = Object();
+
   ProfileLocaleState copyWith({
     List<LocaleOption>? availableLocales,
     List<String>? availableCurrencies,
@@ -68,11 +70,14 @@ class ProfileLocaleState {
     Locale? selectedLocale,
     Locale? systemLocale,
     AppLocaleSource? localeSource,
-    String? savedCurrencyOverride,
+    Object? savedCurrencyOverride = _sentinel,
     String? selectedCurrencyCode,
     bool? isSaving,
     DateTime? lastSavedAt,
   }) {
+    final overrideValue = savedCurrencyOverride == _sentinel
+        ? this.savedCurrencyOverride
+        : savedCurrencyOverride as String?;
     return ProfileLocaleState(
       availableLocales: availableLocales ?? this.availableLocales,
       availableCurrencies: availableCurrencies ?? this.availableCurrencies,
@@ -80,8 +85,7 @@ class ProfileLocaleState {
       selectedLocale: selectedLocale ?? this.selectedLocale,
       systemLocale: systemLocale ?? this.systemLocale,
       localeSource: localeSource ?? this.localeSource,
-      savedCurrencyOverride:
-          savedCurrencyOverride ?? this.savedCurrencyOverride,
+      savedCurrencyOverride: overrideValue,
       selectedCurrencyCode: selectedCurrencyCode ?? this.selectedCurrencyCode,
       isSaving: isSaving ?? this.isSaving,
       lastSavedAt: lastSavedAt ?? this.lastSavedAt,
