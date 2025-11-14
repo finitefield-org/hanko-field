@@ -1,0 +1,123 @@
+{{ define "frag_account_profile_form" }}
+{{ $values := .Values }}
+{{ $errors := .Errors }}
+<div class="space-y-6" data-account-profile-form-container>
+  <div class="space-y-2">
+    <h3 class="text-xl font-semibold text-gray-900">{{ tlang .Lang "account.profile.section_title" }}</h3>
+    <p class="text-sm text-gray-600">{{ .Subtitle }}</p>
+  </div>
+
+  <form id="{{ .FormID }}"
+        data-account-profile-form="true"
+        data-initial-state="{{ .InitialState }}"
+        class="space-y-6"
+        hx-post="/account/profile/form"
+        hx-target="#account-profile-form-shell"
+        hx-swap="innerHTML"
+        hx-indicator="#account-profile-form-indicator">
+
+    <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-center gap-4">
+        <img src="{{ .AvatarURL }}" alt="{{ tlang .Lang "account.profile.avatar.label" }}" class="h-16 w-16 rounded-full border border-gray-200 object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset .AvatarURL 96 128 192 }}" sizes="{{ responsiveSizes "avatar" }}">
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-gray-900">{{ tlang .Lang "account.profile.avatar.label" }}</p>
+          <p class="text-xs text-gray-500">{{ tlang .Lang "account.profile.avatar.help" }}</p>
+        </div>
+        <div class="ml-auto flex flex-wrap gap-3">
+          <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900">
+            {{ tlang .Lang "account.profile.avatar.upload" }}
+          </button>
+          <button type="button" class="text-sm text-gray-500 hover:text-gray-900" data-account-avatar-reset="true">
+            {{ tlang .Lang "account.profile.avatar.remove" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {{ template "c_input" (dict
+        "ID" "display_name"
+        "Name" "display_name"
+        "Label" (tlang .Lang "account.profile.display_name")
+        "Value" (index $values "display_name")
+        "Required" true
+        "Error" (index $errors "display_name")
+      ) }}
+      {{ template "c_input" (dict
+        "ID" "email"
+        "Type" "email"
+        "Name" "email"
+        "Label" (tlang .Lang "account.profile.email")
+        "Value" (index $values "email")
+        "Required" true
+        "Error" (index $errors "email")
+      ) }}
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+      <div>
+        <label for="phone_country" class="block text-sm font-medium text-gray-700">{{ tlang .Lang "account.profile.phone_country" }}</label>
+        <select id="phone_country"
+                name="phone_country"
+                class="mt-1 block w-full rounded-xl border-gray-200 bg-white py-2 pl-3 pr-8 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+          {{ range .DialCodes }}
+            <option value="{{ .Value }}" {{ if eq .Value (index $values "phone_country") }}selected{{ end }}>{{ .Label }}</option>
+          {{ end }}
+        </select>
+      </div>
+      <div>
+        <label for="phone" class="block text-sm font-medium text-gray-700">{{ tlang .Lang "account.profile.phone" }}</label>
+        <div class="mt-1">
+          <input id="phone"
+                 name="phone"
+                 type="tel"
+                 value="{{ index $values "phone" }}"
+                 class="block w-full rounded-xl border-gray-200 py-2 px-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 {{ if (index $errors "phone") }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}">
+        </div>
+        {{ if (index $errors "phone") }}
+          <p class="mt-1 text-xs text-red-600">{{ index $errors "phone" }}</p>
+        {{ else }}
+          <p class="mt-1 text-xs text-gray-500">{{ tlang .Lang "account.profile.phone_hint" }}</p>
+        {{ end }}
+      </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="lang" class="block text-sm font-medium text-gray-700">{{ tlang .Lang "account.profile.language" }}</label>
+        <select id="lang"
+                name="lang"
+                class="mt-1 block w-full rounded-xl border-gray-200 bg-white py-2 pl-3 pr-8 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 {{ if (index $errors "lang") }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}">
+          {{ range .Languages }}
+            <option value="{{ .Value }}" {{ if eq .Value (index $values "lang") }}selected{{ end }}>{{ .Label }}</option>
+          {{ end }}
+        </select>
+        {{ if (index $errors "lang") }}
+          <p class="mt-1 text-xs text-red-600">{{ index $errors "lang" }}</p>
+        {{ end }}
+      </div>
+      <div>
+        <label for="country" class="block text-sm font-medium text-gray-700">{{ tlang .Lang "account.profile.country" }}</label>
+        <select id="country"
+                name="country"
+                class="mt-1 block w-full rounded-xl border-gray-200 bg-white py-2 pl-3 pr-8 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 {{ if (index $errors "country") }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}">
+          {{ range .Countries }}
+            <option value="{{ .Value }}" {{ if eq .Value (index $values "country") }}selected{{ end }}>{{ .Label }}</option>
+          {{ end }}
+        </select>
+        {{ if (index $errors "country") }}
+          <p class="mt-1 text-xs text-red-600">{{ index $errors "country" }}</p>
+        {{ end }}
+      </div>
+    </div>
+
+    <div id="account-profile-form-indicator" class="htmx-indicator flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+      <svg class="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke-opacity="0.2"></circle>
+        <path d="M21 12a9 9 0 00-9-9" stroke-linecap="round"></path>
+      </svg>
+      <span>{{ tlang .Lang "account.profile.saving" }}</span>
+    </div>
+  </form>
+</div>
+{{ end }}

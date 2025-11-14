@@ -1,0 +1,80 @@
+{{ define "account_address_modal_body" }}
+{{ $form := . }}
+{{ $isJA := eq $form.Lang "ja" }}
+{{ $labelLabel := "Label" }}{{ if $isJA }}{{ $labelLabel = "ラベル" }}{{ end }}
+{{ $usageLabel := "Usage" }}{{ if $isJA }}{{ $usageLabel = "用途" }}{{ end }}
+{{ $recipientLabel := "Recipient" }}{{ if $isJA }}{{ $recipientLabel = "受取人" }}{{ end }}
+{{ $phoneLabel := "Phone" }}{{ if $isJA }}{{ $phoneLabel = "電話番号" }}{{ end }}
+{{ $companyLabel := "Company" }}{{ if $isJA }}{{ $companyLabel = "会社名" }}{{ end }}
+{{ $deptLabel := "Department" }}{{ if $isJA }}{{ $deptLabel = "部署" }}{{ end }}
+{{ $countryLabel := "Country/Region" }}{{ if $isJA }}{{ $countryLabel = "国・地域" }}{{ end }}
+{{ $regionLabel := "Prefecture/State" }}{{ if $isJA }}{{ $regionLabel = "都道府県" }}{{ end }}
+{{ $cityLabel := "City" }}{{ if $isJA }}{{ $cityLabel = "市区町村" }}{{ end }}
+{{ $postalLabel := "Postal code" }}{{ if $isJA }}{{ $postalLabel = "郵便番号" }}{{ end }}
+{{ $line1Label := "Address line 1" }}{{ if $isJA }}{{ $line1Label = "住所1" }}{{ end }}
+{{ $line2Label := "Address line 2" }}{{ if $isJA }}{{ $line2Label = "住所2" }}{{ end }}
+{{ $notesLabel := "Notes" }}{{ if $isJA }}{{ $notesLabel = "メモ" }}{{ end }}
+{{ $notesHelp := "Include customs or building access notes." }}{{ if $isJA }}{{ $notesHelp = "通関や搬入口などのメモを記載できます。" }}{{ end }}
+<div class="space-y-4">
+  {{ if $form.Subtitle }}
+    <p class="text-sm text-gray-600">{{ $form.Subtitle }}</p>
+  {{ end }}
+  {{ if $form.Errors }}
+    <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      <p class="font-semibold">{{ if eq $form.Lang "ja" }}入力内容を確認してください{{ else }}Please fix the highlighted fields{{ end }}</p>
+      <ul class="mt-2 list-disc pl-4 text-xs leading-relaxed">
+        {{ range $field, $err := $form.Errors }}
+          {{ if $err }}<li>{{ $err }}</li>{{ end }}
+        {{ end }}
+      </ul>
+    </div>
+  {{ end }}
+  <form id="account-address-modal-form"
+        class="space-y-4"
+        hx-post="/me/addresses"
+        hx-target="#modal-root"
+        hx-swap="innerHTML">
+    <input type="hidden" name="id" value="{{ $form.AddressID }}">
+    <div class="grid gap-4 md:grid-cols-2">
+      {{ template "c_input" (dict "Name" "label" "Label" $labelLabel "Value" (index $form.Values "label") "Required" true "Error" (index $form.Errors "label")) }}
+      {{ template "c_select" (dict "Name" "kind" "Label" $usageLabel "Options" $form.KindOptions "Value" $form.Kind "Required" true "Error" (index $form.Errors "kind")) }}
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      {{ template "c_input" (dict "Name" "recipient" "Label" $recipientLabel "Value" (index $form.Values "recipient") "Required" true "Error" (index $form.Errors "recipient")) }}
+      {{ template "c_input" (dict "Name" "phone" "Label" $phoneLabel "Value" (index $form.Values "phone") "Error" (index $form.Errors "phone")) }}
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      {{ template "c_input" (dict "Name" "company" "Label" $companyLabel "Value" (index $form.Values "company")) }}
+      {{ template "c_input" (dict "Name" "department" "Label" $deptLabel "Value" (index $form.Values "department")) }}
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      {{ template "c_select" (dict "Name" "country" "Label" $countryLabel "Options" $form.Countries "Value" (or (index $form.Values "country") "JP") "Required" true "Error" (index $form.Errors "country")) }}
+      {{ template "c_select" (dict "Name" "region" "Label" $regionLabel "Options" $form.Prefectures "Value" (index $form.Values "region")) }}
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      {{ template "c_input" (dict "Name" "city" "Label" $cityLabel "Value" (index $form.Values "city") "Required" true "Error" (index $form.Errors "city")) }}
+      {{ template "c_input" (dict "Name" "postal" "Label" $postalLabel "Value" (index $form.Values "postal") "Required" true "Error" (index $form.Errors "postal")) }}
+    </div>
+    {{ template "c_input" (dict "Name" "line1" "Label" $line1Label "Value" (index $form.Values "line1") "Required" true "Error" (index $form.Errors "line1")) }}
+    {{ template "c_input" (dict "Name" "line2" "Label" $line2Label "Value" (index $form.Values "line2")) }}
+    {{ template "c_textarea" (dict "Name" "notes" "Rows" 3 "Label" $notesLabel "Value" (index $form.Values "notes") "Help" $notesHelp) }}
+  </form>
+</div>
+{{ end }}
+
+{{ define "account_address_modal_footer" }}
+<div class="flex items-center justify-end gap-3">
+  <button type="button" class="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" data-modal-close>{{ if eq .Lang "ja" }}キャンセル{{ else }}Cancel{{ end }}</button>
+  <button form="account-address-modal-form" type="submit" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+    {{ if eq .Lang "ja" }}保存する{{ else }}Save address{{ end }}
+  </button>
+</div>
+{{ end }}
+
+{{ define "frag_account_address_modal" }}
+{{ $title := .Title }}
+{{ if not $title }}
+  {{ if eq .Lang "ja" }}{{ $title = "住所" }}{{ else }}{{ $title = "Address" }}{{ end }}
+{{ end }}
+{{ template "c_modal" (dict "ID" "account-address-modal" "Title" $title "BodyTmpl" "account_address_modal_body" "BodyData" . "FooterTmpl" "account_address_modal_footer" "FooterData" (dict "Lang" .Lang)) }}
+{{ end }}

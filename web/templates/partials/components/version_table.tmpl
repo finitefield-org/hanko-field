@@ -1,0 +1,49 @@
+{{ define "version_table" }}
+{{ $lang := .Lang }}
+{{ $history := .History }}
+<section class="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-800">{{ tlang $lang "legal.history.title" }}</h2>
+    <span class="text-xs uppercase tracking-wide text-gray-400">{{ tlang $lang "legal.history.latest" }}</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <tr>
+          <th scope="col" class="px-4 py-3">{{ tlang $lang "legal.history.version" }}</th>
+          <th scope="col" class="px-4 py-3">{{ tlang $lang "legal.history.effective" }}</th>
+          <th scope="col" class="px-4 py-3">{{ tlang $lang "legal.history.summary" }}</th>
+          <th scope="col" class="px-4 py-3 text-right">{{ tlang $lang "legal.history.actions" }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {{ range $history }}
+        <tr class="align-top">
+          <td class="px-4 py-3 font-medium text-gray-900">{{ .Version }}</td>
+          <td class="px-4 py-3 text-gray-600">
+            {{ if .Effective }}
+              <time datetime="{{ .EffectiveISO }}">{{ .Effective }}</time>
+            {{ else if .Updated }}
+              <time datetime="{{ .UpdatedISO }}">{{ .Updated }}</time>
+            {{ else }}
+              &mdash;
+            {{ end }}
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ .Summary }}</td>
+          <td class="px-4 py-3 text-right">
+            {{ if .DownloadURL }}
+              <a href="{{ .DownloadURL }}" class="inline-flex items-center gap-2 rounded-md border border-indigo-200 bg-white px-3 py-1.5 font-medium text-indigo-600 shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                {{ template "icon" dict "Name" "download" "Class" "h-4 w-4" }}
+                <span>{{ .DownloadLabel }}</span>
+              </a>
+            {{ else }}
+              <span class="text-xs text-gray-400">{{ tlang $lang "legal.history.missing" }}</span>
+            {{ end }}
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{ end }}

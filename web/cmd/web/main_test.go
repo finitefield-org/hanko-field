@@ -1,0 +1,997 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"finitefield.org/hanko-web/internal/cms"
+	"finitefield.org/hanko-web/internal/i18n"
+	mw "finitefield.org/hanko-web/internal/middleware"
+	"finitefield.org/hanko-web/internal/status"
+)
+
+// newTestRouter builds a router similar to main(), optionally adding extra routes.
+func newTestRouter(t *testing.T, add func(r chi.Router)) http.Handler {
+	t.Helper()
+	// ensure templates reparse each request and set correct paths
+	devMode = true
+	templatesDir = "../../templates"
+	publicDir = "../../public"
+	if _, err := parseTemplates(); err != nil {
+		t.Fatalf("parseTemplates failed: %v", err)
+	}
+	// load i18n for tests
+	var err error
+	i18nBundle, err = i18n.Load("../../locales", "ja", []string{"ja", "en"})
+	if err != nil {
+		t.Fatalf("load i18n: %v", err)
+	}
+	r := chi.NewRouter()
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(mw.HTMX)
+	r.Use(mw.Session)
+	r.Use(mw.Locale(i18nBundle))
+	r.Use(mw.Auth)
+	r.Use(mw.CSRF)
+	r.Use(mw.VaryLocale)
+	r.Use(mw.Logger)
+	r.Use(chimw.Recoverer)
+
+	// base routes used in app
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "ok")
+	})
+	// assets and home
+	assets := http.StripPrefix("/assets", mw.AssetsWithCache("public/assets"))
+	r.Handle("/assets/*", assets)
+	r.Get("/", HomeHandler)
+	r.Get("/design/new", DesignNewHandler)
+	r.Get("/design/preview", DesignPreviewHandler)
+	r.Get("/design/preview/image", DesignPreviewImageFrag)
+
+	if add != nil {
+		r.Group(func(r chi.Router) {
+			add(r)
+		})
+	}
+	return r
+}
+
+func TestHealthzOK(t *testing.T) {
+	srv := newTestRouter(t, nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	t.Logf("/ status=%d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := strings.TrimSpace(rec.Body.String()); got != "ok" {
+		t.Fatalf("expected body 'ok', got %q", got)
+	}
+}
+
+func TestHomeLocalizedNav_EN(t *testing.T) {
+	srv := newTestRouter(t, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, ">Shop<") {
+		t.Fatalf("expected localized nav label 'Shop' in body; status=%d body=%s", rec.Code, body)
+	}
+}
+
+func TestDesignNewPageRenders(t *testing.T) {
+	srv := newTestRouter(t, nil)
+	req := httptest.NewRequest(http.MethodGet, "/design/new", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "data-design-option") {
+		t.Fatalf("expected design option markers in body; status=%d body=%s", rec.Code, body)
+	}
+	if !strings.Contains(body, "design-primary-cta") {
+		t.Fatalf("expected primary CTA button id in body; status=%d body=%s", rec.Code, body)
+	}
+}
+
+func TestDesignPreviewPageRenders(t *testing.T) {
+	srv := newTestRouter(t, nil)
+	req := httptest.NewRequest(http.MethodGet, "/design/preview", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "design-preview-stage") {
+		t.Fatalf("expected preview stage marker in body; status=%d body=%s", rec.Code, body)
+	}
+	if !strings.Contains(body, "Background material") {
+		t.Fatalf("expected background control copy in body; status=%d body=%s", rec.Code, body)
+	}
+}
+
+func TestDesignPreviewFragmentPushesQuery(t *testing.T) {
+	srv := newTestRouter(t, nil)
+	req := httptest.NewRequest(http.MethodGet, "/design/preview/image?bg=transparent&dpi=1200&frame=desk&grid=1", nil)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	want := "/design/preview?bg=transparent&dpi=1200&frame=desk&grid=1"
+	if got := rec.Header().Get("HX-Push-Url"); got != want {
+		t.Fatalf("expected HX-Push-Url %q, got %q", want, got)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Transparent") && !strings.Contains(body, `value="transparent"`) {
+		t.Fatalf("expected transparent label in fragment response")
+	}
+	if !strings.Contains(body, "Measurement grid") && !strings.Contains(body, "製図ガイド") {
+		t.Fatalf("expected grid copy in fragment response")
+	}
+	if !strings.Contains(body, `/design/preview?bg=transparent&amp;dpi=1200&amp;frame=desk&amp;grid=0`) {
+		t.Fatalf("expected disable grid action to preserve query parameters; body=%s", body)
+	}
+}
+
+func TestCheckoutReviewPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/checkout/review", CheckoutReviewHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/checkout/review", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "checkout-review-root") {
+		t.Fatalf("expected checkout review root id in body; body=%s", body)
+	}
+}
+
+func TestCheckoutCompletePageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/checkout/complete", CheckoutCompleteHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/checkout/complete?order=HF-999001", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "checkout-complete-root") {
+		t.Fatalf("expected checkout complete root id in body; body=%s", body)
+	}
+	if !strings.Contains(body, "HF-999001") {
+		t.Fatalf("expected order number in body; body=%s", body)
+	}
+}
+
+func TestHTMXPostRequiresCSRF(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Post("/echo", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = io.WriteString(w, "ok")
+		})
+		r.Get("/debug", func(w http.ResponseWriter, r *http.Request) {
+			s := mw.GetSession(r)
+			_, _ = io.WriteString(w, s.CSRFToken)
+		})
+	})
+
+	// First, GET / to receive CSRF cookie
+	rec1 := httptest.NewRecorder()
+	req1 := httptest.NewRequest(http.MethodGet, "/", nil)
+	srv.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("GET / expected 200, got %d; body=%s", rec1.Code, rec1.Body.String())
+	}
+	csrfCookie := ""
+	sessCookie := ""
+	t.Logf("Set-Cookie headers: %v", rec1.Result().Header["Set-Cookie"])
+	for _, c := range rec1.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfCookie = c.Value
+		}
+		if c.Name == "HANKO_WEB_SESSION" {
+			sessCookie = c.Value
+		}
+	}
+	if csrfCookie == "" {
+		t.Fatalf("missing csrf_token cookie from GET /")
+	}
+	if sessCookie == "" {
+		t.Fatalf("missing session cookie from GET /")
+	}
+
+	// POST without CSRF should 403 when HX-Request=true
+	rec2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodPost, "/echo", nil)
+	req2.Header.Set("HX-Request", "true")
+	srv.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing CSRF, got %d; body=%s", rec2.Code, rec2.Body.String())
+	}
+
+	// Verify session has same token
+	recDbg := httptest.NewRecorder()
+	reqDbg := httptest.NewRequest(http.MethodGet, "/debug", nil)
+	reqDbg.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	srv.ServeHTTP(recDbg, reqDbg)
+	if strings.TrimSpace(recDbg.Body.String()) != csrfCookie {
+		t.Fatalf("session token mismatch: got %q want %q", recDbg.Body.String(), csrfCookie)
+	}
+
+	// POST with CSRF header and cookie should succeed
+	rec3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodPost, "/echo", nil)
+	req3.Header.Set("HX-Request", "true")
+	req3.Header.Set("X-CSRF-Token", csrfCookie)
+	req3.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	srv.ServeHTTP(rec3, req3)
+	if rec3.Code != http.StatusOK {
+		t.Fatalf("expected 200 with valid CSRF, got %d; body=%s", rec3.Code, rec3.Body.String())
+	}
+	if strings.TrimSpace(rec3.Body.String()) != "ok" {
+		t.Fatalf("expected body ok, got %q", rec3.Body.String())
+	}
+}
+
+func TestSupportPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/support", SupportHandler)
+		r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/support", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="support-form"`) {
+		t.Fatalf("expected support form markup in body; body=%s", body)
+	}
+	if !strings.Contains(body, "Contact support") {
+		t.Fatalf("expected localized header in body; body=%s", body)
+	}
+}
+
+func TestSupportFormValidationAndSuccess(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/support", SupportHandler)
+		r.MethodFunc(http.MethodPost, "/support", SupportSubmitHandler)
+	})
+
+	// Bootstrap session + CSRF token
+	getReq := httptest.NewRequest(http.MethodGet, "/support", nil)
+	getReq.Header.Set("Accept-Language", "en")
+	getRec := httptest.NewRecorder()
+	srv.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("GET /support expected 200, got %d; body=%s", getRec.Code, getRec.Body.String())
+	}
+	var csrfCookie, sessCookie string
+	for _, c := range getRec.Result().Cookies() {
+		switch c.Name {
+		case "csrf_token":
+			csrfCookie = c.Value
+		case "HANKO_WEB_SESSION":
+			sessCookie = c.Value
+		}
+	}
+	if csrfCookie == "" || sessCookie == "" {
+		t.Fatalf("expected csrf_token and session cookies from GET /support; cookies=%v", getRec.Result().Cookies())
+	}
+
+	// Invalid submission (missing required fields) should 422 with error copy
+	var invalidBody bytes.Buffer
+	invalidWriter := multipart.NewWriter(&invalidBody)
+	if err := invalidWriter.WriteField("name", "Test User"); err != nil {
+		t.Fatalf("write field: %v", err)
+	}
+	if err := invalidWriter.WriteField("email", ""); err != nil {
+		t.Fatalf("write field: %v", err)
+	}
+	if err := invalidWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	invalidReq := httptest.NewRequest(http.MethodPost, "/support", &invalidBody)
+	invalidReq.Header.Set("Content-Type", invalidWriter.FormDataContentType())
+	invalidReq.Header.Set("HX-Request", "true")
+	invalidReq.Header.Set("X-CSRF-Token", csrfCookie)
+	invalidReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	invalidReq.Header.Set("Accept-Language", "en")
+	invalidRec := httptest.NewRecorder()
+	srv.ServeHTTP(invalidRec, invalidReq)
+	if invalidRec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for invalid support submission, got %d; body=%s", invalidRec.Code, invalidRec.Body.String())
+	}
+	invalidBodyStr := invalidRec.Body.String()
+	if !strings.Contains(invalidBodyStr, "Please review the highlighted fields.") {
+		t.Fatalf("expected validation alert in response; body=%s", invalidBodyStr)
+	}
+
+	// Successful submission should return 202 with ticket acknowledgement
+	var okBody bytes.Buffer
+	okWriter := multipart.NewWriter(&okBody)
+	fields := map[string]string{
+		"name":     "Support Tester",
+		"email":    "support.tester@example.com",
+		"company":  "Acme Inc.",
+		"order":    "ORD-2048",
+		"topic":    "orders",
+		"priority": "normal",
+		"message":  "We need help adjusting the engraving timeline before shipment.",
+	}
+	for k, v := range fields {
+		if err := okWriter.WriteField(k, v); err != nil {
+			t.Fatalf("write field %s: %v", k, err)
+		}
+	}
+	if err := okWriter.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+	okReq := httptest.NewRequest(http.MethodPost, "/support", &okBody)
+	okReq.Header.Set("Content-Type", okWriter.FormDataContentType())
+	okReq.Header.Set("HX-Request", "true")
+	okReq.Header.Set("X-CSRF-Token", csrfCookie)
+	okReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessCookie)
+	okReq.Header.Set("Accept-Language", "en")
+	okRec := httptest.NewRecorder()
+	srv.ServeHTTP(okRec, okReq)
+	if okRec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202 for valid support submission, got %d; body=%s", okRec.Code, okRec.Body.String())
+	}
+	bodyStr := okRec.Body.String()
+	if !strings.Contains(bodyStr, "Ticket") {
+		t.Fatalf("expected ticket acknowledgement in body; body=%s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, "SUP-") {
+		t.Fatalf("expected generated ticket id in response; body=%s", bodyStr)
+	}
+}
+
+func TestSessionMiddlewareSetsCookie(t *testing.T) {
+	h := mw.Session(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "ok")
+	}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var seen bool
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "HANKO_WEB_SESSION" {
+			seen = true
+			break
+		}
+	}
+	if !seen {
+		t.Fatalf("expected HANKO_WEB_SESSION cookie to be set, got %v", rec.Result().Header["Set-Cookie"])
+	}
+}
+
+func TestDesignAISuggestionsPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/ai", DesignAISuggestionsHandler)
+		r.Get("/design/ai/table", DesignAISuggestionTableFrag)
+		r.Get("/design/ai/preview", DesignAISuggestionPreviewFrag)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/ai", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "design-ai-table") {
+		t.Fatalf("expected design ai table markup in body; body=%s", body)
+	}
+	if !strings.Contains(body, "design-ai-preview") {
+		t.Fatalf("expected preview container in body; body=%s", body)
+	}
+}
+
+func TestDesignAISuggestionsTableFragment(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/ai/table", DesignAISuggestionTableFrag)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/ai/table?status=ready", nil)
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("HX-Push-Url"); got == "" || !strings.HasPrefix(got, "/design/ai") {
+		t.Fatalf("expected HX-Push-Url header, got %q", got)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "data-suggestion-card") {
+		t.Fatalf("expected suggestion cards in fragment; body=%s", body)
+	}
+}
+
+func TestDesignAISuggestionsEmptyFilterKeepsPreviewNeutral(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/ai", DesignAISuggestionsHandler)
+		r.Get("/design/ai/table", DesignAISuggestionTableFrag)
+		r.Get("/design/ai/preview", DesignAISuggestionPreviewFrag)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/design/ai?status=ready&persona=government", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Select a suggestion to open the preview drawer") {
+		t.Fatalf("expected neutral preview message when empty; body=%s", body)
+	}
+	if !strings.Contains(body, "No suggestions match the current filters yet.") {
+		t.Fatalf("expected empty state copy when no results; body=%s", body)
+	}
+
+	fragReq := httptest.NewRequest(http.MethodGet, "/design/ai/table?status=ready&persona=government", nil)
+	fragReq.Header.Set("Accept-Language", "en")
+	fragReq.Header.Set("HX-Request", "true")
+	fragRec := httptest.NewRecorder()
+	srv.ServeHTTP(fragRec, fragReq)
+	if fragRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for fragment, got %d; body=%s", fragRec.Code, fragRec.Body.String())
+	}
+	if got := fragRec.Header().Get("HX-Push-Url"); strings.Contains(got, "focus=") {
+		t.Fatalf("expected HX-Push-Url without focus param, got %q", got)
+	}
+}
+
+func TestDesignAISuggestionAccept(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/ai", DesignAISuggestionsHandler)
+		r.Get("/design/ai/table", DesignAISuggestionTableFrag)
+		r.Get("/design/ai/preview", DesignAISuggestionPreviewFrag)
+		r.MethodFunc(http.MethodPost, "/design/ai/suggestions/{suggestionID}/accept", DesignAISuggestionAcceptHandler)
+	})
+
+	// prime session + CSRF
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/design/ai", nil)
+	req.Header.Set("Accept-Language", "en")
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /design/ai expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	var csrfCookie, sessionCookie string
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfCookie = c.Value
+		}
+		if c.Name == "HANKO_WEB_SESSION" {
+			sessionCookie = c.Value
+		}
+	}
+	if csrfCookie == "" || sessionCookie == "" {
+		t.Fatalf("expected csrf and session cookies, got csrf=%q session=%q", csrfCookie, sessionCookie)
+	}
+
+	postRec := httptest.NewRecorder()
+	postReq := httptest.NewRequest(http.MethodPost, "/design/ai/suggestions/sg-401/accept", nil)
+	postReq.Header.Set("HX-Request", "true")
+	postReq.Header.Set("X-CSRF-Token", csrfCookie)
+	postReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessionCookie)
+	srv.ServeHTTP(postRec, postReq)
+	if postRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 accept response, got %d; body=%s", postRec.Code, postRec.Body.String())
+	}
+	trigger := postRec.Header().Get("HX-Trigger")
+	if trigger == "" || !strings.Contains(trigger, "design-ai:suggestion-accepted") {
+		t.Fatalf("expected HX-Trigger for acceptance, got %q", trigger)
+	}
+	body := postRec.Body.String()
+	if !strings.Contains(body, "Applied to design editor preview") {
+		t.Fatalf("expected acceptance note in response body; body=%s", body)
+	}
+	if !strings.Contains(body, "data-action=\"accept\"") {
+		t.Fatalf("expected accept button markup present; body=%s", body)
+	}
+}
+
+func TestDesignVersionsPageRenders(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions", DesignVersionsHandler)
+		r.Get("/design/versions/table", DesignVersionsTableFrag)
+		r.Get("/design/versions/preview", DesignVersionsPreviewFrag)
+		r.Get("/design/versions/{versionID}/rollback/modal", DesignVersionRollbackModal)
+		r.MethodFunc(http.MethodPost, "/design/versions/{versionID}/rollback", DesignVersionRollbackHandler)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/versions", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "design-versions-table") {
+		t.Fatalf("expected table container in body; body=%s", body)
+	}
+	if !strings.Contains(body, "design-versions-preview") {
+		t.Fatalf("expected preview container in body; body=%s", body)
+	}
+}
+
+func TestDesignVersionsTableFragment(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions/table", DesignVersionsTableFrag)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/versions/table?author=all&range=all", nil)
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("HX-Push-Url"); got == "" || !strings.HasPrefix(got, "/design/versions") {
+		t.Fatalf("expected HX-Push-Url header for versions, got %q", got)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "data-version-row") {
+		t.Fatalf("expected version rows in fragment; body=%s", body)
+	}
+}
+
+func TestDesignVersionsPreviewFragment(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions/preview", DesignVersionsPreviewFrag)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/versions/preview?version=ver-210", nil)
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "data-version-id=\"ver-210\"") {
+		t.Fatalf("expected selected version id in preview; body=%s", body)
+	}
+	if !strings.Contains(body, "Audit timeline") {
+		t.Fatalf("expected audit timeline section in preview; body=%s", body)
+	}
+}
+
+func TestDesignVersionsPreviewFragmentNotFound(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions/preview", DesignVersionsPreviewFrag)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/versions/preview?version=missing", nil)
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for missing version, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestDesignVersionsRollbackModal(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions/table", DesignVersionsTableFrag)
+		r.Get("/design/versions/{versionID}/rollback/modal", DesignVersionRollbackModal)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/design/versions/ver-210/rollback/modal", nil)
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "data-modal-container") {
+		t.Fatalf("expected modal container in response; body=%s", body)
+	}
+	if !strings.Contains(body, "name=\"author\"") {
+		t.Fatalf("expected hidden filter fields in modal; body=%s", body)
+	}
+}
+
+func TestDesignVersionsRollbackHandler(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/design/versions", DesignVersionsHandler)
+		r.Get("/design/versions/table", DesignVersionsTableFrag)
+		r.Get("/design/versions/preview", DesignVersionsPreviewFrag)
+		r.Get("/design/versions/{versionID}/rollback/modal", DesignVersionRollbackModal)
+		r.MethodFunc(http.MethodPost, "/design/versions/{versionID}/rollback", DesignVersionRollbackHandler)
+	})
+
+	// Prime CSRF/session
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/design/versions", nil)
+	req.Header.Set("Accept-Language", "en")
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /design/versions expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	var csrfCookie, sessionCookie string
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfCookie = c.Value
+		}
+		if c.Name == "HANKO_WEB_SESSION" {
+			sessionCookie = c.Value
+		}
+	}
+	if csrfCookie == "" || sessionCookie == "" {
+		t.Fatalf("expected csrf and session cookies, got csrf=%q session=%q", csrfCookie, sessionCookie)
+	}
+
+	postRec := httptest.NewRecorder()
+	postReq := httptest.NewRequest(http.MethodPost, "/design/versions/ver-210/rollback", strings.NewReader("author=all&range=all&focus=ver-210"))
+	postReq.Header.Set("Accept-Language", "en")
+	postReq.Header.Set("HX-Request", "true")
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postReq.Header.Set("X-CSRF-Token", csrfCookie)
+	postReq.Header.Set("Cookie", "csrf_token="+csrfCookie+"; HANKO_WEB_SESSION="+sessionCookie)
+	srv.ServeHTTP(postRec, postReq)
+	if postRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 rollback response, got %d; body=%s", postRec.Code, postRec.Body.String())
+	}
+	trigger := postRec.Header().Get("HX-Trigger")
+	if trigger == "" || !strings.Contains(trigger, "design-versions:rolled-back") || !strings.Contains(trigger, "design-versions:refresh-table") {
+		t.Fatalf("expected HX-Trigger with rollback events, got %q", trigger)
+	}
+	body := postRec.Body.String()
+	if !strings.Contains(body, "data-version-id=\"ver-210\"") {
+		t.Fatalf("expected preview body for selected version; body=%s", body)
+	}
+}
+
+func setupStaticTestRouter(t *testing.T) http.Handler {
+	t.Helper()
+	cmsClient = cms.NewClient("")
+	cmsClient.SetContentDir("../../content")
+	cms.SetContentCacheDuration(500 * time.Millisecond)
+	contentRenderCache.mu.Lock()
+	contentRenderCache.items = map[string]renderedContentEntry{}
+	contentRenderCache.mu.Unlock()
+	statusClient = status.NewClient("")
+	t.Cleanup(func() {
+		cmsClient = nil
+		statusClient = nil
+		contentRenderCache.mu.Lock()
+		contentRenderCache.items = map[string]renderedContentEntry{}
+		contentRenderCache.mu.Unlock()
+	})
+	return newTestRouter(t, func(r chi.Router) {
+		r.Get("/content/{slug}", ContentPageHandler)
+		r.Get("/legal/{slug}", LegalPageHandler)
+		r.MethodFunc(http.MethodPost, "/legal/{slug}/feedback", LegalFeedbackHandler)
+		r.Get("/status", StatusHandler)
+	})
+}
+
+func TestContentPageMarkdownRendering(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/content/about-hanko-field", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "About Hanko Field") {
+		t.Fatalf("expected page title in body, got %s", body)
+	}
+	if !strings.Contains(body, "content-prose") {
+		t.Fatalf("expected prose wrapper in body, got %s", body)
+	}
+	if !strings.Contains(body, "Now supporting bilingual orders") {
+		t.Fatalf("expected banner copy in body, got %s", body)
+	}
+	if !strings.Contains(body, `aria-label="On this page"`) {
+		t.Fatalf("expected table of contents to render, got %s", body)
+	}
+	cache := rec.Header().Get("Cache-Control")
+	if cache != "public, max-age=600" {
+		t.Fatalf("expected Cache-Control=public, max-age=600, got %q", cache)
+	}
+	lastMod := rec.Header().Get("Last-Modified")
+	if lastMod == "" {
+		t.Fatalf("expected Last-Modified header")
+	}
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatalf("expected ETag header")
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/content/about-hanko-field", nil)
+	req2.Header.Set("If-None-Match", etag)
+	req2.Header.Set("Accept-Language", "en")
+	rec2 := httptest.NewRecorder()
+	srv.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusNotModified {
+		t.Fatalf("expected 304 for matching ETag, got %d", rec2.Code)
+	}
+}
+
+func TestLegalPageVersionFooter(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	req.Header.Set("Accept-Language", "ja")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "プライバシーポリシー") {
+		t.Fatalf("expected Japanese policy title, got %s", body)
+	}
+	if !strings.Contains(body, "ドキュメント版 2025.1.2") {
+		t.Fatalf("expected version footer, got %s", body)
+	}
+	if !strings.Contains(body, "privacy@hanko-field.jp") {
+		t.Fatalf("expected contact email in body, got %s", body)
+	}
+	if !strings.Contains(body, "全文をダウンロード") {
+		t.Fatalf("expected download CTA in body, got %s", body)
+	}
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatalf("expected ETag header")
+	}
+	req2 := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	req2.Header.Set("If-None-Match", etag)
+	rec2 := httptest.NewRecorder()
+	srv.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusNotModified {
+		t.Fatalf("expected 304 for matching ETag, got %d", rec2.Code)
+	}
+}
+
+func TestLegalPageHistoryAndLocaleSwitcher(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Revision history") {
+		t.Fatalf("expected revision history table, got %s", body)
+	}
+	if !strings.Contains(body, "Download 2024.10 PDF") {
+		t.Fatalf("expected historical download link, got %s", body)
+	}
+	if !strings.Contains(body, "Available languages") {
+		t.Fatalf("expected locale switcher, got %s", body)
+	}
+	if !strings.Contains(body, `hx-target="#content-page"`) {
+		t.Fatalf("expected htmx enabled locale links, got %s", body)
+	}
+}
+
+func TestLegalFeedbackHandlerHTMX(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	getReq := httptest.NewRequest(http.MethodGet, "/legal/privacy-policy", nil)
+	getReq.Header.Set("Accept-Language", "en")
+	getRec := httptest.NewRecorder()
+	srv.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 bootstrap, got %d; body=%s", getRec.Code, getRec.Body.String())
+	}
+	var csrfToken, sessionCookie string
+	for _, c := range getRec.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfToken = c.Value
+		}
+		if c.Name == "HANKO_WEB_SESSION" {
+			sessionCookie = c.Value
+		}
+	}
+	if csrfToken == "" || sessionCookie == "" {
+		t.Fatalf("expected csrf and session cookies, got csrf=%q session=%q", csrfToken, sessionCookie)
+	}
+
+	form := strings.NewReader("helpful=yes&notes=thanks")
+	req := httptest.NewRequest(http.MethodPost, "/legal/privacy-policy/feedback", form)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("Accept-Language", "en")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	req.Header.Set("Cookie", fmt.Sprintf("csrf_token=%s; HANKO_WEB_SESSION=%s", csrfToken, sessionCookie))
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	if body := rec.Body.String(); !strings.Contains(body, "Thanks for your feedback.") {
+		t.Fatalf("expected thank-you snippet, got %s", body)
+	}
+}
+
+func TestStatusHandlerFallback(t *testing.T) {
+	srv := setupStaticTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "System Status") {
+		t.Fatalf("expected status title, got %s", body)
+	}
+	if !strings.Contains(body, "All systems operational") {
+		t.Fatalf("expected fallback state label, got %s", body)
+	}
+	if !strings.Contains(body, "Scheduled maintenance") {
+		t.Fatalf("expected incident timeline in body, got %s", body)
+	}
+	if !strings.Contains(body, "Uptime summary") {
+		t.Fatalf("expected uptime summary section, got %s", body)
+	}
+	if !strings.Contains(body, "Email alerts") {
+		t.Fatalf("expected subscription card to render, got %s", body)
+	}
+	cache := rec.Header().Get("Cache-Control")
+	if cache != "public, max-age=60" {
+		t.Fatalf("expected Cache-Control=public, max-age=60, got %q", cache)
+	}
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatalf("expected ETag header")
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req2.Header.Set("If-None-Match", etag)
+	req2.Header.Set("Accept-Language", "en")
+	rec2 := httptest.NewRecorder()
+	srv.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusNotModified {
+		t.Fatalf("expected 304 for matching ETag, got %d", rec2.Code)
+	}
+}
+
+func TestModalPickFontSelectedState(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/modal/pick/font", ModalPickFont)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/modal/pick/font?font=jp-gothic", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "font-picker-modal_title") {
+		t.Fatalf("expected modal title wrapper in body, got %s", body)
+	}
+	if !strings.Contains(body, "Gothic Modern") {
+		t.Fatalf("expected selected font name in body, got %s", body)
+	}
+	if strings.Count(body, "Currently applied") != 1 {
+		t.Fatalf("expected exactly one selected marker, got %s", body)
+	}
+}
+
+func TestModalPickTemplateLocalizedTitle(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.Get("/modal/pick/template", ModalPickTemplate)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/modal/pick/template", nil)
+	req.Header.Set("Accept-Language", "ja")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "template-picker-modal_title") {
+		t.Fatalf("expected modal title id in body, got %s", body)
+	}
+	if !strings.Contains(body, "テンプレートを選択") {
+		t.Fatalf("expected localized title in body, got %s", body)
+	}
+	if !strings.Contains(body, "現在の選択") {
+		t.Fatalf("expected selected badge copy, got %s", body)
+	}
+}
+
+func TestModalKanjiMapPOSTRendersCandidates(t *testing.T) {
+	srv := newTestRouter(t, func(r chi.Router) {
+		r.MethodFunc(http.MethodGet, "/modal/kanji-map", ModalKanjiMap)
+		r.MethodFunc(http.MethodPost, "/modal/kanji-map", ModalKanjiMap)
+	})
+
+	bootReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	bootReq.Header.Set("Accept-Language", "ja")
+	bootRec := httptest.NewRecorder()
+	srv.ServeHTTP(bootRec, bootReq)
+	if bootRec.Code != http.StatusOK {
+		t.Fatalf("expected bootstrapping GET to succeed, got %d; body=%s", bootRec.Code, bootRec.Body.String())
+	}
+	var csrfToken, sessionCookie string
+	for _, c := range bootRec.Result().Cookies() {
+		switch c.Name {
+		case "csrf_token":
+			csrfToken = c.Value
+		case "HANKO_WEB_SESSION":
+			sessionCookie = c.Value
+		}
+	}
+	if csrfToken == "" || sessionCookie == "" {
+		t.Fatalf("expected csrf and session cookies, got csrf=%q session=%q", csrfToken, sessionCookie)
+	}
+
+	form := strings.NewReader("name=Saito")
+	req := httptest.NewRequest(http.MethodPost, "/modal/kanji-map", form)
+	req.Header.Set("Accept-Language", "ja")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	req.Header.Set("Cookie", "csrf_token="+csrfToken+"; HANKO_WEB_SESSION="+sessionCookie)
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "kanji-mapper-modal_title") {
+		t.Fatalf("expected kanji mapper modal wrapper, got %s", body)
+	}
+	if !strings.Contains(body, "斎藤") {
+		t.Fatalf("expected mapped kanji candidate in body, got %s", body)
+	}
+	if !strings.Contains(body, "信頼度") {
+		t.Fatalf("expected confidence label in body, got %s", body)
+	}
+}

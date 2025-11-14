@@ -1,0 +1,335 @@
+{{ define "content" }}
+{{ $view := $.Account }}
+{{ $user := $view.User }}
+<section class="py-8">
+  <div class="space-y-8">
+    <header class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-500" aria-label="{{ if eq $.Lang "ja" }}パンくずリスト{{ else }}Breadcrumb{{ end }}">
+        {{ range $i, $crumb := $.Breadcrumbs }}
+          {{ if $i }}<span aria-hidden="true" class="text-gray-300">/</span>{{ end }}
+          {{ if $crumb.Active }}
+            <span class="font-medium text-gray-700">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</span>
+          {{ else }}
+            <a href="{{ $crumb.Href }}" class="hover:text-indigo-600 hover:underline">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</a>
+          {{ end }}
+        {{ end }}
+      </nav>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ tlang $.Lang "account.page.eyebrow" }}</p>
+          <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ tlang $.Lang "nav.account" }}</h1>
+          <p class="text-sm text-gray-600">{{ tlang $.Lang "account.page.subtitle" }}</p>
+        </div>
+        <div class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:gap-5">
+          <div class="flex items-center gap-3">
+            <img src="{{ $user.AvatarURL }}" alt="{{ $user.DisplayName }}" class="h-14 w-14 rounded-full border border-gray-200 object-cover" loading="lazy" decoding="async" srcset="{{ responsiveSrcset $user.AvatarURL 96 128 192 }}" sizes="{{ responsiveSizes "avatar" }}">
+            <div>
+              <p class="text-base font-semibold text-gray-900">{{ $user.DisplayName }}</p>
+              <p class="text-xs text-gray-500">{{ $user.Email }}</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-3 text-xs">
+            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">{{ $user.Plan }}</span>
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">{{ $user.Role }}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside class="space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="space-y-3">
+          {{ range $item := $view.NavItems }}
+            <a href="{{ $item.Href }}"
+               class="block rounded-2xl border px-4 py-3 text-sm transition {{ if $item.Active }}border-indigo-200 bg-indigo-50 text-indigo-800{{ else }}border-gray-100 hover:border-indigo-200{{ end }}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold">{{ $item.Label }}</span>
+                {{ if $item.Badge }}<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $item.Badge }}</span>{{ end }}
+              </div>
+              <p class="mt-1 text-xs text-gray-500">{{ $item.Description }}</p>
+            </a>
+          {{ end }}
+        </div>
+        <div class="rounded-2xl border border-dashed border-gray-200 p-4 text-xs text-gray-500">
+          <p class="font-semibold text-gray-700">{{ tlang $.Lang "account.help.title" }}</p>
+          <p class="mt-1">{{ tlang $.Lang "account.help.body" }}</p>
+          <a href="/guides" class="mt-2 inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-500">
+            {{ tlang $.Lang "account.help.cta" }}
+            {{ template "icon" (dict "Name" "arrow-top-right-on-square" "Class" "h-4 w-4") }}
+          </a>
+        </div>
+      </aside>
+
+      <div class="space-y-6">
+        <section class="space-y-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $view.Section.Eyebrow }}</p>
+              <h2 class="text-2xl font-semibold text-gray-900">{{ $view.Section.Title }}</h2>
+              <p class="text-sm text-gray-600">{{ $view.Section.Subtitle }}</p>
+            </div>
+            <a href="/design/new"
+               class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500">
+              {{ tlang $.Lang "account.orders.primary_cta" }}
+            </a>
+          </div>
+
+          {{ if $view.Support.Title }}
+            <div class="flex items-start gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-900">
+              <span class="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/80 text-indigo-500">
+                {{ template "icon" (dict "Name" "lifebuoy" "Class" "h-5 w-5") }}
+              </span>
+              <div class="space-y-1">
+                <p class="font-semibold">{{ $view.Support.Title }}</p>
+                <p class="text-sm leading-snug text-indigo-900/80">{{ $view.Support.Body }}</p>
+                {{ if $view.Support.CTALabel }}
+                  <a href="{{ $view.Support.CTAHref }}" class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 hover:text-indigo-600">
+                    {{ $view.Support.CTALabel }}
+                    {{ template "icon" (dict "Name" "arrow-up-right" "Class" "h-4 w-4") }}
+                  </a>
+                {{ end }}
+              </div>
+            </div>
+          {{ end }}
+
+          <form id="account-orders-filters"
+                class="space-y-5 rounded-2xl border border-gray-100 bg-gray-50/60 p-5"
+                autocomplete="off">
+            <input type="hidden" name="status" value="{{ if $view.Filters.Status }}{{ $view.Filters.Status }}{{ else }}all{{ end }}">
+            <input type="hidden" name="page" value="{{ $view.Table.Page }}">
+
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "account.orders.filters.status" }}</span>
+                <span class="text-xs text-gray-400">{{ $view.Filters.ResultsLabel }}</span>
+              </div>
+              <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="{{ tlang $.Lang "account.orders.filters.status" }}">
+                {{ range $opt := $view.Filters.StatusOptions }}
+                  <button type="button"
+                          class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition {{ if $opt.Active }}border-indigo-300 bg-white text-indigo-700 shadow-sm{{ else }}border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200{{ end }}"
+                          data-orders-status="{{ $opt.ID }}"
+                          data-active="{{ if $opt.Active }}true{{ else }}false{{ end }}"
+                          aria-pressed="{{ if $opt.Active }}true{{ else }}false{{ end }}">
+                    <span>{{ $opt.Label }}</span>
+                    <span class="rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] font-semibold text-gray-500">{{ $opt.Count }}</span>
+                  </button>
+                {{ end }}
+              </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+              <label class="flex items-center gap-2 text-sm text-gray-600">
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "account.orders.filters.range" }}</span>
+                <select name="range"
+                        class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  {{ range $opt := $view.Filters.RangeOptions }}
+                    <option value="{{ $opt.ID }}" {{ if $opt.Active }}selected{{ end }}>{{ $opt.Label }}</option>
+                  {{ end }}
+                </select>
+              </label>
+              <label class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500">
+                {{ template "icon" (dict "Name" "magnifying-glass" "Class" "h-4 w-4 text-gray-400") }}
+                <input type="search"
+                       name="q"
+                       value="{{ $view.Filters.Query }}"
+                       placeholder="{{ tlang $.Lang "account.orders.filters.placeholder" }}"
+                       class="w-full border-0 bg-transparent text-sm text-gray-700 focus:outline-none"
+                       spellcheck="false"
+                       autocomplete="off">
+              </label>
+            </div>
+          </form>
+
+          <div id="account-orders-loading" class="hidden rounded-xl border border-dashed border-indigo-200 bg-indigo-50/70 p-4 text-sm font-medium text-indigo-700">
+            {{ tlang $.Lang "account.orders.loading" }}
+          </div>
+
+          {{ slot "frag_account_orders_table" $view.Table }}
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  if (window.__accountOrdersInit) { return; }
+  window.__accountOrdersInit = true;
+
+  function ensureHTMX(){
+    if (!window.htmx) {
+      throw new Error('htmx not available');
+    }
+    return window.htmx;
+  }
+
+  function getForm(){
+    return document.getElementById('account-orders-filters');
+  }
+
+  function getShell(){
+    return document.getElementById('account-orders-table-shell');
+  }
+
+  function getStatusValue(input){
+    if (!input) { return 'all'; }
+    var val = (input.value || '').trim();
+    if (val === '' || val === 'all') {
+      return 'all';
+    }
+    return val;
+  }
+
+  function setStatusValue(input, value){
+    if (!input) { return; }
+    input.value = value || 'all';
+  }
+
+  function highlightStatusChips(form, active){
+    if (!form) { return; }
+    var chips = form.querySelectorAll('[data-orders-status]');
+    Array.prototype.forEach.call(chips, function(chip){
+      var value = chip.getAttribute('data-orders-status');
+      var isActive = (active === 'all' && value === 'all') || value === active;
+      chip.dataset.active = isActive ? 'true' : 'false';
+      chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      if (isActive) {
+        chip.classList.add('border-indigo-300', 'bg-white', 'text-indigo-700', 'shadow-sm');
+        chip.classList.remove('border-transparent', 'bg-gray-100', 'text-gray-600');
+      } else {
+        chip.classList.remove('border-indigo-300', 'bg-white', 'text-indigo-700', 'shadow-sm');
+        chip.classList.add('border-transparent', 'bg-gray-100', 'text-gray-600');
+      }
+    });
+  }
+
+  function serializeForm(form){
+    var params = new URLSearchParams();
+    if (!form) { return params.toString(); }
+    var statusInput = form.querySelector('input[name="status"]');
+    var rangeSelect = form.querySelector('select[name="range"]');
+    var searchInput = form.querySelector('input[name="q"]');
+    var pageInput = form.querySelector('input[name="page"]');
+
+    var status = getStatusValue(statusInput);
+    if (status !== 'all') {
+      params.set('status', status);
+    }
+
+    if (rangeSelect && rangeSelect.value && rangeSelect.value !== 'all') {
+      params.set('range', rangeSelect.value);
+    }
+
+    if (searchInput && searchInput.value.trim() !== '') {
+      params.set('q', searchInput.value.trim());
+    }
+
+    if (pageInput && parseInt(pageInput.value || '1', 10) > 1) {
+      params.set('page', pageInput.value);
+    } else {
+      params.delete('page');
+    }
+
+    return params.toString();
+  }
+
+  function toggleLoading(show){
+    var indicator = document.getElementById('account-orders-loading');
+    if (!indicator) { return; }
+    if (show) {
+      indicator.classList.remove('hidden');
+    } else {
+      indicator.classList.add('hidden');
+    }
+  }
+
+  function reloadOrders(page){
+    var form = getForm();
+    var pageInput = form ? form.querySelector('input[name="page"]') : null;
+    if (pageInput) {
+      pageInput.value = (page && page > 0) ? String(page) : '1';
+    }
+    var params = serializeForm(form);
+    var url = '/account/orders/table';
+    if (params) {
+      url += '?' + params;
+    }
+    toggleLoading(true);
+    ensureHTMX().ajax('GET', url, {target: '#account-orders-table-shell', swap: 'outerHTML'});
+  }
+
+  var form = getForm();
+  if (!form) { return; }
+
+  var statusInput = form.querySelector('input[name="status"]');
+  if (statusInput && statusInput.value === '') {
+    statusInput.value = 'all';
+  }
+  highlightStatusChips(form, getStatusValue(statusInput));
+
+  var debounceHandle = null;
+
+  form.addEventListener('click', function(event){
+    var chip = event.target.closest('[data-orders-status]');
+    if (!chip) { return; }
+    event.preventDefault();
+    var value = chip.getAttribute('data-orders-status') || 'all';
+    var current = getStatusValue(statusInput);
+    if (current === value) { return; }
+    setStatusValue(statusInput, value);
+    form.querySelector('input[name="page"]').value = '1';
+    highlightStatusChips(form, value);
+    reloadOrders(1);
+  });
+
+  var rangeSelect = form.querySelector('select[name="range"]');
+  if (rangeSelect) {
+    rangeSelect.addEventListener('change', function(){
+      form.querySelector('input[name="page"]').value = '1';
+      reloadOrders(1);
+    });
+  }
+
+  var searchInput = form.querySelector('input[name="q"]');
+  if (searchInput) {
+    searchInput.addEventListener('input', function(){
+      clearTimeout(debounceHandle);
+      debounceHandle = setTimeout(function(){
+        form.querySelector('input[name="page"]').value = '1';
+        reloadOrders(1);
+      }, 350);
+    });
+  }
+
+  form.addEventListener('submit', function(event){
+    event.preventDefault();
+    reloadOrders(1);
+  });
+
+  document.addEventListener('click', function(event){
+    var loadMoreBtn = event.target.closest('[data-orders-load-more]');
+    if (!loadMoreBtn) { return; }
+    event.preventDefault();
+    var next = parseInt(loadMoreBtn.getAttribute('data-orders-load-more') || '0', 10);
+    if (isNaN(next) || next < 1) { return; }
+    reloadOrders(next);
+  });
+
+  document.body.addEventListener('htmx:afterSwap', function(event){
+    if (!event || !event.target) { return; }
+    if (event.target.id !== 'account-orders-table-shell') { return; }
+    toggleLoading(false);
+    var shell = getShell();
+    var currentPage = shell ? shell.getAttribute('data-current-page') : '1';
+    var pageInput = form.querySelector('input[name="page"]');
+    if (pageInput) {
+      pageInput.value = currentPage || '1';
+    }
+  });
+
+  document.body.addEventListener('htmx:responseError', function(){
+    toggleLoading(false);
+  });
+})();
+</script>
+{{ end }}

@@ -6,6 +6,7 @@ resource "google_cloud_run_v2_service" "this" {
   template {
     service_account = var.service_account_email
     execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+    max_instance_request_concurrency = var.concurrency
 
     scaling {
       min_instance_count = var.min_instances
@@ -14,6 +15,13 @@ resource "google_cloud_run_v2_service" "this" {
 
     containers {
       image = var.image
+
+      resources {
+        limits = {
+          cpu    = var.cpu
+          memory = var.memory
+        }
+      }
 
       dynamic "env" {
         for_each = var.env_vars
@@ -37,7 +45,12 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
 
-    depends_on = []
+    dynamic "vpc_access" {
+      for_each = var.vpc_connector == null ? [] : [var.vpc_connector]
+      content {
+        connector = vpc_access.value
+      }
+    }
   }
 
   ingress = var.ingress

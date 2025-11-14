@@ -1,0 +1,268 @@
+{{ define "content" }}
+{{ $view := $.Checkout }}
+<section id="checkout-complete-root" class="py-6 space-y-6">
+  <header class="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-500" aria-label="{{ if eq $.Lang "ja" }}パンくずリスト{{ else }}Breadcrumb{{ end }}">
+      {{ range $i, $crumb := $.Breadcrumbs }}
+        {{ if $i }}<span aria-hidden="true" class="text-gray-300">/</span>{{ end }}
+        {{ if $crumb.Active }}
+          <span class="font-medium text-gray-700">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</span>
+        {{ else }}
+          <a href="{{ $crumb.Href }}" class="hover:text-indigo-600 hover:underline">{{ if $crumb.LabelKey }}{{ tlang $.Lang $crumb.LabelKey }}{{ else if $crumb.Label }}{{ $crumb.Label }}{{ else }}{{ $crumb.Href }}{{ end }}</a>
+        {{ end }}
+      {{ end }}
+    </nav>
+    <div class="space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ if eq $.Lang "ja" }}チェックアウト{{ else }}Checkout{{ end }}</p>
+      <h1 class="text-3xl font-bold text-gray-900 leading-tight">{{ if eq $.Lang "ja" }}ご注文完了{{ else }}Order complete{{ end }}</h1>
+      <p class="text-sm text-gray-600">
+        {{ if eq $.Lang "ja" }}
+          注文番号と次のステップを確認し、チームと共有できます。
+        {{ else }}
+          Review your confirmation details, next steps, and sharing options for teammates.
+        {{ end }}
+      </p>
+    </div>
+    {{ if $view.Steps }}
+      <ol class="grid gap-3 md:grid-cols-5" aria-label="{{ if eq $.Lang "ja" }}進捗状況{{ else }}Checkout progress{{ end }}">
+        {{ range $view.Steps }}
+          <li class="flex items-center gap-3 rounded-xl border px-3 py-2 text-sm {{ if .Active }}border-indigo-200 bg-indigo-50 text-indigo-700{{ else if .Completed }}border-emerald-200 bg-emerald-50 text-emerald-700{{ else }}border-gray-200 bg-gray-50 text-gray-500{{ end }}">
+            <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs font-semibold {{ if .Active }}bg-indigo-600 text-white{{ else if .Completed }}bg-emerald-500 text-white{{ else }}bg-gray-200 text-gray-600{{ end }}">
+              {{ .Position }}
+            </span>
+            <div>
+              <p class="font-semibold">{{ .Label }}</p>
+              <p class="text-xs text-gray-500">{{ .Description }}</p>
+            </div>
+          </li>
+        {{ end }}
+      </ol>
+    {{ end }}
+  </header>
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+    <div class="space-y-6">
+      <section class="space-y-5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-indigo-600">
+              {{ if $view.Hero.Badge.Label }}
+                <span class="inline-flex items-center gap-1 rounded-full bg-indigo-600/10 px-3 py-1 text-[11px] font-semibold text-indigo-700">{{ $view.Hero.Badge.Label }}</span>
+              {{ end }}
+              <span>{{ if eq $.Lang "ja" }}オーダー{{ else }}Order{{ end }} #{{ $view.Hero.OrderID }}</span>
+            </div>
+            <h2 class="mt-2 text-3xl font-bold text-gray-900">{{ $view.Hero.Title }}</h2>
+            <p class="mt-2 text-sm text-gray-600">{{ $view.Hero.Subtitle }}</p>
+            <p class="mt-3 text-sm text-gray-500">{{ $view.Hero.Message }}</p>
+          </div>
+          <div class="flex flex-col items-start gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-sm text-emerald-700">
+            <div class="inline-flex items-center gap-2 font-semibold text-emerald-800">
+              {{ template "icon" (dict "Name" "check-circle" "Class" "h-4 w-4") }}
+              <span>{{ $view.Hero.Status }}</span>
+            </div>
+            <p class="text-xs text-emerald-700/80">{{ if eq $.Lang "ja" }}スタジオで刻印の準備を進めています。{{ else }}Our studio begins engraving immediately.{{ end }}</p>
+          </div>
+        </div>
+        {{ if $view.Hero.Highlights }}
+          <dl class="grid gap-3 sm:grid-cols-3">
+            {{ range $view.Hero.Highlights }}
+              <div class="rounded-2xl border border-white/80 bg-white/70 p-4">
+                <dt class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {{ if .Icon }}{{ template "icon" (dict "Name" .Icon "Class" "h-4 w-4 text-indigo-500") }}{{ end }}
+                  <span>{{ .Label }}</span>
+                </dt>
+                <dd class="mt-2 text-lg font-semibold text-gray-900">{{ .Value }}</dd>
+              </div>
+            {{ end }}
+          </dl>
+        {{ end }}
+        {{ if $view.Hero.Actions }}
+          <div class="flex flex-wrap gap-3">
+            {{ range $view.Hero.Actions }}
+              {{ if eq .Variant "primary" }}
+                <a href="{{ .Href }}" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500">
+                  {{ if .Icon }}{{ template "icon" (dict "Name" .Icon "Class" "h-4 w-4") }}{{ end }}
+                  <span>{{ .Label }}</span>
+                </a>
+              {{ else }}
+                <a href="{{ .Href }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-300">
+                  {{ if .Icon }}{{ template "icon" (dict "Name" .Icon "Class" "h-4 w-4 text-gray-500") }}{{ end }}
+                  <span>{{ .Label }}</span>
+                </a>
+              {{ end }}
+            {{ end }}
+            {{ if $view.Hero.ReceiptURL }}
+              <a href="{{ $view.Hero.ReceiptURL }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:border-indigo-300">
+                {{ template "icon" (dict "Name" "download" "Class" "h-4 w-4") }}
+                <span>{{ $view.Hero.ReceiptCTA }}</span>
+              </a>
+            {{ end }}
+          </div>
+        {{ end }}
+      </section>
+
+      {{ if $view.NextSteps }}
+        <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <header class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}次のアクション{{ else }}Next steps{{ end }}</p>
+              <h2 class="text-2xl font-semibold text-gray-900">{{ if eq $.Lang "ja" }}出荷準備の進行状況{{ else }}Keep fulfillment moving{{ end }}</h2>
+            </div>
+            <span class="text-xs text-gray-500">{{ if eq $.Lang "ja" }}ステータスは自動更新されます。{{ else }}Statuses update automatically.{{ end }}</span>
+          </header>
+          <div class="space-y-4">
+            {{ range $task := $view.NextSteps }}
+              <article class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-1 items-start gap-4">
+                  <div class="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white text-indigo-600 shadow-inner">
+                    {{ template "icon" (dict "Name" $task.Icon "Class" "h-5 w-5") }}
+                  </div>
+                  <div class="space-y-1">
+                    <h3 class="text-base font-semibold text-gray-900">{{ $task.Title }}</h3>
+                    <p class="text-sm text-gray-600">{{ $task.Description }}</p>
+                    <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide {{ if eq $task.StatusTone "success" }}text-emerald-700{{ else if eq $task.StatusTone "info" }}text-indigo-700{{ else }}text-gray-500{{ end }}">
+                      {{ template "icon" (dict "Name" "status-online" "Class" "h-3.5 w-3.5") }}
+                      {{ $task.Status }}
+                    </span>
+                  </div>
+                </div>
+                <a href="{{ $task.ActionHref }}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-300">
+                  {{ $task.ActionLabel }}
+                </a>
+              </article>
+            {{ end }}
+          </div>
+        </section>
+      {{ end }}
+
+      <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <header class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}共有{{ else }}Share{{ end }}</p>
+            <h2 class="text-xl font-semibold text-gray-900">{{ $view.Share.Title }}</h2>
+            <p class="text-sm text-gray-600">{{ $view.Share.Subtitle }}</p>
+          </div>
+          {{ if $view.Share.ReferralCode }}
+            <div class="rounded-xl border border-dashed border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700">
+              {{ if eq $.Lang "ja" }}紹介コード{{ else }}Referral code{{ end }}: <span>{{ $view.Share.ReferralCode }}</span>
+            </div>
+          {{ end }}
+        </header>
+        <div class="grid gap-3 sm:grid-cols-3">
+          {{ range $link := $view.Share.Links }}
+            {{ if $link.CopyValue }}
+              <button type="button"
+                      class="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4 text-left text-sm font-semibold text-gray-700 hover:border-gray-300"
+                      data-share-copy
+                      data-share-value="{{ $link.CopyValue }}"
+                      data-share-copy-label="{{ $link.Label }}"
+                      data-share-copied-label="{{ if eq $.Lang "ja" }}コピーしました{{ else }}Copied{{ end }}">
+                <span class="inline-flex items-center gap-2 text-indigo-600">
+                  {{ template "icon" (dict "Name" $link.Icon "Class" "h-4 w-4") }}
+                  <span>{{ $link.Label }}</span>
+                </span>
+                <span class="text-xs font-normal text-gray-500">{{ $link.Tooltip }}</span>
+              </button>
+            {{ else }}
+              <a href="{{ $link.Href }}"
+                 class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 text-sm font-semibold text-gray-700 hover:border-gray-300"
+                 {{ if $link.NewTab }}target="_blank" rel="noreferrer"{{ end }}>
+                <span class="inline-flex items-center gap-2 text-indigo-600">
+                  {{ template "icon" (dict "Name" $link.Icon "Class" "h-4 w-4") }}
+                  <span>{{ $link.Label }}</span>
+                </span>
+                <span class="text-xs font-normal text-gray-500">{{ $link.Tooltip }}</span>
+              </a>
+            {{ end }}
+          {{ end }}
+        </div>
+        <div class="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+          <div class="flex-1">
+            <p class="font-semibold">{{ $view.Share.ReferralCopy }}</p>
+            <p class="text-xs text-gray-500 break-all">{{ $view.Share.ShareURL }}</p>
+          </div>
+          <button type="button"
+                  class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
+                  data-share-copy
+                  data-share-value="{{ $view.Share.ShareURL }}"
+                  data-share-copy-label="{{ if eq $.Lang "ja" }}リンクをコピー{{ else }}Copy link{{ end }}"
+                  data-share-copied-label="{{ if eq $.Lang "ja" }}コピーしました{{ else }}Copied{{ end }}">
+            {{ template "icon" (dict "Name" "cursor-arrow-rays" "Class" "h-4 w-4") }}
+            <span>{{ if eq $.Lang "ja" }}リンクをコピー{{ else }}Copy link{{ end }}</span>
+          </button>
+        </div>
+        <span class="sr-only" data-share-copy-status role="status" aria-live="polite"></span>
+      </section>
+    </div>
+
+    <aside class="space-y-4">
+      <div id="checkout-complete-summary-shell">
+        {{ slot "frag_checkout_summary" (dict "Lang" $.Lang "Summary" $view.Summary "Support" $view.Support) }}
+      </div>
+    </aside>
+  </div>
+
+  {{ if $view.Recommendations.Accessories }}
+    <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}アクセサリ{{ else }}Accessories{{ end }}</p>
+          <h2 class="text-xl font-semibold text-gray-900">{{ if eq $.Lang "ja" }}人気の追加アイテム{{ else }}Popular add-ons{{ end }}</h2>
+        </div>
+        <a href="/shop" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500">{{ if eq $.Lang "ja" }}すべて見る{{ else }}Browse shop{{ end }}</a>
+      </header>
+      {{ template "c_product_rail" (dict "Lang" $.Lang "Items" $view.Recommendations.Accessories) }}
+    </section>
+  {{ end }}
+
+  {{ if $view.Recommendations.Guides }}
+    <section class="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <header>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ if eq $.Lang "ja" }}ガイド{{ else }}Guides{{ end }}</p>
+        <h2 class="text-xl font-semibold text-gray-900">{{ if eq $.Lang "ja" }}受け取り後の準備{{ else }}Prep the team after delivery{{ end }}</h2>
+      </header>
+      <div class="grid gap-4 md:grid-cols-2">
+        {{ range $guide := $view.Recommendations.Guides }}
+          <article class="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">{{ $guide.Category }}</p>
+            <h3 class="text-lg font-semibold text-gray-900">{{ $guide.Title }}</h3>
+            <p class="text-sm text-gray-600">{{ $guide.Summary }}</p>
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>{{ $guide.ReadTime }}</span>
+              <a href="{{ $guide.Href }}" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+                {{ if eq $.Lang "ja" }}読む{{ else }}Read guide{{ end }}
+                {{ template "icon" (dict "Name" "chevron-right" "Class" "h-4 w-4") }}
+              </a>
+            </div>
+          </article>
+        {{ end }}
+      </div>
+    </section>
+  {{ end }}
+
+  <div class="text-xs text-gray-500">Path: {{ $.Path }}</div>
+</section>
+
+<script>
+(function(){
+  if (window.__checkoutCompleteShareInit) { return; }
+  window.__checkoutCompleteShareInit = true;
+  var root = document.getElementById('checkout-complete-root');
+  if (!root) { return; }
+  var status = root.querySelector('[data-share-copy-status]');
+  root.querySelectorAll('[data-share-copy]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var value = btn.getAttribute('data-share-value');
+      if (!value || !navigator.clipboard || !navigator.clipboard.writeText) { return; }
+      var success = btn.getAttribute('data-share-copied-label') || 'Copied';
+      navigator.clipboard.writeText(value).then(function(){
+        if (status) {
+          status.textContent = success;
+          setTimeout(function(){ status.textContent = ''; }, 2000);
+        }
+      });
+    });
+  });
+})();
+</script>
+{{ end }}

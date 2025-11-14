@@ -25,6 +25,39 @@ variable "cloud_run_image" {
   type        = string
 }
 
+variable "cloud_run_cpu" {
+  description = "CPU allocation per Cloud Run instance (e.g. 1, 2, 1k)"
+  type        = string
+  default     = "1"
+}
+
+variable "cloud_run_memory" {
+  description = "Memory allocation per Cloud Run instance (e.g. 512Mi, 1Gi)"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "cloud_run_concurrency" {
+  description = "Maximum concurrent requests handled by a single Cloud Run instance"
+  type        = number
+  default     = 80
+}
+
+variable "cloud_run_env_vars" {
+  description = "Additional plain-text environment variables for the Cloud Run service"
+  type        = map(string)
+  default     = {}
+}
+
+variable "cloud_run_secret_mounts" {
+  description = "Secret Manager bindings injected as environment variables (key = env var, secret_key = logical secret id)"
+  type = map(object({
+    secret_key = string
+    version    = optional(string, "latest")
+  }))
+  default = {}
+}
+
 variable "vpc_connector" {
   description = "Name of the Serverless VPC connector for Cloud Run"
   type        = string

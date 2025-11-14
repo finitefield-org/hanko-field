@@ -1,0 +1,161 @@
+{{ define "cookie_consent_banner" }}
+<div class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:px-6" data-consent-container>
+  <div class="hidden w-full max-w-3xl rounded-lg border border-gray-200 bg-white/95 backdrop-blur shadow-xl" data-consent-banner role="dialog" aria-live="polite" aria-label="{{ tlang $.Lang "consent.banner.title" }}">
+    <div class="flex flex-col gap-4 p-4 sm:p-6 md:flex-row md:items-center md:gap-6">
+      <div class="flex-1 text-sm text-gray-600">
+        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">{{ tlang $.Lang "consent.banner.title" }}</p>
+        <p class="mt-2 text-sm leading-5 text-gray-700">{{ tlang $.Lang "consent.banner.body" }}</p>
+      </div>
+      <div class="flex flex-col gap-2 text-sm md:flex-row md:items-center">
+        <button type="button" class="rounded-md border border-gray-200 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-consent-decline>{{ tlang $.Lang "consent.banner.reject" }}</button>
+        <button type="button" class="rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-consent-accept>{{ tlang $.Lang "consent.banner.accept" }}</button>
+        <button type="button" class="text-xs font-medium text-gray-500 underline transition hover:text-gray-700 md:ml-2" data-consent-manage-toggle>{{ tlang $.Lang "consent.banner.manage" }}</button>
+      </div>
+    </div>
+    <div class="hidden border-t border-gray-100 px-4 pb-4 pt-3 sm:px-6" data-consent-manage>
+      <fieldset class="space-y-4">
+        <legend class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ tlang $.Lang "consent.banner.preferences" }}</legend>
+        <label class="flex items-start gap-3 text-sm text-gray-600">
+          <input type="checkbox" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-consent-option="analytics">
+          <span>
+            <span class="block font-medium text-gray-800">{{ tlang $.Lang "consent.banner.analytics.title" }}</span>
+            <span class="mt-0.5 block text-xs text-gray-500">{{ tlang $.Lang "consent.banner.analytics.desc" }}</span>
+          </span>
+        </label>
+        <label class="flex items-start gap-3 text-sm text-gray-600">
+          <input type="checkbox" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-consent-option="marketing">
+          <span>
+            <span class="block font-medium text-gray-800">{{ tlang $.Lang "consent.banner.marketing.title" }}</span>
+            <span class="mt-0.5 block text-xs text-gray-500">{{ tlang $.Lang "consent.banner.marketing.desc" }}</span>
+          </span>
+        </label>
+        <p class="text-[11px] text-gray-400">{{ tlang $.Lang "consent.banner.functional" }}</p>
+        <div class="flex items-center gap-3">
+          <button type="button" class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-indigo-500/40" data-consent-save>{{ tlang $.Lang "consent.banner.save" }}</button>
+          <button type="button" class="text-xs text-gray-400 underline transition hover:text-gray-600" data-consent-reset>{{ tlang $.Lang "consent.banner.reset" }}</button>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var doc = document;
+  var container = doc.querySelector('[data-consent-container]');
+  var banner = doc.querySelector('[data-consent-banner]');
+  if (!banner) { return; }
+
+  var manageSection = banner.querySelector('[data-consent-manage]');
+  var manageToggle = banner.querySelector('[data-consent-manage-toggle]');
+  var acceptBtn = banner.querySelector('[data-consent-accept]');
+  var declineBtn = banner.querySelector('[data-consent-decline]');
+  var saveBtn = banner.querySelector('[data-consent-save]');
+  var resetBtn = banner.querySelector('[data-consent-reset]');
+  var analyticsInput = banner.querySelector('[data-consent-option="analytics"]');
+  var marketingInput = banner.querySelector('[data-consent-option="marketing"]');
+
+  function showBanner(){
+    banner.classList.remove('hidden');
+    if (container) { container.classList.remove('pointer-events-none'); }
+  }
+
+  function hideBanner(){
+    banner.classList.add('hidden');
+    if (container) { container.classList.add('pointer-events-none'); }
+    if (manageSection) { manageSection.classList.add('hidden'); }
+  }
+
+  function currentState(){
+    if (window.hankoConsent && typeof window.hankoConsent.state === 'function') {
+      return window.hankoConsent.state();
+    }
+    return { analytics: false, marketing: false };
+  }
+
+  function applyState(state){
+    state = state || currentState();
+    if (analyticsInput) { analyticsInput.checked = !!state.analytics; }
+    if (marketingInput) { marketingInput.checked = !!state.marketing; }
+  }
+
+  function commit(values){
+    if (!values) { return; }
+    var consent = window.hankoConsent;
+    if (!consent) { return; }
+    if (typeof consent.setMany === 'function') {
+      consent.setMany(values);
+    } else if (typeof consent.batchSet === 'function') {
+      consent.batchSet(values);
+    } else if (typeof consent.set === 'function') {
+      Object.keys(values).forEach(function(key){ consent.set(key, values[key]); });
+    }
+  }
+
+  function handleReady(detail){
+    detail = detail || {};
+    if (detail.choice) {
+      hideBanner();
+    } else {
+      showBanner();
+      applyState(detail.state || currentState());
+    }
+  }
+
+  function bindConsentChange(){
+    if (!window.hankoConsent || typeof window.hankoConsent.onChange !== 'function') { return; }
+    window.hankoConsent.onChange(function(key){
+      if (key === 'analytics' || key === 'marketing') {
+        applyState();
+        if (window.hankoConsent && window.hankoConsent.hasChoice && window.hankoConsent.hasChoice()) {
+          hideBanner();
+        }
+      }
+    });
+  }
+
+  acceptBtn && acceptBtn.addEventListener('click', function(){
+    commit({ analytics: true, marketing: true });
+    hideBanner();
+  });
+
+  declineBtn && declineBtn.addEventListener('click', function(){
+    commit({ analytics: false, marketing: false });
+    hideBanner();
+  });
+
+  saveBtn && saveBtn.addEventListener('click', function(){
+    commit({
+      analytics: analyticsInput ? analyticsInput.checked : false,
+      marketing: marketingInput ? marketingInput.checked : false
+    });
+    hideBanner();
+  });
+
+  resetBtn && resetBtn.addEventListener('click', function(){
+    if (analyticsInput) { analyticsInput.checked = false; }
+    if (marketingInput) { marketingInput.checked = false; }
+    commit({ analytics: false, marketing: false });
+    applyState({ analytics: false, marketing: false });
+    hideBanner();
+  });
+
+  manageToggle && manageToggle.addEventListener('click', function(){
+    if (!manageSection) { return; }
+    manageSection.classList.toggle('hidden');
+    if (!manageSection.classList.contains('hidden')) {
+      applyState();
+    }
+  });
+
+  document.addEventListener('hanko:consent-ready', function(event){
+    handleReady(event.detail || {});
+    bindConsentChange();
+  }, { once: true });
+
+  if (window.hankoConsent && window.hankoConsent.ready && window.hankoConsent.ready()) {
+    handleReady({ state: currentState(), choice: window.hankoConsent.hasChoice && window.hankoConsent.hasChoice() });
+    bindConsentChange();
+  }
+})();
+</script>
+{{ end }}

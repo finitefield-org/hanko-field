@@ -25,6 +25,42 @@ module "service_accounts" {
   name_prefix      = local.name_prefix
 }
 
+module "storage" {
+  source = "./modules/storage_buckets"
+
+  project_id    = var.project_id
+  buckets       = var.storage_buckets
+  name_override = local.bucket_names
+}
+
+module "secrets" {
+  source = "./modules/secret_manager"
+
+  project_id = var.project_id
+  secrets    = local.secret_ids
+}
+
+locals {
+  cloud_run_env_defaults = {
+    API_ENVIRONMENT               = var.environment
+    API_FIREBASE_PROJECT_ID       = var.project_id
+    API_FIRESTORE_PROJECT_ID      = var.project_id
+    API_SECURITY_ENVIRONMENT      = var.environment
+    API_SECURITY_OIDC_AUDIENCE    = var.api_oidc_audience
+    API_SECRET_DEFAULT_PROJECT_ID = var.project_id
+    API_STORAGE_ASSETS_BUCKET     = module.storage.bucket_names["design_assets"]
+    API_STORAGE_EXPORTS_BUCKET    = module.storage.bucket_names["exports"]
+  }
+
+  cloud_run_secret_bindings = {
+    for env_name, config in var.cloud_run_secret_mounts : env_name => {
+      env     = env_name
+      secret  = module.secrets.secret_ids[config.secret_key]
+      version = try(config.version, "latest")
+    }
+  }
+}
+
 module "cloud_run" {
   source = "./modules/cloud_run_service"
 
@@ -37,11 +73,12 @@ module "cloud_run" {
   min_instances         = var.min_instances
   max_instances         = var.max_instances
   vpc_connector         = var.vpc_connector
+  cpu                   = var.cloud_run_cpu
+  memory                = var.cloud_run_memory
+  concurrency           = var.cloud_run_concurrency
+  env_vars              = merge(local.cloud_run_env_defaults, var.cloud_run_env_vars)
+  secrets               = local.cloud_run_secret_bindings
   environment           = var.environment
-  env_vars = {
-    API_ENVIRONMENT             = var.environment
-    API_SECURITY_OIDC_AUDIENCE  = var.api_oidc_audience
-  }
   invokers = [
     module.service_accounts.service_account_emails["scheduler_invoker"],
   ]
@@ -93,14 +130,6 @@ module "pubsub" {
   topics     = var.psp_topics
 }
 
-module "storage" {
-  source = "./modules/storage_buckets"
-
-  project_id    = var.project_id
-  buckets       = var.storage_buckets
-  name_override = local.bucket_names
-}
-
 module "scheduler" {
   source = "./modules/cloud_scheduler"
 
@@ -115,13 +144,6 @@ resource "google_service_account_iam_member" "scheduler_token_creator" {
   service_account_id = module.service_accounts.service_account_ids["scheduler_invoker"]
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
-}
-
-module "secrets" {
-  source = "./modules/secret_manager"
-
-  project_id = var.project_id
-  secrets    = local.secret_ids
 }
 
 resource "google_monitoring_notification_channel" "admin_alerts" {
@@ -210,7 +232,6 @@ resource "google_monitoring_alert_policy" "admin_uptime" {
     endpoint    = each.key
   }
 }
-
 output "cloud_run_service_name" {
   description = "Name of the Cloud Run service"
   value       = module.cloud_run.service_name

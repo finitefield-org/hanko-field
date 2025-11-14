@@ -1,0 +1,22 @@
+{{ define "locale_switcher" }}
+{{ $lang := .Lang }}
+{{ $locales := .Locales }}
+{{ if gt (len $locales) 1 }}
+<div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+  <span class="text-sm font-medium text-gray-700">{{ tlang $lang "legal.locale.label" }}</span>
+  <div class="inline-flex overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+    {{ range $locales }}
+      <a href="{{ .Href }}"
+         hx-get="{{ .Href }}"
+         hx-target="#content-page"
+         hx-select="#content-page"
+         hx-swap="outerHTML"
+         hx-push-url="true"
+         class="px-3 py-1.5 text-sm font-medium transition {{ if .Active }}bg-indigo-600 text-white shadow-inner{{ else }}text-gray-600 hover:bg-gray-100{{ end }}">
+        {{ .Label }}
+      </a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
+{{ end }}

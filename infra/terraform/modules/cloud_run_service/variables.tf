@@ -18,6 +18,24 @@ variable "image" {
   description = "Container image"
 }
 
+variable "cpu" {
+  type        = string
+  description = "CPU allocation per instance"
+  default     = "1"
+}
+
+variable "memory" {
+  type        = string
+  description = "Memory allocation per instance"
+  default     = "512Mi"
+}
+
+variable "concurrency" {
+  type        = number
+  description = "Maximum concurrent requests per instance"
+  default     = 80
+}
+
 variable "service_account_email" {
   type        = string
   description = "Service account to run the service"

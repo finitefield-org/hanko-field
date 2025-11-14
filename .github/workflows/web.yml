@@ -1,0 +1,374 @@
+name: Web CI/CD
+
+on:
+  pull_request:
+    paths:
+      - web/**
+      - .github/workflows/web.yml
+  push:
+    branches:
+      - main
+    paths:
+      - web/**
+      - .github/workflows/web.yml
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Select which environment(s) to deploy when manually dispatching.
+        required: false
+        type: choice
+        options:
+          - both
+          - staging
+          - production
+        default: both
+      ref:
+        description: Git ref (branch, tag, or commit) to deploy. Defaults to the workflow revision.
+        required: false
+        type: string
+      image:
+        description: Existing image reference to deploy (skips build/push steps).
+        required: false
+        type: string
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      GOFLAGS: -trimpath
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout ref input
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref != '' }}
+        run: git checkout ${{ github.event.inputs.ref }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: web/go.mod
+          cache: true
+      - name: Verify gofmt
+        run: |
+          set -euo pipefail
+          cd web
+          fmt_out=$(gofmt -l .)
+          if [ -n "$fmt_out" ]; then
+            echo "::error::The following files are not gofmt formatted:"
+            echo "$fmt_out"
+            exit 1
+          fi
+      - name: Run go vet
+        run: |
+          set -euo pipefail
+          cd web
+          go vet ./...
+      - name: Run unit and integration tests
+        run: |
+          set -euo pipefail
+          cd web
+          go test ./...
+      - name: Build CLI binary
+        run: |
+          set -euo pipefail
+          cd web
+          go build ./cmd/web
+
+  deploy-staging:
+    needs: checks
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment != 'production')
+    environment:
+      name: staging
+    env:
+      GAR_HOST: ${{ vars.WEB_GAR_HOST }}
+      ARTIFACT_PROJECT: ${{ vars.WEB_ARTIFACT_PROJECT }}
+      GAR_REPOSITORY: ${{ vars.WEB_GAR_REPOSITORY }}
+      REGION: ${{ vars.WEB_REGION }}
+      STAGING_PROJECT: ${{ vars.WEB_STAGING_PROJECT }}
+      STAGING_SERVICE: ${{ vars.WEB_STAGING_SERVICE }}
+      STAGING_SMOKE_URL: ${{ vars.WEB_STAGING_SMOKE_URL }}
+      DISPATCH_IMAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image || '' }}
+    outputs:
+      image: ${{ steps.image-meta.outputs.image }}
+    steps:
+      - name: Validate staging configuration
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in GAR_HOST ARTIFACT_PROJECT GAR_REPOSITORY REGION STAGING_PROJECT STAGING_SERVICE; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error::Missing required repository variables: %s\n' "${missing[*]}"
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout ref input
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref != '' }}
+        run: git checkout ${{ github.event.inputs.ref }}
+      - name: Google Cloud authentication
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.WEB_GCP_SA_KEY }}
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.ARTIFACT_PROJECT }}
+      - name: Configure Artifact Registry auth
+        run: gcloud auth configure-docker "${GAR_HOST}"
+      - name: Capture previous revision
+        id: prev
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          if gcloud run services describe "${STAGING_SERVICE}" --project "${STAGING_PROJECT}" --region "${REGION}" --format=json > artifacts/service-before.json 2>/dev/null; then
+            python - <<'PY' > artifacts/previous_revision.txt
+import json
+with open('artifacts/service-before.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+traffic = data.get('status', {}).get('traffic', [])
+previous = ''
+if traffic:
+    previous = traffic[0].get('revisionName', '')
+print(previous)
+PY
+          else
+            echo "none" > artifacts/previous_revision.txt
+          fi
+      - name: Determine image reference
+        id: image-meta
+        run: |
+          set -euo pipefail
+          if [ -n "${DISPATCH_IMAGE}" ]; then
+            echo "image=${DISPATCH_IMAGE}" >> "$GITHUB_OUTPUT"
+            echo "build_required=false" >> "$GITHUB_OUTPUT"
+            echo "IMAGE=${DISPATCH_IMAGE}" >> "$GITHUB_ENV"
+          else
+            IMAGE="${GAR_HOST}/${ARTIFACT_PROJECT}/${GAR_REPOSITORY}/web:${GITHUB_SHA}"
+            echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+            echo "build_required=true" >> "$GITHUB_OUTPUT"
+            echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          fi
+      - name: Build container image
+        if: ${{ steps.image-meta.outputs.build_required == 'true' }}
+        run: |
+          set -euo pipefail
+          docker build -f web/Dockerfile -t "${IMAGE}" web
+      - name: Push container image
+        if: ${{ steps.image-meta.outputs.build_required == 'true' }}
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE}"
+      - name: Deploy to Cloud Run (staging)
+        run: |
+          set -euo pipefail
+          gcloud run deploy "${STAGING_SERVICE}" \
+            --project "${STAGING_PROJECT}" \
+            --region "${REGION}" \
+            --image "${IMAGE}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --tag=staging \
+            --update-labels=app=hanko-web,commit=${GITHUB_SHA},env=staging \
+            --set-env-vars=HANKO_WEB_ENV=staging,HANKO_WEB_RELEASE=${GITHUB_SHA}
+      - name: Smoke test (staging)
+        run: |
+          set -euo pipefail
+          base="${STAGING_SMOKE_URL}"
+          if [ -z "$base" ]; then
+            base=$(gcloud run services describe "${STAGING_SERVICE}" --project "${STAGING_PROJECT}" --region "${REGION}" --format='value(status.url)')
+          fi
+          if [ -z "$base" ]; then
+            echo "::error::Unable to resolve staging service URL for smoke test."
+            exit 1
+          fi
+          echo "Probing ${base}/healthz"
+          for attempt in $(seq 1 5); do
+            if curl -fSs "${base}/healthz"; then
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed; retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Smoke test failed for ${base}/healthz"
+          exit 1
+      - name: Capture deployment metadata
+        run: |
+          set -euo pipefail
+          gcloud run services describe "${STAGING_SERVICE}" --project "${STAGING_PROJECT}" --region "${REGION}" --format=json > artifacts/service-after.json
+          cat <<'EOF' > artifacts/deployment.json
+{
+  "environment": "staging",
+  "image": "${IMAGE}",
+  "commit": "${GITHUB_SHA}"
+}
+EOF
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-staging-deploy-${{ github.run_id }}
+          path: artifacts
+          retention-days: 7
+
+  deploy-production:
+    needs:
+      - checks
+      - deploy-staging
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment != 'staging')
+    environment:
+      name: production
+    env:
+      GAR_HOST: ${{ vars.WEB_GAR_HOST }}
+      ARTIFACT_PROJECT: ${{ vars.WEB_ARTIFACT_PROJECT }}
+      GAR_REPOSITORY: ${{ vars.WEB_GAR_REPOSITORY }}
+      REGION: ${{ vars.WEB_REGION }}
+      PRODUCTION_PROJECT: ${{ vars.WEB_PRODUCTION_PROJECT }}
+      PRODUCTION_SERVICE: ${{ vars.WEB_PRODUCTION_SERVICE }}
+      PRODUCTION_SMOKE_URL: ${{ vars.WEB_PRODUCTION_SMOKE_URL }}
+      DISPATCH_IMAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image || '' }}
+      STAGING_IMAGE: ${{ needs.deploy-staging.outputs.image }}
+    steps:
+      - name: Validate production configuration
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in GAR_HOST ARTIFACT_PROJECT GAR_REPOSITORY REGION PRODUCTION_PROJECT PRODUCTION_SERVICE; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error::Missing required repository variables: %s\n' "${missing[*]}"
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout ref input
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref != '' }}
+        run: git checkout ${{ github.event.inputs.ref }}
+      - name: Google Cloud authentication
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.WEB_GCP_SA_KEY }}
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.ARTIFACT_PROJECT }}
+      - name: Configure Artifact Registry auth
+        run: gcloud auth configure-docker "${GAR_HOST}"
+      - name: Capture previous revision
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          if gcloud run services describe "${PRODUCTION_SERVICE}" --project "${PRODUCTION_PROJECT}" --region "${REGION}" --format=json > artifacts/service-before.json 2>/dev/null; then
+            python - <<'PY' > artifacts/previous_revision.txt
+import json
+with open('artifacts/service-before.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+traffic = data.get('status', {}).get('traffic', [])
+previous = ''
+if traffic:
+    previous = traffic[0].get('revisionName', '')
+print(previous)
+PY
+          else
+            echo "none" > artifacts/previous_revision.txt
+          fi
+      - name: Determine image reference
+        id: image-meta
+        run: |
+          set -euo pipefail
+          if [ -n "${DISPATCH_IMAGE}" ]; then
+            IMAGE="${DISPATCH_IMAGE}"
+            echo "build_required=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "${STAGING_IMAGE}" ]; then
+            IMAGE="${STAGING_IMAGE}"
+            echo "build_required=false" >> "$GITHUB_OUTPUT"
+          else
+            IMAGE="${GAR_HOST}/${ARTIFACT_PROJECT}/${GAR_REPOSITORY}/web:${GITHUB_SHA}"
+            echo "build_required=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+      - name: Build container image
+        if: ${{ steps.image-meta.outputs.build_required == 'true' }}
+        run: |
+          set -euo pipefail
+          docker build -f web/Dockerfile -t "${IMAGE}" web
+      - name: Push container image
+        if: ${{ steps.image-meta.outputs.build_required == 'true' }}
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE}"
+      - name: Deploy to Cloud Run (production)
+        run: |
+          set -euo pipefail
+          gcloud run deploy "${PRODUCTION_SERVICE}" \
+            --project "${PRODUCTION_PROJECT}" \
+            --region "${REGION}" \
+            --image "${IMAGE}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --tag=production \
+            --update-labels=app=hanko-web,commit=${GITHUB_SHA},env=production \
+            --set-env-vars=HANKO_WEB_ENV=prod,HANKO_WEB_RELEASE=${GITHUB_SHA}
+      - name: Smoke test (production)
+        run: |
+          set -euo pipefail
+          base="${PRODUCTION_SMOKE_URL}"
+          if [ -z "$base" ]; then
+            base=$(gcloud run services describe "${PRODUCTION_SERVICE}" --project "${PRODUCTION_PROJECT}" --region "${REGION}" --format='value(status.url)')
+          fi
+          if [ -z "$base" ]; then
+            echo "::error::Unable to resolve production service URL for smoke test."
+            exit 1
+          fi
+          echo "Probing ${base}/healthz"
+          for attempt in $(seq 1 5); do
+            if curl -fSs "${base}/healthz"; then
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed; retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Smoke test failed for ${base}/healthz"
+          exit 1
+      - name: Capture deployment metadata
+        run: |
+          set -euo pipefail
+          gcloud run services describe "${PRODUCTION_SERVICE}" --project "${PRODUCTION_PROJECT}" --region "${REGION}" --format=json > artifacts/service-after.json
+          cat <<'EOF' > artifacts/deployment.json
+{
+  "environment": "production",
+  "image": "${IMAGE}",
+  "commit": "${GITHUB_SHA}"
+}
+EOF
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-production-deploy-${{ github.run_id }}
+          path: artifacts
+          retention-days: 7

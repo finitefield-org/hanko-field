@@ -1,0 +1,16 @@
+{{ define "analytics_head" }}
+{{ $ga := .Analytics.GA4MeasurementID }}
+{{ $gtm := .Analytics.GTMContainerID }}
+{{ $segment := .Analytics.SegmentWriteKey }}
+{{ $debug := .Analytics.Debug }}
+<script>
+(function(){
+  window.__HANKO_ANALYTICS__ = {
+    ga: {{ if $ga }}'{{ $ga }}'{{ else }}''{{ end }},
+    gtm: {{ if $gtm }}'{{ $gtm }}'{{ else }}''{{ end }},
+    segment: {{ if $segment }}'{{ $segment }}'{{ else }}''{{ end }},
+    debug: {{ if $debug }}true{{ else }}false{{ end }}
+  };
+})();
+</script>
+{{ end }}
