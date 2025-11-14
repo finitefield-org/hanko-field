@@ -3389,6 +3389,206 @@
   "description": "ペルソナ更新失敗時のメッセージ"
 }
 
+, "profileLinkedAccountsTitle": "連携アカウント"
+, "@profileLinkedAccountsTitle": {
+  "description": "連携アカウント画面のタイトル"
+}
+
+, "profileLinkedAccountsAddTooltip": "アカウントを追加"
+, "@profileLinkedAccountsAddTooltip": {
+  "description": "連携アカウント画面の追加ボタンのツールチップ"
+}
+
+, "profileLinkedAccountsLoadError": "連携アカウントを読み込めませんでした。"
+, "@profileLinkedAccountsLoadError": {
+  "description": "連携アカウント取得失敗時のメッセージ"
+}
+
+, "profileLinkedAccountsRetryLabel": "再試行"
+, "@profileLinkedAccountsRetryLabel": {
+  "description": "エラー画面の再試行ボタン"
+}
+
+, "profileLinkedAccountsSecurityTitle": "サインインを安全に保つ"
+, "@profileLinkedAccountsSecurityTitle": {
+  "description": "セキュリティバナーのタイトル"
+}
+
+, "profileLinkedAccountsSecurityBody": "パスワードを使い回さず、可能であればパスキーを有効にしましょう。"
+, "@profileLinkedAccountsSecurityBody": {
+  "description": "セキュリティバナーの説明文"
+}
+
+, "profileLinkedAccountsSecurityAction": "セキュリティガイド"
+, "@profileLinkedAccountsSecurityAction": {
+  "description": "セキュリティバナーのアクションボタン"
+}
+
+, "profileLinkedAccountsProviderApple": "Apple"
+, "@profileLinkedAccountsProviderApple": {
+  "description": "Apple プロバイダー名"
+}
+
+, "profileLinkedAccountsProviderGoogle": "Google"
+, "@profileLinkedAccountsProviderGoogle": {
+  "description": "Google プロバイダー名"
+}
+
+, "profileLinkedAccountsProviderEmail": "メール/パスワード"
+, "@profileLinkedAccountsProviderEmail": {
+  "description": "メール/パスワードプロバイダー名"
+}
+
+, "profileLinkedAccountsProviderLine": "LINE"
+, "@profileLinkedAccountsProviderLine": {
+  "description": "LINE プロバイダー名"
+}
+
+, "profileLinkedAccountsStatusActive": "連携済み"
+, "@profileLinkedAccountsStatusActive": {
+  "description": "連携済みステータス"
+}
+
+, "profileLinkedAccountsStatusPending": "確認待ち"
+, "@profileLinkedAccountsStatusPending": {
+  "description": "確認待ちステータス"
+}
+
+, "profileLinkedAccountsStatusRevoked": "解除済み"
+, "@profileLinkedAccountsStatusRevoked": {
+  "description": "解除済みステータス"
+}
+
+, "profileLinkedAccountsStatusActionRequired": "要対応"
+, "@profileLinkedAccountsStatusActionRequired": {
+  "description": "要対応ステータス"
+}
+
+, "profileLinkedAccountsLinkedAt": "連携日: {timestamp}"
+, "@profileLinkedAccountsLinkedAt": {
+  "description": "連携日時の表示",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsLastUsed": "最終利用: {timestamp}"
+, "@profileLinkedAccountsLastUsed": {
+  "description": "最終利用日時の表示",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsAutoSignInLabel": "自動サインイン"
+, "@profileLinkedAccountsAutoSignInLabel": {
+  "description": "自動サインイン設定のラベル"
+}
+
+, "profileLinkedAccountsAutoSignInDescription": "信頼できる端末ではログイン画面をスキップします。"
+, "@profileLinkedAccountsAutoSignInDescription": {
+  "description": "自動サインイン設定の補足"
+}
+
+, "profileLinkedAccountsPendingChangesLabel": "未保存の変更"
+, "@profileLinkedAccountsPendingChangesLabel": {
+  "description": "未保存変更を示すラベル"
+}
+
+, "profileLinkedAccountsUnlinkAction": "連携解除"
+, "@profileLinkedAccountsUnlinkAction": {
+  "description": "連携解除ボタンのラベル"
+}
+
+, "profileLinkedAccountsSaveAction": "保存"
+, "@profileLinkedAccountsSaveAction": {
+  "description": "保存ボタンのラベル"
+}
+
+, "profileLinkedAccountsSaveSuccess": "自動サインイン設定を保存しました。"
+, "@profileLinkedAccountsSaveSuccess": {
+  "description": "保存成功時のスナックバー"
+}
+
+, "profileLinkedAccountsSaveError": "変更を保存できませんでした。"
+, "@profileLinkedAccountsSaveError": {
+  "description": "保存失敗時のスナックバー"
+}
+
+, "profileLinkedAccountsUnlinkConfirmTitle": "このアカウントの連携を解除しますか？"
+, "@profileLinkedAccountsUnlinkConfirmTitle": {
+  "description": "連携解除ダイアログのタイトル"
+}
+
+, "profileLinkedAccountsUnlinkConfirmBody": "解除すると、{provider}で再度サインインする必要があります。"
+, "@profileLinkedAccountsUnlinkConfirmBody": {
+  "description": "連携解除ダイアログの本文",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsUnlinkConfirmAction": "連携解除"
+, "@profileLinkedAccountsUnlinkConfirmAction": {
+  "description": "ダイアログの確定ボタン"
+}
+
+, "profileLinkedAccountsUnlinkCancel": "キャンセル"
+, "@profileLinkedAccountsUnlinkCancel": {
+  "description": "ダイアログのキャンセルボタン"
+}
+
+, "profileLinkedAccountsUnlinkSuccess": "{provider}の連携を解除しました。"
+, "@profileLinkedAccountsUnlinkSuccess": {
+  "description": "連携解除成功時のメッセージ",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsUnlinkError": "連携を解除できませんでした。"
+, "@profileLinkedAccountsUnlinkError": {
+  "description": "連携解除失敗時のメッセージ"
+}
+
+, "profileLinkedAccountsEmptyTitle": "まだ連携されていません"
+, "@profileLinkedAccountsEmptyTitle": {
+  "description": "連携アカウントが無い場合の見出し"
+}
+
+, "profileLinkedAccountsEmptyBody": "AppleやGoogle、LINEなどのサインイン方法を追加して、安全にアクセスできます。"
+, "@profileLinkedAccountsEmptyBody": {
+  "description": "連携アカウントが無い場合の説明"
+}
+
+, "profileLinkedAccountsEmptyAction": "連携を追加"
+, "@profileLinkedAccountsEmptyAction": {
+  "description": "連携アカウント空状態のCTA"
+}
+
+, "profileLinkedAccountsLinkSuccess": "{provider}を追加しました。"
+, "@profileLinkedAccountsLinkSuccess": {
+  "description": "連携追加成功時のメッセージ",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsLinkError": "連携を開始できませんでした。もう一度お試しください。"
+, "@profileLinkedAccountsLinkError": {
+  "description": "連携追加失敗時のメッセージ"
+}
+
+, "profileLinkedAccountsAddSheetTitle": "連携するサービスを選択"
+, "@profileLinkedAccountsAddSheetTitle": {
+  "description": "連携サービス選択シートのタイトル"
+}
+
+, "profileLinkedAccountsAddSheetSubtitle": "普段使っているアカウントを追加しましょう。"
+, "@profileLinkedAccountsAddSheetSubtitle": {
+  "description": "連携サービス選択シートの補足"
+}
+
 , "profilePaymentsTitle": "お支払い方法"
 , "@profilePaymentsTitle": {
   "description": "プロフィール > お支払い方法画面のタイトル"

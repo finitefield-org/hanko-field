@@ -2,6 +2,7 @@ import 'package:app/features/guides/presentation/guide_detail_screen.dart';
 import 'package:app/features/guides/presentation/guides_list_screen.dart';
 import 'package:app/features/profile/presentation/profile_addresses_screen.dart';
 import 'package:app/features/profile/presentation/profile_legal_screen.dart';
+import 'package:app/features/profile/presentation/profile_linked_accounts_screen.dart';
 import 'package:app/features/profile/presentation/profile_locale_screen.dart';
 import 'package:app/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:app/features/profile/presentation/profile_payments_screen.dart';
@@ -111,6 +112,8 @@ class ProfileSectionPage extends StatelessWidget {
         return const ProfileLegalScreen();
       case 'support':
         return const ProfileSupportScreen();
+      case 'linked-accounts':
+        return const ProfileLinkedAccountsScreen();
       default:
         return _ProfileSectionFallback(title: title);
     }

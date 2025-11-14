@@ -3215,6 +3215,130 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomePersonaUpdateError => 'ペルソナを更新できませんでした。もう一度お試しください。';
 
   @override
+  String get profileLinkedAccountsTitle => '連携アカウント';
+
+  @override
+  String get profileLinkedAccountsAddTooltip => 'アカウントを追加';
+
+  @override
+  String get profileLinkedAccountsLoadError => '連携アカウントを読み込めませんでした。';
+
+  @override
+  String get profileLinkedAccountsRetryLabel => '再試行';
+
+  @override
+  String get profileLinkedAccountsSecurityTitle => 'サインインを安全に保つ';
+
+  @override
+  String get profileLinkedAccountsSecurityBody =>
+      'パスワードを使い回さず、可能であればパスキーを有効にしましょう。';
+
+  @override
+  String get profileLinkedAccountsSecurityAction => 'セキュリティガイド';
+
+  @override
+  String get profileLinkedAccountsProviderApple => 'Apple';
+
+  @override
+  String get profileLinkedAccountsProviderGoogle => 'Google';
+
+  @override
+  String get profileLinkedAccountsProviderEmail => 'メール/パスワード';
+
+  @override
+  String get profileLinkedAccountsProviderLine => 'LINE';
+
+  @override
+  String get profileLinkedAccountsStatusActive => '連携済み';
+
+  @override
+  String get profileLinkedAccountsStatusPending => '確認待ち';
+
+  @override
+  String get profileLinkedAccountsStatusRevoked => '解除済み';
+
+  @override
+  String get profileLinkedAccountsStatusActionRequired => '要対応';
+
+  @override
+  String profileLinkedAccountsLinkedAt(String timestamp) {
+    return '連携日: $timestamp';
+  }
+
+  @override
+  String profileLinkedAccountsLastUsed(String timestamp) {
+    return '最終利用: $timestamp';
+  }
+
+  @override
+  String get profileLinkedAccountsAutoSignInLabel => '自動サインイン';
+
+  @override
+  String get profileLinkedAccountsAutoSignInDescription =>
+      '信頼できる端末ではログイン画面をスキップします。';
+
+  @override
+  String get profileLinkedAccountsPendingChangesLabel => '未保存の変更';
+
+  @override
+  String get profileLinkedAccountsUnlinkAction => '連携解除';
+
+  @override
+  String get profileLinkedAccountsSaveAction => '保存';
+
+  @override
+  String get profileLinkedAccountsSaveSuccess => '自動サインイン設定を保存しました。';
+
+  @override
+  String get profileLinkedAccountsSaveError => '変更を保存できませんでした。';
+
+  @override
+  String get profileLinkedAccountsUnlinkConfirmTitle => 'このアカウントの連携を解除しますか？';
+
+  @override
+  String profileLinkedAccountsUnlinkConfirmBody(String provider) {
+    return '解除すると、$providerで再度サインインする必要があります。';
+  }
+
+  @override
+  String get profileLinkedAccountsUnlinkConfirmAction => '連携解除';
+
+  @override
+  String get profileLinkedAccountsUnlinkCancel => 'キャンセル';
+
+  @override
+  String profileLinkedAccountsUnlinkSuccess(String provider) {
+    return '$providerの連携を解除しました。';
+  }
+
+  @override
+  String get profileLinkedAccountsUnlinkError => '連携を解除できませんでした。';
+
+  @override
+  String get profileLinkedAccountsEmptyTitle => 'まだ連携されていません';
+
+  @override
+  String get profileLinkedAccountsEmptyBody =>
+      'AppleやGoogle、LINEなどのサインイン方法を追加して、安全にアクセスできます。';
+
+  @override
+  String get profileLinkedAccountsEmptyAction => '連携を追加';
+
+  @override
+  String profileLinkedAccountsLinkSuccess(String provider) {
+    return '$providerを追加しました。';
+  }
+
+  @override
+  String get profileLinkedAccountsLinkError => '連携を開始できませんでした。もう一度お試しください。';
+
+  @override
+  String get profileLinkedAccountsAddSheetTitle => '連携するサービスを選択';
+
+  @override
+  String get profileLinkedAccountsAddSheetSubtitle => '普段使っているアカウントを追加しましょう。';
+
+  @override
   String get profilePaymentsTitle => 'お支払い方法';
 
   @override

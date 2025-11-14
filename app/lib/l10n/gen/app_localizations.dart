@@ -5798,6 +5798,228 @@ abstract class AppLocalizations {
   /// **'Unable to update persona. Please try again.'**
   String get profileHomePersonaUpdateError;
 
+  /// App bar title for the linked accounts screen
+  ///
+  /// In en, this message translates to:
+  /// **'Linked accounts'**
+  String get profileLinkedAccountsTitle;
+
+  /// Tooltip for the add account icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Link account'**
+  String get profileLinkedAccountsAddTooltip;
+
+  /// Headline shown when linked accounts fail to load
+  ///
+  /// In en, this message translates to:
+  /// **'Your linked accounts couldn\'t be loaded.'**
+  String get profileLinkedAccountsLoadError;
+
+  /// Retry button label for the linked accounts error view
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileLinkedAccountsRetryLabel;
+
+  /// Title for the security banner on the linked accounts screen
+  ///
+  /// In en, this message translates to:
+  /// **'Keep sign-ins secure'**
+  String get profileLinkedAccountsSecurityTitle;
+
+  /// Supporting text in the security banner reminding about password hygiene
+  ///
+  /// In en, this message translates to:
+  /// **'Use unique passwords and enable passkeys wherever possible.'**
+  String get profileLinkedAccountsSecurityBody;
+
+  /// Action button label on the security banner
+  ///
+  /// In en, this message translates to:
+  /// **'Security tips'**
+  String get profileLinkedAccountsSecurityAction;
+
+  /// Readable name for the Apple provider
+  ///
+  /// In en, this message translates to:
+  /// **'Apple'**
+  String get profileLinkedAccountsProviderApple;
+
+  /// Readable name for the Google provider
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get profileLinkedAccountsProviderGoogle;
+
+  /// Readable name for the email/password provider
+  ///
+  /// In en, this message translates to:
+  /// **'Email & password'**
+  String get profileLinkedAccountsProviderEmail;
+
+  /// Readable name for the LINE provider
+  ///
+  /// In en, this message translates to:
+  /// **'LINE'**
+  String get profileLinkedAccountsProviderLine;
+
+  /// Status chip label when the account is active
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get profileLinkedAccountsStatusActive;
+
+  /// Status chip label when verification is pending
+  ///
+  /// In en, this message translates to:
+  /// **'Pending verification'**
+  String get profileLinkedAccountsStatusPending;
+
+  /// Status chip label when the provider revoked access
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get profileLinkedAccountsStatusRevoked;
+
+  /// Status chip label when user action is needed
+  ///
+  /// In en, this message translates to:
+  /// **'Action required'**
+  String get profileLinkedAccountsStatusActionRequired;
+
+  /// Helper text indicating when the account was linked
+  ///
+  /// In en, this message translates to:
+  /// **'Linked {timestamp}'**
+  String profileLinkedAccountsLinkedAt(String timestamp);
+
+  /// Helper text indicating when the account was last used
+  ///
+  /// In en, this message translates to:
+  /// **'Last used {timestamp}'**
+  String profileLinkedAccountsLastUsed(String timestamp);
+
+  /// Label for the auto sign-in setting
+  ///
+  /// In en, this message translates to:
+  /// **'Auto sign-in'**
+  String get profileLinkedAccountsAutoSignInLabel;
+
+  /// Helper text explaining the auto sign-in switch
+  ///
+  /// In en, this message translates to:
+  /// **'Skip the login screen on trusted devices.'**
+  String get profileLinkedAccountsAutoSignInDescription;
+
+  /// Label shown when there are pending changes
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved change'**
+  String get profileLinkedAccountsPendingChangesLabel;
+
+  /// Text button label to unlink an account
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink'**
+  String get profileLinkedAccountsUnlinkAction;
+
+  /// Filled tonal button label to save changes
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get profileLinkedAccountsSaveAction;
+
+  /// Snack bar message shown after saving auto sign-in
+  ///
+  /// In en, this message translates to:
+  /// **'Auto sign-in preferences updated.'**
+  String get profileLinkedAccountsSaveSuccess;
+
+  /// Snack bar message shown when saving fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save changes. Try again.'**
+  String get profileLinkedAccountsSaveError;
+
+  /// Title for the unlink confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink this account?'**
+  String get profileLinkedAccountsUnlinkConfirmTitle;
+
+  /// Body copy for the unlink confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll need to sign in again with {provider} if you unlink it.'**
+  String profileLinkedAccountsUnlinkConfirmBody(String provider);
+
+  /// Confirmation button label in the unlink dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink'**
+  String get profileLinkedAccountsUnlinkConfirmAction;
+
+  /// Cancel button label in the unlink dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get profileLinkedAccountsUnlinkCancel;
+
+  /// Snack bar message after an account is unlinked
+  ///
+  /// In en, this message translates to:
+  /// **'{provider} account unlinked.'**
+  String profileLinkedAccountsUnlinkSuccess(String provider);
+
+  /// Snack bar message when unlinking fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unlink account.'**
+  String get profileLinkedAccountsUnlinkError;
+
+  /// Headline for the empty state on the linked accounts screen
+  ///
+  /// In en, this message translates to:
+  /// **'No linked accounts yet'**
+  String get profileLinkedAccountsEmptyTitle;
+
+  /// Supporting text for the linked accounts empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Link Apple, Google, LINE, or email sign-ins to keep access secure.'**
+  String get profileLinkedAccountsEmptyBody;
+
+  /// CTA label for the empty linked accounts state
+  ///
+  /// In en, this message translates to:
+  /// **'Link an account'**
+  String get profileLinkedAccountsEmptyAction;
+
+  /// Snack bar message shown after a provider is linked
+  ///
+  /// In en, this message translates to:
+  /// **'{provider} account added.'**
+  String profileLinkedAccountsLinkSuccess(String provider);
+
+  /// Snack bar message when linking fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start linking. Try again.'**
+  String get profileLinkedAccountsLinkError;
+
+  /// Title for the provider selection bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a provider'**
+  String get profileLinkedAccountsAddSheetTitle;
+
+  /// Supporting text for the provider selection sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Link another service to keep access safe.'**
+  String get profileLinkedAccountsAddSheetSubtitle;
+
   /// App bar title for the profile payments screen
   ///
   /// In en, this message translates to:

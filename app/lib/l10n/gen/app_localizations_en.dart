@@ -3343,6 +3343,135 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to update persona. Please try again.';
 
   @override
+  String get profileLinkedAccountsTitle => 'Linked accounts';
+
+  @override
+  String get profileLinkedAccountsAddTooltip => 'Link account';
+
+  @override
+  String get profileLinkedAccountsLoadError =>
+      'Your linked accounts couldn\'t be loaded.';
+
+  @override
+  String get profileLinkedAccountsRetryLabel => 'Try again';
+
+  @override
+  String get profileLinkedAccountsSecurityTitle => 'Keep sign-ins secure';
+
+  @override
+  String get profileLinkedAccountsSecurityBody =>
+      'Use unique passwords and enable passkeys wherever possible.';
+
+  @override
+  String get profileLinkedAccountsSecurityAction => 'Security tips';
+
+  @override
+  String get profileLinkedAccountsProviderApple => 'Apple';
+
+  @override
+  String get profileLinkedAccountsProviderGoogle => 'Google';
+
+  @override
+  String get profileLinkedAccountsProviderEmail => 'Email & password';
+
+  @override
+  String get profileLinkedAccountsProviderLine => 'LINE';
+
+  @override
+  String get profileLinkedAccountsStatusActive => 'Connected';
+
+  @override
+  String get profileLinkedAccountsStatusPending => 'Pending verification';
+
+  @override
+  String get profileLinkedAccountsStatusRevoked => 'Revoked';
+
+  @override
+  String get profileLinkedAccountsStatusActionRequired => 'Action required';
+
+  @override
+  String profileLinkedAccountsLinkedAt(String timestamp) {
+    return 'Linked $timestamp';
+  }
+
+  @override
+  String profileLinkedAccountsLastUsed(String timestamp) {
+    return 'Last used $timestamp';
+  }
+
+  @override
+  String get profileLinkedAccountsAutoSignInLabel => 'Auto sign-in';
+
+  @override
+  String get profileLinkedAccountsAutoSignInDescription =>
+      'Skip the login screen on trusted devices.';
+
+  @override
+  String get profileLinkedAccountsPendingChangesLabel => 'Unsaved change';
+
+  @override
+  String get profileLinkedAccountsUnlinkAction => 'Unlink';
+
+  @override
+  String get profileLinkedAccountsSaveAction => 'Save';
+
+  @override
+  String get profileLinkedAccountsSaveSuccess =>
+      'Auto sign-in preferences updated.';
+
+  @override
+  String get profileLinkedAccountsSaveError =>
+      'Couldn\'t save changes. Try again.';
+
+  @override
+  String get profileLinkedAccountsUnlinkConfirmTitle => 'Unlink this account?';
+
+  @override
+  String profileLinkedAccountsUnlinkConfirmBody(String provider) {
+    return 'You\'ll need to sign in again with $provider if you unlink it.';
+  }
+
+  @override
+  String get profileLinkedAccountsUnlinkConfirmAction => 'Unlink';
+
+  @override
+  String get profileLinkedAccountsUnlinkCancel => 'Cancel';
+
+  @override
+  String profileLinkedAccountsUnlinkSuccess(String provider) {
+    return '$provider account unlinked.';
+  }
+
+  @override
+  String get profileLinkedAccountsUnlinkError => 'Couldn\'t unlink account.';
+
+  @override
+  String get profileLinkedAccountsEmptyTitle => 'No linked accounts yet';
+
+  @override
+  String get profileLinkedAccountsEmptyBody =>
+      'Link Apple, Google, LINE, or email sign-ins to keep access secure.';
+
+  @override
+  String get profileLinkedAccountsEmptyAction => 'Link an account';
+
+  @override
+  String profileLinkedAccountsLinkSuccess(String provider) {
+    return '$provider account added.';
+  }
+
+  @override
+  String get profileLinkedAccountsLinkError =>
+      'Couldn\'t start linking. Try again.';
+
+  @override
+  String get profileLinkedAccountsAddSheetTitle => 'Choose a provider';
+
+  @override
+  String get profileLinkedAccountsAddSheetSubtitle =>
+      'Link another service to keep access safe.';
+
+  @override
   String get profilePaymentsTitle => 'Payment methods';
 
   @override

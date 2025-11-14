@@ -4999,6 +4999,206 @@
   "description": "Error message shown when persona update fails"
 }
 
+, "profileLinkedAccountsTitle": "Linked accounts"
+, "@profileLinkedAccountsTitle": {
+  "description": "App bar title for the linked accounts screen"
+}
+
+, "profileLinkedAccountsAddTooltip": "Link account"
+, "@profileLinkedAccountsAddTooltip": {
+  "description": "Tooltip for the add account icon button"
+}
+
+, "profileLinkedAccountsLoadError": "Your linked accounts couldn't be loaded."
+, "@profileLinkedAccountsLoadError": {
+  "description": "Headline shown when linked accounts fail to load"
+}
+
+, "profileLinkedAccountsRetryLabel": "Try again"
+, "@profileLinkedAccountsRetryLabel": {
+  "description": "Retry button label for the linked accounts error view"
+}
+
+, "profileLinkedAccountsSecurityTitle": "Keep sign-ins secure"
+, "@profileLinkedAccountsSecurityTitle": {
+  "description": "Title for the security banner on the linked accounts screen"
+}
+
+, "profileLinkedAccountsSecurityBody": "Use unique passwords and enable passkeys wherever possible."
+, "@profileLinkedAccountsSecurityBody": {
+  "description": "Supporting text in the security banner reminding about password hygiene"
+}
+
+, "profileLinkedAccountsSecurityAction": "Security tips"
+, "@profileLinkedAccountsSecurityAction": {
+  "description": "Action button label on the security banner"
+}
+
+, "profileLinkedAccountsProviderApple": "Apple"
+, "@profileLinkedAccountsProviderApple": {
+  "description": "Readable name for the Apple provider"
+}
+
+, "profileLinkedAccountsProviderGoogle": "Google"
+, "@profileLinkedAccountsProviderGoogle": {
+  "description": "Readable name for the Google provider"
+}
+
+, "profileLinkedAccountsProviderEmail": "Email & password"
+, "@profileLinkedAccountsProviderEmail": {
+  "description": "Readable name for the email/password provider"
+}
+
+, "profileLinkedAccountsProviderLine": "LINE"
+, "@profileLinkedAccountsProviderLine": {
+  "description": "Readable name for the LINE provider"
+}
+
+, "profileLinkedAccountsStatusActive": "Connected"
+, "@profileLinkedAccountsStatusActive": {
+  "description": "Status chip label when the account is active"
+}
+
+, "profileLinkedAccountsStatusPending": "Pending verification"
+, "@profileLinkedAccountsStatusPending": {
+  "description": "Status chip label when verification is pending"
+}
+
+, "profileLinkedAccountsStatusRevoked": "Revoked"
+, "@profileLinkedAccountsStatusRevoked": {
+  "description": "Status chip label when the provider revoked access"
+}
+
+, "profileLinkedAccountsStatusActionRequired": "Action required"
+, "@profileLinkedAccountsStatusActionRequired": {
+  "description": "Status chip label when user action is needed"
+}
+
+, "profileLinkedAccountsLinkedAt": "Linked {timestamp}"
+, "@profileLinkedAccountsLinkedAt": {
+  "description": "Helper text indicating when the account was linked",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsLastUsed": "Last used {timestamp}"
+, "@profileLinkedAccountsLastUsed": {
+  "description": "Helper text indicating when the account was last used",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsAutoSignInLabel": "Auto sign-in"
+, "@profileLinkedAccountsAutoSignInLabel": {
+  "description": "Label for the auto sign-in setting"
+}
+
+, "profileLinkedAccountsAutoSignInDescription": "Skip the login screen on trusted devices."
+, "@profileLinkedAccountsAutoSignInDescription": {
+  "description": "Helper text explaining the auto sign-in switch"
+}
+
+, "profileLinkedAccountsPendingChangesLabel": "Unsaved change"
+, "@profileLinkedAccountsPendingChangesLabel": {
+  "description": "Label shown when there are pending changes"
+}
+
+, "profileLinkedAccountsUnlinkAction": "Unlink"
+, "@profileLinkedAccountsUnlinkAction": {
+  "description": "Text button label to unlink an account"
+}
+
+, "profileLinkedAccountsSaveAction": "Save"
+, "@profileLinkedAccountsSaveAction": {
+  "description": "Filled tonal button label to save changes"
+}
+
+, "profileLinkedAccountsSaveSuccess": "Auto sign-in preferences updated."
+, "@profileLinkedAccountsSaveSuccess": {
+  "description": "Snack bar message shown after saving auto sign-in"
+}
+
+, "profileLinkedAccountsSaveError": "Couldn't save changes. Try again."
+, "@profileLinkedAccountsSaveError": {
+  "description": "Snack bar message shown when saving fails"
+}
+
+, "profileLinkedAccountsUnlinkConfirmTitle": "Unlink this account?"
+, "@profileLinkedAccountsUnlinkConfirmTitle": {
+  "description": "Title for the unlink confirmation dialog"
+}
+
+, "profileLinkedAccountsUnlinkConfirmBody": "You'll need to sign in again with {provider} if you unlink it."
+, "@profileLinkedAccountsUnlinkConfirmBody": {
+  "description": "Body copy for the unlink confirmation dialog",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsUnlinkConfirmAction": "Unlink"
+, "@profileLinkedAccountsUnlinkConfirmAction": {
+  "description": "Confirmation button label in the unlink dialog"
+}
+
+, "profileLinkedAccountsUnlinkCancel": "Cancel"
+, "@profileLinkedAccountsUnlinkCancel": {
+  "description": "Cancel button label in the unlink dialog"
+}
+
+, "profileLinkedAccountsUnlinkSuccess": "{provider} account unlinked."
+, "@profileLinkedAccountsUnlinkSuccess": {
+  "description": "Snack bar message after an account is unlinked",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsUnlinkError": "Couldn't unlink account."
+, "@profileLinkedAccountsUnlinkError": {
+  "description": "Snack bar message when unlinking fails"
+}
+
+, "profileLinkedAccountsEmptyTitle": "No linked accounts yet"
+, "@profileLinkedAccountsEmptyTitle": {
+  "description": "Headline for the empty state on the linked accounts screen"
+}
+
+, "profileLinkedAccountsEmptyBody": "Link Apple, Google, LINE, or email sign-ins to keep access secure."
+, "@profileLinkedAccountsEmptyBody": {
+  "description": "Supporting text for the linked accounts empty state"
+}
+
+, "profileLinkedAccountsEmptyAction": "Link an account"
+, "@profileLinkedAccountsEmptyAction": {
+  "description": "CTA label for the empty linked accounts state"
+}
+
+, "profileLinkedAccountsLinkSuccess": "{provider} account added."
+, "@profileLinkedAccountsLinkSuccess": {
+  "description": "Snack bar message shown after a provider is linked",
+  "placeholders": {
+    "provider": { "type": "String" }
+  }
+}
+
+, "profileLinkedAccountsLinkError": "Couldn't start linking. Try again."
+, "@profileLinkedAccountsLinkError": {
+  "description": "Snack bar message when linking fails"
+}
+
+, "profileLinkedAccountsAddSheetTitle": "Choose a provider"
+, "@profileLinkedAccountsAddSheetTitle": {
+  "description": "Title for the provider selection bottom sheet"
+}
+
+, "profileLinkedAccountsAddSheetSubtitle": "Link another service to keep access safe."
+, "@profileLinkedAccountsAddSheetSubtitle": {
+  "description": "Supporting text for the provider selection sheet"
+}
+
 , "profilePaymentsTitle": "Payment methods"
 , "@profilePaymentsTitle": {
   "description": "App bar title for the profile payments screen"
