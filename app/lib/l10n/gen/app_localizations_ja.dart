@@ -2885,6 +2885,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ / チャット / お問い合わせ';
 
   @override
+  String get profileHomeQuickLinkLegalTitle => '法務ドキュメント';
+
+  @override
+  String get profileHomeQuickLinkLegalSubtitle => '利用規約・プライバシー・特商法';
+
+  @override
   String get profileLocaleTitle => '言語と通貨';
 
   @override
@@ -2941,6 +2947,56 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileLocaleApplyError => '設定を更新できませんでした。もう一度お試しください。';
+
+  @override
+  String get profileLegalTitle => '法務ドキュメント';
+
+  @override
+  String get profileLegalDownloadTooltip => '最新情報を取得してオフラインに保存';
+
+  @override
+  String get profileLegalLoadError => '法務ドキュメントを読み込めませんでした。';
+
+  @override
+  String get profileLegalRetryLabel => '再試行';
+
+  @override
+  String profileLegalSyncedLabel(String timestamp) {
+    return '最終同期 $timestamp';
+  }
+
+  @override
+  String profileLegalOfflineBanner(String timestamp) {
+    return '$timestamp 時点のオフラインコピーを表示しています';
+  }
+
+  @override
+  String get profileLegalDocumentsSectionTitle => 'ドキュメント一覧';
+
+  @override
+  String get profileLegalNoDocumentsLabel => '表示できる法務ドキュメントがありません。';
+
+  @override
+  String profileLegalUpdatedLabel(String timestamp) {
+    return '$timestamp 更新';
+  }
+
+  @override
+  String profileLegalVersionChip(String version) {
+    return 'バージョン $version';
+  }
+
+  @override
+  String get profileLegalViewerEmptyState => 'プレビューするドキュメントを選択してください。';
+
+  @override
+  String get profileLegalOpenInBrowser => 'ブラウザで開く';
+
+  @override
+  String get profileLegalOpenInBrowserUnavailable => 'ブラウザリンクはありません';
+
+  @override
+  String get profileLegalOpenExternalError => 'リンクを開けませんでした。後でもう一度お試しください。';
 
   @override
   String get profileNotificationsTitle => '通知設定';

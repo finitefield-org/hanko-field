@@ -90,7 +90,7 @@
 - [x] [Implement payment methods management (`/profile/payments`) referencing PSP tokens, default selection, and removal.](doc/app/tasks/065-implement-payment-methods-management-profile-payments-referencing-psp-tokens-default-selec.md)
 - [x] [Build notifications settings (`/profile/notifications`) for push/email categories and scheduling.](doc/app/tasks/066-build-notifications-settings-profile-notifications-for-push-email-categories-and-schedulin.md)
 - [x] [Implement locale settings (`/profile/locale`) for language/currency overrides.](doc/app/tasks/067-implement-locale-settings-profile-locale-for-language-currency-overrides.md)
-- [ ] [Build legal documents screen (`/profile/legal`) rendering static content with offline availability.](doc/app/tasks/068-build-legal-documents-screen-profile-legal-rendering-static-content-with-offline-availabil.md)
+- [x] [Build legal documents screen (`/profile/legal`) rendering static content with offline availability.](doc/app/tasks/068-build-legal-documents-screen-profile-legal-rendering-static-content-with-offline-availabil.md)
 - [ ] [Implement support screen (`/profile/support`) linking to FAQ, chat, contact forms.](doc/app/tasks/069-implement-support-screen-profile-support-linking-to-faq-chat-contact-forms.md)
 - [ ] [Build linked accounts screen (`/profile/linked-accounts`) showing social auth connections and unlink flow.](doc/app/tasks/070-build-linked-accounts-screen-profile-linked-accounts-showing-social-auth-connections-and-u.md)
 - [ ] [Implement data export (`/profile/export`) generating archive and downloading securely.](doc/app/tasks/071-implement-data-export-profile-export-generating-archive-and-downloading-securely.md)

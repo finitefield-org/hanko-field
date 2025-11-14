@@ -4473,6 +4473,16 @@
   "description": "Subtitle for the support quick action card"
 }
 
+, "profileHomeQuickLinkLegalTitle": "Legal documents"
+, "@profileHomeQuickLinkLegalTitle": {
+  "description": "Title for the legal documents quick action card"
+}
+
+, "profileHomeQuickLinkLegalSubtitle": "Terms, privacy, compliance notices"
+, "@profileHomeQuickLinkLegalSubtitle": {
+  "description": "Subtitle for the legal documents quick action card"
+}
+
 , "profileLocaleTitle": "Language & currency"
 , "@profileLocaleTitle": {
   "description": "Title for the profile locale settings screen"
@@ -4563,6 +4573,88 @@
 , "profileLocaleApplyError": "Couldn't update preferences. Try again."
 , "@profileLocaleApplyError": {
   "description": "Snackbar message when saving locale settings fails"
+}
+
+, "profileLegalTitle": "Legal documents"
+, "@profileLegalTitle": {
+  "description": "Title for the legal documents screen under profile"
+}
+
+, "profileLegalDownloadTooltip": "Refresh & save offline copy"
+, "@profileLegalDownloadTooltip": {
+  "description": "Tooltip text for the download icon button on the legal screen"
+}
+
+, "profileLegalLoadError": "Legal documents can’t be loaded right now."
+, "@profileLegalLoadError": {
+  "description": "Error message shown when the legal documents screen fails"
+}
+
+, "profileLegalRetryLabel": "Try again"
+, "@profileLegalRetryLabel": {
+  "description": "Retry button label on the legal screen error state"
+}
+
+, "profileLegalSyncedLabel": "Last synced {timestamp}"
+, "@profileLegalSyncedLabel": {
+  "description": "Label displaying when the legal documents were last synced",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "May 24, 14:20" }
+  }
+}
+
+, "profileLegalOfflineBanner": "Showing offline copy from {timestamp}"
+, "@profileLegalOfflineBanner": {
+  "description": "Banner shown when viewing cached legal documents offline",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "May 24, 14:20" }
+  }
+}
+
+, "profileLegalDocumentsSectionTitle": "Documents"
+, "@profileLegalDocumentsSectionTitle": {
+  "description": "Heading above the list of legal documents"
+}
+
+, "profileLegalNoDocumentsLabel": "No legal documents available."
+, "@profileLegalNoDocumentsLabel": {
+  "description": "Empty state copy when there are no legal documents"
+}
+
+, "profileLegalUpdatedLabel": "Updated {timestamp}"
+, "@profileLegalUpdatedLabel": {
+  "description": "Subtitle showing when an individual legal document was updated",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "May 20, 2024" }
+  }
+}
+
+, "profileLegalVersionChip": "Version {version}"
+, "@profileLegalVersionChip": {
+  "description": "Assist chip label showing the document version",
+  "placeholders": {
+    "version": { "type": "String", "example": "v2.1" }
+  }
+}
+
+, "profileLegalViewerEmptyState": "Select a document to preview."
+, "@profileLegalViewerEmptyState": {
+  "description": "Placeholder text shown before a legal document is selected"
+}
+
+, "profileLegalOpenInBrowser": "Open in browser"
+, "@profileLegalOpenInBrowser": {
+  "description": "Label for the footer action button to open the document in a browser"
+}
+
+, "profileLegalOpenInBrowserUnavailable": "Browser link unavailable"
+, "@profileLegalOpenInBrowserUnavailable": {
+  "description": "Label shown when there is no browser link for a legal document"
+}
+
+, "profileLegalOpenExternalError": "Couldn't open the link. Please try again later."
+, "@profileLegalOpenExternalError": {
+  "description": "Snackbar message when opening a legal document link fails"
 }
 
 , "profileNotificationsTitle": "Notification settings"

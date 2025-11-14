@@ -360,6 +360,12 @@ final List<_QuickLinkDefinition> _quickLinks = [
     subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkSupportSubtitle,
     routeSegments: ['support'],
   ),
+  _QuickLinkDefinition(
+    icon: Icons.gavel_outlined,
+    titleBuilder: (l10n) => l10n.profileHomeQuickLinkLegalTitle,
+    subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkLegalSubtitle,
+    routeSegments: ['legal'],
+  ),
 ];
 
 class _QuickLinkCard extends StatelessWidget {

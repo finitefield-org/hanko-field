@@ -2863,6 +2863,16 @@
   "description": "サポートクイックアクションのサブタイトル"
 }
 
+, "profileHomeQuickLinkLegalTitle": "法務ドキュメント"
+, "@profileHomeQuickLinkLegalTitle": {
+  "description": "法務クイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkLegalSubtitle": "利用規約・プライバシー・特商法"
+, "@profileHomeQuickLinkLegalSubtitle": {
+  "description": "法務クイックアクションのサブタイトル"
+}
+
 , "profileLocaleTitle": "言語と通貨"
 , "@profileLocaleTitle": {
   "description": "言語・通貨設定画面のタイトル"
@@ -2953,6 +2963,88 @@
 , "profileLocaleApplyError": "設定を更新できませんでした。もう一度お試しください。"
 , "@profileLocaleApplyError": {
   "description": "設定更新失敗時の Snackbar メッセージ"
+}
+
+, "profileLegalTitle": "法務ドキュメント"
+, "@profileLegalTitle": {
+  "description": "法務ドキュメント画面のタイトル"
+}
+
+, "profileLegalDownloadTooltip": "最新情報を取得してオフラインに保存"
+, "@profileLegalDownloadTooltip": {
+  "description": "法務ドキュメント画面のダウンロードボタンに表示するツールチップ"
+}
+
+, "profileLegalLoadError": "法務ドキュメントを読み込めませんでした。"
+, "@profileLegalLoadError": {
+  "description": "法務ドキュメント画面の読み込みエラー文言"
+}
+
+, "profileLegalRetryLabel": "再試行"
+, "@profileLegalRetryLabel": {
+  "description": "法務ドキュメント画面のリトライボタン文言"
+}
+
+, "profileLegalSyncedLabel": "最終同期 {timestamp}"
+, "@profileLegalSyncedLabel": {
+  "description": "法務ドキュメントの最終同期時刻ラベル",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "2024/05/24 14:20" }
+  }
+}
+
+, "profileLegalOfflineBanner": "{timestamp} 時点のオフラインコピーを表示しています"
+, "@profileLegalOfflineBanner": {
+  "description": "オフライン表示時のバナー文言",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "2024/05/24 14:20" }
+  }
+}
+
+, "profileLegalDocumentsSectionTitle": "ドキュメント一覧"
+, "@profileLegalDocumentsSectionTitle": {
+  "description": "法務ドキュメント一覧セクションのタイトル"
+}
+
+, "profileLegalNoDocumentsLabel": "表示できる法務ドキュメントがありません。"
+, "@profileLegalNoDocumentsLabel": {
+  "description": "法務ドキュメントが存在しない場合のテキスト"
+}
+
+, "profileLegalUpdatedLabel": "{timestamp} 更新"
+, "@profileLegalUpdatedLabel": {
+  "description": "各法務ドキュメントの更新日時ラベル",
+  "placeholders": {
+    "timestamp": { "type": "String", "example": "2024/05/20" }
+  }
+}
+
+, "profileLegalVersionChip": "バージョン {version}"
+, "@profileLegalVersionChip": {
+  "description": "法務ドキュメントのバージョン表示",
+  "placeholders": {
+    "version": { "type": "String", "example": "v2.1" }
+  }
+}
+
+, "profileLegalViewerEmptyState": "プレビューするドキュメントを選択してください。"
+, "@profileLegalViewerEmptyState": {
+  "description": "ドキュメント未選択時の案内文"
+}
+
+, "profileLegalOpenInBrowser": "ブラウザで開く"
+, "@profileLegalOpenInBrowser": {
+  "description": "ブラウザで開くボタンのラベル"
+}
+
+, "profileLegalOpenInBrowserUnavailable": "ブラウザリンクはありません"
+, "@profileLegalOpenInBrowserUnavailable": {
+  "description": "ブラウザリンクが無い場合のラベル"
+}
+
+, "profileLegalOpenExternalError": "リンクを開けませんでした。後でもう一度お試しください。"
+, "@profileLegalOpenExternalError": {
+  "description": "法務ドキュメントのリンク遷移に失敗した場合のスナックバー文言"
 }
 
 , "profileNotificationsTitle": "通知設定"

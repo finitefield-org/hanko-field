@@ -116,6 +116,28 @@ class OfflineCacheRepository {
     );
   }
 
+  Future<CacheReadResult<CachedLegalDocumentList>> readLegalDocuments({
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.legalDocuments,
+      key: key,
+      decoder: (data) => CachedLegalDocumentList.fromJson(_asJson(data)),
+    );
+  }
+
+  Future<void> writeLegalDocuments(
+    CachedLegalDocumentList payload, {
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.legalDocuments,
+      key: key,
+      encoder: (value) => value.toJson(),
+      value: payload,
+    );
+  }
+
   Future<CacheReadResult<KanjiCandidateResponse>> readKanjiCandidates({
     String key = LocalCacheStore.defaultEntryKey,
   }) {
@@ -875,6 +897,110 @@ class OnboardingFlags {
         return OnboardingStep.notifications;
     }
     throw ArgumentError.value(value, 'value', 'Unknown onboarding step');
+  }
+}
+
+class CachedLegalDocumentList {
+  CachedLegalDocumentList({
+    required this.locale,
+    required this.documents,
+    this.updatedAt,
+  });
+
+  factory CachedLegalDocumentList.fromJson(Map<String, dynamic> json) {
+    return CachedLegalDocumentList(
+      locale: json['locale'] as String? ?? 'en',
+      documents: (json['documents'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (doc) => CachedLegalDocumentEntry.fromJson(
+              Map<String, dynamic>.from(doc as Map),
+            ),
+          )
+          .toList(),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+    );
+  }
+
+  final String locale;
+  final List<CachedLegalDocumentEntry> documents;
+  final DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'locale': locale,
+      'documents': documents.map((doc) => doc.toJson()).toList(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+class CachedLegalDocumentEntry {
+  CachedLegalDocumentEntry({
+    required this.id,
+    required this.slug,
+    required this.type,
+    required this.title,
+    required this.version,
+    required this.body,
+    required this.bodyFormat,
+    this.summary,
+    this.effectiveDate,
+    this.updatedAt,
+    this.shareUrl,
+    this.downloadUrl,
+  });
+
+  factory CachedLegalDocumentEntry.fromJson(Map<String, dynamic> json) {
+    return CachedLegalDocumentEntry(
+      id: json['id'] as String,
+      slug: json['slug'] as String,
+      type: json['type'] as String? ?? 'terms',
+      title: json['title'] as String,
+      version: json['version'] as String? ?? '1.0.0',
+      body: json['body'] as String? ?? '',
+      bodyFormat: json['bodyFormat'] as String? ?? 'markdown',
+      summary: json['summary'] as String?,
+      effectiveDate: json['effectiveDate'] == null
+          ? null
+          : DateTime.tryParse(json['effectiveDate'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+      shareUrl: json['shareUrl'] as String?,
+      downloadUrl: json['downloadUrl'] as String?,
+    );
+  }
+
+  final String id;
+  final String slug;
+  final String type;
+  final String title;
+  final String version;
+  final String body;
+  final String bodyFormat;
+  final String? summary;
+  final DateTime? effectiveDate;
+  final DateTime? updatedAt;
+  final String? shareUrl;
+  final String? downloadUrl;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'slug': slug,
+      'type': type,
+      'title': title,
+      'version': version,
+      'body': body,
+      'bodyFormat': bodyFormat,
+      'summary': summary,
+      'effectiveDate': effectiveDate?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'shareUrl': shareUrl,
+      'downloadUrl': downloadUrl,
+    };
   }
 }
 

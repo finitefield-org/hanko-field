@@ -5204,6 +5204,18 @@ abstract class AppLocalizations {
   /// **'FAQ, chat, concierge'**
   String get profileHomeQuickLinkSupportSubtitle;
 
+  /// Title for the legal documents quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Legal documents'**
+  String get profileHomeQuickLinkLegalTitle;
+
+  /// Subtitle for the legal documents quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Terms, privacy, compliance notices'**
+  String get profileHomeQuickLinkLegalSubtitle;
+
   /// Title for the profile locale settings screen
   ///
   /// In en, this message translates to:
@@ -5305,6 +5317,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t update preferences. Try again.'**
   String get profileLocaleApplyError;
+
+  /// Title for the legal documents screen under profile
+  ///
+  /// In en, this message translates to:
+  /// **'Legal documents'**
+  String get profileLegalTitle;
+
+  /// Tooltip text for the download icon button on the legal screen
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh & save offline copy'**
+  String get profileLegalDownloadTooltip;
+
+  /// Error message shown when the legal documents screen fails
+  ///
+  /// In en, this message translates to:
+  /// **'Legal documents can’t be loaded right now.'**
+  String get profileLegalLoadError;
+
+  /// Retry button label on the legal screen error state
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileLegalRetryLabel;
+
+  /// Label displaying when the legal documents were last synced
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {timestamp}'**
+  String profileLegalSyncedLabel(String timestamp);
+
+  /// Banner shown when viewing cached legal documents offline
+  ///
+  /// In en, this message translates to:
+  /// **'Showing offline copy from {timestamp}'**
+  String profileLegalOfflineBanner(String timestamp);
+
+  /// Heading above the list of legal documents
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get profileLegalDocumentsSectionTitle;
+
+  /// Empty state copy when there are no legal documents
+  ///
+  /// In en, this message translates to:
+  /// **'No legal documents available.'**
+  String get profileLegalNoDocumentsLabel;
+
+  /// Subtitle showing when an individual legal document was updated
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String profileLegalUpdatedLabel(String timestamp);
+
+  /// Assist chip label showing the document version
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String profileLegalVersionChip(String version);
+
+  /// Placeholder text shown before a legal document is selected
+  ///
+  /// In en, this message translates to:
+  /// **'Select a document to preview.'**
+  String get profileLegalViewerEmptyState;
+
+  /// Label for the footer action button to open the document in a browser
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get profileLegalOpenInBrowser;
+
+  /// Label shown when there is no browser link for a legal document
+  ///
+  /// In en, this message translates to:
+  /// **'Browser link unavailable'**
+  String get profileLegalOpenInBrowserUnavailable;
+
+  /// Snackbar message when opening a legal document link fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the link. Please try again later.'**
+  String get profileLegalOpenExternalError;
 
   /// App bar title for the notifications settings screen
   ///

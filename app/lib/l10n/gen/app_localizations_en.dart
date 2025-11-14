@@ -3001,6 +3001,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ, chat, concierge';
 
   @override
+  String get profileHomeQuickLinkLegalTitle => 'Legal documents';
+
+  @override
+  String get profileHomeQuickLinkLegalSubtitle =>
+      'Terms, privacy, compliance notices';
+
+  @override
   String get profileLocaleTitle => 'Language & currency';
 
   @override
@@ -3059,6 +3066,58 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileLocaleApplyError =>
       'Couldn\'t update preferences. Try again.';
+
+  @override
+  String get profileLegalTitle => 'Legal documents';
+
+  @override
+  String get profileLegalDownloadTooltip => 'Refresh & save offline copy';
+
+  @override
+  String get profileLegalLoadError =>
+      'Legal documents can’t be loaded right now.';
+
+  @override
+  String get profileLegalRetryLabel => 'Try again';
+
+  @override
+  String profileLegalSyncedLabel(String timestamp) {
+    return 'Last synced $timestamp';
+  }
+
+  @override
+  String profileLegalOfflineBanner(String timestamp) {
+    return 'Showing offline copy from $timestamp';
+  }
+
+  @override
+  String get profileLegalDocumentsSectionTitle => 'Documents';
+
+  @override
+  String get profileLegalNoDocumentsLabel => 'No legal documents available.';
+
+  @override
+  String profileLegalUpdatedLabel(String timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String profileLegalVersionChip(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get profileLegalViewerEmptyState => 'Select a document to preview.';
+
+  @override
+  String get profileLegalOpenInBrowser => 'Open in browser';
+
+  @override
+  String get profileLegalOpenInBrowserUnavailable => 'Browser link unavailable';
+
+  @override
+  String get profileLegalOpenExternalError =>
+      'Couldn\'t open the link. Please try again later.';
 
   @override
   String get profileNotificationsTitle => 'Notification settings';

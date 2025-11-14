@@ -4,15 +4,15 @@
 **Task ID:** 068
 
 ## Goal
-Implement profile home summarizing account info and quick links.
+Implement `/profile/legal` so users can browse terms/privacy/commercial notices offline with static markdown content.
 
 ## Implementation Steps
-1. Display avatar, display name, persona toggle, membership status.
-2. Provide shortcuts to addresses, payments, notifications, support.
-3. Fetch data via profile provider with optimistic updates.
+1. Provide a repository/controller that loads localized legal documents, caches them offline, and exposes last-synced timestamps.
+2. Build the screen with an app bar download icon, offline banner, and a document list showing title/summary/version chips.
+3. Render markdown/HTML inside an outlined card viewer with a footer button to open the canonical web page.
 
 ## Material Design 3 Components
-- **App bar:** `Center-aligned top app bar` with download `Icon button`.
-- **Document list:** `List items` leading icons for document type and trailing `Assist chip` for version.
-- **Content viewer:** `Outlined card` surface rendering markdown/HTML with scroll.
-- **Footer:** `Text button` for open in browser.
+- **App bar:** `Center-aligned top app bar` with `download_for_offline` icon button.
+- **Document list:** `ListTile` rows with leading icon avatars and trailing `AssistChip` for version tags.
+- **Content viewer:** `Outlined card` containing markdown/HTML renderer with scroll physics.
+- **Footer:** `TextButton.icon` to open the selected document in an external browser.
