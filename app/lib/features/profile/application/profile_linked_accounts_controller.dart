@@ -103,18 +103,19 @@ class ProfileLinkedAccountsController
       if (!ref.mounted) {
         return false;
       }
+      final latest = state.asData?.value ?? savingState;
       final accounts = [
-        for (final account in savingState.snapshot.accounts)
+        for (final account in latest.snapshot.accounts)
           if (account.id == updated.id) updated else account,
       ];
-      final snapshot = savingState.snapshot.copyWith(
+      final snapshot = latest.snapshot.copyWith(
         accounts: accounts,
         updatedAt: DateTime.now(),
       );
-      final drafts = Map<String, bool>.from(savingState.autoSignInDrafts)
+      final drafts = Map<String, bool>.from(latest.autoSignInDrafts)
         ..remove(accountId);
-      final remaining = {...saving}..remove(accountId);
-      final resolved = savingState.copyWith(
+      final remaining = {...latest.savingAccountIds}..remove(accountId);
+      final resolved = latest.copyWith(
         snapshot: snapshot,
         autoSignInDrafts: drafts,
         savingAccountIds: remaining,
@@ -143,17 +144,18 @@ class ProfileLinkedAccountsController
       if (!ref.mounted) {
         return false;
       }
-      final accounts = pendingState.snapshot.accounts
+      final latest = state.asData?.value ?? pendingState;
+      final accounts = latest.snapshot.accounts
           .where((account) => account.id != accountId)
           .toList();
-      final snapshot = pendingState.snapshot.copyWith(
+      final snapshot = latest.snapshot.copyWith(
         accounts: accounts,
         updatedAt: DateTime.now(),
       );
-      final drafts = Map<String, bool>.from(pendingState.autoSignInDrafts)
+      final drafts = Map<String, bool>.from(latest.autoSignInDrafts)
         ..remove(accountId);
-      final remaining = {...unlinking}..remove(accountId);
-      final resolved = pendingState.copyWith(
+      final remaining = {...latest.unlinkingAccountIds}..remove(accountId);
+      final resolved = latest.copyWith(
         snapshot: snapshot,
         autoSignInDrafts: drafts,
         unlinkingAccountIds: remaining,
@@ -184,13 +186,14 @@ class ProfileLinkedAccountsController
       if (!ref.mounted) {
         return account;
       }
-      final accounts = [...pendingState.snapshot.accounts, account];
-      final snapshot = pendingState.snapshot.copyWith(
+      final latest = state.asData?.value ?? pendingState;
+      final accounts = [...latest.snapshot.accounts, account];
+      final snapshot = latest.snapshot.copyWith(
         accounts: accounts,
         updatedAt: DateTime.now(),
       );
-      final remaining = {...linking}..remove(provider);
-      final resolved = pendingState.copyWith(
+      final remaining = {...latest.linkingProviders}..remove(provider);
+      final resolved = latest.copyWith(
         snapshot: snapshot,
         linkingProviders: remaining,
       );
