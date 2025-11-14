@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/core/ui/widgets/app_card.dart';
 import 'package:app/features/profile/application/profile_legal_controller.dart';
@@ -36,7 +38,11 @@ class ProfileLegalScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: l10n.profileLegalDownloadTooltip,
-            onPressed: disableManualRefresh ? null : controller.refresh,
+            onPressed: disableManualRefresh
+                ? null
+                : () {
+                    unawaited(controller.refresh());
+                  },
             icon: showRefreshSpinner
                 ? const SizedBox(
                     width: 20,
@@ -53,7 +59,9 @@ class ProfileLegalScreen extends ConsumerWidget {
           error: (error, _) => _LegalScreenError(
             message: l10n.profileLegalLoadError,
             actionLabel: l10n.profileLegalRetryLabel,
-            onRetry: controller.refresh,
+            onRetry: () {
+              unawaited(controller.refresh());
+            },
           ),
           data: (state) => _LegalScreenBody(
             state: state,
