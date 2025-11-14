@@ -5144,6 +5144,18 @@ abstract class AppLocalizations {
   /// **'Quick links'**
   String get profileHomeQuickLinksTitle;
 
+  /// Title for the locale settings quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'Language & currency'**
+  String get profileHomeQuickLinkLocaleTitle;
+
+  /// Subtitle for the locale settings quick action card
+  ///
+  /// In en, this message translates to:
+  /// **'App language and currency overrides'**
+  String get profileHomeQuickLinkLocaleSubtitle;
+
   /// Title for the addresses quick action card
   ///
   /// In en, this message translates to:
@@ -5191,6 +5203,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'FAQ, chat, concierge'**
   String get profileHomeQuickLinkSupportSubtitle;
+
+  /// Title for the profile locale settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Language & currency'**
+  String get profileLocaleTitle;
+
+  /// Error message when profile locale settings cannot load
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load language & currency settings.\n{details}'**
+  String profileLocaleLoadError(String details);
+
+  /// Tooltip for the help button on the profile locale screen
+  ///
+  /// In en, this message translates to:
+  /// **'How overrides work'**
+  String get profileLocaleHelpTooltip;
+
+  /// Title for the help sheet on the profile locale screen
+  ///
+  /// In en, this message translates to:
+  /// **'Language & currency overrides'**
+  String get profileLocaleHelpTitle;
+
+  /// Body text for the help sheet explaining locale overrides
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a language to personalize UI text and guides. Currency overrides control how we display prices and offers and only apply on this device.'**
+  String get profileLocaleHelpBody;
+
+  /// Button label to close the locale help sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get profileLocaleHelpClose;
+
+  /// Heading for the language picker on the profile locale screen
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get profileLocaleLanguageSectionTitle;
+
+  /// Subtitle explaining the language picker
+  ///
+  /// In en, this message translates to:
+  /// **'Switch UI text, guides, and recommended workflows.'**
+  String get profileLocaleLanguageSectionSubtitle;
+
+  /// Heading for the currency selector
+  ///
+  /// In en, this message translates to:
+  /// **'Currency preference'**
+  String get profileLocaleCurrencySectionTitle;
+
+  /// Subtitle for the currency selector description
+  ///
+  /// In en, this message translates to:
+  /// **'Override how prices, checkout totals, and promotions are displayed.'**
+  String get profileLocaleCurrencySectionSubtitle;
+
+  /// Segment label for the JPY currency option
+  ///
+  /// In en, this message translates to:
+  /// **'JPY · Japanese Yen'**
+  String get profileLocaleCurrencyJpyLabel;
+
+  /// Segment label for the USD currency option
+  ///
+  /// In en, this message translates to:
+  /// **'USD · US Dollar'**
+  String get profileLocaleCurrencyUsdLabel;
+
+  /// Hint indicating the recommended currency for the selected locale
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended for {locale}: {currency}'**
+  String profileLocaleCurrencyRecommendation(String locale, String currency);
+
+  /// Button label to switch back to the system locale
+  ///
+  /// In en, this message translates to:
+  /// **'Use device language'**
+  String get profileLocaleUseSystemButton;
+
+  /// Label for the apply button on the locale settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Apply changes'**
+  String get profileLocaleApplyButton;
+
+  /// Snackbar message shown when locale settings are saved
+  ///
+  /// In en, this message translates to:
+  /// **'Language and currency preferences updated.'**
+  String get profileLocaleApplySuccess;
+
+  /// Snackbar message when saving locale settings fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update preferences. Try again.'**
+  String get profileLocaleApplyError;
 
   /// App bar title for the notifications settings screen
   ///

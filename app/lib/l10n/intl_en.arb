@@ -4423,6 +4423,16 @@
   "description": "Heading above the quick link cards on profile home"
 }
 
+, "profileHomeQuickLinkLocaleTitle": "Language & currency"
+, "@profileHomeQuickLinkLocaleTitle": {
+  "description": "Title for the locale settings quick action card"
+}
+
+, "profileHomeQuickLinkLocaleSubtitle": "App language and currency overrides"
+, "@profileHomeQuickLinkLocaleSubtitle": {
+  "description": "Subtitle for the locale settings quick action card"
+}
+
 , "profileHomeQuickLinkAddressesTitle": "Addresses"
 , "@profileHomeQuickLinkAddressesTitle": {
   "description": "Title for the addresses quick action card"
@@ -4461,6 +4471,98 @@
 , "profileHomeQuickLinkSupportSubtitle": "FAQ, chat, concierge"
 , "@profileHomeQuickLinkSupportSubtitle": {
   "description": "Subtitle for the support quick action card"
+}
+
+, "profileLocaleTitle": "Language & currency"
+, "@profileLocaleTitle": {
+  "description": "Title for the profile locale settings screen"
+}
+
+, "profileLocaleLoadError": "Unable to load language & currency settings.\n{details}"
+, "@profileLocaleLoadError": {
+  "description": "Error message when profile locale settings cannot load",
+  "placeholders": {
+    "details": { "type": "String" }
+  }
+}
+
+, "profileLocaleHelpTooltip": "How overrides work"
+, "@profileLocaleHelpTooltip": {
+  "description": "Tooltip for the help button on the profile locale screen"
+}
+
+, "profileLocaleHelpTitle": "Language & currency overrides"
+, "@profileLocaleHelpTitle": {
+  "description": "Title for the help sheet on the profile locale screen"
+}
+
+, "profileLocaleHelpBody": "Choose a language to personalize UI text and guides. Currency overrides control how we display prices and offers and only apply on this device."
+, "@profileLocaleHelpBody": {
+  "description": "Body text for the help sheet explaining locale overrides"
+}
+
+, "profileLocaleHelpClose": "Close"
+, "@profileLocaleHelpClose": {
+  "description": "Button label to close the locale help sheet"
+}
+
+, "profileLocaleLanguageSectionTitle": "App language"
+, "@profileLocaleLanguageSectionTitle": {
+  "description": "Heading for the language picker on the profile locale screen"
+}
+
+, "profileLocaleLanguageSectionSubtitle": "Switch UI text, guides, and recommended workflows."
+, "@profileLocaleLanguageSectionSubtitle": {
+  "description": "Subtitle explaining the language picker"
+}
+
+, "profileLocaleCurrencySectionTitle": "Currency preference"
+, "@profileLocaleCurrencySectionTitle": {
+  "description": "Heading for the currency selector"
+}
+
+, "profileLocaleCurrencySectionSubtitle": "Override how prices, checkout totals, and promotions are displayed."
+, "@profileLocaleCurrencySectionSubtitle": {
+  "description": "Subtitle for the currency selector description"
+}
+
+, "profileLocaleCurrencyJpyLabel": "JPY · Japanese Yen"
+, "@profileLocaleCurrencyJpyLabel": {
+  "description": "Segment label for the JPY currency option"
+}
+
+, "profileLocaleCurrencyUsdLabel": "USD · US Dollar"
+, "@profileLocaleCurrencyUsdLabel": {
+  "description": "Segment label for the USD currency option"
+}
+
+, "profileLocaleCurrencyRecommendation": "Recommended for {locale}: {currency}"
+, "@profileLocaleCurrencyRecommendation": {
+  "description": "Hint indicating the recommended currency for the selected locale",
+  "placeholders": {
+    "locale": { "type": "String" },
+    "currency": { "type": "String" }
+  }
+}
+
+, "profileLocaleUseSystemButton": "Use device language"
+, "@profileLocaleUseSystemButton": {
+  "description": "Button label to switch back to the system locale"
+}
+
+, "profileLocaleApplyButton": "Apply changes"
+, "@profileLocaleApplyButton": {
+  "description": "Label for the apply button on the locale settings screen"
+}
+
+, "profileLocaleApplySuccess": "Language and currency preferences updated."
+, "@profileLocaleApplySuccess": {
+  "description": "Snackbar message shown when locale settings are saved"
+}
+
+, "profileLocaleApplyError": "Couldn't update preferences. Try again."
+, "@profileLocaleApplyError": {
+  "description": "Snackbar message when saving locale settings fails"
 }
 
 , "profileNotificationsTitle": "Notification settings"

@@ -2813,6 +2813,16 @@
   "description": "クイックリンク見出し"
 }
 
+, "profileHomeQuickLinkLocaleTitle": "言語と通貨"
+, "@profileHomeQuickLinkLocaleTitle": {
+  "description": "言語・通貨設定クイックアクションのタイトル"
+}
+
+, "profileHomeQuickLinkLocaleSubtitle": "アプリの表示言語と通貨を調整"
+, "@profileHomeQuickLinkLocaleSubtitle": {
+  "description": "言語・通貨設定クイックアクションのサブタイトル"
+}
+
 , "profileHomeQuickLinkAddressesTitle": "住所帳"
 , "@profileHomeQuickLinkAddressesTitle": {
   "description": "住所帳クイックアクションのタイトル"
@@ -2851,6 +2861,98 @@
 , "profileHomeQuickLinkSupportSubtitle": "FAQ / チャット / お問い合わせ"
 , "@profileHomeQuickLinkSupportSubtitle": {
   "description": "サポートクイックアクションのサブタイトル"
+}
+
+, "profileLocaleTitle": "言語と通貨"
+, "@profileLocaleTitle": {
+  "description": "言語・通貨設定画面のタイトル"
+}
+
+, "profileLocaleLoadError": "言語・通貨の設定を読み込めませんでした。\n{details}"
+, "@profileLocaleLoadError": {
+  "description": "言語・通貨設定の読み込み失敗メッセージ",
+  "placeholders": {
+    "details": { "type": "String" }
+  }
+}
+
+, "profileLocaleHelpTooltip": "オーバーライドの仕組み"
+, "@profileLocaleHelpTooltip": {
+  "description": "ヘルプアイコンのツールチップ"
+}
+
+, "profileLocaleHelpTitle": "言語と通貨のオーバーライド"
+, "@profileLocaleHelpTitle": {
+  "description": "ヘルプシートのタイトル"
+}
+
+, "profileLocaleHelpBody": "表示言語を切り替えると UI テキストやガイドの内容が個別化されます。通貨オーバーライドは価格やオファーの表示方法のみを変更し、この端末に保存されます。"
+, "@profileLocaleHelpBody": {
+  "description": "ヘルプシート本文"
+}
+
+, "profileLocaleHelpClose": "閉じる"
+, "@profileLocaleHelpClose": {
+  "description": "ヘルプシートの閉じるボタン"
+}
+
+, "profileLocaleLanguageSectionTitle": "アプリの表示言語"
+, "@profileLocaleLanguageSectionTitle": {
+  "description": "言語セクション見出し"
+}
+
+, "profileLocaleLanguageSectionSubtitle": "UI テキストやガイド、推奨フローを切り替えます。"
+, "@profileLocaleLanguageSectionSubtitle": {
+  "description": "言語セクションサブタイトル"
+}
+
+, "profileLocaleCurrencySectionTitle": "通貨設定"
+, "@profileLocaleCurrencySectionTitle": {
+  "description": "通貨セクション見出し"
+}
+
+, "profileLocaleCurrencySectionSubtitle": "価格やチェックアウト金額の表示通貨を上書きします。"
+, "@profileLocaleCurrencySectionSubtitle": {
+  "description": "通貨セクションサブタイトル"
+}
+
+, "profileLocaleCurrencyJpyLabel": "JPY・日本円"
+, "@profileLocaleCurrencyJpyLabel": {
+  "description": "JPY オプションのラベル"
+}
+
+, "profileLocaleCurrencyUsdLabel": "USD・米ドル"
+, "@profileLocaleCurrencyUsdLabel": {
+  "description": "USD オプションのラベル"
+}
+
+, "profileLocaleCurrencyRecommendation": "{locale}におすすめ: {currency}"
+, "@profileLocaleCurrencyRecommendation": {
+  "description": "推奨通貨のヒント",
+  "placeholders": {
+    "locale": { "type": "String" },
+    "currency": { "type": "String" }
+  }
+}
+
+, "profileLocaleUseSystemButton": "端末の言語を使う"
+, "@profileLocaleUseSystemButton": {
+  "description": "端末言語に戻すボタンラベル"
+}
+
+, "profileLocaleApplyButton": "変更を適用"
+, "@profileLocaleApplyButton": {
+  "description": "適用ボタンのラベル"
+}
+
+, "profileLocaleApplySuccess": "言語と通貨の設定を更新しました。"
+, "@profileLocaleApplySuccess": {
+  "description": "設定更新成功時の Snackbar メッセージ"
+}
+
+, "profileLocaleApplyError": "設定を更新できませんでした。もう一度お試しください。"
+, "@profileLocaleApplyError": {
+  "description": "設定更新失敗時の Snackbar メッセージ"
 }
 
 , "profileNotificationsTitle": "通知設定"

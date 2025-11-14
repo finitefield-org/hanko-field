@@ -2969,6 +2969,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileHomeQuickLinksTitle => 'Quick links';
 
   @override
+  String get profileHomeQuickLinkLocaleTitle => 'Language & currency';
+
+  @override
+  String get profileHomeQuickLinkLocaleSubtitle =>
+      'App language and currency overrides';
+
+  @override
   String get profileHomeQuickLinkAddressesTitle => 'Addresses';
 
   @override
@@ -2992,6 +2999,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ, chat, concierge';
+
+  @override
+  String get profileLocaleTitle => 'Language & currency';
+
+  @override
+  String profileLocaleLoadError(String details) {
+    return 'Unable to load language & currency settings.\n$details';
+  }
+
+  @override
+  String get profileLocaleHelpTooltip => 'How overrides work';
+
+  @override
+  String get profileLocaleHelpTitle => 'Language & currency overrides';
+
+  @override
+  String get profileLocaleHelpBody =>
+      'Choose a language to personalize UI text and guides. Currency overrides control how we display prices and offers and only apply on this device.';
+
+  @override
+  String get profileLocaleHelpClose => 'Close';
+
+  @override
+  String get profileLocaleLanguageSectionTitle => 'App language';
+
+  @override
+  String get profileLocaleLanguageSectionSubtitle =>
+      'Switch UI text, guides, and recommended workflows.';
+
+  @override
+  String get profileLocaleCurrencySectionTitle => 'Currency preference';
+
+  @override
+  String get profileLocaleCurrencySectionSubtitle =>
+      'Override how prices, checkout totals, and promotions are displayed.';
+
+  @override
+  String get profileLocaleCurrencyJpyLabel => 'JPY · Japanese Yen';
+
+  @override
+  String get profileLocaleCurrencyUsdLabel => 'USD · US Dollar';
+
+  @override
+  String profileLocaleCurrencyRecommendation(String locale, String currency) {
+    return 'Recommended for $locale: $currency';
+  }
+
+  @override
+  String get profileLocaleUseSystemButton => 'Use device language';
+
+  @override
+  String get profileLocaleApplyButton => 'Apply changes';
+
+  @override
+  String get profileLocaleApplySuccess =>
+      'Language and currency preferences updated.';
+
+  @override
+  String get profileLocaleApplyError =>
+      'Couldn\'t update preferences. Try again.';
 
   @override
   String get profileNotificationsTitle => 'Notification settings';

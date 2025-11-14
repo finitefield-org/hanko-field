@@ -2855,6 +2855,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomeQuickLinksTitle => 'クイックリンク';
 
   @override
+  String get profileHomeQuickLinkLocaleTitle => '言語と通貨';
+
+  @override
+  String get profileHomeQuickLinkLocaleSubtitle => 'アプリの表示言語と通貨を調整';
+
+  @override
   String get profileHomeQuickLinkAddressesTitle => '住所帳';
 
   @override
@@ -2877,6 +2883,64 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ / チャット / お問い合わせ';
+
+  @override
+  String get profileLocaleTitle => '言語と通貨';
+
+  @override
+  String profileLocaleLoadError(String details) {
+    return '言語・通貨の設定を読み込めませんでした。\n$details';
+  }
+
+  @override
+  String get profileLocaleHelpTooltip => 'オーバーライドの仕組み';
+
+  @override
+  String get profileLocaleHelpTitle => '言語と通貨のオーバーライド';
+
+  @override
+  String get profileLocaleHelpBody =>
+      '表示言語を切り替えると UI テキストやガイドの内容が個別化されます。通貨オーバーライドは価格やオファーの表示方法のみを変更し、この端末に保存されます。';
+
+  @override
+  String get profileLocaleHelpClose => '閉じる';
+
+  @override
+  String get profileLocaleLanguageSectionTitle => 'アプリの表示言語';
+
+  @override
+  String get profileLocaleLanguageSectionSubtitle =>
+      'UI テキストやガイド、推奨フローを切り替えます。';
+
+  @override
+  String get profileLocaleCurrencySectionTitle => '通貨設定';
+
+  @override
+  String get profileLocaleCurrencySectionSubtitle =>
+      '価格やチェックアウト金額の表示通貨を上書きします。';
+
+  @override
+  String get profileLocaleCurrencyJpyLabel => 'JPY・日本円';
+
+  @override
+  String get profileLocaleCurrencyUsdLabel => 'USD・米ドル';
+
+  @override
+  String profileLocaleCurrencyRecommendation(String locale, String currency) {
+    return '$localeにおすすめ: $currency';
+  }
+
+  @override
+  String get profileLocaleUseSystemButton => '端末の言語を使う';
+
+  @override
+  String get profileLocaleApplyButton => '変更を適用';
+
+  @override
+  String get profileLocaleApplySuccess => '言語と通貨の設定を更新しました。';
+
+  @override
+  String get profileLocaleApplyError => '設定を更新できませんでした。もう一度お試しください。';
 
   @override
   String get profileNotificationsTitle => '通知設定';

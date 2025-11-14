@@ -331,6 +331,12 @@ class _QuickLinkDefinition {
 
 final List<_QuickLinkDefinition> _quickLinks = [
   _QuickLinkDefinition(
+    icon: Icons.language_outlined,
+    titleBuilder: (l10n) => l10n.profileHomeQuickLinkLocaleTitle,
+    subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkLocaleSubtitle,
+    routeSegments: ['locale'],
+  ),
+  _QuickLinkDefinition(
     icon: Icons.location_on_outlined,
     titleBuilder: (l10n) => l10n.profileHomeQuickLinkAddressesTitle,
     subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkAddressesSubtitle,

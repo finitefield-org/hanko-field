@@ -8,27 +8,9 @@ import 'package:app/core/data/repositories/api_user_repository.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/storage/offline_cache_repository.dart';
 import 'package:app/core/storage/storage_providers.dart';
+import 'package:app/shared/locale/locale_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-@immutable
-class LocaleOption {
-  const LocaleOption({
-    required this.locale,
-    required this.title,
-    required this.subtitle,
-    required this.sampleHeadline,
-    required this.sampleBody,
-  });
-
-  final Locale locale;
-  final String title;
-  final String subtitle;
-  final String sampleHeadline;
-  final String sampleBody;
-
-  String get languageTag => locale.toLanguageTag();
-}
 
 @immutable
 class LocaleSelectionState {
@@ -81,23 +63,6 @@ class LocaleSelectionState {
 }
 
 class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
-  static const List<LocaleOption> _supportedLocaleOptions = [
-    LocaleOption(
-      locale: Locale('ja', 'JP'),
-      title: '日本語 (日本)',
-      subtitle: '和文ガイド・円建て価格・国内配送を優先表示',
-      sampleHeadline: 'こんにちは！',
-      sampleBody: '日本語 UI で印鑑作りのステップを丁寧に案内します。',
-    ),
-    LocaleOption(
-      locale: Locale('en', 'US'),
-      title: 'English (Global)',
-      subtitle: 'English guidance, romanization tips, USD-equivalent pricing',
-      sampleHeadline: 'Welcome!',
-      sampleBody: 'We’ll guide you through crafting your personal hanko.',
-    ),
-  ];
-
   @override
   Future<LocaleSelectionState> build() async {
     final localeState = await ref.watch(appLocaleProvider.future);
@@ -109,7 +74,7 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
         initialLocale.toLanguageTag() != systemLocale.toLanguageTag();
 
     return LocaleSelectionState(
-      availableLocales: _supportedLocaleOptions,
+      availableLocales: kSupportedLocaleOptions,
       initialLocale: initialLocale,
       selectedLocale: selectedLocale,
       systemLocale: systemLocale,
@@ -217,13 +182,13 @@ class LocaleSelectionController extends AsyncNotifier<LocaleSelectionState> {
   }
 
   Locale _coerceToSupported(Locale locale) {
-    return _supportedLocaleOptions
+    return kSupportedLocaleOptions
         .map((option) => option.locale)
         .firstWhere(
           (candidate) =>
               candidate.languageCode.toLowerCase() ==
               locale.languageCode.toLowerCase(),
-          orElse: () => _supportedLocaleOptions.first.locale,
+          orElse: () => kSupportedLocaleOptions.first.locale,
         );
   }
 

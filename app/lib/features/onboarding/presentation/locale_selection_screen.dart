@@ -1,4 +1,5 @@
 import 'package:app/features/onboarding/application/locale_selection_controller.dart';
+import 'package:app/shared/locale/locale_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

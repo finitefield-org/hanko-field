@@ -66,7 +66,7 @@ class ExperienceGateNotifier extends AsyncNotifier<ExperienceGate> {
 
     final persona = _resolvePersona(sessionState, prefs);
     final region = _resolveRegion(localeState.locale);
-    final (currencyCode, currencySymbol) = _resolveCurrency(region);
+    final (currencyCode, currencySymbol) = _resolveCurrency(region, prefs);
 
     final creationStages = persona == UserPersona.foreigner
         ? const [
@@ -150,11 +150,28 @@ class ExperienceGateNotifier extends AsyncNotifier<ExperienceGate> {
     return ExperienceRegion.international;
   }
 
-  (String, String) _resolveCurrency(ExperienceRegion region) {
-    if (region == ExperienceRegion.japanDomestic) {
-      return ('JPY', '¥');
+  (String, String) _resolveCurrency(
+    ExperienceRegion region,
+    SharedPreferences prefs,
+  ) {
+    final override = prefs.getString(prefKeyCurrencyOverride);
+    if (override != null) {
+      return _currencyFromCode(override);
     }
-    return ('USD', r'$');
+    return region == ExperienceRegion.japanDomestic
+        ? ('JPY', '¥')
+        : ('USD', r'$');
+  }
+
+  (String, String) _currencyFromCode(String code) {
+    switch (code.toUpperCase()) {
+      case 'JPY':
+        return ('JPY', '¥');
+      case 'USD':
+        return ('USD', r'$');
+      default:
+        return ('JPY', '¥');
+    }
   }
 }
 
