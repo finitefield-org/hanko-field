@@ -5192,6 +5192,204 @@ abstract class AppLocalizations {
   /// **'FAQ, chat, concierge'**
   String get profileHomeQuickLinkSupportSubtitle;
 
+  /// App bar title for the notifications settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Notification settings'**
+  String get profileNotificationsTitle;
+
+  /// Introductory paragraph explaining the notification settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Control push and email alerts per category and schedule digest summaries.'**
+  String get profileNotificationsDescription;
+
+  /// Heading for the channel/category section
+  ///
+  /// In en, this message translates to:
+  /// **'Channels'**
+  String get profileNotificationsCategoriesTitle;
+
+  /// Supporting text under the channel section heading
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which alerts send push notifications or emails.'**
+  String get profileNotificationsCategoriesSubtitle;
+
+  /// Label for the push toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Push'**
+  String get profileNotificationsChannelPush;
+
+  /// Label for the email toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get profileNotificationsChannelEmail;
+
+  /// Category label for order related notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Orders'**
+  String get profileNotificationsCategoryOrder;
+
+  /// Description for order notification category
+  ///
+  /// In en, this message translates to:
+  /// **'Status changes, shipping updates, and completed exports.'**
+  String get profileNotificationsCategoryOrderDescription;
+
+  /// Category label for production notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get profileNotificationsCategoryProduction;
+
+  /// Description for production notification category
+  ///
+  /// In en, this message translates to:
+  /// **'Workshop progress, approvals, and revision requests.'**
+  String get profileNotificationsCategoryProductionDescription;
+
+  /// Category label for promotions
+  ///
+  /// In en, this message translates to:
+  /// **'Offers'**
+  String get profileNotificationsCategoryPromotion;
+
+  /// Description for promotion notification category
+  ///
+  /// In en, this message translates to:
+  /// **'Campaigns, coupons, and cart reminders.'**
+  String get profileNotificationsCategoryPromotionDescription;
+
+  /// Category label for guides
+  ///
+  /// In en, this message translates to:
+  /// **'Guides & learning'**
+  String get profileNotificationsCategoryGuide;
+
+  /// Description for guide notification category
+  ///
+  /// In en, this message translates to:
+  /// **'Tips for newcomers, kanji stories, and how-to articles.'**
+  String get profileNotificationsCategoryGuideDescription;
+
+  /// Category label for system notifications
+  ///
+  /// In en, this message translates to:
+  /// **'System alerts'**
+  String get profileNotificationsCategorySystem;
+
+  /// Description for system notification category
+  ///
+  /// In en, this message translates to:
+  /// **'App status, security notices, and linked account warnings.'**
+  String get profileNotificationsCategorySystemDescription;
+
+  /// Heading for the digest scheduling card
+  ///
+  /// In en, this message translates to:
+  /// **'Digest and scheduling'**
+  String get profileNotificationsDigestTitle;
+
+  /// Supporting text for digest configuration
+  ///
+  /// In en, this message translates to:
+  /// **'Receive a single summary when you\'re ready instead of individual alerts.'**
+  String get profileNotificationsDigestSubtitle;
+
+  /// Label for daily digest frequency
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get profileNotificationsFrequencyDaily;
+
+  /// Label for weekly digest frequency
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get profileNotificationsFrequencyWeekly;
+
+  /// Label for monthly digest frequency
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get profileNotificationsFrequencyMonthly;
+
+  /// Label for the digest send time selector
+  ///
+  /// In en, this message translates to:
+  /// **'Send time'**
+  String get profileNotificationsDigestTimeLabel;
+
+  /// Label for weekly digest day selector
+  ///
+  /// In en, this message translates to:
+  /// **'Day of week'**
+  String get profileNotificationsDigestWeekdayLabel;
+
+  /// Label for monthly digest day selector
+  ///
+  /// In en, this message translates to:
+  /// **'Day of month'**
+  String get profileNotificationsDigestMonthdayLabel;
+
+  /// Heading for the quiet hours card
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get profileNotificationsQuietHoursTitle;
+
+  /// Supporting text for quiet hours
+  ///
+  /// In en, this message translates to:
+  /// **'Pause push notifications overnight and resume in the morning.'**
+  String get profileNotificationsQuietHoursSubtitle;
+
+  /// Label for quiet hours start time
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get profileNotificationsQuietHoursStartLabel;
+
+  /// Label for quiet hours end time
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get profileNotificationsQuietHoursEndLabel;
+
+  /// Label for the save button
+  ///
+  /// In en, this message translates to:
+  /// **'Save preferences'**
+  String get profileNotificationsSaveButton;
+
+  /// Snackbar text after a successful save
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences saved.'**
+  String get profileNotificationsSaveSuccess;
+
+  /// Snackbar text after save failure
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save notification preferences.'**
+  String get profileNotificationsSaveError;
+
+  /// Helper text showing last saved timestamp
+  ///
+  /// In en, this message translates to:
+  /// **'Last saved {time}'**
+  String profileNotificationsLastSaved(String time);
+
+  /// Reset button label to revert unsaved changes
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get profileNotificationsReset;
+
   /// App bar title for the profile addresses screen
   ///
   /// In en, this message translates to:

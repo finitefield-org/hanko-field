@@ -2853,6 +2853,174 @@
   "description": "サポートクイックアクションのサブタイトル"
 }
 
+, "profileNotificationsTitle": "通知設定"
+, "@profileNotificationsTitle": {
+  "description": "通知設定画面のタイトル"
+}
+
+, "profileNotificationsDescription": "カテゴリごとのプッシュ/メール通知と配信タイミングを管理します。"
+, "@profileNotificationsDescription": {
+  "description": "通知設定画面のリード文"
+}
+
+, "profileNotificationsCategoriesTitle": "チャネル"
+, "@profileNotificationsCategoriesTitle": {
+  "description": "チャネル/カテゴリセクションの見出し"
+}
+
+, "profileNotificationsCategoriesSubtitle": "カテゴリごとにプッシュ通知とメール通知を切り替えます。"
+, "@profileNotificationsCategoriesSubtitle": {
+  "description": "チャネルセクションの補足文"
+}
+
+, "profileNotificationsChannelPush": "プッシュ"
+, "@profileNotificationsChannelPush": {
+  "description": "プッシュ切り替えのラベル"
+}
+
+, "profileNotificationsChannelEmail": "メール"
+, "@profileNotificationsChannelEmail": {
+  "description": "メール切り替えのラベル"
+}
+
+, "profileNotificationsCategoryOrder": "注文"
+, "@profileNotificationsCategoryOrder": {
+  "description": "注文カテゴリのラベル"
+}
+
+, "profileNotificationsCategoryOrderDescription": "ステータス変更・発送通知・エクスポート完了など。"
+, "@profileNotificationsCategoryOrderDescription": {
+  "description": "注文カテゴリの説明"
+}
+
+, "profileNotificationsCategoryProduction": "制作"
+, "@profileNotificationsCategoryProduction": {
+  "description": "制作カテゴリのラベル"
+}
+
+, "profileNotificationsCategoryProductionDescription": "工房での進捗、承認依頼、修正リクエスト。"
+, "@profileNotificationsCategoryProductionDescription": {
+  "description": "制作カテゴリの説明"
+}
+
+, "profileNotificationsCategoryPromotion": "キャンペーン"
+, "@profileNotificationsCategoryPromotion": {
+  "description": "キャンペーンカテゴリのラベル"
+}
+
+, "profileNotificationsCategoryPromotionDescription": "キャンペーン、クーポン、カートのリマインダー。"
+, "@profileNotificationsCategoryPromotionDescription": {
+  "description": "キャンペーンカテゴリの説明"
+}
+
+, "profileNotificationsCategoryGuide": "ガイド・学習"
+, "@profileNotificationsCategoryGuide": {
+  "description": "ガイドカテゴリのラベル"
+}
+
+, "profileNotificationsCategoryGuideDescription": "チュートリアル、漢字ストーリー、ハウツー記事。"
+, "@profileNotificationsCategoryGuideDescription": {
+  "description": "ガイドカテゴリの説明"
+}
+
+, "profileNotificationsCategorySystem": "システム通知"
+, "@profileNotificationsCategorySystem": {
+  "description": "システムカテゴリのラベル"
+}
+
+, "profileNotificationsCategorySystemDescription": "アプリ状況、セキュリティ通知、連携アカウントの警告。"
+, "@profileNotificationsCategorySystemDescription": {
+  "description": "システムカテゴリの説明"
+}
+
+, "profileNotificationsDigestTitle": "ダイジェスト・配信スケジュール"
+, "@profileNotificationsDigestTitle": {
+  "description": "ダイジェスト設定カードの見出し"
+}
+
+, "profileNotificationsDigestSubtitle": "個別通知の代わりに、まとめて受け取る時間を決められます。"
+, "@profileNotificationsDigestSubtitle": {
+  "description": "ダイジェスト設定の補足文"
+}
+
+, "profileNotificationsFrequencyDaily": "毎日"
+, "@profileNotificationsFrequencyDaily": {
+  "description": "毎日頻度のラベル"
+}
+
+, "profileNotificationsFrequencyWeekly": "毎週"
+, "@profileNotificationsFrequencyWeekly": {
+  "description": "毎週頻度のラベル"
+}
+
+, "profileNotificationsFrequencyMonthly": "毎月"
+, "@profileNotificationsFrequencyMonthly": {
+  "description": "毎月頻度のラベル"
+}
+
+, "profileNotificationsDigestTimeLabel": "配信時間"
+, "@profileNotificationsDigestTimeLabel": {
+  "description": "ダイジェスト配信時間のラベル"
+}
+
+, "profileNotificationsDigestWeekdayLabel": "配信曜日"
+, "@profileNotificationsDigestWeekdayLabel": {
+  "description": "ダイジェスト配信曜日のラベル"
+}
+
+, "profileNotificationsDigestMonthdayLabel": "配信日"
+, "@profileNotificationsDigestMonthdayLabel": {
+  "description": "月次ダイジェストの配信日のラベル"
+}
+
+, "profileNotificationsQuietHoursTitle": "サイレント時間"
+, "@profileNotificationsQuietHoursTitle": {
+  "description": "サイレント時間カードの見出し"
+}
+
+, "profileNotificationsQuietHoursSubtitle": "夜間のプッシュ通知を一時停止し、朝に再開します。"
+, "@profileNotificationsQuietHoursSubtitle": {
+  "description": "サイレント時間の補足文"
+}
+
+, "profileNotificationsQuietHoursStartLabel": "開始"
+, "@profileNotificationsQuietHoursStartLabel": {
+  "description": "サイレント時間開始のラベル"
+}
+
+, "profileNotificationsQuietHoursEndLabel": "終了"
+, "@profileNotificationsQuietHoursEndLabel": {
+  "description": "サイレント時間終了のラベル"
+}
+
+, "profileNotificationsSaveButton": "設定を保存"
+, "@profileNotificationsSaveButton": {
+  "description": "保存ボタンのラベル"
+}
+
+, "profileNotificationsSaveSuccess": "通知設定を保存しました。"
+, "@profileNotificationsSaveSuccess": {
+  "description": "保存成功時のスナックバー文言"
+}
+
+, "profileNotificationsSaveError": "通知設定を保存できませんでした。"
+, "@profileNotificationsSaveError": {
+  "description": "保存失敗時のスナックバー文言"
+}
+
+, "profileNotificationsLastSaved": "最終保存 {time}"
+, "@profileNotificationsLastSaved": {
+  "description": "最終保存時刻のテキスト",
+  "placeholders": {
+    "time": { "type": "String" }
+  }
+}
+
+, "profileNotificationsReset": "リセット"
+, "@profileNotificationsReset": {
+  "description": "リセットボタンのラベル"
+}
+
 , "profileAddressesTitle": "住所帳"
 , "@profileAddressesTitle": {
   "description": "プロフィール住所画面のタイトル"

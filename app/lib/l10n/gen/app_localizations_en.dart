@@ -2994,6 +2994,118 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ, chat, concierge';
 
   @override
+  String get profileNotificationsTitle => 'Notification settings';
+
+  @override
+  String get profileNotificationsDescription =>
+      'Control push and email alerts per category and schedule digest summaries.';
+
+  @override
+  String get profileNotificationsCategoriesTitle => 'Channels';
+
+  @override
+  String get profileNotificationsCategoriesSubtitle =>
+      'Choose which alerts send push notifications or emails.';
+
+  @override
+  String get profileNotificationsChannelPush => 'Push';
+
+  @override
+  String get profileNotificationsChannelEmail => 'Email';
+
+  @override
+  String get profileNotificationsCategoryOrder => 'Orders';
+
+  @override
+  String get profileNotificationsCategoryOrderDescription =>
+      'Status changes, shipping updates, and completed exports.';
+
+  @override
+  String get profileNotificationsCategoryProduction => 'Production';
+
+  @override
+  String get profileNotificationsCategoryProductionDescription =>
+      'Workshop progress, approvals, and revision requests.';
+
+  @override
+  String get profileNotificationsCategoryPromotion => 'Offers';
+
+  @override
+  String get profileNotificationsCategoryPromotionDescription =>
+      'Campaigns, coupons, and cart reminders.';
+
+  @override
+  String get profileNotificationsCategoryGuide => 'Guides & learning';
+
+  @override
+  String get profileNotificationsCategoryGuideDescription =>
+      'Tips for newcomers, kanji stories, and how-to articles.';
+
+  @override
+  String get profileNotificationsCategorySystem => 'System alerts';
+
+  @override
+  String get profileNotificationsCategorySystemDescription =>
+      'App status, security notices, and linked account warnings.';
+
+  @override
+  String get profileNotificationsDigestTitle => 'Digest and scheduling';
+
+  @override
+  String get profileNotificationsDigestSubtitle =>
+      'Receive a single summary when you\'re ready instead of individual alerts.';
+
+  @override
+  String get profileNotificationsFrequencyDaily => 'Daily';
+
+  @override
+  String get profileNotificationsFrequencyWeekly => 'Weekly';
+
+  @override
+  String get profileNotificationsFrequencyMonthly => 'Monthly';
+
+  @override
+  String get profileNotificationsDigestTimeLabel => 'Send time';
+
+  @override
+  String get profileNotificationsDigestWeekdayLabel => 'Day of week';
+
+  @override
+  String get profileNotificationsDigestMonthdayLabel => 'Day of month';
+
+  @override
+  String get profileNotificationsQuietHoursTitle => 'Quiet hours';
+
+  @override
+  String get profileNotificationsQuietHoursSubtitle =>
+      'Pause push notifications overnight and resume in the morning.';
+
+  @override
+  String get profileNotificationsQuietHoursStartLabel => 'Start';
+
+  @override
+  String get profileNotificationsQuietHoursEndLabel => 'End';
+
+  @override
+  String get profileNotificationsSaveButton => 'Save preferences';
+
+  @override
+  String get profileNotificationsSaveSuccess =>
+      'Notification preferences saved.';
+
+  @override
+  String get profileNotificationsSaveError =>
+      'Couldn\'t save notification preferences.';
+
+  @override
+  String profileNotificationsLastSaved(String time) {
+    return 'Last saved $time';
+  }
+
+  @override
+  String get profileNotificationsReset => 'Reset';
+
+  @override
   String get profileAddressesTitle => 'Addresses';
 
   @override

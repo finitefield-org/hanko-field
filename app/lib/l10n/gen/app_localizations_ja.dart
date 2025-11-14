@@ -2879,6 +2879,116 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomeQuickLinkSupportSubtitle => 'FAQ / チャット / お問い合わせ';
 
   @override
+  String get profileNotificationsTitle => '通知設定';
+
+  @override
+  String get profileNotificationsDescription =>
+      'カテゴリごとのプッシュ/メール通知と配信タイミングを管理します。';
+
+  @override
+  String get profileNotificationsCategoriesTitle => 'チャネル';
+
+  @override
+  String get profileNotificationsCategoriesSubtitle =>
+      'カテゴリごとにプッシュ通知とメール通知を切り替えます。';
+
+  @override
+  String get profileNotificationsChannelPush => 'プッシュ';
+
+  @override
+  String get profileNotificationsChannelEmail => 'メール';
+
+  @override
+  String get profileNotificationsCategoryOrder => '注文';
+
+  @override
+  String get profileNotificationsCategoryOrderDescription =>
+      'ステータス変更・発送通知・エクスポート完了など。';
+
+  @override
+  String get profileNotificationsCategoryProduction => '制作';
+
+  @override
+  String get profileNotificationsCategoryProductionDescription =>
+      '工房での進捗、承認依頼、修正リクエスト。';
+
+  @override
+  String get profileNotificationsCategoryPromotion => 'キャンペーン';
+
+  @override
+  String get profileNotificationsCategoryPromotionDescription =>
+      'キャンペーン、クーポン、カートのリマインダー。';
+
+  @override
+  String get profileNotificationsCategoryGuide => 'ガイド・学習';
+
+  @override
+  String get profileNotificationsCategoryGuideDescription =>
+      'チュートリアル、漢字ストーリー、ハウツー記事。';
+
+  @override
+  String get profileNotificationsCategorySystem => 'システム通知';
+
+  @override
+  String get profileNotificationsCategorySystemDescription =>
+      'アプリ状況、セキュリティ通知、連携アカウントの警告。';
+
+  @override
+  String get profileNotificationsDigestTitle => 'ダイジェスト・配信スケジュール';
+
+  @override
+  String get profileNotificationsDigestSubtitle =>
+      '個別通知の代わりに、まとめて受け取る時間を決められます。';
+
+  @override
+  String get profileNotificationsFrequencyDaily => '毎日';
+
+  @override
+  String get profileNotificationsFrequencyWeekly => '毎週';
+
+  @override
+  String get profileNotificationsFrequencyMonthly => '毎月';
+
+  @override
+  String get profileNotificationsDigestTimeLabel => '配信時間';
+
+  @override
+  String get profileNotificationsDigestWeekdayLabel => '配信曜日';
+
+  @override
+  String get profileNotificationsDigestMonthdayLabel => '配信日';
+
+  @override
+  String get profileNotificationsQuietHoursTitle => 'サイレント時間';
+
+  @override
+  String get profileNotificationsQuietHoursSubtitle =>
+      '夜間のプッシュ通知を一時停止し、朝に再開します。';
+
+  @override
+  String get profileNotificationsQuietHoursStartLabel => '開始';
+
+  @override
+  String get profileNotificationsQuietHoursEndLabel => '終了';
+
+  @override
+  String get profileNotificationsSaveButton => '設定を保存';
+
+  @override
+  String get profileNotificationsSaveSuccess => '通知設定を保存しました。';
+
+  @override
+  String get profileNotificationsSaveError => '通知設定を保存できませんでした。';
+
+  @override
+  String profileNotificationsLastSaved(String time) {
+    return '最終保存 $time';
+  }
+
+  @override
+  String get profileNotificationsReset => 'リセット';
+
+  @override
   String get profileAddressesTitle => '住所帳';
 
   @override

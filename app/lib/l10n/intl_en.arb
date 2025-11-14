@@ -4463,6 +4463,174 @@
   "description": "Subtitle for the support quick action card"
 }
 
+, "profileNotificationsTitle": "Notification settings"
+, "@profileNotificationsTitle": {
+  "description": "App bar title for the notifications settings screen"
+}
+
+, "profileNotificationsDescription": "Control push and email alerts per category and schedule digest summaries."
+, "@profileNotificationsDescription": {
+  "description": "Introductory paragraph explaining the notification settings screen."
+}
+
+, "profileNotificationsCategoriesTitle": "Channels"
+, "@profileNotificationsCategoriesTitle": {
+  "description": "Heading for the channel/category section"
+}
+
+, "profileNotificationsCategoriesSubtitle": "Choose which alerts send push notifications or emails."
+, "@profileNotificationsCategoriesSubtitle": {
+  "description": "Supporting text under the channel section heading"
+}
+
+, "profileNotificationsChannelPush": "Push"
+, "@profileNotificationsChannelPush": {
+  "description": "Label for the push toggle"
+}
+
+, "profileNotificationsChannelEmail": "Email"
+, "@profileNotificationsChannelEmail": {
+  "description": "Label for the email toggle"
+}
+
+, "profileNotificationsCategoryOrder": "Orders"
+, "@profileNotificationsCategoryOrder": {
+  "description": "Category label for order related notifications"
+}
+
+, "profileNotificationsCategoryOrderDescription": "Status changes, shipping updates, and completed exports."
+, "@profileNotificationsCategoryOrderDescription": {
+  "description": "Description for order notification category"
+}
+
+, "profileNotificationsCategoryProduction": "Production"
+, "@profileNotificationsCategoryProduction": {
+  "description": "Category label for production notifications"
+}
+
+, "profileNotificationsCategoryProductionDescription": "Workshop progress, approvals, and revision requests."
+, "@profileNotificationsCategoryProductionDescription": {
+  "description": "Description for production notification category"
+}
+
+, "profileNotificationsCategoryPromotion": "Offers"
+, "@profileNotificationsCategoryPromotion": {
+  "description": "Category label for promotions"
+}
+
+, "profileNotificationsCategoryPromotionDescription": "Campaigns, coupons, and cart reminders."
+, "@profileNotificationsCategoryPromotionDescription": {
+  "description": "Description for promotion notification category"
+}
+
+, "profileNotificationsCategoryGuide": "Guides & learning"
+, "@profileNotificationsCategoryGuide": {
+  "description": "Category label for guides"
+}
+
+, "profileNotificationsCategoryGuideDescription": "Tips for newcomers, kanji stories, and how-to articles."
+, "@profileNotificationsCategoryGuideDescription": {
+  "description": "Description for guide notification category"
+}
+
+, "profileNotificationsCategorySystem": "System alerts"
+, "@profileNotificationsCategorySystem": {
+  "description": "Category label for system notifications"
+}
+
+, "profileNotificationsCategorySystemDescription": "App status, security notices, and linked account warnings."
+, "@profileNotificationsCategorySystemDescription": {
+  "description": "Description for system notification category"
+}
+
+, "profileNotificationsDigestTitle": "Digest and scheduling"
+, "@profileNotificationsDigestTitle": {
+  "description": "Heading for the digest scheduling card"
+}
+
+, "profileNotificationsDigestSubtitle": "Receive a single summary when you're ready instead of individual alerts."
+, "@profileNotificationsDigestSubtitle": {
+  "description": "Supporting text for digest configuration"
+}
+
+, "profileNotificationsFrequencyDaily": "Daily"
+, "@profileNotificationsFrequencyDaily": {
+  "description": "Label for daily digest frequency"
+}
+
+, "profileNotificationsFrequencyWeekly": "Weekly"
+, "@profileNotificationsFrequencyWeekly": {
+  "description": "Label for weekly digest frequency"
+}
+
+, "profileNotificationsFrequencyMonthly": "Monthly"
+, "@profileNotificationsFrequencyMonthly": {
+  "description": "Label for monthly digest frequency"
+}
+
+, "profileNotificationsDigestTimeLabel": "Send time"
+, "@profileNotificationsDigestTimeLabel": {
+  "description": "Label for the digest send time selector"
+}
+
+, "profileNotificationsDigestWeekdayLabel": "Day of week"
+, "@profileNotificationsDigestWeekdayLabel": {
+  "description": "Label for weekly digest day selector"
+}
+
+, "profileNotificationsDigestMonthdayLabel": "Day of month"
+, "@profileNotificationsDigestMonthdayLabel": {
+  "description": "Label for monthly digest day selector"
+}
+
+, "profileNotificationsQuietHoursTitle": "Quiet hours"
+, "@profileNotificationsQuietHoursTitle": {
+  "description": "Heading for the quiet hours card"
+}
+
+, "profileNotificationsQuietHoursSubtitle": "Pause push notifications overnight and resume in the morning."
+, "@profileNotificationsQuietHoursSubtitle": {
+  "description": "Supporting text for quiet hours"
+}
+
+, "profileNotificationsQuietHoursStartLabel": "Start"
+, "@profileNotificationsQuietHoursStartLabel": {
+  "description": "Label for quiet hours start time"
+}
+
+, "profileNotificationsQuietHoursEndLabel": "End"
+, "@profileNotificationsQuietHoursEndLabel": {
+  "description": "Label for quiet hours end time"
+}
+
+, "profileNotificationsSaveButton": "Save preferences"
+, "@profileNotificationsSaveButton": {
+  "description": "Label for the save button"
+}
+
+, "profileNotificationsSaveSuccess": "Notification preferences saved."
+, "@profileNotificationsSaveSuccess": {
+  "description": "Snackbar text after a successful save"
+}
+
+, "profileNotificationsSaveError": "Couldn't save notification preferences."
+, "@profileNotificationsSaveError": {
+  "description": "Snackbar text after save failure"
+}
+
+, "profileNotificationsLastSaved": "Last saved {time}"
+, "@profileNotificationsLastSaved": {
+  "description": "Helper text showing last saved timestamp",
+  "placeholders": {
+    "time": { "type": "String" }
+  }
+}
+
+, "profileNotificationsReset": "Reset"
+, "@profileNotificationsReset": {
+  "description": "Reset button label to revert unsaved changes"
+}
+
 , "profileAddressesTitle": "Addresses"
 , "@profileAddressesTitle": {
   "description": "App bar title for the profile addresses screen"
