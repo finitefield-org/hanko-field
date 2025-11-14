@@ -2,6 +2,8 @@
 
 ## Classification Levels
 
+> See `doc/api/models/pii_inventory.md` for field-by-field mapping.
+
 | Level | Description | Examples | Logging Policy |
 | --- | --- | --- | --- |
 | P0 | Public metadata, safe for caching | template names, product shape, font preview URLs | Log freely, ensure no user association. |

@@ -312,6 +312,57 @@ func (r *InventoryRepository) Release(ctx context.Context, req repositories.Inve
 	return result, nil
 }
 
+func (r *InventoryRepository) ListExpiredReservations(ctx context.Context, query repositories.InventoryExpiredReservationQuery) ([]domain.InventoryReservation, error) {
+	if r == nil || r.provider == nil {
+		return nil, errors.New("inventory repository not initialised")
+	}
+
+	limit := query.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	before := query.Before.UTC()
+	if before.IsZero() {
+		before = time.Now().UTC()
+	}
+
+	client, err := r.provider.Client(ctx)
+	if err != nil {
+		return nil, wrapInventoryError("inventory.expired", err)
+	}
+
+	firestoreQuery := client.Collection(stockReservationsCollection).
+		Where("status", "==", reservationStatusReserved).
+		Where("expiresAt", "<", before).
+		OrderBy("expiresAt", firestore.Asc).
+		Limit(limit)
+
+	iter := firestoreQuery.Documents(ctx)
+	defer iter.Stop()
+
+	var reservations []domain.InventoryReservation
+	for {
+		snap, err := iter.Next()
+		if errors.Is(err, iterator.Done) {
+			break
+		}
+		if err != nil {
+			return nil, wrapInventoryError("inventory.expired", err)
+		}
+		doc, err := decodeReservation(snap)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, doc.toDomain(snap.Ref.ID))
+	}
+
+	return reservations, nil
+}
+
 func (r *InventoryRepository) GetReservation(ctx context.Context, reservationID string) (domain.InventoryReservation, error) {
 	if r == nil || r.reservations == nil {
 		return domain.InventoryReservation{}, errors.New("inventory repository not initialised")
@@ -413,17 +464,112 @@ func (r *InventoryRepository) ListLowStock(ctx context.Context, query repositori
 	}, nil
 }
 
+func (r *InventoryRepository) ConfigureSafetyStock(ctx context.Context, cfg repositories.InventorySafetyStockConfig) (domain.InventoryStock, error) {
+	if r == nil || r.stocks == nil {
+		return domain.InventoryStock{}, errors.New("inventory repository not initialised")
+	}
+	sku := strings.TrimSpace(cfg.SKU)
+	if sku == "" {
+		return domain.InventoryStock{}, repositories.NewInventoryError(repositories.InventoryErrorUnknown, "inventory configure safety: sku is required", nil)
+	}
+	if cfg.SafetyStock < 0 {
+		return domain.InventoryStock{}, repositories.NewInventoryError(repositories.InventoryErrorUnknown, "inventory configure safety: safety stock must be >= 0", nil)
+	}
+	if cfg.InitialOnHand != nil && *cfg.InitialOnHand < 0 {
+		return domain.InventoryStock{}, repositories.NewInventoryError(repositories.InventoryErrorUnknown, "inventory configure safety: initial stock must be >= 0", nil)
+	}
+	productRef := strings.TrimSpace(cfg.ProductRef)
+	now := cfg.Now.UTC()
+	var updated domain.InventoryStock
+	err := r.provider.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		stockRef, err := r.stocks.DocumentRef(ctx, sku)
+		if err != nil {
+			return err
+		}
+		var doc stockDocument
+		snap, err := tx.Get(stockRef)
+		if err != nil {
+			if status.Code(err) != codes.NotFound {
+				return err
+			}
+			doc = stockDocument{}
+		} else if err := snap.DataTo(&doc); err != nil {
+			return fmt.Errorf("decode inventory stock %s: %w", sku, err)
+		}
+		if productRef != "" {
+			doc.ProductRef = productRef
+		}
+		doc.SKU = sku
+		doc.SafetyStock = cfg.SafetyStock
+		if cfg.InitialOnHand != nil {
+			doc.OnHand = *cfg.InitialOnHand
+		}
+		doc.UpdatedAt = now
+		doc.recalculate()
+		if err := tx.Set(stockRef, doc); err != nil {
+			return err
+		}
+		updated = doc.toDomain(sku)
+		return nil
+	})
+	if err != nil {
+		return domain.InventoryStock{}, wrapInventoryError("inventory.configureSafety", err)
+	}
+	return updated, nil
+}
+
+func (r *InventoryRepository) UpdateSafetyNotification(ctx context.Context, sku string, notifiedAt time.Time) (domain.InventoryStock, error) {
+	if r == nil || r.stocks == nil {
+		return domain.InventoryStock{}, errors.New("inventory repository not initialised")
+	}
+	sku = strings.TrimSpace(sku)
+	if sku == "" {
+		return domain.InventoryStock{}, repositories.NewInventoryError(repositories.InventoryErrorStockNotFound, "inventory safety notification: sku is required", nil)
+	}
+	normalized := notifiedAt.UTC()
+	var updated domain.InventoryStock
+	err := r.provider.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		stockRef, err := r.stocks.DocumentRef(ctx, sku)
+		if err != nil {
+			return err
+		}
+		snap, err := tx.Get(stockRef)
+		if err != nil {
+			if status.Code(err) == codes.NotFound {
+				return repositories.NewInventoryError(repositories.InventoryErrorStockNotFound, fmt.Sprintf("stock %s not found", sku), err)
+			}
+			return err
+		}
+		var doc stockDocument
+		if err := snap.DataTo(&doc); err != nil {
+			return fmt.Errorf("decode inventory stock %s: %w", sku, err)
+		}
+		notifiedCopy := normalized
+		doc.LastSafetyNotificationAt = &notifiedCopy
+		if err := tx.Set(stockRef, doc); err != nil {
+			return err
+		}
+		updated = doc.toDomain(sku)
+		return nil
+	})
+	if err != nil {
+		return domain.InventoryStock{}, wrapInventoryError("inventory.updateSafetyNotification", err)
+	}
+	return updated, nil
+}
+
 // Helper structures ---------------------------------------------------------
 
 type stockDocument struct {
-	SKU         string    `firestore:"sku"`
-	ProductRef  string    `firestore:"productRef"`
-	OnHand      int       `firestore:"onHand"`
-	Reserved    int       `firestore:"reserved"`
-	Available   int       `firestore:"available"`
-	SafetyStock int       `firestore:"safetyStock"`
-	SafetyDelta int       `firestore:"safetyDelta"`
-	UpdatedAt   time.Time `firestore:"updatedAt"`
+	SKU                      string     `firestore:"sku"`
+	ProductRef               string     `firestore:"productRef"`
+	OnHand                   int        `firestore:"onHand"`
+	Reserved                 int        `firestore:"reserved"`
+	Available                int        `firestore:"available"`
+	SafetyStock              int        `firestore:"safetyStock"`
+	SafetyDelta              int        `firestore:"safetyDelta"`
+	UpdatedAt                time.Time  `firestore:"updatedAt"`
+	LastSafetyNotificationAt *time.Time `firestore:"lastSafetyNotificationAt,omitempty"`
 }
 
 func (s *stockDocument) recalculate() {
@@ -433,14 +579,15 @@ func (s *stockDocument) recalculate() {
 
 func (s stockDocument) toDomain(id string) domain.InventoryStock {
 	return domain.InventoryStock{
-		SKU:         id,
-		ProductRef:  strings.TrimSpace(s.ProductRef),
-		OnHand:      s.OnHand,
-		Reserved:    s.Reserved,
-		Available:   s.Available,
-		SafetyStock: s.SafetyStock,
-		SafetyDelta: s.SafetyDelta,
-		UpdatedAt:   s.UpdatedAt,
+		SKU:                      id,
+		ProductRef:               strings.TrimSpace(s.ProductRef),
+		OnHand:                   s.OnHand,
+		Reserved:                 s.Reserved,
+		Available:                s.Available,
+		SafetyStock:              s.SafetyStock,
+		SafetyDelta:              s.SafetyDelta,
+		UpdatedAt:                s.UpdatedAt,
+		LastSafetyNotificationAt: cloneTimePointer(s.LastSafetyNotificationAt),
 	}
 }
 
@@ -462,6 +609,17 @@ type reservationLineDocument struct {
 	ProductRef string `firestore:"productRef"`
 	SKU        string `firestore:"sku"`
 	Quantity   int    `firestore:"qty"`
+}
+
+func cloneTimePointer(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	if t.IsZero() {
+		return nil
+	}
+	normalized := t.UTC()
+	return &normalized
 }
 
 func newReservationDocument(res domain.InventoryReservation) reservationDocument {

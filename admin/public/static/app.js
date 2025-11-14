@@ -1,0 +1,4303 @@
+"use strict";
+
+// Minimal bootstrap for the admin shell.
+document.documentElement.classList.add("js-enabled");
+
+if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  document.documentElement.classList.add("reduced-motion");
+}
+
+const KEY_ESCAPE = "Escape";
+const KEY_TAB = "Tab";
+const selectableInputTypes = new Set(["", "text", "search", "url", "tel", "email", "password"]);
+
+const canSelectTextInput = (element) => {
+  if (element instanceof HTMLTextAreaElement) {
+    return true;
+  }
+  if (element instanceof HTMLInputElement) {
+    const inputType = (element.type || "").toLowerCase();
+    return selectableInputTypes.has(inputType);
+  }
+  return false;
+};
+
+const focusableSelectors = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+const workloadLabels = {
+  alerts: "未対応アラート",
+  reviews: "レビュー審査の保留",
+  tasks: "未完了タスク",
+};
+
+const formatAccessibleCount = (value) => {
+  const numeric = Number.isFinite(value) ? Number(value) : 0;
+  if (numeric <= 0) {
+    return "0件";
+  }
+  if (numeric > 99) {
+    return "99件以上";
+  }
+  return `${numeric}件`;
+};
+
+const isEditableTarget = (element) => {
+  if (!(element instanceof Element)) {
+    return false;
+  }
+  const tag = element.tagName ? element.tagName.toLowerCase() : "";
+  if (tag === "input" || tag === "textarea" || tag === "select") {
+    return true;
+  }
+  if (element.isContentEditable) {
+    return true;
+  }
+  return Boolean(element.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
+};
+
+const isVisible = (element) => {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+  if (element.offsetParent !== null) {
+    return true;
+  }
+  return element.getClientRects().length > 0;
+};
+
+const areShortcutsBlocked = () => {
+  const body = document.body;
+  if (!body) {
+    return false;
+  }
+  if (body.dataset.shortcutOverlay === "open") {
+    return true;
+  }
+  if (body.dataset.modalOpen === "true") {
+    return true;
+  }
+  return false;
+};
+
+const getFocusableElements = (root) => {
+  if (!(root instanceof Element)) {
+    return [];
+  }
+  return Array.from(root.querySelectorAll(focusableSelectors)).filter(
+    (el) => el instanceof HTMLElement && isVisible(el) && !el.hasAttribute("disabled"),
+  );
+};
+
+const lockBodyScroll = (locked) => {
+  document.documentElement.classList.toggle("modal-open", locked);
+  if (document.body) {
+    document.body.classList.toggle("has-open-modal", locked);
+    if (locked) {
+      document.body.dataset.modalOpen = "true";
+    } else {
+      delete document.body.dataset.modalOpen;
+    }
+  }
+};
+
+const formatNotificationCount = (value) => {
+  const raw = typeof value === "string" ? value.trim() : String(value ?? "").trim();
+  if (raw === "") {
+    return { display: "0", empty: true };
+  }
+  if (raw.includes("+")) {
+    return { display: raw, empty: false };
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return { display: "0", empty: true };
+  }
+  if (parsed > 99) {
+    return { display: "99+", empty: false };
+  }
+  return { display: String(parsed), empty: false };
+};
+
+const applyNotificationBadgeState = (root) => {
+  if (!(root instanceof Element)) {
+    return;
+  }
+  const badge = root.querySelector("[data-notification-count]");
+  if (!badge) {
+    return;
+  }
+  const payload = formatNotificationCount(badge.textContent);
+  badge.textContent = payload.display;
+  const emptyAttr = badge.getAttribute("data-empty");
+  const isEmpty = emptyAttr === "true" || payload.empty;
+  badge.dataset.empty = isEmpty ? "true" : "false";
+  badge.classList.toggle("opacity-0", isEmpty);
+  badge.classList.toggle("opacity-100", !isEmpty);
+  badge.classList.toggle("pointer-events-none", isEmpty);
+  badge.classList.toggle("pointer-events-auto", !isEmpty);
+};
+
+const parseNotificationInteger = (value) => {
+  const raw = String(value ?? "").trim();
+  if (raw === "") {
+    return 0;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return parsed < 0 ? 0 : parsed;
+};
+
+const normalizeBadgeCounts = (raw) => {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const total = parseNotificationInteger(raw.total ?? raw.Total);
+  const critical = parseNotificationInteger(raw.critical ?? raw.Critical);
+  const warning = parseNotificationInteger(raw.warning ?? raw.Warning);
+  const reviews = parseNotificationInteger(
+    raw.reviews ?? raw.Reviews ?? raw.reviewsPending ?? raw.ReviewsPending ?? raw.reviews_pending,
+  );
+  const tasks = parseNotificationInteger(
+    raw.tasks ?? raw.Tasks ?? raw.tasksPending ?? raw.TasksPending ?? raw.tasks_pending,
+  );
+  return { total, critical, warning, reviews, tasks };
+};
+
+const updateBadgeElements = (selector, labelFallback, displayText, accessibleText, empty, numericValue) => {
+  document.querySelectorAll(selector).forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const label = (element.dataset.badgeLabel || labelFallback || "").trim();
+    element.textContent = displayText;
+    element.dataset.empty = empty ? "true" : "false";
+    element.dataset.count = String(numericValue ?? 0);
+    element.classList.toggle("hidden", empty);
+    if (label) {
+      const narration = `${label}: ${accessibleText}`;
+      element.setAttribute("aria-label", narration);
+      element.setAttribute("title", narration);
+    } else {
+      element.removeAttribute("aria-label");
+      element.setAttribute("title", accessibleText);
+    }
+  });
+};
+
+const updateBadgeAnnouncement = (selector, labelFallback, accessibleText) => {
+  document.querySelectorAll(selector).forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const label = (element.dataset.badgeLabel || labelFallback || "").trim();
+    element.textContent = label ? `${label}: ${accessibleText}` : accessibleText;
+  });
+};
+
+const updateWorkloadBadge = (key, count) => {
+  const numeric = Number.isFinite(count) ? Number(count) : 0;
+  const payload = formatNotificationCount(numeric);
+  const accessible = formatAccessibleCount(numeric);
+  const label = workloadLabels[key] || "";
+  const empty = payload.empty;
+
+  document.querySelectorAll(`[data-workload-item='${key}']`).forEach((element) => {
+    if (element instanceof HTMLElement) {
+      element.classList.toggle("hidden", empty);
+    }
+  });
+
+  document.querySelectorAll(`[data-nav-badge-container='${key}']`).forEach((element) => {
+    if (element instanceof HTMLElement) {
+      element.classList.toggle("hidden", empty);
+    }
+  });
+
+  updateBadgeElements(`[data-workload-badge='${key}']`, label, payload.display, accessible, empty, numeric);
+  updateBadgeElements(`[data-nav-badge='${key}']`, label, payload.display, accessible, empty, numeric);
+
+  updateBadgeAnnouncement(`[data-workload-announcer='${key}']`, label, accessible);
+  updateBadgeAnnouncement(`[data-nav-badge-announcer='${key}']`, label, accessible);
+};
+
+const updateWorkloadBadges = (counts) => {
+  if (!counts || typeof counts !== "object") {
+    return;
+  }
+  updateWorkloadBadge("alerts", counts.total);
+  updateWorkloadBadge("reviews", counts.reviews);
+  updateWorkloadBadge("tasks", counts.tasks);
+};
+
+const applyNotificationBadgeCounts = (counts) => {
+  if (!counts) {
+    return;
+  }
+  document.querySelectorAll("[data-notifications-root]").forEach((root) => {
+    if (!(root instanceof Element)) {
+      return;
+    }
+    const badge = root.querySelector("[data-notification-count]");
+    if (!(badge instanceof HTMLElement)) {
+      return;
+    }
+    const payload = formatNotificationCount(counts.total);
+    badge.textContent = payload.display;
+    badge.dataset.empty = payload.empty ? "true" : "false";
+    badge.dataset.critical = String(counts.critical ?? 0);
+    badge.dataset.warning = String(counts.warning ?? 0);
+    const accessible = formatAccessibleCount(counts.total);
+    const narration = `未対応アラート: ${accessible}`;
+    badge.setAttribute("aria-label", narration);
+    badge.setAttribute("title", narration);
+    badge.dataset.count = String(Number.isFinite(counts.total) ? Number(counts.total) : 0);
+    applyNotificationBadgeState(root);
+    root.dataset.badgeTotal = String(Number.isFinite(counts.total) ? Number(counts.total) : 0);
+    root.dataset.badgeCritical = String(Number.isFinite(counts.critical) ? Number(counts.critical) : 0);
+    root.dataset.badgeWarning = String(Number.isFinite(counts.warning) ? Number(counts.warning) : 0);
+    root.dataset.badgeReviews = String(Number.isFinite(counts.reviews) ? Number(counts.reviews) : 0);
+    root.dataset.badgeTasks = String(Number.isFinite(counts.tasks) ? Number(counts.tasks) : 0);
+  });
+  updateWorkloadBadges(counts);
+};
+
+const dispatchNotificationsEvent = (name, detail) => {
+  if (typeof name !== "string" || name.trim() === "") {
+    return;
+  }
+  document.dispatchEvent(new CustomEvent(name, { detail }));
+};
+
+// Maintain a single EventSource connection and broadcast updates.
+const startNotificationsStream = (() => {
+  let source = null;
+  let reconnectTimer = null;
+  let currentURL = null;
+
+  const closeStream = () => {
+    if (source) {
+      source.removeEventListener("open", handleOpen);
+      source.removeEventListener("badge", handleBadge);
+      source.removeEventListener("error", handleError);
+      source.removeEventListener("stream_error", handleStreamError);
+      source.close();
+      source = null;
+    }
+  };
+
+  const clearReconnect = () => {
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
+
+  const scheduleReconnect = (url) => {
+    if (reconnectTimer) {
+      return;
+    }
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null;
+      connect(url);
+    }, 5000);
+  };
+
+  const toAbsoluteURL = (value) => {
+    try {
+      return new URL(value, window.location.origin).toString();
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const dispatchFromPayload = (payload) => {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+    const counts = normalizeBadgeCounts(payload.badge);
+    if (counts) {
+      applyNotificationBadgeCounts(counts);
+    }
+    dispatchNotificationsEvent("notifications:stream", payload);
+    if (payload.refresh) {
+      dispatchNotificationsEvent("notifications:refresh", payload);
+    }
+  };
+
+  const handleOpen = () => {
+    clearReconnect();
+  };
+
+  const handleBadge = (event) => {
+    if (!event || typeof event.data !== "string") {
+      return;
+    }
+    try {
+      const payload = JSON.parse(event.data);
+      dispatchFromPayload(payload);
+    } catch (error) {
+      // ignore malformed payloads
+    }
+  };
+
+  const handleStreamError = (event) => {
+    if (event && typeof event.data === "string") {
+      try {
+        const payload = JSON.parse(event.data);
+        dispatchNotificationsEvent("notifications:stream-error", payload);
+        if (payload && payload.error && payload.error.message) {
+          console.warn("notifications stream error:", payload.error.message);
+        }
+      } catch (error) {
+        // ignore malformed payloads
+      }
+    }
+    handleError();
+  };
+
+  const handleError = () => {
+    closeStream();
+    if (currentURL) {
+      scheduleReconnect(currentURL);
+    }
+  };
+
+  const connect = (url) => {
+    if (typeof EventSource === "undefined") {
+      return;
+    }
+    const absolute = toAbsoluteURL(url);
+    if (!absolute) {
+      return;
+    }
+    if (absolute === currentURL && source) {
+      return;
+    }
+    currentURL = absolute;
+    closeStream();
+    try {
+      source = new EventSource(absolute, { withCredentials: true });
+    } catch (error) {
+      scheduleReconnect(absolute);
+      return;
+    }
+    source.addEventListener("open", handleOpen);
+    source.addEventListener("badge", handleBadge);
+    source.addEventListener("error", handleError);
+    source.addEventListener("stream_error", handleStreamError);
+  };
+
+  return (url) => connect(url);
+})();
+
+const initNotificationsBadge = () => {
+  const initialize = (root) => {
+    if (!(root instanceof Element)) {
+      return;
+    }
+    const counts = {
+      total: parseNotificationInteger(root.dataset.badgeTotal),
+      critical: parseNotificationInteger(root.dataset.badgeCritical),
+      warning: parseNotificationInteger(root.dataset.badgeWarning),
+      reviews: parseNotificationInteger(root.dataset.badgeReviews),
+      tasks: parseNotificationInteger(root.dataset.badgeTasks),
+    };
+    applyNotificationBadgeCounts(counts);
+    const streamURL = root.getAttribute("data-notifications-stream");
+    if (typeof streamURL === "string" && streamURL.trim() !== "") {
+      startNotificationsStream(streamURL.trim());
+    }
+  };
+
+  document.querySelectorAll("[data-notifications-root]").forEach(initialize);
+
+  if (window.htmx) {
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.matches("[data-notifications-root]")) {
+        initialize(event.target);
+        return;
+      }
+      event.target.querySelectorAll?.("[data-notifications-root]").forEach(initialize);
+    });
+  }
+};
+
+let workloadBadgesObserverAttached = false;
+
+const initWorkloadBadges = () => {
+  const initialize = (root) => {
+    if (!(root instanceof HTMLElement)) {
+      return;
+    }
+    const counts = {
+      total: parseNotificationInteger(root.dataset.badgeTotal),
+      critical: parseNotificationInteger(root.dataset.badgeCritical),
+      warning: parseNotificationInteger(root.dataset.badgeWarning),
+      reviews: parseNotificationInteger(root.dataset.badgeReviews),
+      tasks: parseNotificationInteger(root.dataset.badgeTasks),
+    };
+    updateWorkloadBadges(counts);
+    const hasNotificationsRoot = document.querySelector("[data-notifications-root]");
+    const streamURL = root.getAttribute("data-workload-stream");
+    if (!hasNotificationsRoot && typeof streamURL === "string" && streamURL.trim() !== "") {
+      startNotificationsStream(streamURL.trim());
+    }
+  };
+
+  document.querySelectorAll("[data-workload-badges]").forEach(initialize);
+
+  if (window.htmx && !workloadBadgesObserverAttached) {
+    workloadBadgesObserverAttached = true;
+
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.matches("[data-workload-badges]")) {
+        initialize(event.target);
+        return;
+      }
+      event.target.querySelectorAll?.("[data-workload-badges]").forEach(initialize);
+    });
+  }
+};
+
+const badgeClassForTone = (tone) => {
+  const base = ["badge"];
+  switch ((tone || "").toLowerCase()) {
+    case "success":
+      base.push("badge-success");
+      break;
+    case "danger":
+      base.push("badge-danger");
+      break;
+    case "warning":
+      base.push("badge-warning");
+      break;
+    case "info":
+      base.push("badge-info");
+      break;
+    default:
+      break;
+  }
+  return base.join(" ");
+};
+
+const updateBadgeTone = (element, tone) => {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+  element.className = badgeClassForTone(tone);
+};
+
+const updateSelectedQueryParam = (id) => {
+  try {
+    const url = new URL(window.location.href);
+    if (typeof id === "string" && id.trim() !== "") {
+      url.searchParams.set("selected", id.trim());
+    } else {
+      url.searchParams.delete("selected");
+    }
+    window.history.replaceState({}, "", url.toString());
+  } catch (error) {
+    // ignore invalid URLs (e.g., older browsers)
+  }
+};
+
+const buildMetadataRow = (label, value) => {
+  const row = document.createElement("div");
+  row.className = "flex items-center justify-between gap-2";
+  const dt = document.createElement("dt");
+  dt.className = "font-medium text-slate-500";
+  dt.textContent = label || "";
+  const dd = document.createElement("dd");
+  dd.textContent = value || "";
+  row.appendChild(dt);
+  row.appendChild(dd);
+  return row;
+};
+
+const buildActionButton = (action) => {
+  const anchor = document.createElement("a");
+  anchor.className = "btn btn-secondary btn-sm";
+  anchor.href = typeof action.url === "string" ? action.url : "#";
+  anchor.textContent = action.label || "詳細";
+  if (typeof action.icon === "string" && action.icon.trim() !== "") {
+    anchor.textContent = `${action.icon} ${anchor.textContent}`;
+  }
+  return anchor;
+};
+
+const buildTimelineItem = (event) => {
+  const item = document.createElement("li");
+  item.className = "mb-4 last:mb-0";
+
+  const marker = document.createElement("div");
+  marker.className = "absolute -left-1.5 h-3 w-3 rounded-full border border-white bg-slate-300";
+  item.appendChild(marker);
+
+  const meta = document.createElement("p");
+  meta.className = "flex items-center gap-2 text-xs text-slate-400";
+  if (typeof event.icon === "string" && event.icon.trim() !== "") {
+    const icon = document.createElement("span");
+    icon.textContent = event.icon;
+    meta.appendChild(icon);
+  }
+  const timeLabel = document.createElement("span");
+  timeLabel.textContent = event.occurredRelative || "";
+  meta.appendChild(timeLabel);
+  if (typeof event.actor === "string" && event.actor.trim() !== "") {
+    const actor = document.createElement("span");
+    actor.textContent = `· ${event.actor}`;
+    meta.appendChild(actor);
+  }
+  item.appendChild(meta);
+
+  const title = document.createElement("p");
+  title.className = "mt-1 font-medium text-slate-800";
+  title.textContent = event.title || "";
+  item.appendChild(title);
+
+  if (typeof event.description === "string" && event.description.trim() !== "") {
+    const description = document.createElement("p");
+    description.className = "mt-1 text-slate-600";
+    description.textContent = event.description;
+    item.appendChild(description);
+  }
+
+  return item;
+};
+
+const replaceResourceElement = (scope, payload) => {
+  if (!(scope instanceof HTMLElement)) {
+    return;
+  }
+  const resource = payload && payload.resource ? payload.resource : {};
+  const current = scope.querySelector("[data-notification-resource]");
+  const element = document.createElement(typeof resource.url === "string" && resource.url.trim() !== "" ? "a" : "span");
+  element.setAttribute("data-notification-resource", "");
+  if (element instanceof HTMLAnchorElement && resource.url) {
+    element.href = resource.url;
+    element.className = "text-brand-600 hover:text-brand-500";
+  }
+  element.textContent = resource.label || "";
+  if (current instanceof HTMLElement) {
+    current.replaceWith(element);
+  } else {
+    const placeholder = scope.querySelector("[data-notification-resource-placeholder]");
+    if (placeholder instanceof HTMLElement) {
+      placeholder.replaceWith(element);
+    }
+  }
+};
+
+const renderNotificationDetail = (payload) => {
+  const container = document.querySelector("[data-notification-detail]");
+  if (!(container instanceof HTMLElement) || !payload) {
+    return;
+  }
+
+  container.dataset.notificationId = payload.id || "";
+
+  const category = container.querySelector("[data-notification-category]");
+  if (category) {
+    category.textContent = payload.categoryLabel || "";
+  }
+
+  const title = container.querySelector("[data-notification-title]");
+  if (title) {
+    title.textContent = payload.title || "";
+  }
+
+  const summary = container.querySelector("[data-notification-summary]");
+  if (summary) {
+    summary.textContent = payload.summary || "";
+  }
+
+  const severity = container.querySelector("[data-notification-severity]");
+  if (severity instanceof HTMLElement) {
+    severity.textContent = payload.severityLabel || "";
+    updateBadgeTone(severity, payload.severityTone);
+  }
+
+  const status = container.querySelector("[data-notification-status]");
+  if (status instanceof HTMLElement) {
+    status.textContent = payload.statusLabel || "";
+    updateBadgeTone(status, payload.statusTone);
+  }
+
+  const owner = container.querySelector("[data-notification-owner]");
+  if (owner) {
+    owner.textContent = payload.owner || "";
+    const ownerRow = owner.closest("div");
+    if (ownerRow instanceof HTMLElement) {
+      ownerRow.hidden = !(payload.owner && payload.owner.trim() !== "");
+    }
+  }
+
+  replaceResourceElement(container, payload);
+  const resourceElement = container.querySelector("[data-notification-resource]");
+  if (resourceElement) {
+    const label = resourceElement.parentElement && resourceElement.parentElement.previousElementSibling;
+    if (label instanceof HTMLElement) {
+      const kind = payload && payload.resource ? payload.resource.kind : "";
+      label.textContent = kind || "リソース";
+    }
+  }
+
+  const created = container.querySelector("[data-notification-created]");
+  if (created instanceof HTMLElement) {
+    created.textContent = payload.createdRelative || "";
+    if (payload.createdAt) {
+      created.title = payload.createdAt;
+    }
+  }
+
+  const acknowledged = container.querySelector("[data-notification-acknowledged]");
+  if (acknowledged instanceof HTMLElement) {
+    acknowledged.textContent = payload.acknowledgedLabel || "";
+    const row = acknowledged.closest("div");
+    if (row instanceof HTMLElement) {
+      row.hidden = !(payload.acknowledgedLabel && payload.acknowledgedLabel.trim() !== "");
+    }
+  }
+
+  const resolved = container.querySelector("[data-notification-resolved]");
+  if (resolved instanceof HTMLElement) {
+    resolved.textContent = payload.resolvedLabel || "";
+    const row = resolved.closest("div");
+    if (row instanceof HTMLElement) {
+      row.hidden = !(payload.resolvedLabel && payload.resolvedLabel.trim() !== "");
+    }
+  }
+
+  const metadataContainer = container.querySelector("[data-notification-metadata-container]");
+  const metadataList = container.querySelector("[data-notification-metadata]");
+  if (metadataList instanceof HTMLElement) {
+    metadataList.innerHTML = "";
+    const list = Array.isArray(payload.metadata) ? payload.metadata : [];
+    list.forEach((meta) => {
+      metadataList.appendChild(buildMetadataRow(meta.label, meta.value));
+    });
+    if (metadataContainer instanceof HTMLElement) {
+      metadataContainer.hidden = list.length === 0;
+    }
+  }
+
+  const actionContainer = container.querySelector("[data-notification-actions]");
+  const actionList = container.querySelector("[data-notification-action-list]");
+  if (actionList instanceof HTMLElement) {
+    actionList.innerHTML = "";
+    const actions = Array.isArray(payload.links) ? payload.links : [];
+    actions.forEach((action) => {
+      actionList.appendChild(buildActionButton(action));
+    });
+    if (actionContainer instanceof HTMLElement) {
+      actionContainer.hidden = actions.length === 0;
+    }
+  }
+
+  const timelineContainer = container.querySelector("[data-notification-timeline-container]");
+  const timelineList = container.querySelector("[data-notification-timeline]");
+  if (timelineList instanceof HTMLElement) {
+    timelineList.innerHTML = "";
+    const events = Array.isArray(payload.timeline) ? payload.timeline : [];
+    events.forEach((event) => {
+      timelineList.appendChild(buildTimelineItem(event));
+    });
+    if (timelineContainer instanceof HTMLElement) {
+      timelineContainer.hidden = events.length === 0;
+    }
+  }
+};
+
+const selectNotificationRow = (row) => {
+  if (!(row instanceof HTMLElement)) {
+    return;
+  }
+  const table = row.closest("table");
+  if (table instanceof HTMLElement) {
+    table.querySelectorAll("[data-notification-row]").forEach((tr) => {
+      if (!(tr instanceof HTMLElement)) {
+        return;
+      }
+      if (tr === row) {
+        tr.dataset.selected = "true";
+        tr.classList.add("bg-brand-50");
+      } else {
+        delete tr.dataset.selected;
+        tr.classList.remove("bg-brand-50");
+      }
+    });
+  } else {
+    row.dataset.selected = "true";
+    row.classList.add("bg-brand-50");
+  }
+};
+
+const parseNotificationPayload = (row) => {
+  if (!(row instanceof HTMLElement)) {
+    return null;
+  }
+  const raw = row.getAttribute("data-notification-payload");
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+};
+
+const initNotificationsSelection = () => {
+  const roots = Array.from(document.querySelectorAll("[data-notifications-root]"));
+  const root = roots.find((element) => element instanceof HTMLElement && element.querySelector("[data-notifications-table]"));
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+
+  let refreshTimer = null;
+
+  const queueRefresh = () => {
+    if (!window.htmx) {
+      return;
+    }
+    if (refreshTimer) {
+      return;
+    }
+    refreshTimer = window.setTimeout(() => {
+      refreshTimer = null;
+      if (!document.body.contains(root)) {
+        return;
+      }
+      const table = root.querySelector("[data-notifications-table]");
+      if (!(table instanceof HTMLElement)) {
+        return;
+      }
+      const endpoint = table.getAttribute("data-notifications-endpoint");
+      if (typeof endpoint !== "string" || endpoint.trim() === "") {
+        return;
+      }
+      const url = `${endpoint.trim()}${window.location.search || ""}`;
+      window.htmx.ajax("GET", url, "#notifications-table");
+    }, 300);
+  };
+
+  document.addEventListener("notifications:refresh", queueRefresh);
+
+  const applyDefaultSelection = (scope) => {
+    const table = scope.querySelector("[data-notifications-table]");
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const selectedRow =
+      table.querySelector("[data-notification-row][data-selected='true']") ||
+      table.querySelector("[data-notification-row]");
+    const payload = selectedRow ? parseNotificationPayload(selectedRow) : null;
+    if (selectedRow && payload) {
+      selectNotificationRow(selectedRow);
+      renderNotificationDetail(payload);
+      updateSelectedQueryParam(payload.id);
+    }
+  };
+
+  const shouldIgnoreClick = (event) => {
+    if (!(event.target instanceof Element)) {
+      return true;
+    }
+    const interactive = event.target.closest("a, button, input, textarea, select, [role='button']");
+    return Boolean(interactive);
+  };
+
+  root.addEventListener("click", (event) => {
+    if (!(event instanceof MouseEvent)) {
+      return;
+    }
+    if (shouldIgnoreClick(event)) {
+      return;
+    }
+    const row = event.target instanceof Element ? event.target.closest("[data-notification-row]") : null;
+    if (!(row instanceof HTMLElement)) {
+      return;
+    }
+    const payload = parseNotificationPayload(row);
+    if (!payload) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    selectNotificationRow(row);
+    renderNotificationDetail(payload);
+    updateSelectedQueryParam(payload.id);
+  });
+
+  applyDefaultSelection(root);
+
+  if (window.htmx) {
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const table = event.target.closest?.("[data-notifications-table]") || (event.target.matches && event.target.matches("[data-notifications-table]") ? event.target : null);
+      if (table instanceof HTMLElement) {
+        applyDefaultSelection(table);
+      }
+    });
+  }
+};
+
+const initGuidesModule = () => {
+  const root = document.querySelector("[data-guides-root]");
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+
+  const state = root.__guidesState || { bulk: new Set(), fragmentQuery: "", bound: false };
+  if (!(state.bulk instanceof Set)) {
+    state.bulk = new Set();
+  }
+  root.__guidesState = state;
+
+  const filterForm = root.querySelector("#guides-filter");
+
+  const getTable = (scope) => {
+    if (!scope) {
+      return null;
+    }
+    if (scope.matches && scope.matches("#guides-table")) {
+      return scope;
+    }
+    return scope.querySelector?.("#guides-table") || null;
+  };
+
+  const updateSelectedInputs = (value) => {
+    const val = typeof value === "string" ? value : "";
+    root.querySelectorAll("[data-guides-selected]").forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        input.value = val;
+      }
+    });
+  };
+
+  const updateFragmentQuery = (table) => {
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const raw = table.getAttribute("data-fragment-query") || "";
+    table.dataset.fragmentQuery = raw;
+    state.fragmentQuery = raw;
+  };
+
+  const collectFilterValues = () => {
+    const payload = {};
+    if (filterForm instanceof HTMLFormElement) {
+      const formData = new FormData(filterForm);
+      formData.forEach((value, key) => {
+        const stringValue = String(value);
+        if (Object.prototype.hasOwnProperty.call(payload, key)) {
+          if (Array.isArray(payload[key])) {
+            payload[key].push(stringValue);
+          } else {
+            payload[key] = [payload[key], stringValue];
+          }
+        } else {
+          payload[key] = stringValue;
+        }
+      });
+    }
+    return payload;
+  };
+
+  const updateSelectAllState = () => {
+    const allToggle = root.querySelector("[data-guides-select-all]");
+    if (!(allToggle instanceof HTMLInputElement)) {
+      return;
+    }
+    const checkboxes = Array.from(root.querySelectorAll("[data-guide-select]"));
+    if (checkboxes.length === 0) {
+      allToggle.checked = false;
+      allToggle.indeterminate = false;
+      return;
+    }
+    const checkedCount = checkboxes.reduce((count, checkbox) => {
+      if (checkbox instanceof HTMLInputElement && checkbox.checked) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+    allToggle.checked = checkedCount === checkboxes.length;
+    allToggle.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+  };
+
+  const updateBulkUI = () => {
+    const bulkArea = root.querySelector("[data-guides-bulk]");
+    if (!(bulkArea instanceof HTMLElement)) {
+      return;
+    }
+    const count = state.bulk.size;
+    bulkArea.hidden = count === 0;
+    bulkArea.dataset.selectedCount = String(count);
+    const toolbar = bulkArea.querySelector("[data-guides-bulk-toolbar]");
+    if (toolbar instanceof HTMLElement) {
+      toolbar.dataset.selectedCount = String(count);
+      const badge = toolbar.querySelector("[data-bulk-count]");
+      if (badge instanceof HTMLElement) {
+        badge.textContent = String(count);
+      }
+      const message = toolbar.querySelector("[data-bulk-message]");
+      if (message instanceof HTMLElement) {
+        message.textContent = count > 0 ? `${count} 件選択中` : "項目を選択してください";
+      }
+      const totalLabel = toolbar.querySelector("[data-bulk-total]");
+      if (totalLabel instanceof HTMLElement) {
+        const total = Number(toolbar.dataset.totalCount || totalLabel.dataset.totalCount || 0);
+        if (total > 0) {
+          totalLabel.textContent = `全 ${total} 件`;
+        }
+      }
+      toolbar.querySelectorAll("[data-guides-bulk-action]").forEach((button) => {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = count === 0;
+          button.classList.toggle("opacity-60", count === 0);
+          button.classList.toggle("pointer-events-none", count === 0);
+        }
+      });
+    }
+    const idsField = root.querySelector("#guides-bulk-form input[name='ids']");
+    if (idsField instanceof HTMLInputElement) {
+      idsField.value = count > 0 ? Array.from(state.bulk).join(",") : "";
+    }
+    updateSelectAllState();
+  };
+
+  const clearBulkSelection = () => {
+    state.bulk.clear();
+    root.querySelectorAll("[data-guide-select]").forEach((checkbox) => {
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = false;
+      }
+    });
+    const allToggle = root.querySelector("[data-guides-select-all]");
+    if (allToggle instanceof HTMLInputElement) {
+      allToggle.checked = false;
+      allToggle.indeterminate = false;
+    }
+    updateBulkUI();
+  };
+
+  const requestSelection = (guideId) => {
+    if (typeof window.htmx === "undefined") {
+      return;
+    }
+    const table = getTable(root);
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const path = table.getAttribute("data-fragment-path") || "";
+    if (!path) {
+      return;
+    }
+    const params = new URLSearchParams(state.fragmentQuery || table.getAttribute("data-fragment-query") || "");
+    if (guideId) {
+      params.set("selected", guideId);
+    } else {
+      params.delete("selected");
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${path}?${queryString}` : path;
+    window.htmx.ajax("GET", url, {
+      target: "#guides-table",
+      swap: "outerHTML",
+    });
+  };
+
+  const handleRowClick = (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const interactive = event.target.closest("a, button, input, textarea, select, label, [role='button']");
+    if (interactive) {
+      return;
+    }
+    const row = event.target.closest("[data-guide-row]");
+    if (!(row instanceof HTMLElement)) {
+      return;
+    }
+    const id = row.getAttribute("data-guide-id");
+    if (!id) {
+      return;
+    }
+    event.preventDefault();
+    updateSelectedInputs(id);
+    requestSelection(id);
+  };
+
+  const handleBulkClick = (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const clearButton = event.target.closest("[data-guides-clear-selection]");
+    if (clearButton instanceof HTMLElement) {
+      event.preventDefault();
+      clearBulkSelection();
+      return;
+    }
+    const actionButton = event.target.closest("[data-guides-bulk-action]");
+    if (!(actionButton instanceof HTMLElement)) {
+      return;
+    }
+    const url = actionButton.getAttribute("data-action-url");
+    if (!url || state.bulk.size === 0 || typeof window.htmx === "undefined") {
+      return;
+    }
+    event.preventDefault();
+    const values = collectFilterValues();
+    values.ids = Array.from(state.bulk).join(",");
+    const csrfField = root.querySelector("#guides-bulk-form input[name='csrf_token']");
+    if (csrfField instanceof HTMLInputElement && csrfField.value) {
+      values.csrf_token = csrfField.value;
+    }
+    window.htmx.ajax("POST", url, {
+      target: "#guides-table",
+      swap: "outerHTML",
+      values,
+    });
+  };
+
+  const handleChange = (event) => {
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (event.target.matches("[data-guides-select-all]")) {
+      const checked = event.target.checked;
+      root.querySelectorAll("[data-guide-select]").forEach((checkbox) => {
+        if (checkbox instanceof HTMLInputElement) {
+          checkbox.checked = checked;
+          const id = checkbox.value || "";
+          if (checked && id) {
+            state.bulk.add(id);
+          } else if (!checked && id) {
+            state.bulk.delete(id);
+          }
+        }
+      });
+      updateBulkUI();
+      return;
+    }
+    if (event.target.matches("[data-guide-select]")) {
+      const id = event.target.value || "";
+      if (!id) {
+        return;
+      }
+      if (event.target.checked) {
+        state.bulk.add(id);
+      } else {
+        state.bulk.delete(id);
+      }
+      updateBulkUI();
+    }
+  };
+
+  const applyTableState = (scope) => {
+    const table = getTable(scope);
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const selectedRow = table.querySelector("[data-guide-row][data-selected='true']");
+    const selectedId = selectedRow instanceof HTMLElement ? selectedRow.getAttribute("data-guide-id") || "" : "";
+    updateSelectedInputs(selectedId);
+    updateFragmentQuery(table);
+    clearBulkSelection();
+  };
+
+  if (!state.bound) {
+    root.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.closest("[data-guides-bulk]")) {
+        handleBulkClick(event);
+        return;
+      }
+      handleRowClick(event);
+    });
+    root.addEventListener("change", handleChange);
+    state.bound = true;
+  }
+
+  applyTableState(root);
+};
+
+const initShipmentsModule = () => {
+  const root = document.querySelector("[data-shipments-root]");
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+
+  const getTable = (scope) => {
+    if (!scope) {
+      return null;
+    }
+    if (scope.matches && scope.matches("[data-shipments-table]")) {
+      return scope;
+    }
+    return scope.querySelector?.("[data-shipments-table]") || null;
+  };
+
+  const updateSelectedInputs = (id) => {
+    const value = typeof id === "string" ? id : "";
+    root.querySelectorAll("input[name='selected']").forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        input.value = value;
+      }
+    });
+    root.querySelectorAll("[data-shipments-selected]").forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        input.value = value;
+        const form = input.form;
+        if (form instanceof HTMLFormElement) {
+          const button = form.querySelector("button[type='submit']");
+          if (button instanceof HTMLButtonElement) {
+            const disabled = value === "";
+            button.disabled = disabled;
+            button.classList.toggle("opacity-60", disabled);
+            button.classList.toggle("pointer-events-none", disabled);
+          }
+        }
+      }
+    });
+  };
+
+  const highlightRows = (table, id) => {
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const selectedID = typeof id === "string" ? id : "";
+    table.querySelectorAll("[data-shipments-row]").forEach((row) => {
+      if (!(row instanceof HTMLElement)) {
+        return;
+      }
+      const matches = selectedID !== "" && row.getAttribute("data-batch-id") === selectedID;
+      if (matches) {
+        row.dataset.selected = "true";
+        row.classList.add("bg-brand-50");
+        row.setAttribute("aria-selected", "true");
+      } else {
+        delete row.dataset.selected;
+        row.classList.remove("bg-brand-50");
+        row.removeAttribute("aria-selected");
+      }
+    });
+  };
+
+  const applySelection = (scope) => {
+    const table = getTable(scope);
+    if (!(table instanceof HTMLElement)) {
+      return;
+    }
+    const selectedRow =
+      table.querySelector("[data-shipments-row][data-selected='true']") ||
+      table.querySelector("[data-shipments-row]");
+    const id = selectedRow instanceof HTMLElement ? selectedRow.getAttribute("data-batch-id") || "" : "";
+    highlightRows(table, id);
+    updateSelectedInputs(id);
+  };
+
+  if (root.dataset.shipmentsBound === "true") {
+    applySelection(root);
+    return;
+  }
+  root.dataset.shipmentsBound = "true";
+
+  const handleSelectionEvent = (event) => {
+    const detail = event instanceof CustomEvent ? event.detail || {} : {};
+    const id = typeof detail.id === "string" ? detail.id.trim() : "";
+    const table = getTable(root);
+    highlightRows(table, id);
+    updateSelectedInputs(id);
+  };
+
+  applySelection(root);
+  document.body.addEventListener("shipments:select", handleSelectionEvent);
+
+  if (window.htmx) {
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      if (target.matches("[data-shipments-table]") || target.querySelector?.("[data-shipments-table]")) {
+        applySelection(target);
+      }
+    });
+  }
+};
+
+const initAuditLogsModule = () => {
+  const roots = Array.from(document.querySelectorAll("[data-auditlogs-root]")).filter(
+    (el) => el instanceof HTMLElement,
+  );
+  if (roots.length === 0) {
+    return;
+  }
+
+  const resolveTargetRow = (root, selector) => {
+    if (typeof selector !== "string" || selector.trim() === "") {
+      return null;
+    }
+    try {
+      return root.querySelector(selector);
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const toggleRow = (button, row, open) => {
+    if (!(button instanceof HTMLElement) || !(row instanceof HTMLElement)) {
+      return;
+    }
+    if (open) {
+      row.classList.remove("hidden");
+    } else {
+      row.classList.add("hidden");
+    }
+    const expanded = open ? "true" : "false";
+    button.setAttribute("aria-expanded", expanded);
+    const icon = button.querySelector("[data-audit-toggle-icon]");
+    if (icon instanceof HTMLElement) {
+      icon.classList.toggle("rotate-180", open);
+    }
+  };
+
+  roots.forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.auditlogsBound === "true") {
+      return;
+    }
+    root.dataset.auditlogsBound = "true";
+
+    root.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target.closest("[data-audit-toggle]") : null;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      event.preventDefault();
+      const selector = target.getAttribute("data-target");
+      const row = resolveTargetRow(root, selector);
+      if (!(row instanceof HTMLElement)) {
+        return;
+      }
+      const willOpen = row.classList.contains("hidden");
+      toggleRow(target, row, willOpen);
+    });
+  });
+};
+
+const initDashboardRefresh = () => {
+  const parseTargets = (value) => {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  };
+
+  const clearRefreshState = (button) => {
+    delete button.dataset.loading;
+    delete button.dataset.dashboardPending;
+    button.classList.remove("btn-loading");
+    button.removeAttribute("aria-busy");
+  };
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest("[data-dashboard-refresh]") : null;
+    if (!trigger) {
+      return;
+    }
+    if (!window.htmx) {
+      return;
+    }
+    event.preventDefault();
+    const selectors = parseTargets(trigger.getAttribute("data-dashboard-targets"));
+    if (selectors.length === 0) {
+      return;
+    }
+    trigger.dataset.loading = "true";
+    trigger.dataset.dashboardPending = selectors.join(",");
+    trigger.classList.add("btn-loading");
+    trigger.setAttribute("aria-busy", "true");
+    selectors.forEach((selector) => {
+      window.htmx.trigger(selector, "refresh");
+    });
+  });
+
+  if (!window.htmx) {
+    return;
+  }
+
+  document.body.addEventListener("htmx:afterSettle", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    document.querySelectorAll("[data-dashboard-refresh][data-loading]").forEach((button) => {
+      const pending = button.dataset.dashboardPending || "";
+      if (!pending) {
+        clearRefreshState(button);
+        return;
+      }
+      const selectors = parseTargets(pending);
+      if (selectors.length === 0) {
+        clearRefreshState(button);
+        return;
+      }
+      const remaining = selectors.filter((selector) => {
+        if (selector === "") {
+          return false;
+        }
+        if (target.matches(selector) || target.closest(selector) !== null) {
+          return false;
+        }
+        return true;
+      });
+      if (remaining.length === selectors.length) {
+        return;
+      }
+      if (remaining.length === 0) {
+        delete button.dataset.dashboardPending;
+        clearRefreshState(button);
+        return;
+      }
+      button.dataset.dashboardPending = remaining.join(",");
+    });
+  });
+};
+
+const createModalController = () => {
+  const getRoot = () => {
+    const element = document.getElementById("modal");
+    return element instanceof HTMLElement ? element : null;
+  };
+
+  const ensureRootDefaults = () => {
+    const modal = getRoot();
+    if (!modal) {
+      return null;
+    }
+    modal.classList.add("modal");
+    if (!modal.dataset.modalState) {
+      modal.dataset.modalState = "closed";
+    }
+    if (!modal.dataset.modalOpen) {
+      modal.dataset.modalOpen = "false";
+    }
+    if (!modal.hasAttribute("aria-hidden")) {
+      modal.setAttribute("aria-hidden", "true");
+    }
+    return modal;
+  };
+
+  let root = ensureRootDefaults();
+  if (!root) {
+    return {
+      get root() {
+        return null;
+      },
+      close: () => {},
+      clear: () => {},
+      isOpen: () => false,
+    };
+  }
+
+  let isOpen = false;
+  let lastActiveElement = null;
+
+  const getPanel = () => {
+    const modal = getRoot();
+    return modal ? modal.querySelector("[data-modal-panel]") : null;
+  };
+
+  const getOverlay = () => {
+    const modal = getRoot();
+    return modal ? modal.querySelector("[data-modal-overlay]") : null;
+  };
+
+  const ensurePanelFocusable = () => {
+    const panel = getPanel();
+    if (panel instanceof HTMLElement && !panel.hasAttribute("tabindex")) {
+      panel.setAttribute("tabindex", "-1");
+    }
+  };
+
+  const focusInitialElement = () => {
+    ensurePanelFocusable();
+    const modal = getRoot();
+    if (!modal) {
+      return;
+    }
+    const panel = getPanel();
+    const focusTarget =
+      modal.querySelector("[data-modal-autofocus]") ||
+      modal.querySelector("[autofocus]") ||
+      modal.querySelector("[data-autofocus]");
+    const focusables = getFocusableElements(panel || modal);
+    const target = focusTarget instanceof HTMLElement ? focusTarget : focusables[0];
+
+    queueMicrotask(() => {
+      if (target instanceof HTMLElement) {
+        target.focus({ preventScroll: true });
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+          target.select();
+        }
+        return;
+      }
+      if (panel instanceof HTMLElement) {
+        panel.focus({ preventScroll: true });
+      }
+    });
+  };
+
+  const finishClose = (restoreFocus) => {
+    const modal = ensureRootDefaults();
+    if (!modal) {
+      return;
+    }
+    root = modal;
+    const overlay = modal.querySelector("[data-modal-overlay]");
+    if (overlay instanceof HTMLElement) {
+      overlay.classList.remove("is-closing");
+      overlay.removeAttribute("data-overlay-state");
+    }
+    modal.innerHTML = "";
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    modal.dataset.modalOpen = "false";
+    modal.dataset.modalState = "closed";
+    lockBodyScroll(false);
+    isOpen = false;
+    if (restoreFocus && lastActiveElement instanceof HTMLElement) {
+      const elementToFocus = lastActiveElement;
+      queueMicrotask(() => {
+        if (elementToFocus instanceof HTMLElement) {
+          elementToFocus.focus({ preventScroll: true });
+        }
+      });
+    }
+    lastActiveElement = null;
+  };
+
+  const close = ({ restoreFocus = true, skipAnimation = false } = {}) => {
+    const modal = ensureRootDefaults();
+    if (!modal) {
+      return;
+    }
+    root = modal;
+
+    if (!isOpen && modal.innerHTML.trim() === "") {
+      finishClose(restoreFocus);
+      return;
+    }
+
+    const panel = getPanel();
+    const overlay = getOverlay();
+
+    if (skipAnimation || !(panel instanceof HTMLElement)) {
+      finishClose(restoreFocus);
+      return;
+    }
+
+    modal.dataset.modalState = "closing";
+    if (overlay instanceof HTMLElement) {
+      overlay.classList.add("is-closing");
+      overlay.setAttribute("data-overlay-state", "closing");
+    }
+
+    panel.classList.remove("animate-dialog-in");
+    panel.classList.add("animate-dialog-out");
+    panel.addEventListener(
+      "animationend",
+      () => {
+        panel.classList.remove("animate-dialog-out");
+        finishClose(restoreFocus);
+      },
+      { once: true },
+    );
+  };
+
+  const open = () => {
+    const modal = ensureRootDefaults();
+    if (!modal) {
+      return;
+    }
+    root = modal;
+
+    if (isOpen) {
+      focusInitialElement();
+      return;
+    }
+
+    isOpen = true;
+    lastActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    modal.dataset.modalOpen = "true";
+    modal.dataset.modalState = "opening";
+    lockBodyScroll(true);
+
+    const overlay = getOverlay();
+    if (overlay instanceof HTMLElement) {
+      overlay.classList.remove("is-closing");
+      overlay.setAttribute("data-overlay-state", "opening");
+    }
+
+    requestAnimationFrame(() => {
+      const currentModal = ensureRootDefaults();
+      if (!currentModal) {
+        return;
+      }
+      currentModal.dataset.modalState = "open";
+      const currentOverlay = getOverlay();
+      if (currentOverlay instanceof HTMLElement) {
+        currentOverlay.setAttribute("data-overlay-state", "open");
+        currentOverlay.classList.remove("is-closing");
+      }
+      const panel = getPanel();
+      if (panel instanceof HTMLElement) {
+        panel.classList.remove("animate-dialog-out");
+      }
+      focusInitialElement();
+    });
+  };
+
+  const handleKeydown = (event) => {
+    if (!isOpen) {
+      return;
+    }
+    if (event.key === KEY_ESCAPE) {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (event.key !== KEY_TAB) {
+      return;
+    }
+
+    const modal = getRoot();
+    if (!modal) {
+      return;
+    }
+
+    const panel = getPanel();
+    const focusable = getFocusableElements(panel || modal);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (panel instanceof HTMLElement) {
+        panel.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !modal.contains(active)) {
+        event.preventDefault();
+        event.stopPropagation();
+        last.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    if (active === last) {
+      event.preventDefault();
+      event.stopPropagation();
+      first.focus({ preventScroll: true });
+    }
+  };
+
+  const handleDocumentClick = (event) => {
+    const modal = getRoot();
+    if (!modal || !(event.target instanceof Element)) {
+      return;
+    }
+    if (!modal.contains(event.target)) {
+      return;
+    }
+    const closeTrigger = event.target.closest("[data-modal-close]");
+    if (closeTrigger) {
+      event.preventDefault();
+      close();
+      return;
+    }
+    const overlay = getOverlay();
+    if (overlay instanceof HTMLElement && event.target === overlay) {
+      event.preventDefault();
+      close();
+    }
+  };
+
+  document.addEventListener("keydown", handleKeydown);
+  document.addEventListener("click", handleDocumentClick);
+
+  const handleModalSwap = (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.id === "modal") {
+      root = ensureRootDefaults();
+    }
+  };
+
+  document.body.addEventListener("htmx:oobAfterSwap", (event) => {
+    handleModalSwap(event);
+    const detailTarget = event.detail && event.detail.target;
+    if (detailTarget instanceof HTMLElement && detailTarget.id === "modal") {
+      root = ensureRootDefaults();
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || target.id !== "modal") {
+      return;
+    }
+    root = ensureRootDefaults();
+    const hasContent = target.innerHTML.trim().length > 0;
+    if (!hasContent) {
+      close({ skipAnimation: true });
+      return;
+    }
+    open();
+  });
+
+  document.body.addEventListener("htmx:beforeSwap", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || target.id !== "modal") {
+      return;
+    }
+    root = ensureRootDefaults();
+    const panel = getPanel();
+    if (panel instanceof HTMLElement) {
+      panel.classList.remove("animate-dialog-out");
+    }
+  });
+
+  document.body.addEventListener("modal:close", (event) => {
+    const detail = event instanceof CustomEvent ? event.detail || {} : {};
+    close({
+      restoreFocus: detail.restoreFocus !== false,
+      skipAnimation: detail.skipAnimation === true,
+    });
+  });
+
+  document.body.addEventListener("modal:clear", () => {
+    close({ skipAnimation: true, restoreFocus: false });
+  });
+
+  document.body.addEventListener("modal:open", () => {
+    const modal = ensureRootDefaults();
+    if (modal && modal.innerHTML.trim().length > 0) {
+      root = modal;
+      open();
+    }
+  });
+
+  return {
+    get root() {
+      return getRoot();
+    },
+    close,
+    clear: () => close({ skipAnimation: true, restoreFocus: false }),
+    isOpen: () => isOpen,
+};
+};
+
+const productionRoots = new WeakMap();
+const productionMoves = new WeakMap();
+
+const PRODUCTION_DIRECTION = {
+  backward: -1,
+  forward: 1,
+};
+
+const getProductionAnnouncer = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return null;
+  }
+  const announcer = root.querySelector("[data-production-announcer]");
+  return announcer instanceof HTMLElement ? announcer : null;
+};
+
+const announceProductionStatus = (root, message) => {
+  const announcer = getProductionAnnouncer(root);
+  if (!announcer || typeof message !== "string") {
+    return;
+  }
+  announcer.textContent = message.trim();
+};
+
+const getLaneAnnouncementLabel = (lane) => {
+  if (!(lane instanceof HTMLElement)) {
+    return "";
+  }
+  const label = lane.getAttribute("data-lane-label") || lane.getAttribute("data-stage");
+  return label ? label : "";
+};
+
+const getCardAnnouncementLabel = (card) => {
+  if (!(card instanceof HTMLElement)) {
+    return "カード";
+  }
+  const orderNumber = card.getAttribute("data-order-number");
+  if (orderNumber) {
+    return `注文 ${orderNumber}`;
+  }
+  const orderID = card.getAttribute("data-order-id");
+  if (orderID) {
+    return `カード ${orderID}`;
+  }
+  return "カード";
+};
+
+const announceProductionMove = (root, card, laneLabel) => {
+  const announcer = getProductionAnnouncer(root);
+  if (!announcer) {
+    return;
+  }
+  const cardLabel = getCardAnnouncementLabel(card);
+  const destination = laneLabel && laneLabel.trim() !== "" ? laneLabel : "別ステージ";
+  announcer.textContent = `${cardLabel} を ${destination} に移動しました。`;
+};
+
+const setCardGrabbedState = (card, grabbed) => {
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+  card.setAttribute("aria-grabbed", grabbed ? "true" : "false");
+};
+
+const moveCardWithKeyboard = (root, card, direction) => {
+  if (!(root instanceof HTMLElement) || !(card instanceof HTMLElement) || direction === 0) {
+    return;
+  }
+  const lanes = Array.from(root.querySelectorAll("[data-production-lane]"));
+  if (lanes.length === 0) {
+    return;
+  }
+  const currentLane = card.closest("[data-production-lane]");
+  if (!currentLane) {
+    return;
+  }
+  const currentIndex = lanes.indexOf(currentLane);
+  if (currentIndex === -1) {
+    return;
+  }
+  const targetIndex = currentIndex + direction;
+  if (targetIndex < 0 || targetIndex >= lanes.length) {
+    announceProductionStatus(
+      root,
+      direction < 0 ? "これ以上前のステージはありません。" : "これ以上後ろのステージはありません。",
+    );
+    return;
+  }
+  const targetLane = lanes[targetIndex];
+  if (!(targetLane instanceof HTMLElement)) {
+    return;
+  }
+  const targetStage = targetLane.getAttribute("data-stage");
+  if (!targetStage || targetStage === card.getAttribute("data-stage")) {
+    return;
+  }
+  setCardGrabbedState(card, true);
+  moveProductionCard(targetLane, card);
+  announceProductionMove(root, card, getLaneAnnouncementLabel(targetLane));
+  sendStageUpdate(root, card, targetStage);
+  queueMicrotask(() => {
+    if (card instanceof HTMLElement) {
+      card.focus({ preventScroll: true });
+      setCardGrabbedState(card, false);
+    }
+  });
+};
+
+const initProductionKanban = () => {
+  document.querySelectorAll("[data-production-root]").forEach((root) => {
+    if (root instanceof HTMLElement) {
+      ensureProductionRoot(root);
+    }
+  });
+};
+
+const ensureProductionRoot = (root) => {
+  let state = productionRoots.get(root);
+  if (!state) {
+    state = { dragging: null };
+    productionRoots.set(root, state);
+    root.addEventListener("click", (event) => {
+      const card = event.target instanceof Element ? event.target.closest("[data-production-card]") : null;
+      if (!card) {
+        return;
+      }
+      event.preventDefault();
+      requestBoardSelection(root, card.getAttribute("data-order-id"));
+    });
+    root.addEventListener("keydown", (event) => {
+      const card = event.target instanceof Element ? event.target.closest("[data-production-card]") : null;
+      if (!card) {
+        return;
+      }
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        requestBoardSelection(root, card.getAttribute("data-order-id"));
+        return;
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        moveCardWithKeyboard(
+          root,
+          card,
+          event.key === "ArrowLeft" ? PRODUCTION_DIRECTION.backward : PRODUCTION_DIRECTION.forward,
+        );
+      }
+    });
+  }
+  bindProductionElements(root, state);
+};
+
+const bindProductionElements = (root, state) => {
+  root.querySelectorAll("[data-production-card]").forEach((card) => {
+    if (!(card instanceof HTMLElement) || card.dataset.productionCardInit === "true") {
+      return;
+    }
+    card.dataset.productionCardInit = "true";
+    card.addEventListener("dragstart", (event) => {
+      state.dragging = card;
+      card.classList.add("opacity-60");
+      setCardGrabbedState(card, true);
+      if (event && event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+      }
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("opacity-60");
+      setCardGrabbedState(card, false);
+      state.dragging = null;
+    });
+  });
+
+  root.querySelectorAll("[data-production-lane]").forEach((lane) => {
+    if (!(lane instanceof HTMLElement) || lane.dataset.productionLaneInit === "true") {
+      return;
+    }
+    lane.dataset.productionLaneInit = "true";
+    lane.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      lane.classList.add("ring-2", "ring-brand-200");
+    });
+    lane.addEventListener("dragleave", () => {
+      lane.classList.remove("ring-2", "ring-brand-200");
+    });
+    lane.addEventListener("drop", (event) => {
+      event.preventDefault();
+      lane.classList.remove("ring-2", "ring-brand-200");
+      const card = state.dragging;
+      if (!card || !(card instanceof HTMLElement)) {
+        return;
+      }
+      const targetStage = lane.getAttribute("data-stage");
+      if (!targetStage || targetStage === card.getAttribute("data-stage")) {
+        return;
+      }
+      moveProductionCard(lane, card);
+      announceProductionMove(root, card, getLaneAnnouncementLabel(lane));
+      sendStageUpdate(root, card, targetStage);
+    });
+  });
+};
+
+const moveProductionCard = (lane, card) => {
+  const list = lane.querySelector("[data-production-cards]");
+  if (!(list instanceof HTMLElement)) {
+    return;
+  }
+  productionMoves.set(card, { parent: card.parentElement, next: card.nextElementSibling });
+  list.prepend(card);
+  card.setAttribute("data-stage", lane.getAttribute("data-stage") || "");
+  card.classList.add("opacity-70");
+};
+
+const revertProductionCard = (card) => {
+  const record = productionMoves.get(card);
+  if (!record) {
+    return;
+  }
+  const { parent, next } = record;
+  if (parent instanceof HTMLElement) {
+    if (next instanceof Node && next.parentElement === parent) {
+      parent.insertBefore(card, next);
+    } else {
+      parent.appendChild(card);
+    }
+  }
+  card.classList.remove("opacity-70");
+  setCardGrabbedState(card, false);
+  productionMoves.delete(card);
+};
+
+const getProductionShell = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return null;
+  }
+  const shell = root.querySelector("[data-production-shell]");
+  return shell instanceof HTMLElement ? shell : null;
+};
+
+const requestBoardSelection = (root, cardID) => {
+  const shell = getProductionShell(root);
+  const endpoint = root.getAttribute("data-board-endpoint");
+  if (!shell || !endpoint || !window.htmx) {
+    return;
+  }
+  const params = new URLSearchParams(shell.getAttribute("data-board-query") || "");
+  if (typeof cardID === "string" && cardID.trim() !== "") {
+    params.set("selected", cardID.trim());
+  } else {
+    params.delete("selected");
+  }
+  const query = params.toString();
+  shell.setAttribute("data-board-query", query);
+  const url = query ? `${endpoint}?${query}` : endpoint;
+  window.htmx.ajax("GET", url, { target: shell, swap: "outerHTML" });
+};
+
+const refreshProductionBoard = (root) => {
+  const shell = getProductionShell(root);
+  const endpoint = root.getAttribute("data-board-endpoint");
+  if (!shell || !endpoint || !window.htmx) {
+    return;
+  }
+  const query = shell.getAttribute("data-board-query") || "";
+  const url = query ? `${endpoint}?${query}` : endpoint;
+  window.htmx.ajax("GET", url, { target: shell, swap: "outerHTML" });
+};
+
+const sendStageUpdate = (root, card, stage) => {
+  const endpoint = card.getAttribute("data-endpoint");
+  if (!endpoint || !window.htmx) {
+    revertProductionCard(card);
+    return;
+  }
+  const xhr = window.htmx.ajax("POST", endpoint, { values: { type: stage } });
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      productionMoves.delete(card);
+      refreshProductionBoard(root);
+    } else {
+      revertProductionCard(card);
+      showProductionError();
+    }
+  });
+  xhr.addEventListener("error", () => {
+    revertProductionCard(card);
+    showProductionError();
+  });
+};
+
+const showProductionError = () => {
+  const toast = window.hankoAdmin && window.hankoAdmin.toast;
+  if (toast && typeof toast.show === "function") {
+    toast.show({ message: "制作ステージの更新に失敗しました。", tone: "danger" });
+  }
+};
+
+const normaliseRefreshDetail = (detail, defaultEvent = "refresh") => {
+  const selectors = new Set();
+  let eventName = defaultEvent;
+  let delay = 0;
+
+  const push = (value) => {
+    if (typeof value === "string" && value.trim() !== "") {
+      selectors.add(value.trim());
+    }
+  };
+
+  if (typeof detail === "string") {
+    push(detail);
+  } else if (Array.isArray(detail)) {
+    detail.forEach(push);
+  } else if (detail && typeof detail === "object") {
+    if (Array.isArray(detail.targets)) {
+      detail.targets.forEach(push);
+    }
+    if (Array.isArray(detail.selectors)) {
+      detail.selectors.forEach(push);
+    }
+    if (typeof detail.target === "string") {
+      push(detail.target);
+    }
+    if (typeof detail.selector === "string") {
+      push(detail.selector);
+    }
+    if (typeof detail.event === "string" && detail.event.trim() !== "") {
+      eventName = detail.event.trim();
+    } else if (typeof detail.trigger === "string" && detail.trigger.trim() !== "") {
+      eventName = detail.trigger.trim();
+    }
+    if (typeof detail.delay === "number" && Number.isFinite(detail.delay) && detail.delay > 0) {
+      delay = detail.delay;
+    }
+  }
+
+  return {
+    selectors: Array.from(selectors),
+    eventName,
+    delay,
+  };
+};
+
+const triggerFragmentRefresh = (detail, fallbackEvent) => {
+  const { selectors, eventName, delay } = normaliseRefreshDetail(detail, fallbackEvent);
+  if (selectors.length === 0) {
+    return;
+  }
+  const emit = () => {
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((element) => {
+        if (window.htmx && typeof window.htmx.trigger === "function") {
+          window.htmx.trigger(element, eventName);
+        } else {
+          element.dispatchEvent(new CustomEvent(eventName, { bubbles: true }));
+        }
+      });
+    });
+  };
+  if (delay > 0) {
+    window.setTimeout(emit, delay);
+  } else {
+    emit();
+  }
+};
+
+const initHXTriggerHandlers = () => {
+  const bus = document.body;
+  if (!bus) {
+    return;
+  }
+
+  const handler = (eventName) => (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : undefined;
+    triggerFragmentRefresh(detail, eventName);
+  };
+
+  bus.addEventListener("refresh:fragment", handler("refresh"));
+  bus.addEventListener("refresh:fragments", handler("refresh"));
+  bus.addEventListener("refresh:targets", handler("refresh"));
+};
+
+const safeParseJSON = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    return null;
+  }
+};
+
+const hxHeaderContainsToast = (value) => {
+  if (typeof value !== "string" || value.trim() === "") {
+    return false;
+  }
+  const lower = value.toLowerCase();
+  if (lower.includes("showtoast") || lower.includes("\"toast\"") || lower.includes("toast:show")) {
+    return true;
+  }
+  const parsed = safeParseJSON(value);
+  if (!parsed || typeof parsed !== "object") {
+    return false;
+  }
+  return Boolean(parsed.toast || parsed.showToast || parsed["toast:show"]);
+};
+
+const hasHXToastHeader = (xhr) => {
+  if (!xhr) {
+    return false;
+  }
+  const headers = ["HX-Trigger", "HX-Trigger-After-Swap", "HX-Trigger-After-Settle"];
+  return headers.some((name) => hxHeaderContainsToast(xhr.getResponseHeader(name)));
+};
+
+const normaliseJSONToastPayload = (value) => {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string") {
+    const message = value.trim();
+    return message ? { message } : null;
+  }
+  if (typeof value === "object") {
+    return value;
+  }
+  return null;
+};
+
+const extractToastPayloadFromJSON = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    if (typeof payload === "string") {
+      return normaliseJSONToastPayload(payload);
+    }
+    return null;
+  }
+  const candidates = [payload.toast, payload.showToast, payload.toastPayload];
+  for (const candidate of candidates) {
+    const normalised = normaliseJSONToastPayload(candidate);
+    if (normalised) {
+      return normalised;
+    }
+  }
+  if (payload.data && typeof payload.data === "object" && payload.data !== payload) {
+    const fromData = extractToastPayloadFromJSON(payload.data);
+    if (fromData) {
+      return fromData;
+    }
+  }
+  if (typeof payload.message === "string") {
+    return {
+      title: typeof payload.title === "string" ? payload.title : "",
+      message: payload.message,
+      tone: typeof payload.tone === "string" ? payload.tone : payload.level || "info",
+    };
+  }
+  return null;
+};
+
+const initHTMXToastBridge = (toastApi) => {
+  if (typeof window.htmx === "undefined" || !toastApi || typeof toastApi.show !== "function") {
+    return;
+  }
+  const bus = document.body;
+  if (!bus) {
+    return;
+  }
+  bus.addEventListener("htmx:afterRequest", (event) => {
+    if (!(event instanceof CustomEvent)) {
+      return;
+    }
+    const detail = event.detail;
+    if (!detail || !detail.xhr) {
+      return;
+    }
+    const { xhr } = detail;
+    if (hasHXToastHeader(xhr)) {
+      return;
+    }
+    const contentType = xhr.getResponseHeader("Content-Type") || "";
+    if (!/json/i.test(contentType)) {
+      return;
+    }
+    const text = xhr.responseText;
+    if (typeof text !== "string" || text.trim() === "") {
+      return;
+    }
+    const payload = safeParseJSON(text);
+    if (!payload) {
+      return;
+    }
+    const toastPayload = extractToastPayloadFromJSON(payload);
+    if (!toastPayload) {
+      return;
+    }
+    toastApi.show(toastPayload);
+  });
+};
+
+const toastToneClass = (tone) => {
+  const key = typeof tone === "string" ? tone.toLowerCase() : "";
+  switch (key) {
+    case "success":
+      return "toast-success";
+    case "danger":
+    case "error":
+      return "toast-danger";
+    case "warning":
+      return "toast-warning";
+    case "info":
+    default:
+      return "toast-info";
+  }
+};
+
+const readToastString = (...candidates) => {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim() !== "") {
+      return candidate.trim();
+    }
+  }
+  return "";
+};
+
+const normaliseToastActions = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const actions = [];
+  value.forEach((action) => {
+    if (action == null) {
+      return;
+    }
+    if (typeof action === "string") {
+      const label = readToastString(action);
+      if (label) {
+        actions.push({ label, dismiss: true });
+      }
+      return;
+    }
+    if (typeof action !== "object") {
+      return;
+    }
+    const label = readToastString(action.label, action.text, action.title, action.name);
+    if (!label) {
+      return;
+    }
+    const href = readToastString(action.href, action.url, action.link);
+    const target = readToastString(action.target, action.targetAttr, action.window);
+    const rel = readToastString(action.rel);
+    const download = readToastString(action.download);
+    const eventName = readToastString(action.event, action.trigger, action.action);
+    const detail =
+      action.detail !== undefined
+        ? action.detail
+        : action.payload !== undefined
+          ? action.payload
+          : action.data;
+    const dismiss = action.dismiss !== false;
+    actions.push({ label, href, target, rel, download, eventName, detail, dismiss });
+  });
+  return actions;
+};
+
+const normaliseToastDetail = (detail) => {
+  if (detail == null) {
+    return null;
+  }
+  if (typeof detail === "string") {
+    const message = detail.trim();
+    if (message === "") {
+      return null;
+    }
+    return {
+      title: "",
+      message,
+      tone: "info",
+      duration: 6000,
+      dismissible: true,
+      actions: [],
+    };
+  }
+  if (typeof detail !== "object") {
+    return null;
+  }
+
+  const tone = readToastString(detail.tone, detail.type, detail.level, "info");
+  const title = readToastString(detail.title, detail.heading);
+  const message = readToastString(detail.message, detail.body, detail.description, detail.value, detail.text, detail.label);
+
+  const readNumber = (...candidates) => {
+    for (const candidate of candidates) {
+      if (typeof candidate === "number" && Number.isFinite(candidate)) {
+        return candidate;
+      }
+      if (typeof candidate === "string" && candidate.trim() !== "") {
+        const parsed = Number.parseInt(candidate.trim(), 10);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+    }
+    return null;
+  };
+
+  const durationCandidate = readNumber(detail.duration, detail.timeout, detail.delay, detail.autoHideAfter);
+  const defaultDuration = 6000;
+  let duration = defaultDuration;
+  if (durationCandidate !== null) {
+    duration = durationCandidate;
+  }
+
+  let autoHide = true;
+  if (detail.autoHide === false || detail.sticky === true) {
+    autoHide = false;
+  } else if (detail.autoHide === true) {
+    autoHide = true;
+  }
+
+  if (!autoHide) {
+    duration = 0;
+  } else if (!Number.isFinite(duration) || duration <= 0) {
+    duration = defaultDuration;
+  }
+
+  const dismissible = detail.dismissible !== false;
+  const id = readToastString(detail.id);
+  const actions = normaliseToastActions(detail.actions);
+  if (title === "" && message === "") {
+    return null;
+  }
+
+  return {
+    id,
+    tone,
+    title,
+    message,
+    duration,
+    dismissible,
+    actions,
+  };
+};
+
+const initToastStack = () => {
+  const root = document.getElementById("toast-stack");
+  if (!(root instanceof HTMLElement)) {
+    return {
+      root: null,
+      show: () => {},
+      clear: () => {},
+      hide: () => {},
+      remove: () => {},
+    };
+  }
+
+  const timers = new WeakMap();
+  const maxToasts = 4;
+
+  const clearTimer = (toast) => {
+    const timerId = timers.get(toast);
+    if (typeof timerId === "number") {
+      window.clearTimeout(timerId);
+    }
+    timers.delete(toast);
+  };
+
+  const finishRemoval = (toast) => {
+    clearTimer(toast);
+    if (toast instanceof HTMLElement) {
+      toast.remove();
+    }
+  };
+
+  const hideToast = (toast, { immediate = false } = {}) => {
+    if (!(toast instanceof HTMLElement)) {
+      return;
+    }
+    if (toast.dataset.toastState === "closing") {
+      return;
+    }
+    toast.dataset.toastState = "closing";
+    clearTimer(toast);
+    const remove = () => {
+      toast.removeEventListener("animationend", remove);
+      finishRemoval(toast);
+      toast.dataset.toastState = "";
+    };
+    if (immediate) {
+      remove();
+      return;
+    }
+    toast.classList.remove("animate-toast-in");
+    toast.classList.add("animate-toast-out");
+    toast.addEventListener("animationend", remove, { once: true });
+    window.setTimeout(remove, 240);
+  };
+
+  const scheduleRemoval = (toast, duration) => {
+    clearTimer(toast);
+    if (!(toast instanceof HTMLElement) || !Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+    const timerId = window.setTimeout(() => hideToast(toast), duration);
+    timers.set(toast, timerId);
+  };
+
+  const createCloseButton = (onClose) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-close";
+    button.setAttribute("aria-label", "通知を閉じる");
+    button.innerHTML =
+      '<span class="sr-only">閉じる</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    });
+    return button;
+  };
+
+  const renderToastAction = (action, toast) => {
+    if (!action || typeof action !== "object") {
+      return null;
+    }
+    const label = typeof action.label === "string" ? action.label : "";
+    if (!label) {
+      return null;
+    }
+    const dismissToast = () => {
+      if (action.dismiss !== false) {
+        hideToast(toast);
+      }
+    };
+    if (action.href) {
+      const link = document.createElement("a");
+      link.className = "toast-action";
+      link.textContent = label;
+      link.href = action.href;
+      if (action.target) {
+        link.target = action.target;
+      }
+      if (action.rel) {
+        link.rel = action.rel;
+      }
+      if (action.download) {
+        link.setAttribute("download", action.download);
+      }
+      link.addEventListener("click", () => {
+        dismissToast();
+      });
+      return link;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-action";
+    button.textContent = label;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (action.eventName) {
+        const detail = action.detail !== undefined ? action.detail : {};
+        document.body.dispatchEvent(new CustomEvent(action.eventName, { detail, bubbles: true }));
+      }
+      dismissToast();
+    });
+    return button;
+  };
+
+  const renderToast = (config) => {
+    const toneClass = toastToneClass(config.tone);
+    const toast = document.createElement("div");
+    toast.className = ["toast", toneClass, "animate-toast-in"].filter(Boolean).join(" ");
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    if (config.id) {
+      try {
+        toast.id = config.id;
+      } catch (error) {
+        // ignore invalid IDs (e.g., containing spaces)
+      }
+    }
+    if (config.duration > 0) {
+      toast.dataset.autohide = "true";
+    }
+
+    const body = document.createElement("div");
+    body.className = "flex-1 space-y-1";
+
+    if (config.title) {
+      const heading = document.createElement("p");
+      heading.className = "toast-title";
+      heading.textContent = config.title;
+      body.appendChild(heading);
+    }
+
+    if (config.message) {
+      const message = document.createElement("p");
+      message.className = config.title ? "toast-body" : "toast-body";
+      message.textContent = config.message;
+      body.appendChild(message);
+    }
+
+    if (Array.isArray(config.actions) && config.actions.length > 0) {
+      const actions = document.createElement("div");
+      actions.className = "toast-actions";
+      config.actions.forEach((action) => {
+        const element = renderToastAction(action, toast);
+        if (element) {
+          actions.appendChild(element);
+        }
+      });
+      if (actions.childElementCount > 0) {
+        body.appendChild(actions);
+      }
+    }
+
+    toast.appendChild(body);
+
+    if (config.dismissible) {
+      toast.appendChild(
+        createCloseButton(() => {
+          hideToast(toast);
+        }),
+      );
+    }
+
+    toast.addEventListener("mouseenter", () => {
+      clearTimer(toast);
+    });
+
+    toast.addEventListener("mouseleave", () => {
+      scheduleRemoval(toast, config.duration);
+    });
+
+    toast.addEventListener("focusin", () => {
+      clearTimer(toast);
+    });
+
+    toast.addEventListener("focusout", () => {
+      scheduleRemoval(toast, config.duration);
+    });
+
+    return toast;
+  };
+
+  const show = (detail) => {
+    const config = normaliseToastDetail(detail);
+    if (!config) {
+      return null;
+    }
+
+    while (root.childElementCount >= maxToasts) {
+      const last = root.lastElementChild;
+      if (last instanceof HTMLElement) {
+        hideToast(last, { immediate: true });
+      } else if (last) {
+        root.removeChild(last);
+      } else {
+        break;
+      }
+    }
+
+    const toast = renderToast(config);
+    root.prepend(toast);
+    requestAnimationFrame(() => {
+      toast.classList.add("animate-toast-in");
+    });
+    scheduleRemoval(toast, config.duration);
+    return toast;
+  };
+
+  const clear = () => {
+    Array.from(root.children).forEach((child) => hideToast(child, { immediate: true }));
+  };
+
+  const removeById = (id) => {
+    if (typeof id !== "string" || id.trim() === "") {
+      return;
+    }
+    const safeId = window.CSS && typeof window.CSS.escape === "function" ? window.CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, "");
+    const toast = root.querySelector(`#${safeId}`);
+    if (toast instanceof HTMLElement) {
+      hideToast(toast);
+    }
+  };
+
+  const eventNames = ["toast", "showToast", "toast:show"];
+  const handleEvent = (event) => {
+    if (!(event instanceof CustomEvent)) {
+      return;
+    }
+    show(event.detail);
+  };
+  eventNames.forEach((name) => {
+    document.body.addEventListener(name, handleEvent);
+  });
+
+  return {
+    root,
+    show,
+    clear,
+    hide: (toast) => hideToast(toast),
+    remove: removeById,
+  };
+};
+
+const initSearchShortcut = (getModalRoot) => {
+  const trigger = document.querySelector("[data-topbar-search-trigger]");
+  if (!trigger) {
+    return;
+  }
+
+  const openSearch = () => {
+    trigger.focus({ preventScroll: true });
+    trigger.click();
+  };
+
+  trigger.addEventListener("click", (event) => {
+    if (window.htmx) {
+      return;
+    }
+    const fallbackHref = trigger.getAttribute("data-search-href");
+    if (fallbackHref) {
+      event.preventDefault();
+      window.location.href = fallbackHref;
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (event.target instanceof Element && isEditableTarget(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    openSearch();
+  });
+
+  if (window.htmx) {
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const modalRoot = getModalRoot();
+      if (!modalRoot || event.target !== modalRoot) {
+        return;
+      }
+      const field =
+        modalRoot.querySelector("[data-search-input]") ||
+        modalRoot.querySelector("input[type='search']") ||
+        modalRoot.querySelector("input[name='q']");
+      if (field instanceof HTMLElement) {
+        queueMicrotask(() => {
+          field.focus({ preventScroll: true });
+          if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+            field.select();
+          }
+        });
+      }
+    });
+  }
+};
+
+const initShortcutOverlay = () => {
+  const overlay = document.querySelector("[data-shortcut-overlay]");
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+  const panel = overlay.querySelector("[data-shortcut-panel]");
+  const dismissors = overlay.querySelectorAll("[data-shortcut-overlay-dismiss]");
+  const closeButtons = overlay.querySelectorAll("[data-shortcut-overlay-close]");
+  let isOpen = false;
+  let lastActiveElement = null;
+
+  const setBodyState = (open) => {
+    const body = document.body;
+    if (!body) {
+      return;
+    }
+    if (open) {
+      body.dataset.shortcutOverlay = "open";
+    } else if (body.dataset.shortcutOverlay === "open") {
+      delete body.dataset.shortcutOverlay;
+    }
+  };
+
+  const focusPanel = () => {
+    const target = panel instanceof HTMLElement ? panel : overlay;
+    target.focus({ preventScroll: true });
+  };
+
+  const openOverlay = () => {
+    if (document.body && document.body.dataset.modalOpen === "true") {
+      return;
+    }
+    if (isOpen) {
+      focusPanel();
+      return;
+    }
+    isOpen = true;
+    lastActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    overlay.classList.remove("hidden");
+    overlay.setAttribute("aria-hidden", "false");
+    overlay.dataset.shortcutState = "open";
+    setBodyState(true);
+    focusPanel();
+  };
+
+  const closeOverlay = () => {
+    if (!isOpen) {
+      return;
+    }
+    isOpen = false;
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.dataset.shortcutState = "closed";
+    setBodyState(false);
+    const element = lastActiveElement;
+    lastActiveElement = null;
+    if (element instanceof HTMLElement) {
+      element.focus({ preventScroll: true });
+    }
+  };
+
+  const handleDismiss = (event) => {
+    event.preventDefault();
+    closeOverlay();
+  };
+
+  dismissors.forEach((element) => {
+    element.addEventListener("click", handleDismiss);
+  });
+  closeButtons.forEach((element) => {
+    element.addEventListener("click", handleDismiss);
+  });
+
+  overlay.addEventListener("keydown", (event) => {
+    if (!isOpen) {
+      return;
+    }
+    if (event.key === KEY_ESCAPE) {
+      event.preventDefault();
+      closeOverlay();
+      return;
+    }
+    if (event.key !== KEY_TAB) {
+      return;
+    }
+    const scope = panel instanceof HTMLElement ? panel : overlay;
+    const focusables = getFocusableElements(scope);
+    if (focusables.length === 0) {
+      event.preventDefault();
+      scope.focus({ preventScroll: true });
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (document.activeElement === last) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const wantsHelp = event.key === "?" || (event.key === "/" && event.shiftKey);
+    if (!wantsHelp) {
+      return;
+    }
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (isOpen) {
+      event.preventDefault();
+      closeOverlay();
+      return;
+    }
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    openOverlay();
+  });
+};
+
+const initUserMenu = () => {
+  const root = document.querySelector("[data-user-menu]");
+  if (!root) {
+    return;
+  }
+  const trigger = root.querySelector("[data-user-menu-trigger]");
+  const panel = root.querySelector("[data-user-menu-panel]");
+  if (!(trigger instanceof HTMLElement) || !(panel instanceof HTMLElement)) {
+    return;
+  }
+
+  let open = false;
+
+  const focusable = () =>
+    Array.from(panel.querySelectorAll(focusableSelectors)).filter(
+      (el) => el instanceof HTMLElement && !el.hasAttribute("disabled"),
+    );
+
+  const setOpen = (state) => {
+    if (open === state) {
+      return;
+    }
+    open = state;
+    trigger.setAttribute("aria-expanded", state ? "true" : "false");
+    panel.setAttribute("aria-hidden", state ? "false" : "true");
+    panel.classList.toggle("opacity-0", !state);
+    panel.classList.toggle("pointer-events-none", !state);
+    panel.classList.toggle("opacity-100", state);
+    panel.classList.toggle("pointer-events-auto", state);
+
+    if (state) {
+      const items = focusable();
+      (items[0] || panel).focus({ preventScroll: true });
+    } else {
+      trigger.focus({ preventScroll: true });
+    }
+  };
+
+  const closeMenu = () => setOpen(false);
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    setOpen(!open);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!open) {
+      return;
+    }
+    if (event.target instanceof Node && root.contains(event.target)) {
+      return;
+    }
+    closeMenu();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (!open) {
+      return;
+    }
+    if (event.key === KEY_ESCAPE) {
+      event.preventDefault();
+      closeMenu();
+      return;
+    }
+    if (event.key !== KEY_TAB) {
+      return;
+    }
+    const items = focusable();
+    if (items.length === 0) {
+      event.preventDefault();
+      panel.focus({ preventScroll: true });
+      return;
+    }
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (document.activeElement === last) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  });
+};
+
+const initGlobalSearchInteractions = () => {
+  const ROOT_SELECTOR = "[data-search-root]";
+  const RESULTS_SELECTOR = "[data-search-results]";
+  const RESULT_ROW_SELECTOR = "[data-search-result]";
+  const GROUP_SELECTOR = "[data-search-group]";
+  const FILTER_SELECTOR = "[data-search-filter]";
+  const controllers = new WeakMap();
+
+  class SearchController {
+    constructor(root) {
+      this.root = root;
+      this.form = root.querySelector("[data-search-form]");
+      this.input = root.querySelector("[data-search-input]");
+      this.results = [];
+      this.activeRow = null;
+      this.filters = [];
+      this.groups = [];
+      this.detail = root.querySelector("[data-search-detail]");
+      this.detailEmpty = this.detail ? this.detail.querySelector("[data-search-detail-empty]") : null;
+      this.detailContent = this.detail ? this.detail.querySelector("[data-search-detail-content]") : null;
+      this.detailEntity = this.detail ? this.detail.querySelector("[data-search-detail-entity]") : null;
+      this.detailTitle = this.detail ? this.detail.querySelector("[data-search-detail-title]") : null;
+      this.detailDescription = this.detail ? this.detail.querySelector("[data-search-detail-description]") : null;
+      this.detailBadge = this.detail ? this.detail.querySelector("[data-search-detail-badge]") : null;
+      this.detailMetadata = this.detail ? this.detail.querySelector("[data-search-detail-metadata]") : null;
+      this.detailOpen = this.detail ? this.detail.querySelector("[data-search-detail-open]") : null;
+      this.detailCopy = this.detail ? this.detail.querySelector("[data-search-detail-copy]") : null;
+      this.bindEvents();
+    }
+
+    bindEvents() {
+      this.root.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) {
+          return;
+        }
+        const openLink = target.closest("[data-search-open-link]");
+        if (openLink) {
+          return;
+        }
+        const row = target.closest(RESULT_ROW_SELECTOR);
+        if (!row) {
+          return;
+        }
+        event.preventDefault();
+        this.setActive(row);
+        row.focus({ preventScroll: true });
+      });
+
+      this.root.addEventListener("focusin", (event) => {
+        const row = event.target instanceof Element ? event.target.closest(RESULT_ROW_SELECTOR) : null;
+        if (!row) {
+          return;
+        }
+        this.setActive(row);
+      });
+
+      if (this.detailCopy instanceof HTMLElement) {
+        this.detailCopy.addEventListener("click", (event) => {
+          event.preventDefault();
+          this.copyActiveLink();
+        });
+      }
+    }
+
+    refresh() {
+      const container = this.root.querySelector(RESULTS_SELECTOR);
+      const rows = container ? Array.from(container.querySelectorAll(RESULT_ROW_SELECTOR)) : [];
+      this.results = rows.filter((row) => row instanceof HTMLElement);
+      this.filters = Array.from(this.root.querySelectorAll(FILTER_SELECTOR)).filter(
+        (element) => element instanceof HTMLElement,
+      );
+      this.groups = container
+        ? Array.from(container.querySelectorAll(GROUP_SELECTOR)).filter(
+            (group) => group instanceof HTMLElement && group.querySelector(RESULT_ROW_SELECTOR),
+          )
+        : [];
+      if (this.results.length === 0) {
+        this.setActive(null);
+        return;
+      }
+      const current = this.activeRow && this.results.includes(this.activeRow) ? this.activeRow : null;
+      if (current) {
+        this.setActive(current);
+        return;
+      }
+      this.setActive(this.results[0]);
+    }
+
+    focusInput() {
+      if (!(this.input instanceof HTMLElement)) {
+        return;
+      }
+      this.input.focus({ preventScroll: true });
+      if (canSelectTextInput(this.input)) {
+        this.input.select();
+      }
+    }
+
+    move(delta) {
+      if (this.results.length === 0) {
+        return;
+      }
+      const currentIndex = this.activeRow ? this.results.indexOf(this.activeRow) : -1;
+      let nextIndex = currentIndex + delta;
+      if (nextIndex < 0) {
+        nextIndex = 0;
+      }
+      if (nextIndex >= this.results.length) {
+        nextIndex = this.results.length - 1;
+      }
+      const nextRow = this.results[nextIndex];
+      if (!nextRow) {
+        return;
+      }
+      this.setActive(nextRow);
+      nextRow.focus({ preventScroll: false });
+      nextRow.scrollIntoView({ block: "nearest" });
+    }
+
+    focusFilters() {
+      const targets = this.filters
+        .filter((element) => element.isConnected && isVisible(element) && !element.hasAttribute("disabled"))
+        .map((element) => element);
+      const first = targets[0];
+      if (!(first instanceof HTMLElement)) {
+        return;
+      }
+      first.focus({ preventScroll: true });
+      if (canSelectTextInput(first)) {
+        first.select();
+      }
+    }
+
+    moveGroup(delta) {
+      if (!Number.isFinite(delta) || this.groups.length === 0) {
+        return;
+      }
+      const direction = delta >= 0 ? 1 : -1;
+      const currentIndex = this.activeRow
+        ? this.groups.findIndex((group) => group.contains(this.activeRow))
+        : -1;
+      let nextIndex = currentIndex === -1 ? (direction > 0 ? 0 : this.groups.length - 1) : currentIndex + direction;
+      if (nextIndex < 0) {
+        nextIndex = this.groups.length - 1;
+      }
+      if (nextIndex >= this.groups.length) {
+        nextIndex = 0;
+      }
+      const nextGroup = this.groups[nextIndex];
+      if (!nextGroup) {
+        return;
+      }
+      const firstRow = nextGroup.querySelector(RESULT_ROW_SELECTOR);
+      if (!(firstRow instanceof HTMLElement)) {
+        return;
+      }
+      this.setActive(firstRow);
+      firstRow.focus({ preventScroll: true });
+      firstRow.scrollIntoView({ block: "nearest" });
+    }
+
+    openActive() {
+      const row = this.activeRow;
+      if (!row) {
+        return;
+      }
+      const url = row.getAttribute("data-search-url");
+      if (!url) {
+        return;
+      }
+      window.location.assign(url);
+    }
+
+    copyActiveLink() {
+      if (!(this.detailCopy instanceof HTMLElement)) {
+        return;
+      }
+      const url = this.activeRow ? this.activeRow.getAttribute("data-search-url") : null;
+      if (!url) {
+        return;
+      }
+      const reset = () => {
+        if (this.detailCopy) {
+          delete this.detailCopy.dataset.searchCopyState;
+        }
+      };
+      const applyCopiedState = () => {
+        if (this.detailCopy) {
+          this.detailCopy.dataset.searchCopyState = "copied";
+          window.setTimeout(reset, 1500);
+        }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(url)
+          .then(applyCopiedState)
+          .catch((error) => {
+            console.warn("search: clipboard write failed", error);
+            fallbackCopy(url);
+            applyCopiedState();
+          });
+        return;
+      }
+      fallbackCopy(url);
+      applyCopiedState();
+    }
+
+    setActive(row) {
+      if (this.activeRow === row) {
+        return;
+      }
+      if (this.activeRow instanceof HTMLElement) {
+        this.activeRow.classList.remove("ring-2", "ring-brand-200", "bg-slate-50");
+        delete this.activeRow.dataset.searchActive;
+      }
+      this.activeRow = row instanceof HTMLElement ? row : null;
+      if (this.activeRow) {
+        this.activeRow.dataset.searchActive = "true";
+        this.activeRow.classList.add("ring-2", "ring-brand-200", "bg-slate-50");
+        this.populateDetail(this.activeRow);
+      } else {
+        this.clearDetail();
+      }
+    }
+
+    populateDetail(row) {
+      if (!this.detail) {
+        return;
+      }
+      if (this.detailEmpty instanceof HTMLElement) {
+        this.detailEmpty.classList.add("hidden");
+      }
+      if (this.detailContent instanceof HTMLElement) {
+        this.detailContent.classList.remove("hidden");
+      }
+      if (this.detailEntity instanceof HTMLElement) {
+        this.detailEntity.textContent = row.getAttribute("data-search-entity") || "";
+      }
+      if (this.detailTitle instanceof HTMLElement) {
+        this.detailTitle.textContent = textContent(row, "[data-search-field='title']");
+      }
+      if (this.detailDescription instanceof HTMLElement) {
+        this.detailDescription.textContent = textContent(row, "[data-search-field='description']");
+        this.detailDescription.classList.toggle("hidden", this.detailDescription.textContent.trim() === "");
+      }
+      if (this.detailBadge instanceof HTMLElement) {
+        const badge = row.querySelector("[data-search-field='badge']");
+        this.detailBadge.innerHTML = badge ? badge.innerHTML : "";
+        this.detailBadge.classList.toggle("hidden", !badge);
+      }
+      if (this.detailMetadata instanceof HTMLElement) {
+        const metadata = row.querySelector("[data-search-field='metadata']");
+        this.detailMetadata.innerHTML = metadata ? metadata.innerHTML : "";
+        this.detailMetadata.classList.toggle("hidden", !metadata);
+      }
+      if (this.detailOpen instanceof HTMLElement) {
+        const url = row.getAttribute("data-search-url") || "#";
+        this.detailOpen.setAttribute("href", url);
+      }
+      if (this.detailCopy instanceof HTMLElement) {
+        const url = row.getAttribute("data-search-url") || "";
+        this.detailCopy.disabled = url === "";
+      }
+    }
+
+    clearDetail() {
+      if (!this.detail) {
+        return;
+      }
+      if (this.detailContent instanceof HTMLElement) {
+        this.detailContent.classList.add("hidden");
+      }
+      if (this.detailEmpty instanceof HTMLElement) {
+        this.detailEmpty.classList.remove("hidden");
+      }
+    }
+  }
+
+  const fallbackCopy = (text) => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-1000px";
+    textarea.style.top = "-1000px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } catch (error) {
+      console.warn("search: execCommand copy failed", error);
+    }
+    document.body.removeChild(textarea);
+  };
+
+  const textContent = (root, selector) => {
+    const element = root.querySelector(selector);
+    if (!element) {
+      return "";
+    }
+    return element.textContent ? element.textContent.trim() : "";
+  };
+
+  const getRoot = () => document.querySelector(ROOT_SELECTOR);
+
+  const getController = () => {
+    const root = getRoot();
+    if (!root) {
+      return null;
+    }
+    let controller = controllers.get(root);
+    if (!controller) {
+      controller = new SearchController(root);
+      controllers.set(root, controller);
+      controller.refresh();
+    }
+    return controller;
+  };
+
+  const refreshController = () => {
+    const controller = getController();
+    if (controller) {
+      controller.refresh();
+    }
+  };
+
+  const root = getRoot();
+  if (root) {
+    controllers.set(root, new SearchController(root));
+    refreshController();
+  }
+
+  document.addEventListener("keydown", (event) => {
+    const controller = getController();
+    if (!controller) {
+      return;
+    }
+    if (areShortcutsBlocked()) {
+      return;
+    }
+    const target = event.target;
+    const isEditable = isEditableTarget(target);
+    const hasModifier = event.altKey || event.ctrlKey || event.metaKey;
+    const normalizedKey = typeof event.key === "string" ? event.key.toLowerCase() : "";
+    if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      controller.focusInput();
+      return;
+    }
+    if (normalizedKey === "f" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.focusFilters();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      if (isEditable) {
+        if (target instanceof Element && target.closest(ROOT_SELECTOR)) {
+          return;
+        }
+        return;
+      }
+      event.preventDefault();
+      controller.move(1);
+      return;
+    }
+    if (normalizedKey === "j" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.move(1);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      if (isEditable) {
+        if (target instanceof Element && target.closest(ROOT_SELECTOR)) {
+          return;
+        }
+        return;
+      }
+      event.preventDefault();
+      controller.move(-1);
+      return;
+    }
+    if (normalizedKey === "k" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.move(-1);
+      return;
+    }
+    if (normalizedKey === "g" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.moveGroup(event.shiftKey ? -1 : 1);
+      return;
+    }
+    if (normalizedKey === "o" && !hasModifier) {
+      if (isEditable) {
+        return;
+      }
+      event.preventDefault();
+      controller.openActive();
+      return;
+    }
+    if (event.key === "Enter") {
+      if (isEditableTarget(target)) {
+        if (target instanceof Element && target.closest("[data-search-form]")) {
+          return;
+        }
+      }
+      const row = target instanceof Element ? target.closest(RESULT_ROW_SELECTOR) : null;
+      if (!row) {
+        if (target instanceof Element && target.closest(ROOT_SELECTOR)) {
+          event.preventDefault();
+          controller.openActive();
+        } else if (!isEditableTarget(target)) {
+          event.preventDefault();
+          controller.openActive();
+        }
+      } else {
+        event.preventDefault();
+        controller.openActive();
+      }
+    }
+  });
+
+  if (window.htmx) {
+    document.body.addEventListener("htmx:afterSwap", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.matches(RESULTS_SELECTOR) || event.target.querySelector(RESULT_ROW_SELECTOR)) {
+        refreshController();
+      }
+      if (event.target.closest && event.target.closest(RESULTS_SELECTOR)) {
+        refreshController();
+      }
+    });
+    document.body.addEventListener("htmx:afterSettle", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (event.target.matches(RESULTS_SELECTOR) || event.target.querySelector(RESULT_ROW_SELECTOR)) {
+        refreshController();
+      }
+    });
+  }
+};
+
+const ASSET_UPLOAD_SELECTOR = "[data-asset-upload]";
+
+const getCSRFToken = () => {
+  const tokenEl = document.querySelector('meta[name="csrf-token"]');
+  return tokenEl && typeof tokenEl.content === "string" ? tokenEl.content : "";
+};
+
+const formatBytes = (value) => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  const precision = unit === 0 ? 0 : unit === 1 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[unit]}`;
+};
+
+const showAssetToast = (message, tone = "danger") => {
+  const toast = window.hankoAdmin && window.hankoAdmin.toast;
+  if (toast && typeof toast.show === "function") {
+    toast.show({ message, tone, duration: 5000 });
+  } else {
+    console.warn(message);
+  }
+};
+
+const readDatasetBool = (value) => value === "true";
+
+const parseAcceptList = (accept) => {
+  if (typeof accept !== "string" || accept.trim() === "") {
+    return [];
+  }
+  return accept.split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean);
+};
+
+const matchesAccept = (file, acceptList) => {
+  if (!acceptList || acceptList.length === 0) {
+    return true;
+  }
+  const fileType = typeof file.type === "string" ? file.type.toLowerCase() : "";
+  const extension = (() => {
+    const name = typeof file.name === "string" ? file.name : "";
+    const index = name.lastIndexOf(".");
+    if (index === -1) {
+      return "";
+    }
+    return name.slice(index).toLowerCase();
+  })();
+  return acceptList.some((accept) => {
+    if (accept.endsWith("/*")) {
+      const prefix = accept.slice(0, accept.indexOf("/"));
+      return fileType.startsWith(`${prefix}/`);
+    }
+    if (accept.startsWith(".")) {
+      return accept === extension;
+    }
+    if (fileType) {
+      return accept === fileType;
+    }
+    return false;
+  });
+};
+
+const deriveKind = (root, file) => {
+  if (root && typeof root.dataset.kind === "string" && root.dataset.kind.trim() !== "") {
+    return root.dataset.kind.trim();
+  }
+  if (file && typeof file.type === "string" && file.type.includes("/")) {
+    return file.type.split("/")[1] || "other";
+  }
+  const name = typeof file.name === "string" ? file.name : "";
+  const index = name.lastIndexOf(".");
+  if (index !== -1) {
+    return name.slice(index + 1).toLowerCase();
+  }
+  return "other";
+};
+
+const deriveMimeType = (file) => {
+  if (file && typeof file.type === "string" && file.type.trim() !== "") {
+    return file.type;
+  }
+  const name = typeof file.name === "string" ? file.name.toLowerCase() : "";
+  if (name.endsWith(".svg")) {
+    return "image/svg+xml";
+  }
+  if (name.endsWith(".png")) {
+    return "image/png";
+  }
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (name.endsWith(".webp")) {
+    return "image/webp";
+  }
+  return "application/octet-stream";
+};
+
+const setAssetUploading = (root, uploading) => {
+  const fields = getAssetFields(root);
+  const selectButton = fields.selectButton;
+  const removeButton = fields.removeButton;
+  if (selectButton instanceof HTMLButtonElement) {
+    selectButton.dataset.loading = uploading ? "true" : "false";
+    selectButton.disabled = uploading;
+    selectButton.setAttribute("aria-busy", uploading ? "true" : "false");
+  }
+  if (removeButton instanceof HTMLButtonElement) {
+    removeButton.disabled = uploading;
+  }
+  root.dataset.uploading = uploading ? "true" : "false";
+};
+
+const getAssetFields = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return {};
+  }
+  return {
+    id: root.querySelector("[data-asset-upload-field='id']"),
+    url: root.querySelector("[data-asset-upload-field='url']"),
+    name: root.querySelector("[data-asset-upload-field='name']"),
+    preview: root.querySelector("[data-asset-upload-preview]"),
+    filename: root.querySelector("[data-asset-upload-filename]"),
+    input: root.querySelector("[data-asset-upload-input]"),
+    selectButton: root.querySelector("[data-asset-upload-action='select']"),
+    removeButton: root.querySelector("[data-asset-upload-action='remove']"),
+  };
+};
+
+const prunePreviewObjectURL = (root) => {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+  const url = root.dataset.previewObjectUrl;
+  if (url) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      // ignore
+    }
+    delete root.dataset.previewObjectUrl;
+  }
+};
+
+const updateAssetPreview = (root, state) => {
+  const preview = root.querySelector("[data-asset-upload-preview]");
+  if (!(preview instanceof HTMLElement)) {
+    return;
+  }
+  prunePreviewObjectURL(root);
+  const displayPreview = readDatasetBool(root.dataset.previewEnabled || "false");
+  preview.innerHTML = "";
+  if (state.hasAsset && displayPreview && state.previewURL) {
+    const img = document.createElement("img");
+    img.src = state.previewURL;
+    img.alt = state.alt || "プレビュー";
+    img.className = "h-full w-full rounded-lg object-cover";
+    preview.appendChild(img);
+    if (state.objectURL) {
+      root.dataset.previewObjectUrl = state.objectURL;
+    }
+    return;
+  }
+  const placeholder = document.createElement("div");
+  placeholder.className = displayPreview
+    ? "flex h-full w-full items-center justify-center text-[11px] text-slate-400"
+    : "flex h-full w-full items-center justify-center text-[11px] text-slate-500";
+  placeholder.textContent = state.hasAsset
+    ? state.fileName || root.dataset.labelReplace || "選択済み"
+    : root.dataset.labelEmpty || "未設定";
+  preview.appendChild(placeholder);
+};
+
+const updateAssetButtonLabels = (root, hasAsset) => {
+  const { selectButton, removeButton } = getAssetFields(root);
+  if (selectButton instanceof HTMLButtonElement) {
+    selectButton.textContent = hasAsset
+      ? (root.dataset.labelReplace || "ファイルを変更")
+      : (root.dataset.labelUpload || "ファイルをアップロード");
+  }
+  if (removeButton instanceof HTMLButtonElement) {
+    removeButton.hidden = !hasAsset;
+  }
+};
+
+const setAssetState = (root, state) => {
+  const fields = getAssetFields(root);
+  const hasAsset = Boolean(state.hasAsset);
+  if (fields.id instanceof HTMLInputElement) {
+    fields.id.value = state.assetId || "";
+  }
+  if (fields.url instanceof HTMLInputElement) {
+    fields.url.value = state.url || "";
+  }
+  if (fields.name instanceof HTMLInputElement) {
+    fields.name.value = state.fileName || "";
+  }
+  if (fields.filename instanceof HTMLElement) {
+    fields.filename.textContent = hasAsset
+      ? state.fileName || state.url || root.dataset.labelReplace || "選択済み"
+      : root.dataset.labelEmpty || "未設定";
+  }
+  root.dataset.hasValue = hasAsset ? "true" : "false";
+  updateAssetButtonLabels(root, hasAsset);
+  updateAssetPreview(root, state);
+};
+
+const resetAssetState = (root) => {
+  prunePreviewObjectURL(root);
+  setAssetState(root, { hasAsset: false, assetId: "", url: "", fileName: "" });
+};
+
+const validateAssetFile = (root, file) => {
+  if (!file) {
+    return "ファイルが選択されていません。";
+  }
+  const maxSize = Number.parseInt(root.dataset.maxSize || "", 10);
+  if (Number.isFinite(maxSize) && maxSize > 0 && file.size > maxSize) {
+    return `ファイルサイズが大きすぎます。最大 ${formatBytes(maxSize)} までです。`;
+  }
+  const accepts = parseAcceptList(root.dataset.accept || "");
+  if (accepts.length > 0 && !matchesAccept(file, accepts)) {
+    return "許可されていないファイル形式です。";
+  }
+  return "";
+};
+
+const requestSignedUpload = async (root, file) => {
+  const endpoint = typeof root.dataset.uploadEndpoint === "string" && root.dataset.uploadEndpoint.trim() !== ""
+    ? root.dataset.uploadEndpoint
+    : "/admin/assets/signed-upload";
+  const payload = {
+    purpose: typeof root.dataset.purpose === "string" && root.dataset.purpose.trim() !== "" ? root.dataset.purpose.trim() : "preview",
+    kind: deriveKind(root, file),
+    mimeType: deriveMimeType(file),
+    fileName: file.name,
+    size: file.size,
+  };
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": getCSRFToken(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "署名付きURLの取得に失敗しました。");
+  }
+  return await response.json();
+};
+
+const uploadViaSignedURL = async (info, file) => {
+  if (!info || typeof info.uploadUrl !== "string" || info.uploadUrl.trim() === "") {
+    throw new Error("アップロード先URLが無効です。");
+  }
+  const method = typeof info.method === "string" && info.method.trim() !== "" ? info.method : "PUT";
+  const headers = new Headers(info.headers || {});
+  if (!headers.has("Content-Type") && file && file.type) {
+    headers.set("Content-Type", file.type);
+  }
+  const response = await fetch(info.uploadUrl, {
+    method,
+    headers,
+    body: file,
+  });
+  if (!response.ok) {
+    throw new Error(`アップロードリクエストが失敗しました。(HTTP ${response.status})`);
+  }
+  return true;
+};
+
+const handleAssetFileSelection = async (root, file) => {
+  const errorMessage = validateAssetFile(root, file);
+  if (errorMessage) {
+    showAssetToast(errorMessage, "danger");
+    return;
+  }
+  setAssetUploading(root, true);
+  try {
+    const signed = await requestSignedUpload(root, file);
+    await uploadViaSignedURL(signed, file);
+    const publicUrl = typeof signed.publicUrl === "string" ? signed.publicUrl.trim() : "";
+    let previewURL = publicUrl;
+    let objectURL;
+    if (!previewURL && readDatasetBool(root.dataset.previewEnabled || "false") && typeof URL.createObjectURL === "function") {
+      objectURL = URL.createObjectURL(file);
+      previewURL = objectURL;
+    }
+    setAssetState(root, {
+      hasAsset: true,
+      assetId: signed.assetId || "",
+      url: publicUrl || signed.assetId || "",
+      fileName: file.name,
+      previewURL,
+      objectURL,
+    });
+  } catch (error) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : "ファイルのアップロードに失敗しました。";
+    showAssetToast(message, "danger");
+  } finally {
+    setAssetUploading(root, false);
+  }
+};
+
+const initAssetUploads = (scope) => {
+  const context = scope instanceof Element ? scope : document;
+  context.querySelectorAll(ASSET_UPLOAD_SELECTOR).forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.assetUploadInit === "true") {
+      return;
+    }
+    root.dataset.assetUploadInit = "true";
+    const fields = getAssetFields(root);
+    if (fields.selectButton instanceof HTMLButtonElement && fields.input instanceof HTMLInputElement) {
+      fields.selectButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (root.dataset.uploading === "true") {
+          return;
+        }
+        fields.input.click();
+      });
+      fields.input.addEventListener("change", () => {
+        const file = fields.input.files && fields.input.files[0];
+        if (file) {
+          handleAssetFileSelection(root, file).catch((error) => console.error(error));
+        }
+        fields.input.value = "";
+      });
+    }
+    if (fields.removeButton instanceof HTMLButtonElement) {
+      fields.removeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (root.dataset.uploading === "true") {
+          return;
+        }
+        resetAssetState(root);
+      });
+    }
+  });
+};
+
+// Utility initialisers for the orders index interactions.
+const initOrdersFilter = () => {
+  const form = document.getElementById("orders-filter");
+  if (!(form instanceof HTMLFormElement) || form.dataset.ordersFilterInit === "true") {
+    return;
+  }
+  form.dataset.ordersFilterInit = "true";
+  const minInput = form.querySelector("input[name='amountMin']");
+  const maxInput = form.querySelector("input[name='amountMax']");
+  form.querySelectorAll("[data-orders-preset]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+      const min = typeof button.dataset.min === "string" ? button.dataset.min : "";
+      const max = typeof button.dataset.max === "string" ? button.dataset.max : "";
+      if (minInput instanceof HTMLInputElement) {
+        minInput.value = min;
+      }
+      if (maxInput instanceof HTMLInputElement) {
+        maxInput.value = max;
+      }
+      if (typeof form.requestSubmit === "function") {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
+  });
+};
+
+const initOrdersTable = (scope) => {
+  const container = scope instanceof Element ? scope : document;
+  const fragment = container.querySelector("[data-orders-table-fragment]");
+  if (!(fragment instanceof HTMLElement) || fragment.dataset.ordersTableInit === "true") {
+    return;
+  }
+  fragment.dataset.ordersTableInit = "true";
+
+  const master = fragment.querySelector("[data-orders-master]");
+  const checkboxes = Array.from(fragment.querySelectorAll("[data-orders-checkbox]")).filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  const toolbar = fragment.querySelector("[data-orders-bulk-toolbar]");
+  const countEl = toolbar && toolbar.querySelector("[data-orders-bulk-count]");
+  const actionButtons = toolbar
+    ? Array.from(toolbar.querySelectorAll("[data-orders-bulk-action]")).filter((el) => el instanceof HTMLButtonElement)
+    : [];
+  const clearButton = toolbar && toolbar.querySelector("[data-orders-bulk-clear]");
+
+  const updateState = () => {
+    const selected = checkboxes.filter((input) => input.checked);
+    const count = selected.length;
+    if (countEl instanceof HTMLElement) {
+      countEl.textContent = String(count);
+    }
+    if (toolbar instanceof HTMLElement) {
+      toolbar.classList.toggle("hidden", count === 0);
+    }
+    actionButtons.forEach((button) => {
+      button.disabled = count === 0;
+    });
+    if (master instanceof HTMLInputElement) {
+      master.checked = count > 0 && count === checkboxes.length;
+      master.indeterminate = count > 0 && count < checkboxes.length;
+    }
+  };
+
+  if (master instanceof HTMLInputElement) {
+    master.addEventListener("change", () => {
+      checkboxes.forEach((input) => {
+        input.checked = master.checked;
+      });
+      updateState();
+    });
+  }
+
+  checkboxes.forEach((input) => {
+    input.addEventListener("change", updateState);
+  });
+
+  if (clearButton instanceof HTMLElement) {
+    clearButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      checkboxes.forEach((input) => {
+        input.checked = false;
+      });
+      if (master instanceof HTMLInputElement) {
+        master.checked = false;
+        master.indeterminate = false;
+      }
+      updateState();
+    });
+  }
+
+  updateState();
+};
+
+const initOrdersInteractions = (scope) => {
+  initOrdersFilter();
+  initOrdersTable(scope);
+};
+
+const PROMOTION_CONDITION_SOURCE_ATTR = "data-promotion-condition-source";
+const PROMOTION_CONDITION_KEY_ATTR = "data-promotion-condition-key";
+const PROMOTION_CONDITION_VALUE_ATTR = "data-promotion-condition-value";
+const PROMOTION_HIDE_MISSING_ATTR = "data-promotion-hide-missing";
+const PROMOTION_CONDITION_DISCOUNT = "discount-type";
+const PROMOTION_CONDITION_SHIPPING_OPTION = "shipping-option";
+const PROMOTION_TYPE_SHIPPING = "shipping";
+
+const togglePromotionConditionTarget = (element, show) => {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+  if (show) {
+    element.classList.remove("hidden");
+    element.removeAttribute("hidden");
+    element.setAttribute("aria-hidden", "false");
+  } else {
+    element.classList.add("hidden");
+    element.setAttribute("hidden", "true");
+    element.setAttribute("aria-hidden", "true");
+  }
+  element.querySelectorAll("input, select, textarea").forEach((control) => {
+    if (
+      !(control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+    if (show) {
+      if (control.dataset.promotionDisabled === "true") {
+        control.disabled = false;
+        delete control.dataset.promotionDisabled;
+      }
+      return;
+    }
+    if (!control.disabled) {
+      control.dataset.promotionDisabled = "true";
+      control.disabled = true;
+    }
+  });
+};
+
+const readPromotionSourceValue = (form, element) => {
+  if (!(element instanceof HTMLElement)) {
+    return "";
+  }
+  if (element instanceof HTMLInputElement) {
+    if (element.type === "radio") {
+      const group = form.querySelectorAll(`input[name='${element.name}']`);
+      for (const radio of group) {
+        if (radio instanceof HTMLInputElement && radio.checked) {
+          return radio.value ?? "";
+        }
+      }
+      return "";
+    }
+    if (element.type === "checkbox") {
+      return element.checked ? element.value ?? "on" : "";
+    }
+    return element.value ?? "";
+  }
+  if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+    return element.value ?? "";
+  }
+  return element.getAttribute("value") || "";
+};
+
+const applyPromotionConditions = (form, state) => {
+  const targets = form.querySelectorAll(`[${PROMOTION_CONDITION_KEY_ATTR}]`);
+  targets.forEach((target) => {
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const key = target.getAttribute(PROMOTION_CONDITION_KEY_ATTR) || "";
+    if (key === "") {
+      return;
+    }
+
+    const rawValues = target.getAttribute(PROMOTION_CONDITION_VALUE_ATTR) || "";
+    const values = rawValues
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value !== "");
+    const current = (state[key] || "").trim();
+
+    let matches = values.length === 0 ? true : values.includes(current);
+
+    if (matches && target.getAttribute(PROMOTION_HIDE_MISSING_ATTR) === "true" && current === "") {
+      matches = false;
+    }
+
+    if (matches && key === PROMOTION_CONDITION_SHIPPING_OPTION) {
+      const discountType = (state[PROMOTION_CONDITION_DISCOUNT] || "").trim();
+      matches = discountType === PROMOTION_TYPE_SHIPPING;
+    }
+
+    togglePromotionConditionTarget(target, matches);
+  });
+};
+
+const initPromotionForm = (form) => {
+  if (!(form instanceof HTMLFormElement)) {
+    return;
+  }
+  if (form.dataset.promotionsFormInit === "true") {
+    return;
+  }
+  form.dataset.promotionsFormInit = "true";
+
+  const state = {};
+  const sources = Array.from(form.querySelectorAll(`[${PROMOTION_CONDITION_SOURCE_ATTR}]`));
+
+  const updateState = () => {
+    sources.forEach((element) => {
+      if (!(element instanceof HTMLElement)) {
+        return;
+      }
+      const key = element.getAttribute(PROMOTION_CONDITION_SOURCE_ATTR) || "";
+      if (key === "") {
+        return;
+      }
+      state[key] = readPromotionSourceValue(form, element);
+    });
+    applyPromotionConditions(form, state);
+  };
+
+  sources.forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const key = element.getAttribute(PROMOTION_CONDITION_SOURCE_ATTR) || "";
+    if (key === "") {
+      return;
+    }
+    const handler = () => {
+      state[key] = readPromotionSourceValue(form, element);
+      applyPromotionConditions(form, state);
+    };
+    element.addEventListener("change", handler);
+    if (element instanceof HTMLInputElement && element.type !== "radio") {
+      element.addEventListener("input", handler);
+    }
+  });
+
+  updateState();
+};
+
+const initPromotionForms = (scope) => {
+  const root = scope instanceof Element ? scope : document;
+  root.querySelectorAll("[data-promotion-form]").forEach((form) => initPromotionForm(form));
+};
+
+const updatePromotionSelectedInputs = (promotionID) => {
+  const value = typeof promotionID === "string" ? promotionID : "";
+  document.querySelectorAll("[data-promotions-selected]").forEach((input) => {
+    if (input instanceof HTMLInputElement) {
+      input.value = value;
+    }
+  });
+};
+
+const refreshPromotionTable = (promotionID) => {
+  if (typeof window.htmx === "undefined") {
+    return;
+  }
+  const table = document.getElementById("promotions-table");
+  if (!(table instanceof HTMLElement)) {
+    return;
+  }
+  const base = table.getAttribute("hx-get") || "";
+  if (base === "") {
+    window.htmx.trigger(table, "refresh");
+    return;
+  }
+  const url = new URL(base, window.location.origin);
+  if (promotionID && promotionID.trim() !== "") {
+    url.searchParams.set("selected", promotionID.trim());
+  } else {
+    url.searchParams.delete("selected");
+  }
+  const requestURL = `${url.pathname}${url.search}`;
+  window.htmx.ajax("GET", requestURL, { target: "#promotions-table", swap: "outerHTML" });
+};
+
+const refreshPromotionDrawer = (promotionID) => {
+  if (typeof window.htmx === "undefined") {
+    return;
+  }
+  const container = document.querySelector("[data-promotions-drawer-container]");
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+  const endpoint = container.getAttribute("data-promotions-drawer-endpoint") || "";
+  if (endpoint === "" || !promotionID || promotionID.trim() === "") {
+    return;
+  }
+  const url = new URL(endpoint, window.location.origin);
+  url.searchParams.set("promotionID", promotionID.trim());
+  window.htmx.ajax("GET", url.toString(), { target: "#promotions-drawer", swap: "innerHTML" });
+};
+
+const initPromotionEvents = (() => {
+  let bound = false;
+  return () => {
+    if (bound) {
+      return;
+    }
+    bound = true;
+    document.body.addEventListener("promotions:select", (event) => {
+      const detail = event instanceof CustomEvent ? event.detail || {} : {};
+      const promotionID = typeof detail.id === "string" ? detail.id.trim() : "";
+      updatePromotionSelectedInputs(promotionID);
+      refreshPromotionTable(promotionID);
+      refreshPromotionDrawer(promotionID);
+    });
+  };
+})();
+
+const initPromotionsTable = (scope) => {
+  const container = scope instanceof Element ? scope : document;
+  const fragment = container.querySelector("[data-promotions-table-fragment]");
+  if (!(fragment instanceof HTMLElement) || fragment.dataset.promotionsTableInit === "true") {
+    return;
+  }
+  fragment.dataset.promotionsTableInit = "true";
+
+  const master = fragment.querySelector("[data-promotions-master]");
+  const checkboxes = Array.from(fragment.querySelectorAll("[data-promotions-checkbox]")).filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  const root = fragment.closest("[data-promotions-root]") || fragment.parentElement;
+  const toolbar = root ? root.querySelector("[data-promotions-bulk-toolbar]") : null;
+  if (!(toolbar instanceof HTMLElement)) {
+    return;
+  }
+
+  const countEl = toolbar.querySelector("[data-bulk-count]");
+  const messageEl = toolbar.querySelector("[data-bulk-message]");
+  const totalEl = toolbar.querySelector("[data-bulk-total]");
+  const actionButtons = Array.from(toolbar.querySelectorAll("[data-promotions-bulk-action]")).filter(
+    (el) => el instanceof HTMLButtonElement,
+  );
+  const clearButton = toolbar.querySelector("[data-promotions-clear-selection]");
+  const initialCount = Number.parseInt(toolbar.getAttribute("data-initial-count") || "0", 10) || 0;
+
+  const updateState = () => {
+    const selected = checkboxes.filter((input) => input.checked);
+    const count = selected.length;
+    if (toolbar instanceof HTMLElement) {
+      toolbar.dataset.selectedCount = String(count);
+      toolbar.dataset.promotionsSelectedCount = String(count);
+      toolbar.style.display = count > 0 ? "" : "none";
+    }
+    if (countEl instanceof HTMLElement) {
+      countEl.textContent = String(count);
+    }
+    if (messageEl instanceof HTMLElement) {
+      const totalText = totalEl instanceof HTMLElement ? totalEl.textContent?.trim() ?? "" : "";
+      messageEl.textContent = count > 0 ? `${count} 件選択中` : totalText || "選択中のプロモーションはありません";
+    }
+    actionButtons.forEach((button) => {
+      button.disabled = count === 0;
+    });
+    if (master instanceof HTMLInputElement) {
+      master.checked = count > 0 && count === checkboxes.length;
+      master.indeterminate = count > 0 && count < checkboxes.length;
+    }
+  };
+
+  if (master instanceof HTMLInputElement) {
+    master.addEventListener("change", () => {
+      checkboxes.forEach((input) => {
+        input.checked = master.checked;
+      });
+      updateState();
+    });
+  }
+
+  checkboxes.forEach((input) => {
+    input.addEventListener("change", updateState);
+  });
+
+  if (clearButton instanceof HTMLElement) {
+    clearButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      checkboxes.forEach((input) => {
+        input.checked = false;
+      });
+      if (master instanceof HTMLInputElement) {
+        master.checked = false;
+        master.indeterminate = false;
+      }
+      updateState();
+    });
+  }
+
+  if (initialCount > 0) {
+    const limited = checkboxes.slice(0, initialCount);
+    limited.forEach((input) => {
+      input.checked = true;
+    });
+  }
+
+  updateState();
+};
+
+const initPromotionsModule = (scope) => {
+	initPromotionsTable(scope);
+	initPromotionForms(scope);
+	initPromotionEvents();
+};
+
+// Expose a hook for future htmx/alpine wiring without blocking initial scaffold.
+window.hankoAdmin = window.hankoAdmin || {
+  init() {
+    const modal = createModalController();
+    const modalRoot = () => modal.root;
+    const sidebarRoot = () => document.getElementById("mobile-sidebar");
+    const tabletSidebarRoot = () => document.querySelector("[data-tablet-sidebar]");
+    const tabletSidebarStorageKey = "hanko-admin:tablet-sidebar-expanded";
+    const readTabletSidebarPreference = () => {
+      try {
+        return window.localStorage.getItem(tabletSidebarStorageKey) === "1";
+      } catch (error) {
+        return false;
+      }
+    };
+    const writeTabletSidebarPreference = (expanded) => {
+      try {
+        window.localStorage.setItem(tabletSidebarStorageKey, expanded ? "1" : "0");
+      } catch (error) {
+        // ignore persistence failures
+      }
+    };
+    const setTabletSidebarExpanded = (expanded, persist) => {
+      if (persist === undefined) {
+        persist = true;
+      }
+      const sidebar = tabletSidebarRoot();
+      if (!sidebar) {
+        return;
+      }
+      sidebar.classList.toggle("is-expanded", expanded);
+      document.querySelectorAll("[data-tablet-sidebar-toggle]").forEach((el) => {
+        el.setAttribute("aria-pressed", expanded ? "true" : "false");
+        el.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+      if (persist) {
+        writeTabletSidebarPreference(expanded);
+      }
+    };
+    const toggleTabletSidebar = () => {
+      const sidebar = tabletSidebarRoot();
+      if (!sidebar) {
+        return;
+      }
+      const nextState = !sidebar.classList.contains("is-expanded");
+      setTabletSidebarExpanded(nextState);
+    };
+
+    const setSidebarState = (open) => {
+      const sidebar = sidebarRoot();
+      if (!sidebar) {
+        return;
+      }
+      if (open) {
+        sidebar.classList.remove("hidden");
+        sidebar.classList.add("flex");
+        sidebar.setAttribute("aria-hidden", "false");
+        if (document.body) {
+          document.body.classList.add("overflow-hidden");
+        }
+      } else {
+        sidebar.classList.add("hidden");
+        sidebar.classList.remove("flex");
+        sidebar.setAttribute("aria-hidden", "true");
+        if (document.body) {
+          document.body.classList.remove("overflow-hidden");
+        }
+      }
+      document.querySelectorAll("[data-sidebar-toggle]").forEach((el) => {
+        el.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    };
+
+    const closeSidebar = () => setSidebarState(false);
+    const openSidebar = () => setSidebarState(true);
+    setTabletSidebarExpanded(readTabletSidebarPreference(), false);
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) {
+        return;
+      }
+      const sidebarToggle = target.closest("[data-sidebar-toggle]");
+      if (sidebarToggle) {
+        event.preventDefault();
+        openSidebar();
+        return;
+      }
+      const sidebarDismiss = target.closest("[data-sidebar-dismiss]");
+      if (sidebarDismiss) {
+        event.preventDefault();
+        closeSidebar();
+        return;
+      }
+      const tabletSidebarToggle = target.closest("[data-tablet-sidebar-toggle]");
+      if (tabletSidebarToggle) {
+        event.preventDefault();
+        toggleTabletSidebar();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== KEY_ESCAPE) {
+        return;
+      }
+      if (modal.isOpen()) {
+        return;
+      }
+      const sidebar = sidebarRoot();
+      const isSidebarOpen = sidebar && !sidebar.classList.contains("hidden");
+      if (isSidebarOpen) {
+        event.preventDefault();
+        closeSidebar();
+      }
+    });
+
+    initSearchShortcut(modalRoot);
+    initShortcutOverlay();
+    initNotificationsBadge();
+    initWorkloadBadges();
+    initNotificationsSelection();
+    initGuidesModule();
+    initShipmentsModule();
+    initAuditLogsModule();
+    initProductionKanban();
+    initDashboardRefresh();
+    initHXTriggerHandlers();
+    const toast = initToastStack();
+    initHTMXToastBridge(toast);
+    initUserMenu();
+    initGlobalSearchInteractions();
+    initOrdersInteractions(document);
+    initPromotionsModule(document);
+    initAssetUploads(document);
+
+    if (window.htmx) {
+      document.body.addEventListener("htmx:afterSwap", (event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+        initOrdersInteractions(event.target);
+        initPromotionsModule(event.target);
+        initGuidesModule();
+        initShipmentsModule();
+        initAuditLogsModule();
+        initProductionKanban();
+        initAssetUploads(event.target);
+      });
+    }
+
+    window.hankoAdmin.modal = modal;
+    window.hankoAdmin.toast = toast;
+    window.hankoAdmin.toggleTabletSidebar = toggleTabletSidebar;
+    window.hankoAdmin.setTabletSidebarExpanded = setTabletSidebarExpanded;
+  },
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  window.hankoAdmin.init();
+});

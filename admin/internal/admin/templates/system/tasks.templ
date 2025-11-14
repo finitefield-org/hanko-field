@@ -1,0 +1,611 @@
+package system
+
+import (
+    "fmt"
+
+    "finitefield.org/hanko-admin/internal/admin/templates/helpers"
+    "finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ TasksPage(data TasksPageData) {
+    @layouts.Base(data.Title, data.Breadcrumbs, tasksPageBody(data))
+}
+
+templ tasksPageBody(data TasksPageData) {
+    <div
+        class="space-y-6"
+        data-system-tasks-root
+        hx-ext="sse"
+        sse-connect={ data.StreamEndpoint }
+    >
+        <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="space-y-2">
+                    <h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+                    <p class="text-sm text-slate-600">{ data.Description }</p>
+                    if data.GeneratedLabel != "" {
+                        <p class="text-xs text-slate-400">{ data.GeneratedLabel }</p>
+                    }
+                </div>
+                if data.Scheduler.Label != "" {
+                    <div class="flex flex-col items-start gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm shadow-sm">
+                        <span class={ helpers.BadgeClass(data.Scheduler.Tone) }>{ data.Scheduler.Label }</span>
+                        if data.Scheduler.Message != "" {
+                            <p class="text-xs text-slate-500">{ data.Scheduler.Message }</p>
+                        }
+                        <div class="flex items-center gap-3 text-xs text-slate-400">
+                            if data.Scheduler.Latency != "" {
+                                <span>{ data.Scheduler.Latency }</span>
+                            }
+                            if data.Scheduler.CheckedAt != "" {
+                                <span>{ data.Scheduler.CheckedAt }</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            if len(data.Alerts) > 0 {
+                <div class="mt-6 space-y-3">
+                    @tasksAlerts(data.Alerts)
+                </div>
+            }
+
+            <div class="mt-6 border-t border-slate-200 pt-5">
+                @tasksFilterToolbar(data)
+            </div>
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <section class="space-y-4">
+                <div
+                    id="system-tasks-table"
+                    class="space-y-4"
+                    data-system-tasks-table
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                    hx-trigger="sse:refresh, every 120s, refresh"
+                    hx-get={ helpers.BuildURL(data.Table.FragmentPath, data.Table.RawQuery) }
+                >
+                    @TasksTable(data.Table)
+                </div>
+            </section>
+            <aside>
+                <div class="sticky top-20 space-y-4">
+                    @tasksHistoryCard(data.History)
+                    <div id="system-task-drawer" data-system-task-drawer>
+                        @TasksDrawer(data.Drawer)
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+}
+
+templ tasksAlerts(alerts []TaskAlertView) {
+    for _, alert := range alerts {
+        <div class="rounded-xl border border-slate-200 bg-amber-50 px-4 py-3 shadow-sm">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-slate-900">{ alert.Title }</p>
+                    <p class="text-sm text-slate-600">{ alert.Message }</p>
+                </div>
+                if alert.Action.Label != "" && alert.Action.URL != "" {
+                    <a
+                        href={ alert.Action.URL }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class={ helpers.ButtonClass("secondary", "sm", false, false) }
+                    >
+                        if alert.Action.Icon != "" {
+                            <span aria-hidden="true" class="mr-1">{ alert.Action.Icon }</span>
+                        }
+                        { alert.Action.Label }
+                    </a>
+                }
+            </div>
+        </div>
+    }
+}
+
+templ tasksFilterToolbar(data TasksPageData) {
+    <form
+        id="system-tasks-filter"
+        class="flex flex-col gap-5"
+        method="get"
+        hx-get={ helpers.BuildURL(data.TableEndpoint, data.Query.RawQuery) }
+        hx-target="#system-tasks-table"
+        hx-swap="outerHTML"
+        hx-push-url="true"
+    >
+        <input type="hidden" name="selected" value={ data.Query.SelectedID } />
+        <input type="hidden" name="limit" value={ data.Query.Limit } />
+
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">タイプ</p>
+                <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ジョブタイプ">
+                    for _, option := range data.Filters.TypeOptions {
+                        <label class={ tasksToggleClass(option.Active, option.Tone) }>
+                            <input type="radio" name="type" value={ option.Value } class="sr-only" checked?={ option.Active } />
+                            <span class="inline-flex items-center gap-1 text-sm">
+                                if option.Icon != "" {
+                                    <span aria-hidden="true">{ option.Icon }</span>
+                                }
+                                { option.Label }
+                                if option.Count > 0 {
+                                    <span class="text-xs text-slate-400">({ option.Count })</span>
+                                }
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</p>
+                <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ステータス">
+                    for _, option := range data.Filters.StateOptions {
+                        <label class={ tasksToggleClass(option.Active, option.Tone) }>
+                            <input type="radio" name="state" value={ option.Value } class="sr-only" checked?={ option.Active } />
+                            <span class="inline-flex items-center gap-1 text-sm">
+                                { option.Label }
+                                if option.Count > 0 {
+                                    <span class="text-xs text-slate-400">({ option.Count })</span>
+                                }
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-host">ホスト</label>
+                    <select
+                        id="system-tasks-host"
+                        name="host"
+                        class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                    >
+                        for _, option := range data.Filters.HostOptions {
+                            <option value={ option.Value } selected?={ option.Active }>
+                                if option.Count > 0 {
+                                    { fmt.Sprintf("%s (%d)", option.Label, option.Count) }
+                                } else {
+                                    { option.Label }
+                                }
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-window">次回実行</label>
+                    <select
+                        id="system-tasks-window"
+                        name="window"
+                        class="w-48 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                    >
+                        for _, option := range data.Filters.WindowOptions {
+                            <option value={ option.Value } selected?={ option.Active }>
+                                if option.Count > 0 {
+                                    { fmt.Sprintf("%s (%d)", option.Label, option.Count) }
+                                } else {
+                                    { option.Label }
+                                }
+                            </option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-search">検索</label>
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <input
+                            id="system-tasks-search"
+                            type="search"
+                            name="q"
+                            value={ data.Query.Search }
+                            placeholder="タスク名・ホスト・タグ"
+                            class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                        />
+                        <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+                    </div>
+                    <button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+                    <button type="reset" class={ helpers.ButtonClass("secondary", "sm", false, false) } data-system-tasks-reset>クリア</button>
+                </div>
+            </div>
+        </div>
+    </form>
+}
+
+templ TasksTable(data TasksTableData) {
+    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        if data.Error != "" {
+            <div class="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ data.Error }</div>
+        }
+        if len(data.Items) == 0 {
+            <div class="px-6 py-10 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
+            return
+        }
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th scope="col" class="px-4 py-3 text-left">ジョブ</th>
+                        <th scope="col" class="px-4 py-3 text-left">スケジュール / ホスト</th>
+                        <th scope="col" class="px-4 py-3 text-left">ステータス</th>
+                        <th scope="col" class="px-4 py-3 text-left">直近実行</th>
+                        <th scope="col" class="px-4 py-3 text-left">次回実行</th>
+                        <th scope="col" class="px-4 py-3 text-left">成功率</th>
+                        <th scope="col" class="px-4 py-3 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100"
+                    data-raw-query={ data.RawQuery }
+                >
+                    for _, row := range data.Items {
+                        <tr
+                            class={ tasksRowClass(data.SelectedID == row.ID) }
+                            data-selected?={ data.SelectedID == row.ID }
+                            hx-push-url={ helpers.BuildURL(joinBase(helpers.BasePath(ctx), "/system/tasks"), helpers.SetRawQuery(data.RawQuery, "selected", row.ID)) }
+                            if row.Attributes != nil {
+                                { row.Attributes... }
+                            }
+                        >
+                            <td class="px-4 py-4 align-top">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-semibold text-slate-900">{ row.Name }</p>
+                                        <span class={ helpers.BadgeClass(row.TypeTone) }>{ row.TypeLabel }</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500">{ row.Description }</p>
+                                    if len(row.Tags) > 0 {
+                                        <div class="flex flex-wrap gap-1">
+                                            for _, tag := range row.Tags {
+                                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{ tag }</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">
+                                <div>{ row.Schedule }</div>
+                                <div class="text-xs text-slate-400">{ row.Host }</div>
+                            </td>
+                            <td class="px-4 py-4 align-top">
+                                <span class={ helpers.BadgeClass(row.StatusTone) }>{ row.StatusLabel }</span>
+                            </td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">
+                                <div>{ row.LastRunRelative }</div>
+                                <div class="text-xs text-slate-400">{ row.DurationLabel }</div>
+                            </td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">
+                                <div>{ row.NextRunRelative }</div>
+                                <div class="text-xs text-slate-400">{ row.NextRunTooltip }</div>
+                            </td>
+                            <td class="px-4 py-4 align-top text-sm text-slate-600">{ row.SuccessRate }</td>
+                            <td class="px-4 py-4 align-top text-right">
+                                <div class="flex flex-wrap justify-end gap-2">
+                                    for _, action := range row.Actions {
+                                        <button
+                                            type="button"
+                                            class={ helpers.ButtonClass("secondary", "xs", false, false) }
+                                            hx-post={ action.URL }
+                                            hx-target="closest tr"
+                                            hx-swap="none"
+                                            hx-confirm?={ action.Confirm != "" }
+                                            hx-confirm={ action.Confirm }
+                                            disabled?={ action.Disabled }
+                                            title={ action.Tooltip }
+                                        >
+                                            if action.Icon != "" {
+                                                <span aria-hidden="true" class="mr-1">{ action.Icon }</span>
+                                            }
+                                            { action.Label }
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+templ TasksDrawer(data TasksDrawerData) {
+    if data.Error != "" {
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700 shadow-sm">{ data.Error }</div>
+        return
+    }
+    if data.Empty {
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-8 text-sm text-slate-500 shadow-sm">
+            タスクを選択すると詳細が表示されます。
+        </div>
+        return
+    }
+    <div class="space-y-6 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <div class="space-y-2">
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-semibold text-slate-900">{ data.Job.Name }</h2>
+                <span class={ helpers.BadgeClass(data.Job.StateTone) }>{ data.Job.StateLabel }</span>
+            </div>
+            <p class="text-sm text-slate-600">{ data.Job.Description }</p>
+            <div class="flex flex-wrap gap-2 text-xs text-slate-400">
+                <span>{ data.Job.Schedule }</span>
+                <span>•</span>
+                <span>{ data.Job.Host }</span>
+                if data.Job.Queue != "" {
+                    <span>•</span>
+                    <span>{ data.Job.Queue }</span>
+                }
+            </div>
+            if len(data.Job.Tags) > 0 {
+                <div class="flex flex-wrap gap-1">
+                    for _, tag := range data.Job.Tags {
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{ tag }</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <dl class="grid grid-cols-2 gap-3 text-sm text-slate-600">
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">平均実行時間</dt>
+                <dd>{ data.Job.AverageDuration }</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">成功率</dt>
+                <dd>{ data.Job.SuccessRate }</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">直近実行</dt>
+                <dd>{ data.Job.LastRunRelative } ({ data.Job.LastRunStatusLabel })</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">次回実行</dt>
+                <dd>{ data.Job.NextRunRelative } ({ data.Job.NextRunExact })</dd>
+            </div>
+        </dl>
+
+        if len(data.Actions) > 0 {
+            <div class="flex flex-wrap gap-2">
+                for _, action := range data.Actions {
+                    <button
+                        type="button"
+                        class={ helpers.ButtonClass(pickActionVariant(action.Dangerous), "sm", false, false) }
+                        hx-post={ action.URL }
+                        hx-swap="none"
+                        hx-confirm?={ action.Confirm != "" }
+                        hx-confirm={ action.Confirm }
+                        disabled?={ action.Disabled }
+                        title={ action.Tooltip }
+                    >
+                        if action.Icon != "" {
+                            <span aria-hidden="true" class="mr-1">{ action.Icon }</span>
+                        }
+                        { action.Label }
+                    </button>
+                }
+            </div>
+        }
+
+        if len(data.Parameters) > 0 {
+            <section class="space-y-2">
+                <h3 class="text-sm font-semibold text-slate-900">実行パラメータ</h3>
+                <dl class="space-y-1 text-xs text-slate-600">
+                    for _, item := range data.Parameters {
+                        <div class="flex justify-between gap-3">
+                            <dt class="font-medium text-slate-500">{ item.Key }</dt>
+                            <dd class="text-right text-slate-700">{ item.Value }</dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+
+        if len(data.Environment) > 0 {
+            <section class="space-y-2">
+                <h3 class="text-sm font-semibold text-slate-900">環境変数</h3>
+                <dl class="space-y-1 text-xs text-slate-600">
+                    for _, item := range data.Environment {
+                        <div class="flex justify-between gap-3">
+                            <dt class="font-medium text-slate-500">{ item.Key }</dt>
+                            <dd class="text-right text-slate-700">{ item.Value }</dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+
+        if len(data.Runs) > 0 {
+            <section class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-900">直近の実行</h3>
+                    if data.Job.LogsURL != "" {
+                        <a href={ data.Job.LogsURL } target="_blank" rel="noopener noreferrer" class="text-xs text-brand-600">ログを開く</a>
+                    }
+                </div>
+                <ul class="space-y-2">
+                    for _, run := range data.Runs {
+                        <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class={ helpers.BadgeClass(run.StatusTone) }>{ run.StatusLabel }</span>
+                                        <p class="text-sm font-medium text-slate-900">{ run.Relative }</p>
+                                    </div>
+                                    <p class="text-xs text-slate-500">{ run.StartedAt } / { run.Duration }</p>
+                                    <p class="text-xs text-slate-500">{ run.Trigger }</p>
+                                    if run.Error != "" {
+                                        <p class="text-xs text-rose-600">{ run.Error }</p>
+                                    }
+                                </div>
+                                <div class="flex flex-col items-end gap-1 text-xs text-slate-400">
+                                    if run.Worker != "" {
+                                        <span>{ run.Worker }</span>
+                                    }
+                                    if run.Region != "" {
+                                        <span>{ run.Region }</span>
+                                    }
+                                    if run.Attempt != "" {
+                                        <span>{ run.Attempt }</span>
+                                    }
+                                    if run.LogsURL != "" {
+                                        <a href={ run.LogsURL } target="_blank" rel="noopener noreferrer" class="text-brand-600">ログ</a>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        if len(data.Insights) > 0 {
+            <section class="space-y-2">
+                <h3 class="text-sm font-semibold text-slate-900">インサイト</h3>
+                <ul class="space-y-2">
+                    for _, insight := range data.Insights {
+                        <li class={ tasksInsightClass(insight.Tone) }>
+                            <div class="flex items-start gap-2">
+                                if insight.Icon != "" {
+                                    <span aria-hidden="true">{ insight.Icon }</span>
+                                }
+                                <div>
+                                    <p class="text-sm font-medium">{ insight.Title }</p>
+                                    <p class="text-xs">{ insight.Description }</p>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <div class="flex flex-wrap gap-3 text-xs text-brand-600">
+            if data.Job.RunbookURL != "" {
+                <a href={ data.Job.RunbookURL } target="_blank" rel="noopener noreferrer">Runbook を開く</a>
+            }
+            if data.Job.LogsURL != "" {
+                <a href={ data.Job.LogsURL } target="_blank" rel="noopener noreferrer">Cloud Run ログ</a>
+            }
+        </div>
+    </div>
+}
+
+templ tasksHistoryCard(history TaskHistoryChart) {
+    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-900">実行履歴</h3>
+            <span class="text-xs text-slate-400">継続時間 (秒)</span>
+        </div>
+        if history.Empty {
+            <p class="mt-4 text-xs text-slate-500">履歴データがありません。</p>
+            return
+        }
+        <div class="mt-3 h-32">
+            <svg viewBox="0 0 100 100" role="presentation" aria-hidden="true" class="h-full w-full text-brand-500">
+                <polyline
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    points={ taskHistoryPoints(history) }
+                />
+            </svg>
+        </div>
+        <ul class="mt-3 grid gap-2 text-xs text-slate-500">
+            for _, point := range history.Points {
+                <li class="flex items-center justify-between">
+                    <span>{ point.Label }</span>
+                    <span>{ fmt.Sprintf("%.0f秒", point.DurationSeconds) }</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+func tasksToggleClass(active bool, tone string) string {
+    base := []string{"inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition"}
+    if active {
+        base = append(base, tasksToneClass(tone, true))
+    } else {
+        base = append(base, tasksToneClass(tone, false))
+    }
+    return helpers.ClassList(base...)
+}
+
+func tasksToneClass(tone string, active bool) string {
+    switch tone {
+    case "danger":
+        if active {
+            return "border-rose-500 bg-rose-50 text-rose-700"
+        }
+        return "border-slate-200 text-rose-500 hover:border-rose-200 hover:text-rose-600"
+    case "warning":
+        if active {
+            return "border-amber-500 bg-amber-50 text-amber-700"
+        }
+        return "border-slate-200 text-amber-500 hover:border-amber-200 hover:text-amber-600"
+    case "success":
+        if active {
+            return "border-emerald-500 bg-emerald-50 text-emerald-700"
+        }
+        return "border-slate-200 text-emerald-500 hover:border-emerald-200 hover:text-emerald-600"
+    case "info":
+        if active {
+            return "border-sky-500 bg-sky-50 text-sky-700"
+        }
+        return "border-slate-200 text-sky-500 hover:border-sky-200 hover:text-sky-600"
+    case "secondary":
+        if active {
+            return "border-slate-400 bg-slate-100 text-slate-700"
+        }
+        return "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+    default:
+        if active {
+            return "border-brand-500 bg-brand-50 text-brand-700"
+        }
+        return "border-slate-200 text-slate-500 hover:border-brand-200 hover:text-brand-600"
+    }
+}
+
+func tasksRowClass(selected bool) string {
+    base := []string{"transition hover:bg-slate-50"}
+    if selected {
+        base = append(base, "bg-brand-50")
+    } else {
+        base = append(base, "bg-white")
+    }
+    return helpers.ClassList(base...)
+}
+
+func tasksInsightClass(tone string) string {
+    switch tone {
+    case "success":
+        return "rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700"
+    case "warning":
+        return "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700"
+    case "danger":
+        return "rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700"
+    case "info":
+        return "rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sky-700"
+    default:
+        return "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600"
+    }
+}
+
+func pickActionVariant(dangerous bool) string {
+    if dangerous {
+        return "danger"
+    }
+    return "primary"
+}

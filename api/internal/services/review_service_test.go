@@ -495,6 +495,85 @@ func (m *memoryReviewRepo) ListByUser(_ context.Context, userID string, pager do
 	}, nil
 }
 
+func (m *memoryReviewRepo) List(_ context.Context, filter repositories.ReviewListFilter) (domain.CursorPage[domain.Review], error) {
+	var results []domain.Review
+
+	statusFilter := make(map[domain.ReviewStatus]struct{}, len(filter.Status))
+	for _, status := range filter.Status {
+		statusFilter[status] = struct{}{}
+	}
+
+	for _, review := range m.reviews {
+		if filter.ReviewID != "" && review.ID != filter.ReviewID {
+			continue
+		}
+		if len(statusFilter) > 0 {
+			if _, ok := statusFilter[review.Status]; !ok {
+				continue
+			}
+		}
+		if filter.OrderRef != "" && review.OrderRef != filter.OrderRef {
+			continue
+		}
+		if filter.UserRef != "" && review.UserRef != filter.UserRef {
+			continue
+		}
+		results = append(results, copyReview(review))
+	}
+
+	slices.SortFunc(results, func(a, b domain.Review) int {
+		switch {
+		case a.CreatedAt.After(b.CreatedAt):
+			return -1
+		case a.CreatedAt.Before(b.CreatedAt):
+			return 1
+		default:
+			return strings.Compare(a.ID, b.ID)
+		}
+	})
+
+	start := 0
+	if token, err := strconv.Atoi(filter.Pagination.PageToken); err == nil {
+		switch {
+		case token < 0:
+			start = 0
+		case token >= len(results):
+			start = len(results)
+		default:
+			start = token
+		}
+	}
+
+	pageSize := filter.Pagination.PageSize
+	remaining := len(results) - start
+	if remaining < 0 {
+		remaining = 0
+	}
+	if pageSize <= 0 || pageSize > remaining {
+		pageSize = remaining
+	}
+
+	end := start + pageSize
+	if end > len(results) {
+		end = len(results)
+	}
+
+	var pageItems []domain.Review
+	if start < len(results) {
+		pageItems = results[start:end]
+	}
+
+	nextToken := ""
+	if end < len(results) {
+		nextToken = strconv.Itoa(end)
+	}
+
+	return domain.CursorPage[domain.Review]{
+		Items:         pageItems,
+		NextPageToken: nextToken,
+	}, nil
+}
+
 func (m *memoryReviewRepo) UpdateStatus(_ context.Context, reviewID string, status domain.ReviewStatus, update repositories.ReviewModerationUpdate) (domain.Review, error) {
 	review, ok := m.reviews[reviewID]
 	if !ok {

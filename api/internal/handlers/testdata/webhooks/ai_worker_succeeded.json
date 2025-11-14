@@ -1,0 +1,34 @@
+{
+  "jobId": "job_ai_contract",
+  "suggestionId": "ai_sug_contract",
+  "designId": "des_contract_01",
+  "method": "headline-variations",
+  "model": "gpt-4.1",
+  "status": "succeeded",
+  "outputs": {
+    "variants": [
+      {
+        "text": "Make your mark with modern hanko designs",
+        "score": 0.91
+      },
+      {
+        "text": "Traditional seal, contemporary finish",
+        "score": 0.87
+      }
+    ]
+  },
+  "metadata": {
+    "locale": "ja-JP",
+    "requestedBy": "user_contract"
+  },
+  "suggestion": {
+    "status": "ready",
+    "method": "headline-variations",
+    "createdAt": "2024-11-03T10:00:00Z",
+    "updatedAt": "2024-11-03T10:02:00Z",
+    "payload": {
+      "snapshotRef": "designs/des_contract_01/snapshots/base",
+      "renderRef": "gs://assets/hanko/designs/des_contract_01/latest.png"
+    }
+  }
+}

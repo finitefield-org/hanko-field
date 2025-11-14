@@ -1,0 +1,17 @@
+{
+  "orderId": "ord_ship_contract",
+  "shipmentId": "shp_contract_dhl",
+  "trackingNumber": "JD014600009999",
+  "timestamp": "2024-11-03T09:15:00Z",
+  "status": "Delivered",
+  "description": "Delivered to recipient",
+  "location": "Osaka JP",
+  "details": {
+    "eventCode": "DELIVERED",
+    "signedBy": "K. Yamada"
+  },
+  "raw": {
+    "pieces": 1,
+    "service": "Express Worldwide"
+  }
+}

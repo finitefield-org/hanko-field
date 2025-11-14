@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,6 +65,45 @@ func (s *stubProductionRepo) List(ctx context.Context, orderID string) ([]domain
 	return nil, nil
 }
 
+type stubProductionQueueRepo struct {
+	getFn func(context.Context, string) (domain.ProductionQueue, error)
+	wipFn func(context.Context, string) (domain.ProductionQueueWIPSummary, error)
+}
+
+func (s *stubProductionQueueRepo) List(context.Context, repositories.ProductionQueueListFilter) (domain.CursorPage[domain.ProductionQueue], error) {
+	return domain.CursorPage[domain.ProductionQueue]{}, nil
+}
+
+func (s *stubProductionQueueRepo) Get(ctx context.Context, queueID string) (domain.ProductionQueue, error) {
+	if s.getFn != nil {
+		return s.getFn(ctx, queueID)
+	}
+	return domain.ProductionQueue{}, errors.New("not implemented")
+}
+
+func (s *stubProductionQueueRepo) Insert(_ context.Context, queue domain.ProductionQueue) (domain.ProductionQueue, error) {
+	return domain.ProductionQueue{}, errors.New("not implemented")
+}
+
+func (s *stubProductionQueueRepo) Update(_ context.Context, queue domain.ProductionQueue, _ time.Time) (domain.ProductionQueue, error) {
+	return domain.ProductionQueue{}, errors.New("not implemented")
+}
+
+func (s *stubProductionQueueRepo) Delete(context.Context, string) error {
+	return errors.New("not implemented")
+}
+
+func (s *stubProductionQueueRepo) HasActiveAssignments(context.Context, string) (bool, error) {
+	return false, nil
+}
+
+func (s *stubProductionQueueRepo) QueueWIPSummary(ctx context.Context, queueID string) (domain.ProductionQueueWIPSummary, error) {
+	if s.wipFn != nil {
+		return s.wipFn(ctx, queueID)
+	}
+	return domain.ProductionQueueWIPSummary{}, nil
+}
+
 type stubCounterRepo struct {
 	nextFn func(context.Context, string, int64) (int64, error)
 }
@@ -81,6 +121,7 @@ func (s *stubCounterRepo) Configure(context.Context, string, repositories.Counte
 
 type stubInventoryService struct {
 	commitFn  func(context.Context, InventoryCommitCommand) (InventoryReservation, error)
+	getFn     func(context.Context, string) (InventoryReservation, error)
 	releaseFn func(context.Context, InventoryReleaseCommand) (InventoryReservation, error)
 }
 
@@ -95,6 +136,13 @@ func (s *stubInventoryService) CommitReservation(ctx context.Context, cmd Invent
 	return InventoryReservation{}, nil
 }
 
+func (s *stubInventoryService) GetReservation(ctx context.Context, reservationID string) (InventoryReservation, error) {
+	if s.getFn != nil {
+		return s.getFn(ctx, reservationID)
+	}
+	return InventoryReservation{}, errors.New("not implemented")
+}
+
 func (s *stubInventoryService) ReleaseReservation(ctx context.Context, cmd InventoryReleaseCommand) (InventoryReservation, error) {
 	if s.releaseFn != nil {
 		return s.releaseFn(ctx, cmd)
@@ -102,8 +150,20 @@ func (s *stubInventoryService) ReleaseReservation(ctx context.Context, cmd Inven
 	return InventoryReservation{}, nil
 }
 
+func (s *stubInventoryService) ReleaseExpiredReservations(context.Context, ReleaseExpiredReservationsCommand) (InventoryReleaseExpiredResult, error) {
+	return InventoryReleaseExpiredResult{}, errors.New("not implemented")
+}
+
 func (s *stubInventoryService) ListLowStock(context.Context, InventoryLowStockFilter) (domain.CursorPage[InventorySnapshot], error) {
 	return domain.CursorPage[InventorySnapshot]{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) ConfigureSafetyStock(context.Context, ConfigureSafetyStockCommand) (InventoryStock, error) {
+	return InventoryStock{}, errors.New("not implemented")
+}
+
+func (s *stubInventoryService) RecordSafetyNotification(context.Context, RecordSafetyNotificationCommand) (InventoryStock, error) {
+	return InventoryStock{}, errors.New("not implemented")
 }
 
 type captureOrderEvents struct {
@@ -384,6 +444,428 @@ func TestOrderServiceAppendProductionEventAdvancesStatus(t *testing.T) {
 	}
 	if len(events.events) == 0 {
 		t.Fatalf("expected production event publication")
+	}
+}
+
+func TestOrderServiceAssignOrderToQueue_Success(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 5, 1, 9, 0, 0, 0, time.UTC)
+
+	var updated domain.Order
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:          "ord_assign",
+				OrderNumber: "HF-2024-000050",
+				Status:      domain.OrderStatusPaid,
+				UpdatedAt:   now.Add(-15 * time.Minute),
+			}, nil
+		},
+		updateFn: func(_ context.Context, order domain.Order) error {
+			updated = order
+			return nil
+		},
+	}
+
+	counter := 0
+	queueRepo := &stubProductionQueueRepo{
+		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
+			if queueID != "pqu_main" {
+				t.Fatalf("expected queue id pqu_main, got %s", queueID)
+			}
+			return domain.ProductionQueue{
+				ID:       "pqu_main",
+				Name:     "Main Line",
+				Capacity: 5,
+				Status:   domain.ProductionQueueStatusActive,
+			}, nil
+		},
+		wipFn: func(_ context.Context, queueID string) (domain.ProductionQueueWIPSummary, error) {
+			if queueID != "pqu_main" {
+				t.Fatalf("expected summary for pqu_main, got %s", queueID)
+			}
+			counter++
+			total := 3
+			if counter > 1 {
+				total = 4
+			}
+			return domain.ProductionQueueWIPSummary{
+				QueueID: queueID,
+				Total:   total,
+			}, nil
+		},
+	}
+
+	var insertedEvent domain.OrderProductionEvent
+	productionRepo := &stubProductionRepo{
+		insertFn: func(_ context.Context, event domain.OrderProductionEvent) (domain.OrderProductionEvent, error) {
+			insertedEvent = event
+			return event, nil
+		},
+	}
+
+	events := &captureOrderEvents{}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:      orderRepo,
+		Production:  productionRepo,
+		Queues:      queueRepo,
+		Counters:    &stubCounterRepo{},
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "ASSIGN01" },
+		Events:      events,
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	result, err := svc.AssignOrderToQueue(ctx, AssignOrderToQueueCommand{
+		OrderID: "ord_assign",
+		QueueID: "pqu_main",
+		ActorID: "staff-77",
+	})
+	if err != nil {
+		t.Fatalf("assign order to queue: %v", err)
+	}
+
+	if updated.Production.QueueRef == nil || *updated.Production.QueueRef != "pqu_main" {
+		t.Fatalf("expected production queue set to pqu_main, got %#v", updated.Production.QueueRef)
+	}
+	if updated.Status != domain.OrderStatusInProduction {
+		t.Fatalf("expected status in_production, got %s", updated.Status)
+	}
+	if updated.Production.AssignedAt == nil || !updated.Production.AssignedAt.Equal(now) {
+		t.Fatalf("expected assigned_at %v, got %#v", now, updated.Production.AssignedAt)
+	}
+	if updated.Production.AssignedBy == nil || *updated.Production.AssignedBy != "staff-77" {
+		t.Fatalf("expected assigned_by staff-77, got %#v", updated.Production.AssignedBy)
+	}
+	if updated.Production.LastEventType != "queued" {
+		t.Fatalf("expected last event type queued, got %q", updated.Production.LastEventType)
+	}
+	if insertedEvent.ID != "ope_ASSIGN01" {
+		t.Fatalf("expected event id prefixed, got %s", insertedEvent.ID)
+	}
+	if insertedEvent.Type != "queued" {
+		t.Fatalf("expected event type queued, got %s", insertedEvent.Type)
+	}
+	if insertedEvent.OperatorRef == nil || *insertedEvent.OperatorRef != "staff-77" {
+		t.Fatalf("expected operator ref staff-77, got %#v", insertedEvent.OperatorRef)
+	}
+	if insertedEvent.Note == "" || !strings.Contains(insertedEvent.Note, "pqu_main") {
+		t.Fatalf("expected note to reference queue, got %q", insertedEvent.Note)
+	}
+	if len(events.events) != 2 {
+		t.Fatalf("expected 2 events published, got %d", len(events.events))
+	}
+	if events.events[0].Type != orderEventStatusChanged {
+		t.Fatalf("expected first event status changed, got %s", events.events[0].Type)
+	}
+	if events.events[1].Type != orderEventProductionAppended {
+		t.Fatalf("expected second event production appended, got %s", events.events[1].Type)
+	}
+	if result.Production.QueueRef == nil || *result.Production.QueueRef != "pqu_main" {
+		t.Fatalf("expected result queue pqu_main, got %+v", result.Production.QueueRef)
+	}
+}
+
+func TestOrderServiceAssignOrderToQueue_CapacityReached(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 5, 1, 11, 0, 0, 0, time.UTC)
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:        "ord_cap",
+				Status:    domain.OrderStatusPaid,
+				UpdatedAt: now.Add(-time.Hour),
+			}, nil
+		},
+		updateFn: func(context.Context, domain.Order) error {
+			t.Fatalf("update should not be called when capacity reached")
+			return nil
+		},
+	}
+
+	queueRepo := &stubProductionQueueRepo{
+		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
+			return domain.ProductionQueue{
+				ID:       queueID,
+				Status:   domain.ProductionQueueStatusActive,
+				Capacity: 2,
+			}, nil
+		},
+		wipFn: func(_ context.Context, _ string) (domain.ProductionQueueWIPSummary, error) {
+			return domain.ProductionQueueWIPSummary{
+				Total: 2,
+			}, nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:      orderRepo,
+		Production:  &stubProductionRepo{},
+		Queues:      queueRepo,
+		Counters:    &stubCounterRepo{},
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "IGNORE" },
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	_, err = svc.AssignOrderToQueue(ctx, AssignOrderToQueueCommand{
+		OrderID: "ord_cap",
+		QueueID: "pqu_limit",
+		ActorID: "staff-1",
+	})
+	if !errors.Is(err, ErrOrderQueueCapacityReached) {
+		t.Fatalf("expected ErrOrderQueueCapacityReached, got %v", err)
+	}
+}
+
+func TestOrderServiceAssignOrderToQueue_CapacityExceededAfterRecheck(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 5, 1, 12, 0, 0, 0, time.UTC)
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:        "ord_race",
+				Status:    domain.OrderStatusPaid,
+				UpdatedAt: now.Add(-10 * time.Minute),
+			}, nil
+		},
+	}
+
+	call := 0
+	queueRepo := &stubProductionQueueRepo{
+		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
+			return domain.ProductionQueue{
+				ID:       queueID,
+				Status:   domain.ProductionQueueStatusActive,
+				Capacity: 4,
+			}, nil
+		},
+		wipFn: func(_ context.Context, _ string) (domain.ProductionQueueWIPSummary, error) {
+			call++
+			total := 3
+			if call > 1 {
+				total = 5
+			}
+			return domain.ProductionQueueWIPSummary{Total: total}, nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:      orderRepo,
+		Production:  &stubProductionRepo{},
+		Queues:      queueRepo,
+		Counters:    &stubCounterRepo{},
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "IGNORE" },
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	_, err = svc.AssignOrderToQueue(ctx, AssignOrderToQueueCommand{
+		OrderID: "ord_race",
+		QueueID: "pqu_race",
+		ActorID: "staff-2",
+	})
+	if !errors.Is(err, ErrOrderQueueCapacityReached) {
+		t.Fatalf("expected ErrOrderQueueCapacityReached, got %v", err)
+	}
+}
+
+func TestOrderServiceAssignOrderToQueue_ConcurrencyConflict(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2024, 5, 1, 13, 0, 0, 0, time.UTC)
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:        "ord_conflict",
+				Status:    domain.OrderStatusPaid,
+				UpdatedAt: now,
+			}, nil
+		},
+	}
+
+	queueRepo := &stubProductionQueueRepo{
+		getFn: func(_ context.Context, queueID string) (domain.ProductionQueue, error) {
+			return domain.ProductionQueue{
+				ID:       queueID,
+				Status:   domain.ProductionQueueStatusActive,
+				Capacity: 10,
+			}, nil
+		},
+		wipFn: func(_ context.Context, _ string) (domain.ProductionQueueWIPSummary, error) {
+			return domain.ProductionQueueWIPSummary{}, nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:      orderRepo,
+		Production:  &stubProductionRepo{},
+		Queues:      queueRepo,
+		Counters:    &stubCounterRepo{},
+		UnitOfWork:  &stubUnitOfWork{},
+		Clock:       func() time.Time { return now },
+		IDGenerator: func() string { return "IGNORE" },
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	ifUnmodified := now.Add(-2 * time.Minute)
+
+	_, err = svc.AssignOrderToQueue(ctx, AssignOrderToQueueCommand{
+		OrderID:           "ord_conflict",
+		QueueID:           "pqu_any",
+		ActorID:           "staff-2",
+		IfUnmodifiedSince: &ifUnmodified,
+	})
+	if !errors.Is(err, ErrOrderConflict) {
+		t.Fatalf("expected ErrOrderConflict, got %v", err)
+	}
+}
+
+func TestOrderServiceRequestInvoice(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 3, 10, 8, 15, 0, 0, time.UTC)
+	var updated domain.Order
+	events := &captureOrderEvents{}
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:     "ord_123",
+				UserID: "user-1",
+				Status: domain.OrderStatusPaid,
+				Metadata: map[string]any{
+					"other": "value",
+				},
+			}, nil
+		},
+		updateFn: func(_ context.Context, order domain.Order) error {
+			updated = order
+			return nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:     orderRepo,
+		Counters:   &stubCounterRepo{},
+		UnitOfWork: &stubUnitOfWork{},
+		Clock: func() time.Time {
+			return now
+		},
+		Events: events,
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	result, err := svc.RequestInvoice(ctx, RequestInvoiceCommand{
+		OrderID: "ord_123",
+		ActorID: "user-1",
+		Notes:   " please send ",
+	})
+	if err != nil {
+		t.Fatalf("request invoice: %v", err)
+	}
+
+	if updated.ID != "ord_123" {
+		t.Fatalf("expected updated order ord_123, got %s", updated.ID)
+	}
+	requestedAt, ok := updated.Metadata["invoiceRequestedAt"]
+	if !ok || stringify(requestedAt) == "" {
+		t.Fatalf("expected invoiceRequestedAt set, got %#v", updated.Metadata)
+	}
+	if updated.Metadata["invoiceRequestedBy"] != "user-1" {
+		t.Fatalf("expected invoiceRequestedBy user-1, got %#v", updated.Metadata["invoiceRequestedBy"])
+	}
+	if updated.Metadata["invoiceNotes"] != "please send" {
+		t.Fatalf("expected invoiceNotes trimmed, got %#v", updated.Metadata["invoiceNotes"])
+	}
+	if result.Metadata["invoiceRequestedAt"] == "" {
+		t.Fatalf("expected result metadata populated")
+	}
+	if result.UpdatedAt != now {
+		t.Fatalf("expected updated time %s, got %s", now, result.UpdatedAt)
+	}
+
+	if len(events.events) != 1 {
+		t.Fatalf("expected one event, got %d", len(events.events))
+	}
+	event := events.events[0]
+	if event.Type != orderEventInvoiceRequested {
+		t.Fatalf("expected event type %s, got %s", orderEventInvoiceRequested, event.Type)
+	}
+	if event.OrderID != "ord_123" {
+		t.Fatalf("expected event order ord_123, got %s", event.OrderID)
+	}
+	if event.ActorID != "user-1" {
+		t.Fatalf("expected actor user-1, got %s", event.ActorID)
+	}
+	if event.OccurredAt != now {
+		t.Fatalf("expected occurred at %s, got %s", now, event.OccurredAt)
+	}
+}
+
+func TestOrderServiceRequestInvoiceDuplicate(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 4, 1, 7, 0, 0, 0, time.UTC)
+	events := &captureOrderEvents{}
+
+	orderRepo := &stubOrderRepo{
+		findFn: func(context.Context, string) (domain.Order, error) {
+			return domain.Order{
+				ID:     "ord_456",
+				UserID: "user-1",
+				Status: domain.OrderStatusPaid,
+				Metadata: map[string]any{
+					"invoiceRequestedAt": now.Add(-time.Hour).Format(time.RFC3339Nano),
+				},
+			}, nil
+		},
+		updateFn: func(_ context.Context, order domain.Order) error {
+			t.Fatalf("update should not be called on duplicate, got %#v", order)
+			return nil
+		},
+	}
+
+	svc, err := NewOrderService(OrderServiceDeps{
+		Orders:     orderRepo,
+		Counters:   &stubCounterRepo{},
+		UnitOfWork: &stubUnitOfWork{},
+		Clock: func() time.Time {
+			return now
+		},
+		Events: events,
+	})
+	if err != nil {
+		t.Fatalf("new order service: %v", err)
+	}
+
+	result, err := svc.RequestInvoice(ctx, RequestInvoiceCommand{
+		OrderID: "ord_456",
+		ActorID: "user-1",
+	})
+	if !errors.Is(err, ErrOrderInvoiceAlreadyRequested) {
+		t.Fatalf("expected ErrOrderInvoiceAlreadyRequested, got %v", err)
+	}
+
+	if len(events.events) != 0 {
+		t.Fatalf("expected no events published, got %d", len(events.events))
+	}
+	if stringify(result.Metadata["invoiceRequestedAt"]) == "" {
+		t.Fatalf("expected metadata retained")
 	}
 }
 

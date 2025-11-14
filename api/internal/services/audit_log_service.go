@@ -109,6 +109,7 @@ func (s *auditLogService) buildEntry(record AuditLogRecord) domain.AuditLogEntry
 	}
 
 	entry := domain.AuditLogEntry{
+		ID:        strings.TrimSpace(record.ID),
 		Actor:     sanitizeActor(record.Actor),
 		ActorType: normalizeActorType(record.ActorType, record.Actor),
 		Action:    sanitizeAction(record.Action),

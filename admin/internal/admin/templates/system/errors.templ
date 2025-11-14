@@ -1,0 +1,652 @@
+package system
+
+import (
+	"fmt"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-system-errors-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+					<p class="text-xs text-slate-400">{ data.GeneratedLabel }</p>
+				</div>
+				if len(data.SummaryCards) > 0 {
+					<div class="grid w-full gap-3 sm:grid-cols-2 xl:w-auto xl:grid-cols-4">
+						for _, card := range data.SummaryCards {
+							@summaryCard(card)
+						}
+					</div>
+				}
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-5">
+				@filterToolbar(data)
+			</div>
+		</section>
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="space-y-4">
+				<div
+					id="system-errors-table"
+					class="space-y-4"
+					data-system-errors-table
+					hx-target="this"
+					hx-get={ helpers.BuildURL(data.Table.FragmentPath, data.Table.RawQuery) }
+					hx-swap="outerHTML"
+					hx-trigger="refresh from:body"
+				>
+					@Table(data.Table)
+				</div>
+			</section>
+			<aside class="hidden xl:block">
+				<div
+					class="sticky top-20"
+					id="system-error-drawer"
+					data-system-errors-drawer
+				>
+					@Drawer(data.Drawer)
+				</div>
+			</aside>
+		</div>
+
+		<section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+			@InlineAlert(data.RunbookAlert)
+			if len(data.RunbookSections) > 0 {
+				<div class="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50">
+					for _, section := range data.RunbookSections {
+						@RunbookAccordion(section)
+					}
+				</div>
+			}
+		</section>
+	</div>
+}
+
+templ summaryCard(card SummaryCard) {
+	<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
+		<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+			if card.Icon != "" {
+				<span aria-hidden="true">{ card.Icon }</span>
+			}
+			{ card.Label }
+		</div>
+		<div class="text-xl font-semibold text-slate-900">{ card.Value }</div>
+		if card.SubLabel != "" {
+			<p class="text-xs text-slate-500">{ card.SubLabel }</p>
+		}
+		if card.Delta != "" {
+			<p class={ summaryDeltaClass(card.DeltaTone) }>{ card.Delta }</p>
+		}
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<form
+		id="system-errors-filter"
+		data-system-errors-filter
+		class="flex flex-col gap-6"
+		method="get"
+		hx-get={ data.TableEndpoint }
+		hx-target="#system-errors-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+	>
+		<input type="hidden" name="selected" value={ data.Query.SelectedID } />
+		<input type="hidden" name="limit" value={ data.Query.Limit } />
+
+		<div class="grid gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_280px]">
+			<div class="space-y-2">
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ソース</p>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ソース">
+					for _, option := range data.Filters.SourceOptions {
+						<label class={ sourceOptionClass(option.Active, option.Tone) }>
+							<input type="radio" name="source" value={ option.Value } class="sr-only" checked?={ option.Active } />
+							<span class="inline-flex items-center gap-1 text-sm">
+								if option.Icon != "" {
+									<span aria-hidden="true">{ option.Icon }</span>
+								}
+								{ option.Label }
+								if option.Count > 0 {
+									<span class="text-xs text-slate-400">({ option.Count })</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">重大度</p>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="重大度">
+					for _, option := range data.Filters.SeverityOptions {
+						<label class={ severityOptionClass(option.Active, option.Tone) }>
+							<input type="radio" name="severity" value={ option.Value } class="sr-only" checked?={ option.Active } />
+							<span class="inline-flex items-center gap-1 text-sm">
+								{ option.Label }
+								if option.Count > 0 {
+									<span class="text-xs text-slate-400">({ option.Count })</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</p>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ステータス">
+					for _, option := range data.Filters.StatusOptions {
+						<label class={ statusOptionClass(option.Active, option.Tone) }>
+							<input type="radio" name="status" value={ option.Value } class="sr-only" checked?={ option.Active } />
+							<span class="inline-flex items-center gap-1 text-sm">
+								{ option.Label }
+								if option.Count > 0 {
+									<span class="text-xs text-slate-400">({ option.Count })</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-service">サービス</label>
+				<select
+					id="system-error-service"
+					name="service"
+					class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range data.Filters.ServiceOptions {
+						<option value={ option.Value } selected?={ option.Active }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+		</div>
+
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+			<div class="flex flex-wrap items-center gap-3">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-search">検索</label>
+				<div class="relative">
+					<input
+						id="system-error-search"
+						name="q"
+						type="search"
+						value={ data.Query.Search }
+						placeholder="ジョブ名・サービス・メッセージで検索"
+						class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+				</div>
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-start">期間</label>
+				<input
+					id="system-error-start"
+					name="start"
+					type="date"
+					value={ data.Query.StartDate }
+					class="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+				<span class="text-slate-400">〜</span>
+				<input
+					id="system-error-end"
+					name="end"
+					type="date"
+					value={ data.Query.EndDate }
+					class="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+			</div>
+			<div class="flex items-center gap-3">
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+				<a href={ joinBase(helpers.BasePath(ctx), "/system/errors") } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			</div>
+		</div>
+
+		<div id="system-errors-loading" class="htmx-indicator text-xs text-slate-400">読み込み中…</div>
+	</form>
+}
+
+templ Table(data TableData) {
+	<section class="rounded-2xl border border-slate-200 bg-white shadow-sm" data-system-errors-table-root>
+		<header class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+			<div>
+				<h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">失敗ログ</h2>
+				<p class="text-xs text-slate-400">全 { data.Total } 件</p>
+			</div>
+			<div class="text-xs text-slate-400">{ data.GeneratedAt }</div>
+		</header>
+
+		if data.Error != "" {
+			<div class="border-b border-rose-100 bg-rose-50 px-6 py-4 text-sm text-rose-600">
+				{ data.Error }
+			</div>
+		}
+
+		if len(data.Items) == 0 {
+			<div class="px-6 py-12 text-center text-sm text-slate-500">{ data.EmptyMessage }</div>
+			return
+		}
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full divide-y divide-slate-200">
+				<thead class="bg-slate-50">
+					<tr>
+						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">ジョブ / サービス</th>
+						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">エラー</th>
+						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">最終試行</th>
+						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">リトライ</th>
+						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">アクション</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					for _, row := range data.Items {
+						<tr
+							class={ tableRowClass(row.ID == data.SelectedID) }
+							data-selected?={ row.ID == data.SelectedID }
+							if row.Attributes != nil {
+								{ row.Attributes... }
+							}
+						>
+							<td class="px-6 py-4 align-top">
+								<div class="flex flex-col gap-1">
+									<div class="flex items-center gap-2">
+										<span class={ helpers.BadgeClass(row.SourceTone) }>{ row.SourceLabel }</span>
+										<span class={ helpers.BadgeClass(row.SeverityTone) }>{ row.SeverityLabel }</span>
+										<span class={ helpers.BadgeClass(row.StatusTone) }>{ row.StatusLabel }</span>
+									</div>
+									<p class="text-sm font-semibold text-slate-900">{ row.Name }</p>
+									<p class="text-xs text-slate-500">{ row.ServiceLabel }</p>
+									if row.TargetLabel != "" {
+										if row.TargetURL != "" {
+											<a href={ row.TargetURL } class="text-xs text-brand-600 hover:text-brand-500">関連リンク</a>
+										} else {
+											<span class="text-xs text-slate-400">{ row.TargetLabel }</span>
+										}
+									}
+								</div>
+							</td>
+							<td class="px-6 py-4 align-top">
+								<p class="text-sm text-slate-700">{ row.Message }</p>
+								if row.RunbookURL != "" {
+									<a href={ row.RunbookURL } class="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-500">
+										📘 Runbook
+									</a>
+								}
+							</td>
+							<td class="px-6 py-4 align-top">
+								<p class="text-sm text-slate-700" title={ row.LastSeenTooltip }>{ row.LastSeenRelative }</p>
+							</td>
+							<td class="px-6 py-4 align-top">
+								<span class="text-sm text-slate-700" title={ row.RetryTooltip }>{ row.RetryLabel }</span>
+							</td>
+							<td class="px-6 py-4 align-top">
+								if len(row.Actions) > 0 {
+									<div class="flex flex-wrap gap-2">
+										for _, action := range row.Actions {
+											<button
+												type="button"
+												class={ tableActionClass(action.Variant) }
+												hx-post={ action.URL }
+												hx-target="this"
+												hx-swap="none"
+												hx-include="#system-errors-filter"
+												data-tooltip={ action.Tooltip }
+												disabled?={ action.Disabled }
+											>
+												if action.Icon != "" {
+													<span aria-hidden="true">{ action.Icon }</span>
+												}
+												<span>{ action.Label }</span>
+											</button>
+										}
+									</div>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}
+
+templ Drawer(data DrawerData) {
+	<section
+		class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+		data-system-errors-drawer
+		if data.ID != "" {
+			hx-get={ joinBase(helpers.BasePath(ctx), fmt.Sprintf("/system/errors/%s/drawer", data.ID)) }
+			hx-trigger="refresh from:body"
+			hx-target="this"
+			hx-swap="innerHTML"
+		}
+	>
+		if data.Error != "" {
+			<div class="space-y-2 text-sm text-rose-600">
+				<p class="text-base font-semibold text-rose-700">詳細を読み込めませんでした</p>
+				<p>{ data.Error }</p>
+			</div>
+			return
+		}
+
+		if data.Empty {
+			<div class="space-y-2 text-sm text-slate-600">
+				<p class="text-base font-semibold text-slate-900">行を選択してください</p>
+				<p>一覧から失敗を選択すると、ここに詳細とリトライ履歴が表示されます。</p>
+			</div>
+			return
+		}
+
+		<div class="space-y-4">
+			<header class="space-y-2">
+				<div class="flex items-center gap-2">
+					<span class={ helpers.BadgeClass(data.SourceTone) }>{ data.SourceLabel }</span>
+					<span class={ helpers.BadgeClass(data.SeverityTone) }>{ data.SeverityLabel }</span>
+					<span class={ helpers.BadgeClass(data.StatusTone) }>{ data.StatusLabel }</span>
+				</div>
+				<h2 class="text-lg font-semibold text-slate-900">{ data.Title }</h2>
+				<p class="text-sm text-slate-500">{ data.Subtitle }</p>
+				<p class="text-sm text-slate-600">{ data.Message }</p>
+				if data.Code != "" {
+					<p class="text-xs text-slate-400">コード: { data.Code }</p>
+				}
+			</header>
+
+			<dl class="space-y-2 text-sm text-slate-600">
+				if data.RetrySummary != "" {
+					<div class="flex items-center justify-between gap-2">
+						<dt class="font-medium text-slate-500">リトライ状況</dt>
+						<dd>{ data.RetrySummary }</dd>
+					</div>
+				}
+				if data.LastAttempt != "" {
+					<div class="flex items-center justify-between gap-2">
+						<dt class="font-medium text-slate-500">最終試行</dt>
+						<dd title={ data.LastAttemptExact }>{ data.LastAttempt }</dd>
+					</div>
+				}
+				if data.NextRetry != "" {
+					<div class="flex items-center justify-between gap-2">
+						<dt class="font-medium text-slate-500">次回リトライ予定</dt>
+						<dd>{ data.NextRetry }</dd>
+					</div>
+				}
+				if data.Target.Label != "" {
+					<div class="flex items-center justify-between gap-2">
+						<dt class="font-medium text-slate-500">{ data.Target.Kind }</dt>
+						<dd>
+							if data.Target.URL != "" {
+								<a href={ data.Target.URL } class="text-brand-600 hover:text-brand-500">{ data.Target.Label }</a>
+							} else {
+								<span>{ data.Target.Label }</span>
+							}
+						</dd>
+					</div>
+				}
+				if len(data.Attributes) > 0 {
+					for _, attr := range data.Attributes {
+						<div class="flex items-center justify-between gap-2">
+							<dt class="font-medium text-slate-500">{ attr.Key }</dt>
+							<dd class="text-right">{ attr.Value }</dd>
+						</div>
+					}
+				}
+			</dl>
+
+			if len(data.Links) > 0 {
+				<div class="space-y-2">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">ショートカット</h3>
+					<ul class="space-y-1 text-sm text-brand-600">
+						for _, link := range data.Links {
+							<li>
+								<a href={ link.URL } class="inline-flex items-center gap-1 hover:text-brand-500">
+									if link.Icon != "" {
+										<span aria-hidden="true">{ link.Icon }</span>
+									}
+									<span>{ link.Label }</span>
+								</a>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+
+			if len(data.StackTrace) > 0 {
+				<div class="space-y-2">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">スタックトレース</h3>
+					<pre class="max-h-48 overflow-auto rounded-lg bg-slate-900/90 px-4 py-3 text-xs text-slate-100">
+for _, line := range data.StackTrace {
+{ line }
+{"\n"}
+}
+					</pre>
+				</div>
+			}
+
+			if data.Payload != "" {
+				<div class="space-y-2">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終ペイロード</h3>
+					<pre class="max-h-64 overflow-auto rounded-lg bg-slate-900/90 px-4 py-3 text-xs text-slate-100">{ data.Payload }</pre>
+				</div>
+			}
+
+			if len(data.Headers) > 0 {
+				<div class="space-y-2">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">HTTP ヘッダー</h3>
+					<ul class="space-y-1 text-xs text-slate-600">
+						for _, header := range data.Headers {
+							<li><span class="font-medium text-slate-500">{ header.Key }:</span> { header.Value }</li>
+						}
+					</ul>
+				</div>
+			}
+
+			if len(data.Attempts) > 0 {
+				<div class="space-y-2">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">リトライ履歴</h3>
+					<ul class="space-y-3">
+						for _, attempt := range data.Attempts {
+							<li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+								<div class="flex items-center justify-between gap-2 font-semibold text-slate-700">
+									<span>試行 { attempt.Number }</span>
+									<span title={ attempt.Timestamp }>{ attempt.Relative }</span>
+								</div>
+								<p class="mt-1 text-slate-700">{ attempt.Status }</p>
+								if attempt.Response != "" {
+									<p class="text-slate-500">{ attempt.Response }</p>
+								}
+								if attempt.Duration != "" {
+									<p class="text-slate-400">所要時間 { attempt.Duration }</p>
+								}
+							</li>
+						}
+					</ul>
+				</div>
+			}
+
+			if len(data.RunbookSteps) > 0 {
+				<div class="space-y-3">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Runbook ステップ</h3>
+					<ol class="space-y-3 text-sm text-slate-600">
+						for idx, step := range data.RunbookSteps {
+							<li class="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+								<p class="text-sm font-semibold text-slate-900">{ fmt.Sprintf("%d. %s", idx+1, step.Title) }</p>
+								<p class="mt-1 text-sm text-slate-600">{ step.Description }</p>
+								if len(step.Links) > 0 {
+									<ul class="mt-2 space-y-1 text-xs text-brand-600">
+										for _, link := range step.Links {
+											<li>
+												<a href={ link.URL } class="inline-flex items-center gap-1 hover:text-brand-500">
+													if link.Icon != "" {
+														<span aria-hidden="true">{ link.Icon }</span>
+													}
+													<span>{ link.Label }</span>
+												</a>
+											</li>
+										}
+									</ul>
+								}
+							</li>
+						}
+					</ol>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ InlineAlert(alert Alert) {
+	<div class={ inlineAlertClass(alert.Tone) }>
+		<div class="flex flex-col gap-1">
+			<p class="text-sm font-semibold text-slate-900">
+				if alert.Icon != "" {
+					<span aria-hidden="true">{ alert.Icon }</span>
+				}
+				{ alert.Title }
+			</p>
+			<p class="text-sm text-slate-700">{ alert.Body }</p>
+		</div>
+		if alert.LinkURL != "" {
+			<a href={ alert.LinkURL } class="text-sm font-medium text-brand-600 hover:text-brand-500">{ alert.LinkLabel }</a>
+		}
+	</div>
+}
+
+templ RunbookAccordion(section RunbookSection) {
+	<details class="group [&[open]>.accordion-icon]:rotate-180">
+		<summary class="flex cursor-pointer items-center justify-between gap-3 px-6 py-4 text-left text-sm font-medium text-slate-800 hover:bg-slate-100">
+			<div>
+				<p class="font-semibold text-slate-900">{ section.Title }</p>
+				if section.Summary != "" {
+					<p class="text-xs text-slate-500">{ section.Summary }</p>
+				}
+			</div>
+			<span class="accordion-icon text-lg text-slate-400 transition-transform duration-200">⌄</span>
+		</summary>
+		<div class="space-y-4 border-t border-slate-200 px-6 py-4 text-sm text-slate-600">
+			for _, step := range section.Steps {
+				<div class="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+					<p class="font-semibold text-slate-900">{ step.Title }</p>
+					<p class="text-sm text-slate-600">{ step.Description }</p>
+					if step.LinkURL != "" {
+						<a href={ step.LinkURL } class="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-500">
+							🔗 { step.LinkLabel }
+						</a>
+					}
+				</div>
+			}
+		</div>
+	</details>
+}
+
+func summaryDeltaClass(tone string) string {
+	switch tone {
+	case "danger":
+		return "text-xs font-medium text-rose-600"
+	case "success":
+		return "text-xs font-medium text-emerald-600"
+	default:
+		return "text-xs font-medium text-slate-500"
+	}
+}
+
+func sourceOptionClass(active bool, tone string) string {
+	base := []string{"inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition"}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-700")
+	} else {
+		base = append(base, "border-slate-200 text-slate-500 hover:border-brand-200 hover:text-brand-600")
+	}
+	return helpers.ClassList(base...)
+}
+
+func severityOptionClass(active bool, tone string) string {
+	base := []string{"inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition"}
+	if active {
+		base = append(base, toneClass(tone, true))
+	} else {
+		base = append(base, toneClass(tone, false))
+	}
+	return helpers.ClassList(base...)
+}
+
+func statusOptionClass(active bool, tone string) string {
+	base := []string{"inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition"}
+	if active {
+		base = append(base, toneClass(tone, true))
+	} else {
+		base = append(base, toneClass(tone, false))
+	}
+	return helpers.ClassList(base...)
+}
+
+func toneClass(tone string, active bool) string {
+	switch tone {
+	case "danger":
+		if active {
+			return "border-rose-500 bg-rose-50 text-rose-700"
+		}
+		return "border-slate-200 text-rose-500 hover:border-rose-200 hover:text-rose-600"
+	case "warning":
+		if active {
+			return "border-amber-500 bg-amber-50 text-amber-700"
+		}
+		return "border-slate-200 text-amber-500 hover:border-amber-200 hover:text-amber-600"
+	case "success":
+		if active {
+			return "border-emerald-500 bg-emerald-50 text-emerald-700"
+		}
+		return "border-slate-200 text-emerald-500 hover:border-emerald-200 hover:text-emerald-600"
+	case "info":
+		if active {
+			return "border-sky-500 bg-sky-50 text-sky-700"
+		}
+		return "border-slate-200 text-sky-500 hover:border-sky-200 hover:text-sky-600"
+	default:
+		if active {
+			return "border-brand-500 bg-brand-50 text-brand-700"
+		}
+		return "border-slate-200 text-slate-500 hover:border-brand-200 hover:text-brand-600"
+	}
+}
+
+func tableRowClass(selected bool) string {
+	base := []string{"cursor-pointer transition hover:bg-slate-50"}
+	if selected {
+		base = append(base, "bg-brand-50")
+	}
+	return helpers.ClassList(base...)
+}
+
+func tableActionClass(variant string) string {
+	switch variant {
+	case "primary":
+		return helpers.ButtonClass("primary", "xs", false, false)
+	case "secondary":
+		return helpers.ButtonClass("secondary", "xs", false, false)
+	default:
+		return helpers.ButtonClass("ghost", "xs", false, false)
+	}
+}
+
+func inlineAlertClass(tone string) string {
+	switch tone {
+	case "info":
+		return "flex flex-col gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 shadow-sm"
+	case "warning":
+		return "flex flex-col gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm"
+	case "danger":
+		return "flex flex-col gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 shadow-sm"
+	default:
+		return "flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm"
+	}
+}

@@ -12,8 +12,15 @@ resource "google_cloud_scheduler_job" "jobs" {
     body        = try(each.value.body, null) == null ? null : base64encode(each.value.body)
 
     oidc_token {
-      service_account_email = try(each.value.oidc_service_account, var.service_account_email)
-      audience              = each.value.uri
+      service_account_email = element(compact([
+        try(trimspace(each.value.oidc_service_account), ""),
+        trimspace(var.service_account_email),
+      ]), 0)
+      audience = element(compact([
+        try(trimspace(each.value.audience), ""),
+        var.default_audience == null ? "" : trimspace(var.default_audience),
+        trimspace(each.value.uri),
+      ]), 0)
     }
   }
 

@@ -110,7 +110,7 @@ func (d *backgroundJobDispatcher) QueueAISuggestion(ctx context.Context, cmd Que
 
 	now := d.now()
 	jobID := ensureJobID(d.newID())
-	suggestionID := ensureSuggestionID(d.newID())
+	suggestionID := ensureSuggestionID(cmd.SuggestionID)
 
 	payload := d.buildJobPayload(cmd, suggestionID, now)
 	if key := strings.TrimSpace(cmd.IdempotencyKey); key != "" {
@@ -250,14 +250,33 @@ func (d *backgroundJobDispatcher) CompleteAISuggestion(ctx context.Context, cmd 
 	if suggestion.UpdatedAt.IsZero() {
 		suggestion.UpdatedAt = now
 	}
+	basePayload := copyMap(job.Payload)
+	if suggestion.Payload == nil {
+		suggestion.Payload = basePayload
+	} else if len(basePayload) > 0 {
+		for k, v := range basePayload {
+			if _, exists := suggestion.Payload[k]; !exists {
+				suggestion.Payload[k] = v
+			}
+		}
+	}
 	if suggestion.Payload == nil {
 		suggestion.Payload = make(map[string]any)
 	}
 	suggestion.Payload = mergePayload(suggestion.Payload, cmd.Outputs, cmd.Metadata)
 	suggestion.Status = ensureSuggestionStatus(suggestion.Status)
 
-	if err := d.suggestions.Insert(ctx, suggestion); err != nil {
-		return CompleteAISuggestionResult{}, err
+	stored, err := d.suggestions.UpdateStatus(ctx, suggestion.DesignID, suggestion.ID, suggestion.Status, copyMap(suggestion.Payload))
+	if err != nil {
+		if isRepoNotFound(err) {
+			if err := d.suggestions.Insert(ctx, suggestion); err != nil {
+				return CompleteAISuggestionResult{}, err
+			}
+		} else {
+			return CompleteAISuggestionResult{}, err
+		}
+	} else {
+		suggestion = stored
 	}
 
 	resultRef := fmt.Sprintf("/designs/%s/aiSuggestions/%s", suggestion.DesignID, suggestion.ID)

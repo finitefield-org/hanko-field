@@ -1,0 +1,240 @@
+package auditlogs
+
+import (
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-auditlogs-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+				</div>
+				<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+					<dl class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">対象期間</dt>
+						<dd class="text-sm font-semibold text-slate-900">{ data.Summary.WindowLabel }</dd>
+						if data.Summary.GeneratedAt != "" {
+							<dd class="text-xs text-slate-400">生成: { data.Summary.GeneratedAt } ({ data.Summary.GeneratedAgo })</dd>
+						}
+					</dl>
+					<dl class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+						<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">集計</dt>
+						<dd class="text-sm font-semibold text-slate-900">{ data.Summary.CountLabel }</dd>
+						<dd class="text-xs text-slate-500">{ data.Summary.ActorsLabel } · { data.Summary.TargetsLabel }</dd>
+					</dl>
+					if data.Summary.RetentionNote != "" {
+						<dl class="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm text-amber-700">
+							<dt class="text-xs font-semibold uppercase tracking-wide">保持ポリシー</dt>
+							<dd class="text-sm font-semibold">{ data.Summary.RetentionNote }</dd>
+							<dd class="text-xs opacity-80">保持期限に近いログはエクスポートで保存できます。</dd>
+						</dl>
+					}
+				</div>
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterToolbar(data)
+			</div>
+		</section>
+
+		if len(data.Alerts) > 0 {
+			<div class="space-y-3">
+				for _, alert := range data.Alerts {
+					<div class={ inlineAlertClass(alert.Tone) }>
+						if alert.Icon != "" {
+							<span aria-hidden="true">{ alert.Icon }</span>
+						}
+						<span>{ alert.Message }</span>
+					</div>
+				}
+			</div>
+		}
+
+		<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<div
+				id="audit-log-table"
+				hx-target="this"
+				hx-swap="outerHTML"
+				data-auditlog-table
+			>
+				@Table(data.Table)
+			</div>
+		</section>
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<form
+		hx-get={ data.TableEndpoint }
+		hx-trigger="change delay:400ms, keyup changed delay:400ms from:#audit-search"
+		hx-target="#audit-log-table"
+		hx-push-url="true"
+		hx-indicator="#audit-log-loading"
+		class="flex flex-col gap-4"
+	>
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+			<div class="flex flex-col gap-2 lg:flex-1">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="audit-search">検索</label>
+				<div class="relative">
+					<input
+						id="audit-search"
+						name="q"
+						type="search"
+						value={ data.Query.Search }
+						placeholder="アクション、ターゲット、メモで検索"
+						class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+				</div>
+			</div>
+			<div class="flex items-center gap-3 lg:justify-end">
+				<a
+					href={ data.ExportURL }
+					class={ exportButtonClass(data.Table.ExportEnabled) }
+					aria-disabled?={ !data.Table.ExportEnabled }
+					tabindex={ exportTabIndex(data.Table.ExportEnabled) }
+				>
+					CSVエクスポート
+				</a>
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+				<a href={ data.ResetURL } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			</div>
+		</div>
+
+		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="audit-actors">実行者</label>
+				<input
+					id="audit-actors"
+					name="actor"
+					list="audit-actor-options"
+					value={ firstValue(data.Query.Actors) }
+					placeholder="スタッフIDまたはメール"
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+				<datalist id="audit-actor-options">
+					for _, option := range data.Filters.ActorOptions {
+						<option value={ option.Value } label={ option.Label } />
+					}
+				</datalist>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="audit-targets">対象リソース</label>
+				<select
+					id="audit-targets"
+					name="target"
+					multiple
+					class="min-h-[120px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				>
+					for _, option := range data.Filters.TargetOptions {
+						<option value={ option.Value } selected?={ option.Selected }>
+							{ option.Label }
+							if option.Count > 0 {
+								( { option.Count } )
+							}
+						</option>
+					}
+				</select>
+				<p class="text-xs text-slate-400">複数選択できます（⌘/Ctrl + クリック）。</p>
+			</div>
+			<div class="flex flex-col gap-2">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">アクション</span>
+				<div class="flex flex-wrap gap-2">
+					for _, option := range data.Filters.ActionOptions {
+						<label class={ actionChipClass(option.Active, option.Tone) }>
+							<input type="checkbox" name="action" value={ option.Value } class="sr-only" checked?={ option.Active } />
+							<span class="inline-flex items-center gap-1 text-xs">
+								{ option.Label }
+								if option.Count > 0 {
+									<span class="text-slate-300">({ option.Count })</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">期間</span>
+				<div class="flex items-center gap-2">
+					<input
+						type="date"
+						name="from"
+						value={ data.Query.From }
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="text-slate-400">〜</span>
+					<input
+						type="date"
+						name="to"
+						value={ data.Query.To }
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+				</div>
+			</div>
+		</div>
+		<span id="audit-log-loading" class="htmx-indicator text-xs text-slate-400">読み込み中…</span>
+	</form>
+}
+
+func inlineAlertClass(tone string) string {
+	base := []string{"flex items-center gap-2 rounded-md border px-4 py-3 text-sm"}
+	switch tone {
+	case "danger":
+		base = append(base, "border-rose-200 bg-rose-50 text-rose-700")
+	case "warning":
+		base = append(base, "border-amber-200 bg-amber-50 text-amber-700")
+	case "success":
+		base = append(base, "border-emerald-200 bg-emerald-50 text-emerald-700")
+	default:
+		base = append(base, "border-slate-200 bg-slate-50 text-slate-600")
+	}
+	return helpers.ClassList(base...)
+}
+
+func actionChipClass(active bool, tone string) string {
+	base := []string{"rounded-full border px-3 py-1 text-xs font-medium transition"}
+	if active {
+		base = append(base, "border-transparent bg-brand-600 text-white shadow-sm")
+	} else {
+		switch tone {
+		case "danger":
+			base = append(base, "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100")
+		case "warning":
+			base = append(base, "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100")
+		case "success":
+			base = append(base, "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100")
+		default:
+			base = append(base, "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100")
+		}
+	}
+	return helpers.ClassList(base...)
+}
+
+func firstValue(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+func exportButtonClass(enabled bool) string {
+	base := helpers.ButtonClass("secondary", "sm", false, false)
+	if enabled {
+		return base
+	}
+	return base + " opacity-60 pointer-events-none"
+}
+
+func exportTabIndex(enabled bool) string {
+	if enabled {
+		return "0"
+	}
+	return "-1"
+}

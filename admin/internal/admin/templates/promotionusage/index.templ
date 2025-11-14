@@ -1,0 +1,317 @@
+package promotionusage
+
+import (
+	"strconv"
+	"strings"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-promotion-usage-root>
+		@sectionHeader(data)
+		if data.Alert != nil {
+			@alertBlock(*data.Alert)
+		}
+		@sectionFilters(data)
+		<div
+			id="promotion-usage-table"
+			hx-target="this"
+			hx-swap="outerHTML"
+			data-promotion-usage-table-root
+		>
+			@Table(data.Table)
+		</div>
+		<div id="promotion-usage-export" class="space-y-3">
+			@ExportStatus(data.ExportStatus)
+		</div>
+	</div>
+}
+
+templ sectionHeader(data PageData) {
+	<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+			<div class="space-y-2">
+				<div class="flex items-center gap-3">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Promotion.Name }</h1>
+					if data.Promotion.Code != "" {
+						<span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">{ data.Promotion.Code }</span>
+					}
+					if data.Promotion.StatusLabel != "" {
+						@components.Badge(data.Promotion.StatusLabel, data.Promotion.StatusTone)
+					}
+				</div>
+				if data.Promotion.PeriodLabel != "" {
+					<p class="text-sm text-slate-600">{ data.Promotion.PeriodLabel }</p>
+				}
+				<p class="text-sm text-slate-600">{ data.Description }</p>
+			</div>
+			if len(data.Metrics) > 0 {
+				<div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
+					for _, metric := range data.Metrics {
+						<div class="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+							<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+								if metric.Icon != "" {
+									<span aria-hidden="true">{ metric.Icon }</span>
+								}
+								{ metric.Label }
+							</div>
+							<div class="mt-1 text-xl font-semibold text-slate-900">{ metric.Value }</div>
+							if metric.SubText != "" {
+								<div class="mt-1 text-xs text-slate-500">{ metric.SubText }</div>
+							}
+						</div>
+					}
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ alertBlock(alert Alert) {
+	<div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm" role="alert">
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex items-start gap-2">
+				<span aria-hidden="true" class="mt-0.5 text-lg">⚠️</span>
+				<p>{ alert.Message }</p>
+			</div>
+			if alert.LinkURL != "" {
+				<a href={ alert.LinkURL } class="text-sm font-semibold text-amber-900 underline decoration-2 underline-offset-2 hover:text-amber-700">
+					{ fallbackLinkLabel(alert.LinkLabel) }
+				</a>
+			}
+		</div>
+	</div>
+}
+
+templ sectionFilters(data PageData) {
+	<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+		<form
+			id="promotion-usage-filter"
+			method="get"
+			class="space-y-6"
+			hx-get={ data.TableEndpoint }
+			hx-target="#promotion-usage-table"
+			hx-swap="outerHTML"
+			hx-push-url="true"
+		>
+			<input type="hidden" name="page" value="1" />
+			<input type="hidden" name="pageSize" value={ strconv.Itoa(max(data.Query.PageSize, 1)) } />
+			if data.Query.SortKey != "" {
+				<input type="hidden" name="sort" value={ data.Query.SortKey } />
+			}
+			if data.Query.SortDirection != "" {
+				<input type="hidden" name="direction" value={ data.Query.SortDirection } />
+			}
+			if data.Query.StartInput != "" {
+				<input type="hidden" name="start" value={ data.Query.StartInput } />
+			}
+			if data.Query.EndInput != "" {
+				<input type="hidden" name="end" value={ data.Query.EndInput } />
+			}
+
+			<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+				<div class="flex items-center gap-2">
+					<label class="inline-flex items-center gap-2 text-sm text-slate-600">
+						<input
+							type="checkbox"
+							name="autoRefresh"
+							value="1"
+							class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+							checked?={ data.Query.AutoRefresh }
+							hx-trigger="change"
+							hx-get={ data.TableEndpoint }
+							hx-target="#promotion-usage-table"
+							hx-swap="outerHTML"
+							hx-include="#promotion-usage-filter"
+						/>
+						<span>{ data.AutoRefreshLabel }</span>
+					</label>
+				</div>
+				@exportToolbar(data)
+			</div>
+
+			<div class="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+				<div class="flex flex-col gap-2">
+					<label for="usage-min" class="text-xs font-semibold uppercase tracking-wide text-slate-500">最低利用回数</label>
+					<input
+						id="usage-min"
+						name="minUses"
+						type="number"
+						min="0"
+						value={ strconv.Itoa(data.Query.MinUses) }
+						placeholder="例) 3"
+						class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+				</div>
+				<div class="flex flex-col gap-2">
+					<label for="usage-timeframe" class="text-xs font-semibold uppercase tracking-wide text-slate-500">期間</label>
+					<select
+						id="usage-timeframe"
+						name="timeframe"
+						class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					>
+						for _, option := range data.Filters.TimeframeOptions {
+							<option value={ option.Key } selected?={ option.Selected }>{ option.Label }</option>
+						}
+					</select>
+				</div>
+				<div class="flex flex-col gap-2">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500">チャネル</label>
+					<div class="flex flex-wrap gap-2">
+						for _, option := range data.Filters.ChannelOptions {
+							<label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-600 shadow-sm hover:border-brand-300">
+								<input
+									type="checkbox"
+									name="channel"
+									value={ option.Value }
+									class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+									checked?={ option.Selected }
+								/>
+								<span>
+									{ option.Label }
+									if option.Count > 0 {
+										<span class="ml-1 text-slate-400">({ option.Count })</span>
+									}
+								</span>
+							</label>
+						}
+					</div>
+				</div>
+				<div class="flex flex-col gap-2">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500">利用チャネル元</label>
+					<div class="flex flex-wrap gap-2">
+						for _, option := range data.Filters.SourceOptions {
+							<label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-600 shadow-sm hover:border-brand-300">
+								<input
+									type="checkbox"
+									name="source"
+									value={ option.Value }
+									class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+									checked?={ option.Selected }
+								/>
+								<span>
+									{ option.Label }
+									if option.Count > 0 {
+										<span class="ml-1 text-slate-400">({ option.Count })</span>
+									}
+								</span>
+							</label>
+						}
+					</div>
+				</div>
+				<div class="flex flex-col gap-2 md:col-span-2 lg:col-span-4">
+					<label class="text-xs font-semibold uppercase tracking-wide text-slate-500">セグメント</label>
+					<div class="flex flex-wrap gap-2">
+						for _, option := range data.Filters.SegmentOptions {
+							<label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-600 shadow-sm hover:border-brand-300">
+								<input
+									type="checkbox"
+									name="segment"
+									value={ option.Value }
+									class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+									checked?={ option.Selected }
+								/>
+								<span>
+									{ option.Label }
+									if option.Count > 0 {
+										<span class="ml-1 text-slate-400">({ option.Count })</span>
+									}
+								</span>
+							</label>
+						}
+					</div>
+				</div>
+			</div>
+
+			<div class="flex items-center justify-end gap-3">
+				<button
+					type="submit"
+					class={ helpers.ButtonClass("primary", "sm", false, false) }
+				>
+					適用
+				</button>
+				<a
+					href={ data.TableEndpoint }
+					class={ helpers.ButtonClass("secondary", "sm", false, false) }
+					hx-get={ data.TableEndpoint }
+					hx-target="#promotion-usage-table"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+				>
+					リセット
+				</a>
+			</div>
+		</form>
+	</section>
+}
+
+templ exportToolbar(data PageData) {
+	<form
+		method="post"
+		hx-post={ data.ExportEndpoint }
+		hx-target="#promotion-usage-export"
+		hx-swap="outerHTML"
+		class="flex items-center gap-2"
+	>
+		<input type="hidden" name="promotionName" value={ data.Promotion.Name } />
+		<input type="hidden" name="promotionCode" value={ data.Promotion.Code } />
+		if data.Query.MinUses > 0 {
+			<input type="hidden" name="minUses" value={ strconv.Itoa(data.Query.MinUses) } />
+		}
+		if data.Query.Timeframe != "" {
+			<input type="hidden" name="timeframe" value={ data.Query.Timeframe } />
+		}
+		for _, ch := range data.Query.Channels {
+			<input type="hidden" name="channel" value={ ch } />
+		}
+		for _, src := range data.Query.Sources {
+			<input type="hidden" name="source" value={ src } />
+		}
+		for _, seg := range data.Query.Segments {
+			<input type="hidden" name="segment" value={ seg } />
+		}
+		if data.Query.SortKey != "" {
+			<input type="hidden" name="sort" value={ data.Query.SortKey } />
+		}
+		if data.Query.SortDirection != "" {
+			<input type="hidden" name="direction" value={ data.Query.SortDirection } />
+		}
+		if data.Query.PageSize > 0 {
+			<input type="hidden" name="pageSize" value={ strconv.Itoa(data.Query.PageSize) } />
+		}
+		if data.Query.StartInput != "" {
+			<input type="hidden" name="start" value={ data.Query.StartInput } />
+		}
+		if data.Query.EndInput != "" {
+			<input type="hidden" name="end" value={ data.Query.EndInput } />
+		}
+		<button
+			type="submit"
+			class={ helpers.ButtonClass("secondary", "sm", false, false) }
+			data-loading-text="エクスポート中..."
+		>
+			CSVエクスポート
+		</button>
+	</form>
+}
+
+func fallbackLinkLabel(value string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	return "詳細を確認"
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}

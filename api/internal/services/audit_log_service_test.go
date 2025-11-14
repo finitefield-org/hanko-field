@@ -56,6 +56,7 @@ func TestAuditLogServiceRecordSanitizesAndHashes(t *testing.T) {
 	}
 
 	record := AuditLogRecord{
+		ID:                    " log-123 ",
 		Actor:                 "  /users/user-1  ",
 		Action:                " user.profile.update ",
 		ActorType:             "",
@@ -81,6 +82,9 @@ func TestAuditLogServiceRecordSanitizesAndHashes(t *testing.T) {
 	}
 	entry := repo.entries[0]
 
+	if entry.ID != "log-123" {
+		t.Fatalf("expected trimmed id, got %q", entry.ID)
+	}
 	if entry.Actor != "/users/user-1" {
 		t.Fatalf("unexpected actor: %q", entry.Actor)
 	}

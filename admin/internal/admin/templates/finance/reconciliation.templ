@@ -1,0 +1,271 @@
+package finance
+
+import (
+    "finitefield.org/hanko-admin/internal/admin/templates/components"
+    "finitefield.org/hanko-admin/internal/admin/templates/helpers"
+    "finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ ReconciliationPage(data ReconciliationPageData) {
+    @layouts.Base(data.Title, data.Breadcrumbs, ReconciliationRoot(data))
+}
+
+templ ReconciliationRoot(data ReconciliationPageData) {
+    <div id={ ReconciliationRootID } class="space-y-6">
+        @ReconciliationHeader(data)
+        @ReconciliationDashboard(data)
+    </div>
+    if data.Snackbar != nil {
+        <div hx-swap-oob="true" id="toast-stack">
+            @components.Toast(components.ToastProps{
+                Tone:     data.Snackbar.Tone,
+                Message:  data.Snackbar.Message,
+                AutoHide: true,
+            })
+        </div>
+    }
+}
+
+templ ReconciliationHeader(data ReconciliationPageData) {
+    <section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-2">
+                <h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+                <p class="text-sm text-slate-600">{ data.Description }</p>
+            </div>
+            if len(data.Metrics) > 0 {
+                <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto">
+                    for _, metric := range data.Metrics {
+                        <div class={ metricCardClass(metric.Tone) }>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">{ metric.Label }</div>
+                            <div class="text-xl font-semibold text-slate-900">{ metric.Value }</div>
+                            if metric.SubLabel != "" {
+                                <div class="text-xs text-slate-500">{ metric.SubLabel }</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+templ ReconciliationDashboard(data ReconciliationPageData) {
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section class="space-y-6">
+            @SummaryCard(data.Summary, data.Trigger, data.Alerts)
+            @ReportsCard(data.Reports)
+            @JobsCard(data.Jobs)
+        </section>
+        <aside class="space-y-4">
+            @HistoryPanel(data.History)
+        </aside>
+    </div>
+}
+
+templ SummaryCard(summary SummaryView, trigger TriggerAction, alerts []AlertView) {
+    <section class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                    <span class={ helpers.BadgeClass(summary.StatusTone) }>{ summary.StatusLabel }</span>
+                    if summary.LastRunBy != "" {
+                        <span class="text-xs text-slate-500">担当: { summary.LastRunBy }</span>
+                    }
+                </div>
+                <dl class="grid gap-3 text-sm text-slate-600 md:grid-cols-2">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終実行</dt>
+                        <dd class="mt-1 space-y-0.5">
+                            <p class="font-medium text-slate-900">{ summary.LastRunAt }</p>
+                            if summary.LastRunRelative != "" {
+                                <p class="text-xs text-slate-500">{ summary.LastRunRelative }</p>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">所要時間</dt>
+                        <dd class="mt-1 text-slate-900">{ summary.Duration }</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">次回予定</dt>
+                        <dd class="mt-1 space-y-0.5">
+                            <p class="font-medium text-slate-900">{ summary.NextRunLabel }</p>
+                            if summary.NextRunRelative != "" {
+                                <p class="text-xs text-slate-500">{ summary.NextRunRelative }</p>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">未処理例外</dt>
+                        <dd class="mt-1 space-y-0.5">
+                            <span class={ helpers.BadgeClass(summary.PendingTone) }>{ summary.PendingLabel }</span>
+                            if summary.PendingAmount != "" {
+                                <p class="text-xs text-slate-500">差異合計 { summary.PendingAmount }</p>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="flex flex-col items-start gap-3">
+                <form
+                    hx-post={ trigger.ActionURL }
+                    hx-target={ "#" + ReconciliationRootID }
+                    hx-swap="outerHTML"
+                    hx-indicator={ "#" + trigger.IndicatorID }
+                >
+                    <input type="hidden" name="csrf_token" value={ trigger.CSRFToken } />
+                    <button
+                        type="submit"
+                        class={ helpers.ButtonClass("primary", "sm", false, false) }
+                        disabled?={ trigger.Disabled }
+                    >
+                        リコンシリエーションを実行
+                    </button>
+                </form>
+                <div id={ trigger.IndicatorID } class="htmx-indicator text-xs text-slate-400">実行中...</div>
+                if trigger.Disabled && trigger.DisabledReason != "" {
+                    <p class="text-xs text-amber-600">{ trigger.DisabledReason }</p>
+                }
+            </div>
+        </div>
+        if len(alerts) > 0 {
+            <div class="space-y-3">
+                for _, alert := range alerts {
+                    @inlineAlert(alert)
+                }
+            </div>
+        }
+    </section>
+}
+
+templ ReportsCard(section ReportsSection) {
+    <section class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-start justify-between">
+            <h3 class="text-sm font-semibold text-slate-900">エクスポート</h3>
+        </div>
+        if len(section.Rows) == 0 {
+            <p class="text-sm text-slate-500">{ section.EmptyMessage }</p>
+            return
+        }
+        <div class="overflow-hidden rounded-xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3 text-left">レポート</th>
+                        <th class="px-4 py-3 text-left">更新日時</th>
+                        <th class="px-4 py-3 text-left">状態</th>
+                        <th class="px-4 py-3 text-left">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    for _, row := range section.Rows {
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 align-top">
+                                <div class="font-medium text-slate-900">{ row.Label }</div>
+                                if row.Description != "" {
+                                    <p class="text-xs text-slate-500">{ row.Description }</p>
+                                }
+                                if row.BackgroundJob != "" {
+                                    <p class="text-xs text-slate-400">生成ジョブ: { row.BackgroundJob }</p>
+                                }
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <div class="font-medium text-slate-900">{ row.LastGenerated }</div>
+                                if row.Relative != "" {
+                                    <p class="text-xs text-slate-500">{ row.Relative }</p>
+                                }
+                                if row.FileSize != "" {
+                                    <p class="text-xs text-slate-400">{ row.FileSize }</p>
+                                }
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <span class={ helpers.BadgeClass(row.StatusTone) }>{ row.StatusLabel }</span>
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                if row.DownloadEnabled {
+                                    <a
+                                        href={ row.DownloadURL }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class={ helpers.ButtonClass("secondary", "sm", false, false) }
+                                    >
+                                        { row.DownloadLabel }
+                                    </a>
+                                } else {
+                                    <span class="text-xs text-slate-400">リンク未生成</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+templ JobsCard(section JobsSection) {
+    <section class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-sm font-semibold text-slate-900">バックグラウンドジョブ</h3>
+        if len(section.Rows) == 0 {
+            <p class="text-sm text-slate-500">{ section.EmptyMessage }</p>
+            return
+        }
+        <div class="overflow-hidden rounded-xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3 text-left">ジョブ</th>
+                        <th class="px-4 py-3 text-left">実行状況</th>
+                        <th class="px-4 py-3 text-left">ステータス</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    for _, row := range section.Rows {
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 align-top">
+                                <div class="font-medium text-slate-900">{ row.Label }</div>
+                                if row.Schedule != "" {
+                                    <p class="text-xs text-slate-500">{ row.Schedule }</p>
+                                }
+                                if row.LastError != "" {
+                                    <p class="text-xs text-amber-600">{ row.LastError }</p>
+                                }
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <div class="space-y-1">
+                                    <p class="font-medium text-slate-900">{ row.LastRun }</p>
+                                    if row.Relative != "" {
+                                        <p class="text-xs text-slate-500">{ row.Relative }</p>
+                                    }
+                                    if row.Duration != "" {
+                                        <p class="text-xs text-slate-400">所要時間 { row.Duration }</p>
+                                    }
+                                    <p class="text-xs text-slate-500">次回 { row.NextRun }</p>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <span class={ helpers.BadgeClass(row.StatusTone) }>{ row.StatusLabel }</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+func metricCardClass(tone string) string {
+    classes := []string{"flex", "min-w-[180px]", "flex-col", "gap-1", "rounded-xl", "border", "px-4", "py-3", "shadow-sm"}
+    switch tone {
+    case "success":
+        classes = append(classes, "border-emerald-200", "bg-emerald-50")
+    case "warning":
+        classes = append(classes, "border-amber-200", "bg-amber-50")
+    case "danger":
+        classes = append(classes, "border-rose-200", "bg-rose-50")
+    default:
+        classes = append(classes, "border-slate-200", "bg-slate-50")
+    }
+    return helpers.ClassList(classes...)
+}

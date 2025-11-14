@@ -1,0 +1,212 @@
+package promotions
+
+import (
+	"strconv"
+
+	templpkg "github.com/a-h/templ"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-promotions-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+				</div>
+				<div class="flex flex-col items-stretch gap-3 lg:items-end">
+					if len(data.Metrics) > 0 {
+						<div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
+							for _, metric := range data.Metrics {
+								<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
+									<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+										if metric.Icon != "" {
+											<span aria-hidden="true">{ metric.Icon }</span>
+										}
+										{ metric.Label }
+									</div>
+									<div class="text-xl font-semibold text-slate-900">{ metric.Value }</div>
+									if metric.SubText != "" {
+										<p class="text-xs text-slate-500">{ metric.SubText }</p>
+									}
+							</div>
+						}
+					</div>
+					}
+					<div class="flex justify-end">
+						@components.ButtonWith("プロモーションを作成", components.ButtonOptions{
+							Variant: "primary",
+							Attrs: templpkg.Attributes{
+								"hx-get":   data.NewModalURL,
+								"hx-target": "#modal",
+								"hx-swap":  "innerHTML",
+							},
+						})
+					</div>
+				</div>
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterToolbar(data)
+			</div>
+		</section>
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="flex flex-col gap-4">
+				if data.Toolbar.SelectedCount > 0 {
+					@components.BulkActionToolbar(data.Toolbar)
+				}
+				<div
+					id="promotions-table"
+					class="space-y-4"
+					data-promotions-table
+					hx-target="this"
+					hx-swap="outerHTML"
+					hx-trigger="refresh from:body"
+					hx-get={ helpers.BuildURL(data.Table.FragmentPath, data.Table.RawQuery) }
+				>
+					@Table(data.Table)
+				</div>
+			</section>
+			<aside class="hidden xl:block">
+				<div
+					class="sticky top-20 space-y-4"
+					id="promotions-drawer"
+					data-promotions-drawer-container
+					data-promotions-drawer-endpoint={ data.DrawerEndpoint }
+					hx-target="this"
+					hx-swap="innerHTML"
+				>
+					@Drawer(data.Drawer)
+				</div>
+			</aside>
+		</div>
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<form
+		id="promotions-filter"
+		class="flex flex-col gap-6"
+		method="get"
+		hx-get={ data.TableEndpoint }
+		hx-target="#promotions-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+	>
+		<input type="hidden" name="pageSize" value={ strconv.Itoa(data.Query.PageSize) } />
+		<input type="hidden" name="selected" value={ data.Query.SelectedID } data-promotions-selected />
+
+		<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+			<div class="flex flex-wrap items-center gap-3">
+				<label class="sr-only" for="promotions-search">検索</label>
+				<div class="relative">
+					<input
+						id="promotions-search"
+						name="q"
+						type="search"
+						value={ data.Query.Search }
+						placeholder="コード・名称で検索"
+						class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+				</div>
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>適用</button>
+				<a href={ data.ResetURL } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			</div>
+			<div class="flex flex-wrap items-center gap-2" role="group" aria-label="ステータス">
+				for _, chip := range data.Filters.StatusChips {
+					<label class={ statusChipClass(chip.Active, chip.Tone) }>
+						<input type="checkbox" name="status" value={ chip.Value } class="sr-only" checked?={ chip.Active && chip.Value != "" } disabled?={ chip.Value == "" } />
+						<span class="inline-flex items-center gap-1 text-sm">
+							{ chip.Label }
+						</span>
+					</label>
+				}
+			</div>
+		</div>
+
+		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label for="promotions-type" class="text-xs font-semibold uppercase tracking-wide text-slate-500">種類</label>
+				<select
+					id="promotions-type"
+					name="type"
+					class="min-h-[120px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					multiple
+				>
+					for _, option := range data.Filters.TypeOptions {
+						<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="promotions-channel" class="text-xs font-semibold uppercase tracking-wide text-slate-500">チャネル</label>
+				<select
+					id="promotions-channel"
+					name="channel"
+					class="min-h-[120px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					multiple
+				>
+					for _, option := range data.Filters.ChannelOptions {
+						<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="promotions-owner" class="text-xs font-semibold uppercase tracking-wide text-slate-500">作成者</label>
+				<select
+					id="promotions-owner"
+					name="createdBy"
+					class="min-h-[120px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					multiple
+				>
+					for _, option := range data.Filters.OwnerOptions {
+						<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500">スケジュール</label>
+				<div class="flex items-center gap-2">
+					<input
+						type="date"
+						name="scheduleStart"
+						value={ data.Query.ScheduleStart }
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="text-slate-400">〜</span>
+					<input
+						type="date"
+						name="scheduleEnd"
+						value={ data.Query.ScheduleEnd }
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+				</div>
+			</div>
+		</div>
+
+		<div class="htmx-indicator text-xs text-slate-400">
+			読み込み中…
+		</div>
+	</form>
+}
+
+func statusChipClass(active bool, tone string) string {
+	base := []string{
+		"inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-brand-400",
+	}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-700")
+	} else {
+		base = append(base, "border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:text-brand-600")
+	}
+	return helpers.ClassList(base...)
+}

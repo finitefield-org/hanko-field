@@ -1,0 +1,251 @@
+package payments
+
+import (
+	"strconv"
+
+	"finitefield.org/hanko-admin/internal/admin/templates/components"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/templates/layouts"
+)
+
+templ Index(data PageData) {
+	@layouts.Base(data.Title, data.Breadcrumbs, pageBody(data))
+}
+
+templ pageBody(data PageData) {
+	<div class="space-y-6" data-payments-transactions-root>
+		<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+				<div class="space-y-2">
+					<h1 class="text-2xl font-semibold text-slate-900">{ data.Title }</h1>
+					<p class="text-sm text-slate-600">{ data.Description }</p>
+				</div>
+				<div class="flex flex-col items-stretch gap-3 lg:items-end">
+					if len(data.SummaryCards) > 0 {
+						<div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
+							for _, card := range data.SummaryCards {
+								@summaryCard(card)
+							}
+						</div>
+					}
+					<div class="flex flex-wrap items-center gap-3">
+						<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="payments-saved-view">保存ビュー</label>
+						<select
+							id="payments-saved-view"
+							name="view"
+							class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+							form="payments-filter"
+						>
+							for _, view := range data.SavedViews {
+								<option value={ view.Value } selected?={ view.Selected }>{ view.Label }</option>
+							}
+						</select>
+						<a
+							href={ data.ExportURL }
+							class={ helpers.ButtonClass("outline", "sm", false, false) }
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							📥 取引をエクスポート
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="mt-6 border-t border-slate-200 pt-4">
+				@filterToolbar(data)
+			</div>
+		</section>
+
+		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="flex flex-col gap-4">
+				if data.Toolbar.SelectedCount > 0 || data.Toolbar.RenderWhenEmpty {
+					@components.BulkActionToolbar(data.Toolbar)
+				}
+				<div
+					id="payments-transactions-table-container"
+					class="space-y-4"
+				>
+					@Table(data.Table)
+				</div>
+			</section>
+			<aside class="hidden xl:block">
+				<div
+					class="sticky top-20 space-y-4"
+					id="payments-transaction-drawer"
+					hx-target="this"
+					hx-swap="innerHTML"
+					data-payments-drawer
+				>
+					@Drawer(data.Drawer)
+				</div>
+			</aside>
+		</div>
+	</div>
+}
+
+templ summaryCard(card SummaryCard) {
+	<div class="flex min-w-[180px] flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
+		<div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+			if card.Icon != "" {
+				<span aria-hidden="true">{ card.Icon }</span>
+			}
+			{ card.Label }
+		</div>
+		<div class="text-xl font-semibold text-slate-900">{ card.Value }</div>
+		if card.SubLabel != "" {
+			<p class="text-xs text-slate-500">{ card.SubLabel }</p>
+		}
+		if card.Delta != "" {
+			<p class={ summaryDeltaClass(card.DeltaTone) }>{ card.Delta }</p>
+		}
+	</div>
+}
+
+templ filterToolbar(data PageData) {
+	<form
+		id="payments-filter"
+		class="flex flex-col gap-6"
+		method="get"
+		hx-get={ data.TableEndpoint }
+		hx-target="#payments-transactions-table"
+		hx-swap="outerHTML"
+		hx-push-url="true"
+	>
+		<input type="hidden" name="page" value="0" />
+		<input type="hidden" name="pageSize" value={ strconv.Itoa(data.Query.PageSize) } />
+		<input type="hidden" name="selected" value={ data.Query.SelectedID } />
+
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="payments-provider">プロバイダー</label>
+				<select
+					id="payments-provider"
+					name="provider"
+					class="min-h-[140px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					multiple
+				>
+					for _, option := range data.Filters.ProviderOptions {
+						<option value={ option.Value } selected?={ option.Selected }>
+							{ option.Label }
+							if option.Count > 0 {
+								{" · "}{ strconv.Itoa(option.Count) }
+							}
+						</option>
+					}
+				</select>
+			</div>
+			<div class="flex flex-col gap-2">
+				<span class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</span>
+				<div class="flex flex-wrap gap-2" role="group" aria-label="ステータス">
+					for _, status := range data.Filters.StatusOptions {
+						<label class={ statusChipClass(status.Active, status.Tone) }>
+							<input type="checkbox" name="status" value={ status.Value } class="sr-only" checked?={ status.Active } />
+							<span class="inline-flex items-center gap-1 text-sm">
+								{ status.Label }
+								if status.Count > 0 {
+									<span class="text-xs text-slate-600">{ strconv.Itoa(status.Count) }</span>
+								}
+							</span>
+						</label>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="payments-from">決済日 (From)</label>
+				<input
+					id="payments-from"
+					name="from"
+					type="date"
+					value={ data.Query.From }
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="payments-to">決済日 (To)</label>
+				<input
+					id="payments-to"
+					name="to"
+					type="date"
+					value={ data.Query.To }
+					class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+				/>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="payments-amount-min">金額レンジ (¥)</label>
+				<div class="flex items-center gap-2">
+					<input
+						id="payments-amount-min"
+						name="amountMin"
+						type="number"
+						min="0"
+						value={ data.Query.AmountMin }
+						placeholder={ data.Filters.AmountMinBound }
+						class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+					<span class="text-xs text-slate-500">〜</span>
+					<input
+						id="payments-amount-max"
+						name="amountMax"
+						type="number"
+						min="0"
+						value={ data.Query.AmountMax }
+						placeholder={ data.Filters.AmountMaxBound }
+						class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+					/>
+				</div>
+				if data.Filters.AmountHint != "" {
+					<p class="text-xs text-slate-500">{ data.Filters.AmountHint }</p>
+				}
+			</div>
+		</div>
+
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+				<input
+					type="checkbox"
+					name="flagged"
+					value="1"
+					class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+					checked?={ data.Query.OnlyFlagged }
+				/>
+				<span>リスクフラグ付きのみ ({ data.Filters.FlaggedCount }件)</span>
+			</label>
+			<div class="flex flex-wrap items-center gap-3">
+				<button type="submit" class={ helpers.ButtonClass("primary", "sm", false, false) }>フィルタを適用</button>
+				<a href={ data.ResetURL } class={ helpers.ButtonClass("ghost", "sm", false, false) }>リセット</a>
+			</div>
+		</div>
+	</form>
+}
+
+func summaryDeltaClass(tone string) string {
+	switch tone {
+	case "warning":
+		return "text-xs text-amber-600"
+	case "success":
+		return "text-xs text-emerald-600"
+	case "danger":
+		return "text-xs text-rose-600"
+	default:
+		return "text-xs text-slate-500"
+	}
+}
+
+func statusChipClass(active bool, tone string) string {
+	base := []string{
+		"inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition focus:outline-none focus:ring-2 focus:ring-brand-500",
+	}
+	if active {
+		base = append(base, "border-brand-500 bg-brand-50 text-brand-700")
+	} else {
+		switch tone {
+		case "success":
+			base = append(base, "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300")
+		case "warning":
+			base = append(base, "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300")
+		case "danger":
+			base = append(base, "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300")
+		default:
+			base = append(base, "border-slate-200 bg-white text-slate-600 hover:border-slate-300")
+		}
+	}
+	return helpers.ClassList(base...)
+}
