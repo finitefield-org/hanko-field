@@ -299,11 +299,12 @@ class _ProfileSupportBody extends StatelessWidget {
     BuildContext context,
     SupportTicket ticket,
   ) async {
+    final messenger = ScaffoldMessenger.of(context);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (context) {
-        final scheme = Theme.of(context).colorScheme;
+      builder: (sheetContext) {
+        final scheme = Theme.of(sheetContext).colorScheme;
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.spaceL,
@@ -322,7 +323,7 @@ class _ProfileSupportBody extends StatelessWidget {
                   Expanded(
                     child: Text(
                       ticket.subject,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(sheetContext).textTheme.titleMedium,
                     ),
                   ),
                 ],
@@ -333,7 +334,7 @@ class _ProfileSupportBody extends StatelessWidget {
                   _formatTimestamp(ticket.updatedAt, l10n),
                   ticket.reference,
                 ),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -348,13 +349,13 @@ class _ProfileSupportBody extends StatelessWidget {
               const SizedBox(height: AppTokens.spaceM),
               Text(
                 l10n.profileSupportTicketDetailBody,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(sheetContext).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppTokens.spaceL),
               FilledButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context)
+                  Navigator.of(sheetContext).pop();
+                  messenger
                     ..hideCurrentSnackBar()
                     ..showSnackBar(
                       SnackBar(

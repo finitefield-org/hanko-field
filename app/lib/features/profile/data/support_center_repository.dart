@@ -6,7 +6,7 @@ abstract class SupportCenterRepository {
   Future<SupportCenterSnapshot> fetch();
   Future<SupportTicket> createTicket({
     required String subject,
-    SupportChannel channel,
+    SupportChannel channel = SupportChannel.portal,
   });
 }
 
