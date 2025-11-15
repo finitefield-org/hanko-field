@@ -6668,6 +6668,239 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get supportFaqRetry;
 
+  /// App bar title for the contact form
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get supportContactTitle;
+
+  /// Intro text shown on top of the contact form
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what happened and attach files so we can respond quickly.'**
+  String get supportContactSubtitle;
+
+  /// Tooltip for the history icon on the contact screen
+  ///
+  /// In en, this message translates to:
+  /// **'View ticket history'**
+  String get supportContactHistoryTooltip;
+
+  /// Headline for the topic selector
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get supportContactTopicLabel;
+
+  /// Helper text under the topic selector
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the closest topic so we can route your request.'**
+  String get supportContactTopicHelper;
+
+  /// Label for the subject text field
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get supportContactSubjectLabel;
+
+  /// Hint text for the subject field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Need help updating proof'**
+  String get supportContactSubjectPlaceholder;
+
+  /// Validation error shown when subject is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a subject'**
+  String get supportContactSubjectError;
+
+  /// Label for the optional order ID field
+  ///
+  /// In en, this message translates to:
+  /// **'Order ID (optional)'**
+  String get supportContactOrderIdLabel;
+
+  /// Helper text under the order ID field
+  ///
+  /// In en, this message translates to:
+  /// **'Include a reference so we can pull up details faster.'**
+  String get supportContactOrderIdHelper;
+
+  /// Label for the message text area
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get supportContactMessageLabel;
+
+  /// Helper text shown under the message field
+  ///
+  /// In en, this message translates to:
+  /// **'Share context, what changed, and what outcome you expect.'**
+  String get supportContactMessageHelper;
+
+  /// Validation error for the message field
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least {minLength} characters.'**
+  String supportContactMessageError(int minLength);
+
+  /// Heading above the template assist chips
+  ///
+  /// In en, this message translates to:
+  /// **'Quick templates'**
+  String get supportContactTemplatesTitle;
+
+  /// Helper text for the template chips
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to insert a starter message.'**
+  String get supportContactTemplatesSubtitle;
+
+  /// Heading for the attachments section
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get supportContactAttachmentsTitle;
+
+  /// Summary showing attachment count and size usage
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {maxCount} files · {used} / {maxSize}'**
+  String supportContactAttachmentSummary(
+    int count,
+    int maxCount,
+    String used,
+    String maxSize,
+  );
+
+  /// Tooltip for the add attachment icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Add attachment'**
+  String get supportContactAddAttachmentTooltip;
+
+  /// Status label when requesting a signed upload
+  ///
+  /// In en, this message translates to:
+  /// **'Requesting upload link...'**
+  String get supportContactAttachmentStatusPending;
+
+  /// Status label while the attachment is uploading
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading...'**
+  String get supportContactAttachmentStatusUploading;
+
+  /// Status label while verifying the uploaded attachment
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying...'**
+  String get supportContactAttachmentStatusVerifying;
+
+  /// Status label once an attachment is ready
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get supportContactAttachmentStatusUploaded;
+
+  /// Status label when an attachment upload fails
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get supportContactAttachmentStatusFailed;
+
+  /// Tooltip for retrying a failed attachment
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get supportContactAttachmentRetry;
+
+  /// Tooltip for removing an attachment
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get supportContactAttachmentRemove;
+
+  /// Title for the attachment picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a file to attach'**
+  String get supportContactAttachmentPickerTitle;
+
+  /// Supporting copy inside the attachment picker
+  ///
+  /// In en, this message translates to:
+  /// **'Use demo files if you don\'t have samples handy.'**
+  String get supportContactAttachmentPickerSubtitle;
+
+  /// Label for the submit button
+  ///
+  /// In en, this message translates to:
+  /// **'Submit ticket'**
+  String get supportContactSubmitLabel;
+
+  /// Label for the cancel button
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get supportContactCancelLabel;
+
+  /// Title for the submission confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket sent'**
+  String get supportContactSubmitSuccessTitle;
+
+  /// Body text for the submission confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re on it. Track updates with reference {reference}.'**
+  String supportContactSubmitSuccessBody(String reference);
+
+  /// Button label to open support history from confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'View tickets'**
+  String get supportContactHistoryButton;
+
+  /// Dismiss button label inside the confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get supportContactSubmitDialogDismiss;
+
+  /// Snack bar message shown when submission fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t submit your ticket. Try again.'**
+  String get supportContactSubmitError;
+
+  /// Snack bar message shown when attachment count exceeds the limit
+  ///
+  /// In en, this message translates to:
+  /// **'You reached the attachment limit.'**
+  String get supportContactAttachmentLimitReached;
+
+  /// Snack bar message shown when attachments exceed the total size limit
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments can’t exceed the total size limit.'**
+  String get supportContactAttachmentSizeExceeded;
+
+  /// Snack bar message shown when trying to submit an invalid form
+  ///
+  /// In en, this message translates to:
+  /// **'Check the form for missing info.'**
+  String get supportContactValidationError;
+
+  /// Label for retry button on contact form error view
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get supportContactRetryLabel;
+
   /// Quick link title for data export screen on profile home
   ///
   /// In en, this message translates to:

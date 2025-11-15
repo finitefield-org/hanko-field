@@ -4164,6 +4164,208 @@
   "description": "Retry button label for the FAQ error view"
 }
 
+, "supportContactTitle": "サポートへ連絡"
+, "@supportContactTitle": {
+  "description": "問い合わせフォームのタイトル"
+}
+
+, "supportContactSubtitle": "状況と添付ファイルを送っていただけると、より早くご案内できます。"
+, "@supportContactSubtitle": {
+  "description": "問い合わせフォーム上部の説明文"
+}
+
+, "supportContactHistoryTooltip": "チケット履歴を表示"
+, "@supportContactHistoryTooltip": {
+  "description": "履歴アイコンのツールチップ"
+}
+
+, "supportContactTopicLabel": "トピック"
+, "@supportContactTopicLabel": {
+  "description": "トピックセレクターの見出し"
+}
+
+, "supportContactTopicHelper": "該当するトピックを選ぶと、担当チームへ素早くルーティングできます。"
+, "@supportContactTopicHelper": {
+  "description": "トピックセレクター下の補足文"
+}
+
+, "supportContactSubjectLabel": "件名"
+, "@supportContactSubjectLabel": {
+  "description": "件名フィールドのラベル"
+}
+
+, "supportContactSubjectPlaceholder": "例: 校正の更新について"
+, "@supportContactSubjectPlaceholder": {
+  "description": "件名フィールドのプレースホルダー"
+}
+
+, "supportContactSubjectError": "件名を入力してください"
+, "@supportContactSubjectError": {
+  "description": "件名未入力時のエラー文"
+}
+
+, "supportContactOrderIdLabel": "注文ID（任意）"
+, "@supportContactOrderIdLabel": {
+  "description": "注文IDフィールドのラベル"
+}
+
+, "supportContactOrderIdHelper": "参照番号があると詳細をすぐ確認できます。"
+, "@supportContactOrderIdHelper": {
+  "description": "注文IDフィールド下の補足文"
+}
+
+, "supportContactMessageLabel": "メッセージ"
+, "@supportContactMessageLabel": {
+  "description": "メッセージ欄のラベル"
+}
+
+, "supportContactMessageHelper": "背景や変更点、希望する対応内容を具体的にご共有ください。"
+, "@supportContactMessageHelper": {
+  "description": "メッセージ欄の補足文"
+}
+
+, "supportContactMessageError": "{minLength}文字以上で入力してください。"
+, "@supportContactMessageError": {
+  "description": "メッセージ欄のバリデーションエラー",
+  "placeholders": {
+    "minLength": { "type": "int" }
+  }
+}
+
+, "supportContactTemplatesTitle": "クイックテンプレート"
+, "@supportContactTemplatesTitle": {
+  "description": "テンプレートチップの見出し"
+}
+
+, "supportContactTemplatesSubtitle": "タップすると定型文を挿入します。"
+, "@supportContactTemplatesSubtitle": {
+  "description": "テンプレートチップの補足文"
+}
+
+, "supportContactAttachmentsTitle": "添付ファイル"
+, "@supportContactAttachmentsTitle": {
+  "description": "添付セクションの見出し"
+}
+
+, "supportContactAttachmentSummary": "{count}/{maxCount} 件 · {used} / {maxSize}"
+, "@supportContactAttachmentSummary": {
+  "description": "添付数と容量のサマリー",
+  "placeholders": {
+    "count": { "type": "int" },
+    "maxCount": { "type": "int" },
+    "used": { "type": "String" },
+    "maxSize": { "type": "String" }
+  }
+}
+
+, "supportContactAddAttachmentTooltip": "ファイルを追加"
+, "@supportContactAddAttachmentTooltip": {
+  "description": "添付追加ボタンのツールチップ"
+}
+
+, "supportContactAttachmentStatusPending": "アップロードURLを取得中..."
+, "@supportContactAttachmentStatusPending": {
+  "description": "アップロード準備中のステータス"
+}
+
+, "supportContactAttachmentStatusUploading": "アップロード中..."
+, "@supportContactAttachmentStatusUploading": {
+  "description": "アップロード中のステータス"
+}
+
+, "supportContactAttachmentStatusVerifying": "検証中..."
+, "@supportContactAttachmentStatusVerifying": {
+  "description": "アップロード後の検証ステータス"
+}
+
+, "supportContactAttachmentStatusUploaded": "アップロード済み"
+, "@supportContactAttachmentStatusUploaded": {
+  "description": "アップロード完了時のステータス"
+}
+
+, "supportContactAttachmentStatusFailed": "アップロードに失敗しました"
+, "@supportContactAttachmentStatusFailed": {
+  "description": "アップロード失敗時のステータス"
+}
+
+, "supportContactAttachmentRetry": "再試行"
+, "@supportContactAttachmentRetry": {
+  "description": "添付再試行ボタンのラベル"
+}
+
+, "supportContactAttachmentRemove": "削除"
+, "@supportContactAttachmentRemove": {
+  "description": "添付削除ボタンのラベル"
+}
+
+, "supportContactAttachmentPickerTitle": "添付するファイルを選択"
+, "@supportContactAttachmentPickerTitle": {
+  "description": "添付選択シートのタイトル"
+}
+
+, "supportContactAttachmentPickerSubtitle": "サンプルがない場合はデモファイルをご利用ください。"
+, "@supportContactAttachmentPickerSubtitle": {
+  "description": "添付選択シート内の補足文"
+}
+
+, "supportContactSubmitLabel": "チケットを送信"
+, "@supportContactSubmitLabel": {
+  "description": "送信ボタンのラベル"
+}
+
+, "supportContactCancelLabel": "キャンセル"
+, "@supportContactCancelLabel": {
+  "description": "キャンセルボタンのラベル"
+}
+
+, "supportContactSubmitSuccessTitle": "送信しました"
+, "@supportContactSubmitSuccessTitle": {
+  "description": "送信成功ダイアログのタイトル"
+}
+
+, "supportContactSubmitSuccessBody": "対応中です。参照番号 {reference} で進捗を確認できます。"
+, "@supportContactSubmitSuccessBody": {
+  "description": "送信成功ダイアログの本文",
+  "placeholders": {
+    "reference": { "type": "String" }
+  }
+}
+
+, "supportContactHistoryButton": "チケット一覧を見る"
+, "@supportContactHistoryButton": {
+  "description": "送信成功ダイアログで履歴を開くボタン"
+}
+
+, "supportContactSubmitDialogDismiss": "閉じる"
+, "@supportContactSubmitDialogDismiss": {
+  "description": "送信成功ダイアログの閉じるボタン"
+}
+
+, "supportContactSubmitError": "チケットを送信できませんでした。もう一度お試しください。"
+, "@supportContactSubmitError": {
+  "description": "送信失敗時のスナックバー"
+}
+
+, "supportContactAttachmentLimitReached": "添付ファイルの上限に達しました。"
+, "@supportContactAttachmentLimitReached": {
+  "description": "添付上限に達した際のメッセージ"
+}
+
+, "supportContactAttachmentSizeExceeded": "合計サイズの上限を超えるため追加できません。"
+, "@supportContactAttachmentSizeExceeded": {
+  "description": "容量上限を超えた際のメッセージ"
+}
+
+, "supportContactValidationError": "入力内容をご確認ください。"
+, "@supportContactValidationError": {
+  "description": "バリデーションエラー時のメッセージ"
+}
+
+, "supportContactRetryLabel": "再試行"
+, "@supportContactRetryLabel": {
+  "description": "問い合わせエラー画面のボタンラベル"
+}
+
 , "profileHomeQuickLinkExportTitle": "データエクスポート"
 , "@profileHomeQuickLinkExportTitle": {
   "description": "プロフィールホームのデータエクスポートクイックリンクのタイトル"

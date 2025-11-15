@@ -5774,6 +5774,208 @@
   "description": "Retry button label for the FAQ error view"
 }
 
+, "supportContactTitle": "Contact support"
+, "@supportContactTitle": {
+  "description": "App bar title for the contact form"
+}
+
+, "supportContactSubtitle": "Tell us what happened and attach files so we can respond quickly."
+, "@supportContactSubtitle": {
+  "description": "Intro text shown on top of the contact form"
+}
+
+, "supportContactHistoryTooltip": "View ticket history"
+, "@supportContactHistoryTooltip": {
+  "description": "Tooltip for the history icon on the contact screen"
+}
+
+, "supportContactTopicLabel": "Topic"
+, "@supportContactTopicLabel": {
+  "description": "Headline for the topic selector"
+}
+
+, "supportContactTopicHelper": "Choose the closest topic so we can route your request."
+, "@supportContactTopicHelper": {
+  "description": "Helper text under the topic selector"
+}
+
+, "supportContactSubjectLabel": "Subject"
+, "@supportContactSubjectLabel": {
+  "description": "Label for the subject text field"
+}
+
+, "supportContactSubjectPlaceholder": "e.g. Need help updating proof"
+, "@supportContactSubjectPlaceholder": {
+  "description": "Hint text for the subject field"
+}
+
+, "supportContactSubjectError": "Enter a subject"
+, "@supportContactSubjectError": {
+  "description": "Validation error shown when subject is empty"
+}
+
+, "supportContactOrderIdLabel": "Order ID (optional)"
+, "@supportContactOrderIdLabel": {
+  "description": "Label for the optional order ID field"
+}
+
+, "supportContactOrderIdHelper": "Include a reference so we can pull up details faster."
+, "@supportContactOrderIdHelper": {
+  "description": "Helper text under the order ID field"
+}
+
+, "supportContactMessageLabel": "Message"
+, "@supportContactMessageLabel": {
+  "description": "Label for the message text area"
+}
+
+, "supportContactMessageHelper": "Share context, what changed, and what outcome you expect."
+, "@supportContactMessageHelper": {
+  "description": "Helper text shown under the message field"
+}
+
+, "supportContactMessageError": "Add at least {minLength} characters."
+, "@supportContactMessageError": {
+  "description": "Validation error for the message field",
+  "placeholders": {
+    "minLength": { "type": "int" }
+  }
+}
+
+, "supportContactTemplatesTitle": "Quick templates"
+, "@supportContactTemplatesTitle": {
+  "description": "Heading above the template assist chips"
+}
+
+, "supportContactTemplatesSubtitle": "Tap to insert a starter message."
+, "@supportContactTemplatesSubtitle": {
+  "description": "Helper text for the template chips"
+}
+
+, "supportContactAttachmentsTitle": "Attachments"
+, "@supportContactAttachmentsTitle": {
+  "description": "Heading for the attachments section"
+}
+
+, "supportContactAttachmentSummary": "{count} of {maxCount} files · {used} / {maxSize}"
+, "@supportContactAttachmentSummary": {
+  "description": "Summary showing attachment count and size usage",
+  "placeholders": {
+    "count": { "type": "int" },
+    "maxCount": { "type": "int" },
+    "used": { "type": "String" },
+    "maxSize": { "type": "String" }
+  }
+}
+
+, "supportContactAddAttachmentTooltip": "Add attachment"
+, "@supportContactAddAttachmentTooltip": {
+  "description": "Tooltip for the add attachment icon button"
+}
+
+, "supportContactAttachmentStatusPending": "Requesting upload link..."
+, "@supportContactAttachmentStatusPending": {
+  "description": "Status label when requesting a signed upload"
+}
+
+, "supportContactAttachmentStatusUploading": "Uploading..."
+, "@supportContactAttachmentStatusUploading": {
+  "description": "Status label while the attachment is uploading"
+}
+
+, "supportContactAttachmentStatusVerifying": "Verifying..."
+, "@supportContactAttachmentStatusVerifying": {
+  "description": "Status label while verifying the uploaded attachment"
+}
+
+, "supportContactAttachmentStatusUploaded": "Uploaded"
+, "@supportContactAttachmentStatusUploaded": {
+  "description": "Status label once an attachment is ready"
+}
+
+, "supportContactAttachmentStatusFailed": "Upload failed"
+, "@supportContactAttachmentStatusFailed": {
+  "description": "Status label when an attachment upload fails"
+}
+
+, "supportContactAttachmentRetry": "Retry"
+, "@supportContactAttachmentRetry": {
+  "description": "Tooltip for retrying a failed attachment"
+}
+
+, "supportContactAttachmentRemove": "Remove"
+, "@supportContactAttachmentRemove": {
+  "description": "Tooltip for removing an attachment"
+}
+
+, "supportContactAttachmentPickerTitle": "Choose a file to attach"
+, "@supportContactAttachmentPickerTitle": {
+  "description": "Title for the attachment picker sheet"
+}
+
+, "supportContactAttachmentPickerSubtitle": "Use demo files if you don't have samples handy."
+, "@supportContactAttachmentPickerSubtitle": {
+  "description": "Supporting copy inside the attachment picker"
+}
+
+, "supportContactSubmitLabel": "Submit ticket"
+, "@supportContactSubmitLabel": {
+  "description": "Label for the submit button"
+}
+
+, "supportContactCancelLabel": "Cancel"
+, "@supportContactCancelLabel": {
+  "description": "Label for the cancel button"
+}
+
+, "supportContactSubmitSuccessTitle": "Ticket sent"
+, "@supportContactSubmitSuccessTitle": {
+  "description": "Title for the submission confirmation dialog"
+}
+
+, "supportContactSubmitSuccessBody": "We're on it. Track updates with reference {reference}."
+, "@supportContactSubmitSuccessBody": {
+  "description": "Body text for the submission confirmation dialog",
+  "placeholders": {
+    "reference": { "type": "String" }
+  }
+}
+
+, "supportContactHistoryButton": "View tickets"
+, "@supportContactHistoryButton": {
+  "description": "Button label to open support history from confirmation dialog"
+}
+
+, "supportContactSubmitDialogDismiss": "Done"
+, "@supportContactSubmitDialogDismiss": {
+  "description": "Dismiss button label inside the confirmation dialog"
+}
+
+, "supportContactSubmitError": "We couldn’t submit your ticket. Try again."
+, "@supportContactSubmitError": {
+  "description": "Snack bar message shown when submission fails"
+}
+
+, "supportContactAttachmentLimitReached": "You reached the attachment limit."
+, "@supportContactAttachmentLimitReached": {
+  "description": "Snack bar message shown when attachment count exceeds the limit"
+}
+
+, "supportContactAttachmentSizeExceeded": "Attachments can’t exceed the total size limit."
+, "@supportContactAttachmentSizeExceeded": {
+  "description": "Snack bar message shown when attachments exceed the total size limit"
+}
+
+, "supportContactValidationError": "Check the form for missing info."
+, "@supportContactValidationError": {
+  "description": "Snack bar message shown when trying to submit an invalid form"
+}
+
+, "supportContactRetryLabel": "Retry"
+, "@supportContactRetryLabel": {
+  "description": "Label for retry button on contact form error view"
+}
+
 , "profileHomeQuickLinkExportTitle": "Data export"
 , "@profileHomeQuickLinkExportTitle": {
   "description": "Quick link title for data export screen on profile home"

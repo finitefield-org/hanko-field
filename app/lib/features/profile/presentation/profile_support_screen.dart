@@ -200,15 +200,9 @@ class _ProfileSupportBody extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (state.isCreatingTicket)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: AppTokens.spaceS),
-                      child: LinearProgressIndicator(minHeight: 2),
-                    ),
                   FilledButton.tonal(
-                    onPressed: state.isCreatingTicket
-                        ? null
-                        : () => _handleCreateTicket(context),
+                    onPressed: () =>
+                        navigation.push(const SupportContactRoute()),
                     child: Text(l10n.profileSupportCreateTicketLabel),
                   ),
                 ],
@@ -253,30 +247,6 @@ class _ProfileSupportBody extends StatelessWidget {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(l10n.profileSupportActionError)));
-    }
-  }
-
-  Future<void> _handleCreateTicket(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await controller.createTicket(l10n.profileSupportTicketQuickSubject);
-      if (!context.mounted) {
-        return;
-      }
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text(l10n.profileSupportCreateTicketSuccess)),
-        );
-    } catch (_) {
-      if (!context.mounted) {
-        return;
-      }
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text(l10n.profileSupportCreateTicketError)),
-        );
     }
   }
 

@@ -3694,6 +3694,132 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supportFaqRetry => '再試行';
 
   @override
+  String get supportContactTitle => 'サポートへ連絡';
+
+  @override
+  String get supportContactSubtitle => '状況と添付ファイルを送っていただけると、より早くご案内できます。';
+
+  @override
+  String get supportContactHistoryTooltip => 'チケット履歴を表示';
+
+  @override
+  String get supportContactTopicLabel => 'トピック';
+
+  @override
+  String get supportContactTopicHelper => '該当するトピックを選ぶと、担当チームへ素早くルーティングできます。';
+
+  @override
+  String get supportContactSubjectLabel => '件名';
+
+  @override
+  String get supportContactSubjectPlaceholder => '例: 校正の更新について';
+
+  @override
+  String get supportContactSubjectError => '件名を入力してください';
+
+  @override
+  String get supportContactOrderIdLabel => '注文ID（任意）';
+
+  @override
+  String get supportContactOrderIdHelper => '参照番号があると詳細をすぐ確認できます。';
+
+  @override
+  String get supportContactMessageLabel => 'メッセージ';
+
+  @override
+  String get supportContactMessageHelper => '背景や変更点、希望する対応内容を具体的にご共有ください。';
+
+  @override
+  String supportContactMessageError(int minLength) {
+    return '$minLength文字以上で入力してください。';
+  }
+
+  @override
+  String get supportContactTemplatesTitle => 'クイックテンプレート';
+
+  @override
+  String get supportContactTemplatesSubtitle => 'タップすると定型文を挿入します。';
+
+  @override
+  String get supportContactAttachmentsTitle => '添付ファイル';
+
+  @override
+  String supportContactAttachmentSummary(
+    int count,
+    int maxCount,
+    String used,
+    String maxSize,
+  ) {
+    return '$count/$maxCount 件 · $used / $maxSize';
+  }
+
+  @override
+  String get supportContactAddAttachmentTooltip => 'ファイルを追加';
+
+  @override
+  String get supportContactAttachmentStatusPending => 'アップロードURLを取得中...';
+
+  @override
+  String get supportContactAttachmentStatusUploading => 'アップロード中...';
+
+  @override
+  String get supportContactAttachmentStatusVerifying => '検証中...';
+
+  @override
+  String get supportContactAttachmentStatusUploaded => 'アップロード済み';
+
+  @override
+  String get supportContactAttachmentStatusFailed => 'アップロードに失敗しました';
+
+  @override
+  String get supportContactAttachmentRetry => '再試行';
+
+  @override
+  String get supportContactAttachmentRemove => '削除';
+
+  @override
+  String get supportContactAttachmentPickerTitle => '添付するファイルを選択';
+
+  @override
+  String get supportContactAttachmentPickerSubtitle =>
+      'サンプルがない場合はデモファイルをご利用ください。';
+
+  @override
+  String get supportContactSubmitLabel => 'チケットを送信';
+
+  @override
+  String get supportContactCancelLabel => 'キャンセル';
+
+  @override
+  String get supportContactSubmitSuccessTitle => '送信しました';
+
+  @override
+  String supportContactSubmitSuccessBody(String reference) {
+    return '対応中です。参照番号 $reference で進捗を確認できます。';
+  }
+
+  @override
+  String get supportContactHistoryButton => 'チケット一覧を見る';
+
+  @override
+  String get supportContactSubmitDialogDismiss => '閉じる';
+
+  @override
+  String get supportContactSubmitError => 'チケットを送信できませんでした。もう一度お試しください。';
+
+  @override
+  String get supportContactAttachmentLimitReached => '添付ファイルの上限に達しました。';
+
+  @override
+  String get supportContactAttachmentSizeExceeded => '合計サイズの上限を超えるため追加できません。';
+
+  @override
+  String get supportContactValidationError => '入力内容をご確認ください。';
+
+  @override
+  String get supportContactRetryLabel => '再試行';
+
+  @override
   String get profileHomeQuickLinkExportTitle => 'データエクスポート';
 
   @override

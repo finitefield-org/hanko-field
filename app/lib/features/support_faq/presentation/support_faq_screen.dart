@@ -264,7 +264,7 @@ class _SupportFaqScreenState extends ConsumerState<SupportFaqScreen> {
                 child: _FaqEmptyState(
                   l10n: l10n,
                   onContact: () {
-                    navigation.push(ProfileSectionRoute(['support']));
+                    navigation.push(const SupportContactRoute());
                   },
                 ),
               ),

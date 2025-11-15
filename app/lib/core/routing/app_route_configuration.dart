@@ -33,6 +33,7 @@ import 'package:app/features/orders/presentation/order_invoice_screen.dart';
 import 'package:app/features/orders/presentation/order_reorder_screen.dart';
 import 'package:app/features/orders/presentation/order_tracking_screen.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
+import 'package:app/features/support_contact/presentation/support_contact_screen.dart';
 import 'package:app/features/support_faq/presentation/support_faq_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -459,6 +460,25 @@ class SupportFaqRoute implements IndependentRoute, StandaloneLocationRoute {
 
   @override
   String toString() => 'SupportFaqRoute()';
+}
+
+class SupportContactRoute implements IndependentRoute, StandaloneLocationRoute {
+  const SupportContactRoute();
+
+  @override
+  Widget get page => const SupportContactScreen();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'support-contact-$index';
+
+  @override
+  List<String> get pathSegments => const ['support', 'contact'];
+
+  @override
+  String get standaloneLocation => 'support/contact';
+
+  @override
+  String toString() => 'SupportContactRoute()';
 }
 
 class KanjiDictionaryRoute

@@ -3846,6 +3846,143 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportFaqRetry => 'Retry';
 
   @override
+  String get supportContactTitle => 'Contact support';
+
+  @override
+  String get supportContactSubtitle =>
+      'Tell us what happened and attach files so we can respond quickly.';
+
+  @override
+  String get supportContactHistoryTooltip => 'View ticket history';
+
+  @override
+  String get supportContactTopicLabel => 'Topic';
+
+  @override
+  String get supportContactTopicHelper =>
+      'Choose the closest topic so we can route your request.';
+
+  @override
+  String get supportContactSubjectLabel => 'Subject';
+
+  @override
+  String get supportContactSubjectPlaceholder =>
+      'e.g. Need help updating proof';
+
+  @override
+  String get supportContactSubjectError => 'Enter a subject';
+
+  @override
+  String get supportContactOrderIdLabel => 'Order ID (optional)';
+
+  @override
+  String get supportContactOrderIdHelper =>
+      'Include a reference so we can pull up details faster.';
+
+  @override
+  String get supportContactMessageLabel => 'Message';
+
+  @override
+  String get supportContactMessageHelper =>
+      'Share context, what changed, and what outcome you expect.';
+
+  @override
+  String supportContactMessageError(int minLength) {
+    return 'Add at least $minLength characters.';
+  }
+
+  @override
+  String get supportContactTemplatesTitle => 'Quick templates';
+
+  @override
+  String get supportContactTemplatesSubtitle =>
+      'Tap to insert a starter message.';
+
+  @override
+  String get supportContactAttachmentsTitle => 'Attachments';
+
+  @override
+  String supportContactAttachmentSummary(
+    int count,
+    int maxCount,
+    String used,
+    String maxSize,
+  ) {
+    return '$count of $maxCount files · $used / $maxSize';
+  }
+
+  @override
+  String get supportContactAddAttachmentTooltip => 'Add attachment';
+
+  @override
+  String get supportContactAttachmentStatusPending =>
+      'Requesting upload link...';
+
+  @override
+  String get supportContactAttachmentStatusUploading => 'Uploading...';
+
+  @override
+  String get supportContactAttachmentStatusVerifying => 'Verifying...';
+
+  @override
+  String get supportContactAttachmentStatusUploaded => 'Uploaded';
+
+  @override
+  String get supportContactAttachmentStatusFailed => 'Upload failed';
+
+  @override
+  String get supportContactAttachmentRetry => 'Retry';
+
+  @override
+  String get supportContactAttachmentRemove => 'Remove';
+
+  @override
+  String get supportContactAttachmentPickerTitle => 'Choose a file to attach';
+
+  @override
+  String get supportContactAttachmentPickerSubtitle =>
+      'Use demo files if you don\'t have samples handy.';
+
+  @override
+  String get supportContactSubmitLabel => 'Submit ticket';
+
+  @override
+  String get supportContactCancelLabel => 'Cancel';
+
+  @override
+  String get supportContactSubmitSuccessTitle => 'Ticket sent';
+
+  @override
+  String supportContactSubmitSuccessBody(String reference) {
+    return 'We\'re on it. Track updates with reference $reference.';
+  }
+
+  @override
+  String get supportContactHistoryButton => 'View tickets';
+
+  @override
+  String get supportContactSubmitDialogDismiss => 'Done';
+
+  @override
+  String get supportContactSubmitError =>
+      'We couldn’t submit your ticket. Try again.';
+
+  @override
+  String get supportContactAttachmentLimitReached =>
+      'You reached the attachment limit.';
+
+  @override
+  String get supportContactAttachmentSizeExceeded =>
+      'Attachments can’t exceed the total size limit.';
+
+  @override
+  String get supportContactValidationError =>
+      'Check the form for missing info.';
+
+  @override
+  String get supportContactRetryLabel => 'Retry';
+
+  @override
   String get profileHomeQuickLinkExportTitle => 'Data export';
 
   @override
