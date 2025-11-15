@@ -6,6 +6,7 @@ import 'package:app/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileExportScreen extends ConsumerWidget {
   const ProfileExportScreen({super.key});
@@ -78,6 +79,13 @@ class ProfileExportScreen extends ConsumerWidget {
     final errorColor = Theme.of(context).colorScheme.error;
     try {
       final uri = await controller.downloadArchive(archiveId);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw StateError('failed to open download link');
+      }
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -293,7 +301,7 @@ class _ExportSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final estimated = state.snapshot.estimatedDuration;
-    final minutes = estimated.inMinutes.clamp(1, 90);
+    final minutes = estimated.inMinutes.clamp(1, 90).toInt();
     return AppCard(
       variant: AppCardVariant.filled,
       padding: const EdgeInsets.all(AppTokens.spaceL),
