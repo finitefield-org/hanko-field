@@ -48,7 +48,8 @@ class _SupportFaqScreenState extends ConsumerState<SupportFaqScreen> {
         error: (error, _) => _SupportFaqError(
           message: l10n.supportFaqLoadError,
           retryLabel: l10n.supportFaqRetry,
-          onRetry: controller.refresh,
+          onRetry: () =>
+              _refreshWithFeedback(controller, l10n, showSnackBar: true),
         ),
         data: (state) =>
             _buildBody(context, state, controller, navigation, l10n),
@@ -72,7 +73,8 @@ class _SupportFaqScreenState extends ConsumerState<SupportFaqScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
-      onRefresh: controller.refresh,
+      onRefresh: () =>
+          _refreshWithFeedback(controller, l10n, showSnackBar: true),
       edgeOffset: AppTokens.spaceXL,
       displacement: AppTokens.spaceXXL,
       child: CustomScrollView(
@@ -398,6 +400,24 @@ class _SupportFaqScreenState extends ConsumerState<SupportFaqScreen> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(l10n.supportFaqFeedbackError)));
+    }
+  }
+
+  Future<void> _refreshWithFeedback(
+    SupportFaqController controller,
+    AppLocalizations l10n, {
+    bool showSnackBar = false,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await controller.refresh();
+    } catch (_) {
+      if (!mounted || !showSnackBar) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.supportFaqLoadError)));
     }
   }
 }
