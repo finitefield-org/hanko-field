@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app/core/routing/app_route_configuration.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/theme/tokens.dart';
 import 'package:app/features/profile/application/profile_support_controller.dart';
 import 'package:app/features/profile/domain/support_center.dart';
@@ -16,6 +18,7 @@ class ProfileSupportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(profileSupportControllerProvider);
     final controller = ref.read(profileSupportControllerProvider.notifier);
+    final navigation = ref.read(appNavigationControllerProvider);
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
@@ -30,6 +33,7 @@ class ProfileSupportScreen extends ConsumerWidget {
           state: state,
           controller: controller,
           l10n: l10n,
+          navigation: navigation,
         ),
       ),
     );
@@ -41,11 +45,13 @@ class _ProfileSupportBody extends StatelessWidget {
     required this.state,
     required this.controller,
     required this.l10n,
+    required this.navigation,
   });
 
   final ProfileSupportState state;
   final ProfileSupportController controller;
   final AppLocalizations l10n;
+  final AppNavigationController navigation;
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +224,10 @@ class _ProfileSupportBody extends StatelessWidget {
     BuildContext context,
     SupportQuickAction action,
   ) async {
+    if (action.kind == SupportQuickActionKind.faq) {
+      navigation.push(const SupportFaqRoute());
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     try {
       final launched = await launchUrl(

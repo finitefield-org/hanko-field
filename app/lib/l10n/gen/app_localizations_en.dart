@@ -3768,6 +3768,84 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get supportFaqTitle => 'FAQ';
+
+  @override
+  String get supportFaqSubtitle =>
+      'Search curated answers, browse categories, and keep key guides offline.';
+
+  @override
+  String get supportFaqSearchHint => 'Search topics, e.g. shipping or AI';
+
+  @override
+  String get supportFaqSearchClearTooltip => 'Clear search';
+
+  @override
+  String get supportFaqFilterTooltip => 'Filter by category';
+
+  @override
+  String get supportFaqFilterSheetTitle => 'Choose a category';
+
+  @override
+  String get supportFaqFilterAll => 'All topics';
+
+  @override
+  String get supportFaqSuggestionsTitle => 'Popular searches';
+
+  @override
+  String get supportFaqCategoriesTitle => 'Browse categories';
+
+  @override
+  String get supportFaqCategoryAllChip => 'All';
+
+  @override
+  String supportFaqOfflineBadge(String timestamp) {
+    return 'Offline copy from $timestamp';
+  }
+
+  @override
+  String supportFaqUpdatedAt(String timestamp) {
+    return 'Updated $timestamp';
+  }
+
+  @override
+  String supportFaqHelpfulCount(int count) {
+    return '$count people found this helpful';
+  }
+
+  @override
+  String get supportFaqHelpfulPrompt => 'Was this answer helpful?';
+
+  @override
+  String get supportFaqHelpfulYes => 'Helpful';
+
+  @override
+  String get supportFaqHelpfulNo => 'Not helpful';
+
+  @override
+  String get supportFaqFeedbackThanks => 'Thanks for the feedback!';
+
+  @override
+  String get supportFaqFeedbackError => 'We couldn’t record your feedback.';
+
+  @override
+  String get supportFaqNoResultsTitle => 'No answers matched your filters';
+
+  @override
+  String get supportFaqNoResultsBody =>
+      'Try a different keyword, remove filters, or contact our support team.';
+
+  @override
+  String get supportFaqContactCta => 'Contact support';
+
+  @override
+  String get supportFaqLoadError =>
+      'We couldn’t retrieve FAQ content right now.';
+
+  @override
+  String get supportFaqRetry => 'Retry';
+
+  @override
   String get profileHomeQuickLinkExportTitle => 'Data export';
 
   @override

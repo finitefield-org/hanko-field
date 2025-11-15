@@ -41,6 +41,14 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
         stack: [KanjiDictionaryRoute()],
       );
     }
+    if (uri.pathSegments.first == 'support' &&
+        uri.pathSegments.length >= 2 &&
+        uri.pathSegments[1] == 'faq') {
+      return const TabRoute(
+        currentTab: AppTab.profile,
+        stack: [SupportFaqRoute()],
+      );
+    }
     final firstSegment = uri.pathSegments.first;
     final remaining = uri.pathSegments.skip(1).toList();
     final routeSegments = _extractRouteSegments(remaining);
@@ -251,6 +259,11 @@ class AppRouteInformationParser extends RouteInformationParser<AppRoute> {
         );
       case 'howto':
         return const HowToRoute();
+      case 'support':
+        if (segments.length >= 2 && segments[1] == 'faq') {
+          return const SupportFaqRoute();
+        }
+        break;
       case 'kanji':
         if (segments.length >= 2 && segments[1] == 'dictionary') {
           return const KanjiDictionaryRoute();

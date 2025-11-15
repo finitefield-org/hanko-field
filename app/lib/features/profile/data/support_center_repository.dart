@@ -29,7 +29,7 @@ class FakeSupportCenterRepository implements SupportCenterRepository {
       kind: SupportQuickActionKind.faq,
       availabilityLabel: '24/7',
       availabilityStatus: SupportAvailabilityStatus.online,
-      target: Uri.parse('https://support.hanko-field.com/faq'),
+      target: Uri.parse('app://support/faq'),
     ),
     SupportQuickAction(
       id: 'chat',

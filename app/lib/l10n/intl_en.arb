@@ -5650,6 +5650,130 @@
   }
 }
 
+, "supportFaqTitle": "FAQ"
+, "@supportFaqTitle": {
+  "description": "Title for the standalone FAQ screen"
+}
+
+, "supportFaqSubtitle": "Search curated answers, browse categories, and keep key guides offline."
+, "@supportFaqSubtitle": {
+  "description": "Supporting copy shown under the FAQ headline"
+}
+
+, "supportFaqSearchHint": "Search topics, e.g. shipping or AI"
+, "@supportFaqSearchHint": {
+  "description": "Hint text shown inside the FAQ search bar"
+}
+
+, "supportFaqSearchClearTooltip": "Clear search"
+, "@supportFaqSearchClearTooltip": {
+  "description": "Tooltip for the clear icon inside the FAQ search bar"
+}
+
+, "supportFaqFilterTooltip": "Filter by category"
+, "@supportFaqFilterTooltip": {
+  "description": "Tooltip for the filter icon on the FAQ app bar"
+}
+
+, "supportFaqFilterSheetTitle": "Choose a category"
+, "@supportFaqFilterSheetTitle": {
+  "description": "Title for the modal sheet that lists FAQ categories"
+}
+
+, "supportFaqFilterAll": "All topics"
+, "@supportFaqFilterAll": {
+  "description": "Label for the option that removes all category filters"
+}
+
+, "supportFaqSuggestionsTitle": "Popular searches"
+, "@supportFaqSuggestionsTitle": {
+  "description": "Heading shown above suggested search chips"
+}
+
+, "supportFaqCategoriesTitle": "Browse categories"
+, "@supportFaqCategoriesTitle": {
+  "description": "Heading shown above the FAQ category chips"
+}
+
+, "supportFaqCategoryAllChip": "All"
+, "@supportFaqCategoryAllChip": {
+  "description": "Label for the chip that resets the category filter"
+}
+
+, "supportFaqOfflineBadge": "Offline copy from {timestamp}"
+, "@supportFaqOfflineBadge": {
+  "description": "Badge shown when FAQ content is served from cache",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "supportFaqUpdatedAt": "Updated {timestamp}"
+, "@supportFaqUpdatedAt": {
+  "description": "Label that shows when FAQ content was last updated",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "supportFaqHelpfulCount": "{count} people found this helpful"
+, "@supportFaqHelpfulCount": {
+  "description": "Summary showing how many users marked the answer helpful",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "supportFaqHelpfulPrompt": "Was this answer helpful?"
+, "@supportFaqHelpfulPrompt": {
+  "description": "Prompt shown above the helpful/unhelpful controls"
+}
+
+, "supportFaqHelpfulYes": "Helpful"
+, "@supportFaqHelpfulYes": {
+  "description": "Button label for a positive feedback action"
+}
+
+, "supportFaqHelpfulNo": "Not helpful"
+, "@supportFaqHelpfulNo": {
+  "description": "Button label for a negative feedback action"
+}
+
+, "supportFaqFeedbackThanks": "Thanks for the feedback!"
+, "@supportFaqFeedbackThanks": {
+  "description": "Snack bar message shown after recording FAQ feedback"
+}
+
+, "supportFaqFeedbackError": "We couldn’t record your feedback."
+, "@supportFaqFeedbackError": {
+  "description": "Snack bar message shown when FAQ feedback fails"
+}
+
+, "supportFaqNoResultsTitle": "No answers matched your filters"
+, "@supportFaqNoResultsTitle": {
+  "description": "Heading shown when FAQ filters return zero items"
+}
+
+, "supportFaqNoResultsBody": "Try a different keyword, remove filters, or contact our support team."
+, "@supportFaqNoResultsBody": {
+  "description": "Supporting copy for the FAQ empty state"
+}
+
+, "supportFaqContactCta": "Contact support"
+, "@supportFaqContactCta": {
+  "description": "Primary button label on the FAQ empty state"
+}
+
+, "supportFaqLoadError": "We couldn’t retrieve FAQ content right now."
+, "@supportFaqLoadError": {
+  "description": "Error message shown when the FAQ screen fails to load"
+}
+
+, "supportFaqRetry": "Retry"
+, "@supportFaqRetry": {
+  "description": "Retry button label for the FAQ error view"
+}
+
 , "profileHomeQuickLinkExportTitle": "Data export"
 , "@profileHomeQuickLinkExportTitle": {
   "description": "Quick link title for data export screen on profile home"

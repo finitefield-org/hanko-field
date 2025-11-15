@@ -33,6 +33,7 @@ import 'package:app/features/orders/presentation/order_invoice_screen.dart';
 import 'package:app/features/orders/presentation/order_reorder_screen.dart';
 import 'package:app/features/orders/presentation/order_tracking_screen.dart';
 import 'package:app/features/search/presentation/global_search_page.dart';
+import 'package:app/features/support_faq/presentation/support_faq_screen.dart';
 import 'package:flutter/material.dart';
 
 /// スタックの境界を表すパスセグメント
@@ -439,6 +440,25 @@ class HowToRoute implements IndependentRoute, StandaloneLocationRoute {
 
   @override
   String toString() => 'HowToRoute()';
+}
+
+class SupportFaqRoute implements IndependentRoute, StandaloneLocationRoute {
+  const SupportFaqRoute();
+
+  @override
+  Widget get page => const SupportFaqScreen();
+
+  @override
+  Object stackKey(AppTab tab, int index) => 'support-faq-$index';
+
+  @override
+  List<String> get pathSegments => const ['support', 'faq'];
+
+  @override
+  String get standaloneLocation => 'support/faq';
+
+  @override
+  String toString() => 'SupportFaqRoute()';
 }
 
 class KanjiDictionaryRoute

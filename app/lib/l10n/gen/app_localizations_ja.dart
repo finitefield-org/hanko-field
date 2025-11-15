@@ -3619,6 +3619,81 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get supportFaqTitle => 'FAQ';
+
+  @override
+  String get supportFaqSubtitle => 'カテゴリで探したり、必要なガイドをオフラインに保存できます。';
+
+  @override
+  String get supportFaqSearchHint => '配送やAIなどのキーワードで検索';
+
+  @override
+  String get supportFaqSearchClearTooltip => '検索をクリア';
+
+  @override
+  String get supportFaqFilterTooltip => 'カテゴリで絞り込む';
+
+  @override
+  String get supportFaqFilterSheetTitle => 'カテゴリを選択';
+
+  @override
+  String get supportFaqFilterAll => 'すべてのトピック';
+
+  @override
+  String get supportFaqSuggestionsTitle => '人気のキーワード';
+
+  @override
+  String get supportFaqCategoriesTitle => 'カテゴリから探す';
+
+  @override
+  String get supportFaqCategoryAllChip => 'すべて';
+
+  @override
+  String supportFaqOfflineBadge(String timestamp) {
+    return 'オフラインコピー（$timestamp）';
+  }
+
+  @override
+  String supportFaqUpdatedAt(String timestamp) {
+    return '$timestampに更新';
+  }
+
+  @override
+  String supportFaqHelpfulCount(int count) {
+    return '$count人が役に立ったと回答';
+  }
+
+  @override
+  String get supportFaqHelpfulPrompt => 'この回答は役に立ちましたか？';
+
+  @override
+  String get supportFaqHelpfulYes => '役に立つ';
+
+  @override
+  String get supportFaqHelpfulNo => 'あまり役に立たない';
+
+  @override
+  String get supportFaqFeedbackThanks => 'フィードバックありがとうございます。';
+
+  @override
+  String get supportFaqFeedbackError => 'フィードバックを送信できませんでした。';
+
+  @override
+  String get supportFaqNoResultsTitle => '条件に合う回答が見つかりませんでした';
+
+  @override
+  String get supportFaqNoResultsBody => 'キーワードやフィルターを変えるか、サポートへお問い合わせください。';
+
+  @override
+  String get supportFaqContactCta => 'サポートに連絡';
+
+  @override
+  String get supportFaqLoadError => 'FAQを読み込めませんでした。';
+
+  @override
+  String get supportFaqRetry => '再試行';
+
+  @override
   String get profileHomeQuickLinkExportTitle => 'データエクスポート';
 
   @override

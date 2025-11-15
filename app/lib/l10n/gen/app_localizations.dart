@@ -6530,6 +6530,144 @@ abstract class AppLocalizations {
   /// **'We’ll keep you updated on {reference}.'**
   String profileSupportTicketDetailFollowup(String reference);
 
+  /// Title for the standalone FAQ screen
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get supportFaqTitle;
+
+  /// Supporting copy shown under the FAQ headline
+  ///
+  /// In en, this message translates to:
+  /// **'Search curated answers, browse categories, and keep key guides offline.'**
+  String get supportFaqSubtitle;
+
+  /// Hint text shown inside the FAQ search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Search topics, e.g. shipping or AI'**
+  String get supportFaqSearchHint;
+
+  /// Tooltip for the clear icon inside the FAQ search bar
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get supportFaqSearchClearTooltip;
+
+  /// Tooltip for the filter icon on the FAQ app bar
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by category'**
+  String get supportFaqFilterTooltip;
+
+  /// Title for the modal sheet that lists FAQ categories
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a category'**
+  String get supportFaqFilterSheetTitle;
+
+  /// Label for the option that removes all category filters
+  ///
+  /// In en, this message translates to:
+  /// **'All topics'**
+  String get supportFaqFilterAll;
+
+  /// Heading shown above suggested search chips
+  ///
+  /// In en, this message translates to:
+  /// **'Popular searches'**
+  String get supportFaqSuggestionsTitle;
+
+  /// Heading shown above the FAQ category chips
+  ///
+  /// In en, this message translates to:
+  /// **'Browse categories'**
+  String get supportFaqCategoriesTitle;
+
+  /// Label for the chip that resets the category filter
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get supportFaqCategoryAllChip;
+
+  /// Badge shown when FAQ content is served from cache
+  ///
+  /// In en, this message translates to:
+  /// **'Offline copy from {timestamp}'**
+  String supportFaqOfflineBadge(String timestamp);
+
+  /// Label that shows when FAQ content was last updated
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {timestamp}'**
+  String supportFaqUpdatedAt(String timestamp);
+
+  /// Summary showing how many users marked the answer helpful
+  ///
+  /// In en, this message translates to:
+  /// **'{count} people found this helpful'**
+  String supportFaqHelpfulCount(int count);
+
+  /// Prompt shown above the helpful/unhelpful controls
+  ///
+  /// In en, this message translates to:
+  /// **'Was this answer helpful?'**
+  String get supportFaqHelpfulPrompt;
+
+  /// Button label for a positive feedback action
+  ///
+  /// In en, this message translates to:
+  /// **'Helpful'**
+  String get supportFaqHelpfulYes;
+
+  /// Button label for a negative feedback action
+  ///
+  /// In en, this message translates to:
+  /// **'Not helpful'**
+  String get supportFaqHelpfulNo;
+
+  /// Snack bar message shown after recording FAQ feedback
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for the feedback!'**
+  String get supportFaqFeedbackThanks;
+
+  /// Snack bar message shown when FAQ feedback fails
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t record your feedback.'**
+  String get supportFaqFeedbackError;
+
+  /// Heading shown when FAQ filters return zero items
+  ///
+  /// In en, this message translates to:
+  /// **'No answers matched your filters'**
+  String get supportFaqNoResultsTitle;
+
+  /// Supporting copy for the FAQ empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different keyword, remove filters, or contact our support team.'**
+  String get supportFaqNoResultsBody;
+
+  /// Primary button label on the FAQ empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get supportFaqContactCta;
+
+  /// Error message shown when the FAQ screen fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t retrieve FAQ content right now.'**
+  String get supportFaqLoadError;
+
+  /// Retry button label for the FAQ error view
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get supportFaqRetry;
+
   /// Quick link title for data export screen on profile home
   ///
   /// In en, this message translates to:

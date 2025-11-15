@@ -4040,6 +4040,130 @@
   }
 }
 
+, "supportFaqTitle": "FAQ"
+, "@supportFaqTitle": {
+  "description": "Title for the standalone FAQ screen"
+}
+
+, "supportFaqSubtitle": "カテゴリで探したり、必要なガイドをオフラインに保存できます。"
+, "@supportFaqSubtitle": {
+  "description": "Supporting copy shown under the FAQ headline"
+}
+
+, "supportFaqSearchHint": "配送やAIなどのキーワードで検索"
+, "@supportFaqSearchHint": {
+  "description": "Hint text shown inside the FAQ search bar"
+}
+
+, "supportFaqSearchClearTooltip": "検索をクリア"
+, "@supportFaqSearchClearTooltip": {
+  "description": "Tooltip for the clear icon inside the FAQ search bar"
+}
+
+, "supportFaqFilterTooltip": "カテゴリで絞り込む"
+, "@supportFaqFilterTooltip": {
+  "description": "Tooltip for the filter icon on the FAQ app bar"
+}
+
+, "supportFaqFilterSheetTitle": "カテゴリを選択"
+, "@supportFaqFilterSheetTitle": {
+  "description": "Title for the modal sheet that lists FAQ categories"
+}
+
+, "supportFaqFilterAll": "すべてのトピック"
+, "@supportFaqFilterAll": {
+  "description": "Label for the option that removes all category filters"
+}
+
+, "supportFaqSuggestionsTitle": "人気のキーワード"
+, "@supportFaqSuggestionsTitle": {
+  "description": "Heading shown above suggested search chips"
+}
+
+, "supportFaqCategoriesTitle": "カテゴリから探す"
+, "@supportFaqCategoriesTitle": {
+  "description": "Heading shown above the FAQ category chips"
+}
+
+, "supportFaqCategoryAllChip": "すべて"
+, "@supportFaqCategoryAllChip": {
+  "description": "Label for the chip that resets the category filter"
+}
+
+, "supportFaqOfflineBadge": "オフラインコピー（{timestamp}）"
+, "@supportFaqOfflineBadge": {
+  "description": "Badge shown when FAQ content is served from cache",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "supportFaqUpdatedAt": "{timestamp}に更新"
+, "@supportFaqUpdatedAt": {
+  "description": "Label that shows when FAQ content was last updated",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "supportFaqHelpfulCount": "{count}人が役に立ったと回答"
+, "@supportFaqHelpfulCount": {
+  "description": "Summary showing how many users marked the answer helpful",
+  "placeholders": {
+    "count": { "type": "int" }
+  }
+}
+
+, "supportFaqHelpfulPrompt": "この回答は役に立ちましたか？"
+, "@supportFaqHelpfulPrompt": {
+  "description": "Prompt shown above the helpful/unhelpful controls"
+}
+
+, "supportFaqHelpfulYes": "役に立つ"
+, "@supportFaqHelpfulYes": {
+  "description": "Button label for a positive feedback action"
+}
+
+, "supportFaqHelpfulNo": "あまり役に立たない"
+, "@supportFaqHelpfulNo": {
+  "description": "Button label for a negative feedback action"
+}
+
+, "supportFaqFeedbackThanks": "フィードバックありがとうございます。"
+, "@supportFaqFeedbackThanks": {
+  "description": "Snack bar message shown after recording FAQ feedback"
+}
+
+, "supportFaqFeedbackError": "フィードバックを送信できませんでした。"
+, "@supportFaqFeedbackError": {
+  "description": "Snack bar message shown when FAQ feedback fails"
+}
+
+, "supportFaqNoResultsTitle": "条件に合う回答が見つかりませんでした"
+, "@supportFaqNoResultsTitle": {
+  "description": "Heading shown when FAQ filters return zero items"
+}
+
+, "supportFaqNoResultsBody": "キーワードやフィルターを変えるか、サポートへお問い合わせください。"
+, "@supportFaqNoResultsBody": {
+  "description": "Supporting copy for the FAQ empty state"
+}
+
+, "supportFaqContactCta": "サポートに連絡"
+, "@supportFaqContactCta": {
+  "description": "Primary button label on the FAQ empty state"
+}
+
+, "supportFaqLoadError": "FAQを読み込めませんでした。"
+, "@supportFaqLoadError": {
+  "description": "Error message shown when the FAQ screen fails to load"
+}
+
+, "supportFaqRetry": "再試行"
+, "@supportFaqRetry": {
+  "description": "Retry button label for the FAQ error view"
+}
+
 , "profileHomeQuickLinkExportTitle": "データエクスポート"
 , "@profileHomeQuickLinkExportTitle": {
   "description": "プロフィールホームのデータエクスポートクイックリンクのタイトル"

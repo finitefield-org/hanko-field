@@ -94,6 +94,28 @@ class OfflineCacheRepository {
     );
   }
 
+  Future<CacheReadResult<CachedFaqSnapshot>> readFaqSnapshot({
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.read(
+      bucket: CacheBucket.support,
+      key: key,
+      decoder: (data) => CachedFaqSnapshot.fromJson(_asJson(data)),
+    );
+  }
+
+  Future<void> writeFaqSnapshot(
+    CachedFaqSnapshot payload, {
+    String key = LocalCacheStore.defaultEntryKey,
+  }) {
+    return _store.write(
+      bucket: CacheBucket.support,
+      key: key,
+      encoder: (value) => value.toJson(),
+      value: payload,
+    );
+  }
+
   Future<CacheReadResult<CachedGuideDetail>> readGuideDetail({
     required String key,
   }) {
@@ -738,6 +760,150 @@ class CachedGuideArticle {
       'version': version,
       'shareUrl': shareUrl,
       'featured': featured,
+    };
+  }
+}
+
+class CachedFaqSnapshot {
+  CachedFaqSnapshot({
+    required this.categories,
+    required this.entries,
+    required this.suggestions,
+    this.locale,
+    this.updatedAt,
+  });
+
+  factory CachedFaqSnapshot.fromJson(Map<String, dynamic> json) {
+    return CachedFaqSnapshot(
+      categories: (json['categories'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (value) => CachedFaqCategory.fromJson(
+              Map<String, dynamic>.from(value as Map),
+            ),
+          )
+          .toList(),
+      entries: (json['entries'] as List<dynamic>? ?? <dynamic>[])
+          .map(
+            (value) => CachedFaqEntry.fromJson(
+              Map<String, dynamic>.from(value as Map),
+            ),
+          )
+          .toList(),
+      suggestions: (json['suggestions'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
+          .toList(),
+      locale: json['locale'] as String?,
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+    );
+  }
+
+  final List<CachedFaqCategory> categories;
+  final List<CachedFaqEntry> entries;
+  final List<String> suggestions;
+  final String? locale;
+  final DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'categories': categories.map((category) => category.toJson()).toList(),
+      'entries': entries.map((entry) => entry.toJson()).toList(),
+      'suggestions': suggestions,
+      'locale': locale,
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+class CachedFaqCategory {
+  CachedFaqCategory({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.icon,
+    this.highlight,
+  });
+
+  factory CachedFaqCategory.fromJson(Map<String, dynamic> json) {
+    return CachedFaqCategory(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      icon: json['icon'] as String? ?? '',
+      highlight: json['highlight'] as String?,
+    );
+  }
+
+  final String id;
+  final String title;
+  final String description;
+  final String icon;
+  final String? highlight;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'title': title,
+      'description': description,
+      'icon': icon,
+      'highlight': highlight,
+    };
+  }
+}
+
+class CachedFaqEntry {
+  CachedFaqEntry({
+    required this.id,
+    required this.categoryId,
+    required this.question,
+    required this.answer,
+    required this.tags,
+    this.updatedAt,
+    this.helpfulCount,
+    this.notHelpfulCount,
+    this.relatedLink,
+  });
+
+  factory CachedFaqEntry.fromJson(Map<String, dynamic> json) {
+    return CachedFaqEntry(
+      id: json['id'] as String,
+      categoryId: json['categoryId'] as String,
+      question: json['question'] as String? ?? '',
+      answer: json['answer'] as String? ?? '',
+      tags: (json['tags'] as List<dynamic>? ?? <dynamic>[])
+          .map((value) => value as String)
+          .toList(),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+      helpfulCount: json['helpfulCount'] as int?,
+      notHelpfulCount: json['notHelpfulCount'] as int?,
+      relatedLink: json['relatedLink'] as String?,
+    );
+  }
+
+  final String id;
+  final String categoryId;
+  final String question;
+  final String answer;
+  final List<String> tags;
+  final DateTime? updatedAt;
+  final int? helpfulCount;
+  final int? notHelpfulCount;
+  final String? relatedLink;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'categoryId': categoryId,
+      'question': question,
+      'answer': answer,
+      'tags': tags,
+      'updatedAt': updatedAt?.toIso8601String(),
+      'helpfulCount': helpfulCount,
+      'notHelpfulCount': notHelpfulCount,
+      'relatedLink': relatedLink,
     };
   }
 }

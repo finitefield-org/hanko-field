@@ -23,6 +23,13 @@ enum CacheBucket {
       staleGrace: Duration(days: 3),
     ),
   ),
+  support(
+    boxName: 'cache.support',
+    policy: CachePolicy(
+      timeToLive: Duration(hours: 12),
+      staleGrace: Duration(days: 7),
+    ),
+  ),
   legalDocuments(
     boxName: 'cache.legal_documents',
     policy: CachePolicy(
