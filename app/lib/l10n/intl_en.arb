@@ -5526,4 +5526,242 @@
     "reference": { "type": "String" }
   }
 }
+
+, "profileHomeQuickLinkExportTitle": "Data export"
+, "@profileHomeQuickLinkExportTitle": {
+  "description": "Quick link title for data export screen on profile home"
+}
+
+, "profileHomeQuickLinkExportSubtitle": "Download personal archive"
+, "@profileHomeQuickLinkExportSubtitle": {
+  "description": "Quick link subtitle for data export feature"
+}
+
+, "profileExportTitle": "Data export"
+, "@profileExportTitle": {
+  "description": "App bar title for the data export screen"
+}
+
+, "profileExportLoadError": "Unable to load your export preferences."
+, "@profileExportLoadError": {
+  "description": "Generic error shown when export state fails to load"
+}
+
+, "profileExportRetryLabel": "Try again"
+, "@profileExportRetryLabel": {
+  "description": "Retry button for export load errors"
+}
+
+, "profileExportRequestStarted": "Export generation started. We'll email you once the archive is ready."
+, "@profileExportRequestStarted": {
+  "description": "Snack bar message after requesting an export"
+}
+
+, "profileExportRequestError": "Could not start a new export. Please try again."
+, "@profileExportRequestError": {
+  "description": "Snack bar message when requesting an export fails"
+}
+
+, "profileExportDownloadStarted": "Secure download started via {host}."
+, "@profileExportDownloadStarted": {
+  "description": "Snack bar message shown after requesting a download link",
+  "placeholders": {
+    "host": { "type": "String" }
+  }
+}
+
+, "profileExportDownloadError": "Download could not be prepared. Please retry."
+, "@profileExportDownloadError": {
+  "description": "Snack bar message when download preparation fails"
+}
+
+, "profileExportSummaryTitle": "Download your data copy"
+, "@profileExportSummaryTitle": {
+  "description": "Title of the summary card on export screen"
+}
+
+, "profileExportSummaryDescription": "Export personal details, design assets, orders, and audit history as a single encrypted archive."
+, "@profileExportSummaryDescription": {
+  "description": "Body text describing what is included in exports"
+}
+
+, "profileExportEstimatedDuration": "Usually ready in about {minutes} min."
+, "@profileExportEstimatedDuration": {
+  "description": "Text describing average processing duration",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "profileExportSecurityNote": "Archives are encrypted at rest and signed before download. Links expire automatically."
+, "@profileExportSecurityNote": {
+  "description": "Security note text in export summary card"
+}
+
+, "profileExportSupportNote": "Need data deletion or GDPR help? Use the Help & support section."
+, "@profileExportSupportNote": {
+  "description": "Helper text under export CTA"
+}
+
+, "profileExportStatusNever": "Never"
+, "@profileExportStatusNever": {
+  "description": "Status badge text when no exports exist"
+}
+
+, "profileExportStatusPreparing": "Processing"
+, "@profileExportStatusPreparing": {
+  "description": "Status label for exports still generating"
+}
+
+, "profileExportStatusReady": "Ready"
+, "@profileExportStatusReady": {
+  "description": "Status label for ready exports"
+}
+
+, "profileExportStatusExpired": "Expired"
+, "@profileExportStatusExpired": {
+  "description": "Status label for expired exports"
+}
+
+, "profileExportStatusFailed": "Failed"
+, "@profileExportStatusFailed": {
+  "description": "Status label for failed exports"
+}
+
+, "profileExportLatestEmptyTitle": "No exports yet"
+, "@profileExportLatestEmptyTitle": {
+  "description": "Title shown when there are no export archives"
+}
+
+, "profileExportLatestEmptySubtitle": "Choose the data you want to include and generate your first export."
+, "@profileExportLatestEmptySubtitle": {
+  "description": "Subtitle shown when there are no exports"
+}
+
+, "profileExportLatestArchiveTitle": "Latest archive"
+, "@profileExportLatestArchiveTitle": {
+  "description": "Section title for the latest archive card"
+}
+
+, "profileExportLastRequestedLabel": "Requested {timestamp}"
+, "@profileExportLastRequestedLabel": {
+  "description": "Label showing when the latest archive was requested",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportArchiveSizeLabel": "Size {size}"
+, "@profileExportArchiveSizeLabel": {
+  "description": "Label showing archive size",
+  "placeholders": {
+    "size": { "type": "String" }
+  }
+}
+
+, "profileExportArchiveExpiresLabel": "Expires {timestamp}"
+, "@profileExportArchiveExpiresLabel": {
+  "description": "Label showing archive expiry date",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportDownloadInProgress": "Preparing..."
+, "@profileExportDownloadInProgress": {
+  "description": "Button label while download is being prepared"
+}
+
+, "profileExportDownloadLatest": "Download archive"
+, "@profileExportDownloadLatest": {
+  "description": "Button label to download the latest archive"
+}
+
+, "profileExportIncludeAssetsTitle": "Creative assets"
+, "@profileExportIncludeAssetsTitle": {
+  "description": "Preference label for including creative assets"
+}
+
+, "profileExportIncludeAssetsSubtitle": "Design exports, seal artwork, AI prompts, SVG files"
+, "@profileExportIncludeAssetsSubtitle": {
+  "description": "Preference subtitle for including assets"
+}
+
+, "profileExportIncludeOrdersTitle": "Orders & invoices"
+, "@profileExportIncludeOrdersTitle": {
+  "description": "Preference label for including orders"
+}
+
+, "profileExportIncludeOrdersSubtitle": "Purchases, invoices, shipments, merchant notes"
+, "@profileExportIncludeOrdersSubtitle": {
+  "description": "Preference subtitle for including orders"
+}
+
+, "profileExportIncludeHistoryTitle": "Activity history"
+, "@profileExportIncludeHistoryTitle": {
+  "description": "Preference label for including history"
+}
+
+, "profileExportIncludeHistorySubtitle": "Sign-ins, persona changes, connected apps, approvals"
+, "@profileExportIncludeHistorySubtitle": {
+  "description": "Preference subtitle for including history"
+}
+
+, "profileExportGenerateButton": "Generate export"
+, "@profileExportGenerateButton": {
+  "description": "Primary CTA label to start export generation"
+}
+
+, "profileExportGeneratingLabel": "Generating..."
+, "@profileExportGeneratingLabel": {
+  "description": "Label shown on the CTA while generating"
+}
+
+, "profileExportNoSelectionWarning": "Select at least one category to continue."
+, "@profileExportNoSelectionWarning": {
+  "description": "Warning text when no export options are selected"
+}
+
+, "profileExportViewHistory": "View previous exports"
+, "@profileExportViewHistory": {
+  "description": "Secondary CTA to open history sheet"
+}
+
+, "profileExportHistoryTitle": "Previous exports"
+, "@profileExportHistoryTitle": {
+  "description": "Title of the history bottom sheet"
+}
+
+, "profileExportHistoryEmpty": "No previous archives found."
+, "@profileExportHistoryEmpty": {
+  "description": "Message when there are no archives in history"
+}
+
+, "profileExportHistoryRequested": "Requested {timestamp}"
+, "@profileExportHistoryRequested": {
+  "description": "Label showing when an archive was requested in history",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportHistoryDownload": "Download"
+, "@profileExportHistoryDownload": {
+  "description": "Button label to download an archive from history"
+}
+
+, "profileExportBundleAssets": "Assets"
+, "@profileExportBundleAssets": {
+  "description": "Chip label for assets bundle"
+}
+
+, "profileExportBundleOrders": "Orders"
+, "@profileExportBundleOrders": {
+  "description": "Chip label for orders bundle"
+}
+
+, "profileExportBundleHistory": "History"
+, "@profileExportBundleHistory": {
+  "description": "Chip label for history bundle"
+}
 }

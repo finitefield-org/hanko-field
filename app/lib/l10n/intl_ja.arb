@@ -3916,4 +3916,242 @@
     "reference": { "type": "String" }
   }
 }
+
+, "profileHomeQuickLinkExportTitle": "データエクスポート"
+, "@profileHomeQuickLinkExportTitle": {
+  "description": "プロフィールホームのデータエクスポートクイックリンクのタイトル"
+}
+
+, "profileHomeQuickLinkExportSubtitle": "個人データをダウンロード"
+, "@profileHomeQuickLinkExportSubtitle": {
+  "description": "プロフィールホームのデータエクスポートクイックリンクのサブタイトル"
+}
+
+, "profileExportTitle": "データエクスポート"
+, "@profileExportTitle": {
+  "description": "データエクスポート画面のタイトル"
+}
+
+, "profileExportLoadError": "データエクスポート情報を読み込めません。"
+, "@profileExportLoadError": {
+  "description": "データエクスポート画面の読み込みエラー"
+}
+
+, "profileExportRetryLabel": "再試行"
+, "@profileExportRetryLabel": {
+  "description": "データエクスポート読み込み失敗時の再試行ボタン"
+}
+
+, "profileExportRequestStarted": "エクスポートの作成を開始しました。準備ができたらメールでお知らせします。"
+, "@profileExportRequestStarted": {
+  "description": "エクスポート開始後のスナックバー"
+}
+
+, "profileExportRequestError": "エクスポートを開始できませんでした。もう一度お試しください。"
+, "@profileExportRequestError": {
+  "description": "エクスポート開始失敗時のスナックバー"
+}
+
+, "profileExportDownloadStarted": "{host} 経由の安全なダウンロードを開始しました。"
+, "@profileExportDownloadStarted": {
+  "description": "ダウンロードリンク取得後のスナックバー",
+  "placeholders": {
+    "host": { "type": "String" }
+  }
+}
+
+, "profileExportDownloadError": "ダウンロードリンクを準備できませんでした。もう一度お試しください。"
+, "@profileExportDownloadError": {
+  "description": "ダウンロード準備失敗時のスナックバー"
+}
+
+, "profileExportSummaryTitle": "データコピーをダウンロード"
+, "@profileExportSummaryTitle": {
+  "description": "データエクスポート概要カードのタイトル"
+}
+
+, "profileExportSummaryDescription": "個人情報・デザイン資産・注文履歴・アクティビティ履歴を暗号化されたアーカイブでまとめて取得します。"
+, "@profileExportSummaryDescription": {
+  "description": "データエクスポート概要カードの本文"
+}
+
+, "profileExportEstimatedDuration": "平均 {minutes} 分で完了します"
+, "@profileExportEstimatedDuration": {
+  "description": "エクスポート所要時間のテキスト",
+  "placeholders": {
+    "minutes": { "type": "int" }
+  }
+}
+
+, "profileExportSecurityNote": "アーカイブは保存時にも暗号化され、ダウンロード時に署名されます。リンクは自動で失効します。"
+, "@profileExportSecurityNote": {
+  "description": "データエクスポートのセキュリティ説明"
+}
+
+, "profileExportSupportNote": "GDPR 等の依頼はヘルプ&サポートからお問い合わせください。"
+, "@profileExportSupportNote": {
+  "description": "エクスポートCTA下のテキスト"
+}
+
+, "profileExportStatusNever": "未実行"
+, "@profileExportStatusNever": {
+  "description": "エクスポート未実行時のステータス"
+}
+
+, "profileExportStatusPreparing": "処理中"
+, "@profileExportStatusPreparing": {
+  "description": "エクスポート処理中のステータス"
+}
+
+, "profileExportStatusReady": "準備完了"
+, "@profileExportStatusReady": {
+  "description": "エクスポート完了時のステータス"
+}
+
+, "profileExportStatusExpired": "期限切れ"
+, "@profileExportStatusExpired": {
+  "description": "エクスポート期限切れのステータス"
+}
+
+, "profileExportStatusFailed": "失敗"
+, "@profileExportStatusFailed": {
+  "description": "エクスポート失敗時のステータス"
+}
+
+, "profileExportLatestEmptyTitle": "エクスポートはまだありません"
+, "@profileExportLatestEmptyTitle": {
+  "description": "エクスポート履歴がない場合のタイトル"
+}
+
+, "profileExportLatestEmptySubtitle": "含めたいデータを選んでエクスポートを作成してください。"
+, "@profileExportLatestEmptySubtitle": {
+  "description": "エクスポート履歴がない場合のサブタイトル"
+}
+
+, "profileExportLatestArchiveTitle": "最新のアーカイブ"
+, "@profileExportLatestArchiveTitle": {
+  "description": "最新アーカイブカードのタイトル"
+}
+
+, "profileExportLastRequestedLabel": "リクエスト日時: {timestamp}"
+, "@profileExportLastRequestedLabel": {
+  "description": "最新アーカイブのリクエスト日時表示",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportArchiveSizeLabel": "サイズ {size}"
+, "@profileExportArchiveSizeLabel": {
+  "description": "アーカイブサイズ表示",
+  "placeholders": {
+    "size": { "type": "String" }
+  }
+}
+
+, "profileExportArchiveExpiresLabel": "有効期限 {timestamp}"
+, "@profileExportArchiveExpiresLabel": {
+  "description": "アーカイブ期限表示",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportDownloadInProgress": "準備中..."
+, "@profileExportDownloadInProgress": {
+  "description": "ダウンロード準備中のボタンラベル"
+}
+
+, "profileExportDownloadLatest": "アーカイブをダウンロード"
+, "@profileExportDownloadLatest": {
+  "description": "最新アーカイブダウンロードボタン"
+}
+
+, "profileExportIncludeAssetsTitle": "クリエイティブ資産"
+, "@profileExportIncludeAssetsTitle": {
+  "description": "資産を含める設定のタイトル"
+}
+
+, "profileExportIncludeAssetsSubtitle": "デザイン書き出し、印影データ、AIプロンプト、SVG"
+, "@profileExportIncludeAssetsSubtitle": {
+  "description": "資産を含める設定の補足"
+}
+
+, "profileExportIncludeOrdersTitle": "注文・請求"
+, "@profileExportIncludeOrdersTitle": {
+  "description": "注文データを含める設定のタイトル"
+}
+
+, "profileExportIncludeOrdersSubtitle": "購入履歴、請求書、配送情報、メモ"
+, "@profileExportIncludeOrdersSubtitle": {
+  "description": "注文データを含める設定の補足"
+}
+
+, "profileExportIncludeHistoryTitle": "活動履歴"
+, "@profileExportIncludeHistoryTitle": {
+  "description": "履歴を含める設定のタイトル"
+}
+
+, "profileExportIncludeHistorySubtitle": "サインイン、ペルソナ変更、連携アプリ、承認履歴"
+, "@profileExportIncludeHistorySubtitle": {
+  "description": "履歴を含める設定の補足"
+}
+
+, "profileExportGenerateButton": "エクスポートを作成"
+, "@profileExportGenerateButton": {
+  "description": "エクスポート生成ボタンのラベル"
+}
+
+, "profileExportGeneratingLabel": "生成中..."
+, "@profileExportGeneratingLabel": {
+  "description": "エクスポート生成中のテキスト"
+}
+
+, "profileExportNoSelectionWarning": "少なくとも1つは選択してください。"
+, "@profileExportNoSelectionWarning": {
+  "description": "データ項目が未選択の際の警告"
+}
+
+, "profileExportViewHistory": "過去のエクスポートを見る"
+, "@profileExportViewHistory": {
+  "description": "履歴シートを開くボタン"
+}
+
+, "profileExportHistoryTitle": "過去のアーカイブ"
+, "@profileExportHistoryTitle": {
+  "description": "履歴シートのタイトル"
+}
+
+, "profileExportHistoryEmpty": "過去のアーカイブはありません。"
+, "@profileExportHistoryEmpty": {
+  "description": "履歴が空の場合のメッセージ"
+}
+
+, "profileExportHistoryRequested": "リクエスト日時: {timestamp}"
+, "@profileExportHistoryRequested": {
+  "description": "履歴でのリクエスト日時表示",
+  "placeholders": {
+    "timestamp": { "type": "String" }
+  }
+}
+
+, "profileExportHistoryDownload": "ダウンロード"
+, "@profileExportHistoryDownload": {
+  "description": "履歴からダウンロードするボタン"
+}
+
+, "profileExportBundleAssets": "資産"
+, "@profileExportBundleAssets": {
+  "description": "資産バンドルのチップラベル"
+}
+
+, "profileExportBundleOrders": "注文"
+, "@profileExportBundleOrders": {
+  "description": "注文バンドルのチップラベル"
+}
+
+, "profileExportBundleHistory": "履歴"
+, "@profileExportBundleHistory": {
+  "description": "履歴バンドルのチップラベル"
+}
 }

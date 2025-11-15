@@ -3680,4 +3680,160 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileSupportTicketDetailFollowup(String reference) {
     return 'We’ll keep you updated on $reference.';
   }
+
+  @override
+  String get profileHomeQuickLinkExportTitle => 'Data export';
+
+  @override
+  String get profileHomeQuickLinkExportSubtitle => 'Download personal archive';
+
+  @override
+  String get profileExportTitle => 'Data export';
+
+  @override
+  String get profileExportLoadError =>
+      'Unable to load your export preferences.';
+
+  @override
+  String get profileExportRetryLabel => 'Try again';
+
+  @override
+  String get profileExportRequestStarted =>
+      'Export generation started. We\'ll email you once the archive is ready.';
+
+  @override
+  String get profileExportRequestError =>
+      'Could not start a new export. Please try again.';
+
+  @override
+  String profileExportDownloadStarted(String host) {
+    return 'Secure download started via $host.';
+  }
+
+  @override
+  String get profileExportDownloadError =>
+      'Download could not be prepared. Please retry.';
+
+  @override
+  String get profileExportSummaryTitle => 'Download your data copy';
+
+  @override
+  String get profileExportSummaryDescription =>
+      'Export personal details, design assets, orders, and audit history as a single encrypted archive.';
+
+  @override
+  String profileExportEstimatedDuration(int minutes) {
+    return 'Usually ready in about $minutes min.';
+  }
+
+  @override
+  String get profileExportSecurityNote =>
+      'Archives are encrypted at rest and signed before download. Links expire automatically.';
+
+  @override
+  String get profileExportSupportNote =>
+      'Need data deletion or GDPR help? Use the Help & support section.';
+
+  @override
+  String get profileExportStatusNever => 'Never';
+
+  @override
+  String get profileExportStatusPreparing => 'Processing';
+
+  @override
+  String get profileExportStatusReady => 'Ready';
+
+  @override
+  String get profileExportStatusExpired => 'Expired';
+
+  @override
+  String get profileExportStatusFailed => 'Failed';
+
+  @override
+  String get profileExportLatestEmptyTitle => 'No exports yet';
+
+  @override
+  String get profileExportLatestEmptySubtitle =>
+      'Choose the data you want to include and generate your first export.';
+
+  @override
+  String get profileExportLatestArchiveTitle => 'Latest archive';
+
+  @override
+  String profileExportLastRequestedLabel(String timestamp) {
+    return 'Requested $timestamp';
+  }
+
+  @override
+  String profileExportArchiveSizeLabel(String size) {
+    return 'Size $size';
+  }
+
+  @override
+  String profileExportArchiveExpiresLabel(String timestamp) {
+    return 'Expires $timestamp';
+  }
+
+  @override
+  String get profileExportDownloadInProgress => 'Preparing...';
+
+  @override
+  String get profileExportDownloadLatest => 'Download archive';
+
+  @override
+  String get profileExportIncludeAssetsTitle => 'Creative assets';
+
+  @override
+  String get profileExportIncludeAssetsSubtitle =>
+      'Design exports, seal artwork, AI prompts, SVG files';
+
+  @override
+  String get profileExportIncludeOrdersTitle => 'Orders & invoices';
+
+  @override
+  String get profileExportIncludeOrdersSubtitle =>
+      'Purchases, invoices, shipments, merchant notes';
+
+  @override
+  String get profileExportIncludeHistoryTitle => 'Activity history';
+
+  @override
+  String get profileExportIncludeHistorySubtitle =>
+      'Sign-ins, persona changes, connected apps, approvals';
+
+  @override
+  String get profileExportGenerateButton => 'Generate export';
+
+  @override
+  String get profileExportGeneratingLabel => 'Generating...';
+
+  @override
+  String get profileExportNoSelectionWarning =>
+      'Select at least one category to continue.';
+
+  @override
+  String get profileExportViewHistory => 'View previous exports';
+
+  @override
+  String get profileExportHistoryTitle => 'Previous exports';
+
+  @override
+  String get profileExportHistoryEmpty => 'No previous archives found.';
+
+  @override
+  String profileExportHistoryRequested(String timestamp) {
+    return 'Requested $timestamp';
+  }
+
+  @override
+  String get profileExportHistoryDownload => 'Download';
+
+  @override
+  String get profileExportBundleAssets => 'Assets';
+
+  @override
+  String get profileExportBundleOrders => 'Orders';
+
+  @override
+  String get profileExportBundleHistory => 'History';
 }

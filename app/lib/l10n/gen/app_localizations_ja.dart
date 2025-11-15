@@ -3539,4 +3539,151 @@ class AppLocalizationsJa extends AppLocalizations {
   String profileSupportTicketDetailFollowup(String reference) {
     return '$reference の更新をお送りします。';
   }
+
+  @override
+  String get profileHomeQuickLinkExportTitle => 'データエクスポート';
+
+  @override
+  String get profileHomeQuickLinkExportSubtitle => '個人データをダウンロード';
+
+  @override
+  String get profileExportTitle => 'データエクスポート';
+
+  @override
+  String get profileExportLoadError => 'データエクスポート情報を読み込めません。';
+
+  @override
+  String get profileExportRetryLabel => '再試行';
+
+  @override
+  String get profileExportRequestStarted =>
+      'エクスポートの作成を開始しました。準備ができたらメールでお知らせします。';
+
+  @override
+  String get profileExportRequestError => 'エクスポートを開始できませんでした。もう一度お試しください。';
+
+  @override
+  String profileExportDownloadStarted(String host) {
+    return '$host 経由の安全なダウンロードを開始しました。';
+  }
+
+  @override
+  String get profileExportDownloadError => 'ダウンロードリンクを準備できませんでした。もう一度お試しください。';
+
+  @override
+  String get profileExportSummaryTitle => 'データコピーをダウンロード';
+
+  @override
+  String get profileExportSummaryDescription =>
+      '個人情報・デザイン資産・注文履歴・アクティビティ履歴を暗号化されたアーカイブでまとめて取得します。';
+
+  @override
+  String profileExportEstimatedDuration(int minutes) {
+    return '平均 $minutes 分で完了します';
+  }
+
+  @override
+  String get profileExportSecurityNote =>
+      'アーカイブは保存時にも暗号化され、ダウンロード時に署名されます。リンクは自動で失効します。';
+
+  @override
+  String get profileExportSupportNote => 'GDPR 等の依頼はヘルプ&サポートからお問い合わせください。';
+
+  @override
+  String get profileExportStatusNever => '未実行';
+
+  @override
+  String get profileExportStatusPreparing => '処理中';
+
+  @override
+  String get profileExportStatusReady => '準備完了';
+
+  @override
+  String get profileExportStatusExpired => '期限切れ';
+
+  @override
+  String get profileExportStatusFailed => '失敗';
+
+  @override
+  String get profileExportLatestEmptyTitle => 'エクスポートはまだありません';
+
+  @override
+  String get profileExportLatestEmptySubtitle => '含めたいデータを選んでエクスポートを作成してください。';
+
+  @override
+  String get profileExportLatestArchiveTitle => '最新のアーカイブ';
+
+  @override
+  String profileExportLastRequestedLabel(String timestamp) {
+    return 'リクエスト日時: $timestamp';
+  }
+
+  @override
+  String profileExportArchiveSizeLabel(String size) {
+    return 'サイズ $size';
+  }
+
+  @override
+  String profileExportArchiveExpiresLabel(String timestamp) {
+    return '有効期限 $timestamp';
+  }
+
+  @override
+  String get profileExportDownloadInProgress => '準備中...';
+
+  @override
+  String get profileExportDownloadLatest => 'アーカイブをダウンロード';
+
+  @override
+  String get profileExportIncludeAssetsTitle => 'クリエイティブ資産';
+
+  @override
+  String get profileExportIncludeAssetsSubtitle => 'デザイン書き出し、印影データ、AIプロンプト、SVG';
+
+  @override
+  String get profileExportIncludeOrdersTitle => '注文・請求';
+
+  @override
+  String get profileExportIncludeOrdersSubtitle => '購入履歴、請求書、配送情報、メモ';
+
+  @override
+  String get profileExportIncludeHistoryTitle => '活動履歴';
+
+  @override
+  String get profileExportIncludeHistorySubtitle => 'サインイン、ペルソナ変更、連携アプリ、承認履歴';
+
+  @override
+  String get profileExportGenerateButton => 'エクスポートを作成';
+
+  @override
+  String get profileExportGeneratingLabel => '生成中...';
+
+  @override
+  String get profileExportNoSelectionWarning => '少なくとも1つは選択してください。';
+
+  @override
+  String get profileExportViewHistory => '過去のエクスポートを見る';
+
+  @override
+  String get profileExportHistoryTitle => '過去のアーカイブ';
+
+  @override
+  String get profileExportHistoryEmpty => '過去のアーカイブはありません。';
+
+  @override
+  String profileExportHistoryRequested(String timestamp) {
+    return 'リクエスト日時: $timestamp';
+  }
+
+  @override
+  String get profileExportHistoryDownload => 'ダウンロード';
+
+  @override
+  String get profileExportBundleAssets => '資産';
+
+  @override
+  String get profileExportBundleOrders => '注文';
+
+  @override
+  String get profileExportBundleHistory => '履歴';
 }

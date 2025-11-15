@@ -6385,6 +6385,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We’ll keep you updated on {reference}.'**
   String profileSupportTicketDetailFollowup(String reference);
+
+  /// Quick link title for data export screen on profile home
+  ///
+  /// In en, this message translates to:
+  /// **'Data export'**
+  String get profileHomeQuickLinkExportTitle;
+
+  /// Quick link subtitle for data export feature
+  ///
+  /// In en, this message translates to:
+  /// **'Download personal archive'**
+  String get profileHomeQuickLinkExportSubtitle;
+
+  /// App bar title for the data export screen
+  ///
+  /// In en, this message translates to:
+  /// **'Data export'**
+  String get profileExportTitle;
+
+  /// Generic error shown when export state fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load your export preferences.'**
+  String get profileExportLoadError;
+
+  /// Retry button for export load errors
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileExportRetryLabel;
+
+  /// Snack bar message after requesting an export
+  ///
+  /// In en, this message translates to:
+  /// **'Export generation started. We\'ll email you once the archive is ready.'**
+  String get profileExportRequestStarted;
+
+  /// Snack bar message when requesting an export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start a new export. Please try again.'**
+  String get profileExportRequestError;
+
+  /// Snack bar message shown after requesting a download link
+  ///
+  /// In en, this message translates to:
+  /// **'Secure download started via {host}.'**
+  String profileExportDownloadStarted(String host);
+
+  /// Snack bar message when download preparation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Download could not be prepared. Please retry.'**
+  String get profileExportDownloadError;
+
+  /// Title of the summary card on export screen
+  ///
+  /// In en, this message translates to:
+  /// **'Download your data copy'**
+  String get profileExportSummaryTitle;
+
+  /// Body text describing what is included in exports
+  ///
+  /// In en, this message translates to:
+  /// **'Export personal details, design assets, orders, and audit history as a single encrypted archive.'**
+  String get profileExportSummaryDescription;
+
+  /// Text describing average processing duration
+  ///
+  /// In en, this message translates to:
+  /// **'Usually ready in about {minutes} min.'**
+  String profileExportEstimatedDuration(int minutes);
+
+  /// Security note text in export summary card
+  ///
+  /// In en, this message translates to:
+  /// **'Archives are encrypted at rest and signed before download. Links expire automatically.'**
+  String get profileExportSecurityNote;
+
+  /// Helper text under export CTA
+  ///
+  /// In en, this message translates to:
+  /// **'Need data deletion or GDPR help? Use the Help & support section.'**
+  String get profileExportSupportNote;
+
+  /// Status badge text when no exports exist
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get profileExportStatusNever;
+
+  /// Status label for exports still generating
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get profileExportStatusPreparing;
+
+  /// Status label for ready exports
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get profileExportStatusReady;
+
+  /// Status label for expired exports
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get profileExportStatusExpired;
+
+  /// Status label for failed exports
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get profileExportStatusFailed;
+
+  /// Title shown when there are no export archives
+  ///
+  /// In en, this message translates to:
+  /// **'No exports yet'**
+  String get profileExportLatestEmptyTitle;
+
+  /// Subtitle shown when there are no exports
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the data you want to include and generate your first export.'**
+  String get profileExportLatestEmptySubtitle;
+
+  /// Section title for the latest archive card
+  ///
+  /// In en, this message translates to:
+  /// **'Latest archive'**
+  String get profileExportLatestArchiveTitle;
+
+  /// Label showing when the latest archive was requested
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {timestamp}'**
+  String profileExportLastRequestedLabel(String timestamp);
+
+  /// Label showing archive size
+  ///
+  /// In en, this message translates to:
+  /// **'Size {size}'**
+  String profileExportArchiveSizeLabel(String size);
+
+  /// Label showing archive expiry date
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {timestamp}'**
+  String profileExportArchiveExpiresLabel(String timestamp);
+
+  /// Button label while download is being prepared
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing...'**
+  String get profileExportDownloadInProgress;
+
+  /// Button label to download the latest archive
+  ///
+  /// In en, this message translates to:
+  /// **'Download archive'**
+  String get profileExportDownloadLatest;
+
+  /// Preference label for including creative assets
+  ///
+  /// In en, this message translates to:
+  /// **'Creative assets'**
+  String get profileExportIncludeAssetsTitle;
+
+  /// Preference subtitle for including assets
+  ///
+  /// In en, this message translates to:
+  /// **'Design exports, seal artwork, AI prompts, SVG files'**
+  String get profileExportIncludeAssetsSubtitle;
+
+  /// Preference label for including orders
+  ///
+  /// In en, this message translates to:
+  /// **'Orders & invoices'**
+  String get profileExportIncludeOrdersTitle;
+
+  /// Preference subtitle for including orders
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases, invoices, shipments, merchant notes'**
+  String get profileExportIncludeOrdersSubtitle;
+
+  /// Preference label for including history
+  ///
+  /// In en, this message translates to:
+  /// **'Activity history'**
+  String get profileExportIncludeHistoryTitle;
+
+  /// Preference subtitle for including history
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-ins, persona changes, connected apps, approvals'**
+  String get profileExportIncludeHistorySubtitle;
+
+  /// Primary CTA label to start export generation
+  ///
+  /// In en, this message translates to:
+  /// **'Generate export'**
+  String get profileExportGenerateButton;
+
+  /// Label shown on the CTA while generating
+  ///
+  /// In en, this message translates to:
+  /// **'Generating...'**
+  String get profileExportGeneratingLabel;
+
+  /// Warning text when no export options are selected
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one category to continue.'**
+  String get profileExportNoSelectionWarning;
+
+  /// Secondary CTA to open history sheet
+  ///
+  /// In en, this message translates to:
+  /// **'View previous exports'**
+  String get profileExportViewHistory;
+
+  /// Title of the history bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Previous exports'**
+  String get profileExportHistoryTitle;
+
+  /// Message when there are no archives in history
+  ///
+  /// In en, this message translates to:
+  /// **'No previous archives found.'**
+  String get profileExportHistoryEmpty;
+
+  /// Label showing when an archive was requested in history
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {timestamp}'**
+  String profileExportHistoryRequested(String timestamp);
+
+  /// Button label to download an archive from history
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get profileExportHistoryDownload;
+
+  /// Chip label for assets bundle
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get profileExportBundleAssets;
+
+  /// Chip label for orders bundle
+  ///
+  /// In en, this message translates to:
+  /// **'Orders'**
+  String get profileExportBundleOrders;
+
+  /// Chip label for history bundle
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get profileExportBundleHistory;
 }
 
 class _AppLocalizationsDelegate

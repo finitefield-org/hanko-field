@@ -361,6 +361,12 @@ final List<_QuickLinkDefinition> _quickLinks = [
     routeSegments: ['support'],
   ),
   _QuickLinkDefinition(
+    icon: Icons.download_for_offline_outlined,
+    titleBuilder: (l10n) => l10n.profileHomeQuickLinkExportTitle,
+    subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkExportSubtitle,
+    routeSegments: ['export'],
+  ),
+  _QuickLinkDefinition(
     icon: Icons.gavel_outlined,
     titleBuilder: (l10n) => l10n.profileHomeQuickLinkLegalTitle,
     subtitleBuilder: (l10n) => l10n.profileHomeQuickLinkLegalSubtitle,
