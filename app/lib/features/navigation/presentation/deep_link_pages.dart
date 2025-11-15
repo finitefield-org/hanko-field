@@ -1,6 +1,7 @@
 import 'package:app/features/guides/presentation/guide_detail_screen.dart';
 import 'package:app/features/guides/presentation/guides_list_screen.dart';
 import 'package:app/features/profile/presentation/profile_addresses_screen.dart';
+import 'package:app/features/profile/presentation/profile_delete_screen.dart';
 import 'package:app/features/profile/presentation/profile_export_screen.dart';
 import 'package:app/features/profile/presentation/profile_legal_screen.dart';
 import 'package:app/features/profile/presentation/profile_linked_accounts_screen.dart';
@@ -117,6 +118,8 @@ class ProfileSectionPage extends StatelessWidget {
         return const ProfileLinkedAccountsScreen();
       case 'export':
         return const ProfileExportScreen();
+      case 'delete':
+        return const ProfileDeleteScreen();
       default:
         return _ProfileSectionFallback(title: title);
     }

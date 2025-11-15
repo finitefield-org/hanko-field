@@ -2891,6 +2891,84 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileHomeQuickLinkLegalSubtitle => '利用規約・プライバシー・特商法';
 
   @override
+  String get profileDeleteTitle => 'アカウント削除';
+
+  @override
+  String get profileDeleteSubtitle => 'プロフィール、保存したデザイン、決済データを完全に削除する申請を行います。';
+
+  @override
+  String get profileDeleteWarningTitle => '一度削除すると元に戻せません';
+
+  @override
+  String get profileDeleteWarningBody =>
+      '法令で定められた記録のみ匿名化して保持しますが、処理が完了すると Hanko Field へのアクセスはすべて終了します。';
+
+  @override
+  String get profileDeleteChecklistTitle => '続行前にすべて確認してください';
+
+  @override
+  String get profileDeleteAckDataTitle => 'デザインや履歴がすべて消えることを理解しました';
+
+  @override
+  String get profileDeleteAckDataSubtitle =>
+      '保存済みデザイン、ライブラリ、カート、パーソナライズ情報は完全に削除されます。';
+
+  @override
+  String get profileDeleteAckOrdersTitle => '未処理の注文や請求は個別対応になることを理解しました';
+
+  @override
+  String get profileDeleteAckOrdersSubtitle =>
+      '制作中の注文はポリシーに沿って進行または請求され、自動返金は行われません。';
+
+  @override
+  String get profileDeleteAckExportTitle => '必要なデータはすでにダウンロード済みです';
+
+  @override
+  String get profileDeleteAckExportSubtitle =>
+      'データエクスポートは30日間利用できますが、今後必要ありません。';
+
+  @override
+  String get profileDeleteFeedbackLabel => '任意の理由';
+
+  @override
+  String get profileDeleteFeedbackHint => '退会理由やご要望をお聞かせください';
+
+  @override
+  String get profileDeleteFeedbackHelper => 'いただいた内容は対応の参考にさせていただきます。';
+
+  @override
+  String get profileDeleteSubmitCta => '削除を申請する';
+
+  @override
+  String get profileDeleteCancelLabel => '削除せず戻る';
+
+  @override
+  String get profileDeleteConfirmDialogTitle => '削除申請を送信しますか？';
+
+  @override
+  String get profileDeleteConfirmDialogBody => '申請は30日以内に審査され、処理後は取り消せません。';
+
+  @override
+  String get profileDeleteConfirmPrimary => '申請を送信';
+
+  @override
+  String get profileDeleteConfirmSecondary => 'キャンセル';
+
+  @override
+  String get profileDeleteSubmitSuccess => '削除申請を受け付けました。処理状況はメールでお知らせします。';
+
+  @override
+  String get profileDeleteSubmitError => '申請を送信できませんでした。通信状況を確認して再度お試しください。';
+
+  @override
+  String profileDeleteLastRequestedLabel(Object date) {
+    return '前回の申請日時: $date';
+  }
+
+  @override
+  String get profileDeleteRetryLabel => '再試行';
+
+  @override
   String get profileLocaleTitle => '言語と通貨';
 
   @override

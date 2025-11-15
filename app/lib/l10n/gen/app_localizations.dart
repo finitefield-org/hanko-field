@@ -5216,6 +5216,150 @@ abstract class AppLocalizations {
   /// **'Terms, privacy, compliance notices'**
   String get profileHomeQuickLinkLegalSubtitle;
 
+  /// Title for the account deletion screen in profile settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get profileDeleteTitle;
+
+  /// Subtitle explaining what happens when the user deletes their account.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a removal request to permanently delete your profile, saved designs, and billing data.'**
+  String get profileDeleteSubtitle;
+
+  /// Headline for the warning card on the account deletion screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion can\'t be undone'**
+  String get profileDeleteWarningTitle;
+
+  /// Body copy describing the consequences of deletion.
+  ///
+  /// In en, this message translates to:
+  /// **'We anonymize legal records as required, but once processed you will lose access to Hanko Field and all personalized services.'**
+  String get profileDeleteWarningBody;
+
+  /// Heading for the acknowledgement checklist.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the following before continuing'**
+  String get profileDeleteChecklistTitle;
+
+  /// Title for acknowledgement about data deletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase my designs and history'**
+  String get profileDeleteAckDataTitle;
+
+  /// Subtitle for data deletion acknowledgement.
+  ///
+  /// In en, this message translates to:
+  /// **'All saved designs, libraries, carts, and personalization data will be deleted.'**
+  String get profileDeleteAckDataSubtitle;
+
+  /// Title for acknowledgement about open orders or invoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Outstanding orders and charges handled manually'**
+  String get profileDeleteAckOrdersTitle;
+
+  /// Subtitle for the orders acknowledgement.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending orders may still be fulfilled or billed according to our policy; refunds are not automatic.'**
+  String get profileDeleteAckOrdersSubtitle;
+
+  /// Title for acknowledgement about exporting data.
+  ///
+  /// In en, this message translates to:
+  /// **'I downloaded anything I still need'**
+  String get profileDeleteAckExportTitle;
+
+  /// Subtitle for data export acknowledgement.
+  ///
+  /// In en, this message translates to:
+  /// **'Data exports stay available for 30 days, but I no longer need access.'**
+  String get profileDeleteAckExportSubtitle;
+
+  /// Label for the optional feedback field on the delete screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get profileDeleteFeedbackLabel;
+
+  /// Hint text for the optional feedback field.
+  ///
+  /// In en, this message translates to:
+  /// **'Share feedback for our team'**
+  String get profileDeleteFeedbackHint;
+
+  /// Helper text displayed under the feedback field.
+  ///
+  /// In en, this message translates to:
+  /// **'Your note helps us close the account faster.'**
+  String get profileDeleteFeedbackHelper;
+
+  /// Primary call-to-action label for sending a deletion request.
+  ///
+  /// In en, this message translates to:
+  /// **'Request deletion'**
+  String get profileDeleteSubmitCta;
+
+  /// Secondary action label to dismiss without deleting.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep my account'**
+  String get profileDeleteCancelLabel;
+
+  /// Title for the confirmation dialog before submitting deletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Send deletion request?'**
+  String get profileDeleteConfirmDialogTitle;
+
+  /// Body text for the deletion confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll review the request within 30 days. You can\'t cancel once processed.'**
+  String get profileDeleteConfirmDialogBody;
+
+  /// Primary button label inside the confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get profileDeleteConfirmPrimary;
+
+  /// Secondary button label inside the confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get profileDeleteConfirmSecondary;
+
+  /// Snackbar message shown after successfully sending a deletion request.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks, we received your deletion request. We\'ll email you when it\'s processed.'**
+  String get profileDeleteSubmitSuccess;
+
+  /// Snackbar message shown when the deletion request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the request. Check your connection and try again.'**
+  String get profileDeleteSubmitError;
+
+  /// Label that shows when the user last submitted a deletion request.
+  ///
+  /// In en, this message translates to:
+  /// **'Last requested on {date}'**
+  String profileDeleteLastRequestedLabel(Object date);
+
+  /// Label for retry buttons on the deletion screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileDeleteRetryLabel;
+
   /// Title for the profile locale settings screen
   ///
   /// In en, this message translates to:

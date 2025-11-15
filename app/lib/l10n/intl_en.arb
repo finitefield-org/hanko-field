@@ -4483,6 +4483,129 @@
   "description": "Subtitle for the legal documents quick action card"
 }
 
+, "profileDeleteTitle": "Delete account"
+, "@profileDeleteTitle": {
+  "description": "Title for the account deletion screen in profile settings."
+}
+
+, "profileDeleteSubtitle": "Send a removal request to permanently delete your profile, saved designs, and billing data."
+, "@profileDeleteSubtitle": {
+  "description": "Subtitle explaining what happens when the user deletes their account."
+}
+
+, "profileDeleteWarningTitle": "Deletion can't be undone"
+, "@profileDeleteWarningTitle": {
+  "description": "Headline for the warning card on the account deletion screen."
+}
+
+, "profileDeleteWarningBody": "We anonymize legal records as required, but once processed you will lose access to Hanko Field and all personalized services."
+, "@profileDeleteWarningBody": {
+  "description": "Body copy describing the consequences of deletion."
+}
+
+, "profileDeleteChecklistTitle": "Confirm the following before continuing"
+, "@profileDeleteChecklistTitle": {
+  "description": "Heading for the acknowledgement checklist."
+}
+
+, "profileDeleteAckDataTitle": "Erase my designs and history"
+, "@profileDeleteAckDataTitle": {
+  "description": "Title for acknowledgement about data deletion."
+}
+
+, "profileDeleteAckDataSubtitle": "All saved designs, libraries, carts, and personalization data will be deleted."
+, "@profileDeleteAckDataSubtitle": {
+  "description": "Subtitle for data deletion acknowledgement."
+}
+
+, "profileDeleteAckOrdersTitle": "Outstanding orders and charges handled manually"
+, "@profileDeleteAckOrdersTitle": {
+  "description": "Title for acknowledgement about open orders or invoices."
+}
+
+, "profileDeleteAckOrdersSubtitle": "Pending orders may still be fulfilled or billed according to our policy; refunds are not automatic."
+, "@profileDeleteAckOrdersSubtitle": {
+  "description": "Subtitle for the orders acknowledgement."
+}
+
+, "profileDeleteAckExportTitle": "I downloaded anything I still need"
+, "@profileDeleteAckExportTitle": {
+  "description": "Title for acknowledgement about exporting data."
+}
+
+, "profileDeleteAckExportSubtitle": "Data exports stay available for 30 days, but I no longer need access."
+, "@profileDeleteAckExportSubtitle": {
+  "description": "Subtitle for data export acknowledgement."
+}
+
+, "profileDeleteFeedbackLabel": "Reason (optional)"
+, "@profileDeleteFeedbackLabel": {
+  "description": "Label for the optional feedback field on the delete screen."
+}
+
+, "profileDeleteFeedbackHint": "Share feedback for our team"
+, "@profileDeleteFeedbackHint": {
+  "description": "Hint text for the optional feedback field."
+}
+
+, "profileDeleteFeedbackHelper": "Your note helps us close the account faster."
+, "@profileDeleteFeedbackHelper": {
+  "description": "Helper text displayed under the feedback field."
+}
+
+, "profileDeleteSubmitCta": "Request deletion"
+, "@profileDeleteSubmitCta": {
+  "description": "Primary call-to-action label for sending a deletion request."
+}
+
+, "profileDeleteCancelLabel": "Keep my account"
+, "@profileDeleteCancelLabel": {
+  "description": "Secondary action label to dismiss without deleting."
+}
+
+, "profileDeleteConfirmDialogTitle": "Send deletion request?"
+, "@profileDeleteConfirmDialogTitle": {
+  "description": "Title for the confirmation dialog before submitting deletion."
+}
+
+, "profileDeleteConfirmDialogBody": "We'll review the request within 30 days. You can't cancel once processed."
+, "@profileDeleteConfirmDialogBody": {
+  "description": "Body text for the deletion confirmation dialog."
+}
+
+, "profileDeleteConfirmPrimary": "Send request"
+, "@profileDeleteConfirmPrimary": {
+  "description": "Primary button label inside the confirmation dialog."
+}
+
+, "profileDeleteConfirmSecondary": "Go back"
+, "@profileDeleteConfirmSecondary": {
+  "description": "Secondary button label inside the confirmation dialog."
+}
+
+, "profileDeleteSubmitSuccess": "Thanks, we received your deletion request. We'll email you when it's processed."
+, "@profileDeleteSubmitSuccess": {
+  "description": "Snackbar message shown after successfully sending a deletion request."
+}
+
+, "profileDeleteSubmitError": "Couldn't send the request. Check your connection and try again."
+, "@profileDeleteSubmitError": {
+  "description": "Snackbar message shown when the deletion request fails."
+}
+
+, "profileDeleteLastRequestedLabel": "Last requested on {date}"
+, "@profileDeleteLastRequestedLabel": {
+  "description": "Label that shows when the user last submitted a deletion request.",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "profileDeleteRetryLabel": "Try again"
+, "@profileDeleteRetryLabel": {
+  "description": "Label for retry buttons on the deletion screen."
+}
+
 , "profileLocaleTitle": "Language & currency"
 , "@profileLocaleTitle": {
   "description": "Title for the profile locale settings screen"

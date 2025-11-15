@@ -2873,6 +2873,129 @@
   "description": "法務クイックアクションのサブタイトル"
 }
 
+, "profileDeleteTitle": "アカウント削除"
+, "@profileDeleteTitle": {
+  "description": "アカウント削除画面のタイトル"
+}
+
+, "profileDeleteSubtitle": "プロフィール、保存したデザイン、決済データを完全に削除する申請を行います。"
+, "@profileDeleteSubtitle": {
+  "description": "アカウント削除の説明文"
+}
+
+, "profileDeleteWarningTitle": "一度削除すると元に戻せません"
+, "@profileDeleteWarningTitle": {
+  "description": "警告カードの見出し"
+}
+
+, "profileDeleteWarningBody": "法令で定められた記録のみ匿名化して保持しますが、処理が完了すると Hanko Field へのアクセスはすべて終了します。"
+, "@profileDeleteWarningBody": {
+  "description": "アカウント削除による影響を説明する文章"
+}
+
+, "profileDeleteChecklistTitle": "続行前にすべて確認してください"
+, "@profileDeleteChecklistTitle": {
+  "description": "確認事項リストの見出し"
+}
+
+, "profileDeleteAckDataTitle": "デザインや履歴がすべて消えることを理解しました"
+, "@profileDeleteAckDataTitle": {
+  "description": "データ削除に関する確認事項のタイトル"
+}
+
+, "profileDeleteAckDataSubtitle": "保存済みデザイン、ライブラリ、カート、パーソナライズ情報は完全に削除されます。"
+, "@profileDeleteAckDataSubtitle": {
+  "description": "データ削除の詳細説明"
+}
+
+, "profileDeleteAckOrdersTitle": "未処理の注文や請求は個別対応になることを理解しました"
+, "@profileDeleteAckOrdersTitle": {
+  "description": "注文・請求に関する確認事項のタイトル"
+}
+
+, "profileDeleteAckOrdersSubtitle": "制作中の注文はポリシーに沿って進行または請求され、自動返金は行われません。"
+, "@profileDeleteAckOrdersSubtitle": {
+  "description": "注文・請求に関する詳細説明"
+}
+
+, "profileDeleteAckExportTitle": "必要なデータはすでにダウンロード済みです"
+, "@profileDeleteAckExportTitle": {
+  "description": "データエクスポート確認事項のタイトル"
+}
+
+, "profileDeleteAckExportSubtitle": "データエクスポートは30日間利用できますが、今後必要ありません。"
+, "@profileDeleteAckExportSubtitle": {
+  "description": "データエクスポートに関する詳細説明"
+}
+
+, "profileDeleteFeedbackLabel": "任意の理由"
+, "@profileDeleteFeedbackLabel": {
+  "description": "任意入力フィールドのラベル"
+}
+
+, "profileDeleteFeedbackHint": "退会理由やご要望をお聞かせください"
+, "@profileDeleteFeedbackHint": {
+  "description": "任意入力フィールドのヒント"
+}
+
+, "profileDeleteFeedbackHelper": "いただいた内容は対応の参考にさせていただきます。"
+, "@profileDeleteFeedbackHelper": {
+  "description": "任意入力フィールドの補足"
+}
+
+, "profileDeleteSubmitCta": "削除を申請する"
+, "@profileDeleteSubmitCta": {
+  "description": "削除申請ボタンのラベル"
+}
+
+, "profileDeleteCancelLabel": "削除せず戻る"
+, "@profileDeleteCancelLabel": {
+  "description": "キャンセルボタンのラベル"
+}
+
+, "profileDeleteConfirmDialogTitle": "削除申請を送信しますか？"
+, "@profileDeleteConfirmDialogTitle": {
+  "description": "確認ダイアログのタイトル"
+}
+
+, "profileDeleteConfirmDialogBody": "申請は30日以内に審査され、処理後は取り消せません。"
+, "@profileDeleteConfirmDialogBody": {
+  "description": "確認ダイアログの本文"
+}
+
+, "profileDeleteConfirmPrimary": "申請を送信"
+, "@profileDeleteConfirmPrimary": {
+  "description": "確認ダイアログの実行ボタン"
+}
+
+, "profileDeleteConfirmSecondary": "キャンセル"
+, "@profileDeleteConfirmSecondary": {
+  "description": "確認ダイアログのキャンセルボタン"
+}
+
+, "profileDeleteSubmitSuccess": "削除申請を受け付けました。処理状況はメールでお知らせします。"
+, "@profileDeleteSubmitSuccess": {
+  "description": "削除申請成功時のメッセージ"
+}
+
+, "profileDeleteSubmitError": "申請を送信できませんでした。通信状況を確認して再度お試しください。"
+, "@profileDeleteSubmitError": {
+  "description": "削除申請失敗時のメッセージ"
+}
+
+, "profileDeleteLastRequestedLabel": "前回の申請日時: {date}"
+, "@profileDeleteLastRequestedLabel": {
+  "description": "直近の削除申請日時を表示するラベル",
+  "placeholders": {
+    "date": {}
+  }
+}
+
+, "profileDeleteRetryLabel": "再試行"
+, "@profileDeleteRetryLabel": {
+  "description": "リトライボタンのラベル"
+}
+
 , "profileLocaleTitle": "言語と通貨"
 , "@profileLocaleTitle": {
   "description": "言語・通貨設定画面のタイトル"

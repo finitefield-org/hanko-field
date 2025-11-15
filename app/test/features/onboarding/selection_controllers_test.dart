@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:app/core/app_state/app_locale.dart';
 import 'package:app/core/app_state/user_session.dart';
 import 'package:app/core/data/repositories/api_user_repository.dart';
+import 'package:app/core/domain/entities/account_deletion.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/domain/repositories/user_repository.dart';
 import 'package:app/core/storage/cache_bucket.dart';
@@ -495,6 +496,11 @@ class FakeUserRepository extends UserRepository {
 
   @override
   Future<void> removeFavorite(String favoriteId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> requestAccountDeletion(AccountDeletionRequest request) {
     throw UnimplementedError();
   }
 }

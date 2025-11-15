@@ -1,6 +1,7 @@
 import 'package:app/core/app_state/app_locale.dart';
 import 'package:app/core/app_state/experience_gating.dart';
 import 'package:app/core/data/repositories/api_user_repository.dart';
+import 'package:app/core/domain/entities/account_deletion.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/domain/repositories/user_repository.dart';
 import 'package:app/features/cart/application/checkout_address_controller.dart';
@@ -86,6 +87,10 @@ class _FakeUserRepository extends UserRepository {
 
   @override
   Future<void> removeFavorite(String favoriteId) =>
+      Future.error(UnimplementedError());
+
+  @override
+  Future<void> requestAccountDeletion(AccountDeletionRequest request) =>
       Future.error(UnimplementedError());
 }
 

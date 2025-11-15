@@ -1,4 +1,5 @@
 import 'package:app/core/data/dtos/user_dto.dart';
+import 'package:app/core/domain/entities/account_deletion.dart';
 import 'package:app/core/domain/entities/user.dart';
 import 'package:app/core/domain/repositories/user_repository.dart';
 import 'package:app/core/network/network_client.dart';
@@ -123,6 +124,11 @@ class ApiUserRepository extends UserRepository {
   @override
   Future<void> removeFavorite(String favoriteId) {
     return _client.delete<void>('/me/favorites/$favoriteId');
+  }
+
+  @override
+  Future<void> requestAccountDeletion(AccountDeletionRequest request) {
+    return _client.post<void>('/me/delete-request', data: request.toJson());
   }
 
   static Map<String, dynamic> _expectMap(dynamic value) {

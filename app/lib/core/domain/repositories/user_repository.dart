@@ -1,4 +1,5 @@
 import 'package:app/core/data/dtos/user_dto.dart';
+import 'package:app/core/domain/entities/account_deletion.dart';
 import 'package:app/core/domain/entities/user.dart';
 
 /// DTO ⇔ ドメイン変換をリポジトリ実装で共有するための mixin
@@ -37,4 +38,6 @@ abstract class UserRepository with UserDtoMapper {
   Future<List<UserFavoriteDesign>> fetchFavorites();
   Future<void> addFavorite(UserFavoriteDesign favorite);
   Future<void> removeFavorite(String favoriteId);
+
+  Future<void> requestAccountDeletion(AccountDeletionRequest request);
 }

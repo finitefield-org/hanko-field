@@ -3008,6 +3008,92 @@ class AppLocalizationsEn extends AppLocalizations {
       'Terms, privacy, compliance notices';
 
   @override
+  String get profileDeleteTitle => 'Delete account';
+
+  @override
+  String get profileDeleteSubtitle =>
+      'Send a removal request to permanently delete your profile, saved designs, and billing data.';
+
+  @override
+  String get profileDeleteWarningTitle => 'Deletion can\'t be undone';
+
+  @override
+  String get profileDeleteWarningBody =>
+      'We anonymize legal records as required, but once processed you will lose access to Hanko Field and all personalized services.';
+
+  @override
+  String get profileDeleteChecklistTitle =>
+      'Confirm the following before continuing';
+
+  @override
+  String get profileDeleteAckDataTitle => 'Erase my designs and history';
+
+  @override
+  String get profileDeleteAckDataSubtitle =>
+      'All saved designs, libraries, carts, and personalization data will be deleted.';
+
+  @override
+  String get profileDeleteAckOrdersTitle =>
+      'Outstanding orders and charges handled manually';
+
+  @override
+  String get profileDeleteAckOrdersSubtitle =>
+      'Pending orders may still be fulfilled or billed according to our policy; refunds are not automatic.';
+
+  @override
+  String get profileDeleteAckExportTitle =>
+      'I downloaded anything I still need';
+
+  @override
+  String get profileDeleteAckExportSubtitle =>
+      'Data exports stay available for 30 days, but I no longer need access.';
+
+  @override
+  String get profileDeleteFeedbackLabel => 'Reason (optional)';
+
+  @override
+  String get profileDeleteFeedbackHint => 'Share feedback for our team';
+
+  @override
+  String get profileDeleteFeedbackHelper =>
+      'Your note helps us close the account faster.';
+
+  @override
+  String get profileDeleteSubmitCta => 'Request deletion';
+
+  @override
+  String get profileDeleteCancelLabel => 'Keep my account';
+
+  @override
+  String get profileDeleteConfirmDialogTitle => 'Send deletion request?';
+
+  @override
+  String get profileDeleteConfirmDialogBody =>
+      'We\'ll review the request within 30 days. You can\'t cancel once processed.';
+
+  @override
+  String get profileDeleteConfirmPrimary => 'Send request';
+
+  @override
+  String get profileDeleteConfirmSecondary => 'Go back';
+
+  @override
+  String get profileDeleteSubmitSuccess =>
+      'Thanks, we received your deletion request. We\'ll email you when it\'s processed.';
+
+  @override
+  String get profileDeleteSubmitError =>
+      'Couldn\'t send the request. Check your connection and try again.';
+
+  @override
+  String profileDeleteLastRequestedLabel(Object date) {
+    return 'Last requested on $date';
+  }
+
+  @override
+  String get profileDeleteRetryLabel => 'Try again';
+
+  @override
   String get profileLocaleTitle => 'Language & currency';
 
   @override

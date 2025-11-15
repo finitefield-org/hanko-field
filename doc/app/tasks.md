@@ -94,7 +94,7 @@
 - [x] [Implement support screen (`/profile/support`) linking to FAQ, chat, contact forms.](doc/app/tasks/069-implement-support-screen-profile-support-linking-to-faq-chat-contact-forms.md)
 - [x] [Build linked accounts screen (`/profile/linked-accounts`) showing social auth connections and unlink flow.](doc/app/tasks/070-build-linked-accounts-screen-profile-linked-accounts-showing-social-auth-connections-and-u.md)
 - [x] [Implement data export (`/profile/export`) generating archive and downloading securely.](doc/app/tasks/071-implement-data-export-profile-export-generating-archive-and-downloading-securely.md)
-- [ ] [Build account delete flow (`/profile/delete`) with confirmation steps and backend call.](doc/app/tasks/072-build-account-delete-flow-profile-delete-with-confirmation-steps-and-backend-call.md)
+- [x] [Build account delete flow (`/profile/delete`) with confirmation steps and backend call.](doc/app/tasks/072-build-account-delete-flow-profile-delete-with-confirmation-steps-and-backend-call.md)
 
 ## 12. Support & Status
 - [ ] [Implement FAQ screen (`/support/faq`) with categories, search, and offline caching.](doc/app/tasks/073-implement-faq-screen-support-faq-with-categories-search-and-offline-caching.md)
