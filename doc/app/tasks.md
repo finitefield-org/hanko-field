@@ -4,7 +4,7 @@
 - [x] [Validate Flutter app scope, personas, supported platforms (iOS/Android), and release milestones from `doc/app/app_design.md`.](doc/app/tasks/001-validate-flutter-app-scope-personas-supported-platforms-ios-android-and-release-milestones.md)
 - [x] [Define MVVM + miniriverpod architecture conventions (view/widget, view-model, repository layers) and directory structure.](doc/app/tasks/002-define-mvvm-architecture-conventions-view-widget-view-model-repository-layers-and-director.md)
 - [x] [Establish miniriverpod usage guidelines (providers, mutations/concurrency, scoping) and dependency injection strategy without code generation.](doc/app/tasks/003-establish-miniriverpod-usage-guidelines-providers-scoping-mutations-and-dependency-injection.md)
-- [ ] [Document navigation map (routes, tabs, nested flows) and deep link handling for app sections.](doc/app/tasks/004-document-navigation-map-routes-tabs-nested-flows-and-deep-link-handling-for-app-sections.md)
+- [x] [Document navigation map (routes, tabs, nested flows) and deep link handling for app sections.](doc/app/tasks/004-document-navigation-map-routes-tabs-nested-flows-and-deep-link-handling-for-app-sections.md)
 - [ ] [Create API contract checklist aligning mobile payloads with backend endpoints for all flows.](doc/app/tasks/005-create-api-contract-checklist-aligning-mobile-payloads-with-backend-endpoints-for-all-flow.md)
 
 ## 1. Project Setup & Tooling

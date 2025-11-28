@@ -49,6 +49,7 @@
 ## アプリ(app)
 - Flutter
   - doc/app/app_design.md を参照してください。
+  - doc/app/navigation.md を参照してください。
 - MVVM + feature-first architecture
   - doc/app/architecture.md を参照してください。
 - miniriverpod
