@@ -48,7 +48,7 @@
 
 ## アプリ(app)
 - Flutter
-- Riverpod 3.0
+- miniriverpod
 - MVVM + feature-first architecture
 
 ## タスクについて
