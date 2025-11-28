@@ -2,8 +2,8 @@
 
 ## 0. Planning & Architecture
 - [ ] [Validate Flutter app scope, personas, supported platforms (iOS/Android), and release milestones from `doc/app/app_design.md`.](doc/app/tasks/001-validate-flutter-app-scope-personas-supported-platforms-ios-android-and-release-milestones.md)
-- [ ] [Define MVVM architecture conventions (view/widget, view-model, repository layers) and directory structure.](doc/app/tasks/002-define-mvvm-architecture-conventions-view-widget-view-model-repository-layers-and-director.md)
-- [ ] [Establish Riverpod usage guidelines (Notifier/AsyncNotifier, providers scoping) and dependency injection strategy without code generation.](doc/app/tasks/003-establish-riverpod-usage-guidelines-notifier-asyncnotifier-providers-scoping-and-dependenc.md)
+- [ ] [Define MVVM + miniriverpod architecture conventions (view/widget, view-model, repository layers) and directory structure.](doc/app/tasks/002-define-mvvm-architecture-conventions-view-widget-view-model-repository-layers-and-director.md)
+- [ ] [Establish miniriverpod usage guidelines (providers, mutations/concurrency, scoping) and dependency injection strategy without code generation.](doc/app/tasks/003-establish-miniriverpod-usage-guidelines-providers-scoping-mutations-and-dependency-injection.md)
 - [ ] [Document navigation map (routes, tabs, nested flows) and deep link handling for app sections.](doc/app/tasks/004-document-navigation-map-routes-tabs-nested-flows-and-deep-link-handling-for-app-sections.md)
 - [ ] [Create API contract checklist aligning mobile payloads with backend endpoints for all flows.](doc/app/tasks/005-create-api-contract-checklist-aligning-mobile-payloads-with-backend-endpoints-for-all-flow.md)
 
@@ -20,7 +20,7 @@
 - [ ] [Implement local persistence (Hive/Isar/shared_preferences) for caching, offline screen data, and onboarding state.](doc/app/tasks/013-implement-local-persistence-hive-isar-shared-preferences-for-caching-offline-screen-data-a.md)
 - [ ] [Create shared widgets (buttons, form fields, modals, cards, list skeletons) following design system.](doc/app/tasks/014-create-shared-widgets-buttons-form-fields-modals-cards-list-skeletons-following-design-sys.md)
 - [ ] [Develop navigation shell with bottom tabs (`作成/ショップ/注文/マイ印鑑/プロフィール`), nested navigators, and deep link support.](doc/app/tasks/015-develop-navigation-shell-with-bottom-tabs-nested-navigators-and-deep-link-support.md)
-- [ ] [Implement global app state providers (user session, locale, feature flags) with Riverpod.](doc/app/tasks/016-implement-global-app-state-providers-user-session-locale-feature-flags-with-riverpod.md)
+- [ ] [Implement global app state providers (user session, locale, feature flags) with miniriverpod.](doc/app/tasks/016-implement-global-app-state-providers-user-session-locale-feature-flags-with-miniriverpod.md)
 - [ ] [Create notification bell UI, search entry points, and help overlays accessible from top app bar.](doc/app/tasks/017-create-notification-bell-ui-search-entry-points-and-help-overlays-accessible-from-top-app-.md)
 
 ## 3. Onboarding & Auth Flow
@@ -111,7 +111,7 @@
 
 ## 14. Notifications & Messaging
 - [ ] [Integrate push notification handling (background/foreground) and routing to relevant screens.](doc/app/tasks/082-integrate-push-notification-handling-background-foreground-and-routing-to-relevant-screens.md)
-- [ ] [Implement in-app messaging/toast system for success, warnings, alerts tied to Riverpod providers.](doc/app/tasks/083-implement-in-app-messaging-toast-system-for-success-warnings-alerts-tied-to-riverpod-provi.md)
+- [ ] [Implement in-app messaging/toast system for success, warnings, alerts tied to miniriverpod providers.](doc/app/tasks/083-implement-in-app-messaging-toast-system-for-success-warnings-alerts-tied-to-miniriverpod-providers.md)
 - [ ] [Provide notification inbox sync and badge counts shared between app bar and tabs.](doc/app/tasks/084-provide-notification-inbox-sync-and-badge-counts-shared-between-app-bar-and-tabs.md)
 
 ## 15. Analytics, Telemetry, and Monitoring

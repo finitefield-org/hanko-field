@@ -1,6 +1,6 @@
 # アプリ
 モバイルアプリは Flutter で開発します。MVVMパターンを採用します。
-状態管理には riverpod を使用します。ただし、コード生成は使いません。また、StateProvider は使用しません。NotifierやAsyncNotifierを使用します。
+状態管理には miniriverpod を使用します。Riverpod を簡潔化した軽量実装を採用し、コード生成は使いません。`Provider/AsyncProvider` と mutation (`ref.invoke`) を中心にし、`StateProvider` 相当も避けます。詳しくは `../miniriverpod/miniriverpod/README.md` を参照してください。
 
 
 # 画面一覧
