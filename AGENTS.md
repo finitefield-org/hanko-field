@@ -48,8 +48,9 @@
 
 ## アプリ(app)
 - Flutter
-- miniriverpod
 - MVVM + feature-first architecture
+- miniriverpod
+  - 使い方については、../../miniriverpod/miniriverpod/README.md を参照してください。
 
 ## タスクについて
 - タスクが終了したらチェックを入れること。
