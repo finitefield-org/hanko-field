@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
+import 'package:app/analytics/analytics.dart';
 import 'package:app/config/app_flavor.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/localization/app_localizations.dart';
@@ -41,6 +44,7 @@ class _AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final analytics = ref.watch(analyticsClientProvider);
     final brightness = Theme.of(context).brightness;
     final tokens = ref.watch(themeBundleProvider).tokensFor(brightness);
     final strings = AppLocalizations.of(context);
@@ -61,11 +65,25 @@ class _AppShell extends ConsumerWidget {
               runSpacing: tokens.spacing.sm,
               children: [
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    unawaited(
+                      analytics.track(
+                        PrimaryActionTappedEvent(label: strings.primaryAction),
+                      ),
+                    );
+                  },
                   child: Text(strings.primaryAction),
                 ),
                 FilledButton.tonal(
-                  onPressed: () {},
+                  onPressed: () {
+                    unawaited(
+                      analytics.track(
+                        SecondaryActionTappedEvent(
+                          label: strings.secondaryAction,
+                        ),
+                      ),
+                    );
+                  },
                   child: Text(strings.secondaryAction),
                 ),
               ],
