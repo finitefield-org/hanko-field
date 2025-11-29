@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/config/app_flavor.dart';
+import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -11,12 +13,13 @@ class HankoFieldApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final flavor = ref.watch(appFlavorProvider);
     final themeMode = ref.watch(themeModeProvider);
     final themeBundle = ref.watch(themeBundleProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Hanko Field',
+      title: flavor.displayLabel,
       theme: themeBundle.light,
       darkTheme: themeBundle.dark,
       themeMode: themeMode,

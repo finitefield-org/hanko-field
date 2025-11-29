@@ -1,4 +1,4 @@
-package org.finitefield.hankofield.app
+package com.hanko.field
 
 import io.flutter.embedding.android.FlutterActivity
 

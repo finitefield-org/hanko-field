@@ -12,3 +12,5 @@ Integrate Firebase for auth, messaging, remote config across flavors.
 3. Set up Firebase Messaging for push notifications and background handling.
 4. Initialize Remote Config with defaults and fetch/activate lifecycle.
 5. Provide environment setup guide for developers.
+
+See `doc/app/firebase-setup.md` for the flavor-specific configuration guide and bootstrap details.
