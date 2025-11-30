@@ -49,3 +49,4 @@ Source: `../miniriverpod/miniriverpod/README.md`, complements `doc/app/architect
 - Unit test providers by creating a `ProviderContainer` and overriding dependencies (repositories, environment).
 - Widget tests wrap widgets with `ProviderScope(overrides: [...])`.
 - Verify concurrency behavior (restart/dropLatest) with fake delays to catch double-submits.
+- Override global app providers in tests via scopes: `userSessionScope.overrideWithValue(...)`, `appLocaleScope.overrideWithValue(...)`, `featureFlagsScope.overrideWithValue(...)`.

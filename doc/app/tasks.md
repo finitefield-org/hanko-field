@@ -20,7 +20,7 @@
 - [x] [Implement local persistence (Hive/Isar/shared_preferences) for caching, offline screen data, and onboarding state.](doc/app/tasks/013-implement-local-persistence-hive-isar-shared-preferences-for-caching-offline-screen-data-a.md)
 - [x] [Create shared widgets (buttons, form fields, modals, cards, list skeletons) following design system.](doc/app/tasks/014-create-shared-widgets-buttons-form-fields-modals-cards-list-skeletons-following-design-sys.md)
 - [x] [Develop navigation shell with bottom tabs (`作成/ショップ/注文/マイ印鑑/プロフィール`), nested navigators, and deep link support.](doc/app/tasks/015-develop-navigation-shell-with-bottom-tabs-nested-navigators-and-deep-link-support.md)
-- [ ] [Implement global app state providers (user session, locale, feature flags) with miniriverpod.](doc/app/tasks/016-implement-global-app-state-providers-user-session-locale-feature-flags-with-miniriverpod.md)
+- [x] [Implement global app state providers (user session, locale, feature flags) with miniriverpod.](doc/app/tasks/016-implement-global-app-state-providers-user-session-locale-feature-flags-with-miniriverpod.md)
 - [ ] [Create notification bell UI, search entry points, and help overlays accessible from top app bar.](doc/app/tasks/017-create-notification-bell-ui-search-entry-points-and-help-overlays-accessible-from-top-app-.md)
 
 ## 3. Onboarding & Auth Flow
