@@ -49,6 +49,11 @@ class CachePolicies {
     ttl: Duration(minutes: 10),
     staleGrace: Duration(minutes: 20),
   );
+
+  static const onboarding = CachePolicy(
+    ttl: Duration(days: 365),
+    staleGrace: Duration(days: 30),
+  );
 }
 
 class CacheHit<T> {

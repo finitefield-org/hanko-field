@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/routing/routes.dart';
+import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
@@ -549,11 +550,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.onboarding,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'オンボーディング',
-        routePath: AppRoutePaths.onboarding,
-        showBack: true,
-      ),
+      builder: (context, state) => const OnboardingPage(),
     ),
     GoRoute(
       path: AppRoutePaths.locale,

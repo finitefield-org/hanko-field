@@ -159,3 +159,53 @@ class SecondaryActionTappedEvent extends AppAnalyticsEvent {
   @override
   Map<String, Object?> toParameters() => {'label': label};
 }
+
+class OnboardingStepViewedEvent extends AppAnalyticsEvent {
+  const OnboardingStepViewedEvent({
+    required this.step,
+    required this.totalSteps,
+  });
+
+  final int step;
+  final int totalSteps;
+
+  @override
+  String get name => 'onboarding_step_viewed';
+
+  @override
+  Map<String, Object?> toParameters() => {
+    'step': step,
+    'total_steps': totalSteps,
+  };
+}
+
+class OnboardingCompletedEvent extends AppAnalyticsEvent {
+  const OnboardingCompletedEvent({required this.totalSteps});
+
+  final int totalSteps;
+
+  @override
+  String get name => 'onboarding_completed';
+
+  @override
+  Map<String, Object?> toParameters() => {'total_steps': totalSteps};
+}
+
+class OnboardingSkippedEvent extends AppAnalyticsEvent {
+  const OnboardingSkippedEvent({
+    required this.totalSteps,
+    required this.skippedAtStep,
+  });
+
+  final int totalSteps;
+  final int skippedAtStep;
+
+  @override
+  String get name => 'onboarding_skipped';
+
+  @override
+  Map<String, Object?> toParameters() => {
+    'total_steps': totalSteps,
+    'skipped_at_step': skippedAtStep,
+  };
+}

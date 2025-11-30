@@ -64,3 +64,13 @@ final notificationsCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
     defaultPolicy: CachePolicies.notifications,
   );
 });
+
+final onboardingCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
+  final persistence = ref.watch(localPersistenceProvider);
+  return LocalCacheStore<JsonMap>(
+    persistence: persistence,
+    box: LocalCacheBoxes.onboarding,
+    codec: const JsonCacheCodec(),
+    defaultPolicy: CachePolicies.onboarding,
+  );
+});

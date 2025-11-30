@@ -22,8 +22,15 @@ class LocalCacheBoxes {
   static const cart = CacheBox('cart_cache', encrypted: true);
   static const guides = CacheBox('guides_cache');
   static const notifications = CacheBox('notifications_cache');
+  static const onboarding = CacheBox('onboarding_cache');
 
-  static const defaults = <CacheBox>[designs, cart, guides, notifications];
+  static const defaults = <CacheBox>[
+    designs,
+    cart,
+    guides,
+    notifications,
+    onboarding,
+  ];
 }
 
 class LocalEncryptionKeyManager {
