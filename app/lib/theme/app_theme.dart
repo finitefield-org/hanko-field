@@ -50,6 +50,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       textTheme: textTheme,
+      extensions: [DesignTokensTheme(tokens: tokens)],
       scaffoldBackgroundColor: tokens.colors.background,
       appBarTheme: AppBarTheme(
         backgroundColor: tokens.colors.surface,

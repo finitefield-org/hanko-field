@@ -211,3 +211,31 @@ class DesignTokens {
     );
   }
 }
+
+class DesignTokensTheme extends ThemeExtension<DesignTokensTheme> {
+  const DesignTokensTheme({required this.tokens});
+
+  final DesignTokens tokens;
+
+  static DesignTokens of(BuildContext context) {
+    final extension = Theme.of(context).extension<DesignTokensTheme>();
+    assert(extension != null, 'DesignTokensTheme is not found in ThemeData');
+    return extension!.tokens;
+  }
+
+  @override
+  DesignTokensTheme copyWith({DesignTokens? tokens}) {
+    return DesignTokensTheme(tokens: tokens ?? this.tokens);
+  }
+
+  @override
+  ThemeExtension<DesignTokensTheme> lerp(
+    covariant ThemeExtension<DesignTokensTheme>? other,
+    double t,
+  ) {
+    if (other is! DesignTokensTheme) {
+      return this;
+    }
+    return t < 0.5 ? this : other;
+  }
+}
