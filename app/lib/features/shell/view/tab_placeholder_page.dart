@@ -23,10 +23,7 @@ class TabPlaceholderPage extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        leading: showBack ? const BackButton() : null,
-      ),
+      appBar: AppTopBar(title: title, showBack: showBack),
       body: Padding(
         padding: EdgeInsets.all(tokens.spacing.lg),
         child: Column(
