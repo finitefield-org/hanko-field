@@ -3,6 +3,7 @@
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
+import 'package:app/features/splash/view/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -16,7 +17,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: keys.rootKey,
-    initialLocation: AppRoutePaths.design,
+    initialLocation: AppRoutePaths.splash,
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -543,11 +544,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.splash,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'スプラッシュ',
-        routePath: AppRoutePaths.splash,
-        showBack: true,
-      ),
+      builder: (context, state) => const SplashPage(),
     ),
     GoRoute(
       path: AppRoutePaths.onboarding,
