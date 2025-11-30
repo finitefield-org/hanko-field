@@ -1,10 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:io';
-import 'dart:ui';
-
 import 'package:app/config/app_flavor.dart';
 import 'package:app/firebase/firebase_providers.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class NetworkConfig {
@@ -72,7 +71,7 @@ final networkConfigProvider = Provider<NetworkConfig>((ref) {
       AppFlavor.prod => 'https://api.hanko-field.app',
     };
 
-    final localeTag = PlatformDispatcher.instance.locale.toLanguageTag();
+    final localeTag = ref.watch(appLocaleProvider).toLanguageTag();
 
     return NetworkConfig(
       baseUrl: baseUrl,

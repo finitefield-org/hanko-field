@@ -4,6 +4,7 @@ import 'package:app/config/app_flavor.dart';
 import 'package:app/core/routing/app_router.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -18,6 +19,7 @@ class HankoFieldApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final themeBundle = ref.watch(themeBundleProvider);
     final router = ref.watch(appRouterProvider);
+    final locale = ref.watch(appLocaleProvider);
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -25,6 +27,7 @@ class HankoFieldApp extends ConsumerWidget {
       theme: themeBundle.light,
       darkTheme: themeBundle.dark,
       themeMode: themeMode,
+      locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizationsDelegate(),
