@@ -2,21 +2,10 @@
 
 import 'dart:async';
 
+import 'package:app/core/storage/preferences.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-const sharedPreferencesScope = Scope<SharedPreferences>.required(
-  'sharedPreferences',
-);
-
-final sharedPreferencesProvider = AsyncProvider<SharedPreferences>((ref) async {
-  try {
-    return ref.scope(sharedPreferencesScope);
-  } on StateError {
-    return SharedPreferences.getInstance();
-  }
-});
 
 final privacyPreferencesProvider = AsyncProvider<PrivacyPreferences>((
   ref,

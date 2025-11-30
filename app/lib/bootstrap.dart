@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:app/analytics/analytics.dart';
 import 'package:app/app.dart';
 import 'package:app/config/app_flavor.dart';
+import 'package:app/core/storage/local_persistence_providers.dart';
 import 'package:app/firebase/firebase_options.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/messaging.dart';
@@ -71,6 +72,12 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     await container.read(remoteConfigInitializerProvider.future);
   } catch (e, st) {
     logger.warning('Failed to initialize Remote Config: $e', e, st);
+  }
+
+  try {
+    await container.read(localPersistenceInitializerProvider.future);
+  } catch (e, st) {
+    logger.warning('Failed to initialize local persistence: $e', e, st);
   }
 
   final crashReporter = container.read(crashReporterProvider);
