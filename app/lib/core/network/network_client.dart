@@ -296,15 +296,17 @@ class NetworkClient {
   }
 
   Future<void> _ensureOnline(Uri uri) async {
-    final List<ConnectivityResult> connectivity = await _connectivity
-        .checkConnectivity();
-    final isOffline =
-        connectivity.isEmpty ||
-        connectivity.every((result) => result == ConnectivityResult.none);
+    final dynamic connectivity = await _connectivity.checkConnectivity();
 
-    if (isOffline) {
-      throw NetworkError.offline(uri: uri);
-    }
+    final bool isOffline = switch (connectivity) {
+      final List<ConnectivityResult> list =>
+        list.isEmpty ||
+            list.every((result) => result == ConnectivityResult.none),
+      final ConnectivityResult single => single == ConnectivityResult.none,
+      _ => true,
+    };
+
+    if (isOffline) throw NetworkError.offline(uri: uri);
   }
 
   NetworkError _mapExceptionToNetworkError(Exception exception, Uri uri) {
