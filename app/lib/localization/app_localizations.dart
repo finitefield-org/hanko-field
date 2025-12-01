@@ -56,6 +56,44 @@ class AppLocalizations {
           'Pick the journey that best matches how you will use Hanko Field.',
       'personaContinue': 'Continue',
       'personaUseSelected': 'Save persona',
+      'authTitle': 'Sign in or continue',
+      'authSubtitle': 'Choose how you\'d like to continue',
+      'authBody':
+          'Sign in to sync designs and orders, or continue as a guest with limited features.',
+      'authEmailLabel': 'Email',
+      'authEmailHelper': 'Used for receipts and account recovery.',
+      'authEmailRequired': 'Email is required.',
+      'authEmailInvalid': 'Enter a valid email address.',
+      'authPasswordLabel': 'Password',
+      'authPasswordHelper': 'At least 8 characters.',
+      'authPasswordTooShort': 'Password is too short.',
+      'authEmailCta': 'Continue with email',
+      'authAppleButton': 'Continue with Apple',
+      'authGoogleButton': 'Continue with Google',
+      'authGuestCta': 'Continue as guest',
+      'authGuestNote':
+          'Guest mode lets you browse with limited saving and checkout.',
+      'authHelpTooltip': 'Need help?',
+      'authHelpTitle': 'About signing in',
+      'authHelpBody':
+          'Use your account to keep designs and orders in sync. You can link Apple or Google later from settings.',
+      'authErrorCancelled': 'Sign-in was cancelled.',
+      'authErrorNetwork': 'Network unavailable. Please check your connection.',
+      'authErrorInvalid': 'Credentials are invalid or expired. Try again.',
+      'authErrorWrongPassword': 'Email or password is incorrect.',
+      'authErrorWeakPassword': 'Password is too weak; try 8+ characters.',
+      'authErrorAppleUnavailable':
+          'Apple Sign-In is not available on this device.',
+      'authErrorLink':
+          'This email is already linked with {providers}. Sign in with that option to connect.',
+      'authErrorUnknown': 'Could not sign in. Please try again.',
+      'authLinkingTitle': 'Link your account',
+      'authLinkPrompt':
+          'Sign in with {providers} to link and keep your data together.',
+      'authProviderUnknown': 'your account',
+      'authProviderGoogle': 'Google',
+      'authProviderApple': 'Apple',
+      'authProviderEmail': 'Email',
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -92,6 +130,38 @@ class AppLocalizations {
       'personaDescription': '利用シーンに近いスタイルを選ぶと、最適なガイドを表示します。',
       'personaContinue': '次へ進む',
       'personaUseSelected': 'この設定で進む',
+      'authTitle': 'ログインまたは続行',
+      'authSubtitle': '利用方法を選んでください',
+      'authBody': 'デザインの保存や注文にはログインが必要です。ゲストでも閲覧できます。',
+      'authEmailLabel': 'メールアドレス',
+      'authEmailHelper': '領収書やアカウント復旧に使用します。',
+      'authEmailRequired': 'メールアドレスを入力してください。',
+      'authEmailInvalid': '有効なメールアドレスを入力してください。',
+      'authPasswordLabel': 'パスワード',
+      'authPasswordHelper': '8文字以上で入力してください。',
+      'authPasswordTooShort': 'パスワードが短すぎます。',
+      'authEmailCta': 'メールで続ける',
+      'authAppleButton': 'Appleで続ける',
+      'authGoogleButton': 'Googleで続ける',
+      'authGuestCta': 'ゲストとして続行',
+      'authGuestNote': 'ゲストは閲覧のみ、保存や購入は制限されます。',
+      'authHelpTooltip': 'ヘルプ',
+      'authHelpTitle': 'サインインについて',
+      'authHelpBody': 'アカウントでデザインや注文を安全に同期します。後から設定でApple/Googleを連携できます。',
+      'authErrorCancelled': 'サインインをキャンセルしました。',
+      'authErrorNetwork': 'ネットワークに接続できません。',
+      'authErrorInvalid': '認証情報が無効です。もう一度お試しください。',
+      'authErrorWrongPassword': 'メールアドレスまたはパスワードが正しくありません。',
+      'authErrorWeakPassword': 'パスワードが弱すぎます（8文字以上推奨）。',
+      'authErrorAppleUnavailable': 'この端末ではAppleでのサインインは利用できません。',
+      'authErrorLink': '{providers}ですでに登録済みです。その方法でサインインして連携してください。',
+      'authErrorUnknown': 'サインインできませんでした。再度お試しください。',
+      'authLinkingTitle': 'アカウントを連携',
+      'authLinkPrompt': '{providers}でサインインするとアカウントをまとめられます。',
+      'authProviderUnknown': '既存の方法',
+      'authProviderGoogle': 'Google',
+      'authProviderApple': 'Apple',
+      'authProviderEmail': 'メール',
     },
   };
 
@@ -158,12 +228,52 @@ class AppLocalizations {
   String get personaDescription => _string('personaDescription');
   String get personaContinue => _string('personaContinue');
   String get personaUseSelected => _string('personaUseSelected');
+  String get authTitle => _string('authTitle');
+  String get authSubtitle => _string('authSubtitle');
+  String get authBody => _string('authBody');
+  String get authEmailLabel => _string('authEmailLabel');
+  String get authEmailHelper => _string('authEmailHelper');
+  String get authEmailRequired => _string('authEmailRequired');
+  String get authEmailInvalid => _string('authEmailInvalid');
+  String get authPasswordLabel => _string('authPasswordLabel');
+  String get authPasswordHelper => _string('authPasswordHelper');
+  String get authPasswordTooShort => _string('authPasswordTooShort');
+  String get authEmailCta => _string('authEmailCta');
+  String get authAppleButton => _string('authAppleButton');
+  String get authGoogleButton => _string('authGoogleButton');
+  String get authGuestCta => _string('authGuestCta');
+  String get authGuestNote => _string('authGuestNote');
+  String get authHelpTooltip => _string('authHelpTooltip');
+  String get authHelpTitle => _string('authHelpTitle');
+  String get authHelpBody => _string('authHelpBody');
+  String get authErrorCancelled => _string('authErrorCancelled');
+  String get authErrorNetwork => _string('authErrorNetwork');
+  String get authErrorInvalid => _string('authErrorInvalid');
+  String get authErrorWrongPassword => _string('authErrorWrongPassword');
+  String get authErrorWeakPassword => _string('authErrorWeakPassword');
+  String get authErrorAppleUnavailable => _string('authErrorAppleUnavailable');
+  String get authErrorUnknown => _string('authErrorUnknown');
+  String get authLinkingTitle => _string('authLinkingTitle');
+  String get authProviderUnknown => _string('authProviderUnknown');
+  String get authProviderGoogle => _string('authProviderGoogle');
+  String get authProviderApple => _string('authProviderApple');
+  String get authProviderEmail => _string('authProviderEmail');
 
   String onboardingStepCount(int current, int total) {
     final template = _string('onboardingStepCount');
     return template
         .replaceAll('{current}', '$current')
         .replaceAll('{total}', '$total');
+  }
+
+  String authErrorLink(String providers) {
+    final template = _string('authErrorLink');
+    return template.replaceAll('{providers}', providers);
+  }
+
+  String authLinkPrompt(String providers) {
+    final template = _string('authLinkPrompt');
+    return template.replaceAll('{providers}', providers);
   }
 
   String localeDescription(String deviceTag) {

@@ -3,7 +3,7 @@
 import 'dart:ui';
 
 import 'package:app/core/storage/onboarding_preferences.dart';
-import 'package:app/features/users/data/repositories/user_repository.dart';
+import 'package:app/features/users/data/repositories/local_user_repository.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/shared/providers/session_provider.dart';
@@ -85,14 +85,7 @@ class LocaleSelectionViewModel extends AsyncProvider<LocaleSelectionState> {
   }, concurrency: Concurrency.dropLatest);
 
   Future<void> _syncProfile(Ref ref, Locale locale) async {
-    UserRepository repository;
-    try {
-      repository = ref.scope(UserRepository.fallback);
-    } on StateError {
-      _localeLogger.fine('UserRepository not available; skipping locale sync');
-      return;
-    }
-
+    final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;
     if (profile == null) {

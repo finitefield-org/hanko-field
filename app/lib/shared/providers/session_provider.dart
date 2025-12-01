@@ -3,16 +3,13 @@
 import 'dart:async';
 
 import 'package:app/features/users/data/models/user_models.dart';
-import 'package:app/features/users/data/repositories/user_repository.dart';
+import 'package:app/features/users/data/repositories/local_user_repository.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/security/secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 const userSessionScope = Scope<UserSession>.required('app.session');
-
-final _sessionLogger = Logger('UserSessionProvider');
 
 class SessionUser {
   const SessionUser({
@@ -151,14 +148,8 @@ class UserSessionProvider extends AsyncProvider<UserSession> {
       return const UserSession.signedOut();
     }
 
-    UserProfile profile;
-    try {
-      final repository = ref.scope(UserRepository.fallback);
-      profile = await repository.fetchProfile();
-    } on StateError catch (e, stack) {
-      _sessionLogger.severe('UserRepository override missing', e, stack);
-      rethrow;
-    }
+    final repository = ref.watch(userRepositoryProvider);
+    final profile = await repository.fetchProfile();
 
     return UserSession.authenticated(
       user: SessionUser.fromFirebaseUser(user),

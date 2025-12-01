@@ -2,7 +2,7 @@
 
 import 'package:app/core/storage/onboarding_preferences.dart';
 import 'package:app/features/users/data/models/user_models.dart';
-import 'package:app/features/users/data/repositories/user_repository.dart';
+import 'package:app/features/users/data/repositories/local_user_repository.dart';
 import 'package:app/shared/providers/app_persona_provider.dart';
 import 'package:app/shared/providers/session_provider.dart';
 import 'package:logging/logging.dart';
@@ -65,16 +65,7 @@ class PersonaSelectionViewModel extends AsyncProvider<PersonaSelectionState> {
   }, concurrency: Concurrency.dropLatest);
 
   Future<void> _syncProfile(Ref ref, UserPersona persona) async {
-    UserRepository repository;
-    try {
-      repository = ref.scope(UserRepository.fallback);
-    } on StateError {
-      _personaLogger.fine(
-        'UserRepository not available; skipping persona sync',
-      );
-      return;
-    }
-
+    final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;
     if (profile == null) {

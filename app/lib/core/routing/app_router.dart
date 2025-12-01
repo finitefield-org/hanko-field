@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/routing/routes.dart';
+import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -564,11 +565,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.auth,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '認証',
-        routePath: AppRoutePaths.auth,
-        showBack: true,
-      ),
+      builder: (context, state) => const AuthPage(),
     ),
     GoRoute(
       path: AppRoutePaths.notifications,

@@ -7,7 +7,7 @@ import 'package:app/core/storage/cache_keys.dart';
 import 'package:app/core/storage/local_cache.dart';
 import 'package:app/core/storage/local_persistence_providers.dart';
 import 'package:app/core/storage/onboarding_preferences.dart';
-import 'package:app/features/users/data/repositories/user_repository.dart';
+import 'package:app/features/users/data/repositories/local_user_repository.dart';
 import 'package:app/shared/providers/session_provider.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -107,14 +107,7 @@ class OnboardingViewModel extends AsyncProvider<OnboardingState> {
   }
 
   Future<void> _syncToBackend(Ref ref, JsonMap onboardingState) async {
-    UserRepository repository;
-    try {
-      repository = ref.scope(UserRepository.fallback);
-    } on StateError {
-      _logger.fine('UserRepository not available; skipping onboarding sync');
-      return;
-    }
-
+    final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;
     if (profile == null) {
