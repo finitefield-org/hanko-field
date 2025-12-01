@@ -2,6 +2,8 @@
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
+import 'package:app/features/preferences/view/locale_selection_page.dart';
+import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
@@ -489,11 +491,8 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'locale',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '地域設定',
-            routePath: AppRoutePaths.profileLocale,
-            showBack: true,
-          ),
+          builder: (context, state) =>
+              const LocaleSelectionPage(onCompleteRoute: AppRoutePaths.profile),
         ),
         GoRoute(
           path: 'legal',
@@ -555,20 +554,12 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.locale,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '地域選択',
-        routePath: AppRoutePaths.locale,
-        showBack: true,
-      ),
+      builder: (context, state) => const LocaleSelectionPage(),
     ),
     GoRoute(
       path: AppRoutePaths.persona,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'ペルソナ選択',
-        routePath: AppRoutePaths.persona,
-        showBack: true,
-      ),
+      builder: (context, state) => const PersonaSelectionPage(),
     ),
     GoRoute(
       path: AppRoutePaths.auth,

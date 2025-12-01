@@ -43,6 +43,19 @@ class AppLocalizations {
       'onboardingSlideSupportBody':
           'Save progress, resume on web, and reach support if you get stuck.',
       'onboardingSlideSupportTagline': 'Assist',
+      'localeTitle': 'Choose language & region',
+      'localeSave': 'Save',
+      'localeSubtitle': 'Set your preferred language',
+      'localeDescription': 'Device locale: {device}',
+      'localeContinue': 'Save and continue',
+      'localeUseDevice': 'Use device locale',
+      'personaTitle': 'Choose your persona',
+      'personaSave': 'Save',
+      'personaSubtitle': 'Tailor guidance to your needs',
+      'personaDescription':
+          'Pick the journey that best matches how you will use Hanko Field.',
+      'personaContinue': 'Continue',
+      'personaUseSelected': 'Save persona',
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -67,6 +80,18 @@ class AppLocalizations {
       'onboardingSlideSupportTitle': 'サポート付きで安心',
       'onboardingSlideSupportBody': '途中保存やWebとの連携ができ、困ったらすぐに相談できます。',
       'onboardingSlideSupportTagline': 'サポート',
+      'localeTitle': '言語・地域の設定',
+      'localeSave': '保存',
+      'localeSubtitle': '表示言語を選択してください',
+      'localeDescription': '端末の言語設定: {device}',
+      'localeContinue': '保存して進む',
+      'localeUseDevice': '端末の設定を使う',
+      'personaTitle': 'ペルソナを選択',
+      'personaSave': '保存',
+      'personaSubtitle': 'あなたに合わせた案内に切り替えます',
+      'personaDescription': '利用シーンに近いスタイルを選ぶと、最適なガイドを表示します。',
+      'personaContinue': '次へ進む',
+      'personaUseSelected': 'この設定で進む',
     },
   };
 
@@ -122,12 +147,28 @@ class AppLocalizations {
       _string('onboardingSlideSupportBody');
   String get onboardingSlideSupportTagline =>
       _string('onboardingSlideSupportTagline');
+  String get localeTitle => _string('localeTitle');
+  String get localeSave => _string('localeSave');
+  String get localeSubtitle => _string('localeSubtitle');
+  String get localeContinue => _string('localeContinue');
+  String get localeUseDevice => _string('localeUseDevice');
+  String get personaTitle => _string('personaTitle');
+  String get personaSave => _string('personaSave');
+  String get personaSubtitle => _string('personaSubtitle');
+  String get personaDescription => _string('personaDescription');
+  String get personaContinue => _string('personaContinue');
+  String get personaUseSelected => _string('personaUseSelected');
 
   String onboardingStepCount(int current, int total) {
     final template = _string('onboardingStepCount');
     return template
         .replaceAll('{current}', '$current')
         .replaceAll('{total}', '$total');
+  }
+
+  String localeDescription(String deviceTag) {
+    final template = _string('localeDescription');
+    return template.replaceAll('{device}', deviceTag);
   }
 
   String _string(String key) {

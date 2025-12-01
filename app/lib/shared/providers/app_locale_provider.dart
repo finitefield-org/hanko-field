@@ -112,3 +112,6 @@ Locale? _matchLocale(String? tag, List<Locale> supported) {
 /// `ProviderScope(overrides: [appLocaleScope.overrideWithValue(const Locale('ja'))])`.
 
 const _localePreferenceKey = 'app_locale_preference';
+
+Locale? matchSupportedLocale(String? tag) =>
+    _matchLocale(tag, AppLocalizations.supportedLocales);
