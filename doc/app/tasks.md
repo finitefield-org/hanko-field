@@ -31,7 +31,7 @@
 - [x] [Implement language/region and persona gating to drive downstream UI states.](doc/app/tasks/022-implement-language-region-and-persona-gating-to-drive-downstream-ui-states.md)
 
 ## 4. Home & Discovery
-- [ ] [Implement home screen (`/home`) showing featured items, recent designs, and recommended templates using async providers.](doc/app/tasks/023-implement-home-screen-home-showing-featured-items-recent-designs-and-recommended-templates.md)
+- [x] [Implement home screen (`/home`) showing featured items, recent designs, and recommended templates using async providers.](doc/app/tasks/023-implement-home-screen-home-showing-featured-items-recent-designs-and-recommended-templates.md)
 - [ ] [Build search screen (`/search`) with global search bar, segmented results (templates/materials/articles/FAQ), and search history.](doc/app/tasks/024-build-search-screen-search-with-global-search-bar-segmented-results-templates-materials-ar.md)
 - [ ] [Implement notifications list (`/notifications`) with pagination, read/unread state, and push navigation handling.](doc/app/tasks/025-implement-notifications-list-notifications-with-pagination-read-unread-state-and-push-navi.md)
 

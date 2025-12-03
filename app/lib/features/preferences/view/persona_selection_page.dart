@@ -142,7 +142,7 @@ class _PersonaSelectionPageState extends ConsumerState<PersonaSelectionPage> {
       if (!mounted) return;
       final target =
           widget.onCompleteRoute ??
-          (isAuthed ? AppRoutePaths.design : AppRoutePaths.auth);
+          (isAuthed ? AppRoutePaths.home : AppRoutePaths.auth);
       context.go(target);
     } catch (e) {
       if (!mounted) return;

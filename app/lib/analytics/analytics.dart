@@ -222,3 +222,58 @@ class OnboardingSkippedEvent extends AppAnalyticsEvent {
     'skipped_at_step': skippedAtStep,
   };
 }
+
+class HomeSectionItemTappedEvent extends AppAnalyticsEvent {
+  const HomeSectionItemTappedEvent({
+    required this.section,
+    required this.itemId,
+    this.position,
+    this.persona,
+    this.locale,
+    this.reason,
+  });
+
+  final String section;
+  final String itemId;
+  final int? position;
+  final String? persona;
+  final String? locale;
+  final String? reason;
+
+  @override
+  String get name => 'home_section_item_tapped';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'section': section,
+      'item_id': itemId,
+      'position': position,
+      'persona': persona,
+      'locale': locale,
+      'reason': reason,
+    };
+  }
+}
+
+class HomeRefreshedEvent extends AppAnalyticsEvent {
+  const HomeRefreshedEvent({this.persona, this.locale, this.sections});
+
+  final String? persona;
+  final String? locale;
+  final List<String>? sections;
+
+  @override
+  String get name => 'home_refreshed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'persona': persona,
+      'locale': locale,
+      'sections': sections == null || sections!.isEmpty
+          ? null
+          : sections!.join(','),
+    };
+  }
+}

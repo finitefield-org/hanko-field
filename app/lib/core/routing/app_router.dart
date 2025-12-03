@@ -2,6 +2,7 @@
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
+import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -32,6 +33,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
         branches: [
           StatefulShellBranch(
+            initialLocation: AppRoutePaths.home,
             navigatorKey: keys.designTabKey,
             routes: _designRoutes(keys.designTabKey),
           ),
@@ -93,6 +95,12 @@ class TabNavigatorKeys {
 
 List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
   return [
+    GoRoute(
+      path: AppRoutePaths.home,
+      parentNavigatorKey: tabKey,
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: HomePage()),
+    ),
     GoRoute(
       path: AppRoutePaths.design,
       parentNavigatorKey: tabKey,
@@ -665,11 +673,6 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
         routePath: AppRoutePaths.error,
         showBack: true,
       ),
-    ),
-    GoRoute(
-      path: AppRoutePaths.home,
-      parentNavigatorKey: keys.rootKey,
-      redirect: (context, state) => AppRoutePaths.design,
     ),
   ];
 }

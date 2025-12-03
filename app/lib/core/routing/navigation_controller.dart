@@ -79,7 +79,7 @@ class DeepLinkHandler {
   }
 
   String _toPath(Uri uri) {
-    final normalizedPath = uri.path.isEmpty ? AppRoutePaths.design : uri.path;
+    final normalizedPath = uri.path.isEmpty ? AppRoutePaths.home : uri.path;
     final pathWithSlash = normalizedPath.startsWith('/')
         ? normalizedPath
         : '/$normalizedPath';

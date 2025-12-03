@@ -118,7 +118,7 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
     }
 
     return const SplashResult(
-      targetRoute: AppRoutePaths.design,
+      targetRoute: AppRoutePaths.home,
       reason: SplashDestination.home,
     );
   }

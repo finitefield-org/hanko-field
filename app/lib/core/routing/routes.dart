@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 enum AppTab {
   design(
     label: '作成',
-    location: AppRoutePaths.design,
+    location: AppRoutePaths.home,
     icon: Icons.brush_outlined,
     selectedIcon: Icons.brush,
   ),

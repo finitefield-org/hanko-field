@@ -312,7 +312,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   void _goNext() {
-    context.go(AppRoutePaths.design);
+    context.go(AppRoutePaths.home);
   }
 
   void _showAuthError(AuthException exception) {
