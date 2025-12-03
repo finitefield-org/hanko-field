@@ -9,6 +9,7 @@ import 'package:app/core/storage/onboarding_preferences.dart';
 import 'package:app/core/util/version_compare.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/remote_config.dart';
+import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/shared/providers/feature_flags_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
@@ -43,12 +44,18 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
     try {
       await _initialize(ref);
       final decision = await _resolveNext(ref);
+      final gates = ref.watch(appExperienceGatesProvider);
 
       unawaited(
         ref
             .watch(analyticsClientProvider)
             .track(
-              AppOpenedEvent(entryPoint: 'splash_${decision.reason.name}'),
+              AppOpenedEvent(
+                entryPoint: 'splash_${decision.reason.name}',
+                locale: gates.localeTag,
+                region: gates.regionCode,
+                persona: gates.personaKey,
+              ),
             ),
       );
 

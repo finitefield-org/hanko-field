@@ -123,16 +123,29 @@ sealed class AppAnalyticsEvent {
 }
 
 class AppOpenedEvent extends AppAnalyticsEvent {
-  const AppOpenedEvent({required this.entryPoint});
+  const AppOpenedEvent({
+    required this.entryPoint,
+    this.locale,
+    this.region,
+    this.persona,
+  });
 
   final String entryPoint;
+  final String? locale;
+  final String? region;
+  final String? persona;
 
   @override
   String get name => 'app_opened';
 
   @override
   Map<String, Object?> toParameters() {
-    return {'entry_point': entryPoint};
+    return {
+      'entry_point': entryPoint,
+      'locale': locale,
+      'region': region,
+      'persona': persona,
+    };
   }
 }
 
