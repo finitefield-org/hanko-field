@@ -6,6 +6,7 @@ import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
+import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
@@ -587,11 +588,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.search,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '検索',
-        routePath: AppRoutePaths.search,
-        showBack: true,
-      ),
+      builder: (context, state) => const SearchPage(),
     ),
     GoRoute(
       path: AppRoutePaths.supportFaq,
