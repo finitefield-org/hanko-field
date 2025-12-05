@@ -277,3 +277,35 @@ class HomeRefreshedEvent extends AppAnalyticsEvent {
     };
   }
 }
+
+class DesignCreationModeSelectedEvent extends AppAnalyticsEvent {
+  const DesignCreationModeSelectedEvent({
+    required this.mode,
+    this.filters,
+    this.persona,
+    this.locale,
+    this.entryPoint,
+  });
+
+  final String mode;
+  final List<String>? filters;
+  final String? persona;
+  final String? locale;
+  final String? entryPoint;
+
+  @override
+  String get name => 'design_creation_mode_selected';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'mode': mode,
+      'filters': filters == null || filters!.isEmpty
+          ? null
+          : filters!.join(','),
+      'persona': persona,
+      'locale': locale,
+      'entry_point': entryPoint,
+    };
+  }
+}

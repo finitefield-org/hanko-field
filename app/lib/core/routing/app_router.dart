@@ -2,6 +2,7 @@
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
+import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
@@ -116,11 +117,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
       routes: [
         GoRoute(
           path: 'new',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '作成タイプ選択',
-            routePath: AppRoutePaths.designNew,
-            showBack: true,
-          ),
+          builder: (context, state) => const DesignTypeSelectionPage(),
         ),
         GoRoute(
           path: 'input',
