@@ -3,6 +3,7 @@
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/home/view/home_page.dart';
+import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -579,11 +580,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.notifications,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'お知らせ',
-        routePath: AppRoutePaths.notifications,
-        showBack: true,
-      ),
+      builder: (context, state) => const NotificationsPage(),
     ),
     GoRoute(
       path: AppRoutePaths.search,

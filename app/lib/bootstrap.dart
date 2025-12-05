@@ -6,6 +6,7 @@ import 'package:app/analytics/analytics.dart';
 import 'package:app/app.dart';
 import 'package:app/config/app_flavor.dart';
 import 'package:app/core/storage/local_persistence_providers.dart';
+import 'package:app/features/notifications/data/push_notification_navigation.dart';
 import 'package:app/firebase/firebase_options.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/messaging.dart';
@@ -72,6 +73,12 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     await container.read(remoteConfigInitializerProvider.future);
   } catch (e, st) {
     logger.warning('Failed to initialize Remote Config: $e', e, st);
+  }
+
+  try {
+    await container.read(pushNotificationNavigationInitializerProvider.future);
+  } catch (e, st) {
+    logger.warning('Failed to initialize push navigation: $e', e, st);
   }
 
   try {

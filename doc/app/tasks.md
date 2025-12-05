@@ -33,7 +33,7 @@
 ## 4. Home & Discovery
 - [x] [Implement home screen (`/home`) showing featured items, recent designs, and recommended templates using async providers.](doc/app/tasks/023-implement-home-screen-home-showing-featured-items-recent-designs-and-recommended-templates.md)
 - [x] [Build search screen (`/search`) with global search bar, segmented results (templates/materials/articles/FAQ), and search history.](doc/app/tasks/024-build-search-screen-search-with-global-search-bar-segmented-results-templates-materials-ar.md)
-- [ ] [Implement notifications list (`/notifications`) with pagination, read/unread state, and push navigation handling.](doc/app/tasks/025-implement-notifications-list-notifications-with-pagination-read-unread-state-and-push-navi.md)
+- [x] [Implement notifications list (`/notifications`) with pagination, read/unread state, and push navigation handling.](doc/app/tasks/025-implement-notifications-list-notifications-with-pagination-read-unread-state-and-push-navi.md)
 
 ## 5. Design Creation Flow (作成タブ)
 - [ ] [Implement design type selection (`/design/new`) with entry points for text/upload/logo flows.](doc/app/tasks/026-implement-design-type-selection-design-new-with-entry-points-for-text-upload-logo-flows.md)
