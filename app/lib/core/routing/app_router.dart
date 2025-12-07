@@ -2,6 +2,8 @@
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
+import 'package:app/features/designs/data/models/design_models.dart';
+import 'package:app/features/designs/view/design_input_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
@@ -121,11 +123,16 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'input',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '名前入力',
-            routePath: AppRoutePaths.designInput,
-            showBack: true,
-          ),
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'];
+            DesignSourceType? sourceType;
+            if (mode != null) {
+              try {
+                sourceType = DesignSourceTypeX.fromJson(mode);
+              } catch (_) {}
+            }
+            return DesignInputPage(sourceType: sourceType);
+          },
           routes: [
             GoRoute(
               path: 'kanji-map',
