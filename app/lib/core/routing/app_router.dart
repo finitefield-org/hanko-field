@@ -4,6 +4,7 @@ import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
+import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
@@ -143,11 +144,27 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'style',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '書体/スタイル',
-            routePath: AppRoutePaths.designStyle,
-            showBack: true,
-          ),
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'];
+            DesignSourceType? sourceType;
+            if (mode != null) {
+              try {
+                sourceType = DesignSourceTypeX.fromJson(mode);
+              } catch (_) {}
+            }
+            final filters =
+                state.uri.queryParameters['filters']
+                    ?.split(',')
+                    .where((value) => value.trim().isNotEmpty)
+                    .map((value) => value.trim())
+                    .toSet() ??
+                const <String>{};
+
+            return DesignStyleSelectionPage(
+              sourceType: sourceType,
+              queryFilters: filters,
+            );
+          },
         ),
         GoRoute(
           path: 'editor',

@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/enums.dart';
+import 'package:app/features/catalog/data/models/catalog_models.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/security/storage_permission_client.dart';
@@ -88,6 +89,10 @@ class DesignCreationState {
     required this.nameDraft,
     required this.previewStyle,
     this.savedInput,
+    this.selectedShape,
+    this.selectedSize,
+    this.selectedStyle,
+    this.selectedTemplate,
   });
 
   final DesignSourceType selectedType;
@@ -96,6 +101,10 @@ class DesignCreationState {
   final NameInputDraft nameDraft;
   final WritingStyle previewStyle;
   final DesignInput? savedInput;
+  final SealShape? selectedShape;
+  final DesignSize? selectedSize;
+  final DesignStyle? selectedStyle;
+  final Template? selectedTemplate;
 
   DesignCreationState copyWith({
     DesignSourceType? selectedType,
@@ -104,6 +113,10 @@ class DesignCreationState {
     NameInputDraft? nameDraft,
     WritingStyle? previewStyle,
     DesignInput? savedInput,
+    SealShape? selectedShape,
+    DesignSize? selectedSize,
+    DesignStyle? selectedStyle,
+    Template? selectedTemplate,
     bool clearSavedInput = false,
   }) {
     return DesignCreationState(
@@ -114,6 +127,10 @@ class DesignCreationState {
       nameDraft: nameDraft ?? this.nameDraft,
       previewStyle: previewStyle ?? this.previewStyle,
       savedInput: clearSavedInput ? null : (savedInput ?? this.savedInput),
+      selectedShape: selectedShape ?? this.selectedShape,
+      selectedSize: selectedSize ?? this.selectedSize,
+      selectedStyle: selectedStyle ?? this.selectedStyle,
+      selectedTemplate: selectedTemplate ?? this.selectedTemplate,
     );
   }
 }
@@ -128,6 +145,7 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
   late final applySuggestionMut = mutation<NameInputDraft>(#applySuggestion);
   late final setKanjiMappingMut = mutation<KanjiMapping?>(#setKanjiMapping);
   late final setPreviewStyleMut = mutation<WritingStyle>(#setPreviewStyle);
+  late final setStyleSelectionMut = mutation<DesignStyle>(#setStyleSelection);
   late final saveInputMut = mutation<DesignInput>(#saveInput);
 
   @override
@@ -171,6 +189,10 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
       nameDraft: nameSeed,
       previewStyle: WritingStyle.tensho,
       savedInput: null,
+      selectedShape: null,
+      selectedSize: null,
+      selectedStyle: null,
+      selectedTemplate: null,
     );
   }
 
@@ -247,6 +269,26 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
         ref.state = AsyncData(current.copyWith(previewStyle: style));
         return style;
       }, concurrency: Concurrency.dropLatest);
+
+  Call<DesignStyle> setStyleSelection({
+    required SealShape shape,
+    required DesignSize size,
+    required DesignStyle style,
+    Template? template,
+  }) => mutate(setStyleSelectionMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return style;
+
+    ref.state = AsyncData(
+      current.copyWith(
+        selectedShape: shape,
+        selectedSize: size,
+        selectedStyle: style,
+        selectedTemplate: template ?? current.selectedTemplate,
+      ),
+    );
+    return style;
+  }, concurrency: Concurrency.dropLatest);
 
   Call<DesignInput> saveNameInput() => mutate(saveInputMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
