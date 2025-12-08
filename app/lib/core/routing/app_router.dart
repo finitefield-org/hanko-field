@@ -3,6 +3,7 @@
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
+import 'package:app/features/designs/view/design_editor_page.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
 import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
@@ -168,11 +169,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'editor',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'エディタ',
-            routePath: AppRoutePaths.designEditor,
-            showBack: true,
-          ),
+          builder: (context, state) => const DesignEditorPage(),
         ),
         GoRoute(
           path: 'ai',
