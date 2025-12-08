@@ -147,6 +147,7 @@ class _DesignInputPageState extends ConsumerState<DesignInputPage> {
                       prefersEnglish: prefersEnglish,
                       onOpen: () => _openKanjiMap(context),
                       showAssist: gates.enableKanjiAssist,
+                      mapping: draft.kanjiMapping,
                     ),
                     SizedBox(height: tokens.spacing.lg),
                     _PreviewCard(
@@ -502,11 +503,13 @@ class _KanjiMappingCard extends StatelessWidget {
     required this.prefersEnglish,
     required this.onOpen,
     required this.showAssist,
+    this.mapping,
   });
 
   final bool prefersEnglish;
   final VoidCallback onOpen;
   final bool showAssist;
+  final KanjiMapping? mapping;
 
   @override
   Widget build(BuildContext context) {
@@ -546,6 +549,18 @@ class _KanjiMappingCard extends StatelessWidget {
                     color: tokens.colors.onSurface.withValues(alpha: 0.8),
                   ),
                 ),
+                if (mapping != null) ...[
+                  SizedBox(height: tokens.spacing.xs),
+                  Text(
+                    prefersEnglish
+                        ? 'Selected: ${mapping!.value ?? mapping!.mappingRef ?? ''}'
+                        : '選択中: ${mapping!.value ?? mapping!.mappingRef ?? ''}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: tokens.colors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 if (showAssist) ...[
                   SizedBox(height: tokens.spacing.xs),
                   Text(

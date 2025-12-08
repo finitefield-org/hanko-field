@@ -5,6 +5,7 @@ import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
+import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
@@ -136,11 +137,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
           routes: [
             GoRoute(
               path: 'kanji-map',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '漢字マップ',
-                routePath: AppRoutePaths.designKanjiMap,
-                showBack: true,
-              ),
+              builder: (context, state) => const KanjiMappingPage(),
             ),
           ],
         ),

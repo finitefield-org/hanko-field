@@ -50,6 +50,11 @@ class CachePolicies {
     staleGrace: Duration(minutes: 20),
   );
 
+  static const kanji = CachePolicy(
+    ttl: Duration(hours: 12),
+    staleGrace: Duration(days: 2),
+  );
+
   static const onboarding = CachePolicy(
     ttl: Duration(days: 365),
     staleGrace: Duration(days: 30),

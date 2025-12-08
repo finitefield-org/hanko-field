@@ -126,6 +126,7 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
   late final ensureStorageMut = mutation<bool>(#ensureStorage);
   late final updateNameMut = mutation<NameInputDraft>(#updateName);
   late final applySuggestionMut = mutation<NameInputDraft>(#applySuggestion);
+  late final setKanjiMappingMut = mutation<KanjiMapping?>(#setKanjiMapping);
   late final setPreviewStyleMut = mutation<WritingStyle>(#setPreviewStyle);
   late final saveInputMut = mutation<DesignInput>(#saveInput);
 
@@ -224,6 +225,19 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
         );
         return suggestion;
       }, concurrency: Concurrency.restart);
+
+  Call<KanjiMapping?> setKanjiMapping(KanjiMapping? mapping) =>
+      mutate(setKanjiMappingMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return mapping;
+
+        final draft = _applyKanjiMapping(current.nameDraft, mapping);
+
+        ref.state = AsyncData(
+          current.copyWith(nameDraft: draft, clearSavedInput: true),
+        );
+        return mapping;
+      }, concurrency: Concurrency.dropLatest);
 
   Call<WritingStyle> setPreviewStyle(WritingStyle style) =>
       mutate(setPreviewStyleMut, (ref) async {
@@ -340,6 +354,35 @@ NameInputDraft _updateDraftField(
     case NameField.givenKana:
       return draft.copyWith(givenKana: value);
   }
+}
+
+NameInputDraft _applyKanjiMapping(NameInputDraft draft, KanjiMapping? mapping) {
+  if (mapping == null) {
+    return draft.copyWith(kanjiMapping: null);
+  }
+
+  var surname = draft.surnameKanji;
+  var given = draft.givenKanji;
+  final value = mapping.value?.trim() ?? '';
+
+  if (value.isNotEmpty) {
+    final parts = value.split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      surname = surname.trim().isEmpty ? parts.first : surname;
+      given = given.trim().isEmpty ? parts.sublist(1).join(' ') : given;
+    } else if (value.length >= 2) {
+      surname = surname.trim().isEmpty ? value.substring(0, 1) : surname;
+      given = given.trim().isEmpty ? value.substring(1) : given;
+    } else if (surname.trim().isEmpty) {
+      surname = value;
+    }
+  }
+
+  return draft.copyWith(
+    surnameKanji: surname,
+    givenKanji: given,
+    kanjiMapping: mapping,
+  );
 }
 
 NameValidationResult validateNameDraft(

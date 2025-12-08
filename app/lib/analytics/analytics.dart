@@ -309,3 +309,39 @@ class DesignCreationModeSelectedEvent extends AppAnalyticsEvent {
     };
   }
 }
+
+class KanjiMappingSelectedEvent extends AppAnalyticsEvent {
+  const KanjiMappingSelectedEvent({
+    required this.candidateId,
+    required this.glyph,
+    required this.query,
+    this.persona,
+    this.locale,
+    this.bookmarked = false,
+    this.fromCache = false,
+  });
+
+  final String candidateId;
+  final String glyph;
+  final String query;
+  final String? persona;
+  final String? locale;
+  final bool bookmarked;
+  final bool fromCache;
+
+  @override
+  String get name => 'kanji_mapping_selected';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'candidate_id': candidateId,
+      'glyph': glyph,
+      'query': query,
+      'persona': persona,
+      'locale': locale,
+      'bookmarked': bookmarked,
+      'from_cache': fromCache,
+    };
+  }
+}

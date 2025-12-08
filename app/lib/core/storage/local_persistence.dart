@@ -23,6 +23,7 @@ class LocalCacheBoxes {
   static const guides = CacheBox('guides_cache');
   static const notifications = CacheBox('notifications_cache');
   static const onboarding = CacheBox('onboarding_cache');
+  static const kanji = CacheBox('kanji_cache');
 
   static const defaults = <CacheBox>[
     designs,
@@ -30,6 +31,7 @@ class LocalCacheBoxes {
     guides,
     notifications,
     onboarding,
+    kanji,
   ];
 }
 

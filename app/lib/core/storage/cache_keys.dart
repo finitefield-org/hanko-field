@@ -34,6 +34,26 @@ class LocalCacheKeys {
     );
   }
 
+  static LocalCacheKey kanjiSuggestions({
+    required String query,
+    String persona = 'default',
+    String filterKey = 'any',
+  }) {
+    final normalized = Uri.encodeComponent(query.toLowerCase());
+    final normalizedFilter = Uri.encodeComponent(filterKey);
+    return LocalCacheKey(
+      'kanji/suggestions/$persona/$normalizedFilter/$normalized',
+      tags: ['kanji', persona, 'suggestions'],
+    );
+  }
+
+  static LocalCacheKey kanjiBookmarks({String persona = 'default'}) {
+    return LocalCacheKey(
+      'kanji/bookmarks/$persona',
+      tags: ['kanji', persona, 'bookmarks'],
+    );
+  }
+
   static const onboarding = LocalCacheKey(
     'onboarding/state',
     tags: ['onboarding'],
