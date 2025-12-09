@@ -6,6 +6,7 @@ import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view/design_ai_page.dart';
 import 'package:app/features/designs/view/design_check_page.dart';
 import 'package:app/features/designs/view/design_editor_page.dart';
+import 'package:app/features/designs/view/design_export_page.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
 import 'package:app/features/designs/view/design_preview_page.dart';
 import 'package:app/features/designs/view/design_style_selection_page.dart';
@@ -185,11 +186,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'export',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'エクスポート',
-            routePath: AppRoutePaths.designExport,
-            showBack: true,
-          ),
+          builder: (context, state) => const DesignExportPage(),
         ),
         GoRoute(
           path: 'versions',

@@ -181,12 +181,8 @@ class _DesignPreviewPageState extends ConsumerState<DesignPreviewPage> {
           ? null
           : _PreviewActions(
               prefersEnglish: prefersEnglish,
-              onExport: () => _showToast(
-                context,
-                prefersEnglish
-                    ? 'Exporting sample PNG (mock)'
-                    : 'PNGを書き出しています（モック）',
-              ),
+              onExport: () =>
+                  GoRouter.of(context).go(AppRoutePaths.designExport),
               onEdit: () => GoRouter.of(context).go(AppRoutePaths.designEditor),
             ),
     );
