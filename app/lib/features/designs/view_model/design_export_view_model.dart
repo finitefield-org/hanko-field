@@ -1,14 +1,25 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
 import 'package:app/security/storage_permission_client.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:characters/characters.dart';
+import 'package:flutter/material.dart' hide Characters;
 import 'package:miniriverpod/miniriverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
 
 enum ExportFormat { png, svg, pdf }
 
@@ -39,6 +50,10 @@ class ExportableDesign {
     required this.shape,
     required this.sizeMm,
     required this.writingStyle,
+    required this.layout,
+    required this.strokeWeight,
+    required this.margin,
+    required this.rotation,
     this.templateName,
   });
 
@@ -46,6 +61,10 @@ class ExportableDesign {
   final SealShape shape;
   final double sizeMm;
   final WritingStyle writingStyle;
+  final DesignCanvasLayout layout;
+  final double strokeWeight;
+  final double margin;
+  final double rotation;
   final String? templateName;
 
   ExportableDesign copyWith({
@@ -53,6 +72,10 @@ class ExportableDesign {
     SealShape? shape,
     double? sizeMm,
     WritingStyle? writingStyle,
+    DesignCanvasLayout? layout,
+    double? strokeWeight,
+    double? margin,
+    double? rotation,
     String? templateName,
   }) {
     return ExportableDesign(
@@ -60,6 +83,10 @@ class ExportableDesign {
       shape: shape ?? this.shape,
       sizeMm: sizeMm ?? this.sizeMm,
       writingStyle: writingStyle ?? this.writingStyle,
+      layout: layout ?? this.layout,
+      strokeWeight: strokeWeight ?? this.strokeWeight,
+      margin: margin ?? this.margin,
+      rotation: rotation ?? this.rotation,
       templateName: templateName ?? this.templateName,
     );
   }
@@ -316,41 +343,61 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
 
         var working = current.copyWith(
           isExporting: true,
-          progress: 0.18,
+          progress: 0.14,
           storageStatus: permission,
           clearFeedback: true,
           lastSharedVia: null,
         );
         ref.state = AsyncData(working);
 
-        await _simulateProgress(ref, working, intent: _ExportIntent.download);
-        working = ref.watch(this).valueOrNull ?? working;
+        try {
+          final rendered = await _renderExportAsset(working, watermark: false);
+          working = working.copyWith(progress: 0.62);
+          ref.state = AsyncData(working);
 
-        final filename = _fileSafeName(working.design.displayName);
-        final record = ExportRecord(
-          filename: filename,
-          destination: destination,
-          format: working.format,
-          createdAt: DateTime.now(),
-          fileSizeMb: _estimateSizeMb(working),
-          sharedVia: null,
-          watermarked: false,
-        );
+          final saved = await _saveExportFile(
+            rendered,
+            destination: destination,
+            state: working,
+          );
 
-        final updatedHistory = <ExportRecord>[record, ...working.history];
-        ref.state = AsyncData(
-          working.copyWith(
-            isExporting: false,
-            progress: 1.0,
-            lastExportPath: '$destination/${record.label}',
-            history: updatedHistory.take(6).toList(),
-            feedbackMessage: _gates.prefersEnglish
-                ? 'Saved ${record.label} to $destination'
-                : '$destination に ${record.label} を保存しました',
-            feedbackId: working.feedbackId + 1,
-          ),
-        );
-        return true;
+          final record = ExportRecord(
+            filename: rendered.filenameBase,
+            destination: destination,
+            format: rendered.format,
+            createdAt: DateTime.now(),
+            fileSizeMb: rendered.sizeMb,
+            sharedVia: null,
+            watermarked: false,
+          );
+
+          final updatedHistory = <ExportRecord>[record, ...working.history];
+          ref.state = AsyncData(
+            working.copyWith(
+              isExporting: false,
+              progress: 1.0,
+              lastExportPath: saved.filePath,
+              history: updatedHistory.take(6).toList(),
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Saved ${record.label} to $destination'
+                  : '$destination に ${record.label} を保存しました',
+              feedbackId: working.feedbackId + 1,
+            ),
+          );
+          return true;
+        } catch (error) {
+          ref.state = AsyncData(
+            working.copyWith(
+              isExporting: false,
+              progress: 0,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Export failed: $error'
+                  : '書き出しに失敗しました: $error',
+              feedbackId: working.feedbackId + 1,
+            ),
+          );
+          return false;
+        }
       }, concurrency: Concurrency.restart);
 
   Call<bool> share({required String target}) => mutate(shareMut, (ref) async {
@@ -376,53 +423,60 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
     );
     ref.state = AsyncData(working);
 
-    await _simulateProgress(ref, working, intent: _ExportIntent.share);
-    working = ref.watch(this).valueOrNull ?? working;
-
-    final filename = _fileSafeName(working.design.displayName);
-    final record = ExportRecord(
-      filename: filename,
-      destination: target,
-      format: working.format,
-      createdAt: DateTime.now(),
-      fileSizeMb: _estimateSizeMb(working),
-      sharedVia: target,
-      watermarked: working.watermarkOnShare,
-    );
-    final updatedHistory = <ExportRecord>[record, ...working.history];
-
-    ref.state = AsyncData(
-      working.copyWith(
-        isSharing: false,
-        progress: 1.0,
-        lastSharedVia: target,
-        lastExportPath: 'share://${record.label}',
-        history: updatedHistory.take(6).toList(),
-        feedbackMessage: _gates.prefersEnglish
-            ? 'Shared ${record.label} via $target'
-            : '${record.label} を$targetで共有しました',
-        feedbackId: working.feedbackId + 1,
-      ),
-    );
-    return true;
-  }, concurrency: Concurrency.restart);
-
-  Future<void> _simulateProgress(
-    Ref ref,
-    DesignExportState base, {
-    required _ExportIntent intent,
-  }) async {
-    final steps = intent == _ExportIntent.download
-        ? <double>[0.32, 0.58, 0.86, 1.0]
-        : <double>[0.42, 0.68, 0.92, 1.0];
-    var working = base;
-
-    for (final step in steps) {
-      await Future<void>.delayed(const Duration(milliseconds: 260));
-      working = working.copyWith(progress: step);
+    try {
+      final rendered = await _renderExportAsset(
+        working,
+        watermark: working.watermarkOnShare,
+      );
+      working = working.copyWith(progress: 0.68);
       ref.state = AsyncData(working);
+
+      await _shareExport(
+        rendered,
+        target: target,
+        includeMetadata: working.includeMetadata,
+        state: working,
+      );
+
+      final record = ExportRecord(
+        filename: rendered.filenameBase,
+        destination: target,
+        format: rendered.format,
+        createdAt: DateTime.now(),
+        fileSizeMb: rendered.sizeMb,
+        sharedVia: target,
+        watermarked: working.watermarkOnShare,
+      );
+      final updatedHistory = <ExportRecord>[record, ...working.history];
+
+      ref.state = AsyncData(
+        working.copyWith(
+          isSharing: false,
+          progress: 1.0,
+          lastSharedVia: target,
+          lastExportPath: 'share://${record.label}',
+          history: updatedHistory.take(6).toList(),
+          feedbackMessage: _gates.prefersEnglish
+              ? 'Shared ${record.label} via $target'
+              : '${record.label} を$targetで共有しました',
+          feedbackId: working.feedbackId + 1,
+        ),
+      );
+      return true;
+    } catch (error) {
+      ref.state = AsyncData(
+        working.copyWith(
+          isSharing: false,
+          progress: 0,
+          feedbackMessage: _gates.prefersEnglish
+              ? 'Share failed: $error'
+              : '共有に失敗しました: $error',
+          feedbackId: working.feedbackId + 1,
+        ),
+      );
+      return false;
     }
-  }
+  }, concurrency: Concurrency.restart);
 
   void _emitFeedback(Ref ref, String message) {
     final current = ref.watch(this).valueOrNull;
@@ -434,6 +488,578 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
         feedbackId: current.feedbackId + 1,
       ),
     );
+  }
+
+  Future<_RenderedBytes> _renderExportAsset(
+    DesignExportState state, {
+    required bool watermark,
+  }) async {
+    final pixelSize = exportPixelSize(state.design, state.format);
+    final bleedPx = state.includeBleed ? _bleedPx(state.format) : 0;
+    final rasterized = await _rasterizeDesign(
+      state: state,
+      baseSize: pixelSize,
+      bleedPx: bleedPx,
+      watermark: watermark,
+    );
+
+    final filenameBase = _fileSafeName(state.design.displayName);
+    final side = pixelSize + bleedPx * 2;
+
+    switch (state.format) {
+      case ExportFormat.png:
+        return _RenderedBytes(
+          bytes: rasterized.pngBytes,
+          format: state.format,
+          filenameBase: filenameBase,
+          mimeType: 'image/png',
+          pixelSize: side,
+          bleedPx: bleedPx,
+        );
+      case ExportFormat.svg:
+        final markup = _buildSvgMarkup(
+          state: state,
+          side: side.toDouble(),
+          bleedPx: bleedPx.toDouble(),
+          watermark: watermark,
+        );
+        return _RenderedBytes(
+          bytes: Uint8List.fromList(utf8.encode(markup)),
+          format: state.format,
+          filenameBase: filenameBase,
+          mimeType: 'image/svg+xml',
+          pixelSize: side,
+          bleedPx: bleedPx,
+        );
+      case ExportFormat.pdf:
+        final pdfBytes = await _buildPdfBytes(
+          rasterized: rasterized,
+          state: state,
+        );
+        return _RenderedBytes(
+          bytes: pdfBytes,
+          format: state.format,
+          filenameBase: filenameBase,
+          mimeType: 'application/pdf',
+          pixelSize: side,
+          bleedPx: bleedPx,
+        );
+    }
+  }
+
+  Future<_RasterizedDesign> _rasterizeDesign({
+    required DesignExportState state,
+    required int baseSize,
+    required int bleedPx,
+    required bool watermark,
+  }) async {
+    final side = baseSize + bleedPx * 2;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
+    );
+
+    if (!state.transparentBackground) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
+        Paint()..color = Colors.white,
+      );
+    }
+
+    final inset = (state.design.margin + 8).clamp(0, side / 3).toDouble();
+    final area = Rect.fromLTWH(
+      bleedPx.toDouble() + inset,
+      bleedPx.toDouble() + inset,
+      side.toDouble() - (bleedPx.toDouble() + inset) * 2,
+      side.toDouble() - (bleedPx.toDouble() + inset) * 2,
+    );
+    final center = area.center;
+    const ink = Color(0xFFB71C1C);
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(state.design.rotation * pi / 180);
+    canvas.translate(-center.dx, -center.dy);
+
+    _paintShape(canvas, center, area, state.design, ink);
+    _paintName(canvas, center, area, state.design, ink);
+
+    canvas.restore();
+
+    if (watermark) {
+      _paintWatermark(canvas, side.toDouble());
+    }
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(side, side);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return _RasterizedDesign(
+      pngBytes: byteData!.buffer.asUint8List(),
+      side: side,
+      bleedPx: bleedPx,
+    );
+  }
+
+  Future<_SavedExport> _saveExportFile(
+    _RenderedBytes rendered, {
+    required String destination,
+    required DesignExportState state,
+  }) async {
+    final baseDir = await getApplicationDocumentsDirectory();
+    final destinationDir = Directory(
+      p.join(baseDir.path, 'exports', _fileSafeName(destination)),
+    );
+    await destinationDir.create(recursive: true);
+
+    final path = p.join(destinationDir.path, rendered.filenameWithExtension);
+    await File(path).writeAsBytes(rendered.bytes, flush: true);
+
+    String? metadataPath;
+    if (state.includeMetadata) {
+      metadataPath = await _writeMetadataSidecar(
+        rendered: rendered,
+        destinationDir: destinationDir,
+        state: state,
+        sharedVia: null,
+        watermarked: false,
+      );
+    }
+
+    return _SavedExport(filePath: path, metadataPath: metadataPath);
+  }
+
+  Future<void> _shareExport(
+    _RenderedBytes rendered, {
+    required String target,
+    required bool includeMetadata,
+    required DesignExportState state,
+  }) async {
+    final tempDir = await getTemporaryDirectory();
+    final exportPath = p.join(tempDir.path, rendered.filenameWithExtension);
+    await File(exportPath).writeAsBytes(rendered.bytes, flush: true);
+
+    final attachments = <XFile>[
+      XFile(
+        exportPath,
+        mimeType: rendered.mimeType,
+        name: rendered.filenameWithExtension,
+      ),
+    ];
+
+    if (includeMetadata) {
+      final metadataPath = await _writeMetadataSidecar(
+        rendered: rendered,
+        destinationDir: tempDir,
+        state: state,
+        sharedVia: target,
+        watermarked: state.watermarkOnShare,
+      );
+      attachments.add(
+        XFile(
+          metadataPath,
+          mimeType: 'application/json',
+          name: '${rendered.filenameBase}.metadata.json',
+        ),
+      );
+    }
+
+    await Share.shareXFiles(
+      attachments,
+      subject: rendered.filenameWithExtension,
+      text: _gates.prefersEnglish
+          ? 'Shared from Hanko Field ($target)'
+          : 'Hanko Field から$targetに共有しました',
+    );
+  }
+
+  Future<String> _writeMetadataSidecar({
+    required _RenderedBytes rendered,
+    required Directory destinationDir,
+    required DesignExportState state,
+    required bool watermarked,
+    String? sharedVia,
+  }) async {
+    final payload = _buildMetadataPayload(
+      state: state,
+      format: rendered.format,
+      watermarked: watermarked,
+      sharedVia: sharedVia,
+    );
+    final metadataPath = p.join(
+      destinationDir.path,
+      '${rendered.filenameBase}.metadata.json',
+    );
+    final encoder = const JsonEncoder.withIndent('  ');
+    await File(metadataPath).writeAsString(encoder.convert(payload));
+    return metadataPath;
+  }
+
+  Map<String, Object?> _buildMetadataPayload({
+    required DesignExportState state,
+    required ExportFormat format,
+    required bool watermarked,
+    String? sharedVia,
+  }) {
+    return {
+      'design': {
+        'displayName': state.design.displayName,
+        'shape': state.design.shape.name,
+        'sizeMm': state.design.sizeMm,
+        'writingStyle': state.design.writingStyle.name,
+        'layout': state.design.layout.name,
+        'strokeWeight': state.design.strokeWeight,
+        'margin': state.design.margin,
+        'rotation': state.design.rotation,
+        'templateName': state.design.templateName,
+      },
+      'export': {
+        'format': format.name,
+        'colorProfile': state.colorProfile,
+        'transparentBackground': state.transparentBackground,
+        'includeBleed': state.includeBleed,
+        'includeMetadata': state.includeMetadata,
+        'watermarked': watermarked,
+        'sharedVia': sharedVia,
+        'createdAt': DateTime.now().toIso8601String(),
+      },
+    };
+  }
+
+  void _paintShape(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    ExportableDesign design,
+    Color ink,
+  ) {
+    final radius = min(area.width, area.height) / 2;
+    final stroke = Paint()
+      ..color = ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = design.strokeWeight
+      ..strokeJoin = StrokeJoin.round;
+
+    switch (design.shape) {
+      case SealShape.round:
+        canvas.drawCircle(center, radius, stroke);
+      case SealShape.square:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: center,
+              width: area.shortestSide,
+              height: area.shortestSide,
+            ),
+            const Radius.circular(8),
+          ),
+          stroke,
+        );
+    }
+  }
+
+  void _paintName(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    ExportableDesign design,
+    Color ink,
+  ) {
+    final characters = Characters(design.displayName).toList();
+    final inkPaint = Paint()
+      ..color = ink
+      ..style = PaintingStyle.fill;
+    final textStyle = TextStyle(
+      color: inkPaint.color,
+      fontWeight: _fontWeightForStyle(design.writingStyle),
+      letterSpacing: design.layout == DesignCanvasLayout.grid
+          ? 1
+          : (design.layout == DesignCanvasLayout.vertical ? 0.5 : 0),
+      fontSize: area.shortestSide * 0.12,
+      height: design.layout == DesignCanvasLayout.vertical ? 1.15 : 1.0,
+    );
+
+    switch (design.layout) {
+      case DesignCanvasLayout.balanced:
+        _drawCentered(canvas, center, area, textStyle, characters.join(''));
+      case DesignCanvasLayout.vertical:
+        _drawVertical(canvas, center, area, textStyle, characters);
+      case DesignCanvasLayout.grid:
+        _drawGridLayout(canvas, center, area, textStyle, characters);
+      case DesignCanvasLayout.arc:
+        _drawArc(canvas, center, area, textStyle, characters);
+    }
+  }
+
+  void _drawCentered(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    TextStyle style,
+    String text,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      maxLines: 2,
+    )..layout(maxWidth: area.width * 0.8);
+    final offset = Offset(
+      center.dx - painter.width / 2,
+      center.dy - painter.height / 2,
+    );
+    painter.paint(canvas, offset);
+  }
+
+  void _drawVertical(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    TextStyle style,
+    List<String> chars,
+  ) {
+    final spacing = area.height / (chars.length + 1);
+    for (int i = 0; i < chars.length; i++) {
+      final painter = TextPainter(
+        text: TextSpan(text: chars[i], style: style),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final offset = Offset(
+        center.dx - painter.width / 2,
+        area.top + spacing * (i + 0.8),
+      );
+      painter.paint(canvas, offset);
+    }
+  }
+
+  void _drawGridLayout(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    TextStyle style,
+    List<String> chars,
+  ) {
+    final columns = 2;
+    final rows = (chars.length / columns).ceil();
+    final cellWidth = area.width / columns;
+    final cellHeight = area.height / rows;
+    for (int i = 0; i < chars.length; i++) {
+      final col = i % columns;
+      final row = (i / columns).floor();
+      final painter = TextPainter(
+        text: TextSpan(text: chars[i], style: style),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: cellWidth);
+      final dx = area.left + cellWidth * col + (cellWidth - painter.width) / 2;
+      final dy =
+          area.top + cellHeight * row + (cellHeight - painter.height) / 2;
+      painter.paint(canvas, Offset(dx, dy));
+    }
+  }
+
+  void _drawArc(
+    Canvas canvas,
+    Offset center,
+    Rect area,
+    TextStyle style,
+    List<String> chars,
+  ) {
+    final radius = min(area.width, area.height) / 2.4;
+    final sweep = pi * 1.3;
+    final startAngle = -sweep / 2;
+    for (int i = 0; i < chars.length; i++) {
+      final angle = startAngle + sweep * (i / max(chars.length - 1, 1));
+      final offset = Offset(
+        center.dx + radius * cos(angle),
+        center.dy + radius * sin(angle),
+      );
+      canvas.save();
+      canvas.translate(offset.dx, offset.dy);
+      canvas.rotate(angle + pi / 2);
+      final painter = TextPainter(
+        text: TextSpan(text: chars[i], style: style),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(canvas, Offset(-painter.width / 2, -painter.height / 2));
+      canvas.restore();
+    }
+  }
+
+  void _paintWatermark(Canvas canvas, double side) {
+    const watermark = 'Hanko Field • preview';
+    final painter = TextPainter(
+      text: const TextSpan(
+        text: watermark,
+        style: TextStyle(
+          color: Color(0x66B71C1C),
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textAlign: TextAlign.right,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: side);
+    painter.paint(
+      canvas,
+      Offset(side - painter.width - 16, side - painter.height - 16),
+    );
+  }
+
+  String _buildSvgMarkup({
+    required DesignExportState state,
+    required double side,
+    required double bleedPx,
+    required bool watermark,
+  }) {
+    final inset = (state.design.margin + 8).clamp(0, side / 3);
+    final areaSize = side - (bleedPx + inset) * 2;
+    final center = side / 2;
+    final buffer = StringBuffer()
+      ..writeln(
+        '<svg xmlns="http://www.w3.org/2000/svg" '
+        'width="$side" height="$side" viewBox="0 0 $side $side">',
+      );
+    if (!state.transparentBackground) {
+      buffer.writeln('<rect width="100%" height="100%" fill="white" />');
+    }
+
+    buffer.write(
+      '<g transform="rotate(${state.design.rotation},$center,$center)">',
+    );
+    final strokeWidth = state.design.strokeWeight;
+    if (state.design.shape == SealShape.round) {
+      final radius = areaSize / 2;
+      buffer.writeln(
+        '<circle cx="$center" cy="$center" r="$radius" '
+        'fill="none" stroke="#b71c1c" stroke-width="$strokeWidth" />',
+      );
+    } else {
+      final start = bleedPx + inset;
+      buffer.writeln(
+        '<rect x="$start" y="$start" width="$areaSize" height="$areaSize" '
+        'fill="none" stroke="#b71c1c" stroke-width="$strokeWidth" '
+        'rx="8" ry="8" />',
+      );
+    }
+
+    final chars = Characters(state.design.displayName).toList();
+    final fontSize = areaSize * 0.12;
+    final fontWeight = _fontWeightForStyle(state.design.writingStyle);
+    final weightValue = fontWeight.value;
+
+    switch (state.design.layout) {
+      case DesignCanvasLayout.balanced:
+        buffer.writeln(
+          '<text x="$center" y="$center" '
+          'fill="#b71c1c" font-size="$fontSize" font-weight="$weightValue" '
+          'text-anchor="middle" dominant-baseline="central">'
+          '${_escapeSvg(chars.join(''))}</text>',
+        );
+      case DesignCanvasLayout.vertical:
+        final spacing = areaSize / (chars.length + 1);
+        for (int i = 0; i < chars.length; i++) {
+          final y = bleedPx + inset + spacing * (i + 0.8);
+          buffer.writeln(
+            '<text x="$center" y="$y" fill="#b71c1c" '
+            'font-size="$fontSize" font-weight="$weightValue" '
+            'text-anchor="middle" dominant-baseline="central">'
+            '${_escapeSvg(chars[i])}</text>',
+          );
+        }
+      case DesignCanvasLayout.grid:
+        final columns = 2;
+        final rows = (chars.length / columns).ceil();
+        final cellWidth = areaSize / columns;
+        final cellHeight = areaSize / rows;
+        for (int i = 0; i < chars.length; i++) {
+          final col = i % columns;
+          final row = (i / columns).floor();
+          final x = bleedPx + inset + cellWidth * col + cellWidth / 2;
+          final y = bleedPx + inset + cellHeight * row + cellHeight / 2;
+          buffer.writeln(
+            '<text x="$x" y="$y" fill="#b71c1c" '
+            'font-size="$fontSize" font-weight="$weightValue" '
+            'text-anchor="middle" dominant-baseline="central">'
+            '${_escapeSvg(chars[i])}</text>',
+          );
+        }
+      case DesignCanvasLayout.arc:
+        final radius = areaSize / 2.4;
+        final sweep = pi * 1.3;
+        final startAngle = -sweep / 2;
+        for (int i = 0; i < chars.length; i++) {
+          final angle = startAngle + sweep * (i / max(chars.length - 1, 1));
+          final x = center + radius * cos(angle);
+          final y = center + radius * sin(angle);
+          final rotate = angle * 180 / pi + 90;
+          buffer.writeln(
+            '<text x="$x" y="$y" fill="#b71c1c" '
+            'font-size="$fontSize" font-weight="$weightValue" '
+            'text-anchor="middle" dominant-baseline="central" '
+            'transform="rotate($rotate,$x,$y)">'
+            '${_escapeSvg(chars[i])}</text>',
+          );
+        }
+    }
+    buffer.writeln('</g>');
+
+    if (watermark) {
+      final watermarkSize = fontSize * 0.7;
+      buffer.writeln(
+        '<text x="${side - 12}" y="${side - 12}" '
+        'fill="rgba(183,28,28,0.4)" font-size="$watermarkSize" '
+        'font-weight="600" text-anchor="end" '
+        'dominant-baseline="ideographic">Hanko Field • preview</text>',
+      );
+    }
+
+    buffer.writeln('</svg>');
+    return buffer.toString();
+  }
+
+  Future<Uint8List> _buildPdfBytes({
+    required _RasterizedDesign rasterized,
+    required DesignExportState state,
+  }) async {
+    final doc = pw.Document(
+      creator: 'Hanko Field',
+      title: state.design.displayName,
+      author: 'Hanko Field',
+    );
+    final mmSide = state.design.sizeMm + (state.includeBleed ? 3.0 : 0.0);
+    final format = PdfPageFormat(
+      mmSide * PdfPageFormat.mm,
+      mmSide * PdfPageFormat.mm,
+    );
+    final image = pw.MemoryImage(rasterized.pngBytes);
+    doc.addPage(
+      pw.Page(
+        pageFormat: format,
+        build: (_) => pw.Center(
+          child: pw.Image(
+            image,
+            width: format.width,
+            height: format.height,
+            fit: pw.BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+    return Uint8List.fromList(await doc.save());
+  }
+
+  FontWeight _fontWeightForStyle(WritingStyle style) {
+    return switch (style) {
+      WritingStyle.tensho => FontWeight.w600,
+      WritingStyle.reisho => FontWeight.w500,
+      WritingStyle.kaisho => FontWeight.w700,
+      WritingStyle.gyosho => FontWeight.w500,
+      WritingStyle.koentai => FontWeight.w800,
+      WritingStyle.custom => FontWeight.w600,
+    };
   }
 
   ExportableDesign _resolveDesign(
@@ -463,6 +1089,27 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
         WritingStyle.tensho;
     final sizeMm =
         editorState?.sizeMm ?? creationState?.selectedSize?.mm ?? 15.0;
+    final defaultLayout =
+        (creationState?.selectedShape ?? editorState?.shape) == SealShape.square
+        ? DesignCanvasLayout.grid
+        : DesignCanvasLayout.balanced;
+    final layout =
+        editorState?.layout ??
+        switch (creationState?.selectedStyle?.layout?.grid) {
+          'grid' => DesignCanvasLayout.grid,
+          'vertical' => DesignCanvasLayout.vertical,
+          'arc' => DesignCanvasLayout.arc,
+          _ => defaultLayout,
+        };
+    final strokeWeight =
+        editorState?.strokeWeight ??
+        creationState?.selectedStyle?.stroke?.weight ??
+        2.4;
+    final margin =
+        editorState?.margin ??
+        creationState?.selectedStyle?.layout?.margin ??
+        12;
+    final rotation = editorState?.rotation ?? 0.0;
     final templateName =
         creationState?.selectedTemplate?.name ??
         creationState?.selectedTemplate?.id ??
@@ -473,14 +1120,57 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
       shape: shape,
       sizeMm: sizeMm,
       writingStyle: writing,
+      layout: layout,
+      strokeWeight: strokeWeight,
+      margin: margin,
+      rotation: rotation,
       templateName: templateName,
     );
   }
 }
 
-final designExportViewModel = DesignExportViewModel();
+class _RenderedBytes {
+  _RenderedBytes({
+    required this.bytes,
+    required this.format,
+    required this.filenameBase,
+    required this.mimeType,
+    required this.pixelSize,
+    required this.bleedPx,
+  });
 
-enum _ExportIntent { download, share }
+  final Uint8List bytes;
+  final ExportFormat format;
+  final String filenameBase;
+  final String mimeType;
+  final int pixelSize;
+  final int bleedPx;
+
+  double get sizeMb => bytes.lengthInBytes / (1024 * 1024);
+
+  String get filenameWithExtension => '$filenameBase.${format.fileExtension}';
+}
+
+class _RasterizedDesign {
+  _RasterizedDesign({
+    required this.pngBytes,
+    required this.side,
+    required this.bleedPx,
+  });
+
+  final Uint8List pngBytes;
+  final int side;
+  final int bleedPx;
+}
+
+class _SavedExport {
+  _SavedExport({required this.filePath, this.metadataPath});
+
+  final String filePath;
+  final String? metadataPath;
+}
+
+final designExportViewModel = DesignExportViewModel();
 
 double _estimateSizeMb(DesignExportState state) {
   final basePx = _pixelSize(state.design, state.format);
@@ -504,11 +1194,7 @@ double _estimateSizeMb(DesignExportState state) {
 
 int _pixelSize(ExportableDesign design, ExportFormat format) {
   final inches = design.sizeMm / 25.4;
-  final ppi = switch (format) {
-    ExportFormat.png => 1200,
-    ExportFormat.svg => 960,
-    ExportFormat.pdf => 900,
-  };
+  final ppi = _ppiForFormat(format);
   return max(512, (inches * ppi).round());
 }
 
@@ -516,6 +1202,24 @@ int exportPixelSize(ExportableDesign design, ExportFormat format) =>
     _pixelSize(design, format);
 
 double estimateExportSizeMb(DesignExportState state) => _estimateSizeMb(state);
+
+int _ppiForFormat(ExportFormat format) => switch (format) {
+  ExportFormat.png => 1200,
+  ExportFormat.svg => 960,
+  ExportFormat.pdf => 900,
+};
+
+int _bleedPx(ExportFormat format) {
+  final ppi = _ppiForFormat(format);
+  return (1.5 / 25.4 * ppi).round();
+}
+
+String _escapeSvg(String input) {
+  return input
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+}
 
 String _fileSafeName(String name) {
   final sanitized = name.replaceAll(
