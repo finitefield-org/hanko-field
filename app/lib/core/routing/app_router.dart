@@ -7,6 +7,7 @@ import 'package:app/features/designs/view/design_ai_page.dart';
 import 'package:app/features/designs/view/design_check_page.dart';
 import 'package:app/features/designs/view/design_editor_page.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
+import 'package:app/features/designs/view/design_preview_page.dart';
 import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
@@ -180,11 +181,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'preview',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'プレビュー',
-            routePath: AppRoutePaths.designPreview,
-            showBack: true,
-          ),
+          builder: (context, state) => const DesignPreviewPage(),
         ),
         GoRoute(
           path: 'export',
