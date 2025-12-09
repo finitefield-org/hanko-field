@@ -55,6 +55,11 @@ class CachePolicies {
     staleGrace: Duration(days: 2),
   );
 
+  static const registrability = CachePolicy(
+    ttl: Duration(hours: 12),
+    staleGrace: Duration(hours: 36),
+  );
+
   static const onboarding = CachePolicy(
     ttl: Duration(days: 365),
     staleGrace: Duration(days: 30),

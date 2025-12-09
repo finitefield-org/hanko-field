@@ -21,6 +21,13 @@ class LocalCacheKeys {
     );
   }
 
+  static LocalCacheKey registrabilityCheck(String designId) {
+    return LocalCacheKey(
+      'designs/$designId/registrability',
+      tags: ['designs', 'design:$designId', 'registrability'],
+    );
+  }
+
   static const cart = LocalCacheKey('cart/current', tags: ['cart']);
 
   static LocalCacheKey guides({String locale = 'default'}) {
