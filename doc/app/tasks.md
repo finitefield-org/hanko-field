@@ -46,7 +46,7 @@
 - [x] [Build preview screen (`/design/preview`) with actual size view, backgrounds, zoom, and share triggers.](doc/app/tasks/033-build-preview-screen-design-preview-with-actual-size-view-backgrounds-zoom-and-share-trigg.md)
 - [x] [Implement digital export (`/design/export`) generating PNG/SVG, handling permissions and download/share sheets.](doc/app/tasks/034-implement-digital-export-design-export-generating-png-svg-handling-permissions-and-downloa.md)
 - [x] [Implement version history (`/design/versions`) with diff view and rollback actions.](doc/app/tasks/035-implement-version-history-design-versions-with-diff-view-and-rollback-actions.md)
-- [ ] [Build share screen (`/design/share`) generating mocked social posts and watermarked images.](doc/app/tasks/036-build-share-screen-design-share-generating-mocked-social-posts-and-watermarked-images.md)
+- [x] [Build share screen (`/design/share`) generating mocked social posts and watermarked images.](doc/app/tasks/036-build-share-screen-design-share-generating-mocked-social-posts-and-watermarked-images.md)
 
 ## 6. Shop & Product Browsing
 - [ ] [Implement shop home (`/shop`) with category tiles, promotions, and recommended materials.](doc/app/tasks/037-implement-shop-home-shop-with-category-tiles-promotions-and-recommended-materials.md)

@@ -9,6 +9,7 @@ import 'package:app/features/designs/view/design_editor_page.dart';
 import 'package:app/features/designs/view/design_export_page.dart';
 import 'package:app/features/designs/view/design_input_page.dart';
 import 'package:app/features/designs/view/design_preview_page.dart';
+import 'package:app/features/designs/view/design_share_page.dart';
 import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/design_versions_page.dart';
@@ -195,11 +196,7 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'share',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '共有',
-            routePath: AppRoutePaths.designShare,
-            showBack: true,
-          ),
+          builder: (context, state) => const DesignSharePage(),
         ),
       ],
     ),
