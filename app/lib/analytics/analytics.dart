@@ -372,3 +372,173 @@ class DesignVersionRolledBackEvent extends AppAnalyticsEvent {
     };
   }
 }
+
+class ShopCategoryTappedEvent extends AppAnalyticsEvent {
+  const ShopCategoryTappedEvent({
+    required this.categoryId,
+    this.position,
+    this.persona,
+    this.locale,
+  });
+
+  final String categoryId;
+  final int? position;
+  final String? persona;
+  final String? locale;
+
+  ShopCategoryTappedEvent copyWith({
+    String? categoryId,
+    int? position,
+    String? persona,
+    String? locale,
+  }) {
+    return ShopCategoryTappedEvent(
+      categoryId: categoryId ?? this.categoryId,
+      position: position ?? this.position,
+      persona: persona ?? this.persona,
+      locale: locale ?? this.locale,
+    );
+  }
+
+  @override
+  String get name => 'shop_category_tapped';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'category_id': categoryId,
+      'position': position,
+      'persona': persona,
+      'locale': locale,
+    };
+  }
+}
+
+class ShopPromotionTappedEvent extends AppAnalyticsEvent {
+  const ShopPromotionTappedEvent({
+    required this.promotionId,
+    this.code,
+    this.position,
+    this.persona,
+    this.locale,
+    this.entryPoint,
+  });
+
+  final String promotionId;
+  final String? code;
+  final int? position;
+  final String? persona;
+  final String? locale;
+  final String? entryPoint;
+
+  ShopPromotionTappedEvent copyWith({
+    String? promotionId,
+    String? code,
+    int? position,
+    String? persona,
+    String? locale,
+    String? entryPoint,
+  }) {
+    return ShopPromotionTappedEvent(
+      promotionId: promotionId ?? this.promotionId,
+      code: code ?? this.code,
+      position: position ?? this.position,
+      persona: persona ?? this.persona,
+      locale: locale ?? this.locale,
+      entryPoint: entryPoint ?? this.entryPoint,
+    );
+  }
+
+  @override
+  String get name => 'shop_promotion_tapped';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'promotion_id': promotionId,
+      'code': code,
+      'position': position,
+      'persona': persona,
+      'locale': locale,
+      'entry_point': entryPoint,
+    };
+  }
+}
+
+class ShopMaterialTappedEvent extends AppAnalyticsEvent {
+  const ShopMaterialTappedEvent({
+    required this.materialId,
+    this.materialType,
+    this.position,
+    this.persona,
+    this.locale,
+  });
+
+  final String materialId;
+  final String? materialType;
+  final int? position;
+  final String? persona;
+  final String? locale;
+
+  ShopMaterialTappedEvent copyWith({
+    String? materialId,
+    String? materialType,
+    int? position,
+    String? persona,
+    String? locale,
+  }) {
+    return ShopMaterialTappedEvent(
+      materialId: materialId ?? this.materialId,
+      materialType: materialType ?? this.materialType,
+      position: position ?? this.position,
+      persona: persona ?? this.persona,
+      locale: locale ?? this.locale,
+    );
+  }
+
+  @override
+  String get name => 'shop_material_tapped';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'material_id': materialId,
+      'material_type': materialType,
+      'position': position,
+      'persona': persona,
+      'locale': locale,
+    };
+  }
+}
+
+class ShopGuideTappedEvent extends AppAnalyticsEvent {
+  const ShopGuideTappedEvent({
+    required this.guideId,
+    this.persona,
+    this.locale,
+  });
+
+  final String guideId;
+  final String? persona;
+  final String? locale;
+
+  ShopGuideTappedEvent copyWith({
+    String? guideId,
+    String? persona,
+    String? locale,
+  }) {
+    return ShopGuideTappedEvent(
+      guideId: guideId ?? this.guideId,
+      persona: persona ?? this.persona,
+      locale: locale ?? this.locale,
+    );
+  }
+
+  @override
+  String get name => 'shop_guide_tapped';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {'guide_id': guideId, 'persona': persona, 'locale': locale};
+  }
+}
