@@ -345,3 +345,30 @@ class KanjiMappingSelectedEvent extends AppAnalyticsEvent {
     };
   }
 }
+
+class DesignVersionRolledBackEvent extends AppAnalyticsEvent {
+  const DesignVersionRolledBackEvent({
+    required this.designId,
+    required this.toVersion,
+    required this.fromVersion,
+    this.reason,
+  });
+
+  final String designId;
+  final int toVersion;
+  final int fromVersion;
+  final String? reason;
+
+  @override
+  String get name => 'design_version_rolled_back';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'design_id': designId,
+      'to_version': toVersion,
+      'from_version': fromVersion,
+      'reason': reason,
+    };
+  }
+}

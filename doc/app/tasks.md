@@ -45,7 +45,7 @@
 - [x] [Implement registrability check (`/design/check`) calling external service, showing result badges.](doc/app/tasks/032-implement-registrability-check-design-check-calling-external-service-showing-result-badges.md)
 - [x] [Build preview screen (`/design/preview`) with actual size view, backgrounds, zoom, and share triggers.](doc/app/tasks/033-build-preview-screen-design-preview-with-actual-size-view-backgrounds-zoom-and-share-trigg.md)
 - [x] [Implement digital export (`/design/export`) generating PNG/SVG, handling permissions and download/share sheets.](doc/app/tasks/034-implement-digital-export-design-export-generating-png-svg-handling-permissions-and-downloa.md)
-- [ ] [Implement version history (`/design/versions`) with diff view and rollback actions.](doc/app/tasks/035-implement-version-history-design-versions-with-diff-view-and-rollback-actions.md)
+- [x] [Implement version history (`/design/versions`) with diff view and rollback actions.](doc/app/tasks/035-implement-version-history-design-versions-with-diff-view-and-rollback-actions.md)
 - [ ] [Build share screen (`/design/share`) generating mocked social posts and watermarked images.](doc/app/tasks/036-build-share-screen-design-share-generating-mocked-social-posts-and-watermarked-images.md)
 
 ## 6. Shop & Product Browsing
