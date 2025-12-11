@@ -3,6 +3,7 @@
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/catalog/view/material_detail_page.dart';
+import 'package:app/features/catalog/view/product_addons_page.dart';
 import 'package:app/features/catalog/view/product_detail_page.dart';
 import 'package:app/features/catalog/view/shop_home_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
@@ -284,11 +285,8 @@ List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.productAddons,
       parentNavigatorKey: tabKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'オプション',
-        routePath: AppRoutePaths.productAddons,
-        showBack: true,
-      ),
+      builder: (context, state) =>
+          ProductAddonsPage(productId: state.pathParameters['productId'] ?? ''),
     ),
   ];
 }
