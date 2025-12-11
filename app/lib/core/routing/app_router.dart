@@ -2,6 +2,7 @@
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/auth/view/auth_page.dart';
+import 'package:app/features/cart/view/cart_page.dart';
 import 'package:app/features/catalog/view/material_detail_page.dart';
 import 'package:app/features/catalog/view/product_addons_page.dart';
 import 'package:app/features/catalog/view/product_detail_page.dart';
@@ -218,11 +219,7 @@ List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.cart,
       parentNavigatorKey: tabKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'カート',
-        routePath: AppRoutePaths.cart,
-        showBack: true,
-      ),
+      builder: (context, state) => const CartPage(),
     ),
     GoRoute(
       path: AppRoutePaths.checkoutAddress,
