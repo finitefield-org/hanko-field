@@ -37,10 +37,17 @@ class CheckoutReviewState {
 }
 
 class PlaceOrderResult {
-  const PlaceOrderResult({required this.isSuccess, this.message});
+  const PlaceOrderResult({
+    required this.isSuccess,
+    this.message,
+    this.orderId,
+    this.orderNumber,
+  });
 
   final bool isSuccess;
   final String? message;
+  final String? orderId;
+  final String? orderNumber;
 }
 
 class CheckoutReviewViewModel extends AsyncProvider<CheckoutReviewState> {
@@ -97,7 +104,14 @@ class CheckoutReviewViewModel extends AsyncProvider<CheckoutReviewState> {
 
         await Future<void>.delayed(const Duration(milliseconds: 650));
 
-        return const PlaceOrderResult(isSuccess: true);
+        final millis = DateTime.now().millisecondsSinceEpoch;
+        final suffix = (millis % 1000000).toString().padLeft(6, '0');
+
+        return PlaceOrderResult(
+          isSuccess: true,
+          orderId: 'ord_$millis',
+          orderNumber: 'HF-$suffix',
+        );
       }, concurrency: Concurrency.dropLatest);
 }
 

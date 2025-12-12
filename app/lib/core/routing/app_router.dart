@@ -8,6 +8,7 @@ import 'package:app/features/catalog/view/product_addons_page.dart';
 import 'package:app/features/catalog/view/product_detail_page.dart';
 import 'package:app/features/catalog/view/shop_home_page.dart';
 import 'package:app/features/checkout/view/checkout_address_page.dart';
+import 'package:app/features/checkout/view/checkout_complete_page.dart';
 import 'package:app/features/checkout/view/checkout_payment_page.dart';
 import 'package:app/features/checkout/view/checkout_review_page.dart';
 import 'package:app/features/checkout/view/checkout_shipping_page.dart';
@@ -248,11 +249,11 @@ List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.checkoutComplete,
       parentNavigatorKey: tabKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '注文完了',
-        routePath: AppRoutePaths.checkoutComplete,
-        showBack: true,
-      ),
+      builder: (context, state) {
+        final orderId = state.uri.queryParameters['orderId'];
+        final orderNumber = state.uri.queryParameters['orderNumber'];
+        return CheckoutCompletePage(orderId: orderId, orderNumber: orderNumber);
+      },
     ),
     GoRoute(
       path: AppRoutePaths.materialDetail,

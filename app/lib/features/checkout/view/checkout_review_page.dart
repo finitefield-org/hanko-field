@@ -339,7 +339,18 @@ class _CheckoutReviewPageState extends ConsumerState<CheckoutReviewPage> {
           content: Text(prefersEnglish ? 'Order placed!' : '注文を受け付けました。'),
         ),
       );
-      GoRouter.of(context).go(AppRoutePaths.checkoutComplete);
+      final query = <String, String>{};
+      if (result.orderId != null && result.orderId!.isNotEmpty) {
+        query['orderId'] = result.orderId!;
+      }
+      if (result.orderNumber != null && result.orderNumber!.isNotEmpty) {
+        query['orderNumber'] = result.orderNumber!;
+      }
+      final uri = Uri(
+        path: AppRoutePaths.checkoutComplete,
+        queryParameters: query,
+      );
+      GoRouter.of(context).go(uri.toString());
     } else {
       messenger.showSnackBar(
         SnackBar(
