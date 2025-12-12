@@ -7,6 +7,7 @@ import 'package:app/features/users/data/dtos/user_dtos.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/features/users/data/repositories/user_repository.dart';
 import 'package:app/firebase/firebase_providers.dart';
+import 'package:app/security/secure_storage.dart';
 import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -15,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _userProfileKey = 'user.profile';
 const _userAddressesKey = 'user.addresses';
 const _userPaymentsKey = 'user.payments';
+const _paymentProviderRefPrefix = 'user.payment.providerRef.';
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   try {
@@ -172,12 +174,50 @@ class LocalUserRepository implements UserRepository {
     final cached = prefs.getString(_userPaymentsKey);
     if (cached != null) {
       try {
+        final secure = _ref.watch(secureStorageProvider);
         final list = jsonDecode(cached) as List;
-        return list.map((item) {
-          final map = item as Map<String, Object?>;
+        var didMigrate = false;
+        final decoded = <PaymentMethod>[];
+
+        for (final raw in list) {
+          final map = (raw as Map).cast<String, Object?>();
           final id = map['id'] as String?;
-          return PaymentMethodDto.fromJson(map, id: id).toDomain();
-        }).toList();
+          final providerRefFromPrefs = map['providerRef'] as String?;
+
+          if (id != null && providerRefFromPrefs != null) {
+            await secure.write(
+              key: '$_paymentProviderRefPrefix$id',
+              value: providerRefFromPrefs,
+            );
+            didMigrate = true;
+          }
+
+          final providerRef =
+              providerRefFromPrefs ??
+              (id == null
+                  ? null
+                  : await secure.read(key: '$_paymentProviderRefPrefix$id'));
+
+          if (providerRef == null || providerRef.isEmpty) {
+            _logger.warning(
+              'Payment method missing providerRef; skipping (id=$id)',
+            );
+            continue;
+          }
+
+          decoded.add(
+            PaymentMethodDto.fromJson({
+              ...map,
+              'providerRef': providerRef,
+            }, id: id).toDomain(),
+          );
+        }
+
+        if (didMigrate) {
+          await _persistPayments(prefs, decoded);
+        }
+
+        return decoded;
       } catch (e, stack) {
         _logger.warning('Failed to parse cached payments', e, stack);
       }
@@ -188,12 +228,14 @@ class LocalUserRepository implements UserRepository {
   @override
   Future<PaymentMethod> addPaymentMethod(PaymentMethod method) async {
     final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final secure = _ref.watch(secureStorageProvider);
     final existing = await listPaymentMethods();
     final now = DateTime.now().toUtc();
-    final newMethod = method.copyWith(
-      id: method.id ?? 'pm_${now.microsecondsSinceEpoch}',
-      createdAt: method.createdAt,
-      updatedAt: now,
+    final id = method.id ?? 'pm_${now.microsecondsSinceEpoch}';
+    final newMethod = method.copyWith(id: id, updatedAt: now);
+    await secure.write(
+      key: '$_paymentProviderRefPrefix$id',
+      value: method.providerRef,
     );
     final updated = [newMethod, ...existing];
     await _persistPayments(prefs, updated);
@@ -203,9 +245,11 @@ class LocalUserRepository implements UserRepository {
   @override
   Future<void> removePaymentMethod(String methodId) async {
     final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final secure = _ref.watch(secureStorageProvider);
     final existing = await listPaymentMethods();
     final filtered = existing.where((item) => item.id != methodId).toList();
     await _persistPayments(prefs, filtered);
+    await secure.delete(key: '$_paymentProviderRefPrefix$methodId');
   }
 
   @override
@@ -268,6 +312,7 @@ class LocalUserRepository implements UserRepository {
       if (method.id != null) {
         map['id'] = method.id;
       }
+      map.remove('providerRef');
       return map;
     }).toList();
     await prefs.setString(_userPaymentsKey, jsonEncode(encoded));

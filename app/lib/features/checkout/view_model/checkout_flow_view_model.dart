@@ -8,6 +8,7 @@ class CheckoutFlowState {
     this.addressId,
     this.shippingMethodId,
     this.paymentMethodId,
+    this.paymentProviderRef,
     this.isInternational = false,
     this.shippingCost,
     this.shippingEtaMinDays,
@@ -17,6 +18,7 @@ class CheckoutFlowState {
   final String? addressId;
   final String? shippingMethodId;
   final String? paymentMethodId;
+  final String? paymentProviderRef;
   final bool isInternational;
   final Money? shippingCost;
   final int? shippingEtaMinDays;
@@ -26,6 +28,7 @@ class CheckoutFlowState {
     String? addressId,
     String? shippingMethodId,
     String? paymentMethodId,
+    String? paymentProviderRef,
     bool? isInternational,
     Money? shippingCost,
     int? shippingEtaMinDays,
@@ -41,6 +44,9 @@ class CheckoutFlowState {
       paymentMethodId: clearPayment
           ? null
           : (paymentMethodId ?? this.paymentMethodId),
+      paymentProviderRef: clearPayment
+          ? null
+          : (paymentProviderRef ?? this.paymentProviderRef),
       isInternational: isInternational ?? this.isInternational,
       shippingCost: clearShipping ? null : (shippingCost ?? this.shippingCost),
       shippingEtaMinDays: clearShipping
@@ -92,11 +98,16 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> setPayment({required String? paymentMethodId}) =>
-      mutate(setPaymentMut, (ref) async {
-        final current = ref.watch(this);
-        ref.state = current.copyWith(paymentMethodId: paymentMethodId);
-      }, concurrency: Concurrency.dropLatest);
+  Call<void> setPayment({
+    required String? paymentMethodId,
+    required String? paymentProviderRef,
+  }) => mutate(setPaymentMut, (ref) async {
+    final current = ref.watch(this);
+    ref.state = current.copyWith(
+      paymentMethodId: paymentMethodId,
+      paymentProviderRef: paymentProviderRef,
+    );
+  }, concurrency: Concurrency.dropLatest);
 }
 
 final checkoutFlowProvider = CheckoutFlowViewModel();

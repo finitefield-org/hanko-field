@@ -123,7 +123,10 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
         );
         if (selection != null) {
           await ref.invoke(
-            checkoutFlowProvider.setPayment(paymentMethodId: selection.id),
+            checkoutFlowProvider.setPayment(
+              paymentMethodId: selection.id,
+              paymentProviderRef: selection.providerRef,
+            ),
           );
         }
         return methodId;
@@ -177,7 +180,10 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
                 ),
           );
           await ref.invoke(
-            checkoutFlowProvider.setPayment(paymentMethodId: saved.id),
+            checkoutFlowProvider.setPayment(
+              paymentMethodId: saved.id,
+              paymentProviderRef: saved.providerRef,
+            ),
           );
           return PaymentSaveResult(validation: validation, saved: saved);
         } catch (e, stack) {
