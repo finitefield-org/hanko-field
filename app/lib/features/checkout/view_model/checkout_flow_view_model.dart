@@ -58,6 +58,7 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
 
   late final setAddressMut = mutation<void>(#setAddress);
   late final setShippingMut = mutation<void>(#setShipping);
+  late final setPaymentMut = mutation<void>(#setPayment);
 
   @override
   CheckoutFlowState build(Ref ref) => const CheckoutFlowState();
@@ -90,6 +91,12 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
       clearPayment: true,
     );
   }, concurrency: Concurrency.dropLatest);
+
+  Call<void> setPayment({required String? paymentMethodId}) =>
+      mutate(setPaymentMut, (ref) async {
+        final current = ref.watch(this);
+        ref.state = current.copyWith(paymentMethodId: paymentMethodId);
+      }, concurrency: Concurrency.dropLatest);
 }
 
 final checkoutFlowProvider = CheckoutFlowViewModel();

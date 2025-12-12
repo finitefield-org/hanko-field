@@ -8,6 +8,7 @@ import 'package:app/features/catalog/view/product_addons_page.dart';
 import 'package:app/features/catalog/view/product_detail_page.dart';
 import 'package:app/features/catalog/view/shop_home_page.dart';
 import 'package:app/features/checkout/view/checkout_address_page.dart';
+import 'package:app/features/checkout/view/checkout_payment_page.dart';
 import 'package:app/features/checkout/view/checkout_shipping_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view/design_ai_page.dart';
@@ -236,11 +237,7 @@ List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.checkoutPayment,
       parentNavigatorKey: tabKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '支払い',
-        routePath: AppRoutePaths.checkoutPayment,
-        showBack: true,
-      ),
+      builder: (context, state) => const CheckoutPaymentPage(),
     ),
     GoRoute(
       path: AppRoutePaths.checkoutReview,

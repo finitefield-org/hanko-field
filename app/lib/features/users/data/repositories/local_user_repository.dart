@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _userProfileKey = 'user.profile';
 const _userAddressesKey = 'user.addresses';
+const _userPaymentsKey = 'user.payments';
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   try {
@@ -166,16 +167,45 @@ class LocalUserRepository implements UserRepository {
   }
 
   @override
-  Future<List<PaymentMethod>> listPaymentMethods() async => const [];
-
-  @override
-  Future<PaymentMethod> addPaymentMethod(PaymentMethod method) {
-    throw UnimplementedError('Payment method management not implemented yet.');
+  Future<List<PaymentMethod>> listPaymentMethods() async {
+    final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final cached = prefs.getString(_userPaymentsKey);
+    if (cached != null) {
+      try {
+        final list = jsonDecode(cached) as List;
+        return list.map((item) {
+          final map = item as Map<String, Object?>;
+          final id = map['id'] as String?;
+          return PaymentMethodDto.fromJson(map, id: id).toDomain();
+        }).toList();
+      } catch (e, stack) {
+        _logger.warning('Failed to parse cached payments', e, stack);
+      }
+    }
+    return const [];
   }
 
   @override
-  Future<void> removePaymentMethod(String methodId) {
-    throw UnimplementedError('Payment method management not implemented yet.');
+  Future<PaymentMethod> addPaymentMethod(PaymentMethod method) async {
+    final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final existing = await listPaymentMethods();
+    final now = DateTime.now().toUtc();
+    final newMethod = method.copyWith(
+      id: method.id ?? 'pm_${now.microsecondsSinceEpoch}',
+      createdAt: method.createdAt,
+      updatedAt: now,
+    );
+    final updated = [newMethod, ...existing];
+    await _persistPayments(prefs, updated);
+    return newMethod;
+  }
+
+  @override
+  Future<void> removePaymentMethod(String methodId) async {
+    final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final existing = await listPaymentMethods();
+    final filtered = existing.where((item) => item.id != methodId).toList();
+    await _persistPayments(prefs, filtered);
   }
 
   @override
@@ -226,6 +256,21 @@ class LocalUserRepository implements UserRepository {
       return <String, Object?>{'id': item.id, ...json};
     }).toList();
     await prefs.setString(_userAddressesKey, jsonEncode(encoded));
+  }
+
+  Future<void> _persistPayments(
+    SharedPreferences prefs,
+    List<PaymentMethod> methods,
+  ) async {
+    final encoded = methods.map((method) {
+      final dto = PaymentMethodDto.fromDomain(method);
+      final map = dto.toJson();
+      if (method.id != null) {
+        map['id'] = method.id;
+      }
+      return map;
+    }).toList();
+    await prefs.setString(_userPaymentsKey, jsonEncode(encoded));
   }
 
   List<UserAddress> _decodeAddresses(String raw) {
