@@ -20,6 +20,7 @@ class LocalCacheBoxes {
 
   static const designs = CacheBox('designs_cache', encrypted: true);
   static const cart = CacheBox('cart_cache', encrypted: true);
+  static const orders = CacheBox('orders_cache', encrypted: true);
   static const guides = CacheBox('guides_cache');
   static const notifications = CacheBox('notifications_cache');
   static const onboarding = CacheBox('onboarding_cache');
@@ -28,6 +29,7 @@ class LocalCacheBoxes {
   static const defaults = <CacheBox>[
     designs,
     cart,
+    orders,
     guides,
     notifications,
     onboarding,

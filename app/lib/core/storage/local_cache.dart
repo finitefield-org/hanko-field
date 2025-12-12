@@ -40,6 +40,11 @@ class CachePolicies {
     staleGrace: Duration(hours: 24),
   );
 
+  static const orders = CachePolicy(
+    ttl: Duration(minutes: 10),
+    staleGrace: Duration(minutes: 20),
+  );
+
   static const guides = CachePolicy(
     ttl: Duration(hours: 6),
     staleGrace: Duration(hours: 6),

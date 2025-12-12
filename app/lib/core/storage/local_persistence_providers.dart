@@ -45,6 +45,16 @@ final cartCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
   );
 });
 
+final ordersCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
+  final persistence = ref.watch(localPersistenceProvider);
+  return LocalCacheStore<JsonMap>(
+    persistence: persistence,
+    box: LocalCacheBoxes.orders,
+    codec: const JsonCacheCodec(),
+    defaultPolicy: CachePolicies.orders,
+  );
+});
+
 final guidesCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
   final persistence = ref.watch(localPersistenceProvider);
   return LocalCacheStore<JsonMap>(

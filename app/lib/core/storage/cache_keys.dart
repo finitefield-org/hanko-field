@@ -30,6 +30,10 @@ class LocalCacheKeys {
 
   static const cart = LocalCacheKey('cart/current', tags: ['cart']);
 
+  static LocalCacheKey orders({String userId = 'current'}) {
+    return LocalCacheKey('orders/$userId', tags: ['orders', userId]);
+  }
+
   static LocalCacheKey guides({String locale = 'default'}) {
     return LocalCacheKey('guides/$locale', tags: ['guides', locale]);
   }
