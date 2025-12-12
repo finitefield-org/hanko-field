@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/model/value_objects.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CheckoutFlowState {
@@ -8,18 +9,27 @@ class CheckoutFlowState {
     this.shippingMethodId,
     this.paymentMethodId,
     this.isInternational = false,
+    this.shippingCost,
+    this.shippingEtaMinDays,
+    this.shippingEtaMaxDays,
   });
 
   final String? addressId;
   final String? shippingMethodId;
   final String? paymentMethodId;
   final bool isInternational;
+  final Money? shippingCost;
+  final int? shippingEtaMinDays;
+  final int? shippingEtaMaxDays;
 
   CheckoutFlowState copyWith({
     String? addressId,
     String? shippingMethodId,
     String? paymentMethodId,
     bool? isInternational,
+    Money? shippingCost,
+    int? shippingEtaMinDays,
+    int? shippingEtaMaxDays,
     bool clearShipping = false,
     bool clearPayment = false,
   }) {
@@ -32,6 +42,13 @@ class CheckoutFlowState {
           ? null
           : (paymentMethodId ?? this.paymentMethodId),
       isInternational: isInternational ?? this.isInternational,
+      shippingCost: clearShipping ? null : (shippingCost ?? this.shippingCost),
+      shippingEtaMinDays: clearShipping
+          ? null
+          : (shippingEtaMinDays ?? this.shippingEtaMinDays),
+      shippingEtaMaxDays: clearShipping
+          ? null
+          : (shippingEtaMaxDays ?? this.shippingEtaMaxDays),
     );
   }
 }
@@ -40,6 +57,7 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
   CheckoutFlowViewModel() : super.args(null, autoDispose: false);
 
   late final setAddressMut = mutation<void>(#setAddress);
+  late final setShippingMut = mutation<void>(#setShipping);
 
   @override
   CheckoutFlowState build(Ref ref) => const CheckoutFlowState();
@@ -53,6 +71,22 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
       addressId: addressId,
       isInternational: isInternational,
       clearShipping: true,
+      clearPayment: true,
+    );
+  }, concurrency: Concurrency.dropLatest);
+
+  Call<void> setShipping({
+    required String shippingMethodId,
+    required Money shippingCost,
+    required int etaMinDays,
+    required int etaMaxDays,
+  }) => mutate(setShippingMut, (ref) async {
+    final current = ref.watch(this);
+    ref.state = current.copyWith(
+      shippingMethodId: shippingMethodId,
+      shippingCost: shippingCost,
+      shippingEtaMinDays: etaMinDays,
+      shippingEtaMaxDays: etaMaxDays,
       clearPayment: true,
     );
   }, concurrency: Concurrency.dropLatest);

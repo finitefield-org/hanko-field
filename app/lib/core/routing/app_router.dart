@@ -8,6 +8,7 @@ import 'package:app/features/catalog/view/product_addons_page.dart';
 import 'package:app/features/catalog/view/product_detail_page.dart';
 import 'package:app/features/catalog/view/shop_home_page.dart';
 import 'package:app/features/checkout/view/checkout_address_page.dart';
+import 'package:app/features/checkout/view/checkout_shipping_page.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view/design_ai_page.dart';
 import 'package:app/features/designs/view/design_check_page.dart';
@@ -230,11 +231,7 @@ List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.checkoutShipping,
       parentNavigatorKey: tabKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '配送方法',
-        routePath: AppRoutePaths.checkoutShipping,
-        showBack: true,
-      ),
+      builder: (context, state) => const CheckoutShippingPage(),
     ),
     GoRoute(
       path: AppRoutePaths.checkoutPayment,
