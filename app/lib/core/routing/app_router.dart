@@ -25,6 +25,7 @@ import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/design_versions_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
+import 'package:app/features/library/view/library_list_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/orders/view/order_detail_page.dart';
@@ -332,13 +333,8 @@ List<RouteBase> _libraryRoutes(GlobalKey<NavigatorState> tabKey) {
     GoRoute(
       path: AppRoutePaths.library,
       parentNavigatorKey: tabKey,
-      pageBuilder: (context, state) => const NoTransitionPage(
-        child: TabPlaceholderPage(
-          title: 'マイ印鑑',
-          routePath: AppRoutePaths.library,
-          detail: 'Library tab root',
-        ),
-      ),
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: LibraryListPage()),
       routes: [
         GoRoute(
           path: ':designId',

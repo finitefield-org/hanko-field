@@ -71,7 +71,7 @@
 - [x] [Build reorder flow (`/orders/:orderId/reorder`) cloning cart data and redirecting to checkout.](doc/app/tasks/052-build-reorder-flow-orders-orderid-reorder-cloning-cart-data-and-redirecting-to-checkout.md)
 
 ## 9. My Hanko Library
-- [ ] [Implement library list (`/library`) with sorting, filtering (status, date, AI score), and grid/list toggle.](doc/app/tasks/053-implement-library-list-library-with-sorting-filtering-status-date-ai-score-and-grid-list-t.md)
+- [x] [Implement library list (`/library`) with sorting, filtering (status, date, AI score), and grid/list toggle.](doc/app/tasks/053-implement-library-list-library-with-sorting-filtering-status-date-ai-score-and-grid-list-t.md)
 - [ ] [Build design detail (`/library/:designId`) showing metadata, AI score, registrability status, usage history, and quick actions.](doc/app/tasks/054-build-design-detail-library-designid-showing-metadata-ai-score-registrability-status-usage.md)
 - [ ] [Implement versions view (`/library/:designId/versions`) reusing diff/rollback components.](doc/app/tasks/055-implement-versions-view-library-designid-versions-reusing-diff-rollback-components.md)
 - [ ] [Build duplicate flow (`/library/:designId/duplicate`) creating new design entry and navigating to editor.](doc/app/tasks/056-build-duplicate-flow-library-designid-duplicate-creating-new-design-entry-and-navigating-t.md)
