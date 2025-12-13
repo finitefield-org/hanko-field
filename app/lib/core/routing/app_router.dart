@@ -26,6 +26,7 @@ import 'package:app/features/designs/view/design_versions_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/library/view/library_design_detail_page.dart';
+import 'package:app/features/library/view/library_design_duplicate_page.dart';
 import 'package:app/features/library/view/library_design_versions_page.dart';
 import 'package:app/features/library/view/library_list_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
@@ -352,10 +353,8 @@ List<RouteBase> _libraryRoutes(GlobalKey<NavigatorState> tabKey) {
             ),
             GoRoute(
               path: 'duplicate',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '複製',
-                routePath: AppRoutePaths.libraryDuplicate,
-                showBack: true,
+              builder: (context, state) => LibraryDesignDuplicatePage(
+                designId: state.pathParameters['designId'] ?? '',
               ),
             ),
             GoRoute(

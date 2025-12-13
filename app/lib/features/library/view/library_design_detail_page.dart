@@ -166,43 +166,7 @@ class _LibraryDesignDetailPageState
 
   Future<void> _handleDuplicate(BuildContext context) async {
     final router = GoRouter.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
-
-    try {
-      final duplicated = await ref.invoke(
-        LibraryDesignDetailViewModel(designId: widget.designId).duplicate(),
-      );
-      final id = duplicated.id;
-      if (id == null) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              prefersEnglish ? 'Duplicated (missing id)' : '複製しました（ID不明）',
-            ),
-          ),
-        );
-        return;
-      }
-
-      unawaited(ref.invoke(libraryListViewModel.refresh()));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(prefersEnglish ? 'Duplicated' : '複製しました'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      router.go('${AppRoutePaths.library}/$id');
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    router.go('${AppRoutePaths.library}/${widget.designId}/duplicate');
   }
 
   Future<void> _handleArchive(BuildContext context, Design design) async {

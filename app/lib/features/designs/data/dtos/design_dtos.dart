@@ -333,6 +333,7 @@ class DesignDto {
     this.input,
     this.ai,
     this.assets,
+    this.tags = const <String>[],
     this.hash,
     this.lastOrderedAt,
   });
@@ -346,6 +347,7 @@ class DesignDto {
   final DesignStyleDto style;
   final AiMetadataDto? ai;
   final DesignAssetsDto? assets;
+  final List<String> tags;
   final String? hash;
   final int version;
   final DateTime createdAt;
@@ -371,6 +373,9 @@ class DesignDto {
       ),
       ai: aiMap != null ? AiMetadataDto.fromJson(aiMap) : null,
       assets: assetsMap != null ? DesignAssetsDto.fromJson(assetsMap) : null,
+      tags:
+          (json['tags'] as List?)?.map((e) => e.toString()).toList() ??
+          const <String>[],
       hash: json['hash'] as String?,
       version: (json['version'] as num).toInt(),
       createdAt:
@@ -392,6 +397,7 @@ class DesignDto {
     'style': style.toJson(),
     'ai': ai?.toJson(),
     'assets': assets?.toJson(),
+    'tags': tags,
     'hash': hash,
     'version': version,
     'createdAt': createdAt.toIso8601String(),
@@ -410,6 +416,7 @@ class DesignDto {
       style: style.toDomain(),
       ai: ai?.toDomain(),
       assets: assets?.toDomain(),
+      tags: tags,
       hash: hash,
       version: version,
       createdAt: createdAt,
@@ -433,6 +440,7 @@ class DesignDto {
       assets: design.assets != null
           ? DesignAssetsDto.fromDomain(design.assets!)
           : null,
+      tags: design.tags,
       hash: design.hash,
       version: design.version,
       createdAt: design.createdAt,

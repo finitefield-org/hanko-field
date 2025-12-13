@@ -328,6 +328,7 @@ class Design {
     this.input,
     this.ai,
     this.assets,
+    this.tags = const <String>[],
     this.hash,
     this.lastOrderedAt,
   });
@@ -341,6 +342,7 @@ class Design {
   final DesignStyle style;
   final AiMetadata? ai;
   final DesignAssets? assets;
+  final List<String> tags;
   final String? hash;
   final int version;
   final DateTime createdAt;
@@ -357,6 +359,7 @@ class Design {
     DesignStyle? style,
     AiMetadata? ai,
     DesignAssets? assets,
+    List<String>? tags,
     String? hash,
     int? version,
     DateTime? createdAt,
@@ -373,6 +376,7 @@ class Design {
       style: style ?? this.style,
       ai: ai ?? this.ai,
       assets: assets ?? this.assets,
+      tags: tags ?? this.tags,
       hash: hash ?? this.hash,
       version: version ?? this.version,
       createdAt: createdAt ?? this.createdAt,
@@ -383,6 +387,7 @@ class Design {
 
   @override
   bool operator ==(Object other) {
+    const tagsEq = ListEquality<String>();
     return identical(this, other) ||
         (other is Design &&
             other.id == id &&
@@ -394,6 +399,7 @@ class Design {
             other.style == style &&
             other.ai == ai &&
             other.assets == assets &&
+            tagsEq.equals(other.tags, tags) &&
             other.hash == hash &&
             other.version == version &&
             other.createdAt == createdAt &&
@@ -412,6 +418,7 @@ class Design {
     style,
     ai,
     assets,
+    const ListEquality<String>().hash(tags),
     hash,
     version,
     createdAt,
