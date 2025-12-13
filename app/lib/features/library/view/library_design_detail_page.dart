@@ -154,8 +154,10 @@ class _LibraryDesignDetailPageState
 
   Future<void> _handleExport(BuildContext context, Design design) async {
     final router = GoRouter.of(context);
-    if (!await _hydrateCreationFromDesign(context, design)) return;
-    router.go(AppRoutePaths.designExport);
+    router.go(
+      '${AppRoutePaths.library}/${widget.designId}/export',
+      extra: design,
+    );
   }
 
   Future<void> _handleShare(BuildContext context, Design design) async {
