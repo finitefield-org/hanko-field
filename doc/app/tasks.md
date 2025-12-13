@@ -64,7 +64,7 @@
 
 ## 8. Orders & Tracking
 - [x] [Implement orders list (`/orders`) with filters, status chips, and infinite scroll.](doc/app/tasks/047-implement-orders-list-orders-with-filters-status-chips-and-infinite-scroll.md)
-- [ ] [Build order detail (`/orders/:orderId`) showing line items, totals, addresses, and design snapshot gallery.](doc/app/tasks/048-build-order-detail-orders-orderid-showing-line-items-totals-addresses-and-design-snapshot-.md)
+- [x] [Build order detail (`/orders/:orderId`) showing line items, totals, addresses, and design snapshot gallery.](doc/app/tasks/048-build-order-detail-orders-orderid-showing-line-items-totals-addresses-and-design-snapshot-.md)
 - [ ] [Implement production timeline (`/orders/:orderId/production`) visualizing stages and timestamps.](doc/app/tasks/049-implement-production-timeline-orders-orderid-production-visualizing-stages-and-timestamps.md)
 - [ ] [Build shipment tracking (`/orders/:orderId/tracking`) with event timeline and carrier integration.](doc/app/tasks/050-build-shipment-tracking-orders-orderid-tracking-with-event-timeline-and-carrier-integratio.md)
 - [ ] [Implement invoice viewer (`/orders/:orderId/invoice`) with PDF download/share support.](doc/app/tasks/051-implement-invoice-viewer-orders-orderid-invoice-with-pdf-download-share-support.md)

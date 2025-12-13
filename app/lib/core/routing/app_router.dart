@@ -27,6 +27,7 @@ import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
+import 'package:app/features/orders/view/order_detail_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -288,12 +289,8 @@ List<RouteBase> _ordersRoutes(GlobalKey<NavigatorState> tabKey) {
       routes: [
         GoRoute(
           path: ':orderId',
-          builder: (context, state) => TabPlaceholderPage(
-            title: '注文詳細',
-            routePath:
-                '${AppRoutePaths.orders}/${state.pathParameters['orderId'] ?? ''}',
-            showBack: true,
-          ),
+          builder: (context, state) =>
+              OrderDetailPage(orderId: state.pathParameters['orderId'] ?? ''),
           routes: [
             GoRoute(
               path: 'production',
