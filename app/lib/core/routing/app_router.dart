@@ -29,6 +29,7 @@ import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/orders/view/order_detail_page.dart';
 import 'package:app/features/orders/view/order_production_timeline_page.dart';
+import 'package:app/features/orders/view/order_tracking_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -301,10 +302,8 @@ List<RouteBase> _ordersRoutes(GlobalKey<NavigatorState> tabKey) {
             ),
             GoRoute(
               path: 'tracking',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '配送トラッキング',
-                routePath: AppRoutePaths.orderTracking,
-                showBack: true,
+              builder: (context, state) => OrderTrackingPage(
+                orderId: state.pathParameters['orderId'] ?? '',
               ),
             ),
             GoRoute(

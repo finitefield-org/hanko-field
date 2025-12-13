@@ -179,12 +179,36 @@ class LocalOrderRepository implements OrderRepository {
       final raw = hit?.value['orders'];
       if (raw is! List) return;
 
-      _orders = raw
+      final cachedOrders = raw
           .whereType<Map<Object?, Object?>>()
           .map(
             (e) => OrderDto.fromJson(Map<String, Object?>.from(e)).toDomain(),
           )
           .toList();
+
+      var migrated = false;
+      final hydrated = cachedOrders.map((order) {
+        if (order.status == OrderStatus.canceled) return order;
+        if (order.status.index < OrderStatus.readyToShip.index) return order;
+        if (order.shipments.isNotEmpty) return order;
+
+        final seed = _stableRandomSeed(order.id ?? order.orderNumber);
+        final shipments = _seedShipments(
+          status: order.status,
+          createdAt: order.createdAt,
+          shippedAt: order.shippedAt,
+          deliveredAt: order.deliveredAt,
+          random: Random(seed),
+        );
+        if (shipments.isEmpty) return order;
+        migrated = true;
+        return order.copyWith(shipments: shipments);
+      }).toList();
+
+      _orders = hydrated;
+      if (migrated) {
+        await _persist();
+      }
     } catch (e, stack) {
       _logger.fine('Ignoring invalid orders cache', e, stack);
     }
@@ -308,7 +332,13 @@ class LocalOrderRepository implements OrderRepository {
             ? (_gates.prefersEnglish ? 'Changed my mind' : '都合によりキャンセル')
             : null,
         payments: const [],
-        shipments: const [],
+        shipments: _seedShipments(
+          status: status,
+          createdAt: createdAt,
+          shippedAt: shippedAt,
+          deliveredAt: deliveredAt,
+          random: random,
+        ),
         productionEvents: productionEvents,
       );
     });
@@ -475,5 +505,103 @@ class LocalOrderRepository implements OrderRepository {
 
     events.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return events;
+  }
+
+  int _stableRandomSeed(String value) {
+    return value.hashCode & 0x7fffffff;
+  }
+
+  List<OrderShipment> _seedShipments({
+    required OrderStatus status,
+    required DateTime createdAt,
+    required DateTime? shippedAt,
+    required DateTime? deliveredAt,
+    required Random random,
+  }) {
+    if (status.index < OrderStatus.readyToShip.index ||
+        status == OrderStatus.canceled) {
+      return const [];
+    }
+
+    final carrier = ShipmentCarrier
+        .values[random.nextInt(ShipmentCarrier.values.length - 1)];
+    final trackingNumber = 'TRK${(random.nextInt(900000000) + 100000000)}';
+    final base =
+        shippedAt ?? createdAt.add(Duration(days: random.nextInt(5) + 2));
+    final eta = deliveredAt ?? base.add(Duration(days: random.nextInt(4) + 1));
+    final localeCity = _gates.prefersEnglish ? 'Tokyo' : '東京都';
+
+    final shipmentStatus = switch (status) {
+      OrderStatus.readyToShip => ShipmentStatus.labelCreated,
+      OrderStatus.shipped => ShipmentStatus.inTransit,
+      OrderStatus.delivered => ShipmentStatus.delivered,
+      _ => ShipmentStatus.inTransit,
+    };
+
+    final events = <ShipmentEvent>[
+      ShipmentEvent(
+        timestamp: base.subtract(const Duration(hours: 6)),
+        code: ShipmentEventCode.labelCreated,
+        location: localeCity,
+      ),
+    ];
+
+    if (status.index >= OrderStatus.shipped.index) {
+      events.add(
+        ShipmentEvent(
+          timestamp: base.subtract(const Duration(hours: 2)),
+          code: ShipmentEventCode.pickedUp,
+          location: localeCity,
+        ),
+      );
+      events.add(
+        ShipmentEvent(
+          timestamp: base.add(const Duration(hours: 8)),
+          code: ShipmentEventCode.inTransit,
+          location: _gates.prefersEnglish ? 'Sort facility' : '仕分けセンター',
+        ),
+      );
+      events.add(
+        ShipmentEvent(
+          timestamp: base.add(const Duration(days: 1, hours: 4)),
+          code: ShipmentEventCode.arrivedHub,
+          location: _gates.prefersEnglish ? 'Regional hub' : '地域拠点',
+        ),
+      );
+    }
+
+    if (status == OrderStatus.delivered) {
+      events.add(
+        ShipmentEvent(
+          timestamp: eta.subtract(const Duration(hours: 5)),
+          code: ShipmentEventCode.outForDelivery,
+          location: _gates.prefersEnglish ? 'Local depot' : '配達拠点',
+        ),
+      );
+      events.add(
+        ShipmentEvent(
+          timestamp: eta,
+          code: ShipmentEventCode.delivered,
+          location: _gates.prefersEnglish ? 'Destination' : 'お届け先',
+        ),
+      );
+    }
+
+    final sorted = List<ShipmentEvent>.of(events)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    return [
+      OrderShipment(
+        id: 'shp_${createdAt.millisecondsSinceEpoch}',
+        carrier: carrier,
+        service: _gates.prefersEnglish ? 'Standard' : '通常便',
+        trackingNumber: trackingNumber,
+        status: shipmentStatus,
+        eta: eta,
+        createdAt: base,
+        updatedAt: sorted.last.timestamp,
+        events: sorted,
+      ),
+    ];
   }
 }
