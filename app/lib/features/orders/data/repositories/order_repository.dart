@@ -233,6 +233,28 @@ class LocalOrderRepository implements OrderRepository {
           ? createdAt.add(Duration(hours: random.nextInt(48) + 1))
           : null;
 
+      final fulfillment = _seedFulfillment(
+        status: status,
+        createdAt: createdAt,
+        shippedAt: shippedAt,
+        deliveredAt: deliveredAt,
+        canceledAt: canceledAt,
+        random: random,
+      );
+
+      final production = _seedProductionInfo(status: status, random: random);
+
+      final productionEvents = _seedProductionEvents(
+        status: status,
+        createdAt: createdAt,
+        paidAt: paidAt,
+        shippedAt: shippedAt,
+        deliveredAt: deliveredAt,
+        canceledAt: canceledAt,
+        random: random,
+        prefersEnglish: _gates.prefersEnglish,
+      );
+
       final subtotal = 8900 + random.nextInt(8000);
       final shipping = 0;
       final tax = (subtotal * 0.1).round();
@@ -279,13 +301,15 @@ class LocalOrderRepository implements OrderRepository {
         paidAt: paidAt,
         shippedAt: shippedAt,
         deliveredAt: deliveredAt,
+        fulfillment: fulfillment,
+        production: production,
         canceledAt: canceledAt,
         cancelReason: status == OrderStatus.canceled
             ? (_gates.prefersEnglish ? 'Changed my mind' : '都合によりキャンセル')
             : null,
         payments: const [],
         shipments: const [],
-        productionEvents: const [],
+        productionEvents: productionEvents,
       );
     });
   }
@@ -306,5 +330,150 @@ class LocalOrderRepository implements OrderRepository {
     final random = Random();
     final nonce = random.nextInt(1000000).toString().padLeft(6, '0');
     return 'ord_${DateTime.now().millisecondsSinceEpoch}_$nonce';
+  }
+
+  OrderFulfillment? _seedFulfillment({
+    required OrderStatus status,
+    required DateTime createdAt,
+    required DateTime? shippedAt,
+    required DateTime? deliveredAt,
+    required DateTime? canceledAt,
+    required Random random,
+  }) {
+    if (status == OrderStatus.pendingPayment) return null;
+    if (status == OrderStatus.canceled && canceledAt == null) return null;
+
+    final estimatedShipDate = createdAt.add(
+      Duration(days: random.nextInt(5) + 2),
+    );
+    final estimatedDeliveryDate = estimatedShipDate.add(
+      Duration(days: random.nextInt(4) + 1),
+    );
+
+    return OrderFulfillment(
+      requestedAt: createdAt,
+      estimatedShipDate: shippedAt ?? estimatedShipDate,
+      estimatedDeliveryDate: deliveredAt ?? estimatedDeliveryDate,
+    );
+  }
+
+  OrderProductionInfo? _seedProductionInfo({
+    required OrderStatus status,
+    required Random random,
+  }) {
+    if (status.index < OrderStatus.inProduction.index ||
+        status == OrderStatus.canceled) {
+      return null;
+    }
+
+    final stationNumber = (random.nextInt(6) + 1).toString().padLeft(2, '0');
+    return OrderProductionInfo(
+      queueRef: 'queues/standard',
+      assignedStation: 'ST-$stationNumber',
+      operatorRef: 'ops/${random.nextInt(90) + 10}',
+    );
+  }
+
+  List<ProductionEvent> _seedProductionEvents({
+    required OrderStatus status,
+    required DateTime createdAt,
+    required DateTime? paidAt,
+    required DateTime? shippedAt,
+    required DateTime? deliveredAt,
+    required DateTime? canceledAt,
+    required Random random,
+    required bool prefersEnglish,
+  }) {
+    if (status == OrderStatus.pendingPayment) return const [];
+
+    final base = paidAt ?? createdAt;
+    final queuedAt = base.add(Duration(hours: random.nextInt(6) + 1));
+    final engravingAt = queuedAt.add(Duration(hours: random.nextInt(20) + 6));
+    final polishingAt = engravingAt.add(
+      Duration(hours: random.nextInt(18) + 4),
+    );
+    final qcAt = polishingAt.add(Duration(hours: random.nextInt(10) + 2));
+    final packedAt = qcAt.add(Duration(hours: random.nextInt(12) + 2));
+
+    final qcFailed = random.nextInt(12) == 0;
+    final qc = ProductionQcInfo(
+      result: qcFailed ? 'fail' : 'pass',
+      defects: qcFailed
+          ? [
+              prefersEnglish ? 'surface scratch' : '表面キズ',
+              prefersEnglish ? 'edge roughness' : '縁の粗さ',
+            ]
+          : const [],
+    );
+
+    final events = <ProductionEvent>[
+      ProductionEvent(type: ProductionEventType.queued, createdAt: queuedAt),
+    ];
+
+    if (status.index >= OrderStatus.inProduction.index &&
+        status != OrderStatus.canceled) {
+      events.addAll([
+        ProductionEvent(
+          type: ProductionEventType.engraving,
+          createdAt: engravingAt,
+          station: prefersEnglish ? 'Engraver' : '彫刻機',
+        ),
+        ProductionEvent(
+          type: ProductionEventType.polishing,
+          createdAt: polishingAt,
+          station: prefersEnglish ? 'Finishing' : '研磨',
+        ),
+        ProductionEvent(
+          type: ProductionEventType.qc,
+          createdAt: qcAt,
+          station: prefersEnglish ? 'QC' : '検品',
+          qc: qc,
+        ),
+      ]);
+
+      if (qcFailed) {
+        final reworkAt = qcAt.add(Duration(hours: random.nextInt(8) + 2));
+        final recheckAt = reworkAt.add(Duration(hours: random.nextInt(8) + 2));
+        events.addAll([
+          ProductionEvent(
+            type: ProductionEventType.rework,
+            createdAt: reworkAt,
+            note: prefersEnglish
+                ? 'Rework triggered after QC'
+                : '検品の結果、再加工になりました',
+          ),
+          ProductionEvent(
+            type: ProductionEventType.qc,
+            createdAt: recheckAt,
+            station: prefersEnglish ? 'QC' : '検品',
+            qc: const ProductionQcInfo(result: 'pass'),
+          ),
+        ]);
+      }
+    }
+
+    if (status.index >= OrderStatus.readyToShip.index &&
+        status != OrderStatus.canceled) {
+      events.add(
+        ProductionEvent(
+          type: ProductionEventType.packed,
+          createdAt: packedAt,
+          station: prefersEnglish ? 'Packing' : '梱包',
+        ),
+      );
+    }
+
+    if (status == OrderStatus.canceled && canceledAt != null) {
+      events.add(
+        ProductionEvent(
+          type: ProductionEventType.canceled,
+          createdAt: canceledAt,
+          note: prefersEnglish ? 'Order canceled' : '注文がキャンセルされました',
+        ),
+      );
+    }
+
+    events.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return events;
   }
 }

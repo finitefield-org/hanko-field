@@ -28,6 +28,7 @@ import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/orders/view/order_detail_page.dart';
+import 'package:app/features/orders/view/order_production_timeline_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
@@ -294,10 +295,8 @@ List<RouteBase> _ordersRoutes(GlobalKey<NavigatorState> tabKey) {
           routes: [
             GoRoute(
               path: 'production',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '制作進捗',
-                routePath: AppRoutePaths.orderProduction,
-                showBack: true,
+              builder: (context, state) => OrderProductionTimelinePage(
+                orderId: state.pathParameters['orderId'] ?? '',
               ),
             ),
             GoRoute(
