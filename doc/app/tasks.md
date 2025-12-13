@@ -67,7 +67,7 @@
 - [x] [Build order detail (`/orders/:orderId`) showing line items, totals, addresses, and design snapshot gallery.](doc/app/tasks/048-build-order-detail-orders-orderid-showing-line-items-totals-addresses-and-design-snapshot-.md)
 - [x] [Implement production timeline (`/orders/:orderId/production`) visualizing stages and timestamps.](doc/app/tasks/049-implement-production-timeline-orders-orderid-production-visualizing-stages-and-timestamps.md)
 - [x] [Build shipment tracking (`/orders/:orderId/tracking`) with event timeline and carrier integration.](doc/app/tasks/050-build-shipment-tracking-orders-orderid-tracking-with-event-timeline-and-carrier-integratio.md)
-- [ ] [Implement invoice viewer (`/orders/:orderId/invoice`) with PDF download/share support.](doc/app/tasks/051-implement-invoice-viewer-orders-orderid-invoice-with-pdf-download-share-support.md)
+- [x] [Implement invoice viewer (`/orders/:orderId/invoice`) with PDF download/share support.](doc/app/tasks/051-implement-invoice-viewer-orders-orderid-invoice-with-pdf-download-share-support.md)
 - [ ] [Build reorder flow (`/orders/:orderId/reorder`) cloning cart data and redirecting to checkout.](doc/app/tasks/052-build-reorder-flow-orders-orderid-reorder-cloning-cart-data-and-redirecting-to-checkout.md)
 
 ## 9. My Hanko Library

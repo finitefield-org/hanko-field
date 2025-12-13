@@ -7,11 +7,14 @@ import 'package:app/core/storage/cache_keys.dart';
 import 'package:app/core/storage/local_cache.dart';
 import 'package:app/core/storage/local_persistence_providers.dart';
 import 'package:app/features/orders/data/dtos/order_dtos.dart';
+import 'package:app/features/orders/data/models/order_invoice_models.dart';
 import 'package:app/features/orders/data/models/order_models.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 abstract class OrderRepository {
   static const fallback = Scope<OrderRepository>.required('order.repository');
@@ -23,6 +26,10 @@ abstract class OrderRepository {
   Future<Order> cancelOrder(String orderId, {String? reason});
 
   Future<void> requestInvoice(String orderId);
+
+  Future<OrderInvoice> getInvoice(String orderId);
+
+  Future<List<int>> downloadInvoicePdf(String orderId);
 
   Future<Order> reorder(String orderId);
 
@@ -55,10 +62,16 @@ class LocalOrderRepository implements OrderRepository {
   final Logger _logger;
 
   static const int _pageSize = 12;
+  static const Duration _invoiceFulfillmentDelay = Duration(seconds: 2);
 
   bool _seeded = false;
   late List<Order> _orders;
   late final LocalCacheKey _cacheKey = LocalCacheKeys.orders(
+    userId: _gates.isAuthenticated ? 'current' : 'guest',
+  );
+
+  LocalCacheKey _invoiceKey(String orderId) => LocalCacheKeys.orderInvoice(
+    orderId: orderId,
     userId: _gates.isAuthenticated ? 'current' : 'guest',
   );
 
@@ -117,8 +130,302 @@ class LocalOrderRepository implements OrderRepository {
   @override
   Future<void> requestInvoice(String orderId) async {
     await _ensureSeeded();
-    if (_orders.where((o) => o.id == orderId).isEmpty) return;
+    final order = _orders.where((o) => o.id == orderId).firstOrNull;
+    if (order == null) return;
+
+    final now = DateTime.now();
+    final issuedAt = order.paidAt != null
+        ? now.add(_invoiceFulfillmentDelay)
+        : null;
+    final invoiceNumber = _invoiceNumberFor(order: order, issuedAt: now);
+
+    await _cache.write(
+      _invoiceKey(orderId).value,
+      <String, Object?>{
+        'orderId': orderId,
+        'invoiceNumber': invoiceNumber,
+        'requestedAt': now.toIso8601String(),
+        'issuedAt': issuedAt?.toIso8601String(),
+      },
+      policy: CachePolicies.orders,
+      tags: _invoiceKey(orderId).tags,
+    );
+
     await Future<void>.delayed(const Duration(milliseconds: 120));
+  }
+
+  @override
+  Future<OrderInvoice> getInvoice(String orderId) async {
+    await _ensureSeeded();
+    final order = await getOrder(orderId);
+    final hit = await _cache.read(_invoiceKey(orderId).value);
+
+    final issuedAtRaw = hit?.value['issuedAt'];
+    final issuedAt = issuedAtRaw is String
+        ? DateTime.tryParse(issuedAtRaw)
+        : null;
+    final now = DateTime.now();
+
+    final isAvailable =
+        order.paidAt != null &&
+        order.status != OrderStatus.canceled &&
+        (issuedAt == null || !now.isBefore(issuedAt));
+
+    final invoiceNumber =
+        (hit?.value['invoiceNumber'] as String?) ??
+        _invoiceNumberFor(order: order, issuedAt: issuedAt ?? order.paidAt);
+
+    return OrderInvoice(
+      orderId: orderId,
+      invoiceNumber: invoiceNumber,
+      status: isAvailable
+          ? OrderInvoiceStatus.available
+          : OrderInvoiceStatus.pending,
+      taxStatus: OrderInvoiceTaxStatus.taxable,
+      issuedAt: isAvailable ? (issuedAt ?? order.paidAt) : null,
+      downloadUrl: null,
+    );
+  }
+
+  @override
+  Future<List<int>> downloadInvoicePdf(String orderId) async {
+    final invoice = await getInvoice(orderId);
+    if (invoice.status != OrderInvoiceStatus.available) {
+      throw StateError('Invoice is not available yet');
+    }
+
+    final order = await getOrder(orderId);
+    final issuedAt = invoice.issuedAt ?? DateTime.now();
+    final doc = pw.Document(
+      creator: 'Hanko Field',
+      title: invoice.invoiceNumber,
+      author: 'Hanko Field',
+    );
+
+    final headerStyle = pw.TextStyle(
+      fontSize: 18,
+      fontWeight: pw.FontWeight.bold,
+    );
+    final labelStyle = const pw.TextStyle(
+      fontSize: 10,
+      color: PdfColors.grey700,
+    );
+    final valueStyle = const pw.TextStyle(fontSize: 12);
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (_) {
+          return [
+            pw.Text(
+              _gates.prefersEnglish ? 'Invoice' : '領収書',
+              style: headerStyle,
+            ),
+            pw.SizedBox(height: 16),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      _gates.prefersEnglish ? 'Invoice number' : '領収書番号',
+                      style: labelStyle,
+                    ),
+                    pw.Text(invoice.invoiceNumber, style: valueStyle),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      _gates.prefersEnglish ? 'Order number' : '注文番号',
+                      style: labelStyle,
+                    ),
+                    pw.Text(order.orderNumber, style: valueStyle),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      _gates.prefersEnglish ? 'Issued at' : '発行日',
+                      style: labelStyle,
+                    ),
+                    pw.Text(_formatDate(issuedAt), style: valueStyle),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      _gates.prefersEnglish ? 'Total' : '合計',
+                      style: labelStyle,
+                    ),
+                    pw.Text(
+                      _formatMoney(
+                        order.totals.total,
+                        currency: order.currency,
+                      ),
+                      style: pw.TextStyle(
+                        fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+            pw.Divider(),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              _gates.prefersEnglish ? 'Line items' : '明細',
+              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(5),
+                1: pw.FlexColumnWidth(1),
+                2: pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        _gates.prefersEnglish ? 'Item' : '商品',
+                        style: labelStyle,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        _gates.prefersEnglish ? 'Qty' : '数量',
+                        style: labelStyle,
+                        textAlign: pw.TextAlign.right,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        _gates.prefersEnglish ? 'Amount' : '金額',
+                        style: labelStyle,
+                        textAlign: pw.TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+                ...order.lineItems.map((item) {
+                  final name = item.name ?? item.sku;
+                  return pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(name, style: valueStyle),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          '${item.quantity}',
+                          style: valueStyle,
+                          textAlign: pw.TextAlign.right,
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          _formatMoney(item.total, currency: order.currency),
+                          style: valueStyle,
+                          textAlign: pw.TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  _totalsRow(
+                    label: _gates.prefersEnglish ? 'Subtotal' : '小計',
+                    value: _formatMoney(
+                      order.totals.subtotal,
+                      currency: order.currency,
+                    ),
+                  ),
+                  if (order.totals.discount != 0)
+                    _totalsRow(
+                      label: _gates.prefersEnglish ? 'Discount' : '値引き',
+                      value: _formatMoney(
+                        -order.totals.discount,
+                        currency: order.currency,
+                      ),
+                    ),
+                  _totalsRow(
+                    label: _gates.prefersEnglish ? 'Tax' : '消費税',
+                    value: _formatMoney(
+                      order.totals.tax,
+                      currency: order.currency,
+                    ),
+                  ),
+                  _totalsRow(
+                    label: _gates.prefersEnglish ? 'Shipping' : '送料',
+                    value: _formatMoney(
+                      order.totals.shipping,
+                      currency: order.currency,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Container(
+                    width: 220,
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                        top: pw.BorderSide(color: PdfColors.grey600),
+                      ),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          _gates.prefersEnglish ? 'Total' : '合計',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Text(
+                          _formatMoney(
+                            order.totals.total,
+                            currency: order.currency,
+                          ),
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 24),
+            pw.Text(
+              _gates.prefersEnglish
+                  ? 'Thank you for your purchase.'
+                  : 'ご購入ありがとうございました。',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+          ];
+        },
+      ),
+    );
+
+    return doc.save();
   }
 
   @override
@@ -603,5 +910,45 @@ class LocalOrderRepository implements OrderRepository {
         events: sorted,
       ),
     ];
+  }
+
+  String _invoiceNumberFor({required Order order, DateTime? issuedAt}) {
+    final y = (issuedAt ?? DateTime.now()).year;
+    return 'INV-$y-${order.orderNumber}';
+  }
+
+  String _formatDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  String _formatMoney(int amount, {required String currency}) {
+    final digits = amount.abs().toString();
+    final formatted = digits.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]},',
+    );
+    final prefix = currency.toUpperCase() == 'JPY' ? '¥' : '$currency ';
+    final sign = amount < 0 ? '-' : '';
+    return '$sign$prefix$formatted';
+  }
+
+  pw.Widget _totalsRow({required String label, required String value}) {
+    return pw.Container(
+      width: 220,
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            label,
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+          pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
   }
 }

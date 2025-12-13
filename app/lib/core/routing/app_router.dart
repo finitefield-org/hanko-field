@@ -28,6 +28,7 @@ import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/orders/view/order_detail_page.dart';
+import 'package:app/features/orders/view/order_invoice_page.dart';
 import 'package:app/features/orders/view/order_production_timeline_page.dart';
 import 'package:app/features/orders/view/order_tracking_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
@@ -308,10 +309,8 @@ List<RouteBase> _ordersRoutes(GlobalKey<NavigatorState> tabKey) {
             ),
             GoRoute(
               path: 'invoice',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '領収書',
-                routePath: AppRoutePaths.orderInvoice,
-                showBack: true,
+              builder: (context, state) => OrderInvoicePage(
+                orderId: state.pathParameters['orderId'] ?? '',
               ),
             ),
             GoRoute(

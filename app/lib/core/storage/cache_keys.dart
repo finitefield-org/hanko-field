@@ -34,6 +34,16 @@ class LocalCacheKeys {
     return LocalCacheKey('orders/$userId', tags: ['orders', userId]);
   }
 
+  static LocalCacheKey orderInvoice({
+    required String orderId,
+    String userId = 'current',
+  }) {
+    return LocalCacheKey(
+      'orders/$userId/$orderId/invoice',
+      tags: ['orders', userId, 'order:$orderId', 'invoice'],
+    );
+  }
+
   static LocalCacheKey guides({String locale = 'default'}) {
     return LocalCacheKey('guides/$locale', tags: ['guides', locale]);
   }
