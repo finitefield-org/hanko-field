@@ -15,7 +15,7 @@ abstract class ContentRepository {
     String? pageToken,
   });
 
-  Future<Guide> getGuide(String slug);
+  Future<Guide> getGuide(String slug, {String? lang});
 
-  Future<PageContent> getPage(String slug);
+  Future<PageContent> getPage(String slug, {String? lang});
 }

@@ -24,6 +24,8 @@ import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/design_versions_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
+import 'package:app/features/guides/view/guide_detail_page.dart';
+import 'package:app/features/guides/view/guides_list_page.dart';
 import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/library/view/library_design_detail_page.dart';
 import 'package:app/features/library/view/library_design_duplicate_page.dart';
@@ -396,19 +398,13 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
       routes: [
         GoRoute(
           path: 'guides',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'ガイド一覧',
-            routePath: AppRoutePaths.guides,
-            showBack: true,
-          ),
+          builder: (context, state) => const GuidesListPage(),
           routes: [
             GoRoute(
               path: ':slug',
-              builder: (context, state) => TabPlaceholderPage(
-                title: 'ガイド詳細',
-                routePath:
-                    '${AppRoutePaths.guides}/${state.pathParameters['slug'] ?? ''}',
-                showBack: true,
+              builder: (context, state) => GuideDetailPage(
+                slug: state.pathParameters['slug'] ?? '',
+                lang: state.uri.queryParameters['lang'],
               ),
             ),
           ],
@@ -505,6 +501,21 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
 
 List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
   return [
+    GoRoute(
+      path: AppRoutePaths.guides,
+      parentNavigatorKey: keys.rootKey,
+      redirect: (context, state) => '${AppRoutePaths.profile}/guides',
+    ),
+    GoRoute(
+      path: AppRoutePaths.guideDetail,
+      parentNavigatorKey: keys.rootKey,
+      redirect: (context, state) {
+        final slug = state.pathParameters['slug'] ?? '';
+        final lang = state.uri.queryParameters['lang'];
+        final qp = lang != null && lang.isNotEmpty ? '?lang=$lang' : '';
+        return '${AppRoutePaths.profile}/guides/$slug$qp';
+      },
+    ),
     GoRoute(
       path: AppRoutePaths.splash,
       parentNavigatorKey: keys.rootKey,

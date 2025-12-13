@@ -79,7 +79,7 @@
 - [x] [Build share link management (`/library/:designId/shares`) showing issued links, expiry, revoke.](doc/app/tasks/058-build-share-link-management-library-designid-shares-showing-issued-links-expiry-revoke.md)
 
 ## 10. Guides & Cultural Content
-- [ ] [Implement guides list (`/guides`) with localization filters and recommended content for personas.](doc/app/tasks/059-implement-guides-list-guides-with-localization-filters-and-recommended-content-for-persona.md)
+- [x] [Implement guides list (`/guides`) with localization filters and recommended content for personas.](doc/app/tasks/059-implement-guides-list-guides-with-localization-filters-and-recommended-content-for-persona.md)
 - [ ] [Build guide detail (`/guides/:slug`) rendering CMS content with markdown/HTML and offline caching.](doc/app/tasks/060-build-guide-detail-guides-slug-rendering-cms-content-with-markdown-html-and-offline-cachin.md)
 - [ ] [Implement kanji dictionary (`/kanji/dictionary`) with search, favorites, and integration with design input.](doc/app/tasks/061-implement-kanji-dictionary-kanji-dictionary-with-search-favorites-and-integration-with-des.md)
 - [ ] [Build how-to screen (`/howto`) aggregating tutorials/videos with embedded players.](doc/app/tasks/062-build-how-to-screen-howto-aggregating-tutorials-videos-with-embedded-players.md)
