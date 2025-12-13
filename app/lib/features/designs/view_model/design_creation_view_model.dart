@@ -147,6 +147,7 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
   late final setPreviewStyleMut = mutation<WritingStyle>(#setPreviewStyle);
   late final setStyleSelectionMut = mutation<DesignStyle>(#setStyleSelection);
   late final saveInputMut = mutation<DesignInput>(#saveInput);
+  late final hydrateFromDesignMut = mutation<Design>(#hydrateFromDesign);
 
   @override
   Future<DesignCreationState> build(Ref ref) async {
@@ -315,6 +316,40 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     ref.state = AsyncData(current.copyWith(savedInput: input));
     return input;
   }, concurrency: Concurrency.dropLatest);
+
+  Call<Design> hydrateFromDesign(Design design) =>
+      mutate(hydrateFromDesignMut, (ref) async {
+        var current = ref.watch(this).valueOrNull;
+        if (current == null) {
+          final hydrated = await build(ref);
+          current = hydrated;
+          ref.state = AsyncData(hydrated);
+        }
+
+        final gates = ref.watch(appExperienceGatesProvider);
+        final incomingInput = design.input;
+        final rawName = incomingInput?.rawName.trim();
+        final input = DesignInput(
+          sourceType: incomingInput?.sourceType ?? DesignSourceType.typed,
+          rawName: (rawName == null || rawName.isEmpty)
+              ? (gates.prefersEnglish ? 'Design' : '印鑑')
+              : rawName,
+          kanji: incomingInput?.kanji,
+        );
+
+        ref.state = AsyncData(
+          current.copyWith(
+            selectedType: input.sourceType,
+            savedInput: input,
+            selectedShape: design.shape,
+            selectedSize: design.size,
+            selectedStyle: design.style,
+            selectedTemplate: null,
+            previewStyle: design.style.writing,
+          ),
+        );
+        return design;
+      }, concurrency: Concurrency.dropLatest);
 
   Call<bool> ensureStorageAccess() => mutate(ensureStorageMut, (ref) async {
     final current = ref.watch(this).valueOrNull;

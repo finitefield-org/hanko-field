@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/data/repositories/design_repository.dart';
+import 'package:app/features/library/view/library_shared.dart';
 import 'package:app/features/library/view_model/library_list_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
@@ -195,7 +196,7 @@ class _LibraryListPageState extends ConsumerState<LibraryListPage> {
           child: AspectRatio(
             aspectRatio: 1,
             child: Hero(
-              tag: _heroTag(design),
+              tag: libraryDesignHeroTag(design),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(tokens.radii.md),
                 child: Image.network(url, fit: BoxFit.cover),
@@ -628,7 +629,7 @@ class _LibraryGridCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(tokens.radii.md),
               child: Hero(
-                tag: _heroTag(design),
+                tag: libraryDesignHeroTag(design),
                 child: preview == null
                     ? Container(
                         color: tokens.colors.surfaceVariant,
@@ -724,7 +725,10 @@ class _LibraryListTile extends StatelessWidget {
         height: 56,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(tokens.radii.md),
-          child: Hero(tag: _heroTag(design), child: _thumbnail(design, tokens)),
+          child: Hero(
+            tag: libraryDesignHeroTag(design),
+            child: _thumbnail(design, tokens),
+          ),
         ),
       ),
       trailing: Wrap(
@@ -761,9 +765,6 @@ class _LibraryListTile extends StatelessWidget {
     return Image.network(url, fit: BoxFit.cover);
   }
 }
-
-String _heroTag(Design design) =>
-    'library:design:${design.id ?? design.hash ?? 'unknown'}';
 
 String _statusLabel(DesignStatus status, bool prefersEnglish) {
   return switch (status) {

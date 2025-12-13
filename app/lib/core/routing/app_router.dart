@@ -25,6 +25,7 @@ import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/design_versions_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/home/view/home_page.dart';
+import 'package:app/features/library/view/library_design_detail_page.dart';
 import 'package:app/features/library/view/library_list_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
@@ -338,11 +339,8 @@ List<RouteBase> _libraryRoutes(GlobalKey<NavigatorState> tabKey) {
       routes: [
         GoRoute(
           path: ':designId',
-          builder: (context, state) => TabPlaceholderPage(
-            title: '印鑑詳細',
-            routePath:
-                '${AppRoutePaths.library}/${state.pathParameters['designId'] ?? ''}',
-            showBack: true,
+          builder: (context, state) => LibraryDesignDetailPage(
+            designId: state.pathParameters['designId'] ?? '',
           ),
           routes: [
             GoRoute(
