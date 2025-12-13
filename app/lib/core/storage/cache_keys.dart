@@ -28,6 +28,16 @@ class LocalCacheKeys {
     );
   }
 
+  static LocalCacheKey designShareLinks({
+    required String designId,
+    String persona = 'default',
+  }) {
+    return LocalCacheKey(
+      'designs/$designId/share-links/$persona',
+      tags: ['designs', 'design:$designId', 'share-links', persona],
+    );
+  }
+
   static const cart = LocalCacheKey('cart/current', tags: ['cart']);
 
   static LocalCacheKey orders({String userId = 'current'}) {

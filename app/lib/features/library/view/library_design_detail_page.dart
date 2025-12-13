@@ -106,6 +106,9 @@ class _LibraryDesignDetailPageState
                   onDuplicate: () => _handleDuplicate(context),
                   onShare: () =>
                       _handleShare(context, state.valueOrNull!.design),
+                  onShareLinks: () => GoRouter.of(
+                    context,
+                  ).go('${AppRoutePaths.library}/${widget.designId}/shares'),
                   onArchive: () =>
                       _handleArchive(context, state.valueOrNull!.design),
                   onReorder: () =>
@@ -279,6 +282,7 @@ class _DetailsTab extends StatelessWidget {
     required this.onVersions,
     required this.onDuplicate,
     required this.onShare,
+    required this.onShareLinks,
     required this.onArchive,
     required this.onReorder,
     required this.onRefresh,
@@ -290,6 +294,7 @@ class _DetailsTab extends StatelessWidget {
   final VoidCallback onVersions;
   final VoidCallback onDuplicate;
   final VoidCallback onShare;
+  final VoidCallback onShareLinks;
   final VoidCallback onArchive;
   final VoidCallback onReorder;
   final Future<void> Function() onRefresh;
@@ -318,6 +323,7 @@ class _DetailsTab extends StatelessWidget {
             onVersions: onVersions,
             onDuplicate: onDuplicate,
             onShare: onShare,
+            onShareLinks: onShareLinks,
             onArchive: onArchive,
             onReorder: onReorder,
           ),
@@ -367,6 +373,7 @@ class _ActivityTab extends StatelessWidget {
             onVersions: null,
             onDuplicate: null,
             onShare: null,
+            onShareLinks: null,
             onArchive: null,
             onReorder: null,
           ),
@@ -432,6 +439,7 @@ class _FilesTab extends StatelessWidget {
             onVersions: null,
             onDuplicate: null,
             onShare: null,
+            onShareLinks: null,
             onArchive: null,
             onReorder: null,
           ),
@@ -476,6 +484,7 @@ class _HeaderCard extends StatelessWidget {
     this.onVersions,
     required this.onDuplicate,
     required this.onShare,
+    required this.onShareLinks,
     required this.onArchive,
     required this.onReorder,
   });
@@ -486,6 +495,7 @@ class _HeaderCard extends StatelessWidget {
   final VoidCallback? onVersions;
   final VoidCallback? onDuplicate;
   final VoidCallback? onShare;
+  final VoidCallback? onShareLinks;
   final VoidCallback? onArchive;
   final VoidCallback? onReorder;
 
@@ -597,6 +607,7 @@ class _HeaderCard extends StatelessWidget {
             if (onDuplicate != null ||
                 onVersions != null ||
                 onShare != null ||
+                onShareLinks != null ||
                 onArchive != null ||
                 onReorder != null) ...[
               SizedBox(height: tokens.spacing.md),
@@ -615,6 +626,12 @@ class _HeaderCard extends StatelessWidget {
                       avatar: const Icon(Icons.share_outlined),
                       label: Text(prefersEnglish ? 'Share' : '共有'),
                       onPressed: onShare,
+                    ),
+                  if (onShareLinks != null)
+                    ActionChip(
+                      avatar: const Icon(Icons.link_rounded),
+                      label: Text(prefersEnglish ? 'Links' : 'リンク'),
+                      onPressed: onShareLinks,
                     ),
                   if (onDuplicate != null)
                     ActionChip(

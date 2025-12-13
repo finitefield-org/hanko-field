@@ -28,6 +28,7 @@ import 'package:app/features/home/view/home_page.dart';
 import 'package:app/features/library/view/library_design_detail_page.dart';
 import 'package:app/features/library/view/library_design_duplicate_page.dart';
 import 'package:app/features/library/view/library_design_export_page.dart';
+import 'package:app/features/library/view/library_design_shares_page.dart';
 import 'package:app/features/library/view/library_design_versions_page.dart';
 import 'package:app/features/library/view/library_list_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
@@ -369,10 +370,8 @@ List<RouteBase> _libraryRoutes(GlobalKey<NavigatorState> tabKey) {
             ),
             GoRoute(
               path: 'shares',
-              builder: (context, state) => const TabPlaceholderPage(
-                title: '共有リンク',
-                routePath: AppRoutePaths.libraryShares,
-                showBack: true,
+              builder: (context, state) => LibraryDesignSharesPage(
+                designId: state.pathParameters['designId'] ?? '',
               ),
             ),
           ],
