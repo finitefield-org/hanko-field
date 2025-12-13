@@ -73,7 +73,7 @@
 ## 9. My Hanko Library
 - [x] [Implement library list (`/library`) with sorting, filtering (status, date, AI score), and grid/list toggle.](doc/app/tasks/053-implement-library-list-library-with-sorting-filtering-status-date-ai-score-and-grid-list-t.md)
 - [x] [Build design detail (`/library/:designId`) showing metadata, AI score, registrability status, usage history, and quick actions.](doc/app/tasks/054-build-design-detail-library-designid-showing-metadata-ai-score-registrability-status-usage.md)
-- [ ] [Implement versions view (`/library/:designId/versions`) reusing diff/rollback components.](doc/app/tasks/055-implement-versions-view-library-designid-versions-reusing-diff-rollback-components.md)
+- [x] [Implement versions view (`/library/:designId/versions`) reusing diff/rollback components.](doc/app/tasks/055-implement-versions-view-library-designid-versions-reusing-diff-rollback-components.md)
 - [ ] [Build duplicate flow (`/library/:designId/duplicate`) creating new design entry and navigating to editor.](doc/app/tasks/056-build-duplicate-flow-library-designid-duplicate-creating-new-design-entry-and-navigating-t.md)
 - [ ] [Implement digital export screen (`/library/:designId/export`) with formats and permissions.](doc/app/tasks/057-implement-digital-export-screen-library-designid-export-with-formats-and-permissions.md)
 - [ ] [Build share link management (`/library/:designId/shares`) showing issued links, expiry, revoke.](doc/app/tasks/058-build-share-link-management-library-designid-shares-showing-issued-links-expiry-revoke.md)

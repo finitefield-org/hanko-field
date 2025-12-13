@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
+import 'package:app/features/designs/data/repositories/design_repository.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
@@ -123,7 +124,13 @@ class DesignVersionsState {
 }
 
 class DesignVersionsViewModel extends AsyncProvider<DesignVersionsState> {
-  DesignVersionsViewModel() : super.args(null, autoDispose: false);
+  DesignVersionsViewModel({this.designId})
+    : super.args(
+        designId == null ? null : (designId,),
+        autoDispose: designId != null,
+      );
+
+  final String? designId;
 
   late final selectVersionMut = mutation<String>(#selectVersion);
   late final rollbackMut = mutation<DesignVersion?>(#rollback);
@@ -281,17 +288,20 @@ class DesignVersionsViewModel extends AsyncProvider<DesignVersionsState> {
     _analytics = ref.watch(analyticsClientProvider);
     _service = _DesignVersionService(gates: _gates, logger: _logger);
 
+    final repository = ref.watch(designRepositoryProvider);
     final creation = ref.watch(designCreationViewModel).valueOrNull;
     final editor = ref.watch(designEditorViewModel).valueOrNull;
     final session = ref.watch(userSessionProvider).valueOrNull;
-    final designId = _service.resolveDesignId(creation);
+    final resolvedDesignId = designId;
 
-    final currentDesign = _service.buildSnapshot(
-      designId: designId,
-      creation: creation,
-      editor: editor,
-      ownerRef: session?.user?.uid,
-    );
+    final currentDesign = resolvedDesignId == null
+        ? _service.buildSnapshot(
+            designId: _service.resolveDesignId(creation),
+            creation: creation,
+            editor: editor,
+            ownerRef: session?.user?.uid,
+          )
+        : await repository.getDesign(resolvedDesignId);
 
     final versions = _service.seedVersions(currentDesign);
     final focus = versions.length > 1
@@ -302,7 +312,7 @@ class DesignVersionsViewModel extends AsyncProvider<DesignVersionsState> {
         : _service.diff(versions.first, versions.first);
 
     return DesignVersionsState(
-      designId: designId,
+      designId: currentDesign.id ?? (resolvedDesignId ?? 'design-current'),
       versions: versions,
       focusVersionId: focus,
       diff: diff,
@@ -464,6 +474,7 @@ class _DesignVersionService {
     for (var i = 0; i < seeds.length; i++) {
       final seed = seeds[i];
       final version = baseVersion - (i + 1);
+      if (version < 1) break;
       final snapshot = current.copyWith(
         version: version,
         style: current.style.copyWith(

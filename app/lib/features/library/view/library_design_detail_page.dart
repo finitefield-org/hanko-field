@@ -100,6 +100,9 @@ class _LibraryDesignDetailPageState
                   subtitle: subtitle,
                   state: state.valueOrNull!,
                   prefersEnglish: prefersEnglish,
+                  onVersions: () => GoRouter.of(
+                    context,
+                  ).go('${AppRoutePaths.library}/${widget.designId}/versions'),
                   onDuplicate: () => _handleDuplicate(context),
                   onShare: () =>
                       _handleShare(context, state.valueOrNull!.design),
@@ -307,6 +310,7 @@ class _DetailsTab extends StatelessWidget {
     required this.subtitle,
     required this.state,
     required this.prefersEnglish,
+    required this.onVersions,
     required this.onDuplicate,
     required this.onShare,
     required this.onArchive,
@@ -317,6 +321,7 @@ class _DetailsTab extends StatelessWidget {
   final String subtitle;
   final LibraryDesignDetailState state;
   final bool prefersEnglish;
+  final VoidCallback onVersions;
   final VoidCallback onDuplicate;
   final VoidCallback onShare;
   final VoidCallback onArchive;
@@ -344,6 +349,7 @@ class _DetailsTab extends StatelessWidget {
             subtitle: subtitle,
             design: design,
             prefersEnglish: prefersEnglish,
+            onVersions: onVersions,
             onDuplicate: onDuplicate,
             onShare: onShare,
             onArchive: onArchive,
@@ -392,6 +398,7 @@ class _ActivityTab extends StatelessWidget {
             subtitle: subtitle,
             design: state.design,
             prefersEnglish: prefersEnglish,
+            onVersions: null,
             onDuplicate: null,
             onShare: null,
             onArchive: null,
@@ -456,6 +463,7 @@ class _FilesTab extends StatelessWidget {
             subtitle: subtitle,
             design: design,
             prefersEnglish: prefersEnglish,
+            onVersions: null,
             onDuplicate: null,
             onShare: null,
             onArchive: null,
@@ -499,6 +507,7 @@ class _HeaderCard extends StatelessWidget {
     required this.subtitle,
     required this.design,
     required this.prefersEnglish,
+    this.onVersions,
     required this.onDuplicate,
     required this.onShare,
     required this.onArchive,
@@ -508,6 +517,7 @@ class _HeaderCard extends StatelessWidget {
   final String subtitle;
   final Design design;
   final bool prefersEnglish;
+  final VoidCallback? onVersions;
   final VoidCallback? onDuplicate;
   final VoidCallback? onShare;
   final VoidCallback? onArchive;
@@ -619,6 +629,7 @@ class _HeaderCard extends StatelessWidget {
               ],
             ),
             if (onDuplicate != null ||
+                onVersions != null ||
                 onShare != null ||
                 onArchive != null ||
                 onReorder != null) ...[
@@ -627,6 +638,12 @@ class _HeaderCard extends StatelessWidget {
                 spacing: tokens.spacing.sm,
                 runSpacing: tokens.spacing.sm,
                 children: [
+                  if (onVersions != null)
+                    ActionChip(
+                      avatar: const Icon(Icons.history_rounded),
+                      label: Text(prefersEnglish ? 'Versions' : 'バージョン'),
+                      onPressed: onVersions,
+                    ),
                   if (onShare != null)
                     ActionChip(
                       avatar: const Icon(Icons.share_outlined),

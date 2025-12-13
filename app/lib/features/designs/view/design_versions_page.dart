@@ -12,7 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignVersionsPage extends ConsumerStatefulWidget {
-  const DesignVersionsPage({super.key});
+  const DesignVersionsPage({super.key, this.viewModel, this.secondaryAction});
+
+  final DesignVersionsViewModel? viewModel;
+  final VersionsSecondaryAction? secondaryAction;
 
   @override
   ConsumerState<DesignVersionsPage> createState() => _DesignVersionsPageState();
@@ -31,7 +34,8 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final state = ref.watch(designVersionsViewModel);
+    final viewModel = widget.viewModel ?? designVersionsViewModel;
+    final state = ref.watch(viewModel);
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -58,16 +62,17 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           AsyncError(:final error) when state.valueOrNull == null =>
             _VersionsError(
               message: error.toString(),
-              onRetry: () => ref.invalidate(designVersionsViewModel),
+              onRetry: () => ref.invalidate(viewModel),
             ),
           _ => RefreshIndicator.adaptive(
-            onRefresh: () => ref.invoke(designVersionsViewModel.refresh()),
+            onRefresh: () => ref.invoke(viewModel.refresh()),
             edgeOffset: tokens.spacing.md,
             displacement: tokens.spacing.lg,
             child: _buildBody(
               context: context,
               state: state.valueOrNull!,
               tokens: tokens,
+              viewModel: viewModel,
             ),
           ),
         },
@@ -79,10 +84,13 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     required BuildContext context,
     required DesignVersionsState state,
     required DesignTokens tokens,
+    required DesignVersionsViewModel viewModel,
   }) {
     _maybeShowFeedback(context, state);
     final diff = state.diff;
     final focus = state.focused ?? state.current;
+
+    final secondary = widget.secondaryAction;
 
     return ListView(
       controller: _scrollController,
@@ -102,8 +110,14 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           diff: diff,
           isBusy: state.isRollingBack || state.isDuplicating,
           onRollback: () => _confirmRollback(context, state, focus),
-          onDuplicate: () =>
-              ref.invoke(designVersionsViewModel.duplicate(_versionId(focus))),
+          secondaryAction:
+              secondary ??
+              VersionsSecondaryAction(
+                label: 'コピーを作成',
+                icon: Icons.copy_all_rounded,
+                onPressed: (focused) =>
+                    ref.invoke(viewModel.duplicate(_versionId(focused))),
+              ),
         ),
         SizedBox(height: tokens.spacing.md),
         if (diff != null) ...[
@@ -117,7 +131,7 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           action: IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: '履歴をリフレッシュ',
-            onPressed: () => ref.invoke(designVersionsViewModel.refresh()),
+            onPressed: () => ref.invoke(viewModel.refresh()),
           ),
         ),
         SizedBox(height: tokens.spacing.sm),
@@ -130,9 +144,8 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
               version: version,
               selected: selected,
               isCurrent: isCurrent,
-              onSelect: () => ref.invoke(
-                designVersionsViewModel.selectVersion(_versionId(version)),
-              ),
+              onSelect: () =>
+                  ref.invoke(viewModel.selectVersion(_versionId(version))),
               onRestore: isCurrent
                   ? null
                   : () => _confirmRollback(context, state, version),
@@ -193,7 +206,11 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
       secondaryAction: 'キャンセル',
       onPrimaryPressed: () {
         Navigator.of(context).maybePop();
-        ref.invoke(designVersionsViewModel.rollback(_versionId(target)));
+        ref.invoke(
+          (widget.viewModel ?? designVersionsViewModel).rollback(
+            _versionId(target),
+          ),
+        );
       },
     );
   }
@@ -209,7 +226,7 @@ class _DiffHeader extends StatelessWidget {
     required this.diff,
     required this.isBusy,
     required this.onRollback,
-    required this.onDuplicate,
+    required this.secondaryAction,
   });
 
   final DesignVersion current;
@@ -217,7 +234,7 @@ class _DiffHeader extends StatelessWidget {
   final VersionDiff? diff;
   final bool isBusy;
   final VoidCallback onRollback;
-  final VoidCallback onDuplicate;
+  final VersionsSecondaryAction secondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -283,10 +300,12 @@ class _DiffHeader extends StatelessWidget {
               SizedBox(width: tokens.spacing.sm),
               Expanded(
                 child: AppButton(
-                  label: 'コピーを作成',
+                  label: secondaryAction.label,
                   variant: AppButtonVariant.ghost,
-                  onPressed: isBusy ? null : onDuplicate,
-                  leading: const Icon(Icons.copy_all_rounded),
+                  onPressed: isBusy
+                      ? null
+                      : () => secondaryAction.onPressed(focus),
+                  leading: Icon(secondaryAction.icon),
                 ),
               ),
             ],
@@ -295,6 +314,18 @@ class _DiffHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class VersionsSecondaryAction {
+  const VersionsSecondaryAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final void Function(DesignVersion focused) onPressed;
 }
 
 class _PreviewRow extends StatelessWidget {
