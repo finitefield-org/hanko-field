@@ -227,7 +227,7 @@ class CartState {
 }
 
 class CartViewModel extends AsyncProvider<CartState> {
-  CartViewModel() : super.args(null, autoDispose: true);
+  CartViewModel() : super.args(null, autoDispose: false);
 
   late final adjustQuantityMut = mutation<String>(#adjustQuantity);
   late final removeLineMut = mutation<String>(#removeLine);
@@ -235,6 +235,7 @@ class CartViewModel extends AsyncProvider<CartState> {
   late final applyPromoMut = mutation<CartPromo?>(#applyPromo);
   late final updateAddonsMut = mutation<Set<String>>(#updateAddons);
   late final clearPromoMut = mutation<void>(#clearPromo);
+  late final replaceLinesMut = mutation<List<CartLineItem>>(#replaceLines);
 
   @override
   Future<CartState> build(Ref ref) async {
@@ -458,6 +459,15 @@ class CartViewModel extends AsyncProvider<CartState> {
       ),
     );
   }, concurrency: Concurrency.dropLatest);
+
+  Call<List<CartLineItem>> replaceLines(List<CartLineItem> lines) =>
+      mutate(replaceLinesMut, (ref) async {
+        final gates = ref.watch(appExperienceGatesProvider);
+        ref.state = AsyncData(
+          CartState(lines: lines, estimate: _estimateFor(lines, gates)),
+        );
+        return lines;
+      }, concurrency: Concurrency.dropLatest);
 }
 
 List<CartLineItem> _seedLines(AppExperienceGates gates) {

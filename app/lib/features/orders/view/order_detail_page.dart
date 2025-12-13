@@ -51,7 +51,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                       icon: const Icon(Icons.replay_outlined),
                       onPressed: order == null
                           ? null
-                          : () => unawaited(_reorder(order, prefersEnglish)),
+                          : () => _openReorderFlow(),
                     ),
                     IconButton(
                       tooltip: prefersEnglish ? 'Share' : '共有',
@@ -172,40 +172,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     Share.share(text, subject: order.orderNumber);
   }
 
-  Future<void> _reorder(Order order, bool prefersEnglish) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final created = await ref.invoke(
-        OrderDetailViewModel(orderId: widget.orderId).reorder(),
-      );
-      if (!mounted) return;
-
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish
-                ? 'Created reorder ${created.orderNumber}'
-                : '再注文を作成しました（${created.orderNumber}）',
-          ),
-        ),
-      );
-
-      final id = created.id;
-      if (id != null) {
-        await ref.container
-            .read(navigationControllerProvider)
-            .push<Object?>('${AppRoutePaths.orders}/$id');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(prefersEnglish ? 'Could not reorder' : '再注文に失敗しました'),
-        ),
-      );
-    }
+  void _openReorderFlow() {
+    unawaited(
+      ref.container
+          .read(navigationControllerProvider)
+          .push<Object?>('${AppRoutePaths.orders}/${widget.orderId}/reorder'),
+    );
   }
 
   Future<void> _requestInvoice(bool prefersEnglish) async {
