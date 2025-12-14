@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeContentRepository implements ContentRepository {
   String? lastSlug;
@@ -51,6 +52,7 @@ void main() {
   testWidgets(
     'GuideDetailPage fetch uses preferred language when query missing',
     (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
       final repo = _FakeContentRepository();
       final container = ProviderContainer(
         overrides: [

@@ -1,4 +1,5 @@
 export 'buttons/app_button.dart';
+export 'content/rich_content.dart';
 export 'feedback/app_empty_state.dart';
 export 'feedback/app_skeleton.dart';
 export 'forms/app_text_field.dart';
