@@ -85,6 +85,13 @@ class LocalCacheKeys {
     );
   }
 
+  static LocalCacheKey kanjiSearchHistory({String persona = 'default'}) {
+    return LocalCacheKey(
+      'kanji/history/$persona',
+      tags: ['kanji', persona, 'history'],
+    );
+  }
+
   static const onboarding = LocalCacheKey(
     'onboarding/state',
     tags: ['onboarding'],

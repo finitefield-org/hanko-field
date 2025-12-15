@@ -105,21 +105,32 @@ class KanjiCandidate {
 }
 
 class KanjiFilter {
-  const KanjiFilter({this.strokeBucket, this.radical});
+  const KanjiFilter({this.grade, this.strokeBucket, this.radical});
 
+  final int? grade;
   final String? strokeBucket;
   final String? radical;
 
+  static const Object _unset = Object();
+
   String get cacheKey {
+    final gradeKey = grade?.toString() ?? 'any';
     final stroke = strokeBucket ?? 'any';
     final rad = radical ?? 'any';
-    return 'stroke:$stroke|radical:$rad';
+    return 'grade:$gradeKey|stroke:$stroke|radical:$rad';
   }
 
-  KanjiFilter copyWith({String? strokeBucket, String? radical}) {
+  KanjiFilter copyWith({
+    Object? grade = _unset,
+    Object? strokeBucket = _unset,
+    Object? radical = _unset,
+  }) {
     return KanjiFilter(
-      strokeBucket: strokeBucket ?? this.strokeBucket,
-      radical: radical ?? this.radical,
+      grade: grade == _unset ? this.grade : grade as int?,
+      strokeBucket: strokeBucket == _unset
+          ? this.strokeBucket
+          : strokeBucket as String?,
+      radical: radical == _unset ? this.radical : radical as String?,
     );
   }
 }

@@ -27,6 +27,7 @@ import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/guides/view/guide_detail_page.dart';
 import 'package:app/features/guides/view/guides_list_page.dart';
 import 'package:app/features/home/view/home_page.dart';
+import 'package:app/features/kanji_dictionary/view/kanji_dictionary_page.dart';
 import 'package:app/features/library/view/library_design_detail_page.dart';
 import 'package:app/features/library/view/library_design_duplicate_page.dart';
 import 'package:app/features/library/view/library_design_export_page.dart';
@@ -411,11 +412,18 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'kanji/dictionary',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '漢字辞典',
-            routePath: AppRoutePaths.kanjiDictionary,
-            showBack: true,
-          ),
+          builder: (context, state) {
+            final initialQuery = state.uri.queryParameters['q'];
+            final insertField = parseNameFieldParam(
+              state.uri.queryParameters['insertField'],
+            );
+            final returnTo = state.uri.queryParameters['returnTo'];
+            return KanjiDictionaryPage(
+              initialQuery: initialQuery,
+              insertField: insertField,
+              returnTo: returnTo,
+            );
+          },
         ),
         GoRoute(
           path: 'howto',
@@ -514,6 +522,14 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
         final lang = state.uri.queryParameters['lang'];
         final qp = lang != null && lang.isNotEmpty ? '?lang=$lang' : '';
         return '${AppRoutePaths.profile}/guides/$slug$qp';
+      },
+    ),
+    GoRoute(
+      path: AppRoutePaths.kanjiDictionary,
+      parentNavigatorKey: keys.rootKey,
+      redirect: (context, state) {
+        final qp = state.uri.query.isEmpty ? '' : '?${state.uri.query}';
+        return '${AppRoutePaths.profile}/kanji/dictionary$qp';
       },
     ),
     GoRoute(

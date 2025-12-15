@@ -135,6 +135,8 @@ class _DesignInputPageState extends ConsumerState<DesignInputPage> {
                       validation: validation,
                       prefersEnglish: prefersEnglish,
                       onChanged: _handleFieldChanged,
+                      onOpenDictionary: (field, value) =>
+                          _openKanjiDictionary(field, value),
                       onApplySuggestion: (next) => ref.invoke(
                         designCreationViewModel.applyNameSuggestion(next),
                       ),
@@ -237,6 +239,16 @@ class _DesignInputPageState extends ConsumerState<DesignInputPage> {
   void _openKanjiMap(BuildContext context) {
     context.push(AppRoutePaths.designKanjiMap);
   }
+
+  void _openKanjiDictionary(NameField field, String query) {
+    final qp = <String, String>{
+      if (query.trim().isNotEmpty) 'q': query.trim(),
+      'insertField': field.name,
+      'returnTo': AppRoutePaths.designInput,
+    };
+    final uri = Uri(path: AppRoutePaths.kanjiDictionary, queryParameters: qp);
+    context.push(uri.toString());
+  }
 }
 
 class _NameFieldsCard extends StatelessWidget {
@@ -249,6 +261,7 @@ class _NameFieldsCard extends StatelessWidget {
     required this.validation,
     required this.prefersEnglish,
     required this.onChanged,
+    required this.onOpenDictionary,
     required this.onApplySuggestion,
     required this.surnameTemplates,
     required this.givenTemplates,
@@ -263,6 +276,7 @@ class _NameFieldsCard extends StatelessWidget {
   final NameValidationResult validation;
   final bool prefersEnglish;
   final void Function(NameField, String) onChanged;
+  final void Function(NameField field, String currentValue) onOpenDictionary;
   final ValueChanged<NameInputDraft> onApplySuggestion;
   final List<_NameTemplate> surnameTemplates;
   final List<_NameTemplate> givenTemplates;
@@ -294,6 +308,14 @@ class _NameFieldsCard extends StatelessWidget {
                   controller: surnameController,
                   hintText: prefersEnglish ? 'e.g., 山田 / Smith' : '例: 山田',
                   errorText: validation.surnameError,
+                  suffix: IconButton(
+                    tooltip: prefersEnglish ? 'Kanji dictionary' : '漢字辞典',
+                    icon: const Icon(Icons.menu_book_outlined),
+                    onPressed: () => onOpenDictionary(
+                      NameField.surnameKanji,
+                      surnameController.text,
+                    ),
+                  ),
                   onChanged: (value) =>
                       onChanged(NameField.surnameKanji, value),
                   textInputAction: TextInputAction.next,
@@ -304,6 +326,14 @@ class _NameFieldsCard extends StatelessWidget {
                   controller: givenController,
                   hintText: prefersEnglish ? 'e.g., 太郎 / Ken' : '例: 太郎',
                   errorText: validation.givenError,
+                  suffix: IconButton(
+                    tooltip: prefersEnglish ? 'Kanji dictionary' : '漢字辞典',
+                    icon: const Icon(Icons.menu_book_outlined),
+                    onPressed: () => onOpenDictionary(
+                      NameField.givenKanji,
+                      givenController.text,
+                    ),
+                  ),
                   onChanged: (value) => onChanged(NameField.givenKanji, value),
                   textInputAction: TextInputAction.next,
                 ),
@@ -317,6 +347,14 @@ class _NameFieldsCard extends StatelessWidget {
                     controller: surnameController,
                     hintText: prefersEnglish ? 'e.g., 山田 / Smith' : '例: 山田',
                     errorText: validation.surnameError,
+                    suffix: IconButton(
+                      tooltip: prefersEnglish ? 'Kanji dictionary' : '漢字辞典',
+                      icon: const Icon(Icons.menu_book_outlined),
+                      onPressed: () => onOpenDictionary(
+                        NameField.surnameKanji,
+                        surnameController.text,
+                      ),
+                    ),
                     onChanged: (value) =>
                         onChanged(NameField.surnameKanji, value),
                     textInputAction: TextInputAction.next,
@@ -329,6 +367,14 @@ class _NameFieldsCard extends StatelessWidget {
                     controller: givenController,
                     hintText: prefersEnglish ? 'e.g., 太郎 / Ken' : '例: 太郎',
                     errorText: validation.givenError,
+                    suffix: IconButton(
+                      tooltip: prefersEnglish ? 'Kanji dictionary' : '漢字辞典',
+                      icon: const Icon(Icons.menu_book_outlined),
+                      onPressed: () => onOpenDictionary(
+                        NameField.givenKanji,
+                        givenController.text,
+                      ),
+                    ),
                     onChanged: (value) =>
                         onChanged(NameField.givenKanji, value),
                     textInputAction: TextInputAction.next,

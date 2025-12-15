@@ -159,6 +159,9 @@ class LocalKanjiMappingRepository implements KanjiMappingRepository {
   List<KanjiCandidate> _filterCatalog(String query, KanjiFilter filter) {
     final filtered = _catalog.where((candidate) {
       final inQuery = _matchesQuery(candidate, query);
+      final matchesGrade = filter.grade == null
+          ? true
+          : _inferGrade(candidate.strokeCount) == filter.grade;
       final matchesStroke = filter.strokeBucket == null
           ? true
           : _matchesStrokeBucket(candidate.strokeCount, filter.strokeBucket!);
@@ -166,7 +169,7 @@ class LocalKanjiMappingRepository implements KanjiMappingRepository {
           ? true
           : candidate.radical == filter.radical;
 
-      return inQuery && matchesStroke && matchesRadical;
+      return inQuery && matchesGrade && matchesStroke && matchesRadical;
     }).toList()..sort((a, b) => b.popularity.compareTo(a.popularity));
 
     if (filtered.isNotEmpty) return filtered;
@@ -201,6 +204,15 @@ class LocalKanjiMappingRepository implements KanjiMappingRepository {
         return strokes >= 16;
     }
     return true;
+  }
+
+  int _inferGrade(int strokes) {
+    if (strokes <= 5) return 1;
+    if (strokes <= 8) return 2;
+    if (strokes <= 11) return 3;
+    if (strokes <= 14) return 4;
+    if (strokes <= 17) return 5;
+    return 6;
   }
 
   List<KanjiCandidate> _decodeCandidates(JsonMap map) {
