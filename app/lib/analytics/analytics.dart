@@ -542,3 +542,50 @@ class ShopGuideTappedEvent extends AppAnalyticsEvent {
     return {'guide_id': guideId, 'persona': persona, 'locale': locale};
   }
 }
+
+class HowtoTutorialOpenedEvent extends AppAnalyticsEvent {
+  const HowtoTutorialOpenedEvent({
+    required this.tutorialId,
+    required this.format,
+    this.topic,
+    this.position,
+  });
+
+  final String tutorialId;
+  final String format;
+  final String? topic;
+  final int? position;
+
+  @override
+  String get name => 'howto_tutorial_opened';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'tutorial_id': tutorialId,
+      'format': format,
+      'topic': topic,
+      'position': position,
+    };
+  }
+}
+
+class HowtoTutorialProgressEvent extends AppAnalyticsEvent {
+  const HowtoTutorialProgressEvent({
+    required this.tutorialId,
+    required this.format,
+    required this.progress,
+  });
+
+  final String tutorialId;
+  final String format;
+  final String progress;
+
+  @override
+  String get name => 'howto_tutorial_progress';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {'tutorial_id': tutorialId, 'format': format, 'progress': progress};
+  }
+}

@@ -27,6 +27,7 @@ import 'package:app/features/designs/view/kanji_mapping_page.dart';
 import 'package:app/features/guides/view/guide_detail_page.dart';
 import 'package:app/features/guides/view/guides_list_page.dart';
 import 'package:app/features/home/view/home_page.dart';
+import 'package:app/features/howto/view/howto_page.dart';
 import 'package:app/features/kanji_dictionary/view/kanji_dictionary_page.dart';
 import 'package:app/features/library/view/library_design_detail_page.dart';
 import 'package:app/features/library/view/library_design_duplicate_page.dart';
@@ -425,14 +426,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
             );
           },
         ),
-        GoRoute(
-          path: 'howto',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '使い方',
-            routePath: AppRoutePaths.howto,
-            showBack: true,
-          ),
-        ),
+        GoRoute(path: 'howto', builder: (context, state) => const HowtoPage()),
         GoRoute(
           path: 'addresses',
           builder: (context, state) => const TabPlaceholderPage(
@@ -531,6 +525,11 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
         final qp = state.uri.query.isEmpty ? '' : '?${state.uri.query}';
         return '${AppRoutePaths.profile}/kanji/dictionary$qp';
       },
+    ),
+    GoRoute(
+      path: AppRoutePaths.howto,
+      parentNavigatorKey: keys.rootKey,
+      redirect: (context, state) => '${AppRoutePaths.profile}/howto',
     ),
     GoRoute(
       path: AppRoutePaths.splash,
