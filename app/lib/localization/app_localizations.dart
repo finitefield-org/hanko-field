@@ -94,6 +94,58 @@ class AppLocalizations {
       'authProviderGoogle': 'Google',
       'authProviderApple': 'Apple',
       'authProviderEmail': 'Email',
+      'profileTitle': 'Profile',
+      'profileAvatarUpdateTooltip': 'Update profile photo',
+      'profileAvatarUpdateTitle': 'Update profile photo',
+      'profileAvatarUpdateBody':
+          'Photo updates are coming soon. For now, you can still change your persona and manage settings here.',
+      'profileAvatarUpdateOk': 'OK',
+      'profileLoadFailedTitle': 'Could not load profile',
+      'profileLoadFailedMessage':
+          'Something went wrong while loading your profile. Please try again.',
+      'profileRetry': 'Retry',
+      'profileStatusSignedOut': 'Signed out',
+      'profileStatusGuest': 'Guest',
+      'profileStatusMember': 'Signed in',
+      'profileFallbackGuestName': 'Guest',
+      'profileFallbackProfileName': 'Profile',
+      'profilePersonaTitle': 'Persona',
+      'profilePersonaSubtitle': 'Switch guidance and recommendations.',
+      'profilePersonaJapanese': 'Japan',
+      'profilePersonaForeigner': 'Global',
+      'profileQuickLinksTitle': 'Quick links',
+      'profileQuickOrdersTitle': 'Orders',
+      'profileQuickOrdersSubtitle': 'View order history',
+      'profileQuickLibraryTitle': 'My seals',
+      'profileQuickLibrarySubtitle': 'Saved designs',
+      'profileSettingsTitle': 'Settings',
+      'profileAddressesTitle': 'Addresses',
+      'profileAddressesSubtitle': 'Manage shipping destinations',
+      'profilePaymentsTitle': 'Payments',
+      'profilePaymentsSubtitle': 'Manage saved payment methods',
+      'profileNotificationsTitle': 'Notifications',
+      'profileNotificationsSubtitle': 'Update notification preferences',
+      'profileLocaleTitle': 'Language & currency',
+      'profileLocaleSubtitle': 'Change language and region',
+      'profileLegalTitle': 'Legal',
+      'profileLegalSubtitle': 'Terms, privacy, and disclosures',
+      'profileSupportTitle': 'Support',
+      'profileSupportSubtitle': 'FAQ and contact options',
+      'profileGuidesTitle': 'Guides',
+      'profileGuidesSubtitle': 'Culture and how-to guides',
+      'profileHowtoTitle': 'How to',
+      'profileHowtoSubtitle': 'Tutorials and videos',
+      'profileLinkedAccountsTitle': 'Linked accounts',
+      'profileLinkedAccountsSubtitle': 'Connect Apple and Google',
+      'profileExportTitle': 'Export data',
+      'profileExportSubtitle': 'Download your account data',
+      'profileDeleteTitle': 'Delete account',
+      'profileDeleteSubtitle': 'Permanently delete your account',
+      'profileSignInCta': 'Sign in',
+      'profileAccountSecurityTitle': 'Account security',
+      'profileAccountSecuritySubtitle': 'Passwords, 2FA, and linked providers',
+      'profileAccountSecurityBody':
+          'Security settings will appear here in a future update.',
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -162,6 +214,55 @@ class AppLocalizations {
       'authProviderGoogle': 'Google',
       'authProviderApple': 'Apple',
       'authProviderEmail': 'メール',
+      'profileTitle': 'プロフィール',
+      'profileAvatarUpdateTooltip': 'プロフィール写真を変更',
+      'profileAvatarUpdateTitle': 'プロフィール写真の変更',
+      'profileAvatarUpdateBody': 'プロフィール写真の更新は準備中です。現在はペルソナ切替と各種設定の確認ができます。',
+      'profileAvatarUpdateOk': 'OK',
+      'profileLoadFailedTitle': 'プロフィールを読み込めませんでした',
+      'profileLoadFailedMessage': 'プロフィールの読み込みに失敗しました。再度お試しください。',
+      'profileRetry': '再試行',
+      'profileStatusSignedOut': '未ログイン',
+      'profileStatusGuest': 'ゲスト',
+      'profileStatusMember': 'ログイン済み',
+      'profileFallbackGuestName': 'ゲスト',
+      'profileFallbackProfileName': 'プロフィール',
+      'profilePersonaTitle': 'ペルソナ',
+      'profilePersonaSubtitle': 'ガイドやおすすめ表示を切り替えます。',
+      'profilePersonaJapanese': '日本向け',
+      'profilePersonaForeigner': '海外向け',
+      'profileQuickLinksTitle': 'クイックリンク',
+      'profileQuickOrdersTitle': '注文',
+      'profileQuickOrdersSubtitle': '注文履歴を確認',
+      'profileQuickLibraryTitle': 'マイ印鑑',
+      'profileQuickLibrarySubtitle': '保存したデザイン',
+      'profileSettingsTitle': '設定',
+      'profileAddressesTitle': '住所帳',
+      'profileAddressesSubtitle': '配送先を管理',
+      'profilePaymentsTitle': '支払い方法',
+      'profilePaymentsSubtitle': '支払い手段を管理',
+      'profileNotificationsTitle': '通知設定',
+      'profileNotificationsSubtitle': '通知の受け取りを設定',
+      'profileLocaleTitle': '言語と通貨',
+      'profileLocaleSubtitle': '表示言語と地域設定',
+      'profileLegalTitle': '規約・法務',
+      'profileLegalSubtitle': '利用規約やプライバシー',
+      'profileSupportTitle': 'サポート',
+      'profileSupportSubtitle': 'FAQ・問い合わせ',
+      'profileGuidesTitle': 'ガイド',
+      'profileGuidesSubtitle': '文化と使い方の案内',
+      'profileHowtoTitle': '使い方',
+      'profileHowtoSubtitle': 'チュートリアルと動画',
+      'profileLinkedAccountsTitle': '連携アカウント',
+      'profileLinkedAccountsSubtitle': 'Apple/Google 連携',
+      'profileExportTitle': 'データ出力',
+      'profileExportSubtitle': 'アカウントデータをDL',
+      'profileDeleteTitle': 'アカウント削除',
+      'profileDeleteSubtitle': '削除手続きを進める',
+      'profileSignInCta': 'ログインする',
+      'profileAccountSecurityTitle': 'アカウント保護',
+      'profileAccountSecuritySubtitle': 'パスワードや2FA、連携の管理',
+      'profileAccountSecurityBody': 'セキュリティ設定は今後追加予定です。',
     },
   };
 
@@ -258,6 +359,65 @@ class AppLocalizations {
   String get authProviderGoogle => _string('authProviderGoogle');
   String get authProviderApple => _string('authProviderApple');
   String get authProviderEmail => _string('authProviderEmail');
+  String get profileTitle => _string('profileTitle');
+  String get profileAvatarUpdateTooltip =>
+      _string('profileAvatarUpdateTooltip');
+  String get profileAvatarUpdateTitle => _string('profileAvatarUpdateTitle');
+  String get profileAvatarUpdateBody => _string('profileAvatarUpdateBody');
+  String get profileAvatarUpdateOk => _string('profileAvatarUpdateOk');
+  String get profileLoadFailedTitle => _string('profileLoadFailedTitle');
+  String get profileLoadFailedMessage => _string('profileLoadFailedMessage');
+  String get profileRetry => _string('profileRetry');
+  String get profileStatusSignedOut => _string('profileStatusSignedOut');
+  String get profileStatusGuest => _string('profileStatusGuest');
+  String get profileStatusMember => _string('profileStatusMember');
+  String get profileFallbackGuestName => _string('profileFallbackGuestName');
+  String get profileFallbackProfileName =>
+      _string('profileFallbackProfileName');
+  String get profilePersonaTitle => _string('profilePersonaTitle');
+  String get profilePersonaSubtitle => _string('profilePersonaSubtitle');
+  String get profilePersonaJapanese => _string('profilePersonaJapanese');
+  String get profilePersonaForeigner => _string('profilePersonaForeigner');
+  String get profileQuickLinksTitle => _string('profileQuickLinksTitle');
+  String get profileQuickOrdersTitle => _string('profileQuickOrdersTitle');
+  String get profileQuickOrdersSubtitle =>
+      _string('profileQuickOrdersSubtitle');
+  String get profileQuickLibraryTitle => _string('profileQuickLibraryTitle');
+  String get profileQuickLibrarySubtitle =>
+      _string('profileQuickLibrarySubtitle');
+  String get profileSettingsTitle => _string('profileSettingsTitle');
+  String get profileAddressesTitle => _string('profileAddressesTitle');
+  String get profileAddressesSubtitle => _string('profileAddressesSubtitle');
+  String get profilePaymentsTitle => _string('profilePaymentsTitle');
+  String get profilePaymentsSubtitle => _string('profilePaymentsSubtitle');
+  String get profileNotificationsTitle => _string('profileNotificationsTitle');
+  String get profileNotificationsSubtitle =>
+      _string('profileNotificationsSubtitle');
+  String get profileLocaleTitle => _string('profileLocaleTitle');
+  String get profileLocaleSubtitle => _string('profileLocaleSubtitle');
+  String get profileLegalTitle => _string('profileLegalTitle');
+  String get profileLegalSubtitle => _string('profileLegalSubtitle');
+  String get profileSupportTitle => _string('profileSupportTitle');
+  String get profileSupportSubtitle => _string('profileSupportSubtitle');
+  String get profileGuidesTitle => _string('profileGuidesTitle');
+  String get profileGuidesSubtitle => _string('profileGuidesSubtitle');
+  String get profileHowtoTitle => _string('profileHowtoTitle');
+  String get profileHowtoSubtitle => _string('profileHowtoSubtitle');
+  String get profileLinkedAccountsTitle =>
+      _string('profileLinkedAccountsTitle');
+  String get profileLinkedAccountsSubtitle =>
+      _string('profileLinkedAccountsSubtitle');
+  String get profileExportTitle => _string('profileExportTitle');
+  String get profileExportSubtitle => _string('profileExportSubtitle');
+  String get profileDeleteTitle => _string('profileDeleteTitle');
+  String get profileDeleteSubtitle => _string('profileDeleteSubtitle');
+  String get profileSignInCta => _string('profileSignInCta');
+  String get profileAccountSecurityTitle =>
+      _string('profileAccountSecurityTitle');
+  String get profileAccountSecuritySubtitle =>
+      _string('profileAccountSecuritySubtitle');
+  String get profileAccountSecurityBody =>
+      _string('profileAccountSecurityBody');
 
   String onboardingStepCount(int current, int total) {
     final template = _string('onboardingStepCount');
