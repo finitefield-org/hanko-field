@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_payment_view_model.dart';
@@ -173,28 +173,23 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
             onRefresh: () =>
                 ref.refreshValue(checkoutPaymentViewModel, keepPrevious: true),
             edgeOffset: tokens.spacing.sm,
-            child: RadioGroup<String?>(
-              groupValue: selectedId,
-              onChanged: (value) =>
-                  ref.invoke(checkoutPaymentViewModel.selectPayment(value)),
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                itemCount: data.methods.length,
-                separatorBuilder: (_, __) =>
-                    SizedBox(height: tokens.spacing.sm),
-                itemBuilder: (context, index) {
-                  final method = data.methods[index];
-                  return _PaymentTile(
-                    method: method,
-                    prefersEnglish: prefersEnglish,
-                    onSelect: () => ref.invoke(
-                      checkoutPaymentViewModel.selectPayment(method.id),
-                    ),
-                  );
-                },
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
               ),
+              itemCount: data.methods.length,
+              separatorBuilder: (_, __) => SizedBox(height: tokens.spacing.sm),
+              itemBuilder: (context, index) {
+                final method = data.methods[index];
+                return _PaymentTile(
+                  method: method,
+                  prefersEnglish: prefersEnglish,
+                  groupValue: selectedId,
+                  onSelect: () => ref.invoke(
+                    checkoutPaymentViewModel.selectPayment(method.id),
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -273,11 +268,13 @@ class _PaymentTile extends StatelessWidget {
   const _PaymentTile({
     required this.method,
     required this.prefersEnglish,
+    required this.groupValue,
     required this.onSelect,
   });
 
   final PaymentMethod method;
   final bool prefersEnglish;
+  final String? groupValue;
   final VoidCallback onSelect;
 
   @override
@@ -309,7 +306,11 @@ class _PaymentTile extends StatelessWidget {
               ],
             ),
           ),
-          Radio<String?>(value: method.id),
+          Radio<String?>(
+            value: method.id,
+            groupValue: groupValue,
+            onChanged: (_) => onSelect(),
+          ),
         ],
       ),
     );

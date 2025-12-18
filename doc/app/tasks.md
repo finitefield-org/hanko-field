@@ -86,7 +86,7 @@
 
 ## 11. Profile & Settings
 - [x] [Implement profile home (`/profile`) showing avatar, display name, persona toggle, quick links.](doc/app/tasks/063-implement-profile-home-profile-showing-avatar-display-name-persona-toggle-quick-links.md)
-- [ ] [Build addresses management (`/profile/addresses`) with CRUD, defaults, and shipping sync.](doc/app/tasks/064-build-addresses-management-profile-addresses-with-crud-defaults-and-shipping-sync.md)
+- [x] [Build addresses management (`/profile/addresses`) with CRUD, defaults, and shipping sync.](doc/app/tasks/064-build-addresses-management-profile-addresses-with-crud-defaults-and-shipping-sync.md)
 - [ ] [Implement payment methods management (`/profile/payments`) referencing PSP tokens, default selection, and removal.](doc/app/tasks/065-implement-payment-methods-management-profile-payments-referencing-psp-tokens-default-selec.md)
 - [ ] [Build notifications settings (`/profile/notifications`) for push/email categories and scheduling.](doc/app/tasks/066-build-notifications-settings-profile-notifications-for-push-email-categories-and-schedulin.md)
 - [ ] [Implement locale settings (`/profile/locale`) for language/currency overrides.](doc/app/tasks/067-implement-locale-settings-profile-locale-for-language-currency-overrides.md)

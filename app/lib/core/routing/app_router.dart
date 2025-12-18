@@ -45,6 +45,7 @@ import 'package:app/features/orders/view/order_tracking_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
+import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
 import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
@@ -425,11 +426,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         GoRoute(path: 'howto', builder: (context, state) => const HowtoPage()),
         GoRoute(
           path: 'addresses',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '住所',
-            routePath: AppRoutePaths.profileAddresses,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileAddressesPage(),
         ),
         GoRoute(
           path: 'payments',
