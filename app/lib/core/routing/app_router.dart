@@ -47,6 +47,7 @@ import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
+import 'package:app/features/profile/view/profile_payments_page.dart';
 import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
@@ -430,11 +431,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'payments',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '支払い方法',
-            routePath: AppRoutePaths.profilePayments,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfilePaymentsPage(),
         ),
         GoRoute(
           path: 'notifications',

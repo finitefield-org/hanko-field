@@ -4,15 +4,14 @@
 **Task ID:** 065
 
 ## Goal
-Implement profile home summarizing account info and quick links.
+Implement payment methods management in `/profile/payments` with PSP token-backed methods, default selection, and removal.
 
 ## Implementation Steps
-1. Display avatar, display name, persona toggle, membership status.
-2. Provide shortcuts to addresses, payments, notifications, support.
-3. Fetch data via profile provider with optimistic updates.
+1. Load saved payment methods and display brand/last4 with default selection.
+2. Support adding methods with PSP token references stored securely.
+3. Allow setting a default method and removing saved methods with confirmation.
 
 ## Material Design 3 Components
 - **App bar:** `Small top app bar` with add payment `Icon button`.
 - **Method list:** `Two-line list items` with brand icon leading and trailing `Radio button` for default.
-- **Security card:** `Outlined card` summarizing security tips with `Assist chips` linking to FAQ.
-- **Dialogs:** `Full-screen dialog` for card entry using `Outlined text fields` and `Segmented buttons` for billing address choice.
+- **Dialogs:** `Modal bottom sheet` for card entry using `Outlined text fields` and `Segmented buttons`.

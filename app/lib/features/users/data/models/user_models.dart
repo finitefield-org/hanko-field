@@ -324,6 +324,7 @@ class PaymentMethod {
     required this.methodType,
     required this.providerRef,
     required this.createdAt,
+    this.isDefault = false,
     this.id,
     this.brand,
     this.last4,
@@ -344,6 +345,7 @@ class PaymentMethod {
   final String? fingerprint;
   final String? billingName;
   final String providerRef;
+  final bool isDefault;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -358,6 +360,7 @@ class PaymentMethod {
     String? fingerprint,
     String? billingName,
     String? providerRef,
+    bool? isDefault,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -372,6 +375,7 @@ class PaymentMethod {
       fingerprint: fingerprint ?? this.fingerprint,
       billingName: billingName ?? this.billingName,
       providerRef: providerRef ?? this.providerRef,
+      isDefault: isDefault ?? this.isDefault,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -391,6 +395,7 @@ class PaymentMethod {
             other.fingerprint == fingerprint &&
             other.billingName == billingName &&
             other.providerRef == providerRef &&
+            other.isDefault == isDefault &&
             other.createdAt == createdAt &&
             other.updatedAt == updatedAt);
   }
@@ -407,6 +412,7 @@ class PaymentMethod {
     fingerprint,
     billingName,
     providerRef,
+    isDefault,
     createdAt,
     updatedAt,
   );

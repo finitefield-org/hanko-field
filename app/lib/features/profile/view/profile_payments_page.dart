@@ -1,39 +1,39 @@
 // ignore_for_file: public_member_api_docs, deprecated_member_use
 
-import 'package:app/core/routing/routes.dart';
-import 'package:app/features/checkout/view_model/checkout_payment_view_model.dart';
 import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/payments/view/payment_method_form_sheet.dart';
+import 'package:app/features/profile/view_model/profile_payments_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
-import 'package:app/ui/app_ui.dart';
+import 'package:app/ui/feedback/app_empty_state.dart';
+import 'package:app/ui/feedback/app_skeleton.dart';
+import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
-class CheckoutPaymentPage extends ConsumerStatefulWidget {
-  const CheckoutPaymentPage({super.key});
+class ProfilePaymentsPage extends ConsumerStatefulWidget {
+  const ProfilePaymentsPage({super.key});
 
   @override
-  ConsumerState<CheckoutPaymentPage> createState() =>
-      _CheckoutPaymentPageState();
+  ConsumerState<ProfilePaymentsPage> createState() =>
+      _ProfilePaymentsPageState();
 }
 
-class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
+class _ProfilePaymentsPageState extends ConsumerState<ProfilePaymentsPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final state = ref.watch(checkoutPaymentViewModel);
+    final state = ref.watch(profilePaymentsViewModel);
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
       appBar: AppBar(
-        centerTitle: true,
         leading: const BackButton(),
-        title: Text(prefersEnglish ? 'Payment method' : '支払い方法'),
+        centerTitle: true,
+        title: Text(prefersEnglish ? 'Payment methods' : '支払い方法'),
         actions: [
           if (state.valueOrNull?.canAddMethods == true)
             IconButton(
@@ -54,15 +54,10 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
           child: _buildBody(
             context: context,
             prefersEnglish: prefersEnglish,
-            gates: gates,
             state: state,
+            canAdd: state.valueOrNull?.canAddMethods ?? false,
           ),
         ),
-      ),
-      bottomNavigationBar: _buildFooter(
-        context: context,
-        prefersEnglish: prefersEnglish,
-        state: state,
       ),
     );
   }
@@ -70,12 +65,12 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
   Widget _buildBody({
     required BuildContext context,
     required bool prefersEnglish,
-    required AppExperienceGates gates,
-    required AsyncValue<CheckoutPaymentState> state,
+    required AsyncValue<ProfilePaymentsState> state,
+    required bool canAdd,
   }) {
     final tokens = DesignTokensTheme.of(context);
 
-    if (state is AsyncLoading<CheckoutPaymentState> &&
+    if (state is AsyncLoading<ProfilePaymentsState> &&
         state.valueOrNull == null) {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.lg),
@@ -83,7 +78,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       );
     }
 
-    if (state is AsyncError<CheckoutPaymentState> &&
+    if (state is AsyncError<ProfilePaymentsState> &&
         state.valueOrNull == null) {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
@@ -93,87 +88,50 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
           icon: Icons.error_outline,
           actionLabel: prefersEnglish ? 'Retry' : '再試行',
           onAction: () =>
-              ref.refreshValue(checkoutPaymentViewModel, keepPrevious: false),
+              ref.refreshValue(profilePaymentsViewModel, keepPrevious: false),
         ),
       );
     }
 
-    final data = state.valueOrNull ?? const CheckoutPaymentState(methods: []);
+    final data = state.valueOrNull ?? const ProfilePaymentsState(methods: []);
     if (data.methods.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prefersEnglish ? 'Add a payment method' : '支払い方法を追加してください',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                SizedBox(height: tokens.spacing.sm),
-                Text(
-                  prefersEnglish
-                      ? 'Save a card or wallet to continue checkout.'
-                      : 'カードやウォレットを登録すると、次のステップに進めます。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: tokens.colors.onSurface.withValues(alpha: 0.72),
-                  ),
-                ),
-                if (!data.canAddMethods) ...[
-                  SizedBox(height: tokens.spacing.sm),
-                  Text(
-                    prefersEnglish
-                        ? 'Sign in to add methods.'
-                        : '支払い方法の追加にはログインが必要です。',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: tokens.colors.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-                if (data.canAddMethods) ...[
-                  SizedBox(height: tokens.spacing.md),
-                  AppButton(
-                    label: prefersEnglish ? 'Add method' : '支払い方法を追加',
-                    expand: true,
-                    onPressed: () =>
-                        _openAddForm(prefersEnglish: prefersEnglish),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+      final message = prefersEnglish
+          ? (canAdd
+                ? 'Add a card or wallet to speed up checkout.'
+                : 'Sign in to manage payment methods.')
+          : (canAdd
+                ? 'カードやウォレットを登録すると、チェックアウトがスムーズになります。'
+                : '支払い方法の管理にはログインが必要です。');
+      return AppEmptyState(
+        title: prefersEnglish ? 'No payment methods' : '支払い方法がありません',
+        message: message,
+        icon: Icons.credit_card_outlined,
+        actionLabel: canAdd
+            ? (prefersEnglish ? 'Add method' : '支払い方法を追加')
+            : null,
+        onAction: canAdd
+            ? () => _openAddForm(prefersEnglish: prefersEnglish)
+            : null,
       );
     }
 
-    final selectedId = data.selectedMethod?.id;
+    final defaultId = data.defaultMethod?.id;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          prefersEnglish
-              ? 'Choose a saved payment method.'
-              : '保存済みの支払い方法を選択してください。',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: tokens.colors.onSurface.withValues(alpha: 0.75),
-          ),
-        ),
         if (data.lastError != null) ...[
-          SizedBox(height: tokens.spacing.sm),
           Text(
             data.lastError!,
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: tokens.colors.error),
           ),
+          SizedBox(height: tokens.spacing.sm),
         ],
-        SizedBox(height: tokens.spacing.md),
         Expanded(
           child: RefreshIndicator.adaptive(
             onRefresh: () =>
-                ref.refreshValue(checkoutPaymentViewModel, keepPrevious: true),
+                ref.refreshValue(profilePaymentsViewModel, keepPrevious: true),
             edgeOffset: tokens.spacing.sm,
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(
@@ -183,58 +141,24 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
               separatorBuilder: (_, __) => SizedBox(height: tokens.spacing.sm),
               itemBuilder: (context, index) {
                 final method = data.methods[index];
-                return _PaymentTile(
+                return _PaymentMethodListItem(
                   method: method,
                   prefersEnglish: prefersEnglish,
-                  groupValue: selectedId,
-                  onSelect: () => ref.invoke(
-                    checkoutPaymentViewModel.selectPayment(method.id),
-                  ),
+                  groupValue: defaultId,
+                  onSelect: method.id == null || method.id == defaultId
+                      ? null
+                      : () => ref.invoke(
+                          profilePaymentsViewModel.setDefault(method.id!),
+                        ),
+                  onDelete: method.id == null
+                      ? null
+                      : () => _confirmDelete(method),
                 );
               },
             ),
           ),
         ),
-        if (data.canAddMethods) ...[
-          SizedBox(height: tokens.spacing.md),
-          AppButton(
-            label: prefersEnglish ? 'Add another method' : '支払い方法を追加',
-            variant: AppButtonVariant.ghost,
-            leading: const Icon(Icons.add),
-            expand: true,
-            onPressed: () => _openAddForm(prefersEnglish: prefersEnglish),
-          ),
-        ],
       ],
-    );
-  }
-
-  Widget _buildFooter({
-    required BuildContext context,
-    required bool prefersEnglish,
-    required AsyncValue<CheckoutPaymentState> state,
-  }) {
-    final tokens = DesignTokensTheme.of(context);
-    final data = state.valueOrNull;
-    final selected = data?.selectedMethod;
-    final addState = ref.watch(checkoutPaymentViewModel.addPaymentMut);
-    final isSaving = addState is PendingMutationState;
-
-    return SafeArea(
-      minimum: EdgeInsets.fromLTRB(
-        tokens.spacing.lg,
-        tokens.spacing.sm,
-        tokens.spacing.lg,
-        tokens.spacing.md,
-      ),
-      child: AppButton(
-        label: prefersEnglish ? 'Continue to review' : '注文確認へ進む',
-        expand: true,
-        isLoading: isSaving,
-        onPressed: selected == null || isSaving
-            ? null
-            : () => GoRouter.of(context).go(AppRoutePaths.checkoutReview),
-      ),
     );
   }
 
@@ -248,7 +172,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
     );
     if (result == null) return;
     final save = await ref.invoke(
-      checkoutPaymentViewModel.addPaymentMethod(result),
+      profilePaymentsViewModel.addPaymentMethod(result),
     );
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -265,20 +189,54 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       );
     }
   }
+
+  Future<void> _confirmDelete(PaymentMethod method) async {
+    final gates = ref.container.read(appExperienceGatesProvider);
+    final prefersEnglish = gates.prefersEnglish;
+    final id = method.id;
+    if (id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          prefersEnglish ? 'Remove payment method?' : '支払い方法を削除しますか？',
+        ),
+        content: Text(
+          prefersEnglish ? 'This cannot be undone.' : 'この操作は取り消せません。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(prefersEnglish ? 'Cancel' : 'キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(prefersEnglish ? 'Remove' : '削除'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+    await ref.invoke(profilePaymentsViewModel.deletePaymentMethod(id));
+  }
 }
 
-class _PaymentTile extends StatelessWidget {
-  const _PaymentTile({
+class _PaymentMethodListItem extends StatelessWidget {
+  const _PaymentMethodListItem({
     required this.method,
     required this.prefersEnglish,
     required this.groupValue,
     required this.onSelect,
+    required this.onDelete,
   });
 
   final PaymentMethod method;
   final bool prefersEnglish;
   final String? groupValue;
-  final VoidCallback onSelect;
+  final VoidCallback? onSelect;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +254,31 @@ class _PaymentTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    if (method.isDefault)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: tokens.spacing.sm,
+                          vertical: tokens.spacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tokens.colors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(tokens.radii.lg),
+                        ),
+                        child: Text(
+                          prefersEnglish ? 'Default' : '既定',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                  ],
+                ),
                 if (subtitle != null) ...[
                   SizedBox(height: tokens.spacing.xs),
                   Text(
@@ -309,10 +291,20 @@ class _PaymentTile extends StatelessWidget {
               ],
             ),
           ),
-          Radio<String?>(
-            value: method.id,
-            groupValue: groupValue,
-            onChanged: (_) => onSelect(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Radio<String?>(
+                value: method.id,
+                groupValue: groupValue,
+                onChanged: onSelect == null ? null : (_) => onSelect!(),
+              ),
+              IconButton(
+                tooltip: prefersEnglish ? 'Remove' : '削除',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline),
+              ),
+            ],
           ),
         ],
       ),

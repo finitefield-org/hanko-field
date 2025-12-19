@@ -177,6 +177,7 @@ class LocalUserRepository implements UserRepository {
         final secure = _ref.watch(secureStorageProvider);
         final list = jsonDecode(cached) as List;
         var didMigrate = false;
+        var didNormalize = false;
         final decoded = <PaymentMethod>[];
 
         for (final raw in list) {
@@ -213,11 +214,19 @@ class LocalUserRepository implements UserRepository {
           );
         }
 
-        if (didMigrate) {
-          await _persistPayments(prefs, decoded);
+        final normalized = _ensurePaymentDefaults(
+          decoded,
+          now: DateTime.now().toUtc(),
+        );
+        if (normalized.changed) {
+          didNormalize = true;
         }
 
-        return decoded;
+        if (didMigrate || didNormalize) {
+          await _persistPayments(prefs, normalized.methods);
+        }
+
+        return normalized.methods;
       } catch (e, stack) {
         _logger.warning('Failed to parse cached payments', e, stack);
       }
@@ -232,14 +241,55 @@ class LocalUserRepository implements UserRepository {
     final existing = await listPaymentMethods();
     final now = DateTime.now().toUtc();
     final id = method.id ?? 'pm_${now.microsecondsSinceEpoch}';
-    final newMethod = method.copyWith(id: id, updatedAt: now);
+    final hasDefault = existing.any((item) => item.isDefault);
+    final newMethod = method.copyWith(
+      id: id,
+      isDefault: method.isDefault || !hasDefault,
+      updatedAt: now,
+    );
     await secure.write(
       key: '$_paymentProviderRefPrefix$id',
       value: method.providerRef,
     );
-    final updated = [newMethod, ...existing];
+    final updated = newMethod.isDefault
+        ? [
+            newMethod,
+            ...existing.map((item) => item.copyWith(isDefault: false)),
+          ]
+        : [newMethod, ...existing];
     await _persistPayments(prefs, updated);
     return newMethod;
+  }
+
+  @override
+  Future<PaymentMethod> updatePaymentMethod(PaymentMethod method) async {
+    final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    final existing = await listPaymentMethods();
+    final index = existing.indexWhere((item) => item.id == method.id);
+    if (index == -1) {
+      throw StateError('Payment method ${method.id} not found');
+    }
+
+    final now = DateTime.now().toUtc();
+    final updatedMethod = method.copyWith(
+      createdAt: method.createdAt,
+      updatedAt: now,
+    );
+    final next = existing
+        .map((item) => item.id == updatedMethod.id ? updatedMethod : item)
+        .toList();
+
+    final normalized = updatedMethod.isDefault
+        ? [
+            updatedMethod,
+            ...next
+                .where((item) => item.id != updatedMethod.id)
+                .map((item) => item.copyWith(isDefault: false)),
+          ]
+        : next;
+
+    await _persistPayments(prefs, normalized);
+    return updatedMethod;
   }
 
   @override
@@ -248,6 +298,16 @@ class LocalUserRepository implements UserRepository {
     final secure = _ref.watch(secureStorageProvider);
     final existing = await listPaymentMethods();
     final filtered = existing.where((item) => item.id != methodId).toList();
+    if (filtered.isNotEmpty && filtered.every((item) => !item.isDefault)) {
+      final first = filtered.first;
+      final updated = first.copyWith(
+        isDefault: true,
+        updatedAt: DateTime.now().toUtc(),
+      );
+      filtered
+        ..removeAt(0)
+        ..insert(0, updated);
+    }
     await _persistPayments(prefs, filtered);
     await secure.delete(key: '$_paymentProviderRefPrefix$methodId');
   }
@@ -306,7 +366,18 @@ class LocalUserRepository implements UserRepository {
     SharedPreferences prefs,
     List<PaymentMethod> methods,
   ) async {
-    final encoded = methods.map((method) {
+    final normalized = [...methods];
+    if (normalized.isNotEmpty && normalized.every((item) => !item.isDefault)) {
+      final first = normalized.first;
+      normalized
+        ..removeAt(0)
+        ..insert(
+          0,
+          first.copyWith(isDefault: true, updatedAt: DateTime.now().toUtc()),
+        );
+    }
+
+    final encoded = normalized.map((method) {
       final dto = PaymentMethodDto.fromDomain(method);
       final map = dto.toJson();
       if (method.id != null) {
@@ -367,6 +438,44 @@ class LocalUserRepository implements UserRepository {
       ),
     ];
   }
+}
+
+class _NormalizedPaymentMethods {
+  const _NormalizedPaymentMethods({
+    required this.methods,
+    required this.changed,
+  });
+
+  final List<PaymentMethod> methods;
+  final bool changed;
+}
+
+_NormalizedPaymentMethods _ensurePaymentDefaults(
+  List<PaymentMethod> methods, {
+  required DateTime now,
+}) {
+  if (methods.isEmpty) {
+    return const _NormalizedPaymentMethods(methods: [], changed: false);
+  }
+
+  final defaults = methods.where((item) => item.isDefault).toList();
+  if (defaults.length == 1) {
+    return _NormalizedPaymentMethods(methods: methods, changed: false);
+  }
+
+  final keepId = defaults.isEmpty ? methods.first.id : defaults.first.id;
+  final normalized = <PaymentMethod>[];
+  for (var i = 0; i < methods.length; i++) {
+    final method = methods[i];
+    final shouldDefault = keepId != null ? method.id == keepId : i == 0;
+    if (method.isDefault == shouldDefault) {
+      normalized.add(method);
+    } else {
+      normalized.add(method.copyWith(isDefault: shouldDefault, updatedAt: now));
+    }
+  }
+
+  return _NormalizedPaymentMethods(methods: normalized, changed: true);
 }
 
 UserPersona _personaForLocale(String languageCode) {

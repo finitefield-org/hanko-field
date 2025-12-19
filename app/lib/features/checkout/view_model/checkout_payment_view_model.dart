@@ -1,41 +1,13 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
+import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/features/users/data/repositories/local_user_repository.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
-
-class PaymentMethodDraft {
-  const PaymentMethodDraft({
-    this.provider = PaymentProvider.stripe,
-    this.methodType = PaymentMethodType.card,
-    this.brand,
-    this.last4,
-    this.expMonth,
-    this.expYear,
-    this.billingName,
-  });
-
-  final PaymentProvider provider;
-  final PaymentMethodType methodType;
-  final String? brand;
-  final String? last4;
-  final int? expMonth;
-  final int? expYear;
-  final String? billingName;
-}
-
-class PaymentValidationResult {
-  const PaymentValidationResult({this.fieldErrors = const {}, this.message});
-
-  final Map<String, String> fieldErrors;
-  final String? message;
-
-  bool get isValid => fieldErrors.isEmpty && message == null;
-}
 
 class PaymentSaveResult {
   const PaymentSaveResult({required this.validation, this.saved});
@@ -99,10 +71,11 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
     final methods = await repository.listPaymentMethods();
     final sorted = _sort(methods);
     final flowId = flow.paymentMethodId;
+    final defaultId = sorted.firstWhereOrNull((item) => item.isDefault)?.id;
     final selectedId =
         (flowId != null && sorted.any((item) => item.id == flowId))
         ? flowId
-        : sorted.firstOrNull?.id;
+        : (defaultId ?? sorted.firstOrNull?.id);
 
     return CheckoutPaymentState(
       methods: sorted,
@@ -136,7 +109,7 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
       mutate(addPaymentMut, (ref) async {
         final gates = ref.watch(appExperienceGatesProvider);
         final prefersEnglish = gates.prefersEnglish;
-        final validation = _validateDraft(draft, prefersEnglish);
+        final validation = validatePaymentDraft(draft, prefersEnglish);
         final current = ref.watch(this).valueOrNull;
 
         if (!validation.isValid) {
@@ -150,6 +123,9 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
 
         final repository = ref.watch(userRepositoryProvider);
         final now = DateTime.now().toUtc();
+        final hasDefault = (current?.methods ?? const []).any(
+          (item) => item.isDefault,
+        );
         final method = PaymentMethod(
           id: null,
           provider: draft.provider,
@@ -160,6 +136,7 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
           expYear: draft.expYear,
           billingName: draft.billingName,
           providerRef: 'tok_${now.microsecondsSinceEpoch}',
+          isDefault: !hasDefault,
           createdAt: now,
           updatedAt: now,
         );
@@ -202,42 +179,15 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
 
   List<PaymentMethod> _sort(List<PaymentMethod> methods) {
     final sorted = [...methods];
-    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    sorted.sort((a, b) {
+      if (a.isDefault != b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      final aUpdated = a.updatedAt ?? a.createdAt;
+      final bUpdated = b.updatedAt ?? b.createdAt;
+      return bUpdated.compareTo(aUpdated);
+    });
     return sorted;
-  }
-
-  PaymentValidationResult _validateDraft(
-    PaymentMethodDraft draft,
-    bool prefersEnglish,
-  ) {
-    final errors = <String, String>{};
-    final last4 = draft.last4?.trim();
-    if (draft.methodType == PaymentMethodType.card) {
-      if (last4 == null || last4.length != 4) {
-        errors['last4'] = prefersEnglish
-            ? 'Enter last 4 digits'
-            : '下4桁を入力してください';
-      }
-      if (draft.expMonth == null ||
-          draft.expMonth! < 1 ||
-          draft.expMonth! > 12) {
-        errors['expMonth'] = prefersEnglish
-            ? 'Enter expiry month'
-            : '有効期限(月)を入力してください';
-      }
-      if (draft.expYear == null || draft.expYear! < DateTime.now().year) {
-        errors['expYear'] = prefersEnglish
-            ? 'Enter expiry year'
-            : '有効期限(年)を入力してください';
-      }
-    }
-
-    return PaymentValidationResult(
-      fieldErrors: errors,
-      message: errors.isEmpty
-          ? null
-          : (prefersEnglish ? 'Fix the highlighted fields' : '入力内容を確認してください'),
-    );
   }
 }
 

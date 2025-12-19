@@ -243,6 +243,7 @@ class PaymentMethodDto {
     required this.methodType,
     required this.providerRef,
     required this.createdAt,
+    this.isDefault = false,
     this.id,
     this.brand,
     this.last4,
@@ -263,6 +264,7 @@ class PaymentMethodDto {
   final String? fingerprint;
   final String? billingName;
   final String providerRef;
+  final bool isDefault;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -278,6 +280,7 @@ class PaymentMethodDto {
       fingerprint: json['fingerprint'] as String?,
       billingName: json['billingName'] as String?,
       providerRef: json['providerRef'] as String,
+      isDefault: json['isDefault'] as bool? ?? false,
       createdAt:
           parseDateTime(json['createdAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -295,6 +298,7 @@ class PaymentMethodDto {
     'fingerprint': fingerprint,
     'billingName': billingName,
     'providerRef': providerRef,
+    'isDefault': isDefault,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt?.toIso8601String(),
   };
@@ -311,6 +315,7 @@ class PaymentMethodDto {
       fingerprint: fingerprint,
       billingName: billingName,
       providerRef: providerRef,
+      isDefault: isDefault,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -328,6 +333,7 @@ class PaymentMethodDto {
       fingerprint: method.fingerprint,
       billingName: method.billingName,
       providerRef: method.providerRef,
+      isDefault: method.isDefault,
       createdAt: method.createdAt,
       updatedAt: method.updatedAt,
     );

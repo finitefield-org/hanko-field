@@ -22,6 +22,8 @@ abstract class UserRepository {
 
   Future<PaymentMethod> addPaymentMethod(PaymentMethod method);
 
+  Future<PaymentMethod> updatePaymentMethod(PaymentMethod method);
+
   Future<void> removePaymentMethod(String methodId);
 
   Future<List<FavoriteDesign>> listFavorites();
