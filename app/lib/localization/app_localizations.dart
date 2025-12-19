@@ -125,6 +125,34 @@ class AppLocalizations {
       'profilePaymentsSubtitle': 'Manage saved payment methods',
       'profileNotificationsTitle': 'Notifications',
       'profileNotificationsSubtitle': 'Update notification preferences',
+      'profileNotificationsHeader':
+          'Choose how you want to hear from Hanko Field.',
+      'profileNotificationsPushHeader': 'Push notifications',
+      'profileNotificationsEmailHeader': 'Email notifications',
+      'profileNotificationsDigestHeader': 'Digest frequency',
+      'profileNotificationsDigestHelper':
+          'How often should we send summary emails?',
+      'profileNotificationsDigestDaily': 'Daily',
+      'profileNotificationsDigestWeekly': 'Weekly',
+      'profileNotificationsDigestMonthly': 'Monthly',
+      'profileNotificationsSave': 'Save preferences',
+      'profileNotificationsReset': 'Reset',
+      'profileNotificationsSaved': 'Notification preferences saved.',
+      'profileNotificationsSaveFailed': 'Could not save preferences.',
+      'profileNotificationsLoadFailedTitle':
+          'Could not load notification settings',
+      'profileNotificationsCategoryOrdersTitle': 'Order updates',
+      'profileNotificationsCategoryOrdersBody':
+          'Shipping, production, and delivery status.',
+      'profileNotificationsCategoryDesignsTitle': 'Design activity',
+      'profileNotificationsCategoryDesignsBody':
+          'AI suggestions, edits, and approvals.',
+      'profileNotificationsCategoryPromosTitle': 'Promotions',
+      'profileNotificationsCategoryPromosBody':
+          'New drops, seasonal releases, and offers.',
+      'profileNotificationsCategoryGuidesTitle': 'Guides & tips',
+      'profileNotificationsCategoryGuidesBody':
+          'How-to content and cultural insights.',
       'profileLocaleTitle': 'Language & currency',
       'profileLocaleSubtitle': 'Change language and region',
       'profileLegalTitle': 'Legal',
@@ -243,6 +271,27 @@ class AppLocalizations {
       'profilePaymentsSubtitle': '支払い手段を管理',
       'profileNotificationsTitle': '通知設定',
       'profileNotificationsSubtitle': '通知の受け取りを設定',
+      'profileNotificationsHeader': 'ハンコフィールドからの通知方法を選択します。',
+      'profileNotificationsPushHeader': 'プッシュ通知',
+      'profileNotificationsEmailHeader': 'メール通知',
+      'profileNotificationsDigestHeader': 'まとめ通知の頻度',
+      'profileNotificationsDigestHelper': 'メールの配信頻度を選択してください。',
+      'profileNotificationsDigestDaily': '毎日',
+      'profileNotificationsDigestWeekly': '毎週',
+      'profileNotificationsDigestMonthly': '毎月',
+      'profileNotificationsSave': '設定を保存',
+      'profileNotificationsReset': 'リセット',
+      'profileNotificationsSaved': '通知設定を保存しました。',
+      'profileNotificationsSaveFailed': '通知設定を保存できませんでした。',
+      'profileNotificationsLoadFailedTitle': '通知設定を読み込めません',
+      'profileNotificationsCategoryOrdersTitle': '注文状況',
+      'profileNotificationsCategoryOrdersBody': '発送、製作、配達のステータス更新。',
+      'profileNotificationsCategoryDesignsTitle': 'デザインの進捗',
+      'profileNotificationsCategoryDesignsBody': 'AI提案や修正、承認の通知。',
+      'profileNotificationsCategoryPromosTitle': 'キャンペーン',
+      'profileNotificationsCategoryPromosBody': '新作や季節限定、特別オファー。',
+      'profileNotificationsCategoryGuidesTitle': 'ガイドとヒント',
+      'profileNotificationsCategoryGuidesBody': '使い方コンテンツや文化的なヒント。',
       'profileLocaleTitle': '言語と通貨',
       'profileLocaleSubtitle': '表示言語と地域設定',
       'profileLegalTitle': '規約・法務',
@@ -393,6 +442,45 @@ class AppLocalizations {
   String get profileNotificationsTitle => _string('profileNotificationsTitle');
   String get profileNotificationsSubtitle =>
       _string('profileNotificationsSubtitle');
+  String get profileNotificationsHeader =>
+      _string('profileNotificationsHeader');
+  String get profileNotificationsPushHeader =>
+      _string('profileNotificationsPushHeader');
+  String get profileNotificationsEmailHeader =>
+      _string('profileNotificationsEmailHeader');
+  String get profileNotificationsDigestHeader =>
+      _string('profileNotificationsDigestHeader');
+  String get profileNotificationsDigestHelper =>
+      _string('profileNotificationsDigestHelper');
+  String get profileNotificationsDigestDaily =>
+      _string('profileNotificationsDigestDaily');
+  String get profileNotificationsDigestWeekly =>
+      _string('profileNotificationsDigestWeekly');
+  String get profileNotificationsDigestMonthly =>
+      _string('profileNotificationsDigestMonthly');
+  String get profileNotificationsSave => _string('profileNotificationsSave');
+  String get profileNotificationsReset => _string('profileNotificationsReset');
+  String get profileNotificationsSaved => _string('profileNotificationsSaved');
+  String get profileNotificationsSaveFailed =>
+      _string('profileNotificationsSaveFailed');
+  String get profileNotificationsLoadFailedTitle =>
+      _string('profileNotificationsLoadFailedTitle');
+  String get profileNotificationsCategoryOrdersTitle =>
+      _string('profileNotificationsCategoryOrdersTitle');
+  String get profileNotificationsCategoryOrdersBody =>
+      _string('profileNotificationsCategoryOrdersBody');
+  String get profileNotificationsCategoryDesignsTitle =>
+      _string('profileNotificationsCategoryDesignsTitle');
+  String get profileNotificationsCategoryDesignsBody =>
+      _string('profileNotificationsCategoryDesignsBody');
+  String get profileNotificationsCategoryPromosTitle =>
+      _string('profileNotificationsCategoryPromosTitle');
+  String get profileNotificationsCategoryPromosBody =>
+      _string('profileNotificationsCategoryPromosBody');
+  String get profileNotificationsCategoryGuidesTitle =>
+      _string('profileNotificationsCategoryGuidesTitle');
+  String get profileNotificationsCategoryGuidesBody =>
+      _string('profileNotificationsCategoryGuidesBody');
   String get profileLocaleTitle => _string('profileLocaleTitle');
   String get profileLocaleSubtitle => _string('profileLocaleSubtitle');
   String get profileLegalTitle => _string('profileLegalTitle');

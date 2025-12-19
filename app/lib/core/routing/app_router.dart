@@ -47,6 +47,7 @@ import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
+import 'package:app/features/profile/view/profile_notifications_page.dart';
 import 'package:app/features/profile/view/profile_payments_page.dart';
 import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
@@ -435,11 +436,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'notifications',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '通知設定',
-            routePath: AppRoutePaths.profileNotifications,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileNotificationsPage(),
         ),
         GoRoute(
           path: 'locale',

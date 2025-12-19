@@ -4,12 +4,12 @@
 **Task ID:** 066
 
 ## Goal
-Implement profile home summarizing account info and quick links.
+Implement notification settings screen for push/email categories and digest scheduling.
 
 ## Implementation Steps
-1. Display avatar, display name, persona toggle, membership status.
-2. Provide shortcuts to addresses, payments, notifications, support.
-3. Fetch data via profile provider with optimistic updates.
+1. Add local notification preferences model stored in shared preferences.
+2. Build the notifications settings UI with push/email category toggles.
+3. Include digest frequency segmented controls and save/reset flows.
 
 ## Material Design 3 Components
 - **App bar:** `Center-aligned top app bar` with reset `Text button`.
