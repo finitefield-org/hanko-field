@@ -47,6 +47,7 @@ import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
+import 'package:app/features/profile/view/profile_locale_page.dart';
 import 'package:app/features/profile/view/profile_notifications_page.dart';
 import 'package:app/features/profile/view/profile_payments_page.dart';
 import 'package:app/features/search/view/search_page.dart';
@@ -440,8 +441,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'locale',
-          builder: (context, state) =>
-              const LocaleSelectionPage(onCompleteRoute: AppRoutePaths.profile),
+          builder: (context, state) => const ProfileLocalePage(),
         ),
         GoRoute(
           path: 'legal',

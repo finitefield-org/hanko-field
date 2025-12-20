@@ -155,6 +155,21 @@ class AppLocalizations {
           'How-to content and cultural insights.',
       'profileLocaleTitle': 'Language & currency',
       'profileLocaleSubtitle': 'Change language and region',
+      'profileLocaleLanguageHeader': 'App language',
+      'profileLocaleLanguageHelper':
+          'Choose the language used across menus and content.',
+      'profileLocaleCurrencyHeader': 'Currency',
+      'profileLocaleCurrencyHelper':
+          'Override the currency used for prices and totals.',
+      'profileLocaleCurrencyAuto': 'Auto',
+      'profileLocaleCurrencyAutoHint':
+          'Auto will use {currency} based on your language/region.',
+      'profileLocaleCurrencyJpy': 'JPY',
+      'profileLocaleCurrencyUsd': 'USD',
+      'profileLocaleSave': 'Save changes',
+      'profileLocaleSaved': 'Locale preferences updated.',
+      'profileLocaleSaveFailed': 'Could not save locale preferences.',
+      'profileLocaleUseDevice': 'Use device language',
       'profileLegalTitle': 'Legal',
       'profileLegalSubtitle': 'Terms, privacy, and disclosures',
       'profileSupportTitle': 'Support',
@@ -294,6 +309,18 @@ class AppLocalizations {
       'profileNotificationsCategoryGuidesBody': '使い方コンテンツや文化的なヒント。',
       'profileLocaleTitle': '言語と通貨',
       'profileLocaleSubtitle': '表示言語と地域設定',
+      'profileLocaleLanguageHeader': '表示言語',
+      'profileLocaleLanguageHelper': 'メニューやコンテンツの表示言語を選択します。',
+      'profileLocaleCurrencyHeader': '通貨',
+      'profileLocaleCurrencyHelper': '価格表示の通貨を上書きします。',
+      'profileLocaleCurrencyAuto': '自動',
+      'profileLocaleCurrencyAutoHint': '言語・地域に合わせて {currency} を使います。',
+      'profileLocaleCurrencyJpy': 'JPY',
+      'profileLocaleCurrencyUsd': 'USD',
+      'profileLocaleSave': '保存',
+      'profileLocaleSaved': '言語と通貨の設定を保存しました。',
+      'profileLocaleSaveFailed': '設定を保存できませんでした。',
+      'profileLocaleUseDevice': '端末の言語に合わせる',
       'profileLegalTitle': '規約・法務',
       'profileLegalSubtitle': '利用規約やプライバシー',
       'profileSupportTitle': 'サポート',
@@ -483,6 +510,21 @@ class AppLocalizations {
       _string('profileNotificationsCategoryGuidesBody');
   String get profileLocaleTitle => _string('profileLocaleTitle');
   String get profileLocaleSubtitle => _string('profileLocaleSubtitle');
+  String get profileLocaleLanguageHeader =>
+      _string('profileLocaleLanguageHeader');
+  String get profileLocaleLanguageHelper =>
+      _string('profileLocaleLanguageHelper');
+  String get profileLocaleCurrencyHeader =>
+      _string('profileLocaleCurrencyHeader');
+  String get profileLocaleCurrencyHelper =>
+      _string('profileLocaleCurrencyHelper');
+  String get profileLocaleCurrencyAuto => _string('profileLocaleCurrencyAuto');
+  String get profileLocaleCurrencyJpy => _string('profileLocaleCurrencyJpy');
+  String get profileLocaleCurrencyUsd => _string('profileLocaleCurrencyUsd');
+  String get profileLocaleSave => _string('profileLocaleSave');
+  String get profileLocaleSaved => _string('profileLocaleSaved');
+  String get profileLocaleSaveFailed => _string('profileLocaleSaveFailed');
+  String get profileLocaleUseDevice => _string('profileLocaleUseDevice');
   String get profileLegalTitle => _string('profileLegalTitle');
   String get profileLegalSubtitle => _string('profileLegalSubtitle');
   String get profileSupportTitle => _string('profileSupportTitle');
@@ -512,6 +554,11 @@ class AppLocalizations {
     return template
         .replaceAll('{current}', '$current')
         .replaceAll('{total}', '$total');
+  }
+
+  String profileLocaleCurrencyAutoHint(String currency) {
+    final template = _string('profileLocaleCurrencyAutoHint');
+    return template.replaceAll('{currency}', currency);
   }
 
   String authErrorLink(String providers) {
