@@ -51,6 +51,7 @@ import 'package:app/features/profile/view/profile_legal_page.dart';
 import 'package:app/features/profile/view/profile_locale_page.dart';
 import 'package:app/features/profile/view/profile_notifications_page.dart';
 import 'package:app/features/profile/view/profile_payments_page.dart';
+import 'package:app/features/profile/view/profile_support_page.dart';
 import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
@@ -450,11 +451,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'support',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'サポート',
-            routePath: AppRoutePaths.profileSupport,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileSupportPage(),
         ),
         GoRoute(
           path: 'linked-accounts',
