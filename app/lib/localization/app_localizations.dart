@@ -172,6 +172,17 @@ class AppLocalizations {
       'profileLocaleUseDevice': 'Use device language',
       'profileLegalTitle': 'Legal',
       'profileLegalSubtitle': 'Terms, privacy, and disclosures',
+      'profileLegalDownloadTooltip': 'Download for offline',
+      'profileLegalDownloadComplete': 'Legal documents saved for offline use.',
+      'profileLegalDownloadFailed': 'Could not save documents. Try again.',
+      'profileLegalLoadFailedTitle': 'Could not load legal documents',
+      'profileLegalDocumentsTitle': 'Documents',
+      'profileLegalContentTitle': 'Document',
+      'profileLegalOpenInBrowser': 'Open in browser',
+      'profileLegalVersionUnknown': 'Latest',
+      'profileLegalNoDocument': 'Select a document to view details.',
+      'profileLegalUnavailable': 'This document is not available right now.',
+      'profileLegalNoContent': 'No content available for this document.',
       'profileSupportTitle': 'Support',
       'profileSupportSubtitle': 'FAQ and contact options',
       'profileGuidesTitle': 'Guides',
@@ -323,6 +334,17 @@ class AppLocalizations {
       'profileLocaleUseDevice': '端末の言語に合わせる',
       'profileLegalTitle': '規約・法務',
       'profileLegalSubtitle': '利用規約やプライバシー',
+      'profileLegalDownloadTooltip': 'オフライン用に保存',
+      'profileLegalDownloadComplete': '法務文書をオフライン用に保存しました。',
+      'profileLegalDownloadFailed': '保存できませんでした。再試行してください。',
+      'profileLegalLoadFailedTitle': '法務文書を読み込めませんでした',
+      'profileLegalDocumentsTitle': '文書一覧',
+      'profileLegalContentTitle': '文書',
+      'profileLegalOpenInBrowser': 'ブラウザで開く',
+      'profileLegalVersionUnknown': '最新',
+      'profileLegalNoDocument': '表示する文書を選択してください。',
+      'profileLegalUnavailable': '現在この文書を利用できません。',
+      'profileLegalNoContent': '文書の内容がありません。',
       'profileSupportTitle': 'サポート',
       'profileSupportSubtitle': 'FAQ・問い合わせ',
       'profileGuidesTitle': 'ガイド',
@@ -527,6 +549,23 @@ class AppLocalizations {
   String get profileLocaleUseDevice => _string('profileLocaleUseDevice');
   String get profileLegalTitle => _string('profileLegalTitle');
   String get profileLegalSubtitle => _string('profileLegalSubtitle');
+  String get profileLegalDownloadTooltip =>
+      _string('profileLegalDownloadTooltip');
+  String get profileLegalDownloadComplete =>
+      _string('profileLegalDownloadComplete');
+  String get profileLegalDownloadFailed =>
+      _string('profileLegalDownloadFailed');
+  String get profileLegalLoadFailedTitle =>
+      _string('profileLegalLoadFailedTitle');
+  String get profileLegalDocumentsTitle =>
+      _string('profileLegalDocumentsTitle');
+  String get profileLegalContentTitle => _string('profileLegalContentTitle');
+  String get profileLegalOpenInBrowser => _string('profileLegalOpenInBrowser');
+  String get profileLegalVersionUnknown =>
+      _string('profileLegalVersionUnknown');
+  String get profileLegalNoDocument => _string('profileLegalNoDocument');
+  String get profileLegalUnavailable => _string('profileLegalUnavailable');
+  String get profileLegalNoContent => _string('profileLegalNoContent');
   String get profileSupportTitle => _string('profileSupportTitle');
   String get profileSupportSubtitle => _string('profileSupportSubtitle');
   String get profileGuidesTitle => _string('profileGuidesTitle');

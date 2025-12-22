@@ -47,6 +47,7 @@ import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
+import 'package:app/features/profile/view/profile_legal_page.dart';
 import 'package:app/features/profile/view/profile_locale_page.dart';
 import 'package:app/features/profile/view/profile_notifications_page.dart';
 import 'package:app/features/profile/view/profile_payments_page.dart';
@@ -445,11 +446,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'legal',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '規約',
-            routePath: AppRoutePaths.profileLegal,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileLegalPage(),
         ),
         GoRoute(
           path: 'support',
