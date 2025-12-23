@@ -191,6 +191,48 @@ class AppLocalizations {
       'profileHowtoSubtitle': 'Tutorials and videos',
       'profileLinkedAccountsTitle': 'Linked accounts',
       'profileLinkedAccountsSubtitle': 'Connect Apple and Google',
+      'profileLinkedAccountsHeader':
+          'Manage the sign-in methods connected to your account.',
+      'profileLinkedAccountsAddTooltip': 'Link account',
+      'profileLinkedAccountsLoadFailedTitle': 'Could not load linked accounts',
+      'profileLinkedAccountsSignedOutTitle':
+          'Sign in to manage linked accounts',
+      'profileLinkedAccountsSignedOutBody':
+          'Sign in to connect Apple or Google.',
+      'profileLinkedAccountsSignIn': 'Sign in',
+      'profileLinkedAccountsBannerTitle': 'Security reminder',
+      'profileLinkedAccountsBannerBody':
+          'Use a unique password and keep recovery options updated.',
+      'profileLinkedAccountsBannerBodyLong':
+          'Use a unique password, keep recovery options updated, and review connected providers regularly.',
+      'profileLinkedAccountsBannerAction': 'Review tips',
+      'profileLinkedAccountsConnected': 'Connected',
+      'profileLinkedAccountsNotConnected': 'Not connected',
+      'profileLinkedAccountsProviderFallback': 'No display name',
+      'profileLinkedAccountsAutoSignIn': 'Auto sign-in',
+      'profileLinkedAccountsNotConnectedHelper':
+          'Link this provider to enable auto sign-in.',
+      'profileLinkedAccountsUnlink': 'Unlink',
+      'profileLinkedAccountsUnlinkTitle': 'Unlink account?',
+      'profileLinkedAccountsUnlinkBody':
+          'You will no longer be able to sign in with this provider.',
+      'profileLinkedAccountsUnlinkConfirm': 'Unlink',
+      'profileLinkedAccountsCancel': 'Cancel',
+      'profileLinkedAccountsUnlinkDisabled':
+          'Link another account before unlinking.',
+      'profileLinkedAccountsSave': 'Save changes',
+      'profileLinkedAccountsSaved': 'Linked account settings saved.',
+      'profileLinkedAccountsSaveFailed': 'Could not save changes.',
+      'profileLinkedAccountsLinked': 'Account linked.',
+      'profileLinkedAccountsLinkFailed': 'Could not link account.',
+      'profileLinkedAccountsUnlinked': 'Account unlinked.',
+      'profileLinkedAccountsUnlinkFailed': 'Could not unlink account.',
+      'profileLinkedAccountsLinkTitle': 'Link another account',
+      'profileLinkedAccountsLinkSubtitle': 'Continue to connect.',
+      'profileLinkedAccountsAlreadyLinked': 'Already linked.',
+      'profileLinkedAccountsFooter':
+          'Tip: Linking more than one provider helps you recover access.',
+      'profileLinkedAccountsOk': 'OK',
       'profileExportTitle': 'Export data',
       'profileExportSubtitle': 'Download your account data',
       'profileDeleteTitle': 'Delete account',
@@ -353,6 +395,40 @@ class AppLocalizations {
       'profileHowtoSubtitle': 'チュートリアルと動画',
       'profileLinkedAccountsTitle': '連携アカウント',
       'profileLinkedAccountsSubtitle': 'Apple/Google 連携',
+      'profileLinkedAccountsHeader': '連携済みのサインイン方法を管理します。',
+      'profileLinkedAccountsAddTooltip': 'アカウントを追加',
+      'profileLinkedAccountsLoadFailedTitle': '連携アカウントを読み込めません',
+      'profileLinkedAccountsSignedOutTitle': 'サインインして連携を管理',
+      'profileLinkedAccountsSignedOutBody': 'サインイン後にApple/Googleを連携できます。',
+      'profileLinkedAccountsSignIn': 'サインイン',
+      'profileLinkedAccountsBannerTitle': 'セキュリティのヒント',
+      'profileLinkedAccountsBannerBody': '強固なパスワードと復旧手段を最新に保ちましょう。',
+      'profileLinkedAccountsBannerBodyLong':
+          '強固なパスワードを使い、復旧手段を最新に保ち、連携済みのプロバイダを定期的に確認しましょう。',
+      'profileLinkedAccountsBannerAction': '確認する',
+      'profileLinkedAccountsConnected': '接続済み',
+      'profileLinkedAccountsNotConnected': '未接続',
+      'profileLinkedAccountsProviderFallback': '表示名なし',
+      'profileLinkedAccountsAutoSignIn': '自動サインイン',
+      'profileLinkedAccountsNotConnectedHelper': '連携すると自動サインインが有効になります。',
+      'profileLinkedAccountsUnlink': '解除',
+      'profileLinkedAccountsUnlinkTitle': '連携を解除しますか？',
+      'profileLinkedAccountsUnlinkBody': 'このプロバイダでのサインインができなくなります。',
+      'profileLinkedAccountsUnlinkConfirm': '解除する',
+      'profileLinkedAccountsCancel': 'キャンセル',
+      'profileLinkedAccountsUnlinkDisabled': '解除するには別の連携を追加してください。',
+      'profileLinkedAccountsSave': '変更を保存',
+      'profileLinkedAccountsSaved': '連携設定を保存しました。',
+      'profileLinkedAccountsSaveFailed': '変更を保存できませんでした。',
+      'profileLinkedAccountsLinked': '連携しました。',
+      'profileLinkedAccountsLinkFailed': '連携できませんでした。',
+      'profileLinkedAccountsUnlinked': '解除しました。',
+      'profileLinkedAccountsUnlinkFailed': '解除できませんでした。',
+      'profileLinkedAccountsLinkTitle': '連携するアカウント',
+      'profileLinkedAccountsLinkSubtitle': '続けて連携します。',
+      'profileLinkedAccountsAlreadyLinked': '連携済み',
+      'profileLinkedAccountsFooter': 'ヒント: 複数のプロバイダを連携すると復旧が容易です。',
+      'profileLinkedAccountsOk': 'OK',
       'profileExportTitle': 'データ出力',
       'profileExportSubtitle': 'アカウントデータをDL',
       'profileDeleteTitle': 'アカウント削除',
@@ -576,6 +652,70 @@ class AppLocalizations {
       _string('profileLinkedAccountsTitle');
   String get profileLinkedAccountsSubtitle =>
       _string('profileLinkedAccountsSubtitle');
+  String get profileLinkedAccountsHeader =>
+      _string('profileLinkedAccountsHeader');
+  String get profileLinkedAccountsAddTooltip =>
+      _string('profileLinkedAccountsAddTooltip');
+  String get profileLinkedAccountsLoadFailedTitle =>
+      _string('profileLinkedAccountsLoadFailedTitle');
+  String get profileLinkedAccountsSignedOutTitle =>
+      _string('profileLinkedAccountsSignedOutTitle');
+  String get profileLinkedAccountsSignedOutBody =>
+      _string('profileLinkedAccountsSignedOutBody');
+  String get profileLinkedAccountsSignIn =>
+      _string('profileLinkedAccountsSignIn');
+  String get profileLinkedAccountsBannerTitle =>
+      _string('profileLinkedAccountsBannerTitle');
+  String get profileLinkedAccountsBannerBody =>
+      _string('profileLinkedAccountsBannerBody');
+  String get profileLinkedAccountsBannerBodyLong =>
+      _string('profileLinkedAccountsBannerBodyLong');
+  String get profileLinkedAccountsBannerAction =>
+      _string('profileLinkedAccountsBannerAction');
+  String get profileLinkedAccountsConnected =>
+      _string('profileLinkedAccountsConnected');
+  String get profileLinkedAccountsNotConnected =>
+      _string('profileLinkedAccountsNotConnected');
+  String get profileLinkedAccountsProviderFallback =>
+      _string('profileLinkedAccountsProviderFallback');
+  String get profileLinkedAccountsAutoSignIn =>
+      _string('profileLinkedAccountsAutoSignIn');
+  String get profileLinkedAccountsNotConnectedHelper =>
+      _string('profileLinkedAccountsNotConnectedHelper');
+  String get profileLinkedAccountsUnlink =>
+      _string('profileLinkedAccountsUnlink');
+  String get profileLinkedAccountsUnlinkTitle =>
+      _string('profileLinkedAccountsUnlinkTitle');
+  String get profileLinkedAccountsUnlinkBody =>
+      _string('profileLinkedAccountsUnlinkBody');
+  String get profileLinkedAccountsUnlinkConfirm =>
+      _string('profileLinkedAccountsUnlinkConfirm');
+  String get profileLinkedAccountsCancel =>
+      _string('profileLinkedAccountsCancel');
+  String get profileLinkedAccountsUnlinkDisabled =>
+      _string('profileLinkedAccountsUnlinkDisabled');
+  String get profileLinkedAccountsSave => _string('profileLinkedAccountsSave');
+  String get profileLinkedAccountsSaved =>
+      _string('profileLinkedAccountsSaved');
+  String get profileLinkedAccountsSaveFailed =>
+      _string('profileLinkedAccountsSaveFailed');
+  String get profileLinkedAccountsLinked =>
+      _string('profileLinkedAccountsLinked');
+  String get profileLinkedAccountsLinkFailed =>
+      _string('profileLinkedAccountsLinkFailed');
+  String get profileLinkedAccountsUnlinked =>
+      _string('profileLinkedAccountsUnlinked');
+  String get profileLinkedAccountsUnlinkFailed =>
+      _string('profileLinkedAccountsUnlinkFailed');
+  String get profileLinkedAccountsLinkTitle =>
+      _string('profileLinkedAccountsLinkTitle');
+  String get profileLinkedAccountsLinkSubtitle =>
+      _string('profileLinkedAccountsLinkSubtitle');
+  String get profileLinkedAccountsAlreadyLinked =>
+      _string('profileLinkedAccountsAlreadyLinked');
+  String get profileLinkedAccountsFooter =>
+      _string('profileLinkedAccountsFooter');
+  String get profileLinkedAccountsOk => _string('profileLinkedAccountsOk');
   String get profileExportTitle => _string('profileExportTitle');
   String get profileExportSubtitle => _string('profileExportSubtitle');
   String get profileDeleteTitle => _string('profileDeleteTitle');

@@ -48,6 +48,7 @@ import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
 import 'package:app/features/profile/view/profile_legal_page.dart';
+import 'package:app/features/profile/view/profile_linked_accounts_page.dart';
 import 'package:app/features/profile/view/profile_locale_page.dart';
 import 'package:app/features/profile/view/profile_notifications_page.dart';
 import 'package:app/features/profile/view/profile_payments_page.dart';
@@ -455,11 +456,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'linked-accounts',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: '連携アカウント',
-            routePath: AppRoutePaths.profileLinkedAccounts,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileLinkedAccountsPage(),
         ),
         GoRoute(
           path: 'export',
