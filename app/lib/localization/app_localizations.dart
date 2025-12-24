@@ -235,6 +235,51 @@ class AppLocalizations {
       'profileLinkedAccountsOk': 'OK',
       'profileExportTitle': 'Export data',
       'profileExportSubtitle': 'Download your account data',
+      'profileExportAppBarSubtitle': 'Create a secure account archive',
+      'profileExportSummaryTitle': 'What we export',
+      'profileExportSummaryBody':
+          'Your profile, saved seals, orders, and activity are bundled into a single ZIP archive.',
+      'profileExportIncludeAssetsTitle': 'Design assets',
+      'profileExportIncludeAssetsSubtitle':
+          'Saved seals, templates, and previews',
+      'profileExportIncludeOrdersTitle': 'Orders & invoices',
+      'profileExportIncludeOrdersSubtitle':
+          'Order history, shipments, receipts',
+      'profileExportIncludeHistoryTitle': 'Usage history',
+      'profileExportIncludeHistorySubtitle':
+          'Searches, edits, and activity log',
+      'profileExportPermissionTitle': 'Storage access needed',
+      'profileExportPermissionBody':
+          'Allow access to download the archive to your device.',
+      'profileExportPermissionCta': 'Allow access',
+      'profileExportStatusReadyTitle': 'Ready to export',
+      'profileExportStatusReadyBody':
+          'We will package your data as a ZIP archive.',
+      'profileExportStatusInProgressTitle': 'Preparing archive',
+      'profileExportStatusInProgressBody':
+          'This may take a moment. Keep the app open.',
+      'profileExportStatusDoneTitle': 'Export ready',
+      'profileExportStatusDoneBody':
+          'Saved to secure storage. You can download again anytime.',
+      'profileExportCtaStart': 'Create export',
+      'profileExportCtaHistory': 'View previous exports',
+      'profileExportHistoryTitle': 'Previous exports',
+      'profileExportHistoryEmptyTitle': 'No exports yet',
+      'profileExportHistoryEmptyBody': 'Create an export to see it here.',
+      'profileExportHistoryDownload': 'Download archive',
+      'profileExportErrorTitle': 'Could not load export',
+      'profileExportErrorBody':
+          'Something went wrong while loading export settings.',
+      'profileExportRetry': 'Retry',
+      'profileExportTimeJustNow': 'Just now',
+      'profileExportTimeMinutes': '{count} min ago',
+      'profileExportTimeHours': '{count} hr ago',
+      'profileExportTimeDays': '{count} days ago',
+      'profileExportTimeDate': '{date}',
+      'profileExportTimeCompactNow': 'now',
+      'profileExportTimeCompactMinutes': '{count}m',
+      'profileExportTimeCompactHours': '{count}h',
+      'profileExportTimeCompactDays': '{count}d',
       'profileDeleteTitle': 'Delete account',
       'profileDeleteSubtitle': 'Permanently delete your account',
       'profileSignInCta': 'Sign in',
@@ -431,6 +476,42 @@ class AppLocalizations {
       'profileLinkedAccountsOk': 'OK',
       'profileExportTitle': 'データ出力',
       'profileExportSubtitle': 'アカウントデータをDL',
+      'profileExportAppBarSubtitle': 'アカウントの安全なアーカイブを作成',
+      'profileExportSummaryTitle': '含まれる内容',
+      'profileExportSummaryBody': 'プロフィール、保存済み印影、注文履歴、利用履歴をZIPにまとめます。',
+      'profileExportIncludeAssetsTitle': 'デザイン素材',
+      'profileExportIncludeAssetsSubtitle': '保存済み印影・テンプレ・プレビュー',
+      'profileExportIncludeOrdersTitle': '注文・請求書',
+      'profileExportIncludeOrdersSubtitle': '注文履歴、配送状況、領収書',
+      'profileExportIncludeHistoryTitle': '利用履歴',
+      'profileExportIncludeHistorySubtitle': '検索、編集、アクティビティログ',
+      'profileExportPermissionTitle': 'ストレージ権限が必要です',
+      'profileExportPermissionBody': 'アーカイブを端末に保存するため許可してください。',
+      'profileExportPermissionCta': '許可する',
+      'profileExportStatusReadyTitle': '準備完了',
+      'profileExportStatusReadyBody': 'データをZIPアーカイブにまとめます。',
+      'profileExportStatusInProgressTitle': 'アーカイブ作成中',
+      'profileExportStatusInProgressBody': 'しばらくお待ちください。アプリを閉じないでください。',
+      'profileExportStatusDoneTitle': 'エクスポート完了',
+      'profileExportStatusDoneBody': '安全な領域に保存しました。いつでも再ダウンロードできます。',
+      'profileExportCtaStart': 'エクスポートを作成',
+      'profileExportCtaHistory': '過去のエクスポートを見る',
+      'profileExportHistoryTitle': '過去のエクスポート',
+      'profileExportHistoryEmptyTitle': 'まだありません',
+      'profileExportHistoryEmptyBody': 'エクスポートを作成するとここに表示されます。',
+      'profileExportHistoryDownload': 'アーカイブをダウンロード',
+      'profileExportErrorTitle': 'データ出力を読み込めませんでした',
+      'profileExportErrorBody': 'エクスポート設定の読み込みに失敗しました。',
+      'profileExportRetry': '再試行',
+      'profileExportTimeJustNow': 'たった今',
+      'profileExportTimeMinutes': '{count}分前',
+      'profileExportTimeHours': '{count}時間前',
+      'profileExportTimeDays': '{count}日前',
+      'profileExportTimeDate': '{date}',
+      'profileExportTimeCompactNow': '今',
+      'profileExportTimeCompactMinutes': '{count}分',
+      'profileExportTimeCompactHours': '{count}時間',
+      'profileExportTimeCompactDays': '{count}日',
       'profileDeleteTitle': 'アカウント削除',
       'profileDeleteSubtitle': '削除手続きを進める',
       'profileSignInCta': 'ログインする',
@@ -718,6 +799,55 @@ class AppLocalizations {
   String get profileLinkedAccountsOk => _string('profileLinkedAccountsOk');
   String get profileExportTitle => _string('profileExportTitle');
   String get profileExportSubtitle => _string('profileExportSubtitle');
+  String get profileExportAppBarSubtitle =>
+      _string('profileExportAppBarSubtitle');
+  String get profileExportSummaryTitle => _string('profileExportSummaryTitle');
+  String get profileExportSummaryBody => _string('profileExportSummaryBody');
+  String get profileExportIncludeAssetsTitle =>
+      _string('profileExportIncludeAssetsTitle');
+  String get profileExportIncludeAssetsSubtitle =>
+      _string('profileExportIncludeAssetsSubtitle');
+  String get profileExportIncludeOrdersTitle =>
+      _string('profileExportIncludeOrdersTitle');
+  String get profileExportIncludeOrdersSubtitle =>
+      _string('profileExportIncludeOrdersSubtitle');
+  String get profileExportIncludeHistoryTitle =>
+      _string('profileExportIncludeHistoryTitle');
+  String get profileExportIncludeHistorySubtitle =>
+      _string('profileExportIncludeHistorySubtitle');
+  String get profileExportPermissionTitle =>
+      _string('profileExportPermissionTitle');
+  String get profileExportPermissionBody =>
+      _string('profileExportPermissionBody');
+  String get profileExportPermissionCta =>
+      _string('profileExportPermissionCta');
+  String get profileExportStatusReadyTitle =>
+      _string('profileExportStatusReadyTitle');
+  String get profileExportStatusReadyBody =>
+      _string('profileExportStatusReadyBody');
+  String get profileExportStatusInProgressTitle =>
+      _string('profileExportStatusInProgressTitle');
+  String get profileExportStatusInProgressBody =>
+      _string('profileExportStatusInProgressBody');
+  String get profileExportStatusDoneTitle =>
+      _string('profileExportStatusDoneTitle');
+  String get profileExportStatusDoneBody =>
+      _string('profileExportStatusDoneBody');
+  String get profileExportCtaStart => _string('profileExportCtaStart');
+  String get profileExportCtaHistory => _string('profileExportCtaHistory');
+  String get profileExportHistoryTitle => _string('profileExportHistoryTitle');
+  String get profileExportHistoryEmptyTitle =>
+      _string('profileExportHistoryEmptyTitle');
+  String get profileExportHistoryEmptyBody =>
+      _string('profileExportHistoryEmptyBody');
+  String get profileExportHistoryDownload =>
+      _string('profileExportHistoryDownload');
+  String get profileExportErrorTitle => _string('profileExportErrorTitle');
+  String get profileExportErrorBody => _string('profileExportErrorBody');
+  String get profileExportRetry => _string('profileExportRetry');
+  String get profileExportTimeJustNow => _string('profileExportTimeJustNow');
+  String get profileExportTimeCompactNow =>
+      _string('profileExportTimeCompactNow');
   String get profileDeleteTitle => _string('profileDeleteTitle');
   String get profileDeleteSubtitle => _string('profileDeleteSubtitle');
   String get profileSignInCta => _string('profileSignInCta');
@@ -727,6 +857,46 @@ class AppLocalizations {
       _string('profileAccountSecuritySubtitle');
   String get profileAccountSecurityBody =>
       _string('profileAccountSecurityBody');
+
+  String profileExportTimeMinutes(int count) {
+    final template = _string('profileExportTimeMinutes');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String profileExportTimeHours(int count) {
+    final template = _string('profileExportTimeHours');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String profileExportTimeDays(int count) {
+    final template = _string('profileExportTimeDays');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String profileExportTimeDate(DateTime dateTime) {
+    final template = _string('profileExportTimeDate');
+    final isJa = _resolveLanguageCode(locale) == 'ja';
+    String two(int value) => value.toString().padLeft(2, '0');
+    final date = isJa
+        ? '${dateTime.year}/${two(dateTime.month)}/${two(dateTime.day)}'
+        : '${dateTime.year}-${two(dateTime.month)}-${two(dateTime.day)}';
+    return template.replaceAll('{date}', date);
+  }
+
+  String profileExportTimeCompactMinutes(int count) {
+    final template = _string('profileExportTimeCompactMinutes');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String profileExportTimeCompactHours(int count) {
+    final template = _string('profileExportTimeCompactHours');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String profileExportTimeCompactDays(int count) {
+    final template = _string('profileExportTimeCompactDays');
+    return template.replaceAll('{count}', '$count');
+  }
 
   String onboardingStepCount(int current, int total) {
     final template = _string('onboardingStepCount');
