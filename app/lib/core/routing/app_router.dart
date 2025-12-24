@@ -59,6 +59,7 @@ import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
+import 'package:app/features/support/view/faq_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -541,11 +542,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.supportFaq,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'FAQ',
-        routePath: AppRoutePaths.supportFaq,
-        showBack: true,
-      ),
+      builder: (context, state) => const FaqPage(),
     ),
     GoRoute(
       path: AppRoutePaths.supportContact,
