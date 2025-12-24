@@ -35,4 +35,6 @@ abstract class UserRepository {
   });
 
   Future<void> removeFavorite(String designId);
+
+  Future<void> deleteAccount();
 }

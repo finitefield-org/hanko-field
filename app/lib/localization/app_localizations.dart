@@ -282,6 +282,35 @@ class AppLocalizations {
       'profileExportTimeCompactDays': '{count}d',
       'profileDeleteTitle': 'Delete account',
       'profileDeleteSubtitle': 'Permanently delete your account',
+      'profileDeleteWarningTitle': 'Account deletion is permanent',
+      'profileDeleteWarningBody':
+          'Your profile, saved seals, and order history will be removed. '
+          'Some transactional records may be retained for legal reasons.',
+      'profileDeleteAcknowledgementTitle': 'Please confirm before continuing',
+      'profileDeleteAckDataLossTitle': 'Delete my saved designs and profile',
+      'profileDeleteAckDataLossBody':
+          'This removes your profile, saved seals, and preferences.',
+      'profileDeleteAckOrdersTitle': 'I understand active orders continue',
+      'profileDeleteAckOrdersBody':
+          'Open orders, refunds, or support cases may continue after deletion.',
+      'profileDeleteAckIrreversibleTitle': 'This action cannot be undone',
+      'profileDeleteAckIrreversibleBody':
+          'I will need to create a new account to return.',
+      'profileDeleteFooterNote':
+          'You will be signed out immediately after the deletion request is processed.',
+      'profileDeleteCta': 'Delete account',
+      'profileDeleteCancelCta': 'Cancel',
+      'profileDeleteConfirmTitle': 'Delete your account?',
+      'profileDeleteConfirmBody':
+          'We will deactivate your account and remove personal data. This cannot be undone.',
+      'profileDeleteConfirmAction': 'Delete',
+      'profileDeleteConfirmCancel': 'Keep account',
+      'profileDeleteSuccess':
+          'Account deletion requested. You have been signed out.',
+      'profileDeleteError': 'Account deletion failed. Please try again.',
+      'profileDeleteErrorTitle': 'Unable to load delete settings',
+      'profileDeleteErrorBody': 'Please try again.',
+      'profileDeleteRetry': 'Retry',
       'profileSignInCta': 'Sign in',
       'profileAccountSecurityTitle': 'Account security',
       'profileAccountSecuritySubtitle': 'Passwords, 2FA, and linked providers',
@@ -514,6 +543,29 @@ class AppLocalizations {
       'profileExportTimeCompactDays': '{count}日',
       'profileDeleteTitle': 'アカウント削除',
       'profileDeleteSubtitle': '削除手続きを進める',
+      'profileDeleteWarningTitle': 'アカウント削除は取り消せません',
+      'profileDeleteWarningBody':
+          'プロフィール、保存した印影、注文履歴は削除されます。'
+          '法令上必要な記録は保持される場合があります。',
+      'profileDeleteAcknowledgementTitle': '確認事項',
+      'profileDeleteAckDataLossTitle': '保存した印影とプロフィールを削除',
+      'profileDeleteAckDataLossBody': 'プロフィール、保存デザイン、設定が削除されます。',
+      'profileDeleteAckOrdersTitle': '進行中の注文は継続',
+      'profileDeleteAckOrdersBody': '未完了の注文や返金、サポート対応は削除後も処理されます。',
+      'profileDeleteAckIrreversibleTitle': '取り消し不可',
+      'profileDeleteAckIrreversibleBody': '再利用するには新規登録が必要です。',
+      'profileDeleteFooterNote': '削除処理が完了すると自動的にサインアウトします。',
+      'profileDeleteCta': 'アカウントを削除',
+      'profileDeleteCancelCta': 'キャンセル',
+      'profileDeleteConfirmTitle': 'アカウントを削除しますか？',
+      'profileDeleteConfirmBody': 'アカウントを無効化し、個人データを削除します。元に戻せません。',
+      'profileDeleteConfirmAction': '削除する',
+      'profileDeleteConfirmCancel': '残しておく',
+      'profileDeleteSuccess': '削除を受け付けました。サインアウトしました。',
+      'profileDeleteError': '削除に失敗しました。もう一度お試しください。',
+      'profileDeleteErrorTitle': '削除画面を読み込めません',
+      'profileDeleteErrorBody': '時間をおいて再度お試しください。',
+      'profileDeleteRetry': '再試行',
       'profileSignInCta': 'ログインする',
       'profileAccountSecurityTitle': 'アカウント保護',
       'profileAccountSecuritySubtitle': 'パスワードや2FA、連携の管理',
@@ -850,6 +902,36 @@ class AppLocalizations {
       _string('profileExportTimeCompactNow');
   String get profileDeleteTitle => _string('profileDeleteTitle');
   String get profileDeleteSubtitle => _string('profileDeleteSubtitle');
+  String get profileDeleteWarningTitle => _string('profileDeleteWarningTitle');
+  String get profileDeleteWarningBody => _string('profileDeleteWarningBody');
+  String get profileDeleteAcknowledgementTitle =>
+      _string('profileDeleteAcknowledgementTitle');
+  String get profileDeleteAckDataLossTitle =>
+      _string('profileDeleteAckDataLossTitle');
+  String get profileDeleteAckDataLossBody =>
+      _string('profileDeleteAckDataLossBody');
+  String get profileDeleteAckOrdersTitle =>
+      _string('profileDeleteAckOrdersTitle');
+  String get profileDeleteAckOrdersBody =>
+      _string('profileDeleteAckOrdersBody');
+  String get profileDeleteAckIrreversibleTitle =>
+      _string('profileDeleteAckIrreversibleTitle');
+  String get profileDeleteAckIrreversibleBody =>
+      _string('profileDeleteAckIrreversibleBody');
+  String get profileDeleteFooterNote => _string('profileDeleteFooterNote');
+  String get profileDeleteCta => _string('profileDeleteCta');
+  String get profileDeleteCancelCta => _string('profileDeleteCancelCta');
+  String get profileDeleteConfirmTitle => _string('profileDeleteConfirmTitle');
+  String get profileDeleteConfirmBody => _string('profileDeleteConfirmBody');
+  String get profileDeleteConfirmAction =>
+      _string('profileDeleteConfirmAction');
+  String get profileDeleteConfirmCancel =>
+      _string('profileDeleteConfirmCancel');
+  String get profileDeleteSuccess => _string('profileDeleteSuccess');
+  String get profileDeleteError => _string('profileDeleteError');
+  String get profileDeleteErrorTitle => _string('profileDeleteErrorTitle');
+  String get profileDeleteErrorBody => _string('profileDeleteErrorBody');
+  String get profileDeleteRetry => _string('profileDeleteRetry');
   String get profileSignInCta => _string('profileSignInCta');
   String get profileAccountSecurityTitle =>
       _string('profileAccountSecurityTitle');

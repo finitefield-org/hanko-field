@@ -4,12 +4,12 @@
 **Task ID:** 072
 
 ## Goal
-Implement profile home summarizing account info and quick links.
+Implement account deletion flow with confirmations, UX warnings, and backend call.
 
 ## Implementation Steps
-1. Display avatar, display name, persona toggle, membership status.
-2. Provide shortcuts to addresses, payments, notifications, support.
-3. Fetch data via profile provider with optimistic updates.
+1. Build `/profile/delete` screen with warning copy, acknowledgement checklist, and destructive CTA.
+2. Add a view model to track confirmations, handle delete mutations, and sign out on success.
+3. Call backend account deactivation endpoint via user repository and clear local caches.
 
 ## Material Design 3 Components
 - **App bar:** `Medium top app bar` with prominent danger color tokens.

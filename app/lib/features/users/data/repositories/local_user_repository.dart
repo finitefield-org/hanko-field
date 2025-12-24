@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:app/core/network/network_providers.dart';
 import 'package:app/core/storage/preferences.dart';
 import 'package:app/features/users/data/dtos/user_dtos.dart';
 import 'package:app/features/users/data/models/user_models.dart';
@@ -329,10 +330,50 @@ class LocalUserRepository implements UserRepository {
     throw UnimplementedError('Favorites not implemented yet.');
   }
 
+  @override
+  Future<void> deleteAccount() async {
+    final auth = _ref.watch(firebaseAuthProvider);
+    final user = auth.currentUser;
+    if (user == null) {
+      throw StateError('No signed-in user to delete.');
+    }
+
+    final token = await user.getIdToken();
+    final client = _ref.watch(networkClientProvider);
+
+    try {
+      await client.post<Object?>(
+        '/users/${user.uid}:deactivate-and-mask',
+        headers: {'Authorization': 'Bearer $token'},
+        decoder: (json) => json,
+      );
+    } catch (e, stack) {
+      _logger.warning('Account deletion request failed', e, stack);
+      rethrow;
+    }
+
+    await _clearUserCache();
+  }
+
   Future<void> _saveProfile(UserProfile profile) async {
     final prefs = await _ref.watch(sharedPreferencesProvider.future);
     final dto = UserProfileDto.fromDomain(profile);
     await prefs.setString(_userProfileKey, jsonEncode(dto.toJson()));
+  }
+
+  Future<void> _clearUserCache() async {
+    final prefs = await _ref.watch(sharedPreferencesProvider.future);
+    await prefs.remove(_userProfileKey);
+    await prefs.remove(_userAddressesKey);
+    await prefs.remove(_userPaymentsKey);
+
+    final secure = _ref.watch(secureStorageProvider);
+    final entries = await secure.readAll();
+    for (final key in entries.keys) {
+      if (key.startsWith(_paymentProviderRefPrefix)) {
+        await secure.delete(key: key);
+      }
+    }
   }
 
   Future<void> _persistAddresses(

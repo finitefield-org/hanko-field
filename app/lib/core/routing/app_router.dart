@@ -46,6 +46,7 @@ import 'package:app/features/orders/view/orders_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
+import 'package:app/features/profile/view/profile_delete_page.dart';
 import 'package:app/features/profile/view/profile_export_page.dart';
 import 'package:app/features/profile/view/profile_home_page.dart';
 import 'package:app/features/profile/view/profile_legal_page.dart';
@@ -465,11 +466,7 @@ List<RouteBase> _profileRoutes(GlobalKey<NavigatorState> tabKey) {
         ),
         GoRoute(
           path: 'delete',
-          builder: (context, state) => const TabPlaceholderPage(
-            title: 'アカウント削除',
-            routePath: AppRoutePaths.profileDelete,
-            showBack: true,
-          ),
+          builder: (context, state) => const ProfileDeletePage(),
         ),
       ],
     ),
