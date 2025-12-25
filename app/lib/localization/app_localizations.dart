@@ -354,6 +354,29 @@ class AppLocalizations {
       'profileAccountSecuritySubtitle': 'Passwords, 2FA, and linked providers',
       'profileAccountSecurityBody':
           'Security settings will appear here in a future update.',
+      'appUpdateTitle': 'App update',
+      'appUpdateCheckAgain': 'Check again',
+      'appUpdateChecking': 'Checking version...',
+      'appUpdateVerifyFailedTitle': 'Unable to verify version',
+      'appUpdateRetry': 'Retry',
+      'appUpdateBannerRequired': 'You must update to keep using the app.',
+      'appUpdateBannerOptional':
+          'A new version is ready. Update when convenient.',
+      'appUpdateBannerAction': 'Update',
+      'appUpdateCardRequiredTitle': 'Update required',
+      'appUpdateCardOptionalTitle': 'Update available',
+      'appUpdateCurrentVersion': 'Current version: {version}',
+      'appUpdateMinimumVersion': 'Minimum required: {version}',
+      'appUpdateLatestVersion': 'Latest version: {version}',
+      'appUpdateNow': 'Update now',
+      'appUpdateOpenStore': 'Open store listing',
+      'appUpdateContinue': 'Continue without updating',
+      'appUpdateStoreUnavailable':
+          'Store link is unavailable. Please update from the app store.',
+      'appUpdateStoreOpenFailed':
+          'Unable to open the store. Please update from the store app.',
+      'appUpdateReminder': 'Update available (v{version}).',
+      'appUpdateLater': 'Later',
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -637,6 +660,26 @@ class AppLocalizations {
       'profileAccountSecurityTitle': 'アカウント保護',
       'profileAccountSecuritySubtitle': 'パスワードや2FA、連携の管理',
       'profileAccountSecurityBody': 'セキュリティ設定は今後追加予定です。',
+      'appUpdateTitle': 'アップデート',
+      'appUpdateCheckAgain': '再確認',
+      'appUpdateChecking': 'バージョンを確認中...',
+      'appUpdateVerifyFailedTitle': 'バージョンを確認できませんでした',
+      'appUpdateRetry': '再試行',
+      'appUpdateBannerRequired': '最新バージョンへの更新が必要です。',
+      'appUpdateBannerOptional': '新しいバージョンが利用可能です。',
+      'appUpdateBannerAction': '更新する',
+      'appUpdateCardRequiredTitle': '更新が必要です',
+      'appUpdateCardOptionalTitle': 'アップデートがあります',
+      'appUpdateCurrentVersion': '現在のバージョン: {version}',
+      'appUpdateMinimumVersion': '必須バージョン: {version}',
+      'appUpdateLatestVersion': '最新バージョン: {version}',
+      'appUpdateNow': '今すぐ更新',
+      'appUpdateOpenStore': 'ストアを開く',
+      'appUpdateContinue': '後で行う',
+      'appUpdateStoreUnavailable': 'ストアのリンクを取得できませんでした。ストアから更新してください。',
+      'appUpdateStoreOpenFailed': 'ストアを開けませんでした。ストアアプリから更新してください。',
+      'appUpdateReminder': '新しいバージョンがあります (v{version})。',
+      'appUpdateLater': '後で',
     },
   };
 
@@ -1045,6 +1088,25 @@ class AppLocalizations {
       _string('profileAccountSecuritySubtitle');
   String get profileAccountSecurityBody =>
       _string('profileAccountSecurityBody');
+  String get appUpdateTitle => _string('appUpdateTitle');
+  String get appUpdateCheckAgain => _string('appUpdateCheckAgain');
+  String get appUpdateChecking => _string('appUpdateChecking');
+  String get appUpdateVerifyFailedTitle =>
+      _string('appUpdateVerifyFailedTitle');
+  String get appUpdateRetry => _string('appUpdateRetry');
+  String get appUpdateBannerRequired => _string('appUpdateBannerRequired');
+  String get appUpdateBannerOptional => _string('appUpdateBannerOptional');
+  String get appUpdateBannerAction => _string('appUpdateBannerAction');
+  String get appUpdateCardRequiredTitle =>
+      _string('appUpdateCardRequiredTitle');
+  String get appUpdateCardOptionalTitle =>
+      _string('appUpdateCardOptionalTitle');
+  String get appUpdateNow => _string('appUpdateNow');
+  String get appUpdateOpenStore => _string('appUpdateOpenStore');
+  String get appUpdateContinue => _string('appUpdateContinue');
+  String get appUpdateStoreUnavailable => _string('appUpdateStoreUnavailable');
+  String get appUpdateStoreOpenFailed => _string('appUpdateStoreOpenFailed');
+  String get appUpdateLater => _string('appUpdateLater');
 
   String profileExportTimeMinutes(int count) {
     final template = _string('profileExportTimeMinutes');
@@ -1084,6 +1146,26 @@ class AppLocalizations {
   String profileExportTimeCompactDays(int count) {
     final template = _string('profileExportTimeCompactDays');
     return template.replaceAll('{count}', '$count');
+  }
+
+  String appUpdateCurrentVersion(String version) {
+    final template = _string('appUpdateCurrentVersion');
+    return template.replaceAll('{version}', version);
+  }
+
+  String appUpdateMinimumVersion(String version) {
+    final template = _string('appUpdateMinimumVersion');
+    return template.replaceAll('{version}', version);
+  }
+
+  String appUpdateLatestVersion(String version) {
+    final template = _string('appUpdateLatestVersion');
+    return template.replaceAll('{version}', version);
+  }
+
+  String appUpdateReminder(String version) {
+    final template = _string('appUpdateReminder');
+    return template.replaceAll('{version}', version);
   }
 
   String onboardingStepCount(int current, int total) {

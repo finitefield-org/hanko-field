@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/routing/routes.dart';
+import 'package:app/features/app_update/view/app_update_page.dart';
 import 'package:app/features/auth/view/auth_page.dart';
 import 'package:app/features/cart/view/cart_page.dart';
 import 'package:app/features/catalog/view/material_detail_page.dart';
@@ -65,6 +66,7 @@ import 'package:app/features/support/view/faq_page.dart';
 import 'package:app/features/support/view/support_chat_page.dart';
 import 'package:app/features/support/view/support_contact_page.dart';
 import 'package:app/features/updates/view/changelog_page.dart';
+import 'package:app/shared/providers/app_update_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -75,10 +77,20 @@ final tabNavigatorKeysProvider = Provider<TabNavigatorKeys>((ref) {
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final keys = ref.watch(tabNavigatorKeysProvider);
+  final updateRefresh = ref.watch(appUpdateRouterRefreshProvider);
 
   return GoRouter(
     navigatorKey: keys.rootKey,
     initialLocation: AppRoutePaths.splash,
+    refreshListenable: updateRefresh,
+    redirect: (context, state) {
+      final updateStatus = ref.watch(appUpdateStatusProvider).valueOrNull;
+      if (updateStatus?.isUpdateRequired == true &&
+          state.uri.path != AppRoutePaths.appUpdate) {
+        return AppRoutePaths.appUpdate;
+      }
+      return null;
+    },
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -577,11 +589,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.appUpdate,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'アップデート',
-        routePath: AppRoutePaths.appUpdate,
-        showBack: true,
-      ),
+      builder: (context, state) => const AppUpdatePage(),
     ),
     GoRoute(
       path: AppRoutePaths.offline,

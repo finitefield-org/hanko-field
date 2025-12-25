@@ -9,6 +9,10 @@ const remoteConfigDefaults = <String, Object>{
   'feature_checkout_enabled': true,
   'min_supported_version_ios': '1.0.0',
   'min_supported_version_android': '1.0.0',
+  'latest_version_ios': '',
+  'latest_version_android': '',
+  'app_store_url_ios': '',
+  'app_store_url_android': '',
 };
 
 final remoteConfigInitializerProvider = AsyncProvider<void>((ref) async {

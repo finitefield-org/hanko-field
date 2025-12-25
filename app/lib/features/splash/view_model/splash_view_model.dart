@@ -9,9 +9,9 @@ import 'package:app/core/storage/onboarding_preferences.dart';
 import 'package:app/core/util/version_compare.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/remote_config.dart';
+import 'package:app/shared/providers/app_update_provider.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/shared/providers/feature_flags_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -79,7 +79,7 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
     final packageInfo = await PackageInfo.fromPlatform();
 
     final currentVersion = packageInfo.version;
-    final minimumVersion = _minimumSupportedVersion(flags);
+    final minimumVersion = minimumSupportedVersion(flags);
 
     if (!isVersionAtLeast(currentVersion, minimumVersion)) {
       return const SplashResult(
@@ -125,14 +125,3 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
 }
 
 final splashViewModel = SplashViewModel();
-
-String _minimumSupportedVersion(FeatureFlags flags) {
-  if (kIsWeb) {
-    return flags.minSupportedVersionAndroid;
-  }
-
-  return switch (defaultTargetPlatform) {
-    TargetPlatform.iOS => flags.minSupportedVersionIos,
-    _ => flags.minSupportedVersionAndroid,
-  };
-}

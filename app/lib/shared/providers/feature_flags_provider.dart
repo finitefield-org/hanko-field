@@ -18,6 +18,10 @@ class FeatureFlags {
     required this.checkoutEnabled,
     required this.minSupportedVersionIos,
     required this.minSupportedVersionAndroid,
+    required this.latestVersionIos,
+    required this.latestVersionAndroid,
+    required this.appStoreUrlIos,
+    required this.appStoreUrlAndroid,
     required this.lastUpdatedAt,
   });
 
@@ -25,6 +29,10 @@ class FeatureFlags {
   final bool checkoutEnabled;
   final String minSupportedVersionIos;
   final String minSupportedVersionAndroid;
+  final String latestVersionIos;
+  final String latestVersionAndroid;
+  final String appStoreUrlIos;
+  final String appStoreUrlAndroid;
   final DateTime? lastUpdatedAt;
 
   FeatureFlags copyWith({
@@ -32,6 +40,10 @@ class FeatureFlags {
     bool? checkoutEnabled,
     String? minSupportedVersionIos,
     String? minSupportedVersionAndroid,
+    String? latestVersionIos,
+    String? latestVersionAndroid,
+    String? appStoreUrlIos,
+    String? appStoreUrlAndroid,
     DateTime? lastUpdatedAt,
   }) {
     return FeatureFlags(
@@ -41,6 +53,10 @@ class FeatureFlags {
           minSupportedVersionIos ?? this.minSupportedVersionIos,
       minSupportedVersionAndroid:
           minSupportedVersionAndroid ?? this.minSupportedVersionAndroid,
+      latestVersionIos: latestVersionIos ?? this.latestVersionIos,
+      latestVersionAndroid: latestVersionAndroid ?? this.latestVersionAndroid,
+      appStoreUrlIos: appStoreUrlIos ?? this.appStoreUrlIos,
+      appStoreUrlAndroid: appStoreUrlAndroid ?? this.appStoreUrlAndroid,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
@@ -53,6 +69,10 @@ class FeatureFlags {
             other.checkoutEnabled == checkoutEnabled &&
             other.minSupportedVersionIos == minSupportedVersionIos &&
             other.minSupportedVersionAndroid == minSupportedVersionAndroid &&
+            other.latestVersionIos == latestVersionIos &&
+            other.latestVersionAndroid == latestVersionAndroid &&
+            other.appStoreUrlIos == appStoreUrlIos &&
+            other.appStoreUrlAndroid == appStoreUrlAndroid &&
             other.lastUpdatedAt == lastUpdatedAt);
   }
 
@@ -62,6 +82,10 @@ class FeatureFlags {
     checkoutEnabled,
     minSupportedVersionIos,
     minSupportedVersionAndroid,
+    latestVersionIos,
+    latestVersionAndroid,
+    appStoreUrlIos,
+    appStoreUrlAndroid,
     lastUpdatedAt,
   );
 
@@ -70,6 +94,12 @@ class FeatureFlags {
     final androidMinVersion = remoteConfig.getString(
       'min_supported_version_android',
     );
+    final iosLatestVersion = remoteConfig.getString('latest_version_ios');
+    final androidLatestVersion = remoteConfig.getString(
+      'latest_version_android',
+    );
+    final iosStoreUrl = remoteConfig.getString('app_store_url_ios');
+    final androidStoreUrl = remoteConfig.getString('app_store_url_android');
 
     return FeatureFlags(
       designAi: remoteConfig.getBool('feature_design_ai'),
@@ -82,6 +112,18 @@ class FeatureFlags {
           ? androidMinVersion
           : (remoteConfigDefaults['min_supported_version_android'] as String? ??
                 ''),
+      latestVersionIos: iosLatestVersion.isNotEmpty
+          ? iosLatestVersion
+          : (remoteConfigDefaults['latest_version_ios'] as String? ?? ''),
+      latestVersionAndroid: androidLatestVersion.isNotEmpty
+          ? androidLatestVersion
+          : (remoteConfigDefaults['latest_version_android'] as String? ?? ''),
+      appStoreUrlIos: iosStoreUrl.isNotEmpty
+          ? iosStoreUrl
+          : (remoteConfigDefaults['app_store_url_ios'] as String? ?? ''),
+      appStoreUrlAndroid: androidStoreUrl.isNotEmpty
+          ? androidStoreUrl
+          : (remoteConfigDefaults['app_store_url_android'] as String? ?? ''),
       lastUpdatedAt: remoteConfig.lastFetchTime,
     );
   }
