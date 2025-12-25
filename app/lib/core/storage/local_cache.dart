@@ -55,6 +55,11 @@ class CachePolicies {
     staleGrace: Duration(minutes: 20),
   );
 
+  static const supportChat = CachePolicy(
+    ttl: Duration(days: 30),
+    staleGrace: Duration(days: 30),
+  );
+
   static const kanji = CachePolicy(
     ttl: Duration(hours: 12),
     staleGrace: Duration(days: 2),

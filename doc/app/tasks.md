@@ -99,7 +99,7 @@
 ## 12. Support & Status
 - [x] [Implement FAQ screen (`/support/faq`) with categories, search, and offline caching.](doc/app/tasks/073-implement-faq-screen-support-faq-with-categories-search-and-offline-caching.md)
 - [x] [Build contact form (`/support/contact`) with ticket creation and file attachment uploading.](doc/app/tasks/074-build-contact-form-support-contact-with-ticket-creation-and-file-attachment-uploading.md)
-- [ ] [Implement chat support (`/support/chat`) integrating bot handoff to live agent with push notifications.](doc/app/tasks/075-implement-chat-support-support-chat-integrating-bot-handoff-to-live-agent-with-push-notifi.md)
+- [x] [Implement chat support (`/support/chat`) integrating bot handoff to live agent with push notifications.](doc/app/tasks/075-implement-chat-support-support-chat-integrating-bot-handoff-to-live-agent-with-push-notifi.md)
 - [ ] [Build system status screen (`/status`) showing current incidents and historical uptime.](doc/app/tasks/076-build-system-status-screen-status-showing-current-incidents-and-historical-uptime.md)
 
 ## 13. System Utilities

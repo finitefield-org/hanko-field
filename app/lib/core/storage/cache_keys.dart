@@ -65,6 +65,13 @@ class LocalCacheKeys {
     );
   }
 
+  static LocalCacheKey supportChat({String userId = 'current'}) {
+    return LocalCacheKey(
+      'support/chat/$userId',
+      tags: ['support', 'chat', userId],
+    );
+  }
+
   static LocalCacheKey kanjiSuggestions({
     required String query,
     String persona = 'default',

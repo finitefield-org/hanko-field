@@ -75,6 +75,16 @@ final notificationsCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
   );
 });
 
+final supportChatCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
+  final persistence = ref.watch(localPersistenceProvider);
+  return LocalCacheStore<JsonMap>(
+    persistence: persistence,
+    box: LocalCacheBoxes.supportChat,
+    codec: const JsonCacheCodec(),
+    defaultPolicy: CachePolicies.supportChat,
+  );
+});
+
 final kanjiCacheProvider = Provider<LocalCacheStore<JsonMap>>((ref) {
   final persistence = ref.watch(localPersistenceProvider);
   return LocalCacheStore<JsonMap>(

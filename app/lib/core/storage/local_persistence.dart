@@ -23,6 +23,7 @@ class LocalCacheBoxes {
   static const orders = CacheBox('orders_cache', encrypted: true);
   static const guides = CacheBox('guides_cache');
   static const notifications = CacheBox('notifications_cache');
+  static const supportChat = CacheBox('support_chat_cache', encrypted: true);
   static const onboarding = CacheBox('onboarding_cache');
   static const kanji = CacheBox('kanji_cache');
 
@@ -32,6 +33,7 @@ class LocalCacheBoxes {
     orders,
     guides,
     notifications,
+    supportChat,
     onboarding,
     kanji,
   ];
