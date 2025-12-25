@@ -60,6 +60,7 @@ import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
 import 'package:app/features/support/view/faq_page.dart';
+import 'package:app/features/support/view/support_contact_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -547,11 +548,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.supportContact,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '問い合わせ',
-        routePath: AppRoutePaths.supportContact,
-        showBack: true,
-      ),
+      builder: (context, state) => const SupportContactPage(),
     ),
     GoRoute(
       path: AppRoutePaths.supportChat,
