@@ -64,6 +64,7 @@ import 'package:app/features/status/view/system_status_page.dart';
 import 'package:app/features/support/view/faq_page.dart';
 import 'package:app/features/support/view/support_chat_page.dart';
 import 'package:app/features/support/view/support_contact_page.dart';
+import 'package:app/features/updates/view/changelog_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -571,11 +572,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.changelog,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '変更履歴',
-        routePath: AppRoutePaths.changelog,
-        showBack: true,
-      ),
+      builder: (context, state) => const ChangelogPage(),
     ),
     GoRoute(
       path: AppRoutePaths.appUpdate,

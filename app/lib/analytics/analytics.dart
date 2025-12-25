@@ -589,3 +589,60 @@ class HowtoTutorialProgressEvent extends AppAnalyticsEvent {
     return {'tutorial_id': tutorialId, 'format': format, 'progress': progress};
   }
 }
+
+class ChangelogViewedEvent extends AppAnalyticsEvent {
+  const ChangelogViewedEvent({this.latestVersion, this.releaseCount});
+
+  final String? latestVersion;
+  final int? releaseCount;
+
+  @override
+  String get name => 'changelog_viewed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {'latest_version': latestVersion, 'release_count': releaseCount};
+  }
+}
+
+class ChangelogFilterChangedEvent extends AppAnalyticsEvent {
+  const ChangelogFilterChangedEvent({required this.filter});
+
+  final String filter;
+
+  @override
+  String get name => 'changelog_filter_changed';
+
+  @override
+  Map<String, Object?> toParameters() => {'filter': filter};
+}
+
+class ChangelogReleaseExpandedEvent extends AppAnalyticsEvent {
+  const ChangelogReleaseExpandedEvent({
+    required this.version,
+    required this.expanded,
+  });
+
+  final String version;
+  final bool expanded;
+
+  @override
+  String get name => 'changelog_release_expanded';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {'version': version, 'expanded': expanded};
+  }
+}
+
+class ChangelogLearnMoreTappedEvent extends AppAnalyticsEvent {
+  const ChangelogLearnMoreTappedEvent({required this.version});
+
+  final String version;
+
+  @override
+  String get name => 'changelog_learn_more_tapped';
+
+  @override
+  Map<String, Object?> toParameters() => {'version': version};
+}
