@@ -103,7 +103,7 @@
 - [x] [Build system status screen (`/status`) showing current incidents and historical uptime.](doc/app/tasks/076-build-system-status-screen-status-showing-current-incidents-and-historical-uptime.md)
 
 ## 13. System Utilities
-- [ ] [Implement permissions onboarding (`/permissions`) prompting for photo/storage/notification access with rationale.](doc/app/tasks/077-implement-permissions-onboarding-permissions-prompting-for-photo-storage-notification-acce.md)
+- [x] [Implement permissions onboarding (`/permissions`) prompting for photo/storage/notification access with rationale.](doc/app/tasks/077-implement-permissions-onboarding-permissions-prompting-for-photo-storage-notification-acce.md)
 - [ ] [Build changelog screen (`/updates/changelog`) with version history and feature highlights.](doc/app/tasks/078-build-changelog-screen-updates-changelog-with-version-history-and-feature-highlights.md)
 - [ ] [Implement forced app update flow (`/app-update`) checking version constraints and gating access.](doc/app/tasks/079-implement-forced-app-update-flow-app-update-checking-version-constraints-and-gating-access.md)
 - [ ] [Build offline screen (`/offline`) with retry and cached content access.](doc/app/tasks/080-build-offline-screen-offline-with-retry-and-cached-content-access.md)

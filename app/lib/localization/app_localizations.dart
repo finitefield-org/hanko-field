@@ -252,6 +252,44 @@ class AppLocalizations {
       'profileExportPermissionBody':
           'Allow access to download the archive to your device.',
       'profileExportPermissionCta': 'Allow access',
+      'permissionsTitle': 'Permissions',
+      'permissionsSubtitle': 'Give Hanko Field the access it needs.',
+      'permissionsHeroTitle': 'Stay ready to create',
+      'permissionsHeroBody':
+          'We only request access when it helps you build, export, and stay updated.',
+      'permissionsPersonaDomestic':
+          'Optimized for official Japanese hanko workflows.',
+      'permissionsPersonaInternational':
+          'Guidance-first setup for global users.',
+      'permissionsPhotosTitle': 'Photos',
+      'permissionsPhotosBody':
+          'Import a stamp scan or photo to begin a new design.',
+      'permissionsPhotosAssist1': 'Scan an existing seal',
+      'permissionsPhotosAssist2': 'Use camera roll',
+      'permissionsStorageTitle': 'Files & storage',
+      'permissionsStorageBody':
+          'Save exports, receipts, and design proofs to your device.',
+      'permissionsStorageAssist1': 'Download exports',
+      'permissionsStorageAssist2': 'Attach files',
+      'permissionsNotificationsTitle': 'Notifications',
+      'permissionsNotificationsBody':
+          'Get updates on production, delivery, and approvals.',
+      'permissionsNotificationsAssist1': 'Production alerts',
+      'permissionsNotificationsAssist2': 'Delivery updates',
+      'permissionsStatusGranted': 'Granted',
+      'permissionsStatusDenied': 'Not allowed',
+      'permissionsStatusRestricted': 'Restricted',
+      'permissionsStatusUnknown': 'Not decided',
+      'permissionsFallbackPhotos':
+          'To enable photo access, open system Settings and allow Photos.',
+      'permissionsFallbackStorage':
+          'To enable file access, open system Settings and allow Files & Storage.',
+      'permissionsFallbackNotifications':
+          'To enable alerts, open system Settings and allow Notifications.',
+      'permissionsCtaGrantAll': 'Grant access',
+      'permissionsCtaNotNow': 'Not now',
+      'permissionsFooterPolicy': 'Review data policy',
+      'permissionsItemActionAllow': 'Allow',
       'profileExportStatusReadyTitle': 'Ready to export',
       'profileExportStatusReadyBody':
           'We will package your data as a ZIP archive.',
@@ -517,6 +555,35 @@ class AppLocalizations {
       'profileExportPermissionTitle': 'ストレージ権限が必要です',
       'profileExportPermissionBody': 'アーカイブを端末に保存するため許可してください。',
       'profileExportPermissionCta': '許可する',
+      'permissionsTitle': '権限',
+      'permissionsSubtitle': 'Hanko Fieldを快適に使うための権限です。',
+      'permissionsHeroTitle': '作業をスムーズに',
+      'permissionsHeroBody': '作成・書き出し・更新通知に必要なときだけ確認します。',
+      'permissionsPersonaDomestic': '実印・銀行印の運用を意識した設定です。',
+      'permissionsPersonaInternational': '海外ユーザー向けのガイド重視設定です。',
+      'permissionsPhotosTitle': '写真',
+      'permissionsPhotosBody': '印影の写真やスキャンを取り込み、新規デザインに使います。',
+      'permissionsPhotosAssist1': '印影をスキャン',
+      'permissionsPhotosAssist2': 'カメラロールから',
+      'permissionsStorageTitle': 'ファイルとストレージ',
+      'permissionsStorageBody': '書き出しデータや領収書を端末に保存します。',
+      'permissionsStorageAssist1': '書き出しを保存',
+      'permissionsStorageAssist2': 'ファイルを添付',
+      'permissionsNotificationsTitle': '通知',
+      'permissionsNotificationsBody': '制作・発送・承認の最新情報を受け取ります。',
+      'permissionsNotificationsAssist1': '制作アラート',
+      'permissionsNotificationsAssist2': '配送状況',
+      'permissionsStatusGranted': '許可済み',
+      'permissionsStatusDenied': '未許可',
+      'permissionsStatusRestricted': '制限中',
+      'permissionsStatusUnknown': '未選択',
+      'permissionsFallbackPhotos': '写真へのアクセスは設定アプリで「写真」を許可してください。',
+      'permissionsFallbackStorage': 'ファイルへのアクセスは設定アプリで「ファイル/ストレージ」を許可してください。',
+      'permissionsFallbackNotifications': '通知を受け取るには設定アプリで「通知」を許可してください。',
+      'permissionsCtaGrantAll': 'まとめて許可',
+      'permissionsCtaNotNow': '後で',
+      'permissionsFooterPolicy': 'データポリシーを見る',
+      'permissionsItemActionAllow': '許可する',
       'profileExportStatusReadyTitle': '準備完了',
       'profileExportStatusReadyBody': 'データをZIPアーカイブにまとめます。',
       'profileExportStatusInProgressTitle': 'アーカイブ作成中',
@@ -873,6 +940,45 @@ class AppLocalizations {
       _string('profileExportPermissionBody');
   String get profileExportPermissionCta =>
       _string('profileExportPermissionCta');
+  String get permissionsTitle => _string('permissionsTitle');
+  String get permissionsSubtitle => _string('permissionsSubtitle');
+  String get permissionsHeroTitle => _string('permissionsHeroTitle');
+  String get permissionsHeroBody => _string('permissionsHeroBody');
+  String get permissionsPersonaDomestic =>
+      _string('permissionsPersonaDomestic');
+  String get permissionsPersonaInternational =>
+      _string('permissionsPersonaInternational');
+  String get permissionsPhotosTitle => _string('permissionsPhotosTitle');
+  String get permissionsPhotosBody => _string('permissionsPhotosBody');
+  String get permissionsPhotosAssist1 => _string('permissionsPhotosAssist1');
+  String get permissionsPhotosAssist2 => _string('permissionsPhotosAssist2');
+  String get permissionsStorageTitle => _string('permissionsStorageTitle');
+  String get permissionsStorageBody => _string('permissionsStorageBody');
+  String get permissionsStorageAssist1 => _string('permissionsStorageAssist1');
+  String get permissionsStorageAssist2 => _string('permissionsStorageAssist2');
+  String get permissionsNotificationsTitle =>
+      _string('permissionsNotificationsTitle');
+  String get permissionsNotificationsBody =>
+      _string('permissionsNotificationsBody');
+  String get permissionsNotificationsAssist1 =>
+      _string('permissionsNotificationsAssist1');
+  String get permissionsNotificationsAssist2 =>
+      _string('permissionsNotificationsAssist2');
+  String get permissionsStatusGranted => _string('permissionsStatusGranted');
+  String get permissionsStatusDenied => _string('permissionsStatusDenied');
+  String get permissionsStatusRestricted =>
+      _string('permissionsStatusRestricted');
+  String get permissionsStatusUnknown => _string('permissionsStatusUnknown');
+  String get permissionsFallbackPhotos => _string('permissionsFallbackPhotos');
+  String get permissionsFallbackStorage =>
+      _string('permissionsFallbackStorage');
+  String get permissionsFallbackNotifications =>
+      _string('permissionsFallbackNotifications');
+  String get permissionsCtaGrantAll => _string('permissionsCtaGrantAll');
+  String get permissionsCtaNotNow => _string('permissionsCtaNotNow');
+  String get permissionsFooterPolicy => _string('permissionsFooterPolicy');
+  String get permissionsItemActionAllow =>
+      _string('permissionsItemActionAllow');
   String get profileExportStatusReadyTitle =>
       _string('profileExportStatusReadyTitle');
   String get profileExportStatusReadyBody =>

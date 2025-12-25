@@ -43,6 +43,7 @@ import 'package:app/features/orders/view/order_production_timeline_page.dart';
 import 'package:app/features/orders/view/order_reorder_page.dart';
 import 'package:app/features/orders/view/order_tracking_page.dart';
 import 'package:app/features/orders/view/orders_page.dart';
+import 'package:app/features/permissions/view/permissions_onboarding_page.dart';
 import 'package:app/features/preferences/view/locale_selection_page.dart';
 import 'package:app/features/preferences/view/persona_selection_page.dart';
 import 'package:app/features/profile/view/profile_addresses_page.dart';
@@ -565,11 +566,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.permissions,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: '権限',
-        routePath: AppRoutePaths.permissions,
-        showBack: true,
-      ),
+      builder: (context, state) => const PermissionsOnboardingPage(),
     ),
     GoRoute(
       path: AppRoutePaths.changelog,
