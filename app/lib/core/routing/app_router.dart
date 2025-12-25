@@ -59,6 +59,7 @@ import 'package:app/features/search/view/search_page.dart';
 import 'package:app/features/shell/view/navigation_shell.dart';
 import 'package:app/features/shell/view/tab_placeholder_page.dart';
 import 'package:app/features/splash/view/splash_page.dart';
+import 'package:app/features/status/view/system_status_page.dart';
 import 'package:app/features/support/view/faq_page.dart';
 import 'package:app/features/support/view/support_chat_page.dart';
 import 'package:app/features/support/view/support_contact_page.dart';
@@ -559,11 +560,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.status,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'ステータス',
-        routePath: AppRoutePaths.status,
-        showBack: true,
-      ),
+      builder: (context, state) => const SystemStatusPage(),
     ),
     GoRoute(
       path: AppRoutePaths.permissions,
