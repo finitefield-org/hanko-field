@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/config/app_flavor.dart';
+import 'package:app/core/storage/preferences.dart';
 import 'package:app/firebase/firebase_options.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,8 +9,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _logger = Logger('FirebaseMessaging');
+const _fcmTokenKey = 'firebase_messaging_token';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -28,6 +31,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> configureFirebaseMessaging(ProviderContainer container) async {
   final messaging = container.read(firebaseMessagingProvider);
+  final prefs = await container.read(sharedPreferencesProvider.future);
 
   await messaging.setAutoInitEnabled(true);
 
@@ -50,4 +54,20 @@ Future<void> configureFirebaseMessaging(ProviderContainer container) async {
       sound: true,
     );
   }
+
+  final token = await messaging.getToken();
+  if (token != null && token.isNotEmpty) {
+    await _persistToken(prefs, token);
+  }
+
+  messaging.onTokenRefresh.listen((token) async {
+    if (token.isEmpty) return;
+    await _persistToken(prefs, token);
+  });
+}
+
+Future<void> _persistToken(SharedPreferences prefs, String token) async {
+  await prefs.setString(_fcmTokenKey, token);
+  final suffix = token.length > 6 ? token.substring(token.length - 6) : token;
+  _logger.fine('FCM token stored (suffix=$suffix)');
 }

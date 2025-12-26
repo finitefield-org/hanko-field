@@ -647,6 +647,30 @@ class ChangelogLearnMoreTappedEvent extends AppAnalyticsEvent {
   Map<String, Object?> toParameters() => {'version': version};
 }
 
+class NotificationOpenedEvent extends AppAnalyticsEvent {
+  const NotificationOpenedEvent({
+    required this.notificationId,
+    required this.route,
+    required this.source,
+  });
+
+  final String notificationId;
+  final String route;
+  final String source;
+
+  @override
+  String get name => 'notification_opened';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'notification_id': notificationId,
+      'route': route,
+      'source': source,
+    };
+  }
+}
+
 class ErrorScreenViewedEvent extends AppAnalyticsEvent {
   const ErrorScreenViewedEvent({
     required this.path,

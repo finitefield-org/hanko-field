@@ -110,7 +110,7 @@
 - [x] [Implement generic error screen (`/error`) with diagnostics and support links.](doc/app/tasks/081-implement-generic-error-screen-error-with-diagnostics-and-support-links.md)
 
 ## 14. Notifications & Messaging
-- [ ] [Integrate push notification handling (background/foreground) and routing to relevant screens.](doc/app/tasks/082-integrate-push-notification-handling-background-foreground-and-routing-to-relevant-screens.md)
+- [x] [Integrate push notification handling (background/foreground) and routing to relevant screens.](doc/app/tasks/082-integrate-push-notification-handling-background-foreground-and-routing-to-relevant-screens.md)
 - [ ] [Implement in-app messaging/toast system for success, warnings, alerts tied to miniriverpod providers.](doc/app/tasks/083-implement-in-app-messaging-toast-system-for-success-warnings-alerts-tied-to-miniriverpod-providers.md)
 - [ ] [Provide notification inbox sync and badge counts shared between app bar and tabs.](doc/app/tasks/084-provide-notification-inbox-sync-and-badge-counts-shared-between-app-bar-and-tabs.md)
 

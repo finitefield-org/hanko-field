@@ -26,6 +26,11 @@ abstract class NotificationRepository {
 
   Future<int> setReadState(String notificationId, {required bool read});
 
+  Future<int> upsertNotification(
+    AppNotification notification, {
+    bool markRead = false,
+  });
+
   Future<int> markAllRead();
 
   Future<int> unreadCount();
@@ -62,6 +67,8 @@ class LocalNotificationRepository implements NotificationRepository {
   );
 
   bool _seeded = false;
+  late final List<AppNotification> _baseNotifications;
+  final List<AppNotification> _extraNotifications = [];
   late List<AppNotification> _notifications;
 
   @override
@@ -105,6 +112,30 @@ class LocalNotificationRepository implements NotificationRepository {
   }
 
   @override
+  Future<int> upsertNotification(
+    AppNotification notification, {
+    bool markRead = false,
+  }) async {
+    await _ensureSeeded();
+
+    _baseNotifications.removeWhere((item) => item.id == notification.id);
+    _extraNotifications.removeWhere((item) => item.id == notification.id);
+    _notifications.removeWhere((item) => item.id == notification.id);
+
+    _extraNotifications.insert(0, notification);
+    _notifications = [..._baseNotifications, ..._extraNotifications];
+
+    if (markRead) {
+      _readIds.add(notification.id);
+    } else {
+      _readIds.remove(notification.id);
+    }
+
+    await _persist();
+    return _unreadCount();
+  }
+
+  @override
   Future<int> markAllRead() async {
     await _ensureSeeded();
     _readIds.addAll(_notifications.map((n) => n.id));
@@ -129,7 +160,8 @@ class LocalNotificationRepository implements NotificationRepository {
 
   Future<void> _ensureSeeded() async {
     if (_seeded) return;
-    _notifications = _seedNotifications();
+    _baseNotifications = _seedNotifications();
+    _notifications = List<AppNotification>.of(_baseNotifications);
     await _loadFromCache();
     _seeded = true;
   }
@@ -137,9 +169,23 @@ class LocalNotificationRepository implements NotificationRepository {
   Future<void> _loadFromCache() async {
     try {
       final hit = await _cache.read(_cacheKey.value);
-      final raw = hit?.value['readIds'];
-      if (raw is List) {
-        _readIds.addAll(raw.whereType<String>().where(_containsNotificationId));
+      if (hit != null) {
+        final extraRaw = hit.value['extraNotifications'];
+        if (extraRaw is List) {
+          _extraNotifications
+            ..clear()
+            ..addAll(
+              extraRaw.map(_decodeNotification).whereType<AppNotification>(),
+            );
+          _notifications = [..._baseNotifications, ..._extraNotifications];
+        }
+
+        final raw = hit.value['readIds'];
+        if (raw is List) {
+          _readIds.addAll(
+            raw.whereType<String>().where(_containsNotificationId),
+          );
+        }
       }
       if (hit == null) {
         await _persist();
@@ -153,6 +199,9 @@ class LocalNotificationRepository implements NotificationRepository {
     final payload = <String, Object?>{
       'readIds': _readIds.toList(),
       'unreadCount': _unreadCount(),
+      'extraNotifications': _extraNotifications
+          .map(_encodeNotification)
+          .toList(),
     };
     await _cache.write(_cacheKey.value, payload, tags: _cacheKey.tags);
   }
@@ -328,5 +377,62 @@ class LocalNotificationRepository implements NotificationRepository {
           ctaLabel: prefersEnglish ? 'Read guide' : 'ガイドを読む',
         ),
     ];
+  }
+}
+
+JsonMap _encodeNotification(AppNotification notification) {
+  return {
+    'id': notification.id,
+    'title': notification.title,
+    'body': notification.body,
+    'category': notification.category.toJson(),
+    'createdAt': notification.createdAt.toIso8601String(),
+    'target': notification.target,
+    'ctaLabel': notification.ctaLabel,
+  };
+}
+
+AppNotification? _decodeNotification(Object? value) {
+  if (value is! Map) return null;
+  final map = Map<String, Object?>.from(value);
+  final id = map['id'];
+  final title = map['title'];
+  final body = map['body'];
+  final target = map['target'];
+  if (id is! String ||
+      title is! String ||
+      body is! String ||
+      target is! String) {
+    return null;
+  }
+
+  final categoryRaw = map['category'];
+  final category = categoryRaw is String
+      ? _parseCategory(categoryRaw)
+      : NotificationCategory.system;
+
+  final createdAtRaw = map['createdAt'];
+  final createdAt = createdAtRaw is String
+      ? DateTime.tryParse(createdAtRaw)
+      : null;
+  if (createdAt == null) return null;
+
+  final ctaLabel = map['ctaLabel'];
+  return AppNotification(
+    id: id,
+    title: title,
+    body: body,
+    category: category,
+    createdAt: createdAt,
+    target: target,
+    ctaLabel: ctaLabel is String && ctaLabel.isNotEmpty ? ctaLabel : null,
+  );
+}
+
+NotificationCategory _parseCategory(String raw) {
+  try {
+    return NotificationCategoryX.fromJson(raw);
+  } on ArgumentError {
+    return NotificationCategory.system;
   }
 }
