@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/network/network_providers.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/app_update/view/app_update_page.dart';
 import 'package:app/features/auth/view/auth_page.dart';
@@ -37,6 +38,7 @@ import 'package:app/features/library/view/library_design_shares_page.dart';
 import 'package:app/features/library/view/library_design_versions_page.dart';
 import 'package:app/features/library/view/library_list_page.dart';
 import 'package:app/features/notifications/view/notifications_page.dart';
+import 'package:app/features/offline/view/offline_page.dart';
 import 'package:app/features/onboarding/view/onboarding_page.dart';
 import 'package:app/features/orders/view/order_detail_page.dart';
 import 'package:app/features/orders/view/order_invoice_page.dart';
@@ -75,16 +77,39 @@ final tabNavigatorKeysProvider = Provider<TabNavigatorKeys>((ref) {
   return TabNavigatorKeys();
 });
 
+final offlineNavigationTrackerProvider = Provider<OfflineNavigationTracker>((
+  ref,
+) {
+  return OfflineNavigationTracker();
+});
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final keys = ref.watch(tabNavigatorKeysProvider);
   final updateRefresh = ref.watch(appUpdateRouterRefreshProvider);
+  final connectivityStatus = ref.watch(connectivityStatusProvider);
+  final offlineTracker = ref.watch(offlineNavigationTrackerProvider);
 
   return GoRouter(
     navigatorKey: keys.rootKey,
     initialLocation: AppRoutePaths.splash,
-    refreshListenable: updateRefresh,
+    refreshListenable: Listenable.merge([updateRefresh, connectivityStatus]),
     redirect: (context, state) {
+      final isOffline = connectivityStatus.isOffline;
+      final currentPath = state.uri.path;
       final updateStatus = ref.watch(appUpdateStatusProvider).valueOrNull;
+
+      if (isOffline) {
+        if (!_isOfflineAllowed(currentPath)) {
+          offlineTracker.lastOnlineLocation = state.uri.toString();
+          return AppRoutePaths.offline;
+        }
+      } else if (currentPath == AppRoutePaths.offline) {
+        if (updateStatus?.isUpdateRequired == true) {
+          return AppRoutePaths.appUpdate;
+        }
+        return offlineTracker.lastOnlineLocation ?? AppRoutePaths.home;
+      }
+
       if (updateStatus?.isUpdateRequired == true &&
           state.uri.path != AppRoutePaths.appUpdate) {
         return AppRoutePaths.appUpdate;
@@ -159,6 +184,10 @@ class TabNavigatorKeys {
       _ => profileTabKey,
     };
   }
+}
+
+class OfflineNavigationTracker {
+  String? lastOnlineLocation;
 }
 
 List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
@@ -255,6 +284,17 @@ List<RouteBase> _designRoutes(GlobalKey<NavigatorState> tabKey) {
       ],
     ),
   ];
+}
+
+bool _isOfflineAllowed(String path) {
+  if (path == AppRoutePaths.offline) return true;
+  if (path.startsWith(AppRoutePaths.library)) return true;
+  if (path.startsWith(AppRoutePaths.guides)) return true;
+  if (path.startsWith('${AppRoutePaths.profile}/guides')) return true;
+  if (path == AppRoutePaths.howto) return true;
+  if (path == '${AppRoutePaths.profile}/howto') return true;
+  if (path == AppRoutePaths.supportFaq) return true;
+  return false;
 }
 
 List<RouteBase> _shopRoutes(GlobalKey<NavigatorState> tabKey) {
@@ -594,11 +634,7 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.offline,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'オフライン',
-        routePath: AppRoutePaths.offline,
-        showBack: true,
-      ),
+      builder: (context, state) => const OfflinePage(),
     ),
     GoRoute(
       path: AppRoutePaths.error,
