@@ -646,3 +646,33 @@ class ChangelogLearnMoreTappedEvent extends AppAnalyticsEvent {
   @override
   Map<String, Object?> toParameters() => {'version': version};
 }
+
+class ErrorScreenViewedEvent extends AppAnalyticsEvent {
+  const ErrorScreenViewedEvent({
+    required this.path,
+    this.code,
+    this.source,
+    this.locale,
+    this.persona,
+  });
+
+  final String path;
+  final String? code;
+  final String? source;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'error_screen_viewed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'path': path,
+      'code': code,
+      'source': source,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}

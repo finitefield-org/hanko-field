@@ -26,6 +26,7 @@ import 'package:app/features/designs/view/design_style_selection_page.dart';
 import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view/design_versions_page.dart';
 import 'package:app/features/designs/view/kanji_mapping_page.dart';
+import 'package:app/features/error/view/error_page.dart';
 import 'package:app/features/guides/view/guide_detail_page.dart';
 import 'package:app/features/guides/view/guides_list_page.dart';
 import 'package:app/features/home/view/home_page.dart';
@@ -639,11 +640,24 @@ List<RouteBase> _globalRoutes(TabNavigatorKeys keys) {
     GoRoute(
       path: AppRoutePaths.error,
       parentNavigatorKey: keys.rootKey,
-      builder: (context, state) => const TabPlaceholderPage(
-        title: 'エラー',
-        routePath: AppRoutePaths.error,
-        showBack: true,
-      ),
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        final message = state.uri.queryParameters['message'];
+        final source = state.uri.queryParameters['source'];
+        final returnTo = state.uri.queryParameters['returnTo'];
+        final traceId = state.uri.queryParameters['traceId'];
+        return ErrorPage(
+          diagnostics: ErrorDiagnostics(
+            path: state.uri.toString(),
+            timestamp: DateTime.now(),
+            code: code,
+            message: message,
+            source: source,
+            returnTo: returnTo,
+            traceId: traceId,
+          ),
+        );
+      },
     ),
   ];
 }
