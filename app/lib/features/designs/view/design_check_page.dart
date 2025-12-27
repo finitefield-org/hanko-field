@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/registrability_models.dart';
 import 'package:app/features/designs/view_model/design_check_view_model.dart';
@@ -19,14 +21,29 @@ class DesignCheckPage extends ConsumerStatefulWidget {
 
 class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
   int? _lastFeedbackId;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackCancel = ref.container
+        .listen<AsyncValue<RegistrabilityCheckState>>(
+          registrabilityCheckViewModel,
+          (next) {
+            if (next case AsyncData(:final value)) {
+              _handleFeedback(value);
+            }
+          },
+        );
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   Future<void> _refresh() => ref.invoke(registrabilityCheckViewModel.refresh());
-
-  void _showSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,16 +52,6 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
     final prefersEnglish = gates.prefersEnglish;
     final state = ref.watch(registrabilityCheckViewModel);
     final data = state.valueOrNull;
-
-    if (data != null &&
-        data.feedbackMessage != null &&
-        data.feedbackId != _lastFeedbackId) {
-      _lastFeedbackId = data.feedbackId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _showSnackbar(context, data.feedbackMessage!);
-      });
-    }
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -67,6 +74,14 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
         ),
       ),
     );
+  }
+
+  void _handleFeedback(RegistrabilityCheckState state) {
+    final feedback = state.feedbackMessage;
+    if (feedback == null) return;
+    if (state.feedbackId == _lastFeedbackId) return;
+    _lastFeedbackId = state.feedbackId;
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Widget _buildBody({

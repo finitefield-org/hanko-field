@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/view_model/design_export_view_model.dart';
 import 'package:app/security/storage_permission_client.dart';
@@ -18,6 +20,26 @@ class DesignExportPage extends ConsumerStatefulWidget {
 
 class _DesignExportPageState extends ConsumerState<DesignExportPage> {
   int? _lastFeedbackId;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackCancel = ref.container.listen<AsyncValue<DesignExportState>>(
+      designExportViewModel,
+      (next) {
+        if (next case AsyncData(:final value)) {
+          _handleFeedback(value);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +101,6 @@ class _DesignExportPageState extends ConsumerState<DesignExportPage> {
     required DesignExportState state,
     required bool prefersEnglish,
   }) {
-    _maybeShowFeedback(context, state);
     return _ExportBody(
       state: state,
       prefersEnglish: prefersEnglish,
@@ -100,18 +121,12 @@ class _DesignExportPageState extends ConsumerState<DesignExportPage> {
     );
   }
 
-  void _maybeShowFeedback(BuildContext context, DesignExportState state) {
+  void _handleFeedback(DesignExportState state) {
     final feedback = state.feedbackMessage;
     if (feedback == null) return;
     if (state.feedbackId == _lastFeedbackId) return;
     _lastFeedbackId = state.feedbackId;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(feedback)));
-    });
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Future<void> _handleExport(

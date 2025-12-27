@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/features/profile/view_model/profile_export_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/security/storage_permission_client.dart';
@@ -21,6 +23,26 @@ class ProfileExportPage extends ConsumerStatefulWidget {
 
 class _ProfileExportPageState extends ConsumerState<ProfileExportPage> {
   int? _lastFeedbackId;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackCancel = ref.container.listen<AsyncValue<ProfileExportState>>(
+      profileExportViewModel,
+      (next) {
+        if (next case AsyncData(:final value)) {
+          _handleFeedback(value);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +53,6 @@ class _ProfileExportPageState extends ConsumerState<ProfileExportPage> {
     late final Widget body;
     switch (export) {
       case AsyncData(:final value):
-        _maybeShowFeedback(context, value);
         body = _ExportBody(
           state: value,
           onRequestPermission: () =>
@@ -78,18 +99,12 @@ class _ProfileExportPageState extends ConsumerState<ProfileExportPage> {
     );
   }
 
-  void _maybeShowFeedback(BuildContext context, ProfileExportState state) {
+  void _handleFeedback(ProfileExportState state) {
     final feedback = state.feedbackMessage;
     if (feedback == null) return;
     if (state.feedbackId == _lastFeedbackId) return;
     _lastFeedbackId = state.feedbackId;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(feedback)));
-    });
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Future<void> _openHistory(BuildContext context, ProfileExportState state) {

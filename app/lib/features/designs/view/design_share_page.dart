@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/view_model/design_share_view_model.dart';
@@ -21,9 +23,24 @@ class DesignSharePage extends ConsumerStatefulWidget {
 class _DesignSharePageState extends ConsumerState<DesignSharePage> {
   final TextEditingController _overlayController = TextEditingController();
   int? _lastFeedbackId;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackCancel = ref.container.listen<AsyncValue<DesignShareState>>(
+      designShareViewModel,
+      (next) {
+        if (next case AsyncData(:final value)) {
+          _handleFeedback(value);
+        }
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _feedbackCancel();
     _overlayController.dispose();
     super.dispose();
   }
@@ -41,18 +58,6 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
         text: data.overlayText,
         selection: TextSelection.collapsed(offset: data.overlayText.length),
       );
-    }
-
-    if (data != null &&
-        data.feedbackMessage != null &&
-        data.feedbackId != _lastFeedbackId) {
-      _lastFeedbackId = data.feedbackId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(data.feedbackMessage!)));
-      });
     }
 
     Widget body;
@@ -112,6 +117,14 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
               onNavigate: (tab) => GoRouter.of(context).go(tab.location),
             ),
     );
+  }
+
+  void _handleFeedback(DesignShareState state) {
+    final feedback = state.feedbackMessage;
+    if (feedback == null) return;
+    if (state.feedbackId == _lastFeedbackId) return;
+    _lastFeedbackId = state.feedbackId;
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   void _close(BuildContext context) {

@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_versions_view_model.dart';
@@ -24,9 +26,25 @@ class DesignVersionsPage extends ConsumerStatefulWidget {
 class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
   int? _lastFeedbackId;
   final _scrollController = ScrollController();
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    final viewModel = widget.viewModel ?? designVersionsViewModel;
+    _feedbackCancel = ref.container.listen<AsyncValue<DesignVersionsState>>(
+      viewModel,
+      (next) {
+        if (next case AsyncData(:final value)) {
+          _handleFeedback(value);
+        }
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _feedbackCancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -86,7 +104,6 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     required DesignTokens tokens,
     required DesignVersionsViewModel viewModel,
   }) {
-    _maybeShowFeedback(context, state);
     final diff = state.diff;
     final focus = state.focused ?? state.current;
 
@@ -176,18 +193,12 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     );
   }
 
-  void _maybeShowFeedback(BuildContext context, DesignVersionsState state) {
+  void _handleFeedback(DesignVersionsState state) {
     final feedback = state.feedbackMessage;
     if (feedback == null) return;
     if (state.feedbackId == _lastFeedbackId) return;
     _lastFeedbackId = state.feedbackId;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(feedback)));
-    });
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Future<void> _confirmRollback(

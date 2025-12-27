@@ -2,6 +2,8 @@
 
 import 'dart:async';
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_ai_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
@@ -19,6 +21,26 @@ class DesignAiPage extends ConsumerStatefulWidget {
 
 class _DesignAiPageState extends ConsumerState<DesignAiPage> {
   int? _lastFeedbackId;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackCancel = ref.container.listen<AsyncValue<AiSuggestionsState>>(
+      designAiViewModel,
+      (next) {
+        if (next case AsyncData(:final value)) {
+          _handleFeedback(value);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   Future<void> _refresh() => ref.invoke(designAiViewModel.poll());
 
@@ -39,19 +61,6 @@ class _DesignAiPageState extends ConsumerState<DesignAiPage> {
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final state = ref.watch(designAiViewModel);
-    final feedback = state.valueOrNull;
-
-    if (feedback != null &&
-        feedback.feedbackMessage != null &&
-        feedback.feedbackId != _lastFeedbackId) {
-      _lastFeedbackId = feedback.feedbackId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(feedback.feedbackMessage!)));
-      });
-    }
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -75,6 +84,14 @@ class _DesignAiPageState extends ConsumerState<DesignAiPage> {
         ),
       ),
     );
+  }
+
+  void _handleFeedback(AiSuggestionsState state) {
+    final feedback = state.feedbackMessage;
+    if (feedback == null) return;
+    if (state.feedbackId == _lastFeedbackId) return;
+    _lastFeedbackId = state.feedbackId;
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Widget _buildBody({

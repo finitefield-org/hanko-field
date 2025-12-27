@@ -6,6 +6,7 @@ import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/theme/app_theme.dart';
+import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -37,6 +38,9 @@ class HankoFieldApp extends ConsumerWidget {
       ],
       localeResolutionCallback: AppLocalizations.resolveLocale,
       routerConfig: router,
+      builder: (context, child) {
+        return AppMessageOverlay(child: child ?? const SizedBox.shrink());
+      },
     );
   }
 }

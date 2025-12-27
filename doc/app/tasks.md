@@ -111,7 +111,7 @@
 
 ## 14. Notifications & Messaging
 - [x] [Integrate push notification handling (background/foreground) and routing to relevant screens.](doc/app/tasks/082-integrate-push-notification-handling-background-foreground-and-routing-to-relevant-screens.md)
-- [ ] [Implement in-app messaging/toast system for success, warnings, alerts tied to miniriverpod providers.](doc/app/tasks/083-implement-in-app-messaging-toast-system-for-success-warnings-alerts-tied-to-miniriverpod-providers.md)
+- [x] [Implement in-app messaging/toast system for success, warnings, alerts tied to miniriverpod providers.](doc/app/tasks/083-implement-in-app-messaging-toast-system-for-success-warnings-alerts-tied-to-miniriverpod-providers.md)
 - [ ] [Provide notification inbox sync and badge counts shared between app bar and tabs.](doc/app/tasks/084-provide-notification-inbox-sync-and-badge-counts-shared-between-app-bar-and-tabs.md)
 
 ## 15. Analytics, Telemetry, and Monitoring

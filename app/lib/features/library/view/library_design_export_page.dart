@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_export_view_model.dart';
@@ -30,39 +32,57 @@ class LibraryDesignExportPage extends ConsumerStatefulWidget {
 class _LibraryDesignExportPageState
     extends ConsumerState<LibraryDesignExportPage> {
   int? _lastFeedbackId;
+  late LibraryDesignExportViewModel _viewModel;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = LibraryDesignExportViewModel(
+      designId: widget.designId,
+      designOverride: widget.designOverride,
+    );
+    _feedbackCancel = ref.container
+        .listen<AsyncValue<LibraryDesignExportState>>(_viewModel, (next) {
+          if (next case AsyncData(:final value)) {
+            _handleFeedback(value);
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final viewModel = LibraryDesignExportViewModel(
-      designId: widget.designId,
-      designOverride: widget.designOverride,
-    );
-    final export = ref.watch(viewModel);
+    final export = ref.watch(_viewModel);
 
     late final Widget body;
     switch (export) {
       case AsyncData(:final value):
-        _maybeShowFeedback(context, value);
         body = _LoadedBody(
           state: value,
           prefersEnglish: prefersEnglish,
-          onFormatChanged: (format) => ref.invoke(viewModel.setFormat(format)),
-          onScaleChanged: (scale) => ref.invoke(viewModel.setScale(scale)),
+          onFormatChanged: (format) => ref.invoke(_viewModel.setFormat(format)),
+          onScaleChanged: (scale) => ref.invoke(_viewModel.setScale(scale)),
           onToggleWatermark: (enabled) =>
-              ref.invoke(viewModel.toggleWatermark(enabled)),
+              ref.invoke(_viewModel.toggleWatermark(enabled)),
           onToggleExpiry: (enabled) =>
-              ref.invoke(viewModel.toggleExpiry(enabled)),
+              ref.invoke(_viewModel.toggleExpiry(enabled)),
           onPickExpiryDays: () => _pickExpiryDays(
             context: context,
             prefersEnglish: prefersEnglish,
             selected: value.permissions.expiryDays,
-            onSelected: (days) => ref.invoke(viewModel.setExpiryDays(days)),
+            onSelected: (days) => ref.invoke(_viewModel.setExpiryDays(days)),
           ),
           onToggleDownload: (enabled) =>
-              ref.invoke(viewModel.toggleDownloadAllowed(enabled)),
+              ref.invoke(_viewModel.toggleDownloadAllowed(enabled)),
           onCopyActiveLink: value.activeLink == null
               ? null
               : () => _copyToClipboard(
@@ -80,7 +100,7 @@ class _LibraryDesignExportPageState
         body = _ExportError(
           prefersEnglish: prefersEnglish,
           error: error,
-          onRetry: () => ref.invalidate(viewModel),
+          onRetry: () => ref.invalidate(_viewModel),
         );
     }
 
@@ -90,8 +110,8 @@ class _LibraryDesignExportPageState
         bottomBar = _ExportActions(
           state: value,
           prefersEnglish: prefersEnglish,
-          onGenerate: () => ref.invoke(viewModel.generateLink()),
-          onRevokeAll: () => ref.invoke(viewModel.revokeAll()),
+          onGenerate: () => ref.invoke(_viewModel.generateLink()),
+          onRevokeAll: () => ref.invoke(_viewModel.revokeAll()),
         );
       default:
         bottomBar = null;
@@ -114,21 +134,12 @@ class _LibraryDesignExportPageState
     );
   }
 
-  void _maybeShowFeedback(
-    BuildContext context,
-    LibraryDesignExportState state,
-  ) {
+  void _handleFeedback(LibraryDesignExportState state) {
     final feedback = state.feedbackMessage;
     if (feedback == null) return;
     if (state.feedbackId == _lastFeedbackId) return;
     _lastFeedbackId = state.feedbackId;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(feedback)));
-    });
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), feedback);
   }
 
   Future<void> _copyToClipboard(

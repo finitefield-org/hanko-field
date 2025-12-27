@@ -3,6 +3,8 @@
 import 'dart:async';
 
 import 'package:app/analytics/analytics.dart';
+import 'package:app/core/feedback/app_message_helpers.dart';
+import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/features/library/data/models/design_share_link_models.dart';
 import 'package:app/features/library/view_model/library_design_shares_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
@@ -26,30 +28,34 @@ class LibraryDesignSharesPage extends ConsumerStatefulWidget {
 class _LibraryDesignSharesPageState
     extends ConsumerState<LibraryDesignSharesPage> {
   int? _lastFeedbackId;
+  late LibraryDesignSharesViewModel _viewModel;
+  late final void Function() _feedbackCancel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = LibraryDesignSharesViewModel(designId: widget.designId);
+    _feedbackCancel = ref.container
+        .listen<AsyncValue<LibraryDesignSharesState>>(_viewModel, (next) {
+          if (next case AsyncData(:final value)) {
+            _handleFeedback(value);
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _feedbackCancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final state = ref.watch(
-      LibraryDesignSharesViewModel(designId: widget.designId),
-    );
+    final state = ref.watch(_viewModel);
     final data = state.valueOrNull;
-
-    if (data != null &&
-        data.feedbackMessage != null &&
-        data.feedbackId != _lastFeedbackId) {
-      _lastFeedbackId = data.feedbackId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final message = _feedbackLabel(data.feedbackMessage!, prefersEnglish);
-        if (message == null) return;
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(SnackBar(content: Text(message)));
-      });
-    }
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -75,16 +81,12 @@ class _LibraryDesignSharesPageState
           AsyncError(:final error) when data == null => _ErrorBody(
             prefersEnglish: prefersEnglish,
             message: error.toString(),
-            onRetry: () => ref.invalidate(
-              LibraryDesignSharesViewModel(designId: widget.designId),
-            ),
+            onRetry: () => ref.invalidate(_viewModel),
           ),
           _ => _Body(
             prefersEnglish: prefersEnglish,
             state: data!,
-            onRefresh: () => ref.invoke(
-              LibraryDesignSharesViewModel(designId: widget.designId).refresh(),
-            ),
+            onRefresh: () => ref.invoke(_viewModel.refresh()),
             onTapLink: (link) =>
                 _showLinkActions(context, link, prefersEnglish),
             onRevoke: (link) => _confirmRevoke(context, link, prefersEnglish),
@@ -124,6 +126,19 @@ class _LibraryDesignSharesPageState
     );
   }
 
+  void _handleFeedback(LibraryDesignSharesState state) {
+    final feedback = state.feedbackMessage;
+    if (feedback == null) return;
+    if (state.feedbackId == _lastFeedbackId) return;
+    _lastFeedbackId = state.feedbackId;
+    final prefersEnglish = ref.container
+        .read(appExperienceGatesProvider)
+        .prefersEnglish;
+    final message = _feedbackLabel(feedback, prefersEnglish);
+    if (message == null) return;
+    emitMessageFromText(ref.container.read(appMessageSinkProvider), message);
+  }
+
   String? _feedbackLabel(String raw, bool prefersEnglish) {
     if (raw.startsWith('created:')) {
       return prefersEnglish ? 'Share link created' : '共有リンクを作成しました';
@@ -152,11 +167,7 @@ class _LibraryDesignSharesPageState
       ),
     );
 
-    final created = await ref.invoke(
-      LibraryDesignSharesViewModel(
-        designId: widget.designId,
-      ).create(ttl: selection.ttl),
-    );
+    final created = await ref.invoke(_viewModel.create(ttl: selection.ttl));
 
     if (!context.mounted) return;
     await _copyToClipboard(context, created.url, prefersEnglish);
@@ -203,9 +214,7 @@ class _LibraryDesignSharesPageState
       ),
     );
 
-    await ref.invoke(
-      LibraryDesignSharesViewModel(designId: widget.designId).revoke(link.id),
-    );
+    await ref.invoke(_viewModel.revoke(link.id));
   }
 
   Future<void> _showLinkActions(
@@ -246,9 +255,7 @@ class _LibraryDesignSharesPageState
           ),
         );
         await ref.invoke(
-          LibraryDesignSharesViewModel(
-            designId: widget.designId,
-          ).extend(link.id, extendBy: const Duration(days: 7)),
+          _viewModel.extend(link.id, extendBy: const Duration(days: 7)),
         );
         return;
       case _LinkAction.revoke:
