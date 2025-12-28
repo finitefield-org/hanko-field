@@ -118,7 +118,7 @@
 - [x] [Define analytics events for key flows (design creation, checkout, share) and instrument across view models.](doc/app/tasks/085-define-analytics-events-for-key-flows-design-creation-checkout-share-and-instrument-across.md)
 - [x] [Configure performance monitoring (Firebase Performance) and custom metrics for screen load times.](doc/app/tasks/086-configure-performance-monitoring-firebase-performance-and-custom-metrics-for-screen-load-t.md)
 - [x] [Implement remote config/feature flag handling for gradual rollout of features.](doc/app/tasks/087-implement-remote-config-feature-flag-handling-for-gradual-rollout-of-features.md)
-- [ ] [Set up logging/trace pipeline for client errors and attach device context.](doc/app/tasks/088-set-up-logging-trace-pipeline-for-client-errors-and-attach-device-context.md)
+- [x] [Set up logging/trace pipeline for client errors and attach device context.](doc/app/tasks/088-set-up-logging-trace-pipeline-for-client-errors-and-attach-device-context.md)
 
 ## 16. Accessibility, Localization, and QA
 - [ ] [Ensure accessibility compliance (semantics, focus order, color contrast, screen reader labels) across screens.](doc/app/tasks/089-ensure-accessibility-compliance-semantics-focus-order-color-contrast-screen-reader-labels-.md)

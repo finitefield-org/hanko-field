@@ -13,6 +13,7 @@ import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/messaging.dart';
 import 'package:app/firebase/remote_config.dart';
 import 'package:app/monitoring/crash_reporting.dart';
+import 'package:app/monitoring/logging_pipeline.dart';
 import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/privacy/privacy_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -57,6 +58,12 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     await container.read(crashReportingInitializerProvider.future);
   } catch (e, st) {
     logger.warning('Failed to initialize Crashlytics: $e', e, st);
+  }
+
+  try {
+    await container.read(loggingPipelineInitializerProvider.future);
+  } catch (e, st) {
+    logger.warning('Failed to initialize logging pipeline: $e', e, st);
   }
 
   try {

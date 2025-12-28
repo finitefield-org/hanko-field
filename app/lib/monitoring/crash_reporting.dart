@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:app/config/app_flavor.dart';
 import 'package:app/firebase/firebase_providers.dart';
+import 'package:app/monitoring/logging_context.dart';
 import 'package:app/privacy/privacy_preferences.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
@@ -57,8 +58,29 @@ class CrashReporter {
     await setCollectionEnabled(collectionEnabled);
   }
 
+  Future<void> setContext(LogContext context) async {
+    if (!_allowSending) return;
+    final keys = context.toCustomKeys();
+    for (final entry in keys.entries) {
+      await _crashlytics.setCustomKey(entry.key, entry.value);
+    }
+    if (context.userIdHash == null || context.userIdHash!.isEmpty) {
+      await _crashlytics.setCustomKey('user_id_hash', '');
+    }
+    await _crashlytics.setUserIdentifier(
+      context.userIdHash == null || context.userIdHash!.isEmpty
+          ? 'anonymous'
+          : context.userIdHash!,
+    );
+  }
+
   Future<void> setCollectionEnabled(bool enabled) {
     return _crashlytics.setCrashlyticsCollectionEnabled(enabled);
+  }
+
+  Future<void> log(String message) async {
+    if (!_allowSending) return;
+    await _crashlytics.log(message);
   }
 
   Future<void> recordFlutterError(FlutterErrorDetails details) async {
