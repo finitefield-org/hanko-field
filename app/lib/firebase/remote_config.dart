@@ -2,6 +2,7 @@
 
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 const remoteConfigDefaults = <String, Object>{
@@ -15,16 +16,26 @@ const remoteConfigDefaults = <String, Object>{
   'app_store_url_android': '',
 };
 
+final _remoteConfigLogger = Logger('RemoteConfigInitializer');
+
 final remoteConfigInitializerProvider = AsyncProvider<void>((ref) async {
   final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
 
-  await remoteConfig.setConfigSettings(
-    RemoteConfigSettings(
-      fetchTimeout: const Duration(seconds: 10),
-      minimumFetchInterval: const Duration(minutes: 30),
-    ),
-  );
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 10),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
 
-  await remoteConfig.setDefaults(remoteConfigDefaults);
-  await remoteConfig.fetchAndActivate();
+    await remoteConfig.setDefaults(remoteConfigDefaults);
+    await remoteConfig.fetchAndActivate();
+  } catch (e, stack) {
+    _remoteConfigLogger.warning(
+      'Failed to initialize Remote Config; using cached/default values.',
+      e,
+      stack,
+    );
+  }
 });

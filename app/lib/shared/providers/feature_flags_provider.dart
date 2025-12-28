@@ -106,25 +106,39 @@ class FeatureFlags {
       checkoutEnabled: remoteConfig.getBool('feature_checkout_enabled'),
       minSupportedVersionIos: iosMinVersion.isNotEmpty
           ? iosMinVersion
-          : (remoteConfigDefaults['min_supported_version_ios'] as String? ??
-                ''),
+          : _defaultString('min_supported_version_ios'),
       minSupportedVersionAndroid: androidMinVersion.isNotEmpty
           ? androidMinVersion
-          : (remoteConfigDefaults['min_supported_version_android'] as String? ??
-                ''),
+          : _defaultString('min_supported_version_android'),
       latestVersionIos: iosLatestVersion.isNotEmpty
           ? iosLatestVersion
-          : (remoteConfigDefaults['latest_version_ios'] as String? ?? ''),
+          : _defaultString('latest_version_ios'),
       latestVersionAndroid: androidLatestVersion.isNotEmpty
           ? androidLatestVersion
-          : (remoteConfigDefaults['latest_version_android'] as String? ?? ''),
+          : _defaultString('latest_version_android'),
       appStoreUrlIos: iosStoreUrl.isNotEmpty
           ? iosStoreUrl
-          : (remoteConfigDefaults['app_store_url_ios'] as String? ?? ''),
+          : _defaultString('app_store_url_ios'),
       appStoreUrlAndroid: androidStoreUrl.isNotEmpty
           ? androidStoreUrl
-          : (remoteConfigDefaults['app_store_url_android'] as String? ?? ''),
+          : _defaultString('app_store_url_android'),
       lastUpdatedAt: remoteConfig.lastFetchTime,
+    );
+  }
+
+  static FeatureFlags defaults({DateTime? lastUpdatedAt}) {
+    return FeatureFlags(
+      designAi: _defaultBool('feature_design_ai'),
+      checkoutEnabled: _defaultBool('feature_checkout_enabled'),
+      minSupportedVersionIos: _defaultString('min_supported_version_ios'),
+      minSupportedVersionAndroid: _defaultString(
+        'min_supported_version_android',
+      ),
+      latestVersionIos: _defaultString('latest_version_ios'),
+      latestVersionAndroid: _defaultString('latest_version_android'),
+      appStoreUrlIos: _defaultString('app_store_url_ios'),
+      appStoreUrlAndroid: _defaultString('app_store_url_android'),
+      lastUpdatedAt: lastUpdatedAt,
     );
   }
 }
@@ -143,8 +157,17 @@ class FeatureFlagsProvider extends AsyncProvider<FeatureFlags> {
     }
 
     final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
-    await remoteConfig.ensureInitialized();
-    await ref.watch(remoteConfigInitializerProvider.future);
+    try {
+      await remoteConfig.ensureInitialized();
+      await ref.watch(remoteConfigInitializerProvider.future);
+    } catch (e, stack) {
+      _featureFlagsLogger.warning(
+        'Failed to initialize Remote Config; using defaults.',
+        e,
+        stack,
+      );
+      return FeatureFlags.defaults(lastUpdatedAt: remoteConfig.lastFetchTime);
+    }
 
     _listenForUpdates(ref, remoteConfig);
 
@@ -164,7 +187,15 @@ class FeatureFlagsProvider extends AsyncProvider<FeatureFlags> {
       _ => const AsyncLoading<FeatureFlags>(),
     };
 
-    await remoteConfig.fetchAndActivate();
+    try {
+      await remoteConfig.fetchAndActivate();
+    } catch (e, stack) {
+      _featureFlagsLogger.warning(
+        'Failed to refresh Remote Config; using cached values.',
+        e,
+        stack,
+      );
+    }
     final flags = FeatureFlags.fromRemoteConfig(remoteConfig);
     ref.state = AsyncData(flags);
     return flags;
@@ -197,3 +228,11 @@ final featureFlagsProvider = FeatureFlagsProvider();
 
 /// Tests can inject a custom flag set via:
 /// `ProviderScope(overrides: [featureFlagsScope.overrideWithValue(fakeFlags)])`.
+
+String _defaultString(String key) {
+  return remoteConfigDefaults[key] as String? ?? '';
+}
+
+bool _defaultBool(String key) {
+  return remoteConfigDefaults[key] as bool? ?? false;
+}
