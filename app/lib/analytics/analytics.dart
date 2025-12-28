@@ -29,7 +29,7 @@ final analyticsInitializerProvider = AsyncProvider<void>((ref) async {
   await analytics.setAnalyticsCollectionEnabled(preferences.analyticsAllowed);
   await analytics.setUserProperty(name: 'environment', value: flavor.name);
 
-  ref.listen(privacyPreferencesProvider, (next) {
+  ref.listen(privacyPreferencesProvider, (_, next) {
     if (next case AsyncData<PrivacyPreferences>(:final value)) {
       unawaited(
         analytics
@@ -697,6 +697,534 @@ class ErrorScreenViewedEvent extends AppAnalyticsEvent {
       'source': source,
       'locale': locale,
       'persona': persona,
+    };
+  }
+}
+
+class DesignCreationStartedEvent extends AppAnalyticsEvent {
+  const DesignCreationStartedEvent({this.locale, this.persona});
+
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_creation_started';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {'locale': locale, 'persona': persona};
+  }
+}
+
+class DesignInputSavedEvent extends AppAnalyticsEvent {
+  const DesignInputSavedEvent({
+    required this.sourceType,
+    required this.nameLength,
+    required this.hasKanji,
+    this.locale,
+    this.persona,
+  });
+
+  final String sourceType;
+  final int nameLength;
+  final bool hasKanji;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_input_saved';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'source_type': sourceType,
+      'name_length': nameLength,
+      'has_kanji': hasKanji,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignStyleSelectedEvent extends AppAnalyticsEvent {
+  const DesignStyleSelectedEvent({
+    required this.shape,
+    required this.sizeMm,
+    required this.writingStyle,
+    this.templateRef,
+    this.locale,
+    this.persona,
+  });
+
+  final String shape;
+  final double sizeMm;
+  final String writingStyle;
+  final String? templateRef;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_style_selected';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'shape': shape,
+      'size_mm': sizeMm,
+      'writing_style': writingStyle,
+      'template_ref': templateRef,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignEditorStartedEvent extends AppAnalyticsEvent {
+  const DesignEditorStartedEvent({
+    required this.layout,
+    required this.shape,
+    required this.sizeMm,
+    required this.writingStyle,
+    this.templateRef,
+    this.locale,
+    this.persona,
+  });
+
+  final String layout;
+  final String shape;
+  final double sizeMm;
+  final String writingStyle;
+  final String? templateRef;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_editor_started';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'layout': layout,
+      'shape': shape,
+      'size_mm': sizeMm,
+      'writing_style': writingStyle,
+      'template_ref': templateRef,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignExportCompletedEvent extends AppAnalyticsEvent {
+  const DesignExportCompletedEvent({
+    required this.format,
+    required this.destination,
+    required this.fileSizeMb,
+    required this.includeBleed,
+    required this.includeMetadata,
+    required this.transparentBackground,
+    required this.watermarkOnShare,
+    this.locale,
+    this.persona,
+  });
+
+  final String format;
+  final String destination;
+  final double fileSizeMb;
+  final bool includeBleed;
+  final bool includeMetadata;
+  final bool transparentBackground;
+  final bool watermarkOnShare;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_export_completed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'format': format,
+      'destination': destination,
+      'file_size_mb': fileSizeMb,
+      'include_bleed': includeBleed,
+      'include_metadata': includeMetadata,
+      'transparent_background': transparentBackground,
+      'watermark_on_share': watermarkOnShare,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignExportSharedEvent extends AppAnalyticsEvent {
+  const DesignExportSharedEvent({
+    required this.format,
+    required this.target,
+    required this.includeMetadata,
+    required this.watermarked,
+    this.locale,
+    this.persona,
+  });
+
+  final String format;
+  final String target;
+  final bool includeMetadata;
+  final bool watermarked;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_export_shared';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'format': format,
+      'target': target,
+      'include_metadata': includeMetadata,
+      'watermarked': watermarked,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignShareOpenedEvent extends AppAnalyticsEvent {
+  const DesignShareOpenedEvent({
+    required this.background,
+    required this.watermarkEnabled,
+    required this.includeHashtags,
+    this.locale,
+    this.persona,
+  });
+
+  final String background;
+  final bool watermarkEnabled;
+  final bool includeHashtags;
+  final String? locale;
+  final String? persona;
+
+  @override
+  String get name => 'design_share_opened';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'background': background,
+      'watermark_enabled': watermarkEnabled,
+      'include_hashtags': includeHashtags,
+      'locale': locale,
+      'persona': persona,
+    };
+  }
+}
+
+class DesignShareBackgroundSelectedEvent extends AppAnalyticsEvent {
+  const DesignShareBackgroundSelectedEvent({required this.background});
+
+  final String background;
+
+  @override
+  String get name => 'design_share_background_selected';
+
+  @override
+  Map<String, Object?> toParameters() => {'background': background};
+}
+
+class DesignShareWatermarkToggledEvent extends AppAnalyticsEvent {
+  const DesignShareWatermarkToggledEvent({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  String get name => 'design_share_watermark_toggled';
+
+  @override
+  Map<String, Object?> toParameters() => {'enabled': enabled};
+}
+
+class DesignShareHashtagsToggledEvent extends AppAnalyticsEvent {
+  const DesignShareHashtagsToggledEvent({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  String get name => 'design_share_hashtags_toggled';
+
+  @override
+  Map<String, Object?> toParameters() => {'enabled': enabled};
+}
+
+class DesignShareRegeneratedEvent extends AppAnalyticsEvent {
+  const DesignShareRegeneratedEvent({
+    required this.background,
+    required this.watermarkEnabled,
+    required this.includeHashtags,
+  });
+
+  final String background;
+  final bool watermarkEnabled;
+  final bool includeHashtags;
+
+  @override
+  String get name => 'design_share_regenerated';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'background': background,
+      'watermark_enabled': watermarkEnabled,
+      'include_hashtags': includeHashtags,
+    };
+  }
+}
+
+class DesignShareSubmittedEvent extends AppAnalyticsEvent {
+  const DesignShareSubmittedEvent({
+    required this.target,
+    required this.success,
+    required this.background,
+    required this.watermarkEnabled,
+    required this.includeHashtags,
+  });
+
+  final String target;
+  final bool success;
+  final String background;
+  final bool watermarkEnabled;
+  final bool includeHashtags;
+
+  @override
+  String get name => 'design_share_submitted';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'target': target,
+      'success': success,
+      'background': background,
+      'watermark_enabled': watermarkEnabled,
+      'include_hashtags': includeHashtags,
+    };
+  }
+}
+
+class CheckoutStartedEvent extends AppAnalyticsEvent {
+  const CheckoutStartedEvent({
+    required this.itemCount,
+    required this.subtotalAmount,
+    required this.currency,
+    required this.hasPromo,
+    required this.isInternational,
+  });
+
+  final int itemCount;
+  final int subtotalAmount;
+  final String currency;
+  final bool hasPromo;
+  final bool isInternational;
+
+  @override
+  String get name => 'checkout_started';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'item_count': itemCount,
+      'subtotal_amount': subtotalAmount,
+      'currency': currency,
+      'has_promo': hasPromo,
+      'is_international': isInternational,
+    };
+  }
+}
+
+class CheckoutAddressSavedEvent extends AppAnalyticsEvent {
+  const CheckoutAddressSavedEvent({
+    required this.isNew,
+    required this.isDefault,
+    required this.country,
+    required this.isInternational,
+  });
+
+  final bool isNew;
+  final bool isDefault;
+  final String country;
+  final bool isInternational;
+
+  @override
+  String get name => 'checkout_address_saved';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'is_new': isNew,
+      'is_default': isDefault,
+      'country': country,
+      'is_international': isInternational,
+    };
+  }
+}
+
+class CheckoutAddressConfirmedEvent extends AppAnalyticsEvent {
+  const CheckoutAddressConfirmedEvent({
+    required this.country,
+    required this.isInternational,
+    required this.addressCount,
+  });
+
+  final String country;
+  final bool isInternational;
+  final int addressCount;
+
+  @override
+  String get name => 'checkout_address_confirmed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'country': country,
+      'is_international': isInternational,
+      'address_count': addressCount,
+    };
+  }
+}
+
+class CheckoutShippingSelectedEvent extends AppAnalyticsEvent {
+  const CheckoutShippingSelectedEvent({
+    required this.shippingMethodId,
+    required this.carrier,
+    required this.costAmount,
+    required this.currency,
+    required this.etaMinDays,
+    required this.etaMaxDays,
+    required this.isExpress,
+    required this.isInternational,
+    required this.focus,
+    required this.hasPromo,
+  });
+
+  final String shippingMethodId;
+  final String carrier;
+  final int costAmount;
+  final String currency;
+  final int etaMinDays;
+  final int etaMaxDays;
+  final bool isExpress;
+  final bool isInternational;
+  final String focus;
+  final bool hasPromo;
+
+  @override
+  String get name => 'checkout_shipping_selected';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'shipping_method_id': shippingMethodId,
+      'carrier': carrier,
+      'cost_amount': costAmount,
+      'currency': currency,
+      'eta_min_days': etaMinDays,
+      'eta_max_days': etaMaxDays,
+      'is_express': isExpress,
+      'is_international': isInternational,
+      'focus': focus,
+      'has_promo': hasPromo,
+    };
+  }
+}
+
+class CheckoutPaymentSelectedEvent extends AppAnalyticsEvent {
+  const CheckoutPaymentSelectedEvent({
+    required this.provider,
+    required this.methodType,
+    required this.isDefault,
+    required this.isNew,
+  });
+
+  final String provider;
+  final String methodType;
+  final bool isDefault;
+  final bool isNew;
+
+  @override
+  String get name => 'checkout_payment_selected';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'provider': provider,
+      'method_type': methodType,
+      'is_default': isDefault,
+      'is_new': isNew,
+    };
+  }
+}
+
+class CheckoutOrderPlacedEvent extends AppAnalyticsEvent {
+  const CheckoutOrderPlacedEvent({
+    required this.success,
+    required this.totalAmount,
+    required this.currency,
+    required this.itemCount,
+    required this.isInternational,
+    required this.hasPromo,
+    required this.shippingMethodId,
+    required this.paymentMethodType,
+  });
+
+  final bool success;
+  final int totalAmount;
+  final String currency;
+  final int itemCount;
+  final bool isInternational;
+  final bool hasPromo;
+  final String shippingMethodId;
+  final String paymentMethodType;
+
+  @override
+  String get name => 'checkout_order_placed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'success': success,
+      'total_amount': totalAmount,
+      'currency': currency,
+      'item_count': itemCount,
+      'is_international': isInternational,
+      'has_promo': hasPromo,
+      'shipping_method_id': shippingMethodId,
+      'payment_method_type': paymentMethodType,
+    };
+  }
+}
+
+class CheckoutCompleteViewedEvent extends AppAnalyticsEvent {
+  const CheckoutCompleteViewedEvent({
+    required this.totalAmount,
+    required this.currency,
+    required this.itemCount,
+    required this.notificationStatus,
+  });
+
+  final int totalAmount;
+  final String currency;
+  final int itemCount;
+  final String notificationStatus;
+
+  @override
+  String get name => 'checkout_complete_viewed';
+
+  @override
+  Map<String, Object?> toParameters() {
+    return {
+      'total_amount': totalAmount,
+      'currency': currency,
+      'item_count': itemCount,
+      'notification_status': notificationStatus,
     };
   }
 }

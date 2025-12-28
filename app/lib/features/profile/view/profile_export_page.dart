@@ -23,14 +23,15 @@ class ProfileExportPage extends ConsumerStatefulWidget {
 
 class _ProfileExportPageState extends ConsumerState<ProfileExportPage> {
   int? _lastFeedbackId;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<ProfileExportState>>
+  _feedbackCancel;
 
   @override
   void initState() {
     super.initState();
     _feedbackCancel = ref.container.listen<AsyncValue<ProfileExportState>>(
       profileExportViewModel,
-      (next) {
+      (_, next) {
         if (next case AsyncData(:final value)) {
           _handleFeedback(value);
         }
@@ -40,7 +41,7 @@ class _ProfileExportPageState extends ConsumerState<ProfileExportPage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 

@@ -1,7 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
 import 'dart:math';
 
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
@@ -218,7 +220,7 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
     final includeHashtags = true;
     final seed = DateTime.now().millisecondsSinceEpoch;
 
-    ref.listen(designCreationViewModel, (next) {
+    ref.listen(designCreationViewModel, (_, next) {
       _syncFromSources(
         ref,
         creation: next,
@@ -226,7 +228,7 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
       );
     });
 
-    ref.listen(designEditorViewModel, (next) {
+    ref.listen(designEditorViewModel, (_, next) {
       _syncFromSources(
         ref,
         creation: ref.watch(designCreationViewModel),
@@ -241,6 +243,19 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
       shareLink: shareLink,
       includeHashtags: includeHashtags,
       gates: _gates,
+    );
+
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        DesignShareOpenedEvent(
+          background: ShareBackground.linen.name,
+          watermarkEnabled: true,
+          includeHashtags: includeHashtags,
+          persona: _gates.personaKey,
+          locale: _gates.localeTag,
+        ),
+      ),
     );
 
     return DesignShareState(
@@ -292,6 +307,12 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
             ),
           ),
         );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(
+            DesignShareBackgroundSelectedEvent(background: background.name),
+          ),
+        );
         return background;
       }, concurrency: Concurrency.dropLatest);
 
@@ -307,6 +328,10 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
                 .map((mock) => mock.copyWith(watermarked: enabled))
                 .toList(),
           ),
+        );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(DesignShareWatermarkToggledEvent(enabled: enabled)),
         );
         return enabled;
       }, concurrency: Concurrency.dropLatest);
@@ -331,6 +356,10 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
               gates: _gates,
             ),
           ),
+        );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(DesignShareHashtagsToggledEvent(enabled: enabled)),
         );
         return enabled;
       }, concurrency: Concurrency.dropLatest);
@@ -395,6 +424,16 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
         feedbackId: current.feedbackId + 1,
       ),
     );
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        DesignShareRegeneratedEvent(
+          background: current.background.name,
+          watermarkEnabled: current.watermarkEnabled,
+          includeHashtags: current.includeHashtags,
+        ),
+      ),
+    );
     return true;
   }, concurrency: Concurrency.restart);
 
@@ -418,6 +457,18 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
           feedbackId: current.feedbackId + 1,
         ),
       );
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          DesignShareSubmittedEvent(
+            target: target,
+            success: true,
+            background: current.background.name,
+            watermarkEnabled: current.watermarkEnabled,
+            includeHashtags: current.includeHashtags,
+          ),
+        ),
+      );
       return true;
     } catch (error) {
       ref.state = AsyncData(
@@ -427,6 +478,18 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
               ? 'Share failed: $error'
               : '共有に失敗しました: $error',
           feedbackId: current.feedbackId + 1,
+        ),
+      );
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          DesignShareSubmittedEvent(
+            target: target,
+            success: false,
+            background: current.background.name,
+            watermarkEnabled: current.watermarkEnabled,
+            includeHashtags: current.includeHashtags,
+          ),
         ),
       );
       return false;

@@ -26,7 +26,8 @@ class DesignVersionsPage extends ConsumerStatefulWidget {
 class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
   int? _lastFeedbackId;
   final _scrollController = ScrollController();
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<DesignVersionsState>>
+  _feedbackCancel;
 
   @override
   void initState() {
@@ -34,7 +35,7 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     final viewModel = widget.viewModel ?? designVersionsViewModel;
     _feedbackCancel = ref.container.listen<AsyncValue<DesignVersionsState>>(
       viewModel,
-      (next) {
+      (_, next) {
         if (next case AsyncData(:final value)) {
           _handleFeedback(value);
         }
@@ -44,7 +45,7 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     _scrollController.dispose();
     super.dispose();
   }

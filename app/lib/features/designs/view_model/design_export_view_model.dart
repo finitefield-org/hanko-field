@@ -7,6 +7,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
@@ -220,7 +221,7 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
     final editor = ref.watch(designEditorViewModel);
     final design = _resolveDesign(creation, editor, _gates);
 
-    ref.listen(designCreationViewModel, (next) {
+    ref.listen(designCreationViewModel, (_, next) {
       final current = ref.watch(this).valueOrNull;
       if (current == null) return;
       final updated = _resolveDesign(
@@ -231,7 +232,7 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
       ref.state = AsyncData(current.copyWith(design: updated));
     });
 
-    ref.listen(designEditorViewModel, (next) {
+    ref.listen(designEditorViewModel, (_, next) {
       final current = ref.watch(this).valueOrNull;
       if (current == null) return;
       final updated = _resolveDesign(
@@ -384,6 +385,22 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
               feedbackId: working.feedbackId + 1,
             ),
           );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              DesignExportCompletedEvent(
+                format: record.format.name,
+                destination: destination,
+                fileSizeMb: record.fileSizeMb,
+                includeBleed: working.includeBleed,
+                includeMetadata: working.includeMetadata,
+                transparentBackground: working.transparentBackground,
+                watermarkOnShare: working.watermarkOnShare,
+                persona: _gates.personaKey,
+                locale: _gates.localeTag,
+              ),
+            ),
+          );
           return true;
         } catch (error) {
           ref.state = AsyncData(
@@ -460,6 +477,19 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
               ? 'Shared ${record.label} via $target'
               : '${record.label} を$targetで共有しました',
           feedbackId: working.feedbackId + 1,
+        ),
+      );
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          DesignExportSharedEvent(
+            format: record.format.name,
+            target: target,
+            includeMetadata: working.includeMetadata,
+            watermarked: working.watermarkOnShare,
+            persona: _gates.personaKey,
+            locale: _gates.localeTag,
+          ),
         ),
       );
       return true;

@@ -29,14 +29,15 @@ class _LibraryDesignSharesPageState
     extends ConsumerState<LibraryDesignSharesPage> {
   int? _lastFeedbackId;
   late LibraryDesignSharesViewModel _viewModel;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<LibraryDesignSharesState>>
+  _feedbackCancel;
 
   @override
   void initState() {
     super.initState();
     _viewModel = LibraryDesignSharesViewModel(designId: widget.designId);
     _feedbackCancel = ref.container
-        .listen<AsyncValue<LibraryDesignSharesState>>(_viewModel, (next) {
+        .listen<AsyncValue<LibraryDesignSharesState>>(_viewModel, (_, next) {
           if (next case AsyncData(:final value)) {
             _handleFeedback(value);
           }
@@ -45,7 +46,7 @@ class _LibraryDesignSharesPageState
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 

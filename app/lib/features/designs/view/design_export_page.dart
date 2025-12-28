@@ -20,14 +20,15 @@ class DesignExportPage extends ConsumerStatefulWidget {
 
 class _DesignExportPageState extends ConsumerState<DesignExportPage> {
   int? _lastFeedbackId;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<DesignExportState>>
+  _feedbackCancel;
 
   @override
   void initState() {
     super.initState();
     _feedbackCancel = ref.container.listen<AsyncValue<DesignExportState>>(
       designExportViewModel,
-      (next) {
+      (_, next) {
         if (next case AsyncData(:final value)) {
           _handleFeedback(value);
         }
@@ -37,7 +38,7 @@ class _DesignExportPageState extends ConsumerState<DesignExportPage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 

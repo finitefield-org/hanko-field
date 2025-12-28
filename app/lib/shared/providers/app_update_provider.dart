@@ -60,7 +60,7 @@ final appUpdateStatusProvider = AsyncProvider<AppUpdateStatus>((ref) async {
 final appUpdateRouterRefreshProvider = Provider<AppUpdateRouterRefreshNotifier>(
   (ref) {
     final notifier = AppUpdateRouterRefreshNotifier();
-    ref.listen(appUpdateStatusProvider, (_) => notifier.trigger());
+    ref.listen(appUpdateStatusProvider, (_, __) => notifier.trigger());
     ref.onDispose(notifier.dispose);
     return notifier;
   },

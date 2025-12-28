@@ -1,7 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
 import 'dart:math';
 
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/value_objects.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
@@ -33,6 +35,7 @@ class CheckoutCompleteViewModel extends AsyncProvider<CheckoutCompleteState> {
 
   final String? orderId;
   final String? orderNumber;
+  bool _trackedView = false;
 
   late final requestNotificationsMut = mutation<CheckoutNotificationStatus>(
     #requestNotifications,
@@ -56,6 +59,23 @@ class CheckoutCompleteViewModel extends AsyncProvider<CheckoutCompleteState> {
       minDays: flow.shippingEtaMinDays,
       maxDays: flow.shippingEtaMaxDays,
     );
+
+    if (!_trackedView) {
+      _trackedView = true;
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          CheckoutCompleteViewedEvent(
+            totalAmount: cart.total.amount,
+            currency: cart.total.currency,
+            itemCount: cart.lines.length,
+            notificationStatus: _notificationStatus(
+              settings.authorizationStatus,
+            ).name,
+          ),
+        ),
+      );
+    }
 
     return CheckoutCompleteState(
       orderNumber: computedOrderNumber,

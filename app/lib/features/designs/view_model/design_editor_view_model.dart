@@ -3,8 +3,10 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
+import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 enum DesignCanvasLayout { balanced, vertical, grid, arc }
@@ -96,6 +98,7 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
   final List<DesignEditorState> _redoStack = <DesignEditorState>[];
   Timer? _autosaveTimer;
   DesignEditorState? _initialState;
+  bool _trackedStart = false;
 
   late final setLayoutMut = mutation<DesignCanvasLayout>(#setLayout);
   late final setStrokeMut = mutation<double>(#setStroke);
@@ -116,6 +119,25 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
     _initialState = seed;
     _undoStack.clear();
     _redoStack.clear();
+
+    if (!_trackedStart) {
+      _trackedStart = true;
+      final analytics = ref.watch(analyticsClientProvider);
+      final gates = ref.watch(appExperienceGatesProvider);
+      unawaited(
+        analytics.track(
+          DesignEditorStartedEvent(
+            layout: seed.layout.name,
+            shape: seed.shape.name,
+            sizeMm: seed.sizeMm,
+            writingStyle: seed.writingStyle.name,
+            templateRef: seed.templateName,
+            persona: gates.personaKey,
+            locale: gates.localeTag,
+          ),
+        ),
+      );
+    }
 
     return seed;
   }

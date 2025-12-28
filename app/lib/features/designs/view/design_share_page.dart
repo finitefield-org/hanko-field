@@ -23,14 +23,14 @@ class DesignSharePage extends ConsumerStatefulWidget {
 class _DesignSharePageState extends ConsumerState<DesignSharePage> {
   final TextEditingController _overlayController = TextEditingController();
   int? _lastFeedbackId;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<DesignShareState>> _feedbackCancel;
 
   @override
   void initState() {
     super.initState();
     _feedbackCancel = ref.container.listen<AsyncValue<DesignShareState>>(
       designShareViewModel,
-      (next) {
+      (_, next) {
         if (next case AsyncData(:final value)) {
           _handleFeedback(value);
         }
@@ -40,7 +40,7 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     _overlayController.dispose();
     super.dispose();
   }

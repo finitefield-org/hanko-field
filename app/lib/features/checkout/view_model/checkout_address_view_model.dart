@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
+import 'package:app/analytics/analytics.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/features/users/data/repositories/local_user_repository.dart';
@@ -249,6 +252,18 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
       _addressLogger.warning('Failed to persist checkout selection', e, stack);
     }
 
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        CheckoutAddressSavedEvent(
+          isNew: normalized.id == null,
+          isDefault: saved.isDefault,
+          country: saved.country,
+          isInternational: _isInternational(saved.country),
+        ),
+      ),
+    );
+
     return AddressSaveResult(
       validation: const AddressValidationResult(),
       saved: saved,
@@ -266,6 +281,16 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
           checkoutFlowProvider.setAddress(
             addressId: selected.id,
             isInternational: _isInternational(selected.country),
+          ),
+        );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(
+            CheckoutAddressConfirmedEvent(
+              country: selected.country,
+              isInternational: _isInternational(selected.country),
+              addressCount: state?.addresses.length ?? 0,
+            ),
           ),
         );
         return selected;

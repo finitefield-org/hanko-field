@@ -21,7 +21,8 @@ class DesignCheckPage extends ConsumerStatefulWidget {
 
 class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
   int? _lastFeedbackId;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<RegistrabilityCheckState>>
+  _feedbackCancel;
 
   @override
   void initState() {
@@ -29,7 +30,7 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
     _feedbackCancel = ref.container
         .listen<AsyncValue<RegistrabilityCheckState>>(
           registrabilityCheckViewModel,
-          (next) {
+          (_, next) {
             if (next case AsyncData(:final value)) {
               _handleFeedback(value);
             }
@@ -39,7 +40,7 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 

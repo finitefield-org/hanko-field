@@ -22,11 +22,40 @@ class NotificationsPage extends ConsumerStatefulWidget {
 
 class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   final ScrollController _scrollController = ScrollController();
+  bool _didResetBadge = false;
+  late final ProviderSubscription<AsyncValue<NotificationsState>> _badgeCancel;
+  late final ProviderSubscription<AsyncValue<int>> _unreadCancel;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _badgeCancel = ref.container.listen<AsyncValue<NotificationsState>>(
+      notificationsViewModel,
+      (AsyncValue<NotificationsState>? _, AsyncValue<NotificationsState> next) {
+        if (_didResetBadge) return;
+        if (next.valueOrNull == null) return;
+        final unreadState = ref.container.read(unreadNotificationsProvider);
+        if (unreadState is AsyncLoading<int>) return;
+        final unread = unreadState.valueOrNull;
+        if (unread == null || unread <= 0) return;
+        _didResetBadge = true;
+        unawaited(ref.invoke(notificationsViewModel.markAllRead()));
+      },
+    );
+    _unreadCancel = ref.container.listen<AsyncValue<int>>(
+      unreadNotificationsProvider,
+      (AsyncValue<int>? _, AsyncValue<int> next) {
+        if (_didResetBadge) return;
+        final unread = next.valueOrNull;
+        if (unread == null || unread <= 0) return;
+        if (ref.container.read(notificationsViewModel).valueOrNull == null) {
+          return;
+        }
+        _didResetBadge = true;
+        unawaited(ref.invoke(notificationsViewModel.markAllRead()));
+      },
+    );
   }
 
   @override
@@ -34,6 +63,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _badgeCancel.close();
+    _unreadCancel.close();
     super.dispose();
   }
 

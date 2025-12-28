@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/routing/routes.dart';
+import 'package:app/features/notifications/data/providers/unread_notifications_provider.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/app_update_provider.dart';
 import 'package:app/theme/design_tokens.dart';
@@ -32,6 +33,7 @@ class _NavigationShellScaffoldState
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final l10n = AppLocalizations.of(context);
+    final unread = ref.watch(unreadNotificationsProvider).valueOrNull ?? 0;
     final updateStatus = ref.watch(appUpdateStatusProvider).valueOrNull;
     final latestVersion = updateStatus?.latestVersion ?? '';
     final showUpdateReminder =
@@ -39,11 +41,23 @@ class _NavigationShellScaffoldState
         updateStatus?.isUpdateRequired != true &&
         latestVersion.isNotEmpty &&
         _dismissedUpdateVersion != latestVersion;
+    Widget tabIcon(AppTab tab, {required bool selected}) {
+      final icon = Icon(selected ? tab.selectedIcon : tab.icon);
+      if (tab != AppTab.profile || unread <= 0) return icon;
+      return Badge.count(
+        count: unread,
+        backgroundColor: tokens.colors.primary,
+        textColor: tokens.colors.onPrimary,
+        offset: const Offset(6, -4),
+        child: icon,
+      );
+    }
+
     final destinations = AppTab.values
         .map(
           (tab) => NavigationDestination(
-            icon: Icon(tab.icon),
-            selectedIcon: Icon(tab.selectedIcon),
+            icon: tabIcon(tab, selected: false),
+            selectedIcon: tabIcon(tab, selected: true),
             label: tab.label,
           ),
         )

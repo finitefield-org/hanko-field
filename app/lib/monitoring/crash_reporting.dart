@@ -28,7 +28,7 @@ final crashReportingInitializerProvider = AsyncProvider<void>((ref) async {
 
   await crashReporter.initialize(flavor, preferences.crashReportingAllowed);
 
-  ref.listen(privacyPreferencesProvider, (next) {
+  ref.listen(privacyPreferencesProvider, (_, next) {
     if (next case AsyncData<PrivacyPreferences>(:final value)) {
       unawaited(
         crashReporter

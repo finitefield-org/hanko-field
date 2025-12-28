@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
+import 'package:app/analytics/analytics.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
 import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/users/data/models/user_models.dart';
@@ -101,6 +104,17 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
               paymentProviderRef: selection.providerRef,
             ),
           );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              CheckoutPaymentSelectedEvent(
+                provider: selection.provider.name,
+                methodType: selection.methodType.name,
+                isDefault: selection.isDefault,
+                isNew: false,
+              ),
+            ),
+          );
         }
         return methodId;
       }, concurrency: Concurrency.dropLatest);
@@ -160,6 +174,17 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
             checkoutFlowProvider.setPayment(
               paymentMethodId: saved.id,
               paymentProviderRef: saved.providerRef,
+            ),
+          );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              CheckoutPaymentSelectedEvent(
+                provider: saved.provider.name,
+                methodType: saved.methodType.name,
+                isDefault: saved.isDefault,
+                isNew: true,
+              ),
             ),
           );
           return PaymentSaveResult(validation: validation, saved: saved);

@@ -21,14 +21,15 @@ class DesignAiPage extends ConsumerStatefulWidget {
 
 class _DesignAiPageState extends ConsumerState<DesignAiPage> {
   int? _lastFeedbackId;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<AiSuggestionsState>>
+  _feedbackCancel;
 
   @override
   void initState() {
     super.initState();
     _feedbackCancel = ref.container.listen<AsyncValue<AiSuggestionsState>>(
       designAiViewModel,
-      (next) {
+      (_, next) {
         if (next case AsyncData(:final value)) {
           _handleFeedback(value);
         }
@@ -38,7 +39,7 @@ class _DesignAiPageState extends ConsumerState<DesignAiPage> {
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 

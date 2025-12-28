@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
@@ -148,6 +151,7 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
   late final setStyleSelectionMut = mutation<DesignStyle>(#setStyleSelection);
   late final saveInputMut = mutation<DesignInput>(#saveInput);
   late final hydrateFromDesignMut = mutation<Design>(#hydrateFromDesign);
+  bool _trackedStart = false;
 
   @override
   Future<DesignCreationState> build(Ref ref) async {
@@ -157,7 +161,7 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     final nameSeed = _seedDraftFromProfile(gates, session?.profile);
     String? lastProfileId = session?.profile?.id;
 
-    ref.listen(userSessionProvider, (next) {
+    ref.listen(userSessionProvider, (_, next) {
       final profile = next.valueOrNull?.profile;
       if (profile == null) return;
 
@@ -182,6 +186,19 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
         current.copyWith(nameDraft: seed, clearSavedInput: true),
       );
     });
+
+    if (!_trackedStart) {
+      _trackedStart = true;
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          DesignCreationStartedEvent(
+            persona: gates.personaKey,
+            locale: gates.localeTag,
+          ),
+        ),
+      );
+    }
 
     return DesignCreationState(
       selectedType: DesignSourceType.typed,
@@ -280,12 +297,26 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return style;
 
+    final gates = ref.watch(appExperienceGatesProvider);
+    final analytics = ref.watch(analyticsClientProvider);
     ref.state = AsyncData(
       current.copyWith(
         selectedShape: shape,
         selectedSize: size,
         selectedStyle: style,
         selectedTemplate: template ?? current.selectedTemplate,
+      ),
+    );
+    unawaited(
+      analytics.track(
+        DesignStyleSelectedEvent(
+          shape: shape.name,
+          sizeMm: size.mm,
+          writingStyle: style.writing.name,
+          templateRef: template?.id ?? template?.slug ?? template?.name,
+          persona: gates.personaKey,
+          locale: gates.localeTag,
+        ),
       ),
     );
     return style;
@@ -314,6 +345,18 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     );
 
     ref.state = AsyncData(current.copyWith(savedInput: input));
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        DesignInputSavedEvent(
+          sourceType: current.selectedType.toJson(),
+          nameLength: rawName.length,
+          hasKanji: current.nameDraft.kanjiMapping != null,
+          persona: gates.personaKey,
+          locale: gates.localeTag,
+        ),
+      ),
+    );
     return input;
   }, concurrency: Concurrency.dropLatest);
 

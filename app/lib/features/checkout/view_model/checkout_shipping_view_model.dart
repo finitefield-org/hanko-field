@@ -1,7 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
 import 'dart:math';
 
+import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/value_objects.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
@@ -180,6 +182,7 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
     #selectShipping,
   );
   late final focusMut = mutation<ShippingFocus>(#setFocus);
+  bool _trackedStart = false;
 
   @override
   Future<CheckoutShippingState> build(Ref ref) async {
@@ -208,6 +211,22 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
       requiresExpress: requiresExpress,
       addressId: flow.addressId,
     );
+
+    if (!_trackedStart) {
+      _trackedStart = true;
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          CheckoutStartedEvent(
+            itemCount: cart.lines.length,
+            subtotalAmount: cart.subtotal.amount,
+            currency: cart.subtotal.currency,
+            hasPromo: cart.appliedPromo != null,
+            isInternational: flow.isInternational,
+          ),
+        ),
+      );
+    }
 
     return _resolveSelection(initial);
   }
@@ -273,6 +292,24 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
         stackTrace,
       );
     }
+
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        CheckoutShippingSelectedEvent(
+          shippingMethodId: option.id,
+          carrier: option.carrier,
+          costAmount: current.effectiveCost(option).amount,
+          currency: current.effectiveCost(option).currency,
+          etaMinDays: option.minDays,
+          etaMaxDays: option.maxDays,
+          isExpress: option.express,
+          isInternational: option.international,
+          focus: current.focus.name,
+          hasPromo: current.promoCode != null,
+        ),
+      ),
+    );
 
     return ShippingSelectionResult(
       selected: option,

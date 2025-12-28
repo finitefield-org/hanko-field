@@ -84,7 +84,7 @@ class DesignStyleViewModel extends AsyncProvider<DesignStyleState> {
     final filters = creation?.activeFilters ?? const <String>{};
     final shape = _defaultShape(gates, filters);
 
-    ref.listen(designCreationViewModel, (next) {
+    ref.listen(designCreationViewModel, (_, next) {
       final input = next.valueOrNull?.savedInput;
       final current = ref.watch(this).valueOrNull;
       if (input == null || current == null || current.input == input) return;

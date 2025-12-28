@@ -33,7 +33,8 @@ class _LibraryDesignExportPageState
     extends ConsumerState<LibraryDesignExportPage> {
   int? _lastFeedbackId;
   late LibraryDesignExportViewModel _viewModel;
-  late final void Function() _feedbackCancel;
+  late final ProviderSubscription<AsyncValue<LibraryDesignExportState>>
+  _feedbackCancel;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _LibraryDesignExportPageState
       designOverride: widget.designOverride,
     );
     _feedbackCancel = ref.container
-        .listen<AsyncValue<LibraryDesignExportState>>(_viewModel, (next) {
+        .listen<AsyncValue<LibraryDesignExportState>>(_viewModel, (_, next) {
           if (next case AsyncData(:final value)) {
             _handleFeedback(value);
           }
@@ -52,7 +53,7 @@ class _LibraryDesignExportPageState
 
   @override
   void dispose() {
-    _feedbackCancel();
+    _feedbackCancel.close();
     super.dispose();
   }
 
