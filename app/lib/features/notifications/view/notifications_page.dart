@@ -7,7 +7,7 @@ import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/notifications/data/models/notification_models.dart';
 import 'package:app/features/notifications/data/providers/unread_notifications_provider.dart';
 import 'package:app/features/notifications/view_model/notifications_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -71,17 +71,16 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
     final unread = ref.watch(unreadNotificationsProvider);
     final state = ref.watch(notificationsViewModel);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
       appBar: _NotificationsAppBar(
         unread: unread,
         onMarkAllRead: _handleMarkAllRead,
-        prefersEnglish: prefersEnglish,
+        l10n: l10n,
       ),
       body: SafeArea(
         child: Column(
@@ -95,7 +94,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               ),
               child: _FilterBar(
                 selected: state.valueOrNull?.filter ?? NotificationFilter.all,
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 onSelected: (filter) =>
                     ref.invoke(notificationsViewModel.setFilter(filter)),
               ),
@@ -108,7 +107,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 child: _buildContent(
                   context: context,
                   state: state,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   tokens: tokens,
                 ),
               ),
@@ -122,7 +121,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   Widget _buildContent({
     required BuildContext context,
     required AsyncValue<NotificationsState> state,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required DesignTokens tokens,
   }) {
     final loading = state is AsyncLoading<NotificationsState>;
@@ -140,10 +139,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load' : '読み込みに失敗しました',
+          title: l10n.commonLoadFailed,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () => unawaited(_refresh()),
         ),
       );
@@ -162,10 +161,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       final message =
           (state.valueOrNull?.filter ?? NotificationFilter.all) ==
               NotificationFilter.unread
-          ? (prefersEnglish ? 'You are all caught up.' : '未読はありません。')
-          : (prefersEnglish ? 'No notifications yet.' : '通知はまだありません。');
+          ? l10n.notificationsEmptyUnreadMessage
+          : l10n.notificationsEmptyAllMessage;
 
-      final cta = prefersEnglish ? 'Refresh' : '更新する';
+      final cta = l10n.notificationsRefresh;
 
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -174,7 +173,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         children: [
           SizedBox(height: tokens.spacing.xl),
           AppEmptyState(
-            title: prefersEnglish ? 'Inbox is clear' : 'お知らせはありません',
+            title: l10n.notificationsEmptyTitle,
             message: message,
             icon: Icons.notifications_none_rounded,
             actionLabel: cta,
@@ -202,7 +201,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               child: isLoadingMore
                   ? const CircularProgressIndicator.adaptive()
                   : Text(
-                      prefersEnglish ? 'Pull to load more' : '引っ張って続きを読み込む',
+                      l10n.notificationsLoadMoreHint,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
             ),
@@ -217,7 +216,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               bottom: tokens.spacing.xs,
             ),
             child: Text(
-              _formatHeader(date, prefersEnglish),
+              _formatHeader(date, l10n),
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
@@ -225,7 +224,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             padding: EdgeInsets.only(bottom: tokens.spacing.sm),
             child: _NotificationTile(
               notification: notification,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               onTap: () => _openNotification(notification),
               onSwipe: (read) =>
                   _handleSwipe(notification: notification, read: read),
@@ -265,12 +264,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     );
     if (!mounted) return;
 
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final message = read
-        ? (prefersEnglish ? 'Marked as read' : '既読にしました')
-        : (prefersEnglish ? 'Moved back to unread' : '未読に戻しました');
+        ? l10n.notificationsMarkedRead
+        : l10n.notificationsMarkedUnread;
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -278,7 +275,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         SnackBar(
           content: Text(message),
           action: SnackBarAction(
-            label: prefersEnglish ? 'Undo' : '元に戻す',
+            label: l10n.notificationsUndo,
             onPressed: () => ref.invoke(
               notificationsViewModel.setReadState(notification.id, previous),
             ),
@@ -300,15 +297,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   Future<void> _handleMarkAllRead() async {
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
     await ref.invoke(notificationsViewModel.markAllRead());
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(prefersEnglish ? 'All caught up' : 'すべて既読にしました')),
-    );
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.notificationsAllCaughtUp)));
   }
 }
 
@@ -317,12 +312,12 @@ class _NotificationsAppBar extends StatelessWidget
   const _NotificationsAppBar({
     required this.unread,
     required this.onMarkAllRead,
-    required this.prefersEnglish,
+    required this.l10n,
   });
 
   final AsyncValue<int> unread;
   final Future<void> Function() onMarkAllRead;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -341,17 +336,17 @@ class _NotificationsAppBar extends StatelessWidget
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(prefersEnglish ? 'Notifications' : 'お知らせ'),
+          Text(l10n.topBarNotificationsLabel),
           if (unreadCount > 0)
             Text(
-              prefersEnglish ? '$unreadCount unread' : '未読 $unreadCount 件',
+              l10n.notificationsUnreadCount(unreadCount),
               style: Theme.of(context).textTheme.labelSmall,
             ),
         ],
       ),
       actions: [
         PopupMenuButton<_OverflowAction>(
-          tooltip: prefersEnglish ? 'More' : 'その他の操作',
+          tooltip: l10n.notificationsMoreTooltip,
           onSelected: (action) {
             if (action == _OverflowAction.markAllRead) {
               unawaited(onMarkAllRead());
@@ -364,7 +359,7 @@ class _NotificationsAppBar extends StatelessWidget
                 children: [
                   const Icon(Icons.done_all, size: 18),
                   SizedBox(width: tokens.spacing.sm),
-                  Text(prefersEnglish ? 'Mark all read' : 'すべて既読にする'),
+                  Text(l10n.notificationsMarkAllRead),
                 ],
               ),
             ),
@@ -379,12 +374,12 @@ class _NotificationsAppBar extends StatelessWidget
 class _FilterBar extends StatelessWidget {
   const _FilterBar({
     required this.selected,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onSelected,
   });
 
   final NotificationFilter selected;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final Future<void> Function(NotificationFilter) onSelected;
 
   @override
@@ -393,12 +388,12 @@ class _FilterBar extends StatelessWidget {
       segments: [
         ButtonSegment(
           value: NotificationFilter.all,
-          label: Text(prefersEnglish ? 'All' : 'すべて'),
+          label: Text(l10n.notificationsFilterAll),
           icon: const Icon(Icons.inbox_rounded),
         ),
         ButtonSegment(
           value: NotificationFilter.unread,
-          label: Text(prefersEnglish ? 'Unread' : '未読'),
+          label: Text(l10n.notificationsFilterUnread),
           icon: const Icon(Icons.mark_email_unread_outlined),
         ),
       ],
@@ -416,13 +411,13 @@ class _FilterBar extends StatelessWidget {
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({
     required this.notification,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onTap,
     required this.onSwipe,
   });
 
   final AppNotification notification;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onTap;
   final Future<void> Function(bool) onSwipe;
 
@@ -430,7 +425,7 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final categoryColor = _categoryColor(notification.category, tokens);
-    final timeLabel = _timeLabel(notification.createdAt, prefersEnglish);
+    final timeLabel = _timeLabel(notification.createdAt, l10n);
 
     return Dismissible(
       key: ValueKey(notification.id),
@@ -442,14 +437,14 @@ class _NotificationTile extends StatelessWidget {
         return false;
       },
       background: _SwipeBackground(
-        label: prefersEnglish ? 'Mark read' : '既読にする',
+        label: l10n.notificationsMarkRead,
         icon: Icons.mark_email_read_outlined,
         color: tokens.colors.primary.withValues(alpha: 0.12),
       ),
       secondaryBackground: _SwipeBackground(
         label: notification.read
-            ? (prefersEnglish ? 'Mark unread' : '未読に戻す')
-            : (prefersEnglish ? 'Mark read' : '既読にする'),
+            ? l10n.notificationsMarkUnread
+            : l10n.notificationsMarkRead,
         icon: notification.read
             ? Icons.mark_email_unread_outlined
             : Icons.mark_email_read_outlined,
@@ -503,10 +498,7 @@ class _NotificationTile extends StatelessWidget {
                         children: [
                           ActionChip(
                             label: Text(
-                              _categoryLabel(
-                                notification.category,
-                                prefersEnglish,
-                              ),
+                              _categoryLabel(notification.category, l10n),
                             ),
                             avatar: Icon(
                               _categoryIcon(notification.category),
@@ -684,32 +676,33 @@ List<_ListEntry> _entriesFor(List<AppNotification> items) {
   return entries;
 }
 
-String _formatHeader(DateTime date, bool prefersEnglish) {
+String _formatHeader(DateTime date, AppLocalizations l10n) {
   final today = DateUtils.dateOnly(DateTime.now());
   final diff = today.difference(date).inDays;
-  if (diff == 0) return prefersEnglish ? 'Today' : '今日';
-  if (diff == 1) return prefersEnglish ? 'Yesterday' : '昨日';
+  if (diff == 0) return l10n.notificationsToday;
+  if (diff == 1) return l10n.notificationsYesterday;
 
   const weekdaysJa = ['月', '火', '水', '木', '金', '土', '日'];
   const weekdaysEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  final weekday = prefersEnglish
-      ? weekdaysEn[date.weekday - 1]
-      : weekdaysJa[date.weekday - 1];
+  final isJa = l10n.locale.languageCode == 'ja';
+  final weekday = isJa
+      ? weekdaysJa[date.weekday - 1]
+      : weekdaysEn[date.weekday - 1];
 
   final month = date.month;
   final day = date.day;
 
-  return prefersEnglish ? '$month/$day ($weekday)' : '$month月$day日($weekday)';
+  return isJa ? '$month月$day日($weekday)' : '$month/$day ($weekday)';
 }
 
-String _timeLabel(DateTime date, bool prefersEnglish) {
+String _timeLabel(DateTime date, AppLocalizations l10n) {
   String two(int v) => v.toString().padLeft(2, '0');
   final time = '${two(date.hour)}:${two(date.minute)}';
   final today = DateUtils.dateOnly(DateTime.now());
   final diff = today.difference(DateUtils.dateOnly(date)).inDays;
 
   if (diff == 0) return time;
-  if (diff == 1) return prefersEnglish ? 'Yesterday $time' : '昨日 $time';
+  if (diff == 1) return '${l10n.notificationsYesterday} $time';
   return '${date.month}/${date.day} $time';
 }
 
@@ -724,20 +717,20 @@ IconData _categoryIcon(NotificationCategory category) {
   };
 }
 
-String _categoryLabel(NotificationCategory category, bool prefersEnglish) {
+String _categoryLabel(NotificationCategory category, AppLocalizations l10n) {
   switch (category) {
     case NotificationCategory.order:
-      return prefersEnglish ? 'Order' : '注文';
+      return l10n.notificationsCategoryOrder;
     case NotificationCategory.design:
-      return prefersEnglish ? 'Design' : 'デザイン';
+      return l10n.notificationsCategoryDesign;
     case NotificationCategory.promotion:
-      return prefersEnglish ? 'Promo' : 'お得情報';
+      return l10n.notificationsCategoryPromo;
     case NotificationCategory.support:
-      return prefersEnglish ? 'Support' : 'サポート';
+      return l10n.notificationsCategorySupport;
     case NotificationCategory.system:
-      return prefersEnglish ? 'Status' : 'お知らせ';
+      return l10n.notificationsCategoryStatus;
     case NotificationCategory.security:
-      return prefersEnglish ? 'Security' : 'セキュリティ';
+      return l10n.notificationsCategorySecurity;
   }
 }
 

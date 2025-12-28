@@ -7,6 +7,7 @@ import 'package:app/core/storage/cache_keys.dart';
 import 'package:app/core/storage/local_cache.dart';
 import 'package:app/core/storage/local_persistence_providers.dart';
 import 'package:app/features/support/data/models/support_chat_models.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -123,10 +124,8 @@ class LocalSupportChatRepository implements SupportChatRepository {
   }
 
   SupportChatSession _seedSession() {
-    final prefersEnglish = _gates.prefersEnglish;
-    final greeting = prefersEnglish
-        ? "Hi! I'm Hana, your support bot. How can I help today?"
-        : 'こんにちは。サポートボットのハナです。ご用件を教えてください。';
+    final l10n = AppLocalizations(_gates.locale);
+    final greeting = l10n.supportChatSeedGreeting;
     final message = SupportChatMessage(
       id: createSupportChatMessageId(_random),
       sender: SupportChatSender.bot,

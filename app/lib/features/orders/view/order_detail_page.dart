@@ -480,9 +480,7 @@ class _SummaryTab extends StatelessWidget {
                           ),
                           SizedBox(height: tokens.spacing.xs),
                           Text(
-                            l10n.orderDetailItemQtyLabel(
-                              item.quantity.toString(),
-                            ),
+                            l10n.orderDetailItemQtyLabel(item.quantity),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: tokens.colors.onSurface.withValues(
@@ -647,7 +645,7 @@ class _TimelineTab extends StatelessWidget {
                             ),
                             SizedBox(height: tokens.spacing.xs),
                             Text(
-                              m.timeLabel ?? '—',
+                              m.timeLabel ?? l10n.commonPlaceholder,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -1026,7 +1024,11 @@ class _DesignGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (snapshots.isEmpty) {
-      return Text('—', style: Theme.of(context).textTheme.bodySmall);
+      final l10n = AppLocalizations.of(context);
+      return Text(
+        l10n.commonPlaceholder,
+        style: Theme.of(context).textTheme.bodySmall,
+      );
     }
 
     return Wrap(

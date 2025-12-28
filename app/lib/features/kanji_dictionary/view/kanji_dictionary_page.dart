@@ -506,7 +506,7 @@ class _KanjiListItem extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
     final subtitle = [
       candidate.pronunciation,
-      l10n.kanjiDictionaryStrokeCount(candidate.strokeCount.toString()),
+      l10n.kanjiDictionaryStrokeCount(candidate.strokeCount),
       if (candidate.radical.isNotEmpty)
         l10n.kanjiDictionaryRadicalLabel(candidate.radical),
     ].where((v) => v.trim().isNotEmpty).join(' · ');
@@ -636,9 +636,7 @@ class _KanjiDetailSheet extends ConsumerWidget {
           children: [
             InputChip(
               label: Text(
-                l10n.kanjiDictionaryChipStrokes(
-                  candidate.strokeCount.toString(),
-                ),
+                l10n.kanjiDictionaryChipStrokes(candidate.strokeCount),
               ),
               onPressed: () {},
             ),

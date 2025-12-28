@@ -73,7 +73,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
                       final release = latestRelease;
                       if (release == null) return const SizedBox.shrink();
                       return Badge(
-                        label: Text('v$latestVersion'),
+                        label: Text(l10n.commonVersionLabel(latestVersion)),
                         backgroundColor: tokens.colors.primary,
                         textColor: tokens.colors.onPrimary,
                         child: IconButton(

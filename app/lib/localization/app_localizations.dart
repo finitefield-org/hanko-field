@@ -974,6 +974,77 @@ class AppLocalizations {
       'orderProductionEventOnHold': 'On hold',
       'orderProductionEventRework': 'Rework',
       'orderProductionEventCanceled': 'Canceled',
+      'commonCancel': 'Cancel',
+      'commonPlaceholder': '—',
+      'commonVersionLabel': 'v{version}',
+      'commonSizeMillimeters': '{size}mm',
+      'commonPercentLabel': '{percent}%',
+      'commonPercentDiscountLabel': '-{percent}%',
+      'cartSummaryItem': '{count} item',
+      'profileExportTimeMinute': '{count} min ago',
+      'profileExportTimeHour': '{count} hr ago',
+      'profileExportTimeDay': '{count} day ago',
+      'profileExportTimeCompactMinute': '{count}m',
+      'profileExportTimeCompactHour': '{count}h',
+      'profileExportTimeCompactDay': '{count}d',
+      'designVersionsRelativeMinute': '{count}m ago',
+      'designVersionsRelativeHour': '{count}h ago',
+      'designVersionsRelativeDay': '{count}d ago',
+      'kanjiDictionaryStrokeCountOne': '{count} stroke',
+      'kanjiDictionaryChipStrokesOne': 'Stroke: {count}',
+      'notificationsEmptyUnreadMessage': 'You are all caught up.',
+      'notificationsEmptyAllMessage': 'No notifications yet.',
+      'notificationsEmptyTitle': 'Inbox is clear',
+      'notificationsRefresh': 'Refresh',
+      'notificationsLoadMoreHint': 'Pull to load more',
+      'notificationsMarkedRead': 'Marked as read',
+      'notificationsMarkedUnread': 'Moved back to unread',
+      'notificationsUndo': 'Undo',
+      'notificationsAllCaughtUp': 'All caught up',
+      'notificationsUnreadCount': '{count} unread',
+      'notificationsMoreTooltip': 'More',
+      'notificationsMarkAllRead': 'Mark all read',
+      'notificationsFilterAll': 'All',
+      'notificationsFilterUnread': 'Unread',
+      'notificationsMarkRead': 'Mark read',
+      'notificationsMarkUnread': 'Mark unread',
+      'notificationsToday': 'Today',
+      'notificationsYesterday': 'Yesterday',
+      'notificationsCategoryOrder': 'Order',
+      'notificationsCategoryDesign': 'Design',
+      'notificationsCategoryPromo': 'Promo',
+      'notificationsCategorySupport': 'Support',
+      'notificationsCategoryStatus': 'Status',
+      'notificationsCategorySecurity': 'Security',
+      'orderReorderTitle': 'Reorder',
+      'orderReorderSelectItem': 'Select at least one item to reorder',
+      'orderReorderCartRebuilt': 'Cart rebuilt for checkout',
+      'orderReorderFromOrder': 'From {order}',
+      'orderReorderSelectedCount': '{selected}/{total} selected',
+      'orderReorderRebuildCart': 'Rebuild cart',
+      'orderReorderBannerOutOfStockAndPrice':
+          'Some items are out of stock and some prices have changed.',
+      'orderReorderBannerOutOfStock': 'Some items are out of stock.',
+      'orderReorderBannerPriceChanged':
+          'Some prices have changed since your last order.',
+      'orderReorderBannerUpdates': 'Updates available.',
+      'orderReorderDismiss': 'Dismiss',
+      'orderReorderItemFallback': 'Item',
+      'orderReorderDesignLabel': 'Design: {label}',
+      'orderReorderOutOfStock': 'Out of stock',
+      'orderReorderPriceUpdated': 'Price updated',
+      'orderReorderLoadFailed': 'Could not load reorder data.',
+      'nameValidationSurnameRequired': 'Enter surname',
+      'nameValidationSurnameFullWidth': 'Use full width',
+      'nameValidationGivenRequired': 'Enter given name',
+      'nameValidationGivenFullWidth': 'Use full width',
+      'nameValidationSurnameKanaRequired': 'Enter surname kana',
+      'nameValidationKanaFullWidth': 'Use full-width kana',
+      'nameValidationGivenKanaRequired': 'Enter given name kana',
+      'nameValidationKanaFullWidthRecommended':
+          'Use kana in full width for engraving accuracy',
+      'supportChatSeedGreeting':
+          "Hi! I'm Hana, your support bot. How can I help today?",
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -1833,6 +1904,73 @@ class AppLocalizations {
       'orderProductionEventOnHold': '保留',
       'orderProductionEventRework': '再加工',
       'orderProductionEventCanceled': 'キャンセル',
+      'commonCancel': 'キャンセル',
+      'commonPlaceholder': '—',
+      'commonVersionLabel': 'v{version}',
+      'commonSizeMillimeters': '{size}mm',
+      'commonPercentLabel': '{percent}%',
+      'commonPercentDiscountLabel': '-{percent}%',
+      'cartSummaryItem': '{count}点',
+      'profileExportTimeMinute': '{count}分前',
+      'profileExportTimeHour': '{count}時間前',
+      'profileExportTimeDay': '{count}日前',
+      'profileExportTimeCompactMinute': '{count}分',
+      'profileExportTimeCompactHour': '{count}時間',
+      'profileExportTimeCompactDay': '{count}日',
+      'designVersionsRelativeMinute': '{count}分前',
+      'designVersionsRelativeHour': '{count}時間前',
+      'designVersionsRelativeDay': '{count}日前',
+      'kanjiDictionaryStrokeCountOne': '{count}画',
+      'kanjiDictionaryChipStrokesOne': '画数: {count}',
+      'notificationsEmptyUnreadMessage': '未読はありません。',
+      'notificationsEmptyAllMessage': '通知はまだありません。',
+      'notificationsEmptyTitle': 'お知らせはありません',
+      'notificationsRefresh': '更新する',
+      'notificationsLoadMoreHint': '引っ張って続きを読み込む',
+      'notificationsMarkedRead': '既読にしました',
+      'notificationsMarkedUnread': '未読に戻しました',
+      'notificationsUndo': '元に戻す',
+      'notificationsAllCaughtUp': 'すべて既読にしました',
+      'notificationsUnreadCount': '未読 {count} 件',
+      'notificationsMoreTooltip': 'その他の操作',
+      'notificationsMarkAllRead': 'すべて既読にする',
+      'notificationsFilterAll': 'すべて',
+      'notificationsFilterUnread': '未読',
+      'notificationsMarkRead': '既読にする',
+      'notificationsMarkUnread': '未読に戻す',
+      'notificationsToday': '今日',
+      'notificationsYesterday': '昨日',
+      'notificationsCategoryOrder': '注文',
+      'notificationsCategoryDesign': 'デザイン',
+      'notificationsCategoryPromo': 'お得情報',
+      'notificationsCategorySupport': 'サポート',
+      'notificationsCategoryStatus': 'お知らせ',
+      'notificationsCategorySecurity': 'セキュリティ',
+      'orderReorderTitle': '再注文',
+      'orderReorderSelectItem': '再注文する商品を選択してください',
+      'orderReorderCartRebuilt': 'カートを再作成してチェックアウトへ進みます',
+      'orderReorderFromOrder': '{order} の内容から再注文',
+      'orderReorderSelectedCount': '{selected}/{total} 件選択',
+      'orderReorderRebuildCart': 'カートを再作成',
+      'orderReorderBannerOutOfStockAndPrice': '在庫切れの商品、価格変更の商品があります。',
+      'orderReorderBannerOutOfStock': '在庫切れの商品があります。',
+      'orderReorderBannerPriceChanged': '前回注文時から価格が変更されています。',
+      'orderReorderBannerUpdates': '更新があります。',
+      'orderReorderDismiss': '閉じる',
+      'orderReorderItemFallback': '商品',
+      'orderReorderDesignLabel': 'デザイン：{label}',
+      'orderReorderOutOfStock': '在庫切れ',
+      'orderReorderPriceUpdated': '価格変更',
+      'orderReorderLoadFailed': '再注文情報の取得に失敗しました。',
+      'nameValidationSurnameRequired': '姓を入力してください',
+      'nameValidationSurnameFullWidth': '全角で入力してください (姓)',
+      'nameValidationGivenRequired': '名を入力してください',
+      'nameValidationGivenFullWidth': '全角で入力してください (名)',
+      'nameValidationSurnameKanaRequired': 'セイを入力してください',
+      'nameValidationKanaFullWidth': '全角カナで入力してください',
+      'nameValidationGivenKanaRequired': 'メイを入力してください',
+      'nameValidationKanaFullWidthRecommended': 'フリガナは全角が推奨です',
+      'supportChatSeedGreeting': 'こんにちは。サポートボットのハナです。ご用件を教えてください。',
     },
   };
 
@@ -2293,12 +2431,14 @@ class AppLocalizations {
   String get commonBack => _string('commonBack');
   String get commonRetry => _string('commonRetry');
   String get commonClose => _string('commonClose');
+  String get commonCancel => _string('commonCancel');
   String get commonSave => _string('commonSave');
   String get commonLearnMore => _string('commonLearnMore');
   String get commonLoadMore => _string('commonLoadMore');
   String get commonClear => _string('commonClear');
   String get commonLoadFailed => _string('commonLoadFailed');
   String get commonUnknown => _string('commonUnknown');
+  String get commonPlaceholder => _string('commonPlaceholder');
   String get offlineTitle => _string('offlineTitle');
   String get offlineMessage => _string('offlineMessage');
   String get offlineRetry => _string('offlineRetry');
@@ -2912,6 +3052,70 @@ class AppLocalizations {
       _string('orderDetailMilestoneDelivered');
   String get orderDetailMilestoneCanceled =>
       _string('orderDetailMilestoneCanceled');
+  String get notificationsEmptyUnreadMessage =>
+      _string('notificationsEmptyUnreadMessage');
+  String get notificationsEmptyAllMessage =>
+      _string('notificationsEmptyAllMessage');
+  String get notificationsEmptyTitle => _string('notificationsEmptyTitle');
+  String get notificationsRefresh => _string('notificationsRefresh');
+  String get notificationsLoadMoreHint => _string('notificationsLoadMoreHint');
+  String get notificationsMarkedRead => _string('notificationsMarkedRead');
+  String get notificationsMarkedUnread => _string('notificationsMarkedUnread');
+  String get notificationsUndo => _string('notificationsUndo');
+  String get notificationsAllCaughtUp => _string('notificationsAllCaughtUp');
+  String get notificationsMoreTooltip => _string('notificationsMoreTooltip');
+  String get notificationsMarkAllRead => _string('notificationsMarkAllRead');
+  String get notificationsFilterAll => _string('notificationsFilterAll');
+  String get notificationsFilterUnread => _string('notificationsFilterUnread');
+  String get notificationsMarkRead => _string('notificationsMarkRead');
+  String get notificationsMarkUnread => _string('notificationsMarkUnread');
+  String get notificationsToday => _string('notificationsToday');
+  String get notificationsYesterday => _string('notificationsYesterday');
+  String get notificationsCategoryOrder =>
+      _string('notificationsCategoryOrder');
+  String get notificationsCategoryDesign =>
+      _string('notificationsCategoryDesign');
+  String get notificationsCategoryPromo =>
+      _string('notificationsCategoryPromo');
+  String get notificationsCategorySupport =>
+      _string('notificationsCategorySupport');
+  String get notificationsCategoryStatus =>
+      _string('notificationsCategoryStatus');
+  String get notificationsCategorySecurity =>
+      _string('notificationsCategorySecurity');
+  String get orderReorderTitle => _string('orderReorderTitle');
+  String get orderReorderSelectItem => _string('orderReorderSelectItem');
+  String get orderReorderCartRebuilt => _string('orderReorderCartRebuilt');
+  String get orderReorderRebuildCart => _string('orderReorderRebuildCart');
+  String get orderReorderBannerOutOfStockAndPrice =>
+      _string('orderReorderBannerOutOfStockAndPrice');
+  String get orderReorderBannerOutOfStock =>
+      _string('orderReorderBannerOutOfStock');
+  String get orderReorderBannerPriceChanged =>
+      _string('orderReorderBannerPriceChanged');
+  String get orderReorderBannerUpdates => _string('orderReorderBannerUpdates');
+  String get orderReorderDismiss => _string('orderReorderDismiss');
+  String get orderReorderItemFallback => _string('orderReorderItemFallback');
+  String get orderReorderOutOfStock => _string('orderReorderOutOfStock');
+  String get orderReorderPriceUpdated => _string('orderReorderPriceUpdated');
+  String get orderReorderLoadFailed => _string('orderReorderLoadFailed');
+  String get nameValidationSurnameRequired =>
+      _string('nameValidationSurnameRequired');
+  String get nameValidationSurnameFullWidth =>
+      _string('nameValidationSurnameFullWidth');
+  String get nameValidationGivenRequired =>
+      _string('nameValidationGivenRequired');
+  String get nameValidationGivenFullWidth =>
+      _string('nameValidationGivenFullWidth');
+  String get nameValidationSurnameKanaRequired =>
+      _string('nameValidationSurnameKanaRequired');
+  String get nameValidationKanaFullWidth =>
+      _string('nameValidationKanaFullWidth');
+  String get nameValidationGivenKanaRequired =>
+      _string('nameValidationGivenKanaRequired');
+  String get nameValidationKanaFullWidthRecommended =>
+      _string('nameValidationKanaFullWidthRecommended');
+  String get supportChatSeedGreeting => _string('supportChatSeedGreeting');
   String get kanjiDictionaryTitle => _string('kanjiDictionaryTitle');
   String get kanjiDictionaryToggleShowAll =>
       _string('kanjiDictionaryToggleShowAll');
@@ -3016,18 +3220,66 @@ class AppLocalizations {
   String get orderProductionEventCanceled =>
       _string('orderProductionEventCanceled');
 
+  String commonVersionLabel(String version) {
+    final template = _string('commonVersionLabel');
+    return template.replaceAll('{version}', version);
+  }
+
+  String commonSizeMillimeters(String size) {
+    final template = _string('commonSizeMillimeters');
+    return template.replaceAll('{size}', size);
+  }
+
+  String commonPercentLabel(String percent) {
+    final template = _string('commonPercentLabel');
+    return template.replaceAll('{percent}', percent);
+  }
+
+  String commonPercentDiscountLabel(String percent) {
+    final template = _string('commonPercentDiscountLabel');
+    return template.replaceAll('{percent}', percent);
+  }
+
+  String notificationsUnreadCount(int count) {
+    final template = _string('notificationsUnreadCount');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String orderReorderFromOrder(String orderNumber) {
+    final template = _string('orderReorderFromOrder');
+    return template.replaceAll('{order}', orderNumber);
+  }
+
+  String orderReorderSelectedCount(int selected, int total) {
+    final template = _string('orderReorderSelectedCount');
+    return template
+        .replaceAll('{selected}', selected.toString())
+        .replaceAll('{total}', total.toString());
+  }
+
+  String orderReorderDesignLabel(String label) {
+    final template = _string('orderReorderDesignLabel');
+    return template.replaceAll('{label}', label);
+  }
+
   String profileExportTimeMinutes(int count) {
-    final template = _string('profileExportTimeMinutes');
+    final template = count == 1
+        ? _string('profileExportTimeMinute')
+        : _string('profileExportTimeMinutes');
     return template.replaceAll('{count}', '$count');
   }
 
   String profileExportTimeHours(int count) {
-    final template = _string('profileExportTimeHours');
+    final template = count == 1
+        ? _string('profileExportTimeHour')
+        : _string('profileExportTimeHours');
     return template.replaceAll('{count}', '$count');
   }
 
   String profileExportTimeDays(int count) {
-    final template = _string('profileExportTimeDays');
+    final template = count == 1
+        ? _string('profileExportTimeDay')
+        : _string('profileExportTimeDays');
     return template.replaceAll('{count}', '$count');
   }
 
@@ -3042,17 +3294,23 @@ class AppLocalizations {
   }
 
   String profileExportTimeCompactMinutes(int count) {
-    final template = _string('profileExportTimeCompactMinutes');
+    final template = count == 1
+        ? _string('profileExportTimeCompactMinute')
+        : _string('profileExportTimeCompactMinutes');
     return template.replaceAll('{count}', '$count');
   }
 
   String profileExportTimeCompactHours(int count) {
-    final template = _string('profileExportTimeCompactHours');
+    final template = count == 1
+        ? _string('profileExportTimeCompactHour')
+        : _string('profileExportTimeCompactHours');
     return template.replaceAll('{count}', '$count');
   }
 
   String profileExportTimeCompactDays(int count) {
-    final template = _string('profileExportTimeCompactDays');
+    final template = count == 1
+        ? _string('profileExportTimeCompactDay')
+        : _string('profileExportTimeCompactDays');
     return template.replaceAll('{count}', '$count');
   }
 
@@ -3119,17 +3377,23 @@ class AppLocalizations {
   }
 
   String designVersionsRelativeMinutes(int count) {
-    final template = _string('designVersionsRelativeMinutes');
+    final template = count == 1
+        ? _string('designVersionsRelativeMinute')
+        : _string('designVersionsRelativeMinutes');
     return template.replaceAll('{count}', '$count');
   }
 
   String designVersionsRelativeHours(int count) {
-    final template = _string('designVersionsRelativeHours');
+    final template = count == 1
+        ? _string('designVersionsRelativeHour')
+        : _string('designVersionsRelativeHours');
     return template.replaceAll('{count}', '$count');
   }
 
   String designVersionsRelativeDays(int count) {
-    final template = _string('designVersionsRelativeDays');
+    final template = count == 1
+        ? _string('designVersionsRelativeDay')
+        : _string('designVersionsRelativeDays');
     return template.replaceAll('{count}', '$count');
   }
 
@@ -3158,9 +3422,9 @@ class AppLocalizations {
     return template.replaceAll('{number}', number);
   }
 
-  String orderDetailItemQtyLabel(String quantity) {
+  String orderDetailItemQtyLabel(int quantity) {
     final template = _string('orderDetailItemQtyLabel');
-    return template.replaceAll('{quantity}', quantity);
+    return template.replaceAll('{quantity}', '$quantity');
   }
 
   String orderDetailPaymentPaidAt(String date) {
@@ -3173,9 +3437,11 @@ class AppLocalizations {
     return template.replaceAll('{id}', id).replaceAll('{date}', date);
   }
 
-  String kanjiDictionaryStrokeCount(String count) {
-    final template = _string('kanjiDictionaryStrokeCount');
-    return template.replaceAll('{count}', count);
+  String kanjiDictionaryStrokeCount(int count) {
+    final template = count == 1
+        ? _string('kanjiDictionaryStrokeCountOne')
+        : _string('kanjiDictionaryStrokeCount');
+    return template.replaceAll('{count}', '$count');
   }
 
   String kanjiDictionaryRadicalLabel(String radical) {
@@ -3183,9 +3449,11 @@ class AppLocalizations {
     return template.replaceAll('{radical}', radical);
   }
 
-  String kanjiDictionaryChipStrokes(String count) {
-    final template = _string('kanjiDictionaryChipStrokes');
-    return template.replaceAll('{count}', count);
+  String kanjiDictionaryChipStrokes(int count) {
+    final template = count == 1
+        ? _string('kanjiDictionaryChipStrokesOne')
+        : _string('kanjiDictionaryChipStrokes');
+    return template.replaceAll('{count}', '$count');
   }
 
   String kanjiDictionaryChipRadical(String radical) {
@@ -3248,7 +3516,9 @@ class AppLocalizations {
   }
 
   String cartSummaryItems(int count) {
-    final template = _string('cartSummaryItems');
+    final template = count == 1
+        ? _string('cartSummaryItem')
+        : _string('cartSummaryItems');
     return template.replaceAll('{count}', count.toString());
   }
 

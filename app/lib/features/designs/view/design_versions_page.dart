@@ -792,7 +792,7 @@ class _SimilarityGauge extends StatelessWidget {
                   ),
                 ),
               ),
-              Text('${(value * 100).round()}%'),
+              Text(l10n.commonPercentLabel('${(value * 100).round()}')),
             ],
           ),
         ),

@@ -836,7 +836,7 @@ Widget _metadataCard(
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
         title: Text(l10n.libraryDesignDetailMetadataVersion),
-        subtitle: Text('v${design.version}'),
+        subtitle: Text(l10n.commonVersionLabel(design.version.toString())),
         dense: true,
       ),
     ],

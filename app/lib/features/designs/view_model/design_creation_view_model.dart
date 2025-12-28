@@ -7,6 +7,7 @@ import 'package:app/core/model/enums.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/users/data/models/user_models.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/security/storage_permission_client.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/shared/providers/session_provider.dart';
@@ -509,6 +510,7 @@ NameValidationResult validateNameDraft(
   NameInputDraft draft,
   AppExperienceGates gates,
 ) {
+  final l10n = AppLocalizations(gates.locale);
   String? surnameError;
   String? givenError;
   String? surnameKanaError;
@@ -516,36 +518,28 @@ NameValidationResult validateNameDraft(
   String? scriptWarning;
 
   if (draft.surnameKanji.trim().isEmpty) {
-    surnameError = gates.prefersEnglish ? 'Enter surname' : '姓を入力してください';
+    surnameError = l10n.nameValidationSurnameRequired;
   } else if (_containsHalfWidth(draft.surnameKanji) && !gates.prefersEnglish) {
-    surnameError = gates.prefersEnglish ? 'Use full width' : '全角で入力してください (姓)';
+    surnameError = l10n.nameValidationSurnameFullWidth;
   }
 
   if (draft.givenKanji.trim().isEmpty) {
-    givenError = gates.prefersEnglish ? 'Enter given name' : '名を入力してください';
+    givenError = l10n.nameValidationGivenRequired;
   } else if (_containsHalfWidth(draft.givenKanji) && !gates.prefersEnglish) {
-    givenError = gates.prefersEnglish ? 'Use full width' : '全角で入力してください (名)';
+    givenError = l10n.nameValidationGivenFullWidth;
   }
 
   if (gates.prefersJapanese) {
     if (draft.surnameKana.trim().isEmpty) {
-      surnameKanaError = gates.prefersEnglish
-          ? 'Enter surname kana'
-          : 'セイを入力してください';
+      surnameKanaError = l10n.nameValidationSurnameKanaRequired;
     } else if (!_looksKana(draft.surnameKana)) {
-      surnameKanaError = gates.prefersEnglish
-          ? 'Use full-width kana'
-          : '全角カナで入力してください';
+      surnameKanaError = l10n.nameValidationKanaFullWidth;
     }
 
     if (draft.givenKana.trim().isEmpty) {
-      givenKanaError = gates.prefersEnglish
-          ? 'Enter given name kana'
-          : 'メイを入力してください';
+      givenKanaError = l10n.nameValidationGivenKanaRequired;
     } else if (!_looksKana(draft.givenKana)) {
-      givenKanaError = gates.prefersEnglish
-          ? 'Use full-width kana'
-          : '全角カナで入力してください';
+      givenKanaError = l10n.nameValidationKanaFullWidth;
     }
   } else {
     final hasHalfWidthSurname =
@@ -553,9 +547,7 @@ NameValidationResult validateNameDraft(
     final hasHalfWidthGiven =
         draft.givenKana.isNotEmpty && _containsHalfWidth(draft.givenKana);
     if (hasHalfWidthSurname || hasHalfWidthGiven) {
-      scriptWarning = gates.prefersEnglish
-          ? 'Use kana in full width for engraving accuracy'
-          : 'フリガナは全角が推奨です';
+      scriptWarning = l10n.nameValidationKanaFullWidthRecommended;
     }
   }
 

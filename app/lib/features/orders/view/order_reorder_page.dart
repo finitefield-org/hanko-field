@@ -7,6 +7,7 @@ import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/features/orders/view_model/order_reorder_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +28,7 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final vm = OrderReorderViewModel(orderId: widget.orderId);
     final stateAsync = ref.watch(vm);
     final toggleState = ref.watch(vm.toggleLineMut);
@@ -42,18 +42,18 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
       appBar: AppBar(
         centerTitle: true,
         leading: IconButton(
-          tooltip: prefersEnglish ? 'Back' : '戻る',
+          tooltip: l10n.commonBack,
           icon: const Icon(Icons.arrow_back),
           onPressed: () =>
               ref.container.read(navigationControllerProvider).pop(),
         ),
-        title: Text(prefersEnglish ? 'Reorder' : '再注文'),
+        title: Text(l10n.orderReorderTitle),
       ),
       body: SafeArea(
         child: data != null
             ? _ReorderBody(
                 state: data,
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 isBusy: isBusy,
                 showBanner: !_bannerDismissed,
                 onToggle: (id) => ref.invoke(vm.toggleLine(id)),
@@ -67,7 +67,7 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
                   ? const Center(child: CircularProgressIndicator.adaptive())
                   : (isError
                         ? _ErrorState(
-                            prefersEnglish: prefersEnglish,
+                            l10n: l10n,
                             onRetry: () => unawaited(
                               ref.refreshValue(vm, keepPrevious: true),
                             ),
@@ -84,19 +84,13 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
   Future<void> _rebuildCart(OrderReorderState state) async {
     final messenger = ScaffoldMessenger.of(context);
     final gates = ref.container.read(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     final lines = buildCartLinesFromReorder(state, gates);
     if (lines.isEmpty) {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish
-                ? 'Select at least one item to reorder'
-                : '再注文する商品を選択してください',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderReorderSelectItem)),
       );
       return;
     }
@@ -106,13 +100,7 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          prefersEnglish
-              ? 'Cart rebuilt for checkout'
-              : 'カートを再作成してチェックアウトへ進みます',
-        ),
-      ),
+      SnackBar(content: Text(l10n.orderReorderCartRebuilt)),
     );
 
     ref.container
@@ -124,7 +112,7 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
 class _ReorderBody extends StatelessWidget {
   const _ReorderBody({
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.isBusy,
     required this.showBanner,
     required this.onToggle,
@@ -134,7 +122,7 @@ class _ReorderBody extends StatelessWidget {
   });
 
   final OrderReorderState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final bool isBusy;
   final bool showBanner;
   final ValueChanged<String> onToggle;
@@ -164,16 +152,15 @@ class _ReorderBody extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  prefersEnglish
-                      ? 'From $orderNumber'
-                      : '$orderNumber の内容から再注文',
+                  l10n.orderReorderFromOrder(orderNumber),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               Text(
-                prefersEnglish
-                    ? '${state.selectedCount}/${state.selectableCount} selected'
-                    : '${state.selectedCount}/${state.selectableCount} 件選択',
+                l10n.orderReorderSelectedCount(
+                  state.selectedCount,
+                  state.selectableCount,
+                ),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: tokens.colors.onSurface.withValues(alpha: 0.7),
                 ),
@@ -190,7 +177,7 @@ class _ReorderBody extends StatelessWidget {
               final line = items[index];
               return _ReorderLineCard(
                 line: line,
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 onToggle: isBusy ? null : () => onToggle(line.id),
               );
             },
@@ -208,14 +195,11 @@ class _ReorderBody extends StatelessWidget {
               Expanded(
                 child: FilledButton.tonal(
                   onPressed: isBusy ? null : onRebuildCart,
-                  child: Text(prefersEnglish ? 'Rebuild cart' : 'カートを再作成'),
+                  child: Text(l10n.orderReorderRebuildCart),
                 ),
               ),
               SizedBox(width: tokens.spacing.sm),
-              TextButton(
-                onPressed: onCancel,
-                child: Text(prefersEnglish ? 'Cancel' : 'キャンセル'),
-              ),
+              TextButton(onPressed: onCancel, child: Text(l10n.commonCancel)),
             ],
           ),
         ),
@@ -228,17 +212,10 @@ class _ReorderBody extends StatelessWidget {
     if (!state.hasOutOfStock && !state.hasPriceChanges) return null;
 
     final message = switch ((state.hasOutOfStock, state.hasPriceChanges)) {
-      (true, true) =>
-        prefersEnglish
-            ? 'Some items are out of stock and some prices have changed.'
-            : '在庫切れの商品、価格変更の商品があります。',
-      (true, false) =>
-        prefersEnglish ? 'Some items are out of stock.' : '在庫切れの商品があります。',
-      (false, true) =>
-        prefersEnglish
-            ? 'Some prices have changed since your last order.'
-            : '前回注文時から価格が変更されています。',
-      _ => prefersEnglish ? 'Updates available.' : '更新があります。',
+      (true, true) => l10n.orderReorderBannerOutOfStockAndPrice,
+      (true, false) => l10n.orderReorderBannerOutOfStock,
+      (false, true) => l10n.orderReorderBannerPriceChanged,
+      _ => l10n.orderReorderBannerUpdates,
     };
 
     return MaterialBanner(
@@ -248,7 +225,7 @@ class _ReorderBody extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: onDismissBanner,
-          child: Text(prefersEnglish ? 'Dismiss' : '閉じる'),
+          child: Text(l10n.orderReorderDismiss),
         ),
       ],
     );
@@ -258,12 +235,12 @@ class _ReorderBody extends StatelessWidget {
 class _ReorderLineCard extends StatelessWidget {
   const _ReorderLineCard({
     required this.line,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onToggle,
   });
 
   final OrderReorderLine line;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback? onToggle;
 
   @override
@@ -273,16 +250,14 @@ class _ReorderLineCard extends StatelessWidget {
         ?.trim();
     final title = line.item.name?.trim().isNotEmpty == true
         ? line.item.name!.trim()
-        : (prefersEnglish ? 'Item' : '商品');
+        : l10n.orderReorderItemFallback;
 
     final subtitleParts = <String>[
       if (line.item.sku.isNotEmpty) line.item.sku,
       if (snapshotLabel != null && snapshotLabel.isNotEmpty)
-        prefersEnglish ? 'Design: $snapshotLabel' : 'デザイン：$snapshotLabel',
+        l10n.orderReorderDesignLabel(snapshotLabel),
       if (line.item.quantity > 1)
-        prefersEnglish
-            ? 'Qty ${line.item.quantity}'
-            : '数量 ${line.item.quantity}',
+        l10n.orderDetailItemQtyLabel(line.item.quantity),
     ];
 
     final subtitle = subtitleParts.join(' · ');
@@ -334,12 +309,12 @@ class _ReorderLineCard extends StatelessWidget {
                       children: [
                         if (line.issue == ReorderLineIssue.outOfStock)
                           _Chip(
-                            label: prefersEnglish ? 'Out of stock' : '在庫切れ',
+                            label: l10n.orderReorderOutOfStock,
                             color: tokens.colors.error,
                           ),
                         if (line.issue == ReorderLineIssue.priceChanged)
                           _Chip(
-                            label: prefersEnglish ? 'Price updated' : '価格変更',
+                            label: l10n.orderReorderPriceUpdated,
                             color: tokens.colors.primary,
                           ),
                       ],
@@ -408,9 +383,9 @@ class _Chip extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.prefersEnglish, required this.onRetry});
+  const _ErrorState({required this.l10n, required this.onRetry});
 
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onRetry;
 
   @override
@@ -421,17 +396,9 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              prefersEnglish
-                  ? 'Could not load reorder data.'
-                  : '再注文情報の取得に失敗しました。',
-              textAlign: TextAlign.center,
-            ),
+            Text(l10n.orderReorderLoadFailed, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              child: Text(prefersEnglish ? 'Retry' : '再試行'),
-            ),
+            FilledButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
           ],
         ),
       ),
