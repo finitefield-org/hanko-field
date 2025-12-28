@@ -29,13 +29,18 @@ class AppCard extends StatelessWidget {
       child: child,
     );
 
-    return Material(
-      color: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(color: borderColor),
+    return Semantics(
+      container: true,
+      button: onTap != null,
+      enabled: onTap != null,
+      child: Material(
+        color: surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: borderColor),
+        ),
+        child: InkWell(borderRadius: radius, onTap: onTap, child: content),
       ),
-      child: InkWell(borderRadius: radius, onTap: onTap, child: content),
     );
   }
 }
@@ -73,42 +78,44 @@ class AppListTile extends StatelessWidget {
             vertical: spacing,
           ),
       onTap: onTap,
-      child: Row(
-        crossAxisAlignment: subtitle == null
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
-        children: [
-          if (leading != null) ...[
-            Padding(
-              padding: EdgeInsets.only(right: tokens.spacing.md),
-              child: leading,
-            ),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DefaultTextStyle(
-                  style: Theme.of(context).textTheme.titleMedium!,
-                  child: title,
-                ),
-                if (subtitle != null) ...[
-                  SizedBox(height: tokens.spacing.xs),
+      child: MergeSemantics(
+        child: Row(
+          crossAxisAlignment: subtitle == null
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
+          children: [
+            if (leading != null) ...[
+              Padding(
+                padding: EdgeInsets.only(right: tokens.spacing.md),
+                child: leading,
+              ),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   DefaultTextStyle(
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: tokens.colors.onSurface.withValues(alpha: 0.72),
-                    ),
-                    child: subtitle!,
+                    style: Theme.of(context).textTheme.titleMedium!,
+                    child: title,
                   ),
+                  if (subtitle != null) ...[
+                    SizedBox(height: tokens.spacing.xs),
+                    DefaultTextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: tokens.colors.onSurface.withValues(alpha: 0.72),
+                      ),
+                      child: subtitle!,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (trailing != null) ...[
-            SizedBox(width: tokens.spacing.md),
-            trailing!,
+            if (trailing != null) ...[
+              SizedBox(width: tokens.spacing.md),
+              trailing!,
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

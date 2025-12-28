@@ -39,7 +39,10 @@ class HankoFieldApp extends ConsumerWidget {
       localeResolutionCallback: AppLocalizations.resolveLocale,
       routerConfig: router,
       builder: (context, child) {
-        return AppMessageOverlay(child: child ?? const SizedBox.shrink());
+        return FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: AppMessageOverlay(child: child ?? const SizedBox.shrink()),
+        );
       },
     );
   }

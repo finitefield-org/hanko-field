@@ -61,7 +61,7 @@ class AppButton extends StatelessWidget {
             child: leading,
           ),
         Flexible(
-          child: Text(label, overflow: TextOverflow.ellipsis, style: textStyle),
+          child: Text(label, textAlign: TextAlign.center, style: textStyle),
         ),
         if (trailing != null)
           Padding(
@@ -71,14 +71,18 @@ class AppButton extends StatelessWidget {
       ],
     );
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: dense ? 40 : 48),
-      child: SizedBox(
-        width: expand ? double.infinity : null,
-        child: TextButton(
-          onPressed: disabled ? null : onPressed,
-          style: _buildStyle(tokens, colors, padding),
-          child: child,
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: dense ? 40 : 48),
+        child: SizedBox(
+          width: expand ? double.infinity : null,
+          child: TextButton(
+            onPressed: disabled ? null : onPressed,
+            style: _buildStyle(tokens, colors, padding),
+            child: child,
+          ),
         ),
       ),
     );

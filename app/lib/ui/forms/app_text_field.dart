@@ -53,60 +53,62 @@ class AppTextField extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: labelStyle),
-        SizedBox(height: tokens.spacing.xs),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          enabled: enabled,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          onFieldSubmitted: onSubmitted,
-          decoration: InputDecoration(
-            hintText: hintText,
-            helperText: helperText,
-            errorText: errorText,
-            filled: true,
-            fillColor: tokens.colors.surface,
-            contentPadding: fieldPadding,
-            prefixIcon: prefix == null
-                ? null
-                : Padding(
-                    padding: EdgeInsets.only(left: tokens.spacing.md),
-                    child: prefix,
-                  ),
-            prefixIconConstraints: BoxConstraints(
-              minHeight: 0,
-              minWidth: tokens.spacing.xl,
+    return MergeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: labelStyle),
+          SizedBox(height: tokens.spacing.xs),
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            obscureText: obscureText,
+            enabled: enabled,
+            maxLines: maxLines,
+            onChanged: onChanged,
+            onFieldSubmitted: onSubmitted,
+            decoration: InputDecoration(
+              hintText: hintText,
+              helperText: helperText,
+              errorText: errorText,
+              filled: true,
+              fillColor: tokens.colors.surface,
+              contentPadding: fieldPadding,
+              prefixIcon: prefix == null
+                  ? null
+                  : Padding(
+                      padding: EdgeInsets.only(left: tokens.spacing.md),
+                      child: prefix,
+                    ),
+              prefixIconConstraints: BoxConstraints(
+                minHeight: 0,
+                minWidth: tokens.spacing.xl,
+              ),
+              suffixIcon: suffix == null
+                  ? null
+                  : Padding(
+                      padding: EdgeInsets.only(right: tokens.spacing.md),
+                      child: suffix,
+                    ),
+              suffixIconConstraints: BoxConstraints(
+                minHeight: 0,
+                minWidth: tokens.spacing.xl,
+              ),
+              enabledBorder: borderFor(
+                tokens.colors.outline.withValues(alpha: 0.7),
+              ),
+              focusedBorder: borderFor(tokens.colors.primary),
+              errorBorder: borderFor(tokens.colors.error),
+              focusedErrorBorder: borderFor(tokens.colors.error),
+              helperStyle: Theme.of(context).textTheme.bodySmall,
+              errorStyle: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: tokens.colors.error),
             ),
-            suffixIcon: suffix == null
-                ? null
-                : Padding(
-                    padding: EdgeInsets.only(right: tokens.spacing.md),
-                    child: suffix,
-                  ),
-            suffixIconConstraints: BoxConstraints(
-              minHeight: 0,
-              minWidth: tokens.spacing.xl,
-            ),
-            enabledBorder: borderFor(
-              tokens.colors.outline.withValues(alpha: 0.7),
-            ),
-            focusedBorder: borderFor(tokens.colors.primary),
-            errorBorder: borderFor(tokens.colors.error),
-            focusedErrorBorder: borderFor(tokens.colors.error),
-            helperStyle: Theme.of(context).textTheme.bodySmall,
-            errorStyle: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: tokens.colors.error),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -139,20 +141,23 @@ class AppValidationMessage extends StatelessWidget {
       _ => Icons.info_outline,
     };
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, color: color, size: 18),
-        SizedBox(width: tokens.spacing.xs),
-        Expanded(
-          child: Text(
-            message,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: color, height: 1.3),
+    return Semantics(
+      liveRegion: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 18),
+          SizedBox(width: tokens.spacing.xs),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: color, height: 1.3),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
