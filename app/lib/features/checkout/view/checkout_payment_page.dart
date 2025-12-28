@@ -5,7 +5,7 @@ import 'package:app/features/checkout/view_model/checkout_payment_view_model.dar
 import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/payments/view/payment_method_form_sheet.dart';
 import 'package:app/features/users/data/models/user_models.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -24,8 +24,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(checkoutPaymentViewModel);
 
     return Scaffold(
@@ -33,13 +32,13 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       appBar: AppBar(
         centerTitle: true,
         leading: const BackButton(),
-        title: Text(prefersEnglish ? 'Payment method' : '支払い方法'),
+        title: Text(l10n.checkoutPaymentTitle),
         actions: [
           if (state.valueOrNull?.canAddMethods == true)
             IconButton(
-              tooltip: prefersEnglish ? 'Add payment method' : '支払い方法を追加',
+              tooltip: l10n.checkoutPaymentAddTooltip,
               icon: const Icon(Icons.add_card_outlined),
-              onPressed: () => _openAddForm(prefersEnglish: prefersEnglish),
+              onPressed: () => _openAddForm(l10n),
             ),
         ],
       ),
@@ -51,17 +50,12 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
             tokens.spacing.lg,
             tokens.spacing.lg,
           ),
-          child: _buildBody(
-            context: context,
-            prefersEnglish: prefersEnglish,
-            gates: gates,
-            state: state,
-          ),
+          child: _buildBody(context: context, l10n: l10n, state: state),
         ),
       ),
       bottomNavigationBar: _buildFooter(
         context: context,
-        prefersEnglish: prefersEnglish,
+        l10n: l10n,
         state: state,
       ),
     );
@@ -69,8 +63,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
 
   Widget _buildBody({
     required BuildContext context,
-    required bool prefersEnglish,
-    required AppExperienceGates gates,
+    required AppLocalizations l10n,
     required AsyncValue<CheckoutPaymentState> state,
   }) {
     final tokens = DesignTokensTheme.of(context);
@@ -88,10 +81,10 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load payments' : '支払い方法を読み込めません',
+          title: l10n.checkoutPaymentLoadFailedTitle,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () =>
               ref.refreshValue(checkoutPaymentViewModel, keepPrevious: false),
         ),
@@ -108,14 +101,12 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  prefersEnglish ? 'Add a payment method' : '支払い方法を追加してください',
+                  l10n.checkoutPaymentEmptyTitle,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 SizedBox(height: tokens.spacing.sm),
                 Text(
-                  prefersEnglish
-                      ? 'Save a card or wallet to continue checkout.'
-                      : 'カードやウォレットを登録すると、次のステップに進めます。',
+                  l10n.checkoutPaymentEmptyBody,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: tokens.colors.onSurface.withValues(alpha: 0.72),
                   ),
@@ -123,9 +114,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
                 if (!data.canAddMethods) ...[
                   SizedBox(height: tokens.spacing.sm),
                   Text(
-                    prefersEnglish
-                        ? 'Sign in to add methods.'
-                        : '支払い方法の追加にはログインが必要です。',
+                    l10n.checkoutPaymentSignInHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: tokens.colors.onSurface.withValues(alpha: 0.6),
                     ),
@@ -134,10 +123,9 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
                 if (data.canAddMethods) ...[
                   SizedBox(height: tokens.spacing.md),
                   AppButton(
-                    label: prefersEnglish ? 'Add method' : '支払い方法を追加',
+                    label: l10n.checkoutPaymentAddMethod,
                     expand: true,
-                    onPressed: () =>
-                        _openAddForm(prefersEnglish: prefersEnglish),
+                    onPressed: () => _openAddForm(l10n),
                   ),
                 ],
               ],
@@ -153,9 +141,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          prefersEnglish
-              ? 'Choose a saved payment method.'
-              : '保存済みの支払い方法を選択してください。',
+          l10n.checkoutPaymentChooseSaved,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: tokens.colors.onSurface.withValues(alpha: 0.75),
           ),
@@ -185,7 +171,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
                 final method = data.methods[index];
                 return _PaymentTile(
                   method: method,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   groupValue: selectedId,
                   onSelect: () => ref.invoke(
                     checkoutPaymentViewModel.selectPayment(method.id),
@@ -198,11 +184,11 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
         if (data.canAddMethods) ...[
           SizedBox(height: tokens.spacing.md),
           AppButton(
-            label: prefersEnglish ? 'Add another method' : '支払い方法を追加',
+            label: l10n.checkoutPaymentAddAnother,
             variant: AppButtonVariant.ghost,
             leading: const Icon(Icons.add),
             expand: true,
-            onPressed: () => _openAddForm(prefersEnglish: prefersEnglish),
+            onPressed: () => _openAddForm(l10n),
           ),
         ],
       ],
@@ -211,7 +197,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
 
   Widget _buildFooter({
     required BuildContext context,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required AsyncValue<CheckoutPaymentState> state,
   }) {
     final tokens = DesignTokensTheme.of(context);
@@ -228,7 +214,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
         tokens.spacing.md,
       ),
       child: AppButton(
-        label: prefersEnglish ? 'Continue to review' : '注文確認へ進む',
+        label: l10n.checkoutPaymentContinueReview,
         expand: true,
         isLoading: isSaving,
         onPressed: selected == null || isSaving
@@ -238,13 +224,12 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
     );
   }
 
-  Future<void> _openAddForm({required bool prefersEnglish}) async {
+  Future<void> _openAddForm(AppLocalizations l10n) async {
     final result = await showModalBottomSheet<PaymentMethodDraft>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          PaymentMethodFormSheet(prefersEnglish: prefersEnglish),
+      builder: (context) => const PaymentMethodFormSheet(),
     );
     if (result == null) return;
     final save = await ref.invoke(
@@ -256,10 +241,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            save.validation.message ??
-                (prefersEnglish
-                    ? 'Could not add payment method'
-                    : '支払い方法を追加できません'),
+            save.validation.message ?? l10n.checkoutPaymentAddFailed,
           ),
         ),
       );
@@ -270,13 +252,13 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
 class _PaymentTile extends StatelessWidget {
   const _PaymentTile({
     required this.method,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.groupValue,
     required this.onSelect,
   });
 
   final PaymentMethod method;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final String? groupValue;
   final VoidCallback onSelect;
 
@@ -339,12 +321,12 @@ class _PaymentTile extends StatelessWidget {
       if (last4 != null) {
         return '•••• $last4';
       }
-      return prefersEnglish ? 'Card' : 'カード';
+      return l10n.checkoutPaymentMethodCard;
     }
     return switch (method.methodType) {
-      PaymentMethodType.wallet => prefersEnglish ? 'Wallet' : 'ウォレット',
-      PaymentMethodType.bank => prefersEnglish ? 'Bank transfer' : '銀行振込',
-      _ => prefersEnglish ? 'Payment method' : '支払い方法',
+      PaymentMethodType.wallet => l10n.checkoutPaymentMethodWallet,
+      PaymentMethodType.bank => l10n.checkoutPaymentMethodBank,
+      _ => l10n.checkoutPaymentMethodFallback,
     };
   }
 
@@ -352,9 +334,7 @@ class _PaymentTile extends StatelessWidget {
     if (method.methodType == PaymentMethodType.card &&
         method.expMonth != null &&
         method.expYear != null) {
-      return prefersEnglish
-          ? 'Expires ${method.expMonth}/${method.expYear}'
-          : '有効期限 ${method.expMonth}/${method.expYear}';
+      return l10n.checkoutPaymentExpires(method.expMonth!, method.expYear!);
     }
     return method.billingName;
   }

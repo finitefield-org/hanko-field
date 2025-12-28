@@ -3,6 +3,7 @@
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_address_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/buttons/app_button.dart';
@@ -26,8 +27,8 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
     final state = ref.watch(checkoutAddressViewModel);
 
     return Scaffold(
@@ -35,10 +36,10 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
       appBar: AppBar(
         centerTitle: true,
         leading: const BackButton(),
-        title: Text(prefersEnglish ? 'Shipping address' : '配送先'),
+        title: Text(l10n.checkoutAddressTitle),
         actions: [
           IconButton(
-            tooltip: prefersEnglish ? 'Add address' : '住所を追加',
+            tooltip: l10n.checkoutAddressAddTooltip,
             icon: const Icon(Icons.add_location_alt_outlined),
             onPressed: () => _openForm(),
           ),
@@ -54,7 +55,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
           ),
           child: _buildBody(
             context: context,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             gates: gates,
             state: state,
           ),
@@ -62,7 +63,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
       ),
       bottomNavigationBar: _buildFooter(
         context: context,
-        prefersEnglish: prefersEnglish,
+        l10n: l10n,
         state: state,
       ),
     );
@@ -70,7 +71,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
 
   Widget _buildBody({
     required BuildContext context,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required AppExperienceGates gates,
     required AsyncValue<CheckoutAddressState> state,
   }) {
@@ -89,10 +90,10 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load addresses' : '住所を読み込めません',
+          title: l10n.checkoutAddressLoadFailedTitle,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () =>
               ref.refreshValue(checkoutAddressViewModel, keepPrevious: false),
         ),
@@ -104,16 +105,14 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PersonaHint(prefersEnglish: prefersEnglish, gates: gates),
+          _PersonaHint(l10n: l10n, gates: gates),
           SizedBox(height: tokens.spacing.lg),
           Expanded(
             child: AppEmptyState(
-              title: prefersEnglish ? 'Add your first address' : '住所を追加してください',
-              message: prefersEnglish
-                  ? 'Save a shipping address to continue checkout.'
-                  : '配送先を登録すると、次のステップに進めます。',
+              title: l10n.checkoutAddressEmptyTitle,
+              message: l10n.checkoutAddressEmptyMessage,
               icon: Icons.home_work_outlined,
-              actionLabel: prefersEnglish ? 'Add address' : '住所を追加',
+              actionLabel: l10n.checkoutAddressAddAction,
               onAction: () => _openForm(makeDefault: true),
             ),
           ),
@@ -125,12 +124,10 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _PersonaHint(prefersEnglish: prefersEnglish, gates: gates),
+        _PersonaHint(l10n: l10n, gates: gates),
         SizedBox(height: tokens.spacing.sm),
         Text(
-          prefersEnglish
-              ? 'Choose where to ship your order.'
-              : '配送先を選択し、必要に応じて編集してください。',
+          l10n.checkoutAddressChooseHint,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: tokens.colors.onSurface.withValues(alpha: 0.7),
           ),
@@ -155,7 +152,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
                   address: address,
                   selected: isSelected,
                   selectedId: selectedId,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   onSelect: () => ref.invoke(
                     checkoutAddressViewModel.selectAddress(address.id),
                   ),
@@ -167,7 +164,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
         ),
         SizedBox(height: tokens.spacing.md),
         AppButton(
-          label: prefersEnglish ? 'Add another address' : '住所を追加',
+          label: l10n.checkoutAddressAddAnother,
           variant: AppButtonVariant.ghost,
           leading: const Icon(Icons.add),
           expand: true,
@@ -179,7 +176,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
 
   Widget _buildFooter({
     required BuildContext context,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required AsyncValue<CheckoutAddressState> state,
   }) {
     final tokens = DesignTokensTheme.of(context);
@@ -197,17 +194,17 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
         tokens.spacing.md,
       ),
       child: AppButton(
-        label: prefersEnglish ? 'Continue to shipping' : '配送方法へ進む',
+        label: l10n.checkoutAddressContinueShipping,
         expand: true,
         isLoading: isSaving,
         onPressed: selected == null || isSaving
             ? null
-            : () => _confirmAndNext(prefersEnglish),
+            : () => _confirmAndNext(l10n),
       ),
     );
   }
 
-  Future<void> _confirmAndNext(bool prefersEnglish) async {
+  Future<void> _confirmAndNext(AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final result = await ref.invoke(
@@ -215,11 +212,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
     );
     if (result == null) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish ? 'Select an address to continue' : '配送先を選択してください',
-          ),
-        ),
+        SnackBar(content: Text(l10n.checkoutAddressSelectRequired)),
       );
       return;
     }
@@ -232,7 +225,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
     bool makeDefault = false,
   }) async {
     final gates = ref.container.read(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final existing =
         ref.container.read(checkoutAddressViewModel).valueOrNull?.addresses ??
         const [];
@@ -274,16 +267,15 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
 
     final result = await showDialog<AddressSaveResult>(
       context: context,
-      builder: (context) =>
-          _AddressFormDialog(initial: initial, prefersEnglish: prefersEnglish),
+      builder: (context) => _AddressFormDialog(initial: initial),
     );
 
     if (!mounted || result == null || !result.isSuccess) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final message = prefersEnglish
-        ? (result.created ? 'Address added' : 'Address updated')
-        : (result.created ? '住所を追加しました' : '住所を更新しました');
+    final message = result.created
+        ? l10n.checkoutAddressSavedCreated
+        : l10n.checkoutAddressSavedUpdated;
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
@@ -293,7 +285,7 @@ class _AddressTile extends StatelessWidget {
     required this.address,
     required this.selected,
     required this.selectedId,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onSelect,
     required this.onEdit,
   });
@@ -301,7 +293,7 @@ class _AddressTile extends StatelessWidget {
   final UserAddress address;
   final bool selected;
   final String? selectedId;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onSelect;
   final VoidCallback onEdit;
 
@@ -310,11 +302,11 @@ class _AddressTile extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final chips = <String>[
-      if (selected) prefersEnglish ? 'Shipping' : '配送先',
-      if (address.isDefault) prefersEnglish ? 'Default' : '既定',
-      if (address.isDefault) prefersEnglish ? 'Billing' : '請求先',
+      if (selected) l10n.checkoutAddressChipShipping,
+      if (address.isDefault) l10n.checkoutAddressChipDefault,
+      if (address.isDefault) l10n.checkoutAddressChipBilling,
       if (address.country.toUpperCase() != 'JP')
-        (prefersEnglish ? 'International' : '海外配送'),
+        l10n.checkoutAddressChipInternational,
     ];
 
     return AppCard(
@@ -341,14 +333,13 @@ class _AddressTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        address.label ??
-                            (prefersEnglish ? 'Shipping address' : '配送先'),
+                        address.label ?? l10n.checkoutAddressLabelFallback,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
                     TextButton(
                       onPressed: onEdit,
-                      child: Text(prefersEnglish ? 'Edit' : '編集'),
+                      child: Text(l10n.checkoutAddressEditAction),
                     ),
                   ],
                 ),
@@ -359,7 +350,7 @@ class _AddressTile extends StatelessWidget {
                 ),
                 SizedBox(height: tokens.spacing.xs),
                 Text(
-                  _formatAddress(address, prefersEnglish),
+                  _formatAddress(address),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: tokens.colors.onSurface.withValues(alpha: 0.72),
                   ),
@@ -409,20 +400,16 @@ class _AddressTile extends StatelessWidget {
 }
 
 class _PersonaHint extends StatelessWidget {
-  const _PersonaHint({required this.prefersEnglish, required this.gates});
+  const _PersonaHint({required this.l10n, required this.gates});
 
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final AppExperienceGates gates;
 
   @override
   Widget build(BuildContext context) {
-    final message = prefersEnglish
-        ? (gates.isJapanRegion
-              ? 'Use postal lookup for Japanese addresses; include building name.'
-              : 'For international shipping, enter romanized names and a phone with country code.')
-        : (gates.isJapanRegion
-              ? '郵便番号から住所を補完できます。建物名・部屋番号まで入力してください。'
-              : '海外配送の場合はローマ字表記と国番号付き電話を入力してください。');
+    final message = gates.isJapanRegion
+        ? l10n.checkoutAddressPersonaDomesticHint
+        : l10n.checkoutAddressPersonaInternationalHint;
 
     return AppValidationMessage(
       message: message,
@@ -432,13 +419,9 @@ class _PersonaHint extends StatelessWidget {
 }
 
 class _AddressFormDialog extends ConsumerStatefulWidget {
-  const _AddressFormDialog({
-    required this.initial,
-    required this.prefersEnglish,
-  });
+  const _AddressFormDialog({required this.initial});
 
   final AddressFormInput initial;
-  final bool prefersEnglish;
 
   @override
   ConsumerState<_AddressFormDialog> createState() => _AddressFormDialogState();
@@ -497,29 +480,29 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final prefersEnglish = widget.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final saveState = ref.watch(checkoutAddressViewModel.saveAddressMut);
     final lookupState = ref.watch(checkoutAddressViewModel.postalLookupMut);
     final isSaving = saveState is PendingMutationState;
     final isLookingUp = lookupState is PendingMutationState;
 
     final title = _draft.id == null
-        ? (prefersEnglish ? 'Add address' : '住所を追加')
-        : (prefersEnglish ? 'Edit address' : '住所を編集');
+        ? l10n.checkoutAddressFormAddTitle
+        : l10n.checkoutAddressFormEditTitle;
 
     return Dialog.fullscreen(
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.close),
-            tooltip: prefersEnglish ? 'Close' : '閉じる',
+            tooltip: l10n.commonClose,
             onPressed: isSaving ? null : () => Navigator.of(context).pop(),
           ),
           title: Text(title),
           actions: [
             TextButton(
               onPressed: isSaving ? null : _submit,
-              child: Text(prefersEnglish ? 'Save' : '保存'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -530,7 +513,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _PersonaHint(
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   gates: ref.container.read(appExperienceGatesProvider),
                 ),
                 SizedBox(height: tokens.spacing.md),
@@ -538,12 +521,12 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                   segments: [
                     ButtonSegment(
                       value: AddressFormLayout.domestic,
-                      label: Text(prefersEnglish ? 'Domestic (JP)' : '国内'),
+                      label: Text(l10n.checkoutAddressFormDomesticLabel),
                       icon: const Icon(Icons.flag),
                     ),
                     ButtonSegment(
                       value: AddressFormLayout.international,
-                      label: Text(prefersEnglish ? 'International' : '海外'),
+                      label: Text(l10n.checkoutAddressFormInternationalLabel),
                       icon: const Icon(Icons.public),
                     ),
                   ],
@@ -566,14 +549,14 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.lg),
                 AppTextField(
-                  label: prefersEnglish ? 'Label (optional)' : 'ラベル（任意）',
+                  label: l10n.checkoutAddressFormLabelOptional,
                   controller: _labelController,
                   onChanged: (value) =>
                       setState(() => _draft = _draft.copyWith(label: value)),
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'Recipient' : '受取人',
+                  label: l10n.checkoutAddressFormRecipient,
                   controller: _recipientController,
                   errorText: _errors['recipient'],
                   onChanged: (value) => setState(
@@ -582,7 +565,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'Company (optional)' : '会社名（任意）',
+                  label: l10n.checkoutAddressFormCompanyOptional,
                   controller: _companyController,
                   onChanged: (value) =>
                       setState(() => _draft = _draft.copyWith(company: value)),
@@ -592,7 +575,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                   children: [
                     Expanded(
                       child: AppTextField(
-                        label: prefersEnglish ? 'Postal code' : '郵便番号',
+                        label: l10n.checkoutAddressFormPostalCode,
                         controller: _postalController,
                         keyboardType: TextInputType.number,
                         errorText: _errors['postalCode'],
@@ -617,13 +600,13 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                               ),
                             )
                           : const Icon(Icons.search),
-                      label: Text(prefersEnglish ? 'Lookup' : '住所補完'),
+                      label: Text(l10n.checkoutAddressFormLookup),
                     ),
                   ],
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'Prefecture/State' : '都道府県・州',
+                  label: l10n.checkoutAddressFormState,
                   controller: _stateController,
                   errorText: _errors['state'],
                   onChanged: (value) =>
@@ -631,7 +614,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'City/Ward' : '市区町村',
+                  label: l10n.checkoutAddressFormCity,
                   controller: _cityController,
                   errorText: _errors['city'],
                   onChanged: (value) =>
@@ -639,7 +622,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'Address line 1' : '番地・町名',
+                  label: l10n.checkoutAddressFormLine1,
                   controller: _line1Controller,
                   errorText: _errors['line1'],
                   onChanged: (value) =>
@@ -647,16 +630,14 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish
-                      ? 'Address line 2 (optional)'
-                      : '建物名・部屋番号（任意）',
+                  label: l10n.checkoutAddressFormLine2Optional,
                   controller: _line2Controller,
                   onChanged: (value) =>
                       setState(() => _draft = _draft.copyWith(line2: value)),
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish ? 'Country/Region' : '国・地域',
+                  label: l10n.checkoutAddressFormCountry,
                   controller: _countryController,
                   enabled: _draft.layout == AddressFormLayout.international,
                   errorText: _errors['country'],
@@ -665,9 +646,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 ),
                 SizedBox(height: tokens.spacing.md),
                 AppTextField(
-                  label: prefersEnglish
-                      ? 'Phone (with country code)'
-                      : '電話番号（国番号付き推奨）',
+                  label: l10n.checkoutAddressFormPhone,
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   errorText: _errors['phone'],
@@ -682,16 +661,12 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                       : (value) => setState(
                           () => _draft = _draft.copyWith(isDefault: value),
                         ),
-                  title: Text(prefersEnglish ? 'Use as default' : '既定の住所にする'),
-                  subtitle: Text(
-                    prefersEnglish
-                        ? 'Default address is pre-selected in checkout.'
-                        : '既定の住所はチェックアウトで自動選択されます。',
-                  ),
+                  title: Text(l10n.checkoutAddressFormDefaultTitle),
+                  subtitle: Text(l10n.checkoutAddressFormDefaultSubtitle),
                 ),
                 SizedBox(height: tokens.spacing.xl),
                 AppButton(
-                  label: prefersEnglish ? 'Save address' : '保存する',
+                  label: l10n.checkoutAddressFormSave,
                   expand: true,
                   isLoading: isSaving,
                   onPressed: isSaving ? null : _submit,
@@ -700,9 +675,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
                 if (_errors.isNotEmpty) ...[
                   SizedBox(height: tokens.spacing.md),
                   AppValidationMessage(
-                    message: prefersEnglish
-                        ? 'Please correct the highlighted fields.'
-                        : 'エラーを修正してください。',
+                    message: l10n.checkoutAddressFormFixErrors,
                     state: AppValidationState.error,
                   ),
                 ],
@@ -764,7 +737,7 @@ class _AddressFormDialogState extends ConsumerState<_AddressFormDialog> {
   }
 }
 
-String _formatAddress(UserAddress address, bool prefersEnglish) {
+String _formatAddress(UserAddress address) {
   if (address.country.toUpperCase() == 'JP') {
     return '〒${address.postalCode} ${address.state ?? ''}${address.city} ${address.line1} ${address.line2 ?? ''}';
   }

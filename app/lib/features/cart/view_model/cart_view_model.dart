@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
@@ -240,9 +242,10 @@ class CartViewModel extends AsyncProvider<CartState> {
   @override
   Future<CartState> build(Ref ref) async {
     final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
     await Future<void>.delayed(const Duration(milliseconds: 160));
-    final lines = _seedLines(gates);
-    return CartState(lines: lines, estimate: _estimateFor(lines, gates));
+    final lines = _seedLines(gates, l10n);
+    return CartState(lines: lines, estimate: _estimateFor(lines, gates, l10n));
   }
 
   Call<String> adjustQuantity(String lineId, int delta) =>
@@ -258,6 +261,7 @@ class CartViewModel extends AsyncProvider<CartState> {
         await Future<void>.delayed(const Duration(milliseconds: 120));
 
         final gates = ref.watch(appExperienceGatesProvider);
+        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
         final updatedLines = current.lines.map((item) {
           if (item.id != lineId) return item;
           final nextQty = max(1, item.quantity + delta);
@@ -268,7 +272,7 @@ class CartViewModel extends AsyncProvider<CartState> {
         ref.state = AsyncData(
           current.copyWith(
             lines: updatedLines,
-            estimate: _estimateFor(updatedLines, gates),
+            estimate: _estimateFor(updatedLines, gates, l10n),
             pendingLineIds: pending,
             promoError: null,
           ),
@@ -297,12 +301,13 @@ class CartViewModel extends AsyncProvider<CartState> {
     final removed = current.lines[index];
     final updatedLines = [...current.lines]..removeAt(index);
     final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
 
     pending.remove(lineId);
     ref.state = AsyncData(
       current.copyWith(
         lines: updatedLines,
-        estimate: _estimateFor(updatedLines, gates),
+        estimate: _estimateFor(updatedLines, gates, l10n),
         pendingLineIds: pending,
         recentlyRemoved: RemovedCartLine(item: removed, index: index),
         promoError: null,
@@ -319,11 +324,12 @@ class CartViewModel extends AsyncProvider<CartState> {
     final insertIndex = min(removed.index, current.lines.length);
     final updated = [...current.lines]..insert(insertIndex, removed.item);
     final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
 
     ref.state = AsyncData(
       current.copyWith(
         lines: updated,
-        estimate: _estimateFor(updated, gates),
+        estimate: _estimateFor(updated, gates, l10n),
         clearRecentlyRemoved: true,
         promoError: null,
       ),
@@ -336,16 +342,13 @@ class CartViewModel extends AsyncProvider<CartState> {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return null;
 
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
     final code = rawCode.trim().toUpperCase();
 
     if (code.isEmpty) {
       ref.state = AsyncData(
         current.copyWith(
-          promoError: prefersEnglish
-              ? 'Enter a promo code'
-              : 'クーポンコードを入力してください',
+          promoError: l10n.cartPromoEnterCode,
           isApplyingPromo: false,
         ),
       );
@@ -364,16 +367,12 @@ class CartViewModel extends AsyncProvider<CartState> {
       case 'FIELD10':
         final amount = max(0, (subtotal.amount * 0.1).round());
         if (amount == 0) {
-          error = prefersEnglish
-              ? 'Add items before applying discounts.'
-              : '商品を追加すると割引を適用できます。';
+          error = l10n.cartPromoAddItemsRequired;
         } else {
           promo = CartPromo(
             code: code,
-            label: prefersEnglish ? '10% off' : '10%オフ',
-            description: prefersEnglish
-                ? 'Applies to merchandise subtotal.'
-                : '商品小計に適用されます。',
+            label: l10n.cartPromoField10Label,
+            description: l10n.cartPromoField10Description,
             appliedAmount: Money(amount: amount, currency: subtotal.currency),
           );
         }
@@ -382,13 +381,11 @@ class CartViewModel extends AsyncProvider<CartState> {
         final threshold = 9000;
         if (subtotal.amount < threshold) {
           final shortfall = threshold - subtotal.amount;
-          error = prefersEnglish
-              ? 'Add ¥${shortfall.toString()} more to unlock free shipping.'
-              : 'あと¥${shortfall.toString()}で送料無料になります。';
+          error = l10n.cartPromoShipfreeShortfall(shortfall);
         } else {
           promo = CartPromo(
             code: code,
-            label: prefersEnglish ? 'Free shipping' : '送料無料',
+            label: l10n.cartPromoShipfreeLabel,
             freeShipping: true,
             appliedAmount: Money(amount: 0, currency: subtotal.currency),
           );
@@ -397,15 +394,13 @@ class CartViewModel extends AsyncProvider<CartState> {
       case 'INK200':
         promo = CartPromo(
           code: code,
-          label: prefersEnglish ? 'Ink set bonus' : '朱肉セット優待',
-          description: prefersEnglish
-              ? '¥200 off for ink/accessory bundles.'
-              : 'インクやアクセサリーの同梱で¥200オフ。',
+          label: l10n.cartPromoInkLabel,
+          description: l10n.cartPromoInkDescription,
           appliedAmount: Money(amount: 200, currency: subtotal.currency),
         );
         break;
       default:
-        error = prefersEnglish ? 'Invalid or expired code.' : 'コードが無効か期限切れです。';
+        error = l10n.cartPromoInvalid;
     }
 
     ref.state = AsyncData(
@@ -431,6 +426,7 @@ class CartViewModel extends AsyncProvider<CartState> {
         await Future<void>.delayed(const Duration(milliseconds: 180));
 
         final gates = ref.watch(appExperienceGatesProvider);
+        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
         final updatedLines = current.lines.map((item) {
           if (item.id != lineId) return item;
           return item.copyWith(selectedAddonIds: selection);
@@ -440,7 +436,7 @@ class CartViewModel extends AsyncProvider<CartState> {
         ref.state = AsyncData(
           current.copyWith(
             lines: updatedLines,
-            estimate: _estimateFor(updatedLines, gates),
+            estimate: _estimateFor(updatedLines, gates, l10n),
             pendingLineIds: pending,
             promoError: null,
           ),
@@ -463,23 +459,23 @@ class CartViewModel extends AsyncProvider<CartState> {
   Call<List<CartLineItem>> replaceLines(List<CartLineItem> lines) =>
       mutate(replaceLinesMut, (ref) async {
         final gates = ref.watch(appExperienceGatesProvider);
+        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
         ref.state = AsyncData(
-          CartState(lines: lines, estimate: _estimateFor(lines, gates)),
+          CartState(lines: lines, estimate: _estimateFor(lines, gates, l10n)),
         );
         return lines;
       }, concurrency: Concurrency.dropLatest);
 }
 
-List<CartLineItem> _seedLines(AppExperienceGates gates) {
-  final en = gates.prefersEnglish;
+List<CartLineItem> _seedLines(AppExperienceGates gates, AppLocalizations l10n) {
   final intl = gates.emphasizeInternationalFlows;
 
   return [
     CartLineItem(
       id: 'line-titanium',
-      title: en ? 'Titanium round seal' : 'チタン丸印',
-      variantLabel: en ? '15mm · Deep engraving' : '15mm・深彫り調整',
-      designLabel: en ? 'Design: Akiyama (篤山)' : 'デザイン：篤山（Akiyama）',
+      title: l10n.cartLineTitaniumTitle,
+      variantLabel: l10n.cartLineTitaniumVariant,
+      designLabel: l10n.cartLineTitaniumDesign,
       thumbnailUrl:
           'https://images.unsplash.com/photo-1523419400520-223c6fc33afc?auto=format&fit=crop&w=640&q=60',
       basePrice: const Money(amount: 12800, currency: 'JPY'),
@@ -488,40 +484,38 @@ List<CartLineItem> _seedLines(AppExperienceGates gates) {
       addonOptions: [
         CartAddonOption(
           id: 'addon-sleeve',
-          label: en ? 'Microfiber sleeve' : 'マイクロファイバーケース',
-          description: en ? 'Slim case with scratch guard.' : '薄型の起毛ケース。',
+          label: l10n.cartLineTitaniumAddonSleeveLabel,
+          description: l10n.cartLineTitaniumAddonSleeveDescription,
           price: const Money(amount: 1800, currency: 'JPY'),
-          badge: en ? 'Popular' : '人気',
+          badge: l10n.cartLineTitaniumAddonSleeveBadge,
         ),
         CartAddonOption(
           id: 'addon-deep',
-          label: en ? 'Deep engraving' : '深彫り仕上げ',
-          description: en
-              ? 'Sharper edges for crisp stamps.'
-              : 'くっきり押せる深彫り仕上げ。',
+          label: l10n.cartLineTitaniumAddonDeepLabel,
+          description: l10n.cartLineTitaniumAddonDeepDescription,
           price: const Money(amount: 0, currency: 'JPY'),
           kind: CartAddonKind.option,
         ),
         CartAddonOption(
           id: 'addon-wrap',
-          label: en ? 'Gift wrap' : 'ギフトラッピング',
+          label: l10n.cartLineTitaniumAddonWrapLabel,
           price: const Money(amount: 400, currency: 'JPY'),
-          description: en
-              ? 'Adds washi band and message card.'
-              : '和紙帯とメッセージカード付き。',
+          description: l10n.cartLineTitaniumAddonWrapDescription,
         ),
       ],
       selectedAddonIds: {'addon-sleeve', 'addon-deep'},
       leadTimeMinDays: gates.isJapanRegion ? 2 : 5,
       leadTimeMaxDays: gates.isJapanRegion ? 4 : 9,
-      note: intl ? 'Customs-friendly material' : 'お急ぎ対応・名入れ済み',
-      ribbon: en ? 'Bestseller' : '人気',
+      note: intl
+          ? l10n.cartLineTitaniumNoteIntl
+          : l10n.cartLineTitaniumNoteDomestic,
+      ribbon: l10n.cartLineTitaniumRibbon,
     ),
     CartLineItem(
       id: 'line-acrylic',
-      title: en ? 'Color acrylic seal' : 'カラーアクリル印',
-      variantLabel: en ? '12mm · Mint / Script' : '12mm・ミント / 筆記体',
-      designLabel: en ? 'Design: Upload later' : 'デザイン：後でアップロード',
+      title: l10n.cartLineAcrylicTitle,
+      variantLabel: l10n.cartLineAcrylicVariant,
+      designLabel: l10n.cartLineAcrylicDesign,
       thumbnailUrl:
           'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=640&q=60',
       basePrice: const Money(amount: 6200, currency: 'JPY'),
@@ -529,39 +523,37 @@ List<CartLineItem> _seedLines(AppExperienceGates gates) {
       addonOptions: [
         CartAddonOption(
           id: 'addon-uv',
-          label: en ? 'UV finish' : 'UVコート',
-          description: en
-              ? 'Protects from fading and scratches.'
-              : '色あせ・キズ防止コーティング。',
+          label: l10n.cartLineAcrylicAddonUvLabel,
+          description: l10n.cartLineAcrylicAddonUvDescription,
           price: const Money(amount: 1200, currency: 'JPY'),
-          badge: en ? 'Limited' : '期間限定',
+          badge: l10n.cartLineAcrylicAddonUvBadge,
         ),
         CartAddonOption(
           id: 'addon-ink',
-          label: en ? 'Ink pad set' : '朱肉セット',
-          description: en
-              ? 'Compact pad with replaceable insert.'
-              : '交換式のコンパクト朱肉。',
+          label: l10n.cartLineAcrylicAddonInkLabel,
+          description: l10n.cartLineAcrylicAddonInkDescription,
           price: const Money(amount: 900, currency: 'JPY'),
         ),
         CartAddonOption(
           id: 'addon-pouch',
-          label: en ? 'Soft pouch' : 'ソフトポーチ',
-          description: en ? 'Keeps acrylic surface clean.' : 'アクリル面を保護するポーチ。',
+          label: l10n.cartLineAcrylicAddonPouchLabel,
+          description: l10n.cartLineAcrylicAddonPouchDescription,
           price: const Money(amount: 700, currency: 'JPY'),
         ),
       ],
       selectedAddonIds: {'addon-uv', 'addon-ink'},
       leadTimeMinDays: gates.isJapanRegion ? 3 : 7,
       leadTimeMaxDays: gates.isJapanRegion ? 6 : 12,
-      note: en ? 'Ships with add-on recommendations.' : 'オプション同梱で発送。',
-      ribbon: intl ? 'Intl friendly' : 'おすすめ',
+      note: l10n.cartLineAcrylicNote,
+      ribbon: intl
+          ? l10n.cartLineAcrylicRibbonIntl
+          : l10n.cartLineAcrylicRibbon,
     ),
     CartLineItem(
       id: 'line-box',
-      title: en ? 'Keepsake box' : '桐箱・刻印入り',
-      variantLabel: en ? 'Engraved lid · Natural' : '蓋刻印・ナチュラル',
-      designLabel: en ? 'Name: Hanko Field' : '名入れ：はんこフィールド',
+      title: l10n.cartLineBoxTitle,
+      variantLabel: l10n.cartLineBoxVariant,
+      designLabel: l10n.cartLineBoxDesign,
       thumbnailUrl:
           'https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=640&q=60',
       basePrice: const Money(amount: 3200, currency: 'JPY'),
@@ -569,45 +561,45 @@ List<CartLineItem> _seedLines(AppExperienceGates gates) {
       addonOptions: [
         CartAddonOption(
           id: 'addon-foam',
-          label: en ? 'Foam insert' : 'クッション内装',
-          description: en
-              ? 'Secures seal and accessories.'
-              : '印鑑と付属品を固定するクッション。',
+          label: l10n.cartLineBoxAddonFoamLabel,
+          description: l10n.cartLineBoxAddonFoamDescription,
           price: const Money(amount: 0, currency: 'JPY'),
           kind: CartAddonKind.option,
         ),
         CartAddonOption(
           id: 'addon-card',
-          label: en ? 'Care card' : 'お手入れカード',
+          label: l10n.cartLineBoxAddonCardLabel,
           price: const Money(amount: 0, currency: 'JPY'),
-          description: en
-              ? 'Printed care instructions in JP/EN.'
-              : '日英併記のお手入れガイド。',
+          description: l10n.cartLineBoxAddonCardDescription,
         ),
         CartAddonOption(
           id: 'addon-wrap-bundle',
-          label: en ? 'Wrapping bundle' : 'ラッピングセット',
+          label: l10n.cartLineBoxAddonWrapLabel,
           price: const Money(amount: 550, currency: 'JPY'),
-          description: en
-              ? 'Ribbon, sticker, and spare tissue.'
-              : 'リボン・シール・替え紙付き。',
+          description: l10n.cartLineBoxAddonWrapDescription,
         ),
       ],
       selectedAddonIds: {'addon-foam', 'addon-card', 'addon-wrap-bundle'},
       leadTimeMinDays: gates.isJapanRegion ? 2 : 5,
       leadTimeMaxDays: gates.isJapanRegion ? 3 : 8,
-      note: intl ? 'Includes bilingual insert.' : 'メッセージ刻印済み。',
-      ribbon: en ? 'Gift' : 'ギフト',
+      note: intl ? l10n.cartLineBoxNoteIntl : l10n.cartLineBoxNoteDomestic,
+      ribbon: l10n.cartLineBoxRibbon,
     ),
   ];
 }
 
-CartEstimate _estimateFor(List<CartLineItem> lines, AppExperienceGates gates) {
+CartEstimate _estimateFor(
+  List<CartLineItem> lines,
+  AppExperienceGates gates,
+  AppLocalizations l10n,
+) {
   if (lines.isEmpty) {
     return CartEstimate(
       minDays: 0,
       maxDays: 0,
-      methodLabel: gates.emphasizeInternationalFlows ? 'Intl' : 'Domestic',
+      methodLabel: gates.emphasizeInternationalFlows
+          ? l10n.cartEstimateMethodIntl
+          : l10n.cartEstimateMethodDomestic,
       international: gates.emphasizeInternationalFlows,
     );
   }
@@ -623,8 +615,8 @@ CartEstimate _estimateFor(List<CartLineItem> lines, AppExperienceGates gates) {
     minDays: maxMin,
     maxDays: maxMax,
     methodLabel: gates.emphasizeInternationalFlows
-        ? 'Intl priority'
-        : 'Standard',
+        ? l10n.cartEstimateMethodIntlPriority
+        : l10n.cartEstimateMethodStandard,
     international: gates.emphasizeInternationalFlows,
   );
 }

@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:app/core/model/value_objects.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -32,8 +32,7 @@ class _CartPageState extends ConsumerState<CartPage> {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final state = ref.watch(cartViewModel);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final data = state.valueOrNull;
 
     final appliedCode = data?.appliedPromo?.code;
@@ -48,15 +47,13 @@ class _CartPageState extends ConsumerState<CartPage> {
       backgroundColor: tokens.colors.background,
       appBar: AppBar(
         centerTitle: true,
-        title: Text(prefersEnglish ? 'Cart' : 'カート'),
+        title: Text(l10n.cartTitle),
         leading: const BackButton(),
         actions: [
           IconButton(
-            tooltip: prefersEnglish ? 'Bulk edit' : 'まとめて編集',
+            tooltip: l10n.cartBulkEditTooltip,
             icon: const Icon(Icons.edit_note_rounded),
-            onPressed: data == null
-                ? null
-                : () => _showBulkActions(prefersEnglish),
+            onPressed: data == null ? null : () => _showBulkActions(l10n),
           ),
         ],
       ),
@@ -66,7 +63,7 @@ class _CartPageState extends ConsumerState<CartPage> {
           child: _buildBody(
             context: context,
             state: state,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             tokens: tokens,
           ),
         ),
@@ -75,7 +72,7 @@ class _CartPageState extends ConsumerState<CartPage> {
           ? null
           : _SummarySheet(
               state: data,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               onCheckout: () => _goToCheckout(),
             ),
     );
@@ -84,7 +81,7 @@ class _CartPageState extends ConsumerState<CartPage> {
   Widget _buildBody({
     required BuildContext context,
     required AsyncValue<CartState> state,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required DesignTokens tokens,
   }) {
     final router = GoRouter.of(context);
@@ -100,10 +97,10 @@ class _CartPageState extends ConsumerState<CartPage> {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load cart' : 'カートを読み込めません',
+          title: l10n.cartLoadFailedTitle,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () => unawaited(_refresh()),
         ),
       );
@@ -125,12 +122,10 @@ class _CartPageState extends ConsumerState<CartPage> {
           children: [
             SizedBox(height: tokens.spacing.xl),
             AppEmptyState(
-              title: prefersEnglish ? 'Cart is empty' : 'カートは空です',
-              message: prefersEnglish
-                  ? 'Add items from the shop to see an estimate.'
-                  : 'ショップから商品を追加すると、見積もりが表示されます。',
+              title: l10n.cartEmptyTitle,
+              message: l10n.cartEmptyMessage,
               icon: Icons.shopping_bag_outlined,
-              actionLabel: prefersEnglish ? 'Back to shop' : 'ショップへ戻る',
+              actionLabel: l10n.cartEmptyAction,
               onAction: () => router.go(AppRoutePaths.shop),
             ),
           ],
@@ -158,14 +153,14 @@ class _CartPageState extends ConsumerState<CartPage> {
               padding: EdgeInsets.only(bottom: tokens.spacing.md),
               child: _CartLineCard(
                 item: item,
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 pending: data.pendingLineIds.contains(item.id),
                 onIncrement: () =>
                     ref.invoke(cartViewModel.adjustQuantity(item.id, 1)),
                 onDecrement: () =>
                     ref.invoke(cartViewModel.adjustQuantity(item.id, -1)),
-                onEdit: () => _openEditSheet(item, prefersEnglish),
-                onRemove: () => _removeItem(item, prefersEnglish),
+                onEdit: () => _openEditSheet(item, l10n),
+                onRemove: () => _removeItem(item, l10n),
               ),
             ),
           ),
@@ -174,9 +169,9 @@ class _CartPageState extends ConsumerState<CartPage> {
             controller: _promoController,
             appliedPromo: data.appliedPromo,
             promoError: data.promoError,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             isApplying: data.isApplyingPromo,
-            onApply: () => _applyPromo(prefersEnglish),
+            onApply: () => _applyPromo(l10n),
             onClear: () {
               _promoController.clear();
               ref.invoke(cartViewModel.clearPromo());
@@ -192,7 +187,7 @@ class _CartPageState extends ConsumerState<CartPage> {
     return ref.refreshValue(cartViewModel, keepPrevious: true);
   }
 
-  Future<void> _removeItem(CartLineItem item, bool prefersEnglish) async {
+  Future<void> _removeItem(CartLineItem item, AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     await ref.invoke(cartViewModel.removeLine(item.id));
     if (!mounted) return;
@@ -200,18 +195,16 @@ class _CartPageState extends ConsumerState<CartPage> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          prefersEnglish ? 'Removed ${item.title}' : '${item.title} を削除しました',
-        ),
+        content: Text(l10n.cartRemovedItem(item.title)),
         action: SnackBarAction(
-          label: prefersEnglish ? 'Undo' : '元に戻す',
+          label: l10n.cartUndo,
           onPressed: () => ref.invoke(cartViewModel.undoRemoval()),
         ),
       ),
     );
   }
 
-  Future<void> _applyPromo(bool prefersEnglish) async {
+  Future<void> _applyPromo(AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await ref.invoke(
       cartViewModel.applyPromo(_promoController.text),
@@ -219,17 +212,13 @@ class _CartPageState extends ConsumerState<CartPage> {
     if (!mounted) return;
 
     messenger.hideCurrentSnackBar();
-    final message = result == null
-        ? null
-        : (prefersEnglish
-              ? 'Applied ${result.label}'
-              : '${result.label} を適用しました');
+    final message = result == null ? null : l10n.cartPromoApplied(result.label);
     if (message != null) {
       messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
-  Future<void> _openEditSheet(CartLineItem item, bool prefersEnglish) async {
+  Future<void> _openEditSheet(CartLineItem item, AppLocalizations l10n) async {
     final tokens = DesignTokensTheme.of(context);
     final selection = {...item.selectedAddonIds};
 
@@ -254,7 +243,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    prefersEnglish ? 'Edit options' : 'オプションを編集',
+                    l10n.cartEditOptionsTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   SizedBox(height: tokens.spacing.xs),
@@ -308,7 +297,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                           ? null
                           : Text(
                               addon.price!.amount == 0
-                                  ? (prefersEnglish ? 'Included' : '無料')
+                                  ? l10n.cartAddonIncluded
                                   : _formatMoney(addon.price!),
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: tokens.colors.primary),
@@ -327,11 +316,11 @@ class _CartPageState extends ConsumerState<CartPage> {
                           );
                         },
                         icon: const Icon(Icons.replay_outlined),
-                        label: Text(prefersEnglish ? 'Reset' : '元に戻す'),
+                        label: Text(l10n.cartReset),
                       ),
                       const Spacer(),
                       AppButton(
-                        label: prefersEnglish ? 'Save' : '保存',
+                        label: l10n.cartSave,
                         onPressed: () {
                           ref.invoke(
                             cartViewModel.updateAddons(item.id, selection),
@@ -351,7 +340,7 @@ class _CartPageState extends ConsumerState<CartPage> {
     );
   }
 
-  void _showBulkActions(bool prefersEnglish) {
+  void _showBulkActions(AppLocalizations l10n) {
     final tokens = DesignTokensTheme.of(context);
     showModalBottomSheet<void>(
       context: context,
@@ -365,14 +354,12 @@ class _CartPageState extends ConsumerState<CartPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                prefersEnglish ? 'Bulk actions' : 'まとめて操作',
+                l10n.cartBulkActionsTitle,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               SizedBox(height: tokens.spacing.sm),
               Text(
-                prefersEnglish
-                    ? 'Apply promo, adjust quantities, or clear selections for all lines.'
-                    : '全ての行にクーポン適用、数量調整、選択解除をまとめて行えます（モック）。',
+                l10n.cartBulkActionsBody,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               SizedBox(height: tokens.spacing.md),
@@ -381,25 +368,23 @@ class _CartPageState extends ConsumerState<CartPage> {
                 runSpacing: tokens.spacing.sm,
                 children: [
                   ActionChip(
-                    label: Text(
-                      prefersEnglish ? 'Apply FIELD10' : 'FIELD10 を適用',
-                    ),
+                    label: Text(l10n.cartBulkActionApplyField10),
                     onPressed: () {
                       Navigator.of(context).maybePop();
                       _promoController.text = 'FIELD10';
-                      unawaited(_applyPromo(prefersEnglish));
+                      unawaited(_applyPromo(l10n));
                     },
                   ),
                   ActionChip(
-                    label: Text(prefersEnglish ? 'Free shipping' : '送料無料コード'),
+                    label: Text(l10n.cartBulkActionShipfree),
                     onPressed: () {
                       Navigator.of(context).maybePop();
                       _promoController.text = 'SHIPFREE';
-                      unawaited(_applyPromo(prefersEnglish));
+                      unawaited(_applyPromo(l10n));
                     },
                   ),
                   ActionChip(
-                    label: Text(prefersEnglish ? 'Clear selections' : '選択をクリア'),
+                    label: Text(l10n.cartBulkActionClearSelections),
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ],
@@ -420,7 +405,7 @@ class _CartPageState extends ConsumerState<CartPage> {
 class _CartLineCard extends StatelessWidget {
   const _CartLineCard({
     required this.item,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.pending,
     required this.onIncrement,
     required this.onDecrement,
@@ -429,7 +414,7 @@ class _CartLineCard extends StatelessWidget {
   });
 
   final CartLineItem item;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final bool pending;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
@@ -530,7 +515,7 @@ class _CartLineCard extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Text(
-                              prefersEnglish ? 'per item' : '1点あたり',
+                              l10n.cartUnitPerItem,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: tokens.colors.onSurface.withValues(
@@ -616,12 +601,12 @@ class _CartLineCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: pending ? null : onEdit,
                 icon: const Icon(Icons.tune_outlined),
-                label: Text(prefersEnglish ? 'Edit options' : 'オプション編集'),
+                label: Text(l10n.cartEditOptionsAction),
               ),
               TextButton.icon(
                 onPressed: pending ? null : onRemove,
                 icon: const Icon(Icons.delete_outline),
-                label: Text(prefersEnglish ? 'Remove' : '削除'),
+                label: Text(l10n.cartRemoveAction),
               ),
             ],
           ),
@@ -635,14 +620,15 @@ class _CartLineCard extends StatelessWidget {
               ),
               SizedBox(width: tokens.spacing.xs),
               Text(
-                prefersEnglish
-                    ? 'Est. ${item.leadTimeMinDays}-${item.leadTimeMaxDays} days'
-                    : 'お届け目安 ${item.leadTimeMinDays}〜${item.leadTimeMaxDays}日',
+                l10n.cartLeadTimeLabel(
+                  item.leadTimeMinDays,
+                  item.leadTimeMaxDays,
+                ),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
               Text(
-                prefersEnglish ? 'Line total' : '小計',
+                l10n.cartLineTotalLabel,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               SizedBox(width: tokens.spacing.sm),
@@ -667,7 +653,7 @@ class _CartLineCard extends StatelessWidget {
 class _PromoEntryCard extends StatelessWidget {
   const _PromoEntryCard({
     required this.controller,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onApply,
     required this.onClear,
     this.appliedPromo,
@@ -676,7 +662,7 @@ class _PromoEntryCard extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onApply;
   final VoidCallback onClear;
   final CartPromo? appliedPromo;
@@ -694,7 +680,7 @@ class _PromoEntryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            prefersEnglish ? 'Promo code' : 'クーポンコード',
+            l10n.cartPromoTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           SizedBox(height: tokens.spacing.sm),
@@ -702,7 +688,7 @@ class _PromoEntryCard extends StatelessWidget {
             controller: controller,
             textCapitalization: TextCapitalization.characters,
             decoration: InputDecoration(
-              labelText: prefersEnglish ? 'Enter code' : 'コードを入力',
+              labelText: l10n.cartPromoFieldLabel,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(tokens.radii.md),
               ),
@@ -713,9 +699,7 @@ class _PromoEntryCard extends StatelessWidget {
                       ? const Icon(Icons.local_offer_outlined, size: 18)
                       : const Icon(Icons.check_circle, size: 18),
                   label: Text(
-                    applied == null
-                        ? (prefersEnglish ? 'Apply' : '適用')
-                        : applied.code,
+                    applied == null ? l10n.cartPromoApplyLabel : applied.code,
                   ),
                   onPressed: isApplying
                       ? null
@@ -734,17 +718,11 @@ class _PromoEntryCard extends StatelessWidget {
             )
           else if (applied != null)
             AppValidationMessage(
-              message:
-                  applied.description ??
-                  (prefersEnglish ? 'Promo applied.' : 'クーポンを適用しました。'),
+              message: applied.description ?? l10n.cartPromoAppliedFallback,
               state: AppValidationState.success,
             )
           else
-            AppValidationMessage(
-              message: prefersEnglish
-                  ? 'Promo codes are simulated for this mock.'
-                  : 'クーポン入力はモックです。',
-            ),
+            AppValidationMessage(message: l10n.cartPromoMockHint),
         ],
       ),
     );
@@ -754,12 +732,12 @@ class _PromoEntryCard extends StatelessWidget {
 class _SummarySheet extends StatelessWidget {
   const _SummarySheet({
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onCheckout,
   });
 
   final CartState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onCheckout;
 
   @override
@@ -786,42 +764,40 @@ class _SummarySheet extends StatelessWidget {
                   Icon(Icons.summarize_outlined, color: tokens.colors.primary),
                   SizedBox(width: tokens.spacing.xs),
                   Text(
-                    prefersEnglish ? 'Estimate summary' : '概算サマリー',
+                    l10n.cartSummaryTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Spacer(),
                   Text(
-                    prefersEnglish
-                        ? '${state.itemCount} items'
-                        : '${state.itemCount}点',
+                    l10n.cartSummaryItems(state.itemCount),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               ),
               SizedBox(height: tokens.spacing.sm),
               _SummaryRow(
-                label: prefersEnglish ? 'Subtotal' : '商品小計',
+                label: l10n.cartSummarySubtotal,
                 value: _formatMoney(state.subtotal),
               ),
               if (state.discount.amount > 0)
                 _SummaryRow(
-                  label: prefersEnglish ? 'Discount' : '割引',
+                  label: l10n.cartSummaryDiscount,
                   value: '-${_formatMoney(state.discount)}',
                   valueColor: tokens.colors.success,
                 ),
               _SummaryRow(
-                label: prefersEnglish ? 'Shipping' : '送料',
+                label: l10n.cartSummaryShipping,
                 value: state.shipping.amount == 0
-                    ? (prefersEnglish ? 'Free' : '無料')
+                    ? l10n.cartSummaryFree
                     : _formatMoney(state.shipping),
               ),
               _SummaryRow(
-                label: prefersEnglish ? 'Estimated tax' : '推定税',
+                label: l10n.cartSummaryTax,
                 value: _formatMoney(state.tax),
               ),
               Divider(height: tokens.spacing.xl),
               _SummaryRow(
-                label: prefersEnglish ? 'Total (est.)' : '合計（概算）',
+                label: l10n.cartSummaryTotal,
                 value: _formatMoney(state.total),
                 valueStyle: Theme.of(context).textTheme.titleLarge,
               ),
@@ -835,9 +811,11 @@ class _SummarySheet extends StatelessWidget {
                   SizedBox(width: tokens.spacing.xs),
                   Expanded(
                     child: Text(
-                      prefersEnglish
-                          ? 'Est. ${state.estimate.minDays}-${state.estimate.maxDays} days · ${state.estimate.methodLabel}'
-                          : '目安 ${state.estimate.minDays}〜${state.estimate.maxDays}日・${state.estimate.methodLabel}',
+                      l10n.cartSummaryEstimate(
+                        state.estimate.minDays,
+                        state.estimate.maxDays,
+                        state.estimate.methodLabel,
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: tokens.colors.onSurface.withValues(alpha: 0.7),
                       ),
@@ -847,7 +825,7 @@ class _SummarySheet extends StatelessWidget {
               ),
               SizedBox(height: tokens.spacing.md),
               AppButton(
-                label: prefersEnglish ? 'Proceed to checkout' : '購入手続きへ',
+                label: l10n.cartProceedCheckout,
                 onPressed: state.lines.isEmpty ? null : onCheckout,
                 expand: true,
               ),

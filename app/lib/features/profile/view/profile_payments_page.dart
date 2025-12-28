@@ -167,8 +167,7 @@ class _ProfilePaymentsPageState extends ConsumerState<ProfilePaymentsPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          PaymentMethodFormSheet(prefersEnglish: prefersEnglish),
+      builder: (context) => const PaymentMethodFormSheet(),
     );
     if (result == null) return;
     final save = await ref.invoke(

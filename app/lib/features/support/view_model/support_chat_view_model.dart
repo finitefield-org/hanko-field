@@ -4,7 +4,8 @@ import 'dart:math';
 
 import 'package:app/features/support/data/models/support_chat_models.dart';
 import 'package:app/features/support/data/repositories/support_chat_repository.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class SupportChatState {
@@ -129,12 +130,12 @@ class SupportChatViewModel extends AsyncProvider<SupportChatState> {
     String message,
   ) async {
     final repository = ref.watch(supportChatRepositoryProvider);
-    final prefersEnglish = ref.watch(appExperienceGatesProvider).prefersEnglish;
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
     final now = DateTime.now();
 
     if (state.stage == SupportChatStage.bot) {
       final shouldHandoff = _shouldHandoff(state.messages, message);
-      final botReply = _botReply(message, prefersEnglish, shouldHandoff);
+      final botReply = _botReply(message, l10n, shouldHandoff);
       await Future<void>.delayed(const Duration(milliseconds: 700));
 
       var nextState = _appendIncoming(
@@ -161,9 +162,7 @@ class SupportChatViewModel extends AsyncProvider<SupportChatState> {
       }
 
       await Future<void>.delayed(const Duration(milliseconds: 900));
-      final systemMessage = prefersEnglish
-          ? 'You are now connected with Rina (Support Agent).'
-          : 'サポート担当の理奈が参加しました。';
+      final systemMessage = l10n.supportChatConnectedAgent;
       nextState = _appendIncoming(
         nextState.copyWith(stage: SupportChatStage.handoff),
         SupportChatMessage(
@@ -182,9 +181,7 @@ class SupportChatViewModel extends AsyncProvider<SupportChatState> {
         ),
       );
 
-      final agentReply = prefersEnglish
-          ? "Hi, I'm Rina. I can take it from here. Could you share an order ID?"
-          : '理奈です。こちらで対応します。注文IDがあれば教えてください。';
+      final agentReply = l10n.supportChatAgentGreeting;
       await Future<void>.delayed(const Duration(milliseconds: 700));
       nextState = _appendIncoming(
         nextState.copyWith(stage: SupportChatStage.liveAgent),
@@ -206,7 +203,7 @@ class SupportChatViewModel extends AsyncProvider<SupportChatState> {
       return;
     }
 
-    final agentReply = _agentReply(message, prefersEnglish);
+    final agentReply = _agentReply(message, l10n);
     await Future<void>.delayed(const Duration(milliseconds: 700));
     final nextState = _appendIncoming(
       state,
@@ -243,41 +240,27 @@ class SupportChatViewModel extends AsyncProvider<SupportChatState> {
     return userMessages >= 2;
   }
 
-  String _botReply(String message, bool prefersEnglish, bool handingOff) {
+  String _botReply(String message, AppLocalizations l10n, bool handingOff) {
     if (handingOff) {
-      return prefersEnglish
-          ? 'Got it. I am connecting you to a specialist.'
-          : '承知しました。担当者におつなぎします。';
+      return l10n.supportChatBotHandoff;
     }
     if (message.toLowerCase().contains('delivery') || message.contains('配送')) {
-      return prefersEnglish
-          ? 'Delivery usually takes 3-5 business days. Do you have an order ID?'
-          : '通常は3〜5営業日でお届けします。注文IDはお持ちですか？';
+      return l10n.supportChatBotDelivery;
     }
     if (message.toLowerCase().contains('order') || message.contains('注文')) {
-      return prefersEnglish
-          ? 'I can check order status. Please share the order ID if you have it.'
-          : '注文状況を確認できます。注文IDを教えてください。';
+      return l10n.supportChatBotOrderStatus;
     }
-    return prefersEnglish
-        ? 'I can help with orders, delivery, or seal specs. What do you need?'
-        : '注文状況、配送、印面についてお手伝いできます。ご用件を教えてください。';
+    return l10n.supportChatBotFallback;
   }
 
-  String _agentReply(String message, bool prefersEnglish) {
+  String _agentReply(String message, AppLocalizations l10n) {
     if (message.toLowerCase().contains('refund') || message.contains('返金')) {
-      return prefersEnglish
-          ? 'I can help with refunds. Which order should we review?'
-          : '返金の件ですね。対象の注文IDを教えてください。';
+      return l10n.supportChatAgentRefund;
     }
     if (message.toLowerCase().contains('address') || message.contains('住所')) {
-      return prefersEnglish
-          ? 'I can update the delivery address if production has not started.'
-          : '制作前であれば配送先の変更が可能です。注文IDを教えてください。';
+      return l10n.supportChatAgentAddress;
     }
-    return prefersEnglish
-        ? 'Thanks, I am checking now. I will update you shortly.'
-        : '確認しますので少々お待ちください。';
+    return l10n.supportChatAgentFallback;
   }
 
   SupportChatState _appendIncoming(

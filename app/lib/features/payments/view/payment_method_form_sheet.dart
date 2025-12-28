@@ -2,15 +2,14 @@
 
 import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/users/data/models/user_models.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/buttons/app_button.dart';
 import 'package:app/ui/forms/app_text_field.dart';
 import 'package:flutter/material.dart';
 
 class PaymentMethodFormSheet extends StatefulWidget {
-  const PaymentMethodFormSheet({required this.prefersEnglish, super.key});
-
-  final bool prefersEnglish;
+  const PaymentMethodFormSheet({super.key});
 
   @override
   State<PaymentMethodFormSheet> createState() => _PaymentMethodFormSheetState();
@@ -38,7 +37,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final prefersEnglish = widget.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -55,7 +54,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
             children: [
               Expanded(
                 child: Text(
-                  prefersEnglish ? 'Add payment method' : '支払い方法を追加',
+                  l10n.paymentMethodSheetTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -70,12 +69,12 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
             segments: [
               ButtonSegment(
                 value: PaymentMethodType.card,
-                label: Text(prefersEnglish ? 'Card' : 'カード'),
+                label: Text(l10n.paymentMethodSheetCard),
                 icon: const Icon(Icons.credit_card_outlined),
               ),
               ButtonSegment(
                 value: PaymentMethodType.wallet,
-                label: Text(prefersEnglish ? 'Wallet' : 'ウォレット'),
+                label: Text(l10n.paymentMethodSheetWallet),
                 icon: const Icon(Icons.account_balance_wallet_outlined),
               ),
             ],
@@ -86,7 +85,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
           if (_type == PaymentMethodType.card) ...[
             AppTextField(
               controller: _brandCtrl,
-              label: prefersEnglish ? 'Brand (e.g. Visa)' : 'ブランド (例: Visa)',
+              label: l10n.paymentMethodSheetBrandLabel,
               textInputAction: TextInputAction.next,
             ),
             SizedBox(height: tokens.spacing.sm),
@@ -95,7 +94,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                 Expanded(
                   child: AppTextField(
                     controller: _last4Ctrl,
-                    label: prefersEnglish ? 'Last 4 digits' : 'カード下4桁',
+                    label: l10n.paymentMethodSheetLast4Label,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
                   ),
@@ -104,7 +103,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                 Expanded(
                   child: AppTextField(
                     controller: _expMonthCtrl,
-                    label: prefersEnglish ? 'Exp. month' : '有効期限(月)',
+                    label: l10n.paymentMethodSheetExpMonthLabel,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
                   ),
@@ -113,7 +112,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                 Expanded(
                   child: AppTextField(
                     controller: _expYearCtrl,
-                    label: prefersEnglish ? 'Exp. year' : '有効期限(年)',
+                    label: l10n.paymentMethodSheetExpYearLabel,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.next,
                   ),
@@ -124,11 +123,11 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
           ],
           AppTextField(
             controller: _nameCtrl,
-            label: prefersEnglish ? 'Billing name (optional)' : '請求先名 (任意)',
+            label: l10n.paymentMethodSheetBillingNameLabel,
           ),
           SizedBox(height: tokens.spacing.lg),
           AppButton(
-            label: prefersEnglish ? 'Save' : '保存',
+            label: l10n.paymentMethodSheetSave,
             expand: true,
             onPressed: () {
               Navigator.of(context).pop(

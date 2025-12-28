@@ -4,6 +4,8 @@ import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
 import 'package:app/features/payments/payment_method_form.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/features/users/data/repositories/local_user_repository.dart';
+import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
@@ -100,9 +102,8 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
 
   Call<PaymentSaveResult> addPaymentMethod(PaymentMethodDraft draft) =>
       mutate(addPaymentMut, (ref) async {
-        final gates = ref.watch(appExperienceGatesProvider);
-        final prefersEnglish = gates.prefersEnglish;
-        final validation = validatePaymentDraft(draft, prefersEnglish);
+        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+        final validation = validatePaymentDraft(draft, l10n);
         final current = ref.watch(this).valueOrNull;
 
         if (!validation.isValid) {
@@ -149,9 +150,7 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
           return PaymentSaveResult(validation: validation, saved: saved);
         } catch (e, stack) {
           _logger.warning('Failed to add payment method', e, stack);
-          final message = prefersEnglish
-              ? 'Could not add payment method'
-              : '支払い方法を追加できません';
+          final message = l10n.paymentMethodAddFailed;
           if (current != null) {
             ref.state = AsyncData(current.copyWith(lastError: message));
           }

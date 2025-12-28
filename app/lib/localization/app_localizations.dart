@@ -123,6 +123,20 @@ class AppLocalizations {
       'profileAddressesSubtitle': 'Manage shipping destinations',
       'profilePaymentsTitle': 'Payments',
       'profilePaymentsSubtitle': 'Manage saved payment methods',
+      'paymentMethodErrorLast4': 'Enter last 4 digits',
+      'paymentMethodErrorExpMonth': 'Enter expiry month',
+      'paymentMethodErrorExpYear': 'Enter expiry year',
+      'paymentMethodErrorFixFields': 'Fix the highlighted fields',
+      'paymentMethodAddFailed': 'Could not add payment method',
+      'paymentMethodSheetTitle': 'Add payment method',
+      'paymentMethodSheetCard': 'Card',
+      'paymentMethodSheetWallet': 'Wallet',
+      'paymentMethodSheetBrandLabel': 'Brand (e.g. Visa)',
+      'paymentMethodSheetLast4Label': 'Last 4 digits',
+      'paymentMethodSheetExpMonthLabel': 'Exp. month',
+      'paymentMethodSheetExpYearLabel': 'Exp. year',
+      'paymentMethodSheetBillingNameLabel': 'Billing name (optional)',
+      'paymentMethodSheetSave': 'Save',
       'profileNotificationsTitle': 'Notifications',
       'profileNotificationsSubtitle': 'Update notification preferences',
       'profileNotificationsHeader':
@@ -185,6 +199,23 @@ class AppLocalizations {
       'profileLegalNoContent': 'No content available for this document.',
       'profileSupportTitle': 'Support',
       'profileSupportSubtitle': 'FAQ and contact options',
+      'supportChatConnectedAgent':
+          'You are now connected with Rina (Support Agent).',
+      'supportChatAgentGreeting':
+          "Hi, I'm Rina. I can take it from here. Could you share an order ID?",
+      'supportChatBotHandoff': 'Got it. I am connecting you to a specialist.',
+      'supportChatBotDelivery':
+          'Delivery usually takes 3-5 business days. Do you have an order ID?',
+      'supportChatBotOrderStatus':
+          'I can check order status. Please share the order ID if you have it.',
+      'supportChatBotFallback':
+          'I can help with orders, delivery, or seal specs. What do you need?',
+      'supportChatAgentRefund':
+          'I can help with refunds. Which order should we review?',
+      'supportChatAgentAddress':
+          'I can update the delivery address if production has not started.',
+      'supportChatAgentFallback':
+          'Thanks, I am checking now. I will update you shortly.',
       'profileGuidesTitle': 'Guides',
       'profileGuidesSubtitle': 'Culture and how-to guides',
       'profileHowtoTitle': 'How to',
@@ -380,6 +411,7 @@ class AppLocalizations {
       'commonBack': 'Back',
       'commonRetry': 'Retry',
       'commonClose': 'Close',
+      'commonSave': 'Save',
       'commonLearnMore': 'Learn more',
       'commonLoadMore': 'Load more',
       'commonClear': 'Clear',
@@ -517,6 +549,205 @@ class AppLocalizations {
       'designVersionsRelativeMinutes': '{count}m ago',
       'designVersionsRelativeHours': '{count}h ago',
       'designVersionsRelativeDays': '{count}d ago',
+      'checkoutPaymentTitle': 'Payment method',
+      'checkoutPaymentAddTooltip': 'Add payment method',
+      'checkoutPaymentLoadFailedTitle': 'Could not load payments',
+      'checkoutPaymentEmptyTitle': 'Add a payment method',
+      'checkoutPaymentEmptyBody': 'Save a card or wallet to continue checkout.',
+      'checkoutPaymentSignInHint': 'Sign in to add methods.',
+      'checkoutPaymentAddMethod': 'Add method',
+      'checkoutPaymentChooseSaved': 'Choose a saved payment method.',
+      'checkoutPaymentAddAnother': 'Add another method',
+      'checkoutPaymentContinueReview': 'Continue to review',
+      'checkoutPaymentAddFailed': 'Could not add payment method',
+      'checkoutPaymentMethodCard': 'Card',
+      'checkoutPaymentMethodWallet': 'Wallet',
+      'checkoutPaymentMethodBank': 'Bank transfer',
+      'checkoutPaymentMethodFallback': 'Payment method',
+      'checkoutPaymentExpires': 'Expires {month}/{year}',
+      'cartPromoEnterCode': 'Enter a promo code',
+      'cartPromoAddItemsRequired': 'Add items before applying discounts.',
+      'cartPromoField10Label': '10% off',
+      'cartPromoField10Description': 'Applies to merchandise subtotal.',
+      'cartPromoShipfreeShortfall':
+          'Add ¥{amount} more to unlock free shipping.',
+      'cartPromoShipfreeLabel': 'Free shipping',
+      'cartPromoInkLabel': 'Ink set bonus',
+      'cartPromoInkDescription': '¥200 off for ink/accessory bundles.',
+      'cartPromoInvalid': 'Invalid or expired code.',
+      'cartLineTitaniumTitle': 'Titanium round seal',
+      'cartLineTitaniumVariant': '15mm · Deep engraving',
+      'cartLineTitaniumDesign': 'Design: Akiyama (篤山)',
+      'cartLineTitaniumAddonSleeveLabel': 'Microfiber sleeve',
+      'cartLineTitaniumAddonSleeveDescription': 'Slim case with scratch guard.',
+      'cartLineTitaniumAddonSleeveBadge': 'Popular',
+      'cartLineTitaniumAddonDeepLabel': 'Deep engraving',
+      'cartLineTitaniumAddonDeepDescription': 'Sharper edges for crisp stamps.',
+      'cartLineTitaniumAddonWrapLabel': 'Gift wrap',
+      'cartLineTitaniumAddonWrapDescription':
+          'Adds washi band and message card.',
+      'cartLineTitaniumNoteIntl': 'Customs-friendly material',
+      'cartLineTitaniumNoteDomestic': 'Rush-ready, personalized',
+      'cartLineTitaniumRibbon': 'Bestseller',
+      'cartLineAcrylicTitle': 'Color acrylic seal',
+      'cartLineAcrylicVariant': '12mm · Mint / Script',
+      'cartLineAcrylicDesign': 'Design: Upload later',
+      'cartLineAcrylicAddonUvLabel': 'UV finish',
+      'cartLineAcrylicAddonUvDescription':
+          'Protects from fading and scratches.',
+      'cartLineAcrylicAddonUvBadge': 'Limited',
+      'cartLineAcrylicAddonInkLabel': 'Ink pad set',
+      'cartLineAcrylicAddonInkDescription':
+          'Compact pad with replaceable insert.',
+      'cartLineAcrylicAddonPouchLabel': 'Soft pouch',
+      'cartLineAcrylicAddonPouchDescription': 'Keeps acrylic surface clean.',
+      'cartLineAcrylicNote': 'Ships with add-on recommendations.',
+      'cartLineAcrylicRibbonIntl': 'Intl friendly',
+      'cartLineAcrylicRibbon': 'Recommended',
+      'cartLineBoxTitle': 'Keepsake box',
+      'cartLineBoxVariant': 'Engraved lid · Natural',
+      'cartLineBoxDesign': 'Name: Hanko Field',
+      'cartLineBoxAddonFoamLabel': 'Foam insert',
+      'cartLineBoxAddonFoamDescription': 'Secures seal and accessories.',
+      'cartLineBoxAddonCardLabel': 'Care card',
+      'cartLineBoxAddonCardDescription': 'Printed care instructions in JP/EN.',
+      'cartLineBoxAddonWrapLabel': 'Wrapping bundle',
+      'cartLineBoxAddonWrapDescription': 'Ribbon, sticker, and spare tissue.',
+      'cartLineBoxNoteIntl': 'Includes bilingual insert.',
+      'cartLineBoxNoteDomestic': 'Message engraving included.',
+      'cartLineBoxRibbon': 'Gift',
+      'cartEstimateMethodIntl': 'Intl',
+      'cartEstimateMethodDomestic': 'Domestic',
+      'cartEstimateMethodIntlPriority': 'Intl priority',
+      'cartEstimateMethodStandard': 'Standard',
+      'cartTitle': 'Cart',
+      'cartBulkEditTooltip': 'Bulk edit',
+      'cartLoadFailedTitle': 'Could not load cart',
+      'cartEmptyTitle': 'Cart is empty',
+      'cartEmptyMessage': 'Add items from the shop to see an estimate.',
+      'cartEmptyAction': 'Back to shop',
+      'cartRemovedItem': 'Removed {item}',
+      'cartUndo': 'Undo',
+      'cartPromoApplied': 'Applied {label}',
+      'cartEditOptionsTitle': 'Edit options',
+      'cartAddonIncluded': 'Included',
+      'cartReset': 'Reset',
+      'cartSave': 'Save',
+      'cartBulkActionsTitle': 'Bulk actions',
+      'cartBulkActionsBody':
+          'Apply promo, adjust quantities, or clear selections for all lines.',
+      'cartBulkActionApplyField10': 'Apply FIELD10',
+      'cartBulkActionShipfree': 'Free shipping',
+      'cartBulkActionClearSelections': 'Clear selections',
+      'cartUnitPerItem': 'per item',
+      'cartEditOptionsAction': 'Edit options',
+      'cartRemoveAction': 'Remove',
+      'cartLeadTimeLabel': 'Est. {min}-{max} days',
+      'cartLineTotalLabel': 'Line total',
+      'cartPromoTitle': 'Promo code',
+      'cartPromoFieldLabel': 'Enter code',
+      'cartPromoApplyLabel': 'Apply',
+      'cartPromoAppliedFallback': 'Promo applied.',
+      'cartPromoMockHint': 'Promo codes are simulated for this mock.',
+      'cartSummaryTitle': 'Estimate summary',
+      'cartSummaryItems': '{count} items',
+      'cartSummarySubtotal': 'Subtotal',
+      'cartSummaryDiscount': 'Discount',
+      'cartSummaryShipping': 'Shipping',
+      'cartSummaryFree': 'Free',
+      'cartSummaryTax': 'Estimated tax',
+      'cartSummaryTotal': 'Total (est.)',
+      'cartSummaryEstimate': 'Est. {min}-{max} days · {method}',
+      'cartProceedCheckout': 'Proceed to checkout',
+      'checkoutAddressTitle': 'Shipping address',
+      'checkoutAddressAddTooltip': 'Add address',
+      'checkoutAddressLoadFailedTitle': 'Could not load addresses',
+      'checkoutAddressEmptyTitle': 'Add your first address',
+      'checkoutAddressEmptyMessage':
+          'Save a shipping address to continue checkout.',
+      'checkoutAddressAddAction': 'Add address',
+      'checkoutAddressChooseHint': 'Choose where to ship your order.',
+      'checkoutAddressAddAnother': 'Add another address',
+      'checkoutAddressContinueShipping': 'Continue to shipping',
+      'checkoutAddressSelectRequired': 'Select an address to continue',
+      'checkoutAddressSavedCreated': 'Address added',
+      'checkoutAddressSavedUpdated': 'Address updated',
+      'checkoutAddressChipShipping': 'Shipping',
+      'checkoutAddressChipDefault': 'Default',
+      'checkoutAddressChipBilling': 'Billing',
+      'checkoutAddressChipInternational': 'International',
+      'checkoutAddressLabelFallback': 'Shipping address',
+      'checkoutAddressEditAction': 'Edit',
+      'checkoutAddressPersonaDomesticHint':
+          'Use postal lookup for Japanese addresses; include building name.',
+      'checkoutAddressPersonaInternationalHint':
+          'For international shipping, enter romanized names and a phone with country code.',
+      'checkoutAddressFormAddTitle': 'Add address',
+      'checkoutAddressFormEditTitle': 'Edit address',
+      'checkoutAddressFormDomesticLabel': 'Domestic (JP)',
+      'checkoutAddressFormInternationalLabel': 'International',
+      'checkoutAddressFormLabelOptional': 'Label (optional)',
+      'checkoutAddressFormRecipient': 'Recipient',
+      'checkoutAddressFormCompanyOptional': 'Company (optional)',
+      'checkoutAddressFormPostalCode': 'Postal code',
+      'checkoutAddressFormLookup': 'Lookup',
+      'checkoutAddressFormState': 'Prefecture/State',
+      'checkoutAddressFormCity': 'City/Ward',
+      'checkoutAddressFormLine1': 'Address line 1',
+      'checkoutAddressFormLine2Optional': 'Address line 2 (optional)',
+      'checkoutAddressFormCountry': 'Country/Region',
+      'checkoutAddressFormPhone': 'Phone (with country code)',
+      'checkoutAddressFormDefaultTitle': 'Use as default',
+      'checkoutAddressFormDefaultSubtitle':
+          'Default address is pre-selected in checkout.',
+      'checkoutAddressFormSave': 'Save address',
+      'checkoutAddressFormFixErrors': 'Please correct the highlighted fields.',
+      'checkoutAddressRequired': 'Required',
+      'checkoutAddressRecipientRequired': 'Recipient is required',
+      'checkoutAddressLine1Required': 'Address line is required',
+      'checkoutAddressCityRequired': 'City/Ward is required',
+      'checkoutAddressPostalFormat': 'Use 123-4567 format',
+      'checkoutAddressStateRequired': 'Prefecture is required',
+      'checkoutAddressCountryJapanRequired': 'Set country to Japan (JP)',
+      'checkoutAddressPhoneDomestic': 'Include area code (10+ digits)',
+      'checkoutAddressPostalShort': 'Postal/ZIP is too short',
+      'checkoutAddressCountryRequired': 'Country/region is required',
+      'checkoutAddressPhoneInternational': 'Add country code (e.g., +1)',
+      'checkoutShippingMissingState': 'Missing state',
+      'checkoutShippingSelectAddress': 'Select an address first.',
+      'checkoutShippingOptionUnavailable':
+          'Option unavailable for this address.',
+      'checkoutShippingPromoRequiresExpress':
+          'Promotion requires express shipping.',
+      'checkoutShippingBadgePopular': 'Popular',
+      'checkoutShippingBadgeFastest': 'Fastest',
+      'checkoutShippingBadgeTracked': 'Tracked',
+      'checkoutShippingOptionDomStandardLabel': 'Yamato standard',
+      'checkoutShippingOptionDomStandardCarrier': 'Yamato',
+      'checkoutShippingOptionDomStandardNote': 'Weekends + tracking',
+      'checkoutShippingOptionDomExpressLabel': 'Express next-day',
+      'checkoutShippingOptionDomExpressCarrier': 'Yamato/JP Post',
+      'checkoutShippingOptionDomExpressNote':
+          'Best for promo codes requiring express.',
+      'checkoutShippingOptionDomPickupLabel': 'Convenience store pickup',
+      'checkoutShippingOptionDomPickupCarrier': 'Lawson/FamilyMart',
+      'checkoutShippingOptionDomPickupNote': 'Held for 7 days at store.',
+      'checkoutShippingOptionIntlExpressLabel': 'Express courier',
+      'checkoutShippingOptionIntlExpressCarrier': 'DHL / Yamato Global',
+      'checkoutShippingOptionIntlExpressNote':
+          'Includes customs pre-clearance.',
+      'checkoutShippingOptionIntlPriorityLabel': 'Priority air',
+      'checkoutShippingOptionIntlPriorityCarrier': 'EMS',
+      'checkoutShippingOptionIntlPriorityNote':
+          'Hands-on support for customs forms.',
+      'checkoutShippingOptionIntlEconomyLabel': 'Economy air',
+      'checkoutShippingOptionIntlEconomyCarrier': 'JP Post Air',
+      'checkoutShippingOptionIntlEconomyNote':
+          'Best for budget-friendly delivery.',
+      'checkoutShippingBannerInternationalDelay':
+          'Customs screening is adding 1–2 days to some international deliveries.',
+      'checkoutShippingBannerKyushuDelay':
+          'Seasonal weather may delay Kyushu deliveries by half a day.',
       'shopTitle': 'Shop',
       'shopSearchTooltip': 'Search',
       'shopCartTooltip': 'Cart',
@@ -838,6 +1069,20 @@ class AppLocalizations {
       'profileAddressesSubtitle': '配送先を管理',
       'profilePaymentsTitle': '支払い方法',
       'profilePaymentsSubtitle': '支払い手段を管理',
+      'paymentMethodErrorLast4': '下4桁を入力してください',
+      'paymentMethodErrorExpMonth': '有効期限(月)を入力してください',
+      'paymentMethodErrorExpYear': '有効期限(年)を入力してください',
+      'paymentMethodErrorFixFields': '入力内容を確認してください',
+      'paymentMethodAddFailed': '支払い方法を追加できません',
+      'paymentMethodSheetTitle': '支払い方法を追加',
+      'paymentMethodSheetCard': 'カード',
+      'paymentMethodSheetWallet': 'ウォレット',
+      'paymentMethodSheetBrandLabel': 'ブランド (例: Visa)',
+      'paymentMethodSheetLast4Label': 'カード下4桁',
+      'paymentMethodSheetExpMonthLabel': '有効期限(月)',
+      'paymentMethodSheetExpYearLabel': '有効期限(年)',
+      'paymentMethodSheetBillingNameLabel': '請求先名 (任意)',
+      'paymentMethodSheetSave': '保存',
       'profileNotificationsTitle': '通知設定',
       'profileNotificationsSubtitle': '通知の受け取りを設定',
       'profileNotificationsHeader': 'ハンコフィールドからの通知方法を選択します。',
@@ -890,6 +1135,15 @@ class AppLocalizations {
       'profileLegalNoContent': '文書の内容がありません。',
       'profileSupportTitle': 'サポート',
       'profileSupportSubtitle': 'FAQ・問い合わせ',
+      'supportChatConnectedAgent': 'サポート担当の理奈が参加しました。',
+      'supportChatAgentGreeting': '理奈です。こちらで対応します。注文IDがあれば教えてください。',
+      'supportChatBotHandoff': '承知しました。担当者におつなぎします。',
+      'supportChatBotDelivery': '通常は3〜5営業日でお届けします。注文IDはお持ちですか？',
+      'supportChatBotOrderStatus': '注文状況を確認できます。注文IDを教えてください。',
+      'supportChatBotFallback': '注文状況、配送、印面についてお手伝いできます。ご用件を教えてください。',
+      'supportChatAgentRefund': '返金の件ですね。対象の注文IDを教えてください。',
+      'supportChatAgentAddress': '制作前であれば配送先の変更が可能です。注文IDを教えてください。',
+      'supportChatAgentFallback': '確認しますので少々お待ちください。',
       'profileGuidesTitle': 'ガイド',
       'profileGuidesSubtitle': '文化と使い方の案内',
       'profileHowtoTitle': '使い方',
@@ -1049,6 +1303,7 @@ class AppLocalizations {
       'commonBack': '戻る',
       'commonRetry': '再試行',
       'commonClose': '閉じる',
+      'commonSave': '保存',
       'commonLearnMore': '詳しく見る',
       'commonLoadMore': 'もっと見る',
       'commonClear': 'クリア',
@@ -1175,6 +1430,191 @@ class AppLocalizations {
       'designVersionsRelativeMinutes': '{count}分前',
       'designVersionsRelativeHours': '{count}時間前',
       'designVersionsRelativeDays': '{count}日前',
+      'checkoutPaymentTitle': '支払い方法',
+      'checkoutPaymentAddTooltip': '支払い方法を追加',
+      'checkoutPaymentLoadFailedTitle': '支払い方法を読み込めません',
+      'checkoutPaymentEmptyTitle': '支払い方法を追加してください',
+      'checkoutPaymentEmptyBody': 'カードやウォレットを登録すると、次のステップに進めます。',
+      'checkoutPaymentSignInHint': '支払い方法の追加にはログインが必要です。',
+      'checkoutPaymentAddMethod': '支払い方法を追加',
+      'checkoutPaymentChooseSaved': '保存済みの支払い方法を選択してください。',
+      'checkoutPaymentAddAnother': '支払い方法を追加',
+      'checkoutPaymentContinueReview': '注文確認へ進む',
+      'checkoutPaymentAddFailed': '支払い方法を追加できません',
+      'checkoutPaymentMethodCard': 'カード',
+      'checkoutPaymentMethodWallet': 'ウォレット',
+      'checkoutPaymentMethodBank': '銀行振込',
+      'checkoutPaymentMethodFallback': '支払い方法',
+      'checkoutPaymentExpires': '有効期限 {month}/{year}',
+      'cartPromoEnterCode': 'クーポンコードを入力してください',
+      'cartPromoAddItemsRequired': '商品を追加すると割引を適用できます。',
+      'cartPromoField10Label': '10%オフ',
+      'cartPromoField10Description': '商品小計に適用されます。',
+      'cartPromoShipfreeShortfall': 'あと¥{amount}で送料無料になります。',
+      'cartPromoShipfreeLabel': '送料無料',
+      'cartPromoInkLabel': '朱肉セット優待',
+      'cartPromoInkDescription': 'インクやアクセサリーの同梱で¥200オフ。',
+      'cartPromoInvalid': 'コードが無効か期限切れです。',
+      'cartLineTitaniumTitle': 'チタン丸印',
+      'cartLineTitaniumVariant': '15mm・深彫り調整',
+      'cartLineTitaniumDesign': 'デザイン：篤山（Akiyama）',
+      'cartLineTitaniumAddonSleeveLabel': 'マイクロファイバーケース',
+      'cartLineTitaniumAddonSleeveDescription': '薄型の起毛ケース。',
+      'cartLineTitaniumAddonSleeveBadge': '人気',
+      'cartLineTitaniumAddonDeepLabel': '深彫り仕上げ',
+      'cartLineTitaniumAddonDeepDescription': 'くっきり押せる深彫り仕上げ。',
+      'cartLineTitaniumAddonWrapLabel': 'ギフトラッピング',
+      'cartLineTitaniumAddonWrapDescription': '和紙帯とメッセージカード付き。',
+      'cartLineTitaniumNoteIntl': '通関に配慮した素材',
+      'cartLineTitaniumNoteDomestic': 'お急ぎ対応・名入れ済み',
+      'cartLineTitaniumRibbon': '人気',
+      'cartLineAcrylicTitle': 'カラーアクリル印',
+      'cartLineAcrylicVariant': '12mm・ミント / 筆記体',
+      'cartLineAcrylicDesign': 'デザイン：後でアップロード',
+      'cartLineAcrylicAddonUvLabel': 'UVコート',
+      'cartLineAcrylicAddonUvDescription': '色あせ・キズ防止コーティング。',
+      'cartLineAcrylicAddonUvBadge': '期間限定',
+      'cartLineAcrylicAddonInkLabel': '朱肉セット',
+      'cartLineAcrylicAddonInkDescription': '交換式のコンパクト朱肉。',
+      'cartLineAcrylicAddonPouchLabel': 'ソフトポーチ',
+      'cartLineAcrylicAddonPouchDescription': 'アクリル面を保護するポーチ。',
+      'cartLineAcrylicNote': 'オプション同梱で発送。',
+      'cartLineAcrylicRibbonIntl': '海外向け',
+      'cartLineAcrylicRibbon': 'おすすめ',
+      'cartLineBoxTitle': '桐箱・刻印入り',
+      'cartLineBoxVariant': '蓋刻印・ナチュラル',
+      'cartLineBoxDesign': '名入れ：はんこフィールド',
+      'cartLineBoxAddonFoamLabel': 'クッション内装',
+      'cartLineBoxAddonFoamDescription': '印鑑と付属品を固定するクッション。',
+      'cartLineBoxAddonCardLabel': 'お手入れカード',
+      'cartLineBoxAddonCardDescription': '日英併記のお手入れガイド。',
+      'cartLineBoxAddonWrapLabel': 'ラッピングセット',
+      'cartLineBoxAddonWrapDescription': 'リボン・シール・替え紙付き。',
+      'cartLineBoxNoteIntl': '日英の案内カード付き。',
+      'cartLineBoxNoteDomestic': 'メッセージ刻印済み。',
+      'cartLineBoxRibbon': 'ギフト',
+      'cartEstimateMethodIntl': '海外配送',
+      'cartEstimateMethodDomestic': '国内配送',
+      'cartEstimateMethodIntlPriority': '海外優先便',
+      'cartEstimateMethodStandard': '標準',
+      'cartTitle': 'カート',
+      'cartBulkEditTooltip': 'まとめて編集',
+      'cartLoadFailedTitle': 'カートを読み込めません',
+      'cartEmptyTitle': 'カートは空です',
+      'cartEmptyMessage': 'ショップから商品を追加すると、見積もりが表示されます。',
+      'cartEmptyAction': 'ショップへ戻る',
+      'cartRemovedItem': '{item} を削除しました',
+      'cartUndo': '元に戻す',
+      'cartPromoApplied': '{label} を適用しました',
+      'cartEditOptionsTitle': 'オプションを編集',
+      'cartAddonIncluded': '無料',
+      'cartReset': '元に戻す',
+      'cartSave': '保存',
+      'cartBulkActionsTitle': 'まとめて操作',
+      'cartBulkActionsBody': '全ての行にクーポン適用、数量調整、選択解除をまとめて行えます（モック）。',
+      'cartBulkActionApplyField10': 'FIELD10 を適用',
+      'cartBulkActionShipfree': '送料無料コード',
+      'cartBulkActionClearSelections': '選択をクリア',
+      'cartUnitPerItem': '1点あたり',
+      'cartEditOptionsAction': 'オプション編集',
+      'cartRemoveAction': '削除',
+      'cartLeadTimeLabel': 'お届け目安 {min}〜{max}日',
+      'cartLineTotalLabel': '小計',
+      'cartPromoTitle': 'クーポンコード',
+      'cartPromoFieldLabel': 'コードを入力',
+      'cartPromoApplyLabel': '適用',
+      'cartPromoAppliedFallback': 'クーポンを適用しました。',
+      'cartPromoMockHint': 'クーポン入力はモックです。',
+      'cartSummaryTitle': '概算サマリー',
+      'cartSummaryItems': '{count}点',
+      'cartSummarySubtotal': '商品小計',
+      'cartSummaryDiscount': '割引',
+      'cartSummaryShipping': '送料',
+      'cartSummaryFree': '無料',
+      'cartSummaryTax': '推定税',
+      'cartSummaryTotal': '合計（概算）',
+      'cartSummaryEstimate': '目安 {min}〜{max}日・{method}',
+      'cartProceedCheckout': '購入手続きへ',
+      'checkoutAddressTitle': '配送先',
+      'checkoutAddressAddTooltip': '住所を追加',
+      'checkoutAddressLoadFailedTitle': '住所を読み込めません',
+      'checkoutAddressEmptyTitle': '住所を追加してください',
+      'checkoutAddressEmptyMessage': '配送先を登録すると、次のステップに進めます。',
+      'checkoutAddressAddAction': '住所を追加',
+      'checkoutAddressChooseHint': '配送先を選択し、必要に応じて編集してください。',
+      'checkoutAddressAddAnother': '住所を追加',
+      'checkoutAddressContinueShipping': '配送方法へ進む',
+      'checkoutAddressSelectRequired': '配送先を選択してください',
+      'checkoutAddressSavedCreated': '住所を追加しました',
+      'checkoutAddressSavedUpdated': '住所を更新しました',
+      'checkoutAddressChipShipping': '配送先',
+      'checkoutAddressChipDefault': '既定',
+      'checkoutAddressChipBilling': '請求先',
+      'checkoutAddressChipInternational': '海外配送',
+      'checkoutAddressLabelFallback': '配送先',
+      'checkoutAddressEditAction': '編集',
+      'checkoutAddressPersonaDomesticHint':
+          '郵便番号から住所を補完できます。建物名・部屋番号まで入力してください。',
+      'checkoutAddressPersonaInternationalHint':
+          '海外配送の場合はローマ字表記と国番号付き電話を入力してください。',
+      'checkoutAddressFormAddTitle': '住所を追加',
+      'checkoutAddressFormEditTitle': '住所を編集',
+      'checkoutAddressFormDomesticLabel': '国内',
+      'checkoutAddressFormInternationalLabel': '海外',
+      'checkoutAddressFormLabelOptional': 'ラベル（任意）',
+      'checkoutAddressFormRecipient': '受取人',
+      'checkoutAddressFormCompanyOptional': '会社名（任意）',
+      'checkoutAddressFormPostalCode': '郵便番号',
+      'checkoutAddressFormLookup': '住所補完',
+      'checkoutAddressFormState': '都道府県・州',
+      'checkoutAddressFormCity': '市区町村',
+      'checkoutAddressFormLine1': '番地・町名',
+      'checkoutAddressFormLine2Optional': '建物名・部屋番号（任意）',
+      'checkoutAddressFormCountry': '国・地域',
+      'checkoutAddressFormPhone': '電話番号（国番号付き推奨）',
+      'checkoutAddressFormDefaultTitle': '既定の住所にする',
+      'checkoutAddressFormDefaultSubtitle': '既定の住所はチェックアウトで自動選択されます。',
+      'checkoutAddressFormSave': '保存する',
+      'checkoutAddressFormFixErrors': 'エラーを修正してください。',
+      'checkoutAddressRequired': '必須項目です',
+      'checkoutAddressRecipientRequired': '受取人を入力してください',
+      'checkoutAddressLine1Required': '住所（番地）を入力してください',
+      'checkoutAddressCityRequired': '市区町村を入力してください',
+      'checkoutAddressPostalFormat': '郵便番号は123-4567の形式で入力してください',
+      'checkoutAddressStateRequired': '都道府県を入力してください',
+      'checkoutAddressCountryJapanRequired': '国内配送は国をJPにしてください',
+      'checkoutAddressPhoneDomestic': '市外局番を含めて10桁以上で入力してください',
+      'checkoutAddressPostalShort': '郵便番号を正しく入力してください',
+      'checkoutAddressCountryRequired': '国・地域を入力してください',
+      'checkoutAddressPhoneInternational': '国番号付きで入力してください（例: +81）',
+      'checkoutShippingMissingState': '状態を読み込めませんでした',
+      'checkoutShippingSelectAddress': '先に配送先を選択してください。',
+      'checkoutShippingOptionUnavailable': 'この住所では利用できません。',
+      'checkoutShippingPromoRequiresExpress': 'クーポン適用には速達が必要です。',
+      'checkoutShippingBadgePopular': '人気',
+      'checkoutShippingBadgeFastest': '最短',
+      'checkoutShippingBadgeTracked': '追跡',
+      'checkoutShippingOptionDomStandardLabel': 'ヤマト通常便',
+      'checkoutShippingOptionDomStandardCarrier': 'ヤマト運輸',
+      'checkoutShippingOptionDomStandardNote': '土日配達・追跡付き',
+      'checkoutShippingOptionDomExpressLabel': '翌日お届け（速達）',
+      'checkoutShippingOptionDomExpressCarrier': 'ヤマト / 日本郵便',
+      'checkoutShippingOptionDomExpressNote': 'クーポン適用条件の速達はこちら。',
+      'checkoutShippingOptionDomPickupLabel': 'コンビニ受け取り',
+      'checkoutShippingOptionDomPickupCarrier': 'ローソン/ファミマ',
+      'checkoutShippingOptionDomPickupNote': '店舗で7日間保管。',
+      'checkoutShippingOptionIntlExpressLabel': '国際エクスプレス',
+      'checkoutShippingOptionIntlExpressCarrier': 'DHL・ヤマト国際',
+      'checkoutShippingOptionIntlExpressNote': '通関前処理込み、追跡可。',
+      'checkoutShippingOptionIntlPriorityLabel': '優先航空便',
+      'checkoutShippingOptionIntlPriorityCarrier': 'EMS',
+      'checkoutShippingOptionIntlPriorityNote': '通関書類をサポート。',
+      'checkoutShippingOptionIntlEconomyLabel': 'エコノミー航空便',
+      'checkoutShippingOptionIntlEconomyCarrier': '日本郵便航空',
+      'checkoutShippingOptionIntlEconomyNote': 'コスト重視の方向け。',
+      'checkoutShippingBannerInternationalDelay':
+          '通関強化により国際便で+1〜2日の遅延が発生しています。',
+      'checkoutShippingBannerKyushuDelay': '季節要因で九州方面は半日程度遅れる場合があります。',
       'shopTitle': 'ショップ',
       'shopSearchTooltip': '検索',
       'shopCartTooltip': 'カート',
@@ -1520,6 +1960,27 @@ class AppLocalizations {
   String get profileAddressesSubtitle => _string('profileAddressesSubtitle');
   String get profilePaymentsTitle => _string('profilePaymentsTitle');
   String get profilePaymentsSubtitle => _string('profilePaymentsSubtitle');
+  String get paymentMethodErrorLast4 => _string('paymentMethodErrorLast4');
+  String get paymentMethodErrorExpMonth =>
+      _string('paymentMethodErrorExpMonth');
+  String get paymentMethodErrorExpYear => _string('paymentMethodErrorExpYear');
+  String get paymentMethodErrorFixFields =>
+      _string('paymentMethodErrorFixFields');
+  String get paymentMethodAddFailed => _string('paymentMethodAddFailed');
+  String get paymentMethodSheetTitle => _string('paymentMethodSheetTitle');
+  String get paymentMethodSheetCard => _string('paymentMethodSheetCard');
+  String get paymentMethodSheetWallet => _string('paymentMethodSheetWallet');
+  String get paymentMethodSheetBrandLabel =>
+      _string('paymentMethodSheetBrandLabel');
+  String get paymentMethodSheetLast4Label =>
+      _string('paymentMethodSheetLast4Label');
+  String get paymentMethodSheetExpMonthLabel =>
+      _string('paymentMethodSheetExpMonthLabel');
+  String get paymentMethodSheetExpYearLabel =>
+      _string('paymentMethodSheetExpYearLabel');
+  String get paymentMethodSheetBillingNameLabel =>
+      _string('paymentMethodSheetBillingNameLabel');
+  String get paymentMethodSheetSave => _string('paymentMethodSheetSave');
   String get profileNotificationsTitle => _string('profileNotificationsTitle');
   String get profileNotificationsSubtitle =>
       _string('profileNotificationsSubtitle');
@@ -1600,6 +2061,15 @@ class AppLocalizations {
   String get profileLegalNoContent => _string('profileLegalNoContent');
   String get profileSupportTitle => _string('profileSupportTitle');
   String get profileSupportSubtitle => _string('profileSupportSubtitle');
+  String get supportChatConnectedAgent => _string('supportChatConnectedAgent');
+  String get supportChatAgentGreeting => _string('supportChatAgentGreeting');
+  String get supportChatBotHandoff => _string('supportChatBotHandoff');
+  String get supportChatBotDelivery => _string('supportChatBotDelivery');
+  String get supportChatBotOrderStatus => _string('supportChatBotOrderStatus');
+  String get supportChatBotFallback => _string('supportChatBotFallback');
+  String get supportChatAgentRefund => _string('supportChatAgentRefund');
+  String get supportChatAgentAddress => _string('supportChatAgentAddress');
+  String get supportChatAgentFallback => _string('supportChatAgentFallback');
   String get profileGuidesTitle => _string('profileGuidesTitle');
   String get profileGuidesSubtitle => _string('profileGuidesSubtitle');
   String get profileHowtoTitle => _string('profileHowtoTitle');
@@ -1823,6 +2293,7 @@ class AppLocalizations {
   String get commonBack => _string('commonBack');
   String get commonRetry => _string('commonRetry');
   String get commonClose => _string('commonClose');
+  String get commonSave => _string('commonSave');
   String get commonLearnMore => _string('commonLearnMore');
   String get commonLoadMore => _string('commonLoadMore');
   String get commonClear => _string('commonClear');
@@ -1966,6 +2437,273 @@ class AppLocalizations {
       _string('designVersionsLoadFailedTitle');
   String get designVersionsSimilarityLabel =>
       _string('designVersionsSimilarityLabel');
+  String get checkoutPaymentTitle => _string('checkoutPaymentTitle');
+  String get checkoutPaymentAddTooltip => _string('checkoutPaymentAddTooltip');
+  String get checkoutPaymentLoadFailedTitle =>
+      _string('checkoutPaymentLoadFailedTitle');
+  String get checkoutPaymentEmptyTitle => _string('checkoutPaymentEmptyTitle');
+  String get checkoutPaymentEmptyBody => _string('checkoutPaymentEmptyBody');
+  String get checkoutPaymentSignInHint => _string('checkoutPaymentSignInHint');
+  String get checkoutPaymentAddMethod => _string('checkoutPaymentAddMethod');
+  String get checkoutPaymentChooseSaved =>
+      _string('checkoutPaymentChooseSaved');
+  String get checkoutPaymentAddAnother => _string('checkoutPaymentAddAnother');
+  String get checkoutPaymentContinueReview =>
+      _string('checkoutPaymentContinueReview');
+  String get checkoutPaymentAddFailed => _string('checkoutPaymentAddFailed');
+  String get checkoutPaymentMethodCard => _string('checkoutPaymentMethodCard');
+  String get checkoutPaymentMethodWallet =>
+      _string('checkoutPaymentMethodWallet');
+  String get checkoutPaymentMethodBank => _string('checkoutPaymentMethodBank');
+  String get checkoutPaymentMethodFallback =>
+      _string('checkoutPaymentMethodFallback');
+  String get cartPromoEnterCode => _string('cartPromoEnterCode');
+  String get cartPromoAddItemsRequired => _string('cartPromoAddItemsRequired');
+  String get cartPromoField10Label => _string('cartPromoField10Label');
+  String get cartPromoField10Description =>
+      _string('cartPromoField10Description');
+  String get cartPromoShipfreeLabel => _string('cartPromoShipfreeLabel');
+  String get cartPromoInkLabel => _string('cartPromoInkLabel');
+  String get cartPromoInkDescription => _string('cartPromoInkDescription');
+  String get cartPromoInvalid => _string('cartPromoInvalid');
+  String get cartLineTitaniumTitle => _string('cartLineTitaniumTitle');
+  String get cartLineTitaniumVariant => _string('cartLineTitaniumVariant');
+  String get cartLineTitaniumDesign => _string('cartLineTitaniumDesign');
+  String get cartLineTitaniumAddonSleeveLabel =>
+      _string('cartLineTitaniumAddonSleeveLabel');
+  String get cartLineTitaniumAddonSleeveDescription =>
+      _string('cartLineTitaniumAddonSleeveDescription');
+  String get cartLineTitaniumAddonSleeveBadge =>
+      _string('cartLineTitaniumAddonSleeveBadge');
+  String get cartLineTitaniumAddonDeepLabel =>
+      _string('cartLineTitaniumAddonDeepLabel');
+  String get cartLineTitaniumAddonDeepDescription =>
+      _string('cartLineTitaniumAddonDeepDescription');
+  String get cartLineTitaniumAddonWrapLabel =>
+      _string('cartLineTitaniumAddonWrapLabel');
+  String get cartLineTitaniumAddonWrapDescription =>
+      _string('cartLineTitaniumAddonWrapDescription');
+  String get cartLineTitaniumNoteIntl => _string('cartLineTitaniumNoteIntl');
+  String get cartLineTitaniumNoteDomestic =>
+      _string('cartLineTitaniumNoteDomestic');
+  String get cartLineTitaniumRibbon => _string('cartLineTitaniumRibbon');
+  String get cartLineAcrylicTitle => _string('cartLineAcrylicTitle');
+  String get cartLineAcrylicVariant => _string('cartLineAcrylicVariant');
+  String get cartLineAcrylicDesign => _string('cartLineAcrylicDesign');
+  String get cartLineAcrylicAddonUvLabel =>
+      _string('cartLineAcrylicAddonUvLabel');
+  String get cartLineAcrylicAddonUvDescription =>
+      _string('cartLineAcrylicAddonUvDescription');
+  String get cartLineAcrylicAddonUvBadge =>
+      _string('cartLineAcrylicAddonUvBadge');
+  String get cartLineAcrylicAddonInkLabel =>
+      _string('cartLineAcrylicAddonInkLabel');
+  String get cartLineAcrylicAddonInkDescription =>
+      _string('cartLineAcrylicAddonInkDescription');
+  String get cartLineAcrylicAddonPouchLabel =>
+      _string('cartLineAcrylicAddonPouchLabel');
+  String get cartLineAcrylicAddonPouchDescription =>
+      _string('cartLineAcrylicAddonPouchDescription');
+  String get cartLineAcrylicNote => _string('cartLineAcrylicNote');
+  String get cartLineAcrylicRibbonIntl => _string('cartLineAcrylicRibbonIntl');
+  String get cartLineAcrylicRibbon => _string('cartLineAcrylicRibbon');
+  String get cartLineBoxTitle => _string('cartLineBoxTitle');
+  String get cartLineBoxVariant => _string('cartLineBoxVariant');
+  String get cartLineBoxDesign => _string('cartLineBoxDesign');
+  String get cartLineBoxAddonFoamLabel => _string('cartLineBoxAddonFoamLabel');
+  String get cartLineBoxAddonFoamDescription =>
+      _string('cartLineBoxAddonFoamDescription');
+  String get cartLineBoxAddonCardLabel => _string('cartLineBoxAddonCardLabel');
+  String get cartLineBoxAddonCardDescription =>
+      _string('cartLineBoxAddonCardDescription');
+  String get cartLineBoxAddonWrapLabel => _string('cartLineBoxAddonWrapLabel');
+  String get cartLineBoxAddonWrapDescription =>
+      _string('cartLineBoxAddonWrapDescription');
+  String get cartLineBoxNoteIntl => _string('cartLineBoxNoteIntl');
+  String get cartLineBoxNoteDomestic => _string('cartLineBoxNoteDomestic');
+  String get cartLineBoxRibbon => _string('cartLineBoxRibbon');
+  String get cartEstimateMethodIntl => _string('cartEstimateMethodIntl');
+  String get cartEstimateMethodDomestic =>
+      _string('cartEstimateMethodDomestic');
+  String get cartEstimateMethodIntlPriority =>
+      _string('cartEstimateMethodIntlPriority');
+  String get cartEstimateMethodStandard =>
+      _string('cartEstimateMethodStandard');
+  String get cartTitle => _string('cartTitle');
+  String get cartBulkEditTooltip => _string('cartBulkEditTooltip');
+  String get cartLoadFailedTitle => _string('cartLoadFailedTitle');
+  String get cartEmptyTitle => _string('cartEmptyTitle');
+  String get cartEmptyMessage => _string('cartEmptyMessage');
+  String get cartEmptyAction => _string('cartEmptyAction');
+  String get cartUndo => _string('cartUndo');
+  String get cartEditOptionsTitle => _string('cartEditOptionsTitle');
+  String get cartAddonIncluded => _string('cartAddonIncluded');
+  String get cartReset => _string('cartReset');
+  String get cartSave => _string('cartSave');
+  String get cartBulkActionsTitle => _string('cartBulkActionsTitle');
+  String get cartBulkActionsBody => _string('cartBulkActionsBody');
+  String get cartBulkActionApplyField10 =>
+      _string('cartBulkActionApplyField10');
+  String get cartBulkActionShipfree => _string('cartBulkActionShipfree');
+  String get cartBulkActionClearSelections =>
+      _string('cartBulkActionClearSelections');
+  String get cartUnitPerItem => _string('cartUnitPerItem');
+  String get cartEditOptionsAction => _string('cartEditOptionsAction');
+  String get cartRemoveAction => _string('cartRemoveAction');
+  String get cartLineTotalLabel => _string('cartLineTotalLabel');
+  String get cartPromoTitle => _string('cartPromoTitle');
+  String get cartPromoFieldLabel => _string('cartPromoFieldLabel');
+  String get cartPromoApplyLabel => _string('cartPromoApplyLabel');
+  String get cartPromoAppliedFallback => _string('cartPromoAppliedFallback');
+  String get cartPromoMockHint => _string('cartPromoMockHint');
+  String get cartSummaryTitle => _string('cartSummaryTitle');
+  String get cartSummarySubtotal => _string('cartSummarySubtotal');
+  String get cartSummaryDiscount => _string('cartSummaryDiscount');
+  String get cartSummaryShipping => _string('cartSummaryShipping');
+  String get cartSummaryFree => _string('cartSummaryFree');
+  String get cartSummaryTax => _string('cartSummaryTax');
+  String get cartSummaryTotal => _string('cartSummaryTotal');
+  String get cartProceedCheckout => _string('cartProceedCheckout');
+  String get checkoutAddressTitle => _string('checkoutAddressTitle');
+  String get checkoutAddressAddTooltip => _string('checkoutAddressAddTooltip');
+  String get checkoutAddressLoadFailedTitle =>
+      _string('checkoutAddressLoadFailedTitle');
+  String get checkoutAddressEmptyTitle => _string('checkoutAddressEmptyTitle');
+  String get checkoutAddressEmptyMessage =>
+      _string('checkoutAddressEmptyMessage');
+  String get checkoutAddressAddAction => _string('checkoutAddressAddAction');
+  String get checkoutAddressChooseHint => _string('checkoutAddressChooseHint');
+  String get checkoutAddressAddAnother => _string('checkoutAddressAddAnother');
+  String get checkoutAddressContinueShipping =>
+      _string('checkoutAddressContinueShipping');
+  String get checkoutAddressSelectRequired =>
+      _string('checkoutAddressSelectRequired');
+  String get checkoutAddressSavedCreated =>
+      _string('checkoutAddressSavedCreated');
+  String get checkoutAddressSavedUpdated =>
+      _string('checkoutAddressSavedUpdated');
+  String get checkoutAddressChipShipping =>
+      _string('checkoutAddressChipShipping');
+  String get checkoutAddressChipDefault =>
+      _string('checkoutAddressChipDefault');
+  String get checkoutAddressChipBilling =>
+      _string('checkoutAddressChipBilling');
+  String get checkoutAddressChipInternational =>
+      _string('checkoutAddressChipInternational');
+  String get checkoutAddressLabelFallback =>
+      _string('checkoutAddressLabelFallback');
+  String get checkoutAddressEditAction => _string('checkoutAddressEditAction');
+  String get checkoutAddressPersonaDomesticHint =>
+      _string('checkoutAddressPersonaDomesticHint');
+  String get checkoutAddressPersonaInternationalHint =>
+      _string('checkoutAddressPersonaInternationalHint');
+  String get checkoutAddressFormAddTitle =>
+      _string('checkoutAddressFormAddTitle');
+  String get checkoutAddressFormEditTitle =>
+      _string('checkoutAddressFormEditTitle');
+  String get checkoutAddressFormDomesticLabel =>
+      _string('checkoutAddressFormDomesticLabel');
+  String get checkoutAddressFormInternationalLabel =>
+      _string('checkoutAddressFormInternationalLabel');
+  String get checkoutAddressFormLabelOptional =>
+      _string('checkoutAddressFormLabelOptional');
+  String get checkoutAddressFormRecipient =>
+      _string('checkoutAddressFormRecipient');
+  String get checkoutAddressFormCompanyOptional =>
+      _string('checkoutAddressFormCompanyOptional');
+  String get checkoutAddressFormPostalCode =>
+      _string('checkoutAddressFormPostalCode');
+  String get checkoutAddressFormLookup => _string('checkoutAddressFormLookup');
+  String get checkoutAddressFormState => _string('checkoutAddressFormState');
+  String get checkoutAddressFormCity => _string('checkoutAddressFormCity');
+  String get checkoutAddressFormLine1 => _string('checkoutAddressFormLine1');
+  String get checkoutAddressFormLine2Optional =>
+      _string('checkoutAddressFormLine2Optional');
+  String get checkoutAddressFormCountry =>
+      _string('checkoutAddressFormCountry');
+  String get checkoutAddressFormPhone => _string('checkoutAddressFormPhone');
+  String get checkoutAddressFormDefaultTitle =>
+      _string('checkoutAddressFormDefaultTitle');
+  String get checkoutAddressFormDefaultSubtitle =>
+      _string('checkoutAddressFormDefaultSubtitle');
+  String get checkoutAddressFormSave => _string('checkoutAddressFormSave');
+  String get checkoutAddressFormFixErrors =>
+      _string('checkoutAddressFormFixErrors');
+  String get checkoutAddressRequired => _string('checkoutAddressRequired');
+  String get checkoutAddressRecipientRequired =>
+      _string('checkoutAddressRecipientRequired');
+  String get checkoutAddressLine1Required =>
+      _string('checkoutAddressLine1Required');
+  String get checkoutAddressCityRequired =>
+      _string('checkoutAddressCityRequired');
+  String get checkoutAddressPostalFormat =>
+      _string('checkoutAddressPostalFormat');
+  String get checkoutAddressStateRequired =>
+      _string('checkoutAddressStateRequired');
+  String get checkoutAddressCountryJapanRequired =>
+      _string('checkoutAddressCountryJapanRequired');
+  String get checkoutAddressPhoneDomestic =>
+      _string('checkoutAddressPhoneDomestic');
+  String get checkoutAddressPostalShort =>
+      _string('checkoutAddressPostalShort');
+  String get checkoutAddressCountryRequired =>
+      _string('checkoutAddressCountryRequired');
+  String get checkoutAddressPhoneInternational =>
+      _string('checkoutAddressPhoneInternational');
+  String get checkoutShippingMissingState =>
+      _string('checkoutShippingMissingState');
+  String get checkoutShippingSelectAddress =>
+      _string('checkoutShippingSelectAddress');
+  String get checkoutShippingOptionUnavailable =>
+      _string('checkoutShippingOptionUnavailable');
+  String get checkoutShippingPromoRequiresExpress =>
+      _string('checkoutShippingPromoRequiresExpress');
+  String get checkoutShippingBadgePopular =>
+      _string('checkoutShippingBadgePopular');
+  String get checkoutShippingBadgeFastest =>
+      _string('checkoutShippingBadgeFastest');
+  String get checkoutShippingBadgeTracked =>
+      _string('checkoutShippingBadgeTracked');
+  String get checkoutShippingOptionDomStandardLabel =>
+      _string('checkoutShippingOptionDomStandardLabel');
+  String get checkoutShippingOptionDomStandardCarrier =>
+      _string('checkoutShippingOptionDomStandardCarrier');
+  String get checkoutShippingOptionDomStandardNote =>
+      _string('checkoutShippingOptionDomStandardNote');
+  String get checkoutShippingOptionDomExpressLabel =>
+      _string('checkoutShippingOptionDomExpressLabel');
+  String get checkoutShippingOptionDomExpressCarrier =>
+      _string('checkoutShippingOptionDomExpressCarrier');
+  String get checkoutShippingOptionDomExpressNote =>
+      _string('checkoutShippingOptionDomExpressNote');
+  String get checkoutShippingOptionDomPickupLabel =>
+      _string('checkoutShippingOptionDomPickupLabel');
+  String get checkoutShippingOptionDomPickupCarrier =>
+      _string('checkoutShippingOptionDomPickupCarrier');
+  String get checkoutShippingOptionDomPickupNote =>
+      _string('checkoutShippingOptionDomPickupNote');
+  String get checkoutShippingOptionIntlExpressLabel =>
+      _string('checkoutShippingOptionIntlExpressLabel');
+  String get checkoutShippingOptionIntlExpressCarrier =>
+      _string('checkoutShippingOptionIntlExpressCarrier');
+  String get checkoutShippingOptionIntlExpressNote =>
+      _string('checkoutShippingOptionIntlExpressNote');
+  String get checkoutShippingOptionIntlPriorityLabel =>
+      _string('checkoutShippingOptionIntlPriorityLabel');
+  String get checkoutShippingOptionIntlPriorityCarrier =>
+      _string('checkoutShippingOptionIntlPriorityCarrier');
+  String get checkoutShippingOptionIntlPriorityNote =>
+      _string('checkoutShippingOptionIntlPriorityNote');
+  String get checkoutShippingOptionIntlEconomyLabel =>
+      _string('checkoutShippingOptionIntlEconomyLabel');
+  String get checkoutShippingOptionIntlEconomyCarrier =>
+      _string('checkoutShippingOptionIntlEconomyCarrier');
+  String get checkoutShippingOptionIntlEconomyNote =>
+      _string('checkoutShippingOptionIntlEconomyNote');
+  String get checkoutShippingBannerInternationalDelay =>
+      _string('checkoutShippingBannerInternationalDelay');
+  String get checkoutShippingBannerKyushuDelay =>
+      _string('checkoutShippingBannerKyushuDelay');
   String get shopTitle => _string('shopTitle');
   String get shopSearchTooltip => _string('shopSearchTooltip');
   String get shopCartTooltip => _string('shopCartTooltip');
@@ -2478,6 +3216,48 @@ class AppLocalizations {
   String orderInvoiceIssuedLabel(String date) {
     final template = _string('orderInvoiceIssuedLabel');
     return template.replaceAll('{date}', date);
+  }
+
+  String checkoutPaymentExpires(int month, int year) {
+    final template = _string('checkoutPaymentExpires');
+    return template
+        .replaceAll('{month}', '$month')
+        .replaceAll('{year}', '$year');
+  }
+
+  String cartPromoShipfreeShortfall(int amount) {
+    final template = _string('cartPromoShipfreeShortfall');
+    return template.replaceAll('{amount}', amount.toString());
+  }
+
+  String cartRemovedItem(String item) {
+    final template = _string('cartRemovedItem');
+    return template.replaceAll('{item}', item);
+  }
+
+  String cartPromoApplied(String label) {
+    final template = _string('cartPromoApplied');
+    return template.replaceAll('{label}', label);
+  }
+
+  String cartLeadTimeLabel(int minDays, int maxDays) {
+    final template = _string('cartLeadTimeLabel');
+    return template
+        .replaceAll('{min}', minDays.toString())
+        .replaceAll('{max}', maxDays.toString());
+  }
+
+  String cartSummaryItems(int count) {
+    final template = _string('cartSummaryItems');
+    return template.replaceAll('{count}', count.toString());
+  }
+
+  String cartSummaryEstimate(int minDays, int maxDays, String method) {
+    final template = _string('cartSummaryEstimate');
+    return template
+        .replaceAll('{min}', minDays.toString())
+        .replaceAll('{max}', maxDays.toString())
+        .replaceAll('{method}', method);
   }
 
   String orderProductionStatusLabel(String status) {

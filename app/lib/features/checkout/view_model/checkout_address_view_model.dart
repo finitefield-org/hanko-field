@@ -6,7 +6,8 @@ import 'package:app/analytics/analytics.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:app/features/users/data/repositories/local_user_repository.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -199,9 +200,9 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
   Call<AddressSaveResult> saveAddress(
     AddressFormInput input,
   ) => mutate(saveAddressMut, (ref) async {
-    final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
     final normalized = _normalize(input);
-    final validation = _validate(normalized, gates.prefersEnglish);
+    final validation = _validate(normalized, l10n);
     final current = ref.watch(this).valueOrNull;
 
     if (!validation.isValid) {
@@ -341,25 +342,24 @@ AddressFormInput _normalize(AddressFormInput input) {
   );
 }
 
-AddressValidationResult _validate(AddressFormInput input, bool prefersEnglish) {
+AddressValidationResult _validate(
+  AddressFormInput input,
+  AppLocalizations l10n,
+) {
   final errors = <String, String>{};
   final postal = input.postalCode.trim();
   final phone = input.phone.trim();
   final country = input.country.trim().toUpperCase();
 
-  final requiredLabel = prefersEnglish ? 'Required' : '必須項目です';
+  final requiredLabel = l10n.checkoutAddressRequired;
   if (input.recipient.trim().isEmpty) {
-    errors['recipient'] = prefersEnglish
-        ? 'Recipient is required'
-        : '受取人を入力してください';
+    errors['recipient'] = l10n.checkoutAddressRecipientRequired;
   }
   if (input.line1.trim().isEmpty) {
-    errors['line1'] = prefersEnglish
-        ? 'Address line is required'
-        : '住所（番地）を入力してください';
+    errors['line1'] = l10n.checkoutAddressLine1Required;
   }
   if (input.city.trim().isEmpty) {
-    errors['city'] = prefersEnglish ? 'City/Ward is required' : '市区町村を入力してください';
+    errors['city'] = l10n.checkoutAddressCityRequired;
   }
   if (country.isEmpty) {
     errors['country'] = requiredLabel;
@@ -368,40 +368,26 @@ AddressValidationResult _validate(AddressFormInput input, bool prefersEnglish) {
   if (input.layout == AddressFormLayout.domestic) {
     final regex = RegExp(r'^\d{3}-?\d{4}$');
     if (!regex.hasMatch(postal)) {
-      errors['postalCode'] = prefersEnglish
-          ? 'Use 123-4567 format'
-          : '郵便番号は123-4567の形式で入力してください';
+      errors['postalCode'] = l10n.checkoutAddressPostalFormat;
     }
     if (input.state.trim().isEmpty) {
-      errors['state'] = prefersEnglish
-          ? 'Prefecture is required'
-          : '都道府県を入力してください';
+      errors['state'] = l10n.checkoutAddressStateRequired;
     }
     if (country != 'JP') {
-      errors['country'] = prefersEnglish
-          ? 'Set country to Japan (JP)'
-          : '国内配送は国をJPにしてください';
+      errors['country'] = l10n.checkoutAddressCountryJapanRequired;
     }
     if (phone.isNotEmpty && phone.replaceAll('-', '').length < 10) {
-      errors['phone'] = prefersEnglish
-          ? 'Include area code (10+ digits)'
-          : '市外局番を含めて10桁以上で入力してください';
+      errors['phone'] = l10n.checkoutAddressPhoneDomestic;
     }
   } else {
     if (postal.length < 3) {
-      errors['postalCode'] = prefersEnglish
-          ? 'Postal/ZIP is too short'
-          : '郵便番号を正しく入力してください';
+      errors['postalCode'] = l10n.checkoutAddressPostalShort;
     }
     if (country.length < 2) {
-      errors['country'] = prefersEnglish
-          ? 'Country/region is required'
-          : '国・地域を入力してください';
+      errors['country'] = l10n.checkoutAddressCountryRequired;
     }
     if (phone.isNotEmpty && phone.length < 8) {
-      errors['phone'] = prefersEnglish
-          ? 'Add country code (e.g., +1)'
-          : '国番号付きで入力してください（例: +81）';
+      errors['phone'] = l10n.checkoutAddressPhoneInternational;
     }
   }
 

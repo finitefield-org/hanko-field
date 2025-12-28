@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/features/users/data/models/user_models.dart';
+import 'package:app/localization/app_localizations.dart';
 
 class PaymentMethodDraft {
   const PaymentMethodDraft({
@@ -33,30 +34,24 @@ class PaymentValidationResult {
 
 PaymentValidationResult validatePaymentDraft(
   PaymentMethodDraft draft,
-  bool prefersEnglish,
+  AppLocalizations l10n,
 ) {
   final errors = <String, String>{};
   final last4 = draft.last4?.trim();
   if (draft.methodType == PaymentMethodType.card) {
     if (last4 == null || last4.length != 4) {
-      errors['last4'] = prefersEnglish ? 'Enter last 4 digits' : '下4桁を入力してください';
+      errors['last4'] = l10n.paymentMethodErrorLast4;
     }
     if (draft.expMonth == null || draft.expMonth! < 1 || draft.expMonth! > 12) {
-      errors['expMonth'] = prefersEnglish
-          ? 'Enter expiry month'
-          : '有効期限(月)を入力してください';
+      errors['expMonth'] = l10n.paymentMethodErrorExpMonth;
     }
     if (draft.expYear == null || draft.expYear! < DateTime.now().year) {
-      errors['expYear'] = prefersEnglish
-          ? 'Enter expiry year'
-          : '有効期限(年)を入力してください';
+      errors['expYear'] = l10n.paymentMethodErrorExpYear;
     }
   }
 
   return PaymentValidationResult(
     fieldErrors: errors,
-    message: errors.isEmpty
-        ? null
-        : (prefersEnglish ? 'Fix the highlighted fields' : '入力内容を確認してください'),
+    message: errors.isEmpty ? null : l10n.paymentMethodErrorFixFields,
   );
 }

@@ -7,6 +7,8 @@ import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/value_objects.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
+import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
@@ -191,8 +193,9 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
     final cartAsync = ref.watch(cartViewModel);
     final CartState cart =
         cartAsync.valueOrNull ?? await ref.watch(cartViewModel.future);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
 
-    final options = _seedOptions(gates);
+    final options = _seedOptions(gates, l10n);
     final waived =
         cart.subtotal.amount >= 15000 ||
         cart.appliedPromo?.freeShipping == true;
@@ -206,7 +209,7 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
       focus: ShippingFocus.balanced,
       shippingWaived: waived,
       selectedId: flow.shippingMethodId,
-      bannerMessage: _bannerMessage(flow.isInternational, gates),
+      bannerMessage: _bannerMessage(flow.isInternational, l10n),
       promoCode: cart.appliedPromo?.code,
       requiresExpress: requiresExpress,
       addressId: flow.addressId,
@@ -231,91 +234,86 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
     return _resolveSelection(initial);
   }
 
-  Call<ShippingSelectionResult> selectShipping(
-    String optionId,
-  ) => mutate(selectShippingMut, (ref) async {
-    final prefersEnglish = ref.watch(appExperienceGatesProvider).prefersEnglish;
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) {
-      return ShippingSelectionResult(
-        error: prefersEnglish ? 'Missing state' : '状態を読み込めませんでした',
-      );
-    }
+  Call<ShippingSelectionResult> selectShipping(String optionId) =>
+      mutate(selectShippingMut, (ref) async {
+        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) {
+          return ShippingSelectionResult(
+            error: l10n.checkoutShippingMissingState,
+          );
+        }
 
-    if (!current.hasAddress) {
-      return ShippingSelectionResult(
-        error: prefersEnglish ? 'Select an address first.' : '先に配送先を選択してください。',
-        selected: current.selectedOption,
-        appliedCost: current.shippingCost,
-      );
-    }
+        if (!current.hasAddress) {
+          return ShippingSelectionResult(
+            error: l10n.checkoutShippingSelectAddress,
+            selected: current.selectedOption,
+            appliedCost: current.shippingCost,
+          );
+        }
 
-    final option = current.visibleOptions.firstWhereOrNull(
-      (item) => item.id == optionId,
-    );
-    if (option == null) {
-      return ShippingSelectionResult(
-        error: prefersEnglish
-            ? 'Option unavailable for this address.'
-            : 'この住所では利用できません。',
-        selected: current.selectedOption,
-        appliedCost: current.shippingCost,
-      );
-    }
+        final option = current.visibleOptions.firstWhereOrNull(
+          (item) => item.id == optionId,
+        );
+        if (option == null) {
+          return ShippingSelectionResult(
+            error: l10n.checkoutShippingOptionUnavailable,
+            selected: current.selectedOption,
+            appliedCost: current.shippingCost,
+          );
+        }
 
-    if (current.requiresExpress && !option.express) {
-      return ShippingSelectionResult(
-        error: prefersEnglish
-            ? 'Promotion requires express shipping.'
-            : 'クーポン適用には速達が必要です。',
-        selected: current.selectedOption,
-        appliedCost: current.shippingCost,
-      );
-    }
+        if (current.requiresExpress && !option.express) {
+          return ShippingSelectionResult(
+            error: l10n.checkoutShippingPromoRequiresExpress,
+            selected: current.selectedOption,
+            appliedCost: current.shippingCost,
+          );
+        }
 
-    final next = current.copyWith(selectedId: option.id);
-    ref.state = AsyncData(_resolveSelection(next));
+        final next = current.copyWith(selectedId: option.id);
+        ref.state = AsyncData(_resolveSelection(next));
 
-    try {
-      await ref.invoke(
-        checkoutFlowProvider.setShipping(
-          shippingMethodId: option.id,
-          shippingCost: current.effectiveCost(option),
-          etaMinDays: option.minDays,
-          etaMaxDays: option.maxDays,
-        ),
-      );
-    } catch (error, stackTrace) {
-      _shippingLogger.warning(
-        'Failed to persist checkout shipping',
-        error,
-        stackTrace,
-      );
-    }
+        try {
+          await ref.invoke(
+            checkoutFlowProvider.setShipping(
+              shippingMethodId: option.id,
+              shippingCost: current.effectiveCost(option),
+              etaMinDays: option.minDays,
+              etaMaxDays: option.maxDays,
+            ),
+          );
+        } catch (error, stackTrace) {
+          _shippingLogger.warning(
+            'Failed to persist checkout shipping',
+            error,
+            stackTrace,
+          );
+        }
 
-    final analytics = ref.watch(analyticsClientProvider);
-    unawaited(
-      analytics.track(
-        CheckoutShippingSelectedEvent(
-          shippingMethodId: option.id,
-          carrier: option.carrier,
-          costAmount: current.effectiveCost(option).amount,
-          currency: current.effectiveCost(option).currency,
-          etaMinDays: option.minDays,
-          etaMaxDays: option.maxDays,
-          isExpress: option.express,
-          isInternational: option.international,
-          focus: current.focus.name,
-          hasPromo: current.promoCode != null,
-        ),
-      ),
-    );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(
+            CheckoutShippingSelectedEvent(
+              shippingMethodId: option.id,
+              carrier: option.carrier,
+              costAmount: current.effectiveCost(option).amount,
+              currency: current.effectiveCost(option).currency,
+              etaMinDays: option.minDays,
+              etaMaxDays: option.maxDays,
+              isExpress: option.express,
+              isInternational: option.international,
+              focus: current.focus.name,
+              hasPromo: current.promoCode != null,
+            ),
+          ),
+        );
 
-    return ShippingSelectionResult(
-      selected: option,
-      appliedCost: current.effectiveCost(option),
-    );
-  }, concurrency: Concurrency.dropLatest);
+        return ShippingSelectionResult(
+          selected: option,
+          appliedCost: current.effectiveCost(option),
+        );
+      }, concurrency: Concurrency.dropLatest);
 
   Call<ShippingFocus> setFocus(ShippingFocus focus) =>
       mutate(focusMut, (ref) async {
@@ -347,88 +345,86 @@ CheckoutShippingState _resolveSelection(CheckoutShippingState state) {
   return state.copyWith(selectedId: fallback.id);
 }
 
-List<ShippingOption> _seedOptions(AppExperienceGates gates) {
-  final en = gates.prefersEnglish;
+List<ShippingOption> _seedOptions(
+  AppExperienceGates gates,
+  AppLocalizations l10n,
+) {
   final intl = gates.emphasizeInternationalFlows;
   return [
     ShippingOption(
       id: 'dom-standard',
-      label: en ? 'Yamato standard' : 'ヤマト通常便',
-      carrier: en ? 'Yamato' : 'ヤマト運輸',
+      label: l10n.checkoutShippingOptionDomStandardLabel,
+      carrier: l10n.checkoutShippingOptionDomStandardCarrier,
       cost: const Money(amount: 680, currency: 'JPY'),
       minDays: gates.isJapanRegion ? 2 : 3,
       maxDays: gates.isJapanRegion ? 4 : 6,
       international: false,
-      note: en ? 'Weekends + tracking' : '土日配達・追跡付き',
-      badge: intl ? null : (en ? 'Popular' : '人気'),
+      note: l10n.checkoutShippingOptionDomStandardNote,
+      badge: intl ? null : l10n.checkoutShippingBadgePopular,
     ),
     ShippingOption(
       id: 'dom-express',
-      label: en ? 'Express next-day' : '翌日お届け（速達）',
-      carrier: en ? 'Yamato/JP Post' : 'ヤマト / 日本郵便',
+      label: l10n.checkoutShippingOptionDomExpressLabel,
+      carrier: l10n.checkoutShippingOptionDomExpressCarrier,
       cost: const Money(amount: 1280, currency: 'JPY'),
       minDays: 1,
       maxDays: 2,
       international: false,
       express: true,
-      note: en ? 'Best for promo codes requiring express.' : 'クーポン適用条件の速達はこちら。',
-      badge: en ? 'Fastest' : '最短',
+      note: l10n.checkoutShippingOptionDomExpressNote,
+      badge: l10n.checkoutShippingBadgeFastest,
     ),
     ShippingOption(
       id: 'dom-pickup',
-      label: en ? 'Convenience store pickup' : 'コンビニ受け取り',
-      carrier: en ? 'Lawson/FamilyMart' : 'ローソン/ファミマ',
+      label: l10n.checkoutShippingOptionDomPickupLabel,
+      carrier: l10n.checkoutShippingOptionDomPickupCarrier,
       cost: const Money(amount: 540, currency: 'JPY'),
       minDays: 3,
       maxDays: 5,
       international: false,
-      note: en ? 'Held for 7 days at store.' : '店舗で7日間保管。',
+      note: l10n.checkoutShippingOptionDomPickupNote,
     ),
     ShippingOption(
       id: 'intl-express',
-      label: en ? 'Express courier' : '国際エクスプレス',
-      carrier: en ? 'DHL / Yamato Global' : 'DHL・ヤマト国際',
+      label: l10n.checkoutShippingOptionIntlExpressLabel,
+      carrier: l10n.checkoutShippingOptionIntlExpressCarrier,
       cost: const Money(amount: 5200, currency: 'JPY'),
       minDays: 3,
       maxDays: 6,
       international: true,
       express: true,
-      note: en ? 'Includes customs pre-clearance.' : '通関前処理込み、追跡可。',
-      badge: en ? 'Tracked' : '追跡',
+      note: l10n.checkoutShippingOptionIntlExpressNote,
+      badge: l10n.checkoutShippingBadgeTracked,
     ),
     ShippingOption(
       id: 'intl-priority',
-      label: en ? 'Priority air' : '優先航空便',
-      carrier: en ? 'EMS' : 'EMS',
+      label: l10n.checkoutShippingOptionIntlPriorityLabel,
+      carrier: l10n.checkoutShippingOptionIntlPriorityCarrier,
       cost: const Money(amount: 4200, currency: 'JPY'),
       minDays: 4,
       maxDays: 8,
       international: true,
-      note: en ? 'Hands-on support for customs forms.' : '通関書類をサポート。',
+      note: l10n.checkoutShippingOptionIntlPriorityNote,
     ),
     ShippingOption(
       id: 'intl-economy',
-      label: en ? 'Economy air' : 'エコノミー航空便',
-      carrier: en ? 'JP Post Air' : '日本郵便航空',
+      label: l10n.checkoutShippingOptionIntlEconomyLabel,
+      carrier: l10n.checkoutShippingOptionIntlEconomyCarrier,
       cost: const Money(amount: 2800, currency: 'JPY'),
       minDays: 8,
       maxDays: 14,
       international: true,
-      note: en ? 'Best for budget-friendly delivery.' : 'コスト重視の方向け。',
-      badge: intl ? (en ? 'Popular' : '人気') : null,
+      note: l10n.checkoutShippingOptionIntlEconomyNote,
+      badge: intl ? l10n.checkoutShippingBadgePopular : null,
     ),
   ];
 }
 
-String _bannerMessage(bool international, AppExperienceGates gates) {
+String _bannerMessage(bool international, AppLocalizations l10n) {
   if (international) {
-    return gates.prefersEnglish
-        ? 'Customs screening is adding 1–2 days to some international deliveries.'
-        : '通関強化により国際便で+1〜2日の遅延が発生しています。';
+    return l10n.checkoutShippingBannerInternationalDelay;
   }
-  return gates.prefersEnglish
-      ? 'Seasonal weather may delay Kyushu deliveries by half a day.'
-      : '季節要因で九州方面は半日程度遅れる場合があります。';
+  return l10n.checkoutShippingBannerKyushuDelay;
 }
 
 final checkoutShippingViewModel = CheckoutShippingViewModel();
