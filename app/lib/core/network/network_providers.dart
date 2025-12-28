@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:app/core/network/network_client.dart';
 import 'package:app/core/network/network_config.dart';
 import 'package:app/core/network/response_parser.dart';
+import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/security/secure_storage.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -59,6 +60,7 @@ final networkClientProvider = Provider<NetworkClient>((ref) {
     final parser = ref.watch(responseParserProvider);
     final connectivity = ref.watch(connectivityProvider);
     final tokenStorage = ref.watch(tokenStorageProvider);
+    final performanceMonitor = ref.watch(performanceMonitorProvider);
     final logger = Logger('NetworkClient');
 
     return NetworkClient(
@@ -66,6 +68,7 @@ final networkClientProvider = Provider<NetworkClient>((ref) {
       config: config,
       connectivity: connectivity,
       tokenStorage: tokenStorage,
+      performanceMonitor: performanceMonitor,
       parser: parser,
       logger: logger,
     );

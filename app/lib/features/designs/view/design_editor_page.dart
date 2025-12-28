@@ -1,10 +1,12 @@
 // ignore_for_file: public_member_api_docs, unnecessary_import
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:app/core/model/enums.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
+import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
@@ -22,6 +24,27 @@ class DesignEditorPage extends ConsumerStatefulWidget {
 
 class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
   int _selectedTool = 1;
+  late final Stopwatch _renderStopwatch;
+  PerformanceTraceHandle? _renderTrace;
+  bool _renderTraceRecorded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _renderStopwatch = Stopwatch()..start();
+    _renderTrace = ref
+        .read(performanceMonitorProvider)
+        .startTrace(
+          'design_editor_render',
+          attributes: const {'screen': 'design_editor'},
+        );
+  }
+
+  @override
+  void dispose() {
+    _stopRenderTrace(status: 'disposed');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +52,21 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final editor = ref.watch(designEditorViewModel);
+
+    if (!_renderTraceRecorded && editor.valueOrNull != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _renderTraceRecorded) return;
+        _stopRenderTrace();
+      });
+    }
+    if (!_renderTraceRecorded &&
+        editor is AsyncError<DesignEditorState> &&
+        editor.valueOrNull == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _renderTraceRecorded) return;
+        _stopRenderTrace(status: 'error');
+      });
+    }
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -143,6 +181,22 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
             },
           ),
         },
+      ),
+    );
+  }
+
+  void _stopRenderTrace({String? status}) {
+    if (_renderTraceRecorded) return;
+    _renderTraceRecorded = true;
+    _renderStopwatch.stop();
+    final attributes = <String, String>{};
+    if (status != null && status.isNotEmpty) {
+      attributes['status'] = status;
+    }
+    unawaited(
+      _renderTrace?.stop(
+        metrics: {'render_ms': _renderStopwatch.elapsedMilliseconds},
+        attributes: attributes.isEmpty ? null : attributes,
       ),
     );
   }

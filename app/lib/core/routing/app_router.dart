@@ -69,6 +69,7 @@ import 'package:app/features/support/view/faq_page.dart';
 import 'package:app/features/support/view/support_chat_page.dart';
 import 'package:app/features/support/view/support_contact_page.dart';
 import 'package:app/features/updates/view/changelog_page.dart';
+import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/shared/providers/app_update_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -93,6 +94,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: keys.rootKey,
     initialLocation: AppRoutePaths.splash,
+    observers: [ref.watch(performanceRouteObserverProvider)],
     refreshListenable: Listenable.merge([updateRefresh, connectivityStatus]),
     redirect: (context, state) {
       final isOffline = connectivityStatus.isOffline;

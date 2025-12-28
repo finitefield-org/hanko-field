@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:app/core/network/network_config.dart';
 import 'package:app/core/network/network_error.dart';
 import 'package:app/core/network/response_parser.dart';
+import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/security/secure_storage.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
@@ -19,12 +20,14 @@ class NetworkClient {
     required NetworkConfig config,
     required Connectivity connectivity,
     required TokenStorage tokenStorage,
+    PerformanceMonitor? performanceMonitor,
     ResponseParser? parser,
     Logger? logger,
   }) : _httpClient = httpClient,
        _config = config,
        _connectivity = connectivity,
        _tokenStorage = tokenStorage,
+       _performanceMonitor = performanceMonitor,
        _parser = parser ?? const ResponseParser(),
        _logger = logger ?? Logger('NetworkClient');
 
@@ -32,6 +35,7 @@ class NetworkClient {
   final NetworkConfig _config;
   final Connectivity _connectivity;
   final TokenStorage _tokenStorage;
+  final PerformanceMonitor? _performanceMonitor;
   final ResponseParser _parser;
   final Logger _logger;
 
@@ -267,6 +271,12 @@ class NetworkClient {
     required Duration receiveTimeout,
   }) async {
     final (encodedBody, _) = body;
+    final requestPayloadSize = _payloadSize(encodedBody);
+    final metric = await _performanceMonitor?.startHttpMetric(
+      uri: uri,
+      method: method,
+      requestPayloadSize: requestPayloadSize,
+    );
     final request = http.Request(method, uri);
     request.headers.addAll(headers);
     if (encodedBody != null) {
@@ -277,22 +287,36 @@ class NetworkClient {
       }
     }
 
-    final streamed = encodedBody != null && sendTimeout != Duration.zero
-        ? await _httpClient.send(request).timeout(sendTimeout)
-        : await _httpClient.send(request);
+    http.Response? response;
+    try {
+      final streamed = encodedBody != null && sendTimeout != Duration.zero
+          ? await _httpClient.send(request).timeout(sendTimeout)
+          : await _httpClient.send(request);
 
-    final responseFuture = http.Response.fromStream(streamed);
-    final response = receiveTimeout == Duration.zero
-        ? await responseFuture
-        : await responseFuture.timeout(receiveTimeout);
-    final responseData = _decodeBody(response);
+      final responseFuture = http.Response.fromStream(streamed);
+      response = receiveTimeout == Duration.zero
+          ? await responseFuture
+          : await responseFuture.timeout(receiveTimeout);
+      final responseData = _decodeBody(response);
 
-    return NetworkRawResponse(
-      data: responseData,
-      statusCode: response.statusCode,
-      headers: Map<String, String>.from(response.headers),
-      uri: response.request?.url ?? uri,
-    );
+      return NetworkRawResponse(
+        data: responseData,
+        statusCode: response.statusCode,
+        headers: Map<String, String>.from(response.headers),
+        uri: response.request?.url ?? uri,
+      );
+    } finally {
+      if (response != null) {
+        await _performanceMonitor?.stopHttpMetric(
+          metric,
+          responseCode: response.statusCode,
+          responsePayloadSize: response.bodyBytes.length,
+          responseContentType: response.headers['content-type'],
+        );
+      } else {
+        await _performanceMonitor?.stopHttpMetric(metric);
+      }
+    }
   }
 
   Future<void> _ensureOnline(Uri uri) async {
@@ -389,6 +413,13 @@ class NetworkClient {
     });
     return sanitized;
   }
+}
+
+int? _payloadSize(_EncodedBody? body) {
+  if (body == null) return null;
+  if (body.bytes != null) return body.bytes!.length;
+  if (body.text != null) return utf8.encode(body.text!).length;
+  return null;
 }
 
 class NetworkResponse<T> {

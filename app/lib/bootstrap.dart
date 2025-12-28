@@ -13,6 +13,7 @@ import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/firebase/messaging.dart';
 import 'package:app/firebase/remote_config.dart';
 import 'package:app/monitoring/crash_reporting.dart';
+import 'package:app/monitoring/performance_monitoring.dart';
 import 'package:app/privacy/privacy_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -62,6 +63,12 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     await container.read(analyticsInitializerProvider.future);
   } catch (e, st) {
     logger.warning('Failed to initialize Analytics: $e', e, st);
+  }
+
+  try {
+    await container.read(performanceMonitoringInitializerProvider.future);
+  } catch (e, st) {
+    logger.warning('Failed to initialize Performance Monitoring: $e', e, st);
   }
 
   try {
