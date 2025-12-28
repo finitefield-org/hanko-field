@@ -2,6 +2,7 @@
 
 import 'package:app/features/updates/data/models/changelog_models.dart';
 import 'package:app/features/updates/view_model/changelog_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
@@ -28,6 +29,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
 
@@ -59,11 +61,11 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
               pinned: true,
               backgroundColor: tokens.colors.surface,
               leading: IconButton(
-                tooltip: prefersEnglish ? 'Back' : '戻る',
+                tooltip: l10n.commonBack,
                 icon: const Icon(Icons.arrow_back_rounded),
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
-              title: Text(prefersEnglish ? 'Changelog' : '変更履歴'),
+              title: Text(l10n.changelogTitle),
               actions: [
                 if (latestVersion != null && latestRelease != null)
                   Builder(
@@ -75,7 +77,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
                         backgroundColor: tokens.colors.primary,
                         textColor: tokens.colors.onPrimary,
                         child: IconButton(
-                          tooltip: prefersEnglish ? 'Latest release' : '最新リリース',
+                          tooltip: l10n.changelogLatestReleaseTooltip,
                           icon: const Icon(Icons.new_releases_outlined),
                           onPressed: () => _handleLearnMore(
                             context,
@@ -107,12 +109,10 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
-                    title: prefersEnglish
-                        ? 'Unable to load updates'
-                        : '更新履歴を読み込めませんでした',
+                    title: l10n.changelogUnableToLoad,
                     message: error.toString(),
                     icon: Icons.update_disabled_outlined,
-                    actionLabel: prefersEnglish ? 'Retry' : '再試行',
+                    actionLabel: l10n.commonRetry,
                     onAction: () => ref.invoke(changelogViewModel.refresh()),
                   ),
                 ),
@@ -120,6 +120,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
               AsyncData(:final value) => _buildContent(
                 context,
                 value,
+                l10n: l10n,
                 prefersEnglish: prefersEnglish,
               ),
             },
@@ -132,6 +133,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
   List<Widget> _buildContent(
     BuildContext context,
     ChangelogState state, {
+    required AppLocalizations l10n,
     required bool prefersEnglish,
   }) {
     final tokens = DesignTokensTheme.of(context);
@@ -151,7 +153,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
             tokens.spacing.sm,
           ),
           child: Text(
-            prefersEnglish ? 'Highlights' : 'ハイライト',
+            l10n.changelogHighlightsTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
@@ -163,12 +165,12 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
             segments: [
               ButtonSegment(
                 value: ChangelogFilter.all,
-                label: Text(prefersEnglish ? 'All updates' : 'すべて'),
+                label: Text(l10n.changelogAllUpdates),
                 icon: const Icon(Icons.layers_outlined),
               ),
               ButtonSegment(
                 value: ChangelogFilter.major,
-                label: Text(prefersEnglish ? 'Major only' : '主要のみ'),
+                label: Text(l10n.changelogMajorOnly),
                 icon: const Icon(Icons.new_releases_outlined),
               ),
             ],
@@ -212,10 +214,8 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
         SliverFillRemaining(
           hasScrollBody: false,
           child: AppEmptyState(
-            title: prefersEnglish ? 'No updates yet' : '更新履歴はまだありません',
-            message: prefersEnglish
-                ? 'We will post release notes here as soon as they are ready.'
-                : 'リリースノートが準備でき次第こちらに掲載します。',
+            title: l10n.changelogNoUpdatesTitle,
+            message: l10n.changelogNoUpdatesMessage,
             icon: Icons.auto_awesome,
           ),
         ),
@@ -232,14 +232,12 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  prefersEnglish ? 'Version history' : 'バージョン履歴',
+                  l10n.changelogVersionHistoryTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 SizedBox(height: tokens.spacing.xs),
                 Text(
-                  prefersEnglish
-                      ? 'Tap a release to see details and fixes.'
-                      : 'リリースをタップして詳細を確認できます。',
+                  l10n.changelogVersionHistorySubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: tokens.colors.onSurface.withValues(alpha: 0.7),
                   ),
@@ -304,7 +302,7 @@ class _ChangelogPageState extends ConsumerState<ChangelogPage> {
     showAppModal<void>(
       context: context,
       title: 'v${release.version} · ${release.title.resolve(prefersEnglish)}',
-      primaryAction: prefersEnglish ? 'Close' : '閉じる',
+      primaryAction: AppLocalizations.of(context).commonClose,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -482,7 +480,7 @@ class _HighlightCard extends StatelessWidget {
           ),
           SizedBox(height: tokens.spacing.md),
           AppButton(
-            label: prefersEnglish ? 'Learn more' : '詳しく見る',
+            label: AppLocalizations.of(context).commonLearnMore,
             variant: AppButtonVariant.ghost,
             trailing: const Icon(Icons.arrow_forward_rounded, size: 18),
             onPressed: onLearnMore,
@@ -606,7 +604,7 @@ class _ReleaseTile extends StatelessWidget {
               ),
             ),
             AppButton(
-              label: prefersEnglish ? 'Learn more' : '詳しく見る',
+              label: AppLocalizations.of(context).commonLearnMore,
               variant: AppButtonVariant.ghost,
               trailing: const Icon(Icons.open_in_new_rounded, size: 18),
               onPressed: onLearnMore,

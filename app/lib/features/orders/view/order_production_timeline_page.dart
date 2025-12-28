@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/orders/data/models/order_models.dart';
 import 'package:app/features/orders/view_model/order_production_timeline_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -51,8 +51,7 @@ class _OrderProductionTimelinePageState
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final vm = OrderProductionTimelineViewModel(orderId: widget.orderId);
     final state = ref.watch(vm);
     final refreshState = ref.watch(vm.refreshMut);
@@ -61,16 +60,16 @@ class _OrderProductionTimelinePageState
       backgroundColor: tokens.colors.background,
       appBar: AppBar(
         leading: IconButton(
-          tooltip: prefersEnglish ? 'Back' : '戻る',
+          tooltip: l10n.commonBack,
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             ref.container.read(navigationControllerProvider).pop();
           },
         ),
-        title: Text(prefersEnglish ? 'Production' : '制作進捗'),
+        title: Text(l10n.orderProductionTitle),
         actions: [
           IconButton(
-            tooltip: prefersEnglish ? 'Refresh' : '更新',
+            tooltip: l10n.orderProductionRefreshTooltip,
             icon: const Icon(Icons.refresh),
             onPressed: refreshState is PendingMutationState
                 ? null
@@ -87,7 +86,7 @@ class _OrderProductionTimelinePageState
             context: context,
             state: state,
             tokens: tokens,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
           ),
         ),
       ),
@@ -102,7 +101,7 @@ class _OrderProductionTimelinePageState
     required BuildContext context,
     required AsyncValue<OrderProductionTimelineState> state,
     required DesignTokens tokens,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
   }) {
     final loading = state is AsyncLoading<OrderProductionTimelineState>;
     final error = state is AsyncError<OrderProductionTimelineState>;
@@ -119,10 +118,10 @@ class _OrderProductionTimelinePageState
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load' : '読み込みに失敗しました',
+          title: l10n.commonLoadFailed,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () => unawaited(
             _refresh(OrderProductionTimelineViewModel(orderId: widget.orderId)),
           ),
@@ -165,22 +164,20 @@ class _OrderProductionTimelinePageState
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  _HealthChip(health: health, prefersEnglish: prefersEnglish),
+                  _HealthChip(health: health, l10n: l10n),
                 ],
               ),
               SizedBox(height: tokens.spacing.sm),
               Text(
-                prefersEnglish
-                    ? 'Status: ${_orderStatusLabel(order.status, prefersEnglish: prefersEnglish)}'
-                    : 'ステータス：${_orderStatusLabel(order.status, prefersEnglish: prefersEnglish)}',
+                l10n.orderProductionStatusLabel(
+                  _orderStatusLabel(order.status, l10n: l10n),
+                ),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               if (eta != null) ...[
                 SizedBox(height: tokens.spacing.xs),
                 Text(
-                  prefersEnglish
-                      ? 'Estimated completion: ${_formatDateTime(eta)}'
-                      : '完了予定：${_formatDateTime(eta)}',
+                  l10n.orderProductionEtaLabel(_formatDateTime(eta)),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -195,9 +192,7 @@ class _OrderProductionTimelinePageState
                     SizedBox(width: tokens.spacing.sm),
                     Expanded(
                       child: Text(
-                        prefersEnglish
-                            ? 'This order is past the estimated completion date.'
-                            : 'この注文は完了予定日を過ぎています。',
+                        l10n.orderProductionDelayedMessage,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
@@ -209,18 +204,16 @@ class _OrderProductionTimelinePageState
         ),
         SizedBox(height: tokens.spacing.lg),
         Text(
-          prefersEnglish ? 'Timeline' : 'タイムライン',
+          l10n.orderProductionTimelineTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         SizedBox(height: tokens.spacing.sm),
         if (events.isEmpty)
           AppEmptyState(
-            title: prefersEnglish ? 'No events yet' : 'まだ履歴がありません',
-            message: prefersEnglish
-                ? 'Production updates will appear here when available.'
-                : '制作状況が更新されると、ここに表示されます。',
+            title: l10n.orderProductionNoEventsTitle,
+            message: l10n.orderProductionNoEventsMessage,
             icon: Icons.schedule_outlined,
-            actionLabel: prefersEnglish ? 'Refresh' : '更新する',
+            actionLabel: l10n.orderProductionNoEventsAction,
             onAction: () => unawaited(
               _refresh(
                 OrderProductionTimelineViewModel(orderId: widget.orderId),
@@ -228,12 +221,7 @@ class _OrderProductionTimelinePageState
             ),
           )
         else
-          ..._buildEventList(
-            context,
-            tokens,
-            events,
-            prefersEnglish: prefersEnglish,
-          ),
+          ..._buildEventList(context, tokens, events, l10n: l10n),
       ],
     );
   }
@@ -242,7 +230,7 @@ class _OrderProductionTimelinePageState
     BuildContext context,
     DesignTokens tokens,
     List<ProductionEvent> events, {
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
   }) {
     final widgets = <Widget>[];
     for (var i = 0; i < events.length; i++) {
@@ -250,11 +238,8 @@ class _OrderProductionTimelinePageState
       widgets.add(
         AppListTile(
           leading: _EventIcon(type: event.type),
-          title: Text(_eventTitle(event.type, prefersEnglish: prefersEnglish)),
-          subtitle: _EventSubtitle(
-            event: event,
-            prefersEnglish: prefersEnglish,
-          ),
+          title: Text(_eventTitle(event.type, l10n: l10n)),
+          subtitle: _EventSubtitle(event: event, l10n: l10n),
           dense: true,
         ),
       );
@@ -279,10 +264,10 @@ _SlaHealth _healthForEta(DateTime? eta) {
 }
 
 class _HealthChip extends StatelessWidget {
-  const _HealthChip({required this.health, required this.prefersEnglish});
+  const _HealthChip({required this.health, required this.l10n});
 
   final _SlaHealth health;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -290,19 +275,19 @@ class _HealthChip extends StatelessWidget {
 
     final (label, bg, fg, icon) = switch (health) {
       _SlaHealth.onTrack => (
-        prefersEnglish ? 'On track' : '順調',
+        l10n.orderProductionHealthOnTrack,
         scheme.primaryContainer,
         scheme.onPrimaryContainer,
         Icons.check_circle_outline,
       ),
       _SlaHealth.attention => (
-        prefersEnglish ? 'Attention' : '注意',
+        l10n.orderProductionHealthAttention,
         scheme.tertiaryContainer,
         scheme.onTertiaryContainer,
         Icons.info_outline,
       ),
       _SlaHealth.delayed => (
-        prefersEnglish ? 'Delayed' : '遅延',
+        l10n.orderProductionHealthDelayed,
         scheme.errorContainer,
         scheme.onErrorContainer,
         Icons.warning_amber_outlined,
@@ -359,10 +344,10 @@ class _EventIcon extends StatelessWidget {
 }
 
 class _EventSubtitle extends StatelessWidget {
-  const _EventSubtitle({required this.event, required this.prefersEnglish});
+  const _EventSubtitle({required this.event, required this.l10n});
 
   final ProductionEvent event;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +358,7 @@ class _EventSubtitle extends StatelessWidget {
     if (station != null && station.trim().isNotEmpty) {
       parts.add(
         Text(
-          prefersEnglish ? 'Station: $station' : '工程：$station',
+          l10n.orderProductionEventStation(station),
           style: Theme.of(context).textTheme.bodySmall,
         ),
       );
@@ -396,7 +381,7 @@ class _EventSubtitle extends StatelessWidget {
       if (details.trim().isNotEmpty) {
         parts.add(
           Text(
-            prefersEnglish ? 'QC: $details' : '検品：$details',
+            l10n.orderProductionEventQc(details),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         );
@@ -415,29 +400,29 @@ class _EventSubtitle extends StatelessWidget {
   }
 }
 
-String _eventTitle(ProductionEventType type, {required bool prefersEnglish}) {
+String _eventTitle(ProductionEventType type, {required AppLocalizations l10n}) {
   return switch (type) {
-    ProductionEventType.queued => prefersEnglish ? 'Queued' : '受付',
-    ProductionEventType.engraving => prefersEnglish ? 'Engraving' : '彫刻',
-    ProductionEventType.polishing => prefersEnglish ? 'Polishing' : '研磨',
-    ProductionEventType.qc => prefersEnglish ? 'Quality check' : '検品',
-    ProductionEventType.packed => prefersEnglish ? 'Packed' : '梱包',
-    ProductionEventType.onHold => prefersEnglish ? 'On hold' : '保留',
-    ProductionEventType.rework => prefersEnglish ? 'Rework' : '再加工',
-    ProductionEventType.canceled => prefersEnglish ? 'Canceled' : 'キャンセル',
+    ProductionEventType.queued => l10n.orderProductionEventQueued,
+    ProductionEventType.engraving => l10n.orderProductionEventEngraving,
+    ProductionEventType.polishing => l10n.orderProductionEventPolishing,
+    ProductionEventType.qc => l10n.orderProductionEventQualityCheck,
+    ProductionEventType.packed => l10n.orderProductionEventPacked,
+    ProductionEventType.onHold => l10n.orderProductionEventOnHold,
+    ProductionEventType.rework => l10n.orderProductionEventRework,
+    ProductionEventType.canceled => l10n.orderProductionEventCanceled,
   };
 }
 
-String _orderStatusLabel(OrderStatus status, {required bool prefersEnglish}) {
+String _orderStatusLabel(OrderStatus status, {required AppLocalizations l10n}) {
   return switch (status) {
-    OrderStatus.pendingPayment => prefersEnglish ? 'Pending' : '未払い',
-    OrderStatus.paid => prefersEnglish ? 'Paid' : '支払い済み',
-    OrderStatus.inProduction => prefersEnglish ? 'In production' : '制作中',
-    OrderStatus.readyToShip => prefersEnglish ? 'Ready to ship' : '発送準備中',
-    OrderStatus.shipped => prefersEnglish ? 'Shipped' : '発送済み',
-    OrderStatus.delivered => prefersEnglish ? 'Delivered' : '配達済み',
-    OrderStatus.canceled => prefersEnglish ? 'Canceled' : 'キャンセル',
-    _ => prefersEnglish ? 'Processing' : '処理中',
+    OrderStatus.pendingPayment => l10n.orderDetailStatusPending,
+    OrderStatus.paid => l10n.orderDetailStatusPaid,
+    OrderStatus.inProduction => l10n.orderDetailStatusInProduction,
+    OrderStatus.readyToShip => l10n.orderDetailStatusReadyToShip,
+    OrderStatus.shipped => l10n.orderDetailStatusShipped,
+    OrderStatus.delivered => l10n.orderDetailStatusDelivered,
+    OrderStatus.canceled => l10n.orderDetailStatusCanceled,
+    _ => l10n.orderDetailStatusProcessing,
   };
 }
 

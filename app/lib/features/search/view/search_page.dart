@@ -4,6 +4,7 @@ import 'package:app/core/model/enums.dart';
 import 'package:app/core/model/value_objects.dart' as models;
 import 'package:app/features/search/data/search_models.dart';
 import 'package:app/features/search/view_model/search_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
@@ -214,9 +215,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void _handleVoicePressed() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice search and barcode scan coming soon'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).searchVoiceComingSoon),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -529,9 +530,7 @@ class _SearchField extends StatelessWidget {
               onSubmitted: onSubmitted,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: prefersEnglish
-                    ? 'Search templates, materials, articles'
-                    : 'テンプレート、素材、記事を検索',
+                hintText: AppLocalizations.of(context).searchHintText,
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
                 fillColor: Colors.transparent,
@@ -549,7 +548,7 @@ class _SearchField extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.mic_none_rounded),
-            tooltip: 'Voice search',
+            tooltip: AppLocalizations.of(context).searchVoiceTooltip,
             onPressed: onVoicePressed,
           ),
         ],
@@ -586,12 +585,12 @@ class _HistoryAndSuggestions extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                prefersEnglish ? 'Recent searches' : '検索履歴',
+                AppLocalizations.of(context).searchRecentTitle,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               TextButton(
                 onPressed: onClearHistory,
-                child: Text(prefersEnglish ? 'Clear' : 'クリア'),
+                child: Text(AppLocalizations.of(context).commonClear),
               ),
             ],
           ),
@@ -611,14 +610,14 @@ class _HistoryAndSuggestions extends StatelessWidget {
           SizedBox(height: tokens.spacing.md),
         ],
         Text(
-          prefersEnglish ? 'Suggestions' : 'サジェスト',
+          AppLocalizations.of(context).searchSuggestionsTitle,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         SizedBox(height: tokens.spacing.xs),
         switch (suggestions) {
           AsyncLoading() => const AppSkeletonBlock(width: 160),
           AsyncError() => Text(
-            prefersEnglish ? 'Failed to load suggestions' : '候補を取得できませんでした',
+            AppLocalizations.of(context).searchSuggestionsLoadFailed,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           AsyncData(:final value) => Wrap(
@@ -715,10 +714,10 @@ class _ResultList<T> extends StatelessWidget {
       AsyncError(:final error) => Padding(
         padding: padding,
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not search' : '検索できませんでした',
+          title: AppLocalizations.of(context).searchResultsErrorTitle,
           message: error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: AppLocalizations.of(context).commonRetry,
           onAction: onRetry ?? onLoadMore,
         ),
       ),
@@ -726,10 +725,8 @@ class _ResultList<T> extends StatelessWidget {
         Padding(
           padding: padding,
           child: AppEmptyState(
-            title: prefersEnglish ? 'No results' : '結果がありません',
-            message: prefersEnglish
-                ? 'Try adjusting keywords or switching a segment.'
-                : 'キーワードやセグメントを変えてみてください。',
+            title: AppLocalizations.of(context).searchResultsEmptyTitle,
+            message: AppLocalizations.of(context).searchResultsEmptyMessage,
             icon: Icons.inbox_outlined,
           ),
         ),
@@ -752,7 +749,7 @@ class _ResultList<T> extends StatelessWidget {
           }
           return TextButton(
             onPressed: onLoadMore,
-            child: Text(prefersEnglish ? 'Load more' : 'もっと見る'),
+            child: Text(AppLocalizations.of(context).commonLoadMore),
           );
         },
         separatorBuilder: (_, __) => SizedBox(height: tokens.spacing.sm),

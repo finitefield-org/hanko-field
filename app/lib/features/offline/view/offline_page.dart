@@ -4,7 +4,7 @@ import 'package:app/core/network/network_providers.dart';
 import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/core/storage/onboarding_preferences.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -15,23 +15,16 @@ class OfflinePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final prefs = ref.watch(onboardingPreferencesProvider).valueOrNull;
     final lastSync = prefs?.offlineCacheSeededAt;
     final hasCachedLibrary = lastSync != null;
 
-    final title = prefersEnglish ? 'You are offline' : 'オフラインです';
-    final message = prefersEnglish
-        ? 'Reconnect to sync your data and keep everything up to date.'
-        : 'インターネットに接続してデータを同期してください。';
-    final retryLabel = prefersEnglish ? 'Retry connection' : '再試行';
-    final cachedLabel = prefersEnglish
-        ? 'Open cached library'
-        : 'キャッシュ済みライブラリを開く';
-    final cacheHint = prefersEnglish
-        ? 'Cached items are limited until you sync.'
-        : 'キャッシュされた項目のみ閲覧できます。';
+    final title = l10n.offlineTitle;
+    final message = l10n.offlineMessage;
+    final retryLabel = l10n.offlineRetry;
+    final cachedLabel = l10n.offlineOpenCachedLibrary;
+    final cacheHint = l10n.offlineCacheHint;
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
@@ -49,11 +42,7 @@ class OfflinePage extends ConsumerWidget {
               _ElevatedOfflineCard(
                 title: title,
                 message: message,
-                syncLabel: _syncLabel(
-                  context,
-                  lastSync,
-                  prefersEnglish: prefersEnglish,
-                ),
+                syncLabel: _syncLabel(context, lastSync),
               ),
               SizedBox(height: tokens.spacing.lg),
               SizedBox(
@@ -100,13 +89,10 @@ class OfflinePage extends ConsumerWidget {
     );
   }
 
-  String _syncLabel(
-    BuildContext context,
-    DateTime? lastSync, {
-    required bool prefersEnglish,
-  }) {
+  String _syncLabel(BuildContext context, DateTime? lastSync) {
+    final l10n = AppLocalizations.of(context);
     if (lastSync == null) {
-      return prefersEnglish ? 'Last sync unavailable' : '最終同期はまだありません';
+      return l10n.offlineLastSyncUnavailable;
     }
     final local = lastSync.toLocal();
     final localizations = MaterialLocalizations.of(context);
@@ -115,7 +101,7 @@ class OfflinePage extends ConsumerWidget {
       TimeOfDay.fromDateTime(local),
       alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat,
     );
-    return prefersEnglish ? 'Last sync $date $time' : '最終同期 $date $time';
+    return l10n.offlineLastSyncLabel(date, time);
   }
 }
 

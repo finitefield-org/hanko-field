@@ -377,6 +377,372 @@ class AppLocalizations {
           'Unable to open the store. Please update from the store app.',
       'appUpdateReminder': 'Update available (v{version}).',
       'appUpdateLater': 'Later',
+      'commonBack': 'Back',
+      'commonRetry': 'Retry',
+      'commonClose': 'Close',
+      'commonLearnMore': 'Learn more',
+      'commonLoadMore': 'Load more',
+      'commonClear': 'Clear',
+      'commonLoadFailed': 'Failed to load',
+      'commonUnknown': 'Unknown',
+      'offlineTitle': 'You are offline',
+      'offlineMessage':
+          'Reconnect to sync your data and keep everything up to date.',
+      'offlineRetry': 'Retry connection',
+      'offlineOpenCachedLibrary': 'Open cached library',
+      'offlineCacheHint': 'Cached items are limited until you sync.',
+      'offlineLastSyncUnavailable': 'Last sync unavailable',
+      'offlineLastSyncLabel': 'Last sync {date} {time}',
+      'changelogTitle': 'Changelog',
+      'changelogLatestReleaseTooltip': 'Latest release',
+      'changelogHighlightsTitle': 'Highlights',
+      'changelogAllUpdates': 'All updates',
+      'changelogMajorOnly': 'Major only',
+      'changelogUnableToLoad': 'Unable to load updates',
+      'changelogNoUpdatesTitle': 'No updates yet',
+      'changelogNoUpdatesMessage':
+          'We will post release notes here as soon as they are ready.',
+      'changelogVersionHistoryTitle': 'Version history',
+      'changelogVersionHistorySubtitle':
+          'Tap a release to see details and fixes.',
+      'searchHintText': 'Search templates, materials, articles',
+      'searchVoiceTooltip': 'Voice search',
+      'searchVoiceComingSoon': 'Voice search and barcode scan coming soon',
+      'searchRecentTitle': 'Recent searches',
+      'searchSuggestionsTitle': 'Suggestions',
+      'searchSuggestionsLoadFailed': 'Failed to load suggestions',
+      'searchResultsErrorTitle': 'Could not search',
+      'searchResultsEmptyTitle': 'No results',
+      'searchResultsEmptyMessage':
+          'Try adjusting keywords or switching a segment.',
+      'homeTitle': 'Home',
+      'homeSearchTooltip': 'Search',
+      'homeNotificationsTooltip': 'Notifications',
+      'homeFeaturedTitle': 'Featured highlights',
+      'homeFeaturedSubtitle':
+          'Campaigns and recommended flows, curated for you',
+      'homeFeaturedEmpty':
+          'No featured highlights right now. Please check back later.',
+      'homeRecentTitle': 'Recent designs',
+      'homeRecentSubtitle': 'Resume drafts or orders quickly',
+      'homeRecentActionLabel': 'See all',
+      'homeRecentEmpty': 'No designs yet. Start a new one.',
+      'homeRecommendedTitle': 'Recommended templates',
+      'homeRecommendedSubtitle':
+          'Suggestions tailored to your activity and region',
+      'homeRecommendedLoading': 'Preparing recommended templates...',
+      'homeStatusDraft': 'Draft',
+      'homeStatusReady': 'Ready',
+      'homeStatusOrdered': 'Ordered',
+      'homeStatusLocked': 'Locked',
+      'homeShapeRound': 'Round',
+      'homeShapeSquare': 'Square',
+      'homeWritingTensho': 'Tensho',
+      'homeWritingReisho': 'Reisho',
+      'homeWritingKaisho': 'Kaisho',
+      'homeWritingGyosho': 'Gyosho',
+      'homeWritingKoentai': 'Koentai',
+      'homeWritingCustom': 'Custom',
+      'homeNameUnset': 'Unnamed',
+      'homeDesignSummary': '{shape} {size}mm · {style}',
+      'homeDesignAiCheckDone': 'Official seal check complete',
+      'homeDesignAiCheckLabel': 'AI check: {diagnostic}',
+      'homeDesignAiCheckNotRun': 'Not run',
+      'homeTemplateLabel': '{shape}・{style}',
+      'homeTemplateRecommendedSize': 'Recommended {size}mm',
+      'homeTemplateApply': 'Apply',
+      'homeLoadFailed': 'Failed to load',
+      'topBarSearchLabel': 'Search',
+      'topBarSearchHint': 'Supports ⌘K / Ctrl+K shortcuts',
+      'topBarSearchTooltip': 'Search (⌘K / Ctrl+K)',
+      'topBarHelpLabel': 'Help',
+      'topBarHelpHint': 'Open with Shift + /',
+      'topBarHelpTooltip': 'Help & FAQ (Shift + /)',
+      'topBarNotificationsLabel': 'Notifications',
+      'topBarNotificationsLabelWithUnread': 'Notifications ({count} unread)',
+      'topBarNotificationsTooltip': 'Notifications (Alt + N)',
+      'topBarNotificationsTooltipWithUnread':
+          'Notifications ({count} unread) (Alt + N)',
+      'topBarHelpOverlayTitle': 'Help & shortcuts',
+      'topBarHelpOverlayPrimaryAction': 'Browse FAQ',
+      'topBarHelpOverlaySecondaryAction': 'Contact support',
+      'topBarHelpOverlayBody':
+          'Shortcuts and support entry points. Jump to FAQ or chat when you\'re stuck.',
+      'topBarShortcutSearchLabel': 'Search',
+      'topBarShortcutHelpLabel': 'Help',
+      'topBarShortcutNotificationsLabel': 'Notifications',
+      'topBarHelpLinkFaqTitle': 'Find answers in FAQ',
+      'topBarHelpLinkFaqSubtitle': 'Troubleshooting and top questions',
+      'topBarHelpLinkChatTitle': 'Chat with us',
+      'topBarHelpLinkChatSubtitle': 'Get quick answers',
+      'topBarHelpLinkContactTitle': 'Contact form',
+      'topBarHelpLinkContactSubtitle': 'For detailed support requests',
+      'splashLoading': 'Starting up…',
+      'splashFailedTitle': 'Startup failed',
+      'splashFailedMessage': 'Check your network and try again.',
+      'designVersionsTitle': 'Version history',
+      'designVersionsShowDiffTooltip': 'Show diff',
+      'designVersionsSecondaryDuplicate': 'Create copy',
+      'designVersionsTimelineTitle': 'Timeline',
+      'designVersionsRefreshTooltip': 'Refresh history',
+      'designVersionsAuditLogTitle': 'Audit log',
+      'designVersionsNoAuditTitle': 'No history',
+      'designVersionsNoAuditMessage': 'No action log yet for this design.',
+      'designVersionsRollbackTitle': 'Rollback to v{version}?',
+      'designVersionsRollbackBody':
+          'This will replace the current working version. The diff will remain in history.',
+      'designVersionsRollbackAction': 'Restore',
+      'designVersionsRollbackCancel': 'Cancel',
+      'designVersionsCurrentLabel': 'Current: v{version}',
+      'designVersionsNoDiffSummary': 'No changes',
+      'designVersionsCompareTargetLabel': 'Compare v{version}',
+      'designVersionsLatestLabel': 'Latest',
+      'designVersionsRollbackButton': 'Rollback',
+      'designVersionsPreviewCurrent': 'Current',
+      'designVersionsPreviewTarget': 'Compare',
+      'designVersionsInitialFallback': 'Seal',
+      'designVersionsUnset': 'Unset',
+      'designVersionsAutoLayout': 'Auto',
+      'designVersionsNoDiffTitle': 'No changes',
+      'designVersionsNoDiffMessage':
+          'No differences between latest and comparison version.',
+      'designVersionsChangeHistoryEmpty': 'No change note',
+      'designVersionsTemplateLabel': 'Template: {template}',
+      'designVersionsStatusCurrent': 'Current',
+      'designVersionsStatusComparing': 'Comparing',
+      'designVersionsStatusHistory': 'History',
+      'designVersionsLoadFailedTitle': 'Couldn\'t load history',
+      'designVersionsSimilarityLabel': 'Similarity',
+      'designVersionsRelativeNow': 'Just now',
+      'designVersionsRelativeMinutes': '{count}m ago',
+      'designVersionsRelativeHours': '{count}h ago',
+      'designVersionsRelativeDays': '{count}d ago',
+      'shopTitle': 'Shop',
+      'shopSearchTooltip': 'Search',
+      'shopCartTooltip': 'Cart',
+      'shopAppBarSubtitle': 'Pick materials, bundles, and add-ons',
+      'shopActionPromotions': 'See promotions',
+      'shopActionGuides': 'Guides',
+      'shopQuickGuidesTitle': 'Quick guides',
+      'shopQuickGuidesSubtitle': 'Size, care, and cultural tips in one place',
+      'shopBrowseByMaterialTitle': 'Browse by material',
+      'shopBrowseByMaterialSubtitle': 'Find a feel that matches your use case',
+      'shopPromotionsTitle': 'Promotions',
+      'shopPromotionsSubtitle': 'Bundles and fast track slots',
+      'shopPromotionsEmpty': 'No promotions available right now.',
+      'shopRecommendedMaterialsTitle': 'Recommended materials',
+      'shopRecommendedMaterialsSubtitle': 'Based on persona and delivery needs',
+      'shopRecommendedMaterialsEmpty':
+          'Materials are being prepared. Please check back soon.',
+      'shopHeroBadge': 'Seasonal pick',
+      'shopHeroTitle': 'Spring starter bundle with engraving tweaks',
+      'shopHeroBody': 'Case, ink, and DHL-friendly templates in one tap.',
+      'shopHeroAction': 'Open bundle',
+      'libraryDesignDetailTitle': 'Design detail',
+      'libraryDesignDetailSubtitle': 'Library',
+      'libraryDesignDetailEditTooltip': 'Edit',
+      'libraryDesignDetailExportTooltip': 'Export',
+      'libraryDesignDetailTabDetails': 'Details',
+      'libraryDesignDetailTabActivity': 'Activity',
+      'libraryDesignDetailTabFiles': 'Files',
+      'libraryDesignDetailMetadataTitle': 'Metadata',
+      'libraryDesignDetailUsageHistoryTitle': 'Usage history',
+      'libraryDesignDetailNoActivity': 'No activity yet.',
+      'libraryDesignDetailFilesTitle': 'Files',
+      'libraryDesignDetailPreviewPngLabel': 'Preview PNG',
+      'libraryDesignDetailVectorSvgLabel': 'Vector SVG',
+      'libraryDesignDetailExportAction': 'Export',
+      'libraryDesignDetailUntitled': 'Untitled',
+      'libraryDesignDetailAiScoreUnknown': 'AI score: -',
+      'libraryDesignDetailAiScoreLabel': 'AI score: {score}',
+      'libraryDesignDetailRegistrabilityUnknown': 'Registrability: -',
+      'libraryDesignDetailRegistrable': 'Registrable',
+      'libraryDesignDetailNotRegistrable': 'Not registrable',
+      'libraryDesignDetailActionVersions': 'Versions',
+      'libraryDesignDetailActionShare': 'Share',
+      'libraryDesignDetailActionLinks': 'Links',
+      'libraryDesignDetailActionDuplicate': 'Duplicate',
+      'libraryDesignDetailActionReorder': 'Reorder',
+      'libraryDesignDetailActionArchive': 'Archive',
+      'libraryDesignDetailArchiveTitle': 'Archive design?',
+      'libraryDesignDetailArchiveBody':
+          'This removes the design from your library (mocked local data).',
+      'libraryDesignDetailArchiveCancel': 'Cancel',
+      'libraryDesignDetailArchiveConfirm': 'Archive',
+      'libraryDesignDetailArchived': 'Archived',
+      'libraryDesignDetailReorderHint':
+          'Pick a product, then attach this design (mock)',
+      'libraryDesignDetailHydrateFailed': 'Failed to prepare editor: {error}',
+      'libraryDesignDetailFileNotAvailable': 'Not available',
+      'libraryDesignDetailMetadataDesignId': 'Design ID',
+      'libraryDesignDetailMetadataStatus': 'Status',
+      'libraryDesignDetailMetadataAiScore': 'AI score',
+      'libraryDesignDetailMetadataRegistrability': 'Registrability',
+      'libraryDesignDetailMetadataCreated': 'Created',
+      'libraryDesignDetailMetadataUpdated': 'Updated',
+      'libraryDesignDetailMetadataLastUsed': 'Last used',
+      'libraryDesignDetailMetadataVersion': 'Version',
+      'libraryDesignDetailActivityCreatedTitle': 'Created',
+      'libraryDesignDetailActivityUpdatedTitle': 'Updated',
+      'libraryDesignDetailActivityOrderedTitle': 'Ordered',
+      'libraryDesignDetailActivityCreatedDetail': 'Saved',
+      'libraryDesignDetailActivityUpdatedDetail': 'Applied updates',
+      'libraryDesignDetailActivityOrderedDetail': 'Ready to reorder',
+      'orderDetailTitleFallback': 'Order',
+      'orderDetailTooltipReorder': 'Reorder',
+      'orderDetailTooltipShare': 'Share',
+      'orderDetailTooltipMore': 'More',
+      'orderDetailMenuContactSupport': 'Contact support',
+      'orderDetailMenuCancelOrder': 'Cancel order',
+      'orderDetailTabSummary': 'Summary',
+      'orderDetailTabTimeline': 'Timeline',
+      'orderDetailTabFiles': 'Files',
+      'orderDetailShareText': 'Order {number}',
+      'orderDetailInvoiceRequestSent': 'Invoice request sent (mock)',
+      'orderDetailInvoiceRequestFailed': 'Could not request invoice',
+      'orderDetailCancelTitle': 'Cancel this order?',
+      'orderDetailCancelBody':
+          'If production already started, cancellation may not be possible.',
+      'orderDetailCancelConfirm': 'Cancel order',
+      'orderDetailCancelKeep': 'Keep',
+      'orderDetailCancelSuccess': 'Order canceled',
+      'orderDetailCancelFailed': 'Could not cancel',
+      'orderDetailDesignPreviewOk': 'OK',
+      'orderDetailBannerInProgress':
+          'Your order is in progress. You can check production and tracking here.',
+      'orderDetailBannerProduction': 'Production',
+      'orderDetailBannerTracking': 'Tracking',
+      'orderDetailSectionOrder': 'Order',
+      'orderDetailSectionItems': 'Items',
+      'orderDetailSectionTotal': 'Total',
+      'orderDetailSubtotal': 'Subtotal',
+      'orderDetailDiscount': 'Discount',
+      'orderDetailShipping': 'Shipping',
+      'orderDetailShippingFree': 'Free',
+      'orderDetailTax': 'Tax',
+      'orderDetailTotal': 'Total',
+      'orderDetailShippingAddress': 'Shipping address',
+      'orderDetailBillingAddress': 'Billing address',
+      'orderDetailPayment': 'Payment',
+      'orderDetailDesignSnapshots': 'Design snapshots',
+      'orderDetailQuickActions': 'Quick actions',
+      'orderDetailRequestInvoice': 'Request invoice',
+      'orderDetailContactSupport': 'Contact support',
+      'orderDetailTimelineTitle': 'Timeline',
+      'orderDetailProductionEvents': 'Production events',
+      'orderDetailInvoiceTitle': 'Invoice',
+      'orderDetailInvoiceHint': 'You can request and view invoices here.',
+      'orderDetailInvoiceRequest': 'Request',
+      'orderDetailInvoiceView': 'View',
+      'orderDetailItemQtyLabel': 'Qty {quantity}',
+      'orderDetailPaymentPending': 'Pending',
+      'orderDetailPaymentPaid': 'Paid',
+      'orderDetailPaymentCanceled': 'Canceled',
+      'orderDetailPaymentProcessing': 'Processing',
+      'orderDetailPaymentNoInfo': 'No payment information',
+      'orderDetailPaymentPaidAt': 'Paid at {date}',
+      'orderDetailPaymentMethodCard': 'Card',
+      'orderDetailPaymentMethodWallet': 'Wallet',
+      'orderDetailPaymentMethodBank': 'Bank',
+      'orderDetailPaymentMethodOther': 'Other',
+      'orderDetailPaymentSeparator': ' · ',
+      'orderDetailMeta': 'ID {id} · {date}',
+      'orderDetailStatusPending': 'Pending',
+      'orderDetailStatusPaid': 'Paid',
+      'orderDetailStatusInProduction': 'In production',
+      'orderDetailStatusReadyToShip': 'Ready to ship',
+      'orderDetailStatusShipped': 'Shipped',
+      'orderDetailStatusDelivered': 'Delivered',
+      'orderDetailStatusCanceled': 'Canceled',
+      'orderDetailStatusProcessing': 'Processing',
+      'orderDetailMilestonePlaced': 'Placed',
+      'orderDetailMilestonePaid': 'Paid',
+      'orderDetailMilestoneProduction': 'Production',
+      'orderDetailMilestoneShipped': 'Shipped',
+      'orderDetailMilestoneDelivered': 'Delivered',
+      'orderDetailMilestoneCanceled': 'Canceled',
+      'kanjiDictionaryTitle': 'Kanji dictionary',
+      'kanjiDictionaryToggleShowAll': 'Show all',
+      'kanjiDictionaryToggleShowFavorites': 'Show favorites',
+      'kanjiDictionaryOpenGuides': 'Open guides',
+      'kanjiDictionarySearchHint': 'Search kanji',
+      'kanjiDictionaryHistoryHint':
+          'Search for meanings, readings, or sample names.',
+      'kanjiDictionaryHistoryTitle': 'History',
+      'kanjiDictionaryFiltersTitle': 'Filters',
+      'kanjiDictionaryGradesAll': 'All grades',
+      'kanjiDictionaryGrade1': 'Grade 1',
+      'kanjiDictionaryGrade2': 'Grade 2',
+      'kanjiDictionaryGrade3': 'Grade 3',
+      'kanjiDictionaryGrade4': 'Grade 4',
+      'kanjiDictionaryGrade5': 'Grade 5',
+      'kanjiDictionaryGrade6': 'Grade 6+',
+      'kanjiDictionaryStrokesAll': 'All strokes',
+      'kanjiDictionaryRadicalAny': 'Any radical',
+      'kanjiDictionaryRadicalWater': 'Water',
+      'kanjiDictionaryRadicalSun': 'Sun',
+      'kanjiDictionaryRadicalPlant': 'Plant',
+      'kanjiDictionaryRadicalHeart': 'Heart',
+      'kanjiDictionaryRadicalEarth': 'Earth',
+      'kanjiDictionaryStrokeCount': '{count} strokes',
+      'kanjiDictionaryRadicalLabel': 'Radical: {radical}',
+      'kanjiDictionaryFavorite': 'Favorite',
+      'kanjiDictionaryUnfavorite': 'Unfavorite',
+      'kanjiDictionaryDetails': 'Details',
+      'kanjiDictionaryChipStrokes': 'Strokes: {count}',
+      'kanjiDictionaryChipRadical': 'Radical: {radical}',
+      'kanjiDictionaryStrokeOrderTitle': 'Stroke order',
+      'kanjiDictionaryExamplesTitle': 'Examples',
+      'kanjiDictionaryInsertIntoNameInput': 'Insert into name input',
+      'kanjiDictionaryDone': 'Done',
+      'kanjiDictionaryExampleUsage': 'Used in names and seals',
+      'kanjiDictionaryNoStrokeData': 'No stroke data.',
+      'kanjiDictionaryStrokeOrderPrefix': 'Order: {steps}',
+      'orderInvoiceTitle': 'Invoice',
+      'orderInvoiceShareTooltip': 'Share',
+      'orderInvoiceLoadFailed': 'Could not load invoice',
+      'orderInvoiceDownloadPdf': 'Download PDF',
+      'orderInvoiceSendEmail': 'Send by email',
+      'orderInvoiceContactSupport': 'Contact support',
+      'orderInvoiceTotalLabel': 'Total',
+      'orderInvoiceStatusAvailable': 'Available',
+      'orderInvoiceStatusPending': 'Pending',
+      'orderInvoiceTaxable': 'Taxable',
+      'orderInvoiceTaxExempt': 'Tax exempt',
+      'orderInvoicePreviewTitle': 'Preview',
+      'orderInvoiceRefreshTooltip': 'Refresh',
+      'orderInvoicePendingBody': 'Invoice is being prepared.',
+      'orderInvoiceUnavailableBody': 'Invoice preview is not available.',
+      'orderInvoiceRequestAction': 'Request invoice',
+      'orderInvoiceSavedTo': 'Saved to {path}',
+      'orderInvoiceSaveFailed': 'Could not save PDF',
+      'orderInvoiceShareText': '{app} • {number}',
+      'orderInvoiceOrderLabel': 'Order {number}',
+      'orderInvoiceIssuedLabel': 'Issued: {date}',
+      'orderProductionTitle': 'Production',
+      'orderProductionRefreshTooltip': 'Refresh',
+      'orderProductionStatusLabel': 'Status: {status}',
+      'orderProductionEtaLabel': 'Estimated completion: {date}',
+      'orderProductionDelayedMessage':
+          'This order is past the estimated completion date.',
+      'orderProductionTimelineTitle': 'Timeline',
+      'orderProductionNoEventsTitle': 'No events yet',
+      'orderProductionNoEventsMessage':
+          'Production updates will appear here when available.',
+      'orderProductionNoEventsAction': 'Refresh',
+      'orderProductionHealthOnTrack': 'On track',
+      'orderProductionHealthAttention': 'Attention',
+      'orderProductionHealthDelayed': 'Delayed',
+      'orderProductionEventStation': 'Station: {station}',
+      'orderProductionEventQc': 'QC: {details}',
+      'orderProductionEventQueued': 'Queued',
+      'orderProductionEventEngraving': 'Engraving',
+      'orderProductionEventPolishing': 'Polishing',
+      'orderProductionEventQualityCheck': 'Quality check',
+      'orderProductionEventPacked': 'Packed',
+      'orderProductionEventOnHold': 'On hold',
+      'orderProductionEventRework': 'Rework',
+      'orderProductionEventCanceled': 'Canceled',
     },
     'ja': {
       'appTitle': 'ハンコフィールド',
@@ -680,6 +1046,353 @@ class AppLocalizations {
       'appUpdateStoreOpenFailed': 'ストアを開けませんでした。ストアアプリから更新してください。',
       'appUpdateReminder': '新しいバージョンがあります (v{version})。',
       'appUpdateLater': '後で',
+      'commonBack': '戻る',
+      'commonRetry': '再試行',
+      'commonClose': '閉じる',
+      'commonLearnMore': '詳しく見る',
+      'commonLoadMore': 'もっと見る',
+      'commonClear': 'クリア',
+      'commonLoadFailed': '読み込みに失敗しました',
+      'commonUnknown': '不明',
+      'offlineTitle': 'オフラインです',
+      'offlineMessage': 'インターネットに接続してデータを同期してください。',
+      'offlineRetry': '再試行',
+      'offlineOpenCachedLibrary': 'キャッシュ済みライブラリを開く',
+      'offlineCacheHint': 'キャッシュされた項目のみ閲覧できます。',
+      'offlineLastSyncUnavailable': '最終同期はまだありません',
+      'offlineLastSyncLabel': '最終同期 {date} {time}',
+      'changelogTitle': '変更履歴',
+      'changelogLatestReleaseTooltip': '最新リリース',
+      'changelogHighlightsTitle': 'ハイライト',
+      'changelogAllUpdates': 'すべて',
+      'changelogMajorOnly': '主要のみ',
+      'changelogUnableToLoad': '更新履歴を読み込めませんでした',
+      'changelogNoUpdatesTitle': '更新履歴はまだありません',
+      'changelogNoUpdatesMessage': 'リリースノートが準備でき次第こちらに掲載します。',
+      'changelogVersionHistoryTitle': 'バージョン履歴',
+      'changelogVersionHistorySubtitle': 'リリースをタップして詳細を確認できます。',
+      'searchHintText': 'テンプレート、素材、記事を検索',
+      'searchVoiceTooltip': '音声検索',
+      'searchVoiceComingSoon': '音声検索とバーコード検索は近日対応',
+      'searchRecentTitle': '検索履歴',
+      'searchSuggestionsTitle': 'サジェスト',
+      'searchSuggestionsLoadFailed': '候補を取得できませんでした',
+      'searchResultsErrorTitle': '検索できませんでした',
+      'searchResultsEmptyTitle': '結果がありません',
+      'searchResultsEmptyMessage': 'キーワードやセグメントを変えてみてください。',
+      'homeTitle': 'ホーム',
+      'homeSearchTooltip': '検索',
+      'homeNotificationsTooltip': '通知',
+      'homeFeaturedTitle': '注目の特集',
+      'homeFeaturedSubtitle': 'キャンペーンやおすすめの流れをピックアップ',
+      'homeFeaturedEmpty': '今は表示できる特集がありません。後でもう一度お試しください。',
+      'homeRecentTitle': '最近のデザイン',
+      'homeRecentSubtitle': '下書きや発注済みをすぐ再開',
+      'homeRecentActionLabel': '一覧',
+      'homeRecentEmpty': 'まだデザインがありません。新しく作成してみましょう。',
+      'homeRecommendedTitle': 'おすすめテンプレート',
+      'homeRecommendedSubtitle': '利用履歴と地域に合わせて提案',
+      'homeRecommendedLoading': 'おすすめテンプレートを準備しています…',
+      'homeStatusDraft': '下書き',
+      'homeStatusReady': '準備完了',
+      'homeStatusOrdered': '注文済み',
+      'homeStatusLocked': 'ロック',
+      'homeShapeRound': '丸',
+      'homeShapeSquare': '角',
+      'homeWritingTensho': '篆書',
+      'homeWritingReisho': '隷書',
+      'homeWritingKaisho': '楷書',
+      'homeWritingGyosho': '行書',
+      'homeWritingKoentai': '古印体',
+      'homeWritingCustom': 'カスタム',
+      'homeNameUnset': '名称未設定',
+      'homeDesignSummary': '{shape} {size}mm ・ {style}',
+      'homeDesignAiCheckDone': '実印チェック済み',
+      'homeDesignAiCheckLabel': 'AI診断: {diagnostic}',
+      'homeDesignAiCheckNotRun': '未実行',
+      'homeTemplateLabel': '{shape}・{style}',
+      'homeTemplateRecommendedSize': '{size}mm 推奨',
+      'homeTemplateApply': '適用',
+      'homeLoadFailed': '読み込みに失敗しました',
+      'topBarSearchLabel': '検索',
+      'topBarSearchHint': '⌘K / Ctrl+K のショートカットに対応',
+      'topBarSearchTooltip': '検索 (⌘K / Ctrl+K)',
+      'topBarHelpLabel': 'ヘルプ',
+      'topBarHelpHint': 'Shift + / でも開けます',
+      'topBarHelpTooltip': 'ヘルプ・FAQ (Shift + /)',
+      'topBarNotificationsLabel': '通知',
+      'topBarNotificationsLabelWithUnread': '通知 ({count} 件の未読)',
+      'topBarNotificationsTooltip': '通知 (Alt + N)',
+      'topBarNotificationsTooltipWithUnread': '通知 ({count} 件の未読) (Alt + N)',
+      'topBarHelpOverlayTitle': 'ヘルプとショートカット',
+      'topBarHelpOverlayPrimaryAction': 'FAQを見る',
+      'topBarHelpOverlaySecondaryAction': '問い合わせる',
+      'topBarHelpOverlayBody': 'ショートカットとサポートへの入り口です。困ったときはFAQやチャットにすぐ移動できます。',
+      'topBarShortcutSearchLabel': '検索',
+      'topBarShortcutHelpLabel': 'ヘルプ',
+      'topBarShortcutNotificationsLabel': '通知',
+      'topBarHelpLinkFaqTitle': 'FAQで調べる',
+      'topBarHelpLinkFaqSubtitle': 'よくある質問とトラブルシューティング',
+      'topBarHelpLinkChatTitle': 'チャットで相談',
+      'topBarHelpLinkChatSubtitle': 'すぐ聞きたいときはこちら',
+      'topBarHelpLinkContactTitle': '問い合わせフォーム',
+      'topBarHelpLinkContactSubtitle': '詳細なサポートが必要な場合',
+      'splashLoading': '起動しています…',
+      'splashFailedTitle': '起動に失敗しました',
+      'splashFailedMessage': 'ネットワーク状況を確認して、もう一度お試しください。',
+      'designVersionsTitle': 'バージョン履歴',
+      'designVersionsShowDiffTooltip': '差分を表示',
+      'designVersionsSecondaryDuplicate': 'コピーを作成',
+      'designVersionsTimelineTitle': 'タイムライン',
+      'designVersionsRefreshTooltip': '履歴をリフレッシュ',
+      'designVersionsAuditLogTitle': '監査ログ',
+      'designVersionsNoAuditTitle': '履歴はありません',
+      'designVersionsNoAuditMessage': 'このデザインのアクションログがまだありません。',
+      'designVersionsRollbackTitle': 'v{version} にロールバックしますか？',
+      'designVersionsRollbackBody': 'この操作で現在の編集中バージョンを置き換えます。差分は履歴に残ります。',
+      'designVersionsRollbackAction': '復元',
+      'designVersionsRollbackCancel': 'キャンセル',
+      'designVersionsCurrentLabel': '現在: v{version}',
+      'designVersionsNoDiffSummary': '差分はありません',
+      'designVersionsCompareTargetLabel': '比較対象 v{version}',
+      'designVersionsLatestLabel': '最新版',
+      'designVersionsRollbackButton': 'ロールバック',
+      'designVersionsPreviewCurrent': '現在',
+      'designVersionsPreviewTarget': '比較対象',
+      'designVersionsInitialFallback': '印',
+      'designVersionsUnset': '未設定',
+      'designVersionsAutoLayout': '自動',
+      'designVersionsNoDiffTitle': '差分はありません',
+      'designVersionsNoDiffMessage': '最新のバージョンと比較対象に違いはありません。',
+      'designVersionsChangeHistoryEmpty': '変更履歴なし',
+      'designVersionsTemplateLabel': 'テンプレート: {template}',
+      'designVersionsStatusCurrent': '現在',
+      'designVersionsStatusComparing': '比較中',
+      'designVersionsStatusHistory': '履歴',
+      'designVersionsLoadFailedTitle': '履歴の読み込みに失敗しました',
+      'designVersionsSimilarityLabel': '類似度',
+      'designVersionsRelativeNow': 'たった今',
+      'designVersionsRelativeMinutes': '{count}分前',
+      'designVersionsRelativeHours': '{count}時間前',
+      'designVersionsRelativeDays': '{count}日前',
+      'shopTitle': 'ショップ',
+      'shopSearchTooltip': '検索',
+      'shopCartTooltip': 'カート',
+      'shopAppBarSubtitle': '素材やセット、オプションをまとめて選ぶ',
+      'shopActionPromotions': 'キャンペーンを見る',
+      'shopActionGuides': 'ガイド',
+      'shopQuickGuidesTitle': 'クイックガイド',
+      'shopQuickGuidesSubtitle': 'サイズ・お手入れ・文化のポイント',
+      'shopBrowseByMaterialTitle': '素材から探す',
+      'shopBrowseByMaterialSubtitle': '用途に合う質感を選びましょう',
+      'shopPromotionsTitle': 'キャンペーン',
+      'shopPromotionsSubtitle': 'まとめ買い割引や特急枠',
+      'shopPromotionsEmpty': '現在ご利用いただけるキャンペーンはありません。',
+      'shopRecommendedMaterialsTitle': 'おすすめ素材',
+      'shopRecommendedMaterialsSubtitle': 'ペルソナと配送希望に合わせて提案',
+      'shopRecommendedMaterialsEmpty': 'おすすめ素材を準備中です。またのぞいてみてください。',
+      'shopHeroBadge': '季節のおすすめ',
+      'shopHeroTitle': '彫り深さ調整付き 春のスターターセット',
+      'shopHeroBody': 'ケース・朱肉・DHL対応テンプレが1タップで揃います。',
+      'shopHeroAction': 'セットを見る',
+      'libraryDesignDetailTitle': '印鑑詳細',
+      'libraryDesignDetailSubtitle': 'マイ印鑑',
+      'libraryDesignDetailEditTooltip': '編集',
+      'libraryDesignDetailExportTooltip': '出力',
+      'libraryDesignDetailTabDetails': '詳細',
+      'libraryDesignDetailTabActivity': '履歴',
+      'libraryDesignDetailTabFiles': 'ファイル',
+      'libraryDesignDetailMetadataTitle': 'メタデータ',
+      'libraryDesignDetailUsageHistoryTitle': '使用履歴',
+      'libraryDesignDetailNoActivity': 'まだ履歴がありません。',
+      'libraryDesignDetailFilesTitle': 'ファイル',
+      'libraryDesignDetailPreviewPngLabel': 'プレビューPNG',
+      'libraryDesignDetailVectorSvgLabel': 'ベクターSVG',
+      'libraryDesignDetailExportAction': '出力',
+      'libraryDesignDetailUntitled': '名称未設定',
+      'libraryDesignDetailAiScoreUnknown': 'AIスコア: -',
+      'libraryDesignDetailAiScoreLabel': 'AIスコア: {score}',
+      'libraryDesignDetailRegistrabilityUnknown': '登録可否: -',
+      'libraryDesignDetailRegistrable': '登録可',
+      'libraryDesignDetailNotRegistrable': '登録不可',
+      'libraryDesignDetailActionVersions': 'バージョン',
+      'libraryDesignDetailActionShare': '共有',
+      'libraryDesignDetailActionLinks': 'リンク',
+      'libraryDesignDetailActionDuplicate': '複製',
+      'libraryDesignDetailActionReorder': '再注文',
+      'libraryDesignDetailActionArchive': 'アーカイブ',
+      'libraryDesignDetailArchiveTitle': 'アーカイブしますか？',
+      'libraryDesignDetailArchiveBody': 'この印鑑をライブラリから削除します（ローカルモック）。',
+      'libraryDesignDetailArchiveCancel': 'キャンセル',
+      'libraryDesignDetailArchiveConfirm': 'アーカイブ',
+      'libraryDesignDetailArchived': 'アーカイブしました',
+      'libraryDesignDetailReorderHint': '商品を選んで、この印鑑を選択してください（モック）',
+      'libraryDesignDetailHydrateFailed': '編集の準備に失敗しました: {error}',
+      'libraryDesignDetailFileNotAvailable': '未生成',
+      'libraryDesignDetailMetadataDesignId': 'デザインID',
+      'libraryDesignDetailMetadataStatus': 'ステータス',
+      'libraryDesignDetailMetadataAiScore': 'AIスコア',
+      'libraryDesignDetailMetadataRegistrability': '登録可否',
+      'libraryDesignDetailMetadataCreated': '作成日',
+      'libraryDesignDetailMetadataUpdated': '更新日',
+      'libraryDesignDetailMetadataLastUsed': '最終使用',
+      'libraryDesignDetailMetadataVersion': 'バージョン',
+      'libraryDesignDetailActivityCreatedTitle': '作成',
+      'libraryDesignDetailActivityUpdatedTitle': '更新',
+      'libraryDesignDetailActivityOrderedTitle': '注文で使用',
+      'libraryDesignDetailActivityCreatedDetail': '保存しました',
+      'libraryDesignDetailActivityUpdatedDetail': '編集内容を反映しました',
+      'libraryDesignDetailActivityOrderedDetail': '再注文できます',
+      'orderDetailTitleFallback': '注文',
+      'orderDetailTooltipReorder': '再注文',
+      'orderDetailTooltipShare': '共有',
+      'orderDetailTooltipMore': 'その他',
+      'orderDetailMenuContactSupport': '問い合わせ',
+      'orderDetailMenuCancelOrder': '注文をキャンセル',
+      'orderDetailTabSummary': '概要',
+      'orderDetailTabTimeline': '履歴',
+      'orderDetailTabFiles': 'ファイル',
+      'orderDetailShareText': '注文番号：{number}',
+      'orderDetailInvoiceRequestSent': '領収書のリクエストを送信しました（モック）',
+      'orderDetailInvoiceRequestFailed': '領収書のリクエストに失敗しました',
+      'orderDetailCancelTitle': 'この注文をキャンセルしますか？',
+      'orderDetailCancelBody': '制作が開始している場合、キャンセルできないことがあります。',
+      'orderDetailCancelConfirm': 'キャンセルする',
+      'orderDetailCancelKeep': '戻る',
+      'orderDetailCancelSuccess': '注文をキャンセルしました',
+      'orderDetailCancelFailed': 'キャンセルに失敗しました',
+      'orderDetailDesignPreviewOk': 'OK',
+      'orderDetailBannerInProgress': '注文は進行中です。制作状況や配送状況を確認できます。',
+      'orderDetailBannerProduction': '制作',
+      'orderDetailBannerTracking': '配送',
+      'orderDetailSectionOrder': '注文',
+      'orderDetailSectionItems': '明細',
+      'orderDetailSectionTotal': '合計',
+      'orderDetailSubtotal': '小計',
+      'orderDetailDiscount': '割引',
+      'orderDetailShipping': '送料',
+      'orderDetailShippingFree': '無料',
+      'orderDetailTax': '税',
+      'orderDetailTotal': '合計',
+      'orderDetailShippingAddress': '配送先',
+      'orderDetailBillingAddress': '請求先',
+      'orderDetailPayment': '支払い',
+      'orderDetailDesignSnapshots': 'デザインスナップショット',
+      'orderDetailQuickActions': '操作',
+      'orderDetailRequestInvoice': '領収書を依頼',
+      'orderDetailContactSupport': '問い合わせ',
+      'orderDetailTimelineTitle': '履歴',
+      'orderDetailProductionEvents': '制作イベント',
+      'orderDetailInvoiceTitle': '領収書',
+      'orderDetailInvoiceHint': '領収書の依頼・表示ができます。',
+      'orderDetailInvoiceRequest': '依頼する',
+      'orderDetailInvoiceView': '表示する',
+      'orderDetailItemQtyLabel': '数量 {quantity}',
+      'orderDetailPaymentPending': '未払い',
+      'orderDetailPaymentPaid': '支払い済み',
+      'orderDetailPaymentCanceled': 'キャンセル',
+      'orderDetailPaymentProcessing': '処理中',
+      'orderDetailPaymentNoInfo': '支払い情報はありません',
+      'orderDetailPaymentPaidAt': '{date} に支払い',
+      'orderDetailPaymentMethodCard': 'カード',
+      'orderDetailPaymentMethodWallet': 'ウォレット',
+      'orderDetailPaymentMethodBank': '銀行',
+      'orderDetailPaymentMethodOther': 'その他',
+      'orderDetailPaymentSeparator': '・',
+      'orderDetailMeta': 'ID {id}・{date}',
+      'orderDetailStatusPending': '未払い',
+      'orderDetailStatusPaid': '支払い済み',
+      'orderDetailStatusInProduction': '制作中',
+      'orderDetailStatusReadyToShip': '発送準備中',
+      'orderDetailStatusShipped': '発送済み',
+      'orderDetailStatusDelivered': '配達済み',
+      'orderDetailStatusCanceled': 'キャンセル',
+      'orderDetailStatusProcessing': '処理中',
+      'orderDetailMilestonePlaced': '注文',
+      'orderDetailMilestonePaid': '支払い',
+      'orderDetailMilestoneProduction': '制作',
+      'orderDetailMilestoneShipped': '発送',
+      'orderDetailMilestoneDelivered': '配達',
+      'orderDetailMilestoneCanceled': 'キャンセル',
+      'kanjiDictionaryTitle': '漢字辞典',
+      'kanjiDictionaryToggleShowAll': 'すべて表示',
+      'kanjiDictionaryToggleShowFavorites': 'お気に入り',
+      'kanjiDictionaryOpenGuides': 'ガイドへ',
+      'kanjiDictionarySearchHint': '漢字を検索',
+      'kanjiDictionaryHistoryHint': '意味・読み・名前の例で検索できます。',
+      'kanjiDictionaryHistoryTitle': '履歴',
+      'kanjiDictionaryFiltersTitle': '絞り込み',
+      'kanjiDictionaryGradesAll': '学年',
+      'kanjiDictionaryGrade1': '1年',
+      'kanjiDictionaryGrade2': '2年',
+      'kanjiDictionaryGrade3': '3年',
+      'kanjiDictionaryGrade4': '4年',
+      'kanjiDictionaryGrade5': '5年',
+      'kanjiDictionaryGrade6': '6年+',
+      'kanjiDictionaryStrokesAll': '画数',
+      'kanjiDictionaryRadicalAny': '部首',
+      'kanjiDictionaryRadicalWater': '水',
+      'kanjiDictionaryRadicalSun': '日',
+      'kanjiDictionaryRadicalPlant': '草',
+      'kanjiDictionaryRadicalHeart': '心',
+      'kanjiDictionaryRadicalEarth': '土',
+      'kanjiDictionaryStrokeCount': '{count}画',
+      'kanjiDictionaryRadicalLabel': '部首: {radical}',
+      'kanjiDictionaryFavorite': 'お気に入り',
+      'kanjiDictionaryUnfavorite': '解除',
+      'kanjiDictionaryDetails': '詳細',
+      'kanjiDictionaryChipStrokes': '画数: {count}',
+      'kanjiDictionaryChipRadical': '部首: {radical}',
+      'kanjiDictionaryStrokeOrderTitle': '筆順',
+      'kanjiDictionaryExamplesTitle': '用例',
+      'kanjiDictionaryInsertIntoNameInput': '名前入力に追加',
+      'kanjiDictionaryDone': '閉じる',
+      'kanjiDictionaryExampleUsage': '氏名や印影で使われます',
+      'kanjiDictionaryNoStrokeData': '画数情報がありません。',
+      'kanjiDictionaryStrokeOrderPrefix': '順: {steps}',
+      'orderInvoiceTitle': '領収書',
+      'orderInvoiceShareTooltip': '共有',
+      'orderInvoiceLoadFailed': '領収書を読み込めませんでした',
+      'orderInvoiceDownloadPdf': 'PDFを保存',
+      'orderInvoiceSendEmail': 'メールで送る',
+      'orderInvoiceContactSupport': '問い合わせ',
+      'orderInvoiceTotalLabel': '合計',
+      'orderInvoiceStatusAvailable': '利用可能',
+      'orderInvoiceStatusPending': '準備中',
+      'orderInvoiceTaxable': '課税',
+      'orderInvoiceTaxExempt': '非課税',
+      'orderInvoicePreviewTitle': 'プレビュー',
+      'orderInvoiceRefreshTooltip': '更新',
+      'orderInvoicePendingBody': '領収書を準備しています。',
+      'orderInvoiceUnavailableBody': '領収書を表示できません。',
+      'orderInvoiceRequestAction': '領収書をリクエスト',
+      'orderInvoiceSavedTo': '保存しました: {path}',
+      'orderInvoiceSaveFailed': 'PDFを保存できませんでした',
+      'orderInvoiceShareText': '{app} • {number}',
+      'orderInvoiceOrderLabel': '注文番号：{number}',
+      'orderInvoiceIssuedLabel': '発行日：{date}',
+      'orderProductionTitle': '制作進捗',
+      'orderProductionRefreshTooltip': '更新',
+      'orderProductionStatusLabel': 'ステータス：{status}',
+      'orderProductionEtaLabel': '完了予定：{date}',
+      'orderProductionDelayedMessage': 'この注文は完了予定日を過ぎています。',
+      'orderProductionTimelineTitle': 'タイムライン',
+      'orderProductionNoEventsTitle': 'まだ履歴がありません',
+      'orderProductionNoEventsMessage': '制作状況が更新されると、ここに表示されます。',
+      'orderProductionNoEventsAction': '更新する',
+      'orderProductionHealthOnTrack': '順調',
+      'orderProductionHealthAttention': '注意',
+      'orderProductionHealthDelayed': '遅延',
+      'orderProductionEventStation': '工程：{station}',
+      'orderProductionEventQc': '検品：{details}',
+      'orderProductionEventQueued': '受付',
+      'orderProductionEventEngraving': '彫刻',
+      'orderProductionEventPolishing': '研磨',
+      'orderProductionEventQualityCheck': '検品',
+      'orderProductionEventPacked': '梱包',
+      'orderProductionEventOnHold': '保留',
+      'orderProductionEventRework': '再加工',
+      'orderProductionEventCanceled': 'キャンセル',
     },
   };
 
@@ -1107,6 +1820,463 @@ class AppLocalizations {
   String get appUpdateStoreUnavailable => _string('appUpdateStoreUnavailable');
   String get appUpdateStoreOpenFailed => _string('appUpdateStoreOpenFailed');
   String get appUpdateLater => _string('appUpdateLater');
+  String get commonBack => _string('commonBack');
+  String get commonRetry => _string('commonRetry');
+  String get commonClose => _string('commonClose');
+  String get commonLearnMore => _string('commonLearnMore');
+  String get commonLoadMore => _string('commonLoadMore');
+  String get commonClear => _string('commonClear');
+  String get commonLoadFailed => _string('commonLoadFailed');
+  String get commonUnknown => _string('commonUnknown');
+  String get offlineTitle => _string('offlineTitle');
+  String get offlineMessage => _string('offlineMessage');
+  String get offlineRetry => _string('offlineRetry');
+  String get offlineOpenCachedLibrary => _string('offlineOpenCachedLibrary');
+  String get offlineCacheHint => _string('offlineCacheHint');
+  String get offlineLastSyncUnavailable =>
+      _string('offlineLastSyncUnavailable');
+  String get changelogTitle => _string('changelogTitle');
+  String get changelogLatestReleaseTooltip =>
+      _string('changelogLatestReleaseTooltip');
+  String get changelogHighlightsTitle => _string('changelogHighlightsTitle');
+  String get changelogAllUpdates => _string('changelogAllUpdates');
+  String get changelogMajorOnly => _string('changelogMajorOnly');
+  String get changelogUnableToLoad => _string('changelogUnableToLoad');
+  String get changelogNoUpdatesTitle => _string('changelogNoUpdatesTitle');
+  String get changelogNoUpdatesMessage => _string('changelogNoUpdatesMessage');
+  String get changelogVersionHistoryTitle =>
+      _string('changelogVersionHistoryTitle');
+  String get changelogVersionHistorySubtitle =>
+      _string('changelogVersionHistorySubtitle');
+  String get searchHintText => _string('searchHintText');
+  String get searchVoiceTooltip => _string('searchVoiceTooltip');
+  String get searchVoiceComingSoon => _string('searchVoiceComingSoon');
+  String get searchRecentTitle => _string('searchRecentTitle');
+  String get searchSuggestionsTitle => _string('searchSuggestionsTitle');
+  String get searchSuggestionsLoadFailed =>
+      _string('searchSuggestionsLoadFailed');
+  String get searchResultsErrorTitle => _string('searchResultsErrorTitle');
+  String get searchResultsEmptyTitle => _string('searchResultsEmptyTitle');
+  String get searchResultsEmptyMessage => _string('searchResultsEmptyMessage');
+  String get homeTitle => _string('homeTitle');
+  String get homeSearchTooltip => _string('homeSearchTooltip');
+  String get homeNotificationsTooltip => _string('homeNotificationsTooltip');
+  String get homeFeaturedTitle => _string('homeFeaturedTitle');
+  String get homeFeaturedSubtitle => _string('homeFeaturedSubtitle');
+  String get homeFeaturedEmpty => _string('homeFeaturedEmpty');
+  String get homeRecentTitle => _string('homeRecentTitle');
+  String get homeRecentSubtitle => _string('homeRecentSubtitle');
+  String get homeRecentActionLabel => _string('homeRecentActionLabel');
+  String get homeRecentEmpty => _string('homeRecentEmpty');
+  String get homeRecommendedTitle => _string('homeRecommendedTitle');
+  String get homeRecommendedSubtitle => _string('homeRecommendedSubtitle');
+  String get homeRecommendedLoading => _string('homeRecommendedLoading');
+  String get homeStatusDraft => _string('homeStatusDraft');
+  String get homeStatusReady => _string('homeStatusReady');
+  String get homeStatusOrdered => _string('homeStatusOrdered');
+  String get homeStatusLocked => _string('homeStatusLocked');
+  String get homeShapeRound => _string('homeShapeRound');
+  String get homeShapeSquare => _string('homeShapeSquare');
+  String get homeWritingTensho => _string('homeWritingTensho');
+  String get homeWritingReisho => _string('homeWritingReisho');
+  String get homeWritingKaisho => _string('homeWritingKaisho');
+  String get homeWritingGyosho => _string('homeWritingGyosho');
+  String get homeWritingKoentai => _string('homeWritingKoentai');
+  String get homeWritingCustom => _string('homeWritingCustom');
+  String get homeNameUnset => _string('homeNameUnset');
+  String get homeDesignAiCheckDone => _string('homeDesignAiCheckDone');
+  String get homeDesignAiCheckNotRun => _string('homeDesignAiCheckNotRun');
+  String get homeTemplateApply => _string('homeTemplateApply');
+  String get homeLoadFailed => _string('homeLoadFailed');
+  String get topBarSearchLabel => _string('topBarSearchLabel');
+  String get topBarSearchHint => _string('topBarSearchHint');
+  String get topBarSearchTooltip => _string('topBarSearchTooltip');
+  String get topBarHelpLabel => _string('topBarHelpLabel');
+  String get topBarHelpHint => _string('topBarHelpHint');
+  String get topBarHelpTooltip => _string('topBarHelpTooltip');
+  String get topBarNotificationsLabel => _string('topBarNotificationsLabel');
+  String get topBarNotificationsTooltip =>
+      _string('topBarNotificationsTooltip');
+  String get topBarHelpOverlayTitle => _string('topBarHelpOverlayTitle');
+  String get topBarHelpOverlayPrimaryAction =>
+      _string('topBarHelpOverlayPrimaryAction');
+  String get topBarHelpOverlaySecondaryAction =>
+      _string('topBarHelpOverlaySecondaryAction');
+  String get topBarHelpOverlayBody => _string('topBarHelpOverlayBody');
+  String get topBarShortcutSearchLabel => _string('topBarShortcutSearchLabel');
+  String get topBarShortcutHelpLabel => _string('topBarShortcutHelpLabel');
+  String get topBarShortcutNotificationsLabel =>
+      _string('topBarShortcutNotificationsLabel');
+  String get topBarHelpLinkFaqTitle => _string('topBarHelpLinkFaqTitle');
+  String get topBarHelpLinkFaqSubtitle => _string('topBarHelpLinkFaqSubtitle');
+  String get topBarHelpLinkChatTitle => _string('topBarHelpLinkChatTitle');
+  String get topBarHelpLinkChatSubtitle =>
+      _string('topBarHelpLinkChatSubtitle');
+  String get topBarHelpLinkContactTitle =>
+      _string('topBarHelpLinkContactTitle');
+  String get topBarHelpLinkContactSubtitle =>
+      _string('topBarHelpLinkContactSubtitle');
+  String get splashLoading => _string('splashLoading');
+  String get splashFailedTitle => _string('splashFailedTitle');
+  String get splashFailedMessage => _string('splashFailedMessage');
+  String get designVersionsTitle => _string('designVersionsTitle');
+  String get designVersionsShowDiffTooltip =>
+      _string('designVersionsShowDiffTooltip');
+  String get designVersionsSecondaryDuplicate =>
+      _string('designVersionsSecondaryDuplicate');
+  String get designVersionsTimelineTitle =>
+      _string('designVersionsTimelineTitle');
+  String get designVersionsRefreshTooltip =>
+      _string('designVersionsRefreshTooltip');
+  String get designVersionsAuditLogTitle =>
+      _string('designVersionsAuditLogTitle');
+  String get designVersionsNoAuditTitle =>
+      _string('designVersionsNoAuditTitle');
+  String get designVersionsNoAuditMessage =>
+      _string('designVersionsNoAuditMessage');
+  String get designVersionsRollbackAction =>
+      _string('designVersionsRollbackAction');
+  String get designVersionsRollbackCancel =>
+      _string('designVersionsRollbackCancel');
+  String get designVersionsNoDiffSummary =>
+      _string('designVersionsNoDiffSummary');
+  String get designVersionsLatestLabel => _string('designVersionsLatestLabel');
+  String get designVersionsRollbackButton =>
+      _string('designVersionsRollbackButton');
+  String get designVersionsPreviewCurrent =>
+      _string('designVersionsPreviewCurrent');
+  String get designVersionsPreviewTarget =>
+      _string('designVersionsPreviewTarget');
+  String get designVersionsInitialFallback =>
+      _string('designVersionsInitialFallback');
+  String get designVersionsUnset => _string('designVersionsUnset');
+  String get designVersionsAutoLayout => _string('designVersionsAutoLayout');
+  String get designVersionsNoDiffTitle => _string('designVersionsNoDiffTitle');
+  String get designVersionsNoDiffMessage =>
+      _string('designVersionsNoDiffMessage');
+  String get designVersionsChangeHistoryEmpty =>
+      _string('designVersionsChangeHistoryEmpty');
+  String get designVersionsStatusCurrent =>
+      _string('designVersionsStatusCurrent');
+  String get designVersionsStatusComparing =>
+      _string('designVersionsStatusComparing');
+  String get designVersionsStatusHistory =>
+      _string('designVersionsStatusHistory');
+  String get designVersionsLoadFailedTitle =>
+      _string('designVersionsLoadFailedTitle');
+  String get designVersionsSimilarityLabel =>
+      _string('designVersionsSimilarityLabel');
+  String get shopTitle => _string('shopTitle');
+  String get shopSearchTooltip => _string('shopSearchTooltip');
+  String get shopCartTooltip => _string('shopCartTooltip');
+  String get shopAppBarSubtitle => _string('shopAppBarSubtitle');
+  String get shopActionPromotions => _string('shopActionPromotions');
+  String get shopActionGuides => _string('shopActionGuides');
+  String get shopQuickGuidesTitle => _string('shopQuickGuidesTitle');
+  String get shopQuickGuidesSubtitle => _string('shopQuickGuidesSubtitle');
+  String get shopBrowseByMaterialTitle => _string('shopBrowseByMaterialTitle');
+  String get shopBrowseByMaterialSubtitle =>
+      _string('shopBrowseByMaterialSubtitle');
+  String get shopPromotionsTitle => _string('shopPromotionsTitle');
+  String get shopPromotionsSubtitle => _string('shopPromotionsSubtitle');
+  String get shopPromotionsEmpty => _string('shopPromotionsEmpty');
+  String get shopRecommendedMaterialsTitle =>
+      _string('shopRecommendedMaterialsTitle');
+  String get shopRecommendedMaterialsSubtitle =>
+      _string('shopRecommendedMaterialsSubtitle');
+  String get shopRecommendedMaterialsEmpty =>
+      _string('shopRecommendedMaterialsEmpty');
+  String get shopHeroBadge => _string('shopHeroBadge');
+  String get shopHeroTitle => _string('shopHeroTitle');
+  String get shopHeroBody => _string('shopHeroBody');
+  String get shopHeroAction => _string('shopHeroAction');
+  String get libraryDesignDetailTitle => _string('libraryDesignDetailTitle');
+  String get libraryDesignDetailSubtitle =>
+      _string('libraryDesignDetailSubtitle');
+  String get libraryDesignDetailEditTooltip =>
+      _string('libraryDesignDetailEditTooltip');
+  String get libraryDesignDetailExportTooltip =>
+      _string('libraryDesignDetailExportTooltip');
+  String get libraryDesignDetailTabDetails =>
+      _string('libraryDesignDetailTabDetails');
+  String get libraryDesignDetailTabActivity =>
+      _string('libraryDesignDetailTabActivity');
+  String get libraryDesignDetailTabFiles =>
+      _string('libraryDesignDetailTabFiles');
+  String get libraryDesignDetailMetadataTitle =>
+      _string('libraryDesignDetailMetadataTitle');
+  String get libraryDesignDetailUsageHistoryTitle =>
+      _string('libraryDesignDetailUsageHistoryTitle');
+  String get libraryDesignDetailNoActivity =>
+      _string('libraryDesignDetailNoActivity');
+  String get libraryDesignDetailFilesTitle =>
+      _string('libraryDesignDetailFilesTitle');
+  String get libraryDesignDetailPreviewPngLabel =>
+      _string('libraryDesignDetailPreviewPngLabel');
+  String get libraryDesignDetailVectorSvgLabel =>
+      _string('libraryDesignDetailVectorSvgLabel');
+  String get libraryDesignDetailExportAction =>
+      _string('libraryDesignDetailExportAction');
+  String get libraryDesignDetailUntitled =>
+      _string('libraryDesignDetailUntitled');
+  String get libraryDesignDetailAiScoreUnknown =>
+      _string('libraryDesignDetailAiScoreUnknown');
+  String get libraryDesignDetailRegistrabilityUnknown =>
+      _string('libraryDesignDetailRegistrabilityUnknown');
+  String get libraryDesignDetailRegistrable =>
+      _string('libraryDesignDetailRegistrable');
+  String get libraryDesignDetailNotRegistrable =>
+      _string('libraryDesignDetailNotRegistrable');
+  String get libraryDesignDetailActionVersions =>
+      _string('libraryDesignDetailActionVersions');
+  String get libraryDesignDetailActionShare =>
+      _string('libraryDesignDetailActionShare');
+  String get libraryDesignDetailActionLinks =>
+      _string('libraryDesignDetailActionLinks');
+  String get libraryDesignDetailActionDuplicate =>
+      _string('libraryDesignDetailActionDuplicate');
+  String get libraryDesignDetailActionReorder =>
+      _string('libraryDesignDetailActionReorder');
+  String get libraryDesignDetailActionArchive =>
+      _string('libraryDesignDetailActionArchive');
+  String get libraryDesignDetailArchiveTitle =>
+      _string('libraryDesignDetailArchiveTitle');
+  String get libraryDesignDetailArchiveBody =>
+      _string('libraryDesignDetailArchiveBody');
+  String get libraryDesignDetailArchiveCancel =>
+      _string('libraryDesignDetailArchiveCancel');
+  String get libraryDesignDetailArchiveConfirm =>
+      _string('libraryDesignDetailArchiveConfirm');
+  String get libraryDesignDetailArchived =>
+      _string('libraryDesignDetailArchived');
+  String get libraryDesignDetailReorderHint =>
+      _string('libraryDesignDetailReorderHint');
+  String get libraryDesignDetailFileNotAvailable =>
+      _string('libraryDesignDetailFileNotAvailable');
+  String get libraryDesignDetailMetadataDesignId =>
+      _string('libraryDesignDetailMetadataDesignId');
+  String get libraryDesignDetailMetadataStatus =>
+      _string('libraryDesignDetailMetadataStatus');
+  String get libraryDesignDetailMetadataAiScore =>
+      _string('libraryDesignDetailMetadataAiScore');
+  String get libraryDesignDetailMetadataRegistrability =>
+      _string('libraryDesignDetailMetadataRegistrability');
+  String get libraryDesignDetailMetadataCreated =>
+      _string('libraryDesignDetailMetadataCreated');
+  String get libraryDesignDetailMetadataUpdated =>
+      _string('libraryDesignDetailMetadataUpdated');
+  String get libraryDesignDetailMetadataLastUsed =>
+      _string('libraryDesignDetailMetadataLastUsed');
+  String get libraryDesignDetailMetadataVersion =>
+      _string('libraryDesignDetailMetadataVersion');
+  String get libraryDesignDetailActivityCreatedTitle =>
+      _string('libraryDesignDetailActivityCreatedTitle');
+  String get libraryDesignDetailActivityUpdatedTitle =>
+      _string('libraryDesignDetailActivityUpdatedTitle');
+  String get libraryDesignDetailActivityOrderedTitle =>
+      _string('libraryDesignDetailActivityOrderedTitle');
+  String get libraryDesignDetailActivityCreatedDetail =>
+      _string('libraryDesignDetailActivityCreatedDetail');
+  String get libraryDesignDetailActivityUpdatedDetail =>
+      _string('libraryDesignDetailActivityUpdatedDetail');
+  String get libraryDesignDetailActivityOrderedDetail =>
+      _string('libraryDesignDetailActivityOrderedDetail');
+  String get orderDetailTitleFallback => _string('orderDetailTitleFallback');
+  String get orderDetailTooltipReorder => _string('orderDetailTooltipReorder');
+  String get orderDetailTooltipShare => _string('orderDetailTooltipShare');
+  String get orderDetailTooltipMore => _string('orderDetailTooltipMore');
+  String get orderDetailMenuContactSupport =>
+      _string('orderDetailMenuContactSupport');
+  String get orderDetailMenuCancelOrder =>
+      _string('orderDetailMenuCancelOrder');
+  String get orderDetailTabSummary => _string('orderDetailTabSummary');
+  String get orderDetailTabTimeline => _string('orderDetailTabTimeline');
+  String get orderDetailTabFiles => _string('orderDetailTabFiles');
+  String get orderDetailInvoiceRequestSent =>
+      _string('orderDetailInvoiceRequestSent');
+  String get orderDetailInvoiceRequestFailed =>
+      _string('orderDetailInvoiceRequestFailed');
+  String get orderDetailCancelTitle => _string('orderDetailCancelTitle');
+  String get orderDetailCancelBody => _string('orderDetailCancelBody');
+  String get orderDetailCancelConfirm => _string('orderDetailCancelConfirm');
+  String get orderDetailCancelKeep => _string('orderDetailCancelKeep');
+  String get orderDetailCancelSuccess => _string('orderDetailCancelSuccess');
+  String get orderDetailCancelFailed => _string('orderDetailCancelFailed');
+  String get orderDetailDesignPreviewOk =>
+      _string('orderDetailDesignPreviewOk');
+  String get orderDetailBannerInProgress =>
+      _string('orderDetailBannerInProgress');
+  String get orderDetailBannerProduction =>
+      _string('orderDetailBannerProduction');
+  String get orderDetailBannerTracking => _string('orderDetailBannerTracking');
+  String get orderDetailSectionOrder => _string('orderDetailSectionOrder');
+  String get orderDetailSectionItems => _string('orderDetailSectionItems');
+  String get orderDetailSectionTotal => _string('orderDetailSectionTotal');
+  String get orderDetailSubtotal => _string('orderDetailSubtotal');
+  String get orderDetailDiscount => _string('orderDetailDiscount');
+  String get orderDetailShipping => _string('orderDetailShipping');
+  String get orderDetailShippingFree => _string('orderDetailShippingFree');
+  String get orderDetailTax => _string('orderDetailTax');
+  String get orderDetailTotal => _string('orderDetailTotal');
+  String get orderDetailShippingAddress =>
+      _string('orderDetailShippingAddress');
+  String get orderDetailBillingAddress => _string('orderDetailBillingAddress');
+  String get orderDetailPayment => _string('orderDetailPayment');
+  String get orderDetailDesignSnapshots =>
+      _string('orderDetailDesignSnapshots');
+  String get orderDetailQuickActions => _string('orderDetailQuickActions');
+  String get orderDetailRequestInvoice => _string('orderDetailRequestInvoice');
+  String get orderDetailContactSupport => _string('orderDetailContactSupport');
+  String get orderDetailTimelineTitle => _string('orderDetailTimelineTitle');
+  String get orderDetailProductionEvents =>
+      _string('orderDetailProductionEvents');
+  String get orderDetailInvoiceTitle => _string('orderDetailInvoiceTitle');
+  String get orderDetailInvoiceHint => _string('orderDetailInvoiceHint');
+  String get orderDetailInvoiceRequest => _string('orderDetailInvoiceRequest');
+  String get orderDetailInvoiceView => _string('orderDetailInvoiceView');
+  String get orderDetailPaymentPending => _string('orderDetailPaymentPending');
+  String get orderDetailPaymentPaid => _string('orderDetailPaymentPaid');
+  String get orderDetailPaymentCanceled =>
+      _string('orderDetailPaymentCanceled');
+  String get orderDetailPaymentProcessing =>
+      _string('orderDetailPaymentProcessing');
+  String get orderDetailPaymentNoInfo => _string('orderDetailPaymentNoInfo');
+  String get orderDetailPaymentMethodCard =>
+      _string('orderDetailPaymentMethodCard');
+  String get orderDetailPaymentMethodWallet =>
+      _string('orderDetailPaymentMethodWallet');
+  String get orderDetailPaymentMethodBank =>
+      _string('orderDetailPaymentMethodBank');
+  String get orderDetailPaymentMethodOther =>
+      _string('orderDetailPaymentMethodOther');
+  String get orderDetailPaymentSeparator =>
+      _string('orderDetailPaymentSeparator');
+  String get orderDetailStatusPending => _string('orderDetailStatusPending');
+  String get orderDetailStatusPaid => _string('orderDetailStatusPaid');
+  String get orderDetailStatusInProduction =>
+      _string('orderDetailStatusInProduction');
+  String get orderDetailStatusReadyToShip =>
+      _string('orderDetailStatusReadyToShip');
+  String get orderDetailStatusShipped => _string('orderDetailStatusShipped');
+  String get orderDetailStatusDelivered =>
+      _string('orderDetailStatusDelivered');
+  String get orderDetailStatusCanceled => _string('orderDetailStatusCanceled');
+  String get orderDetailStatusProcessing =>
+      _string('orderDetailStatusProcessing');
+  String get orderDetailMilestonePlaced =>
+      _string('orderDetailMilestonePlaced');
+  String get orderDetailMilestonePaid => _string('orderDetailMilestonePaid');
+  String get orderDetailMilestoneProduction =>
+      _string('orderDetailMilestoneProduction');
+  String get orderDetailMilestoneShipped =>
+      _string('orderDetailMilestoneShipped');
+  String get orderDetailMilestoneDelivered =>
+      _string('orderDetailMilestoneDelivered');
+  String get orderDetailMilestoneCanceled =>
+      _string('orderDetailMilestoneCanceled');
+  String get kanjiDictionaryTitle => _string('kanjiDictionaryTitle');
+  String get kanjiDictionaryToggleShowAll =>
+      _string('kanjiDictionaryToggleShowAll');
+  String get kanjiDictionaryToggleShowFavorites =>
+      _string('kanjiDictionaryToggleShowFavorites');
+  String get kanjiDictionaryOpenGuides => _string('kanjiDictionaryOpenGuides');
+  String get kanjiDictionarySearchHint => _string('kanjiDictionarySearchHint');
+  String get kanjiDictionaryHistoryHint =>
+      _string('kanjiDictionaryHistoryHint');
+  String get kanjiDictionaryHistoryTitle =>
+      _string('kanjiDictionaryHistoryTitle');
+  String get kanjiDictionaryFiltersTitle =>
+      _string('kanjiDictionaryFiltersTitle');
+  String get kanjiDictionaryGradesAll => _string('kanjiDictionaryGradesAll');
+  String get kanjiDictionaryGrade1 => _string('kanjiDictionaryGrade1');
+  String get kanjiDictionaryGrade2 => _string('kanjiDictionaryGrade2');
+  String get kanjiDictionaryGrade3 => _string('kanjiDictionaryGrade3');
+  String get kanjiDictionaryGrade4 => _string('kanjiDictionaryGrade4');
+  String get kanjiDictionaryGrade5 => _string('kanjiDictionaryGrade5');
+  String get kanjiDictionaryGrade6 => _string('kanjiDictionaryGrade6');
+  String get kanjiDictionaryStrokesAll => _string('kanjiDictionaryStrokesAll');
+  String get kanjiDictionaryRadicalAny => _string('kanjiDictionaryRadicalAny');
+  String get kanjiDictionaryRadicalWater =>
+      _string('kanjiDictionaryRadicalWater');
+  String get kanjiDictionaryRadicalSun => _string('kanjiDictionaryRadicalSun');
+  String get kanjiDictionaryRadicalPlant =>
+      _string('kanjiDictionaryRadicalPlant');
+  String get kanjiDictionaryRadicalHeart =>
+      _string('kanjiDictionaryRadicalHeart');
+  String get kanjiDictionaryRadicalEarth =>
+      _string('kanjiDictionaryRadicalEarth');
+  String get kanjiDictionaryFavorite => _string('kanjiDictionaryFavorite');
+  String get kanjiDictionaryUnfavorite => _string('kanjiDictionaryUnfavorite');
+  String get kanjiDictionaryDetails => _string('kanjiDictionaryDetails');
+  String get kanjiDictionaryStrokeOrderTitle =>
+      _string('kanjiDictionaryStrokeOrderTitle');
+  String get kanjiDictionaryExamplesTitle =>
+      _string('kanjiDictionaryExamplesTitle');
+  String get kanjiDictionaryInsertIntoNameInput =>
+      _string('kanjiDictionaryInsertIntoNameInput');
+  String get kanjiDictionaryDone => _string('kanjiDictionaryDone');
+  String get kanjiDictionaryExampleUsage =>
+      _string('kanjiDictionaryExampleUsage');
+  String get kanjiDictionaryNoStrokeData =>
+      _string('kanjiDictionaryNoStrokeData');
+  String get orderInvoiceTitle => _string('orderInvoiceTitle');
+  String get orderInvoiceShareTooltip => _string('orderInvoiceShareTooltip');
+  String get orderInvoiceLoadFailed => _string('orderInvoiceLoadFailed');
+  String get orderInvoiceDownloadPdf => _string('orderInvoiceDownloadPdf');
+  String get orderInvoiceSendEmail => _string('orderInvoiceSendEmail');
+  String get orderInvoiceContactSupport =>
+      _string('orderInvoiceContactSupport');
+  String get orderInvoiceTotalLabel => _string('orderInvoiceTotalLabel');
+  String get orderInvoiceStatusAvailable =>
+      _string('orderInvoiceStatusAvailable');
+  String get orderInvoiceStatusPending => _string('orderInvoiceStatusPending');
+  String get orderInvoiceTaxable => _string('orderInvoiceTaxable');
+  String get orderInvoiceTaxExempt => _string('orderInvoiceTaxExempt');
+  String get orderInvoicePreviewTitle => _string('orderInvoicePreviewTitle');
+  String get orderInvoiceRefreshTooltip =>
+      _string('orderInvoiceRefreshTooltip');
+  String get orderInvoicePendingBody => _string('orderInvoicePendingBody');
+  String get orderInvoiceUnavailableBody =>
+      _string('orderInvoiceUnavailableBody');
+  String get orderInvoiceRequestAction => _string('orderInvoiceRequestAction');
+  String get orderInvoiceSaveFailed => _string('orderInvoiceSaveFailed');
+  String get designVersionsRollbackBody =>
+      _string('designVersionsRollbackBody');
+  String get orderProductionTitle => _string('orderProductionTitle');
+  String get orderProductionRefreshTooltip =>
+      _string('orderProductionRefreshTooltip');
+  String get orderProductionDelayedMessage =>
+      _string('orderProductionDelayedMessage');
+  String get orderProductionTimelineTitle =>
+      _string('orderProductionTimelineTitle');
+  String get orderProductionNoEventsTitle =>
+      _string('orderProductionNoEventsTitle');
+  String get orderProductionNoEventsMessage =>
+      _string('orderProductionNoEventsMessage');
+  String get orderProductionNoEventsAction =>
+      _string('orderProductionNoEventsAction');
+  String get orderProductionHealthOnTrack =>
+      _string('orderProductionHealthOnTrack');
+  String get orderProductionHealthAttention =>
+      _string('orderProductionHealthAttention');
+  String get orderProductionHealthDelayed =>
+      _string('orderProductionHealthDelayed');
+  String get orderProductionEventQueued =>
+      _string('orderProductionEventQueued');
+  String get orderProductionEventEngraving =>
+      _string('orderProductionEventEngraving');
+  String get orderProductionEventPolishing =>
+      _string('orderProductionEventPolishing');
+  String get orderProductionEventQualityCheck =>
+      _string('orderProductionEventQualityCheck');
+  String get orderProductionEventPacked =>
+      _string('orderProductionEventPacked');
+  String get orderProductionEventOnHold =>
+      _string('orderProductionEventOnHold');
+  String get orderProductionEventRework =>
+      _string('orderProductionEventRework');
+  String get orderProductionEventCanceled =>
+      _string('orderProductionEventCanceled');
 
   String profileExportTimeMinutes(int count) {
     final template = _string('profileExportTimeMinutes');
@@ -1146,6 +2316,188 @@ class AppLocalizations {
   String profileExportTimeCompactDays(int count) {
     final template = _string('profileExportTimeCompactDays');
     return template.replaceAll('{count}', '$count');
+  }
+
+  String offlineLastSyncLabel(String date, String time) {
+    final template = _string('offlineLastSyncLabel');
+    return template.replaceAll('{date}', date).replaceAll('{time}', time);
+  }
+
+  String homeDesignSummary({
+    required String shape,
+    required String size,
+    required String style,
+  }) {
+    final template = _string('homeDesignSummary');
+    return template
+        .replaceAll('{shape}', shape)
+        .replaceAll('{size}', size)
+        .replaceAll('{style}', style);
+  }
+
+  String homeDesignAiCheckLabel(String diagnostic) {
+    final template = _string('homeDesignAiCheckLabel');
+    return template.replaceAll('{diagnostic}', diagnostic);
+  }
+
+  String homeTemplateLabel({required String shape, required String style}) {
+    final template = _string('homeTemplateLabel');
+    return template.replaceAll('{shape}', shape).replaceAll('{style}', style);
+  }
+
+  String homeTemplateRecommendedSize(String size) {
+    final template = _string('homeTemplateRecommendedSize');
+    return template.replaceAll('{size}', size);
+  }
+
+  String topBarNotificationsLabelWithUnread(int count) {
+    final template = _string('topBarNotificationsLabelWithUnread');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String topBarNotificationsTooltipWithUnread(int count) {
+    final template = _string('topBarNotificationsTooltipWithUnread');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String designVersionsRollbackTitle(String version) {
+    final template = _string('designVersionsRollbackTitle');
+    return template.replaceAll('{version}', version);
+  }
+
+  String designVersionsCurrentLabel(String version) {
+    final template = _string('designVersionsCurrentLabel');
+    return template.replaceAll('{version}', version);
+  }
+
+  String designVersionsCompareTargetLabel(String version) {
+    final template = _string('designVersionsCompareTargetLabel');
+    return template.replaceAll('{version}', version);
+  }
+
+  String designVersionsTemplateLabel(String templateValue) {
+    final template = _string('designVersionsTemplateLabel');
+    return template.replaceAll('{template}', templateValue);
+  }
+
+  String designVersionsRelativeMinutes(int count) {
+    final template = _string('designVersionsRelativeMinutes');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String designVersionsRelativeHours(int count) {
+    final template = _string('designVersionsRelativeHours');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String designVersionsRelativeDays(int count) {
+    final template = _string('designVersionsRelativeDays');
+    return template.replaceAll('{count}', '$count');
+  }
+
+  String designVersionsRelativeTime(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return _string('designVersionsRelativeNow');
+    if (diff.inMinutes < 60) {
+      return designVersionsRelativeMinutes(diff.inMinutes);
+    }
+    if (diff.inHours < 24) return designVersionsRelativeHours(diff.inHours);
+    return designVersionsRelativeDays(diff.inDays);
+  }
+
+  String libraryDesignDetailAiScoreLabel(String score) {
+    final template = _string('libraryDesignDetailAiScoreLabel');
+    return template.replaceAll('{score}', score);
+  }
+
+  String libraryDesignDetailHydrateFailed(String error) {
+    final template = _string('libraryDesignDetailHydrateFailed');
+    return template.replaceAll('{error}', error);
+  }
+
+  String orderDetailShareText(String number) {
+    final template = _string('orderDetailShareText');
+    return template.replaceAll('{number}', number);
+  }
+
+  String orderDetailItemQtyLabel(String quantity) {
+    final template = _string('orderDetailItemQtyLabel');
+    return template.replaceAll('{quantity}', quantity);
+  }
+
+  String orderDetailPaymentPaidAt(String date) {
+    final template = _string('orderDetailPaymentPaidAt');
+    return template.replaceAll('{date}', date);
+  }
+
+  String orderDetailMeta(String id, String date) {
+    final template = _string('orderDetailMeta');
+    return template.replaceAll('{id}', id).replaceAll('{date}', date);
+  }
+
+  String kanjiDictionaryStrokeCount(String count) {
+    final template = _string('kanjiDictionaryStrokeCount');
+    return template.replaceAll('{count}', count);
+  }
+
+  String kanjiDictionaryRadicalLabel(String radical) {
+    final template = _string('kanjiDictionaryRadicalLabel');
+    return template.replaceAll('{radical}', radical);
+  }
+
+  String kanjiDictionaryChipStrokes(String count) {
+    final template = _string('kanjiDictionaryChipStrokes');
+    return template.replaceAll('{count}', count);
+  }
+
+  String kanjiDictionaryChipRadical(String radical) {
+    final template = _string('kanjiDictionaryChipRadical');
+    return template.replaceAll('{radical}', radical);
+  }
+
+  String kanjiDictionaryStrokeOrderPrefix(String steps) {
+    final template = _string('kanjiDictionaryStrokeOrderPrefix');
+    return template.replaceAll('{steps}', steps);
+  }
+
+  String orderInvoiceSavedTo(String path) {
+    final template = _string('orderInvoiceSavedTo');
+    return template.replaceAll('{path}', path);
+  }
+
+  String orderInvoiceShareText({required String app, required String number}) {
+    final template = _string('orderInvoiceShareText');
+    return template.replaceAll('{app}', app).replaceAll('{number}', number);
+  }
+
+  String orderInvoiceOrderLabel(String number) {
+    final template = _string('orderInvoiceOrderLabel');
+    return template.replaceAll('{number}', number);
+  }
+
+  String orderInvoiceIssuedLabel(String date) {
+    final template = _string('orderInvoiceIssuedLabel');
+    return template.replaceAll('{date}', date);
+  }
+
+  String orderProductionStatusLabel(String status) {
+    final template = _string('orderProductionStatusLabel');
+    return template.replaceAll('{status}', status);
+  }
+
+  String orderProductionEtaLabel(String date) {
+    final template = _string('orderProductionEtaLabel');
+    return template.replaceAll('{date}', date);
+  }
+
+  String orderProductionEventStation(String station) {
+    final template = _string('orderProductionEventStation');
+    return template.replaceAll('{station}', station);
+  }
+
+  String orderProductionEventQc(String details) {
+    final template = _string('orderProductionEventQc');
+    return template.replaceAll('{details}', details);
   }
 
   String appUpdateCurrentVersion(String version) {

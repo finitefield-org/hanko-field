@@ -8,6 +8,7 @@ import 'package:app/core/routing/routes.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart'
     as catalog;
 import 'package:app/features/catalog/view_model/shop_home_providers.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
@@ -44,8 +45,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final router = GoRouter.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     final categories = ref.watch(shopCategoriesProvider);
     final promotions = ref.watch(shopPromotionsProvider);
@@ -63,7 +63,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            _buildAppBar(context, router, prefersEnglish),
+            _buildAppBar(context, router, l10n),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -73,7 +73,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                   tokens.spacing.md,
                 ),
                 child: _HeroBanner(
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   onTap: () => _handleHeroTap(router),
                 ),
               ),
@@ -86,10 +86,10 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                   tokens.spacing.lg,
                   tokens.spacing.md,
                 ),
-                child: _buildGuideLinks(guides, prefersEnglish),
+                child: _buildGuideLinks(guides, l10n),
               ),
             ),
-            _buildCategoryGrid(categories, prefersEnglish),
+            _buildCategoryGrid(categories, l10n),
             SliverToBoxAdapter(
               key: _promotionsSectionKey,
               child: Padding(
@@ -99,7 +99,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                   tokens.spacing.lg,
                   tokens.spacing.md,
                 ),
-                child: _buildPromotions(context, promotions, prefersEnglish),
+                child: _buildPromotions(context, promotions, l10n),
               ),
             ),
             SliverToBoxAdapter(
@@ -110,11 +110,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                   tokens.spacing.lg,
                   tokens.spacing.xl,
                 ),
-                child: _buildMaterialRecommendations(
-                  context,
-                  materials,
-                  prefersEnglish,
-                ),
+                child: _buildMaterialRecommendations(context, materials, l10n),
               ),
             ),
           ],
@@ -126,22 +122,22 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
   SliverAppBar _buildAppBar(
     BuildContext context,
     GoRouter router,
-    bool prefersEnglish,
+    AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
 
     return SliverAppBar.large(
       pinned: true,
       backgroundColor: tokens.colors.surface,
-      title: Text(prefersEnglish ? 'Shop' : 'ショップ'),
+      title: Text(l10n.shopTitle),
       actions: [
         IconButton(
-          tooltip: prefersEnglish ? 'Search' : '検索',
+          tooltip: l10n.shopSearchTooltip,
           onPressed: () => router.go(AppRoutePaths.search),
           icon: const Icon(Icons.search_rounded),
         ),
         IconButton(
-          tooltip: prefersEnglish ? 'Cart' : 'カート',
+          tooltip: l10n.shopCartTooltip,
           onPressed: () => router.go(AppRoutePaths.cart),
           icon: const Icon(Icons.shopping_cart_outlined),
         ),
@@ -162,9 +158,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    prefersEnglish
-                        ? 'Pick materials, bundles, and add-ons'
-                        : '素材やセット、オプションをまとめて選ぶ',
+                    l10n.shopAppBarSubtitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: tokens.colors.onSurface.withValues(alpha: 0.8),
                     ),
@@ -179,14 +173,12 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                           Icons.local_offer_outlined,
                           size: 18,
                         ),
-                        label: Text(
-                          prefersEnglish ? 'See promotions' : 'キャンペーンを見る',
-                        ),
+                        label: Text(l10n.shopActionPromotions),
                         onPressed: _scrollToPromotions,
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.menu_book_outlined, size: 18),
-                        label: Text(prefersEnglish ? 'Guides' : 'ガイド'),
+                        label: Text(l10n.shopActionGuides),
                         onPressed: () =>
                             router.go('${AppRoutePaths.profile}/guides'),
                       ),
@@ -203,7 +195,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
 
   Widget _buildGuideLinks(
     AsyncValue<List<ShopGuideLink>> links,
-    bool prefersEnglish,
+    AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
 
@@ -211,10 +203,8 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: prefersEnglish ? 'Quick guides' : 'クイックガイド',
-          subtitle: prefersEnglish
-              ? 'Size, care, and cultural tips in one place'
-              : 'サイズ・お手入れ・文化のポイント',
+          title: l10n.shopQuickGuidesTitle,
+          subtitle: l10n.shopQuickGuidesSubtitle,
         ),
         SizedBox(height: tokens.spacing.sm),
         switch (links) {
@@ -257,7 +247,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
 
   SliverPadding _buildCategoryGrid(
     AsyncValue<List<ShopCategory>> categories,
-    bool prefersEnglish,
+    AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
 
@@ -273,10 +263,8 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionHeader(
-              title: prefersEnglish ? 'Browse by material' : '素材から探す',
-              subtitle: prefersEnglish
-                  ? 'Find a feel that matches your use case'
-                  : '用途に合う質感を選びましょう',
+              title: l10n.shopBrowseByMaterialTitle,
+              subtitle: l10n.shopBrowseByMaterialSubtitle,
             ),
             SizedBox(height: tokens.spacing.md),
             switch (categories) {
@@ -324,7 +312,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
   Widget _buildPromotions(
     BuildContext context,
     AsyncValue<List<ShopPromotionHighlight>> promotions,
-    bool prefersEnglish,
+    AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
@@ -333,10 +321,8 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: prefersEnglish ? 'Promotions' : 'キャンペーン',
-          subtitle: prefersEnglish
-              ? 'Bundles and fast track slots'
-              : 'まとめ買い割引や特急枠',
+          title: l10n.shopPromotionsTitle,
+          subtitle: l10n.shopPromotionsSubtitle,
         ),
         SizedBox(height: tokens.spacing.md),
         SizedBox(
@@ -351,11 +337,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
               onRetry: () => ref.invalidate(shopPromotionsProvider),
             ),
             AsyncData(:final value) when value.isEmpty => AppCard(
-              child: Text(
-                prefersEnglish
-                    ? 'No promotions available right now.'
-                    : '現在ご利用いただけるキャンペーンはありません。',
-              ),
+              child: Text(l10n.shopPromotionsEmpty),
             ),
             AsyncData(:final value) => Column(
               children: [
@@ -401,7 +383,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
   Widget _buildMaterialRecommendations(
     BuildContext context,
     AsyncValue<List<ShopMaterialHighlight>> materials,
-    bool prefersEnglish,
+    AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
@@ -410,10 +392,8 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: prefersEnglish ? 'Recommended materials' : 'おすすめ素材',
-          subtitle: prefersEnglish
-              ? 'Based on persona and delivery needs'
-              : 'ペルソナと配送希望に合わせて提案',
+          title: l10n.shopRecommendedMaterialsTitle,
+          subtitle: l10n.shopRecommendedMaterialsSubtitle,
         ),
         SizedBox(height: tokens.spacing.sm),
         switch (materials) {
@@ -423,11 +403,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
             onRetry: () => ref.invalidate(shopMaterialRecommendationsProvider),
           ),
           AsyncData(:final value) when value.isEmpty => AppCard(
-            child: Text(
-              prefersEnglish
-                  ? 'Materials are being prepared. Please check back soon.'
-                  : 'おすすめ素材を準備中です。またのぞいてみてください。',
-            ),
+            child: Text(l10n.shopRecommendedMaterialsEmpty),
           ),
           AsyncData(:final value) => Column(
             children: value.asMap().entries.map((entry) {
@@ -548,9 +524,9 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({required this.prefersEnglish, required this.onTap});
+  const _HeroBanner({required this.l10n, required this.onTap});
 
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onTap;
 
   @override
@@ -591,7 +567,7 @@ class _HeroBanner extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Chip(
-                      label: Text(prefersEnglish ? 'Seasonal pick' : '季節のおすすめ'),
+                      label: Text(l10n.shopHeroBadge),
                       visualDensity: VisualDensity.compact,
                       side: BorderSide.none,
                       backgroundColor: colorScheme.onPrimaryContainer
@@ -599,18 +575,14 @@ class _HeroBanner extends StatelessWidget {
                     ),
                     SizedBox(height: tokens.spacing.xs),
                     Text(
-                      prefersEnglish
-                          ? 'Spring starter bundle with engraving tweaks'
-                          : '彫り深さ調整付き 春のスターターセット',
+                      l10n.shopHeroTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: tokens.colors.onPrimary,
                       ),
                     ),
                     SizedBox(height: tokens.spacing.xs),
                     Text(
-                      prefersEnglish
-                          ? 'Case, ink, and DHL-friendly templates in one tap.'
-                          : 'ケース・朱肉・DHL対応テンプレが1タップで揃います。',
+                      l10n.shopHeroBody,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: tokens.colors.onPrimary.withValues(alpha: 0.9),
                       ),
@@ -621,7 +593,7 @@ class _HeroBanner extends StatelessWidget {
                     FilledButton.icon(
                       onPressed: onTap,
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      label: Text(prefersEnglish ? 'Open bundle' : 'セットを見る'),
+                      label: Text(l10n.shopHeroAction),
                     ),
                   ],
                 ),
@@ -1130,11 +1102,15 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('読み込みに失敗しました', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.commonLoadFailed,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           SizedBox(height: tokens.spacing.xs),
           Text(
             message,
@@ -1146,7 +1122,7 @@ class _ErrorCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('再試行'),
+            label: Text(l10n.commonRetry),
           ),
         ],
       ),

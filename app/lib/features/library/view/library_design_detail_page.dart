@@ -9,7 +9,7 @@ import 'package:app/features/designs/view_model/design_creation_view_model.dart'
 import 'package:app/features/library/view/library_shared.dart';
 import 'package:app/features/library/view_model/library_design_detail_view_model.dart';
 import 'package:app/features/library/view_model/library_list_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
@@ -31,14 +31,13 @@ class _LibraryDesignDetailPageState
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(
       LibraryDesignDetailViewModel(designId: widget.designId),
     );
 
-    final title = prefersEnglish ? 'Design detail' : '印鑑詳細';
-    final subtitle = prefersEnglish ? 'Library' : 'マイ印鑑';
+    final title = l10n.libraryDesignDetailTitle;
+    final subtitle = l10n.libraryDesignDetailSubtitle;
 
     return DefaultTabController(
       length: 3,
@@ -53,14 +52,14 @@ class _LibraryDesignDetailPageState
                 centerTitle: false,
                 actions: [
                   IconButton(
-                    tooltip: prefersEnglish ? 'Edit' : '編集',
+                    tooltip: l10n.libraryDesignDetailEditTooltip,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: state.valueOrNull == null
                         ? null
                         : () => _handleEdit(context, state.valueOrNull!.design),
                   ),
                   IconButton(
-                    tooltip: prefersEnglish ? 'Export' : '出力',
+                    tooltip: l10n.libraryDesignDetailExportTooltip,
                     icon: const Icon(Icons.cloud_download_outlined),
                     onPressed: state.valueOrNull == null
                         ? null
@@ -70,9 +69,9 @@ class _LibraryDesignDetailPageState
                 ],
                 bottom: TabBar(
                   tabs: [
-                    Tab(text: prefersEnglish ? 'Details' : '詳細'),
-                    Tab(text: prefersEnglish ? 'Activity' : '履歴'),
-                    Tab(text: prefersEnglish ? 'Files' : 'ファイル'),
+                    Tab(text: l10n.libraryDesignDetailTabDetails),
+                    Tab(text: l10n.libraryDesignDetailTabActivity),
+                    Tab(text: l10n.libraryDesignDetailTabFiles),
                   ],
                 ),
               ),
@@ -89,7 +88,7 @@ class _LibraryDesignDetailPageState
               _ErrorBody(
                 subtitle: subtitle,
                 message: error.toString(),
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 onRetry: () => ref.invalidate(
                   LibraryDesignDetailViewModel(designId: widget.designId),
                 ),
@@ -99,7 +98,7 @@ class _LibraryDesignDetailPageState
                 _DetailsTab(
                   subtitle: subtitle,
                   state: state.valueOrNull!,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   onVersions: () => GoRouter.of(
                     context,
                   ).go('${AppRoutePaths.library}/${widget.designId}/versions'),
@@ -122,7 +121,7 @@ class _LibraryDesignDetailPageState
                 _ActivityTab(
                   subtitle: subtitle,
                   state: state.valueOrNull!,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   onRefresh: () => ref.invoke(
                     LibraryDesignDetailViewModel(
                       designId: widget.designId,
@@ -132,7 +131,7 @@ class _LibraryDesignDetailPageState
                 _FilesTab(
                   subtitle: subtitle,
                   state: state.valueOrNull!,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   onExport: () =>
                       _handleExport(context, state.valueOrNull!.design),
                   onRefresh: () => ref.invoke(
@@ -176,9 +175,7 @@ class _LibraryDesignDetailPageState
 
   Future<void> _handleArchive(BuildContext context, Design design) async {
     final tokens = DesignTokensTheme.of(context);
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final id = design.id ?? '';
 
@@ -186,16 +183,12 @@ class _LibraryDesignDetailPageState
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(prefersEnglish ? 'Archive design?' : 'アーカイブしますか？'),
-          content: Text(
-            prefersEnglish
-                ? 'This removes the design from your library (mocked local data).'
-                : 'この印鑑をライブラリから削除します（ローカルモック）。',
-          ),
+          title: Text(l10n.libraryDesignDetailArchiveTitle),
+          content: Text(l10n.libraryDesignDetailArchiveBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text(prefersEnglish ? 'Cancel' : 'キャンセル'),
+              child: Text(l10n.libraryDesignDetailArchiveCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -203,7 +196,7 @@ class _LibraryDesignDetailPageState
                 backgroundColor: tokens.colors.error,
                 foregroundColor: tokens.colors.onError,
               ),
-              child: Text(prefersEnglish ? 'Archive' : 'アーカイブ'),
+              child: Text(l10n.libraryDesignDetailArchiveConfirm),
             ),
           ],
         );
@@ -219,7 +212,7 @@ class _LibraryDesignDetailPageState
     unawaited(ref.invoke(libraryListViewModel.refresh()));
     messenger.showSnackBar(
       SnackBar(
-        content: Text(prefersEnglish ? 'Archived' : 'アーカイブしました'),
+        content: Text(l10n.libraryDesignDetailArchived),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -229,15 +222,10 @@ class _LibraryDesignDetailPageState
   void _handleReorder(BuildContext context, Design design) {
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          prefersEnglish
-              ? 'Pick a product, then attach this design (mock)'
-              : '商品を選んで、この印鑑を選択してください（モック）',
+          AppLocalizations.of(context).libraryDesignDetailReorderHint,
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -250,9 +238,7 @@ class _LibraryDesignDetailPageState
     Design design,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final prefersEnglish = ref.container
-        .read(appExperienceGatesProvider)
-        .prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     try {
       await ref.container.read(designCreationViewModel.future);
@@ -261,11 +247,7 @@ class _LibraryDesignDetailPageState
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            prefersEnglish
-                ? 'Failed to prepare editor: $e'
-                : '編集の準備に失敗しました: $e',
-          ),
+          content: Text(l10n.libraryDesignDetailHydrateFailed(e.toString())),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -278,7 +260,7 @@ class _DetailsTab extends StatelessWidget {
   const _DetailsTab({
     required this.subtitle,
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onVersions,
     required this.onDuplicate,
     required this.onShare,
@@ -290,7 +272,7 @@ class _DetailsTab extends StatelessWidget {
 
   final String subtitle;
   final LibraryDesignDetailState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onVersions;
   final VoidCallback onDuplicate;
   final VoidCallback onShare;
@@ -319,7 +301,7 @@ class _DetailsTab extends StatelessWidget {
           _HeaderCard(
             subtitle: subtitle,
             design: design,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             onVersions: onVersions,
             onDuplicate: onDuplicate,
             onShare: onShare,
@@ -328,9 +310,9 @@ class _DetailsTab extends StatelessWidget {
             onReorder: onReorder,
           ),
           SizedBox(height: tokens.spacing.lg),
-          _SectionTitle(title: prefersEnglish ? 'Metadata' : 'メタデータ'),
+          _SectionTitle(title: l10n.libraryDesignDetailMetadataTitle),
           SizedBox(height: tokens.spacing.sm),
-          _metadataCard(context, design, prefersEnglish),
+          _metadataCard(context, design, l10n),
         ],
       ),
     );
@@ -341,13 +323,13 @@ class _ActivityTab extends StatelessWidget {
   const _ActivityTab({
     required this.subtitle,
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onRefresh,
   });
 
   final String subtitle;
   final LibraryDesignDetailState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final Future<void> Function() onRefresh;
 
   @override
@@ -369,7 +351,7 @@ class _ActivityTab extends StatelessWidget {
           _HeaderCard(
             subtitle: subtitle,
             design: state.design,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             onVersions: null,
             onDuplicate: null,
             onShare: null,
@@ -378,20 +360,15 @@ class _ActivityTab extends StatelessWidget {
             onReorder: null,
           ),
           SizedBox(height: tokens.spacing.lg),
-          _SectionTitle(title: prefersEnglish ? 'Usage history' : '使用履歴'),
+          _SectionTitle(title: l10n.libraryDesignDetailUsageHistoryTitle),
           SizedBox(height: tokens.spacing.sm),
           if (state.activity.isEmpty)
-            AppCard(
-              child: Text(prefersEnglish ? 'No activity yet.' : 'まだ履歴がありません。'),
-            )
+            AppCard(child: Text(l10n.libraryDesignDetailNoActivity))
           else
             ...state.activity.map(
               (item) => Padding(
                 padding: EdgeInsets.only(bottom: tokens.spacing.sm),
-                child: _ActivityTile(
-                  item: item,
-                  prefersEnglish: prefersEnglish,
-                ),
+                child: _ActivityTile(item: item, l10n: l10n),
               ),
             ),
         ],
@@ -404,14 +381,14 @@ class _FilesTab extends StatelessWidget {
   const _FilesTab({
     required this.subtitle,
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onExport,
     required this.onRefresh,
   });
 
   final String subtitle;
   final LibraryDesignDetailState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onExport;
   final Future<void> Function() onRefresh;
 
@@ -435,7 +412,7 @@ class _FilesTab extends StatelessWidget {
           _HeaderCard(
             subtitle: subtitle,
             design: design,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             onVersions: null,
             onDuplicate: null,
             onShare: null,
@@ -444,28 +421,28 @@ class _FilesTab extends StatelessWidget {
             onReorder: null,
           ),
           SizedBox(height: tokens.spacing.lg),
-          _SectionTitle(title: prefersEnglish ? 'Files' : 'ファイル'),
+          _SectionTitle(title: l10n.libraryDesignDetailFilesTitle),
           SizedBox(height: tokens.spacing.sm),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FileRow(
-                  prefersEnglish: prefersEnglish,
-                  label: prefersEnglish ? 'Preview PNG' : 'プレビューPNG',
+                  l10n: l10n,
+                  label: l10n.libraryDesignDetailPreviewPngLabel,
                   value: design.assets?.previewPngUrl,
                 ),
                 SizedBox(height: tokens.spacing.sm),
                 _FileRow(
-                  prefersEnglish: prefersEnglish,
-                  label: prefersEnglish ? 'Vector SVG' : 'ベクターSVG',
+                  l10n: l10n,
+                  label: l10n.libraryDesignDetailVectorSvgLabel,
                   value: design.assets?.vectorSvg,
                 ),
                 SizedBox(height: tokens.spacing.md),
                 FilledButton.icon(
                   onPressed: onExport,
                   icon: const Icon(Icons.cloud_download_outlined),
-                  label: Text(prefersEnglish ? 'Export' : '出力'),
+                  label: Text(l10n.libraryDesignDetailExportAction),
                 ),
               ],
             ),
@@ -480,7 +457,7 @@ class _HeaderCard extends StatelessWidget {
   const _HeaderCard({
     required this.subtitle,
     required this.design,
-    required this.prefersEnglish,
+    required this.l10n,
     this.onVersions,
     required this.onDuplicate,
     required this.onShare,
@@ -491,7 +468,7 @@ class _HeaderCard extends StatelessWidget {
 
   final String subtitle;
   final Design design;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback? onVersions;
   final VoidCallback? onDuplicate;
   final VoidCallback? onShare;
@@ -504,7 +481,7 @@ class _HeaderCard extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
     final name = design.input?.rawName.trim();
     final displayName = (name == null || name.isEmpty)
-        ? (prefersEnglish ? 'Untitled' : '名称未設定')
+        ? l10n.libraryDesignDetailUntitled
         : name;
     final previewUrl =
         design.assets?.previewPngUrl ?? design.assets?.stampMockUrl;
@@ -556,7 +533,7 @@ class _HeaderCard extends StatelessWidget {
                     runSpacing: tokens.spacing.sm,
                     children: [
                       _InfoChip(
-                        label: _statusLabel(design.status, prefersEnglish),
+                        label: _statusLabel(design.status, l10n),
                         icon: Icons.bookmark_outline,
                       ),
                       _InfoChip(
@@ -564,32 +541,27 @@ class _HeaderCard extends StatelessWidget {
                         icon: Icons.straighten_outlined,
                       ),
                       _InfoChip(
-                        label: _shapeLabel(design.shape, prefersEnglish),
+                        label: _shapeLabel(design.shape, l10n),
                         icon: Icons.radio_button_checked_outlined,
                       ),
                       _InfoChip(
-                        label: _writingLabel(
-                          design.style.writing,
-                          prefersEnglish,
-                        ),
+                        label: _writingLabel(design.style.writing, l10n),
                         icon: Icons.font_download_outlined,
                       ),
                       _InfoChip(
                         label: aiScore == null
-                            ? (prefersEnglish ? 'AI score: -' : 'AIスコア: -')
-                            : (prefersEnglish
-                                  ? 'AI score: ${(aiScore * 100).round()}'
-                                  : 'AIスコア: ${(aiScore * 100).round()}'),
+                            ? l10n.libraryDesignDetailAiScoreUnknown
+                            : l10n.libraryDesignDetailAiScoreLabel(
+                                (aiScore * 100).round().toString(),
+                              ),
                         icon: Icons.auto_awesome_outlined,
                       ),
                       _InfoChip(
                         label: registrable == null
-                            ? (prefersEnglish ? 'Registrability: -' : '登録可否: -')
+                            ? l10n.libraryDesignDetailRegistrabilityUnknown
                             : (registrable
-                                  ? (prefersEnglish ? 'Registrable' : '登録可')
-                                  : (prefersEnglish
-                                        ? 'Not registrable'
-                                        : '登録不可')),
+                                  ? l10n.libraryDesignDetailRegistrable
+                                  : l10n.libraryDesignDetailNotRegistrable),
                         icon: registrable == true
                             ? Icons.verified_outlined
                             : Icons.report_problem_outlined,
@@ -618,37 +590,37 @@ class _HeaderCard extends StatelessWidget {
                   if (onVersions != null)
                     ActionChip(
                       avatar: const Icon(Icons.history_rounded),
-                      label: Text(prefersEnglish ? 'Versions' : 'バージョン'),
+                      label: Text(l10n.libraryDesignDetailActionVersions),
                       onPressed: onVersions,
                     ),
                   if (onShare != null)
                     ActionChip(
                       avatar: const Icon(Icons.share_outlined),
-                      label: Text(prefersEnglish ? 'Share' : '共有'),
+                      label: Text(l10n.libraryDesignDetailActionShare),
                       onPressed: onShare,
                     ),
                   if (onShareLinks != null)
                     ActionChip(
                       avatar: const Icon(Icons.link_rounded),
-                      label: Text(prefersEnglish ? 'Links' : 'リンク'),
+                      label: Text(l10n.libraryDesignDetailActionLinks),
                       onPressed: onShareLinks,
                     ),
                   if (onDuplicate != null)
                     ActionChip(
                       avatar: const Icon(Icons.copy_outlined),
-                      label: Text(prefersEnglish ? 'Duplicate' : '複製'),
+                      label: Text(l10n.libraryDesignDetailActionDuplicate),
                       onPressed: onDuplicate,
                     ),
                   if (onReorder != null)
                     ActionChip(
                       avatar: const Icon(Icons.shopping_bag_outlined),
-                      label: Text(prefersEnglish ? 'Reorder' : '再注文'),
+                      label: Text(l10n.libraryDesignDetailActionReorder),
                       onPressed: onReorder,
                     ),
                   if (onArchive != null)
                     ActionChip(
                       avatar: const Icon(Icons.archive_outlined),
-                      label: Text(prefersEnglish ? 'Archive' : 'アーカイブ'),
+                      label: Text(l10n.libraryDesignDetailActionArchive),
                       onPressed: onArchive,
                     ),
                 ],
@@ -693,10 +665,10 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.item, required this.prefersEnglish});
+  const _ActivityTile({required this.item, required this.l10n});
 
   final LibraryDesignActivityItem item;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -707,9 +679,9 @@ class _ActivityTile extends StatelessWidget {
     };
     return AppListTile(
       leading: Icon(icon),
-      title: Text(prefersEnglish ? item.title : _activityTitleJa(item.kind)),
+      title: Text(_activityTitle(item.kind, l10n)),
       subtitle: Text(
-        '${_formatShortDate(item.timestamp)} • ${prefersEnglish ? item.detail : _activityDetailJa(item.kind)}',
+        '${_formatShortDate(item.timestamp)} • ${_activityDetail(item.kind, l10n)}',
       ),
       dense: true,
     );
@@ -718,12 +690,12 @@ class _ActivityTile extends StatelessWidget {
 
 class _FileRow extends StatelessWidget {
   const _FileRow({
-    required this.prefersEnglish,
+    required this.l10n,
     required this.label,
     required this.value,
   });
 
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final String label;
   final String? value;
 
@@ -731,7 +703,7 @@ class _FileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final resolved = value == null || value!.trim().isEmpty
-        ? (prefersEnglish ? 'Not available' : '未生成')
+        ? l10n.libraryDesignDetailFileNotAvailable
         : value!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,13 +728,13 @@ class _ErrorBody extends StatelessWidget {
   const _ErrorBody({
     required this.subtitle,
     required this.message,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onRetry,
   });
 
   final String subtitle;
   final String message;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final VoidCallback onRetry;
 
   @override
@@ -777,7 +749,7 @@ class _ErrorBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                prefersEnglish ? 'Failed to load' : '読み込みに失敗しました',
+                l10n.commonLoadFailed,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               SizedBox(height: tokens.spacing.sm),
@@ -785,10 +757,7 @@ class _ErrorBody extends StatelessWidget {
               SizedBox(height: tokens.spacing.sm),
               Text(message),
               SizedBox(height: tokens.spacing.md),
-              FilledButton(
-                onPressed: onRetry,
-                child: Text(prefersEnglish ? 'Retry' : '再試行'),
-              ),
+              FilledButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
             ],
           ),
         ),
@@ -797,72 +766,76 @@ class _ErrorBody extends StatelessWidget {
   }
 }
 
-Widget _metadataCard(BuildContext context, Design design, bool prefersEnglish) {
+Widget _metadataCard(
+  BuildContext context,
+  Design design,
+  AppLocalizations l10n,
+) {
   final tokens = DesignTokensTheme.of(context);
-  final id = design.id ?? (prefersEnglish ? 'Unknown' : '不明');
+  final id = design.id ?? l10n.commonUnknown;
   final aiScore = design.ai?.qualityScore;
   final registrable = design.ai?.registrable;
 
   String registrabilityText() {
-    if (registrable == null) return prefersEnglish ? 'Unknown' : '不明';
+    if (registrable == null) return l10n.commonUnknown;
     return registrable
-        ? (prefersEnglish ? 'Registrable' : '登録可')
-        : (prefersEnglish ? 'Not registrable' : '登録不可');
+        ? l10n.libraryDesignDetailRegistrable
+        : l10n.libraryDesignDetailNotRegistrable;
   }
 
   String aiText() {
-    if (aiScore == null) return prefersEnglish ? 'Unknown' : '不明';
+    if (aiScore == null) return l10n.commonUnknown;
     return '${(aiScore * 100).round()} / 100';
   }
 
   return Column(
     children: [
       AppListTile(
-        title: Text(prefersEnglish ? 'Design ID' : 'デザインID'),
+        title: Text(l10n.libraryDesignDetailMetadataDesignId),
         subtitle: Text(id),
         dense: true,
       ),
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'Status' : 'ステータス'),
-        subtitle: Text(_statusLabel(design.status, prefersEnglish)),
+        title: Text(l10n.libraryDesignDetailMetadataStatus),
+        subtitle: Text(_statusLabel(design.status, l10n)),
         dense: true,
       ),
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'AI score' : 'AIスコア'),
+        title: Text(l10n.libraryDesignDetailMetadataAiScore),
         subtitle: Text(aiText()),
         dense: true,
       ),
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'Registrability' : '登録可否'),
+        title: Text(l10n.libraryDesignDetailMetadataRegistrability),
         subtitle: Text(registrabilityText()),
         dense: true,
       ),
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'Created' : '作成日'),
+        title: Text(l10n.libraryDesignDetailMetadataCreated),
         subtitle: Text(_formatShortDate(design.createdAt)),
         dense: true,
       ),
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'Updated' : '更新日'),
+        title: Text(l10n.libraryDesignDetailMetadataUpdated),
         subtitle: Text(_formatShortDate(design.updatedAt)),
         dense: true,
       ),
       if (design.lastOrderedAt != null) ...[
         SizedBox(height: tokens.spacing.sm),
         AppListTile(
-          title: Text(prefersEnglish ? 'Last used' : '最終使用'),
+          title: Text(l10n.libraryDesignDetailMetadataLastUsed),
           subtitle: Text(_formatShortDate(design.lastOrderedAt!)),
           dense: true,
         ),
       ],
       SizedBox(height: tokens.spacing.sm),
       AppListTile(
-        title: Text(prefersEnglish ? 'Version' : 'バージョン'),
+        title: Text(l10n.libraryDesignDetailMetadataVersion),
         subtitle: Text('v${design.version}'),
         dense: true,
       ),
@@ -870,27 +843,27 @@ Widget _metadataCard(BuildContext context, Design design, bool prefersEnglish) {
   );
 }
 
-String _shapeLabel(SealShape shape, bool prefersEnglish) => switch (shape) {
-  SealShape.round => prefersEnglish ? 'Round' : '丸',
-  SealShape.square => prefersEnglish ? 'Square' : '角',
+String _shapeLabel(SealShape shape, AppLocalizations l10n) => switch (shape) {
+  SealShape.round => l10n.homeShapeRound,
+  SealShape.square => l10n.homeShapeSquare,
 };
 
-String _writingLabel(WritingStyle style, bool prefersEnglish) =>
+String _writingLabel(WritingStyle style, AppLocalizations l10n) =>
     switch (style) {
-      WritingStyle.tensho => prefersEnglish ? 'Tensho' : '篆書',
-      WritingStyle.reisho => prefersEnglish ? 'Reisho' : '隷書',
-      WritingStyle.kaisho => prefersEnglish ? 'Kaisho' : '楷書',
-      WritingStyle.gyosho => prefersEnglish ? 'Gyosho' : '行書',
-      WritingStyle.koentai => prefersEnglish ? 'Koentai' : '古印体',
-      WritingStyle.custom => prefersEnglish ? 'Custom' : 'カスタム',
+      WritingStyle.tensho => l10n.homeWritingTensho,
+      WritingStyle.reisho => l10n.homeWritingReisho,
+      WritingStyle.kaisho => l10n.homeWritingKaisho,
+      WritingStyle.gyosho => l10n.homeWritingGyosho,
+      WritingStyle.koentai => l10n.homeWritingKoentai,
+      WritingStyle.custom => l10n.homeWritingCustom,
     };
 
-String _statusLabel(DesignStatus status, bool prefersEnglish) =>
+String _statusLabel(DesignStatus status, AppLocalizations l10n) =>
     switch (status) {
-      DesignStatus.draft => prefersEnglish ? 'Draft' : '下書き',
-      DesignStatus.ready => prefersEnglish ? 'Ready' : '準備完了',
-      DesignStatus.ordered => prefersEnglish ? 'Ordered' : '注文済み',
-      DesignStatus.locked => prefersEnglish ? 'Locked' : 'ロック',
+      DesignStatus.draft => l10n.homeStatusDraft,
+      DesignStatus.ready => l10n.homeStatusReady,
+      DesignStatus.ordered => l10n.homeStatusOrdered,
+      DesignStatus.locked => l10n.homeStatusLocked,
     };
 
 String _formatShortDate(DateTime date) {
@@ -900,14 +873,22 @@ String _formatShortDate(DateTime date) {
   return '$y/$m/$d';
 }
 
-String _activityTitleJa(LibraryDesignActivityKind kind) => switch (kind) {
-  LibraryDesignActivityKind.created => '作成',
-  LibraryDesignActivityKind.updated => '更新',
-  LibraryDesignActivityKind.ordered => '注文で使用',
-};
+String _activityTitle(LibraryDesignActivityKind kind, AppLocalizations l10n) =>
+    switch (kind) {
+      LibraryDesignActivityKind.created =>
+        l10n.libraryDesignDetailActivityCreatedTitle,
+      LibraryDesignActivityKind.updated =>
+        l10n.libraryDesignDetailActivityUpdatedTitle,
+      LibraryDesignActivityKind.ordered =>
+        l10n.libraryDesignDetailActivityOrderedTitle,
+    };
 
-String _activityDetailJa(LibraryDesignActivityKind kind) => switch (kind) {
-  LibraryDesignActivityKind.created => '保存しました',
-  LibraryDesignActivityKind.updated => '編集内容を反映しました',
-  LibraryDesignActivityKind.ordered => '再注文できます',
-};
+String _activityDetail(LibraryDesignActivityKind kind, AppLocalizations l10n) =>
+    switch (kind) {
+      LibraryDesignActivityKind.created =>
+        l10n.libraryDesignDetailActivityCreatedDetail,
+      LibraryDesignActivityKind.updated =>
+        l10n.libraryDesignDetailActivityUpdatedDetail,
+      LibraryDesignActivityKind.ordered =>
+        l10n.libraryDesignDetailActivityOrderedDetail,
+    };

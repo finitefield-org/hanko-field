@@ -6,7 +6,7 @@ import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/orders/data/models/order_models.dart';
 import 'package:app/features/orders/view_model/order_detail_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -26,12 +26,11 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final orderAsync = ref.watch(OrderDetailViewModel(orderId: widget.orderId));
     final order = orderAsync.valueOrNull;
 
-    final title = order?.orderNumber ?? (prefersEnglish ? 'Order' : '注文');
+    final title = order?.orderNumber ?? l10n.orderDetailTitleFallback;
 
     return DefaultTabController(
       length: 3,
@@ -47,36 +46,32 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                   title: Text(title),
                   actions: [
                     IconButton(
-                      tooltip: prefersEnglish ? 'Reorder' : '再注文',
+                      tooltip: l10n.orderDetailTooltipReorder,
                       icon: const Icon(Icons.replay_outlined),
                       onPressed: order == null
                           ? null
                           : () => _openReorderFlow(),
                     ),
                     IconButton(
-                      tooltip: prefersEnglish ? 'Share' : '共有',
+                      tooltip: l10n.orderDetailTooltipShare,
                       icon: const Icon(Icons.ios_share_outlined),
                       onPressed: order == null
                           ? null
-                          : () => _share(order, prefersEnglish),
+                          : () => _share(order, l10n),
                     ),
                     PopupMenuButton<_OrderMenuAction>(
-                      tooltip: prefersEnglish ? 'More' : 'その他',
+                      tooltip: l10n.orderDetailTooltipMore,
                       itemBuilder: (context) {
                         return [
                           PopupMenuItem(
                             value: _OrderMenuAction.contactSupport,
-                            child: Text(
-                              prefersEnglish ? 'Contact support' : '問い合わせ',
-                            ),
+                            child: Text(l10n.orderDetailMenuContactSupport),
                           ),
                           if (order != null &&
                               order.status != OrderStatus.canceled)
                             PopupMenuItem(
                               value: _OrderMenuAction.cancel,
-                              child: Text(
-                                prefersEnglish ? 'Cancel order' : '注文をキャンセル',
-                              ),
+                              child: Text(l10n.orderDetailMenuCancelOrder),
                             ),
                         ];
                       },
@@ -87,16 +82,16 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                           case _OrderMenuAction.contactSupport:
                             _contactSupport();
                           case _OrderMenuAction.cancel:
-                            unawaited(_confirmCancel(current, prefersEnglish));
+                            unawaited(_confirmCancel(current, l10n));
                         }
                       },
                     ),
                   ],
                   bottom: TabBar(
                     tabs: [
-                      Tab(text: prefersEnglish ? 'Summary' : '概要'),
-                      Tab(text: prefersEnglish ? 'Timeline' : '履歴'),
-                      Tab(text: prefersEnglish ? 'Files' : 'ファイル'),
+                      Tab(text: l10n.orderDetailTabSummary),
+                      Tab(text: l10n.orderDetailTabTimeline),
+                      Tab(text: l10n.orderDetailTabFiles),
                     ],
                   ),
                 ),
@@ -106,47 +101,44 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
               children: [
                 _TabScaffold(
                   tokens: tokens,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   state: orderAsync,
                   onRetry: _refresh,
                   child: order == null
                       ? null
                       : _SummaryTab(
                           order: order,
-                          prefersEnglish: prefersEnglish,
+                          l10n: l10n,
                           onTapDesign: _showDesignPreview,
                           onOpenProduction: () => _pushSubRoute('production'),
                           onOpenTracking: () => _pushSubRoute('tracking'),
                           onRequestInvoice: () =>
-                              unawaited(_requestInvoice(prefersEnglish)),
+                              unawaited(_requestInvoice(l10n)),
                           onContactSupport: _contactSupport,
                         ),
                 ),
                 _TabScaffold(
                   tokens: tokens,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   state: orderAsync,
                   onRetry: _refresh,
                   child: order == null
                       ? null
-                      : _TimelineTab(
-                          order: order,
-                          prefersEnglish: prefersEnglish,
-                        ),
+                      : _TimelineTab(order: order, l10n: l10n),
                 ),
                 _TabScaffold(
                   tokens: tokens,
-                  prefersEnglish: prefersEnglish,
+                  l10n: l10n,
                   state: orderAsync,
                   onRetry: _refresh,
                   child: order == null
                       ? null
                       : _FilesTab(
                           order: order,
-                          prefersEnglish: prefersEnglish,
+                          l10n: l10n,
                           onTapDesign: _showDesignPreview,
                           onRequestInvoice: () =>
-                              unawaited(_requestInvoice(prefersEnglish)),
+                              unawaited(_requestInvoice(l10n)),
                           onOpenInvoice: () => _pushSubRoute('invoice'),
                         ),
                 ),
@@ -165,10 +157,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     );
   }
 
-  void _share(Order order, bool prefersEnglish) {
-    final text = prefersEnglish
-        ? 'Order ${order.orderNumber}'
-        : '注文番号：${order.orderNumber}';
+  void _share(Order order, AppLocalizations l10n) {
+    final text = l10n.orderDetailShareText(order.orderNumber);
     Share.share(text, subject: order.orderNumber);
   }
 
@@ -180,7 +170,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     );
   }
 
-  Future<void> _requestInvoice(bool prefersEnglish) async {
+  Future<void> _requestInvoice(AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.invoke(
@@ -189,23 +179,13 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish
-                ? 'Invoice request sent (mock)'
-                : '領収書のリクエストを送信しました（モック）',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderDetailInvoiceRequestSent)),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish ? 'Could not request invoice' : '領収書のリクエストに失敗しました',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderDetailInvoiceRequestFailed)),
       );
     }
   }
@@ -226,18 +206,14 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     );
   }
 
-  Future<void> _confirmCancel(Order order, bool prefersEnglish) async {
+  Future<void> _confirmCancel(Order order, AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showAppModal<bool>(
       context: context,
-      title: prefersEnglish ? 'Cancel this order?' : 'この注文をキャンセルしますか？',
-      body: Text(
-        prefersEnglish
-            ? 'If production already started, cancellation may not be possible.'
-            : '制作が開始している場合、キャンセルできないことがあります。',
-      ),
-      primaryAction: prefersEnglish ? 'Cancel order' : 'キャンセルする',
-      secondaryAction: prefersEnglish ? 'Keep' : '戻る',
+      title: l10n.orderDetailCancelTitle,
+      body: Text(l10n.orderDetailCancelBody),
+      primaryAction: l10n.orderDetailCancelConfirm,
+      secondaryAction: l10n.orderDetailCancelKeep,
       onPrimaryPressed: () => Navigator.of(context).pop(true),
       onSecondaryPressed: () => Navigator.of(context).pop(false),
     );
@@ -249,17 +225,13 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(prefersEnglish ? 'Order canceled' : '注文をキャンセルしました'),
-        ),
+        SnackBar(content: Text(l10n.orderDetailCancelSuccess)),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(prefersEnglish ? 'Could not cancel' : 'キャンセルに失敗しました'),
-        ),
+        SnackBar(content: Text(l10n.orderDetailCancelFailed)),
       );
     }
   }
@@ -313,7 +285,9 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: AppButton(
-                    label: 'OK',
+                    label: AppLocalizations.of(
+                      context,
+                    ).orderDetailDesignPreviewOk,
                     variant: AppButtonVariant.secondary,
                     onPressed: () => Navigator.of(ctx).pop(),
                   ),
@@ -332,14 +306,14 @@ enum _OrderMenuAction { contactSupport, cancel }
 class _TabScaffold extends StatelessWidget {
   const _TabScaffold({
     required this.tokens,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.state,
     required this.onRetry,
     required this.child,
   });
 
   final DesignTokens tokens;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final AsyncValue<Order> state;
   final Future<void> Function() onRetry;
   final Widget? child;
@@ -372,10 +346,10 @@ class _TabScaffold extends StatelessWidget {
               padding: EdgeInsets.all(tokens.spacing.xl),
               children: [
                 AppEmptyState(
-                  title: prefersEnglish ? 'Could not load' : '読み込みに失敗しました',
+                  title: l10n.commonLoadFailed,
                   message: error.toString(),
                   icon: Icons.error_outline,
-                  actionLabel: prefersEnglish ? 'Retry' : '再試行',
+                  actionLabel: l10n.commonRetry,
                   onAction: () => unawaited(onRetry()),
                 ),
               ],
@@ -399,7 +373,7 @@ class _TabScaffold extends StatelessWidget {
 class _SummaryTab extends StatelessWidget {
   const _SummaryTab({
     required this.order,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onTapDesign,
     required this.onOpenProduction,
     required this.onOpenTracking,
@@ -408,7 +382,7 @@ class _SummaryTab extends StatelessWidget {
   });
 
   final Order order;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final ValueChanged<_DesignSnapshot> onTapDesign;
   final VoidCallback onOpenProduction;
   final VoidCallback onOpenTracking;
@@ -437,18 +411,14 @@ class _SummaryTab extends StatelessWidget {
             padding: EdgeInsets.only(bottom: tokens.spacing.md),
             child: MaterialBanner(
               leading: const Icon(Icons.info_outline),
-              content: Text(
-                prefersEnglish
-                    ? 'Your order is in progress. You can check production and tracking here.'
-                    : '注文は進行中です。制作状況や配送状況を確認できます。',
-              ),
+              content: Text(l10n.orderDetailBannerInProgress),
               actions: [
                 ActionChip(
-                  label: Text(prefersEnglish ? 'Production' : '制作'),
+                  label: Text(l10n.orderDetailBannerProduction),
                   onPressed: onOpenProduction,
                 ),
                 ActionChip(
-                  label: Text(prefersEnglish ? 'Tracking' : '配送'),
+                  label: Text(l10n.orderDetailBannerTracking),
                   onPressed: onOpenTracking,
                 ),
               ],
@@ -462,7 +432,7 @@ class _SummaryTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      prefersEnglish ? 'Order' : '注文',
+                      l10n.orderDetailSectionOrder,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     SizedBox(height: tokens.spacing.xs),
@@ -472,7 +442,7 @@ class _SummaryTab extends StatelessWidget {
                     ),
                     SizedBox(height: tokens.spacing.sm),
                     Text(
-                      _orderMeta(order, prefersEnglish: prefersEnglish),
+                      _orderMeta(order, l10n: l10n),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: tokens.colors.onSurface.withValues(alpha: 0.72),
                       ),
@@ -482,7 +452,7 @@ class _SummaryTab extends StatelessWidget {
               ),
               _StatusChip(
                 status: order.status,
-                prefersEnglish: prefersEnglish,
+                l10n: l10n,
                 scheme: scheme,
                 tokens: tokens,
               ),
@@ -491,7 +461,7 @@ class _SummaryTab extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Items' : '明細',
+          title: l10n.orderDetailSectionItems,
           child: Column(
             children: order.lineItems.map((item) {
               final name = item.name ?? item.sku;
@@ -510,9 +480,9 @@ class _SummaryTab extends StatelessWidget {
                           ),
                           SizedBox(height: tokens.spacing.xs),
                           Text(
-                            prefersEnglish
-                                ? 'Qty ${item.quantity}'
-                                : '数量 ${item.quantity}',
+                            l10n.orderDetailItemQtyLabel(
+                              item.quantity.toString(),
+                            ),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: tokens.colors.onSurface.withValues(
@@ -535,11 +505,11 @@ class _SummaryTab extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Total' : '合計',
+          title: l10n.orderDetailSectionTotal,
           child: Column(
             children: [
               _TotalRow(
-                label: prefersEnglish ? 'Subtotal' : '小計',
+                label: l10n.orderDetailSubtotal,
                 value: _formatCurrency(
                   order.totals.subtotal,
                   currency: order.currency,
@@ -547,21 +517,21 @@ class _SummaryTab extends StatelessWidget {
               ),
               if (order.totals.discount != 0)
                 _TotalRow(
-                  label: prefersEnglish ? 'Discount' : '割引',
+                  label: l10n.orderDetailDiscount,
                   value:
                       '-${_formatCurrency(order.totals.discount, currency: order.currency)}',
                 ),
               _TotalRow(
-                label: prefersEnglish ? 'Shipping' : '送料',
+                label: l10n.orderDetailShipping,
                 value: order.totals.shipping == 0
-                    ? (prefersEnglish ? 'Free' : '無料')
+                    ? l10n.orderDetailShippingFree
                     : _formatCurrency(
                         order.totals.shipping,
                         currency: order.currency,
                       ),
               ),
               _TotalRow(
-                label: prefersEnglish ? 'Tax' : '税',
+                label: l10n.orderDetailTax,
                 value: _formatCurrency(
                   order.totals.tax,
                   currency: order.currency,
@@ -569,7 +539,7 @@ class _SummaryTab extends StatelessWidget {
               ),
               Divider(height: tokens.spacing.lg),
               _TotalRow(
-                label: prefersEnglish ? 'Total' : '合計',
+                label: l10n.orderDetailTotal,
                 value: _formatCurrency(
                   order.totals.total,
                   currency: order.currency,
@@ -581,24 +551,24 @@ class _SummaryTab extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Shipping address' : '配送先',
+          title: l10n.orderDetailShippingAddress,
           child: _AddressBlock(address: order.shippingAddress),
         ),
         if (order.billingAddress != null) ...[
           SizedBox(height: tokens.spacing.md),
           _SectionCard(
-            title: prefersEnglish ? 'Billing address' : '請求先',
+            title: l10n.orderDetailBillingAddress,
             child: _AddressBlock(address: order.billingAddress!),
           ),
         ],
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Payment' : '支払い',
-          child: _PaymentSummary(order: order, prefersEnglish: prefersEnglish),
+          title: l10n.orderDetailPayment,
+          child: _PaymentSummary(order: order, l10n: l10n),
         ),
         SizedBox(height: tokens.spacing.md),
         _ElevatedSectionCard(
-          title: prefersEnglish ? 'Design snapshots' : 'デザインスナップショット',
+          title: l10n.orderDetailDesignSnapshots,
           child: _DesignGallery(
             snapshots: _collectSnapshots(order),
             onTap: onTapDesign,
@@ -607,17 +577,17 @@ class _SummaryTab extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Quick actions' : '操作',
+          title: l10n.orderDetailQuickActions,
           child: Wrap(
             spacing: tokens.spacing.sm,
             runSpacing: tokens.spacing.sm,
             children: [
               ActionChip(
-                label: Text(prefersEnglish ? 'Request invoice' : '領収書を依頼'),
+                label: Text(l10n.orderDetailRequestInvoice),
                 onPressed: onRequestInvoice,
               ),
               ActionChip(
-                label: Text(prefersEnglish ? 'Contact support' : '問い合わせ'),
+                label: Text(l10n.orderDetailContactSupport),
                 onPressed: onContactSupport,
               ),
             ],
@@ -629,15 +599,15 @@ class _SummaryTab extends StatelessWidget {
 }
 
 class _TimelineTab extends StatelessWidget {
-  const _TimelineTab({required this.order, required this.prefersEnglish});
+  const _TimelineTab({required this.order, required this.l10n});
 
   final Order order;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final milestones = _milestones(order, prefersEnglish: prefersEnglish);
+    final milestones = _milestones(order, l10n: l10n);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(
@@ -655,7 +625,7 @@ class _TimelineTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                prefersEnglish ? 'Timeline' : '履歴',
+                l10n.orderDetailTimelineTitle,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               SizedBox(height: tokens.spacing.md),
@@ -677,7 +647,7 @@ class _TimelineTab extends StatelessWidget {
                             ),
                             SizedBox(height: tokens.spacing.xs),
                             Text(
-                              m.timeLabel ?? (prefersEnglish ? '—' : '—'),
+                              m.timeLabel ?? '—',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -690,7 +660,7 @@ class _TimelineTab extends StatelessWidget {
               if (order.productionEvents.isNotEmpty) ...[
                 Divider(height: tokens.spacing.lg),
                 Text(
-                  prefersEnglish ? 'Production events' : '制作イベント',
+                  l10n.orderDetailProductionEvents,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 SizedBox(height: tokens.spacing.md),
@@ -742,14 +712,14 @@ class _TimelineTab extends StatelessWidget {
 class _FilesTab extends StatelessWidget {
   const _FilesTab({
     required this.order,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onTapDesign,
     required this.onRequestInvoice,
     required this.onOpenInvoice,
   });
 
   final Order order;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final ValueChanged<_DesignSnapshot> onTapDesign;
   final VoidCallback onRequestInvoice;
   final VoidCallback onOpenInvoice;
@@ -770,7 +740,7 @@ class _FilesTab extends StatelessWidget {
       ),
       children: [
         _ElevatedSectionCard(
-          title: prefersEnglish ? 'Design snapshots' : 'デザインスナップショット',
+          title: l10n.orderDetailDesignSnapshots,
           child: _DesignGallery(
             snapshots: _collectSnapshots(order),
             onTap: onTapDesign,
@@ -779,14 +749,12 @@ class _FilesTab extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.md),
         _SectionCard(
-          title: prefersEnglish ? 'Invoice' : '領収書',
+          title: l10n.orderDetailInvoiceTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                prefersEnglish
-                    ? 'You can request and view invoices here.'
-                    : '領収書の依頼・表示ができます。',
+                l10n.orderDetailInvoiceHint,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               SizedBox(height: tokens.spacing.md),
@@ -794,7 +762,7 @@ class _FilesTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: AppButton(
-                      label: prefersEnglish ? 'Request' : '依頼する',
+                      label: l10n.orderDetailInvoiceRequest,
                       variant: AppButtonVariant.secondary,
                       leading: const Icon(Icons.receipt_long_outlined),
                       expand: true,
@@ -804,7 +772,7 @@ class _FilesTab extends StatelessWidget {
                   SizedBox(width: tokens.spacing.sm),
                   Expanded(
                     child: AppButton(
-                      label: prefersEnglish ? 'View' : '表示する',
+                      label: l10n.orderDetailInvoiceView,
                       variant: AppButtonVariant.ghost,
                       expand: true,
                       onPressed: onOpenInvoice,
@@ -872,13 +840,13 @@ class _ElevatedSectionCard extends StatelessWidget {
 class _StatusChip extends StatelessWidget {
   const _StatusChip({
     required this.status,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.scheme,
     required this.tokens,
   });
 
   final OrderStatus status;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final ColorScheme scheme;
   final DesignTokens tokens;
 
@@ -895,7 +863,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(tokens.radii.lg),
       ),
       child: Text(
-        _statusLabel(status, prefersEnglish: prefersEnglish),
+        _statusLabel(status, l10n: l10n),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: colors.fg,
           fontWeight: FontWeight.w600,
@@ -972,10 +940,10 @@ class _AddressBlock extends StatelessWidget {
 }
 
 class _PaymentSummary extends StatelessWidget {
-  const _PaymentSummary({required this.order, required this.prefersEnglish});
+  const _PaymentSummary({required this.order, required this.l10n});
 
   final Order order;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -985,23 +953,21 @@ class _PaymentSummary extends StatelessWidget {
     final status = order.status;
 
     final headline = switch (status) {
-      OrderStatus.pendingPayment => prefersEnglish ? 'Pending' : '未払い',
+      OrderStatus.pendingPayment => l10n.orderDetailPaymentPending,
       OrderStatus.paid ||
       OrderStatus.inProduction ||
-      OrderStatus.readyToShip => prefersEnglish ? 'Paid' : '支払い済み',
+      OrderStatus.readyToShip => l10n.orderDetailPaymentPaid,
       OrderStatus.shipped ||
-      OrderStatus.delivered => prefersEnglish ? 'Paid' : '支払い済み',
-      OrderStatus.canceled => prefersEnglish ? 'Canceled' : 'キャンセル',
-      _ => prefersEnglish ? 'Processing' : '処理中',
+      OrderStatus.delivered => l10n.orderDetailPaymentPaid,
+      OrderStatus.canceled => l10n.orderDetailPaymentCanceled,
+      _ => l10n.orderDetailPaymentProcessing,
     };
 
     final detail = payment == null
         ? (paidAt == null
-              ? (prefersEnglish ? 'No payment information' : '支払い情報はありません')
-              : (prefersEnglish
-                    ? 'Paid at ${_formatDateTime(paidAt)}'
-                    : '${_formatDateTime(paidAt)} に支払い'))
-        : _paymentDetail(payment, prefersEnglish: prefersEnglish);
+              ? l10n.orderDetailPaymentNoInfo
+              : l10n.orderDetailPaymentPaidAt(_formatDateTime(paidAt)))
+        : _paymentDetail(payment, l10n: l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,18 +985,18 @@ class _PaymentSummary extends StatelessWidget {
   }
 }
 
-String _paymentDetail(OrderPayment payment, {required bool prefersEnglish}) {
+String _paymentDetail(OrderPayment payment, {required AppLocalizations l10n}) {
   final method = payment.method;
-  final base = prefersEnglish
-      ? '${payment.provider.toJson()} · ${payment.status.toJson()}'
-      : '${payment.provider.toJson()}・${payment.status.toJson()}';
+  final separator = l10n.orderDetailPaymentSeparator;
+  final base =
+      '${payment.provider.toJson()}$separator${payment.status.toJson()}';
   if (method == null) return base;
 
   final methodLabel = switch (method.type) {
-    PaymentMethodType.card => prefersEnglish ? 'Card' : 'カード',
-    PaymentMethodType.wallet => prefersEnglish ? 'Wallet' : 'ウォレット',
-    PaymentMethodType.bank => prefersEnglish ? 'Bank' : '銀行',
-    PaymentMethodType.other => prefersEnglish ? 'Other' : 'その他',
+    PaymentMethodType.card => l10n.orderDetailPaymentMethodCard,
+    PaymentMethodType.wallet => l10n.orderDetailPaymentMethodWallet,
+    PaymentMethodType.bank => l10n.orderDetailPaymentMethodBank,
+    PaymentMethodType.other => l10n.orderDetailPaymentMethodOther,
   };
 
   final suffix = [
@@ -1040,9 +1006,10 @@ String _paymentDetail(OrderPayment payment, {required bool prefersEnglish}) {
       '${method.expMonth}/${method.expYear}',
   ].whereType<String>().where((e) => e.trim().isNotEmpty).join(' ');
 
+  final joiner = l10n.orderDetailPaymentSeparator;
   return suffix.isEmpty
-      ? '$base · $methodLabel'
-      : '$base · $methodLabel $suffix';
+      ? '$base$joiner$methodLabel'
+      : '$base$joiner$methodLabel $suffix';
 }
 
 class _DesignGallery extends StatelessWidget {
@@ -1158,11 +1125,11 @@ String? _stringFromMap(Map<String, Object?>? map, List<String> keys) {
   return null;
 }
 
-String _orderMeta(Order order, {required bool prefersEnglish}) {
+String _orderMeta(Order order, {required AppLocalizations l10n}) {
   final id = order.id;
   final created = _formatDateTime(order.createdAt);
   if (id == null) return created;
-  return prefersEnglish ? 'ID $id · $created' : 'ID $id・$created';
+  return l10n.orderDetailMeta(id, created);
 }
 
 String _formatDateTime(DateTime dateTime) {
@@ -1188,16 +1155,16 @@ String _formatCurrency(int amount, {required String currency}) {
   return '$prefix$sb';
 }
 
-String _statusLabel(OrderStatus status, {required bool prefersEnglish}) {
+String _statusLabel(OrderStatus status, {required AppLocalizations l10n}) {
   return switch (status) {
-    OrderStatus.pendingPayment => prefersEnglish ? 'Pending' : '未払い',
-    OrderStatus.paid => prefersEnglish ? 'Paid' : '支払い済み',
-    OrderStatus.inProduction => prefersEnglish ? 'In production' : '制作中',
-    OrderStatus.readyToShip => prefersEnglish ? 'Ready to ship' : '発送準備中',
-    OrderStatus.shipped => prefersEnglish ? 'Shipped' : '発送済み',
-    OrderStatus.delivered => prefersEnglish ? 'Delivered' : '配達済み',
-    OrderStatus.canceled => prefersEnglish ? 'Canceled' : 'キャンセル',
-    _ => prefersEnglish ? 'Processing' : '処理中',
+    OrderStatus.pendingPayment => l10n.orderDetailStatusPending,
+    OrderStatus.paid => l10n.orderDetailStatusPaid,
+    OrderStatus.inProduction => l10n.orderDetailStatusInProduction,
+    OrderStatus.readyToShip => l10n.orderDetailStatusReadyToShip,
+    OrderStatus.shipped => l10n.orderDetailStatusShipped,
+    OrderStatus.delivered => l10n.orderDetailStatusDelivered,
+    OrderStatus.canceled => l10n.orderDetailStatusCanceled,
+    _ => l10n.orderDetailStatusProcessing,
   };
 }
 
@@ -1245,7 +1212,7 @@ String _statusLabel(OrderStatus status, {required bool prefersEnglish}) {
 
 List<({IconData icon, String label, String? timeLabel})> _milestones(
   Order order, {
-  required bool prefersEnglish,
+  required AppLocalizations l10n,
 }) {
   DateTime? productionAt;
   for (final event in order.productionEvents) {
@@ -1258,33 +1225,33 @@ List<({IconData icon, String label, String? timeLabel})> _milestones(
   return [
     _milestone(
       Icons.receipt_long_outlined,
-      prefersEnglish ? 'Placed' : '注文',
+      l10n.orderDetailMilestonePlaced,
       order.placedAt ?? order.createdAt,
     ),
     _milestone(
       Icons.credit_card_outlined,
-      prefersEnglish ? 'Paid' : '支払い',
+      l10n.orderDetailMilestonePaid,
       order.paidAt,
     ),
     _milestone(
       Icons.handyman_outlined,
-      prefersEnglish ? 'Production' : '制作',
+      l10n.orderDetailMilestoneProduction,
       productionAt,
     ),
     _milestone(
       Icons.local_shipping_outlined,
-      prefersEnglish ? 'Shipped' : '発送',
+      l10n.orderDetailMilestoneShipped,
       order.shippedAt,
     ),
     _milestone(
       Icons.inventory_2_outlined,
-      prefersEnglish ? 'Delivered' : '配達',
+      l10n.orderDetailMilestoneDelivered,
       order.deliveredAt,
     ),
     if (order.canceledAt != null)
       _milestone(
         Icons.cancel_outlined,
-        prefersEnglish ? 'Canceled' : 'キャンセル',
+        l10n.orderDetailMilestoneCanceled,
         order.canceledAt,
       ),
   ];

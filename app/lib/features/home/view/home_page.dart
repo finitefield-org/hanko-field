@@ -8,6 +8,7 @@ import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/home/view_model/home_providers.dart';
 import 'package:app/features/notifications/data/providers/unread_notifications_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
@@ -42,6 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final router = GoRouter.of(context);
     final featured = ref.watch(homeFeaturedProvider);
     final recents = ref.watch(homeRecentDesignsProvider);
@@ -50,7 +52,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
-      appBar: _HomeAppBar(unread: unread),
+      appBar: _HomeAppBar(unread: unread, title: l10n.homeTitle),
       body: RefreshIndicator.adaptive(
         onRefresh: _refresh,
         edgeOffset: tokens.spacing.lg,
@@ -105,13 +107,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     ColorScheme colorScheme,
   ) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: '注目の特集',
-          subtitle: 'キャンペーンやおすすめの流れをピックアップ',
+          title: l10n.homeFeaturedTitle,
+          subtitle: l10n.homeFeaturedSubtitle,
           padding: EdgeInsets.only(bottom: tokens.spacing.md),
         ),
         SizedBox(
@@ -124,7 +127,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             AsyncData(:final value) when value.isEmpty => AppCard(
               child: Text(
-                '今は表示できる特集がありません。後でもう一度お試しください。',
+                l10n.homeFeaturedEmpty,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -176,14 +179,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     required VoidCallback onSeeAll,
   }) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: '最近のデザイン',
-          subtitle: '下書きや発注済みをすぐ再開',
-          actionLabel: '一覧',
+          title: l10n.homeRecentTitle,
+          subtitle: l10n.homeRecentSubtitle,
+          actionLabel: l10n.homeRecentActionLabel,
           onAction: onSeeAll,
         ),
         SizedBox(height: tokens.spacing.sm),
@@ -200,7 +204,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             AsyncData(:final value) when value.isEmpty => AppCard(
               child: Text(
-                'まだデザインがありません。新しく作成してみましょう。',
+                l10n.homeRecentEmpty,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -230,11 +234,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     ColorScheme colorScheme,
   ) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'おすすめテンプレート', subtitle: '利用履歴と地域に合わせて提案'),
+        _SectionHeader(
+          title: l10n.homeRecommendedTitle,
+          subtitle: l10n.homeRecommendedSubtitle,
+        ),
         SizedBox(height: tokens.spacing.sm),
         SizedBox(
           height: 190,
@@ -250,7 +258,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             AsyncData(:final value) when value.isEmpty => AppCard(
               child: Text(
-                'おすすめテンプレートを準備しています…',
+                l10n.homeRecommendedLoading,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -343,9 +351,10 @@ class _HomePageState extends ConsumerState<HomePage> {
 }
 
 class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const _HomeAppBar({required this.unread});
+  const _HomeAppBar({required this.unread, required this.title});
 
   final AsyncValue<int> unread;
+  final String title;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -361,10 +370,10 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
     return AppBar(
       centerTitle: true,
-      title: const Text('ホーム'),
+      title: Text(title),
       actions: [
         IconButton(
-          tooltip: '検索',
+          tooltip: AppLocalizations.of(context).homeSearchTooltip,
           onPressed: () => router.go(AppRoutePaths.search),
           icon: const Icon(Icons.search_rounded),
         ),
@@ -375,7 +384,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             isLabelVisible: unreadCount > 0,
             offset: const Offset(2, -2),
             child: IconButton(
-              tooltip: '通知',
+              tooltip: AppLocalizations.of(context).homeNotificationsTooltip,
               onPressed: () => router.go(AppRoutePaths.notifications),
               icon: const Icon(Icons.notifications_none_rounded),
             ),
@@ -565,24 +574,27 @@ class _RecentDesignCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final statusLabel = switch (design.status) {
-      DesignStatus.draft => '下書き',
-      DesignStatus.ready => '準備完了',
-      DesignStatus.ordered => '注文済み',
-      DesignStatus.locked => 'ロック',
+      DesignStatus.draft => l10n.homeStatusDraft,
+      DesignStatus.ready => l10n.homeStatusReady,
+      DesignStatus.ordered => l10n.homeStatusOrdered,
+      DesignStatus.locked => l10n.homeStatusLocked,
     };
 
-    final shapeLabel = design.shape == SealShape.round ? '丸' : '角';
+    final shapeLabel = design.shape == SealShape.round
+        ? l10n.homeShapeRound
+        : l10n.homeShapeSquare;
     final writingLabel = switch (design.style.writing) {
-      WritingStyle.tensho => '篆書',
-      WritingStyle.reisho => '隷書',
-      WritingStyle.kaisho => '楷書',
-      WritingStyle.gyosho => '行書',
-      WritingStyle.koentai => '古印体',
-      WritingStyle.custom => 'カスタム',
+      WritingStyle.tensho => l10n.homeWritingTensho,
+      WritingStyle.reisho => l10n.homeWritingReisho,
+      WritingStyle.kaisho => l10n.homeWritingKaisho,
+      WritingStyle.gyosho => l10n.homeWritingGyosho,
+      WritingStyle.koentai => l10n.homeWritingKoentai,
+      WritingStyle.custom => l10n.homeWritingCustom,
     };
 
-    final name = design.input?.rawName ?? '名称未設定';
+    final name = design.input?.rawName ?? l10n.homeNameUnset;
     final previewUrl = design.assets?.previewPngUrl;
 
     return SizedBox(
@@ -639,7 +651,11 @@ class _RecentDesignCard extends StatelessWidget {
                       ),
                       SizedBox(height: tokens.spacing.xs),
                       Text(
-                        '$shapeLabel ${design.size.mm}mm ・ $writingLabel',
+                        l10n.homeDesignSummary(
+                          shape: shapeLabel,
+                          size: design.size.mm.toString(),
+                          style: writingLabel,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -652,8 +668,11 @@ class _RecentDesignCard extends StatelessWidget {
             SizedBox(height: tokens.spacing.sm),
             Text(
               design.ai?.registrable == true
-                  ? '実印チェック済み'
-                  : 'AI診断: ${design.ai?.diagnostics.firstOrNull ?? '未実行'}',
+                  ? l10n.homeDesignAiCheckDone
+                  : l10n.homeDesignAiCheckLabel(
+                      design.ai?.diagnostics.firstOrNull ??
+                          l10n.homeDesignAiCheckNotRun,
+                    ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -681,15 +700,18 @@ class _TemplateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final template = recommendation.template;
-    final shapeLabel = template.shape == SealShape.round ? '丸' : '角';
+    final shapeLabel = template.shape == SealShape.round
+        ? l10n.homeShapeRound
+        : l10n.homeShapeSquare;
     final writingLabel = switch (template.writing) {
-      WritingStyle.tensho => '篆書',
-      WritingStyle.reisho => '隷書',
-      WritingStyle.kaisho => '楷書',
-      WritingStyle.gyosho => '行書',
-      WritingStyle.koentai => '古印体',
-      WritingStyle.custom => 'カスタム',
+      WritingStyle.tensho => l10n.homeWritingTensho,
+      WritingStyle.reisho => l10n.homeWritingReisho,
+      WritingStyle.kaisho => l10n.homeWritingKaisho,
+      WritingStyle.gyosho => l10n.homeWritingGyosho,
+      WritingStyle.koentai => l10n.homeWritingKoentai,
+      WritingStyle.custom => l10n.homeWritingCustom,
     };
 
     return SizedBox(
@@ -708,7 +730,12 @@ class _TemplateCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Chip(
-                  label: Text('$shapeLabel・$writingLabel'),
+                  label: Text(
+                    l10n.homeTemplateLabel(
+                      shape: shapeLabel,
+                      style: writingLabel,
+                    ),
+                  ),
                   visualDensity: VisualDensity.compact,
                   side: BorderSide.none,
                   backgroundColor: colorScheme.onSurface.withValues(
@@ -735,7 +762,9 @@ class _TemplateCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '${template.defaults?.sizeMm?.toStringAsFixed(1) ?? '-'}mm 推奨',
+                      l10n.homeTemplateRecommendedSize(
+                        template.defaults?.sizeMm?.toStringAsFixed(1) ?? '-',
+                      ),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -744,7 +773,7 @@ class _TemplateCard extends StatelessWidget {
                     FilledButton.tonalIcon(
                       onPressed: onTap,
                       icon: const Icon(Icons.style_outlined),
-                      label: const Text('適用'),
+                      label: Text(l10n.homeTemplateApply),
                     ),
                   ],
                 ),
@@ -898,11 +927,15 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('読み込みに失敗しました', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.homeLoadFailed,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           SizedBox(height: tokens.spacing.xs),
           Text(
             message,
@@ -914,7 +947,7 @@ class _ErrorCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('再試行'),
+            label: Text(l10n.commonRetry),
           ),
         ],
       ),

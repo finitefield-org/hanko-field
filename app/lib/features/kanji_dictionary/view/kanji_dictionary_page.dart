@@ -7,7 +7,7 @@ import 'package:app/features/designs/data/models/kanji_mapping_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/kanji_dictionary/data/models/kanji_dictionary_models.dart';
 import 'package:app/features/kanji_dictionary/view_model/kanji_dictionary_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:characters/characters.dart';
@@ -62,8 +62,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final router = GoRouter.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     final state = ref.watch(_viewModel);
     final data = state.valueOrNull;
@@ -86,17 +85,17 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
     return Scaffold(
       backgroundColor: tokens.colors.background,
       appBar: AppBar(
-        title: Text(prefersEnglish ? 'Kanji dictionary' : '漢字辞典'),
+        title: Text(l10n.kanjiDictionaryTitle),
         leading: IconButton(
-          tooltip: prefersEnglish ? 'Back' : '戻る',
+          tooltip: l10n.commonBack,
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => _handleBack(router),
         ),
         actions: [
           IconButton(
             tooltip: data?.favoritesOnly == true
-                ? (prefersEnglish ? 'Show all' : 'すべて表示')
-                : (prefersEnglish ? 'Show favorites' : 'お気に入り'),
+                ? l10n.kanjiDictionaryToggleShowAll
+                : l10n.kanjiDictionaryToggleShowFavorites,
             icon: Icon(
               data?.favoritesOnly == true
                   ? Icons.bookmark_rounded
@@ -107,7 +106,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
                 : () => ref.invoke(_viewModel.toggleFavoritesOnly()),
           ),
           IconButton(
-            tooltip: prefersEnglish ? 'Open guides' : 'ガイドへ',
+            tooltip: l10n.kanjiDictionaryOpenGuides,
             icon: const Icon(Icons.menu_book_outlined),
             onPressed: () => router.go(AppRoutePaths.guides),
           ),
@@ -125,7 +124,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
               controller: _searchCtrl,
               onSubmitted: _requestSearch,
               textInputAction: TextInputAction.search,
-              hintText: prefersEnglish ? 'Search kanji' : '漢字を検索',
+              hintText: l10n.kanjiDictionarySearchHint,
               trailing: [
                 IconButton(
                   icon: const Icon(Icons.search_rounded),
@@ -145,9 +144,9 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
           AsyncError(:final error) when data == null => Padding(
             padding: EdgeInsets.all(tokens.spacing.lg),
             child: AppEmptyState(
-              title: prefersEnglish ? 'Could not load' : '読み込みに失敗しました',
+              title: l10n.commonLoadFailed,
               message: error.toString(),
-              actionLabel: prefersEnglish ? 'Retry' : '再試行',
+              actionLabel: l10n.commonRetry,
               onAction: () => ref.invalidate(_viewModel),
             ),
           ),
@@ -159,7 +158,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
             displacement: tokens.spacing.xl,
             child: _Content(
               state: data,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               isBusy: isBusy,
               onFilterChanged: (filter) =>
                   ref.invoke(_viewModel.setFilter(filter)),
@@ -170,10 +169,8 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
               onClearHistory: () => ref.invoke(_viewModel.clearHistory()),
               onToggleFavorite: (id) =>
                   ref.invoke(_viewModel.toggleFavorite(id)),
-              onOpenDetail: (candidate) => _openDetail(
-                candidate: candidate,
-                prefersEnglish: prefersEnglish,
-              ),
+              onOpenDetail: (candidate) =>
+                  _openDetail(candidate: candidate, l10n: l10n),
             ),
           ),
           _ => const SizedBox.shrink(),
@@ -214,10 +211,10 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
 
   Future<void> _openDetail({
     required KanjiCandidate candidate,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
   }) async {
     final tokens = DesignTokensTheme.of(context);
-    final entry = _toEntry(candidate, prefersEnglish: prefersEnglish);
+    final entry = _toEntry(candidate, l10n: l10n);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -232,7 +229,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
         ),
         child: _KanjiDetailSheet(
           entry: entry,
-          prefersEnglish: prefersEnglish,
+          l10n: l10n,
           insertField: widget.insertField,
           returnTo: widget.returnTo,
         ),
@@ -244,7 +241,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
 class _Content extends ConsumerWidget {
   const _Content({
     required this.state,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.isBusy,
     required this.onFilterChanged,
     required this.onSelectHistory,
@@ -254,7 +251,7 @@ class _Content extends ConsumerWidget {
   });
 
   final KanjiDictionaryState state;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final bool isBusy;
   final ValueChanged<KanjiFilter> onFilterChanged;
   final ValueChanged<String> onSelectHistory;
@@ -284,7 +281,7 @@ class _Content extends ConsumerWidget {
             ),
             child: _HistorySection(
               history: state.history,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               onSelect: onSelectHistory,
               onClear: onClearHistory,
             ),
@@ -300,7 +297,7 @@ class _Content extends ConsumerWidget {
             ),
             child: _FilterChips(
               filter: state.filter,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               onFilterChanged: onFilterChanged,
             ),
           ),
@@ -321,7 +318,7 @@ class _Content extends ConsumerWidget {
             final isFavorite = favorites.contains(candidate.id);
             return _KanjiListItem(
               candidate: candidate,
-              prefersEnglish: prefersEnglish,
+              l10n: l10n,
               isFavorite: isFavorite,
               isBusy: isBusy,
               onToggleFavorite: () => onToggleFavorite(candidate.id),
@@ -340,13 +337,13 @@ class _Content extends ConsumerWidget {
 class _HistorySection extends StatelessWidget {
   const _HistorySection({
     required this.history,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onSelect,
     required this.onClear,
   });
 
   final List<String> history;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final ValueChanged<String> onSelect;
   final VoidCallback onClear;
 
@@ -355,9 +352,7 @@ class _HistorySection extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
     if (history.isEmpty) {
       return Text(
-        prefersEnglish
-            ? 'Search for meanings, readings, or sample names.'
-            : '意味・読み・名前の例で検索できます。',
+        l10n.kanjiDictionaryHistoryHint,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.3),
       );
     }
@@ -368,14 +363,14 @@ class _HistorySection extends StatelessWidget {
         Row(
           children: [
             Text(
-              prefersEnglish ? 'History' : '履歴',
+              l10n.kanjiDictionaryHistoryTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const Spacer(),
             TextButton.icon(
               onPressed: onClear,
               icon: const Icon(Icons.delete_outline_rounded, size: 18),
-              label: Text(prefersEnglish ? 'Clear' : '消去'),
+              label: Text(l10n.commonClear),
             ),
           ],
         ),
@@ -401,29 +396,29 @@ class _HistorySection extends StatelessWidget {
 class _FilterChips extends StatelessWidget {
   const _FilterChips({
     required this.filter,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.onFilterChanged,
   });
 
   final KanjiFilter filter;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final ValueChanged<KanjiFilter> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final grades = [
-      (null, prefersEnglish ? 'All grades' : '学年'),
-      (1, prefersEnglish ? 'Grade 1' : '1年'),
-      (2, prefersEnglish ? 'Grade 2' : '2年'),
-      (3, prefersEnglish ? 'Grade 3' : '3年'),
-      (4, prefersEnglish ? 'Grade 4' : '4年'),
-      (5, prefersEnglish ? 'Grade 5' : '5年'),
-      (6, prefersEnglish ? 'Grade 6+' : '6年+'),
+      (null, l10n.kanjiDictionaryGradesAll),
+      (1, l10n.kanjiDictionaryGrade1),
+      (2, l10n.kanjiDictionaryGrade2),
+      (3, l10n.kanjiDictionaryGrade3),
+      (4, l10n.kanjiDictionaryGrade4),
+      (5, l10n.kanjiDictionaryGrade5),
+      (6, l10n.kanjiDictionaryGrade6),
     ];
 
     final strokeBuckets = [
-      (null, prefersEnglish ? 'All strokes' : '画数'),
+      (null, l10n.kanjiDictionaryStrokesAll),
       ('1-5', '1-5'),
       ('6-10', '6-10'),
       ('11-15', '11-15'),
@@ -431,12 +426,12 @@ class _FilterChips extends StatelessWidget {
     ];
 
     final radicals = [
-      (null, prefersEnglish ? 'Any radical' : '部首'),
-      ('water', prefersEnglish ? 'Water' : '水'),
-      ('sun', prefersEnglish ? 'Sun' : '日'),
-      ('plant', prefersEnglish ? 'Plant' : '草'),
-      ('heart', prefersEnglish ? 'Heart' : '心'),
-      ('earth', prefersEnglish ? 'Earth' : '土'),
+      (null, l10n.kanjiDictionaryRadicalAny),
+      ('water', l10n.kanjiDictionaryRadicalWater),
+      ('sun', l10n.kanjiDictionaryRadicalSun),
+      ('plant', l10n.kanjiDictionaryRadicalPlant),
+      ('heart', l10n.kanjiDictionaryRadicalHeart),
+      ('earth', l10n.kanjiDictionaryRadicalEarth),
     ];
 
     Widget chips<T>({
@@ -462,7 +457,7 @@ class _FilterChips extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          prefersEnglish ? 'Filters' : '絞り込み',
+          l10n.kanjiDictionaryFiltersTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         SizedBox(height: tokens.spacing.xs),
@@ -492,7 +487,7 @@ class _FilterChips extends StatelessWidget {
 class _KanjiListItem extends StatelessWidget {
   const _KanjiListItem({
     required this.candidate,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.isFavorite,
     required this.isBusy,
     required this.onToggleFavorite,
@@ -500,7 +495,7 @@ class _KanjiListItem extends StatelessWidget {
   });
 
   final KanjiCandidate candidate;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final bool isFavorite;
   final bool isBusy;
   final VoidCallback onToggleFavorite;
@@ -511,9 +506,9 @@ class _KanjiListItem extends StatelessWidget {
     final tokens = DesignTokensTheme.of(context);
     final subtitle = [
       candidate.pronunciation,
-      '${candidate.strokeCount}${prefersEnglish ? ' strokes' : '画'}',
+      l10n.kanjiDictionaryStrokeCount(candidate.strokeCount.toString()),
       if (candidate.radical.isNotEmpty)
-        '${prefersEnglish ? 'Radical' : '部首'}: ${candidate.radical}',
+        l10n.kanjiDictionaryRadicalLabel(candidate.radical),
     ].where((v) => v.trim().isNotEmpty).join(' · ');
 
     return Padding(
@@ -547,8 +542,8 @@ class _KanjiListItem extends StatelessWidget {
             children: [
               IconButton(
                 tooltip: isFavorite
-                    ? (prefersEnglish ? 'Unfavorite' : '解除')
-                    : (prefersEnglish ? 'Favorite' : 'お気に入り'),
+                    ? l10n.kanjiDictionaryUnfavorite
+                    : l10n.kanjiDictionaryFavorite,
                 icon: Icon(
                   isFavorite
                       ? Icons.bookmark_rounded
@@ -557,7 +552,7 @@ class _KanjiListItem extends StatelessWidget {
                 onPressed: isBusy ? null : onToggleFavorite,
               ),
               IconButton(
-                tooltip: prefersEnglish ? 'Details' : '詳細',
+                tooltip: l10n.kanjiDictionaryDetails,
                 icon: const Icon(Icons.info_outline_rounded),
                 onPressed: onOpenDetail,
               ),
@@ -572,13 +567,13 @@ class _KanjiListItem extends StatelessWidget {
 class _KanjiDetailSheet extends ConsumerWidget {
   const _KanjiDetailSheet({
     required this.entry,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.insertField,
     required this.returnTo,
   });
 
   final KanjiDictionaryEntry entry;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final NameField? insertField;
   final String? returnTo;
 
@@ -641,28 +636,28 @@ class _KanjiDetailSheet extends ConsumerWidget {
           children: [
             InputChip(
               label: Text(
-                '${prefersEnglish ? 'Strokes' : '画数'}: ${candidate.strokeCount}',
+                l10n.kanjiDictionaryChipStrokes(
+                  candidate.strokeCount.toString(),
+                ),
               ),
               onPressed: () {},
             ),
             InputChip(
-              label: Text(
-                '${prefersEnglish ? 'Radical' : '部首'}: ${candidate.radical}',
-              ),
+              label: Text(l10n.kanjiDictionaryChipRadical(candidate.radical)),
               onPressed: () {},
             ),
           ],
         ),
         SizedBox(height: tokens.spacing.lg),
         Text(
-          prefersEnglish ? 'Stroke order' : '筆順',
+          l10n.kanjiDictionaryStrokeOrderTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         SizedBox(height: tokens.spacing.xs),
         Text(entry.strokeOrderPreview),
         SizedBox(height: tokens.spacing.lg),
         Text(
-          prefersEnglish ? 'Examples' : '用例',
+          l10n.kanjiDictionaryExamplesTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         SizedBox(height: tokens.spacing.xs),
@@ -687,7 +682,7 @@ class _KanjiDetailSheet extends ConsumerWidget {
               }
             },
             icon: const Icon(Icons.add_rounded),
-            label: Text(prefersEnglish ? 'Insert into name input' : '名前入力に追加'),
+            label: Text(l10n.kanjiDictionaryInsertIntoNameInput),
           )
         else
           FilledButton.icon(
@@ -695,7 +690,7 @@ class _KanjiDetailSheet extends ConsumerWidget {
               await Navigator.of(context).maybePop();
             },
             icon: const Icon(Icons.check_rounded),
-            label: Text(prefersEnglish ? 'Done' : '閉じる'),
+            label: Text(l10n.kanjiDictionaryDone),
           ),
       ],
     );
@@ -725,19 +720,16 @@ class _KanjiDetailSheet extends ConsumerWidget {
 
 KanjiDictionaryEntry _toEntry(
   KanjiCandidate candidate, {
-  required bool prefersEnglish,
+  required AppLocalizations l10n,
 }) {
   final examples = <String>[
     if (candidate.glyph.trim().isNotEmpty) '${candidate.glyph}印',
     if (candidate.keywords.isNotEmpty)
-      ...candidate.keywords.take(3).map((k) => prefersEnglish ? k : k),
-    prefersEnglish ? 'Used in names and seals' : '氏名や印影で使われます',
+      ...candidate.keywords.take(3).map((k) => k),
+    l10n.kanjiDictionaryExampleUsage,
   ].where((value) => value.trim().isNotEmpty).toList();
 
-  final strokePreview = _strokeOrderPreview(
-    candidate.strokeCount,
-    prefersEnglish: prefersEnglish,
-  );
+  final strokePreview = _strokeOrderPreview(candidate.strokeCount, l10n: l10n);
 
   return KanjiDictionaryEntry(
     candidate: candidate,
@@ -746,16 +738,14 @@ KanjiDictionaryEntry _toEntry(
   );
 }
 
-String _strokeOrderPreview(int strokes, {required bool prefersEnglish}) {
+String _strokeOrderPreview(int strokes, {required AppLocalizations l10n}) {
   if (strokes <= 0) {
-    return prefersEnglish ? 'No stroke data.' : '画数情報がありません。';
+    return l10n.kanjiDictionaryNoStrokeData;
   }
   final shown = strokes.clamp(1, 12);
   final steps = List.generate(shown, (i) => '${i + 1}');
   final tail = strokes > shown ? '…' : '';
-  return prefersEnglish
-      ? 'Order: ${steps.join(' → ')}$tail'
-      : '順: ${steps.join(' → ')}$tail';
+  return l10n.kanjiDictionaryStrokeOrderPrefix('${steps.join(' → ')}$tail');
 }
 
 NameField? parseNameFieldParam(String? raw) {

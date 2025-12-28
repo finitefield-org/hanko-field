@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/notifications/data/providers/unread_notifications_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/overlays/app_modal.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final unread = ref.watch(unreadNotificationsProvider);
     final router = GoRouter.of(context);
 
@@ -49,9 +51,13 @@ class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
           title: Text(title),
           leading: leading ?? (showBack ? const BackButton() : null),
           actions: [
-            _SearchAction(onPressed: openSearch),
-            _HelpAction(onPressed: openHelp),
-            _NotificationsAction(unread: unread, onPressed: openNotifications),
+            _SearchAction(onPressed: openSearch, l10n: l10n),
+            _HelpAction(onPressed: openHelp, l10n: l10n),
+            _NotificationsAction(
+              unread: unread,
+              onPressed: openNotifications,
+              l10n: l10n,
+            ),
             if (actions != null && actions!.isNotEmpty) ...[
               SizedBox(width: tokens.spacing.sm),
               ...actions!,
@@ -79,19 +85,20 @@ class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
 }
 
 class _SearchAction extends StatelessWidget {
-  const _SearchAction({required this.onPressed});
+  const _SearchAction({required this.onPressed, required this.l10n});
 
   final VoidCallback onPressed;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '検索',
-      hint: '⌘K / Ctrl+K のショートカットに対応',
+      label: l10n.topBarSearchLabel,
+      hint: l10n.topBarSearchHint,
       button: true,
       child: IconButton(
         icon: const Icon(Icons.search_rounded),
-        tooltip: '検索 (⌘K / Ctrl+K)',
+        tooltip: l10n.topBarSearchTooltip,
         onPressed: onPressed,
         visualDensity: VisualDensity.compact,
       ),
@@ -100,19 +107,20 @@ class _SearchAction extends StatelessWidget {
 }
 
 class _HelpAction extends StatelessWidget {
-  const _HelpAction({required this.onPressed});
+  const _HelpAction({required this.onPressed, required this.l10n});
 
   final VoidCallback onPressed;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'ヘルプ',
-      hint: 'Shift + / でも開けます',
+      label: l10n.topBarHelpLabel,
+      hint: l10n.topBarHelpHint,
       button: true,
       child: IconButton(
         icon: const Icon(Icons.help_outline_rounded),
-        tooltip: 'ヘルプ・FAQ (Shift + /)',
+        tooltip: l10n.topBarHelpTooltip,
         onPressed: onPressed,
         visualDensity: VisualDensity.compact,
       ),
@@ -121,10 +129,15 @@ class _HelpAction extends StatelessWidget {
 }
 
 class _NotificationsAction extends StatelessWidget {
-  const _NotificationsAction({required this.unread, required this.onPressed});
+  const _NotificationsAction({
+    required this.unread,
+    required this.onPressed,
+    required this.l10n,
+  });
 
   final AsyncValue<int> unread;
   final VoidCallback onPressed;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +149,9 @@ class _NotificationsAction extends StatelessWidget {
 
     final count = unreadCount ?? 0;
     final hasUnread = count > 0;
-    final label = hasUnread ? '通知 ($unreadCount 件の未読)' : '通知';
+    final label = hasUnread
+        ? l10n.topBarNotificationsLabelWithUnread(count)
+        : l10n.topBarNotificationsLabel;
 
     final icon = IconButton(
       icon: Icon(
@@ -144,7 +159,9 @@ class _NotificationsAction extends StatelessWidget {
             ? Icons.notifications_active_outlined
             : Icons.notifications_none_rounded,
       ),
-      tooltip: hasUnread ? '$label (Alt + N)' : '通知 (Alt + N)',
+      tooltip: hasUnread
+          ? l10n.topBarNotificationsTooltipWithUnread(count)
+          : l10n.topBarNotificationsTooltip,
       onPressed: onPressed,
       visualDensity: VisualDensity.compact,
     );
@@ -166,12 +183,13 @@ class _NotificationsAction extends StatelessWidget {
 Future<void> _showHelpOverlay(BuildContext context) async {
   final tokens = DesignTokensTheme.of(context);
   final router = GoRouter.of(context);
+  final l10n = AppLocalizations.of(context);
 
   await showAppModal<void>(
     context: context,
-    title: 'ヘルプとショートカット',
-    primaryAction: 'FAQを見る',
-    secondaryAction: '問い合わせる',
+    title: l10n.topBarHelpOverlayTitle,
+    primaryAction: l10n.topBarHelpOverlayPrimaryAction,
+    secondaryAction: l10n.topBarHelpOverlaySecondaryAction,
     onPrimaryPressed: () {
       Navigator.of(context).maybePop();
       router.go(AppRoutePaths.supportFaq);
@@ -183,25 +201,31 @@ Future<void> _showHelpOverlay(BuildContext context) async {
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'ショートカットとサポートへの入り口です。'
-          '困ったときはFAQやチャットにすぐ移動できます。',
-        ),
+        Text(l10n.topBarHelpOverlayBody),
         SizedBox(height: tokens.spacing.md),
         Wrap(
           spacing: tokens.spacing.sm,
           runSpacing: tokens.spacing.sm,
-          children: const [
-            _ShortcutPill(label: '検索', combo: '⌘K / Ctrl+K'),
-            _ShortcutPill(label: 'ヘルプ', combo: 'Shift + /'),
-            _ShortcutPill(label: '通知', combo: 'Alt + N'),
+          children: [
+            _ShortcutPill(
+              label: l10n.topBarShortcutSearchLabel,
+              combo: '⌘K / Ctrl+K',
+            ),
+            _ShortcutPill(
+              label: l10n.topBarShortcutHelpLabel,
+              combo: 'Shift + /',
+            ),
+            _ShortcutPill(
+              label: l10n.topBarShortcutNotificationsLabel,
+              combo: 'Alt + N',
+            ),
           ],
         ),
         SizedBox(height: tokens.spacing.lg),
         _HelpLinkTile(
           icon: Icons.quiz_outlined,
-          title: 'FAQで調べる',
-          subtitle: 'よくある質問とトラブルシューティング',
+          title: l10n.topBarHelpLinkFaqTitle,
+          subtitle: l10n.topBarHelpLinkFaqSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
             router.go(AppRoutePaths.supportFaq);
@@ -210,8 +234,8 @@ Future<void> _showHelpOverlay(BuildContext context) async {
         SizedBox(height: tokens.spacing.sm),
         _HelpLinkTile(
           icon: Icons.chat_bubble_outline_rounded,
-          title: 'チャットで相談',
-          subtitle: 'すぐ聞きたいときはこちら',
+          title: l10n.topBarHelpLinkChatTitle,
+          subtitle: l10n.topBarHelpLinkChatSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
             router.go(AppRoutePaths.supportChat);
@@ -220,8 +244,8 @@ Future<void> _showHelpOverlay(BuildContext context) async {
         SizedBox(height: tokens.spacing.sm),
         _HelpLinkTile(
           icon: Icons.mail_outline_rounded,
-          title: '問い合わせフォーム',
-          subtitle: '詳細なサポートが必要な場合',
+          title: l10n.topBarHelpLinkContactTitle,
+          subtitle: l10n.topBarHelpLinkContactSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
             router.go(AppRoutePaths.supportContact);

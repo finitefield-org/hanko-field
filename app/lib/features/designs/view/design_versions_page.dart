@@ -5,6 +5,7 @@ import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_versions_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 // ignore: unnecessary_import
@@ -59,11 +60,11 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     return Scaffold(
       backgroundColor: tokens.colors.background,
       appBar: AppTopBar(
-        title: 'バージョン履歴',
+        title: AppLocalizations.of(context).designVersionsTitle,
         showBack: true,
         actions: [
           IconButton(
-            tooltip: '差分を表示',
+            tooltip: AppLocalizations.of(context).designVersionsShowDiffTooltip,
             icon: const Icon(Icons.compare_arrows_rounded),
             onPressed: state.valueOrNull == null
                 ? null
@@ -131,7 +132,9 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           secondaryAction:
               secondary ??
               VersionsSecondaryAction(
-                label: 'コピーを作成',
+                label: AppLocalizations.of(
+                  context,
+                ).designVersionsSecondaryDuplicate,
                 icon: Icons.copy_all_rounded,
                 onPressed: (focused) =>
                     ref.invoke(viewModel.duplicate(_versionId(focused))),
@@ -145,10 +148,10 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           SizedBox(height: tokens.spacing.lg),
         ],
         _SectionHeader(
-          label: 'タイムライン',
+          label: AppLocalizations.of(context).designVersionsTimelineTitle,
           action: IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: '履歴をリフレッシュ',
+            tooltip: AppLocalizations.of(context).designVersionsRefreshTooltip,
             onPressed: () => ref.invoke(viewModel.refresh()),
           ),
         ),
@@ -171,12 +174,14 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
           );
         }),
         SizedBox(height: tokens.spacing.lg),
-        const _SectionHeader(label: '監査ログ'),
+        _SectionHeader(
+          label: AppLocalizations.of(context).designVersionsAuditLogTitle,
+        ),
         SizedBox(height: tokens.spacing.sm),
         if (state.auditTrail.isEmpty)
-          const AppEmptyState(
-            title: '履歴はありません',
-            message: 'このデザインのアクションログがまだありません。',
+          AppEmptyState(
+            title: AppLocalizations.of(context).designVersionsNoAuditTitle,
+            message: AppLocalizations.of(context).designVersionsNoAuditMessage,
             icon: Icons.history_toggle_off_rounded,
           )
         else
@@ -207,15 +212,13 @@ class _DesignVersionsPageState extends ConsumerState<DesignVersionsPage> {
     DesignVersionsState state,
     DesignVersion target,
   ) {
+    final l10n = AppLocalizations.of(context);
     return showAppModal<void>(
       context: context,
-      title: 'v${target.version} にロールバックしますか？',
-      body: const Text(
-        'この操作で現在の編集中バージョンを置き換えます。'
-        '差分は履歴に残ります。',
-      ),
-      primaryAction: '復元',
-      secondaryAction: 'キャンセル',
+      title: l10n.designVersionsRollbackTitle('${target.version}'),
+      body: Text(l10n.designVersionsRollbackBody),
+      primaryAction: l10n.designVersionsRollbackAction,
+      secondaryAction: l10n.designVersionsRollbackCancel,
       onPrimaryPressed: () {
         Navigator.of(context).maybePop();
         ref.invoke(
@@ -251,6 +254,7 @@ class _DiffHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final similarity = diff?.similarity ?? 1.0;
 
     return AppCard(
@@ -264,12 +268,12 @@ class _DiffHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '現在: v${current.version}',
+                      l10n.designVersionsCurrentLabel('${current.version}'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     SizedBox(height: tokens.spacing.xs),
                     Text(
-                      diff?.summary ?? '差分はありません',
+                      diff?.summary ?? l10n.designVersionsNoDiffSummary,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,
@@ -288,11 +292,15 @@ class _DiffHeader extends StatelessWidget {
             runSpacing: tokens.spacing.sm,
             children: [
               Chip(
-                label: Text('比較対象 v${focus.version}'),
+                label: Text(
+                  l10n.designVersionsCompareTargetLabel('${focus.version}'),
+                ),
                 avatar: const Icon(Icons.history_edu_rounded, size: 18),
               ),
               Chip(
-                label: Text(current.changeNote ?? '最新版'),
+                label: Text(
+                  current.changeNote ?? l10n.designVersionsLatestLabel,
+                ),
                 avatar: const Icon(Icons.auto_fix_high_rounded, size: 18),
               ),
             ],
@@ -302,7 +310,7 @@ class _DiffHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: AppButton(
-                  label: 'ロールバック',
+                  label: l10n.designVersionsRollbackButton,
                   variant: AppButtonVariant.secondary,
                   onPressed: isBusy ? null : onRollback,
                   isLoading: isBusy,
@@ -352,7 +360,7 @@ class _PreviewRow extends StatelessWidget {
       children: [
         Expanded(
           child: _VersionPreviewCard(
-            title: '現在',
+            title: AppLocalizations.of(context).designVersionsPreviewCurrent,
             version: diff.base,
             background: tokens.colors.surfaceVariant,
           ),
@@ -360,7 +368,7 @@ class _PreviewRow extends StatelessWidget {
         SizedBox(width: tokens.spacing.sm),
         Expanded(
           child: _VersionPreviewCard(
-            title: '比較対象',
+            title: AppLocalizations.of(context).designVersionsPreviewTarget,
             version: diff.target,
             background: Color.alphaBlend(
               tokens.colors.primary.withValues(alpha: 0.05),
@@ -387,6 +395,7 @@ class _VersionPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final snapshot = version.snapshot;
     final initials = snapshot.input?.rawName.characters.take(2).toList().join();
 
@@ -398,7 +407,7 @@ class _VersionPreviewCard extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           SizedBox(height: tokens.spacing.xs),
           Text(
-            'v${version.version} • ${_relative(version.createdAt)}',
+            'v${version.version} • ${_relative(version.createdAt, l10n)}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(
                 context,
@@ -424,7 +433,9 @@ class _VersionPreviewCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  initials?.isNotEmpty == true ? initials! : '印',
+                  initials?.isNotEmpty == true
+                      ? initials!
+                      : l10n.designVersionsInitialFallback,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -433,13 +444,13 @@ class _VersionPreviewCard extends StatelessWidget {
           ),
           SizedBox(height: tokens.spacing.sm),
           Text(
-            snapshot.input?.rawName ?? '未設定',
+            snapshot.input?.rawName ?? l10n.designVersionsUnset,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           SizedBox(height: tokens.spacing.xs),
           Text(
-            '${_writingLabel(snapshot.style.writing)}・'
-            '${snapshot.style.layout?.grid ?? '自動'}・'
+            '${_writingLabel(snapshot.style.writing, l10n)}・'
+            '${snapshot.style.layout?.grid ?? l10n.designVersionsAutoLayout}・'
             '${snapshot.style.stroke?.weight?.toStringAsFixed(1) ?? '-'}pt',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(
@@ -462,9 +473,9 @@ class _ChangesList extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     if (diff.changes.isEmpty) {
-      return const AppEmptyState(
-        title: '差分はありません',
-        message: '最新のバージョンと比較対象に違いはありません。',
+      return AppEmptyState(
+        title: AppLocalizations.of(context).designVersionsNoDiffTitle,
+        message: AppLocalizations.of(context).designVersionsNoDiffMessage,
         icon: Icons.check_circle_outline_rounded,
       );
     }
@@ -549,6 +560,7 @@ class _TimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final borderColor = selected
         ? tokens.colors.primary
         : tokens.colors.outline.withValues(alpha: 0.2);
@@ -582,13 +594,13 @@ class _TimelineItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  version.changeNote ?? '変更履歴なし',
+                  version.changeNote ?? l10n.designVersionsChangeHistoryEmpty,
                   style: Theme.of(context).textTheme.titleMedium,
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: tokens.spacing.xs),
                 Text(
-                  '${_relative(version.createdAt)} • ${version.createdBy}',
+                  '${_relative(version.createdAt, l10n)} • ${version.createdBy}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -598,7 +610,9 @@ class _TimelineItem extends StatelessWidget {
                 if (version.snapshot.style.templateRef != null) ...[
                   SizedBox(height: tokens.spacing.xs),
                   Text(
-                    'テンプレート: ${version.snapshot.style.templateRef}',
+                    l10n.designVersionsTemplateLabel(
+                      version.snapshot.style.templateRef!,
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: tokens.colors.onSurface.withValues(alpha: 0.68),
                     ),
@@ -614,10 +628,10 @@ class _TimelineItem extends StatelessWidget {
               InputChip(
                 label: Text(
                   isCurrent
-                      ? '現在'
+                      ? l10n.designVersionsStatusCurrent
                       : selected
-                      ? '比較中'
-                      : '履歴',
+                      ? l10n.designVersionsStatusComparing
+                      : l10n.designVersionsStatusHistory,
                 ),
                 onPressed: null,
               ),
@@ -626,7 +640,7 @@ class _TimelineItem extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onRestore,
                   icon: const Icon(Icons.restore_rounded),
-                  label: const Text('復元'),
+                  label: Text(l10n.designVersionsRollbackAction),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     foregroundColor: tokens.colors.primary,
@@ -649,6 +663,7 @@ class _AuditTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     final color = switch (entry.level) {
       VersionAuditLevel.success => tokens.colors.primary,
       VersionAuditLevel.warning => tokens.colors.error,
@@ -677,7 +692,7 @@ class _AuditTile extends StatelessWidget {
                 ),
                 SizedBox(height: tokens.spacing.xs),
                 Text(
-                  '${_relative(entry.timestamp)} • ${entry.actor}',
+                  '${_relative(entry.timestamp, l10n)} • ${entry.actor}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: tokens.colors.onSurface.withValues(alpha: 0.6),
                   ),
@@ -738,10 +753,10 @@ class _VersionsError extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.xl),
       child: AppEmptyState(
-        title: '履歴の読み込みに失敗しました',
+        title: AppLocalizations.of(context).designVersionsLoadFailedTitle,
         message: message,
         icon: Icons.error_outline_rounded,
-        actionLabel: '再試行',
+        actionLabel: AppLocalizations.of(context).commonRetry,
         onAction: onRetry,
       ),
     );
@@ -756,6 +771,7 @@ class _SimilarityGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         SizedBox(
@@ -781,27 +797,26 @@ class _SimilarityGauge extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text('類似度', style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          l10n.designVersionsSimilarityLabel,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ],
     );
   }
 }
 
-String _writingLabel(WritingStyle style) {
+String _writingLabel(WritingStyle style, AppLocalizations l10n) {
   return switch (style) {
-    WritingStyle.tensho => '篆書',
-    WritingStyle.reisho => '隷書',
-    WritingStyle.kaisho => '楷書',
-    WritingStyle.gyosho => '行書',
-    WritingStyle.koentai => '古印体',
-    WritingStyle.custom => 'カスタム',
+    WritingStyle.tensho => l10n.homeWritingTensho,
+    WritingStyle.reisho => l10n.homeWritingReisho,
+    WritingStyle.kaisho => l10n.homeWritingKaisho,
+    WritingStyle.gyosho => l10n.homeWritingGyosho,
+    WritingStyle.koentai => l10n.homeWritingKoentai,
+    WritingStyle.custom => l10n.homeWritingCustom,
   };
 }
 
-String _relative(DateTime time) {
-  final diff = DateTime.now().difference(time);
-  if (diff.inMinutes < 1) return 'たった今';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}分前';
-  if (diff.inHours < 24) return '${diff.inHours}時間前';
-  return '${diff.inDays}日前';
+String _relative(DateTime time, AppLocalizations l10n) {
+  return l10n.designVersionsRelativeTime(time);
 }

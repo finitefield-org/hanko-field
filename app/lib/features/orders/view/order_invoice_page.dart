@@ -8,7 +8,7 @@ import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/orders/data/models/order_invoice_models.dart';
 import 'package:app/features/orders/view_model/order_invoice_view_model.dart';
-import 'package:app/shared/providers/experience_gating_provider.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +41,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
     final vm = OrderInvoiceViewModel(orderId: widget.orderId);
     final state = ref.watch(vm);
     final requestState = ref.watch(vm.requestInvoiceMut);
@@ -52,14 +51,14 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
     final bytes = current?.pdfBytes;
     if (bytes != null) _ensurePdfController(bytes);
 
-    final title = prefersEnglish ? 'Invoice' : '領収書';
+    final title = l10n.orderInvoiceTitle;
 
     return Scaffold(
       backgroundColor: tokens.colors.background,
       appBar: AppBar(
         centerTitle: true,
         leading: IconButton(
-          tooltip: prefersEnglish ? 'Back' : '戻る',
+          tooltip: l10n.commonBack,
           icon: const Icon(Icons.arrow_back),
           onPressed: () =>
               ref.container.read(navigationControllerProvider).pop(),
@@ -67,7 +66,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
         title: Text(title),
         actions: [
           IconButton(
-            tooltip: prefersEnglish ? 'Share' : '共有',
+            tooltip: l10n.orderInvoiceShareTooltip,
             icon: const Icon(Icons.ios_share_outlined),
             onPressed: bytes == null ? null : () => unawaited(_share(bytes)),
           ),
@@ -81,7 +80,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
           child: _buildBody(
             context: context,
             tokens: tokens,
-            prefersEnglish: prefersEnglish,
+            l10n: l10n,
             state: state,
             invoice: invoice,
             bytes: bytes,
@@ -109,7 +108,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
   Widget _buildBody({
     required BuildContext context,
     required DesignTokens tokens,
-    required bool prefersEnglish,
+    required AppLocalizations l10n,
     required AsyncValue<OrderInvoiceViewState> state,
     required OrderInvoice? invoice,
     required Uint8List? bytes,
@@ -130,10 +129,10 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
       return Padding(
         padding: EdgeInsets.all(tokens.spacing.xl),
         child: AppEmptyState(
-          title: prefersEnglish ? 'Could not load invoice' : '領収書を読み込めませんでした',
+          title: l10n.orderInvoiceLoadFailed,
           message: state.error.toString(),
           icon: Icons.error_outline,
-          actionLabel: prefersEnglish ? 'Retry' : '再試行',
+          actionLabel: l10n.commonRetry,
           onAction: () => unawaited(_refresh()),
         ),
       );
@@ -157,19 +156,19 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
           orderNumber: current.order.orderNumber,
           currency: current.order.currency,
           total: current.order.totals.total,
-          prefersEnglish: prefersEnglish,
+          l10n: l10n,
         ),
         SizedBox(height: tokens.spacing.lg),
-        _ChipsRow(invoice: invoice, prefersEnglish: prefersEnglish),
+        _ChipsRow(invoice: invoice, l10n: l10n),
         SizedBox(height: tokens.spacing.lg),
         _PreviewCard(
           tokens: tokens,
-          prefersEnglish: prefersEnglish,
+          l10n: l10n,
           controller: _pdfController,
           bytes: bytes,
           onRequestInvoice: requestState is PendingMutationState
               ? null
-              : () => unawaited(_requestInvoice(prefersEnglish)),
+              : () => unawaited(_requestInvoice(l10n)),
           onRefresh: () => unawaited(_refresh()),
           status: invoice.status,
         ),
@@ -179,7 +178,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
             Expanded(
               child: FilledButton.icon(
                 icon: const Icon(Icons.download_outlined),
-                label: Text(prefersEnglish ? 'Download PDF' : 'PDFを保存'),
+                label: Text(l10n.orderInvoiceDownloadPdf),
                 onPressed: bytes == null
                     ? null
                     : () => unawaited(_download(bytes)),
@@ -188,20 +187,20 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
             SizedBox(width: tokens.spacing.md),
             TextButton(
               onPressed: bytes == null ? null : () => unawaited(_share(bytes)),
-              child: Text(prefersEnglish ? 'Send by email' : 'メールで送る'),
+              child: Text(l10n.orderInvoiceSendEmail),
             ),
           ],
         ),
         SizedBox(height: tokens.spacing.md),
         TextButton(
           onPressed: () => _contactSupport(),
-          child: Text(prefersEnglish ? 'Contact support' : '問い合わせ'),
+          child: Text(l10n.orderInvoiceContactSupport),
         ),
       ],
     );
   }
 
-  Future<void> _requestInvoice(bool prefersEnglish) async {
+  Future<void> _requestInvoice(AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
     final vm = OrderInvoiceViewModel(orderId: widget.orderId);
     try {
@@ -209,31 +208,20 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish
-                ? 'Invoice request sent (mock)'
-                : '領収書のリクエストを送信しました（モック）',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderDetailInvoiceRequestSent)),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish ? 'Could not request invoice' : '領収書のリクエストに失敗しました',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderDetailInvoiceRequestFailed)),
       );
     }
   }
 
   Future<void> _download(Uint8List bytes) async {
     final messenger = ScaffoldMessenger.of(context);
-    final gates = ref.container.read(appExperienceGatesProvider);
-    final prefersEnglish = gates.prefersEnglish;
+    final l10n = AppLocalizations.of(context);
 
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -257,26 +245,19 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish ? 'Saved to $filePath' : '保存しました: $filePath',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderInvoiceSavedTo(filePath))),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            prefersEnglish ? 'Could not save PDF' : 'PDFを保存できませんでした',
-          ),
-        ),
+        SnackBar(content: Text(l10n.orderInvoiceSaveFailed)),
       );
     }
   }
 
   Future<void> _share(Uint8List bytes) async {
+    final l10n = AppLocalizations.of(context);
     final tempDir = await getTemporaryDirectory();
     final invoiceNumber =
         ref.container
@@ -292,7 +273,10 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
     await Share.shareXFiles(
       [XFile(path, mimeType: 'application/pdf', name: '$safeName.pdf')],
       subject: invoiceNumber,
-      text: 'Hanko Field • $invoiceNumber',
+      text: l10n.orderInvoiceShareText(
+        app: l10n.appTitle,
+        number: invoiceNumber,
+      ),
     );
   }
 
@@ -311,14 +295,14 @@ class _MetadataCard extends StatelessWidget {
     required this.orderNumber,
     required this.currency,
     required this.total,
-    required this.prefersEnglish,
+    required this.l10n,
   });
 
   final OrderInvoice invoice;
   final String orderNumber;
   final String currency;
   final int total;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +319,7 @@ class _MetadataCard extends StatelessWidget {
             ),
             SizedBox(height: tokens.spacing.xs),
             Text(
-              prefersEnglish ? 'Order $orderNumber' : '注文番号：$orderNumber',
+              l10n.orderInvoiceOrderLabel(orderNumber),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: tokens.colors.onSurface.withValues(alpha: 0.7),
               ),
@@ -343,9 +327,7 @@ class _MetadataCard extends StatelessWidget {
             if (invoice.issuedAt != null) ...[
               SizedBox(height: tokens.spacing.sm),
               Text(
-                prefersEnglish
-                    ? 'Issued: ${_formatDate(invoice.issuedAt!)}'
-                    : '発行日：${_formatDate(invoice.issuedAt!)}',
+                l10n.orderInvoiceIssuedLabel(_formatDate(invoice.issuedAt!)),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: tokens.colors.onSurface.withValues(alpha: 0.7),
                 ),
@@ -356,7 +338,7 @@ class _MetadataCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  prefersEnglish ? 'Total' : '合計',
+                  l10n.orderInvoiceTotalLabel,
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 Text(
@@ -373,21 +355,21 @@ class _MetadataCard extends StatelessWidget {
 }
 
 class _ChipsRow extends StatelessWidget {
-  const _ChipsRow({required this.invoice, required this.prefersEnglish});
+  const _ChipsRow({required this.invoice, required this.l10n});
 
   final OrderInvoice invoice;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final statusLabel = switch (invoice.status) {
-      OrderInvoiceStatus.available => prefersEnglish ? 'Available' : '利用可能',
-      OrderInvoiceStatus.pending => prefersEnglish ? 'Pending' : '準備中',
+      OrderInvoiceStatus.available => l10n.orderInvoiceStatusAvailable,
+      OrderInvoiceStatus.pending => l10n.orderInvoiceStatusPending,
     };
 
     final taxLabel = switch (invoice.taxStatus) {
-      OrderInvoiceTaxStatus.taxable => prefersEnglish ? 'Taxable' : '課税',
-      OrderInvoiceTaxStatus.taxExempt => prefersEnglish ? 'Tax exempt' : '非課税',
+      OrderInvoiceTaxStatus.taxable => l10n.orderInvoiceTaxable,
+      OrderInvoiceTaxStatus.taxExempt => l10n.orderInvoiceTaxExempt,
     };
 
     return Wrap(
@@ -404,7 +386,7 @@ class _ChipsRow extends StatelessWidget {
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({
     required this.tokens,
-    required this.prefersEnglish,
+    required this.l10n,
     required this.controller,
     required this.bytes,
     required this.onRequestInvoice,
@@ -413,7 +395,7 @@ class _PreviewCard extends StatelessWidget {
   });
 
   final DesignTokens tokens;
-  final bool prefersEnglish;
+  final AppLocalizations l10n;
   final PdfControllerPinch? controller;
   final Uint8List? bytes;
   final VoidCallback? onRequestInvoice;
@@ -432,12 +414,12 @@ class _PreviewCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    prefersEnglish ? 'Preview' : 'プレビュー',
+                    l10n.orderInvoicePreviewTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 IconButton(
-                  tooltip: prefersEnglish ? 'Refresh' : '更新',
+                  tooltip: l10n.orderInvoiceRefreshTooltip,
                   icon: const Icon(Icons.refresh),
                   onPressed: onRefresh,
                 ),
@@ -462,12 +444,8 @@ class _PreviewCard extends StatelessWidget {
                     SizedBox(height: tokens.spacing.sm),
                     Text(
                       status == OrderInvoiceStatus.pending
-                          ? (prefersEnglish
-                                ? 'Invoice is being prepared.'
-                                : '領収書を準備しています。')
-                          : (prefersEnglish
-                                ? 'Invoice preview is not available.'
-                                : '領収書を表示できません。'),
+                          ? l10n.orderInvoicePendingBody
+                          : l10n.orderInvoiceUnavailableBody,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -475,9 +453,7 @@ class _PreviewCard extends StatelessWidget {
                     if (status == OrderInvoiceStatus.pending)
                       FilledButton(
                         onPressed: onRequestInvoice,
-                        child: Text(
-                          prefersEnglish ? 'Request invoice' : '領収書をリクエスト',
-                        ),
+                        child: Text(l10n.orderInvoiceRequestAction),
                       ),
                   ],
                 ),

@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/features/splash/view_model/splash_view_model.dart';
+import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(splashViewModel);
     final retryState = ref.watch(splashViewModel.retryMut);
     final isRetrying = retryState is PendingMutationState;
@@ -57,18 +59,18 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                   ),
                   SizedBox(height: tokens.spacing.md),
                   Text(
-                    '起動しています…',
+                    l10n.splashLoading,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ] else if (isError) ...[
                   Text(
-                    '起動に失敗しました',
+                    l10n.splashFailedTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: tokens.spacing.sm),
                   Text(
-                    'ネットワーク状況を確認して、もう一度お試しください。',
+                    l10n.splashFailedMessage,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -91,7 +93,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                             ),
                           )
                         : const Icon(Icons.refresh),
-                    label: const Text('再試行'),
+                    label: Text(l10n.commonRetry),
                   ),
                 ],
               ],
@@ -148,7 +150,7 @@ class _BrandLockup extends StatelessWidget {
           ),
         ),
         SizedBox(height: tokens.spacing.md),
-        Text('Hanko Field', style: displayStyle),
+        Text(AppLocalizations.of(context).appTitle, style: displayStyle),
       ],
     );
   }
