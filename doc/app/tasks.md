@@ -124,7 +124,7 @@
 - [x] [Ensure accessibility compliance (semantics, focus order, color contrast, screen reader labels) across screens.](doc/app/tasks/089-ensure-accessibility-compliance-semantics-focus-order-color-contrast-screen-reader-labels-.md)
 - [x] [Complete full localization pass (copy extraction, pluralization, RTL readiness if needed).](doc/app/tasks/090-complete-full-localization-pass-copy-extraction-pluralization-rtl-readiness-if-needed.md)
 - [x] [Add Hebrew localization and RTL validation across app flows.](doc/app/tasks/090a-add-hebrew-localization-and-rtl-validation-across-app-flows.md)
-- [ ] [Implement automated widget tests, integration tests (golden tests, end-to-end flows) covering core journeys.](doc/app/tasks/091-implement-automated-widget-tests-integration-tests-golden-tests-end-to-end-flows-covering-.md)
+- [x] [Implement automated widget tests, integration tests (golden tests, end-to-end flows) covering core journeys.](doc/app/tasks/091-implement-automated-widget-tests-integration-tests-golden-tests-end-to-end-flows-covering-.md)
 - [ ] [Prepare manual QA checklist and device matrix for release certification.](doc/app/tasks/092-prepare-manual-qa-checklist-and-device-matrix-for-release-certification.md)
 
 ## 17. Release Management & Distribution
