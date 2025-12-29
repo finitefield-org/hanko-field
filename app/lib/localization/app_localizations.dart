@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:app/localization/app_localizations_en.dart';
 import 'package:app/localization/app_localizations_ja.dart';
 import 'package:app/localization/app_localizations_strings.dart';
+import 'package:app/localization/app_localizations_zh.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -15,9 +16,13 @@ class AppLocalizations {
   final Locale locale;
   final AppLocalizationsStrings _strings;
 
-  static const supportedLocales = <Locale>[Locale('en'), Locale('ja')];
+  static const supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('ja'),
+    Locale('zh'),
+  ];
 
-  static const supportedLanguageCodes = <String>{'en', 'ja'};
+  static const supportedLanguageCodes = <String>{'en', 'ja', 'zh'};
 
   static AppLocalizations of(BuildContext context) {
     final localizations = maybeOf(context);
@@ -46,6 +51,8 @@ class AppLocalizations {
     switch (locale.languageCode) {
       case 'ja':
         return const AppLocalizationsJa();
+      case 'zh':
+        return const AppLocalizationsZh();
       case 'en':
       default:
         return const AppLocalizationsEn();

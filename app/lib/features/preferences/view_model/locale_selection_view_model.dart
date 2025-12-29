@@ -114,6 +114,12 @@ List<LocaleOption> localeOptionsFor(Locale selected) {
       sample: '例: 漢字/かな入力補助、材質別のおすすめ、国内配送の案内。',
     ),
     const LocaleOption(
+      locale: Locale('zh'),
+      title: '简体中文 (中国)',
+      subtitle: '提供简体中文界面、国际配送说明与汉字辅助功能。',
+      sample: '示例：制作印章、预览汉字、支持海外配送。',
+    ),
+    const LocaleOption(
       locale: Locale('en'),
       title: 'English (International)',
       subtitle: 'Ordering guidance, international shipping, and kanji helpers.',
