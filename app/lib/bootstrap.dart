@@ -114,13 +114,7 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     unawaited(crashReporter.recordFlutterError(details));
   };
 
-  runZonedGuarded(
-    () {
-      runApp(ProviderScope(container: container, child: const HankoFieldApp()));
-    },
-    (error, stack) =>
-        unawaited(crashReporter.recordError(error, stack, fatal: true)),
-  );
+  runApp(ProviderScope(container: container, child: const HankoFieldApp()));
 
   unawaited(
     container

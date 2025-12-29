@@ -42,5 +42,5 @@ extension AppFlavorX on AppFlavor {
     }
   }
 
-  String get firebaseAppName => 'hanko-field-$name';
+  String get firebaseAppName => 'hanko-field';
 }
