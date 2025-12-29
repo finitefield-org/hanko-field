@@ -113,9 +113,9 @@ Future<T?> showAppBottomSheet<T>({
     ),
     builder: (ctx) {
       return Padding(
-        padding: EdgeInsets.only(
-          left: tokens.spacing.lg,
-          right: tokens.spacing.lg,
+        padding: EdgeInsetsDirectional.only(
+          start: tokens.spacing.lg,
+          end: tokens.spacing.lg,
           top: tokens.spacing.md,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + tokens.spacing.lg,
         ),

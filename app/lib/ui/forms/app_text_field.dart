@@ -78,7 +78,9 @@ class AppTextField extends StatelessWidget {
               prefixIcon: prefix == null
                   ? null
                   : Padding(
-                      padding: EdgeInsets.only(left: tokens.spacing.md),
+                      padding: EdgeInsetsDirectional.only(
+                        start: tokens.spacing.md,
+                      ),
                       child: prefix,
                     ),
               prefixIconConstraints: BoxConstraints(
@@ -88,7 +90,9 @@ class AppTextField extends StatelessWidget {
               suffixIcon: suffix == null
                   ? null
                   : Padding(
-                      padding: EdgeInsets.only(right: tokens.spacing.md),
+                      padding: EdgeInsetsDirectional.only(
+                        end: tokens.spacing.md,
+                      ),
                       child: suffix,
                     ),
               suffixIconConstraints: BoxConstraints(

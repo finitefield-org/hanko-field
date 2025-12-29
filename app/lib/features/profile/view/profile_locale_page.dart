@@ -162,7 +162,7 @@ class _ProfileLocalePageState extends ConsumerState<ProfileLocalePage> {
               ],
               SizedBox(height: tokens.spacing.sm),
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: isBusy ? null : _useDeviceLocale,
                   icon: const Icon(Icons.phone_iphone),

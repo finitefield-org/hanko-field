@@ -45,7 +45,7 @@ class AppButton extends StatelessWidget {
       children: [
         if (isLoading)
           Padding(
-            padding: EdgeInsets.only(right: tokens.spacing.sm),
+            padding: EdgeInsetsDirectional.only(end: tokens.spacing.sm),
             child: SizedBox(
               width: 18,
               height: 18,
@@ -57,7 +57,7 @@ class AppButton extends StatelessWidget {
           )
         else if (leading != null)
           Padding(
-            padding: EdgeInsets.only(right: tokens.spacing.sm),
+            padding: EdgeInsetsDirectional.only(end: tokens.spacing.sm),
             child: leading,
           ),
         Flexible(
@@ -65,7 +65,7 @@ class AppButton extends StatelessWidget {
         ),
         if (trailing != null)
           Padding(
-            padding: EdgeInsets.only(left: tokens.spacing.sm),
+            padding: EdgeInsetsDirectional.only(start: tokens.spacing.sm),
             child: trailing,
           ),
       ],

@@ -319,13 +319,13 @@ class _SlideIllustration extends StatelessWidget {
               borderRadius: BorderRadius.circular(tokens.radii.lg),
             ),
           ),
-          Positioned(
-            left: -20,
+          PositionedDirectional(
+            start: -20,
             top: -10,
             child: _Halo(accent: accent.withValues(alpha: 0.3)),
           ),
-          Positioned(
-            right: -16,
+          PositionedDirectional(
+            end: -16,
             bottom: -12,
             child: _Halo(accent: accent.withValues(alpha: 0.2)),
           ),
@@ -333,7 +333,7 @@ class _SlideIllustration extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(tokens.spacing.lg),
               child: Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: Icon(
                   slide.icon,
                   size: 96,
@@ -342,8 +342,8 @@ class _SlideIllustration extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            left: tokens.spacing.lg,
+          PositionedDirectional(
+            start: tokens.spacing.lg,
             bottom: tokens.spacing.lg,
             child: Text(
               slide.title,

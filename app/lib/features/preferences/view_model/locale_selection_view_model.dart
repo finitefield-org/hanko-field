@@ -125,6 +125,12 @@ List<LocaleOption> localeOptionsFor(Locale selected) {
       subtitle: 'Ordering guidance, international shipping, and kanji helpers.',
       sample: 'Sample: Make a seal, preview kanji, and ship worldwide.',
     ),
+    const LocaleOption(
+      locale: Locale('he'),
+      title: 'עברית (ישראל)',
+      subtitle: 'ממשק בעברית, מידע על משלוחים בינלאומיים וסיוע בקאנג\'י.',
+      sample: 'דוגמה: יצירת חותמת, תצוגת קאנג\'י ומשלוח בינלאומי.',
+    ),
   ];
 
   if (preferJapanese) return options;

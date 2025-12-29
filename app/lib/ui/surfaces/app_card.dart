@@ -86,7 +86,7 @@ class AppListTile extends StatelessWidget {
           children: [
             if (leading != null) ...[
               Padding(
-                padding: EdgeInsets.only(right: tokens.spacing.md),
+                padding: EdgeInsetsDirectional.only(end: tokens.spacing.md),
                 child: leading,
               ),
             ],

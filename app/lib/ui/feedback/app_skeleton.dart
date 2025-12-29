@@ -43,8 +43,8 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
         return ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+              begin: AlignmentDirectional.centerStart,
+              end: AlignmentDirectional.centerEnd,
               colors: [baseColor, highlight, baseColor],
               stops: const [0.2, 0.5, 0.8],
               transform: _SlidingGradientTransform(
@@ -68,7 +68,12 @@ class _SlidingGradientTransform extends GradientTransform {
 
   @override
   Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(bounds.width * slidePercent * 0.25, 0, 0);
+    final direction = textDirection == TextDirection.rtl ? -1.0 : 1.0;
+    return Matrix4.translationValues(
+      bounds.width * slidePercent * 0.25 * direction,
+      0,
+      0,
+    );
   }
 }
 

@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:app/localization/app_localizations_en.dart';
+import 'package:app/localization/app_localizations_he.dart';
 import 'package:app/localization/app_localizations_ja.dart';
 import 'package:app/localization/app_localizations_strings.dart';
 import 'package:app/localization/app_localizations_zh.dart';
@@ -20,9 +21,10 @@ class AppLocalizations {
     Locale('en'),
     Locale('ja'),
     Locale('zh'),
+    Locale('he'),
   ];
 
-  static const supportedLanguageCodes = <String>{'en', 'ja', 'zh'};
+  static const supportedLanguageCodes = <String>{'en', 'ja', 'zh', 'he'};
 
   static AppLocalizations of(BuildContext context) {
     final localizations = maybeOf(context);
@@ -53,6 +55,8 @@ class AppLocalizations {
         return const AppLocalizationsJa();
       case 'zh':
         return const AppLocalizationsZh();
+      case 'he':
+        return const AppLocalizationsHe();
       case 'en':
       default:
         return const AppLocalizationsEn();
