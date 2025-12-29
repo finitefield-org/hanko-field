@@ -44,11 +44,6 @@ android {
             applicationIdSuffix = ".dev"
             resValue("string", "app_name", "Hanko Field Dev")
         }
-        create("stg") {
-            dimension = "env"
-            applicationIdSuffix = ".stg"
-            resValue("string", "app_name", "Hanko Field Stg")
-        }
         create("prod") {
             dimension = "env"
             applicationId = "com.hanko.field"

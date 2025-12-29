@@ -67,7 +67,6 @@ final networkConfigProvider = Provider<NetworkConfig>((ref) {
     final AppFlavor flavor = ref.watch(appFlavorProvider);
     final baseUrl = switch (flavor) {
       AppFlavor.dev => 'https://api-dev.hanko-field.app',
-      AppFlavor.stg => 'https://api-stg.hanko-field.app',
       AppFlavor.prod => 'https://api.hanko-field.app',
     };
 

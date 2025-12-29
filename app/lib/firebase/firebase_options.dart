@@ -33,8 +33,6 @@ class DefaultFirebaseOptions {
     switch (flavor) {
       case AppFlavor.dev:
         return _androidDev;
-      case AppFlavor.stg:
-        return _androidStg;
       case AppFlavor.prod:
         return _androidProd;
     }
@@ -44,8 +42,6 @@ class DefaultFirebaseOptions {
     switch (flavor) {
       case AppFlavor.dev:
         return _iosDev;
-      case AppFlavor.stg:
-        return _iosStg;
       case AppFlavor.prod:
         return _iosProd;
     }
@@ -57,16 +53,8 @@ class DefaultFirebaseOptions {
     apiKey: 'YOUR_DEV_ANDROID_API_KEY',
     appId: '1:000000000000:android:devappid',
     messagingSenderId: '000000000000',
-    projectId: 'hanko-field-dev',
-    storageBucket: 'hanko-field-dev.appspot.com',
-  );
-
-  static const FirebaseOptions _androidStg = FirebaseOptions(
-    apiKey: 'YOUR_STG_ANDROID_API_KEY',
-    appId: '1:000000000000:android:stgappid',
-    messagingSenderId: '000000000000',
-    projectId: 'hanko-field-stg',
-    storageBucket: 'hanko-field-stg.appspot.com',
+    projectId: 'hanko-field',
+    storageBucket: 'hanko-field.firebasestorage.app',
   );
 
   static const FirebaseOptions _androidProd = FirebaseOptions(
@@ -74,25 +62,16 @@ class DefaultFirebaseOptions {
     appId: '1:000000000000:android:prodappid',
     messagingSenderId: '000000000000',
     projectId: 'hanko-field',
-    storageBucket: 'hanko-field.appspot.com',
+    storageBucket: 'hanko-field-prod.firebasestorage.app',
   );
 
   static const FirebaseOptions _iosDev = FirebaseOptions(
     apiKey: 'YOUR_DEV_IOS_API_KEY',
     appId: '1:000000000000:ios:devappid',
     messagingSenderId: '000000000000',
-    projectId: 'hanko-field-dev',
-    storageBucket: 'hanko-field-dev.appspot.com',
+    projectId: 'hanko-field',
+    storageBucket: 'hanko-field.firebasestorage.app',
     iosBundleId: 'com.hanko.field.dev',
-  );
-
-  static const FirebaseOptions _iosStg = FirebaseOptions(
-    apiKey: 'YOUR_STG_IOS_API_KEY',
-    appId: '1:000000000000:ios:stgappid',
-    messagingSenderId: '000000000000',
-    projectId: 'hanko-field-stg',
-    storageBucket: 'hanko-field-stg.appspot.com',
-    iosBundleId: 'com.hanko.field.stg',
   );
 
   static const FirebaseOptions _iosProd = FirebaseOptions(
@@ -100,7 +79,7 @@ class DefaultFirebaseOptions {
     appId: '1:000000000000:ios:prodappid',
     messagingSenderId: '000000000000',
     projectId: 'hanko-field',
-    storageBucket: 'hanko-field.appspot.com',
+    storageBucket: 'hanko-field-prod.firebasestorage.app',
     iosBundleId: 'com.hanko.field',
   );
 }
