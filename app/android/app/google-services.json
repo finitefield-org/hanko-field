@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1036900576518",
+    "project_id": "hanko-field",
+    "storage_bucket": "hanko-field.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1036900576518:android:1fcefdec445914cf9c0287",
+        "android_client_info": {
+          "package_name": "com.hanko.field"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBu8WjvhcE1TB1YjV3P1Z4XL_tqcP9k3lE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -10,9 +10,7 @@ import 'package:flutter/foundation.dart';
 class DefaultFirebaseOptions {
   static FirebaseOptions currentPlatform(AppFlavor flavor) {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'Web is not supported for this project. Requested flavor: ${flavor.name}',
-      );
+      return web(flavor);
     }
 
     switch (defaultTargetPlatform) {
@@ -49,37 +47,66 @@ class DefaultFirebaseOptions {
 
   static FirebaseOptions macos(AppFlavor flavor) => ios(flavor);
 
+  static FirebaseOptions web(AppFlavor flavor) {
+    switch (flavor) {
+      case AppFlavor.dev:
+        return _webDev;
+      case AppFlavor.prod:
+        return _webProd;
+    }
+  }
+
   static const FirebaseOptions _androidDev = FirebaseOptions(
-    apiKey: 'YOUR_DEV_ANDROID_API_KEY',
-    appId: '1:000000000000:android:devappid',
-    messagingSenderId: '000000000000',
+    apiKey: 'AIzaSyBu8WjvhcE1TB1YjV3P1Z4XL_tqcP9k3lE',
+    appId: '1:1036900576518:android:1fcefdec445914cf9c0287',
+    messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field.firebasestorage.app',
   );
 
   static const FirebaseOptions _androidProd = FirebaseOptions(
-    apiKey: 'YOUR_PROD_ANDROID_API_KEY',
-    appId: '1:000000000000:android:prodappid',
-    messagingSenderId: '000000000000',
+    apiKey: 'AIzaSyBu8WjvhcE1TB1YjV3P1Z4XL_tqcP9k3lE',
+    appId: '1:1036900576518:android:1fcefdec445914cf9c0287',
+    messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field-prod.firebasestorage.app',
   );
 
   static const FirebaseOptions _iosDev = FirebaseOptions(
-    apiKey: 'YOUR_DEV_IOS_API_KEY',
-    appId: '1:000000000000:ios:devappid',
-    messagingSenderId: '000000000000',
+    apiKey: 'AIzaSyAcRdlxHxhOEj2l_Vj6gxYOkrwrHbg32NI',
+    appId: '1:1036900576518:ios:f24ee9a689b943f09c0287',
+    messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field.firebasestorage.app',
-    iosBundleId: 'com.hanko.field.dev',
+    iosBundleId: 'com.hanko.field',
   );
 
   static const FirebaseOptions _iosProd = FirebaseOptions(
-    apiKey: 'YOUR_PROD_IOS_API_KEY',
-    appId: '1:000000000000:ios:prodappid',
-    messagingSenderId: '000000000000',
+    apiKey: 'AIzaSyAcRdlxHxhOEj2l_Vj6gxYOkrwrHbg32NI',
+    appId: '1:1036900576518:ios:f24ee9a689b943f09c0287',
+    messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field-prod.firebasestorage.app',
     iosBundleId: 'com.hanko.field',
+  );
+
+  static const FirebaseOptions _webDev = FirebaseOptions(
+    apiKey: 'AIzaSyAKYkwDTD1EGYgreG_hCmyWRXdG7GgFxMc',
+    appId: '1:1036900576518:web:72b66c4c58bd8b4e9c0287',
+    messagingSenderId: '1036900576518',
+    projectId: 'hanko-field',
+    authDomain: 'hanko-field.firebaseapp.com',
+    storageBucket: 'hanko-field.firebasestorage.app',
+    measurementId: 'G-V2TDW9Z84Y',
+  );
+
+  static const FirebaseOptions _webProd = FirebaseOptions(
+    apiKey: 'AIzaSyAKYkwDTD1EGYgreG_hCmyWRXdG7GgFxMc',
+    appId: '1:1036900576518:web:72b66c4c58bd8b4e9c0287',
+    messagingSenderId: '1036900576518',
+    projectId: 'hanko-field',
+    authDomain: 'hanko-field.firebaseapp.com',
+    storageBucket: 'hanko-field-prod.firebasestorage.app',
+    measurementId: 'G-V2TDW9Z84Y',
   );
 }
