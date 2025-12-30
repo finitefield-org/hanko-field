@@ -475,6 +475,7 @@ class _FeaturedCard extends StatelessWidget {
                 Colors.black.withValues(alpha: 0.25),
                 BlendMode.darken,
               ),
+              onImageError: (_, __) {},
             ),
             Container(
               decoration: BoxDecoration(
@@ -631,7 +632,14 @@ class _RecentDesignCard extends StatelessWidget {
                     height: 56,
                     color: colorScheme.surfaceContainerHigh,
                     child: previewUrl != null
-                        ? Image.network(previewUrl, fit: BoxFit.cover)
+                        ? Image.network(
+                            previewUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.broken_image_outlined,
+                              color: colorScheme.outline,
+                            ),
+                          )
                         : Icon(
                             Icons.image_outlined,
                             color: colorScheme.outline,
@@ -759,28 +767,35 @@ class _TemplateCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
-                // Avoid horizontal overflows on narrow cards by stacking the
-                // label and CTA vertically.
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Keep this section single-line to avoid vertical overflow in the
+                // fixed-height card, but make it resilient on narrow widths.
+                Row(
                   children: [
-                    Text(
-                      l10n.homeTemplateRecommendedSize(
-                        template.defaults?.sizeMm?.toStringAsFixed(1) ?? '-',
+                    Expanded(
+                      child: Text(
+                        l10n.homeTemplateRecommendedSize(
+                          template.defaults?.sizeMm?.toStringAsFixed(1) ?? '-',
+                        ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: tokens.spacing.xs),
-                    Align(
-                      alignment: Alignment.centerRight,
+                    SizedBox(width: tokens.spacing.xs),
+                    Flexible(
                       child: FilledButton.tonalIcon(
                         onPressed: onTap,
                         icon: const Icon(Icons.style_outlined),
-                        label: Text(l10n.homeTemplateApply),
+                        label: Text(
+                          l10n.homeTemplateApply,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                       ),
                     ),
                   ],
