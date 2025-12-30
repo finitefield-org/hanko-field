@@ -1,39 +1,36 @@
-# Flutter flavors, icons, and splash setup (dev/stg/prod)
-Targets: Flutter app with three flavors and branded launch assets.
+# Flutter flavors, icons, and splash setup (dev/prod)
+Targets: Flutter app with dev/prod flavors and branded launch assets.
 
 ## Flavor definitions
-- Flavors: `dev`, `prod` (planned: `stg`).
+- Flavors: `dev`, `prod`.
 - Package IDs:
   - Android `applicationId`: `org.finitefield.hanko` (dev/prod share the same for now; see note below).
   - iOS bundle IDs: `org.finitefield.hanko` (dev/prod share the same for now; see note below).
-- App display names: `Hanko Field Dev`, `Hanko Field Stg`, `Hanko Field`.
-- Deep link schemes (align with navigation doc): `hanko-dev`, `hanko-stg`, `hanko`.
+- App display names: `Hanko Field Dev`, `Hanko Field`.
+- Deep link schemes (align with navigation doc): `hanko-dev`, `hanko`.
 
 Note:
 - The repo currently has a single checked-in `google-services.json` for Android (`org.finitefield.hanko`).
 - If you want side-by-side installs (e.g. `org.finitefield.hanko.dev`), add a separate Firebase Android app for that package and place a matching `google-services.json` under `android/app/src/dev/google-services.json` (and similarly for other flavors).
 
 ## Entry points
-Create separate entry files that set a flavor flag/env and call the shared bootstrap.
+Use a single entry file and select the flavor via launch arguments.
 ```
-lib/main.dart          # defaults to prod
-lib/main_dev.dart      # sets flavor=dev
-lib/main_stg.dart      # sets flavor=stg
+lib/main.dart          # flavor is resolved from args (APP_FLAVOR / --flavor)
 lib/bootstrap.dart     # runApp, ProviderScope overrides per flavor
 ```
 
 Example snippet:
 ```dart
-import 'bootstrap.dart';
+import 'package:app/bootstrap.dart';
+import 'package:app/config/app_flavor.dart';
 
-void main() {
-  bootstrap(flavor: Flavor.prod);
-}
+Future<void> main() => bootstrap(flavor: appFlavorFromEnvironment());
 ```
 
 ## Android configuration
 - `android/app/build.gradle`:
-  - Define `productFlavors` with `applicationIdSuffix` for dev/stg, and `resValue` for app name.
+  - Define `productFlavors` (dev/prod) and `resValue` for app name.
   - Set `manifestPlaceholders` for intent-filter scheme per flavor.
   - Use `buildConfigField` for API base URL, feature flag endpoints, and flavor string.
 - `AndroidManifest.xml`:
@@ -43,11 +40,11 @@ void main() {
 
 ## iOS configuration
 - Create schemes/targets per flavor or use xcconfigs:
-  - `Runner-dev`, `Runner-stg`, `Runner` (prod).
+  - `Runner-dev`, `Runner` (prod).
   - Bundle ID per flavor; set `PRODUCT_BUNDLE_IDENTIFIER`.
-  - Add URL Type for deep link scheme (`hanko-dev`, `hanko-stg`, `hanko`).
+  - Add URL Type for deep link scheme (`hanko-dev`, `hanko`).
   - Set `APP_DISPLAY_NAME` via `Info.plist` or build settings.
-- Use `Configurations` (`Debug-Dev`, `Debug-Stg`, `Release-Prod`) and map to schemes.
+- Use `Configurations` (`Debug-Dev`, `Release-Prod`) and map to schemes.
 
 ## Icons and splash
 - Add to `pubspec.yaml`:
@@ -77,17 +74,15 @@ void main() {
 - Provide flavor-specific icons if needed by running generator with alternate config files (e.g., `pubspec_dev.yaml`).
 
 ## Build/run commands
-- `flutter run --flavor dev` (recommended; `main.dart` reads the selected flavor via `FLUTTER_APP_FLAVOR`)
-- `flutter run --flavor dev -t lib/main_dev.dart` (also works)
-- `flutter run --flavor stg -t lib/main_stg.dart`
-- `flutter run --flavor prod -t lib/main.dart`
-- Android bundle: `flutter build appbundle --flavor prod -t lib/main.dart`
-- iOS: `flutter build ipa --flavor prod -t lib/main.dart`
+- `flutter run --flavor dev --dart-define=APP_FLAVOR=dev`
+- `flutter run --flavor prod --dart-define=APP_FLAVOR=prod`
+- Android bundle: `flutter build appbundle --flavor prod --dart-define=APP_FLAVOR=prod`
+- iOS: `flutter build ipa --flavor prod --dart-define=APP_FLAVOR=prod`
 
 ## CI notes
 - Cache `flutter pub get`; run `flutter analyze`/`flutter test` once (no flavor-specific tests unless needed).
 - Build matrix per flavor for release artifacts; inject env via `--dart-define` or flavor-specific config files.
-- Ensure signing keys/Profiles provided via CI secrets for prod; dev/stg can use ad-hoc.
+- Ensure signing keys/Profiles provided via CI secrets for prod; dev can use ad-hoc.
 
 ## To-do after assets arrive
 - Add actual branding files under `assets/branding/`.
