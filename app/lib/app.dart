@@ -14,6 +14,27 @@ import 'package:miniriverpod/miniriverpod.dart';
 class HankoFieldApp extends ConsumerWidget {
   const HankoFieldApp({super.key});
 
+  static const _rtlLanguages = <String>{
+    'ar', // Arabic
+    'fa', // Persian
+    'he', // Hebrew
+    'iw', // Hebrew (legacy)
+    'ps', // Pashto
+    'ur', // Urdu
+    'dv', // Divehi
+    'ku', // Kurdish
+    'ug', // Uyghur
+    'sd', // Sindhi
+    'yi', // Yiddish
+  };
+
+  TextDirection _resolveTextDirection(Locale? locale) {
+    final resolvedLocale =
+        locale ?? WidgetsBinding.instance.platformDispatcher.locale;
+    final isRtl = _rtlLanguages.contains(resolvedLocale.languageCode);
+    return isRtl ? TextDirection.rtl : TextDirection.ltr;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final flavor = ref.watch(appFlavorProvider);
@@ -39,9 +60,12 @@ class HankoFieldApp extends ConsumerWidget {
       localeResolutionCallback: AppLocalizations.resolveLocale,
       routerConfig: router,
       builder: (context, child) {
-        return FocusTraversalGroup(
-          policy: OrderedTraversalPolicy(),
-          child: AppMessageOverlay(child: child ?? const SizedBox.shrink()),
+        return Directionality(
+          textDirection: _resolveTextDirection(locale),
+          child: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: AppMessageOverlay(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
     );
