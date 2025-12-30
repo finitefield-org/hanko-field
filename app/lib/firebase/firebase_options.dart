@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions _androidDev = FirebaseOptions(
     apiKey: 'AIzaSyBu8WjvhcE1TB1YjV3P1Z4XL_tqcP9k3lE',
-    appId: '1:1036900576518:android:1fcefdec445914cf9c0287',
+    appId: '1:1036900576518:android:2d745bbef1a57bb59c0287',
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field.firebasestorage.app',
@@ -66,7 +66,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions _androidProd = FirebaseOptions(
     apiKey: 'AIzaSyBu8WjvhcE1TB1YjV3P1Z4XL_tqcP9k3lE',
-    appId: '1:1036900576518:android:1fcefdec445914cf9c0287',
+    appId: '1:1036900576518:android:2d745bbef1a57bb59c0287',
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field-prod.firebasestorage.app',
@@ -74,7 +74,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions _iosDev = FirebaseOptions(
     apiKey: 'AIzaSyAcRdlxHxhOEj2l_Vj6gxYOkrwrHbg32NI',
-    appId: '1:1036900576518:ios:f24ee9a689b943f09c0287',
+    appId: '1:1036900576518:ios:ab02c6e2f97c1e6a9c0287',
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field.firebasestorage.app',
@@ -83,7 +83,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions _iosProd = FirebaseOptions(
     apiKey: 'AIzaSyAcRdlxHxhOEj2l_Vj6gxYOkrwrHbg32NI',
-    appId: '1:1036900576518:ios:f24ee9a689b943f09c0287',
+    appId: '1:1036900576518:ios:ab02c6e2f97c1e6a9c0287',
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field-prod.firebasestorage.app',
