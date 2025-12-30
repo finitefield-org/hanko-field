@@ -77,7 +77,8 @@ void main() {
 - Provide flavor-specific icons if needed by running generator with alternate config files (e.g., `pubspec_dev.yaml`).
 
 ## Build/run commands
-- `flutter run --flavor dev -t lib/main_dev.dart`
+- `flutter run --flavor dev` (recommended; `main.dart` reads the selected flavor via `FLUTTER_APP_FLAVOR`)
+- `flutter run --flavor dev -t lib/main_dev.dart` (also works)
 - `flutter run --flavor stg -t lib/main_stg.dart`
 - `flutter run --flavor prod -t lib/main.dart`
 - Android bundle: `flutter build appbundle --flavor prod -t lib/main.dart`

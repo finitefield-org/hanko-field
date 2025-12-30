@@ -35,9 +35,21 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     );
   }
 
-  final firebaseApp = await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform(flavor),
-  );
+  final firebaseApp = await (() async {
+    try {
+      return await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform(flavor),
+      );
+    } on FirebaseException catch (e) {
+      // On Android (and sometimes other platforms), the native SDK may have
+      // already initialized the default app (e.g. via google-services.json).
+      // In that case, initializing again with options throws duplicate-app.
+      if (e.code == 'duplicate-app') {
+        return Firebase.app();
+      }
+      rethrow;
+    }
+  })();
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -116,7 +128,17 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
 
   runZonedGuarded(
     () {
-      runApp(ProviderScope(container: container, child: const HankoFieldApp()));
+      // Safety net: ensure a Directionality exists even during very early
+      // frames (or in case something renders above MaterialApp).
+      runApp(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: ProviderScope(
+            container: container,
+            child: const HankoFieldApp(),
+          ),
+        ),
+      );
     },
     (error, stack) =>
         unawaited(crashReporter.recordError(error, stack, fatal: true)),
