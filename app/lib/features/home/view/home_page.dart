@@ -759,7 +759,10 @@ class _TemplateCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
-                Row(
+                // Avoid horizontal overflows on narrow cards by stacking the
+                // label and CTA vertically.
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       l10n.homeTemplateRecommendedSize(
@@ -768,12 +771,17 @@ class _TemplateCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
-                    FilledButton.tonalIcon(
-                      onPressed: onTap,
-                      icon: const Icon(Icons.style_outlined),
-                      label: Text(l10n.homeTemplateApply),
+                    SizedBox(height: tokens.spacing.xs),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.tonalIcon(
+                        onPressed: onTap,
+                        icon: const Icon(Icons.style_outlined),
+                        label: Text(l10n.homeTemplateApply),
+                      ),
                     ),
                   ],
                 ),

@@ -23,8 +23,6 @@ import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 Future<void> bootstrap({required AppFlavor flavor}) async {
-  WidgetsFlutterBinding.ensureInitialized();
-
   final logger = Logger('Bootstrap');
   final envFlavor = appFlavorFromEnvironment();
 
@@ -35,99 +33,115 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
     );
   }
 
-  final firebaseApp = await (() async {
-    try {
-      return await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform(flavor),
+  // Keep the Flutter binding initialization and runApp in the same zone.
+  // Otherwise Flutter throws "Zone mismatch" during runApp.
+  CrashReporter? crashReporter;
+
+  await runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      final firebaseApp = await (() async {
+        try {
+          return await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform(flavor),
+          );
+        } on FirebaseException catch (e) {
+          // On Android (and sometimes other platforms), the native SDK may have
+          // already initialized the default app (e.g. via google-services.json).
+          // In that case, initializing again with options throws duplicate-app.
+          if (e.code == 'duplicate-app') {
+            return Firebase.app();
+          }
+          rethrow;
+        }
+      })();
+
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+      final container = ProviderContainer(
+        overrides: [
+          appFlavorScope.overrideWithValue(flavor),
+          firebaseAppScope.overrideWithValue(firebaseApp),
+        ],
       );
-    } on FirebaseException catch (e) {
-      // On Android (and sometimes other platforms), the native SDK may have
-      // already initialized the default app (e.g. via google-services.json).
-      // In that case, initializing again with options throws duplicate-app.
-      if (e.code == 'duplicate-app') {
-        return Firebase.app();
+
+      try {
+        await container.read(privacyPreferencesProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to load privacy preferences: $e', e, st);
       }
-      rethrow;
-    }
-  })();
 
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      try {
+        await container.read(crashReportingInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to initialize Crashlytics: $e', e, st);
+      }
 
-  final container = ProviderContainer(
-    overrides: [
-      appFlavorScope.overrideWithValue(flavor),
-      firebaseAppScope.overrideWithValue(firebaseApp),
-    ],
-  );
+      try {
+        await container.read(loggingPipelineInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to initialize logging pipeline: $e', e, st);
+      }
 
-  try {
-    await container.read(privacyPreferencesProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to load privacy preferences: $e', e, st);
-  }
+      try {
+        await container.read(analyticsInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to initialize Analytics: $e', e, st);
+      }
 
-  try {
-    await container.read(crashReportingInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize Crashlytics: $e', e, st);
-  }
+      try {
+        await container.read(performanceMonitoringInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning(
+          'Failed to initialize Performance Monitoring: $e',
+          e,
+          st,
+        );
+      }
 
-  try {
-    await container.read(loggingPipelineInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize logging pipeline: $e', e, st);
-  }
+      try {
+        await configureFirebaseMessaging(container);
+      } catch (e, st) {
+        logger.warning('Failed to configure Firebase Messaging: $e', e, st);
+      }
 
-  try {
-    await container.read(analyticsInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize Analytics: $e', e, st);
-  }
+      try {
+        await container.read(remoteConfigInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to initialize Remote Config: $e', e, st);
+      }
 
-  try {
-    await container.read(performanceMonitoringInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize Performance Monitoring: $e', e, st);
-  }
+      try {
+        await container.read(
+          pushNotificationNavigationInitializerProvider.future,
+        );
+      } catch (e, st) {
+        logger.warning('Failed to initialize push navigation: $e', e, st);
+      }
 
-  try {
-    await configureFirebaseMessaging(container);
-  } catch (e, st) {
-    logger.warning('Failed to configure Firebase Messaging: $e', e, st);
-  }
+      try {
+        await container.read(supportChatPushHandlerProvider.future);
+      } catch (e, st) {
+        logger.warning(
+          'Failed to initialize support chat push handler: $e',
+          e,
+          st,
+        );
+      }
 
-  try {
-    await container.read(remoteConfigInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize Remote Config: $e', e, st);
-  }
+      try {
+        await container.read(localPersistenceInitializerProvider.future);
+      } catch (e, st) {
+        logger.warning('Failed to initialize local persistence: $e', e, st);
+      }
 
-  try {
-    await container.read(pushNotificationNavigationInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize push navigation: $e', e, st);
-  }
+      crashReporter = container.read(crashReporterProvider);
 
-  try {
-    await container.read(supportChatPushHandlerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize support chat push handler: $e', e, st);
-  }
+      FlutterError.onError = (details) {
+        unawaited(crashReporter?.recordFlutterError(details));
+      };
 
-  try {
-    await container.read(localPersistenceInitializerProvider.future);
-  } catch (e, st) {
-    logger.warning('Failed to initialize local persistence: $e', e, st);
-  }
-
-  final crashReporter = container.read(crashReporterProvider);
-
-  FlutterError.onError = (details) {
-    unawaited(crashReporter.recordFlutterError(details));
-  };
-
-  runZonedGuarded(
-    () {
       // Safety net: ensure a Directionality exists even during very early
       // frames (or in case something renders above MaterialApp).
       runApp(
@@ -139,14 +153,20 @@ Future<void> bootstrap({required AppFlavor flavor}) async {
           ),
         ),
       );
-    },
-    (error, stack) =>
-        unawaited(crashReporter.recordError(error, stack, fatal: true)),
-  );
 
-  unawaited(
-    container
-        .read(analyticsClientProvider)
-        .track(const AppOpenedEvent(entryPoint: 'bootstrap')),
+      unawaited(
+        container
+            .read(analyticsClientProvider)
+            .track(const AppOpenedEvent(entryPoint: 'bootstrap')),
+      );
+    },
+    (error, stack) {
+      // If something fails before CrashReporter initializes, at least surface it.
+      logger.severe('Uncaught error during bootstrap: $error', error, stack);
+      final reporter = crashReporter;
+      if (reporter != null) {
+        unawaited(reporter.recordError(error, stack, fatal: true));
+      }
+    },
   );
 }

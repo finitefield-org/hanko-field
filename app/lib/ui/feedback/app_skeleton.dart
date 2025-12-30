@@ -39,6 +39,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        final textDirection = Directionality.of(context);
         final value = _controller.value * 2 * math.pi;
         return ShaderMask(
           shaderCallback: (bounds) {
@@ -50,7 +51,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
               transform: _SlidingGradientTransform(
                 slidePercent: math.sin(value),
               ),
-            ).createShader(bounds);
+            ).createShader(bounds, textDirection: textDirection);
           },
           blendMode: BlendMode.srcATop,
           child: child,

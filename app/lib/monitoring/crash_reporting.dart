@@ -7,6 +7,7 @@ import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/monitoring/logging_context.dart';
 import 'package:app/privacy/privacy_preferences.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -85,10 +86,14 @@ class CrashReporter {
 
   Future<void> recordFlutterError(FlutterErrorDetails details) async {
     FlutterError.presentError(details);
+    final stack = details.stack ?? StackTrace.current;
+    // The structured logging pipeline prints a single JSON line, which can be
+    // truncated by logcat. Emit a non-JSON stack preview as well.
+    debugPrint('CrashReporter: Flutter stack (top):\n${_stackPreview(stack)}');
     logger.severe(
       'Flutter error: ${details.exceptionAsString()}',
       details.exception,
-      details.stack ?? StackTrace.current,
+      stack,
     );
     if (!_allowSending) return;
     await _crashlytics.recordFlutterFatalError(details);
@@ -110,4 +115,13 @@ class CrashReporter {
           .valueOrNull
           ?.crashReportingAllowed ??
       false;
+}
+
+String _stackPreview(StackTrace stack, {int maxLines = 25}) {
+  final lines = stack.toString().split('\n');
+  if (lines.length <= maxLines) return stack.toString();
+  return [
+    ...lines.take(maxLines),
+    '... (${lines.length - maxLines} more lines)',
+  ].join('\n');
 }
