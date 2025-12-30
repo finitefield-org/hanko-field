@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>org.finitefield.hankofield.app</string>
+	<string>org.finitefield.hanko</string>
 	<key>PROJECT_ID</key>
 	<string>hanko-field</string>
 	<key>STORAGE_BUCKET</key>

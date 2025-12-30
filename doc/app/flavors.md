@@ -4,14 +4,14 @@ Targets: Flutter app with three flavors and branded launch assets.
 ## Flavor definitions
 - Flavors: `dev`, `prod` (planned: `stg`).
 - Package IDs:
-  - Android `applicationId`: `com.hanko.field` (dev/prod share the same for now; see note below).
-  - iOS bundle IDs: `com.hanko.field` (dev/prod share the same for now; see note below).
+  - Android `applicationId`: `org.finitefield.hanko` (dev/prod share the same for now; see note below).
+  - iOS bundle IDs: `org.finitefield.hanko` (dev/prod share the same for now; see note below).
 - App display names: `Hanko Field Dev`, `Hanko Field Stg`, `Hanko Field`.
 - Deep link schemes (align with navigation doc): `hanko-dev`, `hanko-stg`, `hanko`.
 
 Note:
-- The repo currently has a single checked-in `google-services.json` for Android (`com.hanko.field`).
-- If you want side-by-side installs (e.g. `com.hanko.field.dev`), add a separate Firebase Android app for that package and place a matching `google-services.json` under `android/app/src/dev/google-services.json` (and similarly for other flavors).
+- The repo currently has a single checked-in `google-services.json` for Android (`org.finitefield.hanko`).
+- If you want side-by-side installs (e.g. `org.finitefield.hanko.dev`), add a separate Firebase Android app for that package and place a matching `google-services.json` under `android/app/src/dev/google-services.json` (and similarly for other flavors).
 
 ## Entry points
 Create separate entry files that set a flavor flag/env and call the shared bootstrap.

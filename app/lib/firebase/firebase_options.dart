@@ -78,7 +78,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field.firebasestorage.app',
-    iosBundleId: 'com.hanko.field',
+    iosBundleId: 'org.finitefield.hanko',
   );
 
   static const FirebaseOptions _iosProd = FirebaseOptions(
@@ -87,7 +87,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1036900576518',
     projectId: 'hanko-field',
     storageBucket: 'hanko-field-prod.firebasestorage.app',
-    iosBundleId: 'com.hanko.field',
+    iosBundleId: 'org.finitefield.hanko',
   );
 
   static const FirebaseOptions _webDev = FirebaseOptions(

@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hanko.field"
+    namespace = "org.finitefield.hanko"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -25,7 +25,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.hanko.field"
+        applicationId = "org.finitefield.hanko"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -47,20 +47,20 @@ android {
         create("dev") {
             dimension = "env"
             // NOTE: `google-services.json` currently only contains a client for
-            // `com.hanko.field`, so dev must use the same applicationId unless
+            // `org.finitefield.hanko`, so dev must use the same applicationId unless
             // we add a separate Firebase Android app (and google-services.json)
-            // for `com.hanko.field.dev`.
+            // for `org.finitefield.hanko.dev`.
             //
             // Without this explicit override, a stale local config (e.g. an
             // `applicationIdSuffix` added during experimentation) can make the
             // Google Services plugin fail with:
-            //   "No matching client found for package name 'com.hanko.field.dev'".
-            applicationId = "com.hanko.field"
+            //   "No matching client found for package name 'org.finitefield.hanko.dev'".
+            applicationId = "org.finitefield.hanko"
             resValue("string", "app_name", "Hanko Field Dev")
         }
         create("prod") {
             dimension = "env"
-            applicationId = "com.hanko.field"
+            applicationId = "org.finitefield.hanko"
             resValue("string", "app_name", "Hanko Field")
         }
     }

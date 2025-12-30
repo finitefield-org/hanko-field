@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1036900576518:android:1fcefdec445914cf9c0287",
         "android_client_info": {
-          "package_name": "com.hanko.field"
+          "package_name": "org.finitefield.hanko"
         }
       },
       "oauth_client": [],

@@ -4,8 +4,8 @@ Firebase is wired for all flavors via FlutterFire packages. Update the options f
 
 ## Flavor mapping
 - Flavors: `dev`, `stg`, `prod`
-- Android IDs: `com.hanko.field.dev`, `com.hanko.field.stg`, `com.hanko.field`
-- iOS bundle IDs: `com.hanko.field.dev`, `com.hanko.field.stg`, `com.hanko.field`
+- Android IDs: `org.finitefield.hanko.dev`, `org.finitefield.hanko.stg`, `org.finitefield.hanko`
+- iOS bundle IDs: `org.finitefield.hanko.dev`, `org.finitefield.hanko.stg`, `org.finitefield.hanko`
 
 ## Configure projects with FlutterFire
 Run the CLI once per flavor and copy the generated options into `app/lib/firebase/firebase_options.dart` (replace the placeholder values).
@@ -14,24 +14,24 @@ Run the CLI once per flavor and copy the generated options into `app/lib/firebas
 # Dev
 flutterfire configure \
   --project <firebase-dev-project-id> \
-  --ios-bundle-id com.hanko.field.dev \
-  --android-package-name com.hanko.field.dev \
+  --ios-bundle-id org.finitefield.hanko.dev \
+  --android-package-name org.finitefield.hanko.dev \
   --platforms ios,android \
   --out lib/firebase/firebase_options_dev.dart
 
 # Staging
 flutterfire configure \
   --project <firebase-stg-project-id> \
-  --ios-bundle-id com.hanko.field.stg \
-  --android-package-name com.hanko.field.stg \
+  --ios-bundle-id org.finitefield.hanko.stg \
+  --android-package-name org.finitefield.hanko.stg \
   --platforms ios,android \
   --out lib/firebase/firebase_options_stg.dart
 
 # Prod
 flutterfire configure \
   --project <firebase-prod-project-id> \
-  --ios-bundle-id com.hanko.field \
-  --android-package-name com.hanko.field \
+  --ios-bundle-id org.finitefield.hanko \
+  --android-package-name org.finitefield.hanko \
   --platforms ios,android \
   --out lib/firebase/firebase_options_prod.dart
 ```
