@@ -1,48 +1,59 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:app/core/routing/app_router.dart';
 import 'package:app/core/routing/routes.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 final navigationControllerProvider = Provider<NavigationController>((ref) {
-  final router = ref.watch(appRouterProvider);
-  return NavigationController(router);
+  return NavigationController(ref.container);
 });
 
 final deepLinkHandlerProvider = Provider<DeepLinkHandler>((ref) {
   final logger = Logger('DeepLinkHandler');
-  final router = ref.watch(appRouterProvider);
-  return DeepLinkHandler(router, logger);
+  final navigation = ref.watch(navigationControllerProvider);
+  return DeepLinkHandler(navigation, logger);
 });
 
 class NavigationController {
-  NavigationController(this._router);
+  NavigationController(this._container);
 
-  final GoRouter _router;
+  final ProviderContainer _container;
 
-  void goToTab(AppTab tab) {
-    _router.go(tab.location);
+  Future<void> goToTab(AppTab tab) {
+    return _container.invoke(appNavigationProvider.selectTab(tab));
   }
 
-  Future<T?> push<T>(String location) {
-    return _router.push<T>(location);
+  Future<void> push(String location) {
+    return _container.invoke(appNavigationProvider.push(location));
   }
 
-  void go(String location) {
-    _router.go(location);
+  Future<void> go(String location) {
+    return _container.invoke(appNavigationProvider.go(location));
   }
 
   void pop<T extends Object?>([T? result]) {
-    _router.pop(result);
+    unawaited(_container.invoke(appNavigationProvider.pop()));
+  }
+
+  String get currentLocation =>
+      _container.read(appNavigationProvider).currentLocation;
+
+  bool canPop() {
+    final state = _container.read(appNavigationProvider);
+    if (state.rootPages.length > 1) return true;
+    final pages = state.pagesByTab[state.currentTab] ?? const <Object>[];
+    return pages.length > 1;
   }
 }
 
 class DeepLinkHandler {
-  DeepLinkHandler(this._router, this._logger);
+  DeepLinkHandler(this._navigation, this._logger);
 
-  final GoRouter _router;
+  final NavigationController _navigation;
   final Logger _logger;
 
   Future<bool> open(Uri uri, {bool push = false}) async {
@@ -54,9 +65,9 @@ class DeepLinkHandler {
 
     try {
       if (push) {
-        await _router.push(location);
+        await _navigation.push(location);
       } else {
-        _router.go(location);
+        await _navigation.go(location);
       }
       return true;
     } catch (e, stack) {
@@ -92,4 +103,36 @@ class DeepLinkHandler {
 
     return normalized.toString();
   }
+}
+
+class NavigationControllerScope extends InheritedWidget {
+  const NavigationControllerScope({
+    super.key,
+    required this.controller,
+    required super.child,
+  });
+
+  final NavigationController controller;
+
+  static NavigationController of(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<NavigationControllerScope>();
+    assert(scope != null, 'NavigationControllerScope not found in context.');
+    return scope!.controller;
+  }
+
+  @override
+  bool updateShouldNotify(NavigationControllerScope oldWidget) {
+    return oldWidget.controller != controller;
+  }
+}
+
+extension AppNavigationContext on BuildContext {
+  NavigationController get navigation => NavigationControllerScope.of(this);
+
+  Future<void> go(String location) => navigation.go(location);
+
+  Future<void> push(String location) => navigation.push(location);
+
+  void pop<T extends Object?>([T? result]) => navigation.pop(result);
 }

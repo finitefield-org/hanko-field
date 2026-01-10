@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_address_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
@@ -12,7 +13,6 @@ import 'package:app/ui/feedback/app_skeleton.dart';
 import 'package:app/ui/forms/app_text_field.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CheckoutAddressPage extends ConsumerStatefulWidget {
@@ -206,7 +206,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
 
   Future<void> _confirmAndNext(AppLocalizations l10n) async {
     final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final result = await ref.invoke(
       checkoutAddressViewModel.confirmSelection(),
     );
@@ -217,7 +217,7 @@ class _CheckoutAddressPageState extends ConsumerState<CheckoutAddressPage> {
       return;
     }
     if (!mounted) return;
-    router.go(AppRoutePaths.checkoutShipping);
+    await navigation.go(AppRoutePaths.checkoutShipping);
   }
 
   Future<void> _openForm({

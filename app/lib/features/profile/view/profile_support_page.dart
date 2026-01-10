@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
@@ -10,7 +11,6 @@ import 'package:app/ui/buttons/app_button.dart';
 import 'package:app/ui/overlays/app_modal.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class ProfileSupportPage extends ConsumerWidget {
@@ -22,12 +22,12 @@ class ProfileSupportPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final options = _supportOptions(
       context,
       prefersEnglish: prefersEnglish,
-      onNavigate: router.push,
+      onNavigate: navigation.push,
     );
 
     final tickets = _supportTickets(prefersEnglish);
@@ -104,7 +104,8 @@ class ProfileSupportPage extends ConsumerWidget {
                   variant: AppButtonVariant.secondary,
                   expand: true,
                   leading: const Icon(Icons.add_circle_outline),
-                  onPressed: () => router.push(AppRoutePaths.supportContact),
+                  onPressed: () =>
+                      navigation.push(AppRoutePaths.supportContact),
                 ),
               ]),
             ),
@@ -374,7 +375,7 @@ Future<void> _showTicketModal(
   _SupportTicket ticket,
   bool prefersEnglish,
 ) {
-  final router = GoRouter.of(context);
+  final navigation = context.navigation;
   return showAppModal<void>(
     context: context,
     title: ticket.title,
@@ -387,7 +388,7 @@ Future<void> _showTicketModal(
     secondaryAction: prefersEnglish ? 'Close' : '閉じる',
     onPrimaryPressed: () {
       Navigator.of(context).pop();
-      router.push(AppRoutePaths.supportContact);
+      navigation.push(AppRoutePaths.supportContact);
     },
   );
 }

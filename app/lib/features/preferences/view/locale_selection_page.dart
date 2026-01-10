@@ -2,13 +2,13 @@
 
 import 'dart:ui';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/preferences/view_model/locale_selection_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/app_locale_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class LocaleSelectionPage extends ConsumerStatefulWidget {
@@ -137,7 +137,7 @@ class _LocaleSelectionPageState extends ConsumerState<LocaleSelectionPage> {
       await ref.invoke(localeSelectionViewModel.save(selected));
       if (!mounted) return;
       final target = widget.onCompleteRoute ?? AppRoutePaths.persona;
-      context.go(target);
+      await context.go(target);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -151,7 +151,7 @@ class _LocaleSelectionPageState extends ConsumerState<LocaleSelectionPage> {
       await ref.invoke(localeSelectionViewModel.useDeviceLocale());
       if (!mounted) return;
       final target = widget.onCompleteRoute ?? AppRoutePaths.persona;
-      context.go(target);
+      await context.go(target);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

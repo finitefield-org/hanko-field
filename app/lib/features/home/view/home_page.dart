@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/home/view_model/home_providers.dart';
@@ -13,7 +14,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -44,7 +44,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final tokens = DesignTokensTheme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final featured = ref.watch(homeFeaturedProvider);
     final recents = ref.watch(homeRecentDesignsProvider);
     final recommended = ref.watch(homeRecommendedTemplatesProvider);
@@ -80,7 +80,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   context,
                   recents,
                   colorScheme,
-                  onSeeAll: () => router.go(AppRoutePaths.library),
+                  onSeeAll: () => navigation.go(AppRoutePaths.library),
                 ),
               ),
             ),
@@ -307,13 +307,13 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _handleFeaturedTap(HomeFeaturedItem item) {
     _trackTap(section: 'featured', id: item.id);
-    GoRouter.of(context).go(item.targetRoute);
+    context.go(item.targetRoute);
   }
 
   void _handleRecentTap(Design design, int index) {
     final id = design.id ?? 'recent-$index';
     _trackTap(section: 'recents', id: id);
-    GoRouter.of(context).go(AppRoutePaths.designPreview);
+    context.go(AppRoutePaths.designPreview);
   }
 
   void _handleTemplateTap(RecommendedTemplate template, int index) {
@@ -323,7 +323,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       reason: template.reason,
       position: index,
     );
-    GoRouter.of(context).go(AppRoutePaths.designStyle);
+    context.go(AppRoutePaths.designStyle);
   }
 
   void _trackTap({
@@ -361,7 +361,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final tokens = DesignTokensTheme.of(context);
     final unreadCount = switch (unread) {
       AsyncData(:final value) => value,
@@ -374,7 +374,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         IconButton(
           tooltip: AppLocalizations.of(context).homeSearchTooltip,
-          onPressed: () => router.go(AppRoutePaths.search),
+          onPressed: () => navigation.go(AppRoutePaths.search),
           icon: const Icon(Icons.search_rounded),
         ),
         Padding(
@@ -385,7 +385,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             offset: const Offset(2, -2),
             child: IconButton(
               tooltip: AppLocalizations.of(context).homeNotificationsTooltip,
-              onPressed: () => router.go(AppRoutePaths.notifications),
+              onPressed: () => navigation.go(AppRoutePaths.notifications),
               icon: const Icon(Icons.notifications_none_rounded),
             ),
           ),

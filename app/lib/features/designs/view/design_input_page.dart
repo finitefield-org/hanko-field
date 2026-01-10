@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
@@ -12,7 +13,6 @@ import 'package:app/shared/providers/session_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignInputPage extends ConsumerStatefulWidget {
@@ -212,7 +212,7 @@ class _DesignInputPageState extends ConsumerState<DesignInputPage> {
   }
 
   Future<void> _saveAndContinue() async {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final messenger = ScaffoldMessenger.of(context);
     final state = ref.container.read(designCreationViewModel).valueOrNull;
     if (state == null) return;
@@ -223,7 +223,7 @@ class _DesignInputPageState extends ConsumerState<DesignInputPage> {
       final filterQuery = filters.isEmpty
           ? ''
           : '&filters=${filters.join(',')}';
-      router.go(
+      await navigation.go(
         '${AppRoutePaths.designStyle}?mode=${input.sourceType.toJson()}$filterQuery',
       );
     } catch (e) {

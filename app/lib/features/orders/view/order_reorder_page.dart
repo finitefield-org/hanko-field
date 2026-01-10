@@ -103,7 +103,7 @@ class _OrderReorderPageState extends ConsumerState<OrderReorderPage> {
       SnackBar(content: Text(l10n.orderReorderCartRebuilt)),
     );
 
-    ref.container
+    await ref.container
         .read(navigationControllerProvider)
         .go(AppRoutePaths.checkoutAddress);
   }

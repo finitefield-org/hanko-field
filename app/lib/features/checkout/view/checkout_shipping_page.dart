@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_flow_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_shipping_view_model.dart';
@@ -8,7 +9,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CheckoutShippingPage extends ConsumerStatefulWidget {
@@ -122,8 +122,7 @@ class _CheckoutShippingPageState extends ConsumerState<CheckoutShippingPage> {
                 AppButton(
                   label: prefersEnglish ? 'Select address' : '住所を選択',
                   expand: true,
-                  onPressed: () =>
-                      GoRouter.of(context).go(AppRoutePaths.checkoutAddress),
+                  onPressed: () => context.go(AppRoutePaths.checkoutAddress),
                 ),
               ],
             ),
@@ -393,8 +392,8 @@ class _CheckoutShippingPageState extends ConsumerState<CheckoutShippingPage> {
   }
 
   void _openFaq() {
-    final router = GoRouter.of(context);
-    router.push(AppRoutePaths.supportFaq);
+    final navigation = context.navigation;
+    navigation.push(AppRoutePaths.supportFaq);
   }
 
   Future<void> _goToPayment({required bool prefersEnglish}) async {
@@ -441,7 +440,7 @@ class _CheckoutShippingPageState extends ConsumerState<CheckoutShippingPage> {
       }
     }
 
-    GoRouter.of(context).go(AppRoutePaths.checkoutPayment);
+    await context.go(AppRoutePaths.checkoutPayment);
   }
 }
 

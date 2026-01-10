@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
@@ -11,7 +12,6 @@ import 'package:app/features/library/view_model/library_list_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class LibraryDesignDuplicatePage extends ConsumerStatefulWidget {
@@ -137,7 +137,7 @@ class _LibraryDesignDuplicatePageState
   }
 
   Future<void> _submit(LibraryDesignDuplicateViewModel viewModel) async {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final messenger = ScaffoldMessenger.of(context);
     final prefersEnglish = ref.container
         .read(appExperienceGatesProvider)
@@ -155,7 +155,7 @@ class _LibraryDesignDuplicatePageState
           behavior: SnackBarBehavior.floating,
         ),
       );
-      router.go(AppRoutePaths.designEditor);
+      await navigation.go(AppRoutePaths.designEditor);
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(

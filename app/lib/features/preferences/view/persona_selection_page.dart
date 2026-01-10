@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/preferences/view_model/persona_selection_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
@@ -8,7 +9,6 @@ import 'package:app/shared/providers/app_persona_provider.dart';
 import 'package:app/shared/providers/session_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class PersonaSelectionPage extends ConsumerStatefulWidget {
@@ -143,7 +143,7 @@ class _PersonaSelectionPageState extends ConsumerState<PersonaSelectionPage> {
       final target =
           widget.onCompleteRoute ??
           (isAuthed ? AppRoutePaths.home : AppRoutePaths.auth);
-      context.go(target);
+      await context.go(target);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

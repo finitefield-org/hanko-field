@@ -166,7 +166,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>('${AppRoutePaths.orders}/${widget.orderId}/reorder'),
+          .push('${AppRoutePaths.orders}/${widget.orderId}/reorder'),
     );
   }
 
@@ -194,7 +194,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>('${AppRoutePaths.orders}/${widget.orderId}/$subPath'),
+          .push('${AppRoutePaths.orders}/${widget.orderId}/$subPath'),
     );
   }
 
@@ -202,7 +202,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>(AppRoutePaths.supportContact),
+          .push(AppRoutePaths.supportContact),
     );
   }
 

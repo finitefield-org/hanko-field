@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_review_view_model.dart';
@@ -9,7 +10,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CheckoutReviewPage extends ConsumerStatefulWidget {
@@ -125,7 +125,7 @@ class _CheckoutReviewPageState extends ConsumerState<CheckoutReviewPage> {
             : '商品を追加してから購入手続きを行ってください。',
         icon: Icons.shopping_bag_outlined,
         actionLabel: prefersEnglish ? 'Back to cart' : 'カートへ戻る',
-        onAction: () => GoRouter.of(context).go(AppRoutePaths.cart),
+        onAction: () => context.go(AppRoutePaths.cart),
       );
     }
 
@@ -206,9 +206,7 @@ class _CheckoutReviewPageState extends ConsumerState<CheckoutReviewPage> {
                 expand: true,
                 onPressed: isPlacing
                     ? null
-                    : () => GoRouter.of(
-                        context,
-                      ).go(AppRoutePaths.checkoutShipping),
+                    : () => context.go(AppRoutePaths.checkoutShipping),
               ),
             ],
           ),
@@ -242,9 +240,7 @@ class _CheckoutReviewPageState extends ConsumerState<CheckoutReviewPage> {
                 expand: true,
                 onPressed: isPlacing
                     ? null
-                    : () => GoRouter.of(
-                        context,
-                      ).go(AppRoutePaths.checkoutPayment),
+                    : () => context.go(AppRoutePaths.checkoutPayment),
               ),
             ],
           ),
@@ -350,7 +346,7 @@ class _CheckoutReviewPageState extends ConsumerState<CheckoutReviewPage> {
         path: AppRoutePaths.checkoutComplete,
         queryParameters: query,
       );
-      GoRouter.of(context).go(uri.toString());
+      await context.go(uri.toString());
     } else {
       messenger.showSnackBar(
         SnackBar(
@@ -372,7 +368,7 @@ class _EditChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -381,19 +377,19 @@ class _EditChips extends StatelessWidget {
           ActionChip(
             label: Text(prefersEnglish ? 'Edit address' : '住所を編集'),
             avatar: const Icon(Icons.location_on_outlined),
-            onPressed: () => router.go(AppRoutePaths.checkoutAddress),
+            onPressed: () => navigation.go(AppRoutePaths.checkoutAddress),
           ),
           SizedBox(width: tokens.spacing.sm),
           ActionChip(
             label: Text(prefersEnglish ? 'Edit shipping' : '配送を編集'),
             avatar: const Icon(Icons.local_shipping_outlined),
-            onPressed: () => router.go(AppRoutePaths.checkoutShipping),
+            onPressed: () => navigation.go(AppRoutePaths.checkoutShipping),
           ),
           SizedBox(width: tokens.spacing.sm),
           ActionChip(
             label: Text(prefersEnglish ? 'Edit payment' : '支払いを編集'),
             avatar: const Icon(Icons.credit_card_outlined),
-            onPressed: () => router.go(AppRoutePaths.checkoutPayment),
+            onPressed: () => navigation.go(AppRoutePaths.checkoutPayment),
           ),
         ],
       ),

@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/splash/view_model/splash_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class SplashPage extends ConsumerStatefulWidget {

@@ -3,15 +3,12 @@ import 'package:app/features/content/data/models/content_models.dart';
 import 'package:app/features/content/data/repositories/content_repository.dart';
 import 'package:app/features/guides/view/guide_detail_page.dart';
 import 'package:app/features/users/data/models/user_models.dart';
-import 'package:app/shared/providers/app_locale_provider.dart';
-import 'package:app/shared/providers/app_persona_provider.dart';
 import 'package:app/shared/providers/session_provider.dart';
-import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
-import 'package:miniriverpod/miniriverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers/test_app.dart';
 
 class _FakeContentRepository implements ContentRepository {
   String? lastSlug;
@@ -54,34 +51,20 @@ void main() {
     (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final repo = _FakeContentRepository();
-      final container = ProviderContainer(
-        overrides: [
-          appLocaleScope.overrideWithValue(const Locale('en')),
-          appPersonaScope.overrideWithValue(UserPersona.foreigner),
-          userSessionScope.overrideWithValue(const UserSession.signedOut()),
-          ContentRepository.fallback.overrideWithValue(repo),
-        ],
-      );
-
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) =>
-                const GuideDetailPage(slug: 'example', lang: null),
-          ),
-        ],
-      );
+      final overrides = [
+        ...buildTestOverrides(
+          locale: const Locale('en'),
+          persona: UserPersona.foreigner,
+          session: const UserSession.signedOut(),
+        ),
+        ContentRepository.fallback.overrideWithValue(repo),
+      ];
 
       await tester.pumpWidget(
-        ProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-            theme: ThemeData(
-              extensions: [DesignTokensTheme(tokens: DesignTokens.light())],
-            ),
-          ),
+        buildTestApp(
+          child: const GuideDetailPage(slug: 'example', lang: null),
+          overrides: overrides,
+          locale: const Locale('en'),
         ),
       );
 
@@ -93,7 +76,6 @@ void main() {
       expect(find.text('Title'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
-      container.dispose();
       await tester.pump();
     },
   );

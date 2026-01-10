@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/view_model/design_editor_view_model.dart';
 import 'package:app/monitoring/performance_monitoring.dart';
@@ -12,7 +13,6 @@ import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignEditorPage extends ConsumerStatefulWidget {
@@ -83,8 +83,7 @@ class _DesignEditorPageState extends ConsumerState<DesignEditorPage> {
           ? null
           : _PreviewFab(
               prefersEnglish: prefersEnglish,
-              onPressed: () =>
-                  GoRouter.of(context).go(AppRoutePaths.designPreview),
+              onPressed: () => context.go(AppRoutePaths.designPreview),
             ),
       body: SafeArea(
         bottom: false,

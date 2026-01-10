@@ -212,7 +212,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>(AppRoutePaths.supportContact),
+          .push(AppRoutePaths.supportContact),
     );
   }
 }

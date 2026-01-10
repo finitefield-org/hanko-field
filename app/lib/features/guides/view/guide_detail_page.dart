@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/content/data/models/content_models.dart';
 import 'package:app/features/guides/data/models/guide_presentation.dart';
@@ -8,7 +9,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,7 +22,7 @@ class GuideDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final prefersEnglish = ref.watch(appExperienceGatesProvider).prefersEnglish;
     final preferredLang = _normalizeLang(lang, prefersEnglish: prefersEnglish);
 
@@ -39,7 +39,7 @@ class GuideDetailPage extends ConsumerWidget {
         leading: IconButton(
           tooltip: prefersEnglish ? 'Back' : '戻る',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => router.pop(),
+          onPressed: () => navigation.pop(),
         ),
         actions: [
           IconButton(
@@ -80,7 +80,7 @@ class GuideDetailPage extends ConsumerWidget {
           IconButton(
             tooltip: prefersEnglish ? 'Open list' : '一覧へ',
             icon: const Icon(Icons.list_alt_rounded),
-            onPressed: () => router.go('${AppRoutePaths.profile}/guides'),
+            onPressed: () => navigation.go('${AppRoutePaths.profile}/guides'),
           ),
         ],
       ),
@@ -315,7 +315,7 @@ class _RelatedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final translation = guideTranslationForLang(guide, lang);
     final topicLabel = guideTopicLabel(
       guide.category,
@@ -342,7 +342,7 @@ class _RelatedCard extends StatelessWidget {
           ),
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => router.go(
+        onTap: () => navigation.go(
           '${AppRoutePaths.profile}/guides/${guide.slug}?lang=$lang',
         ),
       ),

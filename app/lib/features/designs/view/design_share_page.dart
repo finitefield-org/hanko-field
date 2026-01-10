@@ -3,6 +3,7 @@
 import 'package:app/core/feedback/app_message_helpers.dart';
 import 'package:app/core/feedback/app_message_provider.dart';
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/view_model/design_share_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
@@ -10,7 +11,6 @@ import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignSharePage extends ConsumerStatefulWidget {
@@ -114,7 +114,7 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
           ? null
           : _ShareFooter(
               prefersEnglish: prefersEnglish,
-              onNavigate: (tab) => GoRouter.of(context).go(tab.location),
+              onNavigate: (tab) => context.go(tab.location),
             ),
     );
   }
@@ -128,12 +128,12 @@ class _DesignSharePageState extends ConsumerState<DesignSharePage> {
   }
 
   void _close(BuildContext context) {
-    final router = GoRouter.of(context);
-    if (router.canPop()) {
-      router.pop();
+    final navigation = context.navigation;
+    if (navigation.canPop()) {
+      navigation.pop();
       return;
     }
-    router.go(AppRoutePaths.designPreview);
+    navigation.go(AppRoutePaths.designPreview);
   }
 
   Future<void> _copyToClipboard(String value, String message) async {

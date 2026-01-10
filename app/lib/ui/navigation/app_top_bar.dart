@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/notifications/data/providers/unread_notifications_provider.dart';
 import 'package:app/localization/app_localizations.dart';
@@ -9,7 +10,6 @@ import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/overlays/app_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -34,10 +34,10 @@ class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
     final tokens = DesignTokensTheme.of(context);
     final l10n = AppLocalizations.of(context);
     final unread = ref.watch(unreadNotificationsProvider);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
-    void openNotifications() => router.go(AppRoutePaths.notifications);
-    void openSearch() => router.go(AppRoutePaths.search);
+    void openNotifications() => navigation.go(AppRoutePaths.notifications);
+    void openSearch() => navigation.go(AppRoutePaths.search);
     void openHelp() => unawaited(_showHelpOverlay(context));
 
     return CallbackShortcuts(
@@ -182,7 +182,7 @@ class _NotificationsAction extends StatelessWidget {
 
 Future<void> _showHelpOverlay(BuildContext context) async {
   final tokens = DesignTokensTheme.of(context);
-  final router = GoRouter.of(context);
+  final navigation = context.navigation;
   final l10n = AppLocalizations.of(context);
 
   await showAppModal<void>(
@@ -192,11 +192,11 @@ Future<void> _showHelpOverlay(BuildContext context) async {
     secondaryAction: l10n.topBarHelpOverlaySecondaryAction,
     onPrimaryPressed: () {
       Navigator.of(context).maybePop();
-      router.go(AppRoutePaths.supportFaq);
+      navigation.go(AppRoutePaths.supportFaq);
     },
     onSecondaryPressed: () {
       Navigator.of(context).maybePop();
-      router.go(AppRoutePaths.supportContact);
+      navigation.go(AppRoutePaths.supportContact);
     },
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +228,7 @@ Future<void> _showHelpOverlay(BuildContext context) async {
           subtitle: l10n.topBarHelpLinkFaqSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
-            router.go(AppRoutePaths.supportFaq);
+            navigation.go(AppRoutePaths.supportFaq);
           },
         ),
         SizedBox(height: tokens.spacing.sm),
@@ -238,7 +238,7 @@ Future<void> _showHelpOverlay(BuildContext context) async {
           subtitle: l10n.topBarHelpLinkChatSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
-            router.go(AppRoutePaths.supportChat);
+            navigation.go(AppRoutePaths.supportChat);
           },
         ),
         SizedBox(height: tokens.spacing.sm),
@@ -248,7 +248,7 @@ Future<void> _showHelpOverlay(BuildContext context) async {
           subtitle: l10n.topBarHelpLinkContactSubtitle,
           onTap: () {
             Navigator.of(context).maybePop();
-            router.go(AppRoutePaths.supportContact);
+            navigation.go(AppRoutePaths.supportContact);
           },
         ),
       ],

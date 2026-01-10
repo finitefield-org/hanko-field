@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart'
     as catalog;
@@ -8,7 +9,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class MaterialDetailPage extends ConsumerStatefulWidget {
@@ -116,7 +116,7 @@ class _MaterialDetailPageState extends ConsumerState<MaterialDetailPage> {
                     ? 'Share sheet opened (mock)'
                     : '共有シートを開きました（モック）',
               ),
-              onStartOrder: () => GoRouter.of(context).go(AppRoutePaths.cart),
+              onStartOrder: () => context.go(AppRoutePaths.cart),
             ),
     );
   }
@@ -184,7 +184,7 @@ class _MaterialDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final material = data.material;
     final chips = <String>[
       data.surfaceFinish,
@@ -243,15 +243,16 @@ class _MaterialDetailBody extends StatelessWidget {
                           size: 18,
                         ),
                         label: Text(id),
-                        onPressed: () => router.go('/products/$id'),
+                        onPressed: () => navigation.go('/products/$id'),
                       ),
                     )
                     .toList(),
               ),
               SizedBox(height: tokens.spacing.md),
               TextButton.icon(
-                onPressed: () =>
-                    router.go('/products/${data.compatibleProductRefs.first}'),
+                onPressed: () => navigation.go(
+                  '/products/${data.compatibleProductRefs.first}',
+                ),
                 icon: const Icon(Icons.arrow_forward),
                 label: Text(
                   prefersEnglish ? 'View product detail' : '商品の詳細を見る',

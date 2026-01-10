@@ -284,7 +284,7 @@ class _OrderInvoicePageState extends ConsumerState<OrderInvoicePage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>(AppRoutePaths.supportContact),
+          .push(AppRoutePaths.supportContact),
     );
   }
 }

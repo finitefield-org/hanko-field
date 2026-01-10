@@ -2,6 +2,7 @@
 
 import 'package:app/core/model/enums.dart';
 import 'package:app/core/model/value_objects.dart' as models;
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/search/data/search_models.dart';
 import 'package:app/features/search/view_model/search_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
@@ -9,7 +10,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -474,7 +474,7 @@ class _SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => GoRouter.of(context).pop(),
+        onPressed: () => context.pop(),
       ),
       titleSpacing: 0,
       title: Padding(

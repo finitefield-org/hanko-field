@@ -1,13 +1,13 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_complete_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -35,7 +35,7 @@ class CheckoutCompletePage extends ConsumerWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => GoRouter.of(context).go(AppRoutePaths.shop),
+          onPressed: () => context.go(AppRoutePaths.shop),
         ),
         title: Text(prefersEnglish ? 'Order complete' : '注文完了'),
       ),
@@ -97,7 +97,7 @@ class _Body extends StatelessWidget {
           message: current.error.toString(),
           icon: Icons.error_outline,
           actionLabel: prefersEnglish ? 'Back to shop' : 'ショップへ戻る',
-          onAction: () => GoRouter.of(context).go(AppRoutePaths.shop),
+          onAction: () => context.go(AppRoutePaths.shop),
         ),
       );
     }
@@ -132,7 +132,7 @@ class _Body extends StatelessWidget {
         AppButton(
           label: prefersEnglish ? 'Continue shopping' : '買い物を続ける',
           expand: true,
-          onPressed: () => GoRouter.of(context).go(AppRoutePaths.shop),
+          onPressed: () => context.go(AppRoutePaths.shop),
         ),
       ],
     );
@@ -243,7 +243,7 @@ class _NextStepsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final notificationChip = switch (notificationStatus) {
       CheckoutNotificationStatus.authorized => ActionChip(
@@ -278,7 +278,7 @@ class _NextStepsCard extends StatelessWidget {
                 ? 'See production and delivery updates.'
                 : '制作進捗や配送状況を確認できます。',
             chipLabel: prefersEnglish ? 'Open' : '開く',
-            onChipPressed: () => router.go(AppRoutePaths.orders),
+            onChipPressed: () => navigation.go(AppRoutePaths.orders),
           ),
           _StepTile(
             title: prefersEnglish ? 'View your library' : 'マイ印鑑を見る',
@@ -286,7 +286,7 @@ class _NextStepsCard extends StatelessWidget {
                 ? 'Reuse and export your saved designs.'
                 : '保存したデザインを再利用・出力できます。',
             chipLabel: prefersEnglish ? 'Open' : '開く',
-            onChipPressed: () => router.go(AppRoutePaths.library),
+            onChipPressed: () => navigation.go(AppRoutePaths.library),
           ),
           _StepTile(
             title: prefersEnglish ? 'Create another design' : 'もう一度作成する',
@@ -294,7 +294,7 @@ class _NextStepsCard extends StatelessWidget {
                 ? 'Start a fresh design flow.'
                 : '新しいデザイン作成を開始します。',
             chipLabel: prefersEnglish ? 'Start' : '開始',
-            onChipPressed: () => router.go('${AppRoutePaths.design}/new'),
+            onChipPressed: () => navigation.go('${AppRoutePaths.design}/new'),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
@@ -359,7 +359,7 @@ class _ShareCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     return AppCard(
       child: Column(
@@ -401,7 +401,7 @@ class _ShareCard extends StatelessWidget {
                   label: prefersEnglish ? 'View orders' : '注文一覧',
                   variant: AppButtonVariant.ghost,
                   expand: true,
-                  onPressed: () => router.go(AppRoutePaths.orders),
+                  onPressed: () => navigation.go(AppRoutePaths.orders),
                 ),
               ),
             ],

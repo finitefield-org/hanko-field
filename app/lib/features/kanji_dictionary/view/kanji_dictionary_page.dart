@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/kanji_mapping_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
@@ -13,7 +14,6 @@ import 'package:app/ui/app_ui.dart';
 import 'package:characters/characters.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class KanjiDictionaryPage extends ConsumerStatefulWidget {
@@ -61,7 +61,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final l10n = AppLocalizations.of(context);
 
     final state = ref.watch(_viewModel);
@@ -89,7 +89,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
         leading: IconButton(
           tooltip: l10n.commonBack,
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => _handleBack(router),
+          onPressed: () => _handleBack(navigation),
         ),
         actions: [
           IconButton(
@@ -108,7 +108,7 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
           IconButton(
             tooltip: l10n.kanjiDictionaryOpenGuides,
             icon: const Icon(Icons.menu_book_outlined),
-            onPressed: () => router.go(AppRoutePaths.guides),
+            onPressed: () => navigation.go(AppRoutePaths.guides),
           ),
         ],
         bottom: PreferredSize(
@@ -179,17 +179,17 @@ class _KanjiDictionaryPageState extends ConsumerState<KanjiDictionaryPage> {
     );
   }
 
-  void _handleBack(GoRouter router) {
-    if (router.canPop()) {
-      router.pop();
+  void _handleBack(NavigationController navigation) {
+    if (navigation.canPop()) {
+      navigation.pop();
       return;
     }
     final dest = widget.returnTo?.trim();
     if (dest != null && dest.isNotEmpty) {
-      router.go(Uri.decodeComponent(dest));
+      navigation.go(Uri.decodeComponent(dest));
       return;
     }
-    router.go(AppRoutePaths.profile);
+    navigation.go(AppRoutePaths.profile);
   }
 
   void _handleQueryChanged() {
@@ -580,7 +580,7 @@ class _KanjiDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final candidate = entry.candidate;
 
     final canInsert = insertField != null;
@@ -674,9 +674,9 @@ class _KanjiDetailSheet extends ConsumerWidget {
               await Navigator.of(context).maybePop();
               final dest = returnTo?.trim();
               if (dest != null && dest.isNotEmpty) {
-                router.go(Uri.decodeComponent(dest));
+                await navigation.go(Uri.decodeComponent(dest));
               } else {
-                router.go(AppRoutePaths.designInput);
+                await navigation.go(AppRoutePaths.designInput);
               }
             },
             icon: const Icon(Icons.add_rounded),

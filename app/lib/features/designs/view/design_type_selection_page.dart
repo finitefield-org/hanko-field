@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:app/analytics/analytics.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
@@ -10,7 +11,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignTypeSelectionPage extends ConsumerWidget {
@@ -129,7 +129,7 @@ class DesignTypeSelectionPage extends ConsumerWidget {
     final state = ref.watch(designCreationViewModel).valueOrNull;
     if (state == null) return;
 
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final messenger = ScaffoldMessenger.of(context);
     final requiresStorage = _requiresStorage(state.selectedType);
     if (requiresStorage) {
@@ -160,7 +160,7 @@ class DesignTypeSelectionPage extends ConsumerWidget {
     final filters = state.activeFilters.isEmpty
         ? ''
         : '&filters=${state.activeFilters.join(',')}';
-    router.go('$target?mode=${state.selectedType.toJson()}$filters');
+    await navigation.go('$target?mode=${state.selectedType.toJson()}$filters');
   }
 }
 
@@ -620,7 +620,7 @@ Future<void> _showFlowHelp({
     primaryAction: prefersEnglish ? 'Open guides' : 'ガイドを見る',
     onPrimaryPressed: () {
       Navigator.of(context).maybePop();
-      GoRouter.of(context).go(AppRoutePaths.guides);
+      context.go(AppRoutePaths.guides);
     },
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

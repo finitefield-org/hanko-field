@@ -1,11 +1,11 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/support/data/models/support_chat_models.dart';
 import 'package:app/features/support/view_model/support_chat_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class SupportChatPage extends ConsumerStatefulWidget {
@@ -36,7 +36,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final state = ref.watch(supportChatViewModel);
@@ -50,7 +50,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
         leading: IconButton(
           tooltip: prefersEnglish ? 'Back' : '戻る',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => router.pop(),
+          onPressed: () => navigation.pop(),
         ),
         actions: [
           if (state.valueOrNull != null)

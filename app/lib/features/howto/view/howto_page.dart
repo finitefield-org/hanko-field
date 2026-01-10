@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/content/data/models/content_models.dart';
 import 'package:app/features/guides/data/models/guide_presentation.dart';
@@ -10,7 +11,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class HowtoPage extends ConsumerWidget {
@@ -21,7 +21,7 @@ class HowtoPage extends ConsumerWidget {
     final tokens = DesignTokensTheme.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final state = ref.watch(howtoViewModel);
 
@@ -42,7 +42,7 @@ class HowtoPage extends ConsumerWidget {
                 leading: IconButton(
                   tooltip: prefersEnglish ? 'Back' : '戻る',
                   icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => router.pop(),
+                  onPressed: () => navigation.pop(),
                 ),
                 bottom: TabBar(
                   tabs: [
@@ -102,7 +102,7 @@ class HowtoPage extends ConsumerWidget {
                       final qp = value.lang == null
                           ? ''
                           : '?lang=${value.lang}';
-                      router.go('${AppRoutePaths.profile}/guides/$slug$qp');
+                      navigation.go('${AppRoutePaths.profile}/guides/$slug$qp');
                     },
                   ),
                 ],

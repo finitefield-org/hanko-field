@@ -2,12 +2,12 @@
 
 import 'dart:math' as math;
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/onboarding/view_model/onboarding_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -182,7 +182,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     try {
       await ref.invoke(action);
       if (!mounted) return;
-      context.go(AppRoutePaths.locale);
+      await context.go(AppRoutePaths.locale);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

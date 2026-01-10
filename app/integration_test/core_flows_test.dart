@@ -1,19 +1,14 @@
 import 'package:app/core/model/enums.dart';
 import 'package:app/core/model/value_objects.dart';
 import 'package:app/core/routing/routes.dart';
-import 'package:app/features/cart/view/cart_page.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
-import 'package:app/features/checkout/view/checkout_review_page.dart';
 import 'package:app/features/checkout/view_model/checkout_review_view_model.dart';
 import 'package:app/features/checkout/view_model/checkout_shipping_view_model.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
-import 'package:app/features/designs/view/design_input_page.dart';
-import 'package:app/features/designs/view/design_type_selection_page.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
 import 'package:app/features/users/data/models/user_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:network_image_mock/network_image_mock.dart';
@@ -40,27 +35,16 @@ void main() {
       (_) => const AsyncData<DesignCreationState>(state),
     );
 
-    final router = GoRouter(
-      initialLocation: AppRoutePaths.designNew,
-      routes: [
-        GoRoute(
-          path: AppRoutePaths.designNew,
-          builder: (_, __) => const DesignTypeSelectionPage(),
-        ),
-        GoRoute(
-          path: AppRoutePaths.designInput,
-          builder: (_, __) => const DesignInputPage(),
-        ),
-      ],
-    );
-
     final overrides = [
       ...buildTestOverrides(),
       designCreationViewModel.overrideWith(designOverride),
     ];
 
     await tester.pumpWidget(
-      buildTestRouterApp(router: router, overrides: overrides),
+      buildTestNavApp(
+        initialLocation: AppRoutePaths.designNew,
+        overrides: overrides,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -76,17 +60,6 @@ void main() {
     final cartState = _sampleCartState();
     final reviewState = _sampleCheckoutReviewState(cartState);
 
-    final router = GoRouter(
-      initialLocation: AppRoutePaths.cart,
-      routes: [
-        GoRoute(path: AppRoutePaths.cart, builder: (_, __) => const CartPage()),
-        GoRoute(
-          path: AppRoutePaths.checkoutAddress,
-          builder: (_, __) => const CheckoutReviewPage(),
-        ),
-      ],
-    );
-
     final AsyncValue<CartState> asyncCartState = AsyncData<CartState>(
       cartState,
     );
@@ -100,11 +73,11 @@ void main() {
 
     await mockNetworkImagesFor(() async {
       await tester.pumpWidget(
-        buildTestRouterApp(router: router, overrides: overrides),
+        buildTestNavApp(
+          initialLocation: AppRoutePaths.checkoutReview,
+          overrides: overrides,
+        ),
       );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Proceed to checkout'));
       await tester.pumpAndSettle();
 
       expect(find.text('Review order'), findsOneWidget);

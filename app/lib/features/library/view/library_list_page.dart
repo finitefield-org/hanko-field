@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/data/repositories/design_repository.dart';
@@ -11,7 +12,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class LibraryListPage extends ConsumerStatefulWidget {
@@ -126,12 +126,11 @@ class _LibraryListPageState extends ConsumerState<LibraryListPage> {
                   state: state,
                   onRetry: () =>
                       unawaited(ref.invoke(libraryListViewModel.refresh())),
-                  onCreateNew: () =>
-                      GoRouter.of(context).go(AppRoutePaths.designNew),
+                  onCreateNew: () => context.go(AppRoutePaths.designNew),
                   onOpenDetail: (design) {
                     final id = design.id;
                     if (id == null) return;
-                    GoRouter.of(context).go('${AppRoutePaths.library}/$id');
+                    context.go('${AppRoutePaths.library}/$id');
                   },
                   onPreview: (design) => _showPreview(context, design),
                   onShare: (design) => _showToast(

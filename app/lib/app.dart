@@ -2,6 +2,7 @@
 
 import 'package:app/config/app_flavor.dart';
 import 'package:app/core/routing/app_router.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/firebase/firebase_providers.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/shared/providers/app_locale_provider.dart';
@@ -40,10 +41,10 @@ class HankoFieldApp extends ConsumerWidget {
     final flavor = ref.watch(appFlavorProvider);
     final themeMode = ref.watch(themeModeProvider);
     final themeBundle = ref.watch(themeBundleProvider);
-    final router = ref.watch(appRouterProvider);
+    final navigationController = ref.watch(navigationControllerProvider);
     final locale = ref.watch(appLocaleProvider);
 
-    return MaterialApp.router(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: flavor.displayLabel,
       theme: themeBundle.light,
@@ -58,13 +59,16 @@ class HankoFieldApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
       ],
       localeResolutionCallback: AppLocalizations.resolveLocale,
-      routerConfig: router,
+      home: const AppNavigationRoot(),
       builder: (context, child) {
         return Directionality(
           textDirection: _resolveTextDirection(locale),
           child: FocusTraversalGroup(
             policy: OrderedTraversalPolicy(),
-            child: AppMessageOverlay(child: child ?? const SizedBox.shrink()),
+            child: NavigationControllerScope(
+              controller: navigationController,
+              child: AppMessageOverlay(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         );
       },

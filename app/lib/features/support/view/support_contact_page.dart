@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/support/data/models/support_ticket_models.dart';
 import 'package:app/features/support/view_model/support_contact_view_model.dart';
@@ -14,7 +15,6 @@ import 'package:app/ui/forms/app_text_field.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:path/path.dart' as path;
 
@@ -50,7 +50,7 @@ class _SupportContactPageState extends ConsumerState<SupportContactPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
 
@@ -77,13 +77,13 @@ class _SupportContactPageState extends ConsumerState<SupportContactPage> {
             leading: IconButton(
               tooltip: prefersEnglish ? 'Back' : '戻る',
               icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () => router.pop(),
+              onPressed: () => navigation.pop(),
             ),
             actions: [
               IconButton(
                 tooltip: prefersEnglish ? 'History' : '履歴',
                 icon: const Icon(Icons.history_rounded),
-                onPressed: () => router.push(AppRoutePaths.profileSupport),
+                onPressed: () => navigation.push(AppRoutePaths.profileSupport),
               ),
               SizedBox(width: tokens.spacing.sm),
             ],
@@ -213,7 +213,7 @@ class _SupportContactPageState extends ConsumerState<SupportContactPage> {
                     ),
                     SizedBox(width: tokens.spacing.md),
                     TextButton(
-                      onPressed: isSubmitting ? null : () => router.pop(),
+                      onPressed: isSubmitting ? null : () => navigation.pop(),
                       child: Text(prefersEnglish ? 'Cancel' : 'キャンセル'),
                     ),
                   ],

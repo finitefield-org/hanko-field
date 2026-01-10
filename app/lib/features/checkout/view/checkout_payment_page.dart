@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, deprecated_member_use
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/checkout/view_model/checkout_payment_view_model.dart';
 import 'package:app/features/payments/payment_method_form.dart';
@@ -9,7 +10,6 @@ import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CheckoutPaymentPage extends ConsumerStatefulWidget {
@@ -219,7 +219,7 @@ class _CheckoutPaymentPageState extends ConsumerState<CheckoutPaymentPage> {
         isLoading: isSaving,
         onPressed: selected == null || isSaving
             ? null
-            : () => GoRouter.of(context).go(AppRoutePaths.checkoutReview),
+            : () => context.go(AppRoutePaths.checkoutReview),
       ),
     );
   }

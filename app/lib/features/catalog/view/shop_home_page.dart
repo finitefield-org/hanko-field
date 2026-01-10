@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:app/analytics/analytics.dart';
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart'
     as catalog;
@@ -14,7 +15,6 @@ import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class ShopHomePage extends ConsumerStatefulWidget {
@@ -44,7 +44,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final l10n = AppLocalizations.of(context);
 
     final categories = ref.watch(shopCategoriesProvider);
@@ -63,7 +63,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            _buildAppBar(context, router, l10n),
+            _buildAppBar(context, navigation, l10n),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -74,7 +74,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                 ),
                 child: _HeroBanner(
                   l10n: l10n,
-                  onTap: () => _handleHeroTap(router),
+                  onTap: () => _handleHeroTap(navigation),
                 ),
               ),
             ),
@@ -121,7 +121,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
 
   SliverAppBar _buildAppBar(
     BuildContext context,
-    GoRouter router,
+    NavigationController navigation,
     AppLocalizations l10n,
   ) {
     final tokens = DesignTokensTheme.of(context);
@@ -133,12 +133,12 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
       actions: [
         IconButton(
           tooltip: l10n.shopSearchTooltip,
-          onPressed: () => router.go(AppRoutePaths.search),
+          onPressed: () => navigation.go(AppRoutePaths.search),
           icon: const Icon(Icons.search_rounded),
         ),
         IconButton(
           tooltip: l10n.shopCartTooltip,
-          onPressed: () => router.go(AppRoutePaths.cart),
+          onPressed: () => navigation.go(AppRoutePaths.cart),
           icon: const Icon(Icons.shopping_cart_outlined),
         ),
       ],
@@ -180,7 +180,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
                         avatar: const Icon(Icons.menu_book_outlined, size: 18),
                         label: Text(l10n.shopActionGuides),
                         onPressed: () =>
-                            router.go('${AppRoutePaths.profile}/guides'),
+                            navigation.go('${AppRoutePaths.profile}/guides'),
                       ),
                     ],
                   ),
@@ -446,7 +446,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
     }
   }
 
-  void _handleHeroTap(GoRouter router) {
+  void _handleHeroTap(NavigationController navigation) {
     _trackEvent(
       const ShopPromotionTappedEvent(
         promotionId: 'hero',
@@ -454,7 +454,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
         entryPoint: 'hero',
       ),
     );
-    router.go(
+    navigation.go(
       AppRoutePaths.productDetail.replaceFirst(':productId', 'round-classic'),
     );
   }
@@ -463,7 +463,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
     _trackEvent(
       ShopCategoryTappedEvent(categoryId: category.id, position: index),
     );
-    GoRouter.of(context).go(category.targetRoute);
+    context.go(category.targetRoute);
   }
 
   void _handlePromotionTap(ShopPromotionHighlight promotion, int index) {
@@ -474,7 +474,7 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
         position: index,
       ),
     );
-    GoRouter.of(context).go(promotion.targetRoute);
+    context.go(promotion.targetRoute);
   }
 
   void _handleMaterialTap(ShopMaterialHighlight material, int index) {
@@ -489,12 +489,12 @@ class _ShopHomePageState extends ConsumerState<ShopHomePage> {
         position: index,
       ),
     );
-    GoRouter.of(context).go(target);
+    context.go(target);
   }
 
   void _handleGuideTap(ShopGuideLink link) {
     _trackEvent(ShopGuideTappedEvent(guideId: link.id));
-    GoRouter.of(context).go(link.targetRoute);
+    context.go(link.targetRoute);
   }
 
   void _trackEvent(AppAnalyticsEvent event) {

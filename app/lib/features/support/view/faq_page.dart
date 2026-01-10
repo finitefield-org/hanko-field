@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/content/data/models/content_models.dart';
 import 'package:app/features/guides/data/models/guide_presentation.dart';
@@ -8,7 +9,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class FaqPage extends ConsumerStatefulWidget {
@@ -41,7 +41,7 @@ class _FaqPageState extends ConsumerState<FaqPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final lang = prefersEnglish ? 'en' : 'ja';
@@ -74,7 +74,7 @@ class _FaqPageState extends ConsumerState<FaqPage> {
               leading: IconButton(
                 tooltip: prefersEnglish ? 'Back' : '戻る',
                 icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => router.pop(),
+                onPressed: () => navigation.pop(),
               ),
               actions: [
                 IconButton(
@@ -327,7 +327,7 @@ class _FaqPageState extends ConsumerState<FaqPage> {
     required VoidCallback? onLoadMore,
   }) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final filtered = _applyCategory(items, selectedCategoryId);
     final searched = query.isEmpty
@@ -363,14 +363,15 @@ class _FaqPageState extends ConsumerState<FaqPage> {
                         label: prefersEnglish ? 'Chat' : 'チャット',
                         variant: AppButtonVariant.secondary,
                         leading: const Icon(Icons.chat_bubble_outline),
-                        onPressed: () => router.push(AppRoutePaths.supportChat),
+                        onPressed: () =>
+                            navigation.push(AppRoutePaths.supportChat),
                       ),
                       AppButton(
                         label: prefersEnglish ? 'Contact form' : '問い合わせ',
                         variant: AppButtonVariant.ghost,
                         leading: const Icon(Icons.support_agent_outlined),
                         onPressed: () =>
-                            router.push(AppRoutePaths.supportContact),
+                            navigation.push(AppRoutePaths.supportContact),
                       ),
                     ],
                   ),

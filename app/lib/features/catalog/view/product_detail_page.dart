@@ -1,13 +1,13 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/catalog/view_model/product_detail_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -799,7 +799,7 @@ class _DesignCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = DesignTokensTheme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     return AppCard(
       padding: EdgeInsets.all(tokens.spacing.lg),
@@ -814,7 +814,7 @@ class _DesignCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               TextButton.icon(
-                onPressed: () => router.go(AppRoutePaths.designStyle),
+                onPressed: () => navigation.go(AppRoutePaths.designStyle),
                 icon: const Icon(Icons.brush_outlined),
                 label: Text(prefersEnglish ? 'Open designer' : 'デザインを開く'),
               ),
@@ -855,7 +855,7 @@ class _DesignCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => router.go(
+              onPressed: () => navigation.go(
                 AppRoutePaths.productAddons.replaceFirst(
                   ':productId',
                   productId,

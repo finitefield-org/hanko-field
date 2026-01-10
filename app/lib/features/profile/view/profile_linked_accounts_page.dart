@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/profile/view_model/profile_linked_accounts_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
@@ -11,7 +12,6 @@ import 'package:app/ui/feedback/app_skeleton.dart';
 import 'package:app/ui/overlays/app_modal.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class ProfileLinkedAccountsPage extends ConsumerStatefulWidget {
@@ -32,7 +32,7 @@ class _ProfileLinkedAccountsPageState
     final l10n = AppLocalizations.of(context);
     final tokens = DesignTokensTheme.of(context);
     final theme = Theme.of(context);
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final state = ref.watch(profileLinkedAccountsViewModel);
     final saveState = ref.watch(profileLinkedAccountsViewModel.saveMut);
@@ -93,7 +93,7 @@ class _ProfileLinkedAccountsPageState
             loaded: loaded,
             isBusy: isBusy,
             canSave: _isDirty && !isBusy,
-            onNavigateToAuth: () => router.go(AppRoutePaths.auth),
+            onNavigateToAuth: () => navigation.go(AppRoutePaths.auth),
           ),
         ),
       ),

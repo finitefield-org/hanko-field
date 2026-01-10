@@ -3,13 +3,13 @@
 import 'dart:async';
 
 import 'package:app/core/model/value_objects.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/cart/view_model/cart_view_model.dart';
 import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class CartPage extends ConsumerStatefulWidget {
@@ -84,7 +84,7 @@ class _CartPageState extends ConsumerState<CartPage> {
     required AppLocalizations l10n,
     required DesignTokens tokens,
   }) {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     if (state is AsyncLoading<CartState> && state.valueOrNull == null) {
       return Padding(
@@ -126,7 +126,7 @@ class _CartPageState extends ConsumerState<CartPage> {
               message: l10n.cartEmptyMessage,
               icon: Icons.shopping_bag_outlined,
               actionLabel: l10n.cartEmptyAction,
-              onAction: () => router.go(AppRoutePaths.shop),
+              onAction: () => navigation.go(AppRoutePaths.shop),
             ),
           ],
         ),
@@ -397,8 +397,7 @@ class _CartPageState extends ConsumerState<CartPage> {
   }
 
   void _goToCheckout() {
-    final router = GoRouter.of(context);
-    router.go(AppRoutePaths.checkoutAddress);
+    context.navigation.go(AppRoutePaths.checkoutAddress);
   }
 }
 

@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/content/data/models/content_models.dart';
 import 'package:app/features/guides/view_model/guides_list_view_model.dart';
@@ -7,7 +8,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class GuidesListPage extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _GuidesListPageState extends ConsumerState<GuidesListPage> {
     final tokens = DesignTokensTheme.of(context);
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final state = ref.watch(guidesListViewModel);
 
@@ -60,7 +60,7 @@ class _GuidesListPageState extends ConsumerState<GuidesListPage> {
               leading: IconButton(
                 tooltip: prefersEnglish ? 'Back' : '戻る',
                 icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => router.pop(),
+                onPressed: () => navigation.pop(),
               ),
               flexibleSpace: LayoutBuilder(
                 builder: (context, constraints) {
@@ -145,7 +145,7 @@ class _GuidesListPageState extends ConsumerState<GuidesListPage> {
                 state: value,
                 prefersEnglish: prefersEnglish,
                 query: _query,
-                onOpenGuide: (slug) => router.go(
+                onOpenGuide: (slug) => navigation.go(
                   '${AppRoutePaths.profile}/guides/$slug?lang=${value.locale.resolveLang(gates)}',
                 ),
                 onLoadMore: () => ref.invoke(guidesListViewModel.loadMore()),

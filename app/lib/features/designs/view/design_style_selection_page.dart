@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/catalog/data/models/catalog_models.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
@@ -11,7 +12,6 @@ import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignStyleSelectionPage extends ConsumerStatefulWidget {
@@ -119,7 +119,7 @@ class _DesignStyleSelectionPageState
     required BuildContext context,
     required _StyleSelection selection,
   }) async {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final messenger = ScaffoldMessenger.of(context);
     final gates = ref.container.read(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
@@ -138,7 +138,7 @@ class _DesignStyleSelectionPageState
       ),
     );
 
-    router.go(
+    await navigation.go(
       '${AppRoutePaths.designEditor}?template=${selectionRef ?? 'draft'}',
     );
     messenger.showSnackBar(

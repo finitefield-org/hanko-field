@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:app/core/model/enums.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/design_models.dart';
 import 'package:app/features/designs/view_model/design_creation_view_model.dart';
@@ -13,7 +14,6 @@ import 'package:app/localization/app_localizations.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class LibraryDesignDetailPage extends ConsumerStatefulWidget {
@@ -99,15 +99,15 @@ class _LibraryDesignDetailPageState
                   subtitle: subtitle,
                   state: state.valueOrNull!,
                   l10n: l10n,
-                  onVersions: () => GoRouter.of(
-                    context,
-                  ).go('${AppRoutePaths.library}/${widget.designId}/versions'),
+                  onVersions: () => context.go(
+                    '${AppRoutePaths.library}/${widget.designId}/versions',
+                  ),
                   onDuplicate: () => _handleDuplicate(context),
                   onShare: () =>
                       _handleShare(context, state.valueOrNull!.design),
-                  onShareLinks: () => GoRouter.of(
-                    context,
-                  ).go('${AppRoutePaths.library}/${widget.designId}/shares'),
+                  onShareLinks: () => context.go(
+                    '${AppRoutePaths.library}/${widget.designId}/shares',
+                  ),
                   onArchive: () =>
                       _handleArchive(context, state.valueOrNull!.design),
                   onReorder: () =>
@@ -149,28 +149,27 @@ class _LibraryDesignDetailPageState
   }
 
   Future<void> _handleEdit(BuildContext context, Design design) async {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     if (!await _hydrateCreationFromDesign(context, design)) return;
-    router.go(AppRoutePaths.designEditor);
+    await navigation.go(AppRoutePaths.designEditor);
   }
 
   Future<void> _handleExport(BuildContext context, Design design) async {
-    final router = GoRouter.of(context);
-    router.go(
-      '${AppRoutePaths.library}/${widget.designId}/export',
-      extra: design,
-    );
+    final navigation = context.navigation;
+    await navigation.go('${AppRoutePaths.library}/${widget.designId}/export');
   }
 
   Future<void> _handleShare(BuildContext context, Design design) async {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     if (!await _hydrateCreationFromDesign(context, design)) return;
-    router.go(AppRoutePaths.designShare);
+    await navigation.go(AppRoutePaths.designShare);
   }
 
   Future<void> _handleDuplicate(BuildContext context) async {
-    final router = GoRouter.of(context);
-    router.go('${AppRoutePaths.library}/${widget.designId}/duplicate');
+    final navigation = context.navigation;
+    await navigation.go(
+      '${AppRoutePaths.library}/${widget.designId}/duplicate',
+    );
   }
 
   Future<void> _handleArchive(BuildContext context, Design design) async {
@@ -216,11 +215,11 @@ class _LibraryDesignDetailPageState
         behavior: SnackBarBehavior.floating,
       ),
     );
-    if (context.mounted) GoRouter.of(context).pop();
+    if (context.mounted) context.pop();
   }
 
   void _handleReorder(BuildContext context, Design design) {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(
       SnackBar(
@@ -230,7 +229,7 @@ class _LibraryDesignDetailPageState
         behavior: SnackBarBehavior.floating,
       ),
     );
-    router.go(AppRoutePaths.shop);
+    navigation.go(AppRoutePaths.shop);
   }
 
   Future<bool> _hydrateCreationFromDesign(

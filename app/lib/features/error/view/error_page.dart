@@ -3,13 +3,13 @@
 import 'dart:async';
 
 import 'package:app/analytics/analytics.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/buttons/app_button.dart';
 import 'package:app/ui/surfaces/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -100,7 +100,7 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final diagnostics = widget.diagnostics;
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
 
     final title = prefersEnglish ? 'Something went wrong' : 'エラーが発生しました';
     final headline = prefersEnglish ? 'We hit a snag' : '問題が発生しました';
@@ -132,10 +132,10 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
           tooltip: prefersEnglish ? 'Back' : '戻る',
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
-            if (router.canPop()) {
-              router.pop();
+            if (navigation.canPop()) {
+              navigation.pop();
             } else {
-              router.go(AppRoutePaths.home);
+              navigation.go(AppRoutePaths.home);
             }
           },
         ),
@@ -314,7 +314,7 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
                       subtitle: prefersEnglish
                           ? 'Troubleshooting guides and answers.'
                           : 'よくある質問と解決策を確認できます。',
-                      onTap: () => router.go(AppRoutePaths.supportFaq),
+                      onTap: () => navigation.go(AppRoutePaths.supportFaq),
                     ),
                     SizedBox(height: tokens.spacing.sm),
                     _SupportLinkTile(
@@ -323,7 +323,7 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
                       subtitle: prefersEnglish
                           ? 'Talk to support in real time.'
                           : 'リアルタイムでサポートに相談できます。',
-                      onTap: () => router.go(AppRoutePaths.supportChat),
+                      onTap: () => navigation.go(AppRoutePaths.supportChat),
                     ),
                   ],
                 ),
@@ -341,7 +341,7 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
                   Expanded(
                     child: AppButton(
                       label: homeLabel,
-                      onPressed: () => router.go(AppRoutePaths.home),
+                      onPressed: () => navigation.go(AppRoutePaths.home),
                       variant: AppButtonVariant.ghost,
                       leading: const Icon(Icons.home_outlined),
                     ),
@@ -361,21 +361,21 @@ class _ErrorPageState extends ConsumerState<ErrorPage> {
   }
 
   void _retry() {
-    final router = GoRouter.of(context);
+    final navigation = context.navigation;
     final returnTo = widget.diagnostics.returnTo;
     if (_hasValue(returnTo)) {
-      router.go(returnTo!.trim());
+      navigation.go(returnTo!.trim());
       return;
     }
-    if (router.canPop()) {
-      router.pop();
+    if (navigation.canPop()) {
+      navigation.pop();
       return;
     }
-    router.go(AppRoutePaths.home);
+    navigation.go(AppRoutePaths.home);
   }
 
   void _contactSupport() {
-    GoRouter.of(context).go(AppRoutePaths.supportContact);
+    context.go(AppRoutePaths.supportContact);
   }
 
   Future<void> _exportDiagnostics(AppExperienceGates gates) async {

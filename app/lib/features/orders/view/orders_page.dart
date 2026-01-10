@@ -57,7 +57,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               unawaited(
                 ref.container
                     .read(navigationControllerProvider)
-                    .push<Object?>(AppRoutePaths.search),
+                    .push(AppRoutePaths.search),
               );
             },
           ),
@@ -220,7 +220,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     unawaited(
       ref.container
           .read(navigationControllerProvider)
-          .push<Object?>('${AppRoutePaths.orders}/$id'),
+          .push('${AppRoutePaths.orders}/$id'),
     );
   }
 }

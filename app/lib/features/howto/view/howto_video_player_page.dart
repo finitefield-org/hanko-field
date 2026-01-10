@@ -2,12 +2,12 @@
 
 import 'dart:convert';
 
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/features/howto/data/models/howto_models.dart';
 import 'package:app/features/howto/view_model/howto_view_model.dart';
 import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -74,7 +74,7 @@ class _HowtoVideoPlayerPageState extends ConsumerState<HowtoVideoPlayerPage> {
         if (uri != null && uri.hasScheme) {
           _openExternal(uri);
         }
-        if (mounted) GoRouter.of(context).pop();
+        if (mounted) context.pop();
       });
       return;
     }
@@ -99,7 +99,7 @@ class _HowtoVideoPlayerPageState extends ConsumerState<HowtoVideoPlayerPage> {
         leading: IconButton(
           tooltip: gates.prefersEnglish ? 'Back' : '戻る',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => GoRouter.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: Column(

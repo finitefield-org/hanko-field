@@ -2,6 +2,7 @@
 
 import 'package:app/core/feedback/app_message_helpers.dart';
 import 'package:app/core/feedback/app_message_provider.dart';
+import 'package:app/core/routing/navigation_controller.dart';
 import 'package:app/core/routing/routes.dart';
 import 'package:app/features/designs/data/models/registrability_models.dart';
 import 'package:app/features/designs/view_model/design_check_view_model.dart';
@@ -9,7 +10,6 @@ import 'package:app/shared/providers/experience_gating_provider.dart';
 import 'package:app/theme/design_tokens.dart';
 import 'package:app/ui/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 class DesignCheckPage extends ConsumerStatefulWidget {
@@ -152,7 +152,7 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
           _ConflictBanner(
             message: bannerMessage,
             prefersEnglish: prefersEnglish,
-            onEdit: () => GoRouter.of(context).go(AppRoutePaths.designEditor),
+            onEdit: () => context.go(AppRoutePaths.designEditor),
           ),
           SizedBox(height: tokens.spacing.md),
         ],
@@ -161,7 +161,7 @@ class _DesignCheckPageState extends ConsumerState<DesignCheckPage> {
           prefersEnglish: prefersEnglish,
           usingCache: data.usingCache || report.fromCache,
           onRefresh: _refresh,
-          onEdit: () => GoRouter.of(context).go(AppRoutePaths.designEditor),
+          onEdit: () => context.go(AppRoutePaths.designEditor),
         ),
         SizedBox(height: tokens.spacing.lg),
         _DetailList(report: report, prefersEnglish: prefersEnglish),
