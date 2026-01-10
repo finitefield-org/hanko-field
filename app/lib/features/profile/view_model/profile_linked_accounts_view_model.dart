@@ -95,76 +95,82 @@ class ProfileLinkedAccountsViewModel
   late final refreshMut = mutation<void>(#refresh);
 
   @override
-  Future<LinkedAccountsState> build(Ref ref) async {
+  Future<LinkedAccountsState> build(
+    Ref<AsyncValue<LinkedAccountsState>> ref,
+  ) async {
     final auth = ref.watch(firebaseAuthProvider);
     final prefs = await ref.watch(sharedPreferencesProvider.future);
     return _buildState(auth.currentUser, prefs);
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final auth = ref.watch(firebaseAuthProvider);
-    await auth.currentUser?.reload();
-    final prefs = await ref.watch(sharedPreferencesProvider.future);
-    ref.state = AsyncData(_buildState(auth.currentUser, prefs));
-  }, concurrency: Concurrency.restart);
-
-  Call<void> save(List<LinkedAccountConnection> accounts) =>
-      mutate(saveMut, (ref) async {
-        final prefs = await ref.watch(sharedPreferencesProvider.future);
-        for (final account in accounts) {
-          await prefs.setBool(
-            _autoSignInKey(account.provider.providerId),
-            account.autoSignInEnabled,
-          );
-        }
-        final current = ref.watch(this).valueOrNull;
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(accounts: accounts));
-        }
-      }, concurrency: Concurrency.restart);
-
-  Call<void> unlink(LinkedAccountProviderType providerType) =>
-      mutate(unlinkMut, (ref) async {
-        final auth = ref.watch(firebaseAuthProvider);
-        final user = auth.currentUser;
-        final providerId = _providerId(providerType);
-        if (user == null) {
-          throw StateError('No signed-in user to unlink.');
-        }
-        final current = ref.watch(this).valueOrNull;
-        if (current != null && current.linkedCount <= 1) {
-          throw StateError('Cannot unlink the last linked provider.');
-        }
-
-        try {
-          await user.unlink(providerId);
-          await user.reload();
-        } on FirebaseAuthException catch (e, stack) {
-          _logger.warning('Failed to unlink $providerId', e, stack);
-          rethrow;
-        }
-
-        final prefs = await ref.watch(sharedPreferencesProvider.future);
-        ref.state = AsyncData(_buildState(auth.currentUser, prefs));
-      }, concurrency: Concurrency.queue);
-
-  Call<void> link(LinkedAccountProviderType providerType) =>
-      mutate(linkMut, (ref) async {
-        final authRepo = ref.watch(authRepositoryProvider);
-        switch (providerType) {
-          case LinkedAccountProviderType.apple:
-            await authRepo.signInWithApple(linkWithCurrent: true);
-            break;
-          case LinkedAccountProviderType.google:
-            await authRepo.signInWithGoogle(linkWithCurrent: true);
-            break;
-        }
-
+  Call<void, AsyncValue<LinkedAccountsState>> refresh() =>
+      mutate(refreshMut, (ref) async {
         final auth = ref.watch(firebaseAuthProvider);
         await auth.currentUser?.reload();
         final prefs = await ref.watch(sharedPreferencesProvider.future);
         ref.state = AsyncData(_buildState(auth.currentUser, prefs));
-      }, concurrency: Concurrency.queue);
+      }, concurrency: Concurrency.restart);
+
+  Call<void, AsyncValue<LinkedAccountsState>> save(
+    List<LinkedAccountConnection> accounts,
+  ) => mutate(saveMut, (ref) async {
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
+    for (final account in accounts) {
+      await prefs.setBool(
+        _autoSignInKey(account.provider.providerId),
+        account.autoSignInEnabled,
+      );
+    }
+    final current = ref.watch(this).valueOrNull;
+    if (current != null) {
+      ref.state = AsyncData(current.copyWith(accounts: accounts));
+    }
+  }, concurrency: Concurrency.restart);
+
+  Call<void, AsyncValue<LinkedAccountsState>> unlink(
+    LinkedAccountProviderType providerType,
+  ) => mutate(unlinkMut, (ref) async {
+    final auth = ref.watch(firebaseAuthProvider);
+    final user = auth.currentUser;
+    final providerId = _providerId(providerType);
+    if (user == null) {
+      throw StateError('No signed-in user to unlink.');
+    }
+    final current = ref.watch(this).valueOrNull;
+    if (current != null && current.linkedCount <= 1) {
+      throw StateError('Cannot unlink the last linked provider.');
+    }
+
+    try {
+      await user.unlink(providerId);
+      await user.reload();
+    } on FirebaseAuthException catch (e, stack) {
+      _logger.warning('Failed to unlink $providerId', e, stack);
+      rethrow;
+    }
+
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
+    ref.state = AsyncData(_buildState(auth.currentUser, prefs));
+  }, concurrency: Concurrency.queue);
+
+  Call<void, AsyncValue<LinkedAccountsState>> link(
+    LinkedAccountProviderType providerType,
+  ) => mutate(linkMut, (ref) async {
+    final authRepo = ref.watch(authRepositoryProvider);
+    switch (providerType) {
+      case LinkedAccountProviderType.apple:
+        await authRepo.signInWithApple(linkWithCurrent: true);
+        break;
+      case LinkedAccountProviderType.google:
+        await authRepo.signInWithGoogle(linkWithCurrent: true);
+        break;
+    }
+
+    final auth = ref.watch(firebaseAuthProvider);
+    await auth.currentUser?.reload();
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
+    ref.state = AsyncData(_buildState(auth.currentUser, prefs));
+  }, concurrency: Concurrency.queue);
 }
 
 final profileLinkedAccountsViewModel = ProfileLinkedAccountsViewModel();

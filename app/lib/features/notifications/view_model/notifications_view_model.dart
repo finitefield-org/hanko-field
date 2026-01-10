@@ -54,7 +54,9 @@ class NotificationsViewModel extends AsyncProvider<NotificationsState> {
   late final markAllMut = mutation<void>(#markAllRead);
 
   @override
-  Future<NotificationsState> build(Ref ref) async {
+  Future<NotificationsState> build(
+    Ref<AsyncValue<NotificationsState>> ref,
+  ) async {
     final repository = ref.watch(notificationRepositoryProvider);
     final page = await repository.listNotifications();
     final count = await repository.unreadCount();
@@ -69,88 +71,52 @@ class NotificationsViewModel extends AsyncProvider<NotificationsState> {
     );
   }
 
-  Call<void> loadMore() => mutate(loadMoreMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isLoadingMore) return;
-    final next = current.nextPageToken;
-    if (next == null) return;
-
-    ref.state = AsyncData(current.copyWith(isLoadingMore: true));
-    try {
-      final repository = ref.watch(notificationRepositoryProvider);
-      final page = await repository.listNotifications(
-        unreadOnly: current.filter.unreadOnly,
-        pageToken: next,
-      );
-
-      ref.state = AsyncData(
-        current.copyWith(
-          items: [...current.items, ...page.items],
-          nextPageToken: page.nextPageToken,
-          isLoadingMore: false,
-        ),
-      );
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: AsyncData(current.copyWith(isLoadingMore: false)),
-      );
-    }
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<NotificationFilter> setFilter(NotificationFilter filter) =>
-      mutate(setFilterMut, (ref) async {
-        final repository = ref.watch(notificationRepositoryProvider);
+  Call<void, AsyncValue<NotificationsState>> loadMore() =>
+      mutate(loadMoreMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isLoadingMore) return;
+        final next = current.nextPageToken;
+        if (next == null) return;
 
-        if (current != null) {
+        ref.state = AsyncData(current.copyWith(isLoadingMore: true));
+        try {
+          final repository = ref.watch(notificationRepositoryProvider);
+          final page = await repository.listNotifications(
+            unreadOnly: current.filter.unreadOnly,
+            pageToken: next,
+          );
+
           ref.state = AsyncData(
             current.copyWith(
-              filter: filter,
-              isRefreshing: true,
-              nextPageToken: null,
-            ),
-          );
-        } else {
-          ref.state = const AsyncLoading<NotificationsState>();
-        }
-
-        try {
-          final page = await repository.listNotifications(
-            unreadOnly: filter.unreadOnly,
-          );
-          final count = await repository.unreadCount();
-          unawaited(ref.invoke(unreadNotificationsProvider.seed(count)));
-
-          ref.state = AsyncData(
-            NotificationsState(
-              items: page.items,
-              filter: filter,
+              items: [...current.items, ...page.items],
               nextPageToken: page.nextPageToken,
               isLoadingMore: false,
-              isRefreshing: false,
             ),
           );
-          return filter;
         } catch (e, stack) {
           ref.state = AsyncError(
             e,
             stack,
-            previous: current != null ? AsyncData(current) : null,
+            previous: current.copyWith(isLoadingMore: false),
           );
-          rethrow;
         }
-      }, concurrency: Concurrency.restart);
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    final filter = current?.filter ?? NotificationFilter.all;
+  Call<NotificationFilter, AsyncValue<NotificationsState>> setFilter(
+    NotificationFilter filter,
+  ) => mutate(setFilterMut, (ref) async {
     final repository = ref.watch(notificationRepositoryProvider);
+    final current = ref.watch(this).valueOrNull;
 
     if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
+      ref.state = AsyncData(
+        current.copyWith(
+          filter: filter,
+          isRefreshing: true,
+          nextPageToken: null,
+        ),
+      );
     } else {
       ref.state = const AsyncLoading<NotificationsState>();
     }
@@ -171,60 +137,102 @@ class NotificationsViewModel extends AsyncProvider<NotificationsState> {
           isRefreshing: false,
         ),
       );
+      return filter;
     } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: current != null
-            ? AsyncData(current.copyWith(isRefreshing: false))
-            : null,
-      );
+      ref.state = AsyncError(e, stack, previous: current);
+      rethrow;
     }
   }, concurrency: Concurrency.restart);
 
-  Call<void> setReadState(String id, bool read) =>
-      mutate(setReadStateMut, (ref) async {
+  Call<void, AsyncValue<NotificationsState>> refresh() =>
+      mutate(refreshMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return;
-
+        final filter = current?.filter ?? NotificationFilter.all;
         final repository = ref.watch(notificationRepositoryProvider);
-        final count = await repository.setReadState(id, read: read);
-        unawaited(ref.invoke(unreadNotificationsProvider.seed(count)));
 
-        final updated = current.items
-            .map((n) => n.id == id ? n.copyWith(read: read) : n)
-            .toList();
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        } else {
+          ref.state = const AsyncLoading<NotificationsState>();
+        }
 
-        final nextToken = current.filter.unreadOnly && read
-            ? _decrementToken(current.nextPageToken, by: 1)
-            : current.nextPageToken;
+        try {
+          final page = await repository.listNotifications(
+            unreadOnly: filter.unreadOnly,
+          );
+          final count = await repository.unreadCount();
+          unawaited(ref.invoke(unreadNotificationsProvider.seed(count)));
 
-        ref.state = AsyncData(
-          current.copyWith(items: updated, nextPageToken: nextToken),
-        );
-      }, concurrency: Concurrency.dropLatest);
+          ref.state = AsyncData(
+            NotificationsState(
+              items: page.items,
+              filter: filter,
+              nextPageToken: page.nextPageToken,
+              isLoadingMore: false,
+              isRefreshing: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current?.copyWith(isRefreshing: false),
+          );
+        }
+      }, concurrency: Concurrency.restart);
 
-  Call<void> markAllRead() => mutate(markAllMut, (ref) async {
+  Call<void, AsyncValue<NotificationsState>> setReadState(
+    String id,
+    bool read,
+  ) => mutate(setReadStateMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return;
 
     final repository = ref.watch(notificationRepositoryProvider);
-    await repository.markAllRead();
-    unawaited(ref.invoke(unreadNotificationsProvider.seed(0)));
+    final count = await repository.setReadState(id, read: read);
+    unawaited(ref.invoke(unreadNotificationsProvider.seed(count)));
 
-    final cleared = current.items.map((n) => n.copyWith(read: true)).toList();
-    final removedCount = current.filter.unreadOnly
-        ? current.items.where((n) => !n.read).length
-        : 0;
-    final nextToken = _decrementToken(current.nextPageToken, by: removedCount);
+    final updated = current.items
+        .map((n) => n.id == id ? n.copyWith(read: read) : n)
+        .toList();
+
+    final nextToken = current.filter.unreadOnly && read
+        ? _decrementToken(current.nextPageToken, by: 1)
+        : current.nextPageToken;
 
     ref.state = AsyncData(
-      current.copyWith(
-        items: current.filter.unreadOnly ? <AppNotification>[] : cleared,
-        nextPageToken: nextToken,
-      ),
+      current.copyWith(items: updated, nextPageToken: nextToken),
     );
   }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<NotificationsState>> markAllRead() => mutate(
+    markAllMut,
+    (ref) async {
+      final current = ref.watch(this).valueOrNull;
+      if (current == null) return;
+
+      final repository = ref.watch(notificationRepositoryProvider);
+      await repository.markAllRead();
+      unawaited(ref.invoke(unreadNotificationsProvider.seed(0)));
+
+      final cleared = current.items.map((n) => n.copyWith(read: true)).toList();
+      final removedCount = current.filter.unreadOnly
+          ? current.items.where((n) => !n.read).length
+          : 0;
+      final nextToken = _decrementToken(
+        current.nextPageToken,
+        by: removedCount,
+      );
+
+      ref.state = AsyncData(
+        current.copyWith(
+          items: current.filter.unreadOnly ? <AppNotification>[] : cleared,
+          nextPageToken: nextToken,
+        ),
+      );
+    },
+    concurrency: Concurrency.dropLatest,
+  );
 }
 
 final notificationsViewModel = NotificationsViewModel();

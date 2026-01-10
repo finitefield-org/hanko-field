@@ -104,7 +104,7 @@ class LibraryListViewModel extends AsyncProvider<LibraryListState> {
   late final setQueryMut = mutation<String>(#setQuery);
 
   @override
-  Future<LibraryListState> build(Ref ref) async {
+  Future<LibraryListState> build(Ref<AsyncValue<LibraryListState>> ref) async {
     final repository = ref.watch(designRepositoryProvider);
     final page = await repository.listDesigns(sort: DesignSort.recent);
 
@@ -123,100 +123,177 @@ class LibraryListViewModel extends AsyncProvider<LibraryListState> {
     );
   }
 
-  Call<void> loadMore() => mutate(loadMoreMut, (ref) async {
+  Call<void, AsyncValue<LibraryListState>> loadMore() =>
+      mutate(loadMoreMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isLoadingMore) return;
+        final next = current.nextPageToken;
+        if (next == null) return;
+
+        ref.state = AsyncData(current.copyWith(isLoadingMore: true));
+
+        try {
+          final repository = ref.watch(designRepositoryProvider);
+          final cutoff = current.date.start(DateTime.now());
+          final page = await repository.listDesigns(
+            status: current.status,
+            sort: current.sort,
+            query: current.query,
+            updatedAfter: cutoff,
+            minAiScore: current.ai.minScore(),
+            pageToken: next,
+          );
+
+          final merged = [...current.items, ...page.items];
+          ref.state = AsyncData(
+            current.copyWith(
+              items: _applyPersonaFilter(merged, current.persona),
+              nextPageToken: page.nextPageToken,
+              isLoadingMore: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current.copyWith(isLoadingMore: false),
+          );
+        }
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<LibraryListState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        } else {
+          ref.state = const AsyncLoading<LibraryListState>();
+        }
+
+        try {
+          final repository = ref.watch(designRepositoryProvider);
+          final base = current;
+          final cutoff = (base?.date ?? LibraryDateFilter.all).start(
+            DateTime.now(),
+          );
+          final page = await repository.listDesigns(
+            status: base?.status,
+            sort: base?.sort ?? DesignSort.recent,
+            query: base?.query,
+            updatedAfter: cutoff,
+            minAiScore: (base?.ai ?? LibraryAiFilter.any).minScore(),
+          );
+
+          final persona = base?.persona ?? LibraryPersonaFilter.all;
+          ref.state = AsyncData(
+            LibraryListState(
+              items: _applyPersonaFilter(page.items, persona),
+              status: base?.status,
+              date: base?.date ?? LibraryDateFilter.all,
+              ai: base?.ai ?? LibraryAiFilter.any,
+              persona: persona,
+              sort: base?.sort ?? DesignSort.recent,
+              layout: base?.layout ?? LibraryLayout.grid,
+              query: base?.query ?? '',
+              nextPageToken: page.nextPageToken,
+              isLoadingMore: false,
+              isRefreshing: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current?.copyWith(isRefreshing: false),
+          );
+        }
+      }, concurrency: Concurrency.restart);
+
+  Call<DesignStatus?, AsyncValue<LibraryListState>> setStatus(
+    DesignStatus? status,
+  ) => mutate(setStatusMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isLoadingMore) return;
-    final next = current.nextPageToken;
-    if (next == null) return;
-
-    ref.state = AsyncData(current.copyWith(isLoadingMore: true));
-
-    try {
-      final repository = ref.watch(designRepositoryProvider);
-      final cutoff = current.date.start(DateTime.now());
-      final page = await repository.listDesigns(
-        status: current.status,
-        sort: current.sort,
-        query: current.query,
-        updatedAfter: cutoff,
-        minAiScore: current.ai.minScore(),
-        pageToken: next,
-      );
-
-      final merged = [...current.items, ...page.items];
+    if (current != null) {
       ref.state = AsyncData(
         current.copyWith(
-          items: _applyPersonaFilter(merged, current.persona),
-          nextPageToken: page.nextPageToken,
-          isLoadingMore: false,
+          status: status,
+          isRefreshing: true,
+          nextPageToken: null,
+          items: const <Design>[],
         ),
       );
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: AsyncData(current.copyWith(isLoadingMore: false)),
-      );
+    } else {
+      ref.state = const AsyncLoading<LibraryListState>();
     }
+
+    await ref.invoke(refresh());
+    return status;
+  }, concurrency: Concurrency.restart);
+
+  Call<LibraryDateFilter, AsyncValue<LibraryListState>> setDate(
+    LibraryDateFilter date,
+  ) => mutate(setDateMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current != null) {
+      ref.state = AsyncData(
+        current.copyWith(
+          date: date,
+          isRefreshing: true,
+          nextPageToken: null,
+          items: const <Design>[],
+        ),
+      );
+    } else {
+      ref.state = const AsyncLoading<LibraryListState>();
+    }
+
+    await ref.invoke(refresh());
+    return date;
+  }, concurrency: Concurrency.restart);
+
+  Call<LibraryAiFilter, AsyncValue<LibraryListState>> setAi(
+    LibraryAiFilter ai,
+  ) => mutate(setAiMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current != null) {
+      ref.state = AsyncData(
+        current.copyWith(
+          ai: ai,
+          isRefreshing: true,
+          nextPageToken: null,
+          items: const <Design>[],
+        ),
+      );
+    } else {
+      ref.state = const AsyncLoading<LibraryListState>();
+    }
+
+    await ref.invoke(refresh());
+    return ai;
+  }, concurrency: Concurrency.restart);
+
+  Call<LibraryPersonaFilter, AsyncValue<LibraryListState>> setPersona(
+    LibraryPersonaFilter persona,
+  ) => mutate(setPersonaMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return persona;
+    ref.state = AsyncData(
+      current.copyWith(
+        persona: persona,
+        items: _applyPersonaFilter(current.items, persona),
+      ),
+    );
+    return persona;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
-    } else {
-      ref.state = const AsyncLoading<LibraryListState>();
-    }
-
-    try {
-      final repository = ref.watch(designRepositoryProvider);
-      final base = current;
-      final cutoff = (base?.date ?? LibraryDateFilter.all).start(
-        DateTime.now(),
-      );
-      final page = await repository.listDesigns(
-        status: base?.status,
-        sort: base?.sort ?? DesignSort.recent,
-        query: base?.query,
-        updatedAfter: cutoff,
-        minAiScore: (base?.ai ?? LibraryAiFilter.any).minScore(),
-      );
-
-      final persona = base?.persona ?? LibraryPersonaFilter.all;
-      ref.state = AsyncData(
-        LibraryListState(
-          items: _applyPersonaFilter(page.items, persona),
-          status: base?.status,
-          date: base?.date ?? LibraryDateFilter.all,
-          ai: base?.ai ?? LibraryAiFilter.any,
-          persona: persona,
-          sort: base?.sort ?? DesignSort.recent,
-          layout: base?.layout ?? LibraryLayout.grid,
-          query: base?.query ?? '',
-          nextPageToken: page.nextPageToken,
-          isLoadingMore: false,
-          isRefreshing: false,
-        ),
-      );
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: current != null
-            ? AsyncData(current.copyWith(isRefreshing: false))
-            : null,
-      );
-    }
-  }, concurrency: Concurrency.restart);
-
-  Call<DesignStatus?> setStatus(DesignStatus? status) =>
-      mutate(setStatusMut, (ref) async {
+  Call<DesignSort, AsyncValue<LibraryListState>> setSort(DesignSort sort) =>
+      mutate(setSortMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current != null) {
           ref.state = AsyncData(
             current.copyWith(
-              status: status,
+              sort: sort,
               isRefreshing: true,
               nextPageToken: null,
               items: const <Design>[],
@@ -227,16 +304,25 @@ class LibraryListViewModel extends AsyncProvider<LibraryListState> {
         }
 
         await ref.invoke(refresh());
-        return status;
+        return sort;
       }, concurrency: Concurrency.restart);
 
-  Call<LibraryDateFilter> setDate(LibraryDateFilter date) =>
-      mutate(setDateMut, (ref) async {
+  Call<LibraryLayout, AsyncValue<LibraryListState>> setLayout(
+    LibraryLayout layout,
+  ) => mutate(setLayoutMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return layout;
+    ref.state = AsyncData(current.copyWith(layout: layout));
+    return layout;
+  }, concurrency: Concurrency.dropLatest);
+
+  Call<String, AsyncValue<LibraryListState>> setQuery(String query) =>
+      mutate(setQueryMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current != null) {
           ref.state = AsyncData(
             current.copyWith(
-              date: date,
+              query: query,
               isRefreshing: true,
               nextPageToken: null,
               items: const <Design>[],
@@ -247,87 +333,8 @@ class LibraryListViewModel extends AsyncProvider<LibraryListState> {
         }
 
         await ref.invoke(refresh());
-        return date;
+        return query;
       }, concurrency: Concurrency.restart);
-
-  Call<LibraryAiFilter> setAi(LibraryAiFilter ai) =>
-      mutate(setAiMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current != null) {
-          ref.state = AsyncData(
-            current.copyWith(
-              ai: ai,
-              isRefreshing: true,
-              nextPageToken: null,
-              items: const <Design>[],
-            ),
-          );
-        } else {
-          ref.state = const AsyncLoading<LibraryListState>();
-        }
-
-        await ref.invoke(refresh());
-        return ai;
-      }, concurrency: Concurrency.restart);
-
-  Call<LibraryPersonaFilter> setPersona(LibraryPersonaFilter persona) =>
-      mutate(setPersonaMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return persona;
-        ref.state = AsyncData(
-          current.copyWith(
-            persona: persona,
-            items: _applyPersonaFilter(current.items, persona),
-          ),
-        );
-        return persona;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<DesignSort> setSort(DesignSort sort) => mutate(setSortMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(
-        current.copyWith(
-          sort: sort,
-          isRefreshing: true,
-          nextPageToken: null,
-          items: const <Design>[],
-        ),
-      );
-    } else {
-      ref.state = const AsyncLoading<LibraryListState>();
-    }
-
-    await ref.invoke(refresh());
-    return sort;
-  }, concurrency: Concurrency.restart);
-
-  Call<LibraryLayout> setLayout(LibraryLayout layout) =>
-      mutate(setLayoutMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return layout;
-        ref.state = AsyncData(current.copyWith(layout: layout));
-        return layout;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<String> setQuery(String query) => mutate(setQueryMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(
-        current.copyWith(
-          query: query,
-          isRefreshing: true,
-          nextPageToken: null,
-          items: const <Design>[],
-        ),
-      );
-    } else {
-      ref.state = const AsyncLoading<LibraryListState>();
-    }
-
-    await ref.invoke(refresh());
-    return query;
-  }, concurrency: Concurrency.restart);
 
   List<Design> _applyPersonaFilter(
     List<Design> items,

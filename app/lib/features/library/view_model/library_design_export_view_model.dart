@@ -156,7 +156,9 @@ class LibraryDesignExportViewModel
   final Random _rand = Random();
 
   @override
-  Future<LibraryDesignExportState> build(Ref ref) async {
+  Future<LibraryDesignExportState> build(
+    Ref<AsyncValue<LibraryDesignExportState>> ref,
+  ) async {
     _gates = ref.watch(appExperienceGatesProvider);
 
     final design = designOverride ?? await _fetchDesign(ref);
@@ -181,7 +183,9 @@ class LibraryDesignExportViewModel
     );
   }
 
-  Future<Design> _fetchDesign(Ref ref) async {
+  Future<Design> _fetchDesign(
+    Ref<AsyncValue<LibraryDesignExportState>> ref,
+  ) async {
     if (designId.trim().isEmpty) {
       throw ArgumentError.value(designId, 'designId', 'Design id is required.');
     }
@@ -189,131 +193,142 @@ class LibraryDesignExportViewModel
     return repository.getDesign(designId);
   }
 
-  Call<ExportFormat> setFormat(ExportFormat format) =>
-      mutate(setFormatMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return format;
-        ref.state = AsyncData(current.copyWith(format: format));
-        return format;
-      }, concurrency: Concurrency.dropLatest);
+  Call<ExportFormat, AsyncValue<LibraryDesignExportState>> setFormat(
+    ExportFormat format,
+  ) => mutate(setFormatMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return format;
+    ref.state = AsyncData(current.copyWith(format: format));
+    return format;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<ExportScale> setScale(ExportScale scale) =>
-      mutate(setScaleMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return scale;
-        ref.state = AsyncData(current.copyWith(scale: scale));
-        return scale;
-      }, concurrency: Concurrency.dropLatest);
+  Call<ExportScale, AsyncValue<LibraryDesignExportState>> setScale(
+    ExportScale scale,
+  ) => mutate(setScaleMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return scale;
+    ref.state = AsyncData(current.copyWith(scale: scale));
+    return scale;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleWatermark(bool enabled) =>
-      mutate(toggleWatermarkMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return enabled;
-        ref.state = AsyncData(
-          current.copyWith(
-            permissions: current.permissions.copyWith(watermark: enabled),
-          ),
-        );
-        return enabled;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<bool> toggleExpiry(bool enabled) => mutate(toggleExpiryMut, (ref) async {
+  Call<bool, AsyncValue<LibraryDesignExportState>> toggleWatermark(
+    bool enabled,
+  ) => mutate(toggleWatermarkMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return enabled;
     ref.state = AsyncData(
       current.copyWith(
-        permissions: current.permissions.copyWith(expiryEnabled: enabled),
+        permissions: current.permissions.copyWith(watermark: enabled),
       ),
     );
     return enabled;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<int> setExpiryDays(int days) => mutate(setExpiryDaysMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return days;
-    final sanitized = days.clamp(1, 365);
-    ref.state = AsyncData(
-      current.copyWith(
-        permissions: current.permissions.copyWith(expiryDays: sanitized),
-      ),
-    );
-    return sanitized;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<bool> toggleDownloadAllowed(bool enabled) =>
-      mutate(toggleDownloadMut, (ref) async {
+  Call<bool, AsyncValue<LibraryDesignExportState>> toggleExpiry(bool enabled) =>
+      mutate(toggleExpiryMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
         ref.state = AsyncData(
           current.copyWith(
-            permissions: current.permissions.copyWith(downloadAllowed: enabled),
+            permissions: current.permissions.copyWith(expiryEnabled: enabled),
           ),
         );
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<String> generateLink() => mutate(generateLinkMut, (ref) async {
+  Call<int, AsyncValue<LibraryDesignExportState>> setExpiryDays(int days) =>
+      mutate(setExpiryDaysMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return days;
+        final sanitized = days.clamp(1, 365);
+        ref.state = AsyncData(
+          current.copyWith(
+            permissions: current.permissions.copyWith(expiryDays: sanitized),
+          ),
+        );
+        return sanitized;
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<bool, AsyncValue<LibraryDesignExportState>> toggleDownloadAllowed(
+    bool enabled,
+  ) => mutate(toggleDownloadMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) throw StateError('Export state is not ready.');
-    if (current.isBusy) return current.activeLink ?? '';
-
+    if (current == null) return enabled;
     ref.state = AsyncData(
-      current.copyWith(isGenerating: true, clearFeedback: true),
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 420));
-
-    final working = ref.watch(this).valueOrNull ?? current;
-    final token = _newToken();
-    final url = _buildShareUrl(
-      token,
-      format: working.format,
-      scale: working.scale,
-    );
-    final record = ExportLinkRecord(
-      url: url,
-      format: working.format,
-      scale: working.scale,
-      permissions: working.permissions,
-      createdAt: DateTime.now(),
-    );
-
-    final feedback = _gates.prefersEnglish ? 'Link generated' : 'リンクを生成しました';
-    ref.state = AsyncData(
-      working.copyWith(
-        isGenerating: false,
-        activeLink: url,
-        history: [record, ...working.history],
-        feedbackMessage: feedback,
-        feedbackId: working.feedbackId + 1,
+      current.copyWith(
+        permissions: current.permissions.copyWith(downloadAllowed: enabled),
       ),
     );
-    return url;
+    return enabled;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> revokeAll() => mutate(revokeAllMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isBusy) return;
+  Call<String, AsyncValue<LibraryDesignExportState>> generateLink() => mutate(
+    generateLinkMut,
+    (ref) async {
+      final current = ref.watch(this).valueOrNull;
+      if (current == null) throw StateError('Export state is not ready.');
+      if (current.isBusy) return current.activeLink ?? '';
 
-    ref.state = AsyncData(
-      current.copyWith(isRevoking: true, clearFeedback: true),
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 420));
+      ref.state = AsyncData(
+        current.copyWith(isGenerating: true, clearFeedback: true),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 420));
 
-    final working = ref.watch(this).valueOrNull ?? current;
-    final feedback = _gates.prefersEnglish
-        ? 'All links revoked'
-        : 'すべてのリンクを無効化しました';
-    ref.state = AsyncData(
-      working.copyWith(
-        isRevoking: false,
-        activeLink: null,
-        history: const [],
-        feedbackMessage: feedback,
-        feedbackId: working.feedbackId + 1,
-      ),
-    );
-  }, concurrency: Concurrency.dropLatest);
+      final working = ref.watch(this).valueOrNull ?? current;
+      final token = _newToken();
+      final url = _buildShareUrl(
+        token,
+        format: working.format,
+        scale: working.scale,
+      );
+      final record = ExportLinkRecord(
+        url: url,
+        format: working.format,
+        scale: working.scale,
+        permissions: working.permissions,
+        createdAt: DateTime.now(),
+      );
+
+      final feedback = _gates.prefersEnglish ? 'Link generated' : 'リンクを生成しました';
+      ref.state = AsyncData(
+        working.copyWith(
+          isGenerating: false,
+          activeLink: url,
+          history: [record, ...working.history],
+          feedbackMessage: feedback,
+          feedbackId: working.feedbackId + 1,
+        ),
+      );
+      return url;
+    },
+    concurrency: Concurrency.dropLatest,
+  );
+
+  Call<void, AsyncValue<LibraryDesignExportState>> revokeAll() =>
+      mutate(revokeAllMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isBusy) return;
+
+        ref.state = AsyncData(
+          current.copyWith(isRevoking: true, clearFeedback: true),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 420));
+
+        final working = ref.watch(this).valueOrNull ?? current;
+        final feedback = _gates.prefersEnglish
+            ? 'All links revoked'
+            : 'すべてのリンクを無効化しました';
+        ref.state = AsyncData(
+          working.copyWith(
+            isRevoking: false,
+            activeLink: null,
+            history: const [],
+            feedbackMessage: feedback,
+            feedbackId: working.feedbackId + 1,
+          ),
+        );
+      }, concurrency: Concurrency.dropLatest);
 
   String _newToken() {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';

@@ -29,7 +29,7 @@ class HowtoViewModel extends AsyncProvider<HowtoState> {
   late final trackVideoCompletedMut = mutation<void>(#trackVideoCompleted);
 
   @override
-  Future<HowtoState> build(Ref ref) async {
+  Future<HowtoState> build(Ref<AsyncValue<HowtoState>> ref) async {
     final repository = ref.watch(contentRepositoryProvider);
     final gates = ref.watch(appExperienceGatesProvider);
     final lang = gates.prefersEnglish ? 'en' : 'ja';
@@ -46,19 +46,20 @@ class HowtoViewModel extends AsyncProvider<HowtoState> {
     );
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    ref.state = AsyncData(
-      HowtoState(
-        videos: current?.videos ?? howtoVideosCatalog,
-        guides: current?.guides ?? const <Guide>[],
-        lang: current?.lang,
-      ),
-    );
-    ref.invalidate(this);
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<HowtoState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        ref.state = AsyncData(
+          HowtoState(
+            videos: current?.videos ?? howtoVideosCatalog,
+            guides: current?.guides ?? const <Guide>[],
+            lang: current?.lang,
+          ),
+        );
+        ref.invalidate(this);
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<void> trackVideoOpened({
+  Call<void, AsyncValue<HowtoState>> trackVideoOpened({
     required HowtoVideo video,
     required int position,
   }) => mutate(trackVideoOpenedMut, (ref) async {
@@ -75,31 +76,33 @@ class HowtoViewModel extends AsyncProvider<HowtoState> {
     );
   });
 
-  Call<void> trackVideoStarted({required HowtoVideo video}) =>
-      mutate(trackVideoStartedMut, (ref) async {
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            HowtoTutorialProgressEvent(
-              tutorialId: video.id,
-              format: 'video',
-              progress: 'started',
-            ),
-          ),
-        );
-      }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<HowtoState>> trackVideoStarted({
+    required HowtoVideo video,
+  }) => mutate(trackVideoStartedMut, (ref) async {
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        HowtoTutorialProgressEvent(
+          tutorialId: video.id,
+          format: 'video',
+          progress: 'started',
+        ),
+      ),
+    );
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<void> trackVideoCompleted({required HowtoVideo video}) =>
-      mutate(trackVideoCompletedMut, (ref) async {
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            HowtoTutorialProgressEvent(
-              tutorialId: video.id,
-              format: 'video',
-              progress: 'completed',
-            ),
-          ),
-        );
-      }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<HowtoState>> trackVideoCompleted({
+    required HowtoVideo video,
+  }) => mutate(trackVideoCompletedMut, (ref) async {
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        HowtoTutorialProgressEvent(
+          tutorialId: video.id,
+          format: 'video',
+          progress: 'completed',
+        ),
+      ),
+    );
+  }, concurrency: Concurrency.dropLatest);
 }

@@ -13,7 +13,7 @@ class UnreadNotificationsProvider extends AsyncProvider<int> {
   late final refreshMut = mutation<int>(#refresh);
 
   @override
-  Future<int> build(Ref ref) async {
+  Future<int> build(Ref<AsyncValue<int>> ref) async {
     final cached = await _loadCachedCount(ref);
     if (cached != null) {
       ref.state = AsyncData(cached);
@@ -22,19 +22,19 @@ class UnreadNotificationsProvider extends AsyncProvider<int> {
     return repository.unreadCount();
   }
 
-  Call<int> seed(int count) => mutate(seedMut, (ref) async {
+  Call<int, AsyncValue<int>> seed(int count) => mutate(seedMut, (ref) async {
     ref.state = AsyncData(count);
     return count;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<int> refresh() => mutate(refreshMut, (ref) async {
+  Call<int, AsyncValue<int>> refresh() => mutate(refreshMut, (ref) async {
     final repository = ref.watch(notificationRepositoryProvider);
     final count = await repository.unreadCount();
     ref.state = AsyncData(count);
     return count;
   }, concurrency: Concurrency.dropLatest);
 
-  Future<int?> _loadCachedCount(Ref ref) async {
+  Future<int?> _loadCachedCount(Ref<AsyncValue<int>> ref) async {
     final cache = ref.watch(notificationsCacheProvider);
     final gates = ref.watch(appExperienceGatesProvider);
     final cacheKey = LocalCacheKeys.notifications(

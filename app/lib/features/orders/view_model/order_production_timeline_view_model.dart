@@ -37,7 +37,9 @@ class OrderProductionTimelineViewModel
   late final refreshMut = mutation<void>(#refresh);
 
   @override
-  Future<OrderProductionTimelineState> build(Ref ref) async {
+  Future<OrderProductionTimelineState> build(
+    Ref<AsyncValue<OrderProductionTimelineState>> ref,
+  ) async {
     final repository = ref.watch(orderRepositoryProvider);
     final order = await repository.getOrder(orderId);
     final events = await repository.listProductionEvents(orderId);
@@ -47,14 +49,15 @@ class OrderProductionTimelineViewModel
     return OrderProductionTimelineState(order: order, events: sorted);
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final repository = ref.watch(orderRepositoryProvider);
-    final order = await repository.getOrder(orderId);
-    final events = await repository.listProductionEvents(orderId);
-    final sorted = List<ProductionEvent>.of(events)
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    ref.state = AsyncData(
-      OrderProductionTimelineState(order: order, events: sorted),
-    );
-  }, concurrency: Concurrency.restart);
+  Call<void, AsyncValue<OrderProductionTimelineState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final repository = ref.watch(orderRepositoryProvider);
+        final order = await repository.getOrder(orderId);
+        final events = await repository.listProductionEvents(orderId);
+        final sorted = List<ProductionEvent>.of(events)
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        ref.state = AsyncData(
+          OrderProductionTimelineState(order: order, events: sorted),
+        );
+      }, concurrency: Concurrency.restart);
 }

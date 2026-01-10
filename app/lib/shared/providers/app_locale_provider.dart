@@ -67,7 +67,7 @@ final appLocaleServiceProvider = Provider<AppLocaleService>((ref) {
 class AppLocaleService {
   AppLocaleService(this._ref, this._logger);
 
-  final Ref _ref;
+  final Ref<AppLocaleService> _ref;
   final Logger _logger;
 
   Future<Locale> update(Locale locale) async {

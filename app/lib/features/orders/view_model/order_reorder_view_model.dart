@@ -67,7 +67,9 @@ class OrderReorderViewModel extends AsyncProvider<OrderReorderState> {
   late final toggleLineMut = mutation<OrderReorderState>(#toggleLine);
 
   @override
-  Future<OrderReorderState> build(Ref ref) async {
+  Future<OrderReorderState> build(
+    Ref<AsyncValue<OrderReorderState>> ref,
+  ) async {
     final repository = ref.watch(orderRepositoryProvider);
     final order = await repository.getOrder(orderId);
     final currency = order.currency.isEmpty ? 'JPY' : order.currency;
@@ -85,24 +87,25 @@ class OrderReorderViewModel extends AsyncProvider<OrderReorderState> {
     return OrderReorderState(order: order, lines: lines);
   }
 
-  Call<OrderReorderState> toggleLine(String lineId) =>
-      mutate(toggleLineMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) throw StateError('Reorder state not loaded');
+  Call<OrderReorderState, AsyncValue<OrderReorderState>> toggleLine(
+    String lineId,
+  ) => mutate(toggleLineMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) throw StateError('Reorder state not loaded');
 
-        final updatedLines = current.lines.map((line) {
-          if (line.id != lineId) return line;
-          if (line.issue == ReorderLineIssue.outOfStock) return line;
-          return line.copyWith(isSelected: !line.isSelected);
-        }).toList();
+    final updatedLines = current.lines.map((line) {
+      if (line.id != lineId) return line;
+      if (line.issue == ReorderLineIssue.outOfStock) return line;
+      return line.copyWith(isSelected: !line.isSelected);
+    }).toList();
 
-        final updated = OrderReorderState(
-          order: current.order,
-          lines: updatedLines,
-        );
-        ref.state = AsyncData(updated);
-        return updated;
-      }, concurrency: Concurrency.dropLatest);
+    final updated = OrderReorderState(
+      order: current.order,
+      lines: updatedLines,
+    );
+    ref.state = AsyncData(updated);
+    return updated;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 List<CartLineItem> buildCartLinesFromReorder(

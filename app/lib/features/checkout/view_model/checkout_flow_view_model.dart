@@ -67,9 +67,10 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
   late final setPaymentMut = mutation<void>(#setPayment);
 
   @override
-  CheckoutFlowState build(Ref ref) => const CheckoutFlowState();
+  CheckoutFlowState build(Ref<CheckoutFlowState> ref) =>
+      const CheckoutFlowState();
 
-  Call<void> setAddress({
+  Call<void, CheckoutFlowState> setAddress({
     required String? addressId,
     required bool isInternational,
   }) => mutate(setAddressMut, (ref) async {
@@ -82,7 +83,7 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> setShipping({
+  Call<void, CheckoutFlowState> setShipping({
     required String shippingMethodId,
     required Money shippingCost,
     required int etaMinDays,
@@ -98,7 +99,7 @@ class CheckoutFlowViewModel extends Provider<CheckoutFlowState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> setPayment({
+  Call<void, CheckoutFlowState> setPayment({
     required String? paymentMethodId,
     required String? paymentProviderRef,
   }) => mutate(setPaymentMut, (ref) async {

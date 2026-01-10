@@ -59,7 +59,9 @@ class CheckoutReviewViewModel extends AsyncProvider<CheckoutReviewState> {
   late final placeOrderMut = mutation<PlaceOrderResult>(#placeOrder);
 
   @override
-  Future<CheckoutReviewState> build(Ref ref) async {
+  Future<CheckoutReviewState> build(
+    Ref<AsyncValue<CheckoutReviewState>> ref,
+  ) async {
     final flow = ref.watch(checkoutFlowProvider);
     final cartAsync = ref.watch(cartViewModel);
     final CartState cart =
@@ -95,58 +97,59 @@ class CheckoutReviewViewModel extends AsyncProvider<CheckoutReviewState> {
     );
   }
 
-  Call<PlaceOrderResult> placeOrder({String? notes}) =>
-      mutate(placeOrderMut, (ref) async {
-        final state = ref.watch(this).valueOrNull;
-        if (state == null || !state.isReadyForPlacement) {
-          final analytics = ref.watch(analyticsClientProvider);
-          unawaited(
-            analytics.track(
-              CheckoutOrderPlacedEvent(
-                success: false,
-                totalAmount: state?.total.amount ?? 0,
-                currency: state?.total.currency ?? 'JPY',
-                itemCount: state?.cart.lines.length ?? 0,
-                isInternational: state?.isInternational ?? false,
-                hasPromo: state?.cart.appliedPromo != null,
-                shippingMethodId: state?.shipping?.id ?? 'unknown',
-                paymentMethodType: state?.payment?.methodType.name ?? 'unknown',
-              ),
-            ),
-          );
-          return const PlaceOrderResult(
-            isSuccess: false,
-            message: 'Missing checkout details.',
-          );
-        }
-
-        await Future<void>.delayed(const Duration(milliseconds: 650));
-
-        final millis = DateTime.now().millisecondsSinceEpoch;
-        final suffix = (millis % 1000000).toString().padLeft(6, '0');
-
-        final result = PlaceOrderResult(
-          isSuccess: true,
-          orderId: 'ord_$millis',
-          orderNumber: 'HF-$suffix',
-        );
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            CheckoutOrderPlacedEvent(
-              success: true,
-              totalAmount: state.total.amount,
-              currency: state.total.currency,
-              itemCount: state.cart.lines.length,
-              isInternational: state.isInternational,
-              hasPromo: state.cart.appliedPromo != null,
-              shippingMethodId: state.shipping?.id ?? 'unknown',
-              paymentMethodType: state.payment?.methodType.name ?? 'unknown',
-            ),
+  Call<PlaceOrderResult, AsyncValue<CheckoutReviewState>> placeOrder({
+    String? notes,
+  }) => mutate(placeOrderMut, (ref) async {
+    final state = ref.watch(this).valueOrNull;
+    if (state == null || !state.isReadyForPlacement) {
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          CheckoutOrderPlacedEvent(
+            success: false,
+            totalAmount: state?.total.amount ?? 0,
+            currency: state?.total.currency ?? 'JPY',
+            itemCount: state?.cart.lines.length ?? 0,
+            isInternational: state?.isInternational ?? false,
+            hasPromo: state?.cart.appliedPromo != null,
+            shippingMethodId: state?.shipping?.id ?? 'unknown',
+            paymentMethodType: state?.payment?.methodType.name ?? 'unknown',
           ),
-        );
-        return result;
-      }, concurrency: Concurrency.dropLatest);
+        ),
+      );
+      return const PlaceOrderResult(
+        isSuccess: false,
+        message: 'Missing checkout details.',
+      );
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 650));
+
+    final millis = DateTime.now().millisecondsSinceEpoch;
+    final suffix = (millis % 1000000).toString().padLeft(6, '0');
+
+    final result = PlaceOrderResult(
+      isSuccess: true,
+      orderId: 'ord_$millis',
+      orderNumber: 'HF-$suffix',
+    );
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        CheckoutOrderPlacedEvent(
+          success: true,
+          totalAmount: state.total.amount,
+          currency: state.total.currency,
+          itemCount: state.cart.lines.length,
+          isInternational: state.isInternational,
+          hasPromo: state.cart.appliedPromo != null,
+          shippingMethodId: state.shipping?.id ?? 'unknown',
+          paymentMethodType: state.payment?.methodType.name ?? 'unknown',
+        ),
+      ),
+    );
+    return result;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 final checkoutReviewViewModel = CheckoutReviewViewModel();

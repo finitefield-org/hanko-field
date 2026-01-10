@@ -212,7 +212,9 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
   late AppExperienceGates _gates;
 
   @override
-  Future<DesignExportState> build(Ref ref) async {
+  Future<DesignExportState> build(
+    Ref<AsyncValue<DesignExportState>> ref,
+  ) async {
     _gates = ref.watch(appExperienceGatesProvider);
     final permissionClient = ref.watch(storagePermissionClientProvider);
     final storageStatus = await permissionClient.status();
@@ -263,22 +265,23 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
     );
   }
 
-  Call<ExportFormat> setFormat(ExportFormat format) =>
-      mutate(setFormatMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return format;
+  Call<ExportFormat, AsyncValue<DesignExportState>> setFormat(
+    ExportFormat format,
+  ) => mutate(setFormatMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return format;
 
-        final prefersEnglish = _gates.prefersEnglish;
-        ref.state = AsyncData(
-          current.copyWith(
-            format: format,
-            colorProfile: format.colorProfile(prefersEnglish),
-          ),
-        );
-        return format;
-      }, concurrency: Concurrency.dropLatest);
+    final prefersEnglish = _gates.prefersEnglish;
+    ref.state = AsyncData(
+      current.copyWith(
+        format: format,
+        colorProfile: format.colorProfile(prefersEnglish),
+      ),
+    );
+    return format;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleTransparent(bool enabled) =>
+  Call<bool, AsyncValue<DesignExportState>> toggleTransparent(bool enabled) =>
       mutate(toggleTransparentMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
@@ -286,14 +289,15 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleBleed(bool enabled) => mutate(toggleBleedMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return enabled;
-    ref.state = AsyncData(current.copyWith(includeBleed: enabled));
-    return enabled;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<DesignExportState>> toggleBleed(bool enabled) =>
+      mutate(toggleBleedMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return enabled;
+        ref.state = AsyncData(current.copyWith(includeBleed: enabled));
+        return enabled;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleMetadata(bool enabled) =>
+  Call<bool, AsyncValue<DesignExportState>> toggleMetadata(bool enabled) =>
       mutate(toggleMetadataMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
@@ -301,7 +305,7 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleWatermark(bool enabled) =>
+  Call<bool, AsyncValue<DesignExportState>> toggleWatermark(bool enabled) =>
       mutate(toggleWatermarkMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
@@ -309,115 +313,26 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<StoragePermissionStatus> ensurePermission() =>
-      mutate(ensurePermissionMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return StoragePermissionStatus.denied;
+  Call<StoragePermissionStatus, AsyncValue<DesignExportState>>
+  ensurePermission() => mutate(ensurePermissionMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return StoragePermissionStatus.denied;
 
-        final client = ref.watch(storagePermissionClientProvider);
-        final status = await client.status();
-        if (status.isGranted) {
-          ref.state = AsyncData(current.copyWith(storageStatus: status));
-          return status;
-        }
+    final client = ref.watch(storagePermissionClientProvider);
+    final status = await client.status();
+    if (status.isGranted) {
+      ref.state = AsyncData(current.copyWith(storageStatus: status));
+      return status;
+    }
 
-        final requested = await client.request();
-        ref.state = AsyncData(current.copyWith(storageStatus: requested));
-        return requested;
-      }, concurrency: Concurrency.restart);
+    final requested = await client.request();
+    ref.state = AsyncData(current.copyWith(storageStatus: requested));
+    return requested;
+  }, concurrency: Concurrency.restart);
 
-  Call<bool> export({required String destination}) =>
-      mutate(exportMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return false;
-
-        final permission = await ref.invoke(ensurePermission());
-        if (permission.isGranted != true) {
-          _emitFeedback(
-            ref,
-            _gates.prefersEnglish
-                ? 'Storage permission is required to save files.'
-                : 'ファイル保存のためにストレージ権限が必要です。',
-          );
-          return false;
-        }
-
-        var working = current.copyWith(
-          isExporting: true,
-          progress: 0.14,
-          storageStatus: permission,
-          clearFeedback: true,
-          lastSharedVia: null,
-        );
-        ref.state = AsyncData(working);
-
-        try {
-          final rendered = await _renderExportAsset(working, watermark: false);
-          working = working.copyWith(progress: 0.62);
-          ref.state = AsyncData(working);
-
-          final saved = await _saveExportFile(
-            rendered,
-            destination: destination,
-            state: working,
-          );
-
-          final record = ExportRecord(
-            filename: rendered.filenameBase,
-            destination: destination,
-            format: rendered.format,
-            createdAt: DateTime.now(),
-            fileSizeMb: rendered.sizeMb,
-            sharedVia: null,
-            watermarked: false,
-          );
-
-          final updatedHistory = <ExportRecord>[record, ...working.history];
-          ref.state = AsyncData(
-            working.copyWith(
-              isExporting: false,
-              progress: 1.0,
-              lastExportPath: saved.filePath,
-              history: updatedHistory.take(6).toList(),
-              feedbackMessage: _gates.prefersEnglish
-                  ? 'Saved ${record.label} to $destination'
-                  : '$destination に ${record.label} を保存しました',
-              feedbackId: working.feedbackId + 1,
-            ),
-          );
-          final analytics = ref.watch(analyticsClientProvider);
-          unawaited(
-            analytics.track(
-              DesignExportCompletedEvent(
-                format: record.format.name,
-                destination: destination,
-                fileSizeMb: record.fileSizeMb,
-                includeBleed: working.includeBleed,
-                includeMetadata: working.includeMetadata,
-                transparentBackground: working.transparentBackground,
-                watermarkOnShare: working.watermarkOnShare,
-                persona: _gates.personaKey,
-                locale: _gates.localeTag,
-              ),
-            ),
-          );
-          return true;
-        } catch (error) {
-          ref.state = AsyncData(
-            working.copyWith(
-              isExporting: false,
-              progress: 0,
-              feedbackMessage: _gates.prefersEnglish
-                  ? 'Export failed: $error'
-                  : '書き出しに失敗しました: $error',
-              feedbackId: working.feedbackId + 1,
-            ),
-          );
-          return false;
-        }
-      }, concurrency: Concurrency.restart);
-
-  Call<bool> share({required String target}) => mutate(shareMut, (ref) async {
+  Call<bool, AsyncValue<DesignExportState>> export({
+    required String destination,
+  }) => mutate(exportMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return false;
 
@@ -426,67 +341,66 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
       _emitFeedback(
         ref,
         _gates.prefersEnglish
-            ? 'Storage permission is required before sharing.'
-            : '共有前にストレージ権限が必要です。',
+            ? 'Storage permission is required to save files.'
+            : 'ファイル保存のためにストレージ権限が必要です。',
       );
       return false;
     }
 
     var working = current.copyWith(
-      isSharing: true,
-      progress: max(0.22, current.progress),
+      isExporting: true,
+      progress: 0.14,
       storageStatus: permission,
       clearFeedback: true,
+      lastSharedVia: null,
     );
     ref.state = AsyncData(working);
 
     try {
-      final rendered = await _renderExportAsset(
-        working,
-        watermark: working.watermarkOnShare,
-      );
-      working = working.copyWith(progress: 0.68);
+      final rendered = await _renderExportAsset(working, watermark: false);
+      working = working.copyWith(progress: 0.62);
       ref.state = AsyncData(working);
 
-      await _shareExport(
+      final saved = await _saveExportFile(
         rendered,
-        target: target,
-        includeMetadata: working.includeMetadata,
+        destination: destination,
         state: working,
       );
 
       final record = ExportRecord(
         filename: rendered.filenameBase,
-        destination: target,
+        destination: destination,
         format: rendered.format,
         createdAt: DateTime.now(),
         fileSizeMb: rendered.sizeMb,
-        sharedVia: target,
-        watermarked: working.watermarkOnShare,
+        sharedVia: null,
+        watermarked: false,
       );
-      final updatedHistory = <ExportRecord>[record, ...working.history];
 
+      final updatedHistory = <ExportRecord>[record, ...working.history];
       ref.state = AsyncData(
         working.copyWith(
-          isSharing: false,
+          isExporting: false,
           progress: 1.0,
-          lastSharedVia: target,
-          lastExportPath: 'share://${record.label}',
+          lastExportPath: saved.filePath,
           history: updatedHistory.take(6).toList(),
           feedbackMessage: _gates.prefersEnglish
-              ? 'Shared ${record.label} via $target'
-              : '${record.label} を$targetで共有しました',
+              ? 'Saved ${record.label} to $destination'
+              : '$destination に ${record.label} を保存しました',
           feedbackId: working.feedbackId + 1,
         ),
       );
       final analytics = ref.watch(analyticsClientProvider);
       unawaited(
         analytics.track(
-          DesignExportSharedEvent(
+          DesignExportCompletedEvent(
             format: record.format.name,
-            target: target,
+            destination: destination,
+            fileSizeMb: record.fileSizeMb,
+            includeBleed: working.includeBleed,
             includeMetadata: working.includeMetadata,
-            watermarked: working.watermarkOnShare,
+            transparentBackground: working.transparentBackground,
+            watermarkOnShare: working.watermarkOnShare,
             persona: _gates.personaKey,
             locale: _gates.localeTag,
           ),
@@ -496,11 +410,11 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
     } catch (error) {
       ref.state = AsyncData(
         working.copyWith(
-          isSharing: false,
+          isExporting: false,
           progress: 0,
           feedbackMessage: _gates.prefersEnglish
-              ? 'Share failed: $error'
-              : '共有に失敗しました: $error',
+              ? 'Export failed: $error'
+              : '書き出しに失敗しました: $error',
           feedbackId: working.feedbackId + 1,
         ),
       );
@@ -508,7 +422,99 @@ class DesignExportViewModel extends AsyncProvider<DesignExportState> {
     }
   }, concurrency: Concurrency.restart);
 
-  void _emitFeedback(Ref ref, String message) {
+  Call<bool, AsyncValue<DesignExportState>> share({required String target}) =>
+      mutate(shareMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
+
+        final permission = await ref.invoke(ensurePermission());
+        if (permission.isGranted != true) {
+          _emitFeedback(
+            ref,
+            _gates.prefersEnglish
+                ? 'Storage permission is required before sharing.'
+                : '共有前にストレージ権限が必要です。',
+          );
+          return false;
+        }
+
+        var working = current.copyWith(
+          isSharing: true,
+          progress: max(0.22, current.progress),
+          storageStatus: permission,
+          clearFeedback: true,
+        );
+        ref.state = AsyncData(working);
+
+        try {
+          final rendered = await _renderExportAsset(
+            working,
+            watermark: working.watermarkOnShare,
+          );
+          working = working.copyWith(progress: 0.68);
+          ref.state = AsyncData(working);
+
+          await _shareExport(
+            rendered,
+            target: target,
+            includeMetadata: working.includeMetadata,
+            state: working,
+          );
+
+          final record = ExportRecord(
+            filename: rendered.filenameBase,
+            destination: target,
+            format: rendered.format,
+            createdAt: DateTime.now(),
+            fileSizeMb: rendered.sizeMb,
+            sharedVia: target,
+            watermarked: working.watermarkOnShare,
+          );
+          final updatedHistory = <ExportRecord>[record, ...working.history];
+
+          ref.state = AsyncData(
+            working.copyWith(
+              isSharing: false,
+              progress: 1.0,
+              lastSharedVia: target,
+              lastExportPath: 'share://${record.label}',
+              history: updatedHistory.take(6).toList(),
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Shared ${record.label} via $target'
+                  : '${record.label} を$targetで共有しました',
+              feedbackId: working.feedbackId + 1,
+            ),
+          );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              DesignExportSharedEvent(
+                format: record.format.name,
+                target: target,
+                includeMetadata: working.includeMetadata,
+                watermarked: working.watermarkOnShare,
+                persona: _gates.personaKey,
+                locale: _gates.localeTag,
+              ),
+            ),
+          );
+          return true;
+        } catch (error) {
+          ref.state = AsyncData(
+            working.copyWith(
+              isSharing: false,
+              progress: 0,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Share failed: $error'
+                  : '共有に失敗しました: $error',
+              feedbackId: working.feedbackId + 1,
+            ),
+          );
+          return false;
+        }
+      }, concurrency: Concurrency.restart);
+
+  void _emitFeedback(Ref<AsyncValue<DesignExportState>> ref, String message) {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return;
 

@@ -28,12 +28,15 @@ class OnboardingViewModel extends AsyncProvider<OnboardingState> {
   late final skipMut = mutation<void>(#skip);
 
   @override
-  Future<OnboardingState> build(Ref ref) async {
+  Future<OnboardingState> build(Ref<AsyncValue<OnboardingState>> ref) async {
     final prefs = await ref.watch(onboardingPreferencesProvider.future);
     return OnboardingState(preferences: prefs);
   }
 
-  Call<void> markStep({required int step, required int totalSteps}) {
+  Call<void, AsyncValue<OnboardingState>> markStep({
+    required int step,
+    required int totalSteps,
+  }) {
     return mutate(markStepMut, (ref) async {
       final analytics = ref.watch(analyticsClientProvider);
       final cache = ref.watch(onboardingCacheProvider);
@@ -55,20 +58,26 @@ class OnboardingViewModel extends AsyncProvider<OnboardingState> {
     }, concurrency: Concurrency.restart);
   }
 
-  Call<void> complete({required int step, required int totalSteps}) {
+  Call<void, AsyncValue<OnboardingState>> complete({
+    required int step,
+    required int totalSteps,
+  }) {
     return mutate(completeMut, (ref) async {
       await _finish(ref, skipped: false, step: step, totalSteps: totalSteps);
     }, concurrency: Concurrency.dropLatest);
   }
 
-  Call<void> skip({required int step, required int totalSteps}) {
+  Call<void, AsyncValue<OnboardingState>> skip({
+    required int step,
+    required int totalSteps,
+  }) {
     return mutate(skipMut, (ref) async {
       await _finish(ref, skipped: true, step: step, totalSteps: totalSteps);
     }, concurrency: Concurrency.dropLatest);
   }
 
   Future<void> _finish(
-    Ref ref, {
+    Ref<AsyncValue<OnboardingState>> ref, {
     required bool skipped,
     required int step,
     required int totalSteps,
@@ -106,7 +115,10 @@ class OnboardingViewModel extends AsyncProvider<OnboardingState> {
     await _syncToBackend(ref, payload);
   }
 
-  Future<void> _syncToBackend(Ref ref, JsonMap onboardingState) async {
+  Future<void> _syncToBackend(
+    Ref<AsyncValue<OnboardingState>> ref,
+    JsonMap onboardingState,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;

@@ -44,7 +44,9 @@ class PermissionsOnboardingViewModel
   late final requestAllMut = mutation<PermissionsOnboardingState>(#requestAll);
 
   @override
-  Future<PermissionsOnboardingState> build(Ref ref) async {
+  Future<PermissionsOnboardingState> build(
+    Ref<AsyncValue<PermissionsOnboardingState>> ref,
+  ) async {
     final storageClient = ref.watch(storagePermissionClientProvider);
     final messaging = ref.watch(firebaseMessagingProvider);
 
@@ -57,60 +59,60 @@ class PermissionsOnboardingViewModel
     );
   }
 
-  Call<StoragePermissionStatus> requestStorage() =>
-      mutate(requestStorageMut, (ref) async {
-        final client = ref.watch(storagePermissionClientProvider);
-        final status = await client.request();
-        final current = ref.watch(this).valueOrNull;
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(storageStatus: status));
-        }
-        return status;
-      }, concurrency: Concurrency.dropLatest);
+  Call<StoragePermissionStatus, AsyncValue<PermissionsOnboardingState>>
+  requestStorage() => mutate(requestStorageMut, (ref) async {
+    final client = ref.watch(storagePermissionClientProvider);
+    final status = await client.request();
+    final current = ref.watch(this).valueOrNull;
+    if (current != null) {
+      ref.state = AsyncData(current.copyWith(storageStatus: status));
+    }
+    return status;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<PermissionAccessStatus> requestNotifications() =>
-      mutate(requestNotificationsMut, (ref) async {
-        final messaging = ref.watch(firebaseMessagingProvider);
-        final settings = await messaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-          announcement: false,
-          carPlay: false,
-          criticalAlert: false,
-          provisional: false,
-        );
-        final status = _notificationStatus(settings.authorizationStatus);
-        final current = ref.watch(this).valueOrNull;
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(notificationStatus: status));
-        }
-        return status;
-      }, concurrency: Concurrency.dropLatest);
+  Call<PermissionAccessStatus, AsyncValue<PermissionsOnboardingState>>
+  requestNotifications() => mutate(requestNotificationsMut, (ref) async {
+    final messaging = ref.watch(firebaseMessagingProvider);
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      announcement: false,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+    );
+    final status = _notificationStatus(settings.authorizationStatus);
+    final current = ref.watch(this).valueOrNull;
+    if (current != null) {
+      ref.state = AsyncData(current.copyWith(notificationStatus: status));
+    }
+    return status;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<PermissionsOnboardingState> requestAll() =>
-      mutate(requestAllMut, (ref) async {
-        final client = ref.watch(storagePermissionClientProvider);
-        final messaging = ref.watch(firebaseMessagingProvider);
+  Call<PermissionsOnboardingState, AsyncValue<PermissionsOnboardingState>>
+  requestAll() => mutate(requestAllMut, (ref) async {
+    final client = ref.watch(storagePermissionClientProvider);
+    final messaging = ref.watch(firebaseMessagingProvider);
 
-        final storageStatus = await client.request();
-        final settings = await messaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-          announcement: false,
-          carPlay: false,
-          criticalAlert: false,
-          provisional: false,
-        );
+    final storageStatus = await client.request();
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      announcement: false,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+    );
 
-        final next = PermissionsOnboardingState(
-          storageStatus: storageStatus,
-          notificationStatus: _notificationStatus(settings.authorizationStatus),
-        );
-        ref.state = AsyncData(next);
-        return next;
-      }, concurrency: Concurrency.dropLatest);
+    final next = PermissionsOnboardingState(
+      storageStatus: storageStatus,
+      notificationStatus: _notificationStatus(settings.authorizationStatus),
+    );
+    ref.state = AsyncData(next);
+    return next;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 PermissionAccessStatus _notificationStatus(

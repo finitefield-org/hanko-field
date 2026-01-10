@@ -10,17 +10,20 @@ class ProfileNotificationsViewModel
   late final saveMut = mutation<NotificationPreferences>(#save);
 
   @override
-  Future<NotificationPreferences> build(Ref ref) async {
+  Future<NotificationPreferences> build(
+    Ref<AsyncValue<NotificationPreferences>> ref,
+  ) async {
     return ref.watch(notificationPreferencesProvider.future);
   }
 
-  Call<NotificationPreferences> save(NotificationPreferences preferences) =>
-      mutate(saveMut, (ref) async {
-        final service = ref.watch(notificationPreferencesServiceProvider);
-        final saved = await service.save(preferences);
-        ref.state = AsyncData(saved);
-        return saved;
-      }, concurrency: Concurrency.dropLatest);
+  Call<NotificationPreferences, AsyncValue<NotificationPreferences>> save(
+    NotificationPreferences preferences,
+  ) => mutate(saveMut, (ref) async {
+    final service = ref.watch(notificationPreferencesServiceProvider);
+    final saved = await service.save(preferences);
+    ref.state = AsyncData(saved);
+    return saved;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 final profileNotificationsViewModel = ProfileNotificationsViewModel();

@@ -155,7 +155,9 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
   bool _trackedStart = false;
 
   @override
-  Future<DesignCreationState> build(Ref ref) async {
+  Future<DesignCreationState> build(
+    Ref<AsyncValue<DesignCreationState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final defaults = _defaultFilters(gates);
@@ -215,81 +217,88 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     );
   }
 
-  Call<DesignSourceType> selectType(DesignSourceType type) =>
-      mutate(selectTypeMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return type;
-        ref.state = AsyncData(current.copyWith(selectedType: type));
-        return type;
-      }, concurrency: Concurrency.dropLatest);
+  Call<DesignSourceType, AsyncValue<DesignCreationState>> selectType(
+    DesignSourceType type,
+  ) => mutate(selectTypeMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return type;
+    ref.state = AsyncData(current.copyWith(selectedType: type));
+    return type;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<Set<String>> toggleFilter(String filterId) =>
-      mutate(toggleFilterMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return <String>{};
+  Call<Set<String>, AsyncValue<DesignCreationState>> toggleFilter(
+    String filterId,
+  ) => mutate(toggleFilterMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return <String>{};
 
-        final next = Set<String>.from(current.activeFilters);
-        if (next.contains(filterId) && next.length > 1) {
-          next.remove(filterId);
-        } else {
-          next.add(filterId);
-        }
+    final next = Set<String>.from(current.activeFilters);
+    if (next.contains(filterId) && next.length > 1) {
+      next.remove(filterId);
+    } else {
+      next.add(filterId);
+    }
 
-        ref.state = AsyncData(current.copyWith(activeFilters: next));
-        return next;
-      }, concurrency: Concurrency.dropLatest);
+    ref.state = AsyncData(current.copyWith(activeFilters: next));
+    return next;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<NameInputDraft> updateNameField(NameField field, String value) =>
-      mutate(updateNameMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return const NameInputDraft();
+  Call<NameInputDraft, AsyncValue<DesignCreationState>> updateNameField(
+    NameField field,
+    String value,
+  ) => mutate(updateNameMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return const NameInputDraft();
 
-        final updatedDraft = _updateDraftField(
-          current.nameDraft,
-          field,
-          value,
-        ).copyWith(clearKanjiMapping: true);
+    final updatedDraft = _updateDraftField(
+      current.nameDraft,
+      field,
+      value,
+    ).copyWith(clearKanjiMapping: true);
 
-        ref.state = AsyncData(
-          current.copyWith(nameDraft: updatedDraft, clearSavedInput: true),
-        );
-        return updatedDraft;
-      }, concurrency: Concurrency.restart);
+    ref.state = AsyncData(
+      current.copyWith(nameDraft: updatedDraft, clearSavedInput: true),
+    );
+    return updatedDraft;
+  }, concurrency: Concurrency.restart);
 
-  Call<NameInputDraft> applyNameSuggestion(NameInputDraft suggestion) =>
-      mutate(applySuggestionMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return suggestion;
+  Call<NameInputDraft, AsyncValue<DesignCreationState>> applyNameSuggestion(
+    NameInputDraft suggestion,
+  ) => mutate(applySuggestionMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return suggestion;
 
-        ref.state = AsyncData(
-          current.copyWith(nameDraft: suggestion, clearSavedInput: true),
-        );
-        return suggestion;
-      }, concurrency: Concurrency.restart);
+    ref.state = AsyncData(
+      current.copyWith(nameDraft: suggestion, clearSavedInput: true),
+    );
+    return suggestion;
+  }, concurrency: Concurrency.restart);
 
-  Call<KanjiMapping?> setKanjiMapping(KanjiMapping? mapping) =>
-      mutate(setKanjiMappingMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return mapping;
+  Call<KanjiMapping?, AsyncValue<DesignCreationState>> setKanjiMapping(
+    KanjiMapping? mapping,
+  ) => mutate(setKanjiMappingMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return mapping;
 
-        final draft = _applyKanjiMapping(current.nameDraft, mapping);
+    final draft = _applyKanjiMapping(current.nameDraft, mapping);
 
-        ref.state = AsyncData(
-          current.copyWith(nameDraft: draft, clearSavedInput: true),
-        );
-        return mapping;
-      }, concurrency: Concurrency.dropLatest);
+    ref.state = AsyncData(
+      current.copyWith(nameDraft: draft, clearSavedInput: true),
+    );
+    return mapping;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<WritingStyle> setPreviewStyle(WritingStyle style) =>
-      mutate(setPreviewStyleMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return style;
+  Call<WritingStyle, AsyncValue<DesignCreationState>> setPreviewStyle(
+    WritingStyle style,
+  ) => mutate(setPreviewStyleMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return style;
 
-        ref.state = AsyncData(current.copyWith(previewStyle: style));
-        return style;
-      }, concurrency: Concurrency.dropLatest);
+    ref.state = AsyncData(current.copyWith(previewStyle: style));
+    return style;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<DesignStyle> setStyleSelection({
+  Call<DesignStyle, AsyncValue<DesignCreationState>> setStyleSelection({
     required SealShape shape,
     required DesignSize size,
     required DesignStyle style,
@@ -323,101 +332,109 @@ class DesignCreationViewModel extends AsyncProvider<DesignCreationState> {
     return style;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<DesignInput> saveNameInput() => mutate(saveInputMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) {
-      throw StateError('Design creation state is not ready');
-    }
-
-    final gates = ref.watch(appExperienceGatesProvider);
-    final validation = validateNameDraft(current.nameDraft, gates);
-    if (!validation.isValid) {
-      throw StateError('Name input is invalid');
-    }
-
-    final rawName = _composeRawName(
-      current.nameDraft,
-      prefersEnglish: gates.prefersEnglish,
-    );
-    final input = DesignInput(
-      sourceType: current.selectedType,
-      rawName: rawName,
-      kanji: current.nameDraft.kanjiMapping,
-    );
-
-    ref.state = AsyncData(current.copyWith(savedInput: input));
-    final analytics = ref.watch(analyticsClientProvider);
-    unawaited(
-      analytics.track(
-        DesignInputSavedEvent(
-          sourceType: current.selectedType.toJson(),
-          nameLength: rawName.length,
-          hasKanji: current.nameDraft.kanjiMapping != null,
-          persona: gates.personaKey,
-          locale: gates.localeTag,
-        ),
-      ),
-    );
-    return input;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<Design> hydrateFromDesign(Design design) =>
-      mutate(hydrateFromDesignMut, (ref) async {
-        var current = ref.watch(this).valueOrNull;
+  Call<DesignInput, AsyncValue<DesignCreationState>> saveNameInput() =>
+      mutate(saveInputMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
         if (current == null) {
-          final hydrated = await build(ref);
-          current = hydrated;
-          ref.state = AsyncData(hydrated);
+          throw StateError('Design creation state is not ready');
         }
 
         final gates = ref.watch(appExperienceGatesProvider);
-        final incomingInput = design.input;
-        final rawName = incomingInput?.rawName.trim();
+        final validation = validateNameDraft(current.nameDraft, gates);
+        if (!validation.isValid) {
+          throw StateError('Name input is invalid');
+        }
+
+        final rawName = _composeRawName(
+          current.nameDraft,
+          prefersEnglish: gates.prefersEnglish,
+        );
         final input = DesignInput(
-          sourceType: incomingInput?.sourceType ?? DesignSourceType.typed,
-          rawName: (rawName == null || rawName.isEmpty)
-              ? (gates.prefersEnglish ? 'Design' : '印鑑')
-              : rawName,
-          kanji: incomingInput?.kanji,
+          sourceType: current.selectedType,
+          rawName: rawName,
+          kanji: current.nameDraft.kanjiMapping,
         );
 
-        ref.state = AsyncData(
-          current.copyWith(
-            selectedType: input.sourceType,
-            savedInput: input,
-            selectedShape: design.shape,
-            selectedSize: design.size,
-            selectedStyle: design.style,
-            selectedTemplate: null,
-            previewStyle: design.style.writing,
+        ref.state = AsyncData(current.copyWith(savedInput: input));
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(
+            DesignInputSavedEvent(
+              sourceType: current.selectedType.toJson(),
+              nameLength: rawName.length,
+              hasKanji: current.nameDraft.kanjiMapping != null,
+              persona: gates.personaKey,
+              locale: gates.localeTag,
+            ),
           ),
         );
-        return design;
+        return input;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> ensureStorageAccess() => mutate(ensureStorageMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-
-    final requiresStorage = switch (current.selectedType) {
-      DesignSourceType.typed => false,
-      DesignSourceType.uploaded => true,
-      DesignSourceType.logo => true,
-    };
-    if (!requiresStorage) return true;
-
-    final client = ref.watch(storagePermissionClientProvider);
-    final status = await client.status();
-    if (status.isGranted) {
-      ref.state = AsyncData(current.copyWith(storagePermissionGranted: true));
-      return true;
+  Call<Design, AsyncValue<DesignCreationState>> hydrateFromDesign(
+    Design design,
+  ) => mutate(hydrateFromDesignMut, (ref) async {
+    var current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      final hydrated = await build(ref);
+      current = hydrated;
+      ref.state = AsyncData(hydrated);
     }
 
-    final requested = await client.request();
-    final granted = requested.isGranted;
-    ref.state = AsyncData(current.copyWith(storagePermissionGranted: granted));
-    return granted;
+    final gates = ref.watch(appExperienceGatesProvider);
+    final incomingInput = design.input;
+    final rawName = incomingInput?.rawName.trim();
+    final input = DesignInput(
+      sourceType: incomingInput?.sourceType ?? DesignSourceType.typed,
+      rawName: (rawName == null || rawName.isEmpty)
+          ? (gates.prefersEnglish ? 'Design' : '印鑑')
+          : rawName,
+      kanji: incomingInput?.kanji,
+    );
+
+    ref.state = AsyncData(
+      current.copyWith(
+        selectedType: input.sourceType,
+        savedInput: input,
+        selectedShape: design.shape,
+        selectedSize: design.size,
+        selectedStyle: design.style,
+        selectedTemplate: null,
+        previewStyle: design.style.writing,
+      ),
+    );
+    return design;
   }, concurrency: Concurrency.dropLatest);
+
+  Call<bool, AsyncValue<DesignCreationState>> ensureStorageAccess() => mutate(
+    ensureStorageMut,
+    (ref) async {
+      final current = ref.watch(this).valueOrNull;
+      if (current == null) return false;
+
+      final requiresStorage = switch (current.selectedType) {
+        DesignSourceType.typed => false,
+        DesignSourceType.uploaded => true,
+        DesignSourceType.logo => true,
+      };
+      if (!requiresStorage) return true;
+
+      final client = ref.watch(storagePermissionClientProvider);
+      final status = await client.status();
+      if (status.isGranted) {
+        ref.state = AsyncData(current.copyWith(storagePermissionGranted: true));
+        return true;
+      }
+
+      final requested = await client.request();
+      final granted = requested.isGranted;
+      ref.state = AsyncData(
+        current.copyWith(storagePermissionGranted: granted),
+      );
+      return granted;
+    },
+    concurrency: Concurrency.dropLatest,
+  );
 }
 
 final designCreationViewModel = DesignCreationViewModel();

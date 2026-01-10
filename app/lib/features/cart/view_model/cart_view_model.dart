@@ -240,7 +240,7 @@ class CartViewModel extends AsyncProvider<CartState> {
   late final replaceLinesMut = mutation<List<CartLineItem>>(#replaceLines);
 
   @override
-  Future<CartState> build(Ref ref) async {
+  Future<CartState> build(Ref<AsyncValue<CartState>> ref) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final l10n = AppLocalizations(ref.watch(appLocaleProvider));
     await Future<void>.delayed(const Duration(milliseconds: 160));
@@ -248,60 +248,27 @@ class CartViewModel extends AsyncProvider<CartState> {
     return CartState(lines: lines, estimate: _estimateFor(lines, gates, l10n));
   }
 
-  Call<String> adjustQuantity(String lineId, int delta) =>
-      mutate(adjustQuantityMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return lineId;
-
-        final pending = {...current.pendingLineIds, lineId};
-        ref.state = AsyncData(
-          current.copyWith(pendingLineIds: pending, promoError: null),
-        );
-
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-
-        final gates = ref.watch(appExperienceGatesProvider);
-        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-        final updatedLines = current.lines.map((item) {
-          if (item.id != lineId) return item;
-          final nextQty = max(1, item.quantity + delta);
-          return item.copyWith(quantity: nextQty);
-        }).toList();
-
-        pending.remove(lineId);
-        ref.state = AsyncData(
-          current.copyWith(
-            lines: updatedLines,
-            estimate: _estimateFor(updatedLines, gates, l10n),
-            pendingLineIds: pending,
-            promoError: null,
-          ),
-        );
-        return lineId;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<String> removeLine(String lineId) => mutate(removeLineMut, (ref) async {
+  Call<String, AsyncValue<CartState>> adjustQuantity(
+    String lineId,
+    int delta,
+  ) => mutate(adjustQuantityMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return lineId;
+
     final pending = {...current.pendingLineIds, lineId};
     ref.state = AsyncData(
       current.copyWith(pendingLineIds: pending, promoError: null),
     );
 
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    await Future<void>.delayed(const Duration(milliseconds: 120));
 
-    final index = current.lines.indexWhere((item) => item.id == lineId);
-    if (index == -1) {
-      ref.state = AsyncData(
-        current.copyWith(pendingLineIds: pending..remove(lineId)),
-      );
-      return lineId;
-    }
-
-    final removed = current.lines[index];
-    final updatedLines = [...current.lines]..removeAt(index);
     final gates = ref.watch(appExperienceGatesProvider);
     final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    final updatedLines = current.lines.map((item) {
+      if (item.id != lineId) return item;
+      final nextQty = max(1, item.quantity + delta);
+      return item.copyWith(quantity: nextQty);
+    }).toList();
 
     pending.remove(lineId);
     ref.state = AsyncData(
@@ -309,115 +276,16 @@ class CartViewModel extends AsyncProvider<CartState> {
         lines: updatedLines,
         estimate: _estimateFor(updatedLines, gates, l10n),
         pendingLineIds: pending,
-        recentlyRemoved: RemovedCartLine(item: removed, index: index),
         promoError: null,
       ),
     );
     return lineId;
-  });
-
-  Call<void> undoRemoval() => mutate(undoRemovalMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    final removed = current?.recentlyRemoved;
-    if (current == null || removed == null) return;
-
-    final insertIndex = min(removed.index, current.lines.length);
-    final updated = [...current.lines]..insert(insertIndex, removed.item);
-    final gates = ref.watch(appExperienceGatesProvider);
-    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-
-    ref.state = AsyncData(
-      current.copyWith(
-        lines: updated,
-        estimate: _estimateFor(updated, gates, l10n),
-        clearRecentlyRemoved: true,
-        promoError: null,
-      ),
-    );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<CartPromo?> applyPromo(String rawCode) => mutate(applyPromoMut, (
-    ref,
-  ) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return null;
-
-    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-    final code = rawCode.trim().toUpperCase();
-
-    if (code.isEmpty) {
-      ref.state = AsyncData(
-        current.copyWith(
-          promoError: l10n.cartPromoEnterCode,
-          isApplyingPromo: false,
-        ),
-      );
-      return null;
-    }
-
-    ref.state = AsyncData(current.copyWith(isApplyingPromo: true));
-
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-
-    final subtotal = current.subtotal;
-    CartPromo? promo;
-    String? error;
-
-    switch (code) {
-      case 'FIELD10':
-        final amount = max(0, (subtotal.amount * 0.1).round());
-        if (amount == 0) {
-          error = l10n.cartPromoAddItemsRequired;
-        } else {
-          promo = CartPromo(
-            code: code,
-            label: l10n.cartPromoField10Label,
-            description: l10n.cartPromoField10Description,
-            appliedAmount: Money(amount: amount, currency: subtotal.currency),
-          );
-        }
-        break;
-      case 'SHIPFREE':
-        final threshold = 9000;
-        if (subtotal.amount < threshold) {
-          final shortfall = threshold - subtotal.amount;
-          error = l10n.cartPromoShipfreeShortfall(shortfall);
-        } else {
-          promo = CartPromo(
-            code: code,
-            label: l10n.cartPromoShipfreeLabel,
-            freeShipping: true,
-            appliedAmount: Money(amount: 0, currency: subtotal.currency),
-          );
-        }
-        break;
-      case 'INK200':
-        promo = CartPromo(
-          code: code,
-          label: l10n.cartPromoInkLabel,
-          description: l10n.cartPromoInkDescription,
-          appliedAmount: Money(amount: 200, currency: subtotal.currency),
-        );
-        break;
-      default:
-        error = l10n.cartPromoInvalid;
-    }
-
-    ref.state = AsyncData(
-      current.copyWith(
-        appliedPromo: promo,
-        promoError: error,
-        isApplyingPromo: false,
-      ),
-    );
-    return promo;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<Set<String>> updateAddons(String lineId, Set<String> selection) =>
-      mutate(updateAddonsMut, (ref) async {
+  Call<String, AsyncValue<CartState>> removeLine(String lineId) =>
+      mutate(removeLineMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return selection;
-
+        if (current == null) return lineId;
         final pending = {...current.pendingLineIds, lineId};
         ref.state = AsyncData(
           current.copyWith(pendingLineIds: pending, promoError: null),
@@ -425,12 +293,18 @@ class CartViewModel extends AsyncProvider<CartState> {
 
         await Future<void>.delayed(const Duration(milliseconds: 180));
 
+        final index = current.lines.indexWhere((item) => item.id == lineId);
+        if (index == -1) {
+          ref.state = AsyncData(
+            current.copyWith(pendingLineIds: pending..remove(lineId)),
+          );
+          return lineId;
+        }
+
+        final removed = current.lines[index];
+        final updatedLines = [...current.lines]..removeAt(index);
         final gates = ref.watch(appExperienceGatesProvider);
         final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-        final updatedLines = current.lines.map((item) {
-          if (item.id != lineId) return item;
-          return item.copyWith(selectedAddonIds: selection);
-        }).toList();
 
         pending.remove(lineId);
         ref.state = AsyncData(
@@ -438,33 +312,169 @@ class CartViewModel extends AsyncProvider<CartState> {
             lines: updatedLines,
             estimate: _estimateFor(updatedLines, gates, l10n),
             pendingLineIds: pending,
+            recentlyRemoved: RemovedCartLine(item: removed, index: index),
             promoError: null,
           ),
         );
-        return selection;
-      }, concurrency: Concurrency.dropLatest);
+        return lineId;
+      });
 
-  Call<void> clearPromo() => mutate(clearPromoMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    ref.state = AsyncData(
-      current.copyWith(
-        clearPromo: true,
-        promoError: null,
-        isApplyingPromo: false,
-      ),
-    );
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<CartState>> undoRemoval() =>
+      mutate(undoRemovalMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        final removed = current?.recentlyRemoved;
+        if (current == null || removed == null) return;
 
-  Call<List<CartLineItem>> replaceLines(List<CartLineItem> lines) =>
-      mutate(replaceLinesMut, (ref) async {
+        final insertIndex = min(removed.index, current.lines.length);
+        final updated = [...current.lines]..insert(insertIndex, removed.item);
         final gates = ref.watch(appExperienceGatesProvider);
         final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+
         ref.state = AsyncData(
-          CartState(lines: lines, estimate: _estimateFor(lines, gates, l10n)),
+          current.copyWith(
+            lines: updated,
+            estimate: _estimateFor(updated, gates, l10n),
+            clearRecentlyRemoved: true,
+            promoError: null,
+          ),
         );
-        return lines;
       }, concurrency: Concurrency.dropLatest);
+
+  Call<CartPromo?, AsyncValue<CartState>> applyPromo(String rawCode) => mutate(
+    applyPromoMut,
+    (ref) async {
+      final current = ref.watch(this).valueOrNull;
+      if (current == null) return null;
+
+      final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+      final code = rawCode.trim().toUpperCase();
+
+      if (code.isEmpty) {
+        ref.state = AsyncData(
+          current.copyWith(
+            promoError: l10n.cartPromoEnterCode,
+            isApplyingPromo: false,
+          ),
+        );
+        return null;
+      }
+
+      ref.state = AsyncData(current.copyWith(isApplyingPromo: true));
+
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      final subtotal = current.subtotal;
+      CartPromo? promo;
+      String? error;
+
+      switch (code) {
+        case 'FIELD10':
+          final amount = max(0, (subtotal.amount * 0.1).round());
+          if (amount == 0) {
+            error = l10n.cartPromoAddItemsRequired;
+          } else {
+            promo = CartPromo(
+              code: code,
+              label: l10n.cartPromoField10Label,
+              description: l10n.cartPromoField10Description,
+              appliedAmount: Money(amount: amount, currency: subtotal.currency),
+            );
+          }
+          break;
+        case 'SHIPFREE':
+          final threshold = 9000;
+          if (subtotal.amount < threshold) {
+            final shortfall = threshold - subtotal.amount;
+            error = l10n.cartPromoShipfreeShortfall(shortfall);
+          } else {
+            promo = CartPromo(
+              code: code,
+              label: l10n.cartPromoShipfreeLabel,
+              freeShipping: true,
+              appliedAmount: Money(amount: 0, currency: subtotal.currency),
+            );
+          }
+          break;
+        case 'INK200':
+          promo = CartPromo(
+            code: code,
+            label: l10n.cartPromoInkLabel,
+            description: l10n.cartPromoInkDescription,
+            appliedAmount: Money(amount: 200, currency: subtotal.currency),
+          );
+          break;
+        default:
+          error = l10n.cartPromoInvalid;
+      }
+
+      ref.state = AsyncData(
+        current.copyWith(
+          appliedPromo: promo,
+          promoError: error,
+          isApplyingPromo: false,
+        ),
+      );
+      return promo;
+    },
+    concurrency: Concurrency.dropLatest,
+  );
+
+  Call<Set<String>, AsyncValue<CartState>> updateAddons(
+    String lineId,
+    Set<String> selection,
+  ) => mutate(updateAddonsMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return selection;
+
+    final pending = {...current.pendingLineIds, lineId};
+    ref.state = AsyncData(
+      current.copyWith(pendingLineIds: pending, promoError: null),
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    final updatedLines = current.lines.map((item) {
+      if (item.id != lineId) return item;
+      return item.copyWith(selectedAddonIds: selection);
+    }).toList();
+
+    pending.remove(lineId);
+    ref.state = AsyncData(
+      current.copyWith(
+        lines: updatedLines,
+        estimate: _estimateFor(updatedLines, gates, l10n),
+        pendingLineIds: pending,
+        promoError: null,
+      ),
+    );
+    return selection;
+  }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<CartState>> clearPromo() =>
+      mutate(clearPromoMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        ref.state = AsyncData(
+          current.copyWith(
+            clearPromo: true,
+            promoError: null,
+            isApplyingPromo: false,
+          ),
+        );
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<List<CartLineItem>, AsyncValue<CartState>> replaceLines(
+    List<CartLineItem> lines,
+  ) => mutate(replaceLinesMut, (ref) async {
+    final gates = ref.watch(appExperienceGatesProvider);
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    ref.state = AsyncData(
+      CartState(lines: lines, estimate: _estimateFor(lines, gates, l10n)),
+    );
+    return lines;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 List<CartLineItem> _seedLines(AppExperienceGates gates, AppLocalizations l10n) {

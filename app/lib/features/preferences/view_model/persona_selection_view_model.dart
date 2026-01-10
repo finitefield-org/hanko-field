@@ -42,7 +42,9 @@ class PersonaSelectionViewModel extends AsyncProvider<PersonaSelectionState> {
   late final saveMut = mutation<UserPersona>(#save);
 
   @override
-  Future<PersonaSelectionState> build(Ref ref) async {
+  Future<PersonaSelectionState> build(
+    Ref<AsyncValue<PersonaSelectionState>> ref,
+  ) async {
     await ref.watch(personaPreferencesProvider.future);
     final selected = ref.watch(appPersonaProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
@@ -54,7 +56,9 @@ class PersonaSelectionViewModel extends AsyncProvider<PersonaSelectionState> {
     );
   }
 
-  Call<UserPersona> save(UserPersona persona) => mutate(saveMut, (ref) async {
+  Call<UserPersona, AsyncValue<PersonaSelectionState>> save(
+    UserPersona persona,
+  ) => mutate(saveMut, (ref) async {
     final personaService = ref.watch(appPersonaServiceProvider);
     final onboarding = ref.watch(onboardingPreferencesServiceProvider);
 
@@ -64,7 +68,10 @@ class PersonaSelectionViewModel extends AsyncProvider<PersonaSelectionState> {
     return persona;
   }, concurrency: Concurrency.dropLatest);
 
-  Future<void> _syncProfile(Ref ref, UserPersona persona) async {
+  Future<void> _syncProfile(
+    Ref<AsyncValue<PersonaSelectionState>> ref,
+    UserPersona persona,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;

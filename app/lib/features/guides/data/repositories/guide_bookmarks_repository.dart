@@ -31,7 +31,7 @@ class _SharedPreferencesGuideBookmarksRepository
   _SharedPreferencesGuideBookmarksRepository(this._ref)
     : _logger = Logger('GuideBookmarksRepository');
 
-  final Ref _ref;
+  final Ref<GuideBookmarksRepository> _ref;
   final Logger _logger;
 
   Set<String>? _cache;

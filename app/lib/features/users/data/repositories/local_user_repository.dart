@@ -30,7 +30,7 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 class LocalUserRepository implements UserRepository {
   LocalUserRepository(this._ref) : _logger = Logger('LocalUserRepository');
 
-  final Ref _ref;
+  final Ref<UserRepository> _ref;
   final Logger _logger;
 
   @override

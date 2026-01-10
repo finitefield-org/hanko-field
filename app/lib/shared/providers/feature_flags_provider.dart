@@ -149,7 +149,7 @@ class FeatureFlagsProvider extends AsyncProvider<FeatureFlags> {
   late final refreshMut = mutation<FeatureFlags>(#refresh);
 
   @override
-  Future<FeatureFlags> build(Ref ref) async {
+  Future<FeatureFlags> build(Ref<AsyncValue<FeatureFlags>> ref) async {
     try {
       return ref.scope(featureFlagsScope);
     } on StateError {
@@ -174,34 +174,38 @@ class FeatureFlagsProvider extends AsyncProvider<FeatureFlags> {
     return FeatureFlags.fromRemoteConfig(remoteConfig);
   }
 
-  Call<FeatureFlags> refresh() => mutate(refreshMut, (ref) async {
-    final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
-    final av = ref.watch(this);
-    ref.state = switch (av) {
-      AsyncData(:final value) => AsyncData(value, isRefreshing: true),
-      AsyncError(:final error, :final stack, :final previous) => AsyncError(
-        error,
-        stack,
-        previous: previous,
-      ),
-      _ => const AsyncLoading<FeatureFlags>(),
-    };
+  Call<FeatureFlags, AsyncValue<FeatureFlags>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+        final av = ref.watch(this);
+        ref.state = switch (av) {
+          AsyncData(:final value) => AsyncData(value, isRefreshing: true),
+          AsyncError(:final error, :final stack, :final previous) => AsyncError(
+            error,
+            stack,
+            previous: previous,
+          ),
+          _ => const AsyncLoading<FeatureFlags>(),
+        };
 
-    try {
-      await remoteConfig.fetchAndActivate();
-    } catch (e, stack) {
-      _featureFlagsLogger.warning(
-        'Failed to refresh Remote Config; using cached values.',
-        e,
-        stack,
-      );
-    }
-    final flags = FeatureFlags.fromRemoteConfig(remoteConfig);
-    ref.state = AsyncData(flags);
-    return flags;
-  }, concurrency: Concurrency.restart);
+        try {
+          await remoteConfig.fetchAndActivate();
+        } catch (e, stack) {
+          _featureFlagsLogger.warning(
+            'Failed to refresh Remote Config; using cached values.',
+            e,
+            stack,
+          );
+        }
+        final flags = FeatureFlags.fromRemoteConfig(remoteConfig);
+        ref.state = AsyncData(flags);
+        return flags;
+      }, concurrency: Concurrency.restart);
 
-  void _listenForUpdates(Ref ref, FirebaseRemoteConfig remoteConfig) {
+  void _listenForUpdates(
+    Ref<AsyncValue<FeatureFlags>> ref,
+    FirebaseRemoteConfig remoteConfig,
+  ) {
     try {
       ref.emit(
         remoteConfig.onConfigUpdated.asyncMap((_) async {

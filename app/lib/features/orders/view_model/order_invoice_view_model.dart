@@ -28,7 +28,9 @@ class OrderInvoiceViewModel extends AsyncProvider<OrderInvoiceViewState> {
   late final requestInvoiceMut = mutation<void>(#requestInvoice);
 
   @override
-  Future<OrderInvoiceViewState> build(Ref ref) async {
+  Future<OrderInvoiceViewState> build(
+    Ref<AsyncValue<OrderInvoiceViewState>> ref,
+  ) async {
     final repository = ref.watch(orderRepositoryProvider);
     final order = await repository.getOrder(orderId);
     final invoice = await repository.getInvoice(orderId);
@@ -43,10 +45,11 @@ class OrderInvoiceViewModel extends AsyncProvider<OrderInvoiceViewState> {
     );
   }
 
-  Call<void> requestInvoice() => mutate(requestInvoiceMut, (ref) async {
-    final repository = ref.watch(orderRepositoryProvider);
-    await repository.requestInvoice(orderId);
-    final updated = await build(ref);
-    ref.state = AsyncData(updated);
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<OrderInvoiceViewState>> requestInvoice() =>
+      mutate(requestInvoiceMut, (ref) async {
+        final repository = ref.watch(orderRepositoryProvider);
+        await repository.requestInvoice(orderId);
+        final updated = await build(ref);
+        ref.state = AsyncData(updated);
+      }, concurrency: Concurrency.dropLatest);
 }

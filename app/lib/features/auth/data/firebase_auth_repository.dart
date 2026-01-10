@@ -23,7 +23,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository(this._ref) : _logger = authLogger();
 
-  final Ref _ref;
+  final Ref<AuthRepository> _ref;
   final Logger _logger;
 
   FirebaseAuth get _auth => _ref.watch(firebaseAuthProvider);

@@ -96,7 +96,9 @@ class ShopCategoriesProvider extends AsyncProvider<List<ShopCategory>> {
   ShopCategoriesProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<ShopCategory>> build(Ref ref) async {
+  Future<List<ShopCategory>> build(
+    Ref<AsyncValue<List<ShopCategory>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     return _seedCategories(gates);
@@ -110,7 +112,9 @@ class ShopPromotionsProvider
   ShopPromotionsProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<ShopPromotionHighlight>> build(Ref ref) async {
+  Future<List<ShopPromotionHighlight>> build(
+    Ref<AsyncValue<List<ShopPromotionHighlight>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 160));
     final items = _seedPromotions(gates);
@@ -126,7 +130,9 @@ class ShopMaterialRecommendationsProvider
   ShopMaterialRecommendationsProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<ShopMaterialHighlight>> build(Ref ref) async {
+  Future<List<ShopMaterialHighlight>> build(
+    Ref<AsyncValue<List<ShopMaterialHighlight>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 170));
     return _seedMaterialPicks(gates);
@@ -140,7 +146,9 @@ class ShopGuideLinksProvider extends AsyncProvider<List<ShopGuideLink>> {
   ShopGuideLinksProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<ShopGuideLink>> build(Ref ref) async {
+  Future<List<ShopGuideLink>> build(
+    Ref<AsyncValue<List<ShopGuideLink>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 90));
     return _seedGuideLinks(gates);

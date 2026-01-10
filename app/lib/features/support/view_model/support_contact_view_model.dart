@@ -106,7 +106,7 @@ class SupportContactViewModel extends Provider<SupportContactState> {
   late final submitMut = mutation<SupportTicketSubmission>(#submit);
 
   @override
-  SupportContactState build(Ref ref) {
+  SupportContactState build(Ref<SupportContactState> ref) {
     return const SupportContactState(
       topic: SupportTopic.order,
       subject: '',
@@ -118,35 +118,35 @@ class SupportContactViewModel extends Provider<SupportContactState> {
     );
   }
 
-  Call<void> updateTopic(SupportTopic topic) => _update(
+  Call<void, SupportContactState> updateTopic(SupportTopic topic) => _update(
     (ref, state) => state.copyWith(
       topic: topic,
       errors: _validate(ref, state.copyWith(topic: topic)),
     ),
   );
 
-  Call<void> updateSubject(String value) => _update(
+  Call<void, SupportContactState> updateSubject(String value) => _update(
     (ref, state) => state.copyWith(
       subject: value,
       errors: _validate(ref, state.copyWith(subject: value)),
     ),
   );
 
-  Call<void> updateMessage(String value) => _update(
+  Call<void, SupportContactState> updateMessage(String value) => _update(
     (ref, state) => state.copyWith(
       message: value,
       errors: _validate(ref, state.copyWith(message: value)),
     ),
   );
 
-  Call<void> updateOrderId(String value) => _update(
+  Call<void, SupportContactState> updateOrderId(String value) => _update(
     (ref, state) => state.copyWith(
       orderId: value,
       errors: _validate(ref, state.copyWith(orderId: value)),
     ),
   );
 
-  Call<void> applyTemplate(
+  Call<void, SupportContactState> applyTemplate(
     SupportTopic topic,
     String subject,
     String message,
@@ -162,60 +162,67 @@ class SupportContactViewModel extends Provider<SupportContactState> {
     ),
   );
 
-  Call<void> addAttachments(List<SupportAttachment> attachments) =>
-      _update((ref, state) {
-        final next = [...state.attachments, ...attachments];
-        final overflowed = next.length > _maxAttachments;
-        final limited = next.take(_maxAttachments).toList();
-        var errors = _validate(ref, state.copyWith(attachments: limited));
-        if (overflowed) {
-          errors = SupportContactErrors(
-            subject: errors.subject,
-            message: errors.message,
-            orderId: errors.orderId,
-            attachments: _attachmentsLimitMessage(ref, max: _maxAttachments),
-          );
-        }
-        return state.copyWith(attachments: limited, errors: errors);
-      });
-
-  Call<void> removeAttachment(String id) => _update((ref, state) {
-    final next = state.attachments.where((item) => item.id != id).toList();
-    return state.copyWith(
-      attachments: next,
-      errors: _validate(ref, state.copyWith(attachments: next)),
-    );
-  });
-
-  Call<SupportTicketSubmission> submit() => mutate(submitMut, (ref) async {
-    final current = ref.watch(this);
-    final errors = _validate(ref, current);
-    if (errors.hasError) {
-      ref.state = current.copyWith(errors: errors);
-      throw SupportValidationException(
-        ref.watch(appExperienceGatesProvider).prefersEnglish
-            ? 'Please fix the highlighted fields.'
-            : '入力内容を確認してください。',
+  Call<void, SupportContactState> addAttachments(
+    List<SupportAttachment> attachments,
+  ) => _update((ref, state) {
+    final next = [...state.attachments, ...attachments];
+    final overflowed = next.length > _maxAttachments;
+    final limited = next.take(_maxAttachments).toList();
+    var errors = _validate(ref, state.copyWith(attachments: limited));
+    if (overflowed) {
+      errors = SupportContactErrors(
+        subject: errors.subject,
+        message: errors.message,
+        orderId: errors.orderId,
+        attachments: _attachmentsLimitMessage(ref, max: _maxAttachments),
       );
     }
+    return state.copyWith(attachments: limited, errors: errors);
+  });
 
-    final repository = ref.watch(supportRepositoryProvider);
-    final submission = await repository.createTicket(
-      SupportTicketDraft(
-        topic: current.topic,
-        subject: current.subject.trim(),
-        message: current.message.trim(),
-        orderId: current.orderId.trim(),
-        attachments: current.attachments,
-      ),
-    );
+  Call<void, SupportContactState> removeAttachment(String id) =>
+      _update((ref, state) {
+        final next = state.attachments.where((item) => item.id != id).toList();
+        return state.copyWith(
+          attachments: next,
+          errors: _validate(ref, state.copyWith(attachments: next)),
+        );
+      });
 
-    ref.state = current.resetForm(submission: submission);
-    return submission;
-  }, concurrency: Concurrency.restart);
+  Call<SupportTicketSubmission, SupportContactState> submit() =>
+      mutate(submitMut, (ref) async {
+        final current = ref.watch(this);
+        final errors = _validate(ref, current);
+        if (errors.hasError) {
+          ref.state = current.copyWith(errors: errors);
+          throw SupportValidationException(
+            ref.watch(appExperienceGatesProvider).prefersEnglish
+                ? 'Please fix the highlighted fields.'
+                : '入力内容を確認してください。',
+          );
+        }
 
-  Call<void> _update(
-    SupportContactState Function(Ref ref, SupportContactState state) update,
+        final repository = ref.watch(supportRepositoryProvider);
+        final submission = await repository.createTicket(
+          SupportTicketDraft(
+            topic: current.topic,
+            subject: current.subject.trim(),
+            message: current.message.trim(),
+            orderId: current.orderId.trim(),
+            attachments: current.attachments,
+          ),
+        );
+
+        ref.state = current.resetForm(submission: submission);
+        return submission;
+      }, concurrency: Concurrency.restart);
+
+  Call<void, SupportContactState> _update(
+    SupportContactState Function(
+      Ref<SupportContactState> ref,
+      SupportContactState state,
+    )
+    update,
   ) {
     return mutate(updateMut, (ref) async {
       final current = ref.watch(this);
@@ -223,7 +230,10 @@ class SupportContactViewModel extends Provider<SupportContactState> {
     }, concurrency: Concurrency.dropLatest);
   }
 
-  SupportContactErrors _validate(Ref ref, SupportContactState state) {
+  SupportContactErrors _validate(
+    Ref<SupportContactState> ref,
+    SupportContactState state,
+  ) {
     final prefersEnglish = ref.watch(appExperienceGatesProvider).prefersEnglish;
     final subject = state.subject.trim();
     final message = state.message.trim();
@@ -298,7 +308,10 @@ String _formatBytes(int bytes) {
   return '${value.toStringAsFixed(value >= 10 || unit == 0 ? 0 : 1)} ${units[unit]}';
 }
 
-String _attachmentsLimitMessage(Ref ref, {required int max}) {
+String _attachmentsLimitMessage(
+  Ref<SupportContactState> ref, {
+  required int max,
+}) {
   final prefersEnglish = ref.watch(appExperienceGatesProvider).prefersEnglish;
   return prefersEnglish ? 'Up to $max attachments allowed.' : '添付は最大$max件までです。';
 }

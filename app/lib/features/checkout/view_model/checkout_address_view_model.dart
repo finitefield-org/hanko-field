@@ -160,7 +160,9 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
   late final postalLookupMut = mutation<AddressLookupResult?>(#postalLookup);
 
   @override
-  Future<CheckoutAddressState> build(Ref ref) async {
+  Future<CheckoutAddressState> build(
+    Ref<AsyncValue<CheckoutAddressState>> ref,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final flow = ref.watch(checkoutFlowProvider);
     final addresses = await repository.listAddresses();
@@ -175,9 +177,9 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
     );
   }
 
-  Call<String?> selectAddress(String? addressId) => mutate(selectAddressMut, (
-    ref,
-  ) async {
+  Call<String?, AsyncValue<CheckoutAddressState>> selectAddress(
+    String? addressId,
+  ) => mutate(selectAddressMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return addressId;
     final selection =
@@ -197,7 +199,7 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
     return addressId;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<AddressSaveResult> saveAddress(
+  Call<AddressSaveResult, AsyncValue<CheckoutAddressState>> saveAddress(
     AddressFormInput input,
   ) => mutate(saveAddressMut, (ref) async {
     final l10n = AppLocalizations(ref.watch(appLocaleProvider));
@@ -272,7 +274,7 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
     );
   }, concurrency: Concurrency.restart);
 
-  Call<UserAddress?> confirmSelection() =>
+  Call<UserAddress?, AsyncValue<CheckoutAddressState>> confirmSelection() =>
       mutate(confirmSelectionMut, (ref) async {
         final state = ref.watch(this).valueOrNull;
         final selected = state?.selectedAddress ?? state?.defaultAddress;
@@ -297,12 +299,13 @@ class CheckoutAddressViewModel extends AsyncProvider<CheckoutAddressState> {
         return selected;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<AddressLookupResult?> lookupPostalCode(String postalCode) =>
-      mutate(postalLookupMut, (ref) async {
-        final normalized = postalCode.replaceAll(RegExp('[^0-9]'), '');
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-        return _postalHints[normalized];
-      }, concurrency: Concurrency.restart);
+  Call<AddressLookupResult?, AsyncValue<CheckoutAddressState>> lookupPostalCode(
+    String postalCode,
+  ) => mutate(postalLookupMut, (ref) async {
+    final normalized = postalCode.replaceAll(RegExp('[^0-9]'), '');
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _postalHints[normalized];
+  }, concurrency: Concurrency.restart);
 }
 
 final checkoutAddressViewModel = CheckoutAddressViewModel();

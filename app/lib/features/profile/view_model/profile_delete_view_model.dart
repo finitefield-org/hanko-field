@@ -47,7 +47,9 @@ class ProfileDeleteViewModel extends AsyncProvider<ProfileDeleteState> {
   late final deleteMut = mutation<void>(#deleteAccount);
 
   @override
-  Future<ProfileDeleteState> build(Ref ref) async {
+  Future<ProfileDeleteState> build(
+    Ref<AsyncValue<ProfileDeleteState>> ref,
+  ) async {
     return const ProfileDeleteState(
       confirmDataLoss: false,
       confirmOpenOrders: false,
@@ -56,7 +58,7 @@ class ProfileDeleteViewModel extends AsyncProvider<ProfileDeleteState> {
     );
   }
 
-  Call<void> toggleAcknowledgement(
+  Call<void, AsyncValue<ProfileDeleteState>> toggleAcknowledgement(
     ProfileDeleteAcknowledgement acknowledgement,
     bool value,
   ) => mutate(toggleMut, (ref) async {
@@ -67,26 +69,27 @@ class ProfileDeleteViewModel extends AsyncProvider<ProfileDeleteState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> deleteAccount() => mutate(deleteMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (!current.canDelete) {
-      throw StateError('Cannot delete account without confirmations.');
-    }
+  Call<void, AsyncValue<ProfileDeleteState>> deleteAccount() =>
+      mutate(deleteMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (!current.canDelete) {
+          throw StateError('Cannot delete account without confirmations.');
+        }
 
-    ref.state = AsyncData(current.copyWith(isDeleting: true));
+        ref.state = AsyncData(current.copyWith(isDeleting: true));
 
-    final repository = ref.watch(userRepositoryProvider);
-    try {
-      await repository.deleteAccount();
-      await ref.invoke(userSessionProvider.signOut());
-      ref.state = AsyncData(current.copyWith(isDeleting: false));
-    } catch (e, stack) {
-      _logger.warning('Account deletion failed', e, stack);
-      ref.state = AsyncData(current.copyWith(isDeleting: false));
-      rethrow;
-    }
-  }, concurrency: Concurrency.dropLatest);
+        final repository = ref.watch(userRepositoryProvider);
+        try {
+          await repository.deleteAccount();
+          await ref.invoke(userSessionProvider.signOut());
+          ref.state = AsyncData(current.copyWith(isDeleting: false));
+        } catch (e, stack) {
+          _logger.warning('Account deletion failed', e, stack);
+          ref.state = AsyncData(current.copyWith(isDeleting: false));
+          rethrow;
+        }
+      }, concurrency: Concurrency.dropLatest);
 }
 
 final profileDeleteViewModel = ProfileDeleteViewModel();

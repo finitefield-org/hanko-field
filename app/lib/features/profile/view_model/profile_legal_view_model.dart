@@ -74,7 +74,9 @@ class ProfileLegalViewModel extends AsyncProvider<ProfileLegalState> {
   late final prefetchMut = mutation<void>(#prefetch);
 
   @override
-  Future<ProfileLegalState> build(Ref ref) async {
+  Future<ProfileLegalState> build(
+    Ref<AsyncValue<ProfileLegalState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final prefersEnglish = gates.prefersEnglish;
     final lang = prefersEnglish ? 'en' : 'ja';
@@ -95,7 +97,7 @@ class ProfileLegalViewModel extends AsyncProvider<ProfileLegalState> {
     );
   }
 
-  Call<String> selectDocument(String slug) =>
+  Call<String, AsyncValue<ProfileLegalState>> selectDocument(String slug) =>
       mutate(selectDocumentMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return slug;
@@ -104,23 +106,24 @@ class ProfileLegalViewModel extends AsyncProvider<ProfileLegalState> {
         return slug;
       });
 
-  Call<void> prefetch() => mutate(prefetchMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    final repository = ref.watch(contentRepositoryProvider);
-    final lang = current?.lang ?? _resolveLang(ref);
-    final errors = <Object>[];
-    for (final document in _legalDocuments) {
-      try {
-        await repository.getPage(document.slug, lang: lang);
-      } catch (e) {
-        errors.add(e);
-      }
-    }
+  Call<void, AsyncValue<ProfileLegalState>> prefetch() =>
+      mutate(prefetchMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        final repository = ref.watch(contentRepositoryProvider);
+        final lang = current?.lang ?? _resolveLang(ref);
+        final errors = <Object>[];
+        for (final document in _legalDocuments) {
+          try {
+            await repository.getPage(document.slug, lang: lang);
+          } catch (e) {
+            errors.add(e);
+          }
+        }
 
-    if (errors.isNotEmpty) {
-      throw StateError('Failed to cache ${errors.length} legal documents');
-    }
-  }, concurrency: Concurrency.dropLatest);
+        if (errors.isNotEmpty) {
+          throw StateError('Failed to cache ${errors.length} legal documents');
+        }
+      }, concurrency: Concurrency.dropLatest);
 }
 
 final _logger = Logger('ProfileLegalViewModel');
@@ -171,7 +174,7 @@ Future<List<LegalDocumentEntry>> _loadDocuments({
   return entries;
 }
 
-String _resolveLang(Ref ref) {
+String _resolveLang(Ref<AsyncValue<ProfileLegalState>> ref) {
   final gates = ref.watch(appExperienceGatesProvider);
   return gates.prefersEnglish ? 'en' : 'ja';
 }

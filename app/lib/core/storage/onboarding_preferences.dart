@@ -101,7 +101,7 @@ final onboardingPreferencesServiceProvider =
 class OnboardingPreferencesService {
   OnboardingPreferencesService(this._ref, this._logger);
 
-  final Ref _ref;
+  final Ref<OnboardingPreferencesService> _ref;
   final Logger _logger;
 
   Future<OnboardingPreferences> update({

@@ -50,7 +50,7 @@ final crashReportingInitializerProvider = AsyncProvider<void>((ref) async {
 class CrashReporter {
   CrashReporter(this._ref, this._crashlytics, this.logger);
 
-  final Ref _ref;
+  final Ref<CrashReporter> _ref;
   final FirebaseCrashlytics _crashlytics;
   final Logger logger;
 

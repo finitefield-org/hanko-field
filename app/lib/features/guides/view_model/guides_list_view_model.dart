@@ -92,7 +92,7 @@ class GuidesListViewModel extends AsyncProvider<GuidesListState> {
   late final loadMoreMut = mutation<void>(#loadMore);
 
   @override
-  Future<GuidesListState> build(Ref ref) async {
+  Future<GuidesListState> build(Ref<AsyncValue<GuidesListState>> ref) async {
     final repository = ref.watch(contentRepositoryProvider);
     final gates = ref.watch(appExperienceGatesProvider);
 
@@ -114,153 +114,160 @@ class GuidesListViewModel extends AsyncProvider<GuidesListState> {
     );
   }
 
-  Call<GuidesLocaleFilter> setLocale(GuidesLocaleFilter locale) =>
-      mutate(setLocaleMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        final gates = ref.watch(appExperienceGatesProvider);
-
-        if (current != null) {
-          ref.state = AsyncData(
-            current.copyWith(
-              locale: locale,
-              isRefreshing: true,
-              items: const <Guide>[],
-              nextPageToken: null,
-            ),
-          );
-        } else {
-          ref.state = const AsyncLoading<GuidesListState>();
-        }
-
-        final repository = ref.watch(contentRepositoryProvider);
-        final page = await repository.listGuides(
-          lang: locale.resolveLang(gates),
-          category: current?.topic,
-        );
-
-        final next = GuidesListState(
-          items: page.items,
-          locale: locale,
-          persona: current?.persona ?? _defaultPersonaFilter(ref),
-          topic: current?.topic,
-          nextPageToken: page.nextPageToken,
-          isRefreshing: false,
-          isLoadingMore: false,
-        );
-        ref.state = AsyncData(next);
-        return locale;
-      }, concurrency: Concurrency.restart);
-
-  Call<GuidesPersonaFilter> setPersona(GuidesPersonaFilter persona) =>
-      mutate(setPersonaMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return persona;
-        ref.state = AsyncData(current.copyWith(persona: persona));
-        return persona;
-      });
-
-  Call<GuideCategory?> setTopic(GuideCategory? topic) =>
-      mutate(setTopicMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        final gates = ref.watch(appExperienceGatesProvider);
-
-        if (current != null) {
-          ref.state = AsyncData(
-            current.copyWith(
-              topic: topic,
-              isRefreshing: true,
-              items: const <Guide>[],
-              nextPageToken: null,
-            ),
-          );
-        } else {
-          ref.state = const AsyncLoading<GuidesListState>();
-        }
-
-        final repository = ref.watch(contentRepositoryProvider);
-        final page = await repository.listGuides(
-          lang: (current?.locale ?? GuidesLocaleFilter.auto).resolveLang(gates),
-          category: topic,
-        );
-
-        final next = GuidesListState(
-          items: page.items,
-          locale: current?.locale ?? GuidesLocaleFilter.auto,
-          persona: current?.persona ?? _defaultPersonaFilter(ref),
-          topic: topic,
-          nextPageToken: page.nextPageToken,
-          isRefreshing: false,
-          isLoadingMore: false,
-        );
-
-        ref.state = AsyncData(next);
-        return topic;
-      }, concurrency: Concurrency.restart);
-
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
+  Call<GuidesLocaleFilter, AsyncValue<GuidesListState>> setLocale(
+    GuidesLocaleFilter locale,
+  ) => mutate(setLocaleMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     final gates = ref.watch(appExperienceGatesProvider);
-    final locale = current?.locale ?? GuidesLocaleFilter.auto;
-    final topic = current?.topic;
 
     if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
+      ref.state = AsyncData(
+        current.copyWith(
+          locale: locale,
+          isRefreshing: true,
+          items: const <Guide>[],
+          nextPageToken: null,
+        ),
+      );
+    } else {
+      ref.state = const AsyncLoading<GuidesListState>();
     }
 
     final repository = ref.watch(contentRepositoryProvider);
     final page = await repository.listGuides(
       lang: locale.resolveLang(gates),
-      category: topic,
+      category: current?.topic,
     );
 
     final next = GuidesListState(
       items: page.items,
       locale: locale,
       persona: current?.persona ?? _defaultPersonaFilter(ref),
-      topic: topic,
+      topic: current?.topic,
       nextPageToken: page.nextPageToken,
       isRefreshing: false,
       isLoadingMore: false,
     );
     ref.state = AsyncData(next);
-  }, concurrency: Concurrency.dropLatest);
+    return locale;
+  }, concurrency: Concurrency.restart);
 
-  Call<void> loadMore() => mutate(loadMoreMut, (ref) async {
+  Call<GuidesPersonaFilter, AsyncValue<GuidesListState>> setPersona(
+    GuidesPersonaFilter persona,
+  ) => mutate(setPersonaMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isLoadingMore) return;
-    final nextToken = current.nextPageToken;
-    if (nextToken == null || nextToken.isEmpty) return;
+    if (current == null) return persona;
+    ref.state = AsyncData(current.copyWith(persona: persona));
+    return persona;
+  });
 
-    ref.state = AsyncData(current.copyWith(isLoadingMore: true));
+  Call<GuideCategory?, AsyncValue<GuidesListState>> setTopic(
+    GuideCategory? topic,
+  ) => mutate(setTopicMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    final gates = ref.watch(appExperienceGatesProvider);
 
-    try {
-      final gates = ref.watch(appExperienceGatesProvider);
-      final repository = ref.watch(contentRepositoryProvider);
-      final page = await repository.listGuides(
-        lang: current.locale.resolveLang(gates),
-        category: current.topic,
-        pageToken: nextToken,
-      );
-
+    if (current != null) {
       ref.state = AsyncData(
         current.copyWith(
-          items: [...current.items, ...page.items],
-          nextPageToken: page.nextPageToken,
-          isLoadingMore: false,
+          topic: topic,
+          isRefreshing: true,
+          items: const <Guide>[],
+          nextPageToken: null,
         ),
       );
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: AsyncData(current.copyWith(isLoadingMore: false)),
-      );
+    } else {
+      ref.state = const AsyncLoading<GuidesListState>();
     }
-  }, concurrency: Concurrency.dropLatest);
+
+    final repository = ref.watch(contentRepositoryProvider);
+    final page = await repository.listGuides(
+      lang: (current?.locale ?? GuidesLocaleFilter.auto).resolveLang(gates),
+      category: topic,
+    );
+
+    final next = GuidesListState(
+      items: page.items,
+      locale: current?.locale ?? GuidesLocaleFilter.auto,
+      persona: current?.persona ?? _defaultPersonaFilter(ref),
+      topic: topic,
+      nextPageToken: page.nextPageToken,
+      isRefreshing: false,
+      isLoadingMore: false,
+    );
+
+    ref.state = AsyncData(next);
+    return topic;
+  }, concurrency: Concurrency.restart);
+
+  Call<void, AsyncValue<GuidesListState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        final gates = ref.watch(appExperienceGatesProvider);
+        final locale = current?.locale ?? GuidesLocaleFilter.auto;
+        final topic = current?.topic;
+
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        }
+
+        final repository = ref.watch(contentRepositoryProvider);
+        final page = await repository.listGuides(
+          lang: locale.resolveLang(gates),
+          category: topic,
+        );
+
+        final next = GuidesListState(
+          items: page.items,
+          locale: locale,
+          persona: current?.persona ?? _defaultPersonaFilter(ref),
+          topic: topic,
+          nextPageToken: page.nextPageToken,
+          isRefreshing: false,
+          isLoadingMore: false,
+        );
+        ref.state = AsyncData(next);
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<GuidesListState>> loadMore() =>
+      mutate(loadMoreMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isLoadingMore) return;
+        final nextToken = current.nextPageToken;
+        if (nextToken == null || nextToken.isEmpty) return;
+
+        ref.state = AsyncData(current.copyWith(isLoadingMore: true));
+
+        try {
+          final gates = ref.watch(appExperienceGatesProvider);
+          final repository = ref.watch(contentRepositoryProvider);
+          final page = await repository.listGuides(
+            lang: current.locale.resolveLang(gates),
+            category: current.topic,
+            pageToken: nextToken,
+          );
+
+          ref.state = AsyncData(
+            current.copyWith(
+              items: [...current.items, ...page.items],
+              nextPageToken: page.nextPageToken,
+              isLoadingMore: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current.copyWith(isLoadingMore: false),
+          );
+        }
+      }, concurrency: Concurrency.dropLatest);
 }
 
-GuidesPersonaFilter _defaultPersonaFilter(Ref ref) {
+GuidesPersonaFilter _defaultPersonaFilter(
+  Ref<AsyncValue<GuidesListState>> ref,
+) {
   final persona = ref.watch(appPersonaProvider);
   return switch (persona) {
     UserPersona.japanese => GuidesPersonaFilter.japanese,

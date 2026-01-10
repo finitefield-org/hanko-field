@@ -57,7 +57,7 @@ class ChangelogViewModel extends AsyncProvider<ChangelogState> {
   late final trackLearnMoreMut = mutation<void>(#trackLearnMore);
 
   @override
-  Future<ChangelogState> build(Ref ref) async {
+  Future<ChangelogState> build(Ref<AsyncValue<ChangelogState>> ref) async {
     final repository = ref.watch(changelogRepositoryProvider);
     final releases = await repository.fetchChangelog();
     return ChangelogState(
@@ -68,52 +68,55 @@ class ChangelogViewModel extends AsyncProvider<ChangelogState> {
     );
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
-    }
-
-    final repository = ref.watch(changelogRepositoryProvider);
-    final releases = await repository.fetchChangelog();
-    ref.state = AsyncData(
-      ChangelogState(
-        releases: releases,
-        filter: current?.filter ?? ChangelogFilter.all,
-        isRefreshing: false,
-        latestVersion: _latestVersion(releases),
-      ),
-    );
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<ChangelogFilter> setFilter(ChangelogFilter filter) =>
-      mutate(setFilterMut, (ref) async {
+  Call<void, AsyncValue<ChangelogState>> refresh() =>
+      mutate(refreshMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return filter;
-        if (current.filter == filter) return filter;
-        ref.state = AsyncData(current.copyWith(filter: filter));
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        }
 
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(ChangelogFilterChangedEvent(filter: filter.name)),
+        final repository = ref.watch(changelogRepositoryProvider);
+        final releases = await repository.fetchChangelog();
+        ref.state = AsyncData(
+          ChangelogState(
+            releases: releases,
+            filter: current?.filter ?? ChangelogFilter.all,
+            isRefreshing: false,
+            latestVersion: _latestVersion(releases),
+          ),
         );
-        return filter;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<void> trackViewed() => mutate(trackViewedMut, (ref) async {
+  Call<ChangelogFilter, AsyncValue<ChangelogState>> setFilter(
+    ChangelogFilter filter,
+  ) => mutate(setFilterMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return filter;
+    if (current.filter == filter) return filter;
+    ref.state = AsyncData(current.copyWith(filter: filter));
+
     final analytics = ref.watch(analyticsClientProvider);
-    final snapshot = ref.watch(this).valueOrNull;
     unawaited(
-      analytics.track(
-        ChangelogViewedEvent(
-          latestVersion: snapshot?.latestVersion,
-          releaseCount: snapshot?.releases.length,
-        ),
-      ),
+      analytics.track(ChangelogFilterChangedEvent(filter: filter.name)),
     );
+    return filter;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> trackExpanded({
+  Call<void, AsyncValue<ChangelogState>> trackViewed() =>
+      mutate(trackViewedMut, (ref) async {
+        final analytics = ref.watch(analyticsClientProvider);
+        final snapshot = ref.watch(this).valueOrNull;
+        unawaited(
+          analytics.track(
+            ChangelogViewedEvent(
+              latestVersion: snapshot?.latestVersion,
+              releaseCount: snapshot?.releases.length,
+            ),
+          ),
+        );
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<ChangelogState>> trackExpanded({
     required ChangelogRelease release,
     required bool expanded,
   }) => mutate(trackExpandedMut, (ref) async {
@@ -128,15 +131,14 @@ class ChangelogViewModel extends AsyncProvider<ChangelogState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> trackLearnMore({required ChangelogRelease release}) =>
-      mutate(trackLearnMoreMut, (ref) async {
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            ChangelogLearnMoreTappedEvent(version: release.version),
-          ),
-        );
-      }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<ChangelogState>> trackLearnMore({
+    required ChangelogRelease release,
+  }) => mutate(trackLearnMoreMut, (ref) async {
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(ChangelogLearnMoreTappedEvent(version: release.version)),
+    );
+  }, concurrency: Concurrency.dropLatest);
 
   String? _latestVersion(List<ChangelogRelease> releases) {
     if (releases.isEmpty) return null;

@@ -95,7 +95,9 @@ class AiSuggestionsViewModel extends AsyncProvider<AiSuggestionsState> {
   Timer? _pollTimer;
 
   @override
-  Future<AiSuggestionsState> build(Ref ref) async {
+  Future<AiSuggestionsState> build(
+    Ref<AsyncValue<AiSuggestionsState>> ref,
+  ) async {
     ref.onDispose(() => _pollTimer?.cancel());
 
     _gates = ref.watch(appExperienceGatesProvider);
@@ -121,7 +123,7 @@ class AiSuggestionsViewModel extends AsyncProvider<AiSuggestionsState> {
     );
   }
 
-  Call<bool> requestSuggestions([
+  Call<bool, AsyncValue<AiSuggestionsState>> requestSuggestions([
     AiSuggestionMethod method = AiSuggestionMethod.balance,
   ]) => mutate(requestMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
@@ -184,118 +186,122 @@ class AiSuggestionsViewModel extends AsyncProvider<AiSuggestionsState> {
     }
   }, concurrency: Concurrency.dropLatest);
 
-  Call<void> poll() => mutate(pollMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isPolling) return;
+  Call<void, AsyncValue<AiSuggestionsState>> poll() =>
+      mutate(pollMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isPolling) return;
 
-    ref.state = AsyncData(current.copyWith(isPolling: true));
+        ref.state = AsyncData(current.copyWith(isPolling: true));
+
+        try {
+          final suggestions = await _dataSource.fetch();
+          final queue = _dataSource.queueSnapshot();
+          ref.state = AsyncData(
+            current.copyWith(
+              suggestions: suggestions,
+              queue: queue,
+              queueLength: queue.length,
+              isPolling: false,
+              lastUpdatedAt: DateTime.now(),
+              rateLimitedUntil: _dataSource.rateLimitedUntil,
+            ),
+          );
+        } catch (e, stack) {
+          _logger.warning('Polling AI suggestions failed', e, stack);
+          _emitError(ref, e.toString());
+        }
+      }, concurrency: Concurrency.restart);
+
+  Call<AiSuggestion?, AsyncValue<AiSuggestionsState>> acceptSuggestion(
+    String suggestionId,
+  ) => mutate(acceptMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return null;
 
     try {
-      final suggestions = await _dataSource.fetch();
-      final queue = _dataSource.queueSnapshot();
+      final applied = await _dataSource.accept(suggestionId);
+      final updated = current.suggestions
+          .map((s) => s.id == applied.id ? applied : s)
+          .toList();
+
       ref.state = AsyncData(
         current.copyWith(
-          suggestions: suggestions,
-          queue: queue,
-          queueLength: queue.length,
-          isPolling: false,
+          suggestions: updated,
+          filter: AiSuggestionFilter.applied,
+          feedbackMessage: _gates.prefersEnglish
+              ? 'Applied AI proposal to draft'
+              : 'AI提案をドラフトに反映しました',
+          feedbackId: current.feedbackId + 1,
           lastUpdatedAt: DateTime.now(),
-          rateLimitedUntil: _dataSource.rateLimitedUntil,
         ),
       );
+      return applied;
     } catch (e, stack) {
-      _logger.warning('Polling AI suggestions failed', e, stack);
-      _emitError(ref, e.toString());
+      _logger.warning('Failed to apply suggestion', e, stack);
+      _emitError(
+        ref,
+        _gates.prefersEnglish ? 'Could not apply suggestion' : '提案を適用できませんでした',
+      );
+      return null;
     }
-  }, concurrency: Concurrency.restart);
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<AiSuggestion?> acceptSuggestion(String suggestionId) =>
-      mutate(acceptMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return null;
+  Call<AiSuggestion?, AsyncValue<AiSuggestionsState>> rejectSuggestion(
+    String suggestionId,
+  ) => mutate(rejectMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return null;
 
-        try {
-          final applied = await _dataSource.accept(suggestionId);
-          final updated = current.suggestions
-              .map((s) => s.id == applied.id ? applied : s)
-              .toList();
+    try {
+      final rejected = await _dataSource.reject(suggestionId);
+      final updated = current.suggestions
+          .map((s) => s.id == rejected.id ? rejected : s)
+          .toList();
 
-          ref.state = AsyncData(
-            current.copyWith(
-              suggestions: updated,
-              filter: AiSuggestionFilter.applied,
-              feedbackMessage: _gates.prefersEnglish
-                  ? 'Applied AI proposal to draft'
-                  : 'AI提案をドラフトに反映しました',
-              feedbackId: current.feedbackId + 1,
-              lastUpdatedAt: DateTime.now(),
-            ),
-          );
-          return applied;
-        } catch (e, stack) {
-          _logger.warning('Failed to apply suggestion', e, stack);
-          _emitError(
-            ref,
-            _gates.prefersEnglish
-                ? 'Could not apply suggestion'
-                : '提案を適用できませんでした',
-          );
-          return null;
-        }
-      }, concurrency: Concurrency.dropLatest);
+      ref.state = AsyncData(
+        current.copyWith(
+          suggestions: updated,
+          filter: AiSuggestionFilter.applied,
+          feedbackMessage: _gates.prefersEnglish
+              ? 'Dismissed AI proposal'
+              : 'AI提案を却下しました',
+          feedbackId: current.feedbackId + 1,
+          lastUpdatedAt: DateTime.now(),
+        ),
+      );
+      return rejected;
+    } catch (e, stack) {
+      _logger.warning('Failed to reject suggestion', e, stack);
+      _emitError(
+        ref,
+        _gates.prefersEnglish ? 'Could not reject suggestion' : '提案を却下できませんでした',
+      );
+      return null;
+    }
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<AiSuggestion?> rejectSuggestion(String suggestionId) =>
-      mutate(rejectMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return null;
+  Call<AiSuggestionFilter, AsyncValue<AiSuggestionsState>> setFilter(
+    AiSuggestionFilter filter,
+  ) => mutate(setFilterMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return filter;
+    ref.state = AsyncData(current.copyWith(filter: filter));
+    return filter;
+  }, concurrency: Concurrency.dropLatest);
 
-        try {
-          final rejected = await _dataSource.reject(suggestionId);
-          final updated = current.suggestions
-              .map((s) => s.id == rejected.id ? rejected : s)
-              .toList();
-
-          ref.state = AsyncData(
-            current.copyWith(
-              suggestions: updated,
-              filter: AiSuggestionFilter.applied,
-              feedbackMessage: _gates.prefersEnglish
-                  ? 'Dismissed AI proposal'
-                  : 'AI提案を却下しました',
-              feedbackId: current.feedbackId + 1,
-              lastUpdatedAt: DateTime.now(),
-            ),
-          );
-          return rejected;
-        } catch (e, stack) {
-          _logger.warning('Failed to reject suggestion', e, stack);
-          _emitError(
-            ref,
-            _gates.prefersEnglish
-                ? 'Could not reject suggestion'
-                : '提案を却下できませんでした',
-          );
-          return null;
-        }
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<AiSuggestionFilter> setFilter(AiSuggestionFilter filter) =>
-      mutate(setFilterMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return filter;
-        ref.state = AsyncData(current.copyWith(filter: filter));
-        return filter;
-      }, concurrency: Concurrency.dropLatest);
-
-  void _schedulePolling(Ref ref) {
+  void _schedulePolling(Ref<AsyncValue<AiSuggestionsState>> ref) {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       ref.invoke(poll());
     });
   }
 
-  void _emitError(Ref ref, String message, {DateTime? until}) {
+  void _emitError(
+    Ref<AsyncValue<AiSuggestionsState>> ref,
+    String message, {
+    DateTime? until,
+  }) {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return;
     ref.state = AsyncData(

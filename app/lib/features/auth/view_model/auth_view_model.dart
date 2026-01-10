@@ -39,20 +39,22 @@ class AuthViewModel extends AsyncProvider<AuthState> {
   final Logger _logger = Logger('AuthViewModel');
 
   @override
-  Future<AuthState> build(Ref ref) async {
+  Future<AuthState> build(Ref<AsyncValue<AuthState>> ref) async {
     final appleAvailable = await _isAppleAvailable();
     return AuthState(appleAvailable: appleAvailable);
   }
 
-  Call<AuthResult> signInWithApple() => mutate(appleMut, (ref) async {
-    return _authenticate(ref, (repo) => repo.signInWithApple());
-  }, concurrency: Concurrency.restart);
+  Call<AuthResult, AsyncValue<AuthState>> signInWithApple() =>
+      mutate(appleMut, (ref) async {
+        return _authenticate(ref, (repo) => repo.signInWithApple());
+      }, concurrency: Concurrency.restart);
 
-  Call<AuthResult> signInWithGoogle() => mutate(googleMut, (ref) async {
-    return _authenticate(ref, (repo) => repo.signInWithGoogle());
-  }, concurrency: Concurrency.restart);
+  Call<AuthResult, AsyncValue<AuthState>> signInWithGoogle() =>
+      mutate(googleMut, (ref) async {
+        return _authenticate(ref, (repo) => repo.signInWithGoogle());
+      }, concurrency: Concurrency.restart);
 
-  Call<AuthResult> signInWithEmail({
+  Call<AuthResult, AsyncValue<AuthState>> signInWithEmail({
     required String email,
     required String password,
   }) => mutate(emailMut, (ref) async {
@@ -63,18 +65,20 @@ class AuthViewModel extends AsyncProvider<AuthState> {
     );
   }, concurrency: Concurrency.restart);
 
-  Call<AuthResult> continueAsGuest() => mutate(guestMut, (ref) async {
-    return _authenticate(ref, (repo) => repo.signInAnonymously());
-  }, concurrency: Concurrency.restart);
+  Call<AuthResult, AsyncValue<AuthState>> continueAsGuest() =>
+      mutate(guestMut, (ref) async {
+        return _authenticate(ref, (repo) => repo.signInAnonymously());
+      }, concurrency: Concurrency.restart);
 
-  Call<void> clearPendingLink() => mutate(clearLinkMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    ref.state = AsyncData(current.copyWith(clearPendingLink: true));
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<AuthState>> clearPendingLink() =>
+      mutate(clearLinkMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        ref.state = AsyncData(current.copyWith(clearPendingLink: true));
+      }, concurrency: Concurrency.dropLatest);
 
   Future<AuthResult> _authenticate(
-    Ref ref,
+    Ref<AsyncValue<AuthState>> ref,
     Future<AuthResult> Function(AuthRepository repository) operation, {
     bool consumePendingLink = false,
   }) async {
@@ -95,7 +99,10 @@ class AuthViewModel extends AsyncProvider<AuthState> {
     }
   }
 
-  Future<void> _linkPendingIfAny(Ref ref, AuthRepository repository) async {
+  Future<void> _linkPendingIfAny(
+    Ref<AsyncValue<AuthState>> ref,
+    AuthRepository repository,
+  ) async {
     final state = ref.watch(this).valueOrNull;
     final pending = state?.pendingLink;
     if (pending == null) return;
@@ -109,13 +116,16 @@ class AuthViewModel extends AsyncProvider<AuthState> {
     }
   }
 
-  void _clearPending(Ref ref) {
+  void _clearPending(Ref<AsyncValue<AuthState>> ref) {
     final state = ref.watch(this).valueOrNull;
     if (state == null) return;
     ref.state = AsyncData(state.copyWith(clearPendingLink: true));
   }
 
-  void _updatePendingLink(Ref ref, AuthLinkContext? context) {
+  void _updatePendingLink(
+    Ref<AsyncValue<AuthState>> ref,
+    AuthLinkContext? context,
+  ) {
     if (context == null) return;
     final state = ref.watch(this).valueOrNull;
     if (state == null) return;

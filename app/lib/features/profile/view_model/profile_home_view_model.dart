@@ -54,7 +54,7 @@ class ProfileHomeViewModel extends AsyncProvider<ProfileHomeState> {
   late final refreshMut = mutation<UserSession>(#refresh);
 
   @override
-  Future<ProfileHomeState> build(Ref ref) async {
+  Future<ProfileHomeState> build(Ref<AsyncValue<ProfileHomeState>> ref) async {
     final persona = ref.watch(appPersonaProvider);
     final locale = ref.watch(appLocaleProvider);
 
@@ -77,26 +77,31 @@ class ProfileHomeViewModel extends AsyncProvider<ProfileHomeState> {
     );
   }
 
-  Call<UserPersona> updatePersona(UserPersona persona) =>
-      mutate(updatePersonaMut, (ref) async {
-        final previous = ref.watch(this).valueOrNull;
-        if (previous != null) {
-          ref.state = AsyncData(previous.copyWith(persona: persona));
-        }
+  Call<UserPersona, AsyncValue<ProfileHomeState>> updatePersona(
+    UserPersona persona,
+  ) => mutate(updatePersonaMut, (ref) async {
+    final previous = ref.watch(this).valueOrNull;
+    if (previous != null) {
+      ref.state = AsyncData(previous.copyWith(persona: persona));
+    }
 
-        final personaService = ref.watch(appPersonaServiceProvider);
-        await personaService.update(persona);
-        await _syncProfile(ref, persona);
-        return persona;
-      }, concurrency: Concurrency.dropLatest);
+    final personaService = ref.watch(appPersonaServiceProvider);
+    await personaService.update(persona);
+    await _syncProfile(ref, persona);
+    return persona;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<UserSession> refresh() => mutate(refreshMut, (ref) async {
-    final session = await ref.invoke(userSessionProvider.refresh());
-    ref.invalidate(this);
-    return session;
-  }, concurrency: Concurrency.restart);
+  Call<UserSession, AsyncValue<ProfileHomeState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final session = await ref.invoke(userSessionProvider.refresh());
+        ref.invalidate(this);
+        return session;
+      }, concurrency: Concurrency.restart);
 
-  Future<void> _syncProfile(Ref ref, UserPersona persona) async {
+  Future<void> _syncProfile(
+    Ref<AsyncValue<ProfileHomeState>> ref,
+    UserPersona persona,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;

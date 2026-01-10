@@ -56,7 +56,9 @@ class LibraryDesignSharesViewModel
   late final extendMut = mutation<DesignShareLink>(#extend);
 
   @override
-  Future<LibraryDesignSharesState> build(Ref ref) async {
+  Future<LibraryDesignSharesState> build(
+    Ref<AsyncValue<LibraryDesignSharesState>> ref,
+  ) async {
     final repository = ref.watch(designShareLinkRepositoryProvider);
     final links = await repository.listLinks(designId);
     final split = _split(links);
@@ -71,74 +73,40 @@ class LibraryDesignSharesViewModel
     );
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    final repository = ref.watch(designShareLinkRepositoryProvider);
-    final links = await repository.listLinks(designId);
-    final split = _split(links);
-    final next =
-        (current ??
-                LibraryDesignSharesState(
-                  designId: designId,
-                  activeLinks: const [],
-                  historyLinks: const [],
-                  isCreating: false,
-                  busyLinkIds: <String>{},
-                  feedbackMessage: null,
-                  feedbackId: 0,
-                ))
-            .copyWith(activeLinks: split.active, historyLinks: split.history);
-    ref.state = AsyncData(next);
-  }, concurrency: Concurrency.restart);
+  Call<void, AsyncValue<LibraryDesignSharesState>> refresh() => mutate(
+    refreshMut,
+    (ref) async {
+      final current = ref.watch(this).valueOrNull;
+      final repository = ref.watch(designShareLinkRepositoryProvider);
+      final links = await repository.listLinks(designId);
+      final split = _split(links);
+      final next =
+          (current ??
+                  LibraryDesignSharesState(
+                    designId: designId,
+                    activeLinks: const [],
+                    historyLinks: const [],
+                    isCreating: false,
+                    busyLinkIds: <String>{},
+                    feedbackMessage: null,
+                    feedbackId: 0,
+                  ))
+              .copyWith(activeLinks: split.active, historyLinks: split.history);
+      ref.state = AsyncData(next);
+    },
+    concurrency: Concurrency.restart,
+  );
 
-  Call<DesignShareLink> create({required Duration ttl}) =>
-      mutate(createMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) throw StateError('Shares not loaded');
-        if (current.isCreating) throw StateError('Already creating');
-
-        ref.state = AsyncData(
-          current.copyWith(
-            isCreating: true,
-            feedbackMessage: null,
-            feedbackId: current.feedbackId + 1,
-          ),
-        );
-
-        try {
-          final repository = ref.watch(designShareLinkRepositoryProvider);
-          final created = await repository.createLink(designId, ttl: ttl);
-          final refreshed = await repository.listLinks(designId);
-          final split = _split(refreshed);
-          ref.state = AsyncData(
-            current.copyWith(
-              activeLinks: split.active,
-              historyLinks: split.history,
-              isCreating: false,
-              feedbackMessage: 'created:${created.id}',
-              feedbackId: current.feedbackId + 2,
-            ),
-          );
-          return created;
-        } catch (e, stack) {
-          ref.state = AsyncError(
-            e,
-            stack,
-            previous: AsyncData(current.copyWith(isCreating: false)),
-          );
-          rethrow;
-        }
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<void> revoke(String linkId) => mutate(revokeMut, (ref) async {
+  Call<DesignShareLink, AsyncValue<LibraryDesignSharesState>> create({
+    required Duration ttl,
+  }) => mutate(createMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current == null) throw StateError('Shares not loaded');
-    if (current.busyLinkIds.contains(linkId)) return;
+    if (current.isCreating) throw StateError('Already creating');
 
-    final nextBusy = {...current.busyLinkIds, linkId};
     ref.state = AsyncData(
       current.copyWith(
-        busyLinkIds: nextBusy,
+        isCreating: true,
         feedbackMessage: null,
         feedbackId: current.feedbackId + 1,
       ),
@@ -146,36 +114,34 @@ class LibraryDesignSharesViewModel
 
     try {
       final repository = ref.watch(designShareLinkRepositoryProvider);
-      await repository.revokeLink(designId, linkId);
+      final created = await repository.createLink(designId, ttl: ttl);
       final refreshed = await repository.listLinks(designId);
       final split = _split(refreshed);
       ref.state = AsyncData(
         current.copyWith(
           activeLinks: split.active,
           historyLinks: split.history,
-          busyLinkIds: {...nextBusy}..remove(linkId),
-          feedbackMessage: 'revoked:$linkId',
+          isCreating: false,
+          feedbackMessage: 'created:${created.id}',
           feedbackId: current.feedbackId + 2,
         ),
       );
+      return created;
     } catch (e, stack) {
       ref.state = AsyncError(
         e,
         stack,
-        previous: AsyncData(
-          current.copyWith(busyLinkIds: {...nextBusy}..remove(linkId)),
-        ),
+        previous: current.copyWith(isCreating: false),
       );
+      rethrow;
     }
   }, concurrency: Concurrency.dropLatest);
 
-  Call<DesignShareLink> extend(String linkId, {required Duration extendBy}) =>
-      mutate(extendMut, (ref) async {
+  Call<void, AsyncValue<LibraryDesignSharesState>> revoke(String linkId) =>
+      mutate(revokeMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) throw StateError('Shares not loaded');
-        if (current.busyLinkIds.contains(linkId)) {
-          throw StateError('Link busy');
-        }
+        if (current.busyLinkIds.contains(linkId)) return;
 
         final nextBusy = {...current.busyLinkIds, linkId};
         ref.state = AsyncData(
@@ -188,11 +154,7 @@ class LibraryDesignSharesViewModel
 
         try {
           final repository = ref.watch(designShareLinkRepositoryProvider);
-          final updated = await repository.extendLink(
-            designId,
-            linkId,
-            extendBy: extendBy,
-          );
+          await repository.revokeLink(designId, linkId);
           final refreshed = await repository.listLinks(designId);
           final split = _split(refreshed);
           ref.state = AsyncData(
@@ -200,22 +162,68 @@ class LibraryDesignSharesViewModel
               activeLinks: split.active,
               historyLinks: split.history,
               busyLinkIds: {...nextBusy}..remove(linkId),
-              feedbackMessage: 'extended:$linkId',
+              feedbackMessage: 'revoked:$linkId',
               feedbackId: current.feedbackId + 2,
             ),
           );
-          return updated;
         } catch (e, stack) {
           ref.state = AsyncError(
             e,
             stack,
-            previous: AsyncData(
-              current.copyWith(busyLinkIds: {...nextBusy}..remove(linkId)),
+            previous: current.copyWith(
+              busyLinkIds: {...nextBusy}..remove(linkId),
             ),
           );
-          rethrow;
         }
       }, concurrency: Concurrency.dropLatest);
+
+  Call<DesignShareLink, AsyncValue<LibraryDesignSharesState>> extend(
+    String linkId, {
+    required Duration extendBy,
+  }) => mutate(extendMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) throw StateError('Shares not loaded');
+    if (current.busyLinkIds.contains(linkId)) {
+      throw StateError('Link busy');
+    }
+
+    final nextBusy = {...current.busyLinkIds, linkId};
+    ref.state = AsyncData(
+      current.copyWith(
+        busyLinkIds: nextBusy,
+        feedbackMessage: null,
+        feedbackId: current.feedbackId + 1,
+      ),
+    );
+
+    try {
+      final repository = ref.watch(designShareLinkRepositoryProvider);
+      final updated = await repository.extendLink(
+        designId,
+        linkId,
+        extendBy: extendBy,
+      );
+      final refreshed = await repository.listLinks(designId);
+      final split = _split(refreshed);
+      ref.state = AsyncData(
+        current.copyWith(
+          activeLinks: split.active,
+          historyLinks: split.history,
+          busyLinkIds: {...nextBusy}..remove(linkId),
+          feedbackMessage: 'extended:$linkId',
+          feedbackId: current.feedbackId + 2,
+        ),
+      );
+      return updated;
+    } catch (e, stack) {
+      ref.state = AsyncError(
+        e,
+        stack,
+        previous: current.copyWith(busyLinkIds: {...nextBusy}..remove(linkId)),
+      );
+      rethrow;
+    }
+  }, concurrency: Concurrency.dropLatest);
 }
 
 ({List<DesignShareLink> active, List<DesignShareLink> history}) _split(

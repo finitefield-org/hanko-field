@@ -19,7 +19,7 @@ class PushNotificationNavigationInitializer extends AsyncProvider<void> {
     : super.args(null, autoDispose: false);
 
   @override
-  Future<void> build(Ref ref) async {
+  Future<void> build(Ref<AsyncValue<void>> ref) async {
     final messaging = ref.watch(firebaseMessagingProvider);
     final deepLinkHandler = ref.watch(deepLinkHandlerProvider);
     final repository = ref.watch(notificationRepositoryProvider);
@@ -74,7 +74,7 @@ final pushNotificationNavigationInitializerProvider =
     PushNotificationNavigationInitializer();
 
 Future<void> _handleMessage(
-  Ref ref,
+  Ref<AsyncValue<void>> ref,
   RemoteMessage message, {
   required DeepLinkHandler deepLinkHandler,
   required NotificationRepository repository,

@@ -50,7 +50,7 @@ class SearchViewModel extends AsyncProvider<SearchUiState> {
   late final clearHistoryMut = mutation<String?>(#clearHistory);
 
   @override
-  Future<SearchUiState> build(Ref ref) async {
+  Future<SearchUiState> build(Ref<AsyncValue<SearchUiState>> ref) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 90));
     return SearchUiState(
@@ -61,38 +61,41 @@ class SearchViewModel extends AsyncProvider<SearchUiState> {
     );
   }
 
-  Call<String> updateQuery(String query) => mutate(updateQueryMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return query;
-    ref.state = AsyncData(current.copyWith(query: query));
-    return query;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<String> submit(String rawQuery) => mutate(submitMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    final query = rawQuery.trim();
-    if (current == null) return query;
-
-    final history = <String>[
-      if (query.isNotEmpty) query,
-      ...current.history.where((item) => item != query),
-    ].take(8).toList();
-
-    ref.state = AsyncData(
-      current.copyWith(query: query, activeQuery: query, history: history),
-    );
-    return query;
-  }, concurrency: Concurrency.restart);
-
-  Call<SearchSegment> selectSegment(SearchSegment segment) =>
-      mutate(selectSegmentMut, (ref) async {
+  Call<String, AsyncValue<SearchUiState>> updateQuery(String query) =>
+      mutate(updateQueryMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return segment;
-        ref.state = AsyncData(current.copyWith(selectedSegment: segment));
-        return segment;
+        if (current == null) return query;
+        ref.state = AsyncData(current.copyWith(query: query));
+        return query;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<void> clearHistory([String? entry]) =>
+  Call<String, AsyncValue<SearchUiState>> submit(String rawQuery) =>
+      mutate(submitMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        final query = rawQuery.trim();
+        if (current == null) return query;
+
+        final history = <String>[
+          if (query.isNotEmpty) query,
+          ...current.history.where((item) => item != query),
+        ].take(8).toList();
+
+        ref.state = AsyncData(
+          current.copyWith(query: query, activeQuery: query, history: history),
+        );
+        return query;
+      }, concurrency: Concurrency.restart);
+
+  Call<SearchSegment, AsyncValue<SearchUiState>> selectSegment(
+    SearchSegment segment,
+  ) => mutate(selectSegmentMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return segment;
+    ref.state = AsyncData(current.copyWith(selectedSegment: segment));
+    return segment;
+  }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<SearchUiState>> clearHistory([String? entry]) =>
       mutate(clearHistoryMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return;
@@ -112,7 +115,9 @@ class SearchSuggestionsProvider extends AsyncProvider<List<SearchSuggestion>> {
   final String query;
 
   @override
-  Future<List<SearchSuggestion>> build(Ref ref) async {
+  Future<List<SearchSuggestion>> build(
+    Ref<AsyncValue<List<SearchSuggestion>>> ref,
+  ) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 80));
     return index.suggestionsFor(query);
@@ -127,7 +132,9 @@ class TemplateResultsProvider extends AsyncProvider<Page<TemplateSearchHit>> {
   final String? pageToken;
 
   @override
-  Future<Page<TemplateSearchHit>> build(Ref ref) async {
+  Future<Page<TemplateSearchHit>> build(
+    Ref<AsyncValue<Page<TemplateSearchHit>>> ref,
+  ) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     return index.searchTemplates(query, pageToken: pageToken);
@@ -142,7 +149,9 @@ class MaterialResultsProvider extends AsyncProvider<Page<MaterialSearchHit>> {
   final String? pageToken;
 
   @override
-  Future<Page<MaterialSearchHit>> build(Ref ref) async {
+  Future<Page<MaterialSearchHit>> build(
+    Ref<AsyncValue<Page<MaterialSearchHit>>> ref,
+  ) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     return index.searchMaterials(query, pageToken: pageToken);
@@ -157,7 +166,9 @@ class ArticleResultsProvider extends AsyncProvider<Page<ArticleSearchHit>> {
   final String? pageToken;
 
   @override
-  Future<Page<ArticleSearchHit>> build(Ref ref) async {
+  Future<Page<ArticleSearchHit>> build(
+    Ref<AsyncValue<Page<ArticleSearchHit>>> ref,
+  ) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     return index.searchArticles(query, pageToken: pageToken);
@@ -172,7 +183,9 @@ class FaqResultsProvider extends AsyncProvider<Page<FaqSearchHit>> {
   final String? pageToken;
 
   @override
-  Future<Page<FaqSearchHit>> build(Ref ref) async {
+  Future<Page<FaqSearchHit>> build(
+    Ref<AsyncValue<Page<FaqSearchHit>>> ref,
+  ) async {
     final index = ref.watch(searchIndexProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     return index.searchFaq(query, pageToken: pageToken);

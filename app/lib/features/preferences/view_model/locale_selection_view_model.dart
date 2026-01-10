@@ -48,7 +48,9 @@ class LocaleSelectionViewModel extends AsyncProvider<LocaleSelectionState> {
   late final useDeviceMut = mutation<Locale>(#useDevice);
 
   @override
-  Future<LocaleSelectionState> build(Ref ref) async {
+  Future<LocaleSelectionState> build(
+    Ref<AsyncValue<LocaleSelectionState>> ref,
+  ) async {
     await ref.watch(localePreferencesProvider.future);
     final selected = ref.watch(appLocaleProvider);
     final deviceLocale = PlatformDispatcher.instance.locale;
@@ -62,29 +64,37 @@ class LocaleSelectionViewModel extends AsyncProvider<LocaleSelectionState> {
     );
   }
 
-  Call<Locale> save(Locale locale) => mutate(saveMut, (ref) async {
-    final localeService = ref.watch(appLocaleServiceProvider);
-    final onboarding = ref.watch(onboardingPreferencesServiceProvider);
-    final resolved = await localeService.update(locale);
-    await onboarding.update(localeSelected: true);
-    await _syncProfile(ref, resolved);
-    return resolved;
-  }, concurrency: Concurrency.dropLatest);
+  Call<Locale, AsyncValue<LocaleSelectionState>> save(Locale locale) =>
+      mutate(saveMut, (ref) async {
+        final localeService = ref.watch(appLocaleServiceProvider);
+        final onboarding = ref.watch(onboardingPreferencesServiceProvider);
+        final resolved = await localeService.update(locale);
+        await onboarding.update(localeSelected: true);
+        await _syncProfile(ref, resolved);
+        return resolved;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<Locale> useDeviceLocale() => mutate(useDeviceMut, (ref) async {
-    final onboarding = ref.watch(onboardingPreferencesServiceProvider);
-    final supported = AppLocalizations.supportedLocales;
-    final deviceLocale = PlatformDispatcher.instance.locale;
-    final resolved = AppLocalizations.resolveLocale(deviceLocale, supported);
+  Call<Locale, AsyncValue<LocaleSelectionState>> useDeviceLocale() => mutate(
+    useDeviceMut,
+    (ref) async {
+      final onboarding = ref.watch(onboardingPreferencesServiceProvider);
+      final supported = AppLocalizations.supportedLocales;
+      final deviceLocale = PlatformDispatcher.instance.locale;
+      final resolved = AppLocalizations.resolveLocale(deviceLocale, supported);
 
-    final localeService = ref.watch(appLocaleServiceProvider);
-    await localeService.clearOverride();
-    await onboarding.update(localeSelected: true);
-    await _syncProfile(ref, resolved);
-    return resolved;
-  }, concurrency: Concurrency.dropLatest);
+      final localeService = ref.watch(appLocaleServiceProvider);
+      await localeService.clearOverride();
+      await onboarding.update(localeSelected: true);
+      await _syncProfile(ref, resolved);
+      return resolved;
+    },
+    concurrency: Concurrency.dropLatest,
+  );
 
-  Future<void> _syncProfile(Ref ref, Locale locale) async {
+  Future<void> _syncProfile(
+    Ref<AsyncValue<LocaleSelectionState>> ref,
+    Locale locale,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;

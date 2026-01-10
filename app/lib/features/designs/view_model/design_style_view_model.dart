@@ -75,7 +75,7 @@ class DesignStyleViewModel extends AsyncProvider<DesignStyleState> {
   late final prefetchMut = mutation<String?>(#prefetchTemplate);
 
   @override
-  Future<DesignStyleState> build(Ref ref) async {
+  Future<DesignStyleState> build(Ref<AsyncValue<DesignStyleState>> ref) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final creation = ref.watch(designCreationViewModel).valueOrNull;
     final script = gates.prefersEnglish
@@ -120,45 +120,18 @@ class DesignStyleViewModel extends AsyncProvider<DesignStyleState> {
     );
   }
 
-  Call<ScriptFamily> setScript(ScriptFamily script) =>
-      mutate(setScriptMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return script;
-
-        final gates = ref.watch(appExperienceGatesProvider);
-        final visible = _filterTemplates(
-          templates: current.templates,
-          fonts: current.fonts,
-          script: script,
-          shape: current.selectedShape,
-          filters: current.activeFilters,
-          gates: gates,
-        );
-        final selected =
-            visible.contains(current.selectedTemplate) &&
-                current.selectedTemplate != null
-            ? current.selectedTemplate
-            : (visible.isNotEmpty ? visible.first : null);
-
-        ref.state = AsyncData(
-          current.copyWith(
-            selectedScript: script,
-            visibleTemplates: visible,
-            selectedTemplate: selected,
-          ),
-        );
-        return script;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<SealShape> setShape(SealShape shape) => mutate(setShapeMut, (ref) async {
+  Call<ScriptFamily, AsyncValue<DesignStyleState>> setScript(
+    ScriptFamily script,
+  ) => mutate(setScriptMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return shape;
+    if (current == null) return script;
+
     final gates = ref.watch(appExperienceGatesProvider);
     final visible = _filterTemplates(
       templates: current.templates,
       fonts: current.fonts,
-      script: current.selectedScript,
-      shape: shape,
+      script: script,
+      shape: current.selectedShape,
       filters: current.activeFilters,
       gates: gates,
     );
@@ -170,25 +143,25 @@ class DesignStyleViewModel extends AsyncProvider<DesignStyleState> {
 
     ref.state = AsyncData(
       current.copyWith(
-        selectedShape: shape,
+        selectedScript: script,
         visibleTemplates: visible,
         selectedTemplate: selected,
       ),
     );
-    return shape;
+    return script;
   }, concurrency: Concurrency.dropLatest);
 
-  Call<Set<String>> updateFilters(Set<String> filters) =>
-      mutate(updateFiltersMut, (ref) async {
+  Call<SealShape, AsyncValue<DesignStyleState>> setShape(SealShape shape) =>
+      mutate(setShapeMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return filters;
+        if (current == null) return shape;
         final gates = ref.watch(appExperienceGatesProvider);
         final visible = _filterTemplates(
           templates: current.templates,
           fonts: current.fonts,
           script: current.selectedScript,
-          shape: current.selectedShape,
-          filters: filters,
+          shape: shape,
+          filters: current.activeFilters,
           gates: gates,
         );
         final selected =
@@ -199,56 +172,84 @@ class DesignStyleViewModel extends AsyncProvider<DesignStyleState> {
 
         ref.state = AsyncData(
           current.copyWith(
-            activeFilters: filters,
+            selectedShape: shape,
             visibleTemplates: visible,
             selectedTemplate: selected,
           ),
         );
-        return filters;
+        return shape;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<Template?> selectTemplate(String templateIdOrSlug) =>
-      mutate(selectTemplateMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null || current.templates.isEmpty) return null;
-        final fallback =
-            current.selectedTemplate ??
-            current.visibleTemplates.firstOrNull ??
-            current.templates.first;
-        final template = current.templates.firstWhere(
-          (template) =>
-              template.id == templateIdOrSlug ||
-              template.slug == templateIdOrSlug,
-          orElse: () => fallback,
-        );
-        ref.state = AsyncData(current.copyWith(selectedTemplate: template));
-        return template;
-      }, concurrency: Concurrency.dropLatest);
+  Call<Set<String>, AsyncValue<DesignStyleState>> updateFilters(
+    Set<String> filters,
+  ) => mutate(updateFiltersMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return filters;
+    final gates = ref.watch(appExperienceGatesProvider);
+    final visible = _filterTemplates(
+      templates: current.templates,
+      fonts: current.fonts,
+      script: current.selectedScript,
+      shape: current.selectedShape,
+      filters: filters,
+      gates: gates,
+    );
+    final selected =
+        visible.contains(current.selectedTemplate) &&
+            current.selectedTemplate != null
+        ? current.selectedTemplate
+        : (visible.isNotEmpty ? visible.first : null);
 
-  Call<String?> prefetchTemplate(String templateIdOrSlug) =>
-      mutate(prefetchMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return null;
-        final key = templateIdOrSlug;
-        if (current.prefetchedTemplateRefs.contains(key)) return key;
+    ref.state = AsyncData(
+      current.copyWith(
+        activeFilters: filters,
+        visibleTemplates: visible,
+        selectedTemplate: selected,
+      ),
+    );
+    return filters;
+  }, concurrency: Concurrency.dropLatest);
 
-        ref.state = AsyncData(current.copyWith(isPrefetching: true));
-        await Future<void>.delayed(const Duration(milliseconds: 160));
+  Call<Template?, AsyncValue<DesignStyleState>> selectTemplate(
+    String templateIdOrSlug,
+  ) => mutate(selectTemplateMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null || current.templates.isEmpty) return null;
+    final fallback =
+        current.selectedTemplate ??
+        current.visibleTemplates.firstOrNull ??
+        current.templates.first;
+    final template = current.templates.firstWhere(
+      (template) =>
+          template.id == templateIdOrSlug || template.slug == templateIdOrSlug,
+      orElse: () => fallback,
+    );
+    ref.state = AsyncData(current.copyWith(selectedTemplate: template));
+    return template;
+  }, concurrency: Concurrency.dropLatest);
 
-        final latest = ref.watch(this).valueOrNull;
-        if (latest == null) return null;
+  Call<String?, AsyncValue<DesignStyleState>> prefetchTemplate(
+    String templateIdOrSlug,
+  ) => mutate(prefetchMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return null;
+    final key = templateIdOrSlug;
+    if (current.prefetchedTemplateRefs.contains(key)) return key;
 
-        ref.state = AsyncData(
-          latest.copyWith(
-            isPrefetching: false,
-            prefetchedTemplateRefs: <String>{
-              ...latest.prefetchedTemplateRefs,
-              key,
-            },
-          ),
-        );
-        return key;
-      }, concurrency: Concurrency.restart);
+    ref.state = AsyncData(current.copyWith(isPrefetching: true));
+    await Future<void>.delayed(const Duration(milliseconds: 160));
+
+    final latest = ref.watch(this).valueOrNull;
+    if (latest == null) return null;
+
+    ref.state = AsyncData(
+      latest.copyWith(
+        isPrefetching: false,
+        prefetchedTemplateRefs: <String>{...latest.prefetchedTemplateRefs, key},
+      ),
+    );
+    return key;
+  }, concurrency: Concurrency.restart);
 }
 
 final designStyleViewModel = DesignStyleViewModel();

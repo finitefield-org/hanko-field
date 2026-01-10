@@ -15,24 +15,26 @@ class OrderDetailViewModel extends AsyncProvider<Order> {
   late final requestInvoiceMut = mutation<void>(#requestInvoice);
 
   @override
-  Future<Order> build(Ref ref) async {
+  Future<Order> build(Ref<AsyncValue<Order>> ref) async {
     final repository = ref.watch(orderRepositoryProvider);
     return repository.getOrder(orderId);
   }
 
-  Call<Order> cancel({String? reason}) => mutate(cancelMut, (ref) async {
-    final repository = ref.watch(orderRepositoryProvider);
-    final updated = await repository.cancelOrder(orderId, reason: reason);
-    ref.state = AsyncData(updated);
-    return updated;
-  }, concurrency: Concurrency.dropLatest);
+  Call<Order, AsyncValue<Order>> cancel({String? reason}) =>
+      mutate(cancelMut, (ref) async {
+        final repository = ref.watch(orderRepositoryProvider);
+        final updated = await repository.cancelOrder(orderId, reason: reason);
+        ref.state = AsyncData(updated);
+        return updated;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<void> requestInvoice() => mutate(requestInvoiceMut, (ref) async {
-    final repository = ref.watch(orderRepositoryProvider);
-    await repository.requestInvoice(orderId);
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<Order>> requestInvoice() =>
+      mutate(requestInvoiceMut, (ref) async {
+        final repository = ref.watch(orderRepositoryProvider);
+        await repository.requestInvoice(orderId);
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<Order> reorder() => mutate(reorderMut, (ref) async {
+  Call<Order, AsyncValue<Order>> reorder() => mutate(reorderMut, (ref) async {
     final repository = ref.watch(orderRepositoryProvider);
     return repository.reorder(orderId);
   }, concurrency: Concurrency.dropLatest);

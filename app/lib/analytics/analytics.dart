@@ -49,7 +49,7 @@ final analyticsInitializerProvider = AsyncProvider<void>((ref) async {
 class AnalyticsClient {
   AnalyticsClient(this._ref, this._analytics, this._logger);
 
-  final Ref _ref;
+  final Ref<AnalyticsClient> _ref;
   final FirebaseAnalytics _analytics;
   final Logger _logger;
 

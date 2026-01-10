@@ -79,7 +79,7 @@ class KanjiMappingViewModel extends AsyncProvider<KanjiMapState> {
   late final filterMut = mutation<KanjiSuggestionResult>(#filter);
 
   @override
-  Future<KanjiMapState> build(Ref ref) async {
+  Future<KanjiMapState> build(Ref<AsyncValue<KanjiMapState>> ref) async {
     final repository = ref.watch(kanjiMappingRepositoryProvider);
     final gates = ref.watch(appExperienceGatesProvider);
     final design = ref.watch(designCreationViewModel).valueOrNull;
@@ -112,125 +112,130 @@ class KanjiMappingViewModel extends AsyncProvider<KanjiMapState> {
     );
   }
 
-  Call<KanjiSuggestionResult> search(String rawQuery) =>
-      mutate(searchMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          throw StateError('Kanji map state not initialized');
-        }
-        final repository = ref.watch(kanjiMappingRepositoryProvider);
-        final query = rawQuery.trim().isEmpty ? current.query : rawQuery.trim();
+  Call<KanjiSuggestionResult, AsyncValue<KanjiMapState>> search(
+    String rawQuery,
+  ) => mutate(searchMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      throw StateError('Kanji map state not initialized');
+    }
+    final repository = ref.watch(kanjiMappingRepositoryProvider);
+    final query = rawQuery.trim().isEmpty ? current.query : rawQuery.trim();
 
-        ref.state = AsyncData(
-          current.copyWith(query: query, isLoading: true, message: null),
-        );
+    ref.state = AsyncData(
+      current.copyWith(query: query, isLoading: true, message: null),
+    );
 
-        try {
-          final result = await repository.fetchCandidates(
-            query: query,
-            filter: current.filter,
-          );
-          final selectedId =
-              current.selectedId ?? result.candidates.firstOrNull?.id;
-          final selection = _reconcileSelection(
-            selectedId,
-            current.compareIds,
-            result.candidates,
-          );
+    try {
+      final result = await repository.fetchCandidates(
+        query: query,
+        filter: current.filter,
+      );
+      final selectedId =
+          current.selectedId ?? result.candidates.firstOrNull?.id;
+      final selection = _reconcileSelection(
+        selectedId,
+        current.compareIds,
+        result.candidates,
+      );
 
-          ref.state = AsyncData(
-            current.copyWith(
-              candidates: result.candidates,
-              selectedId: selection.selectedId,
-              compareIds: selection.compareIds,
-              isLoading: false,
-              fromCache: result.fromCache,
-              cachedAt: result.cachedAt,
-              message: null,
-            ),
-          );
-          return result;
-        } catch (e) {
-          ref.state = AsyncData(
-            current.copyWith(isLoading: false, message: e.toString()),
-          );
-          rethrow;
-        }
-      }, concurrency: Concurrency.restart);
+      ref.state = AsyncData(
+        current.copyWith(
+          candidates: result.candidates,
+          selectedId: selection.selectedId,
+          compareIds: selection.compareIds,
+          isLoading: false,
+          fromCache: result.fromCache,
+          cachedAt: result.cachedAt,
+          message: null,
+        ),
+      );
+      return result;
+    } catch (e) {
+      ref.state = AsyncData(
+        current.copyWith(isLoading: false, message: e.toString()),
+      );
+      rethrow;
+    }
+  }, concurrency: Concurrency.restart);
 
-  Call<KanjiSuggestionResult> setFilter(KanjiFilter filter) =>
-      mutate(filterMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          throw StateError('Kanji map state not initialized');
-        }
-        final repository = ref.watch(kanjiMappingRepositoryProvider);
-        ref.state = AsyncData(
-          current.copyWith(filter: filter, isLoading: true, message: null),
-        );
-        final result = await repository.fetchCandidates(
-          query: current.query,
-          filter: filter,
-        );
-        final selection = _reconcileSelection(
-          current.selectedId,
-          current.compareIds,
-          result.candidates,
-        );
-        ref.state = AsyncData(
-          current.copyWith(
-            candidates: result.candidates,
-            selectedId: selection.selectedId,
-            compareIds: selection.compareIds,
-            isLoading: false,
-            fromCache: result.fromCache,
-            cachedAt: result.cachedAt,
-          ),
-        );
-        return result;
-      }, concurrency: Concurrency.restart);
+  Call<KanjiSuggestionResult, AsyncValue<KanjiMapState>> setFilter(
+    KanjiFilter filter,
+  ) => mutate(filterMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      throw StateError('Kanji map state not initialized');
+    }
+    final repository = ref.watch(kanjiMappingRepositoryProvider);
+    ref.state = AsyncData(
+      current.copyWith(filter: filter, isLoading: true, message: null),
+    );
+    final result = await repository.fetchCandidates(
+      query: current.query,
+      filter: filter,
+    );
+    final selection = _reconcileSelection(
+      current.selectedId,
+      current.compareIds,
+      result.candidates,
+    );
+    ref.state = AsyncData(
+      current.copyWith(
+        candidates: result.candidates,
+        selectedId: selection.selectedId,
+        compareIds: selection.compareIds,
+        isLoading: false,
+        fromCache: result.fromCache,
+        cachedAt: result.cachedAt,
+      ),
+    );
+    return result;
+  }, concurrency: Concurrency.restart);
 
-  Call<String?> selectCandidate(String? candidateId) =>
-      mutate(selectMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return candidateId;
-        if (candidateId == null) {
-          ref.state = AsyncData(current.copyWith(selectedId: null));
-          return null;
-        }
-        final compare = Set<String>.from(current.compareIds)..add(candidateId);
-        ref.state = AsyncData(
-          current.copyWith(selectedId: candidateId, compareIds: compare),
-        );
-        return candidateId;
-      }, concurrency: Concurrency.dropLatest);
+  Call<String?, AsyncValue<KanjiMapState>> selectCandidate(
+    String? candidateId,
+  ) => mutate(selectMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return candidateId;
+    if (candidateId == null) {
+      ref.state = AsyncData(current.copyWith(selectedId: null));
+      return null;
+    }
+    final compare = Set<String>.from(current.compareIds)..add(candidateId);
+    ref.state = AsyncData(
+      current.copyWith(selectedId: candidateId, compareIds: compare),
+    );
+    return candidateId;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<Set<String>> toggleCompare(String candidateId) =>
-      mutate(toggleCompareMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return <String>{};
-        final next = Set<String>.from(current.compareIds);
-        if (next.contains(candidateId)) {
-          next.remove(candidateId);
-        } else {
-          next.add(candidateId);
-        }
-        ref.state = AsyncData(current.copyWith(compareIds: next));
-        return next;
-      }, concurrency: Concurrency.dropLatest);
+  Call<Set<String>, AsyncValue<KanjiMapState>> toggleCompare(
+    String candidateId,
+  ) => mutate(toggleCompareMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return <String>{};
+    final next = Set<String>.from(current.compareIds);
+    if (next.contains(candidateId)) {
+      next.remove(candidateId);
+    } else {
+      next.add(candidateId);
+    }
+    ref.state = AsyncData(current.copyWith(compareIds: next));
+    return next;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<Set<String>> toggleBookmark(String candidateId) =>
-      mutate(bookmarkMut, (ref) async {
-        final repository = ref.watch(kanjiMappingRepositoryProvider);
-        final current = ref.watch(this).valueOrNull;
-        final next = await repository.toggleBookmark(candidateId);
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(bookmarks: next));
-        }
-        return next;
-      }, concurrency: Concurrency.dropLatest);
+  Call<Set<String>, AsyncValue<KanjiMapState>> toggleBookmark(
+    String candidateId,
+  ) => mutate(bookmarkMut, (ref) async {
+    final repository = ref.watch(kanjiMappingRepositoryProvider);
+    final current = ref.watch(this).valueOrNull;
+    final next = await repository.toggleBookmark(candidateId);
+    if (current != null) {
+      ref.state = AsyncData(current.copyWith(bookmarks: next));
+    }
+    return next;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<String> updateManualEntry(String value) =>
+  Call<String, AsyncValue<KanjiMapState>> updateManualEntry(String value) =>
       mutate(manualMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return value;
@@ -238,57 +243,58 @@ class KanjiMappingViewModel extends AsyncProvider<KanjiMapState> {
         return value;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<KanjiMapping> applySelection({String? manualValue}) =>
-      mutate(applyMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          throw StateError('Kanji map state not initialized');
-        }
+  Call<KanjiMapping, AsyncValue<KanjiMapState>> applySelection({
+    String? manualValue,
+  }) => mutate(applyMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      throw StateError('Kanji map state not initialized');
+    }
 
-        final manual = manualValue?.trim();
-        final isManual = manual?.isNotEmpty == true;
-        final candidate = isManual
-            ? null
-            : current.candidates.firstWhereOrNull(
-                (c) => c.id == current.selectedId,
-              );
-        final value = isManual ? manual! : (candidate?.glyph ?? '');
-        if (value.isEmpty && !isManual) {
-          throw StateError('No kanji selection to apply');
-        }
+    final manual = manualValue?.trim();
+    final isManual = manual?.isNotEmpty == true;
+    final candidate = isManual
+        ? null
+        : current.candidates.firstWhereOrNull(
+            (c) => c.id == current.selectedId,
+          );
+    final value = isManual ? manual! : (candidate?.glyph ?? '');
+    if (value.isEmpty && !isManual) {
+      throw StateError('No kanji selection to apply');
+    }
 
-        final mapping = KanjiMapping(
-          value: value,
-          mappingRef: isManual ? 'manual' : candidate?.id,
-        );
+    final mapping = KanjiMapping(
+      value: value,
+      mappingRef: isManual ? 'manual' : candidate?.id,
+    );
 
-        await ref.invoke(designCreationViewModel.setKanjiMapping(mapping));
+    await ref.invoke(designCreationViewModel.setKanjiMapping(mapping));
 
-        final analytics = ref.watch(analyticsClientProvider);
-        final gates = ref.watch(appExperienceGatesProvider);
-        unawaited(
-          analytics.track(
-            KanjiMappingSelectedEvent(
-              candidateId: isManual ? 'manual' : (candidate?.id ?? 'manual'),
-              glyph: value,
-              query: current.query,
-              persona: gates.personaKey,
-              locale: gates.localeTag,
-              bookmarked:
-                  candidate != null && current.bookmarks.contains(candidate.id),
-              fromCache: current.fromCache,
-            ),
-          ),
-        );
+    final analytics = ref.watch(analyticsClientProvider);
+    final gates = ref.watch(appExperienceGatesProvider);
+    unawaited(
+      analytics.track(
+        KanjiMappingSelectedEvent(
+          candidateId: isManual ? 'manual' : (candidate?.id ?? 'manual'),
+          glyph: value,
+          query: current.query,
+          persona: gates.personaKey,
+          locale: gates.localeTag,
+          bookmarked:
+              candidate != null && current.bookmarks.contains(candidate.id),
+          fromCache: current.fromCache,
+        ),
+      ),
+    );
 
-        ref.state = AsyncData(
-          current.copyWith(
-            selectedId: isManual ? current.selectedId : (candidate?.id),
-            manualEntry: manual ?? current.manualEntry,
-          ),
-        );
-        return mapping;
-      }, concurrency: Concurrency.dropLatest);
+    ref.state = AsyncData(
+      current.copyWith(
+        selectedId: isManual ? current.selectedId : (candidate?.id),
+        manualEntry: manual ?? current.manualEntry,
+      ),
+    );
+    return mapping;
+  }, concurrency: Concurrency.dropLatest);
 }
 
 final kanjiMappingViewModel = KanjiMappingViewModel();

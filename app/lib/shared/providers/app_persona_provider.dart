@@ -60,7 +60,7 @@ final appPersonaServiceProvider = Provider<AppPersonaService>(
 class AppPersonaService {
   AppPersonaService(this._ref) : _logger = Logger('AppPersonaService');
 
-  final Ref _ref;
+  final Ref<AppPersonaService> _ref;
   final Logger _logger;
 
   Future<UserPersona> update(UserPersona persona) async {

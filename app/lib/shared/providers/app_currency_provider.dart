@@ -63,7 +63,7 @@ final appCurrencyServiceProvider = Provider<AppCurrencyService>((ref) {
 class AppCurrencyService {
   AppCurrencyService(this._ref, this._logger);
 
-  final Ref _ref;
+  final Ref<AppCurrencyService> _ref;
   final Logger _logger;
 
   Future<String> update(String currencyCode) async {

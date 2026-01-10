@@ -69,7 +69,9 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
   late final addPaymentMut = mutation<PaymentSaveResult>(#addPaymentMethod);
 
   @override
-  Future<CheckoutPaymentState> build(Ref ref) async {
+  Future<CheckoutPaymentState> build(
+    Ref<AsyncValue<CheckoutPaymentState>> ref,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final flow = ref.watch(checkoutFlowProvider);
     final gates = ref.watch(appExperienceGatesProvider);
@@ -89,117 +91,117 @@ class CheckoutPaymentViewModel extends AsyncProvider<CheckoutPaymentState> {
     );
   }
 
-  Call<String?> selectPayment(String? methodId) =>
-      mutate(selectPaymentMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return methodId;
-        final selection =
-            current.methods.firstWhereOrNull((item) => item.id == methodId) ??
-            current.selectedMethod;
-        ref.state = AsyncData(
-          current.copyWith(selectedId: methodId, clearError: true),
-        );
-        if (selection != null) {
-          await ref.invoke(
-            checkoutFlowProvider.setPayment(
-              paymentMethodId: selection.id,
-              paymentProviderRef: selection.providerRef,
-            ),
-          );
-          final analytics = ref.watch(analyticsClientProvider);
-          unawaited(
-            analytics.track(
-              CheckoutPaymentSelectedEvent(
-                provider: selection.provider.name,
-                methodType: selection.methodType.name,
-                isDefault: selection.isDefault,
-                isNew: false,
-              ),
-            ),
-          );
-        }
-        return methodId;
-      }, concurrency: Concurrency.dropLatest);
+  Call<String?, AsyncValue<CheckoutPaymentState>> selectPayment(
+    String? methodId,
+  ) => mutate(selectPaymentMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return methodId;
+    final selection =
+        current.methods.firstWhereOrNull((item) => item.id == methodId) ??
+        current.selectedMethod;
+    ref.state = AsyncData(
+      current.copyWith(selectedId: methodId, clearError: true),
+    );
+    if (selection != null) {
+      await ref.invoke(
+        checkoutFlowProvider.setPayment(
+          paymentMethodId: selection.id,
+          paymentProviderRef: selection.providerRef,
+        ),
+      );
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          CheckoutPaymentSelectedEvent(
+            provider: selection.provider.name,
+            methodType: selection.methodType.name,
+            isDefault: selection.isDefault,
+            isNew: false,
+          ),
+        ),
+      );
+    }
+    return methodId;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<PaymentSaveResult> addPaymentMethod(PaymentMethodDraft draft) =>
-      mutate(addPaymentMut, (ref) async {
-        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-        final validation = validatePaymentDraft(draft, l10n);
-        final current = ref.watch(this).valueOrNull;
+  Call<PaymentSaveResult, AsyncValue<CheckoutPaymentState>> addPaymentMethod(
+    PaymentMethodDraft draft,
+  ) => mutate(addPaymentMut, (ref) async {
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    final validation = validatePaymentDraft(draft, l10n);
+    final current = ref.watch(this).valueOrNull;
 
-        if (!validation.isValid) {
-          if (current != null) {
-            ref.state = AsyncData(
-              current.copyWith(lastError: validation.message),
-            );
-          }
-          return PaymentSaveResult(validation: validation);
-        }
+    if (!validation.isValid) {
+      if (current != null) {
+        ref.state = AsyncData(current.copyWith(lastError: validation.message));
+      }
+      return PaymentSaveResult(validation: validation);
+    }
 
-        final repository = ref.watch(userRepositoryProvider);
-        final now = DateTime.now().toUtc();
-        final hasDefault = (current?.methods ?? const []).any(
-          (item) => item.isDefault,
-        );
-        final method = PaymentMethod(
-          id: null,
-          provider: draft.provider,
-          methodType: draft.methodType,
-          brand: draft.brand,
-          last4: draft.last4,
-          expMonth: draft.expMonth,
-          expYear: draft.expYear,
-          billingName: draft.billingName,
-          providerRef: 'tok_${now.microsecondsSinceEpoch}',
-          isDefault: !hasDefault,
-          createdAt: now,
-          updatedAt: now,
-        );
+    final repository = ref.watch(userRepositoryProvider);
+    final now = DateTime.now().toUtc();
+    final hasDefault = (current?.methods ?? const []).any(
+      (item) => item.isDefault,
+    );
+    final method = PaymentMethod(
+      id: null,
+      provider: draft.provider,
+      methodType: draft.methodType,
+      brand: draft.brand,
+      last4: draft.last4,
+      expMonth: draft.expMonth,
+      expYear: draft.expYear,
+      billingName: draft.billingName,
+      providerRef: 'tok_${now.microsecondsSinceEpoch}',
+      isDefault: !hasDefault,
+      createdAt: now,
+      updatedAt: now,
+    );
 
-        try {
-          final saved = await repository.addPaymentMethod(method);
-          final next = _sort([saved, ...(current?.methods ?? const [])]);
-          ref.state = AsyncData(
-            current?.copyWith(
-                  methods: next,
-                  selectedId: saved.id,
-                  clearError: true,
-                ) ??
-                CheckoutPaymentState(
-                  methods: next,
-                  selectedId: saved.id,
-                  canAddMethods: current?.canAddMethods ?? true,
-                ),
-          );
-          await ref.invoke(
-            checkoutFlowProvider.setPayment(
-              paymentMethodId: saved.id,
-              paymentProviderRef: saved.providerRef,
+    try {
+      final saved = await repository.addPaymentMethod(method);
+      final next = _sort([saved, ...(current?.methods ?? const [])]);
+      ref.state = AsyncData(
+        current?.copyWith(
+              methods: next,
+              selectedId: saved.id,
+              clearError: true,
+            ) ??
+            CheckoutPaymentState(
+              methods: next,
+              selectedId: saved.id,
+              canAddMethods: current?.canAddMethods ?? true,
             ),
-          );
-          final analytics = ref.watch(analyticsClientProvider);
-          unawaited(
-            analytics.track(
-              CheckoutPaymentSelectedEvent(
-                provider: saved.provider.name,
-                methodType: saved.methodType.name,
-                isDefault: saved.isDefault,
-                isNew: true,
-              ),
-            ),
-          );
-          return PaymentSaveResult(validation: validation, saved: saved);
-        } catch (e, stack) {
-          _paymentLogger.warning('Failed to add payment method', e, stack);
-          final message = l10n.checkoutPaymentAddFailed;
-          if (current != null) {
-            ref.state = AsyncData(current.copyWith(lastError: message));
-          }
-          return PaymentSaveResult(
-            validation: PaymentValidationResult(message: message),
-          );
-        }
-      }, concurrency: Concurrency.queue);
+      );
+      await ref.invoke(
+        checkoutFlowProvider.setPayment(
+          paymentMethodId: saved.id,
+          paymentProviderRef: saved.providerRef,
+        ),
+      );
+      final analytics = ref.watch(analyticsClientProvider);
+      unawaited(
+        analytics.track(
+          CheckoutPaymentSelectedEvent(
+            provider: saved.provider.name,
+            methodType: saved.methodType.name,
+            isDefault: saved.isDefault,
+            isNew: true,
+          ),
+        ),
+      );
+      return PaymentSaveResult(validation: validation, saved: saved);
+    } catch (e, stack) {
+      _paymentLogger.warning('Failed to add payment method', e, stack);
+      final message = l10n.checkoutPaymentAddFailed;
+      if (current != null) {
+        ref.state = AsyncData(current.copyWith(lastError: message));
+      }
+      return PaymentSaveResult(
+        validation: PaymentValidationResult(message: message),
+      );
+    }
+  }, concurrency: Concurrency.queue);
 
   List<PaymentMethod> _sort(List<PaymentMethod> methods) {
     final sorted = [...methods];

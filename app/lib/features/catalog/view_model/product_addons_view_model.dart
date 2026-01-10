@@ -150,7 +150,9 @@ class ProductAddonsViewModel extends AsyncProvider<ProductAddonsState> {
   late final commitSelectionMut = mutation<AddonCartUpdate>(#commitSelection);
 
   @override
-  Future<ProductAddonsState> build(Ref ref) async {
+  Future<ProductAddonsState> build(
+    Ref<AsyncValue<ProductAddonsState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 140));
 
@@ -160,7 +162,7 @@ class ProductAddonsViewModel extends AsyncProvider<ProductAddonsState> {
     return detail;
   }
 
-  Call<String> toggleAddon(String addonId) =>
+  Call<String, AsyncValue<ProductAddonsState>> toggleAddon(String addonId) =>
       mutate(toggleAddonMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return addonId;
@@ -176,13 +178,14 @@ class ProductAddonsViewModel extends AsyncProvider<ProductAddonsState> {
         return addonId;
       });
 
-  Call<void> clearAll() => mutate(clearAllMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    ref.state = AsyncData(current.copyWith(selectedAddonIds: <String>{}));
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<ProductAddonsState>> clearAll() =>
+      mutate(clearAllMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        ref.state = AsyncData(current.copyWith(selectedAddonIds: <String>{}));
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<void> applyRecommendation() =>
+  Call<void, AsyncValue<ProductAddonsState>> applyRecommendation() =>
       mutate(applyRecommendationMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         final rec = current?.recommendation;
@@ -191,7 +194,7 @@ class ProductAddonsViewModel extends AsyncProvider<ProductAddonsState> {
         ref.state = AsyncData(current.copyWith(selectedAddonIds: next));
       });
 
-  Call<AddonCartUpdate> commitSelection() =>
+  Call<AddonCartUpdate, AsyncValue<ProductAddonsState>> commitSelection() =>
       mutate(commitSelectionMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) throw StateError('Missing add-ons state');

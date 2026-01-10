@@ -143,147 +143,154 @@ class DesignVersionsViewModel extends AsyncProvider<DesignVersionsState> {
   final _logger = Logger('DesignVersionsViewModel');
 
   @override
-  Future<DesignVersionsState> build(Ref ref) => _hydrate(ref);
+  Future<DesignVersionsState> build(Ref<AsyncValue<DesignVersionsState>> ref) =>
+      _hydrate(ref);
 
-  Call<String> selectVersion(String versionId) =>
-      mutate(selectVersionMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return versionId;
+  Call<String, AsyncValue<DesignVersionsState>> selectVersion(
+    String versionId,
+  ) => mutate(selectVersionMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return versionId;
 
-        final target = current.versions.firstWhereOrNull(
-          (v) => _service.versionId(v) == versionId,
-        );
-        if (target == null) return versionId;
+    final target = current.versions.firstWhereOrNull(
+      (v) => _service.versionId(v) == versionId,
+    );
+    if (target == null) return versionId;
 
-        final diff = _service.diff(current.current, target);
-        ref.state = AsyncData(
-          current.copyWith(
-            focusVersionId: versionId,
-            diff: diff,
-            feedbackMessage: _gates.prefersEnglish
-                ? 'Comparing with v${target.version}'
-                : 'v${target.version} と比較中',
-            feedbackId: current.feedbackId + 1,
-          ),
-        );
-        return versionId;
-      });
+    final diff = _service.diff(current.current, target);
+    ref.state = AsyncData(
+      current.copyWith(
+        focusVersionId: versionId,
+        diff: diff,
+        feedbackMessage: _gates.prefersEnglish
+            ? 'Comparing with v${target.version}'
+            : 'v${target.version} と比較中',
+        feedbackId: current.feedbackId + 1,
+      ),
+    );
+    return versionId;
+  });
 
-  Call<DesignVersion?> rollback(String versionId) =>
-      mutate(rollbackMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return null;
+  Call<DesignVersion?, AsyncValue<DesignVersionsState>> rollback(
+    String versionId,
+  ) => mutate(rollbackMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return null;
 
-        final target = current.versions.firstWhereOrNull(
-          (v) => _service.versionId(v) == versionId,
-        );
-        if (target == null) return null;
+    final target = current.versions.firstWhereOrNull(
+      (v) => _service.versionId(v) == versionId,
+    );
+    if (target == null) return null;
 
-        final previousCurrent = current.current;
-        ref.state = AsyncData(
-          current.copyWith(isRollingBack: true, clearFeedback: true),
-        );
+    final previousCurrent = current.current;
+    ref.state = AsyncData(
+      current.copyWith(isRollingBack: true, clearFeedback: true),
+    );
 
-        try {
-          final restored = await _service.rollback(
-            designId: current.designId,
-            current: previousCurrent,
-            target: target,
-          );
-          await _analytics.track(
-            DesignVersionRolledBackEvent(
-              designId: current.designId,
-              toVersion: restored.version,
-              fromVersion: previousCurrent.version,
-              reason: _service.versionId(target),
-            ),
-          );
+    try {
+      final restored = await _service.rollback(
+        designId: current.designId,
+        current: previousCurrent,
+        target: target,
+      );
+      await _analytics.track(
+        DesignVersionRolledBackEvent(
+          designId: current.designId,
+          toVersion: restored.version,
+          fromVersion: previousCurrent.version,
+          reason: _service.versionId(target),
+        ),
+      );
 
-          final updatedTimeline = [restored, ...current.versions];
-          final auditEntry = _service.auditForRollback(
-            from: previousCurrent,
-            to: restored,
-          );
-          final nextFocusId = _service.versionId(previousCurrent);
-          final diff = _service.diff(restored, previousCurrent);
+      final updatedTimeline = [restored, ...current.versions];
+      final auditEntry = _service.auditForRollback(
+        from: previousCurrent,
+        to: restored,
+      );
+      final nextFocusId = _service.versionId(previousCurrent);
+      final diff = _service.diff(restored, previousCurrent);
 
-          ref.state = AsyncData(
-            current.copyWith(
-              versions: updatedTimeline,
-              focusVersionId: nextFocusId,
-              diff: diff,
-              isRollingBack: false,
-              feedbackMessage: _gates.prefersEnglish
-                  ? 'Restored version v${target.version}'
-                  : 'v${target.version} を復元しました',
-              feedbackId: current.feedbackId + 1,
-              auditTrail: [auditEntry, ...current.auditTrail],
-            ),
-          );
-          return restored;
-        } catch (e, stack) {
-          _logger.warning('Rollback failed', e, stack);
-          ref.state = AsyncData(
-            current.copyWith(
-              isRollingBack: false,
-              feedbackMessage: e.toString(),
-              feedbackId: current.feedbackId + 1,
-            ),
-          );
-          return null;
-        }
-      }, concurrency: Concurrency.dropLatest);
+      ref.state = AsyncData(
+        current.copyWith(
+          versions: updatedTimeline,
+          focusVersionId: nextFocusId,
+          diff: diff,
+          isRollingBack: false,
+          feedbackMessage: _gates.prefersEnglish
+              ? 'Restored version v${target.version}'
+              : 'v${target.version} を復元しました',
+          feedbackId: current.feedbackId + 1,
+          auditTrail: [auditEntry, ...current.auditTrail],
+        ),
+      );
+      return restored;
+    } catch (e, stack) {
+      _logger.warning('Rollback failed', e, stack);
+      ref.state = AsyncData(
+        current.copyWith(
+          isRollingBack: false,
+          feedbackMessage: e.toString(),
+          feedbackId: current.feedbackId + 1,
+        ),
+      );
+      return null;
+    }
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<DesignVersion?> duplicate(String versionId) =>
-      mutate(duplicateMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return null;
-        final source = current.versions.firstWhereOrNull(
-          (v) => _service.versionId(v) == versionId,
-        );
-        if (source == null) return null;
+  Call<DesignVersion?, AsyncValue<DesignVersionsState>> duplicate(
+    String versionId,
+  ) => mutate(duplicateMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return null;
+    final source = current.versions.firstWhereOrNull(
+      (v) => _service.versionId(v) == versionId,
+    );
+    if (source == null) return null;
 
-        ref.state = AsyncData(
-          current.copyWith(isDuplicating: true, clearFeedback: true),
-        );
+    ref.state = AsyncData(
+      current.copyWith(isDuplicating: true, clearFeedback: true),
+    );
 
-        final duplicate = _service.duplicateFrom(
-          source,
-          nextVersion: current.current.version + 1,
-        );
-        final audit = VersionAuditEntry(
-          title: _gates.prefersEnglish ? 'Duplicated version' : 'バージョンを複製',
-          detail: _gates.prefersEnglish
-              ? 'v${source.version} duplicated as draft'
-              : 'v${source.version} をドラフトとして複製しました',
-          actor: _gates.prefersEnglish ? 'You' : '自分',
-          level: VersionAuditLevel.info,
-          timestamp: DateTime.now(),
-        );
+    final duplicate = _service.duplicateFrom(
+      source,
+      nextVersion: current.current.version + 1,
+    );
+    final audit = VersionAuditEntry(
+      title: _gates.prefersEnglish ? 'Duplicated version' : 'バージョンを複製',
+      detail: _gates.prefersEnglish
+          ? 'v${source.version} duplicated as draft'
+          : 'v${source.version} をドラフトとして複製しました',
+      actor: _gates.prefersEnglish ? 'You' : '自分',
+      level: VersionAuditLevel.info,
+      timestamp: DateTime.now(),
+    );
 
-        ref.state = AsyncData(
-          current.copyWith(
-            versions: [duplicate, ...current.versions],
-            focusVersionId: _service.versionId(source),
-            diff: _service.diff(duplicate, source),
-            isDuplicating: false,
-            feedbackMessage: _gates.prefersEnglish
-                ? 'Drafted from v${source.version}'
-                : 'v${source.version} を下書きにしました',
-            feedbackId: current.feedbackId + 1,
-            auditTrail: [audit, ...current.auditTrail],
-          ),
-        );
-        return duplicate;
-      }, concurrency: Concurrency.dropLatest);
+    ref.state = AsyncData(
+      current.copyWith(
+        versions: [duplicate, ...current.versions],
+        focusVersionId: _service.versionId(source),
+        diff: _service.diff(duplicate, source),
+        isDuplicating: false,
+        feedbackMessage: _gates.prefersEnglish
+            ? 'Drafted from v${source.version}'
+            : 'v${source.version} を下書きにしました',
+        feedbackId: current.feedbackId + 1,
+        auditTrail: [audit, ...current.auditTrail],
+      ),
+    );
+    return duplicate;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<DesignVersionsState> refresh() => mutate(refreshMut, (ref) async {
-    final refreshed = await _hydrate(ref);
-    ref.state = AsyncData(refreshed);
-    return refreshed;
-  }, concurrency: Concurrency.restart);
+  Call<DesignVersionsState, AsyncValue<DesignVersionsState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final refreshed = await _hydrate(ref);
+        ref.state = AsyncData(refreshed);
+        return refreshed;
+      }, concurrency: Concurrency.restart);
 
-  Future<DesignVersionsState> _hydrate(Ref ref) async {
+  Future<DesignVersionsState> _hydrate(
+    Ref<AsyncValue<DesignVersionsState>> ref,
+  ) async {
     _gates = ref.watch(appExperienceGatesProvider);
     _analytics = ref.watch(analyticsClientProvider);
     _service = _DesignVersionService(gates: _gates, logger: _logger);

@@ -62,7 +62,7 @@ class OrdersViewModel extends AsyncProvider<OrdersState> {
   late final refreshMut = mutation<void>(#refresh);
 
   @override
-  Future<OrdersState> build(Ref ref) async {
+  Future<OrdersState> build(Ref<AsyncValue<OrdersState>> ref) async {
     final repository = ref.watch(orderRepositoryProvider);
     final page = await repository.listOrders();
 
@@ -76,46 +76,47 @@ class OrdersViewModel extends AsyncProvider<OrdersState> {
     );
   }
 
-  Call<void> loadMore() => mutate(loadMoreMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-    if (current.isLoadingMore) return;
-    final next = current.nextPageToken;
-    if (next == null) return;
+  Call<void, AsyncValue<OrdersState>> loadMore() =>
+      mutate(loadMoreMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
+        if (current.isLoadingMore) return;
+        final next = current.nextPageToken;
+        if (next == null) return;
 
-    ref.state = AsyncData(current.copyWith(isLoadingMore: true));
+        ref.state = AsyncData(current.copyWith(isLoadingMore: true));
 
-    try {
-      final repository = ref.watch(orderRepositoryProvider);
-      final page = await repository.listOrders(
-        status: current.status,
-        pageToken: next,
-      );
-      final cutoff = current.time.start(DateTime.now());
+        try {
+          final repository = ref.watch(orderRepositoryProvider);
+          final page = await repository.listOrders(
+            status: current.status,
+            pageToken: next,
+          );
+          final cutoff = current.time.start(DateTime.now());
 
-      final filtered = _applyTimeFilter(page.items, cutoff: cutoff);
-      final willExhaustRange =
-          cutoff != null &&
-          page.items.isNotEmpty &&
-          page.items.last.createdAt.isBefore(cutoff);
+          final filtered = _applyTimeFilter(page.items, cutoff: cutoff);
+          final willExhaustRange =
+              cutoff != null &&
+              page.items.isNotEmpty &&
+              page.items.last.createdAt.isBefore(cutoff);
 
-      ref.state = AsyncData(
-        current.copyWith(
-          items: [...current.items, ...filtered],
-          nextPageToken: willExhaustRange ? null : page.nextPageToken,
-          isLoadingMore: false,
-        ),
-      );
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: AsyncData(current.copyWith(isLoadingMore: false)),
-      );
-    }
-  }, concurrency: Concurrency.dropLatest);
+          ref.state = AsyncData(
+            current.copyWith(
+              items: [...current.items, ...filtered],
+              nextPageToken: willExhaustRange ? null : page.nextPageToken,
+              isLoadingMore: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current.copyWith(isLoadingMore: false),
+          );
+        }
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<OrderStatus?> setStatus(OrderStatus? status) =>
+  Call<OrderStatus?, AsyncValue<OrdersState>> setStatus(OrderStatus? status) =>
       mutate(setStatusMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
 
@@ -157,72 +158,26 @@ class OrdersViewModel extends AsyncProvider<OrdersState> {
           );
           return status;
         } catch (e, stack) {
-          ref.state = AsyncError(
-            e,
-            stack,
-            previous: current != null ? AsyncData(current) : null,
-          );
+          ref.state = AsyncError(e, stack, previous: current);
           rethrow;
         }
       }, concurrency: Concurrency.restart);
 
-  Call<OrderTimeFilter> setTime(OrderTimeFilter time) =>
-      mutate(setTimeMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        final status = current?.status;
-
-        if (current != null) {
-          ref.state = AsyncData(
-            current.copyWith(
-              time: time,
-              isRefreshing: true,
-              nextPageToken: null,
-              items: const <Order>[],
-            ),
-          );
-        } else {
-          ref.state = const AsyncLoading<OrdersState>();
-        }
-
-        try {
-          final repository = ref.watch(orderRepositoryProvider);
-          final page = await repository.listOrders(status: status);
-          final cutoff = time.start(DateTime.now());
-
-          final filtered = _applyTimeFilter(page.items, cutoff: cutoff);
-          final willExhaustRange =
-              cutoff != null &&
-              page.items.isNotEmpty &&
-              page.items.last.createdAt.isBefore(cutoff);
-
-          ref.state = AsyncData(
-            OrdersState(
-              items: filtered,
-              status: status,
-              time: time,
-              nextPageToken: willExhaustRange ? null : page.nextPageToken,
-              isLoadingMore: false,
-              isRefreshing: false,
-            ),
-          );
-          return time;
-        } catch (e, stack) {
-          ref.state = AsyncError(
-            e,
-            stack,
-            previous: current != null ? AsyncData(current) : null,
-          );
-          rethrow;
-        }
-      }, concurrency: Concurrency.restart);
-
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
+  Call<OrderTimeFilter, AsyncValue<OrdersState>> setTime(
+    OrderTimeFilter time,
+  ) => mutate(setTimeMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     final status = current?.status;
-    final time = current?.time ?? OrderTimeFilter.all;
 
     if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
+      ref.state = AsyncData(
+        current.copyWith(
+          time: time,
+          isRefreshing: true,
+          nextPageToken: null,
+          items: const <Order>[],
+        ),
+      );
     } else {
       ref.state = const AsyncLoading<OrdersState>();
     }
@@ -248,16 +203,54 @@ class OrdersViewModel extends AsyncProvider<OrdersState> {
           isRefreshing: false,
         ),
       );
+      return time;
     } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: current != null
-            ? AsyncData(current.copyWith(isRefreshing: false))
-            : null,
-      );
+      ref.state = AsyncError(e, stack, previous: current);
+      rethrow;
     }
   }, concurrency: Concurrency.restart);
+
+  Call<void, AsyncValue<OrdersState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        final status = current?.status;
+        final time = current?.time ?? OrderTimeFilter.all;
+
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        } else {
+          ref.state = const AsyncLoading<OrdersState>();
+        }
+
+        try {
+          final repository = ref.watch(orderRepositoryProvider);
+          final page = await repository.listOrders(status: status);
+          final cutoff = time.start(DateTime.now());
+
+          final filtered = _applyTimeFilter(page.items, cutoff: cutoff);
+          final willExhaustRange =
+              cutoff != null &&
+              page.items.isNotEmpty &&
+              page.items.last.createdAt.isBefore(cutoff);
+
+          ref.state = AsyncData(
+            OrdersState(
+              items: filtered,
+              status: status,
+              time: time,
+              nextPageToken: willExhaustRange ? null : page.nextPageToken,
+              isLoadingMore: false,
+              isRefreshing: false,
+            ),
+          );
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current?.copyWith(isRefreshing: false),
+          );
+        }
+      }, concurrency: Concurrency.restart);
 }
 
 final ordersViewModel = OrdersViewModel();

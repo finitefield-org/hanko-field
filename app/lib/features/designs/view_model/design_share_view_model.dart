@@ -209,7 +209,7 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
   late AppExperienceGates _gates;
 
   @override
-  Future<DesignShareState> build(Ref ref) async {
+  Future<DesignShareState> build(Ref<AsyncValue<DesignShareState>> ref) async {
     _gates = ref.watch(appExperienceGatesProvider);
 
     final creation = ref.watch(designCreationViewModel);
@@ -284,39 +284,40 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
     );
   }
 
-  Call<ShareBackground> selectBackground(ShareBackground background) =>
-      mutate(selectBackgroundMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return background;
+  Call<ShareBackground, AsyncValue<DesignShareState>> selectBackground(
+    ShareBackground background,
+  ) => mutate(selectBackgroundMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return background;
 
-        final hashtags = _hashtags(
-          _gates,
-          includeHashtags: current.includeHashtags,
-        );
-        ref.state = AsyncData(
-          current.copyWith(
-            background: background,
-            previews: _buildMocks(
-              design: current.design,
-              background: background,
-              overlayText: current.overlayText,
-              hashtags: hashtags,
-              watermark: current.watermarkEnabled,
-              seed: current.generationSeed,
-              prefersEnglish: _gates.prefersEnglish,
-            ),
-          ),
-        );
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            DesignShareBackgroundSelectedEvent(background: background.name),
-          ),
-        );
-        return background;
-      }, concurrency: Concurrency.dropLatest);
+    final hashtags = _hashtags(
+      _gates,
+      includeHashtags: current.includeHashtags,
+    );
+    ref.state = AsyncData(
+      current.copyWith(
+        background: background,
+        previews: _buildMocks(
+          design: current.design,
+          background: background,
+          overlayText: current.overlayText,
+          hashtags: hashtags,
+          watermark: current.watermarkEnabled,
+          seed: current.generationSeed,
+          prefersEnglish: _gates.prefersEnglish,
+        ),
+      ),
+    );
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        DesignShareBackgroundSelectedEvent(background: background.name),
+      ),
+    );
+    return background;
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleWatermark(bool enabled) =>
+  Call<bool, AsyncValue<DesignShareState>> toggleWatermark(bool enabled) =>
       mutate(toggleWatermarkMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
@@ -336,7 +337,7 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleHashtags(bool enabled) =>
+  Call<bool, AsyncValue<DesignShareState>> toggleHashtags(bool enabled) =>
       mutate(toggleHashtagsMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return enabled;
@@ -364,7 +365,7 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
         return enabled;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<String> updateOverlay(String value) =>
+  Call<String, AsyncValue<DesignShareState>> updateOverlay(String value) =>
       mutate(updateOverlayMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return value;
@@ -390,114 +391,119 @@ class DesignShareViewModel extends AsyncProvider<DesignShareState> {
         return normalized;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> regenerate() => mutate(regenerateMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-    if (current.isGenerating) return false;
+  Call<bool, AsyncValue<DesignShareState>> regenerate() =>
+      mutate(regenerateMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
+        if (current.isGenerating) return false;
 
-    ref.state = AsyncData(current.copyWith(isGenerating: true));
-    await Future<void>.delayed(const Duration(milliseconds: 360));
-    final seed = DateTime.now().millisecondsSinceEpoch;
-    final hashtags = _hashtags(
-      _gates,
-      includeHashtags: current.includeHashtags,
-    );
-    final previews = _buildMocks(
-      design: current.design,
-      background: current.background,
-      overlayText: current.overlayText,
-      hashtags: hashtags,
-      watermark: current.watermarkEnabled,
-      seed: seed,
-      prefersEnglish: _gates.prefersEnglish,
-    );
-
-    ref.state = AsyncData(
-      current.copyWith(
-        isGenerating: false,
-        generationSeed: seed,
-        lastGeneratedAt: DateTime.now(),
-        previews: previews,
-        feedbackMessage: _gates.prefersEnglish
-            ? 'Refreshed social mockups'
-            : 'ソーシャル向けモックを再生成しました',
-        feedbackId: current.feedbackId + 1,
-      ),
-    );
-    final analytics = ref.watch(analyticsClientProvider);
-    unawaited(
-      analytics.track(
-        DesignShareRegeneratedEvent(
-          background: current.background.name,
-          watermarkEnabled: current.watermarkEnabled,
+        ref.state = AsyncData(current.copyWith(isGenerating: true));
+        await Future<void>.delayed(const Duration(milliseconds: 360));
+        final seed = DateTime.now().millisecondsSinceEpoch;
+        final hashtags = _hashtags(
+          _gates,
           includeHashtags: current.includeHashtags,
-        ),
-      ),
-    );
-    return true;
-  }, concurrency: Concurrency.restart);
+        );
+        final previews = _buildMocks(
+          design: current.design,
+          background: current.background,
+          overlayText: current.overlayText,
+          hashtags: hashtags,
+          watermark: current.watermarkEnabled,
+          seed: seed,
+          prefersEnglish: _gates.prefersEnglish,
+        );
 
-  Call<bool> share({required String target}) => mutate(shareMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-    if (current.isSharing) return false;
-
-    ref.state = AsyncData(
-      current.copyWith(isSharing: true, feedbackMessage: null),
-    );
-
-    try {
-      await Share.share(current.shareCopy, subject: current.design.displayName);
-      ref.state = AsyncData(
-        current.copyWith(
-          isSharing: false,
-          feedbackMessage: _gates.prefersEnglish
-              ? 'Shared via $target'
-              : '$targetで共有しました',
-          feedbackId: current.feedbackId + 1,
-        ),
-      );
-      final analytics = ref.watch(analyticsClientProvider);
-      unawaited(
-        analytics.track(
-          DesignShareSubmittedEvent(
-            target: target,
-            success: true,
-            background: current.background.name,
-            watermarkEnabled: current.watermarkEnabled,
-            includeHashtags: current.includeHashtags,
+        ref.state = AsyncData(
+          current.copyWith(
+            isGenerating: false,
+            generationSeed: seed,
+            lastGeneratedAt: DateTime.now(),
+            previews: previews,
+            feedbackMessage: _gates.prefersEnglish
+                ? 'Refreshed social mockups'
+                : 'ソーシャル向けモックを再生成しました',
+            feedbackId: current.feedbackId + 1,
           ),
-        ),
-      );
-      return true;
-    } catch (error) {
-      ref.state = AsyncData(
-        current.copyWith(
-          isSharing: false,
-          feedbackMessage: _gates.prefersEnglish
-              ? 'Share failed: $error'
-              : '共有に失敗しました: $error',
-          feedbackId: current.feedbackId + 1,
-        ),
-      );
-      final analytics = ref.watch(analyticsClientProvider);
-      unawaited(
-        analytics.track(
-          DesignShareSubmittedEvent(
-            target: target,
-            success: false,
-            background: current.background.name,
-            watermarkEnabled: current.watermarkEnabled,
-            includeHashtags: current.includeHashtags,
+        );
+        final analytics = ref.watch(analyticsClientProvider);
+        unawaited(
+          analytics.track(
+            DesignShareRegeneratedEvent(
+              background: current.background.name,
+              watermarkEnabled: current.watermarkEnabled,
+              includeHashtags: current.includeHashtags,
+            ),
           ),
-        ),
-      );
-      return false;
-    }
-  }, concurrency: Concurrency.restart);
+        );
+        return true;
+      }, concurrency: Concurrency.restart);
+
+  Call<bool, AsyncValue<DesignShareState>> share({required String target}) =>
+      mutate(shareMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
+        if (current.isSharing) return false;
+
+        ref.state = AsyncData(
+          current.copyWith(isSharing: true, feedbackMessage: null),
+        );
+
+        try {
+          await Share.share(
+            current.shareCopy,
+            subject: current.design.displayName,
+          );
+          ref.state = AsyncData(
+            current.copyWith(
+              isSharing: false,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Shared via $target'
+                  : '$targetで共有しました',
+              feedbackId: current.feedbackId + 1,
+            ),
+          );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              DesignShareSubmittedEvent(
+                target: target,
+                success: true,
+                background: current.background.name,
+                watermarkEnabled: current.watermarkEnabled,
+                includeHashtags: current.includeHashtags,
+              ),
+            ),
+          );
+          return true;
+        } catch (error) {
+          ref.state = AsyncData(
+            current.copyWith(
+              isSharing: false,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Share failed: $error'
+                  : '共有に失敗しました: $error',
+              feedbackId: current.feedbackId + 1,
+            ),
+          );
+          final analytics = ref.watch(analyticsClientProvider);
+          unawaited(
+            analytics.track(
+              DesignShareSubmittedEvent(
+                target: target,
+                success: false,
+                background: current.background.name,
+                watermarkEnabled: current.watermarkEnabled,
+                includeHashtags: current.includeHashtags,
+              ),
+            ),
+          );
+          return false;
+        }
+      }, concurrency: Concurrency.restart);
 
   void _syncFromSources(
-    Ref ref, {
+    Ref<AsyncValue<DesignShareState>> ref, {
     required AsyncValue<DesignCreationState> creation,
     required AsyncValue<DesignEditorState> editor,
   }) {

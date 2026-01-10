@@ -70,7 +70,9 @@ class MaterialDetailViewModel extends AsyncProvider<MaterialDetailState> {
   late final toggleFavoriteMut = mutation<bool>(#toggleFavorite);
 
   @override
-  Future<MaterialDetailState> build(Ref ref) async {
+  Future<MaterialDetailState> build(
+    Ref<AsyncValue<MaterialDetailState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 160));
     final seeds = _seedMaterialDetails(gates);
@@ -81,13 +83,14 @@ class MaterialDetailViewModel extends AsyncProvider<MaterialDetailState> {
     return detail;
   }
 
-  Call<bool> toggleFavorite() => mutate(toggleFavoriteMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-    final next = !current.isFavorite;
-    ref.state = AsyncData(current.copyWith(isFavorite: next));
-    return next;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<MaterialDetailState>> toggleFavorite() =>
+      mutate(toggleFavoriteMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
+        final next = !current.isFavorite;
+        ref.state = AsyncData(current.copyWith(isFavorite: next));
+        return next;
+      }, concurrency: Concurrency.dropLatest);
 }
 
 Map<String, MaterialDetailState> _seedMaterialDetails(

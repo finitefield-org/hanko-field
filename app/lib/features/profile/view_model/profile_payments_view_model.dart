@@ -58,7 +58,9 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
   late final deletePaymentMut = mutation<void>(#deletePaymentMethod);
 
   @override
-  Future<ProfilePaymentsState> build(Ref ref) async {
+  Future<ProfilePaymentsState> build(
+    Ref<AsyncValue<ProfilePaymentsState>> ref,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final gates = ref.watch(appExperienceGatesProvider);
     final methods = await repository.listPaymentMethods();
@@ -68,101 +70,101 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
     );
   }
 
-  Call<void> setDefault(String methodId) => mutate(setDefaultMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
-
-    final previousDefaultId = current.defaultMethod?.id;
-    final now = DateTime.now().toUtc();
-    final next = current.methods.map((method) {
-      final shouldDefault = method.id == methodId;
-      if (method.isDefault == shouldDefault) return method;
-      return method.copyWith(isDefault: shouldDefault, updatedAt: now);
-    }).toList();
-    ref.state = AsyncData(
-      current.copyWith(methods: _sort(next), clearError: true),
-    );
-
-    final repository = ref.watch(userRepositoryProvider);
-    final target = next.firstWhereOrNull((item) => item.id == methodId);
-    if (target == null) return;
-    await repository.updatePaymentMethod(target);
-
-    final refreshed = _sort(await repository.listPaymentMethods());
-    ref.state = AsyncData(
-      current.copyWith(methods: refreshed, clearError: true),
-    );
-
-    await _syncCheckoutDefaultIfNeeded(
-      ref,
-      previousDefaultId: previousDefaultId,
-      newDefaultId: methodId,
-    );
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<PaymentSaveResult> addPaymentMethod(PaymentMethodDraft draft) =>
-      mutate(addPaymentMut, (ref) async {
-        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-        final validation = validatePaymentDraft(draft, l10n);
+  Call<void, AsyncValue<ProfilePaymentsState>> setDefault(String methodId) =>
+      mutate(setDefaultMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
 
-        if (!validation.isValid) {
-          if (current != null) {
-            ref.state = AsyncData(
-              current.copyWith(lastError: validation.message),
-            );
-          }
-          return PaymentSaveResult(validation: validation);
-        }
+        final previousDefaultId = current.defaultMethod?.id;
+        final now = DateTime.now().toUtc();
+        final next = current.methods.map((method) {
+          final shouldDefault = method.id == methodId;
+          if (method.isDefault == shouldDefault) return method;
+          return method.copyWith(isDefault: shouldDefault, updatedAt: now);
+        }).toList();
+        ref.state = AsyncData(
+          current.copyWith(methods: _sort(next), clearError: true),
+        );
 
         final repository = ref.watch(userRepositoryProvider);
-        final now = DateTime.now().toUtc();
-        final hasDefault = (current?.methods ?? const []).any(
-          (item) => item.isDefault,
-        );
-        final method = PaymentMethod(
-          id: null,
-          provider: draft.provider,
-          methodType: draft.methodType,
-          brand: draft.brand,
-          last4: draft.last4,
-          expMonth: draft.expMonth,
-          expYear: draft.expYear,
-          billingName: draft.billingName,
-          providerRef: 'tok_${now.microsecondsSinceEpoch}',
-          isDefault: !hasDefault,
-          createdAt: now,
-          updatedAt: now,
+        final target = next.firstWhereOrNull((item) => item.id == methodId);
+        if (target == null) return;
+        await repository.updatePaymentMethod(target);
+
+        final refreshed = _sort(await repository.listPaymentMethods());
+        ref.state = AsyncData(
+          current.copyWith(methods: refreshed, clearError: true),
         );
 
-        try {
-          final saved = await repository.addPaymentMethod(method);
-          final refreshed = _sort(await repository.listPaymentMethods());
-          ref.state = AsyncData(
-            current?.copyWith(methods: refreshed, clearError: true) ??
-                ProfilePaymentsState(
-                  methods: refreshed,
-                  canAddMethods: current?.canAddMethods ?? true,
-                ),
-          );
+        await _syncCheckoutDefaultIfNeeded(
+          ref,
+          previousDefaultId: previousDefaultId,
+          newDefaultId: methodId,
+        );
+      }, concurrency: Concurrency.dropLatest);
 
-          await _syncCheckoutAfterAdd(ref, saved);
-          return PaymentSaveResult(validation: validation, saved: saved);
-        } catch (e, stack) {
-          _logger.warning('Failed to add payment method', e, stack);
-          final message = l10n.paymentMethodAddFailed;
-          if (current != null) {
-            ref.state = AsyncData(current.copyWith(lastError: message));
-          }
-          return PaymentSaveResult(
-            validation: PaymentValidationResult(message: message),
-          );
-        }
-      }, concurrency: Concurrency.queue);
+  Call<PaymentSaveResult, AsyncValue<ProfilePaymentsState>> addPaymentMethod(
+    PaymentMethodDraft draft,
+  ) => mutate(addPaymentMut, (ref) async {
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    final validation = validatePaymentDraft(draft, l10n);
+    final current = ref.watch(this).valueOrNull;
 
-  Call<void> deletePaymentMethod(String methodId) => mutate(deletePaymentMut, (
-    ref,
-  ) async {
+    if (!validation.isValid) {
+      if (current != null) {
+        ref.state = AsyncData(current.copyWith(lastError: validation.message));
+      }
+      return PaymentSaveResult(validation: validation);
+    }
+
+    final repository = ref.watch(userRepositoryProvider);
+    final now = DateTime.now().toUtc();
+    final hasDefault = (current?.methods ?? const []).any(
+      (item) => item.isDefault,
+    );
+    final method = PaymentMethod(
+      id: null,
+      provider: draft.provider,
+      methodType: draft.methodType,
+      brand: draft.brand,
+      last4: draft.last4,
+      expMonth: draft.expMonth,
+      expYear: draft.expYear,
+      billingName: draft.billingName,
+      providerRef: 'tok_${now.microsecondsSinceEpoch}',
+      isDefault: !hasDefault,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    try {
+      final saved = await repository.addPaymentMethod(method);
+      final refreshed = _sort(await repository.listPaymentMethods());
+      ref.state = AsyncData(
+        current?.copyWith(methods: refreshed, clearError: true) ??
+            ProfilePaymentsState(
+              methods: refreshed,
+              canAddMethods: current?.canAddMethods ?? true,
+            ),
+      );
+
+      await _syncCheckoutAfterAdd(ref, saved);
+      return PaymentSaveResult(validation: validation, saved: saved);
+    } catch (e, stack) {
+      _logger.warning('Failed to add payment method', e, stack);
+      final message = l10n.paymentMethodAddFailed;
+      if (current != null) {
+        ref.state = AsyncData(current.copyWith(lastError: message));
+      }
+      return PaymentSaveResult(
+        validation: PaymentValidationResult(message: message),
+      );
+    }
+  }, concurrency: Concurrency.queue);
+
+  Call<void, AsyncValue<ProfilePaymentsState>> deletePaymentMethod(
+    String methodId,
+  ) => mutate(deletePaymentMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current != null) {
       final wasDefault = current.defaultMethod?.id == methodId;
@@ -211,7 +213,7 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
   }, concurrency: Concurrency.queue);
 
   Future<void> _syncCheckoutDefaultIfNeeded(
-    Ref ref, {
+    Ref<AsyncValue<ProfilePaymentsState>> ref, {
     required String? previousDefaultId,
     required String newDefaultId,
   }) async {
@@ -239,7 +241,10 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
     }
   }
 
-  Future<void> _syncCheckoutAfterAdd(Ref ref, PaymentMethod method) async {
+  Future<void> _syncCheckoutAfterAdd(
+    Ref<AsyncValue<ProfilePaymentsState>> ref,
+    PaymentMethod method,
+  ) async {
     final flow = ref.watch(checkoutFlowProvider);
     if (flow.paymentMethodId != null || !method.isDefault) return;
 
@@ -256,7 +261,7 @@ class ProfilePaymentsViewModel extends AsyncProvider<ProfilePaymentsState> {
   }
 
   Future<void> _syncCheckoutAfterDelete(
-    Ref ref, {
+    Ref<AsyncValue<ProfilePaymentsState>> ref, {
     required String deletedId,
     required List<PaymentMethod> methods,
   }) async {

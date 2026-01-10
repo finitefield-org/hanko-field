@@ -90,7 +90,7 @@ class UserSessionProvider extends AsyncProvider<UserSession> {
   late final signOutMut = mutation<void>(#signOut);
 
   @override
-  Future<UserSession> build(Ref ref) async {
+  Future<UserSession> build(Ref<AsyncValue<UserSession>> ref) async {
     try {
       return ref.scope(userSessionScope);
     } on StateError {
@@ -112,7 +112,9 @@ class UserSessionProvider extends AsyncProvider<UserSession> {
     return _buildSession(ref, currentUser, tokenStorage);
   }
 
-  Call<UserSession> refresh() => mutate(refreshMut, (ref) async {
+  Call<UserSession, AsyncValue<UserSession>> refresh() => mutate(refreshMut, (
+    ref,
+  ) async {
     final auth = ref.watch(firebaseAuthProvider);
     final tokenStorage = ref.watch(tokenStorageProvider);
     final av = ref.watch(this);
@@ -131,15 +133,16 @@ class UserSessionProvider extends AsyncProvider<UserSession> {
     return session;
   }, concurrency: Concurrency.restart);
 
-  Call<void> signOut() => mutate(signOutMut, (ref) async {
-    final auth = ref.watch(firebaseAuthProvider);
-    final tokenStorage = ref.watch(tokenStorageProvider);
-    await Future.wait([auth.signOut(), tokenStorage.clear()]);
-    ref.state = const AsyncData(UserSession.signedOut());
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<UserSession>> signOut() =>
+      mutate(signOutMut, (ref) async {
+        final auth = ref.watch(firebaseAuthProvider);
+        final tokenStorage = ref.watch(tokenStorageProvider);
+        await Future.wait([auth.signOut(), tokenStorage.clear()]);
+        ref.state = const AsyncData(UserSession.signedOut());
+      }, concurrency: Concurrency.dropLatest);
 
   Future<UserSession> _buildSession(
-    Ref ref,
+    Ref<AsyncValue<UserSession>> ref,
     User? user,
     TokenStorage tokenStorage,
   ) async {

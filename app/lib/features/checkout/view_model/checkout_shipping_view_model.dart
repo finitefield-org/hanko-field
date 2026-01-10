@@ -187,7 +187,9 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
   bool _trackedStart = false;
 
   @override
-  Future<CheckoutShippingState> build(Ref ref) async {
+  Future<CheckoutShippingState> build(
+    Ref<AsyncValue<CheckoutShippingState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final flow = ref.watch(checkoutFlowProvider);
     final cartAsync = ref.watch(cartViewModel);
@@ -234,95 +236,94 @@ class CheckoutShippingViewModel extends AsyncProvider<CheckoutShippingState> {
     return _resolveSelection(initial);
   }
 
-  Call<ShippingSelectionResult> selectShipping(String optionId) =>
-      mutate(selectShippingMut, (ref) async {
-        final l10n = AppLocalizations(ref.watch(appLocaleProvider));
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          return ShippingSelectionResult(
-            error: l10n.checkoutShippingMissingState,
-          );
-        }
+  Call<ShippingSelectionResult, AsyncValue<CheckoutShippingState>>
+  selectShipping(String optionId) => mutate(selectShippingMut, (ref) async {
+    final l10n = AppLocalizations(ref.watch(appLocaleProvider));
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      return ShippingSelectionResult(error: l10n.checkoutShippingMissingState);
+    }
 
-        if (!current.hasAddress) {
-          return ShippingSelectionResult(
-            error: l10n.checkoutShippingSelectAddress,
-            selected: current.selectedOption,
-            appliedCost: current.shippingCost,
-          );
-        }
+    if (!current.hasAddress) {
+      return ShippingSelectionResult(
+        error: l10n.checkoutShippingSelectAddress,
+        selected: current.selectedOption,
+        appliedCost: current.shippingCost,
+      );
+    }
 
-        final option = current.visibleOptions.firstWhereOrNull(
-          (item) => item.id == optionId,
-        );
-        if (option == null) {
-          return ShippingSelectionResult(
-            error: l10n.checkoutShippingOptionUnavailable,
-            selected: current.selectedOption,
-            appliedCost: current.shippingCost,
-          );
-        }
+    final option = current.visibleOptions.firstWhereOrNull(
+      (item) => item.id == optionId,
+    );
+    if (option == null) {
+      return ShippingSelectionResult(
+        error: l10n.checkoutShippingOptionUnavailable,
+        selected: current.selectedOption,
+        appliedCost: current.shippingCost,
+      );
+    }
 
-        if (current.requiresExpress && !option.express) {
-          return ShippingSelectionResult(
-            error: l10n.checkoutShippingPromoRequiresExpress,
-            selected: current.selectedOption,
-            appliedCost: current.shippingCost,
-          );
-        }
+    if (current.requiresExpress && !option.express) {
+      return ShippingSelectionResult(
+        error: l10n.checkoutShippingPromoRequiresExpress,
+        selected: current.selectedOption,
+        appliedCost: current.shippingCost,
+      );
+    }
 
-        final next = current.copyWith(selectedId: option.id);
-        ref.state = AsyncData(_resolveSelection(next));
+    final next = current.copyWith(selectedId: option.id);
+    ref.state = AsyncData(_resolveSelection(next));
 
-        try {
-          await ref.invoke(
-            checkoutFlowProvider.setShipping(
-              shippingMethodId: option.id,
-              shippingCost: current.effectiveCost(option),
-              etaMinDays: option.minDays,
-              etaMaxDays: option.maxDays,
-            ),
-          );
-        } catch (error, stackTrace) {
-          _shippingLogger.warning(
-            'Failed to persist checkout shipping',
-            error,
-            stackTrace,
-          );
-        }
+    try {
+      await ref.invoke(
+        checkoutFlowProvider.setShipping(
+          shippingMethodId: option.id,
+          shippingCost: current.effectiveCost(option),
+          etaMinDays: option.minDays,
+          etaMaxDays: option.maxDays,
+        ),
+      );
+    } catch (error, stackTrace) {
+      _shippingLogger.warning(
+        'Failed to persist checkout shipping',
+        error,
+        stackTrace,
+      );
+    }
 
-        final analytics = ref.watch(analyticsClientProvider);
-        unawaited(
-          analytics.track(
-            CheckoutShippingSelectedEvent(
-              shippingMethodId: option.id,
-              carrier: option.carrier,
-              costAmount: current.effectiveCost(option).amount,
-              currency: current.effectiveCost(option).currency,
-              etaMinDays: option.minDays,
-              etaMaxDays: option.maxDays,
-              isExpress: option.express,
-              isInternational: option.international,
-              focus: current.focus.name,
-              hasPromo: current.promoCode != null,
-            ),
-          ),
-        );
+    final analytics = ref.watch(analyticsClientProvider);
+    unawaited(
+      analytics.track(
+        CheckoutShippingSelectedEvent(
+          shippingMethodId: option.id,
+          carrier: option.carrier,
+          costAmount: current.effectiveCost(option).amount,
+          currency: current.effectiveCost(option).currency,
+          etaMinDays: option.minDays,
+          etaMaxDays: option.maxDays,
+          isExpress: option.express,
+          isInternational: option.international,
+          focus: current.focus.name,
+          hasPromo: current.promoCode != null,
+        ),
+      ),
+    );
 
-        return ShippingSelectionResult(
-          selected: option,
-          appliedCost: current.effectiveCost(option),
-        );
-      }, concurrency: Concurrency.dropLatest);
+    return ShippingSelectionResult(
+      selected: option,
+      appliedCost: current.effectiveCost(option),
+    );
+  }, concurrency: Concurrency.dropLatest);
 
-  Call<ShippingFocus> setFocus(ShippingFocus focus) =>
-      mutate(focusMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return focus;
-        final next = _resolveSelection(current.copyWith(focus: focus));
-        ref.state = AsyncData(next);
-        return focus;
-      });
+  Call<ShippingFocus, AsyncValue<CheckoutShippingState>> setFocus(
+    ShippingFocus focus,
+  ) => mutate(focusMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return focus;
+    final next = _resolveSelection(current.copyWith(focus: focus));
+    ref.state = AsyncData(next);
+    return focus;
+  });
 }
 
 CheckoutShippingState _resolveSelection(CheckoutShippingState state) {

@@ -117,123 +117,126 @@ class ProfileAddressesViewModel extends AsyncProvider<ProfileAddressesState> {
   late final deleteAddressMut = mutation<void>(#deleteAddress);
 
   @override
-  Future<ProfileAddressesState> build(Ref ref) async {
+  Future<ProfileAddressesState> build(
+    Ref<AsyncValue<ProfileAddressesState>> ref,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final addresses = await repository.listAddresses();
     return ProfileAddressesState(addresses: _sort(addresses));
   }
 
-  Call<void> setDefault(String addressId) => mutate(setDefaultMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return;
+  Call<void, AsyncValue<ProfileAddressesState>> setDefault(String addressId) =>
+      mutate(setDefaultMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return;
 
-    final previousDefaultId = current.defaultAddress?.id;
-    final now = DateTime.now().toUtc();
-    final next = current.addresses
-        .map(
-          (item) => item.copyWith(
-            isDefault: item.id == addressId,
-            updatedAt: item.id == addressId ? now : item.updatedAt,
-          ),
-        )
-        .toList();
-    ref.state = AsyncData(ProfileAddressesState(addresses: _sort(next)));
+        final previousDefaultId = current.defaultAddress?.id;
+        final now = DateTime.now().toUtc();
+        final next = current.addresses
+            .map(
+              (item) => item.copyWith(
+                isDefault: item.id == addressId,
+                updatedAt: item.id == addressId ? now : item.updatedAt,
+              ),
+            )
+            .toList();
+        ref.state = AsyncData(ProfileAddressesState(addresses: _sort(next)));
+
+        final repository = ref.watch(userRepositoryProvider);
+        final target = next.firstWhereOrNull((item) => item.id == addressId);
+        if (target == null) return;
+        await repository.updateAddress(target);
+
+        var refreshed = await repository.listAddresses();
+        refreshed = await _ensureSingleDefault(
+          repository,
+          refreshed,
+          now: now,
+          preferredDefaultId: addressId,
+        );
+        ref.state = AsyncData(
+          ProfileAddressesState(addresses: _sort(refreshed)),
+        );
+
+        await _syncCheckoutAddressIfNeeded(
+          ref,
+          previousDefaultId: previousDefaultId,
+          newDefaultId: addressId,
+        );
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<AddressSaveResult, AsyncValue<ProfileAddressesState>> saveAddress(
+    AddressFormInput input,
+  ) => mutate(saveAddressMut, (ref) async {
+    final gates = ref.watch(appExperienceGatesProvider);
+    final normalized = _normalize(input);
+    final validation = _validate(normalized, gates.prefersEnglish);
+    if (!validation.isValid) {
+      return AddressSaveResult(validation: validation);
+    }
 
     final repository = ref.watch(userRepositoryProvider);
-    final target = next.firstWhereOrNull((item) => item.id == addressId);
-    if (target == null) return;
-    await repository.updateAddress(target);
+    final now = DateTime.now().toUtc();
+
+    final current = ref.watch(this).valueOrNull;
+    final previousDefaultId = current?.defaultAddress?.id;
+    final existing = current?.addresses ?? await repository.listAddresses();
+    final baseCreatedAt =
+        existing
+            .firstWhereOrNull((item) => item.id == normalized.id)
+            ?.createdAt ??
+        now;
+
+    final candidate = _buildAddress(
+      normalized,
+      createdAt: baseCreatedAt,
+      now: now,
+    );
+    final saved = normalized.id == null
+        ? await repository.addAddress(candidate)
+        : await repository.updateAddress(candidate);
 
     var refreshed = await repository.listAddresses();
     refreshed = await _ensureSingleDefault(
       repository,
       refreshed,
       now: now,
-      preferredDefaultId: addressId,
+      preferredDefaultId: normalized.isDefault ? saved.id : null,
     );
+    if (refreshed.isNotEmpty && refreshed.every((item) => !item.isDefault)) {
+      final sorted = _sort(refreshed);
+      final fallbackDefault =
+          sorted.firstWhereOrNull((item) => item.id != saved.id) ??
+          sorted.first;
+      await repository.updateAddress(
+        fallbackDefault.copyWith(isDefault: true, updatedAt: now),
+      );
+      refreshed = await repository.listAddresses();
+    }
+
     ref.state = AsyncData(ProfileAddressesState(addresses: _sort(refreshed)));
 
-    await _syncCheckoutAddressIfNeeded(
-      ref,
-      previousDefaultId: previousDefaultId,
-      newDefaultId: addressId,
+    final newDefaultId = refreshed
+        .firstWhereOrNull((item) => item.isDefault)
+        ?.id;
+    if (newDefaultId != null) {
+      await _syncCheckoutAddressIfNeeded(
+        ref,
+        previousDefaultId: previousDefaultId,
+        newDefaultId: newDefaultId,
+      );
+    }
+
+    return AddressSaveResult(
+      validation: const AddressValidationResult(),
+      saved: saved,
+      created: normalized.id == null,
     );
-  }, concurrency: Concurrency.dropLatest);
+  }, concurrency: Concurrency.restart);
 
-  Call<AddressSaveResult> saveAddress(AddressFormInput input) => mutate(
-    saveAddressMut,
-    (ref) async {
-      final gates = ref.watch(appExperienceGatesProvider);
-      final normalized = _normalize(input);
-      final validation = _validate(normalized, gates.prefersEnglish);
-      if (!validation.isValid) {
-        return AddressSaveResult(validation: validation);
-      }
-
-      final repository = ref.watch(userRepositoryProvider);
-      final now = DateTime.now().toUtc();
-
-      final current = ref.watch(this).valueOrNull;
-      final previousDefaultId = current?.defaultAddress?.id;
-      final existing = current?.addresses ?? await repository.listAddresses();
-      final baseCreatedAt =
-          existing
-              .firstWhereOrNull((item) => item.id == normalized.id)
-              ?.createdAt ??
-          now;
-
-      final candidate = _buildAddress(
-        normalized,
-        createdAt: baseCreatedAt,
-        now: now,
-      );
-      final saved = normalized.id == null
-          ? await repository.addAddress(candidate)
-          : await repository.updateAddress(candidate);
-
-      var refreshed = await repository.listAddresses();
-      refreshed = await _ensureSingleDefault(
-        repository,
-        refreshed,
-        now: now,
-        preferredDefaultId: normalized.isDefault ? saved.id : null,
-      );
-      if (refreshed.isNotEmpty && refreshed.every((item) => !item.isDefault)) {
-        final sorted = _sort(refreshed);
-        final fallbackDefault =
-            sorted.firstWhereOrNull((item) => item.id != saved.id) ??
-            sorted.first;
-        await repository.updateAddress(
-          fallbackDefault.copyWith(isDefault: true, updatedAt: now),
-        );
-        refreshed = await repository.listAddresses();
-      }
-
-      ref.state = AsyncData(ProfileAddressesState(addresses: _sort(refreshed)));
-
-      final newDefaultId = refreshed
-          .firstWhereOrNull((item) => item.isDefault)
-          ?.id;
-      if (newDefaultId != null) {
-        await _syncCheckoutAddressIfNeeded(
-          ref,
-          previousDefaultId: previousDefaultId,
-          newDefaultId: newDefaultId,
-        );
-      }
-
-      return AddressSaveResult(
-        validation: const AddressValidationResult(),
-        saved: saved,
-        created: normalized.id == null,
-      );
-    },
-    concurrency: Concurrency.restart,
-  );
-
-  Call<void> deleteAddress(String addressId) => mutate(deleteAddressMut, (
-    ref,
-  ) async {
+  Call<void, AsyncValue<ProfileAddressesState>> deleteAddress(
+    String addressId,
+  ) => mutate(deleteAddressMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
     if (current != null) {
       final wasDefault = current.defaultAddress?.id == addressId;
@@ -287,7 +290,7 @@ class ProfileAddressesViewModel extends AsyncProvider<ProfileAddressesState> {
   }, concurrency: Concurrency.queue);
 
   Future<void> _syncCheckoutAddressIfNeeded(
-    Ref ref, {
+    Ref<AsyncValue<ProfileAddressesState>> ref, {
     required String? previousDefaultId,
     required String newDefaultId,
   }) async {
@@ -316,7 +319,7 @@ class ProfileAddressesViewModel extends AsyncProvider<ProfileAddressesState> {
   }
 
   Future<void> _syncCheckoutAfterDelete(
-    Ref ref, {
+    Ref<AsyncValue<ProfileAddressesState>> ref, {
     required String deletedId,
     required List<UserAddress> addresses,
   }) async {

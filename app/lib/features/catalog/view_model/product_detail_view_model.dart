@@ -157,7 +157,9 @@ class ProductDetailViewModel extends AsyncProvider<ProductDetailState> {
   late final selectDesignMut = mutation<String>(#selectDesign);
 
   @override
-  Future<ProductDetailState> build(Ref ref) async {
+  Future<ProductDetailState> build(
+    Ref<AsyncValue<ProductDetailState>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 150));
 
@@ -167,43 +169,47 @@ class ProductDetailViewModel extends AsyncProvider<ProductDetailState> {
     return detail;
   }
 
-  Call<bool> toggleFavorite() => mutate(toggleFavoriteMut, (ref) async {
+  Call<bool, AsyncValue<ProductDetailState>> toggleFavorite() =>
+      mutate(toggleFavoriteMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
+        final next = !current.isFavorite;
+        ref.state = AsyncData(current.copyWith(isFavorite: next));
+        return next;
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<String, AsyncValue<ProductDetailState>> selectVariant(
+    String variantId,
+  ) => mutate(selectVariantMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-    final next = !current.isFavorite;
-    ref.state = AsyncData(current.copyWith(isFavorite: next));
-    return next;
-  }, concurrency: Concurrency.dropLatest);
+    if (current == null) return variantId;
 
-  Call<String> selectVariant(String variantId) =>
-      mutate(selectVariantMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return variantId;
+    final target = _resolveVariant(current, variantId: variantId);
+    ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
+    return target.id;
+  });
 
-        final target = _resolveVariant(current, variantId: variantId);
-        ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
-        return target.id;
-      });
+  Call<String, AsyncValue<ProductDetailState>> selectVariantBySize(
+    double sizeMm,
+  ) => mutate(selectVariantMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return sizeMm.toString();
+    final target = _resolveVariant(current, sizeMm: sizeMm);
+    ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
+    return target.id;
+  });
 
-  Call<String> selectVariantBySize(double sizeMm) =>
-      mutate(selectVariantMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return sizeMm.toString();
-        final target = _resolveVariant(current, sizeMm: sizeMm);
-        ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
-        return target.id;
-      });
+  Call<String, AsyncValue<ProductDetailState>> selectVariantByMaterial(
+    String materialRef,
+  ) => mutate(selectVariantMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return materialRef;
+    final target = _resolveVariant(current, materialRef: materialRef);
+    ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
+    return target.id;
+  });
 
-  Call<String> selectVariantByMaterial(String materialRef) =>
-      mutate(selectVariantMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return materialRef;
-        final target = _resolveVariant(current, materialRef: materialRef);
-        ref.state = AsyncData(current.copyWith(selectedVariantId: target.id));
-        return target.id;
-      });
-
-  Call<String> selectDesign(String designId) =>
+  Call<String, AsyncValue<ProductDetailState>> selectDesign(String designId) =>
       mutate(selectDesignMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return designId;

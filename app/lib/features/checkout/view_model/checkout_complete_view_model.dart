@@ -42,7 +42,9 @@ class CheckoutCompleteViewModel extends AsyncProvider<CheckoutCompleteState> {
   );
 
   @override
-  Future<CheckoutCompleteState> build(Ref ref) async {
+  Future<CheckoutCompleteState> build(
+    Ref<AsyncValue<CheckoutCompleteState>> ref,
+  ) async {
     final flow = ref.watch(checkoutFlowProvider);
     final cartAsync = ref.watch(cartViewModel);
     final CartState cart =
@@ -86,21 +88,21 @@ class CheckoutCompleteViewModel extends AsyncProvider<CheckoutCompleteState> {
     );
   }
 
-  Call<CheckoutNotificationStatus> requestNotifications() =>
-      mutate(requestNotificationsMut, (ref) async {
-        final messaging = ref.watch(firebaseMessagingProvider);
-        final settings = await messaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-          announcement: false,
-          carPlay: false,
-          criticalAlert: false,
-          provisional: false,
-        );
-        await ref.refreshValue(this, keepPrevious: true);
-        return _notificationStatus(settings.authorizationStatus);
-      }, concurrency: Concurrency.dropLatest);
+  Call<CheckoutNotificationStatus, AsyncValue<CheckoutCompleteState>>
+  requestNotifications() => mutate(requestNotificationsMut, (ref) async {
+    final messaging = ref.watch(firebaseMessagingProvider);
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      announcement: false,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+    );
+    await ref.refreshValue(this, keepPrevious: true);
+    return _notificationStatus(settings.authorizationStatus);
+  }, concurrency: Concurrency.dropLatest);
 }
 
 CheckoutNotificationStatus _notificationStatus(

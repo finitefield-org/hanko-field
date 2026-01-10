@@ -48,7 +48,9 @@ class ProfileLocaleViewModel extends AsyncProvider<ProfileLocaleState> {
   late final useDeviceMut = mutation<Locale>(#useDevice);
 
   @override
-  Future<ProfileLocaleState> build(Ref ref) async {
+  Future<ProfileLocaleState> build(
+    Ref<AsyncValue<ProfileLocaleState>> ref,
+  ) async {
     await ref.watch(localePreferencesProvider.future);
     await ref.watch(currencyPreferencesProvider.future);
     final selectedLocale = ref.watch(appLocaleProvider);
@@ -69,29 +71,37 @@ class ProfileLocaleViewModel extends AsyncProvider<ProfileLocaleState> {
     );
   }
 
-  Call<void> save(ProfileLocaleDraft draft) => mutate(saveMut, (ref) async {
-    final localeService = ref.watch(appLocaleServiceProvider);
-    final currencyService = ref.watch(appCurrencyServiceProvider);
-    final resolvedLocale = await localeService.update(draft.locale);
-    if (draft.currencyOverride == null) {
-      await currencyService.clearOverride();
-    } else {
-      await currencyService.update(draft.currencyOverride!);
-    }
-    await _syncProfile(ref, resolvedLocale);
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<ProfileLocaleState>> save(ProfileLocaleDraft draft) =>
+      mutate(saveMut, (ref) async {
+        final localeService = ref.watch(appLocaleServiceProvider);
+        final currencyService = ref.watch(appCurrencyServiceProvider);
+        final resolvedLocale = await localeService.update(draft.locale);
+        if (draft.currencyOverride == null) {
+          await currencyService.clearOverride();
+        } else {
+          await currencyService.update(draft.currencyOverride!);
+        }
+        await _syncProfile(ref, resolvedLocale);
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<Locale> useDeviceLocale() => mutate(useDeviceMut, (ref) async {
-    final supported = AppLocalizations.supportedLocales;
-    final deviceLocale = PlatformDispatcher.instance.locale;
-    final resolved = AppLocalizations.resolveLocale(deviceLocale, supported);
-    final localeService = ref.watch(appLocaleServiceProvider);
-    await localeService.clearOverride();
-    await _syncProfile(ref, resolved);
-    return resolved;
-  }, concurrency: Concurrency.dropLatest);
+  Call<Locale, AsyncValue<ProfileLocaleState>> useDeviceLocale() => mutate(
+    useDeviceMut,
+    (ref) async {
+      final supported = AppLocalizations.supportedLocales;
+      final deviceLocale = PlatformDispatcher.instance.locale;
+      final resolved = AppLocalizations.resolveLocale(deviceLocale, supported);
+      final localeService = ref.watch(appLocaleServiceProvider);
+      await localeService.clearOverride();
+      await _syncProfile(ref, resolved);
+      return resolved;
+    },
+    concurrency: Concurrency.dropLatest,
+  );
 
-  Future<void> _syncProfile(Ref ref, Locale locale) async {
+  Future<void> _syncProfile(
+    Ref<AsyncValue<ProfileLocaleState>> ref,
+    Locale locale,
+  ) async {
     final repository = ref.watch(userRepositoryProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     final profile = session?.profile;

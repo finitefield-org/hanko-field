@@ -32,6 +32,8 @@ dependencies:
   device_info_plus: ^10.1.2
   miniriverpod:
     path: ../../miniriverpod/miniriverpod
+  declarative_nav:
+    path: ../../declarative-nav/declarative_nav
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   go_router: ^14.3.0

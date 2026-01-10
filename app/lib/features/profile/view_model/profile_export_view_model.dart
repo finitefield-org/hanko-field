@@ -108,7 +108,9 @@ class ProfileExportViewModel extends AsyncProvider<ProfileExportState> {
   late AppExperienceGates _gates;
 
   @override
-  Future<ProfileExportState> build(Ref ref) async {
+  Future<ProfileExportState> build(
+    Ref<AsyncValue<ProfileExportState>> ref,
+  ) async {
     _gates = ref.watch(appExperienceGatesProvider);
     final permissionClient = ref.watch(storagePermissionClientProvider);
     final storageStatus = await permissionClient.status();
@@ -126,121 +128,130 @@ class ProfileExportViewModel extends AsyncProvider<ProfileExportState> {
     );
   }
 
-  Call<bool> toggleAssets(bool value) => mutate(toggleAssetsMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return value;
-    ref.state = AsyncData(current.copyWith(includeAssets: value));
-    return value;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<bool> toggleOrders(bool value) => mutate(toggleOrdersMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return value;
-    ref.state = AsyncData(current.copyWith(includeOrders: value));
-    return value;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<bool> toggleHistory(bool value) => mutate(toggleHistoryMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return value;
-    ref.state = AsyncData(current.copyWith(includeHistory: value));
-    return value;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<StoragePermissionStatus> ensurePermission() =>
-      mutate(ensurePermissionMut, (ref) async {
-        final client = ref.watch(storagePermissionClientProvider);
-        final status = await client.request();
+  Call<bool, AsyncValue<ProfileExportState>> toggleAssets(bool value) =>
+      mutate(toggleAssetsMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(storageStatus: status));
-        }
-        return status;
+        if (current == null) return value;
+        ref.state = AsyncData(current.copyWith(includeAssets: value));
+        return value;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<ProfileExportRecord?> export() => mutate(exportMut, (ref) async {
+  Call<bool, AsyncValue<ProfileExportState>> toggleOrders(bool value) =>
+      mutate(toggleOrdersMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return value;
+        ref.state = AsyncData(current.copyWith(includeOrders: value));
+        return value;
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<bool, AsyncValue<ProfileExportState>> toggleHistory(bool value) =>
+      mutate(toggleHistoryMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return value;
+        ref.state = AsyncData(current.copyWith(includeHistory: value));
+        return value;
+      }, concurrency: Concurrency.dropLatest);
+
+  Call<StoragePermissionStatus, AsyncValue<ProfileExportState>>
+  ensurePermission() => mutate(ensurePermissionMut, (ref) async {
+    final client = ref.watch(storagePermissionClientProvider);
+    final status = await client.request();
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return null;
-
-    final permission = await ref.invoke(ensurePermission());
-    if (!permission.isGranted) {
-      _emitFeedback(
-        ref,
-        _gates.prefersEnglish
-            ? 'Storage permission is required before exporting.'
-            : 'エクスポートにはストレージ権限が必要です。',
-      );
-      return null;
+    if (current != null) {
+      ref.state = AsyncData(current.copyWith(storageStatus: status));
     }
+    return status;
+  }, concurrency: Concurrency.dropLatest);
 
-    var working = current.copyWith(
-      isExporting: true,
-      progress: 0.12,
-      storageStatus: permission,
-      clearFeedback: true,
-    );
-    ref.state = AsyncData(working);
+  Call<ProfileExportRecord?, AsyncValue<ProfileExportState>> export() =>
+      mutate(exportMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return null;
 
-    try {
-      final bytes = await _buildArchive(working);
-      working = working.copyWith(progress: 0.62);
-      ref.state = AsyncData(working);
+        final permission = await ref.invoke(ensurePermission());
+        if (!permission.isGranted) {
+          _emitFeedback(
+            ref,
+            _gates.prefersEnglish
+                ? 'Storage permission is required before exporting.'
+                : 'エクスポートにはストレージ権限が必要です。',
+          );
+          return null;
+        }
 
-      final saved = await _saveArchive(bytes);
-      final record = ProfileExportRecord(
-        filename: saved.filename,
-        path: saved.path,
-        createdAt: DateTime.now(),
-        fileSizeMb: saved.sizeMb,
-        sections: _activeSections(working),
-      );
-
-      final updatedHistory = <ProfileExportRecord>[record, ...working.history];
-
-      working = working.copyWith(
-        isExporting: false,
-        progress: 1.0,
-        history: updatedHistory.take(8).toList(),
-        feedbackMessage: _gates.prefersEnglish
-            ? 'Export ready to download.'
-            : 'エクスポートの準備ができました。',
-        feedbackId: working.feedbackId + 1,
-      );
-      ref.state = AsyncData(working);
-
-      try {
-        await Share.shareXFiles(
-          [XFile(record.path)],
-          subject: _gates.prefersEnglish
-              ? 'Hanko Field data export'
-              : 'Hanko Field データ出力',
+        var working = current.copyWith(
+          isExporting: true,
+          progress: 0.12,
+          storageStatus: permission,
+          clearFeedback: true,
         );
-      } catch (_) {
-        _emitFeedback(
-          ref,
-          _gates.prefersEnglish
-              ? 'Export saved. Share sheet unavailable.'
-              : 'エクスポートは保存されましたが共有に失敗しました。',
-        );
-      }
+        ref.state = AsyncData(working);
 
-      return record;
-    } catch (error) {
-      ref.state = AsyncData(
-        working.copyWith(
-          isExporting: false,
-          progress: 0,
-          feedbackMessage: _gates.prefersEnglish
-              ? 'Export failed. Please try again.'
-              : 'エクスポートに失敗しました。もう一度お試しください。',
-          feedbackId: working.feedbackId + 1,
-        ),
-      );
-      return null;
-    }
-  }, concurrency: Concurrency.restart);
+        try {
+          final bytes = await _buildArchive(working);
+          working = working.copyWith(progress: 0.62);
+          ref.state = AsyncData(working);
 
-  Call<void> share(ProfileExportRecord record) => mutate(shareMut, (ref) async {
+          final saved = await _saveArchive(bytes);
+          final record = ProfileExportRecord(
+            filename: saved.filename,
+            path: saved.path,
+            createdAt: DateTime.now(),
+            fileSizeMb: saved.sizeMb,
+            sections: _activeSections(working),
+          );
+
+          final updatedHistory = <ProfileExportRecord>[
+            record,
+            ...working.history,
+          ];
+
+          working = working.copyWith(
+            isExporting: false,
+            progress: 1.0,
+            history: updatedHistory.take(8).toList(),
+            feedbackMessage: _gates.prefersEnglish
+                ? 'Export ready to download.'
+                : 'エクスポートの準備ができました。',
+            feedbackId: working.feedbackId + 1,
+          );
+          ref.state = AsyncData(working);
+
+          try {
+            await Share.shareXFiles(
+              [XFile(record.path)],
+              subject: _gates.prefersEnglish
+                  ? 'Hanko Field data export'
+                  : 'Hanko Field データ出力',
+            );
+          } catch (_) {
+            _emitFeedback(
+              ref,
+              _gates.prefersEnglish
+                  ? 'Export saved. Share sheet unavailable.'
+                  : 'エクスポートは保存されましたが共有に失敗しました。',
+            );
+          }
+
+          return record;
+        } catch (error) {
+          ref.state = AsyncData(
+            working.copyWith(
+              isExporting: false,
+              progress: 0,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Export failed. Please try again.'
+                  : 'エクスポートに失敗しました。もう一度お試しください。',
+              feedbackId: working.feedbackId + 1,
+            ),
+          );
+          return null;
+        }
+      }, concurrency: Concurrency.restart);
+
+  Call<void, AsyncValue<ProfileExportState>> share(
+    ProfileExportRecord record,
+  ) => mutate(shareMut, (ref) async {
     final file = File(record.path);
     if (!file.existsSync()) {
       _emitFeedback(
@@ -260,7 +271,7 @@ class ProfileExportViewModel extends AsyncProvider<ProfileExportState> {
     );
   }, concurrency: Concurrency.dropLatest);
 
-  void _emitFeedback(Ref ref, String message) {
+  void _emitFeedback(Ref<AsyncValue<ProfileExportState>> ref, String message) {
     final current = ref.watch(this).valueOrNull;
     if (current == null) return;
     ref.state = AsyncData(

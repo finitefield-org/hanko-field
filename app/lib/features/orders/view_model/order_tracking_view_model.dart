@@ -27,7 +27,9 @@ class OrderTrackingViewModel extends AsyncProvider<OrderTrackingState> {
   late final refreshMut = mutation<void>(#refresh);
 
   @override
-  Future<OrderTrackingState> build(Ref ref) async {
+  Future<OrderTrackingState> build(
+    Ref<AsyncValue<OrderTrackingState>> ref,
+  ) async {
     final repository = ref.watch(orderRepositoryProvider);
     final order = await repository.getOrder(orderId);
     final shipments = await repository.listShipments(orderId);
@@ -41,7 +43,9 @@ class OrderTrackingViewModel extends AsyncProvider<OrderTrackingState> {
     return OrderTrackingState(order: order, shipments: sorted);
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
+  Call<void, AsyncValue<OrderTrackingState>> refresh() => mutate(refreshMut, (
+    ref,
+  ) async {
     final repository = ref.watch(orderRepositoryProvider);
     final order = await repository.getOrder(orderId);
     final shipments = await repository.listShipments(orderId);

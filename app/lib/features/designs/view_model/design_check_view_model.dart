@@ -55,7 +55,9 @@ class RegistrabilityCheckViewModel
   int _feedbackCounter = 0;
 
   @override
-  Future<RegistrabilityCheckState> build(Ref ref) async {
+  Future<RegistrabilityCheckState> build(
+    Ref<AsyncValue<RegistrabilityCheckState>> ref,
+  ) async {
     _repository = ref.watch(registrabilityCheckRepositoryProvider);
     _gates = ref.watch(appExperienceGatesProvider);
 
@@ -91,66 +93,69 @@ class RegistrabilityCheckViewModel
     }
   }
 
-  Call<RegistrabilityReport?> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(
-        current.copyWith(isRefreshing: true, feedbackMessage: null),
-      );
-    }
+  Call<RegistrabilityReport?, AsyncValue<RegistrabilityCheckState>> refresh() =>
+      mutate(refreshMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current != null) {
+          ref.state = AsyncData(
+            current.copyWith(isRefreshing: true, feedbackMessage: null),
+          );
+        }
 
-    final payload = _payloadFrom(ref);
-    final cached = await _repository.loadCached(payload.designId);
+        final payload = _payloadFrom(ref);
+        final cached = await _repository.loadCached(payload.designId);
 
-    try {
-      final report = await _repository.runCheck(payload);
-      final base = current ?? _stateFromReport(report);
-      ref.state = AsyncData(
-        base.copyWith(
-          report: report,
-          isRefreshing: false,
-          usingCache: false,
-          feedbackMessage: _gates.prefersEnglish
-              ? 'Registrability check updated'
-              : 'チェック結果を更新しました',
-          feedbackId: ++_feedbackCounter,
-        ),
-      );
-      return report;
-    } catch (e, stack) {
-      _logger.warning('Failed to refresh registrability check', e, stack);
-      if (cached != null) {
-        ref.state = AsyncData(
-          (current ?? _stateFromReport(cached)).copyWith(
-            report: cached,
-            isRefreshing: false,
-            usingCache: true,
-            feedbackMessage: _gates.prefersEnglish
-                ? 'Network issue. Showing cached result.'
-                : 'ネットワークに接続できません。保存済みの結果を表示します。',
-            feedbackId: ++_feedbackCounter,
-          ),
-        );
-        return cached;
-      }
+        try {
+          final report = await _repository.runCheck(payload);
+          final base = current ?? _stateFromReport(report);
+          ref.state = AsyncData(
+            base.copyWith(
+              report: report,
+              isRefreshing: false,
+              usingCache: false,
+              feedbackMessage: _gates.prefersEnglish
+                  ? 'Registrability check updated'
+                  : 'チェック結果を更新しました',
+              feedbackId: ++_feedbackCounter,
+            ),
+          );
+          return report;
+        } catch (e, stack) {
+          _logger.warning('Failed to refresh registrability check', e, stack);
+          if (cached != null) {
+            ref.state = AsyncData(
+              (current ?? _stateFromReport(cached)).copyWith(
+                report: cached,
+                isRefreshing: false,
+                usingCache: true,
+                feedbackMessage: _gates.prefersEnglish
+                    ? 'Network issue. Showing cached result.'
+                    : 'ネットワークに接続できません。保存済みの結果を表示します。',
+                feedbackId: ++_feedbackCounter,
+              ),
+            );
+            return cached;
+          }
 
-      if (current != null) {
-        ref.state = AsyncData(
-          current.copyWith(
-            isRefreshing: false,
-            feedbackMessage: e.toString(),
-            feedbackId: ++_feedbackCounter,
-          ),
-        );
-        return current.report;
-      }
+          if (current != null) {
+            ref.state = AsyncData(
+              current.copyWith(
+                isRefreshing: false,
+                feedbackMessage: e.toString(),
+                feedbackId: ++_feedbackCounter,
+              ),
+            );
+            return current.report;
+          }
 
-      ref.state = AsyncError<RegistrabilityCheckState>(e, stack);
-      return null;
-    }
-  }, concurrency: Concurrency.dropLatest);
+          ref.state = AsyncError<RegistrabilityCheckState>(e, stack);
+          return null;
+        }
+      }, concurrency: Concurrency.dropLatest);
 
-  RegistrabilityPayload _payloadFrom(Ref ref) {
+  RegistrabilityPayload _payloadFrom(
+    Ref<AsyncValue<RegistrabilityCheckState>> ref,
+  ) {
     final creation = ref.watch(designCreationViewModel).valueOrNull;
     final editor = ref.watch(designEditorViewModel).valueOrNull;
 

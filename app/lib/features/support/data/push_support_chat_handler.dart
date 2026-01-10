@@ -14,7 +14,7 @@ class SupportChatPushHandler extends AsyncProvider<void> {
   SupportChatPushHandler() : super.args(null, autoDispose: false);
 
   @override
-  Future<void> build(Ref ref) async {
+  Future<void> build(Ref<AsyncValue<void>> ref) async {
     final messaging = ref.watch(firebaseMessagingProvider);
     final repository = ref.watch(supportChatRepositoryProvider);
     final logger = Logger('SupportChatPushHandler');

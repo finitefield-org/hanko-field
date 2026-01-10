@@ -50,7 +50,9 @@ class HomeFeaturedProvider extends AsyncProvider<List<HomeFeaturedItem>> {
   HomeFeaturedProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<HomeFeaturedItem>> build(Ref ref) async {
+  Future<List<HomeFeaturedItem>> build(
+    Ref<AsyncValue<List<HomeFeaturedItem>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     await Future<void>.delayed(const Duration(milliseconds: 180));
 
@@ -68,7 +70,7 @@ class HomeRecentDesignsProvider extends AsyncProvider<List<Design>> {
   HomeRecentDesignsProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<Design>> build(Ref ref) async {
+  Future<List<Design>> build(Ref<AsyncValue<List<Design>>> ref) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final session = ref.watch(userSessionProvider).valueOrNull;
     await Future<void>.delayed(const Duration(milliseconds: 220));
@@ -83,7 +85,9 @@ class HomeRecommendedTemplatesProvider
   HomeRecommendedTemplatesProvider() : super.args(null, autoDispose: true);
 
   @override
-  Future<List<RecommendedTemplate>> build(Ref ref) async {
+  Future<List<RecommendedTemplate>> build(
+    Ref<AsyncValue<List<RecommendedTemplate>>> ref,
+  ) async {
     final gates = ref.watch(appExperienceGatesProvider);
     final recents = await ref.watch(homeRecentDesignsProvider.future);
     await Future<void>.delayed(const Duration(milliseconds: 200));

@@ -112,7 +112,9 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
   late final resetMut = mutation<bool>(#reset);
 
   @override
-  Future<DesignEditorState> build(Ref ref) async {
+  Future<DesignEditorState> build(
+    Ref<AsyncValue<DesignEditorState>> ref,
+  ) async {
     ref.onDispose(() => _autosaveTimer?.cancel());
 
     final seed = _seedFromCreation(ref);
@@ -142,31 +144,34 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
     return seed;
   }
 
-  Call<DesignCanvasLayout> setLayout(DesignCanvasLayout layout) =>
-      mutate(setLayoutMut, (ref) async {
+  Call<DesignCanvasLayout, AsyncValue<DesignEditorState>> setLayout(
+    DesignCanvasLayout layout,
+  ) => mutate(setLayoutMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return layout;
+    _commit(ref, current.copyWith(layout: layout));
+    return layout;
+  }, concurrency: Concurrency.dropLatest);
+
+  Call<double, AsyncValue<DesignEditorState>> setStroke(double stroke) =>
+      mutate(setStrokeMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return layout;
-        _commit(ref, current.copyWith(layout: layout));
-        return layout;
+        if (current == null) return stroke;
+        final next = current.copyWith(strokeWeight: stroke.clamp(1.0, 6.0));
+        _commit(ref, next);
+        return next.strokeWeight;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<double> setStroke(double stroke) => mutate(setStrokeMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return stroke;
-    final next = current.copyWith(strokeWeight: stroke.clamp(1.0, 6.0));
-    _commit(ref, next);
-    return next.strokeWeight;
-  }, concurrency: Concurrency.dropLatest);
+  Call<double, AsyncValue<DesignEditorState>> setMargin(double margin) =>
+      mutate(setMarginMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return margin;
+        final next = current.copyWith(margin: margin.clamp(4.0, 28.0));
+        _commit(ref, next);
+        return next.margin;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<double> setMargin(double margin) => mutate(setMarginMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return margin;
-    final next = current.copyWith(margin: margin.clamp(4.0, 28.0));
-    _commit(ref, next);
-    return next.margin;
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<double> setRotation(double rotation) =>
+  Call<double, AsyncValue<DesignEditorState>> setRotation(double rotation) =>
       mutate(setRotationMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return rotation;
@@ -175,15 +180,16 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
         return next.rotation;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleGrid(bool enabled) => mutate(toggleGridMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return enabled;
-    final next = current.copyWith(showGrid: enabled);
-    _commit(ref, next);
-    return next.showGrid;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<DesignEditorState>> toggleGrid(bool enabled) =>
+      mutate(toggleGridMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return enabled;
+        final next = current.copyWith(showGrid: enabled);
+        _commit(ref, next);
+        return next.showGrid;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<double> setGridSpacing(double spacing) =>
+  Call<double, AsyncValue<DesignEditorState>> setGridSpacing(double spacing) =>
       mutate(setGridSpacingMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
         if (current == null) return spacing;
@@ -195,63 +201,67 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
         return next.gridSpacing;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> toggleGuides(bool enabled) => mutate(toggleGuidesMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return enabled;
-    final next = current.copyWith(guidesEnabled: enabled);
-    _commit(ref, next);
-    return next.guidesEnabled;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<DesignEditorState>> toggleGuides(bool enabled) =>
+      mutate(toggleGuidesMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return enabled;
+        final next = current.copyWith(guidesEnabled: enabled);
+        _commit(ref, next);
+        return next.guidesEnabled;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> undo() => mutate(undoMut, (ref) async {
-    if (_undoStack.isEmpty) return false;
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      _redoStack.add(current);
-    }
-    final restored = _undoStack.removeLast();
-    final next = restored.copyWith(
-      canUndo: _undoStack.isNotEmpty,
-      canRedo: _redoStack.isNotEmpty,
-      hasPendingChanges: true,
-    );
-    ref.state = AsyncData(next);
-    _scheduleAutosave(ref, next);
-    return true;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<DesignEditorState>> undo() =>
+      mutate(undoMut, (ref) async {
+        if (_undoStack.isEmpty) return false;
+        final current = ref.watch(this).valueOrNull;
+        if (current != null) {
+          _redoStack.add(current);
+        }
+        final restored = _undoStack.removeLast();
+        final next = restored.copyWith(
+          canUndo: _undoStack.isNotEmpty,
+          canRedo: _redoStack.isNotEmpty,
+          hasPendingChanges: true,
+        );
+        ref.state = AsyncData(next);
+        _scheduleAutosave(ref, next);
+        return true;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> redo() => mutate(redoMut, (ref) async {
-    if (_redoStack.isEmpty) return false;
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      _undoStack.add(current);
-    }
-    final restored = _redoStack.removeLast();
-    final next = restored.copyWith(
-      canUndo: _undoStack.isNotEmpty,
-      canRedo: _redoStack.isNotEmpty,
-      hasPendingChanges: true,
-    );
-    ref.state = AsyncData(next);
-    _scheduleAutosave(ref, next);
-    return true;
-  }, concurrency: Concurrency.dropLatest);
+  Call<bool, AsyncValue<DesignEditorState>> redo() =>
+      mutate(redoMut, (ref) async {
+        if (_redoStack.isEmpty) return false;
+        final current = ref.watch(this).valueOrNull;
+        if (current != null) {
+          _undoStack.add(current);
+        }
+        final restored = _redoStack.removeLast();
+        final next = restored.copyWith(
+          canUndo: _undoStack.isNotEmpty,
+          canRedo: _redoStack.isNotEmpty,
+          hasPendingChanges: true,
+        );
+        ref.state = AsyncData(next);
+        _scheduleAutosave(ref, next);
+        return true;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<bool> reset() => mutate(resetMut, (ref) async {
-    if (_initialState == null) return false;
-    _undoStack.clear();
-    _redoStack.clear();
-    final resetState = _initialState!.copyWith(
-      canUndo: false,
-      canRedo: false,
-      hasPendingChanges: true,
-    );
-    ref.state = AsyncData(resetState);
-    _scheduleAutosave(ref, resetState);
-    return true;
-  }, concurrency: Concurrency.restart);
+  Call<bool, AsyncValue<DesignEditorState>> reset() =>
+      mutate(resetMut, (ref) async {
+        if (_initialState == null) return false;
+        _undoStack.clear();
+        _redoStack.clear();
+        final resetState = _initialState!.copyWith(
+          canUndo: false,
+          canRedo: false,
+          hasPendingChanges: true,
+        );
+        ref.state = AsyncData(resetState);
+        _scheduleAutosave(ref, resetState);
+        return true;
+      }, concurrency: Concurrency.restart);
 
-  void _commit(Ref ref, DesignEditorState next) {
+  void _commit(Ref<AsyncValue<DesignEditorState>> ref, DesignEditorState next) {
     final current = ref.watch(this).valueOrNull;
     if (current != null) {
       _undoStack.add(current);
@@ -269,7 +279,10 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
     _scheduleAutosave(ref, updated);
   }
 
-  void _scheduleAutosave(Ref ref, DesignEditorState state) {
+  void _scheduleAutosave(
+    Ref<AsyncValue<DesignEditorState>> ref,
+    DesignEditorState state,
+  ) {
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(milliseconds: 900), () async {
       final current = ref.watch(this).valueOrNull;
@@ -289,7 +302,7 @@ class DesignEditorViewModel extends AsyncProvider<DesignEditorState> {
     });
   }
 
-  DesignEditorState _seedFromCreation(Ref ref) {
+  DesignEditorState _seedFromCreation(Ref<AsyncValue<DesignEditorState>> ref) {
     final creation = ref.watch(designCreationViewModel).valueOrNull;
     final input = creation?.savedInput;
     final style = creation?.selectedStyle;

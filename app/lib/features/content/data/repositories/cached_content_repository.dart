@@ -25,7 +25,7 @@ final contentRepositoryProvider = Provider<ContentRepository>((ref) {
 class CachedContentRepository implements ContentRepository {
   CachedContentRepository(this._ref) : _logger = Logger('ContentRepository');
 
-  final Ref _ref;
+  final Ref<ContentRepository> _ref;
   final Logger _logger;
 
   NetworkClient get _client => _ref.watch(networkClientProvider);

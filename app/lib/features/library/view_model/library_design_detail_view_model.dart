@@ -42,7 +42,9 @@ class LibraryDesignDetailViewModel
   late final deleteMut = mutation<void>(#delete);
 
   @override
-  Future<LibraryDesignDetailState> build(Ref ref) async {
+  Future<LibraryDesignDetailState> build(
+    Ref<AsyncValue<LibraryDesignDetailState>> ref,
+  ) async {
     final repository = ref.watch(designRepositoryProvider);
     final design = await repository.getDesign(designId);
     return LibraryDesignDetailState(
@@ -51,7 +53,8 @@ class LibraryDesignDetailViewModel
     );
   }
 
-  Call<LibraryDesignDetailState> refresh() => mutate(refreshMut, (ref) async {
+  Call<LibraryDesignDetailState, AsyncValue<LibraryDesignDetailState>>
+  refresh() => mutate(refreshMut, (ref) async {
     final repository = ref.watch(designRepositoryProvider);
     final design = await repository.getDesign(designId);
     final updated = LibraryDesignDetailState(
@@ -62,16 +65,18 @@ class LibraryDesignDetailViewModel
     return updated;
   }, concurrency: Concurrency.restart);
 
-  Call<Design> duplicate() => mutate(duplicateMut, (ref) async {
-    final repository = ref.watch(designRepositoryProvider);
-    final duplicated = await repository.duplicateDesign(designId);
-    return duplicated;
-  }, concurrency: Concurrency.dropLatest);
+  Call<Design, AsyncValue<LibraryDesignDetailState>> duplicate() =>
+      mutate(duplicateMut, (ref) async {
+        final repository = ref.watch(designRepositoryProvider);
+        final duplicated = await repository.duplicateDesign(designId);
+        return duplicated;
+      }, concurrency: Concurrency.dropLatest);
 
-  Call<void> delete() => mutate(deleteMut, (ref) async {
-    final repository = ref.watch(designRepositoryProvider);
-    await repository.deleteDesign(designId);
-  }, concurrency: Concurrency.dropLatest);
+  Call<void, AsyncValue<LibraryDesignDetailState>> delete() =>
+      mutate(deleteMut, (ref) async {
+        final repository = ref.watch(designRepositoryProvider);
+        await repository.deleteDesign(designId);
+      }, concurrency: Concurrency.dropLatest);
 }
 
 List<LibraryDesignActivityItem> _seedActivity(Design design) {

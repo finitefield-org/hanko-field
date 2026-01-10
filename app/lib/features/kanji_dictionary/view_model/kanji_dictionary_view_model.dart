@@ -69,7 +69,9 @@ class KanjiDictionaryViewModel extends AsyncProvider<KanjiDictionaryState> {
   late final clearHistoryMut = mutation<void>(#clearHistory);
 
   @override
-  Future<KanjiDictionaryState> build(Ref ref) async {
+  Future<KanjiDictionaryState> build(
+    Ref<AsyncValue<KanjiDictionaryState>> ref,
+  ) async {
     final repository = ref.watch(kanjiDictionaryRepositoryProvider);
     final filter = const KanjiFilter();
     final favorites = await repository.loadFavorites();
@@ -100,119 +102,124 @@ class KanjiDictionaryViewModel extends AsyncProvider<KanjiDictionaryState> {
     );
   }
 
-  Call<KanjiSuggestionResult> search(String rawQuery) =>
-      mutate(searchMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          throw StateError('Kanji dictionary state not initialized');
-        }
-        final repository = ref.watch(kanjiDictionaryRepositoryProvider);
-        final query = rawQuery.trim();
-        ref.state = AsyncData(
-          current.copyWith(query: query, isLoading: true, message: null),
-        );
-        if (query.isEmpty) {
-          ref.state = AsyncData(
-            current.copyWith(
-              query: '',
-              results: const <KanjiCandidate>[],
-              isLoading: false,
-              fromCache: false,
-              cachedAt: null,
-              message: null,
-            ),
-          );
-          return const KanjiSuggestionResult(candidates: <KanjiCandidate>[]);
-        }
-        try {
-          final result = await repository.search(
-            query: query,
-            filter: current.filter,
-          );
-          final history = query.isEmpty
-              ? current.history
-              : await repository.pushHistory(query);
-          ref.state = AsyncData(
-            current.copyWith(
-              results: result.candidates,
-              history: history,
-              isLoading: false,
-              fromCache: result.fromCache,
-              cachedAt: result.cachedAt,
-              message: null,
-            ),
-          );
-          return result;
-        } catch (e) {
-          ref.state = AsyncData(
-            current.copyWith(isLoading: false, message: e.toString()),
-          );
-          rethrow;
-        }
-      }, concurrency: Concurrency.restart);
-
-  Call<KanjiSuggestionResult> setFilter(KanjiFilter filter) =>
-      mutate(filterMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) {
-          throw StateError('Kanji dictionary state not initialized');
-        }
-        final repository = ref.watch(kanjiDictionaryRepositoryProvider);
-        ref.state = AsyncData(
-          current.copyWith(filter: filter, isLoading: true, message: null),
-        );
-        if (current.query.trim().isEmpty) {
-          ref.state = AsyncData(
-            current.copyWith(
-              filter: filter,
-              results: const <KanjiCandidate>[],
-              isLoading: false,
-              fromCache: false,
-              cachedAt: null,
-            ),
-          );
-          return const KanjiSuggestionResult(candidates: <KanjiCandidate>[]);
-        }
-        final result = await repository.search(
-          query: current.query,
-          filter: filter,
-        );
-        ref.state = AsyncData(
-          current.copyWith(
-            results: result.candidates,
-            isLoading: false,
-            fromCache: result.fromCache,
-            cachedAt: result.cachedAt,
-          ),
-        );
-        return result;
-      }, concurrency: Concurrency.restart);
-
-  Call<bool> toggleFavoritesOnly() => mutate(favoritesOnlyMut, (ref) async {
+  Call<KanjiSuggestionResult, AsyncValue<KanjiDictionaryState>> search(
+    String rawQuery,
+  ) => mutate(searchMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
-    final next = !current.favoritesOnly;
-    ref.state = AsyncData(current.copyWith(favoritesOnly: next));
-    return next;
-  }, concurrency: Concurrency.dropLatest);
+    if (current == null) {
+      throw StateError('Kanji dictionary state not initialized');
+    }
+    final repository = ref.watch(kanjiDictionaryRepositoryProvider);
+    final query = rawQuery.trim();
+    ref.state = AsyncData(
+      current.copyWith(query: query, isLoading: true, message: null),
+    );
+    if (query.isEmpty) {
+      ref.state = AsyncData(
+        current.copyWith(
+          query: '',
+          results: const <KanjiCandidate>[],
+          isLoading: false,
+          fromCache: false,
+          cachedAt: null,
+          message: null,
+        ),
+      );
+      return const KanjiSuggestionResult(candidates: <KanjiCandidate>[]);
+    }
+    try {
+      final result = await repository.search(
+        query: query,
+        filter: current.filter,
+      );
+      final history = query.isEmpty
+          ? current.history
+          : await repository.pushHistory(query);
+      ref.state = AsyncData(
+        current.copyWith(
+          results: result.candidates,
+          history: history,
+          isLoading: false,
+          fromCache: result.fromCache,
+          cachedAt: result.cachedAt,
+          message: null,
+        ),
+      );
+      return result;
+    } catch (e) {
+      ref.state = AsyncData(
+        current.copyWith(isLoading: false, message: e.toString()),
+      );
+      rethrow;
+    }
+  }, concurrency: Concurrency.restart);
 
-  Call<Set<String>> toggleFavorite(String candidateId) =>
-      mutate(favoriteMut, (ref) async {
-        final repository = ref.watch(kanjiDictionaryRepositoryProvider);
+  Call<KanjiSuggestionResult, AsyncValue<KanjiDictionaryState>> setFilter(
+    KanjiFilter filter,
+  ) => mutate(filterMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) {
+      throw StateError('Kanji dictionary state not initialized');
+    }
+    final repository = ref.watch(kanjiDictionaryRepositoryProvider);
+    ref.state = AsyncData(
+      current.copyWith(filter: filter, isLoading: true, message: null),
+    );
+    if (current.query.trim().isEmpty) {
+      ref.state = AsyncData(
+        current.copyWith(
+          filter: filter,
+          results: const <KanjiCandidate>[],
+          isLoading: false,
+          fromCache: false,
+          cachedAt: null,
+        ),
+      );
+      return const KanjiSuggestionResult(candidates: <KanjiCandidate>[]);
+    }
+    final result = await repository.search(
+      query: current.query,
+      filter: filter,
+    );
+    ref.state = AsyncData(
+      current.copyWith(
+        results: result.candidates,
+        isLoading: false,
+        fromCache: result.fromCache,
+        cachedAt: result.cachedAt,
+      ),
+    );
+    return result;
+  }, concurrency: Concurrency.restart);
+
+  Call<bool, AsyncValue<KanjiDictionaryState>> toggleFavoritesOnly() =>
+      mutate(favoritesOnlyMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        final next = await repository.toggleFavorite(candidateId);
-        if (current != null) {
-          ref.state = AsyncData(current.copyWith(favorites: next));
-        }
+        if (current == null) return false;
+        final next = !current.favoritesOnly;
+        ref.state = AsyncData(current.copyWith(favoritesOnly: next));
         return next;
       }, concurrency: Concurrency.dropLatest);
 
-  Call<void> clearHistory() => mutate(clearHistoryMut, (ref) async {
+  Call<Set<String>, AsyncValue<KanjiDictionaryState>> toggleFavorite(
+    String candidateId,
+  ) => mutate(favoriteMut, (ref) async {
     final repository = ref.watch(kanjiDictionaryRepositoryProvider);
     final current = ref.watch(this).valueOrNull;
-    await repository.clearHistory();
+    final next = await repository.toggleFavorite(candidateId);
     if (current != null) {
-      ref.state = AsyncData(current.copyWith(history: const <String>[]));
+      ref.state = AsyncData(current.copyWith(favorites: next));
     }
+    return next;
   }, concurrency: Concurrency.dropLatest);
+
+  Call<void, AsyncValue<KanjiDictionaryState>> clearHistory() =>
+      mutate(clearHistoryMut, (ref) async {
+        final repository = ref.watch(kanjiDictionaryRepositoryProvider);
+        final current = ref.watch(this).valueOrNull;
+        await repository.clearHistory();
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(history: const <String>[]));
+        }
+      }, concurrency: Concurrency.dropLatest);
 }

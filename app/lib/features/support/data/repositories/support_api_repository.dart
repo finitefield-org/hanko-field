@@ -22,7 +22,7 @@ final supportRepositoryProvider = Provider<SupportRepository>((ref) {
 class SupportApiRepository implements SupportRepository {
   SupportApiRepository(this._ref) : _logger = Logger('SupportRepository');
 
-  final Ref _ref;
+  final Ref<SupportRepository> _ref;
   final Logger _logger;
   final Random _random = Random.secure();
 

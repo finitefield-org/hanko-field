@@ -144,7 +144,7 @@ final notificationPreferencesServiceProvider =
 class NotificationPreferencesService {
   NotificationPreferencesService(this._ref, this._logger);
 
-  final Ref _ref;
+  final Ref<NotificationPreferencesService> _ref;
   final Logger _logger;
 
   Future<NotificationPreferences> save(

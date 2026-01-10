@@ -61,7 +61,9 @@ class LibraryDesignDuplicateViewModel
   late final submitMut = mutation<Design>(#submit);
 
   @override
-  Future<LibraryDesignDuplicateState> build(Ref ref) async {
+  Future<LibraryDesignDuplicateState> build(
+    Ref<AsyncValue<LibraryDesignDuplicateState>> ref,
+  ) async {
     final repository = ref.watch(designRepositoryProvider);
     final gates = ref.watch(appExperienceGatesProvider);
     final source = await repository.getDesign(designId);
@@ -87,89 +89,96 @@ class LibraryDesignDuplicateViewModel
     );
   }
 
-  Call<String> setName(String value) => mutate(setNameMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return value;
-    final next = value.trimLeft();
-    ref.state = AsyncData(current.copyWith(name: next));
-    return next;
-  }, concurrency: Concurrency.restart);
-
-  Call<List<String>> setTags(Iterable<String> tags) =>
-      mutate(setTagsMut, (ref) async {
+  Call<String, AsyncValue<LibraryDesignDuplicateState>> setName(String value) =>
+      mutate(setNameMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        final normalized = _normalizeTags(tags);
-        if (current == null) return normalized;
-        ref.state = AsyncData(current.copyWith(tags: normalized));
-        return normalized;
+        if (current == null) return value;
+        final next = value.trimLeft();
+        ref.state = AsyncData(current.copyWith(name: next));
+        return next;
       }, concurrency: Concurrency.restart);
 
-  Call<bool> toggleCopyHistory(bool enabled) =>
-      mutate(toggleCopyHistoryMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return enabled;
-        ref.state = AsyncData(current.copyWith(copyHistory: enabled));
-        return enabled;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<bool> toggleCopyAssets(bool enabled) =>
-      mutate(toggleCopyAssetsMut, (ref) async {
-        final current = ref.watch(this).valueOrNull;
-        if (current == null) return enabled;
-        ref.state = AsyncData(current.copyWith(copyAssets: enabled));
-        return enabled;
-      }, concurrency: Concurrency.dropLatest);
-
-  Call<Design> submit() => mutate(submitMut, (ref) async {
+  Call<List<String>, AsyncValue<LibraryDesignDuplicateState>> setTags(
+    Iterable<String> tags,
+  ) => mutate(setTagsMut, (ref) async {
     final current = ref.watch(this).valueOrNull;
-    if (current == null) throw StateError('Duplicate form is not ready');
-    if (current.isSubmitting) throw StateError('Duplicate already in progress');
+    final normalized = _normalizeTags(tags);
+    if (current == null) return normalized;
+    ref.state = AsyncData(current.copyWith(tags: normalized));
+    return normalized;
+  }, concurrency: Concurrency.restart);
 
-    ref.state = AsyncData(current.copyWith(isSubmitting: true));
-    try {
-      final gates = ref.watch(appExperienceGatesProvider);
-      final repository = ref.watch(designRepositoryProvider);
-      final duplicated = await repository.duplicateDesign(designId);
+  Call<bool, AsyncValue<LibraryDesignDuplicateState>> toggleCopyHistory(
+    bool enabled,
+  ) => mutate(toggleCopyHistoryMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return enabled;
+    ref.state = AsyncData(current.copyWith(copyHistory: enabled));
+    return enabled;
+  }, concurrency: Concurrency.dropLatest);
 
-      final name = current.name.trim();
-      final resolvedName = name.isEmpty
-          ? (duplicated.input?.rawName.trim().isNotEmpty == true
-                ? duplicated.input!.rawName.trim()
-                : (gates.prefersEnglish ? 'Design copy' : '印鑑のコピー'))
-          : name;
+  Call<bool, AsyncValue<LibraryDesignDuplicateState>> toggleCopyAssets(
+    bool enabled,
+  ) => mutate(toggleCopyAssetsMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return enabled;
+    ref.state = AsyncData(current.copyWith(copyAssets: enabled));
+    return enabled;
+  }, concurrency: Concurrency.dropLatest);
 
-      final input =
-          duplicated.input?.copyWith(rawName: resolvedName) ??
-          DesignInput(
-            sourceType: DesignSourceType.typed,
-            rawName: resolvedName,
+  Call<Design, AsyncValue<LibraryDesignDuplicateState>> submit() =>
+      mutate(submitMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) throw StateError('Duplicate form is not ready');
+        if (current.isSubmitting) {
+          throw StateError('Duplicate already in progress');
+        }
+
+        ref.state = AsyncData(current.copyWith(isSubmitting: true));
+        try {
+          final gates = ref.watch(appExperienceGatesProvider);
+          final repository = ref.watch(designRepositoryProvider);
+          final duplicated = await repository.duplicateDesign(designId);
+
+          final name = current.name.trim();
+          final resolvedName = name.isEmpty
+              ? (duplicated.input?.rawName.trim().isNotEmpty == true
+                    ? duplicated.input!.rawName.trim()
+                    : (gates.prefersEnglish ? 'Design copy' : '印鑑のコピー'))
+              : name;
+
+          final input =
+              duplicated.input?.copyWith(rawName: resolvedName) ??
+              DesignInput(
+                sourceType: DesignSourceType.typed,
+                rawName: resolvedName,
+              );
+
+          final updated = duplicated.copyWith(
+            input: input,
+            tags: current.tags,
+            assets: current.copyAssets ? duplicated.assets : null,
+            ai: current.copyHistory ? duplicated.ai : null,
+            hash: current.copyHistory ? duplicated.hash : null,
+            version: 1,
           );
 
-      final updated = duplicated.copyWith(
-        input: input,
-        tags: current.tags,
-        assets: current.copyAssets ? duplicated.assets : null,
-        ai: current.copyHistory ? duplicated.ai : null,
-        hash: current.copyHistory ? duplicated.hash : null,
-        version: 1,
-      );
-
-      final saved = await repository.updateDesign(updated);
-      return saved;
-    } catch (e, stack) {
-      ref.state = AsyncError(
-        e,
-        stack,
-        previous: AsyncData(current.copyWith(isSubmitting: false)),
-      );
-      rethrow;
-    } finally {
-      final latest = ref.watch(this).valueOrNull;
-      if (latest != null && latest.isSubmitting) {
-        ref.state = AsyncData(latest.copyWith(isSubmitting: false));
-      }
-    }
-  }, concurrency: Concurrency.dropLatest);
+          final saved = await repository.updateDesign(updated);
+          return saved;
+        } catch (e, stack) {
+          ref.state = AsyncError(
+            e,
+            stack,
+            previous: current.copyWith(isSubmitting: false),
+          );
+          rethrow;
+        } finally {
+          final latest = ref.watch(this).valueOrNull;
+          if (latest != null && latest.isSubmitting) {
+            ref.state = AsyncData(latest.copyWith(isSubmitting: false));
+          }
+        }
+      }, concurrency: Concurrency.dropLatest);
 }
 
 List<String> _normalizeTags(Iterable<String> tags) {

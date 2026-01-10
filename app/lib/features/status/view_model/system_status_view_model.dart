@@ -37,7 +37,9 @@ class SystemStatusViewModel extends AsyncProvider<SystemStatusState> {
   late final setServiceMut = mutation<StatusService>(#setService);
 
   @override
-  Future<SystemStatusState> build(Ref ref) async {
+  Future<SystemStatusState> build(
+    Ref<AsyncValue<SystemStatusState>> ref,
+  ) async {
     final repository = ref.watch(statusRepositoryProvider);
     final snapshot = await repository.fetchStatus();
     return SystemStatusState(
@@ -47,29 +49,31 @@ class SystemStatusViewModel extends AsyncProvider<SystemStatusState> {
     );
   }
 
-  Call<void> refresh() => mutate(refreshMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current != null) {
-      ref.state = AsyncData(current.copyWith(isRefreshing: true));
-    }
-
-    final repository = ref.watch(statusRepositoryProvider);
-    final snapshot = await repository.fetchStatus();
-    final service = current?.selectedService ?? StatusService.api;
-    ref.state = AsyncData(
-      SystemStatusState(
-        snapshot: snapshot,
-        selectedService: service,
-        isRefreshing: false,
-      ),
-    );
-  }, concurrency: Concurrency.dropLatest);
-
-  Call<StatusService> setService(StatusService service) =>
-      mutate(setServiceMut, (ref) async {
+  Call<void, AsyncValue<SystemStatusState>> refresh() =>
+      mutate(refreshMut, (ref) async {
         final current = ref.watch(this).valueOrNull;
-        if (current == null) return service;
-        ref.state = AsyncData(current.copyWith(selectedService: service));
-        return service;
+        if (current != null) {
+          ref.state = AsyncData(current.copyWith(isRefreshing: true));
+        }
+
+        final repository = ref.watch(statusRepositoryProvider);
+        final snapshot = await repository.fetchStatus();
+        final service = current?.selectedService ?? StatusService.api;
+        ref.state = AsyncData(
+          SystemStatusState(
+            snapshot: snapshot,
+            selectedService: service,
+            isRefreshing: false,
+          ),
+        );
       }, concurrency: Concurrency.dropLatest);
+
+  Call<StatusService, AsyncValue<SystemStatusState>> setService(
+    StatusService service,
+  ) => mutate(setServiceMut, (ref) async {
+    final current = ref.watch(this).valueOrNull;
+    if (current == null) return service;
+    ref.state = AsyncData(current.copyWith(selectedService: service));
+    return service;
+  }, concurrency: Concurrency.dropLatest);
 }

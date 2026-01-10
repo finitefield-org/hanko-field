@@ -58,7 +58,7 @@ final performanceRouteObserverProvider = Provider<PerformanceRouteObserver>((
 class PerformanceMonitor {
   PerformanceMonitor(this._ref, this._performance, this._logger);
 
-  final Ref _ref;
+  final Ref<PerformanceMonitor> _ref;
   final FirebasePerformance _performance;
   final Logger _logger;
 

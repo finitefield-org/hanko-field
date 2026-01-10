@@ -44,7 +44,7 @@ class GuideDetailViewModel extends AsyncProvider<GuideDetailState> {
   late final toggleBookmarkMut = mutation<bool>(#toggleBookmark);
 
   @override
-  Future<GuideDetailState> build(Ref ref) async {
+  Future<GuideDetailState> build(Ref<AsyncValue<GuideDetailState>> ref) async {
     final normalizedSlug = slug.trim();
     if (normalizedSlug.isEmpty) throw ArgumentError.value(slug, 'slug');
 
@@ -70,28 +70,29 @@ class GuideDetailViewModel extends AsyncProvider<GuideDetailState> {
     );
   }
 
-  Call<bool> toggleBookmark() => mutate(toggleBookmarkMut, (ref) async {
-    final current = ref.watch(this).valueOrNull;
-    if (current == null) return false;
+  Call<bool, AsyncValue<GuideDetailState>> toggleBookmark() =>
+      mutate(toggleBookmarkMut, (ref) async {
+        final current = ref.watch(this).valueOrNull;
+        if (current == null) return false;
 
-    final optimistic = !current.isBookmarked;
-    ref.state = AsyncData(current.copyWith(isBookmarked: optimistic));
+        final optimistic = !current.isBookmarked;
+        ref.state = AsyncData(current.copyWith(isBookmarked: optimistic));
 
-    final bookmarksRepo = ref.watch(guideBookmarksRepositoryProvider);
-    final next = await bookmarksRepo.toggleBookmark(current.guide.slug);
+        final bookmarksRepo = ref.watch(guideBookmarksRepositoryProvider);
+        final next = await bookmarksRepo.toggleBookmark(current.guide.slug);
 
-    final isBookmarked = next.contains(current.guide.slug);
-    ref.state = AsyncData(current.copyWith(isBookmarked: isBookmarked));
+        final isBookmarked = next.contains(current.guide.slug);
+        ref.state = AsyncData(current.copyWith(isBookmarked: isBookmarked));
 
-    if (isBookmarked) {
-      final repository = ref.watch(contentRepositoryProvider);
-      try {
-        await repository.getGuide(current.guide.slug, lang: current.lang);
-      } catch (_) {}
-    }
+        if (isBookmarked) {
+          final repository = ref.watch(contentRepositoryProvider);
+          try {
+            await repository.getGuide(current.guide.slug, lang: current.lang);
+          } catch (_) {}
+        }
 
-    return isBookmarked;
-  }, concurrency: Concurrency.dropLatest);
+        return isBookmarked;
+      }, concurrency: Concurrency.dropLatest);
 }
 
 Future<List<Guide>> _loadRelated({

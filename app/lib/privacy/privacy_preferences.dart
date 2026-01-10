@@ -66,7 +66,7 @@ class PrivacyPreferences {
 class PrivacyPreferencesService {
   PrivacyPreferencesService(this._ref, this._logger);
 
-  final Ref _ref;
+  final Ref<PrivacyPreferencesService> _ref;
   final Logger _logger;
 
   Future<PrivacyPreferences> update({

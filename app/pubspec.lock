@@ -337,6 +337,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.11"
+  declarative_nav:
+    dependency: "direct main"
+    description:
+      path: "../../declarative-nav/declarative_nav"
+      relative: true
+    source: path
+    version: "0.2.0"
   device_info_plus:
     dependency: "direct main"
     description:

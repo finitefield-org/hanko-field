@@ -33,14 +33,14 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
   late final retryMut = mutation<SplashResult>(#retry);
 
   @override
-  Future<SplashResult> build(Ref ref) async {
+  Future<SplashResult> build(Ref<AsyncValue<SplashResult>> ref) async {
     return _run(ref);
   }
 
-  Call<SplashResult> retry() =>
+  Call<SplashResult, AsyncValue<SplashResult>> retry() =>
       mutate(retryMut, _run, concurrency: Concurrency.restart);
 
-  Future<SplashResult> _run(Ref ref) async {
+  Future<SplashResult> _run(Ref<AsyncValue<SplashResult>> ref) async {
     try {
       await _initialize(ref);
       final decision = await _resolveNext(ref);
@@ -66,14 +66,14 @@ class SplashViewModel extends AsyncProvider<SplashResult> {
     }
   }
 
-  Future<void> _initialize(Ref ref) async {
+  Future<void> _initialize(Ref<AsyncValue<SplashResult>> ref) async {
     await Future.wait([
       ref.watch(remoteConfigInitializerProvider.future),
       ref.watch(localPersistenceInitializerProvider.future),
     ]);
   }
 
-  Future<SplashResult> _resolveNext(Ref ref) async {
+  Future<SplashResult> _resolveNext(Ref<AsyncValue<SplashResult>> ref) async {
     final flags = await ref.watch(featureFlagsProvider.future);
     final onboarding = await ref.watch(onboardingPreferencesProvider.future);
     final packageInfo = await PackageInfo.fromPlatform();
