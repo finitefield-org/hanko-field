@@ -1034,7 +1034,7 @@ func parseTemplates() (*template.Template, error) {
 	root := template.New("_root")
 	funcMap := tmplFuncMapFor(func() *template.Template { return root })
 	root = root.Funcs(funcMap)
-	// Recursively discover and parse all .tmpl files. Note: ParseGlob doesn't support **.
+	// Recursively discover and parse all .html files. Note: ParseGlob doesn't support **.
 	var files []string
 	if err := filepath.WalkDir(templatesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -1043,7 +1043,7 @@ func parseTemplates() (*template.Template, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if strings.HasSuffix(d.Name(), ".tmpl") {
+		if strings.HasSuffix(d.Name(), ".html") {
 			files = append(files, path)
 		}
 		return nil
@@ -1070,7 +1070,7 @@ func parsePageTemplates(page string) (*template.Template, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if strings.HasSuffix(d.Name(), ".tmpl") {
+		if strings.HasSuffix(d.Name(), ".html") {
 			files = append(files, path)
 		}
 		return nil
@@ -1083,13 +1083,13 @@ func parsePageTemplates(page string) (*template.Template, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if strings.HasSuffix(d.Name(), ".tmpl") {
+		if strings.HasSuffix(d.Name(), ".html") {
 			files = append(files, path)
 		}
 		return nil
 	})
 	// page
-	files = append(files, filepath.Join(templatesDir, "pages", page+".tmpl"))
+	files = append(files, filepath.Join(templatesDir, "pages", page+".html"))
 	return root.ParseFiles(files...)
 }
 

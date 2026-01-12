@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 const contentGlobs = [
-  './templates/**/*.tmpl',
-  './cmd/**/*.{go,tmpl,html}',
-  './internal/**/*.{go,tmpl,html}',
+  './templates/**/*.html',
+  './cmd/**/*.{go,html}',
+  './internal/**/*.{go,html}',
   './content/**/*.{md,html}',
   './public/**/*.html',
 ];
