@@ -173,7 +173,7 @@ func buildAccountOrdersPageView(lang string, sess *mw.SessionData, q url.Values)
 			StatusKey:   o.Status,
 			StatusTone:  accountOrderStatusTone(o.Status),
 			StatusLabel: accountOrderStatusLabel(lang, o.Status),
-			Summary:     accountOrderSummary(lang, o),
+			Summary:     accountOrderSummary(o),
 		})
 	}
 
@@ -354,7 +354,7 @@ func accountOrderStatusLabel(lang, status string) string {
 	return i18nOrDefault(lang, key, titleCaseASCII(status))
 }
 
-func accountOrderSummary(lang string, o accountOrder) string {
+func accountOrderSummary(o accountOrder) string {
 	return fmt.Sprintf("%s · %s", o.PrimaryItem, o.Destination)
 }
 

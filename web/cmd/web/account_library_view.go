@@ -17,8 +17,7 @@ const accountLibraryPageSize = 9
 var accountLibraryNow = time.Date(2025, time.March, 24, 11, 15, 0, 0, time.UTC)
 
 const (
-	httpMethodPost   = "POST"
-	httpMethodDelete = "DELETE"
+	httpMethodPost = "POST"
 )
 
 type AccountLibraryPageView struct {
