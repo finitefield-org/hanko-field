@@ -4,7 +4,6 @@ This guide sets up the Go web module with chi router, html/template rendering, T
 
 ## Prerequisites
 - Go 1.23+
-- Optional: Air for hot reload (`go install github.com/cosmtrek/air@latest`)
 
 No Node.js/npm is required. TailwindCSS is built using its standalone CLI binary, and htmx is fetched once into `public/assets/js`.
 
@@ -26,10 +25,12 @@ make css-watch
 Terminal B (Go server):
 ```bash
 cd web
-make dev        # uses air if available; else falls back to go run
+make dev
 # or
 make run
 ```
+
+The Go server does not hot reload. Restart `make dev` after Go or template changes.
 
 Then open http://localhost:8080
 

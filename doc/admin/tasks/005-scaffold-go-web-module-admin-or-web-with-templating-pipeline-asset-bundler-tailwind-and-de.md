@@ -11,9 +11,9 @@ Create Go module for admin web app including build scripts, dependency managemen
 2. Add dependencies: router (`chi`), template helpers, csrf middleware, Firebase auth client, htmx-friendly utilities.
 3. Configure make/task commands (`dev`, `build`, `lint`, `test`, `tailwind` watcher).
 4. Integrate Tailwind CLI (standalone binary) with make targets for asset compilation; include watch mode for local dev.
-5. Provide local hot reload script using `air` or `fresh` to reload Go server on file change.
+5. Provide local dev script for running the Go server during development.
 6. Document setup in `doc/admin/dev_setup.md`.
 
 ## Acceptance Criteria
-- `make dev` starts server with Tailwind watcher and reload.
+- `make dev` starts server with Tailwind watcher.
 - Lint/test commands pass in clean checkout.

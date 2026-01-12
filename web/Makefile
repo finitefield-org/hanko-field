@@ -12,7 +12,7 @@ run:
 	DEV=1 $(GO) run $(MAIN_PKG)
 
 dev:
-	@command -v air >/dev/null 2>&1 && air -c .air.toml || (echo "air not installed; falling back to 'make run'" && $(MAKE) run)
+	@$(MAKE) run
 
 build:
 	@mkdir -p $(BIN_DIR)

@@ -34,14 +34,19 @@ TAILWIND_BIN := $(BIN_DIR)/tailwindcss
 TAILWIND_URL := https://github.com/tailwindlabs/tailwindcss/releases/download/v$(TAILWIND_VERSION)/tailwindcss-$(TAILWIND_OS)-$(TAILWIND_ARCH)
 
 .PHONY: dev
-dev: tidy ensure-tailwind ## Start hot reload server with Tailwind watcher
+dev: tidy ensure-tailwind ## Start dev server with Tailwind watcher
 	@set -euo pipefail; \
 	echo "Starting Tailwind watcher..."; \
 	$(TAILWIND_BIN) -i $(TAILWIND_INPUT) -o $(TAILWIND_OUTPUT) --watch & \
 	TW_PID=$$!; \
 	trap "kill $$TW_PID" EXIT; \
-	echo "Starting air (Go hot reload)..."; \
-	air
+	echo "Starting Go server..."; \
+	GOCACHE=$(GOCACHE) go run ./cmd/admin
+
+.PHONY: run
+run: ## Run the Go server without hot reload
+	@mkdir -p $(GOCACHE)
+	@GOCACHE=$(GOCACHE) go run ./cmd/admin
 
 .PHONY: css
 css: ensure-tailwind ## Build Tailwind assets

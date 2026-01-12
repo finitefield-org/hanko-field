@@ -31,7 +31,7 @@ Use a tracked checklist in the release ticket and attach command transcripts plu
 - **Access**: `roles/run.admin`, `roles/artifactregistry.writer`, `roles/secretmanager.secretAccessor`, and Firebase project owner/editor.
 - **Infrastructure**: Cloud Run service (`admin-console`), Artifact Registry repo (`hanko-admin`), HTTPS Cloud CDN fronting Cloud Run via Serverless NEG, and Firebase project with Admin SDK service account.
 - **Branch hygiene**: Tagged release commit on `main`. Feature flags merged/disabled as appropriate.
-- **Tooling**: `gcloud` ≥ 451.0, `docker` or Cloud Build privileges, `make`, `air`, `templ`, Tailwind binary installed via `make ensure-tailwind`.
+- **Tooling**: `gcloud` ≥ 451.0, `docker` or Cloud Build privileges, `make`, `templ`, Tailwind binary installed via `make ensure-tailwind`.
 - **Monitoring hooks**: Cloud Monitoring dashboard + alerting policies enabled before promoting to production.
 
 ## Required Environment Variables & Secrets

@@ -4,10 +4,6 @@
 
 - Go 1.23+
 - `curl` available for downloading the Tailwind standalone binary
-- Go tooling:
-  - `go install github.com/air-verse/air@latest`
-
-`air` should be on your `PATH` (typically `$GOPATH/bin`).
 
 ## Setup
 
@@ -18,13 +14,15 @@ make ensure-tailwind   # downloads tailwindcss standalone binary
 
 ## Common Commands
 
-- `make dev` – tidy modules, start Tailwind watcher, then launch `air`.
+- `make dev` – tidy modules, start Tailwind watcher, then launch the Go server.
 - `make css` – single build of Tailwind output (minified) to `public/static/app.css`.
 - `make css-watch` – Tailwind watch mode without starting the Go server.
 - `make lint` – `gofmt` and `go vet`.
 - `make test-ui` – run integration smoke tests with `httptest` + DOM assertions.
 
-`air` watches `*.go` and `*.html` files (configured via `.air.toml`). Tailwind scans the paths listed in `tailwind.config.js`.
+The Go server does not hot reload. Restart `make dev` after Go or template changes.
+
+Tailwind scans the paths listed in `tailwind.config.js`.
 
 ## Configuration
 

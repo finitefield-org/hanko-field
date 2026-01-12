@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 help:
 	@echo "Targets:"
-	@echo "  admin-dev  - run admin dev server (templ + tailwind + air)"
+	@echo "  admin-dev  - run admin dev server (tailwind + go run)"
 	@echo "  api-run    - run API server"
 	@echo "  web-dev    - run web dev server"
 	@echo "  dev        - run admin, api, and web servers in parallel"
