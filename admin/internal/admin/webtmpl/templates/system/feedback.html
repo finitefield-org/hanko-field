@@ -1,0 +1,233 @@
+{{define "system/feedback-modal"}}
+{{if .Data.Receipt}}
+  <div class="modal-overlay" data-modal-overlay>
+    <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{localize .Locale "admin.feedback.modal.success_title"}}" tabindex="-1">
+      <header class="modal-header">
+        <div class="flex-1">
+          <h2 id="modal-title" class="modal-title">{{localize .Locale "admin.feedback.modal.success_title"}}</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+          <span class="sr-only">閉じる</span>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+            <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+          </svg>
+        </button>
+      </header>
+      <div id="modal-description" class="modal-body">
+        {{template "system/feedback-success-body" .}}
+      </div>
+    </div>
+  </div>
+{{else}}
+  <div class="modal-overlay" data-modal-overlay>
+    <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{localize .Locale "admin.feedback.modal.title"}}" tabindex="-1">
+      <header class="modal-header">
+        <div class="flex-1">
+          <h2 id="modal-title" class="modal-title">{{localize .Locale "admin.feedback.modal.title"}}</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+          <span class="sr-only">閉じる</span>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+            <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+          </svg>
+        </button>
+      </header>
+      <div id="modal-description" class="modal-body">
+        {{template "system/feedback-form-body" .}}
+      </div>
+    </div>
+  </div>
+{{end}}
+{{end}}
+
+{{define "system/feedback-form-body"}}
+{{$data := .Data}}
+<div class="space-y-6 text-sm text-slate-700">
+  <p class="text-slate-600">{{localize $.Locale "admin.feedback.modal.description"}}</p>
+  <form
+    class="space-y-5"
+    hx-post="{{$data.ActionURL}}"
+    hx-target="#modal"
+    hx-swap="innerHTML"
+  >
+    <input type="hidden" name="csrf_token" value="{{$data.CSRFToken}}" />
+    <input type="hidden" name="context_url" value="{{$data.Context.CurrentURL}}" />
+    <input type="hidden" name="client_browser" value="{{$data.Context.Browser}}" />
+
+    <div class="space-y-2">
+      <label for="feedback-summary" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {{localize $.Locale "admin.feedback.modal.summary.label"}}
+      </label>
+      <input
+        id="feedback-summary"
+        name="summary"
+        type="text"
+        value="{{$data.Form.Summary}}"
+        required
+        class="{{classList "w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none" (pickClass (ne ($data.Form.FieldError "summary") "") "border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" "border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100")}}"
+        placeholder="{{localize $.Locale "admin.feedback.modal.summary.placeholder"}}"
+      />
+      {{with $data.Form.FieldError "summary"}}
+        <p class="text-xs text-rose-600">{{.}}</p>
+      {{end}}
+    </div>
+
+    <div class="space-y-2">
+      <label for="feedback-details" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {{localize $.Locale "admin.feedback.modal.details.label"}}
+      </label>
+      <textarea
+        id="feedback-details"
+        name="details"
+        rows="4"
+        required
+        class="{{classList "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-inner focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" (pickClass (ne ($data.Form.FieldError "details") "") "border-rose-300 focus:border-rose-500 focus:ring-rose-100" "")}}"
+        placeholder="{{localize $.Locale "admin.feedback.modal.details.placeholder"}}"
+      >{{$data.Form.Details}}</textarea>
+      {{with $data.Form.FieldError "details"}}
+        <p class="text-xs text-rose-600">{{.}}</p>
+      {{end}}
+    </div>
+
+    <div class="space-y-2">
+      <label for="feedback-expectation" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {{localize $.Locale "admin.feedback.modal.expectation.label"}}
+        <span class="text-slate-400">({{localize $.Locale "common.optional"}})</span>
+      </label>
+      <textarea
+        id="feedback-expectation"
+        name="expectation"
+        rows="3"
+        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-inner focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        placeholder="{{localize $.Locale "admin.feedback.modal.expectation.placeholder"}}"
+      >{{$data.Form.Expectation}}</textarea>
+    </div>
+
+    <div class="space-y-2">
+      <label for="feedback-console" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {{localize $.Locale "admin.feedback.modal.console.label"}}
+        <span class="text-slate-400">({{localize $.Locale "common.optional"}})</span>
+      </label>
+      <textarea
+        id="feedback-console"
+        name="console"
+        rows="3"
+        class="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-700 shadow-inner focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        placeholder="{{localize $.Locale "admin.feedback.modal.console.placeholder"}}"
+      >{{$data.Form.ConsoleLog}}</textarea>
+    </div>
+
+    <div class="space-y-2">
+      <label for="feedback-contact" class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {{localize $.Locale "admin.feedback.modal.contact.label"}}
+      </label>
+      <input
+        id="feedback-contact"
+        name="contact"
+        type="email"
+        value="{{$data.Form.Contact}}"
+        required
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        placeholder="name@example.com"
+      />
+      {{with $data.Form.FieldError "contact"}}
+        <p class="text-xs text-rose-600">{{.}}</p>
+      {{else}}
+        <p class="text-xs text-slate-500">{{localize $.Locale "admin.feedback.modal.contact.help"}}</p>
+      {{end}}
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
+      <dl class="space-y-2">
+        <div class="flex flex-col">
+          <dt class="font-semibold text-slate-500">{{localize $.Locale "admin.feedback.modal.context.url"}}</dt>
+          <dd class="break-words text-slate-700">{{$data.Context.CurrentURL}}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="font-semibold text-slate-500">{{localize $.Locale "admin.feedback.modal.context.browser"}}</dt>
+          <dd class="break-words text-slate-700">{{$data.Context.Browser}}</dd>
+        </div>
+      </dl>
+      <p class="mt-3 text-[11px] text-slate-500">{{localize $.Locale "admin.feedback.modal.context.note"}}</p>
+    </div>
+
+    {{if $data.Form.Error}}
+      <p class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{{$data.Form.Error}}</p>
+    {{end}}
+
+    <button type="submit" class="{{buttonClass "primary" "md" true false}}">{{localize $.Locale "admin.feedback.modal.submit"}}</button>
+  </form>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
+    <p>{{localize $.Locale "admin.feedback.modal.tracker_hint"}}</p>
+    <p class="mt-2">
+      <a class="text-brand-600 hover:text-brand-700" href="{{$data.TrackerURL}}" target="_blank" rel="noreferrer">
+        {{localize $.Locale "admin.feedback.modal.tracker_link"}}
+      </a>
+    </p>
+    {{if gt (len $data.SupportingLinks) 0}}
+      <ul class="mt-3 space-y-1">
+        {{range $link := $data.SupportingLinks}}
+          <li>
+            <a href="{{$link.URL}}" class="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900" target="_blank" rel="noreferrer">
+              {{if $link.Icon}}
+                <span aria-hidden="true">{{$link.Icon}}</span>
+              {{end}}
+              <span>{{$link.Label}}</span>
+            </a>
+          </li>
+        {{end}}
+      </ul>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "system/feedback-success-body"}}
+{{$data := .Data}}
+<section class="space-y-6 text-sm text-slate-700">
+  <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+    <p class="text-sm font-semibold">
+      {{localize $.Locale "admin.feedback.modal.success.body"}}
+    </p>
+    <p class="mt-2 text-xs text-emerald-800">
+      ID: <span class="font-mono text-emerald-900">{{$data.Receipt.ID}}</span>
+    </p>
+    {{if $data.Receipt.Message}}
+      <p class="mt-1 text-xs text-emerald-800">{{$data.Receipt.Message}}</p>
+    {{end}}
+    <p class="mt-2 text-xs text-emerald-800">
+      {{localize $.Locale "admin.feedback.modal.success.timestamp" $data.Receipt.SubmittedAt $data.Receipt.SubmittedRelative}}
+    </p>
+  </div>
+
+  <dl class="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+    <div>
+      <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{localize $.Locale "admin.feedback.modal.context.url"}}</dt>
+      <dd class="mt-1 break-words text-sm text-slate-700">{{$data.Receipt.Context.CurrentURL}}</dd>
+    </div>
+    <div>
+      <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{localize $.Locale "admin.feedback.modal.context.browser"}}</dt>
+      <dd class="mt-1 break-words text-sm text-slate-700">{{$data.Receipt.Context.Browser}}</dd>
+    </div>
+  </dl>
+
+  <div class="flex flex-col gap-3 sm:flex-row">
+    <a
+      href="{{$data.Receipt.ReferenceURL}}"
+      target="_blank"
+      rel="noreferrer"
+      class="{{buttonClass "primary" "md" true false}}"
+    >
+      {{localize $.Locale "admin.feedback.modal.success.open_tracker"}}
+    </a>
+    <button
+      type="button"
+      class="{{buttonClass "ghost" "md" true false}}"
+      data-modal-close
+    >
+      {{localize $.Locale "admin.feedback.modal.success.close"}}
+    </button>
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,153 @@
+{{define "shipments/table"}}
+<div class="space-y-4" data-shipments-table-fragment>
+  {{if .Error}}
+    <div class="rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-800">
+      {{.Error}}
+    </div>
+  {{end}}
+
+  <table class="min-w-full divide-y divide-slate-200">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-4 py-3">バッチ</th>
+        <th class="px-4 py-3">キャリア / サービス</th>
+        <th class="px-4 py-3">拠点 / 件数</th>
+        <th class="px-4 py-3">進捗</th>
+        <th class="px-4 py-3">SLA</th>
+        <th class="px-4 py-3 text-right">操作</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-200 text-sm text-slate-700">
+      {{if eq (len .Rows) 0}}
+        <tr>
+          <td colspan="6" class="px-4 py-6 text-center text-sm text-slate-500">
+            {{.EmptyMessage}}
+          </td>
+        </tr>
+      {{else}}
+        {{range $row := .Rows}}
+          <tr
+            class="{{tableRowClass $row.Selected}}"
+            data-shipments-row
+            data-batch-id="{{$row.ID}}"
+            {{if $row.Selected}}data-selected="true"{{end}}
+            aria-selected="{{boolAttr $row.Selected}}"
+            hx-get="{{$row.DetailURL}}"
+            hx-target="#shipments-drawer"
+            hx-swap="outerHTML"
+            hx-vals='{{printf "{\"selected\":\"%s\"}" $row.ID}}'
+            hx-indicator="#shipments-loading"
+            hx-push-url="true"
+          >
+            <td class="px-4 py-4 align-top">
+              <div class="flex flex-col gap-1">
+                <p class="text-sm font-semibold text-slate-900">{{$row.Reference}}</p>
+                <p class="text-xs text-slate-500">
+                  {{$row.CreatedLabel}}
+                  <span class="text-slate-400">({{$row.CreatedRelative}})</span>
+                </p>
+                {{if $row.BadgeLabel}}
+                  <span class="{{badgeClass $row.BadgeTone}}">
+                    {{if $row.BadgeIcon}}<span aria-hidden="true" class="mr-1">{{$row.BadgeIcon}}</span>{{end}}
+                    {{$row.BadgeLabel}}
+                  </span>
+                {{end}}
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <p class="font-medium text-slate-900">{{$row.CarrierLabel}}</p>
+                <p class="text-xs text-slate-500">{{$row.ServiceLevel}}</p>
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <p class="font-medium text-slate-900">{{$row.FacilityLabel}}</p>
+                <p class="text-xs text-slate-500">{{$row.OrderStats}}</p>
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                  <span>{{$row.ProgressLabel}}</span>
+                  <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+                </div>
+                <div class="h-2 w-full rounded-full bg-slate-200">
+                  <div class="h-2 rounded-full bg-brand-500 transition-all" style="width: {{$row.ProgressPercent}}%"></div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <span class="{{badgeClass $row.SLATone}}">{{$row.SLAStatus}}</span>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="flex flex-col items-end gap-2">
+                {{if $row.LabelURL}}
+                  <a href="{{$row.LabelURL}}" class="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                    📄 ラベル
+                  </a>
+                {{end}}
+                {{if $row.ManifestURL}}
+                  <a href="{{$row.ManifestURL}}" class="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                    📦 マニフェスト
+                  </a>
+                {{end}}
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-brand-600"
+                  data-shipments-row-action
+                  data-batch-id="{{$row.ID}}"
+                >
+                  🔁 ラベル再生成
+                </button>
+              </div>
+            </td>
+          </tr>
+        {{end}}
+      {{end}}
+    </tbody>
+  </table>
+
+  {{template "shipments/pagination" .}}
+</div>
+{{end}}
+
+{{define "shipments/pagination"}}
+{{if not (and (le .Pagination.Total .Pagination.PageSize) (eq .Pagination.Next nil) (eq .Pagination.Prev nil))}}
+  <nav class="flex items-center justify-between text-sm text-slate-600">
+    <div>
+      ページ {{.Pagination.Page}} / {{totalPages .Pagination.Total .Pagination.PageSize}}
+    </div>
+    <div class="flex items-center gap-2">
+      {{if .Pagination.Prev}}
+        <a
+          href="{{paginationURL .BasePath .FragmentPath .Pagination.RawQuery .Pagination.Prev}}"
+          class="{{buttonClass "ghost" "xs" false false}}"
+          hx-get="{{paginationURL .BasePath .FragmentPath .Pagination.RawQuery .Pagination.Prev}}"
+          hx-target="#shipments-table"
+          hx-push-url="true"
+          hx-indicator="#shipments-loading"
+        >
+          前へ
+        </a>
+      {{else}}
+        <span class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-400">前へ</span>
+      {{end}}
+      {{if .Pagination.Next}}
+        <a
+          href="{{paginationURL .BasePath .FragmentPath .Pagination.RawQuery .Pagination.Next}}"
+          class="{{buttonClass "ghost" "xs" false false}}"
+          hx-get="{{paginationURL .BasePath .FragmentPath .Pagination.RawQuery .Pagination.Next}}"
+          hx-target="#shipments-table"
+          hx-push-url="true"
+          hx-indicator="#shipments-loading"
+        >
+          次へ
+        </a>
+      {{else}}
+        <span class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-400">次へ</span>
+      {{end}}
+    </div>
+  </nav>
+{{end}}
+{{end}}

@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
 	promotionusage "finitefield.org/hanko-admin/internal/admin/templates/promotionusage"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -25,6 +25,38 @@ const (
 type promotionUsageRequest struct {
 	state promotionusage.QueryState
 	query adminpromotions.UsageQuery
+}
+
+func toPromotionUsageTableView(table promotionusage.TableData) webtmpl.PromotionUsageTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Label:         table.Pagination.Label,
+		Attrs:         attrs,
+	}
+	return webtmpl.PromotionUsageTableView{
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 // PromotionsUsagePage renders the promotion usage analytics page.
@@ -63,7 +95,20 @@ func (h *Handlers) PromotionsUsagePage(w http.ResponseWriter, r *http.Request) {
 	table := promotionusage.TablePayload(basePath, promotionID, req.state, result, errMessage(err))
 	page := promotionusage.BuildPageData(basePath, promotionID, req.state, result, table, nil)
 
-	templ.Handler(promotionusage.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "promotionusage/content"
+	view := webtmpl.PromotionUsagePageView{
+		BaseView: base,
+		Page:     page,
+		Table:    toPromotionUsageTableView(table),
+	}
+	if err := dashboardTemplates.Render(w, "promotionusage/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsUsageTable renders the usage table fragment.
@@ -102,7 +147,10 @@ func (h *Handlers) PromotionsUsageTable(w http.ResponseWriter, r *http.Request) 
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(promotionusage.Table(table)).ServeHTTP(w, r)
+	view := toPromotionUsageTableView(table)
+	if err := dashboardTemplates.Render(w, "promotionusage/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsUsageExport handles CSV export submissions for promotion usage.
@@ -178,7 +226,9 @@ func (h *Handlers) PromotionsUsageExport(w http.ResponseWriter, r *http.Request)
 	basePath := custommw.BasePathFromContext(ctx)
 	payload := promotionusage.BuildExportJobPayload(basePath, promotionID, job)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(promotionusage.ExportStatus(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotionusage/export-status", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsUsageExportJobStatus renders the progress fragment for a usage export job.
@@ -216,7 +266,9 @@ func (h *Handlers) PromotionsUsageExportJobStatus(w http.ResponseWriter, r *http
 	basePath := custommw.BasePathFromContext(ctx)
 	payload := promotionusage.BuildExportJobPayload(basePath, promotionID, status.Job)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(promotionusage.ExportStatus(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotionusage/export-status", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func buildPromotionUsageRequest(r *http.Request) promotionUsageRequest {

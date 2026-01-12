@@ -1,0 +1,125 @@
+{{define "shipments/tracking-table"}}
+<div class="space-y-4" data-tracking-table-fragment>
+  {{if .Error}}
+    <div class="rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-800">{{.Error}}</div>
+  {{end}}
+  <table class="min-w-full divide-y divide-slate-200">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-4 py-3">注文 / トラッキング</th>
+        <th class="px-4 py-3">キャリア / ステータス</th>
+        <th class="px-4 py-3">目的地 / レーン</th>
+        <th class="px-4 py-3">最終イベント</th>
+        <th class="px-4 py-3 text-right">SLA</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-200 text-sm text-slate-700">
+      {{if eq (len .Rows) 0}}
+        <tr>
+          <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
+            {{.EmptyMessage}}
+          </td>
+        </tr>
+      {{else}}
+        {{range $row := .Rows}}
+          <tr>
+            <td class="px-4 py-4 align-top">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <span>{{$row.OrderNumber}}</span>
+                  {{if $row.BadgeIcon}}<span aria-hidden="true">{{$row.BadgeIcon}}</span>{{end}}
+                </div>
+                <p class="text-xs text-slate-500">{{$row.Customer}}</p>
+                <a href="{{$row.OrderURL}}" class="text-xs font-medium text-brand-600 hover:underline">
+                  注文詳細を開く →
+                </a>
+                <p class="text-xs text-slate-400">Tracking: {{$row.TrackingNumber}}</p>
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <p class="font-medium text-slate-900">{{$row.Carrier}}</p>
+                <p class="text-xs text-slate-500">{{$row.Service}}</p>
+                <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+                {{if $row.Exception}}
+                  <span class="{{badgeClass $row.ExceptionTone}}">{{$row.Exception}}</span>
+                {{end}}
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <p class="font-medium text-slate-900">{{$row.Destination}}</p>
+                <p class="text-xs text-slate-500">{{$row.Region}} ・ {{$row.Lane}}</p>
+                {{if $row.DelayLabel}}
+                  <span class="text-xs font-semibold text-rose-600">{{$row.DelayLabel}}</span>
+                {{end}}
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top">
+              <div class="space-y-1">
+                <p class="font-medium text-slate-900">{{$row.LastEvent}}</p>
+                <p class="text-xs text-slate-500">{{$row.LastEventTime}}</p>
+                {{if $row.ETA}}
+                  <p class="text-xs text-slate-500">
+                    予定: {{$row.ETA}}
+                  </p>
+                {{end}}
+              </div>
+            </td>
+            <td class="px-4 py-4 align-top text-right">
+              <div class="flex flex-col items-end gap-2">
+                <span class="{{badgeClass $row.SLATone}}">{{$row.SLAStatus}}</span>
+                {{if $row.DelayLabel}}
+                  <span class="text-xs text-rose-500">{{$row.DelayLabel}}</span>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+        {{end}}
+      {{end}}
+    </tbody>
+  </table>
+
+  {{template "shipments/tracking-pagination" .}}
+</div>
+{{end}}
+
+{{define "shipments/tracking-pagination"}}
+{{if not (and (le .Pagination.Total .Pagination.PageSize) (eq .Pagination.Next nil) (eq .Pagination.Prev nil))}}
+  <nav class="flex items-center justify-between text-sm text-slate-600">
+    <div>
+      ページ {{.Pagination.Page}} / {{trackingTotalPages .Pagination.Total .Pagination.PageSize}}
+    </div>
+    <div class="flex items-center gap-2">
+      {{if .Pagination.Prev}}
+        <a
+          href="{{trackingPaginationURL .FragmentPath .Pagination.RawQuery .Pagination.Prev}}"
+          hx-get="{{trackingPaginationURL .FragmentPath .Pagination.RawQuery .Pagination.Prev}}"
+          hx-target="#tracking-table"
+          hx-indicator="#tracking-loading"
+          hx-push-url="true"
+          class="{{buttonClass "ghost" "xs" false false}}"
+        >
+          前へ
+        </a>
+      {{else}}
+        <span class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-400">前へ</span>
+      {{end}}
+      {{if .Pagination.Next}}
+        <a
+          href="{{trackingPaginationURL .FragmentPath .Pagination.RawQuery .Pagination.Next}}"
+          hx-get="{{trackingPaginationURL .FragmentPath .Pagination.RawQuery .Pagination.Next}}"
+          hx-target="#tracking-table"
+          hx-indicator="#tracking-loading"
+          hx-push-url="true"
+          class="{{buttonClass "ghost" "xs" false false}}"
+        >
+          次へ
+        </a>
+      {{else}}
+        <span class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-400">次へ</span>
+      {{end}}
+    </div>
+  </nav>
+{{end}}
+{{end}}

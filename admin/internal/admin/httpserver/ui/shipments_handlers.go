@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
 	shipmentstpl "finitefield.org/hanko-admin/internal/admin/templates/shipments"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -230,7 +230,19 @@ func (h *Handlers) ShipmentsBatchesPage(w http.ResponseWriter, r *http.Request) 
 
 	page := shipmentstpl.BuildPageData(basePath, req.state, result, table, drawer)
 
-	templ.Handler(shipmentstpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "shipments/content"
+	view := webtmpl.ShipmentsPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "shipments/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ShipmentsBatchesTable renders the table fragment.
@@ -261,7 +273,9 @@ func (h *Handlers) ShipmentsBatchesTable(w http.ResponseWriter, r *http.Request)
 	triggerShipmentsSelect(w, table.SelectedID)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(shipmentstpl.Table(table)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "shipments/table", table); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ShipmentsTrackingPage renders the shipment tracking monitor.
@@ -292,7 +306,19 @@ func (h *Handlers) ShipmentsTrackingPage(w http.ResponseWriter, r *http.Request)
 	page := shipmentstpl.BuildTrackingPageData(basePath, req.state, result, table)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(shipmentstpl.TrackingIndex(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "shipments/tracking-content"
+	view := webtmpl.ShipmentsTrackingPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "shipments/tracking-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ShipmentsTrackingTable renders the tracking table fragment.
@@ -326,7 +352,9 @@ func (h *Handlers) ShipmentsTrackingTable(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(shipmentstpl.TrackingTable(table)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "shipments/tracking-table", table); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ShipmentsBatchDrawer renders the drawer fragment.
@@ -368,7 +396,13 @@ func (h *Handlers) ShipmentsBatchDrawer(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(shipmentstpl.DetailDrawer(drawer)).ServeHTTP(w, r)
+	view := webtmpl.ShipmentsDrawerView{
+		BasePath: basePath,
+		Drawer:   drawer,
+	}
+	if err := dashboardTemplates.Render(w, "shipments/drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ShipmentsCreateBatch acknowledges batch creation requests.

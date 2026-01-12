@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	customerstpl "finitefield.org/hanko-admin/internal/admin/templates/customers"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -27,6 +28,39 @@ const (
 type customersRequest struct {
 	query admincustomers.ListQuery
 	state customerstpl.QueryState
+}
+
+func toCustomersTableView(table customerstpl.TableData, locale string) webtmpl.CustomersTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Label:         table.Pagination.Label,
+		Attrs:         attrs,
+	}
+	return webtmpl.CustomersTableView{
+		Locale:     locale,
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 // CustomersPage renders the customers index page.
@@ -52,7 +86,20 @@ func (h *Handlers) CustomersPage(w http.ResponseWriter, r *http.Request) {
 	table := customerstpl.TablePayload(ctx, basePath, req.state, result, errMsg)
 	page := customerstpl.BuildPageData(ctx, basePath, req.state, result, table)
 
-	templ.Handler(customerstpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "customers/content"
+	view := webtmpl.CustomersPageView{
+		BaseView: base,
+		Page:     page,
+		Table:    toCustomersTableView(table, base.Locale),
+	}
+	if err := dashboardTemplates.Render(w, "customers/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CustomersTable renders the customers table fragment for HTMX requests.
@@ -81,7 +128,10 @@ func (h *Handlers) CustomersTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(customerstpl.Table(table)).ServeHTTP(w, r)
+	view := toCustomersTableView(table, helpers.LocaleCode(ctx))
+	if err := dashboardTemplates.Render(w, "customers/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CustomerDetailPage renders the detailed profile view for a single customer.
@@ -122,12 +172,26 @@ func (h *Handlers) CustomerDetailPage(w http.ResponseWriter, r *http.Request) {
 		target := strings.TrimSpace(custommw.HTMXInfoFromContext(ctx).Target)
 		target = strings.TrimPrefix(target, "#")
 		if strings.EqualFold(target, "customer-tabs") {
-			templ.Handler(customerstpl.CustomerTabs(page)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "customers/tabs", page); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 	}
 
-	templ.Handler(customerstpl.DetailPage(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "customers/detail-content"
+	view := webtmpl.CustomerDetailView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "customers/detail-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CustomerDeactivateModal renders the deactivate + mask confirmation modal.
@@ -166,7 +230,9 @@ func (h *Handlers) CustomerDeactivateModal(w http.ResponseWriter, r *http.Reques
 	}
 	payload := customerstpl.DeactivateModalPayload(ctx, basePath, modal, csrf, form)
 
-	templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "customers/deactivate-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CustomerDeactivateAndMask submits the deactivate + mask action.
@@ -265,7 +331,9 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 
 	if len(form.FieldErrors) > 0 {
 		payload := meta.ToData(csrf, form)
-		templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "customers/deactivate-modal", payload); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -302,7 +370,9 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		}
 
 		payload := meta.ToData(csrf, form)
-		templ.Handler(customerstpl.DeactivateModal(payload)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "customers/deactivate-modal", payload); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -325,7 +395,9 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 	}
 
 	payload := customerstpl.DeactivateSuccessPayload(basePath, displayName, result)
-	templ.Handler(customerstpl.DeactivateSuccess(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "customers/deactivate-success", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func buildCustomersRequest(r *http.Request) customersRequest {

@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminorg "finitefield.org/hanko-admin/internal/admin/org"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	orgtpl "finitefield.org/hanko-admin/internal/admin/templates/org"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const staffRefreshEvent = "org:staff:refresh"
@@ -40,7 +40,19 @@ func (h *Handlers) OrgStaffPage(w http.ResponseWriter, r *http.Request) {
 	content := buildStaffPageContent(basePath, request, list, err != nil)
 	page := orgtpl.BuildStaffPageData(basePath, content)
 
-	templ.Handler(orgtpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "org/content"
+	view := webtmpl.OrgPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "org/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrgStaffTable renders the staff table fragment for htmx updates.
@@ -66,7 +78,9 @@ func (h *Handlers) OrgStaffTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(orgtpl.StaffTableFragment(table)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-table", table); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrgStaffInviteModal renders the invite modal.
@@ -86,16 +100,19 @@ func (h *Handlers) OrgStaffInviteModal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	values := orgtpl.StaffInviteFormValues{
+		SendEmail: true,
+	}
 	payload := orgtpl.StaffInviteModalPayload{
-		Action:    joinBasePath(basePath, "/org/staff/invite"),
-		CSRFToken: custommw.CSRFTokenFromContext(ctx),
-		Values: orgtpl.StaffInviteFormValues{
-			SendEmail: true,
-		},
-		RoleOptions: buildRoleOptions(catalog.Roles, nil),
+		Action:      joinBasePath(basePath, "/org/staff/invite"),
+		CSRFToken:   custommw.CSRFTokenFromContext(ctx),
+		Values:      values,
+		RoleOptions: buildRoleOptions(catalog.Roles, values.Roles),
 	}
 
-	templ.Handler(orgtpl.StaffInviteModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-invite-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrgStaffInviteSubmit handles invite submissions.
@@ -181,7 +198,9 @@ func (h *Handlers) OrgStaffEditModal(w http.ResponseWriter, r *http.Request) {
 		RoleOptions: buildRoleOptions(catalog.Roles, member.Roles),
 	}
 
-	templ.Handler(orgtpl.StaffEditModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-edit-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrgStaffUpdateSubmit handles role update submissions.
@@ -255,7 +274,9 @@ func (h *Handlers) OrgStaffRevokeModal(w http.ResponseWriter, r *http.Request) {
 		NotifyUser:  true,
 	}
 
-	templ.Handler(orgtpl.StaffRevokeModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-revoke-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrgStaffRevokeSubmit handles revocation submissions.
@@ -327,7 +348,20 @@ func (h *Handlers) OrgRolesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := orgtpl.BuildRolesPageData(basePath, content)
-	templ.Handler(orgtpl.Index(page)).ServeHTTP(w, r)
+
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "org/content"
+	view := webtmpl.OrgPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "org/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func buildStaffRequest(r *http.Request) staffRequest {
@@ -582,7 +616,9 @@ func (h *Handlers) renderInviteModalWithError(w http.ResponseWriter, r *http.Req
 		Error:       message,
 	}
 
-	templ.Handler(orgtpl.StaffInviteModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-invite-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderEditModalWithError(w http.ResponseWriter, r *http.Request, memberID, message string) {
@@ -616,7 +652,9 @@ func (h *Handlers) renderEditModalWithError(w http.ResponseWriter, r *http.Reque
 		Error:       message,
 	}
 
-	templ.Handler(orgtpl.StaffEditModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-edit-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderRevokeModalWithError(w http.ResponseWriter, r *http.Request, memberID, message string) {
@@ -646,7 +684,9 @@ func (h *Handlers) renderRevokeModalWithError(w http.ResponseWriter, r *http.Req
 		Error:          message,
 	}
 
-	templ.Handler(orgtpl.StaffRevokeModal(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "org/staff-revoke-modal", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func triggerStaffRefresh(w http.ResponseWriter, message, tone string) {

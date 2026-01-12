@@ -1,0 +1,518 @@
+{{define "system/tasks"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "system/tasks-content"}}
+{{$page := .Page}}
+<div
+  class="space-y-6"
+  data-system-tasks-root
+  hx-ext="sse"
+  sse-connect="{{$page.StreamEndpoint}}"
+>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.Title}}</h1>
+        <p class="text-sm text-slate-600">{{$page.Description}}</p>
+        {{if $page.GeneratedLabel}}
+          <p class="text-xs text-slate-400">{{$page.GeneratedLabel}}</p>
+        {{end}}
+      </div>
+      {{if $page.Scheduler.Label}}
+        <div class="flex flex-col items-start gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm shadow-sm">
+          <span class="{{badgeClass $page.Scheduler.Tone}}">{{$page.Scheduler.Label}}</span>
+          {{if $page.Scheduler.Message}}
+            <p class="text-xs text-slate-500">{{$page.Scheduler.Message}}</p>
+          {{end}}
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            {{if $page.Scheduler.Latency}}
+              <span>{{$page.Scheduler.Latency}}</span>
+            {{end}}
+            {{if $page.Scheduler.CheckedAt}}
+              <span>{{$page.Scheduler.CheckedAt}}</span>
+            {{end}}
+          </div>
+        </div>
+      {{end}}
+    </div>
+
+    {{if gt (len $page.Alerts) 0}}
+      <div class="mt-6 space-y-3">
+        {{template "system/tasks-alerts" $page.Alerts}}
+      </div>
+    {{end}}
+
+    <div class="mt-6 border-t border-slate-200 pt-5">
+      {{template "system/tasks-filter-toolbar" $page}}
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <section class="space-y-4">
+      <div
+        id="system-tasks-table"
+        class="space-y-4"
+        data-system-tasks-table
+        hx-target="this"
+        hx-swap="outerHTML"
+        hx-trigger="sse:refresh, every 120s, refresh"
+        hx-get="{{buildURL $page.Table.FragmentPath $page.Table.RawQuery}}"
+      >
+        {{template "system/tasks-table" $page.Table}}
+      </div>
+    </section>
+    <aside>
+      <div class="sticky top-20 space-y-4">
+        {{template "system/tasks-history-card" $page.History}}
+        <div id="system-task-drawer" data-system-task-drawer>
+          {{template "system/tasks-drawer" $page.Drawer}}
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+{{end}}
+
+{{define "system/tasks-alerts"}}
+{{range $alert := .}}
+  <div class="rounded-xl border border-slate-200 bg-amber-50 px-4 py-3 shadow-sm">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-semibold text-slate-900">{{$alert.Title}}</p>
+        <p class="text-sm text-slate-600">{{$alert.Message}}</p>
+      </div>
+      {{if and $alert.Action.Label $alert.Action.URL}}
+        <a
+          href="{{$alert.Action.URL}}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="{{buttonClass "secondary" "sm" false false}}"
+        >
+          {{if $alert.Action.Icon}}
+            <span aria-hidden="true" class="mr-1">{{$alert.Action.Icon}}</span>
+          {{end}}
+          {{$alert.Action.Label}}
+        </a>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+{{end}}
+
+{{define "system/tasks-filter-toolbar"}}
+<form
+  id="system-tasks-filter"
+  class="flex flex-col gap-5"
+  method="get"
+  hx-get="{{buildURL .TableEndpoint .Query.RawQuery}}"
+  hx-target="#system-tasks-table"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+  <input type="hidden" name="selected" value="{{.Query.SelectedID}}" />
+  <input type="hidden" name="limit" value="{{.Query.Limit}}" />
+
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">タイプ</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ジョブタイプ">
+        {{range $option := .Filters.TypeOptions}}
+          <label class="{{systemTasksToggleClass $option.Active $option.Tone}}">
+            <input type="radio" name="type" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+            <span class="inline-flex items-center gap-1 text-sm">
+              {{if $option.Icon}}
+                <span aria-hidden="true">{{$option.Icon}}</span>
+              {{end}}
+              {{$option.Label}}
+              {{if gt $option.Count 0}}
+                <span class="text-xs text-slate-400">({{$option.Count}})</span>
+              {{end}}
+            </span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ステータス">
+        {{range $option := .Filters.StateOptions}}
+          <label class="{{systemTasksToggleClass $option.Active $option.Tone}}">
+            <input type="radio" name="state" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+            <span class="inline-flex items-center gap-1 text-sm">
+              {{$option.Label}}
+              {{if gt $option.Count 0}}
+                <span class="text-xs text-slate-400">({{$option.Count}})</span>
+              {{end}}
+            </span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-host">ホスト</label>
+        <select
+          id="system-tasks-host"
+          name="host"
+          class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        >
+          {{range $option := .Filters.HostOptions}}
+            <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>
+              {{if gt $option.Count 0}}
+                {{printf "%s (%d)" $option.Label $option.Count}}
+              {{else}}
+                {{$option.Label}}
+              {{end}}
+            </option>
+          {{end}}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-window">次回実行</label>
+        <select
+          id="system-tasks-window"
+          name="window"
+          class="w-48 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        >
+          {{range $option := .Filters.WindowOptions}}
+            <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>
+              {{if gt $option.Count 0}}
+                {{printf "%s (%d)" $option.Label $option.Count}}
+              {{else}}
+                {{$option.Label}}
+              {{end}}
+            </option>
+          {{end}}
+        </select>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-tasks-search">検索</label>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <input
+            id="system-tasks-search"
+            type="search"
+            name="q"
+            value="{{.Query.Search}}"
+            placeholder="タスク名・ホスト・タグ"
+            class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          />
+          <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+        </div>
+        <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+        <button type="reset" class="{{buttonClass "secondary" "sm" false false}}" data-system-tasks-reset>クリア</button>
+      </div>
+    </div>
+  </div>
+</form>
+{{end}}
+
+{{define "system/tasks-table"}}
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  {{if .Error}}
+    <div class="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{.Error}}</div>
+  {{end}}
+  {{if eq (len .Items) 0}}
+    <div class="px-6 py-10 text-center text-sm text-slate-500">{{.EmptyMessage}}</div>
+    {{else}}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <th scope="col" class="px-4 py-3 text-left">ジョブ</th>
+            <th scope="col" class="px-4 py-3 text-left">スケジュール / ホスト</th>
+            <th scope="col" class="px-4 py-3 text-left">ステータス</th>
+            <th scope="col" class="px-4 py-3 text-left">直近実行</th>
+            <th scope="col" class="px-4 py-3 text-left">次回実行</th>
+            <th scope="col" class="px-4 py-3 text-left">成功率</th>
+            <th scope="col" class="px-4 py-3 text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100" data-raw-query="{{.RawQuery}}">
+          {{range $row := .Items}}
+            <tr
+              class="{{systemTasksRowClass (eq $.SelectedID $row.ID)}}"
+              data-selected="{{boolAttr (eq $.SelectedID $row.ID)}}"
+              hx-push-url="{{buildURL (joinBase $.BasePath "/system/tasks") (setRawQuery $.RawQuery "selected" $row.ID)}}"
+              {{range $k, $v := $row.Attributes}} {{$k}}="{{$v}}"{{end}}
+            >
+              <td class="px-4 py-4 align-top">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-semibold text-slate-900">{{$row.Name}}</p>
+                    <span class="{{badgeClass $row.TypeTone}}">{{$row.TypeLabel}}</span>
+                  </div>
+                  <p class="text-xs text-slate-500">{{$row.Description}}</p>
+                  {{if gt (len $row.Tags) 0}}
+                    <div class="flex flex-wrap gap-1">
+                      {{range $tag := $row.Tags}}
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{{$tag}}</span>
+                      {{end}}
+                    </div>
+                  {{end}}
+                </div>
+              </td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">
+                <div>{{$row.Schedule}}</div>
+                <div class="text-xs text-slate-400">{{$row.Host}}</div>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+              </td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">
+                <div>{{$row.LastRunRelative}}</div>
+                <div class="text-xs text-slate-400">{{$row.DurationLabel}}</div>
+              </td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">
+                <div>{{$row.NextRunRelative}}</div>
+                <div class="text-xs text-slate-400">{{$row.NextRunTooltip}}</div>
+              </td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">{{$row.SuccessRate}}</td>
+              <td class="px-4 py-4 align-top text-right">
+                <div class="flex flex-wrap justify-end gap-2">
+                  {{range $action := $row.Actions}}
+                    <button
+                      type="button"
+                      class="{{buttonClass "secondary" "xs" false false}}"
+                      hx-post="{{$action.URL}}"
+                      hx-target="closest tr"
+                      hx-swap="none"
+                      {{if $action.Confirm}}hx-confirm="{{$action.Confirm}}"{{end}}
+                      {{if $action.Disabled}}disabled{{end}}
+                      title="{{$action.Tooltip}}"
+                    >
+                      {{if $action.Icon}}
+                        <span aria-hidden="true" class="mr-1">{{$action.Icon}}</span>
+                      {{end}}
+                      {{$action.Label}}
+                    </button>
+                  {{end}}
+                </div>
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "system/tasks-drawer"}}
+{{if .Error}}
+  <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700 shadow-sm">{{.Error}}</div>
+{{else if .Empty}}
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-8 text-sm text-slate-500 shadow-sm">
+    タスクを選択すると詳細が表示されます。
+  </div>
+{{else}}
+  <div class="space-y-6 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+    <div class="space-y-2">
+      <div class="flex items-center gap-2">
+        <h2 class="text-xl font-semibold text-slate-900">{{.Job.Name}}</h2>
+        <span class="{{badgeClass .Job.StateTone}}">{{.Job.StateLabel}}</span>
+      </div>
+      <p class="text-sm text-slate-600">{{.Job.Description}}</p>
+      <div class="flex flex-wrap gap-2 text-xs text-slate-400">
+        <span>{{.Job.Schedule}}</span>
+        <span>•</span>
+        <span>{{.Job.Host}}</span>
+        {{if .Job.Queue}}
+          <span>•</span>
+          <span>{{.Job.Queue}}</span>
+        {{end}}
+      </div>
+      {{if gt (len .Job.Tags) 0}}
+        <div class="flex flex-wrap gap-1">
+          {{range $tag := .Job.Tags}}
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{{$tag}}</span>
+          {{end}}
+        </div>
+      {{end}}
+    </div>
+
+    <dl class="grid grid-cols-2 gap-3 text-sm text-slate-600">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">平均実行時間</dt>
+        <dd>{{.Job.AverageDuration}}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">成功率</dt>
+        <dd>{{.Job.SuccessRate}}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">直近実行</dt>
+        <dd>{{.Job.LastRunRelative}} ({{.Job.LastRunStatusLabel}})</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">次回実行</dt>
+        <dd>{{.Job.NextRunRelative}} ({{.Job.NextRunExact}})</dd>
+      </div>
+    </dl>
+
+    {{if gt (len .Actions) 0}}
+      <div class="flex flex-wrap gap-2">
+        {{range $action := .Actions}}
+          <button
+            type="button"
+            class="{{buttonClass (systemTasksPickActionVariant $action.Dangerous) "sm" false false}}"
+            hx-post="{{$action.URL}}"
+            hx-swap="none"
+            {{if $action.Confirm}}hx-confirm="{{$action.Confirm}}"{{end}}
+            {{if $action.Disabled}}disabled{{end}}
+            title="{{$action.Tooltip}}"
+          >
+            {{if $action.Icon}}
+              <span aria-hidden="true" class="mr-1">{{$action.Icon}}</span>
+            {{end}}
+            {{$action.Label}}
+          </button>
+        {{end}}
+      </div>
+    {{end}}
+
+    {{if gt (len .Parameters) 0}}
+      <section class="space-y-2">
+        <h3 class="text-sm font-semibold text-slate-900">実行パラメータ</h3>
+        <dl class="space-y-1 text-xs text-slate-600">
+          {{range $item := .Parameters}}
+            <div class="flex justify-between gap-3">
+              <dt class="font-medium text-slate-500">{{$item.Key}}</dt>
+              <dd class="text-right text-slate-700">{{$item.Value}}</dd>
+            </div>
+          {{end}}
+        </dl>
+      </section>
+    {{end}}
+
+    {{if gt (len .Environment) 0}}
+      <section class="space-y-2">
+        <h3 class="text-sm font-semibold text-slate-900">環境変数</h3>
+        <dl class="space-y-1 text-xs text-slate-600">
+          {{range $item := .Environment}}
+            <div class="flex justify-between gap-3">
+              <dt class="font-medium text-slate-500">{{$item.Key}}</dt>
+              <dd class="text-right text-slate-700">{{$item.Value}}</dd>
+            </div>
+          {{end}}
+        </dl>
+      </section>
+    {{end}}
+
+    {{if gt (len .Runs) 0}}
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">直近の実行</h3>
+          {{if .Job.LogsURL}}
+            <a href="{{.Job.LogsURL}}" target="_blank" rel="noopener noreferrer" class="text-xs text-brand-600">ログを開く</a>
+          {{end}}
+        </div>
+        <ul class="space-y-2">
+          {{range $run := .Runs}}
+            <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="{{badgeClass $run.StatusTone}}">{{$run.StatusLabel}}</span>
+                    <p class="text-sm font-medium text-slate-900">{{$run.Relative}}</p>
+                  </div>
+                  <p class="text-xs text-slate-500">{{$run.StartedAt}} / {{$run.Duration}}</p>
+                  <p class="text-xs text-slate-500">{{$run.Trigger}}</p>
+                  {{if $run.Error}}
+                    <p class="text-xs text-rose-600">{{$run.Error}}</p>
+                  {{end}}
+                </div>
+                <div class="flex flex-col items-end gap-1 text-xs text-slate-400">
+                  {{if $run.Worker}}
+                    <span>{{$run.Worker}}</span>
+                  {{end}}
+                  {{if $run.Region}}
+                    <span>{{$run.Region}}</span>
+                  {{end}}
+                  {{if $run.Attempt}}
+                    <span>{{$run.Attempt}}</span>
+                  {{end}}
+                  {{if $run.LogsURL}}
+                    <a href="{{$run.LogsURL}}" target="_blank" rel="noopener noreferrer" class="text-brand-600">ログ</a>
+                  {{end}}
+                </div>
+              </div>
+            </li>
+          {{end}}
+        </ul>
+      </section>
+    {{end}}
+
+    {{if gt (len .Insights) 0}}
+      <section class="space-y-2">
+        <h3 class="text-sm font-semibold text-slate-900">インサイト</h3>
+        <ul class="space-y-2">
+          {{range $insight := .Insights}}
+            <li class="{{systemTasksInsightClass $insight.Tone}}">
+              <div class="flex items-start gap-2">
+                {{if $insight.Icon}}
+                  <span aria-hidden="true">{{$insight.Icon}}</span>
+                {{end}}
+                <div>
+                  <p class="text-sm font-medium">{{$insight.Title}}</p>
+                  <p class="text-xs">{{$insight.Description}}</p>
+                </div>
+              </div>
+            </li>
+          {{end}}
+        </ul>
+      </section>
+    {{end}}
+
+    <div class="flex flex-wrap gap-3 text-xs text-brand-600">
+      {{if .Job.RunbookURL}}
+        <a href="{{.Job.RunbookURL}}" target="_blank" rel="noopener noreferrer">Runbook を開く</a>
+      {{end}}
+      {{if .Job.LogsURL}}
+        <a href="{{.Job.LogsURL}}" target="_blank" rel="noopener noreferrer">Cloud Run ログ</a>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+{{end}}
+
+{{define "system/tasks-history-card"}}
+<div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+  <div class="flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-slate-900">実行履歴</h3>
+    <span class="text-xs text-slate-400">継続時間 (秒)</span>
+  </div>
+  {{if .Empty}}
+    <p class="mt-4 text-xs text-slate-500">履歴データがありません。</p>
+    {{else}}
+    <div class="mt-3 h-32">
+      <svg viewBox="0 0 100 100" role="presentation" aria-hidden="true" class="h-full w-full text-brand-500">
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="3"
+          points="{{systemTaskHistoryPoints .}}"
+        />
+      </svg>
+    </div>
+    <ul class="mt-3 grid gap-2 text-xs text-slate-500">
+      {{range $point := .Points}}
+        <li class="flex items-center justify-between">
+          <span>{{$point.Label}}</span>
+          <span>{{printf "%.0f秒" $point.DurationSeconds}}</span>
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+</div>
+{{end}}

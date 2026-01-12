@@ -29,7 +29,6 @@
 
 ## 管理画面(admin)
 - Go
-- templ
 - htmx
 - Tailwind CSS
 
@@ -42,7 +41,6 @@
 
 ## ウェブ(web)
 - Go
-- templ
 - htmx
 - Tailwind CSS
 

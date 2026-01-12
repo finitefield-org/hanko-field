@@ -1,17 +1,17 @@
 package ui
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	adminaudit "finitefield.org/hanko-admin/internal/admin/auditlogs"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	auditlogstpl "finitefield.org/hanko-admin/internal/admin/templates/auditlogs"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -22,6 +22,38 @@ const (
 type auditLogsRequest struct {
 	query adminaudit.ListQuery
 	state auditlogstpl.QueryState
+}
+
+func toAuditLogsTableView(table auditlogstpl.TableData) webtmpl.AuditLogsTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Label:         table.Pagination.Label,
+		Attrs:         attrs,
+	}
+	return webtmpl.AuditLogsTableView{
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 // AuditLogsPage renders the audit log index page.
@@ -43,7 +75,20 @@ func (h *Handlers) AuditLogsPage(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := auditlogstpl.BuildPageData(basePath, req.state, result)
-	templ.Handler(auditlogstpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "auditlogs/content"
+	view := webtmpl.AuditLogsPageView{
+		BaseView: base,
+		Page:     data,
+		Table:    toAuditLogsTableView(data.Table),
+	}
+	if err := dashboardTemplates.Render(w, "auditlogs/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // AuditLogsTable renders the table fragment for htmx requests.
@@ -65,7 +110,10 @@ func (h *Handlers) AuditLogsTable(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	table := auditlogstpl.TablePayload(basePath, req.state, result, "")
-	templ.Handler(auditlogstpl.Table(table)).ServeHTTP(w, r)
+	view := toAuditLogsTableView(table)
+	if err := dashboardTemplates.Render(w, "auditlogs/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // AuditLogsExport streams a CSV export for the current filter set.

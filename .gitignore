@@ -33,3 +33,5 @@ coverage*.out
 
 test_unused
 test_unused_var
+
+.gocache/

@@ -1,0 +1,163 @@
+{{define "orders/refund-modal"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="返金を登録" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">返金を登録</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      <div class="space-y-6 text-sm text-slate-700">
+        <form
+          hx-post="{{.ActionURL}}"
+          hx-target="#modal"
+          hx-swap="innerHTML"
+          class="space-y-4"
+        >
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
+          <div class="space-y-1">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">注文番号</p>
+            <p class="text-lg font-semibold text-slate-900">#{{.OrderNumber}}</p>
+            {{if .CustomerName}}
+              <p class="text-xs text-slate-500">{{.CustomerName}}</p>
+            {{end}}
+            <p class="text-xs text-slate-500">
+              合計 {{.Total}}
+              {{if .PaymentStatus}}
+                <span class="ml-2 inline-flex items-center gap-1">
+                  <span class="{{badgeClass .PaymentTone}}">{{.PaymentStatus}}</span>
+                </span>
+              {{end}}
+            </p>
+            {{if .Outstanding}}
+              <p class="text-xs text-amber-600">未処理: {{.Outstanding}}</p>
+            {{end}}
+          </div>
+          <div class="space-y-2">
+            <label for="refund-payment" class="text-xs font-semibold uppercase tracking-wide text-slate-500">支払い</label>
+            <select
+              id="refund-payment"
+              name="paymentID"
+              class="{{.PaymentClass}}"
+              required
+            >
+              {{if eq (len .Payments) 0}}
+                <option value="">返金可能な支払いがありません</option>
+              {{else}}
+                {{range $option := .Payments}}
+                  <option value="{{$option.ID}}" {{if $option.Selected}}selected{{end}} {{if $option.Disabled}}disabled{{end}}>
+                    {{$option.Label}}
+                  </option>
+                {{end}}
+              {{end}}
+            </select>
+            {{with index .FieldErrors "paymentID"}}
+              <p class="text-xs text-rose-600">{{.}}</p>
+            {{else}}
+              <p class="text-xs text-slate-500">返金する決済を選択してください。</p>
+            {{end}}
+          </div>
+          <div class="space-y-2">
+            <label for="refund-amount" class="text-xs font-semibold uppercase tracking-wide text-slate-500">金額 ({{.Currency}})</label>
+            <input
+              id="refund-amount"
+              name="amount"
+              type="text"
+              inputmode="decimal"
+              placeholder="例) 12000"
+              value="{{.AmountInput}}"
+              class="{{.AmountClass}}"
+              required
+            />
+            {{if .SupportsPartial}}
+              <p class="text-xs text-slate-500">部分返金に対応しています。返金可能額を超えないよう入力してください。</p>
+            {{else}}
+              <p class="text-xs text-slate-500">全額返金のみ対応しています。</p>
+            {{end}}
+            {{with index .FieldErrors "amount"}}
+              <p class="text-xs text-rose-600">{{.}}</p>
+            {{end}}
+          </div>
+          <div class="space-y-2">
+            <label for="refund-reason" class="text-xs font-semibold uppercase tracking-wide text-slate-500">理由</label>
+            <textarea
+              id="refund-reason"
+              name="reason"
+              rows="3"
+              class="{{.ReasonClass}}"
+              placeholder="例) サイズ違いによる返品"
+              required
+            >{{.Reason}}</textarea>
+            {{with index .FieldErrors "reason"}}
+              <p class="text-xs text-rose-600">{{.}}</p>
+            {{else}}
+              <p class="text-xs text-slate-500">顧客や会計チームに共有する概要を記録します。</p>
+            {{end}}
+          </div>
+          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="notifyCustomer" value="true" {{if .NotifyCustomer}}checked{{end}} class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            <span>顧客に返金通知メールを送信する</span>
+          </label>
+          {{if .Error}}
+            <p class="text-sm text-rose-600">{{.Error}}</p>
+          {{end}}
+          <button type="submit" class="{{buttonClass "primary" "md" true false}}">返金を登録</button>
+        </form>
+
+        {{if gt (len .Payments) 0}}
+          <div class="space-y-3">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">支払いの内訳</h3>
+            <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200">
+              {{range $option := .Payments}}
+                <li class="space-y-2 p-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="font-medium text-slate-800">{{$option.Label}}</p>
+                    <span class="{{badgeClass $option.StatusTone}}">{{$option.Status}}</span>
+                  </div>
+                  {{if $option.Caption}}
+                    <p class="text-xs text-slate-500">{{$option.Caption}}</p>
+                  {{end}}
+                  <p class="text-xs text-slate-500">売上: {{$option.Captured}} / 返金済み: {{$option.Refunded}}</p>
+                  <p class="text-xs font-semibold text-slate-600">返金可能額: {{$option.Available}}</p>
+                </li>
+              {{end}}
+            </ul>
+          </div>
+        {{end}}
+
+        {{if gt (len .Refunds) 0}}
+          <div class="space-y-3">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">最近の返金</h3>
+            <ul class="space-y-2">
+              {{range $refund := .Refunds}}
+                <li class="space-y-1 rounded-lg border border-slate-200 p-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="font-medium text-slate-800">{{$refund.Amount}}</p>
+                    <span class="{{badgeClass $refund.StatusTone}}">{{$refund.Status}}</span>
+                  </div>
+                  {{if $refund.Reason}}
+                    <p class="text-sm text-slate-600">{{$refund.Reason}}</p>
+                  {{end}}
+                  <p class="text-xs text-slate-400">{{$refund.Processed}} ({{$refund.Relative}})</p>
+                  {{if $refund.Actor}}
+                    <p class="text-xs text-slate-500">担当: {{$refund.Actor}}</p>
+                  {{end}}
+                  {{if $refund.Reference}}
+                    <p class="text-xs text-slate-500">ID: {{$refund.Reference}}</p>
+                  {{end}}
+                </li>
+              {{end}}
+            </ul>
+          </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

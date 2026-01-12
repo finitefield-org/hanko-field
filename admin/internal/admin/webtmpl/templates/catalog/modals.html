@@ -1,0 +1,273 @@
+{{define "catalog/upsert-modal"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{.Data.Title}}" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">{{.Data.Title}}</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      {{template "catalog/upsert-modal-body" .}}
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "catalog/upsert-modal-body"}}
+{{$data := .Data}}
+{{$inputClass := "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"}}
+<form
+  class="space-y-6 text-sm text-slate-700"
+  hx-target="#modal"
+  hx-swap="innerHTML"
+  {{if eq $data.Method "PUT"}}
+    hx-put="{{$data.ActionURL}}"
+  {{else}}
+    hx-post="{{$data.ActionURL}}"
+  {{end}}
+>
+  {{range $hidden := $data.HiddenFields}}
+    <input type="hidden" name="{{$hidden.Name}}" value="{{$hidden.Value}}" />
+  {{end}}
+  {{if $data.Description}}
+    <p class="text-sm text-slate-600">{{$data.Description}}</p>
+  {{end}}
+  {{if $data.Error}}
+    <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{$data.Error}}</div>
+  {{end}}
+  {{range $section := $data.Sections}}
+    {{template "catalog/modal-section" (dict "Section" $section "InputClass" $inputClass "BasePath" $.BasePath)}}
+  {{end}}
+  <div class="flex flex-col gap-2 pt-2">
+    <button type="submit" class="{{buttonClass (catalogModalTone $data.SubmitTone) "md" true false}}">{{$data.SubmitLabel}}</button>
+    <p class="text-xs text-slate-500">送信後に一覧が自動更新されます。</p>
+  </div>
+</form>
+{{end}}
+
+{{define "catalog/modal-section"}}
+{{$section := .Section}}
+<section class="space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-xs">
+  <div>
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{$section.Title}}</p>
+    {{if $section.Description}}
+      <p class="text-xs text-slate-500">{{$section.Description}}</p>
+    {{end}}
+  </div>
+  <div class="grid gap-4 md:grid-cols-2">
+    {{range $field := $section.Fields}}
+      <div class="{{catalogFieldContainerClass $field.FullWidth}}">
+        {{template "catalog/modal-field" (dict "Field" $field "InputClass" $.InputClass "BasePath" $.BasePath)}}
+      </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "catalog/modal-field"}}
+{{$field := .Field}}
+<label class="flex flex-col gap-1 text-sm text-slate-600">
+  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    {{$field.Label}}
+    {{if $field.Required}}<span class="ml-1 text-rose-500">*</span>{{end}}
+  </span>
+  {{template "catalog/modal-input" .}}
+</label>
+{{if $field.Hint}}
+  <p class="text-xs text-slate-500">{{$field.Hint}}</p>
+{{end}}
+{{if $field.Error}}
+  <p class="text-xs text-rose-600">{{$field.Error}}</p>
+{{end}}
+{{end}}
+
+{{define "catalog/modal-input"}}
+{{$field := .Field}}
+{{if or $field.Prefix $field.Suffix}}
+  <div class="flex items-center gap-2">
+    {{if $field.Prefix}}<span class="text-xs text-slate-500">{{$field.Prefix}}</span>{{end}}
+    {{template "catalog/modal-control" .}}
+    {{if $field.Suffix}}<span class="text-xs text-slate-500">{{$field.Suffix}}</span>{{end}}
+  </div>
+{{else}}
+  {{template "catalog/modal-control" .}}
+{{end}}
+{{end}}
+
+{{define "catalog/modal-control"}}
+{{$field := .Field}}
+{{$inputClass := .InputClass}}
+{{if eq $field.Type "textarea"}}
+  <textarea
+    name="{{$field.Name}}"
+    class="{{$inputClass}}"
+    rows="{{textareaRows $field.Rows}}"
+    placeholder="{{$field.Placeholder}}"
+    {{if $field.Required}}required{{end}}
+    {{if $field.Autocomplete}}autocomplete="{{$field.Autocomplete}}"{{end}}
+    {{if $field.InputMode}}inputmode="{{$field.InputMode}}"{{end}}
+  >{{$field.Value}}</textarea>
+{{else if eq $field.Type "select"}}
+  <select
+    name="{{$field.Name}}"
+    class="{{$inputClass}}"
+    {{if $field.Required}}required{{end}}
+  >
+    {{if not $field.Required}}
+      <option value="">選択してください</option>
+    {{end}}
+    {{range $option := $field.Options}}
+      <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>{{$option.Label}}</option>
+    {{end}}
+  </select>
+{{else if eq $field.Type "asset"}}
+  {{template "catalog/asset-upload" (dict "Field" $field "InputClass" $inputClass "BasePath" $.BasePath)}}
+{{else}}
+  <input
+    name="{{$field.Name}}"
+    class="{{$inputClass}}"
+    type="{{catalogInputType $field.Type}}"
+    value="{{$field.Value}}"
+    placeholder="{{$field.Placeholder}}"
+    {{if $field.Required}}required{{end}}
+    {{if $field.Autocomplete}}autocomplete="{{$field.Autocomplete}}"{{end}}
+    {{if $field.InputMode}}inputmode="{{$field.InputMode}}"{{end}}
+  />
+{{end}}
+{{end}}
+
+{{define "catalog/asset-upload"}}
+{{$field := .Field}}
+{{$asset := $field.Asset}}
+{{if not $asset}}
+  <div class="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">アップロード設定が見つかりません。</div>
+{{else}}
+  {{$hasAsset := catalogAssetHasValue $asset}}
+  <div
+    class="space-y-3"
+    data-asset-upload
+    data-has-value="{{catalogBoolString $hasAsset}}"
+    data-label-empty="{{$asset.EmptyLabel}}"
+    data-label-upload="{{$asset.UploadLabel}}"
+    data-label-replace="{{$asset.ReplaceLabel}}"
+    data-label-remove="{{$asset.RemoveLabel}}"
+    data-upload-endpoint="{{joinBase $.BasePath "/assets/signed-upload"}}"
+    {{if $asset.Purpose}}data-purpose="{{$asset.Purpose}}"{{end}}
+    {{if $asset.Kind}}data-kind="{{$asset.Kind}}"{{end}}
+    {{if $asset.Accept}}data-accept="{{$asset.Accept}}"{{end}}
+    {{if gt $asset.MaxSizeBytes 0}}data-max-size="{{$asset.MaxSizeBytes}}"{{end}}
+    data-preview-enabled="{{catalogBoolString $asset.DisplayPreview}}"
+  >
+    <input type="hidden" name="{{$asset.AssetIDName}}" value="{{$asset.AssetID}}" data-asset-upload-field="id" />
+    <input type="hidden" name="{{$field.Name}}" value="{{$asset.URLFieldValue}}" data-asset-upload-field="url" />
+    {{if $asset.FileNameName}}
+      <input type="hidden" name="{{$asset.FileNameName}}" value="{{$asset.FileName}}" data-asset-upload-field="name" />
+    {{end}}
+    <div class="flex items-start gap-4">
+      <div class="{{catalogAssetPreviewClass $asset.DisplayPreview $hasAsset}}" data-asset-upload-preview>
+        {{if $asset.DisplayPreview}}
+          {{if and $hasAsset $asset.AssetURL}}
+            <img src="{{$asset.AssetURL}}" alt="{{catalogCoalesceLabel $field.Label "プレビュー"}}" class="h-full w-full rounded-lg object-cover" />
+          {{else}}
+            <div class="flex h-full w-full items-center justify-center text-[11px] text-slate-400">{{$asset.EmptyLabel}}</div>
+          {{end}}
+        {{else}}
+          <div class="flex h-full w-full items-center justify-center text-[11px] text-slate-500" data-asset-upload-placeholder>{{catalogAssetFileLabel $asset $hasAsset}}</div>
+        {{end}}
+      </div>
+      <div class="flex flex-1 flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" class="{{buttonClass "secondary" "sm" false false}}" data-asset-upload-action="select">{{catalogAssetTriggerLabel $asset $hasAsset}}</button>
+          <button type="button" class="{{buttonClass "ghost" "sm" false false}}" data-asset-upload-action="remove" {{if not $hasAsset}}hidden{{end}}>{{$asset.RemoveLabel}}</button>
+        </div>
+        <input type="file" class="hidden" accept="{{$asset.Accept}}" data-asset-upload-input />
+        <p class="text-xs text-slate-500" data-asset-upload-filename>{{catalogAssetFileLabel $asset $hasAsset}}</p>
+        {{if gt $asset.MaxSizeBytes 0}}
+          <p class="text-[11px] text-slate-400">最大 {{catalogFormatFileSize $asset.MaxSizeBytes}}</p>
+        {{end}}
+      </div>
+    </div>
+  </div>
+{{end}}
+{{end}}
+
+{{define "catalog/delete-modal"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{.Data.Title}}" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">{{.Data.Title}}</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      {{template "catalog/delete-modal-body" .}}
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "catalog/delete-modal-body"}}
+{{$data := .Data}}
+<form
+  class="space-y-6 text-sm text-slate-700"
+  hx-target="#modal"
+  hx-swap="innerHTML"
+  {{if eq $data.Method "DELETE"}}
+    hx-delete="{{$data.ActionURL}}"
+  {{else}}
+    hx-post="{{$data.ActionURL}}"
+  {{end}}
+>
+  {{range $hidden := $data.HiddenFields}}
+    <input type="hidden" name="{{$hidden.Name}}" value="{{$hidden.Value}}" />
+  {{end}}
+  <p class="text-sm text-slate-600">{{$data.Description}}</p>
+  <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+    <p class="text-xs text-slate-500">{{$data.KindLabel}} · {{$data.ItemIdentifier}}</p>
+    <p class="text-base font-semibold text-slate-900">{{$data.ItemName}}</p>
+  </div>
+  {{if gt (len $data.Metadata) 0}}
+    <div class="grid gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm text-slate-600">
+      {{range $meta := $data.Metadata}}
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs text-slate-500">{{$meta.Key}}</span>
+          <span class="font-medium text-slate-900">{{$meta.Value}}</span>
+        </div>
+      {{end}}
+    </div>
+  {{end}}
+  {{if gt (len $data.Dependencies) 0}}
+    <div class="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">依存関係</p>
+      {{range $dep := $data.Dependencies}}
+        <div class="flex items-center justify-between text-sm">
+          <span>{{$dep.Label}}</span>
+          <span class="{{badgeClass $dep.Tone}}">{{$dep.Status}}</span>
+        </div>
+      {{end}}
+    </div>
+  {{end}}
+  <div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+    {{catalogCoalesceWarning $data.Warning}}
+  </div>
+  {{if $data.Error}}
+    <div class="rounded-md border border-rose-200 bg-white px-3 py-2 text-sm text-rose-700">{{$data.Error}}</div>
+  {{end}}
+  <div class="flex flex-col gap-3 pt-2">
+    <button type="submit" class="{{buttonClass (catalogModalTone $data.SubmitTone) "md" true false}}">{{$data.SubmitLabel}}</button>
+    <button type="button" class="{{buttonClass "ghost" "md" true false}}" data-modal-close>キャンセル</button>
+  </div>
+</form>
+{{end}}

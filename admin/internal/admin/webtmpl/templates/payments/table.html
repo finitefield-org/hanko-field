@@ -1,0 +1,131 @@
+{{define "payments/table"}}
+{{$table := .Table}}
+<div
+  id="payments-transactions-table"
+  class="space-y-4"
+  data-payments-transactions-table
+  hx-target="this"
+  hx-swap="outerHTML"
+  hx-trigger="refresh from:body"
+  hx-get="{{buildURL $table.FragmentPath $table.RawQuery}}"
+>
+  {{if $table.Error}}
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      {{$table.Error}}
+    </div>
+  {{else if eq (len $table.Rows) 0}}
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500 shadow-sm">
+      {{paymentsFallback $table.EmptyMessage "表示できるトランザクションがありません。"}}
+    </div>
+  {{else}}
+    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th scope="col" class="w-10 px-4 py-3">
+              <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" aria-label="全て選択" />
+            </th>
+            <th scope="col" class="px-4 py-3">トランザクション</th>
+            <th scope="col" class="px-4 py-3">注文</th>
+            <th scope="col" class="px-4 py-3">プロバイダー</th>
+            <th scope="col" class="px-4 py-3 text-right">金額</th>
+            <th scope="col" class="px-4 py-3">ステータス</th>
+            <th scope="col" class="px-4 py-3 text-right">決済日時</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-sm">
+          {{range $row := $table.Rows}}
+            <tr
+              class="{{paymentsRowClass (eq $table.SelectedID $row.ID)}}"
+              data-transaction-id="{{$row.ID}}"
+              hx-get="{{$row.DrawerURL}}"
+              hx-target="#payments-transaction-drawer"
+              hx-trigger="click"
+              hx-swap="innerHTML"
+            >
+              <td class="px-4 py-4 align-top">
+                {{if $row.Selectable}}
+                  <input
+                    type="checkbox"
+                    name="{{$row.InputName}}"
+                    value="{{$row.ID}}"
+                    class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    {{if $row.Selected}}checked{{end}}
+                  />
+                {{end}}
+              </td>
+              <td class="w-[220px] px-4 py-4 align-top">
+                <div class="flex flex-col gap-1">
+                  <span class="font-mono text-sm text-slate-900">{{$row.DisplayID}}</span>
+                  {{if $row.RiskLabel}}
+                    <span class="{{paymentsRiskBadgeClass $row.RiskTone}}">{{$row.RiskLabel}}</span>
+                  {{end}}
+                  <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <span>{{$row.Channel}}</span>
+                    {{if $row.PaymentMethod}}
+                      <span>· {{$row.PaymentMethod}}</span>
+                    {{end}}
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <div class="flex flex-col">
+                  <a href="{{$row.OrderURL}}" class="text-sm font-semibold text-brand-600 hover:text-brand-700">
+                    {{$row.OrderNumber}}
+                  </a>
+                  <span class="text-xs text-slate-500">{{$row.CustomerName}}</span>
+                </div>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <div class="flex items-center gap-2 text-sm text-slate-700">
+                  {{if $row.ProviderIcon}}
+                    <span aria-hidden="true">{{$row.ProviderIcon}}</span>
+                  {{end}}
+                  <span>{{$row.ProviderLabel}}</span>
+                </div>
+                <p class="text-xs text-slate-400">PSP: {{$row.PSPReference}}</p>
+              </td>
+              <td class="px-4 py-4 align-top text-right">
+                <div class="text-sm font-semibold text-slate-900">{{$row.AmountLabel}}</div>
+                <p class="text-xs text-slate-500">Net {{$row.NetLabel}}</p>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+                {{if $row.PayoutBatch}}
+                  <p class="mt-1 text-xs text-slate-500">Payout {{$row.PayoutBatch}}</p>
+                {{end}}
+              </td>
+              <td class="px-4 py-4 align-top text-right text-sm text-slate-600">
+                <div>{{$row.CapturedAtLabel}}</div>
+                <div class="text-xs text-slate-400">{{$row.CapturedRelative}}</div>
+                {{if gt (len $row.Actions) 0}}
+                  <div class="mt-2 flex justify-end gap-2">
+                    {{range $action := $row.Actions}}
+                      <a
+                        href="{{$action.URL}}"
+                        class="{{buttonClass "ghost" "xs" false false}}"
+                        {{if $action.NewTab}}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        {{end}}
+                      >
+                        {{if $action.Icon}}
+                          <span aria-hidden="true">{{$action.Icon}}</span>
+                        {{end}}
+                        {{$action.Label}}
+                      </a>
+                    {{end}}
+                  </div>
+                {{end}}
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="pb-4">
+      {{template "components/pagination" (dict "Props" .Pagination)}}
+    </div>
+  {{end}}
+</div>
+{{end}}

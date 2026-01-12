@@ -2,12 +2,9 @@ package helpers
 
 import (
 	"context"
-	"io"
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/a-h/templ"
 
 	"finitefield.org/hanko-admin/internal/admin/i18n"
 )
@@ -259,33 +256,12 @@ func ClassList(classes ...string) string {
 	return strings.Join(result, " ")
 }
 
-// TextComponent returns a templ component that renders plain text.
-func TextComponent(value string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		_, err := io.WriteString(w, value)
-		return err
-	})
-}
-
 // MinInt returns the smaller of two integers.
 func MinInt(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
-}
-
-// TableRows converts [][]string to [][]templ.Component for tables.
-func TableRows(rows [][]string) [][]templ.Component {
-	result := make([][]templ.Component, 0, len(rows))
-	for _, row := range rows {
-		cells := make([]templ.Component, 0, len(row))
-		for _, col := range row {
-			cells = append(cells, TextComponent(col))
-		}
-		result = append(result, cells)
-	}
-	return result
 }
 
 // SetRawQuery returns a new raw query string with the provided key set to the supplied value.

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
@@ -19,6 +18,7 @@ import (
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	promotionstpl "finitefield.org/hanko-admin/internal/admin/templates/promotions"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -29,6 +29,38 @@ const (
 type promotionsRequest struct {
 	state promotionstpl.QueryState
 	query adminpromotions.ListQuery
+}
+
+func toPromotionsTableView(table promotionstpl.TableData) webtmpl.PromotionsTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Label:         table.Pagination.Label,
+		Attrs:         attrs,
+	}
+	return webtmpl.PromotionsTableView{
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 // PromotionsPage renders the promotions index page.
@@ -76,7 +108,21 @@ func (h *Handlers) PromotionsPage(w http.ResponseWriter, r *http.Request) {
 
 	data := promotionstpl.BuildPageData(basePath, req.state, result, table, toolbar, drawer)
 
-	templ.Handler(promotionstpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "promotions/content"
+	view := webtmpl.PromotionsPageView{
+		BaseView: base,
+		Page:     data,
+		Table:    toPromotionsTableView(table),
+		Drawer:   drawer,
+	}
+	if err := dashboardTemplates.Render(w, "promotions/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsTable renders the promotions table fragment.
@@ -111,7 +157,10 @@ func (h *Handlers) PromotionsTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(promotionstpl.Table(table)).ServeHTTP(w, r)
+	view := toPromotionsTableView(table)
+	if err := dashboardTemplates.Render(w, "promotions/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsDrawer renders the detail drawer fragment for a specific promotion.
@@ -144,7 +193,9 @@ func (h *Handlers) PromotionsDrawer(w http.ResponseWriter, r *http.Request) {
 	basePath := custommw.BasePathFromContext(ctx)
 	payload.EditURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/edit?promotionID=%s", url.QueryEscape(detail.Promotion.ID)))
 	payload.ValidateURL = joinBasePath(basePath, fmt.Sprintf("/promotions/modal/validate?promotionID=%s", url.QueryEscape(detail.Promotion.ID)))
-	templ.Handler(promotionstpl.Drawer(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/drawer", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsBulkStatus handles bulk status actions.
@@ -213,7 +264,9 @@ func (h *Handlers) PromotionsNewModal(w http.ResponseWriter, r *http.Request) {
 	action := joinBasePath(basePath, "/promotions")
 	data := buildPromotionModal(promotionModalModeNew, state, nil, "", action, http.MethodPost, csrf)
 
-	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsEditModal renders the edit modal for a promotion.
@@ -248,7 +301,9 @@ func (h *Handlers) PromotionsEditModal(w http.ResponseWriter, r *http.Request) {
 	action := joinBasePath(basePath, fmt.Sprintf("/promotions/%s", url.PathEscape(promotionID)))
 	data := buildPromotionModal(promotionModalModeEdit, state, nil, "", action, http.MethodPut, csrf)
 
-	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsValidateModal renders the dry-run validation modal for a promotion.
@@ -282,7 +337,9 @@ func (h *Handlers) PromotionsValidateModal(w http.ResponseWriter, r *http.Reques
 	basePath := custommw.BasePathFromContext(ctx)
 	data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, "", nil)
 
-	templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/validation-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsValidateSubmit handles dry-run validation submissions.
@@ -322,7 +379,9 @@ func (h *Handlers) PromotionsValidateSubmit(w http.ResponseWriter, r *http.Reque
 
 	if len(fieldErrors) > 0 || strings.TrimSpace(generalErr) != "" {
 		data := buildPromotionValidationModal(basePath, detail, csrf, state, fieldErrors, generalErr, nil)
-		templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "promotions/validation-modal", data); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -331,7 +390,9 @@ func (h *Handlers) PromotionsValidateSubmit(w http.ResponseWriter, r *http.Reque
 		log.Printf("promotions: dry-run validate failed: %v", err)
 		message := "検証に失敗しました。時間を置いて再度お試しください。"
 		data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, message, nil)
-		templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "promotions/validation-modal", data); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -339,7 +400,9 @@ func (h *Handlers) PromotionsValidateSubmit(w http.ResponseWriter, r *http.Reque
 	state.Currency = req.Currency
 	data := buildPromotionValidationModal(basePath, detail, csrf, state, nil, "", &result)
 
-	templ.Handler(promotionstpl.ValidationModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/validation-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PromotionsCreate handles creation submissions.
@@ -423,7 +486,9 @@ func reRenderPromotionModal(w http.ResponseWriter, r *http.Request, mode promoti
 		action = joinBasePath(basePath, fmt.Sprintf("/promotions/%s", url.PathEscape(strings.TrimSpace(promotionID))))
 	}
 	data := buildPromotionModal(mode, state, fieldErrors, generalErr, action, method, csrf)
-	templ.Handler(promotionstpl.Modal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "promotions/modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func handlePromotionMutationError(w http.ResponseWriter, r *http.Request, mode promotionModalMode, promotionID string, input adminpromotions.PromotionInput, state promotionFormState, err error) {
@@ -644,7 +709,7 @@ func promotionsToolbarProps(basePath string, selectedCount, total int) component
 			buttonAction("削除", "選択したプロモーションを削除します", "delete", "danger"),
 		},
 	}
-	props.Attrs = templ.Attributes{
+	props.Attrs = map[string]string{
 		"data-promotions-bulk-toolbar": "true",
 		"data-initial-count":           strconv.Itoa(selectedCount),
 		"data-bulk-endpoint":           joinBasePath(basePath, "/promotions/bulk/status"),
@@ -656,7 +721,7 @@ func promotionsToolbarProps(basePath string, selectedCount, total int) component
 			Variant: "ghost",
 			Size:    "sm",
 			Type:    "button",
-			Attrs: templ.Attributes{
+			Attrs: map[string]string{
 				"data-promotions-clear-selection": "true",
 			},
 		},
@@ -672,7 +737,7 @@ func buttonAction(label, description, action, variant string) components.BulkToo
 			Variant: variant,
 			Size:    "sm",
 			Type:    "button",
-			Attrs: templ.Attributes{
+			Attrs: map[string]string{
 				"data-promotions-bulk-action": action,
 			},
 		},

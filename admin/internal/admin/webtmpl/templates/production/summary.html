@@ -1,0 +1,274 @@
+{{define "production/summary-index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "production/summary-content"}}
+<div class="space-y-6" data-production-wip-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{.Page.Title}}</h1>
+        {{if .Page.Description}}
+          <p class="text-sm text-slate-600">{{.Page.Description}}</p>
+        {{end}}
+      </div>
+      <div class="flex flex-col items-end gap-1 text-xs text-slate-400">
+        {{if .Page.GeneratedLabel}}<span>{{.Page.GeneratedLabel}}</span>{{end}}
+        {{if .Page.RefreshLabel}}<span>{{.Page.RefreshLabel}}</span>{{end}}
+      </div>
+    </div>
+    {{if .Page.Error}}
+      <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{.Page.Error}}</div>
+    {{end}}
+    {{if gt (len .Page.SummaryChips) 0}}
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {{range .Page.SummaryChips}}
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+            <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span>{{.Label}}</span>
+              {{if .Icon}}<span aria-hidden="true">{{.Icon}}</span>{{end}}
+            </div>
+            <div class="mt-2 text-2xl font-semibold text-slate-900">{{.Value}}</div>
+            {{if .SubText}}<div class="text-xs text-slate-500">{{.SubText}}</div>{{end}}
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+  </section>
+
+  {{if gt (len .Page.Alerts) 0}}
+    <section class="space-y-3">
+      {{range .Page.Alerts}}
+        <div class="{{productionSummaryAlertClass .Tone}}">
+          <div>
+            <p class="text-sm font-semibold text-white">{{.Title}}</p>
+            {{if .Message}}<p class="mt-1 text-sm text-white/90">{{.Message}}</p>{{end}}
+          </div>
+          {{if and .ActionURL .ActionLabel}}
+            <a
+              href="{{.ActionURL}}"
+              class="{{classList (buttonClass "ghost" "sm" false false) "border border-white/60 text-white hover:bg-white/10"}}"
+            >
+              {{.ActionLabel}}
+            </a>
+          {{end}}
+        </div>
+      {{end}}
+    </section>
+  {{end}}
+
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    {{template "production/summary-filter-toolbar" .Page}}
+  </section>
+
+  {{if gt (len .Page.QueueCards) 0}}
+    <section class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      {{range .Page.QueueCards}}
+        <article class="{{productionSummaryCardClass .Tone}}">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900">{{.Title}}</h2>
+            {{if .Subtitle}}<p class="text-sm text-slate-500">{{.Subtitle}}</p>{{end}}
+            {{if .Meta}}<p class="mt-1 text-xs text-slate-400">{{.Meta}}</p>{{end}}
+          </div>
+          {{if gt (len .Metrics) 0}}
+            <dl class="mt-4 grid gap-2 text-sm">
+              {{range .Metrics}}
+                <div class="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2">
+                  <dt class="text-slate-500">{{.Label}}</dt>
+                  <dd class="{{productionSummaryMetricTone .Tone}}">{{.Value}}</dd>
+                </div>
+              {{end}}
+            </dl>
+          {{end}}
+          {{if .LinkURL}}
+            <div class="mt-4">
+              <a href="{{.LinkURL}}" class="{{buttonClass "ghost" "sm" false false}}">ボードを開く</a>
+            </div>
+          {{end}}
+        </article>
+      {{end}}
+    </section>
+  {{end}}
+
+  {{if gt (len .Page.Trend.Bars) 0}}
+    <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">ステージ別WIP</h2>
+        {{if .Page.Trend.Caption}}<span class="text-xs text-slate-400">{{.Page.Trend.Caption}}</span>{{end}}
+      </div>
+      <div class="mt-4 space-y-4">
+        {{range .Page.Trend.Bars}}
+          <div>
+            <div class="flex items-center justify-between text-sm font-medium text-slate-600">
+              <span>{{.Label}}</span>
+              <span>{{.Count}} / {{.Capacity}}</span>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div class="{{productionSummaryBarClass .Percent}}" style="{{printf "width:%d%%" .Percent}}"></div>
+            </div>
+            {{if .SLALabel}}
+              <div class="mt-1 text-xs text-slate-400">{{.SLALabel}}</div>
+            {{end}}
+          </div>
+        {{end}}
+      </div>
+    </section>
+  {{end}}
+
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    {{template "production/summary-table" .Page.Table}}
+  </section>
+</div>
+{{end}}
+
+{{define "production/summary-filter-toolbar"}}
+<form
+  class="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+  method="get"
+  action="{{.Filters.Endpoint}}"
+>
+  <div class="flex flex-col gap-2">
+    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="summary-filter-facility">拠点</label>
+    <select
+      id="summary-filter-facility"
+      name="facility"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      <option value="">すべて</option>
+      {{range .Filters.Facilities}}
+        <option value="{{.Value}}" {{if .Active}}selected{{end}}>
+          {{if gt .Count 0}}
+            {{.Label}} ({{.Count}})
+          {{else}}
+            {{.Label}}
+          {{end}}
+        </option>
+      {{end}}
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="summary-filter-shift">シフト</label>
+    <select
+      id="summary-filter-shift"
+      name="shift"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      <option value="">すべて</option>
+      {{range .Filters.Shifts}}
+        <option value="{{.Value}}" {{if .Active}}selected{{end}}>
+          {{if gt .Count 0}}
+            {{.Label}} ({{.Count}})
+          {{else}}
+            {{.Label}}
+          {{end}}
+        </option>
+      {{end}}
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="summary-filter-type">キュータイプ</label>
+    <select
+      id="summary-filter-type"
+      name="queue_type"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      <option value="">すべて</option>
+      {{range .Filters.QueueTypes}}
+        <option value="{{.Value}}" {{if .Active}}selected{{end}}>
+          {{if gt .Count 0}}
+            {{.Label}} ({{.Count}})
+          {{else}}
+            {{.Label}}
+          {{end}}
+        </option>
+      {{end}}
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="summary-filter-window">期間</label>
+    <select
+      id="summary-filter-window"
+      name="window"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      {{range .Filters.DateRanges}}
+        <option value="{{.Value}}" {{if .Active}}selected{{end}}>{{.Label}}</option>
+      {{end}}
+    </select>
+  </div>
+
+  <div class="md:col-span-2 xl:col-span-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      <a href="{{.Filters.ResetURL}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+      {{if .Filters.HasActive}}
+        <span class="text-xs text-slate-400">フィルター適用中</span>
+      {{end}}
+    </div>
+  </div>
+</form>
+{{end}}
+
+{{define "production/summary-table"}}
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+      <tr>
+        <th scope="col" class="px-4 py-3 text-left">キュー</th>
+        <th scope="col" class="px-4 py-3 text-left">WIP</th>
+        <th scope="col" class="px-4 py-3 text-left">容量</th>
+        <th scope="col" class="px-4 py-3 text-left">使用率</th>
+        <th scope="col" class="px-4 py-3 text-left">SLA逸脱</th>
+        <th scope="col" class="px-4 py-3 text-left">平均経過</th>
+        <th scope="col" class="px-4 py-3 text-left">ステージ内訳</th>
+        <th scope="col" class="px-4 py-3 text-right">操作</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {{if eq (len .Rows) 0}}
+        <tr>
+          <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-500">{{.EmptyMessage}}</td>
+        </tr>
+      {{else}}
+        {{range .Rows}}
+          <tr class="{{productionSummaryRowClass .Tone}}">
+            <td class="px-4 py-4">
+              <div class="font-semibold text-slate-900">{{.QueueName}}</div>
+              {{if .Meta}}<div class="text-xs text-slate-500">{{.Meta}}</div>{{end}}
+              {{if .QueueType}}<div class="text-xs text-slate-400">{{.QueueType}}</div>{{end}}
+            </td>
+            <td class="px-4 py-4">{{.WIP}}</td>
+            <td class="px-4 py-4">{{.Capacity}}</td>
+            <td class="px-4 py-4">{{.Utilisation}}</td>
+            <td class="px-4 py-4">{{.SLABreaches}}</td>
+            <td class="px-4 py-4">{{.AverageAge}}</td>
+            <td class="px-4 py-4 text-sm text-slate-500">{{.StageSummary}}</td>
+            <td class="px-4 py-4 text-right">
+              {{if .ActionURL}}
+                <a href="{{.ActionURL}}" class="{{buttonClass "ghost" "sm" false false}}">ボード</a>
+              {{end}}
+            </td>
+          </tr>
+        {{end}}
+      {{end}}
+    </tbody>
+    {{if gt (len .Rows) 0}}
+      <tfoot class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <td class="px-4 py-3 text-left">合計</td>
+          <td class="px-4 py-3 text-left">{{.Totals.WIP}}</td>
+          <td class="px-4 py-3 text-left">{{.Totals.Capacity}}</td>
+          <td class="px-4 py-3 text-left">{{.Totals.Utilisation}}</td>
+          <td class="px-4 py-3 text-left">{{.Totals.SLABreaches}}</td>
+          <td class="px-4 py-3 text-left">-</td>
+          <td class="px-4 py-3 text-left">-</td>
+          <td class="px-4 py-3"></td>
+        </tr>
+      </tfoot>
+    {{end}}
+  </table>
+</div>
+{{end}}

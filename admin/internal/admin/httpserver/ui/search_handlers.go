@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminsearch "finitefield.org/hanko-admin/internal/admin/search"
 	searchtpl "finitefield.org/hanko-admin/internal/admin/templates/search"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // SearchPage renders the global search page with the initial results.
@@ -35,8 +34,22 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 
 	table := searchtpl.TablePayload(params.state, result, errMsg)
 	payload := searchtpl.BuildPageData(custommw.BasePathFromContext(ctx), params.state, table)
-
-	templ.Handler(searchtpl.Index(payload)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(payload.Breadcrumbs))
+	for _, crumb := range payload.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, payload.Title, crumbs)
+	base.ContentTemplate = "search/content"
+	view := webtmpl.SearchPageView{
+		BaseView: base,
+		Page:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "search/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SearchTable renders the result table fragment for htmx requests.
@@ -58,13 +71,17 @@ func (h *Handlers) SearchTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	table := searchtpl.TablePayload(params.state, result, errMsg)
-	component := searchtpl.Table(table)
 
 	if canonical := canonicalSearchURL(custommw.BasePathFromContext(ctx), params); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(component).ServeHTTP(w, r)
+	view := webtmpl.SearchTableView{
+		Table: table,
+	}
+	if err := dashboardTemplates.Render(w, "search/table", view.Table); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 type searchRequest struct {

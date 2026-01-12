@@ -1,0 +1,182 @@
+{{define "guides/index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "guides/content"}}
+{{$page := .Page}}
+<div class="space-y-6" data-guides-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.Title}}</h1>
+        <p class="text-sm text-slate-600">{{$page.Description}}</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2" id="guides-summary">
+        {{template "guides/summary-chips" $page.Summary}}
+      </div>
+    </div>
+    <div class="mt-6 border-t border-slate-200 pt-4">
+      {{template "guides/filter-toolbar" $page}}
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <section class="space-y-4">
+      <div id="guides-bulk-area">
+        {{template "guides/bulk-section" (dict "Bulk" $page.Bulk "CSRFToken" $page.CSRFToken)}}
+      </div>
+      <div
+        id="guides-table"
+        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        data-guides-table
+        data-fragment-path="{{$page.Table.FragmentPath}}"
+        data-fragment-query="{{$page.Table.RawQuery}}"
+      >
+        {{template "guides/table" .Table}}
+      </div>
+    </section>
+    <aside class="hidden xl:block">
+      <div class="sticky top-20 space-y-4" id="guides-drawer">
+        {{template "guides/drawer" $page.Drawer}}
+      </div>
+    </aside>
+  </div>
+</div>
+{{end}}
+
+{{define "guides/summary-chips"}}
+<div class="flex flex-wrap items-center gap-3">
+  <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+    {{.TotalLabel}}
+  </span>
+  <span class="inline-flex items-center gap-2 rounded-full bg-success-50 px-3 py-1 text-sm font-medium text-success-700">
+    {{.PublishedLabel}}
+  </span>
+  <span class="inline-flex items-center gap-2 rounded-full bg-warning-50 px-3 py-1 text-sm font-medium text-warning-700">
+    {{.ScheduledLabel}}
+  </span>
+  <span class="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-sm font-medium text-slate-600">
+    {{.DraftLabel}}
+  </span>
+  <span class="inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
+    {{.ArchivedLabel}}
+  </span>
+</div>
+<div class="mt-3 flex flex-wrap items-center gap-2 text-sm" role="radiogroup" aria-label="ロケール">
+  {{range $chip := .LocaleChips}}
+    <a
+      href="{{$chip.URL}}"
+      class="{{guidesLocaleChipClass $chip.Active}}"
+      data-locale="{{$chip.Value}}"
+      aria-pressed="{{boolAttr $chip.Active}}"
+    >
+      {{$chip.Label}}
+    </a>
+  {{end}}
+</div>
+{{end}}
+
+{{define "guides/filter-toolbar"}}
+<form
+  id="guides-filter"
+  class="flex flex-col gap-4"
+  method="get"
+  hx-get="{{.TableEndpoint}}"
+  hx-target="#guides-table"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+  data-guides-filter
+>
+  <input type="hidden" name="selected" value="{{.Table.SelectedID}}" data-guides-selected />
+  <input type="hidden" name="locale" value="{{.Query.Locale}}" />
+
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex items-center gap-3">
+      <label class="sr-only" for="guides-search">検索</label>
+      <div class="relative">
+        <input
+          id="guides-search"
+          name="q"
+          type="search"
+          value="{{.Query.Search}}"
+          placeholder="ガイドを検索"
+          class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        />
+        <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+      </div>
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      <a href="{{.ResetURL}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2" role="radiogroup" aria-label="公開状態">
+        {{range $segment := .Filters.StatusSegments}}
+          <label class="{{guidesSegmentedClass $segment.Active}}">
+            <input type="radio" name="status" value="{{$segment.Value}}" class="sr-only" {{if $segment.Active}}checked{{end}} />
+            <span>{{$segment.Label}}</span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="flex flex-col gap-2">
+      <label for="guides-persona" class="text-xs font-semibold uppercase tracking-wide text-slate-500">ペルソナ</label>
+      <select
+        id="guides-persona"
+        name="persona"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >
+        {{range $option := .Filters.PersonaOptions}}
+          <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>{{$option.Label}}</option>
+        {{end}}
+      </select>
+    </div>
+    <div class="flex flex-col gap-2">
+      <label for="guides-category" class="text-xs font-semibold uppercase tracking-wide text-slate-500">カテゴリ</label>
+      <select
+        id="guides-category"
+        name="category"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >
+        {{range $option := .Filters.CategoryOptions}}
+          <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>{{$option.Label}}</option>
+        {{end}}
+      </select>
+    </div>
+    <div class="flex flex-col gap-2">
+      <label for="guides-schedule" class="text-xs font-semibold uppercase tracking-wide text-slate-500">公開予定</label>
+      <input
+        id="guides-schedule"
+        name="schedule"
+        type="date"
+        value="{{.Filters.ScheduleValue}}"
+        class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      />
+    </div>
+  </div>
+</form>
+{{end}}
+
+{{define "guides/bulk-section"}}
+{{$bulk := .Bulk}}
+<div
+  class="space-y-3"
+  data-guides-bulk
+  {{if not $bulk.Visible}}hidden{{end}}
+  data-selected-count="{{$bulk.SelectedCount}}"
+>
+  {{template "components/bulk-toolbar" $bulk.Toolbar}}
+  <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <ol class="flex items-center gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500" data-guides-bulk-progress>
+      {{range $idx, $step := $bulk.Progress.Steps}}
+        <li class="{{guidesBulkStepClass $step $idx $bulk.Progress.ActiveStep}}">{{$step.Label}}</li>
+      {{end}}
+    </ol>
+  </div>
+  <form id="guides-bulk-form" class="hidden" data-guides-bulk-form>
+    <input type="hidden" name="ids" value="" />
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
+  </form>
+</div>
+{{end}}

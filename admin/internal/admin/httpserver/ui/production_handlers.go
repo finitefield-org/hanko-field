@@ -8,12 +8,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	productiontpl "finitefield.org/hanko-admin/internal/admin/templates/production"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // ProductionQueuesPage renders the production kanban board page.
@@ -36,8 +36,19 @@ func (h *Handlers) ProductionQueuesPage(w http.ResponseWriter, r *http.Request) 
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := productiontpl.BuildPageData(basePath, req.state, result, errMsg)
-
-	templ.Handler(productiontpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "production/content"
+	view := webtmpl.ProductionPageView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "production/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQueuesSummaryPage renders the WIP summary page across production queues.
@@ -60,8 +71,19 @@ func (h *Handlers) ProductionQueuesSummaryPage(w http.ResponseWriter, r *http.Re
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := productiontpl.BuildWIPSummaryPage(ctx, basePath, req.state, result, errMsg)
-
-	templ.Handler(productiontpl.WIPSummary(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "production/summary-content"
+	view := webtmpl.ProductionSummaryView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "production/summary-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQueuesBoard renders the kanban fragment for HTMX swaps.
@@ -89,7 +111,9 @@ func (h *Handlers) ProductionQueuesBoard(w http.ResponseWriter, r *http.Request)
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(productiontpl.Board(board)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "production/board", board); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionWorkOrderPage renders the detailed work order view for a single order.
@@ -120,8 +144,19 @@ func (h *Handlers) ProductionWorkOrderPage(w http.ResponseWriter, r *http.Reques
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := productiontpl.BuildWorkOrderPage(basePath, workOrder)
-
-	templ.Handler(productiontpl.WorkOrder(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "production/workorder-content"
+	view := webtmpl.ProductionWorkOrderView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "production/workorder-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQCPage renders the QC worklist page.
@@ -144,7 +179,19 @@ func (h *Handlers) ProductionQCPage(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := productiontpl.BuildQCPageData(basePath, result, errMsg)
-	templ.Handler(productiontpl.QCPage(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "production/qc-content"
+	view := webtmpl.ProductionQCView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "production/qc-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQCDrawer renders the QC drawer fragment.
@@ -182,7 +229,9 @@ func (h *Handlers) ProductionQCDrawer(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	drawer := productiontpl.BuildQCDrawer(basePath, result.Drawer, query)
-	templ.Handler(productiontpl.QCDrawer(drawer)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "production/qc-drawer", drawer); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQCDecision handles pass/fail submissions.
@@ -268,7 +317,9 @@ func (h *Handlers) ProductionQCReworkModal(w http.ResponseWriter, r *http.Reques
 
 	basePath := custommw.BasePathFromContext(ctx)
 	modal := productiontpl.BuildQCReworkModal(basePath, orderID, result.Drawer, query)
-	templ.Handler(productiontpl.QCReworkModal(modal)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "production/qc-rework-modal", modal); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ProductionQCSubmitRework handles rework submissions from the modal.

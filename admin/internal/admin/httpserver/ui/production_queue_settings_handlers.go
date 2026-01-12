@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminproduction "finitefield.org/hanko-admin/internal/admin/production"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	productiontpl "finitefield.org/hanko-admin/internal/admin/templates/productionqueues"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 type queueSettingsContext struct {
@@ -110,7 +110,19 @@ func (h *Handlers) ProductionQueueSettingsPage(w http.ResponseWriter, r *http.Re
 	}
 
 	page := productiontpl.BuildPageData(basePath, req.state, result, detail, errMsg)
-	templ.Handler(productiontpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "production-queues/content"
+	view := webtmpl.ProductionQueuesView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "production-queues/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ProductionQueueSettingsTable(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +161,14 @@ func (h *Handlers) ProductionQueueSettingsTable(w http.ResponseWriter, r *http.R
 	canonical := canonicalQueueURL(basePath, page.Query.RawQuery)
 	w.Header().Set("HX-Push-Url", canonical)
 
-	templ.Handler(productiontpl.TableWithDrawer(page.Table, page.Drawer)).ServeHTTP(w, r)
+	view := webtmpl.ProductionQueuesTableDrawerView{
+		BasePath: basePath,
+		Table:    page.Table,
+		Drawer:   page.Drawer,
+	}
+	if err := dashboardTemplates.Render(w, "production-queues/table-with-drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ProductionQueueSettingsDrawer(w http.ResponseWriter, r *http.Request) {
@@ -180,7 +199,14 @@ func (h *Handlers) ProductionQueueSettingsDrawer(w http.ResponseWriter, r *http.
 	req := parseQueueSettings(r.URL.RawQuery)
 	applySelection(&req, queue.ID)
 	drawer := productiontpl.BuildPageData(basePath, req.state, adminproduction.QueueSettingsResult{}, &queue, "").Drawer
-	templ.Handler(productiontpl.Drawer(drawer)).ServeHTTP(w, r)
+	view := struct {
+		Drawer productiontpl.DrawerData
+	}{
+		Drawer: drawer,
+	}
+	if err := dashboardTemplates.Render(w, "production-queues/drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ProductionQueueNewModal(w http.ResponseWriter, r *http.Request) {
@@ -241,7 +267,9 @@ func (h *Handlers) ProductionQueueDeleteModal(w http.ResponseWriter, r *http.Req
 	basePath := custommw.BasePathFromContext(ctx)
 	req := parseQueueSettings(r.URL.RawQuery)
 	modal := productiontpl.BuildDeleteModalData(basePath, queue, custommw.CSRFTokenFromContext(ctx), req.state.RawQuery, "")
-	templ.Handler(productiontpl.DeleteModal(modal)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "production-queues/delete-modal", modal); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ProductionQueueCreate(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +295,9 @@ func (h *Handlers) ProductionQueueCreate(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		modal := productiontpl.BuildUpsertModalData(custommw.BasePathFromContext(ctx), custommw.CSRFTokenFromContext(ctx), nil, deps.options, deps.queues, req.state.RawQuery, userErr.Error())
-		templ.Handler(productiontpl.UpsertModal(modal)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "production-queues/upsert-modal", modal); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -280,7 +310,9 @@ func (h *Handlers) ProductionQueueCreate(w http.ResponseWriter, r *http.Request)
 				return
 			}
 			modal := productiontpl.BuildUpsertModalData(custommw.BasePathFromContext(ctx), custommw.CSRFTokenFromContext(ctx), nil, deps.options, deps.queues, req.state.RawQuery, "キューを作成できませんでした。入力内容を確認してください。")
-			templ.Handler(productiontpl.UpsertModal(modal)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "production-queues/upsert-modal", modal); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		http.Error(w, "キューの作成に失敗しました。", http.StatusBadGateway)
@@ -321,7 +353,9 @@ func (h *Handlers) ProductionQueueUpdate(w http.ResponseWriter, r *http.Request)
 		}
 		existing, _ := h.production.QueueSettingsDetail(ctx, user.Token, queueID)
 		modal := productiontpl.BuildUpsertModalData(custommw.BasePathFromContext(ctx), custommw.CSRFTokenFromContext(ctx), &existing, deps.options, deps.queues, req.state.RawQuery, userErr.Error())
-		templ.Handler(productiontpl.UpsertModal(modal)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "production-queues/upsert-modal", modal); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -335,7 +369,9 @@ func (h *Handlers) ProductionQueueUpdate(w http.ResponseWriter, r *http.Request)
 			}
 			existing, _ := h.production.QueueSettingsDetail(ctx, user.Token, queueID)
 			modal := productiontpl.BuildUpsertModalData(custommw.BasePathFromContext(ctx), custommw.CSRFTokenFromContext(ctx), &existing, deps.options, deps.queues, req.state.RawQuery, "キューの更新に失敗しました。入力内容を確認してください。")
-			templ.Handler(productiontpl.UpsertModal(modal)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "production-queues/upsert-modal", modal); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		http.Error(w, "キューの更新に失敗しました。", http.StatusBadGateway)
@@ -371,7 +407,9 @@ func (h *Handlers) ProductionQueueDelete(w http.ResponseWriter, r *http.Request)
 		if errors.Is(err, adminproduction.ErrQueueInvalidInput) {
 			queue, _ := h.production.QueueSettingsDetail(ctx, user.Token, queueID)
 			modal := productiontpl.BuildDeleteModalData(custommw.BasePathFromContext(ctx), queue, custommw.CSRFTokenFromContext(ctx), req.state.RawQuery, "このキューは現在使用中のため削除できません。")
-			templ.Handler(productiontpl.DeleteModal(modal)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "production-queues/delete-modal", modal); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		if errors.Is(err, adminproduction.ErrQueueNotFound) {
@@ -464,7 +502,9 @@ func (h *Handlers) renderQueueUpsertModal(w http.ResponseWriter, r *http.Request
 	req := parseQueueSettings(r.URL.RawQuery)
 	basePath := custommw.BasePathFromContext(ctx)
 	modal := productiontpl.BuildUpsertModalData(basePath, custommw.CSRFTokenFromContext(ctx), queue, deps.options, deps.queues, req.state.RawQuery, errMsg)
-	templ.Handler(productiontpl.UpsertModal(modal)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "production-queues/upsert-modal", modal); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderQueueTableSnapshot(ctx context.Context, w http.ResponseWriter, httpReq *http.Request, token string, req queueSettingsContext, detail *adminproduction.QueueDefinition, toastMessage, toastTone string, closeModal bool) {
@@ -507,7 +547,14 @@ func (h *Handlers) renderQueueTableSnapshot(ctx context.Context, w http.Response
 		}
 	}
 
-	templ.Handler(productiontpl.TableWithDrawer(page.Table, page.Drawer)).ServeHTTP(w, httpReq)
+	view := webtmpl.ProductionQueuesTableDrawerView{
+		BasePath: basePath,
+		Table:    page.Table,
+		Drawer:   page.Drawer,
+	}
+	if err := dashboardTemplates.Render(w, "production-queues/table-with-drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func queueInputFromForm(r *http.Request) (adminproduction.QueueDefinitionInput, error) {

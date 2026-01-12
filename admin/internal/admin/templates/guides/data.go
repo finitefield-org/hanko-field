@@ -1,17 +1,14 @@
 package guides
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"html/template"
 	"net/url"
 	"slices"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/a-h/templ"
 
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
@@ -130,7 +127,7 @@ type TableRow struct {
 	EditURL            string
 	ViewURL            string
 	Selected           bool
-	Attributes         templ.Attributes
+	Attributes         map[string]string
 	Actions            []RowAction
 }
 
@@ -258,7 +255,7 @@ type PreviewLocaleOption struct {
 // PreviewContentData mirrors the device frame.
 type PreviewContentData struct {
 	HeroImageURL string
-	Body         templ.Component
+	Body         template.HTML
 	DeviceModes  []PreviewDeviceMode
 	Language     string
 }
@@ -366,7 +363,7 @@ type HistoryEntryData struct {
 	Relative     string
 	Occurred     string
 	Icon         string
-	Diff         templ.Component
+	Diff         template.HTML
 	RevertAction string
 }
 
@@ -423,7 +420,7 @@ func BuildPreviewPageData(basePath string, preview admincontent.GuidePreview) Pr
 
 	viewer := PreviewContentData{
 		HeroImageURL: coalesce(preview.Content.HeroImageURL, guide.HeroImageURL),
-		Body:         htmlComponent(bodyHTML),
+		Body:         template.HTML(bodyHTML),
 		DeviceModes:  defaultPreviewDeviceModes(),
 		Language:     localeLabel(guide.Locale),
 	}
@@ -721,7 +718,7 @@ func firstSelected(rows []TableRow, selected []string) string {
 
 func toTableRow(basePath string, guide admincontent.Guide) TableRow {
 	payload := encodeDrawerPayload(guide)
-	attrs := templ.Attributes{
+	attrs := map[string]string{
 		"data-guide-row":     "true",
 		"data-guide-id":      guide.ID,
 		"data-guide-payload": payload,
@@ -783,7 +780,7 @@ func markRowSelected(row *TableRow) {
 		return
 	}
 	if row.Attributes == nil {
-		row.Attributes = templ.Attributes{}
+		row.Attributes = map[string]string{}
 	}
 	row.Attributes["data-selected"] = "true"
 }
@@ -887,13 +884,17 @@ func BulkPayload(basePath string, state QueryState, table TableData) BulkData {
 		Message:       "",
 		ClearAction: &components.BulkToolbarAction{
 			Label: "選択をクリア",
-			Component: templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-				_, err := fmt.Fprintf(w, `<button type="button" class="%s" data-guides-clear-selection>クリア</button>`, helpers.ButtonClass("ghost", "sm", false, false))
-				return err
-			}),
+			Options: components.ButtonOptions{
+				Variant: "ghost",
+				Size:    "sm",
+				Type:    "button",
+				Attrs: map[string]string{
+					"data-guides-clear-selection": "true",
+				},
+			},
 		},
 	}
-	props.Attrs = templ.Attributes{
+	props.Attrs = map[string]string{
 		"data-guides-bulk-toolbar": "true",
 		"data-total-count":         fmt.Sprintf("%d", total),
 	}
@@ -931,11 +932,15 @@ func bulkActionButton(label, description, actionURL, variant string) components.
 	return components.BulkToolbarAction{
 		Label:       label,
 		Description: description,
-		Component: templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-			buttonClass := helpers.ButtonClass(variant, "sm", false, false)
-			_, err := fmt.Fprintf(w, `<button type="button" class="%s" data-guides-bulk-action data-action-url="%s">%s</button>`, buttonClass, actionURL, label)
-			return err
-		}),
+		Options: components.ButtonOptions{
+			Variant: variant,
+			Size:    "sm",
+			Type:    "button",
+			Attrs: map[string]string{
+				"data-guides-bulk-action": "true",
+				"data-action-url":         actionURL,
+			},
+		},
 	}
 }
 
@@ -1085,13 +1090,6 @@ func coalesce(values ...string) string {
 	return ""
 }
 
-func htmlComponent(value string) templ.Component {
-	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		_, err := io.WriteString(w, value)
-		return err
-	})
-}
-
 func totalStatus(counts map[admincontent.GuideStatus]int) int {
 	total := 0
 	for _, count := range counts {
@@ -1125,7 +1123,7 @@ func buildHistoryPanelData(basePath string, editor admincontent.GuideEditor) His
 			Relative:     helpers.Relative(entry.OccurredAt),
 			Occurred:     helpers.Date(entry.OccurredAt, "2006-01-02 15:04"),
 			Icon:         entry.Icon,
-			Diff:         htmlComponent(diff),
+			Diff:         template.HTML(diff),
 			RevertAction: revertAction,
 		})
 	}

@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	catalogtpl "finitefield.org/hanko-admin/internal/admin/templates/catalog"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // CatalogRootRedirect sends /admin/catalog to the templates tab by default.
@@ -43,7 +43,19 @@ func (h *Handlers) CatalogPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := catalogtpl.BuildPageData(custommw.BasePathFromContext(ctx), kind, state, result)
-	templ.Handler(catalogtpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "catalog/content"
+	view := webtmpl.CatalogPageView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "catalog/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CatalogTable returns the table fragment for htmx requests.
@@ -87,9 +99,21 @@ func renderCatalogFragment(w http.ResponseWriter, r *http.Request, h *Handlers, 
 	data := catalogtpl.BuildPageData(custommw.BasePathFromContext(ctx), assetKind, state, result)
 	switch kind {
 	case fragmentCards:
-		templ.Handler(catalogtpl.CardsFragment(data)).ServeHTTP(w, r)
+		view := webtmpl.CatalogCardsView{
+			Page:     data,
+			BasePath: custommw.BasePathFromContext(ctx),
+		}
+		if err := dashboardTemplates.Render(w, "catalog/cards-fragment", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 	default:
-		templ.Handler(catalogtpl.TableFragment(data)).ServeHTTP(w, r)
+		view := webtmpl.CatalogTableView{
+			Page:     data,
+			BasePath: custommw.BasePathFromContext(ctx),
+		}
+		if err := dashboardTemplates.Render(w, "catalog/table-fragment", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -109,7 +133,10 @@ func (h *Handlers) CatalogNewModal(w http.ResponseWriter, r *http.Request) {
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := buildCatalogUpsertModal(kind, catalogModalModeNew, values, nil, "", action, http.MethodPost, csrf)
 
-	templ.Handler(catalogtpl.UpsertModal(data)).ServeHTTP(w, r)
+	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
+	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CatalogEditModal renders the edit modal for a specific asset.
@@ -140,7 +167,10 @@ func (h *Handlers) CatalogEditModal(w http.ResponseWriter, r *http.Request) {
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := buildCatalogUpsertModal(kind, catalogModalModeEdit, values, nil, "", action, http.MethodPut, csrf)
 
-	templ.Handler(catalogtpl.UpsertModal(data)).ServeHTTP(w, r)
+	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
+	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CatalogDeleteModal renders the delete confirmation modal.
@@ -170,7 +200,10 @@ func (h *Handlers) CatalogDeleteModal(w http.ResponseWriter, r *http.Request) {
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := buildCatalogDeleteModal(kind, detail, action, csrf, "")
 
-	templ.Handler(catalogtpl.DeleteModal(data)).ServeHTTP(w, r)
+	view := webtmpl.CatalogDeleteModalView{BasePath: basePath, Data: data}
+	if err := dashboardTemplates.Render(w, "catalog/delete-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CatalogCreate handles asset creation submissions.
@@ -478,7 +511,10 @@ func reRenderCatalogModal(w http.ResponseWriter, r *http.Request, kind admincata
 	}
 	data := buildCatalogUpsertModal(kind, mode, values, fieldErrors, message, action, method, csrf)
 	w.WriteHeader(http.StatusUnprocessableEntity)
-	templ.Handler(catalogtpl.UpsertModal(data)).ServeHTTP(w, r)
+	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
+	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func handleCatalogMutationError(w http.ResponseWriter, r *http.Request, kind admincatalog.Kind, values map[string]string, fieldErrors map[string]string, err error, method string, mode catalogModalMode) {
@@ -508,7 +544,10 @@ func (h *Handlers) handleCatalogDeleteError(w http.ResponseWriter, r *http.Reque
 				csrf := custommw.CSRFTokenFromContext(ctx)
 				data := buildCatalogDeleteModal(kind, detail, action, csrf, "別のユーザーが更新しました。内容を確認してください。")
 				w.WriteHeader(http.StatusConflict)
-				templ.Handler(catalogtpl.DeleteModal(data)).ServeHTTP(w, r)
+				view := webtmpl.CatalogDeleteModalView{BasePath: basePath, Data: data}
+				if err := dashboardTemplates.Render(w, "catalog/delete-modal", view); err != nil {
+					http.Error(w, "template render error", http.StatusInternalServerError)
+				}
 				return
 			}
 		}

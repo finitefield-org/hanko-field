@@ -1,0 +1,520 @@
+{{define "pages/index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "pages/index-content"}}
+<div class="space-y-6" data-pages-root>
+  {{template "pages/page-header" .Data}}
+  <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <aside class="space-y-4">
+      {{template "pages/tree-panel" .Data.Tree}}
+    </aside>
+    <section>
+      {{template "pages/workspace" (dict "Workspace" .Data.Workspace "CSRF" .Data.CSRFToken)}}
+    </section>
+  </div>
+  <div id="pages-history-modal-container"></div>
+</div>
+{{end}}
+
+{{define "pages/page-header"}}
+<section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div class="space-y-2">
+      <h1 class="text-2xl font-semibold text-slate-900">{{.Title}}</h1>
+      <p class="text-sm text-slate-600">{{.Description}}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      {{range $chip := .Tree.Summary}}
+        <span class="{{summaryChipClass $chip.Tone}}">{{$chip.Label}}</span>
+      {{end}}
+    </div>
+  </div>
+  <form
+    class="mt-6 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,200px)_minmax(0,200px)_minmax(0,200px)_auto]"
+    method="get"
+    action="{{.Tree.ResetURL}}"
+  >
+    <label class="sr-only" for="pages-search">検索</label>
+    <div class="relative">
+      <input
+        id="pages-search"
+        name="q"
+        type="search"
+        value="{{.Tree.SearchValue}}"
+        placeholder="ページを検索"
+        class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      />
+      <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+    </div>
+    <select
+      name="status"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      {{range $option := .Tree.StatusOptions}}
+        <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>{{$option.Label}}</option>
+      {{end}}
+    </select>
+    <select
+      name="type"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      {{range $option := .Tree.TypeOptions}}
+        <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>{{$option.Label}}</option>
+      {{end}}
+    </select>
+    <select
+      name="locale"
+      class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    >
+      {{range $option := .Tree.LocaleOptions}}
+        <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>{{$option.Label}}</option>
+      {{end}}
+    </select>
+    <div class="flex items-center gap-2">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      <a href="{{.Tree.ResetURL}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+    </div>
+  </form>
+</section>
+{{end}}
+
+{{define "pages/tree-panel"}}
+<section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">ページツリー</h2>
+  <nav class="mt-4 space-y-2 text-sm text-slate-700" aria-label="ページツリー">
+    {{template "pages/tree-list" .Nodes}}
+  </nav>
+</section>
+{{end}}
+
+{{define "pages/tree-list"}}
+  {{if eq (len .) 0}}
+    <p class="text-sm text-slate-500">一致するページがありません。</p>
+  {{else}}
+    <ul class="space-y-1">
+      {{range $node := .}}
+        <li>
+          {{template "pages/tree-node" $node}}
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+{{end}}
+
+{{define "pages/tree-node"}}
+<div class="space-y-1">
+  <a
+    href="{{.URL}}"
+    class="{{treeLinkClass .Selected}}"
+    {{if .Selected}}aria-current="page"{{end}}
+  >
+    <div class="flex flex-col">
+      <span class="font-medium">{{.Title}}</span>
+      {{if .Subtitle}}
+        <span class="text-xs text-slate-500">{{.Subtitle}}</span>
+      {{end}}
+    </div>
+    {{if .StatusLabel}}
+      <span class="{{badgeClass .StatusTone}}">{{.StatusLabel}}</span>
+    {{end}}
+  </a>
+  {{if gt (len .Children) 0}}
+    <div class="ml-3 border-l border-slate-200 pl-3">
+      {{template "pages/tree-list" .Children}}
+    </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "pages/workspace"}}
+{{$data := .Workspace}}
+<div class="space-y-6">
+  <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
+    <section class="space-y-6">
+      {{template "pages/editor-panel" (dict "Editor" $data.Editor "CSRF" .CSRF)}}
+      <div id="pages-preview">
+        {{template "pages/preview-panel" $data.Preview}}
+      </div>
+    </section>
+    <aside class="space-y-4">
+      {{template "pages/properties-panel" $data.Properties}}
+      {{template "pages/schedule-panel" (dict "Schedule" $data.Schedule "CSRF" .CSRF)}}
+      {{template "pages/history-panel" (dict "History" $data.History "PageID" $data.ActionBar.PageID)}}
+    </aside>
+  </div>
+  {{template "pages/action-bar" (dict "Actions" $data.ActionBar "CSRF" .CSRF)}}
+</div>
+{{end}}
+
+{{define "pages/preview-fragment"}}
+{{template "pages/preview-panel" .Preview}}
+{{end}}
+
+{{define "pages/editor-panel"}}
+{{$editor := .Editor}}
+<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div class="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+    <div class="space-y-2">
+      <div class="flex items-center gap-3 text-sm text-slate-500">
+        <span class="{{badgeClass $editor.StatusTone}}">{{$editor.StatusLabel}}</span>
+        {{if $editor.LocaleLabel}}
+          <span>{{$editor.LocaleLabel}}</span>
+        {{end}}
+        {{if $editor.Version}}
+          <span class="hidden md:inline text-slate-400">version {{$editor.Version}}</span>
+        {{end}}
+      </div>
+      <h2 class="text-xl font-semibold text-slate-900">{{$editor.PageTitle}}</h2>
+      {{if $editor.PageSummary}}
+        <p class="text-sm text-slate-600">{{$editor.PageSummary}}</p>
+      {{end}}
+      <div class="text-xs text-slate-500">
+        <span>最終更新 {{$editor.UpdatedRelative}}</span>
+        {{if $editor.UpdatedExact}}
+          <span class="hidden md:inline">（{{$editor.UpdatedExact}}）</span>
+        {{end}}
+      </div>
+    </div>
+    {{if gt (len $editor.Locales) 0}}
+      <div class="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-semibold text-slate-600">
+        {{range $option := $editor.Locales}}
+          <a href="{{$option.URL}}" class="{{localeChipClass $option.Active}}" aria-pressed="{{boolAttr $option.Active}}">
+            {{$option.Label}}
+          </a>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+  <form id="page-editor-form" class="mt-6 space-y-4" hx-boost="false">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+    <input type="hidden" name="page_id" value="{{$editor.PageID}}" />
+    <input type="hidden" name="locale" value="{{$editor.LocaleValue}}" />
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label for="page-title" class="text-xs font-semibold uppercase tracking-wide text-slate-500">タイトル</label>
+        <input
+          id="page-title"
+          name="title"
+          type="text"
+          value="{{$editor.PageTitle}}"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          required
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="page-tags" class="text-xs font-semibold uppercase tracking-wide text-slate-500">タグ（カンマ区切り）</label>
+        <input
+          id="page-tags"
+          name="tags"
+          type="text"
+          value="{{$editor.TagsValue}}"
+          placeholder="例: 会社情報, ブランド"
+          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        />
+      </div>
+    </div>
+    <div class="flex flex-col gap-2">
+      <label for="page-summary" class="text-xs font-semibold uppercase tracking-wide text-slate-500">概要</label>
+      <textarea
+        id="page-summary"
+        name="summary"
+        rows="3"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >{{$editor.PageSummary}}</textarea>
+    </div>
+    <div class="flex flex-col gap-2">
+      <label for="page-outline" class="text-xs font-semibold uppercase tracking-wide text-slate-500">リード / アウトライン</label>
+      <textarea
+        id="page-outline"
+        name="outline"
+        rows="3"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >{{$editor.PageOutline}}</textarea>
+    </div>
+  </form>
+  <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <section class="space-y-4">
+      <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">ブロック</h3>
+      <ul class="space-y-3">
+        {{range $block := $editor.Blocks}}
+          <li class="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-medium text-slate-900">{{$block.Label}}</p>
+                {{if $block.Summary}}
+                  <p class="text-sm text-slate-600">{{$block.Summary}}</p>
+                {{end}}
+                {{if $block.Description}}
+                  <p class="text-xs text-slate-500">{{$block.Description}}</p>
+                {{end}}
+              </div>
+              <span class="text-xl">{{$block.Icon}}</span>
+            </div>
+          </li>
+        {{end}}
+      </ul>
+    </section>
+    <section class="space-y-3 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+      <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">ブロック追加</h3>
+      {{range $group := $editor.Palette}}
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-slate-500">{{$group.Label}}</p>
+          <ul class="space-y-2">
+            {{range $item := $group.Blocks}}
+              <li class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div class="flex items-start gap-3">
+                  <span>{{$item.Icon}}</span>
+                  <div>
+                    <p class="font-medium text-slate-900">{{$item.Label}}</p>
+                    {{if $item.Description}}
+                      <p class="text-xs text-slate-600">{{$item.Description}}</p>
+                    {{end}}
+                  </div>
+                </div>
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+    </section>
+  </div>
+</section>
+{{end}}
+
+{{define "pages/preview-panel"}}
+<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ライブプレビュー</p>
+      {{if gt (len .Locales) 0}}
+        {{range $option := .Locales}}
+          {{if $option.Active}}
+            <p class="text-xs text-slate-400">表示言語: {{$option.Label}}</p>
+          {{end}}
+        {{end}}
+      {{end}}
+    </div>
+    {{if gt (len .Locales) 0}}
+      <div class="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-semibold text-slate-600">
+        {{range $option := .Locales}}
+          <a href="{{$option.URL}}" class="{{previewLocaleClass $option.Active}}">{{$option.Label}}</a>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+  <div class="space-y-6 px-6 py-6">
+    {{if trimSpace .HeroHTML}}
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white shadow-sm">
+        {{rawHTML .HeroHTML}}
+      </div>
+    {{end}}
+    <article class="prose prose-slate max-w-none">
+      {{rawHTML .BodyHTML}}
+    </article>
+    {{if gt (len .Notes) 0}}
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+        <ul class="list-disc space-y-1 pl-5">
+          {{range $note := .Notes}}
+            <li>{{$note}}</li>
+          {{end}}
+        </ul>
+      </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "pages/properties-panel"}}
+<section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">プロパティ</h3>
+  <dl class="mt-4 space-y-3 text-sm text-slate-600">
+    {{template "pages/details-row" (dict "Label" "スラッグ" "Value" .Slug)}}
+    {{template "pages/details-row" (dict "Label" "タイプ" "Value" .Type)}}
+    {{if .VisibilityLabel}}
+      <div class="flex items-center justify-between">
+        <span class="font-medium text-slate-500">公開状態</span>
+        <span class="{{badgeClass .VisibilityTone}}">{{.VisibilityLabel}}</span>
+      </div>
+    {{end}}
+    {{template "pages/details-row" (dict "Label" "版" "Value" .Version)}}
+    {{if .LiveURL}}
+      {{template "pages/link-row" (dict "Label" "公開URL" "Value" .LiveURL)}}
+    {{end}}
+    {{if .PreviewURL}}
+      {{template "pages/link-row" (dict "Label" "プレビューURL" "Value" .PreviewURL)}}
+    {{end}}
+    {{if .ShareURL}}
+      {{template "pages/link-row" (dict "Label" "共有リンク" "Value" .ShareURL)}}
+    {{end}}
+    {{if gt (len .Tags) 0}}
+      <div>
+        <p class="font-medium text-slate-500">タグ</p>
+        <div class="mt-1 flex flex-wrap gap-1 text-xs text-slate-500">
+          {{range $tag := .Tags}}
+            <span class="rounded-full bg-slate-100 px-2 py-1">{{$tag}}</span>
+          {{end}}
+        </div>
+      </div>
+    {{end}}
+    {{if .SEO.MetaTitle}}
+      {{template "pages/details-row" (dict "Label" "Meta Title" "Value" .SEO.MetaTitle)}}
+    {{end}}
+    {{if .SEO.MetaDescription}}
+      {{template "pages/details-row" (dict "Label" "Meta Description" "Value" .SEO.MetaDescription)}}
+    {{end}}
+    {{if .SEO.OGImageURL}}
+      {{template "pages/link-row" (dict "Label" "OG Image" "Value" .SEO.OGImageURL)}}
+    {{end}}
+  </dl>
+</section>
+{{end}}
+
+{{define "pages/schedule-panel"}}
+{{$schedule := .Schedule}}
+<section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="flex items-center justify-between">
+    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">公開スケジュール</h3>
+    {{if $schedule.StatusLabel}}
+      <span class="{{badgeClass $schedule.StatusTone}}">{{$schedule.StatusLabel}}</span>
+    {{end}}
+  </div>
+  <form class="mt-4 space-y-3" method="post" hx-post="{{$schedule.ScheduleAction}}" hx-target="body" hx-include="#page-editor-form" hx-swap="none">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+    <label for="page-scheduled-at" class="text-xs font-semibold uppercase tracking-wide text-slate-500">公開予定日時</label>
+    <input
+      id="page-scheduled-at"
+      name="scheduled_at"
+      type="datetime-local"
+      value="{{$schedule.ScheduledValue}}"
+      class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    />
+    {{if $schedule.Timezone}}
+      <p class="text-xs text-slate-500">タイムゾーン: {{$schedule.Timezone}}</p>
+    {{end}}
+    {{if $schedule.LastScheduled}}
+      <p class="text-xs text-slate-500">更新: {{$schedule.LastScheduled}}</p>
+    {{end}}
+    <div class="flex items-center gap-2">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">予約を更新</button>
+      <button
+        type="button"
+        class="{{buttonClass "ghost" "sm" false false}}"
+        hx-post="{{$schedule.UnscheduleAction}}"
+        hx-target="body"
+        hx-include="#page-editor-form"
+        hx-swap="none"
+      >予約解除</button>
+    </div>
+  </form>
+</section>
+{{end}}
+
+{{define "pages/history-panel"}}
+<section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="flex items-center justify-between">
+    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">変更履歴</h3>
+    <button
+      type="button"
+      class="{{buttonClass "ghost" "sm" false false}}"
+      hx-get="{{printf "/admin/content/pages/%s/history" .PageID}}"
+      hx-target="#pages-history-modal-container"
+      hx-swap="innerHTML"
+    >履歴を表示</button>
+  </div>
+  <ul class="mt-4 space-y-3 text-sm text-slate-600">
+    {{if eq (len .History.Items) 0}}
+      <li class="text-slate-500">履歴はまだありません。</li>
+    {{else}}
+      {{range $item := .History.Items}}
+        <li class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            {{if $item.Icon}}
+              <span>{{$item.Icon}}</span>
+            {{end}}
+            <span>{{$item.Relative}}</span>
+            {{if $item.Version}}
+              <span>({{$item.Version}})</span>
+            {{end}}
+          </div>
+          <p class="font-medium text-slate-900">{{$item.Title}}</p>
+          {{if $item.Summary}}
+            <p class="text-sm text-slate-600">{{$item.Summary}}</p>
+          {{end}}
+          {{if $item.Actor}}
+            <p class="text-xs text-slate-500">by {{$item.Actor}}</p>
+          {{end}}
+        </li>
+      {{end}}
+    {{end}}
+  </ul>
+</section>
+{{end}}
+
+{{define "pages/action-bar"}}
+<section class="sticky bottom-4 z-10">
+  <div class="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-lg">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="text-sm text-slate-500">
+        <span>現在の状態: {{.Actions.StatusLabel}}</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          class="{{buttonClass "secondary" "sm" false false}}"
+          hx-post="{{.Actions.PreviewAction}}"
+          hx-target="#pages-preview"
+          hx-swap="outerHTML"
+          hx-include="#page-editor-form"
+        >プレビュー更新</button>
+        <button
+          type="button"
+          class="{{buttonClass "primary" "sm" false false}}"
+          hx-post="{{.Actions.SaveAction}}"
+          hx-include="#page-editor-form"
+          hx-target="body"
+          hx-swap="none"
+        >下書きを保存</button>
+        {{if .Actions.IsPublished}}
+          <button
+            type="button"
+            class="{{buttonClass "ghost" "sm" false false}}"
+            hx-post="{{.Actions.UnpublishAction}}"
+            hx-target="body"
+            hx-swap="none"
+          >公開停止</button>
+        {{else}}
+          <button
+            type="button"
+            class="{{buttonClass "success" "sm" false false}}"
+            hx-post="{{.Actions.PublishAction}}"
+            hx-target="body"
+            hx-swap="none"
+          >公開する</button>
+        {{end}}
+        <a href="{{.Actions.PreviewURL}}" target="_blank" rel="noreferrer" class="{{buttonClass "ghost" "sm" false false}}">プレビューを開く ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{define "pages/details-row"}}
+  {{if trimSpace .Value}}
+    <div>
+      <p class="font-medium text-slate-500">{{.Label}}</p>
+      <p class="text-sm text-slate-700">{{.Value}}</p>
+    </div>
+  {{end}}
+{{end}}
+
+{{define "pages/link-row"}}
+  {{if trimSpace .Value}}
+    <div>
+      <p class="font-medium text-slate-500">{{.Label}}</p>
+      <a href="{{.Value}}" target="_blank" rel="noreferrer" class="text-sm text-brand-600 hover:underline break-all">
+        {{.Value}}
+      </a>
+    </div>
+  {{end}}
+{{end}}

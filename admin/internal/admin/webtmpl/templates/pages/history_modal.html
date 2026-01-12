@@ -1,0 +1,41 @@
+{{define "pages/history-modal"}}
+<div class="modal-overlay" data-modal-overlay {{if .Data.ModalID}}id="{{.Data.ModalID}}"{{end}}>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{.Title}}" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">{{.Title}}</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      {{if eq (len .Data.Items) 0}}
+        <p class="text-sm text-slate-500">履歴はまだありません。</p>
+      {{else}}
+        <ul class="space-y-4 text-sm text-slate-600">
+          {{range $item := .Data.Items}}
+            <li class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                {{if $item.Icon}}<span>{{$item.Icon}}</span>{{end}}
+                {{if $item.Relative}}<span>{{$item.Relative}}</span>{{end}}
+                {{if $item.Occurred}}<span class="text-slate-400">({{$item.Occurred}})</span>{{end}}
+                {{if $item.Version}}<span class="font-semibold text-slate-500">{{$item.Version}}</span>{{end}}
+              </div>
+              <p class="mt-2 font-semibold text-slate-900">{{$item.Title}}</p>
+              {{if $item.Summary}}<p class="text-sm text-slate-600">{{$item.Summary}}</p>{{end}}
+              {{if $item.Actor}}<p class="text-xs text-slate-500">by {{$item.Actor}}</p>{{end}}
+            </li>
+          {{end}}
+        </ul>
+      {{end}}
+      <div class="mt-4 text-right">
+        <button type="button" class="{{buttonClass "secondary" "sm" false false}}" data-modal-close>閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

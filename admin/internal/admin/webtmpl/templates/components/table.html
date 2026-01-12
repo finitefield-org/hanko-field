@@ -1,0 +1,32 @@
+{{define "components/table"}}
+<div class="table-wrapper">
+  <table class="table">
+    {{if gt (len .Headers) 0}}
+      <thead>
+        <tr>
+          {{range $header := .Headers}}
+            <th scope="col">{{$header}}</th>
+          {{end}}
+        </tr>
+      </thead>
+    {{end}}
+    <tbody>
+      {{if eq (len .Rows) 0}}
+        <tr>
+          <td colspan="{{maxInt (len .Headers) 1}}" class="px-4 py-6 text-center text-sm text-slate-500">
+            {{if .EmptyMessage}}{{.EmptyMessage}}{{else}}No data available.{{end}}
+          </td>
+        </tr>
+      {{else}}
+        {{range $row := .Rows}}
+          <tr>
+            {{range $cell := $row}}
+              <td>{{$cell}}</td>
+            {{end}}
+          </tr>
+        {{end}}
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

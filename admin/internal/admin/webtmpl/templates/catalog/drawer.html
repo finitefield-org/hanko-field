@@ -1,0 +1,124 @@
+{{define "catalog/drawer"}}
+{{$drawer := .Drawer}}
+{{$basePath := .BasePath}}
+{{if $drawer.Empty}}
+  <div class="space-y-2 text-sm text-slate-500">
+    <h2 class="text-base font-semibold text-slate-900">詳細</h2>
+    <p>アセットを選択するとここに詳細が表示されます。</p>
+  </div>
+{{else}}
+  <div class="space-y-4">
+    <div class="space-y-2">
+      <div class="flex items-center gap-2">
+        <h2 class="text-lg font-semibold text-slate-900">{{$drawer.Title}}</h2>
+        <span class="{{badgeClass $drawer.StatusTone}}">{{$drawer.StatusLabel}}</span>
+        {{if $drawer.Version}}
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{{$drawer.Version}}</span>
+        {{end}}
+      </div>
+      <p class="text-xs uppercase tracking-wide text-slate-400">{{$drawer.KindLabel}}</p>
+      <p class="text-sm text-slate-600">{{$drawer.Description}}</p>
+      <p class="text-xs text-slate-400">更新 {{$drawer.UpdatedLabel}}</p>
+    </div>
+    {{if $drawer.PreviewURL}}
+      <img src="{{$drawer.PreviewURL}}" alt="{{$drawer.PreviewAlt}}" class="w-full rounded-xl object-cover ring-1 ring-slate-200" />
+    {{end}}
+    <div class="rounded-xl bg-slate-50 p-3 text-sm">
+      <p class="font-semibold text-slate-800">担当者</p>
+      <p class="text-slate-600">{{$drawer.Owner.Name}}</p>
+      <p class="text-xs text-slate-400">{{$drawer.Owner.Email}}</p>
+    </div>
+    {{if or $drawer.LastPublishedLabel $drawer.HasSchedule}}
+      <div class="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">公開情報</p>
+        {{if $drawer.LastPublishedLabel}}
+          <p class="text-slate-600">
+            最終公開 {{$drawer.LastPublishedLabel}}
+            {{if $drawer.LastPublishedBy}}
+              <span class="text-xs text-slate-400"> / {{$drawer.LastPublishedBy}}</span>
+            {{end}}
+          </p>
+        {{end}}
+        {{if $drawer.HasSchedule}}
+          <div class="flex flex-col gap-2">
+            <p class="text-slate-600">
+              公開予約 {{$drawer.ScheduleLabel}}
+              {{if $drawer.ScheduleRelative}}
+                <span class="text-xs text-slate-400">({{$drawer.ScheduleRelative}})</span>
+              {{end}}
+            </p>
+            <button
+              type="button"
+              class="{{buttonClass "ghost" "xs" false false}}"
+              hx-post="{{joinBase $basePath (printf "/catalog/%s/%s/schedule/cancel" $drawer.Kind $drawer.ID)}}"
+              hx-target="#catalog-view"
+              hx-swap="outerHTML"
+              hx-indicator="#catalog-loading"
+              data-confirm="公開予約を取り消しますか？"
+              {{if $drawer.Version}}hx-vals="{{printf "{\"version\":\"%s\"}" $drawer.Version}}"{{end}}
+            >
+              予約を取消
+            </button>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+    {{if gt (len $drawer.Usage) 0}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">利用状況</p>
+        <ul class="mt-2 space-y-1 text-sm text-slate-600">
+          {{range $metric := $drawer.Usage}}
+            <li>{{$metric.Icon}} {{$metric.Label}}: {{$metric.Value}}</li>
+          {{end}}
+        </ul>
+      </div>
+    {{end}}
+    {{if gt (len $drawer.Metadata) 0}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">メタデータ</p>
+        <dl class="mt-2 space-y-1 text-sm text-slate-600">
+          {{range $item := $drawer.Metadata}}
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">{{$item.Icon}} {{$item.Key}}</dt>
+              <dd class="font-medium text-slate-900">{{$item.Value}}</dd>
+            </div>
+          {{end}}
+        </dl>
+      </div>
+    {{end}}
+    {{if gt (len $drawer.Dependencies) 0}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">依存関係</p>
+        <div class="mt-2 space-y-2">
+          {{range $dep := $drawer.Dependencies}}
+            <div class="flex flex-col rounded-xl border border-slate-200 px-3 py-2">
+              <p class="font-semibold text-slate-800">{{$dep.Label}}</p>
+              <p class="text-xs text-slate-500">{{$dep.Kind}} / {{$dep.Status}}</p>
+            </div>
+          {{end}}
+        </div>
+      </div>
+    {{end}}
+    {{if gt (len $drawer.Audit) 0}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">更新履歴</p>
+        <ul class="mt-2 space-y-2 text-xs text-slate-500">
+          {{range $entry := $drawer.Audit}}
+            <li>
+              <p class="font-semibold text-slate-700">{{$entry.Actor}}</p>
+              <p>{{$entry.Timestamp}} / {{$entry.Action}} ({{$entry.Channel}})</p>
+            </li>
+          {{end}}
+        </ul>
+      </div>
+    {{end}}
+    {{if gt (len $drawer.Tags) 0}}
+      <div class="flex flex-wrap gap-1 text-[11px] text-slate-500">
+        {{range $tag := $drawer.Tags}}
+          <span class="rounded-full bg-slate-100 px-2 py-0.5">{{$tag}}</span>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+{{end}}
+{{end}}

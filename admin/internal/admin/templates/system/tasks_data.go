@@ -10,7 +10,6 @@ import (
 	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/partials"
-	"github.com/a-h/templ"
 )
 
 // TasksPageData represents the full payload for the tasks monitor page.
@@ -107,7 +106,7 @@ type TasksTableRow struct {
 	SuccessRate     string
 	Tags            []string
 	Actions         []TaskRowAction
-	Attributes      templ.Attributes
+	Attributes      map[string]string
 }
 
 // TaskRowAction represents row-level actions.
@@ -507,7 +506,7 @@ func taskWindowOptions(selected string, windows []adminsystem.JobWindowOption, t
 }
 
 func toTaskRow(basePath string, job adminsystem.Job, selectedID string) TasksTableRow {
-	attrs := templ.Attributes{
+	attrs := map[string]string{
 		"data-system-task-row": "true",
 		"data-system-task-id":  job.ID,
 		"hx-get":               joinBase(basePath, fmt.Sprintf("/system/tasks/jobs/%s/drawer", job.ID)),

@@ -1,0 +1,192 @@
+{{define "customers/deactivate-modal"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="退会＋マスクを実行" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">退会＋マスクを実行</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      <div class="space-y-6 text-sm text-slate-700">
+        <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-slate-800">
+          <p class="font-semibold">この操作は取り消せません。</p>
+          <p class="mt-1 text-xs text-slate-700">顧客のサインインを即時停止し、個人情報をマスクします。後から復旧するにはサポートチームによる手続きが必要です。</p>
+        </section>
+        <dl class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">顧客</dt>
+            <dd class="mt-1 font-semibold text-slate-900">{{fallback .CustomerName "-"}}</dd>
+            {{if trimSpace .Email}}
+              <dd class="text-xs text-slate-500">{{.Email}}</dd>
+            {{end}}
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">現在のステータス</dt>
+            <dd class="mt-1">
+              {{if trimSpace .StatusLabel}}
+                {{template "components/badge" (dict "Label" .StatusLabel "Tone" .StatusTone)}}
+              {{else}}
+                <span class="text-slate-700">-</span>
+              {{end}}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">累計注文</dt>
+            <dd class="mt-1 font-medium text-slate-900">{{.TotalOrdersLabel}}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">累計売上</dt>
+            <dd class="mt-1 font-medium text-slate-900">{{.LifetimeValueLabel}}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終注文</dt>
+            <dd class="mt-1 font-medium text-slate-900">{{fallback .LastOrderLabel "情報なし"}}</dd>
+          </div>
+        </dl>
+        {{if gt (len .Impacts) 0}}
+          <div class="space-y-2">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">処理の内容</h3>
+            <ul class="space-y-3">
+              {{range $impact := .Impacts}}
+                <li class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <p class="font-semibold text-slate-900">{{fallback $impact.Icon "•"}} {{$impact.Title}}</p>
+                  {{if trimSpace $impact.Description}}
+                    <p class="mt-1 text-xs text-slate-600">{{$impact.Description}}</p>
+                  {{end}}
+                </li>
+              {{end}}
+            </ul>
+          </div>
+        {{end}}
+        <form
+          hx-post="{{.ActionURL}}"
+          hx-target="#modal"
+          hx-swap="innerHTML"
+          class="space-y-4"
+        >
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
+          <input type="hidden" name="action_url" value="{{.ActionURL}}" />
+          <input type="hidden" name="expected_confirmation" value="{{.ConfirmationPhrase}}" />
+          <input type="hidden" name="customer_name" value="{{.CustomerName}}" />
+          <input type="hidden" name="customer_email" value="{{.Email}}" />
+          <input type="hidden" name="status_label" value="{{.StatusLabel}}" />
+          <input type="hidden" name="status_tone" value="{{.StatusTone}}" />
+          <input type="hidden" name="total_orders_label" value="{{.TotalOrdersLabel}}" />
+          <input type="hidden" name="lifetime_value_label" value="{{.LifetimeValueLabel}}" />
+          <input type="hidden" name="last_order_label" value="{{.LastOrderLabel}}" />
+          <input type="hidden" name="impacts_json" value="{{.ImpactsJSON}}" />
+          {{$reasonErr := index .Form.FieldErrors "reason"}}
+          <div class="space-y-2">
+            <label for="deactivate-reason" class="text-xs font-semibold uppercase tracking-wide text-slate-500">理由</label>
+            <textarea
+              id="deactivate-reason"
+              name="reason"
+              rows="3"
+              class="{{customersFieldInputClass $reasonErr}}"
+              placeholder="例: 退会希望のため、サポートチケット #123 を受領"
+            >{{.Form.Reason}}</textarea>
+            {{if trimSpace $reasonErr}}
+              <p class="text-xs text-rose-600">{{$reasonErr}}</p>
+            {{else}}
+              <p class="text-xs text-slate-500">監査ログに記録されるため、依頼経緯やチケット番号などを残してください。</p>
+            {{end}}
+          </div>
+          {{$confirmationErr := index .Form.FieldErrors "confirmation"}}
+          <div class="space-y-2">
+            <label for="deactivate-confirmation" class="text-xs font-semibold uppercase tracking-wide text-slate-500">確認フレーズ</label>
+            <input
+              id="deactivate-confirmation"
+              name="confirmation"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              class="{{customersFieldInputClass $confirmationErr}}"
+              placeholder="{{.ConfirmationPhrase}}"
+              value="{{.Form.Confirmation}}"
+            />
+            <p class="{{customersConfirmationHelpClass $confirmationErr}}">
+              確認のため <span class="font-semibold text-slate-800">{{.ConfirmationPhrase}}</span> と正確に入力してください。
+            </p>
+            {{if trimSpace $confirmationErr}}
+              <p class="text-xs text-rose-600">{{$confirmationErr}}</p>
+            {{end}}
+          </div>
+          {{if trimSpace .Form.Error}}
+            <p class="text-sm text-rose-600">{{.Form.Error}}</p>
+          {{end}}
+          <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-xs text-slate-500">完了後に監査ログへ記録し、顧客詳細を自動で更新します。</p>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+              <button type="button" class="{{buttonClass "ghost" "md" false false}}" data-modal-close>キャンセル</button>
+              <button type="submit" class="{{buttonClass "danger" "md" false false}}" {{if .Form.DisableSubmit}}disabled{{end}}>退会＋マスクを実行</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "customers/deactivate-success"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="退会＋マスクを完了" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">退会＋マスクを完了</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      <div class="space-y-6 text-sm text-slate-700">
+        <section class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-900">
+          <p class="font-semibold">{{.Message}}</p>
+          <p class="mt-1 text-xs text-emerald-800">顧客のサインインを停止し、個人情報を匿名化しました。</p>
+        </section>
+        <dl class="space-y-2 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">監査ログID</dt>
+            <dd class="font-mono text-xs text-slate-700">{{fallback .AuditID "-"}}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">記録日時</dt>
+            <dd class="text-xs text-slate-700">{{fallback .AuditTimestamp "-"}}</dd>
+          </div>
+          {{if trimSpace .AuditRelative}}
+            <div class="flex items-center justify-between gap-2">
+              <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">相対時刻</dt>
+              <dd class="text-xs text-slate-700">{{.AuditRelative}}</dd>
+            </div>
+          {{end}}
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">操作担当</dt>
+            <dd class="text-xs text-slate-700">{{fallback .AuditActor "システム"}}</dd>
+          </div>
+        </dl>
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <a
+            href="{{.AuditURL}}"
+            class="{{buttonClass "secondary" "md" false false}}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            監査ログを表示
+          </a>
+          <button type="button" class="{{buttonClass "primary" "md" false false}}" data-modal-close>閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

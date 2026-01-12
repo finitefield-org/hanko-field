@@ -1,0 +1,272 @@
+{{define "catalog/table-section"}}
+<div
+  id="catalog-view"
+  class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+  hx-target="this"
+  hx-swap="outerHTML"
+  hx-get="{{buildURL .FragmentPath .RawQuery}}"
+  hx-trigger="refresh from:body"
+  hx-indicator="#catalog-loading"
+>
+  {{if eq (len .Rows) 0}}
+    <div class="px-6 py-12 text-center text-sm text-slate-500">{{.EmptyMessage}}</div>
+  {{else}}
+    {{$sort := .Sort}}
+    <table class="min-w-full divide-y divide-slate-200">
+      <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          {{$nameDir := sortCurrentDirection $sort.Active "name"}}
+          <th
+            scope="col"
+            class="px-4 py-3 text-left"
+            aria-sort="{{sortAria $nameDir}}"
+            data-sort-key="name"
+            data-sort-direction="{{$nameDir}}"
+          >
+            <a
+              class="{{sortHeaderClass $nameDir}}"
+              href="{{sortHref $sort.BasePath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "name" "asc" $sort.ResetPage}}"
+              {{if or $sort.HxTarget $sort.HxSwap $sort.HxPushURL}}
+                hx-get="{{sortHxHref $sort.FragmentPath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "name" "asc" $sort.ResetPage}}"
+                {{if $sort.HxTarget}}hx-target="{{$sort.HxTarget}}"{{end}}
+                {{if $sort.HxSwap}}hx-swap="{{$sort.HxSwap}}"{{end}}
+                {{if $sort.HxPushURL}}hx-push-url="true"{{end}}
+              {{end}}
+              role="button"
+              aria-pressed="{{if $nameDir}}true{{else}}false{{end}}"
+              data-next-direction="{{sortNextDirectionAttr $sort.Active "name" "asc"}}"
+            >
+              <span class="flex items-center gap-1">
+                <span>アセット</span>
+                <span class="sr-only">{{sortSrLabel "アセット" $sort.Active "name" "asc"}}</span>
+                <span aria-hidden="true" class="{{sortIconClass $nameDir}}">
+                  {{if eq $nameDir "asc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M10 5l-3 3h6l-3-3z" fill="currentColor"></path>
+                      <path d="M13 12l-3 3-3-3h6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                    </svg>
+                  {{else if eq $nameDir "desc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M7 8l3-3 3 3H7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                      <path d="M10 15l3-3H7l3 3z" fill="currentColor"></path>
+                    </svg>
+                  {{else}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-500" focusable="false">
+                      <path d="M10 5l-2.5 2.5h5L10 5z" fill="currentColor" opacity="0.75"></path>
+                      <path d="M10 15l2.5-2.5h-5L10 15z" fill="currentColor" opacity="0.75"></path>
+                    </svg>
+                  {{end}}
+                </span>
+              </span>
+            </a>
+          </th>
+          {{$ownerDir := sortCurrentDirection $sort.Active "owner"}}
+          <th
+            scope="col"
+            class="px-4 py-3 text-left"
+            aria-sort="{{sortAria $ownerDir}}"
+            data-sort-key="owner"
+            data-sort-direction="{{$ownerDir}}"
+          >
+            <a
+              class="{{sortHeaderClass $ownerDir}}"
+              href="{{sortHref $sort.BasePath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "owner" "asc" $sort.ResetPage}}"
+              {{if or $sort.HxTarget $sort.HxSwap $sort.HxPushURL}}
+                hx-get="{{sortHxHref $sort.FragmentPath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "owner" "asc" $sort.ResetPage}}"
+                {{if $sort.HxTarget}}hx-target="{{$sort.HxTarget}}"{{end}}
+                {{if $sort.HxSwap}}hx-swap="{{$sort.HxSwap}}"{{end}}
+                {{if $sort.HxPushURL}}hx-push-url="true"{{end}}
+              {{end}}
+              role="button"
+              aria-pressed="{{if $ownerDir}}true{{else}}false{{end}}"
+              data-next-direction="{{sortNextDirectionAttr $sort.Active "owner" "asc"}}"
+            >
+              <span class="flex items-center gap-1">
+                <span>担当</span>
+                <span class="sr-only">{{sortSrLabel "担当" $sort.Active "owner" "asc"}}</span>
+                <span aria-hidden="true" class="{{sortIconClass $ownerDir}}">
+                  {{if eq $ownerDir "asc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M10 5l-3 3h6l-3-3z" fill="currentColor"></path>
+                      <path d="M13 12l-3 3-3-3h6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                    </svg>
+                  {{else if eq $ownerDir "desc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M7 8l3-3 3 3H7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                      <path d="M10 15l3-3H7l3 3z" fill="currentColor"></path>
+                    </svg>
+                  {{else}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-500" focusable="false">
+                      <path d="M10 5l-2.5 2.5h5L10 5z" fill="currentColor" opacity="0.75"></path>
+                      <path d="M10 15l2.5-2.5h-5L10 15z" fill="currentColor" opacity="0.75"></path>
+                    </svg>
+                  {{end}}
+                </span>
+              </span>
+            </a>
+          </th>
+          {{$updatedDir := sortCurrentDirection $sort.Active "updated_at"}}
+          <th
+            scope="col"
+            class="px-4 py-3 text-left"
+            aria-sort="{{sortAria $updatedDir}}"
+            data-sort-key="updated_at"
+            data-sort-direction="{{$updatedDir}}"
+          >
+            <a
+              class="{{sortHeaderClass $updatedDir}}"
+              href="{{sortHref $sort.BasePath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "updated_at" "desc" $sort.ResetPage}}"
+              {{if or $sort.HxTarget $sort.HxSwap $sort.HxPushURL}}
+                hx-get="{{sortHxHref $sort.FragmentPath $sort.RawQuery $sort.Param $sort.PageParam $sort.Active "updated_at" "desc" $sort.ResetPage}}"
+                {{if $sort.HxTarget}}hx-target="{{$sort.HxTarget}}"{{end}}
+                {{if $sort.HxSwap}}hx-swap="{{$sort.HxSwap}}"{{end}}
+                {{if $sort.HxPushURL}}hx-push-url="true"{{end}}
+              {{end}}
+              role="button"
+              aria-pressed="{{if $updatedDir}}true{{else}}false{{end}}"
+              data-next-direction="{{sortNextDirectionAttr $sort.Active "updated_at" "desc"}}"
+            >
+              <span class="flex items-center gap-1">
+                <span>更新</span>
+                <span class="sr-only">{{sortSrLabel "更新" $sort.Active "updated_at" "desc"}}</span>
+                <span aria-hidden="true" class="{{sortIconClass $updatedDir}}">
+                  {{if eq $updatedDir "asc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M10 5l-3 3h6l-3-3z" fill="currentColor"></path>
+                      <path d="M13 12l-3 3-3-3h6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                    </svg>
+                  {{else if eq $updatedDir "desc"}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-600" focusable="false">
+                      <path d="M7 8l3-3 3 3H7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.45"></path>
+                      <path d="M10 15l3-3H7l3 3z" fill="currentColor"></path>
+                    </svg>
+                  {{else}}
+                    <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-slate-500" focusable="false">
+                      <path d="M10 5l-2.5 2.5h5L10 5z" fill="currentColor" opacity="0.75"></path>
+                      <path d="M10 15l2.5-2.5h-5L10 15z" fill="currentColor" opacity="0.75"></path>
+                    </svg>
+                  {{end}}
+                </span>
+              </span>
+            </a>
+          </th>
+          <th scope="col" class="px-4 py-3 text-left">利用状況</th>
+          <th scope="col" class="px-4 py-3 text-right">操作</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200 text-sm text-slate-700">
+        {{range $row := .Rows}}
+          <tr
+            class="{{catalogRowClass $row.Selected}}"
+            hx-get="{{buildURL $.FragmentPath (setRawQuery $.RawQuery "selected" $row.ID)}}"
+            hx-target="#catalog-view"
+            hx-swap="outerHTML"
+            hx-push-url="{{buildURL $.PagePath (setRawQuery $.RawQuery "selected" $row.ID)}}"
+            role="button"
+            tabindex="0"
+          >
+            <td class="px-4 py-4">
+              <div class="flex gap-4">
+                {{if $row.PreviewURL}}
+                  <img src="{{$row.PreviewURL}}" alt="{{$row.PreviewAlt}}" class="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-200" />
+                {{end}}
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <p class="font-semibold text-slate-900">{{$row.Name}}</p>
+                    <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+                    {{if $row.Badge}}
+                      <span class="{{badgeClass $row.BadgeTone}}">{{$row.Badge}}</span>
+                    {{end}}
+                    {{if $row.Version}}
+                      <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{{$row.Version}}</span>
+                    {{end}}
+                  </div>
+                  <p class="text-xs text-slate-500">{{$row.Identifier}}</p>
+                  {{if $row.CategoryLabel}}
+                    <p class="text-[11px] uppercase tracking-wide text-slate-400">{{$row.CategoryLabel}}</p>
+                  {{end}}
+                  <p class="text-xs text-slate-500">{{$row.Description}}</p>
+                  {{if $row.ScheduleLabel}}
+                    <p class="flex items-center gap-1 text-xs text-slate-500">
+                      <span>🗓</span>
+                      <span>{{$row.ScheduleLabel}}</span>
+                      {{if $row.ScheduleRelative}}
+                        <span class="text-[11px] text-slate-400">({{$row.ScheduleRelative}})</span>
+                      {{end}}
+                    </p>
+                  {{end}}
+                  <div class="flex flex-wrap gap-1 text-[11px] text-slate-500">
+                    {{range $tag := $row.Tags}}
+                      <span class="rounded-full bg-slate-100 px-2 py-0.5">{{$tag}}</span>
+                    {{end}}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{{$row.OwnerInitials}}</div>
+                <div>
+                  <p class="font-medium">{{$row.Owner}}</p>
+                  <p class="text-xs text-slate-500">{{$row.StatusLabel}}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-4">
+              <p class="font-medium text-slate-900">{{$row.UpdatedLabel}}</p>
+              <p class="text-xs text-slate-500">{{$row.UpdatedRelative}}</p>
+            </td>
+            <td class="px-4 py-4">
+              <p class="font-medium text-slate-900">{{$row.UsageLabel}}</p>
+              <div class="flex flex-wrap gap-2 text-xs text-slate-500">
+                {{range $metric := $row.Metrics}}
+                  <span>{{$metric.Icon}} {{$metric.Label}}: {{$metric.Value}}</span>
+                {{end}}
+              </div>
+            </td>
+            <td class="px-4 py-4">
+              <div class="flex justify-end gap-2">
+                <button
+                  type="button"
+                  class="{{buttonClass "secondary" "xs" false false}}"
+                  hx-get="{{$row.EditURL}}"
+                  hx-target="#modal"
+                  hx-swap="innerHTML"
+                >
+                  編集
+                </button>
+                <button
+                  type="button"
+                  class="{{buttonClass "ghost" "xs" false false}}"
+                  hx-get="{{$row.DeleteURL}}"
+                  hx-target="#modal"
+                  hx-swap="innerHTML"
+                >
+                  削除
+                </button>
+              </div>
+            </td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{if gt .Pagination.PageSize 0}}
+      <div class="border-t border-slate-100 px-4 py-3">
+        {{template "components/pagination" (catalogPaginationProps .)}}
+      </div>
+    {{end}}
+  {{end}}
+</div>
+<div id="catalog-drawer" hx-swap-oob="true">
+  {{template "catalog/drawer" (dict "Drawer" .Drawer "BasePath" $.BasePath)}}
+</div>
+{{template "catalog/view-toggle" (dict "Toggle" .View "Swap" true)}}
+<input type="hidden" id="catalog-view-field" name="view" value="{{.View.Active}}" hx-swap-oob="true" />
+{{end}}
+
+{{define "catalog/table-fragment"}}
+{{template "catalog/table-section" .Page.Table}}
+<div id="catalog-filter-toolbar" hx-swap-oob="true">
+  {{template "catalog/filter-toolbar" .Page}}
+</div>
+{{end}}

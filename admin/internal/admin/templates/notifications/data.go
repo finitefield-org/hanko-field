@@ -10,7 +10,6 @@ import (
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/partials"
-	"github.com/a-h/templ"
 )
 
 // PageData contains the full SSR payload for the notifications page.
@@ -101,7 +100,7 @@ type TableRow struct {
 	CreatedAtRelative string
 	CreatedAtTooltip  string
 	Actions           []RowAction
-	Attributes        templ.Attributes
+	Attributes        map[string]string
 }
 
 // RowAction represents a contextual menu entry.
@@ -375,7 +374,7 @@ func joinBase(base, suffix string) string {
 }
 
 func toTableRow(item adminnotifications.Notification) TableRow {
-	attrs := templ.Attributes{
+	attrs := map[string]string{
 		"data-notification-row":     "true",
 		"data-notification-id":      item.ID,
 		"data-notification-payload": encodeDetailPayload(item),

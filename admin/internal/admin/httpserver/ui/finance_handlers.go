@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	adminfinance "finitefield.org/hanko-admin/internal/admin/finance"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	financetpl "finitefield.org/hanko-admin/internal/admin/templates/finance"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 type taxSettingsRequest struct {
@@ -92,7 +92,19 @@ func (h *Handlers) ReconciliationPage(w http.ResponseWriter, r *http.Request) {
 	basePath := custommw.BasePathFromContext(ctx)
 	triggerURL := joinBasePath(basePath, "/finance/reconciliation:trigger")
 	data := financetpl.BuildReconciliationPageData(basePath, dashboard, triggerURL, custommw.CSRFTokenFromContext(ctx), nil)
-	templ.Handler(financetpl.ReconciliationPage(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "finance/reconciliation-content"
+	view := webtmpl.FinanceReconciliationView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "finance/reconciliation-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ReconciliationTrigger(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +130,9 @@ func (h *Handlers) ReconciliationTrigger(w http.ResponseWriter, r *http.Request)
 	}
 
 	data := financetpl.BuildReconciliationPageData(basePath, dashboard, triggerURL, custommw.CSRFTokenFromContext(ctx), snackbar)
-	templ.Handler(financetpl.ReconciliationRoot(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "finance/reconciliation-root", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) TaxSettingsPage(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +169,19 @@ func (h *Handlers) TaxSettingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := financetpl.BuildPageData(basePath, result, detail, req.state, nil)
-	templ.Handler(financetpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "finance/tax-content"
+	view := webtmpl.FinanceTaxSettingsView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "finance/tax-index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) TaxSettingsGrid(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +224,9 @@ func (h *Handlers) TaxRuleNewModal(w http.ResponseWriter, r *http.Request) {
 	basePath := custommw.BasePathFromContext(ctx)
 	state := financetpl.DefaultRuleFormState(detail, nil)
 	form := financetpl.BuildRuleFormData(basePath, detail, nil, custommw.CSRFTokenFromContext(ctx), state, req.state.RawQuery, nil, "")
-	templ.Handler(financetpl.RuleFormModal(form)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "finance/tax-rule-form-modal", form); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) TaxRuleEditModal(w http.ResponseWriter, r *http.Request) {
@@ -243,7 +271,9 @@ func (h *Handlers) TaxRuleEditModal(w http.ResponseWriter, r *http.Request) {
 	basePath := custommw.BasePathFromContext(ctx)
 	state := financetpl.DefaultRuleFormState(detail, target)
 	form := financetpl.BuildRuleFormData(basePath, detail, target, custommw.CSRFTokenFromContext(ctx), state, req.state.RawQuery, nil, "")
-	templ.Handler(financetpl.RuleFormModal(form)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "finance/tax-rule-form-modal", form); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) TaxRuleDeleteModal(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +317,9 @@ func (h *Handlers) TaxRuleDeleteModal(w http.ResponseWriter, r *http.Request) {
 	req := parseTaxSettingsRequest(r)
 	basePath := custommw.BasePathFromContext(ctx)
 	modal := financetpl.BuildRuleDeleteModalData(basePath, detail, *target, custommw.CSRFTokenFromContext(ctx), req.state.RawQuery, "")
-	templ.Handler(financetpl.RuleDeleteModal(modal)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "finance/tax-rule-delete-modal", modal); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) TaxRuleCreate(w http.ResponseWriter, r *http.Request) {
@@ -346,7 +378,9 @@ func (h *Handlers) handleTaxRuleUpsert(w http.ResponseWriter, r *http.Request, i
 	if parseErr != nil {
 		log.Printf("finance: parse tax rule input failed: %v", parseErr)
 		form := financetpl.BuildRuleFormData(basePath, detail, findRule(detail, ruleID), custommw.CSRFTokenFromContext(ctx), formState, req.state.RawQuery, fieldErrs, parseErr.Error())
-		templ.Handler(financetpl.RuleFormModal(form)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "finance/tax-rule-form-modal", form); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -355,12 +389,16 @@ func (h *Handlers) handleTaxRuleUpsert(w http.ResponseWriter, r *http.Request, i
 		var validationErr *adminfinance.TaxRuleValidationError
 		if errors.As(err, &validationErr) {
 			form := financetpl.BuildRuleFormData(basePath, detail, findRule(detail, ruleID), custommw.CSRFTokenFromContext(ctx), formState, req.state.RawQuery, mergeFieldErrors(fieldErrs, validationErr.FieldErrors), validationErr.Message)
-			templ.Handler(financetpl.RuleFormModal(form)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "finance/tax-rule-form-modal", form); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		log.Printf("finance: upsert tax rule failed: %v", err)
 		form := financetpl.BuildRuleFormData(basePath, detail, findRule(detail, ruleID), custommw.CSRFTokenFromContext(ctx), formState, req.state.RawQuery, fieldErrs, "税率の保存に失敗しました。時間を置いて再度お試しください。")
-		templ.Handler(financetpl.RuleFormModal(form)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "finance/tax-rule-form-modal", form); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -407,12 +445,16 @@ func (h *Handlers) TaxRuleDelete(w http.ResponseWriter, r *http.Request) {
 		var validationErr *adminfinance.TaxRuleValidationError
 		if errors.As(err, &validationErr) {
 			modal := financetpl.BuildRuleDeleteModalData(basePath, detail, findRuleValue(detail, ruleID), custommw.CSRFTokenFromContext(ctx), req.state.RawQuery, validationErr.Message)
-			templ.Handler(financetpl.RuleDeleteModal(modal)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "finance/tax-rule-delete-modal", modal); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		log.Printf("finance: delete tax rule failed: %v", err)
 		modal := financetpl.BuildRuleDeleteModalData(basePath, detail, findRuleValue(detail, ruleID), custommw.CSRFTokenFromContext(ctx), req.state.RawQuery, "税率の削除に失敗しました。時間を置いて再度お試しください。")
-		templ.Handler(financetpl.RuleDeleteModal(modal)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "finance/tax-rule-delete-modal", modal); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -458,7 +500,13 @@ func (h *Handlers) renderTaxSettingsGrid(ctx context.Context, w http.ResponseWri
 		}
 	}
 
-	templ.Handler(financetpl.GridWithSnackbar(page.Content, snackbar)).ServeHTTP(w, r)
+	view := webtmpl.FinanceTaxGridView{
+		Content:  page.Content,
+		Snackbar: page.Snackbar,
+	}
+	if err := dashboardTemplates.Render(w, "finance/tax-grid", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func parseTaxSettingsRequestFromForm(r *http.Request) taxSettingsRequest {

@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminreviews "finitefield.org/hanko-admin/internal/admin/reviews"
 	reviewstpl "finitefield.org/hanko-admin/internal/admin/templates/reviews"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -25,6 +25,38 @@ type reviewsRequest struct {
 	query    adminreviews.ListQuery
 	state    reviewstpl.QueryState
 	selected string
+}
+
+func toReviewsTableView(table reviewstpl.TableData) webtmpl.ReviewsTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Label:         table.Pagination.Label,
+		Attrs:         attrs,
+	}
+	return webtmpl.ReviewsTableView{
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 // ReviewsModerationPage renders the review moderation dashboard.
@@ -60,7 +92,21 @@ func (h *Handlers) ReviewsModerationPage(w http.ResponseWriter, r *http.Request)
 	table := reviewstpl.TablePayload(basePath, state, result, actualSelected, errMsg)
 	page := reviewstpl.BuildPageData(basePath, state, result, table, detail)
 
-	templ.Handler(reviewstpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "reviews/content"
+	view := webtmpl.ReviewsPageView{
+		BaseView: base,
+		Page:     page,
+		Table:    toReviewsTableView(table),
+		Detail:   detail,
+	}
+	if err := dashboardTemplates.Render(w, "reviews/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ReviewsModerationTable renders the moderation table fragment for HTMX requests.
@@ -98,7 +144,13 @@ func (h *Handlers) ReviewsModerationTable(w http.ResponseWriter, r *http.Request
 	if canonical := canonicalReviewsURL(basePath, req); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
-	templ.Handler(reviewstpl.TableFragment(table, detail)).ServeHTTP(w, r)
+	view := webtmpl.ReviewsTableFragmentView{
+		Table:  toReviewsTableView(table),
+		Detail: detail,
+	}
+	if err := dashboardTemplates.Render(w, "reviews/table-fragment", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ReviewsModerationModal renders the moderation modal for approve/reject decisions.
@@ -142,7 +194,9 @@ func (h *Handlers) ReviewsModerationModal(w http.ResponseWriter, r *http.Request
 	currentURL := r.Header.Get("HX-Current-URL")
 
 	data := reviewstpl.ModerationModalPayload(basePath, modal, csrf, currentURL)
-	templ.Handler(reviewstpl.ModerationModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "reviews/moderation-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ReviewsModerate processes approve/reject submissions.
@@ -220,7 +274,13 @@ func (h *Handlers) ReviewsModerate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"toast":{"message":"%s","tone":"%s"},"modal:close":true}`, message, tone))
-	templ.Handler(reviewstpl.ModerationSuccess(payload)).ServeHTTP(w, r)
+	view := webtmpl.ReviewsRefreshView{
+		Table:  toReviewsTableView(payload.Table),
+		Detail: payload.Detail,
+	}
+	if err := dashboardTemplates.Render(w, "reviews/moderation-success", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ReviewsReplyModal renders the reply capture modal.
@@ -254,7 +314,9 @@ func (h *Handlers) ReviewsReplyModal(w http.ResponseWriter, r *http.Request) {
 	currentURL := r.Header.Get("HX-Current-URL")
 
 	data := reviewstpl.ReplyModalPayload(basePath, modal, csrf, currentURL, "", false, false, "")
-	templ.Handler(reviewstpl.ReplyModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "reviews/reply-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // ReviewsStoreReply persists a storefront reply.
@@ -308,7 +370,9 @@ func (h *Handlers) ReviewsStoreReply(w http.ResponseWriter, r *http.Request) {
 			}
 			data := reviewstpl.ReplyModalPayload(basePath, modal, csrf, currentURL, body, notifyCustomer, isPublic, "返信内容を入力してください。")
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			templ.Handler(reviewstpl.ReplyModal(data)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "reviews/reply-modal", data); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		log.Printf("reviews: store reply failed: %v", err)
@@ -340,7 +404,13 @@ func (h *Handlers) ReviewsStoreReply(w http.ResponseWriter, r *http.Request) {
 	payload := reviewstpl.ReplySuccessPayload(table, detail)
 
 	w.Header().Set("HX-Trigger", `{"toast":{"message":"返信を保存しました。","tone":"success"},"modal:close":true}`)
-	templ.Handler(reviewstpl.ReplySuccess(payload)).ServeHTTP(w, r)
+	view := webtmpl.ReviewsRefreshView{
+		Table:  toReviewsTableView(payload.Table),
+		Detail: payload.Detail,
+	}
+	if err := dashboardTemplates.Render(w, "reviews/reply-success", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func buildReviewsRequest(r *http.Request) reviewsRequest {

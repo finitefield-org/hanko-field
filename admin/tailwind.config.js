@@ -3,8 +3,8 @@ const colors = require("tailwindcss/colors");
 
 module.exports = {
   content: [
-    "./internal/admin/templates/**/*.templ",
     "./internal/admin/templates/**/*.go",
+    "./internal/admin/webtmpl/templates/**/*.html",
     "./internal/admin/httpserver/**/*.go",
     "./web/styles/**/*.{css,scss}",
     "./public/**/*.html"

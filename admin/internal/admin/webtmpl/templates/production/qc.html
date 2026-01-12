@@ -1,0 +1,395 @@
+{{define "production/qc-index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "production/qc-content"}}
+<div class="space-y-6" data-qc-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{.Page.Title}}</h1>
+        <p class="text-sm text-slate-600">{{.Page.Description}}</p>
+      </div>
+      <form
+        method="get"
+        action="{{.Page.QueueForm.Endpoint}}"
+        class="flex flex-col gap-2 sm:flex-row sm:items-center"
+      >
+        <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">検品ライン</label>
+        <div class="flex items-center gap-2">
+          <select
+            name="queue"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            {{range .Page.QueueForm.Options}}
+              <option value="{{.ID}}" {{if .Active}}selected{{end}}>{{.Label}}</option>
+            {{end}}
+          </select>
+          <button type="submit" class="{{buttonClass "secondary" "sm" false false}}">切り替え</button>
+        </div>
+        <input type="hidden" name="product_line" value="{{.Page.Filters.Query.ProductLine}}" />
+        <input type="hidden" name="issue_type" value="{{.Page.Filters.Query.IssueType}}" />
+        <input type="hidden" name="assignee" value="{{.Page.Filters.Query.Assignee}}" />
+        <input type="hidden" name="status" value="{{.Page.Filters.Query.Status}}" />
+        <input type="hidden" name="selected" value="{{.Page.Filters.Query.Selected}}" />
+      </form>
+    </div>
+    {{if gt (len .Page.Summary) 0}}
+      <div class="mt-6 grid gap-3 sm:grid-cols-3">
+        {{range .Page.Summary}}
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+              {{if .Icon}}<span>{{.Icon}}</span>{{end}}
+              <span>{{.Label}}</span>
+            </p>
+            <p class="text-2xl font-semibold text-slate-900">{{.Value}}</p>
+            {{if .SubText}}<p class="text-xs text-slate-500">{{.SubText}}</p>{{end}}
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+    {{if gt (len .Page.Performance) 0}}
+      <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        {{range .Page.Performance}}
+          <div class="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-3 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{.Label}}</p>
+            <p class="text-lg font-semibold text-slate-900">{{.Value}}</p>
+            {{if .SubText}}<p class="text-xs text-slate-500">{{.SubText}}</p>{{end}}
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+  </section>
+
+  {{if .Page.Alert}}
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+      <p class="font-semibold">⚠ {{.Page.Alert}}</p>
+    </div>
+  {{end}}
+
+  {{if .Page.Error}}
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm">
+      {{.Page.Error}}
+    </div>
+  {{end}}
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <section class="space-y-4">
+      {{template "production/qc-filter" .Page.Filters}}
+      <div id="qc-table" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {{template "production/qc-table" .Page.Table}}
+      </div>
+    </section>
+    <aside>
+      <div class="xl:sticky xl:top-20">
+        <div id="qc-drawer" hx-target="this" hx-swap="outerHTML">
+          {{template "production/qc-drawer" .Page.Drawer}}
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+{{end}}
+
+{{define "production/qc-filter"}}
+<form
+  method="get"
+  action="{{.Endpoint}}"
+  class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm space-y-4"
+>
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{template "production/qc-select" (dict "Name" "product_line" "Label" "プロダクトライン" "Options" .ProductLines)}}
+    {{template "production/qc-select" (dict "Name" "issue_type" "Label" "課題カテゴリ" "Options" .IssueTypes)}}
+    {{template "production/qc-select" (dict "Name" "assignee" "Label" "担当" "Options" .Assignees)}}
+    {{template "production/qc-select" (dict "Name" "status" "Label" "ステータス" "Options" .Statuses)}}
+  </div>
+  <div class="flex flex-wrap items-center gap-3">
+    <input type="hidden" name="queue" value="{{.Query.QueueID}}" />
+    <input type="hidden" name="selected" value="{{.Query.Selected}}" />
+    <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+    <a href="{{.Endpoint}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+  </div>
+</form>
+{{end}}
+
+{{define "production/qc-select"}}
+<div class="flex flex-col gap-2">
+  <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-filter-{{.Name}}">{{.Label}}</label>
+  <select
+    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    name="{{.Name}}"
+    id="qc-filter-{{.Name}}"
+  >
+    <option value="">すべて</option>
+    {{range .Options}}
+      <option value="{{.Value}}" {{if .Active}}selected{{end}}>
+        {{if gt .Count 0}}
+          {{.Label}} ({{.Count}})
+        {{else}}
+          {{.Label}}
+        {{end}}
+      </option>
+    {{end}}
+  </select>
+</div>
+{{end}}
+
+{{define "production/qc-table"}}
+<table class="min-w-full divide-y divide-slate-200">
+  <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <tr>
+      <th scope="col" class="px-4 py-3 text-left">注文</th>
+      <th scope="col" class="px-4 py-3 text-left">プロダクト</th>
+      <th scope="col" class="px-4 py-3 text-left">担当</th>
+      <th scope="col" class="px-4 py-3 text-left">SLA</th>
+      <th scope="col" class="px-4 py-3 text-left">状態</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+    {{if eq (len .Rows) 0}}
+      <tr>
+        <td colspan="5" class="px-4 py-6 text-center text-slate-500">{{.EmptyMessage}}</td>
+      </tr>
+    {{else}}
+      {{range .Rows}}
+        <tr
+          class="{{productionQCRowClass .Selected}}"
+          hx-get="{{.DrawerEndpoint}}"
+          hx-target="#qc-drawer"
+          hx-swap="outerHTML"
+        >
+          <td class="px-4 py-4">
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-900">#{{.OrderNumber}}</span>
+              {{if .Customer}}<span class="text-xs text-slate-500">{{.Customer}}</span>{{end}}
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex flex-col">
+              <span class="font-medium text-slate-900">{{.ProductLine}}</span>
+              <span class="text-xs text-slate-500">{{.ItemType}}</span>
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex flex-col">
+              <span>{{.Assigned}}</span>
+              <span class="{{badgeClass .StageTone}}">{{.StageLabel}}</span>
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-900">{{.SLA}}</span>
+              <span class="text-xs text-slate-500">SLA</span>
+            </div>
+          </td>
+          <td class="px-4 py-4">
+            <div class="flex flex-col gap-1">
+              <span class="{{badgeClass .StatusTone}}">{{.StatusLabel}}</span>
+              {{if .IssueHint}}<p class="text-xs text-slate-500">{{.IssueHint}}</p>{{end}}
+            </div>
+          </td>
+        </tr>
+      {{end}}
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{define "production/qc-drawer"}}
+<section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-qc-drawer>
+  {{if .Empty}}
+    <div class="space-y-2 text-sm text-slate-600">
+      <p class="text-base font-semibold text-slate-900">検品対象を選択してください</p>
+      <p>左のリストから注文を選択すると、ここにチェックリストとアクションが表示されます。</p>
+    </div>
+  {{else}}
+    <div class="space-y-4">
+      <header class="space-y-1">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">注文 #{{.Item.OrderNumber}}</p>
+        <h2 class="text-xl font-semibold text-slate-900">{{.Item.ProductLine}}</h2>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span>{{.Item.Customer}}</span>
+          <span aria-hidden="true">•</span>
+          <span>{{.Item.Assigned}}</span>
+          <span aria-hidden="true">•</span>
+          <span class="{{badgeClass .Item.StageTone}}">{{.Item.StageLabel}}</span>
+        </div>
+      </header>
+      {{if gt (len .Attachments) 0}}
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">参考画像</p>
+          <ul class="flex flex-wrap gap-3 text-sm text-brand-600">
+            {{range .Attachments}}
+              <li>
+                <a href="{{.URL}}" target="_blank" rel="noreferrer" class="hover:underline">{{.Label}}</a>
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+      {{if gt (len .Checklist) 0}}
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">チェックリスト</p>
+          <ul class="space-y-2">
+            {{range .Checklist}}
+              <li class="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                <input type="checkbox" disabled {{if eq .Status "pass"}}checked{{end}} class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600" />
+                <div>
+                  <p class="text-sm font-medium text-slate-800">
+                    {{.Label}}
+                    {{if .Required}}<span class="text-xs text-rose-500">（必須）</span>{{end}}
+                  </p>
+                  {{if .Description}}<p class="text-xs text-slate-500">{{.Description}}</p>{{end}}
+                </div>
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+      {{if gt (len .Issues) 0}}
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">過去の指摘</p>
+          <ul class="space-y-2 text-sm text-slate-600">
+            {{range .Issues}}
+              <li class="rounded-lg border border-slate-200 px-3 py-2">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                  <span>{{.Category}}</span>
+                  <span>{{.Relative}}</span>
+                </div>
+                <p class="mt-1 font-medium text-slate-800">{{.Summary}}</p>
+                {{if .Actor}}<p class="text-xs text-slate-500">by {{.Actor}}</p>{{end}}
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+      {{if gt (len .Notes) 0}}
+        <div class="space-y-1 text-sm text-slate-600">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">メモ</p>
+          {{range .Notes}}
+            <p class="rounded-lg bg-slate-50 px-3 py-2">{{.}}</p>
+          {{end}}
+        </div>
+      {{end}}
+      <div class="space-y-3 border-t border-slate-200 pt-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">記録</p>
+        <form
+          hx-post="{{.Decision.Action}}"
+          hx-target="#qc-drawer"
+          hx-swap="outerHTML"
+          class="space-y-3"
+          hx-indicator="#qc-action-indicator"
+        >
+          <div class="space-y-2">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-note">コメント</label>
+            <textarea
+              id="qc-note"
+              name="note"
+              rows="3"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+              placeholder="異常内容や補足を記録してください。"
+            ></textarea>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-reason">再検理由</label>
+            <select
+              id="qc-reason"
+              name="reason_code"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              <option value="">選択してください</option>
+              {{range .Decision.ReasonOptions}}
+                <option value="{{.Code}}">{{.Label}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-attachments">参考写真URL</label>
+            <textarea
+              id="qc-attachments"
+              name="attachments"
+              rows="2"
+              placeholder="https://example.com/photo.jpg"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            ></textarea>
+            <p class="text-xs text-slate-500">複数ある場合は改行区切りで入力してください。</p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <button type="submit" name="outcome" value="pass" class="{{buttonClass "primary" "sm" false false}}">合格を記録</button>
+            <button type="submit" name="outcome" value="fail" class="{{buttonClass "secondary" "sm" false false}}">再検を記録</button>
+            <button
+              type="button"
+              class="{{buttonClass "ghost" "sm" false false}}"
+              hx-get="{{.Decision.ReworkModal}}"
+              hx-target="#modal"
+              hx-swap="innerHTML"
+            >
+              再作業を割り当て
+            </button>
+            <div id="qc-action-indicator" class="htmx-indicator text-xs text-slate-400">処理中...</div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "production/qc-rework-modal"}}
+<div class="modal-backdrop" data-modal-state="open">
+  <div class="{{modalPanelClass "md"}}">
+    <div class="modal-header">
+      <h2 class="modal-title">{{.Title}}</h2>
+      <button type="button" class="modal-close" data-modal-dismiss aria-label="閉じる">×</button>
+    </div>
+    <div class="modal-body space-y-6 text-sm text-slate-700">
+      <p class="text-base font-semibold text-slate-900">注文 #{{.OrderNumber}}</p>
+      <form
+        hx-post="{{.Action}}"
+        hx-target="#modal"
+        hx-swap="innerHTML"
+        class="space-y-4"
+      >
+        <div class="space-y-2">
+          <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-route">差し戻し先</label>
+          <select
+            id="qc-route"
+            name="route_id"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            <option value="">選択してください</option>
+            {{range .Routes}}
+              <option value="{{.ID}}">{{.Label}} · {{.Description}}</option>
+            {{end}}
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-issue-category">課題カテゴリ</label>
+          <select
+            id="qc-issue-category"
+            name="issue_code"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            <option value="">選択してください</option>
+            {{range .Reasons}}
+              <option value="{{.Code}}">{{.Label}}</option>
+            {{end}}
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="qc-rework-note">共有事項</label>
+          <textarea
+            id="qc-rework-note"
+            name="note"
+            rows="3"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            placeholder="例: 刻印ラインで再彫り、フォント確認済"
+          ></textarea>
+        </div>
+        <button type="submit" class="{{buttonClass "primary" "md" true false}}">差し戻しを送信</button>
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}

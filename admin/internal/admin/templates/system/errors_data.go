@@ -10,7 +10,6 @@ import (
 	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/partials"
-	"github.com/a-h/templ"
 )
 
 // PageData represents the full SSR payload for the system errors dashboard.
@@ -112,7 +111,7 @@ type TableRow struct {
 	LastSeenTooltip  string
 	RunbookURL       string
 	Actions          []RowAction
-	Attributes       templ.Attributes
+	Attributes       map[string]string
 }
 
 // RowAction renders the retry/acknowledge controls in the table.
@@ -528,7 +527,7 @@ func runbookSections(basePath string) []RunbookSection {
 }
 
 func toTableRow(basePath string, failure adminsystem.Failure, selectedID string) TableRow {
-	attrs := templ.Attributes{
+	attrs := map[string]string{
 		"data-system-error-row": "true",
 		"data-system-error-id":  failure.ID,
 		"hx-get":                joinBase(basePath, fmt.Sprintf("/system/errors/%s/drawer", failure.ID)),

@@ -1,0 +1,156 @@
+{{define "shipments/tracking-index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "shipments/tracking-content"}}
+<div class="space-y-6" data-shipments-tracking-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{.Page.Title}}</h1>
+        <p class="text-sm text-slate-600">{{.Page.Description}}</p>
+      </div>
+      <div class="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
+        {{template "shipments/tracking-summary-chip" (dict "Label" "進行中" "Value" .Page.Summary.ActiveLabel "Tone" "info")}}
+        {{template "shipments/tracking-summary-chip" (dict "Label" "遅延リスク" "Value" .Page.Summary.DelayedLabel "Tone" "warning")}}
+        {{template "shipments/tracking-summary-chip" (dict "Label" "要対応" "Value" .Page.Summary.ExceptionLabel "Tone" "danger")}}
+      </div>
+    </div>
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+      <div>
+        最終更新 {{.Page.Summary.LastRefresh}} / {{.Page.Summary.RefreshEvery}}
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="{{buttonClass "ghost" "sm" false false}}"
+          hx-get="{{trackingFragmentURL .Page.Table.FragmentPath .Page.Table.RawQuery}}"
+          hx-target="#tracking-table"
+          hx-swap="outerHTML"
+          hx-indicator="#tracking-refresh-indicator"
+        >
+          🔄 最新に更新
+        </button>
+        <span id="tracking-refresh-indicator" class="text-slate-400">待機中</span>
+      </div>
+    </div>
+  </section>
+
+  {{if gt (len .Page.Alerts) 0}}
+    <section class="space-y-3">
+      {{range $alert := .Page.Alerts}}
+        <div class="{{trackingAlertClass $alert.Tone}}">
+          <div class="flex flex-col gap-1 text-sm">
+            <p class="font-semibold">{{$alert.Label}}</p>
+            <p>{{$alert.Description}}</p>
+          </div>
+          {{if $alert.ActionURL}}
+            <a href="{{$alert.ActionURL}}" class="text-sm font-medium text-brand-100 underline">{{$alert.ActionLabel}}</a>
+          {{end}}
+        </div>
+      {{end}}
+    </section>
+  {{end}}
+
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    {{template "shipments/tracking-filter-toolbar" .}}
+  </section>
+
+  <section class="space-y-4">
+    <div class="text-xs text-slate-400" id="tracking-loading">データ更新中…</div>
+    <div
+      id="tracking-table"
+      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      data-tracking-table
+      hx-target="this"
+      hx-get="{{trackingFragmentURL .Page.Table.FragmentPath .Page.Table.RawQuery}}"
+      hx-trigger="{{trackingRefreshTrigger .Page.Table.AutoRefresh .Page.Table.RefreshEvery}}"
+      hx-indicator="#tracking-loading"
+      hx-swap="innerHTML"
+    >
+      {{template "shipments/tracking-table" .Page.Table}}
+    </div>
+  </section>
+</div>
+{{end}}
+
+{{define "shipments/tracking-summary-chip"}}
+<div class="{{trackingSummaryClass .Tone}}">
+  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{.Label}}</p>
+  <p class="text-lg font-semibold text-white">{{.Value}}</p>
+</div>
+{{end}}
+
+{{define "shipments/tracking-filter-toolbar"}}
+<form
+  class="flex flex-col gap-4"
+  method="get"
+  hx-get="{{.Page.TableEndpoint}}"
+  hx-target="#tracking-table"
+  hx-push-url="true"
+  hx-indicator="#tracking-loading"
+>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="配送ステータス">
+      <label class="{{trackingStatusChipClass (eq .Page.Query.Status "")}}">
+        <input type="radio" name="status" value="" class="sr-only" {{if eq .Page.Query.Status ""}}checked{{end}} />
+        <span class="text-sm font-medium">すべて</span>
+      </label>
+      {{range $option := .Page.Filters.Statuses}}
+        <label class="{{trackingStatusTone $option.Tone $option.Active}}">
+          <input type="radio" name="status" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+          <span class="text-sm font-medium">
+            {{$option.Label}}
+            {{if gt $option.Count 0}}
+              <span class="text-xs text-slate-400">({{$option.Count}})</span>
+            {{end}}
+          </span>
+        </label>
+      {{end}}
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      <a href="{{joinBase .BasePath "/shipments/tracking"}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+    </div>
+  </div>
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    {{template "shipments/tracking-select" (dict "Label" "キャリア" "Name" "carrier" "Options" .Page.Filters.Carriers)}}
+    {{template "shipments/tracking-select" (dict "Label" "配送レーン" "Name" "lane" "Options" .Page.Filters.Lanes)}}
+    {{template "shipments/tracking-select" (dict "Label" "地域" "Name" "region" "Options" .Page.Filters.Regions)}}
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="tracking-delay">遅延</label>
+      <select
+        id="tracking-delay"
+        name="delay"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >
+        <option value="">すべて</option>
+        <option value="delayed" {{if eq .Page.Query.DelayWindow "delayed"}}selected{{end}}>遅延リスク</option>
+        <option value="breach" {{if eq .Page.Query.DelayWindow "breach"}}selected{{end}}>SLA 逸脱</option>
+      </select>
+    </div>
+  </div>
+</form>
+{{end}}
+
+{{define "shipments/tracking-select"}}
+<div class="flex flex-col gap-2">
+  <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="tracking-{{.Name}}">{{.Label}}</label>
+  <select
+    id="tracking-{{.Name}}"
+    name="{{.Name}}"
+    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+  >
+    <option value="">すべて</option>
+    {{range $option := .Options}}
+      <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>
+        {{if gt $option.Count 0}}
+          {{$option.Label}} ({{$option.Count}})
+        {{else}}
+          {{$option.Label}}
+        {{end}}
+      </option>
+    {{end}}
+  </select>
+</div>
+{{end}}

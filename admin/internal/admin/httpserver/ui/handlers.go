@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	adminassets "finitefield.org/hanko-admin/internal/admin/assets"
 	adminaudit "finitefield.org/hanko-admin/internal/admin/auditlogs"
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
@@ -31,7 +29,9 @@ import (
 	adminshipments "finitefield.org/hanko-admin/internal/admin/shipments"
 	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	dashboardtpl "finitefield.org/hanko-admin/internal/admin/templates/dashboard"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	profiletpl "finitefield.org/hanko-admin/internal/admin/templates/profile"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // Dependencies collects external services required by the UI handlers.
@@ -79,6 +79,8 @@ type Handlers struct {
 	system        adminsystem.Service
 	metrics       *observability.Metrics
 }
+
+var dashboardTemplates = webtmpl.MustNew()
 
 // NewHandlers wires the UI handler set.
 func NewHandlers(deps Dependencies) *Handlers {
@@ -226,8 +228,21 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	data := dashboardtpl.BuildPageData(ctx, custommw.BasePathFromContext(ctx), kpis, alerts, activity)
 	data.KPIFragment = kpiFragment
 	data.AlertsFragment = alertsFragment
-
-	templ.Handler(dashboardtpl.Index(data)).ServeHTTP(w, r)
+	breadcrumbs := []webtmpl.Breadcrumb{
+		{Label: helpers.I18N(ctx, "admin.dashboard.breadcrumb")},
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, breadcrumbs)
+	view := webtmpl.DashboardView{
+		BaseView:       base,
+		Page:           data,
+		KPIFragment:    webtmpl.DashboardKPIView{Locale: base.Locale, Data: data.KPIFragment},
+		AlertsFragment: webtmpl.DashboardAlertsView{Locale: base.Locale, Data: data.AlertsFragment},
+		ActivityFeed:   webtmpl.DashboardActivityView{Locale: base.Locale, Items: data.Activity},
+	}
+	view.ContentTemplate = "dashboard/content"
+	if err := dashboardTemplates.Render(w, "dashboard/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // DashboardKPIs serves the KPI fragment for htmx requests.
@@ -252,8 +267,13 @@ func (h *Handlers) DashboardKPIs(w http.ResponseWriter, r *http.Request) {
 		log.Printf("dashboard: fetch kpis failed: %v", err)
 		payload.Error = "KPIの取得に失敗しました。時間を置いて再度お試しください。"
 	}
-
-	templ.Handler(dashboardtpl.KPIFragment(payload)).ServeHTTP(w, r)
+	view := webtmpl.DashboardKPIView{
+		Locale: helpers.LocaleCode(ctx),
+		Data:   payload,
+	}
+	if err := dashboardTemplates.Render(w, "dashboard/kpi-fragment", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // DashboardAlerts serves the alerts fragment for htmx requests.
@@ -273,8 +293,13 @@ func (h *Handlers) DashboardAlerts(w http.ResponseWriter, r *http.Request) {
 		log.Printf("dashboard: fetch alerts failed: %v", err)
 		payload.Error = "アラートの取得に失敗しました。"
 	}
-
-	templ.Handler(dashboardtpl.AlertsFragment(payload)).ServeHTTP(w, r)
+	view := webtmpl.DashboardAlertsView{
+		Locale: helpers.LocaleCode(ctx),
+		Data:   payload,
+	}
+	if err := dashboardTemplates.Render(w, "dashboard/alerts-fragment", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func parseSince(raw string) *time.Time {
@@ -324,6 +349,9 @@ func (h *Handlers) renderProfilePage(w http.ResponseWriter, r *http.Request) {
 	if state != nil && strings.TrimSpace(state.UserName) != "" {
 		displayName = strings.TrimSpace(state.UserName)
 	}
+	if displayName == "" {
+		displayName = strings.TrimSpace(email)
+	}
 
 	roles := append([]string(nil), user.Roles...)
 	lastLogin := profiletpl.MostRecentSessionAt(state)
@@ -346,13 +374,28 @@ func (h *Handlers) renderProfilePage(w http.ResponseWriter, r *http.Request) {
 		target := strings.TrimSpace(custommw.HTMXInfoFromContext(r.Context()).Target)
 		target = strings.TrimPrefix(target, "#")
 		if strings.EqualFold(target, "profile-tabs") {
-			templ.Handler(profiletpl.ProfileTabs(payload)).ServeHTTP(w, r)
+			view := webtmpl.ProfileTabsView{
+				Page:     payload,
+				BasePath: custommw.BasePathFromContext(r.Context()),
+			}
+			if err := dashboardTemplates.Render(w, "profile/tabs", view); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 	}
 
-	component := profiletpl.Index(payload)
-	templ.Handler(component).ServeHTTP(w, r)
+	title := helpers.I18N(r.Context(), "admin.profile.title")
+	crumbs := []webtmpl.Breadcrumb{{Label: "プロフィール"}}
+	base := webtmpl.BuildBaseView(r.Context(), title, crumbs)
+	base.ContentTemplate = "profile/content"
+	view := webtmpl.ProfilePageView{
+		BaseView: base,
+		Page:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func normalizeProfileTab(raw string) string {

@@ -2,17 +2,17 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/a-h/templ"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminpayments "finitefield.org/hanko-admin/internal/admin/payments"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	paymentstpl "finitefield.org/hanko-admin/internal/admin/templates/payments"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -67,8 +67,24 @@ func (h *Handlers) PaymentsTransactionsPage(w http.ResponseWriter, r *http.Reque
 
 	toolbar := paymentsToolbar(0, result.Pagination.TotalItems)
 	data := paymentstpl.BuildPageData(basePath, req.state, result, table, drawer, toolbar)
-
-	templ.Handler(paymentstpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "payments/content"
+	tableView := toPaymentsTableView(table)
+	view := webtmpl.PaymentsPageView{
+		BaseView: base,
+		Page:     data,
+		Table:    tableView,
+	}
+	if err := dashboardTemplates.Render(w, "payments/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PaymentsTransactionsTable renders the transactions table fragment.
@@ -105,8 +121,10 @@ func (h *Handlers) PaymentsTransactionsTable(w http.ResponseWriter, r *http.Requ
 	if canonical := canonicalPaymentsURL(basePath, req.state.RawQuery); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
-
-	templ.Handler(paymentstpl.Table(table)).ServeHTTP(w, r)
+	view := toPaymentsTableView(table)
+	if err := dashboardTemplates.Render(w, "payments/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PaymentsTransactionsDrawer renders the transaction drawer fragment.
@@ -140,7 +158,9 @@ func (h *Handlers) PaymentsTransactionsDrawer(w http.ResponseWriter, r *http.Req
 
 	basePath := custommw.BasePathFromContext(ctx)
 	payload := paymentstpl.DrawerPayload(basePath, detail)
-	templ.Handler(paymentstpl.Drawer(payload)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "payments/drawer", payload); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func buildPaymentsRequest(r *http.Request) paymentsRequest {
@@ -184,7 +204,7 @@ func paymentsToolbar(selected, total int) components.BulkToolbarProps {
 					Variant:  "primary",
 					Size:     "sm",
 					Disabled: disabled,
-					Attrs: templ.Attributes{
+					Attrs: map[string]string{
 						"type":        "button",
 						"data-action": "capture",
 					},
@@ -196,7 +216,7 @@ func paymentsToolbar(selected, total int) components.BulkToolbarProps {
 					Variant:  "secondary",
 					Size:     "sm",
 					Disabled: disabled,
-					Attrs: templ.Attributes{
+					Attrs: map[string]string{
 						"type":        "button",
 						"data-action": "refund",
 					},
@@ -208,12 +228,44 @@ func paymentsToolbar(selected, total int) components.BulkToolbarProps {
 					Variant:  "ghost",
 					Size:     "sm",
 					Disabled: disabled,
-					Attrs: templ.Attributes{
+					Attrs: map[string]string{
 						"type":        "button",
 						"data-action": "resend-receipt",
 					},
 				},
 			},
 		},
+	}
+}
+
+func toPaymentsTableView(table paymentstpl.TableData) webtmpl.PaymentsTableView {
+	attrs := map[string]string{}
+	for key, val := range table.Pagination.Attrs {
+		attrs[key] = fmt.Sprint(val)
+	}
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.Info.PageSize,
+			Current:    table.Pagination.Info.Current,
+			Count:      table.Pagination.Info.Count,
+			TotalItems: table.Pagination.Info.TotalItems,
+			Next:       table.Pagination.Info.Next,
+			Prev:       table.Pagination.Info.Prev,
+		},
+		BasePath:      table.Pagination.BasePath,
+		RawQuery:      table.Pagination.RawQuery,
+		FragmentPath:  table.Pagination.FragmentPath,
+		FragmentQuery: table.Pagination.FragmentQuery,
+		Param:         table.Pagination.Param,
+		SizeParam:     table.Pagination.SizeParam,
+		HxTarget:      table.Pagination.HxTarget,
+		HxSwap:        table.Pagination.HxSwap,
+		HxPushURL:     table.Pagination.HxPushURL,
+		Attrs:         attrs,
+		Label:         table.Pagination.Label,
+	}
+	return webtmpl.PaymentsTableView{
+		Table:      table,
+		Pagination: props,
 	}
 }

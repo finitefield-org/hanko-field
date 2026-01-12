@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -8,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminnotifications "finitefield.org/hanko-admin/internal/admin/notifications"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	notificationstpl "finitefield.org/hanko-admin/internal/admin/templates/notifications"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // NotificationsPage renders the notifications index page.
@@ -37,8 +38,26 @@ func (h *Handlers) NotificationsPage(w http.ResponseWriter, r *http.Request) {
 	table := notificationstpl.TablePayload(params.state, feed, errMsg, params.selectedID)
 	drawer := notificationstpl.DrawerPayload(feed, table.SelectedID)
 	payload := notificationstpl.BuildPageData(custommw.BasePathFromContext(ctx), params.state, table, drawer)
-
-	templ.Handler(notificationstpl.Index(payload)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(payload.Breadcrumbs))
+	for _, crumb := range payload.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, payload.Title, crumbs)
+	base.ContentTemplate = "notifications/content"
+	view := webtmpl.NotificationsPageView{
+		BaseView:      base,
+		Title:         payload.Title,
+		Description:   payload.Description,
+		Legend:        payload.Legend,
+		Filters:       payload.Filters,
+		Query:         payload.Query,
+		TableEndpoint: payload.TableEndpoint,
+		Table:         toNotificationsTableView(table),
+		Drawer:        toNotificationsDrawerView(drawer),
+	}
+	if err := dashboardTemplates.Render(w, "notifications/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // NotificationsTable renders the table fragment for htmx updates.
@@ -62,13 +81,15 @@ func (h *Handlers) NotificationsTable(w http.ResponseWriter, r *http.Request) {
 
 	table := notificationstpl.TablePayload(params.state, feed, errMsg, params.selectedID)
 	params.selectedID = table.SelectedID
-	component := notificationstpl.Table(table)
 
 	if canonical := canonicalNotificationsURL(custommw.BasePathFromContext(ctx), params); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(component).ServeHTTP(w, r)
+	view := toNotificationsTableView(table)
+	if err := dashboardTemplates.Render(w, "notifications/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // NotificationsBadge renders the top-bar badge fragment.
@@ -87,13 +108,91 @@ func (h *Handlers) NotificationsBadge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := notificationstpl.BadgePayload(custommw.BasePathFromContext(ctx), count)
-	templ.Handler(notificationstpl.Badge(payload)).ServeHTTP(w, r)
+	view := webtmpl.NotificationsBadgeView{
+		Total:          payload.Total,
+		Critical:       payload.Critical,
+		Warning:        payload.Warning,
+		ReviewsPending: payload.ReviewsPending,
+		TasksPending:   payload.TasksPending,
+		Endpoint:       payload.Endpoint,
+		StreamEndpoint: payload.StreamEndpoint,
+		Href:           payload.Href,
+	}
+	if err := dashboardTemplates.Render(w, "notifications/badge", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 type notificationsRequest struct {
 	query      adminnotifications.Query
 	state      notificationstpl.QueryState
 	selectedID string
+}
+
+func toNotificationsTableView(table notificationstpl.TableData) webtmpl.NotificationsTableView {
+	rows := make([]webtmpl.NotificationRowView, 0, len(table.Items))
+	for _, row := range table.Items {
+		attrs := map[string]string{}
+		for key, val := range row.Attributes {
+			attrs[key] = fmt.Sprint(val)
+		}
+		rows = append(rows, webtmpl.NotificationRowView{
+			ID:                row.ID,
+			CategoryLabel:     row.CategoryLabel,
+			CategoryTone:      row.CategoryTone,
+			CategoryIcon:      row.CategoryIcon,
+			SeverityLabel:     row.SeverityLabel,
+			SeverityTone:      row.SeverityTone,
+			Title:             row.Title,
+			Summary:           row.Summary,
+			StatusLabel:       row.StatusLabel,
+			StatusTone:        row.StatusTone,
+			ResourceLabel:     row.ResourceLabel,
+			ResourceURL:       row.ResourceURL,
+			ResourceKind:      row.ResourceKind,
+			Owner:             row.Owner,
+			CreatedAtRelative: row.CreatedAtRelative,
+			CreatedAtTooltip:  row.CreatedAtTooltip,
+			Actions:           row.Actions,
+			Attributes:        attrs,
+		})
+	}
+	return webtmpl.NotificationsTableView{
+		Total:        table.Total,
+		NextCursor:   table.NextCursor,
+		Error:        table.Error,
+		EmptyMessage: table.EmptyMessage,
+		SelectedID:   table.SelectedID,
+		Items:        rows,
+	}
+}
+
+func toNotificationsDrawerView(drawer notificationstpl.DrawerData) webtmpl.NotificationsDrawerView {
+	tooltip := ""
+	if !drawer.CreatedAt.IsZero() {
+		tooltip = helpers.Date(drawer.CreatedAt, "2006-01-02 15:04")
+	}
+	return webtmpl.NotificationsDrawerView{
+		Empty:             drawer.Empty,
+		ID:                drawer.ID,
+		Title:             drawer.Title,
+		Summary:           drawer.Summary,
+		CategoryLabel:     drawer.CategoryLabel,
+		CategoryTone:      drawer.CategoryTone,
+		SeverityLabel:     drawer.SeverityLabel,
+		SeverityTone:      drawer.SeverityTone,
+		StatusLabel:       drawer.StatusLabel,
+		StatusTone:        drawer.StatusTone,
+		Owner:             drawer.Owner,
+		Resource:          drawer.Resource,
+		CreatedRelative:   drawer.CreatedRelative,
+		CreatedTooltip:    tooltip,
+		AcknowledgedLabel: drawer.AcknowledgedLabel,
+		ResolvedLabel:     drawer.ResolvedLabel,
+		Metadata:          drawer.Metadata,
+		Timeline:          drawer.Timeline,
+		Links:             drawer.Links,
+	}
 }
 
 func buildNotificationsRequest(r *http.Request) notificationsRequest {

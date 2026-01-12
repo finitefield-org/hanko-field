@@ -1,0 +1,533 @@
+{{define "system/errors"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "system/errors-content"}}
+{{$page := .Page}}
+<div class="space-y-6" data-system-errors-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+      <div class="space-y-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.Title}}</h1>
+        <p class="text-sm text-slate-600">{{$page.Description}}</p>
+        <p class="text-xs text-slate-400">{{$page.GeneratedLabel}}</p>
+      </div>
+      {{if gt (len $page.SummaryCards) 0}}
+        <div class="grid w-full gap-3 sm:grid-cols-2 xl:w-auto xl:grid-cols-4">
+          {{range $card := $page.SummaryCards}}
+            {{template "system/errors-summary-card" $card}}
+          {{end}}
+        </div>
+      {{end}}
+    </div>
+    <div class="mt-6 border-t border-slate-200 pt-5">
+      {{template "system/errors-filter-toolbar" $page}}
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <section class="space-y-4">
+      <div
+        id="system-errors-table"
+        class="space-y-4"
+        data-system-errors-table
+        hx-target="this"
+        hx-get="{{buildURL $page.Table.FragmentPath $page.Table.RawQuery}}"
+        hx-swap="outerHTML"
+        hx-trigger="refresh from:body"
+      >
+        {{template "system/errors-table" (dict "Table" $page.Table "BasePath" $.BasePath)}}
+      </div>
+    </section>
+    <aside class="hidden xl:block">
+      <div
+        class="sticky top-20"
+        id="system-error-drawer"
+        data-system-errors-drawer
+      >
+        {{template "system/errors-drawer" (dict "Drawer" $page.Drawer "BasePath" $.BasePath)}}
+      </div>
+    </aside>
+  </div>
+
+  <section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+    {{template "system/inline-alert" $page.RunbookAlert}}
+    {{if gt (len $page.RunbookSections) 0}}
+      <div class="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50">
+        {{range $section := $page.RunbookSections}}
+          {{template "system/runbook-accordion" $section}}
+        {{end}}
+      </div>
+    {{end}}
+  </section>
+</div>
+{{end}}
+
+{{define "system/errors-summary-card"}}
+<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm">
+  <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    {{if .Icon}}
+      <span aria-hidden="true">{{.Icon}}</span>
+    {{end}}
+    {{.Label}}
+  </div>
+  <div class="text-xl font-semibold text-slate-900">{{.Value}}</div>
+  {{if .SubLabel}}
+    <p class="text-xs text-slate-500">{{.SubLabel}}</p>
+  {{end}}
+  {{if .Delta}}
+    <p class="{{systemSummaryDeltaClass .DeltaTone}}">{{.Delta}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "system/errors-filter-toolbar"}}
+<form
+  id="system-errors-filter"
+  data-system-errors-filter
+  class="flex flex-col gap-6"
+  method="get"
+  hx-get="{{.TableEndpoint}}"
+  hx-target="#system-errors-table"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+  <input type="hidden" name="selected" value="{{.Query.SelectedID}}" />
+  <input type="hidden" name="limit" value="{{.Query.Limit}}" />
+
+  <div class="grid gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_280px]">
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ソース</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ソース">
+        {{range $option := .Filters.SourceOptions}}
+          <label class="{{systemSourceOptionClass $option.Active $option.Tone}}">
+            <input type="radio" name="source" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+            <span class="inline-flex items-center gap-1 text-sm">
+              {{if $option.Icon}}
+                <span aria-hidden="true">{{$option.Icon}}</span>
+              {{end}}
+              {{$option.Label}}
+              {{if gt $option.Count 0}}
+                <span class="text-xs text-slate-400">({{$option.Count}})</span>
+              {{end}}
+            </span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">重大度</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="重大度">
+        {{range $option := .Filters.SeverityOptions}}
+          <label class="{{systemSeverityOptionClass $option.Active $option.Tone}}">
+            <input type="radio" name="severity" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+            <span class="inline-flex items-center gap-1 text-sm">
+              {{$option.Label}}
+              {{if gt $option.Count 0}}
+                <span class="text-xs text-slate-400">({{$option.Count}})</span>
+              {{end}}
+            </span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</p>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="ステータス">
+        {{range $option := .Filters.StatusOptions}}
+          <label class="{{systemStatusOptionClass $option.Active $option.Tone}}">
+            <input type="radio" name="status" value="{{$option.Value}}" class="sr-only" {{if $option.Active}}checked{{end}} />
+            <span class="inline-flex items-center gap-1 text-sm">
+              {{$option.Label}}
+              {{if gt $option.Count 0}}
+                <span class="text-xs text-slate-400">({{$option.Count}})</span>
+              {{end}}
+            </span>
+          </label>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-service">サービス</label>
+      <select
+        id="system-error-service"
+        name="service"
+        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      >
+        {{range $option := .Filters.ServiceOptions}}
+          <option value="{{$option.Value}}" {{if $option.Active}}selected{{end}}>{{$option.Label}}</option>
+        {{end}}
+      </select>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-search">検索</label>
+      <div class="relative">
+        <input
+          id="system-error-search"
+          name="q"
+          type="search"
+          value="{{.Query.Search}}"
+          placeholder="ジョブ名・サービス・メッセージで検索"
+          class="w-72 rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        />
+        <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-slate-400">🔍</span>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="system-error-start">期間</label>
+      <input
+        id="system-error-start"
+        name="start"
+        type="date"
+        value="{{.Query.StartDate}}"
+        class="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      />
+      <span class="text-slate-400">〜</span>
+      <input
+        id="system-error-end"
+        name="end"
+        type="date"
+        value="{{.Query.EndDate}}"
+        class="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      />
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      <a href="{{joinBase $.BasePath "/system/errors"}}" class="{{buttonClass "ghost" "sm" false false}}">リセット</a>
+    </div>
+  </div>
+
+  <div id="system-errors-loading" class="htmx-indicator text-xs text-slate-400">読み込み中…</div>
+</form>
+{{end}}
+
+{{define "system/errors-table"}}
+{{$table := .Table}}
+<section class="rounded-2xl border border-slate-200 bg-white shadow-sm" data-system-errors-table-root>
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+    <div>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">失敗ログ</h2>
+      <p class="text-xs text-slate-400">全 {{$table.Total}} 件</p>
+    </div>
+    <div class="text-xs text-slate-400">{{$table.GeneratedAt}}</div>
+  </header>
+
+  {{if $table.Error}}
+    <div class="border-b border-rose-100 bg-rose-50 px-6 py-4 text-sm text-rose-600">
+      {{$table.Error}}
+    </div>
+  {{end}}
+
+  {{if eq (len $table.Items) 0}}
+    <div class="px-6 py-12 text-center text-sm text-slate-500">{{$table.EmptyMessage}}</div>
+  {{else}}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">ジョブ / サービス</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">エラー</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">最終試行</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">リトライ</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">アクション</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {{range $row := $table.Items}}
+            <tr
+              class="{{systemErrorsTableRowClass (eq $row.ID $table.SelectedID)}}"
+              data-selected="{{boolAttr (eq $row.ID $table.SelectedID)}}"
+              {{range $k, $v := $row.Attributes}} {{$k}}="{{$v}}"{{end}}
+            >
+              <td class="px-6 py-4 align-top">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <span class="{{badgeClass $row.SourceTone}}">{{$row.SourceLabel}}</span>
+                    <span class="{{badgeClass $row.SeverityTone}}">{{$row.SeverityLabel}}</span>
+                    <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+                  </div>
+                  <p class="text-sm font-semibold text-slate-900">{{$row.Name}}</p>
+                  <p class="text-xs text-slate-500">{{$row.ServiceLabel}}</p>
+                  {{if $row.TargetLabel}}
+                    {{if $row.TargetURL}}
+                      <a href="{{$row.TargetURL}}" class="text-xs text-brand-600 hover:text-brand-500">関連リンク</a>
+                    {{else}}
+                      <span class="text-xs text-slate-400">{{$row.TargetLabel}}</span>
+                    {{end}}
+                  {{end}}
+                </div>
+              </td>
+              <td class="px-6 py-4 align-top">
+                <p class="text-sm text-slate-700">{{$row.Message}}</p>
+                {{if $row.RunbookURL}}
+                  <a href="{{$row.RunbookURL}}" class="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-500">
+                    📘 Runbook
+                  </a>
+                {{end}}
+              </td>
+              <td class="px-6 py-4 align-top">
+                <p class="text-sm text-slate-700" title="{{$row.LastSeenTooltip}}">{{$row.LastSeenRelative}}</p>
+              </td>
+              <td class="px-6 py-4 align-top">
+                <span class="text-sm text-slate-700" title="{{$row.RetryTooltip}}">{{$row.RetryLabel}}</span>
+              </td>
+              <td class="px-6 py-4 align-top">
+                {{if gt (len $row.Actions) 0}}
+                  <div class="flex flex-wrap gap-2">
+                    {{range $action := $row.Actions}}
+                      <button
+                        type="button"
+                        class="{{systemErrorsTableActionClass $action.Variant}}"
+                        hx-post="{{$action.URL}}"
+                        hx-target="this"
+                        hx-swap="none"
+                        hx-include="#system-errors-filter"
+                        data-tooltip="{{$action.Tooltip}}"
+                        {{if $action.Disabled}}disabled{{end}}
+                      >
+                        {{if $action.Icon}}
+                          <span aria-hidden="true">{{$action.Icon}}</span>
+                        {{end}}
+                        <span>{{$action.Label}}</span>
+                      </button>
+                    {{end}}
+                  </div>
+                {{end}}
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "system/errors-drawer"}}
+{{$drawer := .Drawer}}
+<section
+  class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  data-system-errors-drawer
+  {{if $drawer.ID}}
+    hx-get="{{joinBase .BasePath (printf "/system/errors/%s/drawer" $drawer.ID)}}"
+    hx-trigger="refresh from:body"
+    hx-target="this"
+    hx-swap="innerHTML"
+  {{end}}
+>
+  {{if $drawer.Error}}
+    <div class="space-y-2 text-sm text-rose-600">
+      <p class="text-base font-semibold text-rose-700">詳細を読み込めませんでした</p>
+      <p>{{$drawer.Error}}</p>
+    </div>
+  {{else if $drawer.Empty}}
+    <div class="space-y-2 text-sm text-slate-600">
+      <p class="text-base font-semibold text-slate-900">行を選択してください</p>
+      <p>一覧から失敗を選択すると、ここに詳細とリトライ履歴が表示されます。</p>
+    </div>
+  {{else}}
+    <div class="space-y-4">
+      <header class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="{{badgeClass $drawer.SourceTone}}">{{$drawer.SourceLabel}}</span>
+          <span class="{{badgeClass $drawer.SeverityTone}}">{{$drawer.SeverityLabel}}</span>
+          <span class="{{badgeClass $drawer.StatusTone}}">{{$drawer.StatusLabel}}</span>
+        </div>
+        <h2 class="text-lg font-semibold text-slate-900">{{$drawer.Title}}</h2>
+        <p class="text-sm text-slate-500">{{$drawer.Subtitle}}</p>
+        <p class="text-sm text-slate-600">{{$drawer.Message}}</p>
+        {{if $drawer.Code}}
+          <p class="text-xs text-slate-400">コード: {{$drawer.Code}}</p>
+        {{end}}
+      </header>
+
+      <dl class="space-y-2 text-sm text-slate-600">
+        {{if $drawer.RetrySummary}}
+          <div class="flex items-center justify-between gap-2">
+            <dt class="font-medium text-slate-500">リトライ状況</dt>
+            <dd>{{$drawer.RetrySummary}}</dd>
+          </div>
+        {{end}}
+        {{if $drawer.LastAttempt}}
+          <div class="flex items-center justify-between gap-2">
+            <dt class="font-medium text-slate-500">最終試行</dt>
+            <dd title="{{$drawer.LastAttemptExact}}">{{$drawer.LastAttempt}}</dd>
+          </div>
+        {{end}}
+        {{if $drawer.NextRetry}}
+          <div class="flex items-center justify-between gap-2">
+            <dt class="font-medium text-slate-500">次回リトライ予定</dt>
+            <dd>{{$drawer.NextRetry}}</dd>
+          </div>
+        {{end}}
+        {{if $drawer.Target.Label}}
+          <div class="flex items-center justify-between gap-2">
+            <dt class="font-medium text-slate-500">{{$drawer.Target.Kind}}</dt>
+            <dd>
+              {{if $drawer.Target.URL}}
+                <a href="{{$drawer.Target.URL}}" class="text-brand-600 hover:text-brand-500">{{$drawer.Target.Label}}</a>
+              {{else}}
+                <span>{{$drawer.Target.Label}}</span>
+              {{end}}
+            </dd>
+          </div>
+        {{end}}
+        {{if gt (len $drawer.Attributes) 0}}
+          {{range $attr := $drawer.Attributes}}
+            <div class="flex items-center justify-between gap-2">
+              <dt class="font-medium text-slate-500">{{$attr.Key}}</dt>
+              <dd class="text-right">{{$attr.Value}}</dd>
+            </div>
+          {{end}}
+        {{end}}
+      </dl>
+
+      {{if gt (len $drawer.Links) 0}}
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">ショートカット</h3>
+          <ul class="space-y-1 text-sm text-brand-600">
+            {{range $link := $drawer.Links}}
+              <li>
+                <a href="{{$link.URL}}" class="inline-flex items-center gap-1 hover:text-brand-500">
+                  {{if $link.Icon}}
+                    <span aria-hidden="true">{{$link.Icon}}</span>
+                  {{end}}
+                  <span>{{$link.Label}}</span>
+                </a>
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+
+      {{if gt (len $drawer.StackTrace) 0}}
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">スタックトレース</h3>
+          <pre class="max-h-48 overflow-auto rounded-lg bg-slate-900/90 px-4 py-3 text-xs text-slate-100">
+{{range $line := $drawer.StackTrace}}{{$line}}
+{{end}}</pre>
+        </div>
+      {{end}}
+
+      {{if $drawer.Payload}}
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終ペイロード</h3>
+          <pre class="max-h-64 overflow-auto rounded-lg bg-slate-900/90 px-4 py-3 text-xs text-slate-100">{{$drawer.Payload}}</pre>
+        </div>
+      {{end}}
+
+      {{if gt (len $drawer.Headers) 0}}
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">HTTP ヘッダー</h3>
+          <ul class="space-y-1 text-xs text-slate-600">
+            {{range $header := $drawer.Headers}}
+              <li><span class="font-medium text-slate-500">{{$header.Key}}:</span> {{$header.Value}}</li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+
+      {{if gt (len $drawer.Attempts) 0}}
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">リトライ履歴</h3>
+          <ul class="space-y-3">
+            {{range $attempt := $drawer.Attempts}}
+              <li class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <div class="flex items-center justify-between gap-2 font-semibold text-slate-700">
+                  <span>試行 {{$attempt.Number}}</span>
+                  <span title="{{$attempt.Timestamp}}">{{$attempt.Relative}}</span>
+                </div>
+                <p class="mt-1 text-slate-700">{{$attempt.Status}}</p>
+                {{if $attempt.Response}}
+                  <p class="text-slate-500">{{$attempt.Response}}</p>
+                {{end}}
+                {{if $attempt.Duration}}
+                  <p class="text-slate-400">所要時間 {{$attempt.Duration}}</p>
+                {{end}}
+              </li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+
+      {{if gt (len $drawer.RunbookSteps) 0}}
+        <div class="space-y-3">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Runbook ステップ</h3>
+          <ol class="space-y-3 text-sm text-slate-600">
+            {{range $idx, $step := $drawer.RunbookSteps}}
+              <li class="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                <p class="text-sm font-semibold text-slate-900">{{printf "%d. %s" (addInt $idx 1) $step.Title}}</p>
+                <p class="mt-1 text-sm text-slate-600">{{$step.Description}}</p>
+                {{if gt (len $step.Links) 0}}
+                  <ul class="mt-2 space-y-1 text-xs text-brand-600">
+                    {{range $link := $step.Links}}
+                      <li>
+                        <a href="{{$link.URL}}" class="inline-flex items-center gap-1 hover:text-brand-500">
+                          {{if $link.Icon}}
+                            <span aria-hidden="true">{{$link.Icon}}</span>
+                          {{end}}
+                          <span>{{$link.Label}}</span>
+                        </a>
+                      </li>
+                    {{end}}
+                  </ul>
+                {{end}}
+              </li>
+            {{end}}
+          </ol>
+        </div>
+      {{end}}
+    </div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "system/inline-alert"}}
+<div class="{{systemInlineAlertClass .Tone}}">
+  <div class="flex flex-col gap-1">
+    <p class="text-sm font-semibold text-slate-900">
+      {{if .Icon}}
+        <span aria-hidden="true">{{.Icon}}</span>
+      {{end}}
+      {{.Title}}
+    </p>
+    <p class="text-sm text-slate-700">{{.Body}}</p>
+  </div>
+  {{if .LinkURL}}
+    <a href="{{.LinkURL}}" class="text-sm font-medium text-brand-600 hover:text-brand-500">{{.LinkLabel}}</a>
+  {{end}}
+</div>
+{{end}}
+
+{{define "system/runbook-accordion"}}
+<details class="group [&[open]>.accordion-icon]:rotate-180">
+  <summary class="flex cursor-pointer items-center justify-between gap-3 px-6 py-4 text-left text-sm font-medium text-slate-800 hover:bg-slate-100">
+    <div>
+      <p class="font-semibold text-slate-900">{{.Title}}</p>
+      {{if .Summary}}
+        <p class="text-xs text-slate-500">{{.Summary}}</p>
+      {{end}}
+    </div>
+    <span class="accordion-icon text-lg text-slate-400 transition-transform duration-200">⌄</span>
+  </summary>
+  <div class="space-y-4 border-t border-slate-200 px-6 py-4 text-sm text-slate-600">
+    {{range $step := .Steps}}
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
+        <p class="font-semibold text-slate-900">{{$step.Title}}</p>
+        <p class="text-sm text-slate-600">{{$step.Description}}</p>
+        {{if $step.LinkURL}}
+          <a href="{{$step.LinkURL}}" class="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-500">
+            🔗 {{$step.LinkLabel}}
+          </a>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+</details>
+{{end}}

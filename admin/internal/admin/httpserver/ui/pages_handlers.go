@@ -2,17 +2,18 @@ package ui
 
 import (
 	"errors"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	pagestpl "finitefield.org/hanko-admin/internal/admin/templates/pages"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // PagesPage renders the fixed pages management experience.
@@ -72,8 +73,22 @@ func (h *Handlers) PagesPage(w http.ResponseWriter, r *http.Request) {
 	csrfToken := custommw.CSRFTokenFromContext(ctx)
 	basePath := custommw.BasePathFromContext(ctx)
 	data := pagestpl.BuildPageManagementData(basePath, req.state, tree, editor, preview, csrfToken)
-
-	templ.Handler(pagestpl.Index(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "pages/index-content"
+	view := webtmpl.PagesIndexView{
+		BaseView: base,
+		Data:     data,
+	}
+	if err := dashboardTemplates.Render(w, "pages/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PagesPreview renders the standalone preview page.
@@ -105,7 +120,29 @@ func (h *Handlers) PagesPreview(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	data := pagestpl.BuildPreviewPageData(basePath, preview)
-	templ.Handler(pagestpl.PreviewPage(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentClass = "max-w-7xl px-4 py-6 sm:px-6 lg:px-10"
+	base.ContentTemplate = "pages/preview-content"
+	view := webtmpl.PreviewPageView{
+		BaseView: base,
+		Header:   data.Header,
+		Content: webtmpl.PreviewContentView{
+			HeroHTML: template.HTML(data.Content.HeroHTML),
+			BodyHTML: template.HTML(data.Content.BodyHTML),
+			Notes:    append([]string(nil), data.Content.Notes...),
+			Locales:  append([]pagestpl.LocaleOption(nil), data.Content.Locales...),
+		},
+	}
+	if err := dashboardTemplates.Render(w, "pages/preview", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PagesEditPreview handles live preview updates via htmx.
@@ -143,7 +180,12 @@ func (h *Handlers) PagesEditPreview(w http.ResponseWriter, r *http.Request) {
 	req := buildPagesRequest(r)
 	basePath := custommw.BasePathFromContext(ctx)
 	data := pagestpl.BuildPreviewFragmentData(basePath, req.state, preview)
-	templ.Handler(pagestpl.PreviewFragment(data)).ServeHTTP(w, r)
+	view := webtmpl.PagesPreviewFragmentView{
+		Preview: data.Preview,
+	}
+	if err := dashboardTemplates.Render(w, "pages/preview-fragment", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // PagesSaveDraft persists draft changes (placeholder static implementation).
@@ -286,7 +328,13 @@ func (h *Handlers) PagesHistoryModal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := pagestpl.BuildHistoryModalData(editor.History)
-	templ.Handler(pagestpl.HistoryModal(data)).ServeHTTP(w, r)
+	view := webtmpl.HistoryModalView{
+		Title: "変更履歴",
+		Data:  data,
+	}
+	if err := dashboardTemplates.Render(w, "pages/history-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) togglePagePublish(w http.ResponseWriter, r *http.Request, publish bool) error {

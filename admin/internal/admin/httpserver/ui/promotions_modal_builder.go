@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	templpkg "github.com/a-h/templ"
-
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
 	promotionstpl "finitefield.org/hanko-admin/internal/admin/templates/promotions"
 )
@@ -171,7 +169,7 @@ func discountSection(state promotionFormState, errs map[string]string) promotion
 			Options:  promotionTypeOptions(state.Values["type"]),
 			Required: true,
 			Error:    errs["type"],
-			Attributes: templpkg.Attributes{
+			Attributes: map[string]string{
 				"data-promotion-condition-source": conditionDiscountType,
 			},
 		},
@@ -249,7 +247,7 @@ func discountSection(state promotionFormState, errs map[string]string) promotion
 			Options:        promotionShippingOptions(state.Values["shippingOption"]),
 			ConditionKey:   conditionDiscountType,
 			ConditionValue: string(adminpromotions.TypeShipping),
-			Attributes: templpkg.Attributes{
+			Attributes: map[string]string{
 				"data-promotion-condition-source": conditionShippingOption,
 			},
 			Error: errs["shippingOption"],

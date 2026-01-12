@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/observability"
 	adminorders "finitefield.org/hanko-admin/internal/admin/orders"
 	orderstpl "finitefield.org/hanko-admin/internal/admin/templates/orders"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const (
@@ -54,7 +54,20 @@ func (h *Handlers) OrdersPage(w http.ResponseWriter, r *http.Request) {
 	exportSection := orderstpl.ExportJobsSectionPayload(basePath, exportJobs, false)
 	page := orderstpl.BuildPageData(basePath, req.state, result, table, exportSection)
 
-	templ.Handler(orderstpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "orders/content"
+	view := webtmpl.OrdersPageView{
+		BaseView: base,
+		Page:     page,
+		Table:    toOrdersTableView(table),
+	}
+	if err := dashboardTemplates.Render(w, "orders/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersTable renders the orders table fragment for htmx requests.
@@ -83,7 +96,10 @@ func (h *Handlers) OrdersTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(orderstpl.Table(table)).ServeHTTP(w, r)
+	view := toOrdersTableView(table)
+	if err := dashboardTemplates.Render(w, "orders/table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersBulkStatus handles bulk status update submissions.
@@ -190,7 +206,9 @@ func (h *Handlers) OrdersBulkExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(orderstpl.ExportJobsSection(section)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/export-section", section); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersBulkExportJobStatus returns the progress fragment for a specific export job.
@@ -237,7 +255,9 @@ func (h *Handlers) OrdersBulkExportJobStatus(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(orderstpl.ExportJobCard(card)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/export-job-card", card); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersStatusModal renders the status update modal for a specific order.
@@ -270,7 +290,9 @@ func (h *Handlers) OrdersStatusModal(w http.ResponseWriter, r *http.Request) {
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := orderstpl.StatusModalPayload(basePath, modal, csrf, "", true, "")
 
-	templ.Handler(orderstpl.StatusModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/status-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersStatusUpdate handles status transition submissions for a single order.
@@ -338,7 +360,9 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 			data := orderstpl.StatusModalPayload(basePath, modal, csrf, note, notify, message)
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			templ.Handler(orderstpl.StatusModal(data)).ServeHTTP(w, r)
+			if err := dashboardTemplates.Render(w, "orders/status-modal", data); err != nil {
+				http.Error(w, "template render error", http.StatusInternalServerError)
+			}
 			return
 		}
 		log.Printf("orders: status update failed: %v", err)
@@ -353,7 +377,9 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	success := orderstpl.StatusUpdateSuccessPayload(cell, timeline)
 
 	w.Header().Set("HX-Trigger", `{"toast":{"message":"ステータスを更新しました。","tone":"success"},"modal:close":true}`)
-	templ.Handler(orderstpl.StatusUpdateSuccess(success)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/status-update-success", success); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersManualCaptureModal renders the manual capture modal for a specific order.
@@ -386,7 +412,9 @@ func (h *Handlers) OrdersManualCaptureModal(w http.ResponseWriter, r *http.Reque
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := orderstpl.ManualCaptureModalPayload(basePath, modal, csrf, orderstpl.ManualCaptureFormState{}, "", nil, nil)
 
-	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/manual-capture-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersSubmitManualCapture processes manual capture submissions for a specific order payment.
@@ -501,7 +529,9 @@ func (h *Handlers) OrdersSubmitManualCapture(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("HX-Trigger", `{"toast":{"message":"売上を確定しました。","tone":"success"},"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/manual-capture-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersRefundModal renders the refund modal for a specific order.
@@ -539,7 +569,9 @@ func (h *Handlers) OrdersRefundModal(w http.ResponseWriter, r *http.Request) {
 		NotifyCustomer: true,
 	}, "", nil)
 
-	templ.Handler(orderstpl.RefundModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/refund-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // OrdersSubmitRefund processes refund submissions for a specific order payment.
@@ -666,7 +698,9 @@ func (h *Handlers) OrdersInvoiceModal(w http.ResponseWriter, r *http.Request) {
 	csrf := custommw.CSRFTokenFromContext(ctx)
 	data := orderstpl.InvoiceModalPayload(basePath, modal, csrf, orderstpl.InvoiceFormState{}, "", nil)
 
-	templ.Handler(orderstpl.InvoiceModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/invoice-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // InvoicesIssue processes invoice issuance requests.
@@ -742,7 +776,9 @@ func (h *Handlers) InvoicesIssue(w http.ResponseWriter, r *http.Request) {
 		pollURL := joinBasePath(basePath, "/invoices/jobs/"+url.PathEscape(result.Job.ID))
 		payload := orderstpl.InvoiceModalJobPayload(modal, *result.Job, result.Invoice, pollURL)
 		w.Header().Set("HX-Trigger", `{"toast":{"message":"領収書の生成を開始しました。","tone":"info"},"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
-		templ.Handler(orderstpl.InvoiceModal(payload)).ServeHTTP(w, r)
+		if err := dashboardTemplates.Render(w, "orders/invoice-modal", payload); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -787,7 +823,9 @@ func (h *Handlers) InvoiceJobStatus(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Trigger", `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
 	}
 
-	templ.Handler(orderstpl.InvoiceJobStatusFragment(statusData)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/invoice-job-status", statusData); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderInvoiceModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.InvoiceFormState, message string, fieldErrors map[string]string, status int) {
@@ -812,7 +850,9 @@ func (h *Handlers) renderInvoiceModalError(w http.ResponseWriter, r *http.Reques
 	} else {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	}
-	templ.Handler(orderstpl.InvoiceModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/invoice-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderManualCaptureModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.ManualCaptureFormState, message string, fieldErrors map[string]string, status int) {
@@ -837,7 +877,9 @@ func (h *Handlers) renderManualCaptureModalError(w http.ResponseWriter, r *http.
 	} else {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	}
-	templ.Handler(orderstpl.ManualCaptureModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/manual-capture-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) renderRefundModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.RefundFormState, message string, fieldErrors map[string]string, status int) {
@@ -862,7 +904,9 @@ func (h *Handlers) renderRefundModalError(w http.ResponseWriter, r *http.Request
 	} else {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	}
-	templ.Handler(orderstpl.RefundModal(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "orders/refund-modal", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func mergeFieldErrors(base map[string]string, extra map[string]string) map[string]string {
@@ -884,6 +928,32 @@ func mergeFieldErrors(base map[string]string, extra map[string]string) map[strin
 type ordersRequest struct {
 	query adminorders.Query
 	state orderstpl.QueryState
+}
+
+func toOrdersTableView(table orderstpl.TableData) webtmpl.OrdersTableView {
+	props := webtmpl.PaginationProps{
+		Info: webtmpl.PageInfo{
+			PageSize:   table.Pagination.PageSize,
+			Current:    table.Pagination.Page,
+			Count:      table.Pagination.Total,
+			TotalItems: table.Pagination.TotalPtr,
+			Next:       table.Pagination.Next,
+			Prev:       table.Pagination.Prev,
+		},
+		BasePath:      table.BasePath,
+		RawQuery:      table.Sort.RawQuery,
+		FragmentPath:  table.FragmentPath,
+		FragmentQuery: table.Sort.RawQuery,
+		Param:         "page",
+		SizeParam:     "pageSize",
+		HxTarget:      table.HxTarget,
+		HxSwap:        table.HxSwap,
+		HxPushURL:     true,
+	}
+	return webtmpl.OrdersTableView{
+		Table:      table,
+		Pagination: webtmpl.PaginationView{Props: props},
+	}
 }
 
 func triggerToast(w http.ResponseWriter, message, tone string) {

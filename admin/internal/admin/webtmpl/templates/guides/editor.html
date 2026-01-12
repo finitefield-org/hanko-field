@@ -1,0 +1,255 @@
+{{define "guides/editor"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "guides/editor-content"}}
+{{$page := .Page}}
+<div class="space-y-6" data-guide-editor-root>
+  <section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">ガイド編集</p>
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.Form.Title}}</h1>
+        {{if $page.Description}}
+          <p class="text-sm text-slate-600">{{$page.Description}}</p>
+        {{end}}
+        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+          <span class="{{badgeClass $page.StatusTone}}">{{$page.StatusLabel}}</span>
+          {{if $page.Form.Locale}}
+            <span>ロケール: {{$page.Form.Locale}}</span>
+          {{end}}
+          {{if $page.LastSavedLabel}}
+            <span>最終保存 {{$page.LastSavedLabel}}</span>
+          {{end}}
+          {{if $page.LastSavedExact}}
+            <span class="hidden text-xs text-slate-400 md:inline">({{$page.LastSavedExact}})</span>
+          {{end}}
+          {{if $page.LastSavedBy}}
+            <span class="text-xs text-slate-400">更新者: {{$page.LastSavedBy}}</span>
+          {{end}}
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="{{$page.BackURL}}" class="{{buttonClass "ghost" "sm" false false}}">
+          一覧に戻る
+        </a>
+        <button
+          type="button"
+          class="{{buttonClass "secondary" "sm" false false}} opacity-60 cursor-not-allowed"
+          disabled
+          title="保存機能は近日対応予定です"
+        >
+          下書きを保存 (準備中)
+        </button>
+        <a href="{{$page.PreviewPageURL}}" target="_blank" rel="noreferrer" class="{{buttonClass "primary" "sm" false false}}">
+          プレビューを別タブで開く
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_480px]">
+    <section>
+      {{template "guides/editor-form" $page}}
+    </section>
+    <aside class="space-y-4">
+      {{template "guides/editor-preview" $page.Preview}}
+      {{template "guides/history-panel" $page.History}}
+    </aside>
+  </div>
+</div>
+{{end}}
+
+{{define "guides/editor-form"}}
+{{$page := .}}
+<form
+  id="{{$page.FormID}}"
+  class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  method="post"
+  hx-post="{{$page.PreviewEndpoint}}"
+  hx-target="{{$page.PreviewTarget}}"
+  hx-swap="outerHTML"
+  hx-trigger="change delay:400ms, input delay:600ms"
+  hx-sync="closest form:abort"
+  data-guide-editor-form
+>
+  <input type="hidden" name="csrf_token" value="{{$page.Form.CSRFToken}}" />
+  <input type="hidden" name="locale" value="{{$page.Form.Locale}}" />
+
+  <div class="space-y-4">
+    <div class="space-y-2">
+      <label for="guide-title" class="text-sm font-semibold text-slate-700">タイトル</label>
+      <input
+        id="guide-title"
+        name="title"
+        type="text"
+        value="{{$page.Form.Title}}"
+        required
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="ガイドタイトルを入力"
+      />
+    </div>
+
+    <div class="space-y-2">
+      <label for="guide-summary" class="text-sm font-semibold text-slate-700">概要</label>
+      <textarea
+        id="guide-summary"
+        name="summary"
+        rows="3"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="150文字以内で概要を入力"
+      >{{$page.Form.Summary}}</textarea>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="space-y-2">
+        <label for="guide-persona" class="text-sm font-semibold text-slate-700">主な読者</label>
+        <input
+          id="guide-persona"
+          name="persona"
+          type="text"
+          value="{{$page.Form.Persona}}"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          placeholder="製造、CS、マーケなど"
+        />
+      </div>
+      <div class="space-y-2">
+        <label for="guide-category" class="text-sm font-semibold text-slate-700">カテゴリ</label>
+        <input
+          id="guide-category"
+          name="category"
+          type="text"
+          value="{{$page.Form.Category}}"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          placeholder="basics / operations など"
+        />
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <label for="guide-hero-image" class="text-sm font-semibold text-slate-700">ヒーロー画像URL</label>
+      <input
+        id="guide-hero-image"
+        name="hero_image"
+        type="url"
+        value="{{$page.Form.HeroImageURL}}"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="https://example.com/hero.jpg"
+      />
+      <p class="text-xs text-slate-400">空欄の場合は既存の画像またはプレースホルダーが使用されます。</p>
+    </div>
+
+    <div class="space-y-2">
+      <label for="guide-tags" class="text-sm font-semibold text-slate-700">タグ</label>
+      <input
+        id="guide-tags"
+        name="tags"
+        type="text"
+        value="{{$page.Form.TagsValue}}"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="カンマ区切りで入力 (例: onboarding, qa)"
+      />
+    </div>
+
+    <div class="space-y-2">
+      <label for="guide-body" class="text-sm font-semibold text-slate-700">本文</label>
+      <textarea
+        id="guide-body"
+        name="body"
+        rows="16"
+        class="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm text-slate-900 shadow-inner focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+        placeholder="<h1>見出し</h1> などHTML/Markdownを入力"
+      >{{$page.Form.BodyHTML}}</textarea>
+      <p class="text-xs text-slate-400">HTMLタグをサポートしています。入力内容は自動的にライブプレビューへ反映されます。</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+    <p>入力すると約0.6秒でプレビューが更新されます。</p>
+    <button type="submit" class="{{buttonClass "primary" "xs" false false}}">
+      プレビューを手動更新
+    </button>
+  </div>
+</form>
+{{end}}
+
+{{define "guides/editor-preview"}}
+<div id="{{.FragmentID}}" class="sticky top-24 space-y-4" data-guide-editor-preview>
+  {{template "guides/preview-header" .Preview.Header}}
+  <section class="space-y-4">
+    {{template "guides/preview-viewport" .Preview.Viewer}}
+  </section>
+</div>
+{{end}}
+
+{{define "guides/history-panel"}}
+<section
+  id="{{.FragmentID}}"
+  class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  data-guide-history-panel
+>
+  <div class="flex items-center justify-between gap-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">変更履歴</p>
+      <p class="text-xs text-slate-400">以前のバージョンや差分を確認できます。</p>
+    </div>
+    {{if .RefreshAction}}
+      <button
+        type="button"
+        class="{{buttonClass "ghost" "xs" false false}}"
+        hx-get="{{.RefreshAction}}"
+        hx-target="#{{.FragmentID}}"
+        hx-swap="outerHTML"
+      >
+        更新
+      </button>
+    {{end}}
+  </div>
+  {{if eq (len .Entries) 0}}
+    <p class="text-sm text-slate-500">{{.EmptyMessage}}</p>
+  {{else}}
+    <ul class="space-y-3 text-sm text-slate-600">
+      {{range $entry := .Entries}}
+        <li class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            {{if $entry.Icon}}
+              <span>{{$entry.Icon}}</span>
+            {{end}}
+            {{if $entry.Relative}}
+              <span>{{$entry.Relative}}</span>
+            {{end}}
+            {{if $entry.Occurred}}
+              <span class="text-slate-400">({{$entry.Occurred}})</span>
+            {{end}}
+            {{if $entry.Version}}
+              <span class="font-semibold text-slate-500">{{$entry.Version}}</span>
+            {{end}}
+          </div>
+          <p class="mt-2 font-semibold text-slate-900">{{$entry.Title}}</p>
+          {{if $entry.Summary}}
+            <p class="text-sm text-slate-600">{{$entry.Summary}}</p>
+          {{end}}
+          {{if $entry.Actor}}
+            <p class="text-xs text-slate-500">by {{$entry.Actor}}</p>
+          {{end}}
+          <div class="mt-3 space-y-2 text-sm text-slate-600">
+            {{$entry.Diff}}
+          </div>
+          <div class="mt-4 flex justify-end">
+            <button
+              type="button"
+              class="{{buttonClass "ghost" "xs" false false}}"
+              hx-post="{{$entry.RevertAction}}"
+              hx-target="body"
+              hx-swap="none"
+              hx-confirm="この版に戻しますか？"
+            >
+              この版に戻す
+            </button>
+          </div>
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+</section>
+{{end}}

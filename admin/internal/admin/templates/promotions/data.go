@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	adminpromotions "finitefield.org/hanko-admin/internal/admin/promotions"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
@@ -131,7 +129,7 @@ type TableRow struct {
 	SegmentName         string
 	SegmentPreview      []string
 	Metrics             []RowMetric
-	Attributes          templ.Attributes
+	Attributes          map[string]string
 }
 
 // RowMetric renders secondary numerical chips inside the row.
@@ -542,7 +540,7 @@ func toTableRow(promo adminpromotions.Promotion) TableRow {
 		SegmentName:         promo.Segment.Name,
 		SegmentPreview:      append([]string(nil), promo.Segment.Preview...),
 		Metrics:             metrics,
-		Attributes: templ.Attributes{
+		Attributes: map[string]string{
 			"data-promotion-row": "true",
 			"data-promotion-id":  promo.ID,
 		},
@@ -791,7 +789,7 @@ type ModalField struct {
 	FullWidth      bool
 	Options        []ModalOption
 	Rows           int
-	Attributes     templ.Attributes
+	Attributes     map[string]string
 	Error          string
 	Prefix         string
 	Suffix         string

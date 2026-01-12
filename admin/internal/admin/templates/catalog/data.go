@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	admincatalog "finitefield.org/hanko-admin/internal/admin/catalog"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
@@ -659,7 +657,7 @@ func buildTabs(basePath string, kind admincatalog.Kind, state QueryState) []comp
 			Href:   href,
 			Active: k == kind,
 		}
-		tab.Attributes = templ.Attributes{
+		tab.Attributes = map[string]string{
 			"hx-get":      fmt.Sprintf("%s?%s", fragment, ensureQueryView(state.RawQuery, currentView)),
 			"hx-target":   "#catalog-view",
 			"hx-swap":     "outerHTML",

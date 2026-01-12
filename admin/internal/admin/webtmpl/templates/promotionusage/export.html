@@ -1,0 +1,60 @@
+{{define "promotionusage/export-status"}}
+{{if or (eq . nil) (not .Visible)}}
+  <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+    エクスポートジョブはまだ開始されていません。
+  </div>
+{{else}}
+  <div
+    class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+    {{if .Poll}}
+      hx-get="{{.StatusURL}}"
+      hx-trigger="load delay:2s"
+      hx-target="this"
+      hx-swap="outerHTML"
+    {{end}}
+    data-export-job-id="{{.Job.ID}}"
+  >
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          {{template "components/badge" (dict "Label" .Job.Status "Tone" (fallback .Job.StatusTone "info"))}}
+          <p class="text-sm text-slate-600">ジョブID: {{.Job.ID}}</p>
+        </div>
+        {{if trimSpace .Job.Message}}
+          <p class="mt-1 text-sm text-slate-700">{{.Job.Message}}</p>
+        {{end}}
+      </div>
+      {{if and (trimSpace .Job.Download) .Finished}}
+        <a href="{{.Job.Download}}" class="{{buttonClass "primary" "sm" false false}}">ダウンロード</a>
+      {{end}}
+    </div>
+
+    <div class="mt-4">
+      <div class="h-2 rounded-full bg-slate-200">
+        <div class="h-2 rounded-full bg-brand-500 transition-all" style="width: {{clampPercentage .Job.Progress}}%;"></div>
+      </div>
+      <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+        <span>進捗: {{clampPercentage .Job.Progress}}%</span>
+        {{if gt .Job.RecordCount 0}}
+          <span>{{.Job.RecordCount}} 件</span>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+      {{if trimSpace .Submitted}}
+        <span>開始: {{.Submitted}}</span>
+      {{end}}
+      {{if trimSpace .Completed}}
+        <span>完了: {{.Completed}}</span>
+      {{end}}
+      {{if not .Finished}}
+        <span class="inline-flex items-center gap-1 text-amber-600">
+          <span aria-hidden="true">⏳</span>
+          自動更新中
+        </span>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+{{end}}

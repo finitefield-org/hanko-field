@@ -1,0 +1,107 @@
+{{define "notifications/table"}}
+<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+    <div>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">通知一覧</h2>
+      <p class="text-xs text-slate-400">全 {{.Total}} 件</p>
+    </div>
+    {{if .NextCursor}}
+      <a
+        href="#"
+        class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900"
+        aria-disabled="true"
+      >
+        さらに読み込む
+      </a>
+    {{end}}
+  </header>
+
+  {{if .Error}}
+    <div class="border-b border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-700">
+      {{.Error}}
+    </div>
+  {{end}}
+
+  {{if eq (len .Items) 0}}
+    <div class="px-6 py-12 text-center text-sm text-slate-500">
+      {{if .EmptyMessage}}
+        {{.EmptyMessage}}
+      {{else}}
+        通知はありません。
+      {{end}}
+    </div>
+  {{else}}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">通知</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">リソース</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">検知</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">担当</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">ステータス</th>
+            <th scope="col" class="px-3 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {{range $row := .Items}}
+            <tr
+              class="{{tableRowClass (eq $row.ID $.SelectedID)}}"
+              {{if eq $row.ID $.SelectedID}}data-selected="true"{{end}}
+              {{range $k, $v := $row.Attributes}} {{$k}}="{{$v}}"{{end}}
+            >
+              <td class="px-6 py-4 align-top">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <span class="{{badgeClass $row.CategoryTone}}">
+                      {{if $row.CategoryIcon}}<span aria-hidden="true" class="mr-1">{{$row.CategoryIcon}}</span>{{end}}
+                      {{$row.CategoryLabel}}
+                    </span>
+                    <span class="{{badgeClass $row.SeverityTone}}">{{$row.SeverityLabel}}</span>
+                  </div>
+                  <p class="text-sm font-semibold text-slate-900">{{$row.Title}}</p>
+                  {{if $row.Summary}}<p class="text-sm text-slate-600">{{$row.Summary}}</p>{{end}}
+                </div>
+              </td>
+              <td class="px-6 py-4 align-top">
+                {{if $row.ResourceURL}}
+                  <a href="{{$row.ResourceURL}}" class="text-sm font-medium text-brand-600 hover:text-brand-500">{{$row.ResourceLabel}}</a>
+                {{else}}
+                  <span class="text-sm text-slate-600">{{$row.ResourceLabel}}</span>
+                {{end}}
+                {{if $row.ResourceKind}}
+                  <p class="text-xs text-slate-400">{{$row.ResourceKind}}</p>
+                {{end}}
+              </td>
+              <td class="px-6 py-4 align-top">
+                <p class="text-sm text-slate-700" title="{{$row.CreatedAtTooltip}}">{{$row.CreatedAtRelative}}</p>
+              </td>
+              <td class="px-6 py-4 align-top">
+                <p class="text-sm text-slate-700">{{$row.Owner}}</p>
+              </td>
+              <td class="px-6 py-4 align-top">
+                <span class="{{badgeClass $row.StatusTone}}">{{$row.StatusLabel}}</span>
+              </td>
+              <td class="px-3 py-4 align-top">
+                {{if gt (len $row.Actions) 0}}
+                  <div class="flex flex-col gap-2">
+                    {{range $action := $row.Actions}}
+                      <a
+                        href="{{$action.URL}}"
+                        class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:border-brand-300 hover:text-brand-600"
+                      >
+                        {{if $action.Icon}}<span>{{$action.Icon}}</span>{{end}}
+                        <span>{{$action.Label}}</span>
+                      </a>
+                    {{end}}
+                  </div>
+                {{end}}
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{end}}
+</section>
+{{end}}

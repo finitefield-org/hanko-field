@@ -1,0 +1,196 @@
+{{define "org/index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "org/content"}}
+{{$page := .Page}}
+<div class="space-y-6" data-org-root>
+  <section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-2">
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.Title}}</h1>
+        {{if trimSpace $page.Description}}
+          <p class="text-sm text-slate-600">{{$page.Description}}</p>
+        {{end}}
+        {{if trimSpace $page.AccessNote}}
+          <div class="inline-flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+            <span aria-hidden="true">⚠️</span>
+            <span>{{$page.AccessNote}}</span>
+          </div>
+        {{end}}
+      </div>
+      <div class="mt-4">
+        {{template "components/underline-tabs" $page.Tabs}}
+      </div>
+      {{if $page.Staff}}
+        <div class="mt-6">
+          {{template "org/staff-body" $page.Staff}}
+        </div>
+      {{else if $page.Roles}}
+        <div class="mt-6">
+          {{template "org/roles-body" $page.Roles}}
+        </div>
+      {{end}}
+    </div>
+  </section>
+</div>
+{{end}}
+
+{{define "org/staff-body"}}
+<div class="space-y-6" data-org-staff>
+  <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:flex-1">
+      {{template "org/summary-card" (dict "Label" "総スタッフ" "Value" .Summary.Total "Tone" "info")}}
+      {{template "org/summary-card" (dict "Label" "アクティブ" "Value" .Summary.Active "Tone" "success")}}
+      {{template "org/summary-card" (dict "Label" "招待中" "Value" .Summary.Invited "Tone" "warning")}}
+      {{template "org/summary-card" (dict "Label" "アクセス停止" "Value" .Summary.Revoked "Tone" "danger")}}
+    </div>
+    <div class="flex flex-col items-stretch gap-3 lg:w-64">
+      {{if .Invite.Allowed}}
+        <button
+          type="button"
+          class="{{buttonClass "primary" "md" false false}}"
+          hx-get="{{.Invite.ModalURL}}"
+          hx-target="#modal"
+          hx-swap="innerHTML"
+        >
+          スタッフを招待
+        </button>
+        {{if gt .Invite.Remaining 0}}
+          <p class="text-xs text-slate-500">残り {{.Invite.Remaining}} 招待</p>
+        {{end}}
+        {{if trimSpace .Invite.Message}}
+          <p class="text-xs text-slate-500">{{.Invite.Message}}</p>
+        {{end}}
+      {{else}}
+        <button type="button" class="{{buttonClass "secondary" "md" false false}}" disabled>招待不可</button>
+        {{if trimSpace .Invite.DisabledReason}}
+          <p class="text-xs text-slate-500">{{.Invite.DisabledReason}}</p>
+        {{end}}
+      {{end}}
+    </div>
+  </div>
+
+  {{if trimSpace .Error}}
+    <div class="rounded-md border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">{{.Error}}</div>
+  {{end}}
+
+  {{template "org/staff-filters" .Filters}}
+
+  {{template "org/staff-table" .Table}}
+</div>
+{{end}}
+
+{{define "org/summary-card"}}
+<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{.Label}}</p>
+  <p class="mt-1 text-2xl font-semibold text-slate-900">{{.Value}}</p>
+  {{if and (eq .Tone "danger") (gt .Value 0)}}
+    <p class="mt-2 text-xs text-danger-600">アクセス停止の確認が必要です。</p>
+  {{else if and (eq .Tone "warning") (gt .Value 0)}}
+    <p class="mt-2 text-xs text-amber-600">招待の期限切れに注意してください。</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "org/staff-filters"}}
+<form
+  class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+  method="get"
+  {{if trimSpace .Action}}hx-get="{{buildURL .Action ""}}"{{end}}
+  hx-target="#org-staff-table"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div class="flex flex-col gap-2">
+      <label for="org-staff-search" class="text-xs font-semibold uppercase tracking-wide text-slate-500">検索</label>
+      <input
+        id="org-staff-search"
+        name="q"
+        type="search"
+        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="氏名・メールアドレスで検索"
+        value="{{.Search}}"
+      />
+    </div>
+    <div class="flex flex-wrap gap-4">
+      {{template "org/filter-select" (dict "Name" "role" "Label" "ロール" "Options" .RoleOptions)}}
+      {{template "org/filter-select" (dict "Name" "status" "Label" "ステータス" "Options" .StatusOptions)}}
+    </div>
+    <div class="flex items-center gap-3 md:self-end">
+      <button type="submit" class="{{buttonClass "primary" "sm" false false}}">適用</button>
+      {{if trimSpace .ResetURL}}
+        <a class="text-sm text-slate-600 hover:text-brand-600" href="{{.ResetURL}}">リセット</a>
+      {{end}}
+    </div>
+  </div>
+</form>
+{{end}}
+
+{{define "org/filter-select"}}
+{{$name := .Name}}
+<div class="flex flex-col gap-2">
+  <label class="text-xs font-semibold uppercase tracking-wide text-slate-500" for="org-filter-{{$name}}">{{.Label}}</label>
+  <select
+    id="org-filter-{{$name}}"
+    name="{{$name}}"
+    class="min-w-[160px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+  >
+    {{range $option := .Options}}
+      <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>
+        {{if gt $option.Count 0}}
+          {{$option.Label}} ({{$option.Count}})
+        {{else}}
+          {{$option.Label}}
+        {{end}}
+      </option>
+    {{end}}
+  </select>
+</div>
+{{end}}
+
+{{define "org/roles-body"}}
+<div class="space-y-4">
+  {{if trimSpace .Error}}
+    <div class="rounded-md border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">{{.Error}}</div>
+  {{end}}
+  {{if eq (len .Roles) 0}}
+    <div class="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 shadow-sm">ロール定義が見つかりません。バックエンドの RBAC 設定を確認してください。</div>
+  {{else}}
+    <div class="grid gap-4 lg:grid-cols-2">
+      {{range $role := .Roles}}
+        <article class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">{{$role.Label}}</h3>
+              {{if trimSpace $role.Description}}
+                <p class="text-sm text-slate-600">{{$role.Description}}</p>
+              {{end}}
+            </div>
+            <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">{{printf "%d 名" $role.Members}}</span>
+          </div>
+          {{if trimSpace $role.LastUpdatedText}}
+            <p class="text-xs text-slate-400" title="{{$role.LastUpdatedHint}}">{{$role.LastUpdatedText}}</p>
+          {{end}}
+          {{if gt (len $role.Capabilities) 0}}
+            <ul class="space-y-2 text-sm text-slate-600">
+              {{range $cap := $role.Capabilities}}
+                <li class="flex items-start gap-2">
+                  <span class="mt-1 text-brand-500">•</span>
+                  <div>
+                    <p class="font-medium text-slate-800">{{$cap.Label}}</p>
+                    {{if trimSpace $cap.Description}}
+                      <p class="text-xs text-slate-500">{{$cap.Description}}</p>
+                    {{end}}
+                  </div>
+                </li>
+              {{end}}
+            </ul>
+          {{end}}
+        </article>
+      {{end}}
+    </div>
+  {{end}}
+</div>
+{{end}}

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	admincontent "finitefield.org/hanko-admin/internal/admin/content"
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	guidestpl "finitefield.org/hanko-admin/internal/admin/templates/guides"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // GuidesPage renders the guides management page.
@@ -36,8 +36,26 @@ func (h *Handlers) GuidesPage(w http.ResponseWriter, r *http.Request) {
 
 	csrfToken := custommw.CSRFTokenFromContext(ctx)
 	page := guidestpl.BuildPageData(custommw.BasePathFromContext(ctx), params.state, feed, params.state.Selected, csrfToken)
-
-	templ.Handler(guidestpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "guides/content"
+	view := webtmpl.GuidesPageView{
+		BaseView: base,
+		Page:     page,
+		Table: webtmpl.GuidesTableView{
+			Table:     page.Table,
+			CSRFToken: page.CSRFToken,
+		},
+	}
+	if err := dashboardTemplates.Render(w, "guides/index", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // GuidesPreview renders the localized preview page for a guide.
@@ -69,7 +87,23 @@ func (h *Handlers) GuidesPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := guidestpl.BuildPreviewPageData(custommw.BasePathFromContext(ctx), preview)
-	templ.Handler(guidestpl.PreviewPage(data)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.PageTitle, crumbs)
+	base.ContentClass = "max-w-7xl px-4 py-6 sm:px-6 lg:px-10"
+	base.ContentTemplate = "guides/preview-content"
+	view := webtmpl.GuidesPreviewPageView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "guides/preview", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // GuidesEdit renders the two-pane editor for a guide.
@@ -118,8 +152,22 @@ func (h *Handlers) GuidesEdit(w http.ResponseWriter, r *http.Request) {
 
 	csrfToken := custommw.CSRFTokenFromContext(ctx)
 	payload := guidestpl.BuildEditorPageData(custommw.BasePathFromContext(ctx), editor, preview, csrfToken)
-
-	templ.Handler(guidestpl.EditorPage(payload)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(payload.Breadcrumbs))
+	for _, crumb := range payload.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{
+			Label: crumb.Label,
+			Href:  crumb.Href,
+		})
+	}
+	base := webtmpl.BuildBaseView(ctx, payload.Title, crumbs)
+	base.ContentTemplate = "guides/editor-content"
+	view := webtmpl.GuidesEditorPageView{
+		BaseView: base,
+		Page:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "guides/editor", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // GuidesEditPreview handles live preview refreshes from the editor form.
@@ -165,8 +213,9 @@ func (h *Handlers) GuidesEditPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := guidestpl.BuildEditorPreviewData(custommw.BasePathFromContext(ctx), preview)
-
-	templ.Handler(guidestpl.EditorPreview(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "guides/editor-preview", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // GuidesHistory renders the version history panel fragment for htmx requests.
@@ -196,7 +245,9 @@ func (h *Handlers) GuidesHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := guidestpl.BuildHistoryPanelFragmentData(custommw.BasePathFromContext(ctx), editor)
-	templ.Handler(guidestpl.HistoryPanel(data)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "guides/history-panel", data); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // GuidesTable renders the table fragment for htmx updates.
@@ -411,7 +462,16 @@ func (h *Handlers) renderGuidesFragment(w http.ResponseWriter, r *http.Request, 
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(guidestpl.TableFragment(fragment)).ServeHTTP(w, r)
+	view := webtmpl.GuidesFragmentView{
+		Table:     fragment.Table,
+		Summary:   fragment.Summary,
+		Bulk:      fragment.Bulk,
+		Drawer:    fragment.Drawer,
+		CSRFToken: fragment.CSRFToken,
+	}
+	if err := dashboardTemplates.Render(w, "guides/table-fragment", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func splitTags(raw string) []string {

@@ -1,0 +1,77 @@
+{{define "orders/export-section"}}
+<section
+  id="orders-export-wrapper"
+  class="{{classList "space-y-4" (exportSectionClasses .Empty)}}"
+  data-orders-export
+  {{if .OOB}}hx-swap-oob="outerHTML"{{end}}
+>
+  <div class="flex items-center justify-between gap-3">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">エクスポート進捗</h2>
+  </div>
+  <div id="orders-export-jobs" class="space-y-3" data-orders-export-jobs>
+    {{if eq (len .Jobs) 0}}
+      <p class="text-sm text-slate-500">現在進行中のエクスポートはありません。</p>
+    {{else}}
+      {{range $job := .Jobs}}
+        {{template "orders/export-job-card" $job}}
+      {{end}}
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "orders/export-job-card"}}
+<article
+  id="{{.DOMID}}"
+  class="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+  data-orders-export-job
+  hx-target="this"
+  hx-swap="outerHTML"
+  {{if .PollURL}}hx-get="{{.PollURL}}"{{end}}
+  {{if .PollTrigger}}hx-trigger="{{.PollTrigger}}"{{end}}
+  aria-busy="{{boolAttr (not .Done)}}"
+>
+  <div class="flex items-start justify-between gap-4">
+    <div class="space-y-1">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{.FormatLabel}}</p>
+      <p class="text-sm text-slate-600">ジョブID: {{.ID}}</p>
+      {{if .SubmittedAt}}
+        <p class="text-xs text-slate-400">
+          開始: {{.SubmittedAt}}
+          {{if .SubmittedRelative}}
+            <span class="ml-1">({{.SubmittedRelative}})</span>
+          {{end}}
+        </p>
+      {{end}}
+    </div>
+    <span class="{{badgeClass .StatusTone}}">{{.StatusLabel}}</span>
+  </div>
+  {{if .Message}}
+    <p class="text-sm text-slate-600">{{.Message}}</p>
+  {{end}}
+  <div class="space-y-2">
+    <div class="flex items-center justify-between text-xs text-slate-500">
+      <span>進捗</span>
+      <span>{{.CountsLabel}}</span>
+    </div>
+    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.ProgressPercent}}">
+      <div class="h-full bg-brand-500 transition-[width]" style="width: {{.ProgressWidth}}"></div>
+    </div>
+  </div>
+  {{if .FieldsSummary}}
+    <p class="text-xs text-slate-400">出力項目: {{.FieldsSummary}}</p>
+  {{end}}
+  {{if .HasDownload}}
+    <div class="flex justify-end">
+      <a
+        href="{{.DownloadURL}}"
+        target="_blank"
+        rel="noreferrer"
+        class="{{buttonClass "secondary" "xs" false false}}"
+      >
+        {{.DownloadLabel}}
+      </a>
+    </div>
+  {{end}}
+</article>
+{{end}}

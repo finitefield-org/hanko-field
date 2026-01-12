@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/profile"
 	profiletpl "finitefield.org/hanko-admin/internal/admin/templates/profile"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // ProfilePage renders the main profile/security dashboard.
@@ -37,7 +37,13 @@ func (h *Handlers) MFATOTPStart(w http.ResponseWriter, r *http.Request) {
 		Enrollment: enrollment,
 		CSRFToken:  custommw.CSRFTokenFromContext(r.Context()),
 	}
-	templ.Handler(profiletpl.TOTPModal(data)).ServeHTTP(w, r)
+	view := webtmpl.ProfileTOTPModalView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     data,
+	}
+	if err := dashboardTemplates.Render(w, "profile/totp-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // MFATOTPConfirm finalises TOTP enrollment.
@@ -60,7 +66,13 @@ func (h *Handlers) MFATOTPConfirm(w http.ResponseWriter, r *http.Request) {
 			CSRFToken:  custommw.CSRFTokenFromContext(r.Context()),
 			Error:      "認証コードを入力してください。",
 		}
-		templ.Handler(profiletpl.TOTPModal(data)).ServeHTTP(w, r)
+		view := webtmpl.ProfileTOTPModalView{
+			BasePath: custommw.BasePathFromContext(r.Context()),
+			Data:     data,
+		}
+		if err := dashboardTemplates.Render(w, "profile/totp-modal", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -73,7 +85,13 @@ func (h *Handlers) MFATOTPConfirm(w http.ResponseWriter, r *http.Request) {
 			CSRFToken:  custommw.CSRFTokenFromContext(r.Context()),
 			Error:      "コードが正しくないか、期限切れです。再度お試しください。",
 		}
-		templ.Handler(profiletpl.TOTPModal(data)).ServeHTTP(w, r)
+		view := webtmpl.ProfileTOTPModalView{
+			BasePath: custommw.BasePathFromContext(r.Context()),
+			Data:     data,
+		}
+		if err := dashboardTemplates.Render(w, "profile/totp-modal", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -82,7 +100,13 @@ func (h *Handlers) MFATOTPConfirm(w http.ResponseWriter, r *http.Request) {
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 		Message:   "Authenticator アプリを有効化しました。",
 	}
-	templ.Handler(profiletpl.MFAUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileMFAUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/mfa-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // EmailMFAEnable toggles email-based MFA.
@@ -105,7 +129,13 @@ func (h *Handlers) EmailMFAEnable(w http.ResponseWriter, r *http.Request) {
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 		Message:   "メールによる MFA を有効化しました。",
 	}
-	templ.Handler(profiletpl.MFAUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileMFAUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/mfa-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // DisableMFA removes MFA factors.
@@ -128,7 +158,13 @@ func (h *Handlers) DisableMFA(w http.ResponseWriter, r *http.Request) {
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 		Message:   "MFA を無効化しました。",
 	}
-	templ.Handler(profiletpl.MFAUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileMFAUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/mfa-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // NewAPIKeyForm renders the creation form modal.
@@ -136,7 +172,13 @@ func (h *Handlers) NewAPIKeyForm(w http.ResponseWriter, r *http.Request) {
 	data := profiletpl.APIKeyFormData{
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 	}
-	templ.Handler(profiletpl.APIKeyFormModal(data)).ServeHTTP(w, r)
+	view := webtmpl.ProfileAPIKeyFormModalView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     data,
+	}
+	if err := dashboardTemplates.Render(w, "profile/api-key-form-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // CreateAPIKey issues a new key and displays the secret once.
@@ -158,7 +200,13 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 			CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 			Error:     "APIキーのラベルを入力してください。",
 		}
-		templ.Handler(profiletpl.APIKeyFormModal(data)).ServeHTTP(w, r)
+		view := webtmpl.ProfileAPIKeyFormModalView{
+			BasePath: custommw.BasePathFromContext(r.Context()),
+			Data:     data,
+		}
+		if err := dashboardTemplates.Render(w, "profile/api-key-form-modal", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -170,7 +218,13 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 			Error:     "APIキーの発行に失敗しました。時間を置いて再度お試しください。",
 			Label:     label,
 		}
-		templ.Handler(profiletpl.APIKeyFormModal(data)).ServeHTTP(w, r)
+		view := webtmpl.ProfileAPIKeyFormModalView{
+			BasePath: custommw.BasePathFromContext(r.Context()),
+			Data:     data,
+		}
+		if err := dashboardTemplates.Render(w, "profile/api-key-form-modal", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -185,7 +239,13 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		Secret:    secret,
 		Message:   "新しい API キーを発行しました。シークレットはこの画面でのみ表示されます。",
 	}
-	templ.Handler(profiletpl.APIKeyUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileAPIKeyUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/api-key-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // RevokeAPIKey revokes the selected key.
@@ -214,7 +274,13 @@ func (h *Handlers) RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 		Message:   "選択した API キーを失効させました。",
 	}
-	templ.Handler(profiletpl.APIKeyUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileAPIKeyUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/api-key-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // RevokeSession terminates an active session.
@@ -243,5 +309,11 @@ func (h *Handlers) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		CSRFToken: custommw.CSRFTokenFromContext(r.Context()),
 		Message:   "セッションを失効させました。",
 	}
-	templ.Handler(profiletpl.SessionUpdate(payload)).ServeHTTP(w, r)
+	view := webtmpl.ProfileSessionUpdateView{
+		BasePath: custommw.BasePathFromContext(r.Context()),
+		Data:     payload,
+	}
+	if err := dashboardTemplates.Render(w, "profile/session-update", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }

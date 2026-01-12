@@ -1,0 +1,199 @@
+{{define "promotions/modal"}}
+<div class="modal-overlay" data-modal-overlay>
+  <div class="modal-panel" data-modal-panel role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" aria-label="{{.Title}}" tabindex="-1">
+    <header class="modal-header">
+      <div class="flex-1">
+        <h2 id="modal-title" class="modal-title">{{.Title}}</h2>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-modal-close>
+        <span class="sr-only">閉じる</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-4 w-4">
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+        </svg>
+      </button>
+    </header>
+    <div id="modal-description" class="modal-body">
+      <form
+        class="space-y-6 text-sm text-slate-700"
+        hx-target="#modal"
+        hx-swap="innerHTML"
+        data-promotion-form
+        {{if eq .Method "PUT"}}
+          hx-put="{{.ActionURL}}"
+        {{else if eq .Method "PATCH"}}
+          hx-patch="{{.ActionURL}}"
+        {{else if eq .Method "DELETE"}}
+          hx-delete="{{.ActionURL}}"
+        {{else}}
+          hx-post="{{.ActionURL}}"
+        {{end}}
+      >
+        {{range $hidden := .HiddenFields}}
+          <input type="hidden" name="{{$hidden.Name}}" value="{{$hidden.Value}}" />
+        {{end}}
+        {{if .Description}}
+          <p class="text-sm text-slate-600">{{.Description}}</p>
+        {{end}}
+        {{if .Error}}
+          <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{.Error}}</div>
+        {{end}}
+        {{range $section := .Sections}}
+          {{template "promotions/modal-section" (dict "Section" $section "Conditions" $.Conditions)}}
+        {{end}}
+        <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-xs text-slate-500">入力内容を確認して送信してください。保存後に一覧が更新されます。</p>
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+            <button type="button" class="{{buttonClass "ghost" "md" true false}}" data-modal-close>キャンセル</button>
+            <button type="submit" class="{{buttonClass (promotionsModalTone .SubmitTone) "md" true false}}">{{.SubmitLabel}}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "promotions/modal-section"}}
+{{$section := .Section}}
+{{$conditions := .Conditions}}
+<section
+  class="space-y-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xs"
+  data-promotion-section
+  {{if promotionsSectionHidden $section $conditions}}hidden{{end}}
+  {{if $section.ConditionKey}}data-promotion-condition-key="{{$section.ConditionKey}}"{{end}}
+  {{if $section.ConditionValue}}data-promotion-condition-value="{{$section.ConditionValue}}"{{end}}
+  {{if $section.HideWhenMissing}}data-promotion-hide-missing="true"{{end}}
+>
+  <div class="space-y-1">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{$section.Title}}</p>
+    {{if $section.Description}}
+      <p class="text-xs text-slate-500">{{$section.Description}}</p>
+    {{end}}
+  </div>
+  <div class="grid gap-4 md:grid-cols-2">
+    {{range $field := $section.Fields}}
+      <div
+        class="{{if $field.FullWidth}}md:col-span-2{{end}}"
+        data-promotion-field
+        {{if promotionsFieldHidden $field $conditions}}hidden{{end}}
+        {{if $field.ConditionKey}}data-promotion-condition-key="{{$field.ConditionKey}}"{{end}}
+        {{if $field.ConditionValue}}data-promotion-condition-value="{{$field.ConditionValue}}"{{end}}
+      >
+        {{template "promotions/modal-field" $field}}
+      </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "promotions/modal-field"}}
+<label class="flex flex-col gap-1 text-sm text-slate-600">
+  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    {{.Label}}
+    {{if .Required}}<span class="ml-1 text-rose-500">*</span>{{end}}
+  </span>
+  {{template "promotions/modal-input" .}}
+</label>
+{{if .Hint}}
+  <p class="text-xs text-slate-500">{{.Hint}}</p>
+{{end}}
+{{if .Error}}
+  <p class="text-xs text-rose-600">{{.Error}}</p>
+{{end}}
+{{end}}
+
+{{define "promotions/modal-input"}}
+{{if or .Prefix .Suffix}}
+  <div class="flex items-center gap-2">
+    {{if .Prefix}}<span class="text-xs text-slate-500">{{.Prefix}}</span>{{end}}
+    {{template "promotions/modal-control" .}}
+    {{if .Suffix}}<span class="text-xs text-slate-500">{{.Suffix}}</span>{{end}}
+  </div>
+{{else}}
+  {{template "promotions/modal-control" .}}
+{{end}}
+{{end}}
+
+{{define "promotions/modal-control"}}
+{{$type := promotionsInputType .Type}}
+{{if eq $type "textarea"}}
+  <textarea
+    name="{{.Name}}"
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    rows="{{textareaRows .Rows}}"
+    placeholder="{{.Placeholder}}"
+    {{if .Required}}required{{end}}
+    {{range $k, $v := .Attributes}} {{$k}}="{{$v}}"{{end}}
+  >{{.Value}}</textarea>
+{{else if or (eq $type "select") (eq $type "multiselect")}}
+  <select
+    name="{{.Name}}"
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    {{if .Required}}required{{end}}
+    {{if or .Multiple (eq $type "multiselect")}}multiple{{end}}
+    {{range $k, $v := .Attributes}} {{$k}}="{{$v}}"{{end}}
+  >
+    {{if not (or .Multiple (eq $type "multiselect"))}}
+      <option value="">選択してください</option>
+    {{end}}
+    {{range $option := .Options}}
+      <option value="{{$option.Value}}" {{if $option.Selected}}selected{{end}}>{{$option.Label}}</option>
+    {{end}}
+  </select>
+{{else if eq $type "checkbox-group"}}
+  <div class="space-y-2">
+    {{range $option := .Options}}
+      <label class="flex items-start gap-2 text-sm text-slate-600">
+        <input
+          type="checkbox"
+          class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          name="{{$.Name}}"
+          value="{{$option.Value}}"
+          {{if $option.Selected}}checked{{end}}
+          {{range $k, $v := $.Attributes}} {{$k}}="{{$v}}"{{end}}
+        />
+        <span>
+          <span class="font-medium text-slate-700">{{$option.Label}}</span>
+          {{if $option.Description}}
+            <span class="block text-xs text-slate-500">{{$option.Description}}</span>
+          {{end}}
+        </span>
+      </label>
+    {{end}}
+  </div>
+{{else if eq $type "radio"}}
+  <div class="space-y-2">
+    {{range $option := .Options}}
+      <label class="flex items-start gap-2 text-sm text-slate-600">
+        <input
+          type="radio"
+          class="mt-1 h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500"
+          name="{{$.Name}}"
+          value="{{$option.Value}}"
+          {{if $option.Selected}}checked{{end}}
+          {{range $k, $v := $.Attributes}} {{$k}}="{{$v}}"{{end}}
+        />
+        <span>
+          <span class="font-medium text-slate-700">{{$option.Label}}</span>
+          {{if $option.Description}}
+            <span class="block text-xs text-slate-500">{{$option.Description}}</span>
+          {{end}}
+        </span>
+      </label>
+    {{end}}
+  </div>
+{{else}}
+  <input
+    name="{{.Name}}"
+    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+    type="{{$type}}"
+    value="{{.Value}}"
+    placeholder="{{.Placeholder}}"
+    {{if .Required}}required{{end}}
+    {{if .Step}}step="{{.Step}}"{{end}}
+    {{if .Min}}min="{{.Min}}"{{end}}
+    {{if .Max}}max="{{.Max}}"{{end}}
+    {{range $k, $v := .Attributes}} {{$k}}="{{$v}}"{{end}}
+  />
+{{end}}
+{{end}}

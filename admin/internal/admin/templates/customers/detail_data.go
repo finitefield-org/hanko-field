@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	templ "github.com/a-h/templ"
-
 	admincustomers "finitefield.org/hanko-admin/internal/admin/customers"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/templates/partials"
@@ -78,7 +76,7 @@ type QuickActionButton struct {
 	Icon    string
 	Method  string
 	Modal   bool
-	Attrs   templ.Attributes
+	Attrs   map[string]string
 }
 
 // DetailMetricCard renders a KPI card in the metrics row.
@@ -602,7 +600,7 @@ func quickActions(actions []admincustomers.QuickAction) []QuickActionButton {
 		}
 		href := strings.TrimSpace(action.Href)
 		method := strings.TrimSpace(action.Method)
-		attrs := templ.Attributes{
+		attrs := map[string]string{
 			"data-icon": strings.TrimSpace(action.Icon),
 		}
 		if method != "" {

@@ -1,0 +1,9 @@
+{{define "components/toast"}}
+<div class="{{toastClass .Tone}}" role="status" aria-live="polite" data-autohide="true">
+  <div class="flex-1 space-y-1">
+    {{if .Message}}
+      <p class="toast-body">{{.Message}}</p>
+    {{end}}
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,367 @@
+{{define "production/workorder-index"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "production/workorder-content"}}
+<div class="space-y-6">
+  {{template "production/workorder-header" .Page}}
+  <section class="rounded-2xl bg-white px-6 py-4 shadow-sm ring-1 ring-slate-200">
+    {{template "production/workorder-tabs" .Page.Tabs}}
+  </section>
+  {{template "production/workorder-overview" .Page}}
+  {{template "production/workorder-assets" .Page}}
+  {{template "production/workorder-instructions" .Page}}
+  {{template "production/workorder-activity" .Page}}
+</div>
+{{end}}
+
+{{define "production/workorder-header"}}
+<section class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+  <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div class="space-y-3">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">作業指示書</div>
+      <h1 class="text-3xl font-semibold text-slate-900">#{{.Header.OrderNumber}}</h1>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="{{badgeClass .Header.StageTone}}">{{.Header.StageLabel}}</span>
+        <span class="{{badgeClass .Header.PriorityTone}}">{{.Header.PriorityLabel}}</span>
+      </div>
+      <dl class="mt-4 grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">顧客</dt>
+          <dd class="mt-1 font-medium text-slate-900">{{.Header.Customer}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">納期</dt>
+          <dd class="{{productionDeadlineToneClass .Header.DueTone}}">{{fallback .Header.DueLabel "未設定"}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">担当ライン</dt>
+          <dd class="mt-1 font-medium text-slate-900">{{.Header.Queue}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">責任チーム</dt>
+          <dd class="mt-1 font-medium text-slate-900">{{.Header.Responsible}}</dd>
+        </div>
+        {{if .Header.ProductLine}}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">プロダクトライン</dt>
+            <dd class="mt-1 text-slate-900">{{.Header.ProductLine}}</dd>
+          </div>
+        {{end}}
+        {{if .Header.LastPrinted}}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">最終印刷</dt>
+            <dd class="mt-1 text-slate-600">{{.Header.LastPrinted}}</dd>
+          </div>
+        {{end}}
+      </dl>
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {{if .PrimaryAction}}
+        <button
+          type="button"
+          class="{{buttonClass "primary" "md" false false}}"
+          hx-post="{{.ActionEndpoint}}"
+          hx-vals='{{printf "{\"type\":\"%s\"}" .PrimaryAction.Stage}}'
+          hx-swap="none"
+        >
+          {{.PrimaryAction.Label}}
+        </button>
+      {{else}}
+        <button type="button" class="{{buttonClass "primary" "md" false false}}" disabled>更新不可</button>
+      {{end}}
+      {{if .Header.PrintURL}}
+        <a
+          href="{{.Header.PrintURL}}"
+          class="{{buttonClass "secondary" "md" false false}}"
+          target="_blank"
+          rel="noreferrer"
+        >
+          PDFダウンロード
+        </a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{define "production/workorder-tabs"}}
+{{if gt (len .) 0}}
+  <div class="border-b border-slate-200">
+    <nav class="flex flex-wrap items-center gap-2" aria-label="セクションタブ">
+      {{range .}}
+        <a
+          href="{{productionUnderlineTabHref .Href .ID}}"
+          class="{{productionUnderlineTabClass .Active}}"
+          {{if .Active}}aria-current="true"{{end}}
+          data-tab="{{.ID}}"
+        >
+          <span>{{.Label}}</span>
+        </a>
+      {{end}}
+    </nav>
+  </div>
+{{end}}
+{{end}}
+
+{{define "production/workorder-overview"}}
+<section id="overview" class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+  <div class="flex flex-col gap-6 lg:flex-row">
+    <div class="flex-1 space-y-5">
+      <div>
+        <h2 class="text-xl font-semibold text-slate-900">概要</h2>
+        <p class="text-sm text-slate-600">顧客情報と作業メモ、重要な申し送り事項をまとめています。</p>
+      </div>
+      <dl class="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">顧客</dt>
+          <dd class="mt-1 text-slate-900">{{fallback .Overview.Customer "-"}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">デザイン</dt>
+          <dd class="mt-1 text-slate-900">{{.Overview.Design}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">プロダクトライン</dt>
+          <dd class="mt-1 text-slate-900">{{.Overview.ProductLine}}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">ワークステーション</dt>
+          <dd class="mt-1 text-slate-900">{{fallback .Overview.Workstation "未割当"}}</dd>
+        </div>
+      </dl>
+      {{if gt (len .Overview.Notes) 0}}
+        <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">備考</h3>
+          <ul class="mt-2 space-y-1 list-disc pl-4">
+            {{range .Overview.Notes}}
+              <li>{{.}}</li>
+            {{end}}
+          </ul>
+        </div>
+      {{end}}
+      {{if .Overview.CustomerNote}}
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p class="font-semibold text-amber-900">顧客指示</p>
+          <p class="mt-1 whitespace-pre-wrap">{{.Overview.CustomerNote}}</p>
+        </div>
+      {{end}}
+    </div>
+    <div class="lg:w-80">
+      <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">材料・支給品</h3>
+      {{if eq (len .Overview.Materials) 0}}
+        <p class="mt-3 text-sm text-slate-500">登録された材料はありません。</p>
+      {{else}}
+        <ul class="mt-4 space-y-3">
+          {{range .Overview.Materials}}
+            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div class="flex items-center justify-between">
+                <p class="font-medium text-slate-900">{{.Name}}</p>
+                {{if .Status}}
+                  <span class="{{badgeClass "muted"}}">{{.Status}}</span>
+                {{end}}
+              </div>
+              {{if .Detail}}<p class="text-sm text-slate-600">{{.Detail}}</p>{{end}}
+              <dl class="mt-2 grid gap-2 text-xs text-slate-500">
+                <div class="flex justify-between">
+                  <span>数量</span>
+                  <span class="font-semibold text-slate-900">{{.Quantity}}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>保管場所</span>
+                  <span class="font-semibold text-slate-900">{{.Source}}</span>
+                </div>
+              </dl>
+            </li>
+          {{end}}
+        </ul>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{define "production/workorder-assets"}}
+<section id="assets" class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+  <div class="flex flex-col gap-2">
+    <h2 class="text-xl font-semibold text-slate-900">デザイン資産</h2>
+    <p class="text-sm text-slate-600">刻印データ、レンダー、QCシートなどの支給ファイル。</p>
+  </div>
+  {{if eq (len .Assets) 0}}
+    <p class="mt-4 text-sm text-slate-500">表示できる資産がありません。</p>
+  {{else}}
+    <div class="mt-6 grid gap-4 md:grid-cols-2">
+      {{range .Assets}}
+        <article class="flex flex-col rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
+          {{if .PreviewURL}}
+            <img src="{{.PreviewURL}}" alt="{{.Name}}" class="h-48 w-full rounded-t-2xl object-cover" />
+          {{else}}
+            <div class="h-48 w-full rounded-t-2xl bg-slate-200"></div>
+          {{end}}
+          <div class="flex flex-1 flex-col gap-3 px-5 py-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-900">{{.Name}}</p>
+                <p class="text-xs uppercase tracking-wide text-slate-500">{{.Kind}}</p>
+              </div>
+              <span class="text-xs text-slate-500">{{.Size}}</span>
+            </div>
+            {{if .Description}}<p class="text-sm text-slate-600">{{.Description}}</p>{{end}}
+            <p class="text-xs text-slate-500">更新 {{.UpdatedAt}}</p>
+            <div class="mt-auto pt-2">
+              <a
+                href="{{.DownloadURL}}"
+                class="{{buttonClass "ghost" "sm" false false}}"
+                target="_blank"
+                rel="noreferrer"
+              >
+                ダウンロード
+              </a>
+            </div>
+          </div>
+        </article>
+      {{end}}
+    </div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "production/workorder-instructions"}}
+<section id="instructions" class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+  <div class="flex flex-col gap-2">
+    <h2 class="text-xl font-semibold text-slate-900">作業手順</h2>
+    <p class="text-sm text-slate-600">各ステージでの具体的な進行手順と安全留意点。</p>
+  </div>
+  <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div class="space-y-4">
+      {{if eq (len .Instructions) 0}}
+        <p class="text-sm text-slate-500">登録された手順がありません。</p>
+      {{else}}
+        {{range .Instructions}}
+          <article class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{.StageLabel}}</p>
+                <h3 class="text-base font-semibold text-slate-900">{{.Title}}</h3>
+              </div>
+              {{if .Duration}}
+                <span class="text-xs font-medium text-slate-500">所要 {{.Duration}}</span>
+              {{end}}
+            </div>
+            {{if .Description}}
+              <p class="mt-3 text-sm text-slate-700 whitespace-pre-line">{{.Description}}</p>
+            {{end}}
+            {{if gt (len .Tools) 0}}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {{range .Tools}}
+                  <span class="rounded-full bg-white/60 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">{{.}}</span>
+                {{end}}
+              </div>
+            {{end}}
+          </article>
+        {{end}}
+      {{end}}
+    </div>
+    <div class="space-y-4">
+      {{template "production/workorder-checklist" .}}
+      {{template "production/workorder-safety" .}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{define "production/workorder-checklist"}}
+<div class="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
+  <h3 class="text-base font-semibold text-slate-900">進行チェックリスト</h3>
+  <p class="text-sm text-slate-600">ステージ更新は制作イベントとして記録されます。</p>
+  {{if eq (len .Checklist) 0}}
+    <p class="mt-3 text-sm text-slate-500">チェックポイントが設定されていません。</p>
+  {{else}}
+    <ul class="mt-4 space-y-3">
+      {{range .Checklist}}
+        <li class="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span class="{{productionChecklistBadgeClass .Completed}}" aria-hidden="true">{{if .Completed}}✓{{end}}</span>
+              <p class="font-semibold text-slate-900">{{.Label}}</p>
+            </div>
+            <p class="text-sm text-slate-600">{{.Description}}</p>
+            <p class="text-xs text-slate-500">{{.StageLabel}}</p>
+            {{if and .Completed .CompletedAt}}
+              <p class="text-xs text-slate-400">完了 {{.CompletedAt}}</p>
+            {{end}}
+          </div>
+          {{if not .Completed}}
+            <button
+              type="button"
+              class="{{buttonClass "ghost" "sm" false false}}"
+              hx-post="{{$.ActionEndpoint}}"
+              hx-vals='{{printf "{\"type\":\"%s\"}" .Stage}}'
+              hx-swap="none"
+            >
+              完了を記録
+            </button>
+          {{end}}
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+</div>
+{{end}}
+
+{{define "production/workorder-safety"}}
+{{if gt (len .Safety) 0}}
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 shadow-sm">
+    <h3 class="text-base font-semibold text-slate-900">安全・品質メモ</h3>
+    <div class="mt-4 space-y-3">
+      {{range .Safety}}
+        <div class="{{productionNoticeToneClass .Tone}}">
+          <div class="flex items-start gap-3">
+            {{if .Icon}}<span class="text-lg">{{.Icon}}</span>{{end}}
+            <div>
+              <p class="font-semibold">{{.Title}}</p>
+              <p class="text-sm">{{.Body}}</p>
+            </div>
+          </div>
+        </div>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+{{end}}
+
+{{define "production/workorder-activity"}}
+<section id="activity" class="rounded-2xl bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200">
+  <div class="flex flex-col gap-2">
+    <h2 class="text-xl font-semibold text-slate-900">アクティビティ</h2>
+    <p class="text-sm text-slate-600">制作イベントとQCログの履歴。</p>
+  </div>
+  {{if eq (len .Activity) 0}}
+    <p class="mt-4 text-sm text-slate-500">記録されたアクティビティはありません。</p>
+  {{else}}
+    <ol class="mt-6 space-y-4">
+      {{range .Activity}}
+        <li class="flex gap-4">
+          <div class="flex flex-col items-center">
+            <span class="h-3 w-3 rounded-full bg-brand-500"></span>
+            <span class="flex-1 w-px bg-slate-200"></span>
+          </div>
+          <div class="flex-1 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <span class="{{badgeClass .Tone}}">{{.StageLabel}}</span>
+                <p class="text-sm font-semibold text-slate-900">{{.Description}}</p>
+              </div>
+              <span class="text-xs text-slate-500">{{.Timestamp}}</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-600">担当: {{.Actor}}</p>
+            {{if .Note}}
+              <p class="mt-1 rounded-lg bg-white px-3 py-2 text-sm text-slate-700">メモ: {{.Note}}</p>
+            {{end}}
+          </div>
+        </li>
+      {{end}}
+    </ol>
+  {{end}}
+</section>
+{{end}}

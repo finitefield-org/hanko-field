@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
-
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	appsession "finitefield.org/hanko-admin/internal/admin/session"
 	"finitefield.org/hanko-admin/internal/admin/templates/auth"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 const tokenCookieName = "Authorization"
@@ -22,6 +21,13 @@ type authHandlers struct {
 	authenticator custommw.Authenticator
 	basePath      string
 	loginPath     string
+}
+
+var authTemplates = webtmpl.MustNew()
+
+type loginPageView struct {
+	Title string
+	auth.LoginPageData
 }
 
 func newAuthHandlers(authenticator custommw.Authenticator, basePath, loginPath string) *authHandlers {
@@ -205,7 +211,13 @@ func (h *authHandlers) renderLoginPage(w http.ResponseWriter, r *http.Request, d
 	if status != http.StatusOK {
 		w.WriteHeader(status)
 	}
-	templ.Handler(auth.LoginPage(data)).ServeHTTP(w, r)
+	view := loginPageView{
+		Title:         "管理画面ログイン",
+		LoginPageData: data,
+	}
+	if err := authTemplates.Render(w, "auth/login", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func (h *authHandlers) isAuthenticated(r *http.Request) bool {

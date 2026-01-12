@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	systemtpl "finitefield.org/hanko-admin/internal/admin/templates/system"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // SystemEnvironmentSettingsPage renders the environment configuration summary.
@@ -35,7 +35,19 @@ func (h *Handlers) SystemEnvironmentSettingsPage(w http.ResponseWriter, r *http.
 		page.Error = "環境設定の取得に失敗しました。時間を置いて再度お試しください。"
 	}
 
-	templ.Handler(systemtpl.EnvironmentSettingsPage(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "system/config-content"
+	view := webtmpl.SystemConfigPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "system/config", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemTasksPage renders the scheduler tasks monitor.
@@ -88,7 +100,19 @@ func (h *Handlers) SystemTasksPage(w http.ResponseWriter, r *http.Request) {
 	history := drawer.History
 	page := systemtpl.BuildTasksPageData(ctx, basePath, req.state, result, table, drawer, history)
 
-	templ.Handler(systemtpl.TasksPage(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "system/tasks-content"
+	view := webtmpl.SystemTasksPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "system/tasks", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemTasksTable renders the jobs table fragment for HTMX.
@@ -120,7 +144,13 @@ func (h *Handlers) SystemTasksTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(systemtpl.TasksTable(table)).ServeHTTP(w, r)
+	view := webtmpl.SystemTasksTableView{
+		TasksTableData: table,
+		BasePath:       basePath,
+	}
+	if err := dashboardTemplates.Render(w, "system/tasks-table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemTasksDrawer renders the detail drawer fragment.
@@ -164,7 +194,9 @@ func (h *Handlers) SystemTasksDrawer(w http.ResponseWriter, r *http.Request) {
 
 	basePath := custommw.BasePathFromContext(ctx)
 	drawer := systemtpl.TasksDrawerPayload(basePath, summary, detail, detailErr)
-	templ.Handler(systemtpl.TasksDrawer(drawer)).ServeHTTP(w, r)
+	if err := dashboardTemplates.Render(w, "system/tasks-drawer", drawer); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemTasksTrigger enqueues a manual execution for the specified job.
@@ -296,7 +328,19 @@ func (h *Handlers) SystemCountersPage(w http.ResponseWriter, r *http.Request) {
 	drawer := systemtpl.CountersDrawerPayload(basePath, req.state, detail, nil, detailErr)
 	page := systemtpl.BuildCountersPageData(ctx, basePath, req.state, result, table, drawer)
 
-	templ.Handler(systemtpl.CountersPage(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "system/counters-content"
+	view := webtmpl.SystemCountersPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "system/counters", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemCountersTable renders the counters table fragment.
@@ -328,7 +372,14 @@ func (h *Handlers) SystemCountersTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(systemtpl.CountersTable(table)).ServeHTTP(w, r)
+	view := webtmpl.SystemCountersTableView{
+		Table:    table,
+		BasePath: basePath,
+		Query:    req.state,
+	}
+	if err := dashboardTemplates.Render(w, "system/counters-table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemCountersDrawer renders the counter drawer fragment.
@@ -353,7 +404,10 @@ func (h *Handlers) SystemCountersDrawer(w http.ResponseWriter, r *http.Request) 
 	scope, scopeErr := parseScopeInput(req.state.Scope)
 	if scopeErr != nil {
 		drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, adminsystem.CounterDetail{}, nil, "スコープは JSON オブジェクトで指定してください。")
-		templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+		view := webtmpl.SystemCountersDrawerView{Drawer: drawer, Query: req.state}
+		if err := dashboardTemplates.Render(w, "system/counters-drawer", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -372,7 +426,10 @@ func (h *Handlers) SystemCountersDrawer(w http.ResponseWriter, r *http.Request) 
 	}
 
 	drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, detail, nil, detailErr)
-	templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+	view := webtmpl.SystemCountersDrawerView{Drawer: drawer, Query: req.state}
+	if err := dashboardTemplates.Render(w, "system/counters-drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemCountersNext advances the selected counter and re-renders the drawer.
@@ -402,7 +459,10 @@ func (h *Handlers) SystemCountersNext(w http.ResponseWriter, r *http.Request) {
 	scope, scopeErr := parseScopeInput(req.state.Scope)
 	if scopeErr != nil {
 		drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, adminsystem.CounterDetail{}, nil, "スコープは JSON オブジェクトで指定してください。")
-		templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+		view := webtmpl.SystemCountersDrawerView{Drawer: drawer, Query: req.state}
+		if err := dashboardTemplates.Render(w, "system/counters-drawer", view); err != nil {
+			http.Error(w, "template render error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -445,7 +505,10 @@ func (h *Handlers) SystemCountersNext(w http.ResponseWriter, r *http.Request) {
 
 	drawer := systemtpl.CountersDrawerPayload(custommw.BasePathFromContext(ctx), req.state, detail, &outcome, detailErr)
 	sendHXTrigger(w, outcome.Message, "success")
-	templ.Handler(systemtpl.CountersDrawer(drawer, req.state)).ServeHTTP(w, r)
+	view := webtmpl.SystemCountersDrawerView{Drawer: drawer, Query: req.state}
+	if err := dashboardTemplates.Render(w, "system/counters-drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 type systemTasksRequest struct {
@@ -760,7 +823,19 @@ func (h *Handlers) SystemErrorsPage(w http.ResponseWriter, r *http.Request) {
 	drawer := systemtpl.DrawerPayload(custommw.BasePathFromContext(ctx), summary, detail, detailErr)
 	page := systemtpl.BuildPageData(custommw.BasePathFromContext(ctx), req.state, result, table, drawer)
 
-	templ.Handler(systemtpl.Index(page)).ServeHTTP(w, r)
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
+	for _, crumb := range page.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, page.Title, crumbs)
+	base.ContentTemplate = "system/errors-content"
+	view := webtmpl.SystemErrorsPageView{
+		BaseView: base,
+		Page:     page,
+	}
+	if err := dashboardTemplates.Render(w, "system/errors", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemErrorsTable renders the table fragment for htmx refreshes.
@@ -791,7 +866,13 @@ func (h *Handlers) SystemErrorsTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	templ.Handler(systemtpl.Table(table)).ServeHTTP(w, r)
+	view := webtmpl.SystemErrorsTableView{
+		Table:    table,
+		BasePath: custommw.BasePathFromContext(ctx),
+	}
+	if err := dashboardTemplates.Render(w, "system/errors-table", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemErrorsDrawer renders the detail drawer fragment.
@@ -834,7 +915,13 @@ func (h *Handlers) SystemErrorsDrawer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	drawer := systemtpl.DrawerPayload(custommw.BasePathFromContext(ctx), summary, detail, detailErr)
-	templ.Handler(systemtpl.Drawer(drawer)).ServeHTTP(w, r)
+	view := webtmpl.SystemErrorsDrawerView{
+		Drawer:   drawer,
+		BasePath: custommw.BasePathFromContext(ctx),
+	}
+	if err := dashboardTemplates.Render(w, "system/errors-drawer", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // SystemErrorsRetry enqueues a retry for the specified failure.

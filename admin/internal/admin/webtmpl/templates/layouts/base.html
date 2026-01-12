@@ -1,0 +1,202 @@
+{{define "layouts/base"}}
+<!DOCTYPE html>
+<html lang="{{.Locale}}" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{.Title}} | Hanko Admin</title>
+    <link rel="stylesheet" href="/public/static/app.css" />
+    <meta name="csrf-token" content="{{.CSRFToken}}" />
+    <script>
+      (function () {
+        document.addEventListener("htmx:configRequest", function (event) {
+          if (!event || !event.detail || !event.detail.headers) {
+            return;
+          }
+          var tokenEl = document.querySelector('meta[name="csrf-token"]');
+          if (!tokenEl || !tokenEl.content) {
+            return;
+          }
+          event.detail.headers["X-CSRF-Token"] = tokenEl.content;
+        });
+      })();
+    </script>
+  </head>
+  <body class="app-shell min-h-full bg-slate-100 text-slate-900">
+    <a href="#content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:shadow focus:outline-none focus:ring-2 focus:ring-brand-500">
+      {{localize .Locale "admin.layout.skip_to_content"}}
+    </a>
+
+    <div id="mobile-sidebar" class="fixed inset-0 z-40 hidden" data-sidebar aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{localize .Locale "admin.layout.mobile_menu"}}">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-sidebar-dismiss></div>
+      <div class="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-white shadow-xl ring-1 ring-slate-900/10">
+        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+          <span class="text-sm font-semibold text-slate-900">{{localize .Locale "admin.layout.mobile_menu"}}</span>
+          <button type="button" class="rounded-md p-2 text-slate-500 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500" data-sidebar-dismiss>
+            <span class="sr-only">{{localize .Locale "admin.layout.close_menu"}}</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-5 w-5">
+              <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-6">
+          {{template "partials/sidebar" .Sidebar}}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex min-h-screen">
+      <aside class="tablet-sidebar relative hidden bg-white tablet:flex tablet:w-20 tablet:flex-col tablet:border-r tablet:border-slate-200 tablet:shadow-lg xl:flex xl:w-72 xl:border-r xl:border-slate-200 xl:shadow-none" role="complementary" aria-label="{{localize .Locale "admin.layout.nav_label"}}" data-tablet-sidebar>
+        <div class="flex h-full flex-1 flex-col overflow-hidden">
+          <div class="flex-1 overflow-y-auto py-8">
+            <div class="pr-2">
+              {{template "partials/sidebar" .Sidebar}}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur" role="banner">
+          <div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 tablet:hidden lg:hidden"
+                data-sidebar-toggle
+                aria-controls="mobile-sidebar"
+                aria-expanded="false"
+              >
+                <span class="sr-only">{{localize .Locale "admin.layout.open_menu"}}</span>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-5 w-5">
+                  <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+                </svg>
+              </button>
+              <div class="flex flex-col">
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Hanko Admin</span>
+                <span class="text-base font-semibold text-slate-900">{{.Title}}</span>
+              </div>
+            </div>
+            <div id="topbar-actions" class="flex items-center gap-3">
+              {{template "partials/topbar-actions" .Topbar}}
+            </div>
+          </div>
+          <div class="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6 lg:px-8">
+            {{template "partials/breadcrumbs" .Breadcrumbs}}
+          </div>
+        </header>
+
+        <main id="content" class="flex-1 bg-slate-50" tabindex="-1">
+          <div class="mx-auto w-full {{.ContentClass}}">
+            {{if .ContentHTML}}
+              {{.ContentHTML}}
+            {{end}}
+          </div>
+        </main>
+        <footer class="border-t border-slate-200 bg-white" aria-label="{{localize .Locale "admin.footer.support_prompt"}}">
+          <div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <p class="text-xs text-slate-500">
+              {{localize .Locale "admin.footer.support_prompt"}}
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                hx-get="{{joinBaseFooter .BasePath "/feedback/modal"}}"
+                hx-target="#modal"
+                hx-swap="innerHTML"
+              >
+                {{localize .Locale "admin.footer.feedback_cta"}}
+              </button>
+              <a
+                href="{{.FeedbackTrackerURL}}"
+                target="_blank"
+                rel="noreferrer"
+                class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+              >
+                <span class="inline-flex h-2 w-2 rounded-full bg-slate-400" aria-hidden="true"></span>
+                <span>{{localize .Locale "admin.footer.tracker_link"}}</span>
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+    <div id="modal" class="modal hidden" hx-target="this" hx-swap="innerHTML" aria-hidden="true" data-modal-state="closed" data-modal-open="false"></div>
+    <div class="fixed inset-0 z-50 hidden flex items-start justify-center px-4 py-6 sm:px-6 lg:px-8" data-shortcut-overlay aria-hidden="true">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-shortcut-overlay-dismiss></div>
+      <div
+        class="relative z-10 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shortcut-overlay-title"
+        data-shortcut-panel
+        tabindex="-1"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">キーボードショートカット</p>
+            <h2 id="shortcut-overlay-title" class="text-xl font-semibold text-slate-900">操作を素早く切り替える</h2>
+          </div>
+          <button
+            type="button"
+            class="rounded-full p-2 text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            data-shortcut-overlay-close
+            aria-label="ショートカットヘルプを閉じる"
+          >
+            <span class="sr-only">閉じる</span>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-5 w-5">
+              <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <p class="mt-3 text-sm text-slate-600">「?」を押すといつでもこのヘルプを開閉できます。</p>
+        <ul class="mt-6 space-y-3 text-sm text-slate-700">
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">/</kbd>
+            </div>
+            <span class="text-slate-600">検索バーにフォーカス</span>
+          </li>
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">f</kbd>
+            </div>
+            <span class="text-slate-600">フィルターバーにフォーカス</span>
+          </li>
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">j</kbd>
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">k</kbd>
+            </div>
+            <span class="text-slate-600">結果リストを移動</span>
+          </li>
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">o</kbd>
+            </div>
+            <span class="text-slate-600">選択中の詳細を開く</span>
+          </li>
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">g</kbd>
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">Shift+g</kbd>
+            </div>
+            <span class="text-slate-600">結果グループ/タブを切り替え</span>
+          </li>
+          <li class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              <kbd class="rounded border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold uppercase text-slate-600 shadow-sm">?</kbd>
+            </div>
+            <span class="text-slate-600">ショートカット一覧を表示/閉じる</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script src="/public/static/app.js" defer></script>
+  </body>
+</html>
+{{end}}

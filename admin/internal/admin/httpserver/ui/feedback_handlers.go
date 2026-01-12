@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/a-h/templ"
-
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminsystem "finitefield.org/hanko-admin/internal/admin/system"
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	systemtpl "finitefield.org/hanko-admin/internal/admin/templates/system"
+	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
 // FeedbackModal renders the feedback form modal.
@@ -33,7 +32,13 @@ func (h *Handlers) FeedbackModal(w http.ResponseWriter, r *http.Request) {
 	basePath := custommw.BasePathFromContext(ctx)
 	data := systemtpl.BuildFeedbackModalData(ctx, basePath, csrfToken, contextInfo, form, nil)
 
-	templ.Handler(systemtpl.FeedbackModal(data)).ServeHTTP(w, r)
+	view := webtmpl.FeedbackModalView{
+		Locale: helpers.LocaleCode(ctx),
+		Data:   data,
+	}
+	if err := dashboardTemplates.Render(w, "system/feedback-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 // FeedbackSubmit handles submissions from the feedback modal.
@@ -107,7 +112,13 @@ func (h *Handlers) FeedbackSubmit(w http.ResponseWriter, r *http.Request) {
 
 func renderFeedbackForm(r *http.Request, w http.ResponseWriter, basePath, csrfToken string, contextInfo systemtpl.FeedbackContextData, form systemtpl.FeedbackFormState, receipt *adminsystem.FeedbackReceipt) {
 	data := systemtpl.BuildFeedbackModalData(r.Context(), basePath, csrfToken, contextInfo, form, receipt)
-	templ.Handler(systemtpl.FeedbackModal(data)).ServeHTTP(w, r)
+	view := webtmpl.FeedbackModalView{
+		Locale: helpers.LocaleCode(r.Context()),
+		Data:   data,
+	}
+	if err := dashboardTemplates.Render(w, "system/feedback-modal", view); err != nil {
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
 }
 
 func deriveFeedbackContext(r *http.Request) systemtpl.FeedbackContextData {

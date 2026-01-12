@@ -34,7 +34,7 @@ TAILWIND_BIN := $(BIN_DIR)/tailwindcss
 TAILWIND_URL := https://github.com/tailwindlabs/tailwindcss/releases/download/v$(TAILWIND_VERSION)/tailwindcss-$(TAILWIND_OS)-$(TAILWIND_ARCH)
 
 .PHONY: dev
-dev: templ tidy ensure-tailwind ## Start hot reload server with Tailwind watcher
+dev: tidy ensure-tailwind ## Start hot reload server with Tailwind watcher
 	@set -euo pipefail; \
 	echo "Starting Tailwind watcher..."; \
 	$(TAILWIND_BIN) -i $(TAILWIND_INPUT) -o $(TAILWIND_OUTPUT) --watch & \
@@ -42,11 +42,6 @@ dev: templ tidy ensure-tailwind ## Start hot reload server with Tailwind watcher
 	trap "kill $$TW_PID" EXIT; \
 	echo "Starting air (Go hot reload)..."; \
 	air
-
-.PHONY: templ
-templ: ## Regenerate templ components
-	@mkdir -p $(GOCACHE)
-	@GOCACHE=$(GOCACHE) go generate ./internal/admin/templates/...
 
 .PHONY: css
 css: ensure-tailwind ## Build Tailwind assets

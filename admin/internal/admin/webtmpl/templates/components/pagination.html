@@ -1,0 +1,75 @@
+{{define "components/pagination"}}
+  {{if gt (paginationPageSize .Props) 0}}
+    <nav
+      class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+      aria-label="{{paginationLabel .Props}}"
+      data-page-size="{{paginationPageSize .Props}}"
+      data-page-current="{{paginationCurrentPage .Props}}"
+      {{range $k, $v := .Props.Attrs}} {{$k}}="{{$v}}"{{end}}
+    >
+      <div class="text-sm text-slate-600">
+        {{if paginationHasTotalItems .Props}}
+          <span>Showing {{paginationStartIndex .Props}} - {{paginationEndIndex .Props}} of {{paginationTotalItems .Props}}</span>
+        {{else}}
+          <span>Page {{paginationCurrentPage .Props}}</span>
+          <span class="text-slate-400"> · {{paginationPageSize .Props}} per page</span>
+        {{end}}
+      </div>
+      <div class="flex items-center gap-2">
+        {{if .Props.Info.Prev}}
+          <a
+            class="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1"
+            href="{{paginationPrevURL .Props}}"
+            {{if paginationHasHTMX .Props}}
+              hx-get="{{paginationPrevHxURL .Props}}"
+              {{if .Props.HxTarget}}hx-target="{{.Props.HxTarget}}"{{end}}
+              {{if .Props.HxSwap}}hx-swap="{{.Props.HxSwap}}"{{end}}
+              {{if .Props.HxPushURL}}hx-push-url="true"{{end}}
+            {{end}}
+            aria-label="Previous page"
+          >
+            <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4" aria-hidden="true">
+              <path d="M12.5 5.5L8 10l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>Previous</span>
+          </a>
+        {{else}}
+          <span class="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-400 opacity-70" aria-disabled="true">
+            <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4" aria-hidden="true">
+              <path d="M12.5 5.5L8 10l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>Previous</span>
+          </span>
+        {{end}}
+        <span class="text-sm font-semibold text-slate-700">
+          Page {{paginationCurrentPage .Props}}
+        </span>
+        {{if .Props.Info.Next}}
+          <a
+            class="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1"
+            href="{{paginationNextURL .Props}}"
+            {{if paginationHasHTMX .Props}}
+              hx-get="{{paginationNextHxURL .Props}}"
+              {{if .Props.HxTarget}}hx-target="{{.Props.HxTarget}}"{{end}}
+              {{if .Props.HxSwap}}hx-swap="{{.Props.HxSwap}}"{{end}}
+              {{if .Props.HxPushURL}}hx-push-url="true"{{end}}
+            {{end}}
+            aria-label="Next page"
+          >
+            <span>Next</span>
+            <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4" aria-hidden="true">
+              <path d="M7.5 5.5L12 10l-4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+        {{else}}
+          <span class="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-400 opacity-70" aria-disabled="true">
+            <span>Next</span>
+            <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4" aria-hidden="true">
+              <path d="M7.5 5.5L12 10l-4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </span>
+        {{end}}
+      </div>
+    </nav>
+  {{end}}
+{{end}}

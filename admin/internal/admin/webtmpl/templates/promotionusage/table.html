@@ -1,0 +1,103 @@
+{{define "promotionusage/table"}}
+{{$table := .Table}}
+<div class="space-y-4" data-promotion-usage-table-fragment>
+  {{if trimSpace $table.Error}}
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm" role="alert">
+      {{$table.Error}}
+    </div>
+  {{end}}
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+      <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th scope="col" class="px-4 py-3 text-left">顧客</th>
+          <th scope="col" class="px-4 py-3 text-left">セグメント</th>
+          <th scope="col" class="px-4 py-3 text-right">利用</th>
+          <th scope="col" class="px-4 py-3 text-right">割引</th>
+          <th scope="col" class="px-4 py-3 text-left">最新注文</th>
+          <th scope="col" class="px-4 py-3 text-left">最終利用</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {{if eq (len $table.Rows) 0}}
+          <tr>
+            <td colspan="6" class="px-4 py-6 text-center text-sm text-slate-500">{{fallback $table.EmptyMessage "表示できるデータがありません。"}}</td>
+          </tr>
+        {{else}}
+          {{range $row := $table.Rows}}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-4 align-top">
+                <p class="font-semibold text-slate-900">{{$row.UserName}}</p>
+                {{if trimSpace $row.UserEmail}}
+                  <p class="text-xs text-slate-500">{{$row.UserEmail}}</p>
+                {{end}}
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  {{if trimSpace $row.ChannelsLabel}}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
+                      <span aria-hidden="true">🛒</span>
+                      {{$row.ChannelsLabel}}
+                    </span>
+                  {{end}}
+                  {{if trimSpace $row.SourcesLabel}}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
+                      <span aria-hidden="true">🔁</span>
+                      {{$row.SourcesLabel}}
+                    </span>
+                  {{end}}
+                </div>
+              </td>
+              <td class="px-4 py-4 align-top">
+                {{if trimSpace $row.SegmentLabel}}
+                  {{template "components/badge" (dict "Label" $row.SegmentLabel "Tone" (fallback $row.SegmentTone "info"))}}
+                {{else}}
+                  <span class="text-xs text-slate-500">—</span>
+                {{end}}
+              </td>
+              <td class="px-4 py-4 text-right align-top">
+                <p class="font-semibold text-slate-900">{{$row.UsageLabel}}</p>
+                {{if trimSpace $row.TotalOrderLabel}}
+                  <p class="text-xs text-slate-500">累計: {{$row.TotalOrderLabel}}</p>
+                {{end}}
+              </td>
+              <td class="px-4 py-4 text-right align-top">
+                <p class="font-semibold text-slate-900">{{$row.TotalDiscountLabel}}</p>
+                {{if trimSpace $row.AverageDiscount}}
+                  <p class="text-xs text-slate-500">平均: {{$row.AverageDiscount}}</p>
+                {{end}}
+              </td>
+              <td class="px-4 py-4 align-top">
+                {{if trimSpace $row.LastOrder.Number}}
+                  <div class="flex flex-col gap-1">
+                    {{if trimSpace $row.LastOrder.DetailURL}}
+                      <a href="{{$row.LastOrder.DetailURL}}" class="text-sm font-semibold text-brand-600 hover:text-brand-500">{{$row.LastOrder.Number}}</a>
+                    {{else}}
+                      <p class="text-sm font-semibold text-slate-900">{{$row.LastOrder.Number}}</p>
+                    {{end}}
+                    <p class="text-xs text-slate-500">{{$row.LastOrder.AmountLabel}}</p>
+                    {{if trimSpace $row.LastOrder.StatusLabel}}
+                      {{template "components/badge" (dict "Label" $row.LastOrder.StatusLabel "Tone" (fallback $row.LastOrder.StatusTone "info"))}}
+                    {{end}}
+                  </div>
+                {{else}}
+                  <span class="text-xs text-slate-500">—</span>
+                {{end}}
+              </td>
+              <td class="px-4 py-4 align-top">
+                {{if trimSpace $row.LastUsed}}
+                  <p class="text-sm text-slate-900">{{$row.LastUsed}}</p>
+                  {{if trimSpace $row.LastUsedRelative}}
+                    <p class="text-xs text-slate-500">{{$row.LastUsedRelative}}</p>
+                  {{end}}
+                {{else}}
+                  <span class="text-xs text-slate-500">—</span>
+                {{end}}
+              </td>
+            </tr>
+          {{end}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{template "components/pagination" .Pagination}}
+</div>
+{{end}}
