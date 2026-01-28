@@ -110,7 +110,7 @@ func (r *CounterRepository) Next(ctx context.Context, counterID string, step int
 		doc.Step = increment
 		doc.UpdatedAt = now
 
-		if err := tx.Set(ref, doc, firestore.MergeAll); err != nil {
+		if err := tx.Set(ref, doc); err != nil {
 			return err
 		}
 		nextValue = newValue

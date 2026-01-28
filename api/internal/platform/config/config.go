@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultEnvFile                  = ".env"
-	defaultPort                     = "8080"
+	defaultPort                     = "3050"
 	defaultReadTimeout              = 15 * time.Second
 	defaultWriteTimeout             = 30 * time.Second
 	defaultIdleTimeout              = 120 * time.Second

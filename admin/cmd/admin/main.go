@@ -46,7 +46,7 @@ func main() {
 	defer shipmentsClose()
 
 	cfg := httpserver.Config{
-		Address:              getEnv("ADMIN_HTTP_ADDR", ":8080"),
+		Address:              getEnv("ADMIN_HTTP_ADDR", ":3051"),
 		BasePath:             getEnv("ADMIN_BASE_PATH", "/admin"),
 		DefaultLocale:        getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
 		SupportedLocales:     getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),

@@ -93,12 +93,12 @@ Seed data (optional) by running any integration test fixture or helper scripts u
 ## 6. Run the API Locally
 ```bash
 cd hanko-field/api
-make run            # starts cmd/api on :8080
+make run            # starts cmd/api on :3050
 # or
 PORT=9090 task run  # Taskfile wrapper
 ```
 - Server respects `.env` values via the configuration loader.
-- Visit `http://localhost:8080/healthz` to verify the process.
+- Visit `http://localhost:3050/healthz` to verify the process.
 - Use `CTRL+C` for graceful shutdown.
 
 ## 7. Recurring Commands (Linting, Testing, Builds)

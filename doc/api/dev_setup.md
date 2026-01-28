@@ -16,7 +16,7 @@ make deps    # install gofumpt, golangci-lint, staticcheck, govulncheck
 make fmt     # format the codebase
 make lint    # run golangci-lint + staticcheck
 make test    # execute unit tests
-make run     # start the HTTP server on http://localhost:8080
+make run     # start the HTTP server on http://localhost:3050
 ```
 
 ### Alternative (Taskfile)
@@ -29,7 +29,7 @@ task run
 
 ## Local Server
 
-`make run` honours the `PORT` environment variable. By default the server listens on `:8080` and exposes:
+`make run` honours the `PORT` environment variable. By default the server listens on `:3050` and exposes:
 
 - `GET /healthz` → basic health status payload.
 

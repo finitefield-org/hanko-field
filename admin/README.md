@@ -28,7 +28,7 @@ Tailwind scans the paths listed in `tailwind.config.js`.
 
 Environment variables:
 
-- `ADMIN_HTTP_ADDR` – bind address (default `:8080`)
+- `ADMIN_HTTP_ADDR` – bind address (default `:3051`)
 - `ADMIN_BASE_PATH` – mount point for the admin UI (default `/admin`)
 - `FIREBASE_PROJECT_ID` – enables Firebase ID token verification when provided (requires service account credentials)
 - `ADMIN_FIRESTORE_PROJECT_ID` – optional override for the Firestore project used by shipment tracking (falls back to `FIRESTORE_PROJECT_ID` or `FIREBASE_PROJECT_ID`)

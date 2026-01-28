@@ -39,3 +39,5 @@ test_unused_var
 system-field-firebase-setup/
 
 .devbox/
+.go/
+

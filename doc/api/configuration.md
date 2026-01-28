@@ -13,7 +13,7 @@ Missing required values cause the loader to return a `ValidationError` containin
 
 | Key | Default | Required | Description |
 | --- | --- | --- | --- |
-| `API_SERVER_PORT` | `8080` | No | TCP port for the HTTP server. |
+| `API_SERVER_PORT` | `3050` | No | TCP port for the HTTP server. |
 | `API_SERVER_READ_TIMEOUT` | `15s` | No | Maximum duration for reading the request body. |
 | `API_SERVER_WRITE_TIMEOUT` | `30s` | No | Maximum duration for writing responses. |
 | `API_SERVER_IDLE_TIMEOUT` | `120s` | No | Keep-alive timeout for idle connections. |

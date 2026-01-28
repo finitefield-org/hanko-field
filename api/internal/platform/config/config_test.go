@@ -21,8 +21,8 @@ func TestLoadWithDefaults(t *testing.T) {
 		t.Fatalf("Load returned error: %v", err)
 	}
 
-	if cfg.Server.Port != "8080" {
-		t.Errorf("expected default port 8080, got %s", cfg.Server.Port)
+	if cfg.Server.Port != "3050" {
+		t.Errorf("expected default port 3050, got %s", cfg.Server.Port)
 	}
 	if cfg.Server.ReadTimeout != 15*time.Second {
 		t.Errorf("unexpected read timeout: %s", cfg.Server.ReadTimeout)
