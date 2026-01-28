@@ -77,7 +77,7 @@ ensure-tailwind: ## Download Tailwind standalone binary if required version miss
 	@REQUIRED="v$(TAILWIND_VERSION)"; \
 	NEED_DOWNLOAD=0; \
 	if [ -x $(TAILWIND_TARGET) ]; then \
-		CURRENT=$$($(TAILWIND_TARGET) --help 2>/dev/null | awk 'NR==1{print $$2}'); \
+		CURRENT=$$($(TAILWIND_TARGET) --help 2>/dev/null | awk 'NF{print $$2; exit}'); \
 		if [ -z "$$CURRENT" ] || [ "$$CURRENT" != "$$REQUIRED" ]; then \
 			NEED_DOWNLOAD=1; \
 		fi; \
