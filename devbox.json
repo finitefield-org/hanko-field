@@ -1,0 +1,19 @@
+{
+  "packages": [
+    "go@1.22",
+    "flutter",
+    "air",
+    "jdk@21",
+    "nodejs@20",
+    "curl"
+  ],
+  "env": {
+    "GOPATH": "$DEVBOX_PROJECT_ROOT/.go",
+    "PATH": "$GOPATH/bin:$PATH"
+  },
+  "shell": {
+    "init_hook": [
+      "echo 'Hanko Field devbox ready (Go/Flutter/Firebase).'"
+    ]
+  }
+}

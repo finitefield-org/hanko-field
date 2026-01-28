@@ -35,3 +35,7 @@ test_unused
 test_unused_var
 
 .gocache/
+
+system-field-firebase-setup/
+
+.devbox/
