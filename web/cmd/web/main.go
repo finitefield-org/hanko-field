@@ -752,13 +752,13 @@ func main() {
 		tmplPath string
 		pubPath  string
 	)
-	// Port resolution: prefer HANKO_WEB_PORT, then Cloud Run's PORT, else 3052
+	// Port resolution: prefer HANKO_WEB_PORT, then Cloud Run's PORT, else 3055
 	port := os.Getenv("HANKO_WEB_PORT")
 	if port == "" {
 		port = os.Getenv("PORT")
 	}
 	if port == "" {
-		port = "3052"
+		port = "3055"
 	}
 	flag.StringVar(&addr, "addr", ":"+port, "HTTP listen address")
 	flag.StringVar(&tmplPath, "templates", templatesDir, "templates directory")

@@ -35,6 +35,7 @@ func NewLogger() (*zap.Logger, error) {
 			enc.AppendString(strings.ToUpper(level.String()))
 		},
 		CallerKey:     "caller",
+		EncodeCaller:  zapcore.ShortCallerEncoder,
 		StacktraceKey: "stacktrace",
 	}
 

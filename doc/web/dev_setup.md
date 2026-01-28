@@ -32,7 +32,7 @@ make run
 
 The Go server does not hot reload. Restart `make dev` after Go or template changes.
 
-Then open http://localhost:3052
+Then open http://localhost:3055
 
 Environment variables:
 - `HANKO_WEB_PORT`: listen port (fallback to Cloud Run `PORT`), default 8080

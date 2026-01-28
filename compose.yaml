@@ -6,7 +6,7 @@ services:
     ports:
       - "3050:3050"
       - "3051:3051"
-      - "3052:3052"
+      - "3055:3055"
     environment:
       - GOOGLE_CLOUD_PROJECT=hanko-field-dev
       - FIRESTORE_EMULATOR_HOST=firebase:8081

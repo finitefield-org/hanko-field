@@ -47,6 +47,7 @@ Environment variables:
 - `ADMIN_METRICS_EXPORT_INTERVAL` – interval for flushing metrics to Cloud Monitoring (default `60s`)
 
 Run `make ensure-tailwind` after changing `TAILWIND_VERSION` in the `Makefile`; the rule verifies the installed binary matches the requested version and re-downloads if needed.
+When switching between macOS and the Linux dev container, rerun `make ensure-tailwind` if Tailwind fails to launch; the rule now re-downloads the correct OS/arch binary automatically.
 
 ### Authentication
 

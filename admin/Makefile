@@ -75,20 +75,23 @@ test-ui: ## Run admin integration smoke tests
 ensure-tailwind: ## Download Tailwind standalone binary if required version missing
 	@mkdir -p $(BIN_DIR)
 	@REQUIRED="v$(TAILWIND_VERSION)"; \
-	CURRENT=""; \
-	if [ -x $(TAILWIND_BIN) ]; then \
-		CURRENT=$$($(TAILWIND_BIN) --help 2>/dev/null | awk 'NR==1{print $$2}'); \
+	NEED_DOWNLOAD=0; \
+	if [ -x $(TAILWIND_TARGET) ]; then \
+		CURRENT=$$($(TAILWIND_TARGET) --help 2>/dev/null | awk 'NR==1{print $$2}'); \
+		if [ -z "$$CURRENT" ] || [ "$$CURRENT" != "$$REQUIRED" ]; then \
+			NEED_DOWNLOAD=1; \
+		fi; \
+	else \
+		NEED_DOWNLOAD=1; \
 	fi; \
-	if [ "$$CURRENT" != "$$REQUIRED" ]; then \
-		rm -f $(TAILWIND_BIN); \
-	fi; \
-	if [ ! -f $(TAILWIND_TARGET) ]; then \
+	if [ "$$NEED_DOWNLOAD" -eq 1 ]; then \
 		echo "Downloading tailwindcss $$REQUIRED ($(TAILWIND_OS)-$(TAILWIND_ARCH))..."; \
+		rm -f $(TAILWIND_TARGET); \
 		curl -sSL -o $(TAILWIND_TARGET) $(TAILWIND_URL); \
 		chmod +x $(TAILWIND_TARGET); \
 	fi; \
 	ln -sf $$(basename $(TAILWIND_TARGET)) $(TAILWIND_BIN); \
-	$(TAILWIND_BIN) --help >/dev/null
+	$(TAILWIND_TARGET) --help >/dev/null 2>&1
 
 .PHONY: clean
 clean: ## Remove build artifacts

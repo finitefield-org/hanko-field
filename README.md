@@ -20,7 +20,7 @@ make docker-dev
 
 ### 開発サーバー例（ポート競合を避ける）
 
-API / Admin / Web の既定ポートはそれぞれ `3050 / 3051 / 3052` です。
+API / Admin / Web の既定ポートはそれぞれ `3050 / 3051 / 3055` です。
 
 ```bash
 # API (Firestore emulator uses firebase:8081 from compose env)
@@ -37,7 +37,7 @@ FIRESTORE_PROJECT_ID=hanko-field-dev \
 make -C admin dev
 
 # Web
-HANKO_WEB_PORT=3052 \
+HANKO_WEB_PORT=3055 \
 make -C web dev
 ```
 
