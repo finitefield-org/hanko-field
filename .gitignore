@@ -41,3 +41,7 @@ system-field-firebase-setup/
 .devbox/
 .go/
 
+hanko-field-firebase-adminsdk-fbsvc.json
+hanko-field-firebase-adminsdk-fbsvc-7360f8f95f.json
+
+api/.secrets.local

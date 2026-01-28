@@ -80,20 +80,22 @@ func (h *AdminOrderHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Get("/orders", h.listOrders)
-	r.Put("/orders/{orderID}:status", h.updateOrderStatus)
-	r.Post("/orders/{orderID}/production-events", h.appendProductionEvent)
-	if h.shipments != nil {
-		r.Post("/orders/{orderID}/shipments", h.createShipment)
-		r.Put("/orders/{orderID}/shipments/{shipmentID}", h.updateShipment)
-	}
-	if h.payments != nil {
-		r.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
-		r.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
-	}
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Get("/orders", h.listOrders)
+		rt.Put("/orders/{orderID}:status", h.updateOrderStatus)
+		rt.Post("/orders/{orderID}/production-events", h.appendProductionEvent)
+		if h.shipments != nil {
+			rt.Post("/orders/{orderID}/shipments", h.createShipment)
+			rt.Put("/orders/{orderID}/shipments/{shipmentID}", h.updateShipment)
+		}
+		if h.payments != nil {
+			rt.Post("/orders/{orderID}/payments:manual-capture", h.manualCapturePayment)
+			rt.Post("/orders/{orderID}/payments:refund", h.manualRefundPayment)
+		}
+	})
 }
 
 func (h *AdminOrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) {

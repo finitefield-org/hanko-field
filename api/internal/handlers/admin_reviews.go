@@ -70,13 +70,15 @@ func (h *AdminReviewHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Route("/reviews", func(rt chi.Router) {
-		rt.Get("/", h.listReviews)
-		rt.Put("/{reviewID}:moderate", h.moderateReview)
-		rt.Post("/{reviewID}:store-reply", h.storeReviewReply)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Route("/reviews", func(rt chi.Router) {
+			rt.Get("/", h.listReviews)
+			rt.Put("/{reviewID}:moderate", h.moderateReview)
+			rt.Post("/{reviewID}:store-reply", h.storeReviewReply)
+		})
 	})
 }
 

@@ -56,12 +56,14 @@ func (h *AdminUserHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Get("/users", h.searchUsers)
-	r.Get("/users/{userID}", h.getUserDetail)
-	r.Post("/users/{userID}:deactivate-and-mask", h.deactivateAndMaskUser)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Get("/users", h.searchUsers)
+		rt.Get("/users/{userID}", h.getUserDetail)
+		rt.Post("/users/{userID}:deactivate-and-mask", h.deactivateAndMaskUser)
+	})
 }
 
 func (h *AdminUserHandlers) searchUsers(w http.ResponseWriter, r *http.Request) {

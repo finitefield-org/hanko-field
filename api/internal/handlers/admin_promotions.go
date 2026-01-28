@@ -40,11 +40,11 @@ func (h *AdminPromotionHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
-	}
-	r.Post("/promotions:validate", h.validatePromotion)
-	r.Route("/promotions", func(rt chi.Router) {
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
+		}
+		rt.Post("/promotions:validate", h.validatePromotion)
 		rt.Get("/", h.listPromotions)
 		rt.Get("/{promotionID}/usages", h.listPromotionUsage)
 		rt.Post("/", h.createPromotion)

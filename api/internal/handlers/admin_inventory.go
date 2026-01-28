@@ -110,10 +110,10 @@ func (h *AdminInventoryHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
 	r.Route("/stock", func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
 		rt.Get("/low", h.listLowStock)
 		rt.Post("/reservations:release-expired", h.releaseExpiredReservations)
 	})

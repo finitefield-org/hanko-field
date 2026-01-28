@@ -42,10 +42,12 @@ func (h *AdminAuditHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Get("/audit-logs", h.listAuditLogs)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Get("/audit-logs", h.listAuditLogs)
+	})
 }
 
 func (h *AdminAuditHandlers) listAuditLogs(w http.ResponseWriter, r *http.Request) {

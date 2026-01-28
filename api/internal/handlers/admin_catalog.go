@@ -34,22 +34,24 @@ func (h *AdminCatalogHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
-	}
-	r.Route("/catalog", func(rt chi.Router) {
-		rt.Post("/templates", h.createTemplate)
-		rt.Put("/templates/{templateID}", h.updateTemplate)
-		rt.Delete("/templates/{templateID}", h.deleteTemplate)
-		rt.Post("/fonts", h.createFont)
-		rt.Put("/fonts/{fontID}", h.updateFont)
-		rt.Delete("/fonts/{fontID}", h.deleteFont)
-		rt.Post("/materials", h.createMaterial)
-		rt.Put("/materials/{materialID}", h.updateMaterial)
-		rt.Delete("/materials/{materialID}", h.deleteMaterial)
-		rt.Post("/products", h.createProduct)
-		rt.Put("/products/{productID}", h.updateProduct)
-		rt.Delete("/products/{productID}", h.deleteProduct)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
+		}
+		rt.Route("/catalog", func(rt chi.Router) {
+			rt.Post("/templates", h.createTemplate)
+			rt.Put("/templates/{templateID}", h.updateTemplate)
+			rt.Delete("/templates/{templateID}", h.deleteTemplate)
+			rt.Post("/fonts", h.createFont)
+			rt.Put("/fonts/{fontID}", h.updateFont)
+			rt.Delete("/fonts/{fontID}", h.deleteFont)
+			rt.Post("/materials", h.createMaterial)
+			rt.Put("/materials/{materialID}", h.updateMaterial)
+			rt.Delete("/materials/{materialID}", h.deleteMaterial)
+			rt.Post("/products", h.createProduct)
+			rt.Put("/products/{productID}", h.updateProduct)
+			rt.Delete("/products/{productID}", h.deleteProduct)
+		})
 	})
 }
 

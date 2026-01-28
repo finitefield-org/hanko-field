@@ -37,10 +37,10 @@ func (h *AdminContentHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
-	}
 	r.Route("/content", func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin))
+		}
 		rt.Post("/guides", h.createGuide)
 		rt.Put("/guides/{guideID}", h.updateGuide)
 		rt.Delete("/guides/{guideID}", h.deleteGuide)

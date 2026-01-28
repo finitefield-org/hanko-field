@@ -62,10 +62,10 @@ func (h *AdminProductionQueueHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
 	r.Route("/production-queues", func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
 		rt.Get("/", h.listQueues)
 		rt.Post("/", h.createQueue)
 		rt.Put("/{queueID}", h.updateQueue)

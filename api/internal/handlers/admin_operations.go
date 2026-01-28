@@ -67,10 +67,12 @@ func (h *AdminOperationsHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Post("/exports:bigquery-sync", h.startBigQuerySync)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Post("/exports:bigquery-sync", h.startBigQuerySync)
+	})
 }
 
 type adminBigQueryExportRequest struct {

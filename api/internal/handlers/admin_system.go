@@ -70,11 +70,13 @@ func (h *AdminSystemHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Get("/system/errors", h.listSystemErrors)
-	r.Get("/system/tasks", h.listSystemTasks)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Get("/system/errors", h.listSystemErrors)
+		rt.Get("/system/tasks", h.listSystemTasks)
+	})
 }
 
 func (h *AdminSystemHandlers) listSystemErrors(w http.ResponseWriter, r *http.Request) {

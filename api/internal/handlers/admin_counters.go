@@ -90,10 +90,12 @@ func (h *AdminCounterHandlers) Routes(r chi.Router) {
 	if r == nil {
 		return
 	}
-	if h.authn != nil {
-		r.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
-	}
-	r.Post("/counters/{name}:next", h.nextCounterValue)
+	r.Group(func(rt chi.Router) {
+		if h.authn != nil {
+			rt.Use(h.authn.RequireFirebaseAuth(auth.RoleAdmin, auth.RoleStaff))
+		}
+		rt.Post("/counters/{name}:next", h.nextCounterValue)
+	})
 }
 
 type adminNextCounterRequest struct {
