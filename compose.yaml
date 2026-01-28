@@ -6,7 +6,7 @@ services:
     ports:
       - "3050:3050"
       - "3051:3051"
-      - "3059:3059"
+      - "3052:3052"
     environment:
       - GOOGLE_CLOUD_PROJECT=hanko-field
       - FIREBASE_PROJECT_ID=hanko-field
