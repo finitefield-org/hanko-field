@@ -3,13 +3,13 @@
 ## Prerequisites
 
 - Go 1.23+
-- `curl` available for downloading the Tailwind standalone binary
+- Node.js 20+ and npm (devbox manages Tailwind CLI)
 
 ## Setup
 
 ```bash
 cd admin
-make ensure-tailwind   # downloads tailwindcss standalone binary
+make ensure-tailwind   # verifies tailwindcss CLI is available
 ```
 
 ## Common Commands
@@ -46,8 +46,11 @@ Environment variables:
 - `ADMIN_METRICS_SERVICE_NAME` / `ADMIN_METRICS_SERVICE_VERSION` – optional overrides for the resource labels attached to emitted metrics
 - `ADMIN_METRICS_EXPORT_INTERVAL` – interval for flushing metrics to Cloud Monitoring (default `60s`)
 
-Run `make ensure-tailwind` after changing `TAILWIND_VERSION` in the `Makefile`; the rule verifies the installed binary matches the requested version and re-downloads if needed.
-When switching between macOS and the Linux dev container, rerun `make ensure-tailwind` if Tailwind fails to launch; the rule now re-downloads the correct OS/arch binary automatically.
+Install the Tailwind CLI once if missing:
+
+```bash
+npm install
+```
 
 ### Authentication
 

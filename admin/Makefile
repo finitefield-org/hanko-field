@@ -1,37 +1,10 @@
 SHELL := /bin/bash
 
 GOCACHE ?= $(PWD)/.gocache
-BIN_DIR ?= $(PWD)/bin
-TAILWIND_VERSION ?= 3.4.14
+NODE_BIN := ./node_modules/.bin
+TAILWIND_BIN ?= $(NODE_BIN)/tailwindcss
 TAILWIND_INPUT := ./web/styles/tailwind.css
 TAILWIND_OUTPUT := ./public/static/app.css
-
-UNAME_S := $(shell uname -s)
-UNAME_M := $(shell uname -m)
-
-ifeq ($(UNAME_S),Darwin)
-  TAILWIND_OS := macos
-else ifeq ($(UNAME_S),Linux)
-  TAILWIND_OS := linux
-else
-  $(error Unsupported OS $(UNAME_S). Please install Tailwind manually.)
-endif
-
-ifeq ($(UNAME_M),x86_64)
-  TAILWIND_ARCH := x64
-else ifeq ($(UNAME_M),amd64)
-  TAILWIND_ARCH := x64
-else ifeq ($(UNAME_M),arm64)
-  TAILWIND_ARCH := arm64
-else ifeq ($(UNAME_M),aarch64)
-  TAILWIND_ARCH := arm64
-else
-  $(error Unsupported architecture $(UNAME_M). Please install Tailwind manually.)
-endif
-
-TAILWIND_TARGET := $(BIN_DIR)/tailwindcss-v$(TAILWIND_VERSION)
-TAILWIND_BIN := $(BIN_DIR)/tailwindcss
-TAILWIND_URL := https://github.com/tailwindlabs/tailwindcss/releases/download/v$(TAILWIND_VERSION)/tailwindcss-$(TAILWIND_OS)-$(TAILWIND_ARCH)
 
 .PHONY: dev
 dev: tidy ensure-tailwind ## Start dev server with Tailwind watcher
@@ -72,26 +45,16 @@ test-ui: ## Run admin integration smoke tests
 	@go test ./internal/admin/httpserver
 
 .PHONY: ensure-tailwind
-ensure-tailwind: ## Download Tailwind standalone binary if required version missing
-	@mkdir -p $(BIN_DIR)
-	@REQUIRED="v$(TAILWIND_VERSION)"; \
-	NEED_DOWNLOAD=0; \
-	if [ -x $(TAILWIND_TARGET) ]; then \
-		CURRENT=$$($(TAILWIND_TARGET) --help 2>/dev/null | awk 'NF{print $$2; exit}'); \
-		if [ -z "$$CURRENT" ] || [ "$$CURRENT" != "$$REQUIRED" ]; then \
-			NEED_DOWNLOAD=1; \
-		fi; \
-	else \
-		NEED_DOWNLOAD=1; \
-	fi; \
-	if [ "$$NEED_DOWNLOAD" -eq 1 ]; then \
-		echo "Downloading tailwindcss $$REQUIRED ($(TAILWIND_OS)-$(TAILWIND_ARCH))..."; \
-		rm -f $(TAILWIND_TARGET); \
-		curl -sSL -o $(TAILWIND_TARGET) $(TAILWIND_URL); \
-		chmod +x $(TAILWIND_TARGET); \
-	fi; \
-	ln -sf $$(basename $(TAILWIND_TARGET)) $(TAILWIND_BIN); \
-	$(TAILWIND_TARGET) --help >/dev/null 2>&1
+ensure-tailwind: ## Ensure Tailwind CLI is available on PATH
+	@if [ ! -x $(TAILWIND_BIN) ]; then \
+		echo "Installing admin npm deps..."; \
+		npm install; \
+	fi
+	@$(TAILWIND_BIN) --version >/dev/null 2>&1 || ( \
+		echo "Missing tailwindcss CLI. Install with:"; \
+		echo "  npm install"; \
+		exit 1; \
+	)
 
 .PHONY: clean
 clean: ## Remove build artifacts

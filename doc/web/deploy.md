@@ -46,5 +46,5 @@ Cloud Build deploy step uses `--set-secrets` to mount these into Cloud Run env v
 - Use Cloud Run revisions to roll back to a previous image/revision from the Cloud Console or via `gcloud run services update-traffic`.
 
 ## Notes
-- The Dockerfile builds Tailwind CSS using the standalone binary in an intermediate stage; no Node.js is required.
+- Tailwind CLI is installed locally in `web/` via npm (`npm install`) before running asset builds.
 - Distroless static runtime image is used for a small, secure final container.

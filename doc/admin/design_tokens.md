@@ -49,6 +49,6 @@ Each templ component in `internal/admin/templates/components` wraps these classe
 
 ## Build Pipeline
 
-`make css` now executes Tailwind with `NODE_ENV=production`, enabling purge/minify passes and Autoprefixer within the Tailwind standalone binary. In watch mode the same tokens remain available without the production purge. Any custom post-processing should hook into the generated asset `admin/public/static/app.css`.
+`make css` now executes Tailwind with `NODE_ENV=production`, enabling purge/minify passes and Autoprefixer via the Tailwind CLI. In watch mode the same tokens remain available without the production purge. Any custom post-processing should hook into the generated asset `admin/public/static/app.css`.
 
 > When adding new UI primitives, extend the existing tokens before inventing new ad-hoc colors, spacings, or shadows. This keeps the admin console coherent across dashboards, tables, and modal workflows documented in `doc/admin/admin_design.md`.

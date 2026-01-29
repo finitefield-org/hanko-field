@@ -9,7 +9,9 @@
   ],
   "env": {
     "GOPATH": "$DEVBOX_PROJECT_ROOT/.go",
-    "PATH": "$GOPATH/bin:$PATH"
+    "NPM_CONFIG_PREFIX": "$DEVBOX_PROJECT_ROOT/.devbox/npm",
+    "NODE_PATH": "$DEVBOX_PROJECT_ROOT/.devbox/npm/lib/node_modules",
+    "PATH": "$DEVBOX_PROJECT_ROOT/.devbox/npm/bin:$GOPATH/bin:$PATH"
   },
   "shell": {
     "init_hook": [

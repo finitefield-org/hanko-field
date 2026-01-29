@@ -1,11 +1,10 @@
 # Web Dev Setup
 
-This guide sets up the Go web module with chi router, html/template rendering, Tailwind (standalone CLI), local htmx asset, and dev tooling.
+This guide sets up the Go web module with chi router, html/template rendering, Tailwind CLI (installed locally via npm), local htmx asset, and dev tooling.
 
 ## Prerequisites
 - Go 1.23+
-
-No Node.js/npm is required. TailwindCSS is built using its standalone CLI binary, and htmx is fetched once into `public/assets/js`.
+- Node.js 20+ and npm (Tailwind CLI is installed locally via npm)
 
 ## Running the dev server
 Two terminals recommended: one for CSS watch, one for the Go server.
@@ -13,11 +12,8 @@ Two terminals recommended: one for CSS watch, one for the Go server.
 Terminal A (Tailwind watch/build):
 ```bash
 cd web
-# Download tailwindcss standalone (once), put it at web/tools/tailwindcss and make it executable.
-# See: https://github.com/tailwindlabs/tailwindcss/releases
-# macOS (Apple Silicon example):
-#   curl -L -o tools/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-macos-arm64
-#   chmod +x tools/tailwindcss
+# Install Tailwind CLI once if missing.
+#   npm install
 
 make css-watch
 ```
@@ -56,7 +52,6 @@ make tidy       # go mod tidy
 - `web/public/assets`: output CSS/JS (served at `/assets/...`)
 - `web/assets/css/input.css`: Tailwind source
 - TailwindCSS is compiled from `assets/css/input.css` to `public/assets/app.css`.
-- The standalone binary path is `web/tools/tailwindcss` (ignored by Git). Place the downloaded binary there and `chmod +x` it.
 - Run `make htmx` once to fetch `public/assets/js/htmx.min.js` locally; the base layout references `/assets/js/htmx.min.js`.
 
 ## Notes

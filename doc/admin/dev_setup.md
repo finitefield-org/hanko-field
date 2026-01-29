@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.23+
-- `curl` (used to fetch Tailwind standalone binary)
+- Node.js 20+ and npm (Tailwind CLI is installed locally via npm)
 - `templ` generator (`go install github.com/a-h/templ/cmd/templ@latest`)
 
 Ensure `$GOPATH/bin` (where `templ` is installed) is on your `PATH`.
@@ -15,9 +15,11 @@ cd admin
 make ensure-tailwind
 ```
 
-This downloads the Tailwind standalone executable into `admin/bin/`.
+Install the Tailwind CLI once if missing:
 
-`make ensure-tailwind` is idempotent and re-downloads the binary when `TAILWIND_VERSION` changes.
+```bash
+npm install
+```
 
 ## Common Tasks
 

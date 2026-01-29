@@ -2,7 +2,8 @@ GO ?= go
 BIN_DIR := $(CURDIR)/bin
 MAIN_PKG := ./cmd/web
 BINARY := $(BIN_DIR)/hanko-web
-TAILWIND := $(CURDIR)/tools/tailwindcss
+NODE_BIN := ./node_modules/.bin
+TAILWIND ?= $(NODE_BIN)/tailwindcss
 HTMX_VERSION := 2.0.3
 HTMX_URL := https://cdn.jsdelivr.net/npm/htmx.org@$(HTMX_VERSION)/dist/htmx.min.js
 
@@ -29,7 +30,7 @@ tidy:
 
 .DEFAULT_GOAL := build
 
-# --- Assets (Tailwind standalone CLI) ---
+# --- Assets (Tailwind CLI) ---
 css: tools
 	@mkdir -p public/assets
 	@NODE_ENV=production $(TAILWIND) -c tailwind.config.js -i assets/css/input.css -o public/assets/app.css --minify
@@ -39,15 +40,21 @@ css-watch: tools
 	@$(TAILWIND) -c tailwind.config.js -i assets/css/input.css -o public/assets/app.css --watch
 
 tools:
-	@if [ ! -x "$(TAILWIND)" ]; then \
-		echo "Missing tailwindcss standalone binary at $(TAILWIND)"; \
-		echo "Download from https://github.com/tailwindlabs/tailwindcss/releases and place it there (chmod +x)."; \
-		exit 1; \
+	@if [ ! -x $(TAILWIND) ]; then \
+		echo "Installing web npm deps..."; \
+		npm install; \
 	fi
+	@$(TAILWIND) --version >/dev/null 2>&1 || ( \
+		echo "Missing tailwindcss CLI. Install with:"; \
+		echo "  npm install"; \
+		exit 1; \
+	)
 
 htmx:
-	@mkdir -p public/assets/js
-	@echo "Fetching htmx $(HTMX_VERSION) from $(HTMX_URL)"
-	@curl -fsSL "$(HTMX_URL)" -o public/assets/js/htmx.min.js
+	@if [ ! -f public/assets/js/htmx.min.js ]; then \
+		echo "Missing public/assets/js/htmx.min.js. Fetch with:"; \
+		echo "  curl -fsSL \"$(HTMX_URL)\" -o public/assets/js/htmx.min.js"; \
+		exit 1; \
+	fi
 
 assets: css htmx
