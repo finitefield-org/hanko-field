@@ -853,6 +853,7 @@ func main() {
 	r.Get("/", HomeHandler)
 	r.Get("/design/new", DesignNewHandler)
 	r.Get("/design/editor", DesignEditorHandler)
+	r.Get("/design/kanji-mapper", DesignKanjiMapHandler)
 	r.MethodFunc(http.MethodGet, "/design/editor/form", DesignEditorFormFrag)
 	r.MethodFunc(http.MethodPost, "/design/editor/form", DesignEditorFormFrag)
 	r.Get("/design/editor/preview", DesignEditorPreviewFrag)

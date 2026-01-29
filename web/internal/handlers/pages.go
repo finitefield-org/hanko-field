@@ -26,6 +26,7 @@ type PageData struct {
 	Content           any
 	Status            any
 	Design            any
+	DesignKanjiMap    any
 	DesignAI          any
 	DesignPreview     any
 	DesignVersions    any

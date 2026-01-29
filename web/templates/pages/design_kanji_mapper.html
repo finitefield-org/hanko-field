@@ -1,0 +1,26 @@
+{{ define "content" }}
+{{ $view := $.DesignKanjiMap }}
+<section class="space-y-6">
+  <header class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ if eq $.Lang "ja" }}デザインツール{{ else }}Design tools{{ end }}</p>
+      <h1 class="text-3xl font-bold text-gray-900">{{ if eq $.Lang "ja" }}漢字マッピングツール{{ else }}Kanji mapping tool{{ end }}</h1>
+      <p class="text-sm text-gray-600">{{ if eq $.Lang "ja" }}氏名・法人名から漢字表記と代替候補を確認できます。候補を選択するとエディタに移動します。{{ else }}Review mapped kanji spellings and open the editor with your selection applied.{{ end }}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+      <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700">
+        {{ if eq $.Lang "ja" }}入力:{{ else }}Input:{{ end }}
+        {{ if $view.HasName }}{{ $view.Name }}{{ else }}{{ if eq $.Lang "ja" }}未入力{{ else }}None{{ end }}{{ end }}
+      </span>
+      <a href="/design/editor{{ if $view.HasName }}?name={{ urlquery $view.Name }}{{ end }}" class="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
+        {{ template "icon" (dict "Name" "arrow-uturn-left" "Class" "h-4 w-4") }}
+        {{ if eq $.Lang "ja" }}エディタへ戻る{{ else }}Back to editor{{ end }}
+      </a>
+    </div>
+  </header>
+
+  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    {{ template "editor_modal_kanji_body" $view }}
+  </div>
+</section>
+{{ end }}
