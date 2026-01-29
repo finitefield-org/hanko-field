@@ -11,7 +11,7 @@ HTMX_URL := https://cdn.jsdelivr.net/npm/htmx.org@$(HTMX_VERSION)/dist/htmx.min.
 run:
 	DEV=1 $(GO) run $(MAIN_PKG)
 
-dev:
+dev: assets
 	@$(MAKE) run
 
 build:

@@ -30,10 +30,8 @@ dependencies:
   url_launcher: ^6.3.2
   package_info_plus: ^8.1.2
   device_info_plus: ^10.1.2
-  miniriverpod:
-    path: ../../miniriverpod/miniriverpod
-  declarative_nav:
-    path: ../../declarative-nav/declarative_nav
+  miniriverpod: ^0.0.2
+  declarative_nav: ^0.0.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   google_sign_in: ^6.2.2

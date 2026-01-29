@@ -340,10 +340,11 @@ packages:
   declarative_nav:
     dependency: "direct main"
     description:
-      path: "../../declarative-nav/declarative_nav"
-      relative: true
-    source: path
-    version: "0.2.0"
+      name: declarative_nav
+      sha256: dd40012bf6ca421034cba0061498eeeb2dd004e25e6975fc27c1132fe59cca10
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -1030,10 +1031,11 @@ packages:
   miniriverpod:
     dependency: "direct main"
     description:
-      path: "../../miniriverpod/miniriverpod"
-      relative: true
-    source: path
-    version: "0.0.1"
+      name: miniriverpod
+      sha256: "06e2cf029ce7f0cb7a685b7555c65823af63500c5ee0d06b902dd7b5014ddd55"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   mockito:
     dependency: transitive
     description:

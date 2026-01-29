@@ -51,8 +51,6 @@
 - MVVM + feature-first architecture
   - doc/app/architecture.md を参照してください。
 - miniriverpod
-  - 使い方については、../../miniriverpod/miniriverpod/README.md を参照してください。
-  - doc/app/miniriverpod-guidelines.md も参照してください。
 
 ## タスクについて
 - タスクが終了したらチェックを入れること。

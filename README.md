@@ -18,6 +18,22 @@ make docker-web
 make docker-dev
 ```
 
+### Web のアセット生成（Tailwind standalone）
+
+`make docker-web` は `web/public/assets` を生成するため、コンテナ内に Tailwind standalone が必要です。
+初回のみ、以下を実行してください（Linux ARM64 / aarch64 向け）。
+
+```bash
+docker compose exec workspace devbox shell
+cd /workspace/web
+mkdir -p tools
+curl -fsSL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-arm64 -o tools/tailwindcss
+chmod +x tools/tailwindcss
+exit
+```
+
+他のアーキテクチャの場合は、`tailwindcss-linux-x64` など適切なバイナリ名に置き換えてください。
+
 ### 開発サーバー例（ポート競合を避ける）
 
 API / Admin / Web の既定ポートはそれぞれ `3050 / 3051 / 3052` です。
