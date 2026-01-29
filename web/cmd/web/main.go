@@ -2514,7 +2514,8 @@ func ShopTableFrag(w http.ResponseWriter, r *http.Request) {
 
 func TemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	lang := mw.Lang(r)
-	vm := handlersPkg.PageData{Title: "Templates", Lang: lang}
+	pageTitle := i18nOrDefault(lang, "nav.templates", "Templates")
+	vm := handlersPkg.PageData{Title: pageTitle, Lang: lang}
 	vm.Path = r.URL.Path
 	vm.Nav = nav.Build(vm.Path)
 	vm.Breadcrumbs = nav.Breadcrumbs(vm.Path)
@@ -2523,7 +2524,7 @@ func TemplatesHandler(w http.ResponseWriter, r *http.Request) {
 	brand := i18nOrDefault(lang, "brand.name", "Hanko Field")
 	vm.Templates = buildTemplateListProps(lang, r.URL.Query())
 	vm.SEO.Title = fmt.Sprintf("%s | %s", i18nOrDefault(lang, "nav.templates", "Templates"), brand)
-	vm.SEO.Description = "Browse tested seal layouts with script, shape, and registrability filters. Preview any template before starting a design."
+	vm.SEO.Description = i18nOrDefault(lang, "templates.seo.description", "Browse tested seal layouts with script, shape, and registrability filters. Preview any template before starting a design.")
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
 	vm.SEO.OG.SiteName = brand
@@ -2572,7 +2573,7 @@ func TemplateDetailHandler(w http.ResponseWriter, r *http.Request) {
 	} else if len(detail.Summary) > 0 {
 		vm.SEO.Description = detail.Summary[0]
 	} else {
-		vm.SEO.Description = "Template detail overview."
+		vm.SEO.Description = i18nOrDefault(lang, "templates.detail.seo.description", "Template detail overview.")
 	}
 	vm.SEO.Canonical = absoluteURL(r)
 	vm.SEO.OG.URL = vm.SEO.Canonical
@@ -4713,6 +4714,7 @@ type TemplateMeta struct {
 	Locale              string
 	LocaleLabel         string
 	Badge               string
+	BadgeLabel          string
 	PrimarySize         string
 	Preview             TemplatePreview
 	Usage               int
@@ -5099,54 +5101,16 @@ type StatusPageViewModel struct {
 }
 
 var (
-	templateScriptLabels = map[string]string{
-		"kanji":    "Kanji",
-		"kana":     "Kana",
-		"alphabet": "Alphabet",
-		"mixed":    "Mixed Script",
-	}
 	templateScriptOrder = []string{"kanji", "kana", "alphabet", "mixed"}
 
-	templateShapeLabels = map[string]string{
-		"round":  "Round",
-		"square": "Square",
-		"rect":   "Rectangular",
-	}
 	templateShapeOrder = []string{"round", "square", "rect"}
 
-	templateRegistrabilityLabels = map[string]string{
-		"official":   "Registrable",
-		"individual": "Personal Use",
-		"internal":   "Internal",
-		"informal":   "Informal",
-	}
 	templateRegistrabilityOrder = []string{"official", "individual", "internal", "informal"}
 
-	templateCategoryLabels = map[string]string{
-		"corporate":     "Corporate",
-		"brand":         "Brand",
-		"personal":      "Personal",
-		"operations":    "Operations",
-		"international": "International",
-		"events":        "Events",
-	}
 	templateCategoryOrder = []string{"corporate", "brand", "personal", "operations", "international", "events"}
 
-	templateStyleLabels = map[string]string{
-		"modern":  "Modern",
-		"classic": "Classic",
-		"minimal": "Minimal",
-		"playful": "Playful",
-		"bold":    "Bold",
-		"tech":    "Tech",
-	}
 	templateStyleOrder = []string{"modern", "classic", "minimal", "bold", "playful", "tech"}
 
-	templateLocaleLabels = map[string]string{
-		"ja":     "Japanese",
-		"en":     "English",
-		"hybrid": "Dual Locale",
-	}
 	templateLocaleOrder = []string{"ja", "en", "hybrid"}
 
 	templateCatalogSeed = []TemplateMeta{
@@ -5541,11 +5505,72 @@ var (
 	}
 )
 
+type templateLabelSet struct {
+	Scripts        map[string]string
+	Shapes         map[string]string
+	Registrability map[string]string
+	Categories     map[string]string
+	Styles         map[string]string
+	Locales        map[string]string
+	Badges         map[string]string
+}
+
+func templateLabelsFor(lang string) templateLabelSet {
+	return templateLabelSet{
+		Scripts: map[string]string{
+			"kanji":    i18nOrDefault(lang, "templates.script.kanji", "Kanji"),
+			"kana":     i18nOrDefault(lang, "templates.script.kana", "Kana"),
+			"alphabet": i18nOrDefault(lang, "templates.script.alphabet", "Alphabet"),
+			"mixed":    i18nOrDefault(lang, "templates.script.mixed", "Mixed Script"),
+		},
+		Shapes: map[string]string{
+			"round":  i18nOrDefault(lang, "templates.shape.round", "Round"),
+			"square": i18nOrDefault(lang, "templates.shape.square", "Square"),
+			"rect":   i18nOrDefault(lang, "templates.shape.rect", "Rectangular"),
+		},
+		Registrability: map[string]string{
+			"official":   i18nOrDefault(lang, "templates.registrability.official", "Registrable"),
+			"individual": i18nOrDefault(lang, "templates.registrability.individual", "Personal Use"),
+			"internal":   i18nOrDefault(lang, "templates.registrability.internal", "Internal"),
+			"informal":   i18nOrDefault(lang, "templates.registrability.informal", "Informal"),
+		},
+		Categories: map[string]string{
+			"corporate":     i18nOrDefault(lang, "templates.category.corporate", "Corporate"),
+			"brand":         i18nOrDefault(lang, "templates.category.brand", "Brand"),
+			"personal":      i18nOrDefault(lang, "templates.category.personal", "Personal"),
+			"operations":    i18nOrDefault(lang, "templates.category.operations", "Operations"),
+			"international": i18nOrDefault(lang, "templates.category.international", "International"),
+			"events":        i18nOrDefault(lang, "templates.category.events", "Events"),
+		},
+		Styles: map[string]string{
+			"modern":  i18nOrDefault(lang, "templates.style.modern", "Modern"),
+			"classic": i18nOrDefault(lang, "templates.style.classic", "Classic"),
+			"minimal": i18nOrDefault(lang, "templates.style.minimal", "Minimal"),
+			"playful": i18nOrDefault(lang, "templates.style.playful", "Playful"),
+			"bold":    i18nOrDefault(lang, "templates.style.bold", "Bold"),
+			"tech":    i18nOrDefault(lang, "templates.style.tech", "Tech"),
+		},
+		Locales: map[string]string{
+			"ja":     i18nOrDefault(lang, "templates.locale.ja", "Japanese"),
+			"en":     i18nOrDefault(lang, "templates.locale.en", "English"),
+			"hybrid": i18nOrDefault(lang, "templates.locale.hybrid", "Dual Locale"),
+		},
+		Badges: map[string]string{
+			"Popular":  i18nOrDefault(lang, "templates.badge.popular", "Popular"),
+			"Trending": i18nOrDefault(lang, "templates.badge.trending", "Trending"),
+			"New":      i18nOrDefault(lang, "templates.badge.new", "New"),
+			"Classic":  i18nOrDefault(lang, "templates.badge.classic", "Classic"),
+			"Dual":     i18nOrDefault(lang, "templates.badge.dual", "Dual"),
+		},
+	}
+}
+
 func templateData(lang string) []TemplateMeta {
 	out := make([]TemplateMeta, len(templateCatalogSeed))
 	copy(out, templateCatalogSeed)
+	labels := templateLabelsFor(lang)
 	for i := range out {
-		decorateTemplateMeta(&out[i])
+		decorateTemplateMeta(&out[i], labels)
 	}
 	return out
 }
@@ -5612,6 +5637,7 @@ func buildTemplateListProps(lang string, q url.Values) map[string]any {
 	}
 
 	data := templateData(lang)
+	labels := templateLabelsFor(lang)
 	var filtered []TemplateMeta
 	searchLower := strings.ToLower(search)
 	for _, tpl := range data {
@@ -5694,13 +5720,26 @@ func buildTemplateListProps(lang string, q url.Values) map[string]any {
 	}
 	base.Set("per", strconv.Itoa(per))
 
+	displayScript := ""
+	if script != "" && script != "all" {
+		displayScript = labelFor(labels.Scripts, script)
+	}
+	displayShape := ""
+	if shape != "" && shape != "all" {
+		displayShape = labelFor(labels.Shapes, shape)
+	}
+	displayRegistrability := ""
+	if registrability != "" && registrability != "all" {
+		displayRegistrability = labelFor(labels.Registrability, registrability)
+	}
+
 	options := map[string]any{
-		"Scripts":        buildFilterOptions(data, script, "All scripts", templateScriptLabels, templateScriptOrder, func(t TemplateMeta) string { return t.Script }),
-		"Shapes":         buildFilterOptions(data, shape, "All shapes", templateShapeLabels, templateShapeOrder, func(t TemplateMeta) string { return t.Shape }),
-		"Registrability": buildFilterOptions(data, registrability, "All registrability", templateRegistrabilityLabels, templateRegistrabilityOrder, func(t TemplateMeta) string { return t.Registrability }),
-		"Categories":     buildFilterOptions(data, category, "All categories", templateCategoryLabels, templateCategoryOrder, func(t TemplateMeta) string { return t.Category }),
-		"Styles":         buildFilterOptions(data, style, "All styles", templateStyleLabels, templateStyleOrder, func(t TemplateMeta) string { return t.Style }),
-		"Locales":        buildFilterOptions(data, locale, "All locales", templateLocaleLabels, templateLocaleOrder, func(t TemplateMeta) string { return t.Locale }),
+		"Scripts":        buildFilterOptions(data, script, i18nOrDefault(lang, "templates.filters.all_scripts", "All scripts"), labels.Scripts, templateScriptOrder, func(t TemplateMeta) string { return t.Script }),
+		"Shapes":         buildFilterOptions(data, shape, i18nOrDefault(lang, "templates.filters.all_shapes", "All shapes"), labels.Shapes, templateShapeOrder, func(t TemplateMeta) string { return t.Shape }),
+		"Registrability": buildFilterOptions(data, registrability, i18nOrDefault(lang, "templates.filters.all_registrability", "All registrability"), labels.Registrability, templateRegistrabilityOrder, func(t TemplateMeta) string { return t.Registrability }),
+		"Categories":     buildFilterOptions(data, category, i18nOrDefault(lang, "templates.filters.all_categories", "All categories"), labels.Categories, templateCategoryOrder, func(t TemplateMeta) string { return t.Category }),
+		"Styles":         buildFilterOptions(data, style, i18nOrDefault(lang, "templates.filters.all_styles", "All styles"), labels.Styles, templateStyleOrder, func(t TemplateMeta) string { return t.Style }),
+		"Locales":        buildFilterOptions(data, locale, i18nOrDefault(lang, "templates.filters.all_locales", "All locales"), labels.Locales, templateLocaleOrder, func(t TemplateMeta) string { return t.Locale }),
 	}
 
 	nextURL := ""
@@ -5724,9 +5763,9 @@ func buildTemplateListProps(lang string, q url.Values) map[string]any {
 		"NextPage":    page + 1,
 		"NextURL":     nextURL,
 		"Filters": map[string]string{
-			"Script":         script,
-			"Shape":          shape,
-			"Registrability": registrability,
+			"Script":         displayScript,
+			"Shape":          displayShape,
+			"Registrability": displayRegistrability,
 			"Category":       category,
 			"Style":          style,
 			"Locale":         locale,
@@ -5740,13 +5779,16 @@ func buildTemplateListProps(lang string, q url.Values) map[string]any {
 	return props
 }
 
-func decorateTemplateMeta(t *TemplateMeta) {
-	t.ScriptLabel = labelFor(templateScriptLabels, t.Script)
-	t.ShapeLabel = labelFor(templateShapeLabels, t.Shape)
-	t.RegistrabilityLabel = labelFor(templateRegistrabilityLabels, t.Registrability)
-	t.CategoryLabel = labelFor(templateCategoryLabels, t.Category)
-	t.StyleLabel = labelFor(templateStyleLabels, t.Style)
-	t.LocaleLabel = labelFor(templateLocaleLabels, t.Locale)
+func decorateTemplateMeta(t *TemplateMeta, labels templateLabelSet) {
+	t.ScriptLabel = labelFor(labels.Scripts, t.Script)
+	t.ShapeLabel = labelFor(labels.Shapes, t.Shape)
+	t.RegistrabilityLabel = labelFor(labels.Registrability, t.Registrability)
+	t.CategoryLabel = labelFor(labels.Categories, t.Category)
+	t.StyleLabel = labelFor(labels.Styles, t.Style)
+	t.LocaleLabel = labelFor(labels.Locales, t.Locale)
+	if t.Badge != "" {
+		t.BadgeLabel = labelFor(labels.Badges, t.Badge)
+	}
 }
 
 func buildFilterOptions(items []TemplateMeta, current, allLabel string, labels map[string]string, order []string, getter func(TemplateMeta) string) []FilterOption {

@@ -2,22 +2,22 @@
 <section class="py-6 space-y-8">
   <header class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
     <div class="space-y-2">
-      <p class="text-xs uppercase tracking-wide text-indigo-500">Templates</p>
-      <h1 class="text-3xl font-bold text-gray-900">Template library</h1>
-      <p class="text-sm text-gray-600">Browse curated layouts and filter by script, shape, or registrability. Preview instantly before you start designing.</p>
+      <p class="text-xs uppercase tracking-wide text-indigo-500">{{ tlang $.Lang "templates.page.eyebrow" }}</p>
+      <h1 class="text-3xl font-bold text-gray-900">{{ tlang $.Lang "templates.page.title" }}</h1>
+      <p class="text-sm text-gray-600">{{ tlang $.Lang "templates.page.subtitle" }}</p>
     </div>
     <div class="flex flex-wrap items-center gap-3">
-      {{ template "c_button" (dict "Label" "Create from blank" "Href" "/design/new" "Variant" "primary") }}
-      {{ template "c_button" (dict "Label" "Workflow guide" "Href" "/guides/template-workflow" "Variant" "outline") }}
+      {{ template "c_button" (dict "Label" (tlang $.Lang "templates.page.cta.blank") "Href" "/design/new" "Variant" "primary") }}
+      {{ template "c_button" (dict "Label" (tlang $.Lang "templates.page.cta.workflow") "Href" "/guides/template-workflow" "Variant" "outline") }}
     </div>
   </header>
 
-  {{ template "c_template_filters" (dict "Filters" (index $.Templates "Filters") "Options" (index $.Templates "Options") "Total" (index $.Templates "Total") "Per" (index $.Templates "Per")) }}
+  {{ template "c_template_filters" (dict "Filters" (index $.Templates "Filters") "Options" (index $.Templates "Options") "Total" (index $.Templates "Total") "Per" (index $.Templates "Per") "Lang" $.Lang) }}
 
   {{ slot "frag_template_table" $.Templates }}
 
   <div id="template-drawer-root"></div>
 
-  <div class="text-sm text-gray-500">Path: {{ $.Path }}</div>
+  <div class="text-sm text-gray-500">{{ tlang $.Lang "shared.path" }}: {{ $.Path }}</div>
 </section>
 {{ end }}

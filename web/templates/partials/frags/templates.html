@@ -2,8 +2,8 @@
 {{ if not .Append }}
   <div id="template-results" class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
-      <span class="font-medium text-gray-900">{{ .Total }} templates</span>
-      <span>Showing {{ .CountLoaded }} {{ if gt .Total .CountLoaded }}of {{ .Total }}{{ end }}</span>
+      <span class="font-medium text-gray-900">{{ .Total }} {{ tlang $.Lang "templates.filters.total" }}</span>
+      <span>{{ tlang $.Lang "templates.results.showing" }} {{ .CountLoaded }} {{ if gt .Total .CountLoaded }}{{ tlang $.Lang "templates.results.of" }} {{ .Total }}{{ end }}</span>
     </div>
     <div id="template-results-list" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       {{ if .Empty }}
