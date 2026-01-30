@@ -31,17 +31,25 @@
           <button type="button" id="design-redo-button" class="sr-only">Redo</button>
         </div>
         <div class="mt-3 space-y-2">
-          <div>
+          <div class="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+            {{ $nameLabel := "Enter design name" }}
+            {{ $nameHelp := "Text entered here appears in the preview on the right." }}
+            {{ if eq .Lang "ja" }}
+              {{ $nameLabel = "デザイン名を入力" }}
+              {{ $nameHelp = "ここに入力した文字が右側のプレビューに反映されます。" }}
+            {{ end }}
             {{ $err := "" }}
             {{ if .State.Errors }}{{ $err = index .State.Errors "name" }}{{ end }}
             {{ template "c_input" (dict
               "ID" "editor_name"
               "Name" "name"
-              "Label" ""
+              "Label" $nameLabel
               "Value" .State.Name
               "Placeholder" .NamePlaceholder
               "Required" true
+              "Help" $nameHelp
               "Error" $err
+              "Invalid" (ne $err "")
             ) }}
           </div>
           <div class="flex flex-wrap items-center gap-3 text-xs">

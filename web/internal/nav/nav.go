@@ -37,6 +37,10 @@ var Main = []Item{
 // SegmentLabelKeys maps URL path segments to i18n label keys.
 var SegmentLabelKeys = map[string]string{
 	"design-basics": "guides.slug.design-basics",
+	"notifications": "nav.notifications",
+	"design":        "nav.design",
+	"new":           "nav.design.new",
+	"kanji-mapper":  "nav.design.kanji_mapper",
 }
 
 // Build renders navigation items with active state given the current path.
@@ -102,6 +106,11 @@ func Breadcrumbs(currentPath string) []Crumb {
 			if it.Path == top {
 				labelKey = it.LabelKey
 				break
+			}
+		}
+		if labelKey == "" {
+			if key, ok := SegmentLabelKeys[parts[0]]; ok {
+				labelKey = key
 			}
 		}
 		crumbs = append(crumbs, Crumb{Href: top, LabelKey: labelKey, Label: titleFromSegment(parts[0]), Active: len(parts) == 1})
