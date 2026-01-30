@@ -26,17 +26,6 @@
           {{ template "c_select" (dict "Name" "size" "Options" (list (dict "Value" "" "Label" (tlang $.Lang "filter.all")) (dict "Value" "small" "Label" (tlang $.Lang "size.small")) (dict "Value" "medium" "Label" (tlang $.Lang "size.medium")) (dict "Value" "large" "Label" (tlang $.Lang "size.large")))) }}
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ tlang $.Lang "shop.price.label" }}</label>
-          <div class="grid grid-cols-2 gap-2">
-            {{ template "c_input" (dict "Name" "price_min" "Type" "number" "Placeholder" (tlang $.Lang "shop.price.min")) }}
-            {{ template "c_input" (dict "Name" "price_max" "Type" "number" "Placeholder" (tlang $.Lang "shop.price.max")) }}
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <input id="sale" name="sale" type="checkbox" value="1" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
-          <label for="sale" class="text-sm text-gray-700">{{ tlang $.Lang "filter.sale" }}</label>
-        </div>
-        <div>
           {{ template "c_button" (dict "Label" (tlang $.Lang "filter.apply") "Variant" "primary" "Type" "submit") }}
         </div>
         <div class="text-xs text-gray-500">{{ tlang $.Lang "shop.tip.htmx" }}</div>

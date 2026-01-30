@@ -43,6 +43,7 @@ var SegmentLabelKeys = map[string]string{
 	"kanji-mapper":  "nav.design.kanji_mapper",
 	"cart":          "nav.cart",
 	"editor":        "nav.design.editor",
+	"size-guide":    "guides.slug.size-guide",
 }
 
 // Build renders navigation items with active state given the current path.

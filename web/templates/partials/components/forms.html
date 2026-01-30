@@ -10,6 +10,9 @@
     type="{{ if .Type }}{{ .Type }}{{ else }}text{{ end }}"
     value="{{ .Value }}"
     placeholder="{{ .Placeholder }}"
+    {{ with .Min }}min="{{ . }}"{{ end }}
+    {{ with .Max }}max="{{ . }}"{{ end }}
+    {{ with .Step }}step="{{ . }}"{{ end }}
     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm {{ if .Invalid }}border-red-300 focus:border-red-500 focus:ring-red-500{{ end }}"
     {{ with .Required }}{{ if . }}required aria-required="true"{{ end }}{{ end }}
     {{ with .Help }}aria-describedby="{{ $helpID }}"{{ end }}
@@ -63,4 +66,3 @@
   {{ with .Error }}<p id="{{ $errID }}" class="mt-1 text-xs text-red-600">{{ . }}</p>{{ end }}
 </div>
 {{ end }}
-
