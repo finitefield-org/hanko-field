@@ -44,6 +44,7 @@ var SegmentLabelKeys = map[string]string{
 	"cart":          "nav.cart",
 	"editor":        "nav.design.editor",
 	"size-guide":    "guides.slug.size-guide",
+	"billing":       "account.nav.billing",
 }
 
 // Build renders navigation items with active state given the current path.

@@ -938,6 +938,8 @@ func main() {
 	r.Get("/account/library", AccountLibraryHandler)
 	r.Get("/account/library/table", AccountLibraryTableHandler)
 	r.Get("/account/library/drawer", AccountLibraryDrawerHandler)
+	r.Get("/account/billing", AccountBillingHandler)
+	r.Get("/account/notifications", AccountNotificationsHandler)
 	r.Get("/account/orders", AccountOrdersHandler)
 	r.Get("/account/orders/table", AccountOrdersTableHandler)
 	r.Get("/account/orders/{orderID}", AccountOrderDetailHandler)
