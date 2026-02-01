@@ -487,7 +487,7 @@ func canonicalShipmentsURL(basePath string, state shipmentstpl.QueryState, selec
 
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base
@@ -529,7 +529,7 @@ func canonicalTrackingURL(basePath string, state shipmentstpl.TrackingQueryState
 
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

@@ -538,7 +538,7 @@ func firstNonEmpty(values ...string) string {
 func joinBase(base, suffix string) string {
 	b := strings.TrimSpace(base)
 	if b == "" {
-		b = "/admin"
+		b = "/"
 	}
 	u := strings.TrimSpace(suffix)
 	if !strings.HasPrefix(u, "/") {

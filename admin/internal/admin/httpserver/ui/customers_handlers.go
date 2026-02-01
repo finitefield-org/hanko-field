@@ -274,7 +274,7 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 	if strings.TrimSpace(meta.ActionURL) == "" {
 		base := strings.TrimRight(strings.TrimSpace(basePath), "/")
 		if base == "" {
-			base = "/admin"
+			base = "/"
 		}
 		meta.ActionURL = fmt.Sprintf("%s/customers/%s:deactivate-and-mask", base, customerID)
 	}
@@ -516,7 +516,7 @@ func customersRawQuery(state customerstpl.QueryState) string {
 func canonicalCustomersURL(basePath string, req customersRequest) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

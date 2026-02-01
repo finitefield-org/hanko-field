@@ -463,7 +463,7 @@ func toUpper(r rune) rune {
 func joinBasePath(basePath, suffix string) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

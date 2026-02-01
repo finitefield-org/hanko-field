@@ -26,7 +26,7 @@ func newSessionStoreForTest(t *testing.T, clock *sessionTestClock) *appsession.M
 		CookieName:       "test_session",
 		HashKey:          hashKey,
 		BlockKey:         blockKey,
-		CookiePath:       "/admin",
+		CookiePath:       "/",
 		CookieHTTPOnly:   &httpOnly,
 		IdleTimeout:      5 * time.Minute,
 		Lifetime:         time.Hour,
@@ -53,7 +53,7 @@ func TestSessionMiddlewareLifecycle(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req1 := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req1 := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec1 := httptest.NewRecorder()
 	handler.ServeHTTP(rec1, req1)
 	if len(ids) != 1 || ids[0] == "" {
@@ -70,7 +70,7 @@ func TestSessionMiddlewareLifecycle(t *testing.T) {
 	}
 
 	clock.now = clock.now.Add(2 * time.Minute)
-	req2 := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
 	req2.AddCookie(cookie)
 	rec2 := httptest.NewRecorder()
 	handler.ServeHTTP(rec2, req2)
@@ -81,7 +81,7 @@ func TestSessionMiddlewareLifecycle(t *testing.T) {
 		t.Fatalf("expected same session id between active requests")
 	}
 	clock.now = clock.now.Add(15 * time.Minute) // exceed idle timeout
-	req3 := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req3 := httptest.NewRequest(http.MethodGet, "/", nil)
 	req3.AddCookie(cookie)
 	rec3 := httptest.NewRecorder()
 	handler.ServeHTTP(rec3, req3)

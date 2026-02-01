@@ -416,7 +416,7 @@ func (s *FirestoreService) fetchAlerts(ctx context.Context, now time.Time) ([]Tr
 			Description: doc.Description,
 			Tone:        defaultTone(doc.Tone),
 			ActionLabel: firstNonEmpty(doc.ActionLabel, defaultAlertActionLabel),
-			ActionURL:   firstNonEmpty(doc.ActionURL, "/admin/shipments/tracking"),
+			ActionURL:   firstNonEmpty(doc.ActionURL, "/shipments/tracking"),
 		})
 	}
 	return alerts, nil
@@ -569,7 +569,7 @@ func syntheticTrackingAlerts(summary TrackingSummary) []TrackingAlert {
 			Description: fmt.Sprintf(syntheticAlertExceptionDesc, summary.Exceptions),
 			Tone:        "danger",
 			ActionLabel: syntheticAlertExceptionActionLabel,
-			ActionURL:   "/admin/shipments/tracking?status=exception",
+			ActionURL:   "/shipments/tracking?status=exception",
 		})
 	}
 	if summary.Delayed > 0 {
@@ -578,7 +578,7 @@ func syntheticTrackingAlerts(summary TrackingSummary) []TrackingAlert {
 			Description: fmt.Sprintf(syntheticAlertDelayDesc, summary.Delayed),
 			Tone:        "warning",
 			ActionLabel: syntheticAlertDelayActionLabel,
-			ActionURL:   "/admin/shipments/tracking?delay=delayed",
+			ActionURL:   "/shipments/tracking?delay=delayed",
 		})
 	}
 	return alerts

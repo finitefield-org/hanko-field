@@ -22,7 +22,7 @@ func TestHasVisibleItemsRespectRoles(t *testing.T) {
 	ctx := middleware.ContextWithUser(context.Background(), &middleware.User{
 		Roles: []string{string(rbac.RoleSupport)},
 	})
-	menu := navigation.BuildMenu("/admin")
+	menu := navigation.BuildMenu("/")
 
 	var system navigation.MenuGroup
 	var operations navigation.MenuGroup
@@ -53,16 +53,16 @@ func TestVisibleItemsFiltersByCapability(t *testing.T) {
 				Key:         "system-tasks",
 				Label:       "タスク/ジョブ",
 				Capability:  rbac.CapSystemTasks,
-				Href:        "/admin/system/tasks",
-				Pattern:     "/admin/system/tasks",
+				Href:        "/system/tasks",
+				Pattern:     "/system/tasks",
 				MatchPrefix: true,
 			},
 			{
 				Key:         "audit-logs",
 				Label:       "監査ログ",
 				Capability:  rbac.CapAuditLogView,
-				Href:        "/admin/audit-logs",
-				Pattern:     "/admin/audit-logs",
+				Href:        "/audit-logs",
+				Pattern:     "/audit-logs",
 				MatchPrefix: true,
 			},
 		},
@@ -85,11 +85,11 @@ func TestVisibleItemsFiltersByCapability(t *testing.T) {
 func TestSidebarRenderingFiltersAndHighlights(t *testing.T) {
 	t.Parallel()
 
-	menu := navigation.BuildMenu("/admin")
+	menu := navigation.BuildMenu("/")
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/orders/123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/orders/123", nil)
 	var ctx context.Context
-	handler := middleware.RequestInfoMiddleware("/admin")(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	handler := middleware.RequestInfoMiddleware("/")(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		ctx = r.Context()
 	}))
 	handler.ServeHTTP(httptest.NewRecorder(), req)
@@ -104,10 +104,10 @@ func TestSidebarRenderingFiltersAndHighlights(t *testing.T) {
 	doc := parseHTML(t, buf.Bytes())
 
 	// Support role should not see system tools.
-	require.Equal(t, 0, doc.Find(`a[href="/admin/system/tasks"]`).Length(), "system tasks link must be hidden")
-	require.Equal(t, 0, doc.Find(`a[href="/admin/system/errors"]`).Length(), "system errors link must be hidden")
+	require.Equal(t, 0, doc.Find(`a[href="/system/tasks"]`).Length(), "system tasks link must be hidden")
+	require.Equal(t, 0, doc.Find(`a[href="/system/errors"]`).Length(), "system errors link must be hidden")
 
-	ordersLink := doc.Find(`a[href="/admin/orders"]`)
+	ordersLink := doc.Find(`a[href="/orders"]`)
 	require.Equal(t, 1, ordersLink.Length(), "orders link should render")
 	require.Equal(t, "page", ordersLink.AttrOr("aria-current", ""), "active route highlights current page")
 	require.Contains(t, ordersLink.AttrOr("class", ""), "bg-slate-900", "active link should use highlighted class")

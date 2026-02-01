@@ -109,6 +109,7 @@ type ViewOption struct {
 
 // TableData powers the table fragment.
 type TableData struct {
+	BasePath     string
 	FragmentPath string
 	RawQuery     string
 	FilterQuery  string
@@ -433,6 +434,7 @@ func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 	}
 	fragmentPath := joinBase(basePath, fmt.Sprintf("/catalog/%s/table", kind))
 	return TableData{
+		BasePath:     basePath,
 		FragmentPath: fragmentPath,
 		RawQuery:     rawQuery,
 		FilterQuery:  filterQuery,
@@ -890,7 +892,7 @@ func breadcrumbItems(basePath string, kind admincatalog.Kind) []partials.Breadcr
 
 func joinBase(base, suffix string) string {
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(suffix, "/") {
 		suffix = "/" + suffix

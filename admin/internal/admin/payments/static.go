@@ -57,7 +57,7 @@ func NewStaticService() *StaticService {
 			PaymentMethod:     "VISA •••• 4212",
 			AuthID:            "auth_3NZPAA9lM8sd",
 			Channel:           "web",
-			OrderURL:          "/admin/orders/order-20482",
+			OrderURL:          "/orders/order-20482",
 			PSPDashboardURL:   "https://dashboard.stripe.com/payments/pi_3NZPAA9lM8sd",
 		},
 		{
@@ -86,7 +86,7 @@ func NewStaticService() *StaticService {
 			PaymentMethod:   "Mastercard •••• 2240",
 			AuthID:          "auth_sq_001843",
 			Channel:         "store",
-			OrderURL:        "/admin/orders/order-20431",
+			OrderURL:        "/orders/order-20431",
 			PSPDashboardURL: "https://squareup.com/dashboard/sales/transactions/sq0idp-h6vFmq",
 		},
 		{
@@ -112,7 +112,7 @@ func NewStaticService() *StaticService {
 			PaymentMethod:   "JCB •••• 9191",
 			AuthID:          "auth_airpay_0823",
 			Channel:         "web",
-			OrderURL:        "/admin/orders/order-20388",
+			OrderURL:        "/orders/order-20388",
 			PSPDashboardURL: "https://airpay-gmo.jp/admin/transactions/airpay-0823-ffff",
 		},
 		{
@@ -140,7 +140,7 @@ func NewStaticService() *StaticService {
 			PaymentMethod:   "銀行振込",
 			AuthID:          "auth_zeus_2048",
 			Channel:         "customer-support",
-			OrderURL:        "/admin/orders/order-20291",
+			OrderURL:        "/orders/order-20291",
 			PSPDashboardURL: "https://www.cardservice.co.jp/mypage/settlement/zeus-2048-ix",
 		},
 		{
@@ -169,7 +169,7 @@ func NewStaticService() *StaticService {
 			Installments:    "一括",
 			AuthID:          "auth_3NZPAYdispute",
 			Channel:         "web",
-			OrderURL:        "/admin/orders/order-20345",
+			OrderURL:        "/orders/order-20345",
 			PSPDashboardURL: "https://dashboard.stripe.com/payments/pi_3NZPAYdispute",
 		},
 		{
@@ -196,7 +196,7 @@ func NewStaticService() *StaticService {
 			Installments:    "一括",
 			AuthID:          "auth_3NZPAYrefund",
 			Channel:         "app",
-			OrderURL:        "/admin/orders/order-20264",
+			OrderURL:        "/orders/order-20264",
 			PSPDashboardURL: "https://dashboard.stripe.com/payments/pi_3NZPAYrefund",
 		},
 	}

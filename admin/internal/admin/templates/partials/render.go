@@ -95,8 +95,7 @@ func (c topbarComponent) Render(ctx context.Context, w io.Writer) error {
 	if basePath != "" && (canNotifications || canReviews || canTasks) {
 		fmt.Fprintf(
 			&b,
-			`<div data-workload-badges data-workload-stream="%s" data-workload-endpoint="%s">`,
-			html.EscapeString(topbarRoute(basePath, "/notifications/stream")),
+			`<div data-workload-badges data-workload-endpoint="%s">`,
 			html.EscapeString(topbarRoute(basePath, "/notifications/badge")),
 		)
 		if canReviews {

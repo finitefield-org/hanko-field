@@ -65,14 +65,14 @@ func NewStaticService() *StaticService {
 		RetryAvailable: true,
 		AckAvailable:   true,
 		Links: []Link{
-			{Label: "注文 #1042", URL: "/admin/orders/1042", Icon: "🧾"},
-			{Label: "配送ラベル", URL: "/admin/shipments/tracking?order=1042"},
+			{Label: "注文 #1042", URL: "/orders/1042", Icon: "🧾"},
+			{Label: "配送ラベル", URL: "/shipments/tracking?order=1042"},
 		},
 		Target: TargetRef{
 			Kind:  "注文",
 			Label: "#1042",
 			ID:    "1042",
-			URL:   "/admin/orders/1042",
+			URL:   "/orders/1042",
 		},
 		RunbookURL:  "https://runbooks.hanko.local/webhooks/shopify/checkout-update",
 		LastPayload: `{"event":"checkout_update","checkout_id":"chk_82jd8","line_items":3,"total_price":12800}`,
@@ -135,7 +135,7 @@ func NewStaticService() *StaticService {
 		RetryAvailable: true,
 		AckAvailable:   true,
 		Links: []Link{
-			{Label: "配送例外を確認", URL: "/admin/shipments/tracking?status=delayed", Icon: "🚚"},
+			{Label: "配送例外を確認", URL: "/shipments/tracking?status=delayed", Icon: "🚚"},
 		},
 		Target: TargetRef{
 			Kind:  "API",
@@ -202,7 +202,7 @@ func NewStaticService() *StaticService {
 					Title:       "注文ステータスを確認",
 					Description: "関連する注文が既にキャンセルされていないか確認します。キャンセル済みであれば安全に無視できます。",
 					Links: []Link{
-						{Label: "注文 #1042 を開く", URL: "/admin/orders/1042"},
+						{Label: "注文 #1042 を開く", URL: "/orders/1042"},
 					},
 				},
 				{
@@ -317,7 +317,7 @@ func NewStaticService() *StaticService {
 					Title:       "バックログを監視",
 					Description: "配送トラッキング画面で遅延リスクを確認し、お客様への連絡が必要か評価します。",
 					Links: []Link{
-						{Label: "配送トラッキング", URL: "/admin/shipments/tracking"},
+						{Label: "配送トラッキング", URL: "/shipments/tracking"},
 					},
 				},
 				{

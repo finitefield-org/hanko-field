@@ -39,7 +39,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})))
 
 	t.Run("missing token redirects", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
 		if rr.Code != http.StatusFound {
@@ -60,13 +60,13 @@ func TestAuthMiddleware(t *testing.T) {
 		if got := q.Get("reason"); got != ReasonMissingToken {
 			t.Fatalf("expected reason %s, got %s", ReasonMissingToken, got)
 		}
-		if got := q.Get("next"); got != "/admin" {
+		if got := q.Get("next"); got != "/" {
 			t.Fatalf("expected next=/admin, got %s", got)
 		}
 	})
 
 	t.Run("htmx unauthorized returns 401", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("HX-Request", "true")
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -84,13 +84,13 @@ func TestAuthMiddleware(t *testing.T) {
 		if parsed.Path != "/login" {
 			t.Fatalf("expected HX-Redirect path /login, got %s", parsed.Path)
 		}
-		if parsed.Query().Get("next") != "/admin" {
+		if parsed.Query().Get("next") != "/" {
 			t.Fatalf("expected HX-Redirect next=/admin")
 		}
 	})
 
 	t.Run("valid token passes through", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("Authorization", "Bearer valid")
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -100,7 +100,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("token from cookie passes through", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{Name: "Authorization", Value: "valid"})
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -111,7 +111,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	t.Run("expired token triggers refresh header", func(t *testing.T) {
 		auth.err = NewAuthError(ReasonTokenExpired, errors.New("expired"))
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("HX-Request", "true")
 		rr := httptest.NewRecorder()
@@ -130,7 +130,7 @@ func TestCSRFMiddleware(t *testing.T) {
 	mw := CSRF(CSRFConfig{CookieName: "csrf", HeaderName: "X-CSRF-Token"})
 
 	t.Run("issues cookie on GET", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 		mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := CSRFTokenFromContext(r.Context())
@@ -155,7 +155,7 @@ func TestCSRFMiddleware(t *testing.T) {
 	})
 
 	t.Run("rejects unsafe request without header", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/admin", nil)
+		req := httptest.NewRequest(http.MethodPost, "/", nil)
 		req.AddCookie(&http.Cookie{Name: "csrf", Value: "token"})
 		rr := httptest.NewRecorder()
 		mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).ServeHTTP(rr, req)
@@ -165,7 +165,7 @@ func TestCSRFMiddleware(t *testing.T) {
 	})
 
 	t.Run("allows unsafe request with matching header", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/admin", nil)
+		req := httptest.NewRequest(http.MethodPost, "/", nil)
 		req.AddCookie(&http.Cookie{Name: "csrf", Value: "token"})
 		req.Header.Set("X-CSRF-Token", "token")
 		rr := httptest.NewRecorder()
@@ -189,7 +189,7 @@ func TestHTMXMiddleware(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}))
 
-		req := httptest.NewRequest(http.MethodGet, "/admin/fragments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/fragments", nil)
 		req.Header.Set("HX-Request", "true")
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
@@ -202,7 +202,7 @@ func TestHTMXMiddleware(t *testing.T) {
 		handler := base(RequireHTMX()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})))
-		req := httptest.NewRequest(http.MethodGet, "/admin/fragments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/fragments", nil)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
 		if rr.Code != http.StatusNotFound {
@@ -260,7 +260,7 @@ func TestAuthMiddlewareStoresSessionUser(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})))
 
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer valid")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -274,7 +274,7 @@ func TestAuthMiddlewareStoresSessionUser(t *testing.T) {
 		t.Fatalf("expected session cookie to be issued")
 	}
 
-	req2 := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
 	req2.AddCookie(cookies[0])
 	sess, err := store.Load(req2)
 	if err != nil {
@@ -310,7 +310,7 @@ func TestAuthMiddlewareClearsSessionOnUnauthorized(t *testing.T) {
 		t.Fatalf("handler should not be reached")
 	})))
 
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(cookies[0])
 	rec2 := httptest.NewRecorder()
 	handler.ServeHTTP(rec2, req)

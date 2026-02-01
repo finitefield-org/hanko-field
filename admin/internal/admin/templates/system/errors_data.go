@@ -918,7 +918,7 @@ func statusTone(status adminsystem.Status) string {
 func joinBase(base, suffix string) string {
 	base = strings.TrimSpace(base)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

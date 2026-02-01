@@ -417,7 +417,7 @@
     <button
       type="button"
       class="{{buttonClass "ghost" "sm" false false}}"
-      hx-get="{{printf "/admin/content/pages/%s/history" .PageID}}"
+      hx-get="{{joinBase .BasePath (printf "/content/pages/%s/history" .PageID)}}"
       hx-target="#pages-history-modal-container"
       hx-swap="innerHTML"
     >履歴を表示</button>

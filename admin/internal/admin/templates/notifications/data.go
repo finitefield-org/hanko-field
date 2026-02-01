@@ -267,7 +267,7 @@ func BadgePayload(basePath string, count adminnotifications.BadgeCount) BadgeDat
 		ReviewsPending: count.ReviewsPending,
 		TasksPending:   count.TasksPending,
 		Endpoint:       joinBase(basePath, "/notifications/badge"),
-		StreamEndpoint: joinBase(basePath, "/notifications/stream"),
+		StreamEndpoint: "",
 		Href:           joinBase(basePath, "/notifications"),
 	}
 }

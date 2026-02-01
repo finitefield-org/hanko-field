@@ -711,7 +711,7 @@ func safeLabel(label, fallback string) string {
 func join(basePath, suffix string) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(suffix, "/") {
 		suffix = "/" + suffix

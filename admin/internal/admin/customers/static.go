@@ -198,9 +198,9 @@ func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
 					Tags:               append([]string(nil), c.Tags...),
 					QuickActions: []QuickAction{
 						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
-						{Label: "注文を作成", Href: "/admin/orders/new?customer=" + c.ID, Variant: "primary", Icon: "🛒"},
+						{Label: "注文を作成", Href: "/orders/new?customer=" + c.ID, Variant: "primary", Icon: "🛒"},
 						{Label: "Slack で共有", Href: "https://slack.com/app_redirect?channel=support", Variant: "ghost", Icon: "💬"},
-						{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
+						{Label: "退会＋マスク", Href: "/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
 					},
 				},
 				Metrics: []Metric{
@@ -444,7 +444,7 @@ func buildStaticDetails(customers []Customer, now time.Time) map[string]Detail {
 					QuickActions: []QuickAction{
 						{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
 						{Label: "営業へ共有", Href: "https://slack.com/app_redirect?channel=upsell", Variant: "ghost", Icon: "📈"},
-						{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
+						{Label: "退会＋マスク", Href: "/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"},
 					},
 				},
 				Metrics: []Metric{
@@ -573,7 +573,7 @@ func detailFromCustomer(c Customer, now time.Time) Detail {
 		{Label: "メールを送信", Href: "mailto:" + c.Email, Variant: "secondary", Icon: "✉"},
 	}
 	if c.Status != StatusDeactivated {
-		quickActions = append(quickActions, QuickAction{Label: "退会＋マスク", Href: "/admin/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"})
+		quickActions = append(quickActions, QuickAction{Label: "退会＋マスク", Href: "/customers/" + c.ID + "/modal/deactivate-mask", Variant: "danger", Icon: "🛡️", Method: "modal"})
 	}
 
 	profile := Profile{
@@ -730,7 +730,7 @@ func (s *StaticService) DeactivateAndMask(_ context.Context, _ string, customerI
 	detail.Profile.Phone = ""
 	detail.Profile.AvatarURL = ""
 	detail.Profile.QuickActions = []QuickAction{
-		{Label: "監査ログを開く", Href: fmt.Sprintf("/admin/audit-logs?targetRef=user:%s", customerID), Variant: "ghost", Icon: "📜"},
+		{Label: "監査ログを開く", Href: fmt.Sprintf("/audit-logs?targetRef=user:%s", customerID), Variant: "ghost", Icon: "📜"},
 	}
 	if !contains(detail.Profile.Tags, "masked") {
 		detail.Profile.Tags = append(detail.Profile.Tags, "masked")

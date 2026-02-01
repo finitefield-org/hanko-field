@@ -31,7 +31,7 @@ func TestDashboardRedirectsWithoutAuth(t *testing.T) {
 
 	client := noRedirectClient(t)
 
-	resp, err := client.Get(ts.URL + "/admin")
+	resp, err := client.Get(ts.URL + "/")
 	require.NoError(t, err)
 	t.Cleanup(func() { resp.Body.Close() })
 
@@ -40,10 +40,10 @@ func TestDashboardRedirectsWithoutAuth(t *testing.T) {
 	require.NotEmpty(t, location)
 	loc, err := url.Parse(location)
 	require.NoError(t, err)
-	require.Equal(t, "/admin/login", loc.Path)
+	require.Equal(t, "/login", loc.Path)
 	q := loc.Query()
 	require.Equal(t, middleware.ReasonMissingToken, q.Get("reason"))
-	require.Equal(t, "/admin", q.Get("next"))
+	require.Equal(t, "/", q.Get("next"))
 }
 
 func TestDashboardRendersForAuthenticatedUser(t *testing.T) {
@@ -56,7 +56,7 @@ func TestDashboardRendersForAuthenticatedUser(t *testing.T) {
 			{ID: "revenue", Label: "日次売上", Value: "¥123,000", DeltaText: "+12%", Trend: admindashboard.TrendUp, Sparkline: []float64{120, 135, 140}, UpdatedAt: now},
 		},
 		alerts: []admindashboard.Alert{
-			{ID: "inventory", Severity: "warning", Title: "在庫警告", Message: "SKU在庫が閾値を下回りました", ActionURL: "/admin/catalog/products", Action: "確認", CreatedAt: now.Add(-30 * time.Minute)},
+			{ID: "inventory", Severity: "warning", Title: "在庫警告", Message: "SKU在庫が閾値を下回りました", ActionURL: "/catalog/products", Action: "確認", CreatedAt: now.Add(-30 * time.Minute)},
 		},
 		activity: []admindashboard.ActivityItem{
 			{ID: "order", Icon: "📦", Title: "注文 #1001 を出荷しました", Detail: "山田様", Occurred: now.Add(-10 * time.Minute)},
@@ -65,7 +65,7 @@ func TestDashboardRendersForAuthenticatedUser(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithDashboardService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -105,7 +105,7 @@ func TestDashboardKPIFragmentProvidesCards(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithDashboardService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/fragments/kpi?limit=1", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/fragments/kpi?limit=1", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -130,7 +130,7 @@ func TestDashboardKPIsHandlesServiceError(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithDashboardService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/fragments/kpi", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/fragments/kpi", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -152,13 +152,13 @@ func TestDashboardAlertsFragmentProvidesList(t *testing.T) {
 	now := time.Now()
 	stub := &dashboardStub{
 		alerts: []admindashboard.Alert{
-			{ID: "delay", Severity: "danger", Title: "配送遅延", Message: "2件が遅延中", ActionURL: "/admin/shipments/tracking", Action: "確認", CreatedAt: now},
+			{ID: "delay", Severity: "danger", Title: "配送遅延", Message: "2件が遅延中", ActionURL: "/shipments/tracking", Action: "確認", CreatedAt: now},
 		},
 	}
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithDashboardService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/fragments/alerts", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/fragments/alerts", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -182,7 +182,7 @@ func TestDashboardAlertsHandlesServiceError(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithDashboardService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/fragments/alerts", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/fragments/alerts", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -215,7 +215,7 @@ func TestProfilePageRenders(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProfileService(service))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/profile", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profile", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -247,7 +247,7 @@ func TestProfileTabsFragmentHTMX(t *testing.T) {
 
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProfileService(service))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/profile?tab=sessions", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/profile?tab=sessions", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 	req.Header.Set("HX-Request", "true")
@@ -276,8 +276,8 @@ func TestLoginSuccessFlow(t *testing.T) {
 
 	client := noRedirectClient(t)
 
-	seedLoginCSRF(t, client, ts.URL+"/admin/login")
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin/login")
+	seedLoginCSRF(t, client, ts.URL+"/login")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/login")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
@@ -286,13 +286,13 @@ func TestLoginSuccessFlow(t *testing.T) {
 	form.Set("remember", "1")
 	form.Set("csrf_token", csrf)
 
-	resp, err := client.PostForm(ts.URL+"/admin/login", form)
+	resp, err := client.PostForm(ts.URL+"/login", form)
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
-	require.Equal(t, "/admin", resp.Header.Get("Location"))
+	require.Equal(t, "/", resp.Header.Get("Location"))
 
-	cookies := client.Jar.Cookies(mustParseURL(t, ts.URL+"/admin"))
+	cookies := client.Jar.Cookies(mustParseURL(t, ts.URL+"/"))
 	var authCookie *http.Cookie
 	for _, c := range cookies {
 		if c.Name == "Authorization" {
@@ -303,7 +303,7 @@ func TestLoginSuccessFlow(t *testing.T) {
 	require.NotNil(t, authCookie)
 	require.Equal(t, "Bearer "+auth.Token, authCookie.Value)
 
-	resp, err = client.Get(ts.URL + "/admin")
+	resp, err = client.Get(ts.URL + "/")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -316,8 +316,8 @@ func TestLoginHandlesInvalidToken(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 
 	client := noRedirectClient(t)
-	seedLoginCSRF(t, client, ts.URL+"/admin/login")
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin/login")
+	seedLoginCSRF(t, client, ts.URL+"/login")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/login")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
@@ -325,7 +325,7 @@ func TestLoginHandlesInvalidToken(t *testing.T) {
 	form.Set("id_token", "wrong-token")
 	form.Set("csrf_token", csrf)
 
-	resp, err := client.PostForm(ts.URL+"/admin/login", form)
+	resp, err := client.PostForm(ts.URL+"/login", form)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
@@ -342,20 +342,20 @@ func TestLogoutClearsSession(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 
 	client := noRedirectClient(t)
-	seedLoginCSRF(t, client, ts.URL+"/admin/login")
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin/login")
+	seedLoginCSRF(t, client, ts.URL+"/login")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/login")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
 	form.Set("id_token", auth.Token)
 	form.Set("csrf_token", csrf)
 
-	resp, err := client.PostForm(ts.URL+"/admin/login", form)
+	resp, err := client.PostForm(ts.URL+"/login", form)
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
 
-	resp, err = client.Get(ts.URL + "/admin/logout")
+	resp, err = client.Get(ts.URL + "/logout")
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
@@ -363,17 +363,17 @@ func TestLogoutClearsSession(t *testing.T) {
 	require.NotEmpty(t, loc)
 	mapped, err := url.Parse(loc)
 	require.NoError(t, err)
-	require.Equal(t, "/admin/login", mapped.Path)
+	require.Equal(t, "/login", mapped.Path)
 	require.Equal(t, "logged_out", mapped.Query().Get("status"))
 
-	resp, err = client.Get(ts.URL + "/admin")
+	resp, err = client.Get(ts.URL + "/")
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusFound, resp.StatusCode)
 
 	reloc, err := url.Parse(resp.Header.Get("Location"))
 	require.NoError(t, err)
-	require.Equal(t, "/admin/login", reloc.Path)
+	require.Equal(t, "/login", reloc.Path)
 	require.Equal(t, middleware.ReasonMissingToken, reloc.Query().Get("reason"))
 }
 
@@ -384,8 +384,8 @@ func TestLoginRejectsExternalNextParameter(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 
 	client := noRedirectClient(t)
-	seedLoginCSRF(t, client, ts.URL+"/admin/login")
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin/login")
+	seedLoginCSRF(t, client, ts.URL+"/login")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/login")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
@@ -393,19 +393,19 @@ func TestLoginRejectsExternalNextParameter(t *testing.T) {
 	form.Set("csrf_token", csrf)
 	form.Set("next", "http://evil.example/phish")
 
-	resp, err := client.PostForm(ts.URL+"/admin/login", form)
+	resp, err := client.PostForm(ts.URL+"/login", form)
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
-	require.Equal(t, "/admin", resp.Header.Get("Location"))
+	require.Equal(t, "/", resp.Header.Get("Location"))
 
 	// Ensure encoded double slash is also rejected.
 	form.Set("next", "%2f%2fevil.example/another")
-	resp, err = client.PostForm(ts.URL+"/admin/login", form)
+	resp, err = client.PostForm(ts.URL+"/login", form)
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
-	require.Equal(t, "/admin", resp.Header.Get("Location"))
+	require.Equal(t, "/", resp.Header.Get("Location"))
 }
 
 func TestOrdersStatusUpdateFlow(t *testing.T) {
@@ -416,7 +416,7 @@ func TestOrdersStatusUpdateFlow(t *testing.T) {
 	client := noRedirectClient(t)
 
 	// Seed CSRF cookie by loading the orders page.
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/orders", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 	resp, err := client.Do(req)
@@ -424,11 +424,11 @@ func TestOrdersStatusUpdateFlow(t *testing.T) {
 	resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	// Fetch the status modal via htmx request.
-	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1052/modal/status", nil)
+	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders/order-1052/modal/status", nil)
 	require.NoError(t, err)
 	modalReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	modalReq.Header.Set("HX-Request", "true")
@@ -440,14 +440,14 @@ func TestOrdersStatusUpdateFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, modalResp.StatusCode)
 	modalHTML := string(body)
-	require.Contains(t, modalHTML, `hx-put="/admin/orders/order-1052:status"`)
+	require.Contains(t, modalHTML, `hx-put="/orders/order-1052:status"`)
 
 	// Submit the status update.
 	form := url.Values{}
 	form.Set("status", "ready_to_ship")
 	form.Set("note", "包装確認済み")
 	form.Set("notifyCustomer", "true")
-	updateReq, err := http.NewRequest(http.MethodPut, ts.URL+"/admin/orders/order-1052:status", strings.NewReader(form.Encode()))
+	updateReq, err := http.NewRequest(http.MethodPut, ts.URL+"/orders/order-1052:status", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	updateReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	updateReq.Header.Set("HX-Request", "true")
@@ -475,7 +475,7 @@ func TestOrdersManualCaptureFlow(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 	client := noRedirectClient(t)
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/orders", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 	resp, err := client.Do(req)
@@ -483,10 +483,10 @@ func TestOrdersManualCaptureFlow(t *testing.T) {
 	resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
-	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1048/modal/manual-capture", nil)
+	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders/order-1048/modal/manual-capture", nil)
 	require.NoError(t, err)
 	modalReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	modalReq.Header.Set("HX-Request", "true")
@@ -497,14 +497,14 @@ func TestOrdersManualCaptureFlow(t *testing.T) {
 	modalResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, modalResp.StatusCode)
-	require.Contains(t, string(modalBody), `hx-post="/admin/orders/order-1048/payments:manual-capture"`)
+	require.Contains(t, string(modalBody), `hx-post="/orders/order-1048/payments:manual-capture"`)
 
 	form := url.Values{}
 	form.Set("paymentID", "pay-1048")
 	form.Set("amount", "999999")
 	form.Set("reason", "テスト売上確定")
 
-	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
+	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	invalidReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	invalidReq.Header.Set("HX-Request", "true")
@@ -521,7 +521,7 @@ func TestOrdersManualCaptureFlow(t *testing.T) {
 
 	form.Set("amount", "1000")
 
-	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
+	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-1048/payments:manual-capture", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	validReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	validReq.Header.Set("HX-Request", "true")
@@ -547,7 +547,7 @@ func TestOrdersRefundFlow(t *testing.T) {
 	client := noRedirectClient(t)
 
 	// Seed CSRF cookie by loading the orders page.
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/orders", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 	resp, err := client.Do(req)
@@ -555,11 +555,11 @@ func TestOrdersRefundFlow(t *testing.T) {
 	resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	// Load the refund modal.
-	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1052/modal/refund", nil)
+	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders/order-1052/modal/refund", nil)
 	require.NoError(t, err)
 	modalReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	modalReq.Header.Set("HX-Request", "true")
@@ -571,7 +571,7 @@ func TestOrdersRefundFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, modalResp.StatusCode)
 	modalHTML := string(modalBody)
-	require.Contains(t, modalHTML, `hx-post="/admin/orders/order-1052/payments:refund"`)
+	require.Contains(t, modalHTML, `hx-post="/orders/order-1052/payments:refund"`)
 
 	// Submit an invalid refund that exceeds the available amount.
 	form := url.Values{}
@@ -580,7 +580,7 @@ func TestOrdersRefundFlow(t *testing.T) {
 	form.Set("reason", "テスト返金")
 	form.Set("notifyCustomer", "true")
 
-	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1052/payments:refund", strings.NewReader(form.Encode()))
+	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-1052/payments:refund", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	invalidReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	invalidReq.Header.Set("HX-Request", "true")
@@ -597,7 +597,7 @@ func TestOrdersRefundFlow(t *testing.T) {
 
 	// Submit a valid refund.
 	form.Set("amount", "5000")
-	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1052/payments:refund", strings.NewReader(form.Encode()))
+	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-1052/payments:refund", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	validReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	validReq.Header.Set("HX-Request", "true")
@@ -622,7 +622,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	client := noRedirectClient(t)
 
 	// Seed CSRF cookie.
-	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders", nil)
+	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders", nil)
 	require.NoError(t, err)
 	seedReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	seedResp, err := client.Do(seedReq)
@@ -630,11 +630,11 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	seedResp.Body.Close()
 	require.Equal(t, http.StatusOK, seedResp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	// Load the invoice modal.
-	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1052/modal/invoice", nil)
+	modalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders/order-1052/modal/invoice", nil)
 	require.NoError(t, err)
 	modalReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	modalReq.Header.Set("HX-Request", "true")
@@ -645,7 +645,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	require.Equal(t, http.StatusOK, modalResp.StatusCode)
 	modalBody, err := io.ReadAll(modalResp.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(modalBody), `hx-post="/admin/invoices:issue"`)
+	require.Contains(t, string(modalBody), `hx-post="/invoices:issue"`)
 
 	// Submit invalid invoice request (invalid email).
 	form := url.Values{}
@@ -655,7 +655,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	form.Set("email", "invalid-email")
 	form.Set("note", "テスト領収書")
 
-	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/invoices:issue", strings.NewReader(form.Encode()))
+	invalidReq, err := http.NewRequest(http.MethodPost, ts.URL+"/invoices:issue", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	invalidReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	invalidReq.Header.Set("HX-Request", "true")
@@ -672,7 +672,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 
 	// Submit valid invoice request (synchronous template).
 	form.Set("email", "jun.hasegawa+new@example.com")
-	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/invoices:issue", strings.NewReader(form.Encode()))
+	validReq, err := http.NewRequest(http.MethodPost, ts.URL+"/invoices:issue", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	validReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	validReq.Header.Set("HX-Request", "true")
@@ -686,7 +686,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	require.Equal(t, `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`, validResp.Header.Get("HX-Trigger"))
 
 	// Load modal for asynchronous template.
-	asyncModalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/orders/order-1050/modal/invoice", nil)
+	asyncModalReq, err := http.NewRequest(http.MethodGet, ts.URL+"/orders/order-1050/modal/invoice", nil)
 	require.NoError(t, err)
 	asyncModalReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	asyncModalReq.Header.Set("HX-Request", "true")
@@ -704,7 +704,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	asyncForm.Set("email", "maho.sato@example.com")
 	asyncForm.Set("note", "バッチ請求書")
 
-	asyncReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/invoices:issue", strings.NewReader(asyncForm.Encode()))
+	asyncReq, err := http.NewRequest(http.MethodPost, ts.URL+"/invoices:issue", strings.NewReader(asyncForm.Encode()))
 	require.NoError(t, err)
 	asyncReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	asyncReq.Header.Set("HX-Request", "true")
@@ -725,7 +725,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	require.NotEmpty(t, jobID)
 
 	// First poll should keep the job running.
-	pollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/invoices/jobs/"+jobID, nil)
+	pollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/invoices/jobs/"+jobID, nil)
 	require.NoError(t, err)
 	pollReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	pollReq.Header.Set("HX-Request", "true")
@@ -740,7 +740,7 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 	require.Contains(t, string(pollBody), "現在のステータス")
 
 	// Second poll should complete the job and close the modal.
-	finalPollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/invoices/jobs/"+jobID, nil)
+	finalPollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/invoices/jobs/"+jobID, nil)
 	require.NoError(t, err)
 	finalPollReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	finalPollReq.Header.Set("HX-Request", "true")
@@ -759,7 +759,7 @@ func TestProductionQueuesPageRenders(t *testing.T) {
 	stub := &productionStub{boardResult: sampleBoardResult()}
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProductionService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/production/queues", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/production/queues", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -781,7 +781,7 @@ func TestProductionQueuesSummaryRenders(t *testing.T) {
 	stub := &productionStub{summaryResult: sampleSummaryResult()}
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProductionService(stub))
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/production/queues/summary", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/production/queues/summary", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+auth.Token)
 
@@ -804,7 +804,7 @@ func TestOrdersProductionEventSuccess(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProductionService(stub))
 	client := noRedirectClient(t)
 
-	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/production/queues", nil)
+	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/production/queues", nil)
 	require.NoError(t, err)
 	seedReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	seedResp, err := client.Do(seedReq)
@@ -812,12 +812,12 @@ func TestOrdersProductionEventSuccess(t *testing.T) {
 	seedResp.Body.Close()
 	require.Equal(t, http.StatusOK, seedResp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
 	form.Set("type", "engraving")
-	postReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-5000/production-events", strings.NewReader(form.Encode()))
+	postReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-5000/production-events", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	postReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	postReq.Header.Set("HX-Request", "true")
@@ -844,19 +844,19 @@ func TestOrdersProductionEventHandlesErrors(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth), testutil.WithProductionService(stub))
 	client := noRedirectClient(t)
 
-	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/production/queues", nil)
+	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/production/queues", nil)
 	require.NoError(t, err)
 	seedReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	seedResp, err := client.Do(seedReq)
 	require.NoError(t, err)
 	seedResp.Body.Close()
 	require.Equal(t, http.StatusOK, seedResp.StatusCode)
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	form := url.Values{}
 	form.Set("type", "invalid-stage")
-	postReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-5000/production-events", strings.NewReader(form.Encode()))
+	postReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-5000/production-events", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	postReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	postReq.Header.Set("HX-Request", "true")
@@ -879,7 +879,7 @@ func TestShipmentsLabelGenerationFlow(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 	client := noRedirectClient(t)
 
-	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/shipments/batches", nil)
+	seedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/shipments/batches", nil)
 	require.NoError(t, err)
 	seedReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	seedResp, err := client.Do(seedReq)
@@ -887,12 +887,12 @@ func TestShipmentsLabelGenerationFlow(t *testing.T) {
 	seedResp.Body.Close()
 	require.Equal(t, http.StatusOK, seedResp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	regenForm := url.Values{}
 	regenForm.Set("batchID", "batch-2304")
-	regenReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/shipments/batches/regenerate", strings.NewReader(regenForm.Encode()))
+	regenReq, err := http.NewRequest(http.MethodPost, ts.URL+"/shipments/batches/regenerate", strings.NewReader(regenForm.Encode()))
 	require.NoError(t, err)
 	regenReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	regenReq.Header.Set("HX-Request", "true")
@@ -907,7 +907,7 @@ func TestShipmentsLabelGenerationFlow(t *testing.T) {
 	require.Equal(t, `{"toast":{"message":"バッチ batch-2304 のラベル再生成を開始しました。","tone":"success"}}`, regenResp.Header.Get("HX-Trigger"))
 	require.Equal(t, `{"shipments:select":{"id":"batch-2304"}}`, regenResp.Header.Get("HX-Trigger-After-Swap"))
 
-	orderReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/orders/order-1052/shipments", strings.NewReader(""))
+	orderReq, err := http.NewRequest(http.MethodPost, ts.URL+"/orders/order-1052/shipments", strings.NewReader(""))
 	require.NoError(t, err)
 	orderReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	orderReq.Header.Set("HX-Request", "true")
@@ -929,7 +929,7 @@ func TestPromotionsCreationFlow(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 	client := noRedirectClient(t)
 
-	pageReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/promotions", nil)
+	pageReq, err := http.NewRequest(http.MethodGet, ts.URL+"/promotions", nil)
 	require.NoError(t, err)
 	pageReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	pageResp, err := client.Do(pageReq)
@@ -937,7 +937,7 @@ func TestPromotionsCreationFlow(t *testing.T) {
 	pageResp.Body.Close()
 	require.Equal(t, http.StatusOK, pageResp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	now := time.Now().In(time.Local)
@@ -959,7 +959,7 @@ func TestPromotionsCreationFlow(t *testing.T) {
 	form.Set("usageLimit", "500")
 	form.Set("perCustomerLimit", "1")
 
-	createReq, err := http.NewRequest(http.MethodPost, ts.URL+"/admin/promotions", strings.NewReader(form.Encode()))
+	createReq, err := http.NewRequest(http.MethodPost, ts.URL+"/promotions", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	createReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	createReq.Header.Set("HX-Request", "true")
@@ -993,7 +993,7 @@ func TestPromotionsCreationFlow(t *testing.T) {
 	require.NotEmpty(t, selectedID)
 	require.True(t, strings.HasPrefix(selectedID, "promo-generated-"))
 
-	tableReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/promotions/table?selected="+url.QueryEscape(selectedID), nil)
+	tableReq, err := http.NewRequest(http.MethodGet, ts.URL+"/promotions/table?selected="+url.QueryEscape(selectedID), nil)
 	require.NoError(t, err)
 	tableReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	tableReq.Header.Set("HX-Request", "true")
@@ -1019,7 +1019,7 @@ func TestReviewsModerationFlow(t *testing.T) {
 	ts := testutil.NewServer(t, testutil.WithAuthenticator(auth))
 	client := noRedirectClient(t)
 
-	pageURL := ts.URL + "/admin/reviews?moderation=pending"
+	pageURL := ts.URL + "/reviews?moderation=pending"
 	pageReq, err := http.NewRequest(http.MethodGet, pageURL, nil)
 	require.NoError(t, err)
 	pageReq.Header.Set("Authorization", "Bearer "+auth.Token)
@@ -1028,7 +1028,7 @@ func TestReviewsModerationFlow(t *testing.T) {
 	pageResp.Body.Close()
 	require.Equal(t, http.StatusOK, pageResp.StatusCode)
 
-	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/admin")
+	csrf := findCSRFCookie(t, client.Jar, ts.URL+"/")
 	require.NotEmpty(t, csrf)
 
 	reviewID := "rvw-pending-1043"
@@ -1038,7 +1038,7 @@ func TestReviewsModerationFlow(t *testing.T) {
 	form.Set("notifyCustomer", "true")
 	form.Set("selected", reviewID)
 
-	moderateReq, err := http.NewRequest(http.MethodPut, ts.URL+"/admin/reviews/"+reviewID+":moderate", strings.NewReader(form.Encode()))
+	moderateReq, err := http.NewRequest(http.MethodPut, ts.URL+"/reviews/"+reviewID+":moderate", strings.NewReader(form.Encode()))
 	require.NoError(t, err)
 	moderateReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	moderateReq.Header.Set("HX-Request", "true")
@@ -1063,7 +1063,7 @@ func TestReviewsModerationFlow(t *testing.T) {
 	require.True(t, exists)
 	require.Equal(t, "true", swapAttr)
 
-	approvedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/admin/reviews?moderation=approved", nil)
+	approvedReq, err := http.NewRequest(http.MethodGet, ts.URL+"/reviews?moderation=approved", nil)
 	require.NoError(t, err)
 	approvedReq.Header.Set("Authorization", "Bearer "+auth.Token)
 	approvedResp, err := client.Do(approvedReq)

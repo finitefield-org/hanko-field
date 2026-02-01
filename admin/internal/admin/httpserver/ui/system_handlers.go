@@ -649,7 +649,7 @@ func encodeSystemTasksQuery(state systemtpl.TasksQueryState) string {
 func canonicalSystemTasksURL(basePath string, state systemtpl.TasksQueryState) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base
@@ -730,7 +730,7 @@ func encodeSystemCountersQuery(state systemtpl.CountersQueryState) string {
 func canonicalSystemCountersURL(basePath string, state systemtpl.CountersQueryState) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base
@@ -1100,11 +1100,11 @@ func encodeSystemErrorsQuery(state systemtpl.QueryState) string {
 func canonicalSystemErrorsURL(basePath string, state systemtpl.QueryState) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	base = strings.TrimRight(base, "/")
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 
 	query := encodeSystemErrorsQuery(state)

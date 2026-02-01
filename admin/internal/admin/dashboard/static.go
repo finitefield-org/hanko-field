@@ -60,7 +60,7 @@ func NewStaticService() *StaticService {
 			Severity:  "warning",
 			Title:     "在庫残りわずか",
 			Message:   "人気SKU「KF-2024-GD」の残数が 12 個になりました。",
-			ActionURL: "/admin/catalog/products?sku=KF-2024-GD",
+			ActionURL: "/catalog/products?sku=KF-2024-GD",
 			Action:    "在庫を補充",
 			CreatedAt: now.Add(-30 * time.Minute),
 		},
@@ -69,7 +69,7 @@ func NewStaticService() *StaticService {
 			Severity:  "danger",
 			Title:     "配送遅延アラート",
 			Message:   "ヤマト運輸 6 件が遅延ステータスです。お客様への連絡が必要です。",
-			ActionURL: "/admin/shipments/tracking?status=delayed",
+			ActionURL: "/shipments/tracking?status=delayed",
 			Action:    "詳細を確認",
 			CreatedAt: now.Add(-2 * time.Hour),
 		},
@@ -78,7 +78,7 @@ func NewStaticService() *StaticService {
 			Severity:  "info",
 			Title:     "サポート未返信",
 			Message:   "高優先度の問い合わせが 3 件あります。",
-			ActionURL: "/admin/notifications?category=support",
+			ActionURL: "/notifications?category=support",
 			Action:    "チケットを開く",
 			CreatedAt: now.Add(-5 * time.Hour),
 		},
@@ -91,7 +91,7 @@ func NewStaticService() *StaticService {
 			Title:    "注文 #1045 を出荷しました",
 			Detail:   "佐藤様 / ヤマト運輸（翌日配達）",
 			Occurred: now.Add(-12 * time.Minute),
-			LinkURL:  "/admin/orders/1045",
+			LinkURL:  "/orders/1045",
 		},
 		{
 			ID:       "activity-production",
@@ -99,7 +99,7 @@ func NewStaticService() *StaticService {
 			Title:    "制作ライン - 彫刻完了",
 			Detail:   "オーダー #1038 の彫刻工程が完了しました。",
 			Occurred: now.Add(-45 * time.Minute),
-			LinkURL:  "/admin/production/queues",
+			LinkURL:  "/production/queues",
 		},
 		{
 			ID:       "activity-review",
@@ -107,7 +107,7 @@ func NewStaticService() *StaticService {
 			Title:    "レビュー承認待ち",
 			Detail:   "4.5 ★ / 署名刻印リング",
 			Occurred: now.Add(-2 * time.Hour),
-			LinkURL:  "/admin/reviews?moderation=pending",
+			LinkURL:  "/reviews?moderation=pending",
 		},
 	}
 

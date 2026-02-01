@@ -521,7 +521,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 func normalizeBasePath(path string) string {
 	p := strings.TrimSpace(path)
 	if p == "" {
-		return "/admin"
+		return "/"
 	}
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p

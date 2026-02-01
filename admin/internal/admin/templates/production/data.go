@@ -520,7 +520,7 @@ func breadcrumbs(base string) []partials.Breadcrumb {
 
 func joinBase(base, suffix string) string {
 	if strings.TrimSpace(base) == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(suffix, "/") {
 		suffix = "/" + suffix

@@ -266,7 +266,7 @@ func buildNotificationsRequest(r *http.Request) notificationsRequest {
 func canonicalNotificationsURL(basePath string, req notificationsRequest) string {
 	basePath = strings.TrimSpace(basePath)
 	if basePath == "" {
-		basePath = "/admin"
+		basePath = "/"
 	}
 	values := url.Values{}
 	if req.state.Category != "" {
@@ -299,7 +299,7 @@ func canonicalNotificationsURL(basePath string, req notificationsRequest) string
 func joinRoute(base, suffix string) string {
 	base = strings.TrimSpace(base)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

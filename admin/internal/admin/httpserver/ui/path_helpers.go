@@ -5,7 +5,7 @@ import "strings"
 func joinBasePath(basePath, suffix string) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(suffix, "/") {
 		suffix = "/" + suffix

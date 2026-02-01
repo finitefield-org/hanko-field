@@ -18,7 +18,7 @@ import (
 func TestTopbarActionsRenderForAdmin(t *testing.T) {
 	t.Parallel()
 
-	ctx := buildTopbarContext(t, "/admin/orders", "Staging")
+	ctx := buildTopbarContext(t, "/orders", "Staging")
 	ctx = middleware.ContextWithUser(ctx, &middleware.User{
 		UID:   "ops-1",
 		Email: "ops@example.com",
@@ -34,17 +34,16 @@ func TestTopbarActionsRenderForAdmin(t *testing.T) {
 
 	search := doc.Find("[data-topbar-search-trigger]")
 	require.Equal(t, 1, search.Length(), "search shortcut should be visible for admin")
-	require.Equal(t, "/admin/search?overlay=1", search.AttrOr("hx-get", ""))
-	require.Equal(t, "/admin/search", search.AttrOr("data-search-href", ""))
+	require.Equal(t, "/search?overlay=1", search.AttrOr("hx-get", ""))
+	require.Equal(t, "/search", search.AttrOr("data-search-href", ""))
 
 	notifications := doc.Find("[data-notifications-root]")
 	require.Equal(t, 1, notifications.Length(), "notifications badge should render for admin")
-	require.Equal(t, "/admin/notifications/badge", notifications.AttrOr("hx-get", ""))
+	require.Equal(t, "/notifications/badge", notifications.AttrOr("hx-get", ""))
 
 	workloads := doc.Find("[data-workload-badges]")
 	require.Equal(t, 1, workloads.Length(), "workload badges container should render for admin")
-	require.Equal(t, "/admin/notifications/stream", workloads.AttrOr("data-workload-stream", ""))
-	require.Equal(t, "/admin/notifications/badge", workloads.AttrOr("data-workload-endpoint", ""))
+	require.Equal(t, "/notifications/badge", workloads.AttrOr("data-workload-endpoint", ""))
 	require.Equal(t, 1, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge placeholder should render")
 	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews badge placeholder should render")
 	require.Equal(t, 1, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge placeholder should render")
@@ -52,14 +51,14 @@ func TestTopbarActionsRenderForAdmin(t *testing.T) {
 
 	userMenu := doc.Find("[data-user-menu]")
 	require.Equal(t, 1, userMenu.Length(), "user menu should render")
-	require.Equal(t, "/admin/logout", doc.Find("[data-user-menu-logout]").AttrOr("action", ""), "logout form should post to logout route")
+	require.Equal(t, "/logout", doc.Find("[data-user-menu-logout]").AttrOr("action", ""), "logout form should post to logout route")
 	require.Equal(t, 1, doc.Find("[data-user-menu-logout] input[name=\"_csrf\"]").Length(), "logout form should include CSRF field")
 }
 
 func TestTopbarHidesRestrictedActions(t *testing.T) {
 	t.Parallel()
 
-	ctx := buildTopbarContext(t, "/admin/catalog/products", "Development")
+	ctx := buildTopbarContext(t, "/catalog/products", "Development")
 	ctx = middleware.ContextWithUser(ctx, &middleware.User{
 		UID:   "marketer",
 		Email: "marketing@example.com",
@@ -71,7 +70,6 @@ func TestTopbarHidesRestrictedActions(t *testing.T) {
 	require.Equal(t, 0, doc.Find("[data-topbar-search-trigger]").Length(), "search shortcut must be hidden without capability")
 	require.Equal(t, 0, doc.Find("[data-notifications-root]").Length(), "notifications badge must be hidden without capability")
 	require.Equal(t, 1, doc.Find("[data-workload-badges]").Length(), "workload badges container should render when moderation capability is present")
-	require.Equal(t, "/admin/notifications/stream", doc.Find("[data-workload-badges]").AttrOr("data-workload-stream", ""))
 	require.Equal(t, 1, doc.Find("[data-workload-badge='reviews']").Length(), "reviews workload badge should render for marketing role")
 	require.Equal(t, 0, doc.Find("[data-workload-badge='alerts']").Length(), "alerts badge must be hidden without notifications capability")
 	require.Equal(t, 0, doc.Find("[data-workload-badge='tasks']").Length(), "tasks badge must be hidden without system capability")
@@ -88,7 +86,7 @@ func buildTopbarContext(t *testing.T, requestPath string, environment string) co
 	rec := httptest.NewRecorder()
 
 	var ctx context.Context
-	handler := middleware.RequestInfoMiddleware("/admin")(middleware.Environment(environment)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	handler := middleware.RequestInfoMiddleware("/")(middleware.Environment(environment)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		ctx = r.Context()
 	})))
 	handler.ServeHTTP(rec, req)

@@ -1814,7 +1814,7 @@ func joinBaseFooter(base, suffix string) string {
 func joinBase(base, suffix string) string {
 	base = strings.TrimSpace(base)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	suffix = strings.TrimSpace(suffix)
 	if !strings.HasPrefix(suffix, "/") {

@@ -14,12 +14,12 @@ dev: tidy ensure-tailwind ## Start dev server with Tailwind watcher
 	TW_PID=$$!; \
 	trap "kill $$TW_PID" EXIT; \
 	echo "Starting Go server..."; \
-	GOCACHE=$(GOCACHE) go run ./cmd/admin
+	FIREBASE_PROJECT_ID= ADMIN_ALLOW_INSECURE_AUTH=1 GOCACHE=$(GOCACHE) go run ./cmd/admin
 
 .PHONY: run
 run: ## Run the Go server without hot reload
 	@mkdir -p $(GOCACHE)
-	@GOCACHE=$(GOCACHE) go run ./cmd/admin
+	@FIREBASE_PROJECT_ID= ADMIN_ALLOW_INSECURE_AUTH=1 GOCACHE=$(GOCACHE) go run ./cmd/admin
 
 .PHONY: css
 css: ensure-tailwind ## Build Tailwind assets

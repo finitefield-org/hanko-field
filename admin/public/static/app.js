@@ -3612,7 +3612,7 @@ const validateAssetFile = (root, file) => {
 const requestSignedUpload = async (root, file) => {
   const endpoint = typeof root.dataset.uploadEndpoint === "string" && root.dataset.uploadEndpoint.trim() !== ""
     ? root.dataset.uploadEndpoint
-    : "/admin/assets/signed-upload";
+    : "/assets/signed-upload";
   const payload = {
     purpose: typeof root.dataset.purpose === "string" && root.dataset.purpose.trim() !== "" ? root.dataset.purpose.trim() : "preview",
     kind: deriveKind(root, file),

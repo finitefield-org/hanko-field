@@ -63,7 +63,7 @@ func NewServer(t testing.TB, opts ...ServerOption) *httptest.Server {
 
 	cfg := httpserver.Config{
 		Address:           ":0",
-		BasePath:          "/admin",
+		BasePath:          "/",
 		LoginPath:         "",
 		CSRFCookieName:    "csrf_token",
 		CSRFHeaderName:    "X-CSRF-Token",

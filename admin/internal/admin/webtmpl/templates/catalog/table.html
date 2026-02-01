@@ -252,13 +252,13 @@
     </table>
     {{if gt .Pagination.PageSize 0}}
       <div class="border-t border-slate-100 px-4 py-3">
-        {{template "components/pagination" (catalogPaginationProps .)}}
+        {{template "components/pagination" (dict "Props" (catalogPaginationProps .))}}
       </div>
     {{end}}
   {{end}}
 </div>
 <div id="catalog-drawer" hx-swap-oob="true">
-  {{template "catalog/drawer" (dict "Drawer" .Drawer "BasePath" $.BasePath)}}
+  {{template "catalog/drawer" (dict "Drawer" .Drawer "BasePath" .BasePath)}}
 </div>
 {{template "catalog/view-toggle" (dict "Toggle" .View "Swap" true)}}
 <input type="hidden" id="catalog-view-field" name="view" value="{{.View.Active}}" hx-swap-oob="true" />

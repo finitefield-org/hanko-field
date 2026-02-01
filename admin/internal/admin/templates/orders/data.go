@@ -1713,14 +1713,19 @@ func breadcrumbItems() []partials.Breadcrumb {
 
 func joinBase(base, suffix string) string {
 	base = strings.TrimSpace(base)
-	if base == "" {
-		base = "/admin"
-	}
-	if !strings.HasPrefix(base, "/") {
-		base = "/" + base
-	}
-	if base != "/" {
+	if base == "" || base == "/" {
+		base = ""
+	} else {
+		if !strings.HasPrefix(base, "/") {
+			base = "/" + base
+		}
 		base = strings.TrimRight(base, "/")
+	}
+	if strings.TrimSpace(suffix) == "" {
+		if base == "" {
+			return "/"
+		}
+		return base
 	}
 	if !strings.HasPrefix(suffix, "/") {
 		suffix = "/" + suffix

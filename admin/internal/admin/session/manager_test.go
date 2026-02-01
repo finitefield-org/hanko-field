@@ -43,7 +43,7 @@ func newTestManager(t *testing.T) (*Manager, *fixedClock) {
 func TestManager_NewSessionLifecycle(t *testing.T) {
 	mgr, clock := newTestManager(t)
 
-	req := httptest.NewRequest("GET", "/admin", nil)
+	req := httptest.NewRequest("GET", "/", nil)
 	sess, err := mgr.Load(req)
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
@@ -81,7 +81,7 @@ func TestManager_NewSessionLifecycle(t *testing.T) {
 	}
 
 	clock.current = clock.current.Add(5 * time.Minute)
-	req2 := httptest.NewRequest("GET", "/admin", nil)
+	req2 := httptest.NewRequest("GET", "/", nil)
 	req2.AddCookie(httpSessCookie)
 	sess2, err := mgr.Load(req2)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestManager_NewSessionLifecycle(t *testing.T) {
 
 func TestManager_IdleTimeout(t *testing.T) {
 	mgr, clock := newTestManager(t)
-	req := httptest.NewRequest("GET", "/admin", nil)
+	req := httptest.NewRequest("GET", "/", nil)
 	sess, err := mgr.Load(req)
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
@@ -115,7 +115,7 @@ func TestManager_IdleTimeout(t *testing.T) {
 	cookie := findCookie(rec.Result().Cookies(), "test_session")
 
 	clock.current = clock.current.Add(20 * time.Minute)
-	req2 := httptest.NewRequest("GET", "/admin", nil)
+	req2 := httptest.NewRequest("GET", "/", nil)
 	req2.AddCookie(cookie)
 	if _, err := mgr.Load(req2); !errors.Is(err, ErrExpired) {
 		t.Fatalf("expected ErrExpired, got %v", err)
@@ -124,7 +124,7 @@ func TestManager_IdleTimeout(t *testing.T) {
 
 func TestManager_Destroy(t *testing.T) {
 	mgr, _ := newTestManager(t)
-	req := httptest.NewRequest("GET", "/admin", nil)
+	req := httptest.NewRequest("GET", "/", nil)
 	sess, _ := mgr.Load(req)
 	rec := httptest.NewRecorder()
 	sess.Destroy()

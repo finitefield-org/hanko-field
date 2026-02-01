@@ -1070,7 +1070,7 @@ func buildOrdersRequestFromValues(values url.Values, rawQuery string) ordersRequ
 func canonicalOrdersURL(basePath string, req ordersRequest) string {
 	base := strings.TrimSpace(basePath)
 	if base == "" {
-		base = "/admin"
+		base = "/"
 	}
 	if !strings.HasPrefix(base, "/") {
 		base = "/" + base

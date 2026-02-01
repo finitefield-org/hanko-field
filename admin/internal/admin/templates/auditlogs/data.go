@@ -382,14 +382,19 @@ func containsValue(values []string, target string) bool {
 }
 
 func joinBase(basePath, suffix string) string {
-	base := strings.TrimRight(basePath, "/")
-	if base == "" {
-		base = "/admin"
+	base := strings.TrimSpace(basePath)
+	if base == "" || base == "/" {
+		base = ""
+	} else {
+		if !strings.HasPrefix(base, "/") {
+			base = "/" + base
+		}
+		base = strings.TrimRight(base, "/")
 	}
-	if !strings.HasPrefix(base, "/") {
-		base = "/" + base
-	}
-	if suffix == "" {
+	if strings.TrimSpace(suffix) == "" {
+		if base == "" {
+			return "/"
+		}
 		return base
 	}
 	if !strings.HasPrefix(suffix, "/") {

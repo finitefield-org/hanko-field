@@ -24,9 +24,9 @@ func TestOrdersProbeSuccess(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	mountUptimeRoutes(router, "/admin", handlers)
+	mountUptimeRoutes(router, "/", handlers)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/orders", nil)
+	req := httptest.NewRequest(http.MethodGet, "/uptime/orders", nil)
 	req.Header.Set(uptimeAuthHeader, "secret")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
@@ -57,9 +57,9 @@ func TestNotificationsProbeFailure(t *testing.T) {
 		Notifications: failingNotificationsService{},
 	})
 	router := chi.NewRouter()
-	mountUptimeRoutes(router, "/admin", handlers)
+	mountUptimeRoutes(router, "/", handlers)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/notifications", nil)
+	req := httptest.NewRequest(http.MethodGet, "/uptime/notifications", nil)
 	req.Header.Set(uptimeAuthHeader, "secret")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
@@ -89,9 +89,9 @@ func TestUptimeProbeUnauthorized(t *testing.T) {
 		Orders: adminorders.NewStaticService(),
 	})
 	router := chi.NewRouter()
-	mountUptimeRoutes(router, "/admin", handlers)
+	mountUptimeRoutes(router, "/", handlers)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/uptime/orders", nil)
+	req := httptest.NewRequest(http.MethodGet, "/uptime/orders", nil)
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 

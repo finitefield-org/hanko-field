@@ -152,7 +152,7 @@ func normalizeTrackingShipment(sh TrackingShipment) TrackingShipment {
 		}
 	}
 	if sh.OrderURL == "" && sh.OrderID != "" {
-		sh.OrderURL = fmt.Sprintf("/admin/orders/%s?tab=shipments", sh.OrderID)
+		sh.OrderURL = fmt.Sprintf("/orders/%s?tab=shipments", sh.OrderID)
 	}
 	return sh
 }

@@ -50,8 +50,8 @@ func NewStaticService() *StaticService {
 			BadgeIcon:        badgeIcon,
 			BadgeTone:        badgeTone,
 			BadgeLabel:       badgeLabel,
-			LabelDownloadURL: "/admin/shipments/batches/" + id + "/labels.pdf",
-			ManifestURL:      "/admin/shipments/batches/" + id + "/manifest.csv",
+			LabelDownloadURL: "/shipments/batches/" + id + "/labels.pdf",
+			ManifestURL:      "/shipments/batches/" + id + "/manifest.csv",
 			LastOperator:     lastOperator,
 			LastUpdated:      now.Add(-time.Duration(progress) * time.Minute),
 		}
@@ -226,7 +226,7 @@ func mockTrackingShipments(now time.Time) []TrackingShipment {
 			ExceptionLabel:   exceptionLabel,
 			ExceptionTone:    exceptionTone,
 			AlertIcon:        alertIcon,
-			OrderURL:         fmt.Sprintf("/admin/orders/%s?tab=shipments", orderID),
+			OrderURL:         fmt.Sprintf("/orders/%s?tab=shipments", orderID),
 		}
 	}
 
@@ -508,14 +508,14 @@ func (s *StaticService) ListTracking(_ context.Context, _ string, query Tracking
 				Description: "大阪以南宛て 18 件が住所不備で止まっています。チームに連絡してください。",
 				Tone:        "warning",
 				ActionLabel: "連絡先を見る",
-				ActionURL:   "/admin/shipments/batches?facility=osaka",
+				ActionURL:   "/shipments/batches?facility=osaka",
 			},
 			{
 				Label:       "ヤマト HND→FUK レーンで交通規制",
 				Description: "高速道路規制の影響で 6 件が SLA 遅延リスクに入っています。",
 				Tone:        "danger",
 				ActionLabel: "対象注文を表示",
-				ActionURL:   "/admin/shipments/tracking?lane=HND%E2%86%92FUK&status=in_transit",
+				ActionURL:   "/shipments/tracking?lane=HND%E2%86%92FUK&status=in_transit",
 			},
 		},
 	}, nil

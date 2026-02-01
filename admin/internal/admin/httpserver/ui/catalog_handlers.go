@@ -54,6 +54,7 @@ func (h *Handlers) CatalogPage(w http.ResponseWriter, r *http.Request) {
 		Page:     data,
 	}
 	if err := dashboardTemplates.Render(w, "catalog/index", view); err != nil {
+		log.Printf("catalog: template render error (index): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -104,6 +105,7 @@ func renderCatalogFragment(w http.ResponseWriter, r *http.Request, h *Handlers, 
 			BasePath: custommw.BasePathFromContext(ctx),
 		}
 		if err := dashboardTemplates.Render(w, "catalog/cards-fragment", view); err != nil {
+			log.Printf("catalog: template render error (cards fragment): %v", err)
 			http.Error(w, "template render error", http.StatusInternalServerError)
 		}
 	default:
@@ -112,6 +114,7 @@ func renderCatalogFragment(w http.ResponseWriter, r *http.Request, h *Handlers, 
 			BasePath: custommw.BasePathFromContext(ctx),
 		}
 		if err := dashboardTemplates.Render(w, "catalog/table-fragment", view); err != nil {
+			log.Printf("catalog: template render error (table fragment): %v", err)
 			http.Error(w, "template render error", http.StatusInternalServerError)
 		}
 	}
@@ -135,6 +138,7 @@ func (h *Handlers) CatalogNewModal(w http.ResponseWriter, r *http.Request) {
 
 	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
 	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		log.Printf("catalog: template render error (new modal): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -169,6 +173,7 @@ func (h *Handlers) CatalogEditModal(w http.ResponseWriter, r *http.Request) {
 
 	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
 	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		log.Printf("catalog: template render error (edit modal): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -202,6 +207,7 @@ func (h *Handlers) CatalogDeleteModal(w http.ResponseWriter, r *http.Request) {
 
 	view := webtmpl.CatalogDeleteModalView{BasePath: basePath, Data: data}
 	if err := dashboardTemplates.Render(w, "catalog/delete-modal", view); err != nil {
+		log.Printf("catalog: template render error (delete modal): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -513,6 +519,7 @@ func reRenderCatalogModal(w http.ResponseWriter, r *http.Request, kind admincata
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	view := webtmpl.CatalogModalView{BasePath: basePath, Data: data}
 	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
+		log.Printf("catalog: template render error (upsert modal rerender): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -546,6 +553,7 @@ func (h *Handlers) handleCatalogDeleteError(w http.ResponseWriter, r *http.Reque
 				w.WriteHeader(http.StatusConflict)
 				view := webtmpl.CatalogDeleteModalView{BasePath: basePath, Data: data}
 				if err := dashboardTemplates.Render(w, "catalog/delete-modal", view); err != nil {
+					log.Printf("catalog: template render error (delete modal rerender): %v", err)
 					http.Error(w, "template render error", http.StatusInternalServerError)
 				}
 				return

@@ -84,14 +84,14 @@ func TestDelRawQuery(t *testing.T) {
 func TestBuildURL(t *testing.T) {
 	t.Parallel()
 
-	u := BuildURL("/admin/orders", "page=2&sort=created_at")
-	if u != "/admin/orders?page=2&sort=created_at" {
+	u := BuildURL("/orders", "page=2&sort=created_at")
+	if u != "/orders?page=2&sort=created_at" {
 		t.Errorf("unexpected URL: %s", u)
 	}
 
 	// handles empty raw query without trailing question mark
-	u = BuildURL("/admin/orders?page=1", "")
-	if u != "/admin/orders" {
+	u = BuildURL("/orders?page=1", "")
+	if u != "/orders" {
 		t.Errorf("expected query stripped when empty, got %s", u)
 	}
 }

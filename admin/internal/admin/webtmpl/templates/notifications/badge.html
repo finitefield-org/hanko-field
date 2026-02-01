@@ -3,10 +3,9 @@
   class="relative"
   data-notifications-root
   hx-get="{{.Endpoint}}"
-  hx-trigger="load, every 30s"
+  hx-trigger="every 30s"
   hx-target="this"
   hx-swap="outerHTML"
-  data-notifications-stream="{{.StreamEndpoint}}"
   data-notifications-href="{{.Href}}"
   data-badge-total="{{.Total}}"
   data-badge-critical="{{.Critical}}"

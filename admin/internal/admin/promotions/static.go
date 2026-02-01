@@ -1396,7 +1396,7 @@ func (s *StaticService) UsageExportStatus(_ context.Context, _ string, jobID str
 			state.Job.StatusTone = "success"
 			state.Job.Message = "エクスポートが完了しました。ダウンロードを開始できます。"
 			state.Job.CompletedAt = &now
-			state.Job.DownloadURL = fmt.Sprintf("/admin/downloads/promotions/%s/%s.%s", state.Job.PromotionID, state.Job.ID, state.Job.Format)
+			state.Job.DownloadURL = fmt.Sprintf("/downloads/promotions/%s/%s.%s", state.Job.PromotionID, state.Job.ID, state.Job.Format)
 		}
 
 		s.usageExports[jobID] = state
@@ -2183,7 +2183,7 @@ func buildUsageAlert(promotion Promotion, query UsageQuery, summary UsageSummary
 		return nil
 	}
 	if promotion.Status == StatusPaused {
-		link := fmt.Sprintf("/admin/promotions/%s/analytics", url.QueryEscape(promotion.ID))
+		link := fmt.Sprintf("/promotions/%s/analytics", url.QueryEscape(promotion.ID))
 		message := fmt.Sprintf("%s は一時停止中ですが直近で %d 件の利用が検知されています。", promotion.Name, summary.TotalRedemptions)
 		return &UsageAlert{
 			Tone:      "warning",
@@ -2209,7 +2209,7 @@ func buildUsageAlert(promotion Promotion, query UsageQuery, summary UsageSummary
 	}
 
 	if summary.TotalRedemptions >= threshold && threshold > 0 {
-		link := fmt.Sprintf("/admin/promotions/%s/analytics", url.QueryEscape(promotion.ID))
+		link := fmt.Sprintf("/promotions/%s/analytics", url.QueryEscape(promotion.ID))
 		message := fmt.Sprintf("%s の利用が想定より多く発生しています。(期間内 %d 件)", promotion.Name, summary.TotalRedemptions)
 		return &UsageAlert{
 			Tone:      "warning",

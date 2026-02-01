@@ -47,7 +47,7 @@ func main() {
 
 	cfg := httpserver.Config{
 		Address:              getEnv("ADMIN_HTTP_ADDR", ":3051"),
-		BasePath:             getEnv("ADMIN_BASE_PATH", "/admin"),
+		BasePath:             getEnv("ADMIN_BASE_PATH", "/"),
 		DefaultLocale:        getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
 		SupportedLocales:     getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),
 		Authenticator:        buildAuthenticator(rootCtx),
