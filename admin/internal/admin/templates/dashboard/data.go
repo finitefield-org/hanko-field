@@ -19,7 +19,6 @@ type PageData struct {
 	Activity           []ActivityItem
 	KPIEndpoint        string
 	AlertsEndpoint     string
-	PollIntervalSecond int
 }
 
 // KPIFragmentData holds the KPI cards payload.
@@ -72,11 +71,10 @@ func BuildPageData(ctx context.Context, basePath string, kpis []admindashboard.K
 	return PageData{
 		Title:              formatter.T("admin.dashboard.title"),
 		KPIFragment:        KPIFragmentPayload(kpis),
-		AlertsFragment:     AlertsFragmentPayload(alerts),
-		Activity:           ActivityFeedPayload(activity),
+		AlertsFragment:     AlertsFragmentPayload(alerts, basePath),
+		Activity:           ActivityFeedPayload(activity, basePath),
 		KPIEndpoint:        joinBase(basePath, "/fragments/kpi"),
 		AlertsEndpoint:     joinBase(basePath, "/fragments/alerts"),
-		PollIntervalSecond: 60,
 	}
 }
 
@@ -86,13 +84,13 @@ func KPIFragmentPayload(list []admindashboard.KPI) KPIFragmentData {
 }
 
 // AlertsFragmentPayload prepares alerts data for rendering.
-func AlertsFragmentPayload(list []admindashboard.Alert) AlertsFragmentData {
-	return AlertsFragmentData{Alerts: toAlertViews(list)}
+func AlertsFragmentPayload(list []admindashboard.Alert, basePath string) AlertsFragmentData {
+	return AlertsFragmentData{Alerts: toAlertViews(list, basePath)}
 }
 
 // ActivityFeedPayload prepares activity items for rendering.
-func ActivityFeedPayload(list []admindashboard.ActivityItem) []ActivityItem {
-	return toActivityViews(list)
+func ActivityFeedPayload(list []admindashboard.ActivityItem, basePath string) []ActivityItem {
+	return toActivityViews(list, basePath)
 }
 
 // toKPIViews converts service models.
@@ -113,15 +111,16 @@ func toKPIViews(list []admindashboard.KPI) []KPIView {
 }
 
 // toAlertViews converts service models.
-func toAlertViews(list []admindashboard.Alert) []AlertView {
+func toAlertViews(list []admindashboard.Alert, basePath string) []AlertView {
 	result := make([]AlertView, 0, len(list))
 	for _, item := range list {
+		actionURL := applyBasePath(basePath, item.ActionURL)
 		result = append(result, AlertView{
 			ID:        item.ID,
 			Severity:  item.Severity,
 			Title:     item.Title,
 			Message:   item.Message,
-			ActionURL: item.ActionURL,
+			ActionURL: actionURL,
 			Action:    item.Action,
 			CreatedAt: item.CreatedAt,
 		})
@@ -130,19 +129,31 @@ func toAlertViews(list []admindashboard.Alert) []AlertView {
 }
 
 // toActivityViews converts service models.
-func toActivityViews(list []admindashboard.ActivityItem) []ActivityItem {
+func toActivityViews(list []admindashboard.ActivityItem, basePath string) []ActivityItem {
 	result := make([]ActivityItem, 0, len(list))
 	for _, item := range list {
+		linkURL := applyBasePath(basePath, item.LinkURL)
 		result = append(result, ActivityItem{
 			ID:       item.ID,
 			Icon:     item.Icon,
 			Title:    item.Title,
 			Detail:   item.Detail,
 			Occurred: item.Occurred,
-			LinkURL:  item.LinkURL,
+			LinkURL:  linkURL,
 		})
 	}
 	return result
+}
+
+func applyBasePath(basePath, href string) string {
+	href = strings.TrimSpace(href)
+	if href == "" {
+		return ""
+	}
+	if strings.HasPrefix(href, "/") {
+		return joinBase(basePath, href)
+	}
+	return href
 }
 
 func joinBase(base, suffix string) string {

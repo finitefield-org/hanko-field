@@ -201,13 +201,6 @@
 {{if .Visible}}
   <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
     <p class="font-medium text-slate-700">{{.Summary}}</p>
-    <div class="flex flex-wrap gap-2">
-      {{range $action := .Actions}}
-        <button type="button" class="{{buttonClass $action.Tone "sm" false $action.Disabled}}" {{if $action.Disabled}}disabled{{end}}>
-          {{$action.Label}}
-        </button>
-      {{end}}
-    </div>
   </div>
 {{end}}
 {{end}}

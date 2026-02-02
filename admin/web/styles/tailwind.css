@@ -5,26 +5,26 @@
 @layer base {
   :root {
     color-scheme: light;
-    --surface-default: theme("colors.surface.DEFAULT");
-    --surface-muted: theme("colors.surface.muted");
-    --surface-subtle: theme("colors.surface.subtle");
-    --surface-overlay: theme("colors.surface.overlay");
-    --border-subtle: theme("colors.border.subtle");
-    --border-bold: theme("colors.border.bold");
-    --text-default: theme("colors.slate.900");
-    --text-subtle: theme("colors.slate.600");
+    --surface-default: theme("colors.surface.DEFAULT", #ffffff);
+    --surface-muted: theme("colors.surface.muted", #f1f5f9);
+    --surface-subtle: theme("colors.surface.subtle", #f8fafc);
+    --surface-overlay: theme("colors.surface.overlay", rgba(15, 23, 42, 0.55));
+    --border-subtle: theme("colors.border.subtle", #e2e8f0);
+    --border-bold: theme("colors.border.bold", #cbd5f5);
+    --text-default: theme("colors.slate.900", #0f172a);
+    --text-subtle: theme("colors.slate.600", #475569);
   }
 
   .dark {
     color-scheme: dark;
-    --surface-default: theme("colors.slate.950");
-    --surface-muted: theme("colors.slate.900");
-    --surface-subtle: theme("colors.slate.800");
+    --surface-default: theme("colors.slate.950", #020617);
+    --surface-muted: theme("colors.slate.900", #0f172a);
+    --surface-subtle: theme("colors.slate.800", #1e293b);
     --surface-overlay: rgba(2, 6, 23, 0.65);
-    --border-subtle: theme("colors.slate.700");
-    --border-bold: theme("colors.slate.600");
-    --text-default: theme("colors.slate.100");
-    --text-subtle: theme("colors.slate.400");
+    --border-subtle: theme("colors.slate.700", #334155);
+    --border-bold: theme("colors.slate.600", #475569);
+    --text-default: theme("colors.slate.100", #f1f5f9);
+    --text-subtle: theme("colors.slate.400", #94a3b8);
   }
 
   body {
@@ -248,7 +248,7 @@
 
   @screen tablet {
     .tablet-sidebar {
-      box-shadow: theme("boxShadow.surface");
+      box-shadow: theme("boxShadow.surface", 0 8px 20px rgba(15, 23, 42, 0.08));
     }
 
     .tablet-sidebar .sidebar-brand-title,

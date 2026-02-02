@@ -44,6 +44,7 @@ func (h *Handlers) NotificationsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	base := webtmpl.BuildBaseView(ctx, payload.Title, crumbs)
 	base.ContentTemplate = "notifications/content"
+	basePath := custommw.BasePathFromContext(ctx)
 	view := webtmpl.NotificationsPageView{
 		BaseView:      base,
 		Title:         payload.Title,
@@ -52,8 +53,8 @@ func (h *Handlers) NotificationsPage(w http.ResponseWriter, r *http.Request) {
 		Filters:       payload.Filters,
 		Query:         payload.Query,
 		TableEndpoint: payload.TableEndpoint,
-		Table:         toNotificationsTableView(table),
-		Drawer:        toNotificationsDrawerView(drawer),
+		Table:         toNotificationsTableView(basePath, table),
+		Drawer:        toNotificationsDrawerView(basePath, drawer),
 	}
 	if err := dashboardTemplates.Render(w, "notifications/index", view); err != nil {
 		http.Error(w, "template render error", http.StatusInternalServerError)
@@ -86,7 +87,7 @@ func (h *Handlers) NotificationsTable(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Push-Url", canonical)
 	}
 
-	view := toNotificationsTableView(table)
+	view := toNotificationsTableView(custommw.BasePathFromContext(ctx), table)
 	if err := dashboardTemplates.Render(w, "notifications/table", view); err != nil {
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
@@ -115,7 +116,6 @@ func (h *Handlers) NotificationsBadge(w http.ResponseWriter, r *http.Request) {
 		ReviewsPending: payload.ReviewsPending,
 		TasksPending:   payload.TasksPending,
 		Endpoint:       payload.Endpoint,
-		StreamEndpoint: payload.StreamEndpoint,
 		Href:           payload.Href,
 	}
 	if err := dashboardTemplates.Render(w, "notifications/badge", view); err != nil {
@@ -129,12 +129,20 @@ type notificationsRequest struct {
 	selectedID string
 }
 
-func toNotificationsTableView(table notificationstpl.TableData) webtmpl.NotificationsTableView {
+func toNotificationsTableView(basePath string, table notificationstpl.TableData) webtmpl.NotificationsTableView {
 	rows := make([]webtmpl.NotificationRowView, 0, len(table.Items))
 	for _, row := range table.Items {
 		attrs := map[string]string{}
 		for key, val := range row.Attributes {
 			attrs[key] = fmt.Sprint(val)
+		}
+		actions := make([]notificationstpl.RowAction, 0, len(row.Actions))
+		for _, action := range row.Actions {
+			actions = append(actions, notificationstpl.RowAction{
+				Label: action.Label,
+				URL:   applyBasePath(basePath, action.URL),
+				Icon:  action.Icon,
+			})
 		}
 		rows = append(rows, webtmpl.NotificationRowView{
 			ID:                row.ID,
@@ -148,12 +156,12 @@ func toNotificationsTableView(table notificationstpl.TableData) webtmpl.Notifica
 			StatusLabel:       row.StatusLabel,
 			StatusTone:        row.StatusTone,
 			ResourceLabel:     row.ResourceLabel,
-			ResourceURL:       row.ResourceURL,
+			ResourceURL:       applyBasePath(basePath, row.ResourceURL),
 			ResourceKind:      row.ResourceKind,
 			Owner:             row.Owner,
 			CreatedAtRelative: row.CreatedAtRelative,
 			CreatedAtTooltip:  row.CreatedAtTooltip,
-			Actions:           row.Actions,
+			Actions:           actions,
 			Attributes:        attrs,
 		})
 	}
@@ -167,10 +175,20 @@ func toNotificationsTableView(table notificationstpl.TableData) webtmpl.Notifica
 	}
 }
 
-func toNotificationsDrawerView(drawer notificationstpl.DrawerData) webtmpl.NotificationsDrawerView {
+func toNotificationsDrawerView(basePath string, drawer notificationstpl.DrawerData) webtmpl.NotificationsDrawerView {
 	tooltip := ""
 	if !drawer.CreatedAt.IsZero() {
 		tooltip = helpers.Date(drawer.CreatedAt, "2006-01-02 15:04")
+	}
+	resource := drawer.Resource
+	resource.URL = applyBasePath(basePath, resource.URL)
+	links := make([]notificationstpl.RowAction, 0, len(drawer.Links))
+	for _, link := range drawer.Links {
+		links = append(links, notificationstpl.RowAction{
+			Label: link.Label,
+			URL:   applyBasePath(basePath, link.URL),
+			Icon:  link.Icon,
+		})
 	}
 	return webtmpl.NotificationsDrawerView{
 		Empty:             drawer.Empty,
@@ -184,15 +202,37 @@ func toNotificationsDrawerView(drawer notificationstpl.DrawerData) webtmpl.Notif
 		StatusLabel:       drawer.StatusLabel,
 		StatusTone:        drawer.StatusTone,
 		Owner:             drawer.Owner,
-		Resource:          drawer.Resource,
+		Resource:          resource,
 		CreatedRelative:   drawer.CreatedRelative,
 		CreatedTooltip:    tooltip,
 		AcknowledgedLabel: drawer.AcknowledgedLabel,
 		ResolvedLabel:     drawer.ResolvedLabel,
 		Metadata:          drawer.Metadata,
 		Timeline:          drawer.Timeline,
-		Links:             drawer.Links,
+		Links:             links,
 	}
+}
+
+func applyBasePath(basePath, href string) string {
+	href = strings.TrimSpace(href)
+	if href == "" {
+		return href
+	}
+	lower := strings.ToLower(href)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "mailto:") || strings.HasPrefix(lower, "tel:") {
+		return href
+	}
+	if !strings.HasPrefix(href, "/") {
+		return href
+	}
+	base := strings.TrimSpace(basePath)
+	if base == "" || base == "/" {
+		return href
+	}
+	if strings.HasPrefix(href, base+"/") || href == base {
+		return href
+	}
+	return joinBasePath(base, href)
 }
 
 func buildNotificationsRequest(r *http.Request) notificationsRequest {

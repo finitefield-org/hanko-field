@@ -21,17 +21,6 @@
         </span>
       </div>
     </div>
-    <div class="flex flex-col items-start gap-4">
-      {{ template "c_inline_notice" (dict "ID" "design-ai-poll-indicator" "Message" (safe (printf "Next refresh in <span id='design-ai-countdown'>%d</span>s" $view.Poll.CountdownSeconds))) }}
-      <button id="design-ai-poll-toggle"
-              type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              aria-pressed="true"
-              data-poll-state="running">
-        {{ template "icon" (dict "Name" "pause" "Class" "h-4 w-4") }}
-        Pause auto refresh
-      </button>
-    </div>
   </header>
 
   {{ template "c_ai_stats_bar" (dict "Stats" $view.Stats) }}
@@ -111,9 +100,6 @@
 
 <script>
 (function(){
-  var polling = true;
-  var timer = null;
-
   function $(selector){ return document.querySelector(selector); }
   function $all(selector){ return Array.prototype.slice.call(document.querySelectorAll(selector)); }
 
@@ -125,29 +111,10 @@
     return document.getElementById('design-ai-preview');
   }
 
-  function updateCountdown(display){
-    var el = document.getElementById('design-ai-countdown');
-    if (!el) { return; }
-    el.textContent = display;
-  }
-
-  function formatCountdown(secs){
-    if (secs <= 0) { return '0'; }
-    return secs.toString();
-  }
-
   function triggerRefresh(){
     var table = getTable();
     if (!table) { return; }
-    if (!polling) { return; }
     htmx.trigger(table, 'design-ai:refresh');
-  }
-
-  function stopTimer(){
-    if (timer) {
-      window.clearInterval(timer);
-      timer = null;
-    }
   }
 
   function applyActiveState(){
@@ -168,39 +135,6 @@
     });
   }
 
-  function refreshTimer(){
-    stopTimer();
-    var table = getTable();
-    if (!table) {
-      updateCountdown('--');
-      return;
-    }
-    var interval = parseInt(table.getAttribute('data-poll-interval') || '12', 10);
-    var remaining = interval;
-    updateCountdown(formatCountdown(remaining));
-    if (!polling) { return; }
-    timer = window.setInterval(function(){
-      remaining -= 1;
-      if (remaining <= 0) {
-        triggerRefresh();
-        remaining = interval;
-      }
-      updateCountdown(formatCountdown(remaining));
-    }, 1000);
-  }
-
-  var pollToggle = document.getElementById('design-ai-poll-toggle');
-  if (pollToggle) {
-    pollToggle.addEventListener('click', function(){
-      polling = !polling;
-      pollToggle.setAttribute('aria-pressed', polling ? 'true' : 'false');
-      pollToggle.setAttribute('data-poll-state', polling ? 'running' : 'paused');
-      pollToggle.innerHTML = polling
-        ? '{{ template "icon" (dict "Name" "pause" "Class" "h-4 w-4") }} Pause auto refresh'
-        : '{{ template "icon" (dict "Name" "play" "Class" "h-4 w-4") }} Resume auto refresh';
-      refreshTimer();
-    });
-  }
 
   document.body.addEventListener('design-ai:suggestion-accepted', function(evt){
     var detail = (evt && evt.detail) || {};
@@ -247,7 +181,6 @@
   document.addEventListener('htmx:afterSwap', function(evt){
     if (!evt || !evt.target) { return; }
     if (evt.target.id === 'design-ai-table') {
-      refreshTimer();
       applyActiveState();
     }
     if (evt.target.id === 'design-ai-preview') {
@@ -256,7 +189,6 @@
   });
 
   applyActiveState();
-  refreshTimer();
 })();
 </script>
 {{ end }}

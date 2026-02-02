@@ -273,7 +273,7 @@ func (h *Handlers) ReviewsModerate(w http.ResponseWriter, r *http.Request) {
 		tone = "warning"
 	}
 
-	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"toast":{"message":"%s","tone":"%s"},"modal:close":true}`, message, tone))
+setHXTrigger(w, fmt.Sprintf(`{"toast":{"message":"%s","tone":"%s"},"modal:close":true}`, message, tone))
 	view := webtmpl.ReviewsRefreshView{
 		Table:  toReviewsTableView(payload.Table),
 		Detail: payload.Detail,
@@ -403,7 +403,7 @@ func (h *Handlers) ReviewsStoreReply(w http.ResponseWriter, r *http.Request) {
 	table := reviewstpl.TablePayload(basePath, reviewsReq.state, listResult, detail.SelectedID, errMsg)
 	payload := reviewstpl.ReplySuccessPayload(table, detail)
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"返信を保存しました。","tone":"success"},"modal:close":true}`)
+setHXTrigger(w, `{"toast":{"message":"返信を保存しました。","tone":"success"},"modal:close":true}`)
 	view := webtmpl.ReviewsRefreshView{
 		Table:  toReviewsTableView(payload.Table),
 		Detail: payload.Detail,

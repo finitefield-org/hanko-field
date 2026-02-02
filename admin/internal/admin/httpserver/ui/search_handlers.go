@@ -11,6 +11,7 @@ import (
 	custommw "finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	adminsearch "finitefield.org/hanko-admin/internal/admin/search"
 	searchtpl "finitefield.org/hanko-admin/internal/admin/templates/search"
+	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 	"finitefield.org/hanko-admin/internal/admin/webtmpl"
 )
 
@@ -32,7 +33,7 @@ func (h *Handlers) SearchPage(w http.ResponseWriter, r *http.Request) {
 		result = adminsearch.ResultSet{}
 	}
 
-	table := searchtpl.TablePayload(params.state, result, errMsg)
+	table := searchtpl.TablePayload(params.state, result, errMsg, helpers.LocaleCode(ctx))
 	payload := searchtpl.BuildPageData(custommw.BasePathFromContext(ctx), params.state, table)
 	crumbs := make([]webtmpl.Breadcrumb, 0, len(payload.Breadcrumbs))
 	for _, crumb := range payload.Breadcrumbs {
@@ -70,7 +71,7 @@ func (h *Handlers) SearchTable(w http.ResponseWriter, r *http.Request) {
 		result = adminsearch.ResultSet{}
 	}
 
-	table := searchtpl.TablePayload(params.state, result, errMsg)
+	table := searchtpl.TablePayload(params.state, result, errMsg, helpers.LocaleCode(ctx))
 
 	if canonical := canonicalSearchURL(custommw.BasePathFromContext(ctx), params); canonical != "" {
 		w.Header().Set("HX-Push-Url", canonical)

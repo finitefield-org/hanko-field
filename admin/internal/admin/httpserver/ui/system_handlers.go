@@ -242,41 +242,50 @@ func (h *Handlers) SystemTasksTrigger(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// SystemTasksStream emits SSE refresh events for the tasks table.
-func (h *Handlers) SystemTasksStream(w http.ResponseWriter, r *http.Request) {
+// SystemTasksRetry triggers a retry from notification links.
+func (h *Handlers) SystemTasksRetry(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
-	writeEvent := func() {
-		if _, err := fmt.Fprintf(w, "event: refresh\n"); err != nil {
-			return
-		}
-		if _, err := fmt.Fprintf(w, "data: %s\n\n", time.Now().Format(time.RFC3339)); err != nil {
-			return
-		}
-		flusher.Flush()
+	jobID := strings.TrimSpace(chi.URLParam(r, "jobID"))
+	if jobID == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
 	}
 
-	writeEvent()
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
+	outcome, err := h.system.TriggerJob(ctx, user.Token, jobID, adminsystem.TriggerOptions{
+		Actor:  user.Email,
+		Reason: "通知からの再実行",
+	})
+	if err != nil {
+		if errors.Is(err, adminsystem.ErrJobNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
-		case <-ticker.C:
-			writeEvent()
 		}
+		if errors.Is(err, adminsystem.ErrJobTriggerNotAllowed) {
+			http.Error(w, "このタスクでは再実行が許可されていません。", http.StatusBadRequest)
+			return
+		}
+		log.Printf("system tasks: retry failed: %v", err)
+		http.Error(w, "再実行の要求に失敗しました。", http.StatusInternalServerError)
+		return
 	}
+
+	if strings.EqualFold(r.Header.Get("HX-Request"), "true") {
+		sendHXTrigger(w, outcome.Message, "success")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	basePath := custommw.BasePathFromContext(ctx)
+	target := joinBase(basePath, "/system/tasks")
+	values := url.Values{}
+	values.Set("selected", jobID)
+	http.Redirect(w, r, target+"?"+values.Encode(), http.StatusSeeOther)
 }
 
 // SystemCountersPage renders the counters management page.
@@ -1199,5 +1208,5 @@ func sendHXTrigger(w http.ResponseWriter, message, tone string) {
 		log.Printf("system errors: marshal HX-Trigger failed: %v", err)
 		return
 	}
-	w.Header().Set("HX-Trigger", string(body))
+setHXTrigger(w, string(body))
 }

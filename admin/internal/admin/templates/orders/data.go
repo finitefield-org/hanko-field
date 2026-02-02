@@ -3,7 +3,6 @@ package orders
 import (
 	"fmt"
 	"math"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -407,12 +406,10 @@ type InvoiceJobModalData struct {
 	Submitted     string
 	Relative      string
 	Message       string
-	PollURL       string
-	PollTrigger   string
 	Status        InvoiceJobStatusFragmentData
 }
 
-// InvoiceJobStatusFragmentData captures the current job status payload for polling.
+// InvoiceJobStatusFragmentData captures the current job status payload.
 type InvoiceJobStatusFragmentData struct {
 	JobID         string
 	StatusLabel   string
@@ -424,8 +421,6 @@ type InvoiceJobStatusFragmentData struct {
 	Relative      string
 	Done          bool
 	Active        bool
-	PollURL       string
-	PollTrigger   string
 }
 
 // InvoiceFormState stores user input when re-rendering the invoice modal.
@@ -479,8 +474,6 @@ type ExportJobCardData struct {
 	FieldsSummary     string
 	DownloadURL       string
 	DownloadLabel     string
-	PollURL           string
-	PollTrigger       string
 	Done              bool
 	HasDownload       bool
 }
@@ -597,12 +590,6 @@ func buildExportJobCards(basePath string, jobs []adminorders.ExportJob) []Export
 		fieldsSummary := strings.Join(job.Fields, ", ")
 		downloadURL := strings.TrimSpace(job.DownloadURL)
 		downloadLabel := exportDownloadLabel(job.Format)
-		pollURL := exportJobPollURL(basePath, id)
-		pollTrigger := ""
-		if !done {
-			pollTrigger = "load, every 3s"
-		}
-
 		message := strings.TrimSpace(job.Message)
 		if message == "" {
 			message = fallbackExportMessage(job.Format, done)
@@ -624,8 +611,6 @@ func buildExportJobCards(basePath string, jobs []adminorders.ExportJob) []Export
 			FieldsSummary:     fieldsSummary,
 			DownloadURL:       downloadURL,
 			DownloadLabel:     downloadLabel,
-			PollURL:           pollURL,
-			PollTrigger:       pollTrigger,
 			Done:              done,
 			HasDownload:       downloadURL != "",
 		})
@@ -640,14 +625,6 @@ func exportDownloadLabel(format adminorders.ExportFormat) string {
 	default:
 		return "CSVをダウンロード"
 	}
-}
-
-func exportJobPollURL(basePath string, jobID string) string {
-	trimmed := strings.TrimSpace(jobID)
-	if trimmed == "" {
-		return ""
-	}
-	return joinBase(basePath, "/orders/bulk/export/jobs/"+url.PathEscape(trimmed))
 }
 
 func exportJobDOMID(id string) string {
@@ -1203,13 +1180,9 @@ func InvoiceModalPayload(basePath string, modal adminorders.InvoiceModal, csrfTo
 }
 
 // InvoiceModalJobPayload prepares the job state view for asynchronous issuance.
-func InvoiceModalJobPayload(modal adminorders.InvoiceModal, job adminorders.InvoiceJob, invoice adminorders.InvoiceRecord, pollURL string) InvoiceModalData {
+func InvoiceModalJobPayload(modal adminorders.InvoiceModal, job adminorders.InvoiceJob, invoice adminorders.InvoiceRecord) InvoiceModalData {
 	status := buildInvoiceJobStatus(invoice, job)
-	if trimmed := strings.TrimSpace(pollURL); trimmed != "" && !status.Done {
-		status.Active = true
-		status.PollURL = trimmed
-		status.PollTrigger = "load, every 4s"
-	}
+	status.Active = !status.Done
 
 	jobData := &InvoiceJobModalData{
 		OrderID:       strings.TrimSpace(modal.Order.ID),
@@ -1218,8 +1191,6 @@ func InvoiceModalJobPayload(modal adminorders.InvoiceModal, job adminorders.Invo
 		Submitted:     helpers.Date(job.SubmittedAt, "2006-01-02 15:04"),
 		Relative:      helpers.Relative(job.SubmittedAt),
 		Message:       strings.TrimSpace(job.Message),
-		PollURL:       status.PollURL,
-		PollTrigger:   status.PollTrigger,
 		Status:        status,
 	}
 
@@ -1227,20 +1198,6 @@ func InvoiceModalJobPayload(modal adminorders.InvoiceModal, job adminorders.Invo
 		Job:    jobData,
 		Recent: buildInvoiceRecords(modal.RecentInvoices),
 	}
-}
-
-// InvoiceJobStatusFragmentPayload prepares the polling fragment payload.
-func InvoiceJobStatusFragmentPayload(result adminorders.InvoiceJobStatus, pollURL string) InvoiceJobStatusFragmentData {
-	status := buildInvoiceJobStatus(result.Invoice, result.Job)
-	status.Done = result.Done
-	if !result.Done {
-		status.Active = true
-		status.PollURL = strings.TrimSpace(pollURL)
-		if status.PollURL != "" {
-			status.PollTrigger = "load, every 4s"
-		}
-	}
-	return status
 }
 
 func defaultManualCapturePayment(payments []adminorders.ManualCapturePaymentOption) string {

@@ -62,6 +62,7 @@ type ShortcutHint struct {
 // TableData represents the payload for the results fragment.
 type TableData struct {
 	QueryTerm     string
+	Locale        string
 	Error         string
 	EmptyMessage  string
 	Groups        []ResultGroupView
@@ -89,7 +90,7 @@ type HitView struct {
 	BadgeTone   string
 	URL         string
 	Score       float64
-	OccurredAt  *time.Time
+	OccurredAt  time.Time
 	Persona     string
 	Metadata    []MetadataView
 }
@@ -120,9 +121,10 @@ func BuildPageData(basePath string, state QueryState, table TableData) PageData 
 }
 
 // TablePayload prepares the table fragment payload.
-func TablePayload(state QueryState, result adminsearch.ResultSet, errMsg string) TableData {
+func TablePayload(state QueryState, result adminsearch.ResultSet, errMsg, locale string) TableData {
 	payload := TableData{
 		QueryTerm:     state.Term,
+		Locale:        locale,
 		Groups:        toResultGroups(result.Groups),
 		Summary:       Summary{TotalHits: result.Total, Duration: formatDuration(result.Duration)},
 		ShortcutHints: defaultShortcutHints(),
@@ -161,10 +163,9 @@ func toResultGroups(groups []adminsearch.ResultGroup) []ResultGroupView {
 func toHitViews(hits []adminsearch.Hit) []HitView {
 	result := make([]HitView, 0, len(hits))
 	for _, hit := range hits {
-		var occurred *time.Time
+		var occurred time.Time
 		if hit.OccurredAt != nil && !hit.OccurredAt.IsZero() {
-			t := *hit.OccurredAt
-			occurred = &t
+			occurred = *hit.OccurredAt
 		}
 		result = append(result, HitView{
 			ID:          hit.ID,

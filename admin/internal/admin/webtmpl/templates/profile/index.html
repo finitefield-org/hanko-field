@@ -16,13 +16,6 @@
       </div>
       {{template "profile/tabs" (dict "Page" $page "BasePath" $.BasePath)}}
     </div>
-    <aside class="space-y-4">
-      {{template "profile/support-panel" .}}
-      <div class="space-y-4">
-        {{template "profile/alert-card" (dict "Title" "セキュリティベストプラクティス" "Body" "Authenticator アプリとメール MFA を併用し、復旧コードは必ず安全な場所に保管してください。" "LinkHref" "https://cloud.google.com/security/best-practices-for-enterprises" "LinkText" "ガイドを開く")}}
-        {{template "profile/alert-card" (dict "Title" "API キー権限" "Body" "API キーは最小権限で発行し、定期的にローテーションを行ってください。" "LinkHref" "https://firebase.google.com/docs/projects/api-keys#best-practices" "LinkText" "API キー運用")}}
-      </div>
-    </aside>
   </div>
 </div>
 {{end}}
@@ -62,7 +55,7 @@
   <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
       <h2 class="text-base font-semibold text-slate-900">プロフィール概要</h2>
-      <p class="mt-2 text-sm text-slate-600">連絡先、MFA、API キーなどのセキュリティ状況を確認できます。</p>
+      <p class="mt-2 text-sm text-slate-600">連絡先とログイン状況を確認できます。</p>
     </div>
     <a class="{{buttonClass "secondary" "sm" false false}}" href="https://console.firebase.google.com/" target="_blank" rel="noreferrer">Firebase Console を開く</a>
   </div>
@@ -97,50 +90,7 @@
         {{end}}
       </dd>
     </div>
-    {{if .Security}}
-      <div>
-        <dt class="font-medium text-slate-500">MFA</dt>
-        <dd class="mt-1">
-          {{if .Security.MFA.Enabled}}
-            <span class="{{badgeClass "success"}}">有効</span>
-          {{else}}
-            <span class="{{badgeClass "muted"}}">未設定</span>
-          {{end}}
-        </dd>
-      </div>
-      <div>
-        <dt class="font-medium text-slate-500">API キー</dt>
-        <dd class="mt-1 text-slate-900">{{len .Security.APIKeys}} 件</dd>
-      </div>
-    {{end}}
   </dl>
-</section>
-{{end}}
-
-{{define "profile/support-panel"}}
-<section class="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm">
-  <h2 class="text-base font-semibold text-slate-900">セキュリティ運用</h2>
-  <p class="mt-2 text-sm text-slate-600">疑問やインシデントが発生した場合は、以下のリソースからガイドラインを参照してください。</p>
-  <ul class="mt-4 space-y-3 text-sm">
-    <li>
-      <a
-        href="https://cloud.google.com/security/best-practices-for-enterprises"
-        target="_blank"
-        rel="noreferrer"
-        class="inline-flex items-center gap-2 font-medium text-indigo-600 hover:text-indigo-500"
-      >
-        Google Cloud セキュリティガイド
-      </a>
-    </li>
-    <li>
-      <a
-        href="mailto:security@hanko-field.dev"
-        class="inline-flex items-center gap-2 font-medium text-indigo-600 hover:text-indigo-500"
-      >
-        security@hanko-field.dev
-      </a>
-    </li>
-  </ul>
 </section>
 {{end}}
 
@@ -165,15 +115,6 @@
       hx-swap="outerHTML"
       hx-push-url="true"
     >アカウント</a>
-    <a
-      href="{{buildURL $base "tab=security"}}"
-      class="{{underlineTabClass (eq $page.ActiveTab "security")}}"
-      data-tab="security"
-      hx-get="{{buildURL $base "tab=security"}}"
-      hx-target="#profile-tabs"
-      hx-swap="outerHTML"
-      hx-push-url="true"
-    >セキュリティ</a>
     <a
       href="{{buildURL $base "tab=sessions"}}"
       class="{{underlineTabClass (eq $page.ActiveTab "sessions")}}"
@@ -203,7 +144,7 @@
     {{else if eq $page.ActiveTab "flags"}}
       {{template "profile/flags-tab" $page}}
     {{else}}
-      {{template "profile/security-tab" $tabContext}}
+      {{template "profile/account-tab" $page}}
     {{end}}
   </div>
 </div>
@@ -245,24 +186,12 @@
 </div>
 {{end}}
 
-{{define "profile/security-tab"}}
-<div class="space-y-6">
-  <p class="text-sm text-slate-600">Authenticator アプリやメールによる MFA を有効化し、API キーは最小権限で管理してください。</p>
-  <section id="mfa-card">
-    {{template "profile/mfa-card" (dict "Security" .Page.Security "CSRFToken" .Page.CSRFToken "BasePath" .BasePath)}}
-  </section>
-  <section id="api-keys-card">
-    {{template "profile/api-keys-card" (dict "Security" .Page.Security "CSRFToken" .Page.CSRFToken "BasePath" .BasePath)}}
-  </section>
-</div>
-{{end}}
-
 {{define "profile/sessions-tab"}}
 <div class="space-y-4">
   <section id="sessions-card">
     {{template "profile/sessions-card" (dict "Security" .Page.Security "CSRFToken" .Page.CSRFToken "BasePath" .BasePath)}}
   </section>
-  <p class="text-xs text-slate-500">すべてのセッションを失効すると、次回ログイン時に MFA が再認証されます。</p>
+  <p class="text-xs text-slate-500">すべてのセッションを失効すると、次回ログイン時に再認証が必要になります。</p>
 </div>
 {{end}}
 
@@ -321,179 +250,6 @@
     </a>
   {{end}}
 </div>
-{{end}}
-
-{{define "profile/mfa-card"}}
-{{$state := .Security}}
-{{$csrf := .CSRFToken}}
-{{$base := .BasePath}}
-<section class="card">
-  <h2 class="card-title">多要素認証 (MFA)</h2>
-  <div class="card-body">
-    {{if not $state}}
-      <p class="text-sm text-slate-500">MFA 情報を取得できませんでした。</p>
-    {{else}}
-      <section class="space-y-5">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div class="flex items-center gap-3">
-            {{if $state.MFA.Enabled}}
-              <span class="{{badgeClass "success"}}">有効</span>
-            {{else}}
-              <span class="{{badgeClass "muted"}}">無効</span>
-            {{end}}
-            {{if $state.MFA.LastConfirmed}}
-              <span class="text-sm text-slate-600">最終確認: {{profileFormatOptionalTime $state.MFA.LastConfirmed}}</span>
-            {{end}}
-          </div>
-          <button
-            type="button"
-            class="{{buttonClass "primary" "md" false false}}"
-            hx-get="{{joinBase $base "/profile/mfa/totp"}}"
-            hx-target="#modal"
-            hx-swap="innerHTML"
-          >
-            Authenticator を追加
-          </button>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
-          <h3 class="text-sm font-semibold text-slate-800">登録済み要素</h3>
-          {{if eq (len $state.MFA.Methods) 0}}
-            <p class="mt-2 text-sm text-slate-600">まだ MFA 要素が登録されていません。Authenticator アプリかメール認証を設定してください。</p>
-          {{else}}
-            <ul class="mt-3 space-y-3">
-              {{range $method := $state.MFA.Methods}}
-                <li class="flex flex-col gap-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <span class="font-semibold text-slate-900">{{$method.Label}}</span>
-                    <span class="ml-2 text-xs uppercase text-slate-500">{{$method.Kind}}</span>
-                    {{if $method.Default}}
-                      <span class="{{badgeClass "info"}}">Primary</span>
-                    {{end}}
-                  </div>
-                  <div class="text-xs text-slate-500 md:text-right">
-                    <p>登録: {{profileFormatTimestamp $method.CreatedAt}}</p>
-                    {{if $method.LastUsedAt}}
-                      <p>最終利用: {{profileFormatOptionalTime $method.LastUsedAt}}</p>
-                    {{end}}
-                  </div>
-                </li>
-              {{end}}
-            </ul>
-          {{end}}
-          {{if gt (len $state.MFA.RecoveryCodes) 0}}
-            <p class="mt-3 text-xs text-slate-500">復旧コード: {{len $state.MFA.RecoveryCodes}} 件</p>
-          {{end}}
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-          {{if not (hasMFAMethod $state "email")}}
-            <form
-              hx-post="{{joinBase $base "/profile/mfa/email"}}"
-              hx-target="#mfa-card"
-              hx-swap="outerHTML"
-            >
-              <input type="hidden" name="csrf_token" value="{{$csrf}}" />
-              <button type="submit" class="{{buttonClass "secondary" "md" false false}}">メールコードを有効化</button>
-            </form>
-          {{end}}
-          {{if $state.MFA.Enabled}}
-            <form
-              hx-post="{{joinBase $base "/profile/mfa/disable"}}"
-              hx-target="#mfa-card"
-              hx-swap="outerHTML"
-              class="inline"
-            >
-              <input type="hidden" name="csrf_token" value="{{$csrf}}" />
-              <button type="submit" class="{{buttonClass "danger" "md" false false}}">MFA を無効化</button>
-            </form>
-          {{end}}
-        </div>
-      </section>
-    {{end}}
-  </div>
-</section>
-{{end}}
-
-{{define "profile/api-keys-card"}}
-{{$state := .Security}}
-{{$csrf := .CSRFToken}}
-{{$base := .BasePath}}
-<section class="card">
-  <h2 class="card-title">API キー</h2>
-  <div class="card-body">
-    <div class="space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-slate-600">バックエンド連携や自動化のためのキー。シークレットは発行直後のみ表示されます。</p>
-        <button
-          type="button"
-          class="{{buttonClass "primary" "md" false false}}"
-          hx-get="{{joinBase $base "/profile/api-keys/new"}}"
-          hx-target="#modal"
-          hx-swap="innerHTML"
-        >
-          新しいキーを発行
-        </button>
-      </div>
-
-      {{if or (not $state) (eq (len $state.APIKeys) 0)}}
-        <p class="rounded-lg border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">API キーはまだ発行されていません。</p>
-      {{else}}
-        <div class="overflow-hidden rounded-xl border border-slate-200">
-          <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium">ラベル</th>
-                <th class="px-4 py-3 text-left font-medium">状態</th>
-                <th class="px-4 py-3 text-left font-medium">最終利用</th>
-                <th class="px-4 py-3 text-left font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200 bg-white">
-              {{range $key := $state.APIKeys}}
-                {{$status := printf "%s" $key.Status}}
-                <tr>
-                  <td class="px-4 py-3">
-                    <div class="font-semibold text-slate-900">{{$key.Label}}</div>
-                    <div class="text-xs text-slate-500">作成: {{profileFormatTimestamp $key.CreatedAt}}</div>
-                    {{if $key.ExpiresAt}}
-                      <div class="text-xs text-amber-600">期限: {{profileFormatOptionalTime $key.ExpiresAt}}</div>
-                    {{end}}
-                  </td>
-                  <td class="px-4 py-3">
-                  {{if eq $status "active"}}
-                    <span class="{{badgeClass "success"}}">有効</span>
-                  {{else if eq $status "expired"}}
-                    <span class="{{badgeClass "warning"}}">期限切れ</span>
-                  {{else}}
-                    <span class="{{badgeClass "muted"}}">失効</span>
-                  {{end}}
-                </td>
-                  <td class="px-4 py-3 text-slate-600">{{profileFormatOptionalTime $key.LastUsed}}</td>
-                  <td class="px-4 py-3">
-                  {{if eq $status "active"}}
-                      <form
-                        hx-post="{{joinBase $base (printf "/profile/api-keys/%s/revoke" $key.ID)}}"
-                        hx-target="#api-keys-card"
-                        hx-swap="outerHTML"
-                        class="inline-flex"
-                      >
-                        <input type="hidden" name="csrf_token" value="{{$csrf}}" />
-                        <button type="submit" class="{{buttonClass "danger" "sm" false false}}">失効</button>
-                      </form>
-                    {{else}}
-                      <span class="text-xs text-slate-400">操作なし</span>
-                    {{end}}
-                  </td>
-                </tr>
-              {{end}}
-            </tbody>
-          </table>
-        </div>
-      {{end}}
-    </div>
-  </div>
-</section>
 {{end}}
 
 {{define "profile/sessions-card"}}

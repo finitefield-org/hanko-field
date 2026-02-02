@@ -1,6 +1,7 @@
 package shipments
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"sort"
@@ -187,9 +188,9 @@ type DrawerPrintRecord struct {
 }
 
 // BuildPageData assembles the full page payload.
-func BuildPageData(basePath string, state QueryState, result adminshipments.ListResult, table TableData, drawer DrawerData) PageData {
+func BuildPageData(ctx context.Context, basePath string, state QueryState, result adminshipments.ListResult, table TableData, drawer DrawerData) PageData {
 	filters := buildFilters(state, result.Filters)
-	metrics := buildMetrics(result.Summary)
+	metrics := buildMetrics(helpers.NewFormatter(ctx), result.Summary)
 
 	return PageData{
 		Title:         "出荷バッチ管理",
@@ -205,12 +206,12 @@ func BuildPageData(basePath string, state QueryState, result adminshipments.List
 }
 
 // TablePayload prepares the table fragment payload.
-func TablePayload(basePath string, state QueryState, result adminshipments.ListResult, errMsg string) TableData {
+func TablePayload(ctx context.Context, basePath string, state QueryState, result adminshipments.ListResult, errMsg string) TableData {
 	selected := strings.TrimSpace(state.Selected)
 	if selected == "" {
 		selected = strings.TrimSpace(result.SelectedID)
 	}
-	rows := buildRows(basePath, result.Batches, selected)
+	rows := buildRows(helpers.NewFormatter(ctx), basePath, result.Batches, selected)
 	hasSelected := false
 	for _, row := range rows {
 		if row.Selected {
@@ -255,7 +256,7 @@ func TablePayload(basePath string, state QueryState, result adminshipments.ListR
 }
 
 // DrawerPayload converts the detail response into drawer data.
-func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerData {
+func DrawerPayload(ctx context.Context, detail adminshipments.BatchDetail, selected string) DrawerData {
 	if detail.Batch.ID == "" || strings.TrimSpace(selected) == "" {
 		return DrawerData{Empty: true}
 	}
@@ -264,8 +265,9 @@ func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerDat
 		return DrawerData{Empty: true}
 	}
 
-	created := helpers.Date(detail.Batch.CreatedAt, "2006-01-02 15:04")
-	relative := helpers.Relative(detail.Batch.CreatedAt)
+	formatter := helpers.NewFormatter(ctx)
+	created := formatter.Date(detail.Batch.CreatedAt, "2006-01-02 15:04")
+	relative := formatter.Relative(detail.Batch.CreatedAt)
 
 	operator := OperatorData{
 		Name:  strings.TrimSpace(detail.Operator.Name),
@@ -278,8 +280,8 @@ func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerDat
 		StateTone:  strings.TrimSpace(detail.Job.StateTone),
 		Message:    strings.TrimSpace(detail.Job.Message),
 		Progress:   clamp(detail.Job.Progress, 0, 100),
-		StartLabel: formatOptionalTime(detail.Job.StartedAt),
-		EndLabel:   formatOptionalTime(detail.Job.EndedAt),
+		StartLabel: formatOptionalTime(formatter, detail.Job.StartedAt),
+		EndLabel:   formatOptionalTime(formatter, detail.Job.EndedAt),
 	}
 
 	orderSummary := make([]DrawerOrder, 0, len(detail.Orders))
@@ -303,7 +305,7 @@ func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerDat
 			Description: strings.TrimSpace(event.Description),
 			Tone:        strings.TrimSpace(event.Tone),
 			Icon:        strings.TrimSpace(event.Icon),
-			Timestamp:   helpers.Date(event.OccurredAt, "01/02 15:04"),
+			Timestamp:   formatter.Date(event.OccurredAt, "01/02 15:04"),
 		})
 	}
 
@@ -318,7 +320,7 @@ func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerDat
 			Actor:     strings.TrimSpace(record.Actor),
 			Channel:   strings.TrimSpace(record.Channel),
 			Count:     record.Count,
-			Timestamp: helpers.Date(record.PrintedAt, "01/02 15:04"),
+			Timestamp: formatter.Date(record.PrintedAt, "01/02 15:04"),
 		})
 	}
 
@@ -343,15 +345,15 @@ func DrawerPayload(detail adminshipments.BatchDetail, selected string) DrawerDat
 	}
 }
 
-func buildRows(basePath string, batches []adminshipments.Batch, selected string) []TableRow {
+func buildRows(formatter helpers.Formatter, basePath string, batches []adminshipments.Batch, selected string) []TableRow {
 	if len(batches) == 0 {
 		return nil
 	}
 
 	result := make([]TableRow, 0, len(batches))
 	for _, batch := range batches {
-		created := helpers.Date(batch.CreatedAt, "01/02 15:04")
-		relative := helpers.Relative(batch.CreatedAt)
+		created := formatter.Date(batch.CreatedAt, "01/02 15:04")
+		relative := formatter.Relative(batch.CreatedAt)
 		progressLabel := fmt.Sprintf("%d%%", clamp(batch.ProgressPercent, 0, 100))
 		orderStats := fmt.Sprintf("%d / %d 件", batch.OrdersTotal-batch.OrdersPending, batch.OrdersTotal)
 		if batch.OrdersTotal == 0 {
@@ -445,10 +447,10 @@ func buildFilters(state QueryState, summary adminshipments.FilterSummary) Filter
 	}
 }
 
-func buildMetrics(summary adminshipments.Summary) []MetricChip {
+func buildMetrics(formatter helpers.Formatter, summary adminshipments.Summary) []MetricChip {
 	lastRun := ""
 	if summary.LastRun != nil && !summary.LastRun.IsZero() {
-		lastRun = helpers.Relative(*summary.LastRun)
+		lastRun = formatter.Relative(*summary.LastRun)
 	}
 
 	return []MetricChip{
@@ -501,11 +503,11 @@ func breadcrumbItems(base string) []partials.Breadcrumb {
 	}
 }
 
-func formatOptionalTime(ts *time.Time) string {
+func formatOptionalTime(formatter helpers.Formatter, ts *time.Time) string {
 	if ts == nil || ts.IsZero() {
 		return ""
 	}
-	return helpers.Date(ts.In(time.Local), "2006-01-02 15:04")
+	return formatter.Date(ts.In(time.Local), "2006-01-02 15:04")
 }
 
 func labelOrFallback(label, fallback string) string {

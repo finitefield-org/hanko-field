@@ -244,7 +244,7 @@ func (h *Handlers) PromotionsBulkStatus(w http.ResponseWriter, r *http.Request) 
 		},
 	}
 	if data, err := json.Marshal(trigger); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -521,7 +521,7 @@ func triggerPromotionsRefresh(w http.ResponseWriter, message, tone, promotionID 
 		payload["promotions:select"] = map[string]string{"id": id}
 	}
 	if data, err := json.Marshal(payload); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	} else {
 		log.Printf("promotions: failed to marshal HX-Trigger payload: %v", err)
 	}

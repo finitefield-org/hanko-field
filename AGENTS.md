@@ -31,6 +31,7 @@
 - Go
 - htmx
 - Tailwind CSS
+- **ポリシー**: 管理画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しないこと。
 
 ## バックエンド(api)
 - Go
@@ -43,6 +44,7 @@
 - Go
 - htmx
 - Tailwind CSS
+- **ポリシー**: ユーザ向けウェブ画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しないこと。
 
 ## アプリ(app)
 - Flutter

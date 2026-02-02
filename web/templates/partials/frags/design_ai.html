@@ -2,9 +2,6 @@
 {{ $view := . }}
 <div id="design-ai-table"
      class="space-y-5"
-     data-poll-enabled="{{ if $view.Poll.Enabled }}true{{ else }}false{{ end }}"
-     data-poll-interval="{{ $view.Poll.IntervalSeconds }}"
-     data-countdown="{{ $view.Poll.CountdownSeconds }}"
      data-active-id="{{ $view.SelectedID }}"
      hx-get="/design/ai/table{{ if $view.Query }}?{{ $view.Query }}{{ end }}"
      hx-trigger="load,design-ai:refresh"

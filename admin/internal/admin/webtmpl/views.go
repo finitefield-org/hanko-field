@@ -296,30 +296,6 @@ type ProfileTabsView struct {
 	BasePath string
 }
 
-// ProfileTOTPModalView renders the TOTP enrollment modal.
-type ProfileTOTPModalView struct {
-	BasePath string
-	Data     profiletpl.TOTPModalData
-}
-
-// ProfileAPIKeyFormModalView renders the API key form modal.
-type ProfileAPIKeyFormModalView struct {
-	BasePath string
-	Data     profiletpl.APIKeyFormData
-}
-
-// ProfileMFAUpdateView renders the MFA update fragment.
-type ProfileMFAUpdateView struct {
-	BasePath string
-	Data     profiletpl.MFAUpdateData
-}
-
-// ProfileAPIKeyUpdateView renders the API key update fragment.
-type ProfileAPIKeyUpdateView struct {
-	BasePath string
-	Data     profiletpl.APIKeyUpdateData
-}
-
 // ProfileSessionUpdateView renders the sessions update fragment.
 type ProfileSessionUpdateView struct {
 	BasePath string
@@ -534,7 +510,6 @@ type NotificationsBadgeView struct {
 	ReviewsPending int
 	TasksPending   int
 	Endpoint       string
-	StreamEndpoint string
 	Href           string
 }
 

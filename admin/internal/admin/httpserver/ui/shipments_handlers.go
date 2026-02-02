@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -210,11 +211,11 @@ func (h *Handlers) ShipmentsBatchesPage(w http.ResponseWriter, r *http.Request) 
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := shipmentstpl.TablePayload(basePath, req.state, result, errMsg)
+	table := shipmentstpl.TablePayload(ctx, basePath, req.state, result, errMsg)
 	selectedID := table.SelectedID
 	req.state.Selected = selectedID
 
-	drawer := shipmentstpl.DrawerPayload(adminshipments.BatchDetail{}, selectedID)
+	drawer := shipmentstpl.DrawerPayload(ctx, adminshipments.BatchDetail{}, selectedID)
 	if errMsg == "" && selectedID != "" {
 		detail, detailErr := h.shipments.BatchDetail(ctx, user.Token, selectedID)
 		if detailErr != nil {
@@ -224,11 +225,11 @@ func (h *Handlers) ShipmentsBatchesPage(w http.ResponseWriter, r *http.Request) 
 				log.Printf("shipments: batch detail failed: %v", detailErr)
 			}
 		} else {
-			drawer = shipmentstpl.DrawerPayload(detail, selectedID)
+			drawer = shipmentstpl.DrawerPayload(ctx, detail, selectedID)
 		}
 	}
 
-	page := shipmentstpl.BuildPageData(basePath, req.state, result, table, drawer)
+	page := shipmentstpl.BuildPageData(ctx, basePath, req.state, result, table, drawer)
 
 	crumbs := make([]webtmpl.Breadcrumb, 0, len(page.Breadcrumbs))
 	for _, crumb := range page.Breadcrumbs {
@@ -264,7 +265,7 @@ func (h *Handlers) ShipmentsBatchesTable(w http.ResponseWriter, r *http.Request)
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)
-	table := shipmentstpl.TablePayload(basePath, req.state, result, errMsg)
+	table := shipmentstpl.TablePayload(ctx, basePath, req.state, result, errMsg)
 	req.state.Selected = table.SelectedID
 
 	if canonical := canonicalShipmentsURL(basePath, req.state, table.SelectedID); canonical != "" {
@@ -291,6 +292,9 @@ func (h *Handlers) ShipmentsTrackingPage(w http.ResponseWriter, r *http.Request)
 	result, err := h.shipments.ListTracking(ctx, user.Token, req.query)
 	errMsg := ""
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		log.Printf("shipments: list tracking failed: %v", err)
 		errMsg = "配送状況の取得に失敗しました。時間を置いて再度お試しください。"
 		result = adminshipments.TrackingResult{
@@ -334,6 +338,9 @@ func (h *Handlers) ShipmentsTrackingTable(w http.ResponseWriter, r *http.Request
 	result, err := h.shipments.ListTracking(ctx, user.Token, req.query)
 	errMsg := ""
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
 		log.Printf("shipments: list tracking failed: %v", err)
 		errMsg = "配送状況の取得に失敗しました。時間を置いて再度お試しください。"
 		result = adminshipments.TrackingResult{
@@ -387,7 +394,7 @@ func (h *Handlers) ShipmentsBatchDrawer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	drawer := shipmentstpl.DrawerPayload(detail, selected)
+	drawer := shipmentstpl.DrawerPayload(ctx, detail, selected)
 	triggerShipmentsSelect(w, selected)
 
 	basePath := custommw.BasePathFromContext(ctx)

@@ -2,6 +2,7 @@
 
 ウェブは Go + htmx + templ + chi + TailwindCSS で開発します。
 Cloud Run で実行します。
+**ポリシー**: ユーザ向けウェブ画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しません。
 
 ---
 

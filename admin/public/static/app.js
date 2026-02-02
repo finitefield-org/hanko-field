@@ -271,135 +271,6 @@ const applyNotificationBadgeCounts = (counts) => {
   updateWorkloadBadges(counts);
 };
 
-const dispatchNotificationsEvent = (name, detail) => {
-  if (typeof name !== "string" || name.trim() === "") {
-    return;
-  }
-  document.dispatchEvent(new CustomEvent(name, { detail }));
-};
-
-// Maintain a single EventSource connection and broadcast updates.
-const startNotificationsStream = (() => {
-  let source = null;
-  let reconnectTimer = null;
-  let currentURL = null;
-
-  const closeStream = () => {
-    if (source) {
-      source.removeEventListener("open", handleOpen);
-      source.removeEventListener("badge", handleBadge);
-      source.removeEventListener("error", handleError);
-      source.removeEventListener("stream_error", handleStreamError);
-      source.close();
-      source = null;
-    }
-  };
-
-  const clearReconnect = () => {
-    if (reconnectTimer) {
-      window.clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-  };
-
-  const scheduleReconnect = (url) => {
-    if (reconnectTimer) {
-      return;
-    }
-    reconnectTimer = window.setTimeout(() => {
-      reconnectTimer = null;
-      connect(url);
-    }, 5000);
-  };
-
-  const toAbsoluteURL = (value) => {
-    try {
-      return new URL(value, window.location.origin).toString();
-    } catch (error) {
-      return null;
-    }
-  };
-
-  const dispatchFromPayload = (payload) => {
-    if (!payload || typeof payload !== "object") {
-      return;
-    }
-    const counts = normalizeBadgeCounts(payload.badge);
-    if (counts) {
-      applyNotificationBadgeCounts(counts);
-    }
-    dispatchNotificationsEvent("notifications:stream", payload);
-    if (payload.refresh) {
-      dispatchNotificationsEvent("notifications:refresh", payload);
-    }
-  };
-
-  const handleOpen = () => {
-    clearReconnect();
-  };
-
-  const handleBadge = (event) => {
-    if (!event || typeof event.data !== "string") {
-      return;
-    }
-    try {
-      const payload = JSON.parse(event.data);
-      dispatchFromPayload(payload);
-    } catch (error) {
-      // ignore malformed payloads
-    }
-  };
-
-  const handleStreamError = (event) => {
-    if (event && typeof event.data === "string") {
-      try {
-        const payload = JSON.parse(event.data);
-        dispatchNotificationsEvent("notifications:stream-error", payload);
-        if (payload && payload.error && payload.error.message) {
-          console.warn("notifications stream error:", payload.error.message);
-        }
-      } catch (error) {
-        // ignore malformed payloads
-      }
-    }
-    handleError();
-  };
-
-  const handleError = () => {
-    closeStream();
-    if (currentURL) {
-      scheduleReconnect(currentURL);
-    }
-  };
-
-  const connect = (url) => {
-    if (typeof EventSource === "undefined") {
-      return;
-    }
-    const absolute = toAbsoluteURL(url);
-    if (!absolute) {
-      return;
-    }
-    if (absolute === currentURL && source) {
-      return;
-    }
-    currentURL = absolute;
-    closeStream();
-    try {
-      source = new EventSource(absolute, { withCredentials: true });
-    } catch (error) {
-      scheduleReconnect(absolute);
-      return;
-    }
-    source.addEventListener("open", handleOpen);
-    source.addEventListener("badge", handleBadge);
-    source.addEventListener("error", handleError);
-    source.addEventListener("stream_error", handleStreamError);
-  };
-
-  return (url) => connect(url);
-})();
-
 const initNotificationsBadge = () => {
   const initialize = (root) => {
     if (!(root instanceof Element)) {
@@ -413,10 +284,6 @@ const initNotificationsBadge = () => {
       tasks: parseNotificationInteger(root.dataset.badgeTasks),
     };
     applyNotificationBadgeCounts(counts);
-    const streamURL = root.getAttribute("data-notifications-stream");
-    if (typeof streamURL === "string" && streamURL.trim() !== "") {
-      startNotificationsStream(streamURL.trim());
-    }
   };
 
   document.querySelectorAll("[data-notifications-root]").forEach(initialize);
@@ -450,11 +317,6 @@ const initWorkloadBadges = () => {
       tasks: parseNotificationInteger(root.dataset.badgeTasks),
     };
     updateWorkloadBadges(counts);
-    const hasNotificationsRoot = document.querySelector("[data-notifications-root]");
-    const streamURL = root.getAttribute("data-workload-stream");
-    if (!hasNotificationsRoot && typeof streamURL === "string" && streamURL.trim() !== "") {
-      startNotificationsStream(streamURL.trim());
-    }
   };
 
   document.querySelectorAll("[data-workload-badges]").forEach(initialize);
@@ -1643,7 +1505,7 @@ const createModalController = () => {
     if (!modal.contains(event.target)) {
       return;
     }
-    const closeTrigger = event.target.closest("[data-modal-close]");
+    const closeTrigger = event.target.closest("[data-modal-close], [data-modal-dismiss]");
     if (closeTrigger) {
       event.preventDefault();
       close();
@@ -2978,6 +2840,12 @@ const initGlobalSearchInteractions = () => {
         this.detailCopy.addEventListener("click", (event) => {
           event.preventDefault();
           this.copyActiveLink();
+        });
+      }
+      if (this.detailOpen instanceof HTMLElement) {
+        this.detailOpen.addEventListener("click", (event) => {
+          event.preventDefault();
+          this.openActive();
         });
       }
     }

@@ -74,7 +74,8 @@ func DefaultAuthenticator() Authenticator {
 }
 
 // Auth validates incoming requests and either attaches a User to context or redirects to login.
-func Auth(authenticator Authenticator, loginPath string) func(http.Handler) http.Handler {
+// When allowMissingToken is true, missing credentials create a local dev user instead of redirecting.
+func Auth(authenticator Authenticator, loginPath string, allowMissingToken bool) func(http.Handler) http.Handler {
 	if authenticator == nil {
 		authenticator = DefaultAuthenticator()
 	}
@@ -89,6 +90,23 @@ func Auth(authenticator Authenticator, loginPath string) func(http.Handler) http
 				token = cookieToken(r)
 			}
 			if strings.TrimSpace(token) == "" {
+				if allowMissingToken {
+					user := &User{
+						UID:   "dev",
+						Email: "dev@local",
+						Roles: []string{"admin"},
+					}
+					if sess, ok := SessionFromContext(r.Context()); ok {
+						sess.SetUser(&appsession.User{
+							UID:   user.UID,
+							Email: user.Email,
+							Roles: append([]string(nil), user.Roles...),
+						})
+					}
+					ctx := context.WithValue(r.Context(), userContextKey, user)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 				log.Printf("auth failure: reason=%s error=%v", ReasonMissingToken, ErrUnauthorized)
 				destroySession(r.Context())
 				handleUnauthorized(w, r, loginPath, ReasonMissingToken)

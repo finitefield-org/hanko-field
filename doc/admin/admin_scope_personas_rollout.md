@@ -29,7 +29,7 @@
 - **Permission model**: RBAC UI is deferred (Phase 2); define interim policy (Firebase Console managed roles) and document guardrails.
 - **Notification reliability**: clarify event sources feeding `/admin/notifications` and ensure monitoring for job failure alerts.
 - **Search scope**: `/admin/search` cross-entity search depends on Firestore/Algolia index design; need explicit requirements before Phase 2.
-- **Data freshness**: audit log and shipment tracking rely on near-real-time ingestion; confirm streaming vs batch update strategy.
+- **Data freshness**: audit log and shipment tracking rely on near-real-time ingestion; use batch updates + manual refresh (no polling/streaming in admin UI).
 
 ## Alignment Actions
 
@@ -37,4 +37,3 @@
 2. Track API readiness in decision log with responsible backend owners and due dates.
 3. Tag backlog items by phase (`MVP`, `P1.5`, `P2+`) and assign owners in project tracker.
 4. Schedule rollout review ahead of MVP code freeze to re-confirm dependencies and risk mitigations.
-

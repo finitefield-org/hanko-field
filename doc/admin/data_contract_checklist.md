@@ -9,7 +9,7 @@ Each admin interaction references a backend endpoint. This checklist enumerates 
 | Load KPI cards | `/admin/fragments/kpi` | GET | `since` (optional ISO datetime) | `kpis[]` (id, label, value, delta, trend) | Returns HTML fragment via `templ`; backing API aggregates Firestore metrics. |
 | Load alert feed | `/admin/fragments/alerts` | GET | — | `alerts[]` (id, severity, message, createdAt) | Provides HTML fragment. Source data pulled from Firestore/Cloud Tasks logs. |
 | Global search | `/admin/search` | GET | `q`, `type[]`, `status`, pagination cursors | `results[]` (type, id, headline, snippet, url, badges) | Requires search index (Algolia/Firestore). Fragment endpoint `/admin/search/table`. |
-| Notifications list | `/admin/notifications` | GET | `cursor`, `filter` | `notifications[]` (id, category, message, entityRef, createdAt, read) | Shows failure jobs/inventory alerts; ensure streaming updates. |
+| Notifications list | `/admin/notifications` | GET | `cursor`, `filter` | `notifications[]` (id, category, message, entityRef, createdAt, read) | Shows failure jobs/inventory alerts; refresh via page reload or manual action (no polling/streaming). |
 
 ## Orders & Fulfilment
 

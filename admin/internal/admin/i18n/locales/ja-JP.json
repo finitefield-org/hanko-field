@@ -71,7 +71,7 @@
   "admin.layout.toggle_sidebar": "サイドバーを開閉",
   "admin.footer.support_prompt": "不具合や改善のアイデアがあればこちらからお知らせください。",
   "admin.footer.feedback_cta": "不具合を報告",
-  "admin.footer.tracker_link": "Issue Tracker",
+  "admin.footer.tracker_link": "課題トラッカー",
   "admin.feedback.modal.title": "フィードバックを送信",
   "admin.feedback.modal.success_title": "送信完了",
   "admin.feedback.modal.description": "不具合や改善してほしい点をチームに共有します。再現手順と影響をなるべく詳しく記載してください。",

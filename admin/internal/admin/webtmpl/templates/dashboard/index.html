@@ -30,7 +30,7 @@
       class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5"
       hx-get="{{.Page.KPIEndpoint}}"
       hx-target="this"
-      hx-trigger="{{printf "load, refresh, every %ds" .Page.PollIntervalSecond}}"
+      hx-trigger="load, refresh"
       hx-swap="innerHTML"
       data-fragment="dashboard-kpi"
     >
@@ -42,7 +42,7 @@
       class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5"
       hx-get="{{.Page.AlertsEndpoint}}"
       hx-target="this"
-      hx-trigger="{{printf "load, refresh, every %ds" (mul .Page.PollIntervalSecond 2)}}"
+      hx-trigger="load, refresh"
       hx-swap="innerHTML"
       data-fragment="dashboard-alerts"
     >

@@ -41,6 +41,7 @@ Environment variables:
 - `ADMIN_SHIPMENTS_TRACKING_ALERTS_LIMIT` – maximum number of alert banners to render (default `5`)
 - `ADMIN_SHIPMENTS_TRACKING_CACHE_TTL` – in-memory cache duration for the tracking dataset (default `15s`)
 - `ADMIN_SHIPMENTS_TRACKING_REFRESH_INTERVAL` – fallback auto-refresh interval exposed to the UI when metadata does not supply one (default `30s`)
+- `ADMIN_SHIPMENTS_TRACKING_QUERY_TIMEOUT` – max duration for Firestore tracking queries before timing out (default `5s`)
 - `ADMIN_METRICS_ENABLED` – toggles Cloud Monitoring export for admin metrics (default `true` when a project ID is available)
 - `ADMIN_METRICS_PROJECT_ID` – overrides the project used for Cloud Monitoring (falls back to `GOOGLE_CLOUD_PROJECT` / `GCP_PROJECT`)
 - `ADMIN_METRICS_SERVICE_NAME` / `ADMIN_METRICS_SERVICE_VERSION` – optional overrides for the resource labels attached to emitted metrics
@@ -55,6 +56,8 @@ npm install
 ### Authentication
 
 The default authenticator accepts any non-empty bearer token for local development. Include an `Authorization: Bearer <token>` header in requests (e.g., via browser extension) until Firebase integration is wired in. Unauthenticated browsers are redirected to `<ADMIN_BASE_PATH>/login`.
+
+If `ADMIN_ALLOW_INSECURE_AUTH=1`, the admin UI skips the login gate and injects a local dev user for all requests. Do not enable this in production.
 
 ## Layout
 

@@ -51,6 +51,7 @@ func main() {
 		DefaultLocale:        getEnv("ADMIN_DEFAULT_LOCALE", "ja-JP"),
 		SupportedLocales:     getEnvList("ADMIN_SUPPORTED_LOCALES", []string{"ja-JP", "en-US"}),
 		Authenticator:        buildAuthenticator(rootCtx),
+		AllowInsecureAuth:    getEnvBool("ADMIN_ALLOW_INSECURE_AUTH", false),
 		CatalogService:       buildCatalogService(),
 		ProfileService:       buildProfileService(),
 		SearchService:        buildSearchService(),
@@ -345,6 +346,7 @@ func buildShipmentsService(ctx context.Context) (adminshipments.Service, func())
 		AlertsLimit:            getEnvInt("ADMIN_SHIPMENTS_TRACKING_ALERTS_LIMIT", 5),
 		CacheTTL:               getEnvDuration("ADMIN_SHIPMENTS_TRACKING_CACHE_TTL", 15*time.Second),
 		DefaultRefreshInterval: getEnvDuration("ADMIN_SHIPMENTS_TRACKING_REFRESH_INTERVAL", 30*time.Second),
+		QueryTimeout:           getEnvDuration("ADMIN_SHIPMENTS_TRACKING_QUERY_TIMEOUT", 0),
 	}
 	service := adminshipments.NewFirestoreService(client, cfg)
 	cleanup := func() {

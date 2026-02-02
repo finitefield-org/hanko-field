@@ -21,7 +21,6 @@ type DesignAISuggestionsView struct {
 	Suggestions        []DesignAISuggestionRow
 	Queue              DesignAIQueueStatus
 	Stats              []DesignAIStat
-	Poll               DesignAIPolling
 	SelectedID         string
 	SelectedSuggestion DesignAISuggestionDetail
 	Empty              bool
@@ -80,7 +79,6 @@ type DesignAIQueueStatus struct {
 	AvgSeconds       int
 	Message          string
 	UpdatedAgo       string
-	PollEverySeconds int
 }
 
 // DesignAIStat provides a quick analytics snapshot.
@@ -89,13 +87,6 @@ type DesignAIStat struct {
 	Value string
 	Trend string
 	Tone  string
-}
-
-// DesignAIPolling governs automatic polling behaviour.
-type DesignAIPolling struct {
-	Enabled          bool
-	IntervalSeconds  int
-	CountdownSeconds int
 }
 
 // DesignAISuggestionDetail powers the preview drawer.
@@ -248,11 +239,6 @@ func buildDesignAISuggestionsView(lang string, q url.Values) DesignAISuggestions
 		Suggestions:   rows,
 		Queue:         buildDesignAIQueueStatus(lang, statusCounts),
 		Stats:         buildDesignAIStats(lang),
-		Poll: DesignAIPolling{
-			Enabled:          true,
-			IntervalSeconds:  12,
-			CountdownSeconds: 12,
-		},
 		SelectedID:         selectedID,
 		SelectedSuggestion: detail,
 		Empty:              len(rows) == 0,
@@ -279,9 +265,8 @@ func buildDesignAIQueueStatus(lang string, counts map[string]int) DesignAIQueueS
 		Processing:       counts["processing"],
 		Backlog:          pending,
 		AvgSeconds:       26,
-		Message:          i18nOrDefault(lang, "design.ai.queue.message", "AI queue refreshes automatically."),
-		UpdatedAgo:       i18nOrDefault(lang, "design.ai.queue.updated_ago", "Refreshed 30s ago"),
-		PollEverySeconds: 12,
+		Message:          i18nOrDefault(lang, "design.ai.queue.message", "AI queue updates when you refresh the page."),
+		UpdatedAgo:       i18nOrDefault(lang, "design.ai.queue.updated_ago", "Updated on page load"),
 	}
 }
 

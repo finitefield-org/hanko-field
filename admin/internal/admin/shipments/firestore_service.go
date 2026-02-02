@@ -2,6 +2,7 @@ package shipments
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -33,6 +34,7 @@ type FirestoreConfig struct {
 	AlertsLimit            int
 	CacheTTL               time.Duration
 	DefaultRefreshInterval time.Duration
+	QueryTimeout           time.Duration
 	Now                    func() time.Time
 	BatchService           Service
 }
@@ -47,6 +49,7 @@ type FirestoreService struct {
 	alertsLimit        int
 	cacheTTL           time.Duration
 	defaultRefresh     time.Duration
+	queryTimeout       time.Duration
 	now                func() time.Time
 	batches            Service
 	mu                 sync.RWMutex
@@ -141,6 +144,9 @@ func NewFirestoreService(client *firestore.Client, cfg FirestoreConfig) *Firesto
 	if cfg.DefaultRefreshInterval <= 0 {
 		cfg.DefaultRefreshInterval = 30 * time.Second
 	}
+	if cfg.QueryTimeout <= 0 {
+		cfg.QueryTimeout = 5 * time.Second
+	}
 	nowFn := cfg.Now
 	if nowFn == nil {
 		nowFn = time.Now
@@ -169,6 +175,7 @@ func NewFirestoreService(client *firestore.Client, cfg FirestoreConfig) *Firesto
 		alertsLimit:        cfg.AlertsLimit,
 		cacheTTL:           cfg.CacheTTL,
 		defaultRefresh:     cfg.DefaultRefreshInterval,
+		queryTimeout:       cfg.QueryTimeout,
 		now:                nowFn,
 		batches:            batchSvc,
 	}
@@ -192,6 +199,9 @@ func (s *FirestoreService) BatchDetail(ctx context.Context, token, batchID strin
 
 // ListTracking reads shipment tracking rows from Firestore-backed views.
 func (s *FirestoreService) ListTracking(ctx context.Context, _ string, query TrackingQuery) (TrackingResult, error) {
+	ctx, cancel := s.withQueryTimeout(ctx)
+	defer cancel()
+
 	dataset, err := s.loadDataset(ctx)
 	if err != nil {
 		return TrackingResult{}, err
@@ -218,9 +228,22 @@ func (s *FirestoreService) ListTracking(ctx context.Context, _ string, query Tra
 	}, nil
 }
 
+func (s *FirestoreService) withQueryTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if s.queryTimeout <= 0 || ctx == nil {
+		return ctx, func() {}
+	}
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, s.queryTimeout)
+}
+
 func (s *FirestoreService) loadDataset(ctx context.Context) (trackingDataset, error) {
 	meta, err := s.loadMetadata(ctx)
 	if err != nil {
+		if cached, ok := s.cachedDatasetForCanceled(err, metadataSnapshot{}); ok {
+			return cached, nil
+		}
 		return trackingDataset{}, err
 	}
 	now := s.now()
@@ -238,6 +261,9 @@ func (s *FirestoreService) loadDataset(ctx context.Context) (trackingDataset, er
 
 	meta, err = s.loadMetadata(ctx)
 	if err != nil {
+		if cached, ok := s.cachedDatasetForCanceled(err, metadataSnapshot{}); ok {
+			return cached, nil
+		}
 		return trackingDataset{}, err
 	}
 	now = s.now()
@@ -252,6 +278,9 @@ func (s *FirestoreService) loadDataset(ctx context.Context) (trackingDataset, er
 
 	shipments, err := s.fetchShipments(ctx)
 	if err != nil {
+		if cached, ok := s.cachedDatasetForCanceled(err, meta); ok {
+			return cached, nil
+		}
 		return trackingDataset{}, err
 	}
 
@@ -275,6 +304,19 @@ func (s *FirestoreService) loadDataset(ctx context.Context) (trackingDataset, er
 	s.mu.Unlock()
 
 	return newDataset, nil
+}
+
+func (s *FirestoreService) cachedDatasetForCanceled(err error, meta metadataSnapshot) (trackingDataset, bool) {
+	if !isContextCanceled(err) {
+		return trackingDataset{}, false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if len(s.dataset.shipments) == 0 {
+		return trackingDataset{}, false
+	}
+	now := s.now()
+	return s.dataset.withMetadata(meta, now, s.cacheTTL, s.defaultRefresh), true
 }
 
 func (s *FirestoreService) fetchShipments(ctx context.Context) ([]TrackingShipment, error) {
@@ -582,4 +624,23 @@ func syntheticTrackingAlerts(summary TrackingSummary) []TrackingAlert {
 		})
 	}
 	return alerts
+}
+
+type grpcStatus interface {
+	GRPCStatus() *status.Status
+}
+
+func isContextCanceled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var gs grpcStatus
+	if errors.As(err, &gs) {
+		code := gs.GRPCStatus().Code()
+		return code == codes.Canceled || code == codes.DeadlineExceeded
+	}
+	return false
 }

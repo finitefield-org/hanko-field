@@ -680,12 +680,6 @@ func defaultBulkActions(kind Kind) []BulkAction {
 			Tone:        "secondary",
 			Description: "非公開にし、下書きに戻します。",
 		},
-		{
-			Value:       "archive",
-			Label:       "アーカイブ",
-			Tone:        "danger",
-			Description: "公開停止し、アーカイブへ移動します。",
-		},
 	}
 }
 

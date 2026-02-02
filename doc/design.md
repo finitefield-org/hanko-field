@@ -10,6 +10,7 @@
 - ストレージ: Firebase Storage
 - 認証: Firebase Auth
 - 支払い: Stripe
+- 管理画面/ウェブ: ポーリングやストリーミング（SSE / WebSocket 等）を実装しない
 
 ## ドキュメント構成
 

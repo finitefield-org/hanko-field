@@ -35,7 +35,7 @@
         hx-get="{{buildURL $page.Table.FragmentPath $page.Query.RawQuery}}"
         hx-target="this"
         hx-swap="outerHTML"
-        hx-trigger="refresh from:body, every 120s"
+        hx-trigger="refresh from:body"
       >
         {{template "system/counters-table" (dict "Table" $page.Table "BasePath" $.BasePath "Query" $page.Query)}}
       </div>

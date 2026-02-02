@@ -220,7 +220,7 @@ func (h *Handlers) PromotionsUsageExport(w http.ResponseWriter, r *http.Request)
 		},
 	}
 	if data, err := json.Marshal(triggerPayload); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	}
 
 	basePath := custommw.BasePathFromContext(ctx)

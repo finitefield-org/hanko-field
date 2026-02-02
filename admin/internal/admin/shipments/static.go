@@ -254,7 +254,7 @@ func (s *StaticService) ListBatches(_ context.Context, _ string, query ListQuery
 		if status != "" && !strings.EqualFold(string(batch.Status), status) {
 			continue
 		}
-		if carrier != "" && !strings.EqualFold(batch.Carrier, carrier) {
+		if carrier != "" && !carrierMatchesBatch(batch, carrier) {
 			continue
 		}
 		if facility != "" && !strings.EqualFold(batch.Facility, facility) {
@@ -324,6 +324,20 @@ func (s *StaticService) ListBatches(_ context.Context, _ string, query ListQuery
 		Generated:  time.Now(),
 		SelectedID: selected,
 	}, nil
+}
+
+func carrierMatchesBatch(batch Batch, carrier string) bool {
+	value := strings.TrimSpace(carrier)
+	if value == "" {
+		return true
+	}
+	if strings.EqualFold(batch.Carrier, value) {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(batch.CarrierLabel), value) {
+		return true
+	}
+	return strings.EqualFold(carrierLabel(batch.Carrier), value)
 }
 
 func buildSummary(batches []Batch) Summary {

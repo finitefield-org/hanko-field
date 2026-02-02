@@ -163,6 +163,7 @@ type RowMetric struct {
 
 // CardsData powers the card grid fragment.
 type CardsData struct {
+	BasePath     string
 	FragmentPath string
 	RawQuery     string
 	FilterQuery  string
@@ -471,6 +472,7 @@ func CardsPayload(basePath, pagePath string, kind admincatalog.Kind, state Query
 	}
 	rawQuery := ensureQueryView(state.RawQuery, "cards")
 	return CardsData{
+		BasePath:     basePath,
 		FragmentPath: joinBase(basePath, fmt.Sprintf("/catalog/%s/cards", kind)),
 		RawQuery:     rawQuery,
 		FilterQuery:  stripQueryParams(rawQuery, "page"),

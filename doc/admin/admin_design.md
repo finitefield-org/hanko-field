@@ -2,6 +2,7 @@
 
 管理画面は Go + htmx + templ + chi + TailwindCSS で開発します。
 Cloud Run で実行します。
+**ポリシー**: 管理画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しません。
 
 # 0. フレーム / 共通ユーティリティ
 

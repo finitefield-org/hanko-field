@@ -203,10 +203,6 @@ func TestProfilePageRenders(t *testing.T) {
 	service := &profileStub{
 		state: &profile.SecurityState{
 			UserEmail: "staff@example.com",
-			MFA:       profile.MFAState{Enabled: true},
-			APIKeys: []profile.APIKey{
-				{ID: "key-1", Label: "Automation", Status: profile.APIKeyStatusActive, CreatedAt: time.Now()},
-			},
 			Sessions: []profile.Session{
 				{ID: "sess-1", UserAgent: "Chrome", IPAddress: "127.0.0.1", CreatedAt: time.Now(), LastSeenAt: time.Now(), Current: true},
 			},
@@ -229,7 +225,7 @@ func TestProfilePageRenders(t *testing.T) {
 
 	doc := testutil.ParseHTML(t, body)
 	require.Contains(t, doc.Find("title").First().Text(), "admin.profile.title")
-	require.Contains(t, doc.Find("body").Text(), "API キー")
+	require.Contains(t, doc.Find("body").Text(), "プロフィール概要")
 }
 
 func TestProfileTabsFragmentHTMX(t *testing.T) {
@@ -723,33 +719,6 @@ func TestOrdersInvoiceIssueFlow(t *testing.T) {
 
 	jobID := extractJobID(t, string(asyncBody))
 	require.NotEmpty(t, jobID)
-
-	// First poll should keep the job running.
-	pollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/invoices/jobs/"+jobID, nil)
-	require.NoError(t, err)
-	pollReq.Header.Set("Authorization", "Bearer "+auth.Token)
-	pollReq.Header.Set("HX-Request", "true")
-	pollReq.Header.Set("HX-Target", "modal")
-	pollResp, err := client.Do(pollReq)
-	require.NoError(t, err)
-	defer pollResp.Body.Close()
-	require.Equal(t, http.StatusOK, pollResp.StatusCode)
-	require.Empty(t, pollResp.Header.Get("HX-Trigger"))
-	pollBody, err := io.ReadAll(pollResp.Body)
-	require.NoError(t, err)
-	require.Contains(t, string(pollBody), "現在のステータス")
-
-	// Second poll should complete the job and close the modal.
-	finalPollReq, err := http.NewRequest(http.MethodGet, ts.URL+"/invoices/jobs/"+jobID, nil)
-	require.NoError(t, err)
-	finalPollReq.Header.Set("Authorization", "Bearer "+auth.Token)
-	finalPollReq.Header.Set("HX-Request", "true")
-	finalPollReq.Header.Set("HX-Target", "modal")
-	finalPollResp, err := client.Do(finalPollReq)
-	require.NoError(t, err)
-	defer finalPollResp.Body.Close()
-	require.Equal(t, http.StatusOK, finalPollResp.StatusCode)
-	require.Equal(t, `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`, finalPollResp.Header.Get("HX-Trigger"))
 }
 
 func TestProductionQueuesPageRenders(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 )
 
-const feedbackTrackerURL = "https://github.com/finitefield/hanko-field/issues"
+const feedbackTrackerURL = "https://github.com/finitefield-org/hanko-field/issues"
 
 // BuildBaseView prepares shared layout data for admin pages.
 func BuildBaseView(ctx context.Context, title string, crumbs []Breadcrumb) BaseView {

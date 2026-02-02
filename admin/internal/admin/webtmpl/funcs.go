@@ -14,7 +14,6 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/httpserver/middleware"
 	"finitefield.org/hanko-admin/internal/admin/i18n"
 	"finitefield.org/hanko-admin/internal/admin/navigation"
-	"finitefield.org/hanko-admin/internal/admin/profile"
 	"finitefield.org/hanko-admin/internal/admin/rbac"
 	catalogtpl "finitefield.org/hanko-admin/internal/admin/templates/catalog"
 	"finitefield.org/hanko-admin/internal/admin/templates/components"
@@ -226,7 +225,6 @@ var templateFuncs = template.FuncMap{
 	"profileAvatarInitial":               profileAvatarInitial,
 	"profileFormatTimestamp":             profileFormatTimestamp,
 	"profileFormatOptionalTime":          profileFormatOptionalTime,
-	"hasMFAMethod":                       hasMFAMethod,
 	"productionQueuesTableContainerID":   productionQueuesTableContainerID,
 	"productionQueuesDrawerContainerID":  productionQueuesDrawerContainerID,
 	"productionQueuesQueueRowClass":      productionQueuesQueueRowClass,
@@ -2948,17 +2946,4 @@ func profileFormatOptionalTime(t *time.Time) string {
 		return "-"
 	}
 	return profileFormatTimestamp(*t)
-}
-
-func hasMFAMethod(state *profile.SecurityState, kind string) bool {
-	if state == nil {
-		return false
-	}
-	normalized := strings.TrimSpace(kind)
-	for _, method := range state.MFA.Methods {
-		if string(method.Kind) == normalized {
-			return true
-		}
-	}
-	return false
 }

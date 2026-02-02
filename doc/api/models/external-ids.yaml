@@ -46,7 +46,7 @@ id_spaces:
     pattern: s_{base32(10)}
     generator: AI job dispatcher
     exposure: external
-    notes: Returned to client for polling and accept/reject flows.
+    notes: Returned to client for accept/reject flows and manual refresh (no polling/streaming in web/admin).
 
   - entity: ai_jobs
     collection: /aiJobs/{jobId}

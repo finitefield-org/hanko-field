@@ -543,7 +543,7 @@ func (h *Handlers) renderQueueTableSnapshot(ctx context.Context, w http.Response
 	}
 	if len(trigger) > 0 {
 		if payload, err := json.Marshal(trigger); err == nil {
-			w.Header().Set("HX-Trigger", string(payload))
+			setHXTrigger(w, string(payload))
 		}
 	}
 

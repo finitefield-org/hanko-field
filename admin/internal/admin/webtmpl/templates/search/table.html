@@ -18,7 +18,7 @@
     </div>
   {{else}}
     {{range $group := .Groups}}
-      {{template "search/group" (dict "Query" $.QueryTerm "Group" $group)}}
+      {{template "search/group" (dict "Query" $.QueryTerm "Group" $group "Locale" $.Locale)}}
     {{end}}
   {{end}}
 
@@ -43,7 +43,7 @@
       <div class="px-5 py-6 text-sm text-slate-500">このカテゴリに該当する結果はありません。</div>
     {{else}}
       {{range $hit := $group.Hits}}
-        {{template "search/row" (dict "Query" $.Query "Group" $group "Hit" $hit)}}
+        {{template "search/row" (dict "Query" $.Query "Group" $group "Hit" $hit "Locale" $.Locale)}}
       {{end}}
     {{end}}
     {{if $group.HasMore}}
@@ -57,6 +57,7 @@
 {{$query := .Query}}
 {{$group := .Group}}
 {{$hit := .Hit}}
+{{$locale := .Locale}}
 <div
   class="group flex cursor-pointer flex-col gap-3 px-5 py-4 transition hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-brand-300 md:flex-row md:items-start"
   tabindex="0"
@@ -94,7 +95,7 @@
         {{end}}
         <span data-search-field="score">スコア {{searchFormatScore $hit.Score}}</span>
         {{if $hit.OccurredAt}}
-          <span data-search-field="occurred">{{relativeTime $hit.OccurredAt}}</span>
+          <span data-search-field="occurred">{{relativeTime $locale $hit.OccurredAt}}</span>
         {{end}}
       </div>
       {{if gt (len $hit.Metadata) 0}}

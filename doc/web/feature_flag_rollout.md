@@ -7,7 +7,7 @@ This playbook documents how the web surface consumes and operates feature flags,
 - **Environment override (`HANKO_WEB_FEATURE_FLAGS`)** – JSON fallback used when remote config is unreachable.
 - **Config file (`HANKO_WEB_FEATURE_FLAG_FILE`)** – optional path to a JSON file bundled with the deploy artifact. The file must live under `HANKO_WEB_FEATURE_FLAG_BASE_DIR` (defaults to the process working directory); paths escaping that directory are rejected to avoid leaking arbitrary files.
 - **Runtime overrides (`HANKO_WEB_FEATURE_FLAG_OVERRIDES`)** – comma/semicolon separated list of flag assignments (e.g. `new_checkout=false,ai_writer=true`). Prefix `!`/`-` can disable a flag (`!new_checkout`). When a prefix and explicit value conflict (e.g. `!new_checkout=true`) the entry is ignored and a warning is logged.
-- **Feature flag API (`GET /api/feature-flags`)** – exposes the resolved payload (after overrides) for clients that need to poll without a full page reload.
+- **Feature flag API (`GET /api/feature-flags`)** – exposes the resolved payload (after overrides) for clients that need to refresh on demand or after a page reload (no polling/streaming).
 
 Every successful load publishes Prometheus metrics:
 - `hanko_web_feature_flag_enabled{flag,source,version}` – 1 when a flag is active, 0 when disabled.
@@ -94,7 +94,7 @@ await window.hankoFlags.refreshRemote(); // fetches /api/feature-flags and reapp
 | Scenario | Action | Time to live |
 |---|---|---|
 | Immediate customer impact | Set `HANKO_WEB_FEATURE_FLAG_OVERRIDES="new_checkout=false"` and redeploy config (no code build required). | Minutes |
-| Remote config available | Update flag entry with `"force": "off"` and publish. Clients honour on next poll / reload. | <5 minutes |
+| Remote config available | Update flag entry with `"force": "off"` and publish. Clients honour on next reload or manual refresh. | <5 minutes |
 | Local testing / canary | Provide a JSON file via `HANKO_WEB_FEATURE_FLAG_FILE=/etc/hanko/flags.json`. | Until next deploy |
 
 Additional safeguards:

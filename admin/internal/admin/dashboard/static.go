@@ -69,7 +69,7 @@ func NewStaticService() *StaticService {
 			Severity:  "danger",
 			Title:     "配送遅延アラート",
 			Message:   "ヤマト運輸 6 件が遅延ステータスです。お客様への連絡が必要です。",
-			ActionURL: "/shipments/tracking?status=delayed",
+			ActionURL: "/shipments/tracking?delay=delayed",
 			Action:    "詳細を確認",
 			CreatedAt: now.Add(-2 * time.Hour),
 		},

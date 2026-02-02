@@ -8,7 +8,7 @@ import (
 	"finitefield.org/hanko-admin/internal/admin/templates/helpers"
 )
 
-const defaultFeedbackTracker = "https://github.com/finitefield/hanko-field/issues/new?labels=admin-bug&template=bug_report.md"
+const defaultFeedbackTracker = "https://github.com/finitefield-org/hanko-field/issues/new?labels=admin-bug&template=bug_report.md"
 
 // FeedbackModalData powers the feedback modal template.
 type FeedbackModalData struct {

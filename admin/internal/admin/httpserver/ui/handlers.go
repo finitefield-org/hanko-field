@@ -212,8 +212,9 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		kpiFragment.Error = "KPIの取得に失敗しました。時間を置いて再度お試しください。"
 	}
 
+	basePath := custommw.BasePathFromContext(ctx)
 	alerts, err := h.dashboard.FetchAlerts(ctx, user.Token, 0)
-	alertsFragment := dashboardtpl.AlertsFragmentPayload(alerts)
+	alertsFragment := dashboardtpl.AlertsFragmentPayload(alerts, basePath)
 	if err != nil {
 		log.Printf("dashboard: fetch alerts failed: %v", err)
 		alertsFragment.Error = "アラートの取得に失敗しました。"
@@ -225,7 +226,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		activity = nil
 	}
 
-	data := dashboardtpl.BuildPageData(ctx, custommw.BasePathFromContext(ctx), kpis, alerts, activity)
+	data := dashboardtpl.BuildPageData(ctx, basePath, kpis, alerts, activity)
 	data.KPIFragment = kpiFragment
 	data.AlertsFragment = alertsFragment
 	breadcrumbs := []webtmpl.Breadcrumb{
@@ -287,8 +288,9 @@ func (h *Handlers) DashboardAlerts(w http.ResponseWriter, r *http.Request) {
 
 	limit := parseLimit(r.URL.Query().Get("limit"), 0)
 
+	basePath := custommw.BasePathFromContext(ctx)
 	alerts, err := h.dashboard.FetchAlerts(ctx, user.Token, limit)
-	payload := dashboardtpl.AlertsFragmentPayload(alerts)
+	payload := dashboardtpl.AlertsFragmentPayload(alerts, basePath)
 	if err != nil {
 		log.Printf("dashboard: fetch alerts failed: %v", err)
 		payload.Error = "アラートの取得に失敗しました。"
@@ -406,9 +408,7 @@ func normalizeProfileTab(raw string) string {
 		return "sessions"
 	case "flags":
 		return "flags"
-	case "security":
-		fallthrough
 	default:
-		return "security"
+		return "account"
 	}
 }

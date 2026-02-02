@@ -176,7 +176,6 @@ type BadgeData struct {
 	ReviewsPending int
 	TasksPending   int
 	Endpoint       string
-	StreamEndpoint string
 	Href           string
 }
 
@@ -267,7 +266,6 @@ func BadgePayload(basePath string, count adminnotifications.BadgeCount) BadgeDat
 		ReviewsPending: count.ReviewsPending,
 		TasksPending:   count.TasksPending,
 		Endpoint:       joinBase(basePath, "/notifications/badge"),
-		StreamEndpoint: "",
 		Href:           joinBase(basePath, "/notifications"),
 	}
 }

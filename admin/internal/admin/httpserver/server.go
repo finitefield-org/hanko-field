@@ -62,6 +62,7 @@ type Config struct {
 	SystemService        adminsystem.Service
 	Session              SessionConfig
 	SessionStore         custommw.SessionStore
+	AllowInsecureAuth    bool
 	CSRFCookieName       string
 	CSRFCookiePath       string
 	CSRFCookieSecure     bool
@@ -218,6 +219,7 @@ func New(cfg Config) *http.Server {
 		SessionStore:  sessionStore,
 		Authenticator: authenticator,
 		LoginPath:     loginPath,
+		AllowInsecure: cfg.AllowInsecureAuth,
 		CSRF:          csrfCfg,
 		UI:            uiHandlers,
 		Environment:   environment,
@@ -242,6 +244,7 @@ type routeOptions struct {
 	SessionStore  custommw.SessionStore
 	Authenticator custommw.Authenticator
 	LoginPath     string
+	AllowInsecure bool
 	CSRF          custommw.CSRFConfig
 	UI            *ui.Handlers
 	Environment   string
@@ -284,7 +287,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 		}
 
 		r.Group(func(protected chi.Router) {
-			protected.Use(custommw.Auth(opts.Authenticator, opts.LoginPath))
+			protected.Use(custommw.Auth(opts.Authenticator, opts.LoginPath, opts.AllowInsecure))
 			protected.Use(custommw.CSRF(opts.CSRF))
 
 			protected.Get("/", uiHandlers.Dashboard)
@@ -293,13 +296,6 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			protected.Post("/preferences/locale", uiHandlers.UpdateLocalePreference)
 			protected.Route("/profile", func(pr chi.Router) {
 				pr.Get("/", uiHandlers.ProfilePage)
-				pr.Get("/mfa/totp", uiHandlers.MFATOTPStart)
-				pr.Post("/mfa/totp", uiHandlers.MFATOTPConfirm)
-				pr.Post("/mfa/email", uiHandlers.EmailMFAEnable)
-				pr.Post("/mfa/disable", uiHandlers.DisableMFA)
-				pr.Get("/api-keys/new", uiHandlers.NewAPIKeyForm)
-				pr.Post("/api-keys", uiHandlers.CreateAPIKey)
-				pr.Post("/api-keys/{keyID}/revoke", uiHandlers.RevokeAPIKey)
 				pr.Post("/sessions/{sessionID}/revoke", uiHandlers.RevokeSession)
 			})
 			protected.Post("/assets/signed-upload", uiHandlers.AssetsSignedUpload)
@@ -313,7 +309,6 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				nr.Get("/", uiHandlers.NotificationsPage)
 				nr.Get("/table", uiHandlers.NotificationsTable)
 				nr.Get("/badge", uiHandlers.NotificationsBadge)
-				nr.Get("/stream", uiHandlers.NotificationsStream)
 			})
 			protected.Route("/orders", func(or chi.Router) {
 				or.Get("/", uiHandlers.OrdersPage)
@@ -321,7 +316,6 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				or.Post("/bulk/status", uiHandlers.OrdersBulkStatus)
 				or.Post("/bulk/labels", uiHandlers.OrdersBulkLabels)
 				or.Post("/bulk/export", uiHandlers.OrdersBulkExport)
-				or.Get("/bulk/export/jobs/{jobID}", uiHandlers.OrdersBulkExportJobStatus)
 				or.Get("/{orderID}/modal/status", uiHandlers.OrdersStatusModal)
 				or.Put("/{orderID}:status", uiHandlers.OrdersStatusUpdate)
 				or.Get("/{orderID}/modal/manual-capture", uiHandlers.OrdersManualCaptureModal)
@@ -469,8 +463,8 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 					tr.Get("/tasks", uiHandlers.SystemTasksPage)
 					RegisterFragment(tr, "/tasks/table", uiHandlers.SystemTasksTable)
 					RegisterFragment(tr, "/tasks/jobs/{jobID}/drawer", uiHandlers.SystemTasksDrawer)
+					tr.Get("/tasks/jobs/{jobID}/retry", uiHandlers.SystemTasksRetry)
 					tr.Post("/tasks/jobs/{jobID}:trigger", uiHandlers.SystemTasksTrigger)
-					tr.Get("/tasks/stream", uiHandlers.SystemTasksStream)
 				})
 				sr.Group(func(cr chi.Router) {
 					cr.Use(custommw.RequireCapability(rbac.CapSystemCounters))
@@ -512,7 +506,6 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			RegisterFragment(protected, "/feedback/modal", uiHandlers.FeedbackModal)
 			protected.Post("/feedback", uiHandlers.FeedbackSubmit)
 			protected.Post("/invoices:issue", uiHandlers.InvoicesIssue)
-			protected.Get("/invoices/jobs/{jobID}", uiHandlers.InvoiceJobStatus)
 			// Future admin routes will be registered here.
 		})
 	})

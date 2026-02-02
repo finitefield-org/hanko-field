@@ -397,7 +397,7 @@ func NewStaticService() *StaticService {
 			},
 			Tags:             []string{"海外", "USD"},
 			Badges:           []Badge{{Label: "国際送料計算済み", Tone: "info", Icon: "🌐"}},
-			ItemsSummary:     "Custom Signet Ring × 1 / Gift Wrap",
+			ItemsSummary:     "カスタムサインリング × 1 / ギフトラップ",
 			SalesChannel:     "Etsy",
 			Integration:      "Etsy",
 			HasRefundRequest: true,

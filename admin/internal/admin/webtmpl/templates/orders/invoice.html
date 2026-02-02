@@ -188,10 +188,6 @@
 <div
   class="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
   data-invoice-job-status
-  hx-target="this"
-  hx-swap="outerHTML"
-  {{if .PollURL}}hx-get="{{.PollURL}}"{{end}}
-  {{if .PollTrigger}}hx-trigger="{{.PollTrigger}}"{{end}}
 >
   <div class="flex items-center justify-between gap-2">
     <p class="text-sm font-semibold text-slate-600">現在のステータス</p>

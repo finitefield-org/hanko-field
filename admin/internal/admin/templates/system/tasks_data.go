@@ -22,7 +22,6 @@ type TasksPageData struct {
 	Query          TasksQueryState
 	Filters        TasksFilters
 	TableEndpoint  string
-	StreamEndpoint string
 	Table          TasksTableData
 	Drawer         TasksDrawerData
 	History        TaskHistoryChart
@@ -219,7 +218,6 @@ func BuildTasksPageData(ctx context.Context, basePath string, state TasksQuerySt
 		Query:          state,
 		Filters:        taskFilters(basePath, state, result.Filters, result.Jobs),
 		TableEndpoint:  joinBase(basePath, "/system/tasks/table"),
-		StreamEndpoint: joinBase(basePath, "/system/tasks/stream"),
 		Table:          table,
 		Drawer:         drawer,
 		History:        history,

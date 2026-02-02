@@ -104,8 +104,7 @@ func (h *Handlers) OrdersTable(w http.ResponseWriter, r *http.Request) {
 
 // OrdersBulkStatus handles bulk status update submissions.
 func (h *Handlers) OrdersBulkStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	user, ok := custommw.UserFromContext(ctx)
+	user, ok := custommw.UserFromContext(r.Context())
 	if !ok || user == nil {
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
@@ -116,10 +115,18 @@ func (h *Handlers) OrdersBulkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orderIDs := r.PostForm["orderID"]
+	if len(orderIDs) == 0 {
+		triggerToast(w, "更新対象の注文を選択してください。", "warning")
+		http.Error(w, "対象の注文が選択されていません。", http.StatusBadRequest)
+		return
+	}
+
 	// Future implementation will call backend API using h.orders.
-	// For now, we respond with a no-content acknowledgement so HX requests complete silently.
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"ステータスを更新しました。","tone":"success"}}`)
-	w.WriteHeader(http.StatusNoContent)
+	triggerToast(w, "ステータスを更新しました。", "success")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
 	_ = user // reserved for future use
 }
 
@@ -137,8 +144,17 @@ func (h *Handlers) OrdersBulkLabels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"出荷ラベル生成をキューに投入しました。","tone":"info"}}`)
-	w.WriteHeader(http.StatusNoContent)
+	orderIDs := r.PostForm["orderID"]
+	if len(orderIDs) == 0 {
+		triggerToast(w, "出荷ラベル生成の対象となる注文を選択してください。", "warning")
+		http.Error(w, "対象の注文が選択されていません。", http.StatusBadRequest)
+		return
+	}
+
+	triggerToast(w, "出荷ラベル生成をキューに投入しました。", "info")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
 }
 
 // OrdersBulkExport handles bulk export submissions.
@@ -200,62 +216,13 @@ func (h *Handlers) OrdersBulkExport(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	if data, err := json.Marshal(triggerPayload); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	} else {
 		log.Printf("orders: marshal HX-Trigger payload failed: %v", err)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := dashboardTemplates.Render(w, "orders/export-section", section); err != nil {
-		http.Error(w, "template render error", http.StatusInternalServerError)
-	}
-}
-
-// OrdersBulkExportJobStatus returns the progress fragment for a specific export job.
-func (h *Handlers) OrdersBulkExportJobStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	user, ok := custommw.UserFromContext(ctx)
-	if !ok || user == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	jobID := strings.TrimSpace(chi.URLParam(r, "jobID"))
-	if jobID == "" {
-		http.Error(w, "ジョブIDが不正です。", http.StatusBadRequest)
-		return
-	}
-
-	status, err := h.orders.ExportJobStatus(ctx, user.Token, jobID)
-	if err != nil {
-		if errors.Is(err, adminorders.ErrExportJobNotFound) {
-			http.Error(w, "指定されたジョブが見つかりません。", http.StatusNotFound)
-			return
-		}
-		log.Printf("orders: fetch export job status failed: %v", err)
-		http.Error(w, "エクスポート進捗の取得に失敗しました。", http.StatusBadGateway)
-		return
-	}
-
-	basePath := custommw.BasePathFromContext(ctx)
-	card := orderstpl.ExportJobCardPayload(basePath, status.Job)
-
-	if status.Done && status.Job.DownloadURL != "" {
-		triggerPayload := map[string]any{
-			"toast": map[string]string{
-				"message": fmt.Sprintf("%sのエクスポートが完了しました。(ジョブID: %s)", orderstpl.ExportFormatLabel(status.Job.Format), status.Job.ID),
-				"tone":    "success",
-			},
-		}
-		if data, err := json.Marshal(triggerPayload); err == nil {
-			w.Header().Set("HX-Trigger", string(data))
-		} else {
-			log.Printf("orders: marshal HX-Trigger payload failed: %v", err)
-		}
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := dashboardTemplates.Render(w, "orders/export-job-card", card); err != nil {
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
 }
@@ -376,7 +343,7 @@ func (h *Handlers) OrdersStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	timeline := orderstpl.StatusTimelinePayload(result.Order.ID, result.Timeline)
 	success := orderstpl.StatusUpdateSuccessPayload(cell, timeline)
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"ステータスを更新しました。","tone":"success"},"modal:close":true}`)
+setHXTrigger(w, `{"toast":{"message":"ステータスを更新しました。","tone":"success"},"modal:close":true}`)
 	if err := dashboardTemplates.Render(w, "orders/status-update-success", success); err != nil {
 		http.Error(w, "template render error", http.StatusInternalServerError)
 	}
@@ -527,7 +494,7 @@ func (h *Handlers) OrdersSubmitManualCapture(w http.ResponseWriter, r *http.Requ
 	}
 	data := orderstpl.ManualCaptureModalPayload(basePath, modal, csrf, successForm, "", nil, &result)
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"売上を確定しました。","tone":"success"},"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
+setHXTrigger(w, `{"toast":{"message":"売上を確定しました。","tone":"success"},"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := dashboardTemplates.Render(w, "orders/manual-capture-modal", data); err != nil {
 		http.Error(w, "template render error", http.StatusInternalServerError)
@@ -664,7 +631,7 @@ func (h *Handlers) OrdersSubmitRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"返金を登録しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
+setHXTrigger(w, `{"toast":{"message":"返金を登録しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-payments]","[data-order-summary]"]}}`)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -765,7 +732,6 @@ func (h *Handlers) InvoicesIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	basePath := custommw.BasePathFromContext(ctx)
 	if result.Job != nil {
 		modal, modalErr := h.orders.InvoiceModal(ctx, user.Token, orderID)
 		if modalErr != nil {
@@ -773,59 +739,16 @@ func (h *Handlers) InvoicesIssue(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "領収書モーダルの再取得に失敗しました。", http.StatusBadGateway)
 			return
 		}
-		pollURL := joinBasePath(basePath, "/invoices/jobs/"+url.PathEscape(result.Job.ID))
-		payload := orderstpl.InvoiceModalJobPayload(modal, *result.Job, result.Invoice, pollURL)
-		w.Header().Set("HX-Trigger", `{"toast":{"message":"領収書の生成を開始しました。","tone":"info"},"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
+		payload := orderstpl.InvoiceModalJobPayload(modal, *result.Job, result.Invoice)
+		setHXTrigger(w, `{"toast":{"message":"領収書の生成を開始しました。","tone":"info"},"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
 		if err := dashboardTemplates.Render(w, "orders/invoice-modal", payload); err != nil {
 			http.Error(w, "template render error", http.StatusInternalServerError)
 		}
 		return
 	}
 
-	w.Header().Set("HX-Trigger", `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
+	setHXTrigger(w, `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// InvoiceJobStatus polls the status of an invoice issuance job.
-func (h *Handlers) InvoiceJobStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	user, ok := custommw.UserFromContext(ctx)
-	if !ok || user == nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-
-	jobID := strings.TrimSpace(chi.URLParam(r, "jobID"))
-	if jobID == "" {
-		http.Error(w, "ジョブIDが不正です。", http.StatusBadRequest)
-		return
-	}
-
-	statusResult, err := h.orders.InvoiceJobStatus(ctx, user.Token, jobID)
-	if err != nil {
-		switch {
-		case errors.Is(err, adminorders.ErrInvoiceJobNotFound):
-			http.Error(w, "指定されたジョブが見つかりません。", http.StatusNotFound)
-			return
-		case errors.Is(err, adminorders.ErrOrderNotFound):
-			http.Error(w, "指定された注文が見つかりません。", http.StatusNotFound)
-			return
-		default:
-			log.Printf("orders: invoice job status failed: %v", err)
-			http.Error(w, "ジョブの状態取得に失敗しました。", http.StatusBadGateway)
-			return
-		}
-	}
-
-	pollURL := r.URL.Path
-	statusData := orderstpl.InvoiceJobStatusFragmentPayload(statusResult, pollURL)
-	if statusData.Done {
-		w.Header().Set("HX-Trigger", `{"toast":{"message":"領収書を発行しました。","tone":"success"},"modal:close":true,"refresh:fragment":{"targets":["[data-order-invoice]"]}}`)
-	}
-
-	if err := dashboardTemplates.Render(w, "orders/invoice-job-status", statusData); err != nil {
-		http.Error(w, "template render error", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handlers) renderInvoiceModalError(w http.ResponseWriter, r *http.Request, user *custommw.User, orderID string, form orderstpl.InvoiceFormState, message string, fieldErrors map[string]string, status int) {
@@ -968,7 +891,7 @@ func triggerToast(w http.ResponseWriter, message, tone string) {
 		log.Printf("orders: marshal HX-Trigger payload failed: %v", err)
 		return
 	}
-	w.Header().Set("HX-Trigger", string(data))
+	setHXTrigger(w, string(data))
 }
 
 func buildOrdersRequest(r *http.Request) ordersRequest {

@@ -591,7 +591,7 @@ func triggerCatalogRefresh(w http.ResponseWriter, message, tone string) {
 		},
 	}
 	if data, err := json.Marshal(payload); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	} else {
 		log.Printf("catalog: failed to marshal HX-Trigger payload: %v", err)
 	}

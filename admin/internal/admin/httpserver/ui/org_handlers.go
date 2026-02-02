@@ -699,7 +699,7 @@ func triggerStaffRefresh(w http.ResponseWriter, message, tone string) {
 		staffRefreshEvent: true,
 	}
 	if data, err := json.Marshal(payload); err == nil {
-		w.Header().Set("HX-Trigger", string(data))
+		setHXTrigger(w, string(data))
 	} else {
 		log.Printf("org: marshal HX-Trigger payload failed: %v", err)
 	}

@@ -391,7 +391,7 @@ func (h *Handlers) CustomerDeactivateAndMask(w http.ResponseWriter, r *http.Requ
 		},
 	}
 	if encoded, marshalErr := json.Marshal(trigger); marshalErr == nil {
-		w.Header().Set("HX-Trigger", string(encoded))
+		setHXTrigger(w, string(encoded))
 	}
 
 	payload := customerstpl.DeactivateSuccessPayload(basePath, displayName, result)

@@ -31,7 +31,7 @@ func TestAuthMiddleware(t *testing.T) {
 		user:  &User{UID: "user-1"},
 	}
 
-	handler := HTMX()(Auth(auth, "/login")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := HTMX()(Auth(auth, "/login", false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := UserFromContext(r.Context()); !ok {
 			t.Fatalf("expected user in context")
 		}
@@ -245,7 +245,7 @@ func TestAuthMiddlewareStoresSessionUser(t *testing.T) {
 		},
 	}
 
-	handler := Session(store)(Auth(auth, "/login")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := Session(store)(Auth(auth, "/login", false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, ok := SessionFromContext(r.Context())
 		if !ok {
 			t.Fatalf("expected session in context")
@@ -306,7 +306,7 @@ func TestAuthMiddlewareClearsSessionOnUnauthorized(t *testing.T) {
 	}
 
 	auth := &mockAuthenticator{token: "valid", user: &User{UID: "user-1"}}
-	handler := Session(store)(Auth(auth, "/login")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := Session(store)(Auth(auth, "/login", false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("handler should not be reached")
 	})))
 
