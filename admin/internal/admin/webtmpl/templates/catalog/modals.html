@@ -20,12 +20,17 @@
 {{end}}
 
 {{define "catalog/upsert-modal-body"}}
+{{template "catalog/upsert-form" (dict "Data" .Data "BasePath" .BasePath "HxTarget" "#modal" "HxSwap" "innerHTML")}}
+{{end}}
+
+{{define "catalog/upsert-form"}}
 {{$data := .Data}}
 {{$inputClass := "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"}}
 <form
   class="space-y-6 text-sm text-slate-700"
-  hx-target="#modal"
-  hx-swap="innerHTML"
+  {{if .FormID}}id="{{.FormID}}"{{end}}
+  {{if .HxTarget}}hx-target="{{.HxTarget}}"{{end}}
+  {{if .HxSwap}}hx-swap="{{.HxSwap}}"{{end}}
   {{if eq $data.Method "PUT"}}
     hx-put="{{$data.ActionURL}}"
   {{else}}
@@ -46,7 +51,11 @@
   {{end}}
   <div class="flex flex-col gap-2 pt-2">
     <button type="submit" class="{{buttonClass (catalogModalTone $data.SubmitTone) "md" true false}}">{{$data.SubmitLabel}}</button>
-    <p class="text-xs text-slate-500">送信後に一覧が自動更新されます。</p>
+    {{if .HelperText}}
+      <p class="text-xs text-slate-500">{{.HelperText}}</p>
+    {{else}}
+      <p class="text-xs text-slate-500">送信後に一覧が自動更新されます。</p>
+    {{end}}
   </div>
 </form>
 {{end}}

@@ -36,6 +36,23 @@ type PageData struct {
 	PageURL        string
 }
 
+// EditPageData powers the catalog edit page.
+type EditPageData struct {
+	Title          string
+	Kind           admincatalog.Kind
+	KindLabel      string
+	ItemID         string
+	ItemName       string
+	ItemIdentifier string
+	StatusLabel    string
+	StatusTone     string
+	UpdatedLabel   string
+	BackURL        string
+	Form           ModalFormData
+	Drawer         DrawerData
+	Breadcrumbs    []partials.Breadcrumb
+}
+
 // QueryState mirrors query parameters from the HTTP request.
 type QueryState struct {
 	Status   []string
@@ -420,6 +437,40 @@ func BuildPageData(basePath string, kind admincatalog.Kind, state QueryState, re
 	}
 }
 
+// BuildEditPageData composes the catalog edit page payload.
+func BuildEditPageData(basePath string, kind admincatalog.Kind, detail admincatalog.ItemDetail, form ModalFormData) EditPageData {
+	pagePath := joinBase(basePath, fmt.Sprintf("/catalog/%s", kind))
+	breadcrumbs := []partials.Breadcrumb{
+		{
+			Label: "カタログ",
+			Href:  joinBase(basePath, "/catalog/templates"),
+		},
+		{
+			Label: kind.Label(),
+			Href:  pagePath,
+		},
+		{
+			Label: "編集",
+			Href:  "",
+		},
+	}
+	return EditPageData{
+		Title:          fmt.Sprintf("%sを編集", kind.Label()),
+		Kind:           kind,
+		KindLabel:      kind.Label(),
+		ItemID:         detail.Item.ID,
+		ItemName:       detail.Item.Name,
+		ItemIdentifier: detail.Item.Identifier,
+		StatusLabel:    detail.Item.StatusLabel,
+		StatusTone:     detail.Item.StatusTone,
+		UpdatedLabel:   helpers.Date(detail.UpdatedAt, "2006-01-02 15:04"),
+		BackURL:        pagePath,
+		Form:           form,
+		Drawer:         DrawerPayload(&detail),
+		Breadcrumbs:    breadcrumbs,
+	}
+}
+
 // TablePayload prepares the table fragment data.
 func TablePayload(basePath, pagePath string, kind admincatalog.Kind, state QueryState, result admincatalog.ListResult, drawer DrawerData, view ViewToggle) TableData {
 	rows := make([]TableRow, 0, len(result.Items))
@@ -567,7 +618,7 @@ func toTableRow(basePath string, kind admincatalog.Kind, item admincatalog.Item,
 			Icon:  metric.Icon,
 		})
 	}
-	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/edit", kind, item.ID))
+	editURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, item.ID))
 	deleteURL := joinBase(basePath, fmt.Sprintf("/catalog/%s/%s/modal/delete", kind, item.ID))
 	scheduleLabel, scheduleRelative := scheduleDescriptors(item.ScheduledPublishAt)
 

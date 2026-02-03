@@ -260,6 +260,12 @@ type CatalogPageView struct {
 	Page catalogtpl.PageData
 }
 
+// CatalogEditPageView wraps the layout and catalog edit page data.
+type CatalogEditPageView struct {
+	BaseView
+	Page catalogtpl.EditPageData
+}
+
 // CatalogTableView wraps the catalog table fragment data.
 type CatalogTableView struct {
 	Page     catalogtpl.PageData
@@ -282,6 +288,12 @@ type CatalogModalView struct {
 type CatalogDeleteModalView struct {
 	BasePath string
 	Data     catalogtpl.DeleteModalData
+}
+
+// CatalogEditFormView renders the catalog edit form fragment.
+type CatalogEditFormView struct {
+	BasePath string
+	Form     catalogtpl.ModalFormData
 }
 
 // ProfilePageView wraps the layout and profile data.

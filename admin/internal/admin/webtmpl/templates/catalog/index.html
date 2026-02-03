@@ -49,7 +49,6 @@
       {{else}}
         {{template "catalog/table-section" $page.Table}}
       {{end}}
-      {{template "catalog/bulk-bar" $page.Bulk}}
     </section>
     <aside id="catalog-drawer" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       {{template "catalog/drawer" (dict "Drawer" $page.Drawer "BasePath" $.BasePath)}}

@@ -1,0 +1,40 @@
+{{define "catalog/edit"}}
+{{template "layouts/base" .}}
+{{end}}
+
+{{define "catalog/edit-content"}}
+{{$page := .Page}}
+<div class="space-y-6" data-catalog-edit>
+  <section class="rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">カタログ編集 / {{$page.KindLabel}}</p>
+        <h1 class="text-2xl font-semibold text-slate-900">{{$page.ItemName}}</h1>
+        <p class="text-sm text-slate-600">{{$page.ItemIdentifier}}</p>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span class="{{badgeClass $page.StatusTone}}">{{$page.StatusLabel}}</span>
+          {{if $page.UpdatedLabel}}<span>更新 {{$page.UpdatedLabel}}</span>{{end}}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{{$page.BackURL}}" class="{{buttonClass "ghost" "sm" false false}}">一覧に戻る</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <section>
+      {{template "catalog/edit-form" (dict "Form" $page.Form "BasePath" $.BasePath)}}
+    </section>
+    <aside class="space-y-4">
+      {{template "catalog/drawer" (dict "Drawer" $page.Drawer "BasePath" $.BasePath)}}
+    </aside>
+  </div>
+</div>
+{{end}}
+
+{{define "catalog/edit-form"}}
+<div id="catalog-edit-form">
+  {{template "catalog/upsert-form" (dict "Data" .Form "BasePath" .BasePath "HxTarget" "#catalog-edit-form" "HxSwap" "outerHTML" "HelperText" "保存後に画面が更新されます。")}}
+</div>
+{{end}}

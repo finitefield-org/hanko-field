@@ -368,6 +368,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 			protected.Route("/catalog", func(cr chi.Router) {
 				cr.Get("/", uiHandlers.CatalogRootRedirect)
 				cr.Get("/{kind}", uiHandlers.CatalogPage)
+				cr.Get("/{kind}/{itemID}/edit", uiHandlers.CatalogEditPage)
 				RegisterFragment(cr, "/{kind}/table", uiHandlers.CatalogTable)
 				RegisterFragment(cr, "/{kind}/cards", uiHandlers.CatalogCards)
 				RegisterFragment(cr, "/{kind}/modal/new", uiHandlers.CatalogNewModal)
@@ -375,6 +376,7 @@ func mountAdminRoutes(router chi.Router, base string, opts routeOptions) {
 				RegisterFragment(cr, "/{kind}/{itemID}/modal/delete", uiHandlers.CatalogDeleteModal)
 				cr.Post("/{kind}", uiHandlers.CatalogCreate)
 				cr.Put("/{kind}/{itemID}", uiHandlers.CatalogUpdate)
+				cr.Put("/{kind}/{itemID}/edit", uiHandlers.CatalogEditUpdate)
 				cr.Delete("/{kind}/{itemID}", uiHandlers.CatalogDelete)
 				cr.Post("/{kind}/{itemID}/schedule/cancel", uiHandlers.CatalogCancelSchedule)
 			})

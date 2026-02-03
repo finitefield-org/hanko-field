@@ -178,6 +178,51 @@ func (h *Handlers) CatalogEditModal(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CatalogEditPage renders the full edit page for a catalog asset.
+func (h *Handlers) CatalogEditPage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	kind := catalogKindFromRequest(r)
+	itemID := catalogItemID(r)
+	if itemID == "" {
+		http.Error(w, "アセットIDが不正です。", http.StatusBadRequest)
+		return
+	}
+
+	detail, err := h.catalog.GetAsset(ctx, user.Token, kind, itemID)
+	if err != nil {
+		handleCatalogServiceError(w, err)
+		return
+	}
+
+	values := catalogValuesFromDetail(kind, detail)
+	basePath := custommw.BasePathFromContext(ctx)
+	action := joinBasePath(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, itemID))
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	form := buildCatalogUpsertModal(kind, catalogModalModeEdit, values, nil, "", action, http.MethodPut, csrf)
+	data := catalogtpl.BuildEditPageData(basePath, kind, detail, form)
+
+	crumbs := make([]webtmpl.Breadcrumb, 0, len(data.Breadcrumbs))
+	for _, crumb := range data.Breadcrumbs {
+		crumbs = append(crumbs, webtmpl.Breadcrumb{Label: crumb.Label, Href: crumb.Href})
+	}
+	base := webtmpl.BuildBaseView(ctx, data.Title, crumbs)
+	base.ContentTemplate = "catalog/edit-content"
+	view := webtmpl.CatalogEditPageView{
+		BaseView: base,
+		Page:     data,
+	}
+	if err := dashboardTemplates.Render(w, "catalog/edit", view); err != nil {
+		log.Printf("catalog: template render error (edit page): %v", err)
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
+}
+
 // CatalogDeleteModal renders the delete confirmation modal.
 func (h *Handlers) CatalogDeleteModal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -277,6 +322,54 @@ func (h *Handlers) CatalogUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	triggerCatalogRefresh(w, fmt.Sprintf("%sを更新しました。", strings.TrimSpace(input.Name)), "success")
+}
+
+// CatalogEditUpdate handles update submissions from the catalog edit page.
+func (h *Handlers) CatalogEditUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, ok := custommw.UserFromContext(ctx)
+	if !ok || user == nil {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	itemID := catalogItemID(r)
+	if itemID == "" {
+		http.Error(w, "アセットIDが不正です。", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "フォームの解析に失敗しました。", http.StatusBadRequest)
+		return
+	}
+
+	kind := catalogKindFromRequest(r)
+	values := catalogFormValues(kind, r.PostForm)
+	input, fieldErrors := parseCatalogForm(kind, r.PostForm, true)
+	input.ID = itemID
+	if len(fieldErrors) > 0 {
+		reRenderCatalogEditForm(w, r, kind, values, fieldErrors, "入力内容を確認してください。")
+		return
+	}
+
+	input.Kind = kind
+	if _, err := h.catalog.SaveAsset(ctx, user.Token, input); err != nil {
+		handleCatalogEditMutationError(w, r, kind, values, fieldErrors, err)
+		return
+	}
+
+	setHXTrigger(w, fmt.Sprintf(`{"toast":{"message":"%sを更新しました。","tone":"success"}}`, strings.TrimSpace(input.Name)))
+
+	detail, err := h.catalog.GetAsset(ctx, user.Token, kind, itemID)
+	if err != nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	basePath := custommw.BasePathFromContext(ctx)
+	action := joinBasePath(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, itemID))
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	form := buildCatalogUpsertModal(kind, catalogModalModeEdit, catalogValuesFromDetail(kind, detail), nil, "", action, http.MethodPut, csrf)
+	renderCatalogEditForm(w, basePath, form)
 }
 
 // CatalogDelete handles delete submissions.
@@ -521,6 +614,37 @@ func reRenderCatalogModal(w http.ResponseWriter, r *http.Request, kind admincata
 	if err := dashboardTemplates.Render(w, "catalog/upsert-modal", view); err != nil {
 		log.Printf("catalog: template render error (upsert modal rerender): %v", err)
 		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
+}
+
+func renderCatalogEditForm(w http.ResponseWriter, basePath string, form catalogtpl.ModalFormData) {
+	view := webtmpl.CatalogEditFormView{BasePath: basePath, Form: form}
+	if err := dashboardTemplates.Render(w, "catalog/edit-form", view); err != nil {
+		log.Printf("catalog: template render error (edit form): %v", err)
+		http.Error(w, "template render error", http.StatusInternalServerError)
+	}
+}
+
+func reRenderCatalogEditForm(w http.ResponseWriter, r *http.Request, kind admincatalog.Kind, values map[string]string, fieldErrors map[string]string, message string) {
+	ctx := r.Context()
+	basePath := custommw.BasePathFromContext(ctx)
+	itemID := catalogItemID(r)
+	action := joinBasePath(basePath, fmt.Sprintf("/catalog/%s/%s/edit", kind, itemID))
+	csrf := custommw.CSRFTokenFromContext(ctx)
+	form := buildCatalogUpsertModal(kind, catalogModalModeEdit, values, fieldErrors, message, action, http.MethodPut, csrf)
+	w.WriteHeader(http.StatusUnprocessableEntity)
+	renderCatalogEditForm(w, basePath, form)
+}
+
+func handleCatalogEditMutationError(w http.ResponseWriter, r *http.Request, kind admincatalog.Kind, values map[string]string, fieldErrors map[string]string, err error) {
+	switch {
+	case errors.Is(err, admincatalog.ErrItemNotFound):
+		http.Error(w, "指定されたアセットが見つかりません。", http.StatusNotFound)
+	case errors.Is(err, admincatalog.ErrVersionConflict):
+		reRenderCatalogEditForm(w, r, kind, values, fieldErrors, "別のユーザーによって更新されました。最新データを確認してください。")
+	default:
+		log.Printf("catalog: edit mutation failed: %v", err)
+		http.Error(w, "処理に失敗しました。時間を置いて再度お試しください。", http.StatusBadGateway)
 	}
 }
 
