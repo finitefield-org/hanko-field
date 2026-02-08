@@ -1,5 +1,10 @@
 # hanko-field
 
+## 前提
+
+このリポジトリの `devbox.json` は Jetify の devbox CLI を前提にしています。
+[Jetify Devbox のインストール手順](https://www.jetify.com/docs/devbox/installing_devbox/) を使ってセットアップしてください。
+
 ## Docker + devbox でのローカル環境
 
 Docker と devbox で、Go/Flutter/Firebase Emulator をまとめて用意できます。
@@ -18,14 +23,23 @@ make docker-web
 make docker-dev
 ```
 
-### Web のアセット生成（Tailwind CLI）
+### Web/Admin のアセット生成（ironframe）
 
-`make docker-web` は `web/public/assets` を生成するため、コンテナ内に Tailwind CLI が必要です。
-Tailwind CLI は `web/` と `admin/` にローカル（npm）で入れています。初回のみそれぞれで `npm install` を実行してください。
+`ironframe` は `devbox run ironframe` で実行し、`0.3.1` に固定しています。
+初回実行時に `cargo install` で `.devbox/bin/ironframe` を作成します。
 
 ```bash
-cd web && npm install
-cd admin && npm install
+devbox run ironframe -- --version
+```
+
+ビルド・ウォッチは以下のように実行してください。
+
+```bash
+# build
+devbox run ironframe -- build -i <input.css> -o <output.css> "<glob>..."
+
+# watch
+devbox run ironframe -- watch -i <input.css> -o <output.css> "<glob>..."
 ```
 
 ### 開発サーバー例（ポート競合を避ける）
