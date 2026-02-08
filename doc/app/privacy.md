@@ -1,8 +1,0 @@
-# Telemetry, storage, and privacy
-
-- **Secure storage**: Access/refresh tokens are stored via `flutter_secure_storage` with encrypted shared preferences on Android and `KeychainAccessibility.first_unlock_this_device` on Apple platforms. Web storage uses a dedicated `hanko_field_secure` database/public key. Use `tokenStorageProvider` to save/read/clear tokens; avoid keeping tokens in memory longer than needed.
-- **Payment tokens**: PSP token references (`PaymentMethod.providerRef`) are stored in `flutter_secure_storage` (not `SharedPreferences`); UI metadata (brand/last4/expiry) may be cached separately.
-- **Consent gating**: Crash reporting and analytics are disabled by default (`SharedPreferences` keys: `crash_reporting_allowed`, `analytics_allowed`). Use `privacyPreferencesServiceProvider` → `update(...)` to persist user choices and automatically refresh downstream providers.
-- **Crash reporting**: `CrashReporter` wraps Firebase Crashlytics, tags the `environment` custom key (flavor), and only sends reports when consent is granted. Flutter and zone errors are captured; disabling consent stops collection and keeps local logging only.
-- **Analytics**: `AnalyticsClient` wraps Firebase Analytics with typed events (`AppOpenedEvent`, `PrimaryActionTappedEvent`, `SecondaryActionTappedEvent`). Parameters are validated/truncated to avoid schema drift. Collection follows the consent flag; set consent to false to opt out and drop queued events.
-- **Opt-out flows**: Provide a settings toggle that calls `privacyPreferencesServiceProvider.update(crashReportingAllowed: false, analyticsAllowed: false)`. Respect the same flags for onboarding/legal prompts. Clearing tokens should call `tokenStorageProvider.clear()` and reset consents if the user signs out.
