@@ -48,3 +48,6 @@ api/.secrets.local
 
 # Node
 node_modules/
+
+.editorconfig
+
