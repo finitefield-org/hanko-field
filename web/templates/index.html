@@ -1,0 +1,267 @@
+{{define "page"}}
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hanko Field | 印鑑デザインモック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Kosugi+Maru&family=Potta+One&family=Kiwi+Maru:wght@400;700&family=WDXL+Lubrifont+JP+N&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="bg-shape bg-shape-left"></div>
+  <div class="bg-shape bg-shape-right"></div>
+
+  <main class="layout">
+    <header class="hero">
+      <p class="hero-eyebrow">Hanko Field Mock</p>
+    </header>
+
+    <section class="panel">
+      <ol class="step-track" aria-label="注文ステップ">
+        <li class="step-dot is-active" data-step-indicator="1">1. デザイン</li>
+        <li class="step-dot" data-step-indicator="2">2. 材質</li>
+        <li class="step-dot" data-step-indicator="3">3. 購入</li>
+      </ol>
+
+      <form id="order-form" class="flow-form">
+        <section class="step-panel is-active" data-step-panel="1">
+          <div class="section-title-wrap">
+          </div>
+
+          <div class="design-grid">
+            <div class="design-controls">
+              <p class="field-label">お名前</p>
+              <div class="seal-lines-input">
+                <div>
+                  <label class="field-label compact" for="seal_line1">1行目</label>
+                  <input
+                    id="seal_line1"
+                    name="seal_line1"
+                    type="text"
+                    maxlength="2"
+                    required
+                    autocomplete="off"
+                    placeholder="例: 山田 / Ta / A1"
+                  >
+                </div>
+                <div>
+                  <label class="field-label compact" for="seal_line2">2行目</label>
+                  <input
+                    id="seal_line2"
+                    name="seal_line2"
+                    type="text"
+                    maxlength="2"
+                    autocomplete="off"
+                    placeholder="例: 太郎 / ro / 23"
+                  >
+                </div>
+              </div>
+              <p class="field-hint">各行2文字まで</p>
+              <p class="field-error" id="seal_text_error" role="alert" aria-live="polite"></p>
+
+              <div class="ai-box">
+                <h3>外国籍ユーザ向け 漢字名提案</h3>
+                <p>本名から Gemini を使って漢字候補（4文字以内）を提案し、2行（各2文字）へ反映する想定のモックです。</p>
+                <label class="field-label" for="real_name">本名</label>
+                <input
+                  id="real_name"
+                  name="real_name"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="例: Michael Smith"
+                >
+                <button
+                  type="button"
+                  class="secondary"
+                  hx-post="/mock/kanji"
+                  hx-target="#kanji-suggestions"
+                  hx-swap="innerHTML"
+                  hx-include="#real_name"
+                >
+                  Geminiで候補を表示（モック）
+                </button>
+                <div id="kanji-suggestions" class="suggestions-box">
+                  <p class="placeholder">本名を入力して候補を生成してください。</p>
+                </div>
+              </div>
+            </div>
+
+            <aside class="preview-card">
+              <h3>プレビュー</h3>
+              <div id="seal-preview" class="seal-preview is-square mode-single-char" aria-live="polite">
+                <div id="seal-preview-text" class="seal-preview-text">
+                  <span id="seal-preview-line1">印</span>
+                  <span id="seal-preview-line2" hidden></span>
+                </div>
+              </div>
+
+              <div class="preview-config">
+                <input type="hidden" id="font" name="font" value="{{(index .Fonts 0).Key}}">
+                <div class="font-chip-list" role="listbox" aria-label="フォント選択">
+                  {{range $index, $font := .Fonts}}
+                  <button
+                    type="button"
+                    class="font-chip{{if eq $index 0}} is-selected{{end}}"
+                    data-font-key="{{$font.Key}}"
+                    data-font-label="{{$font.Label}}"
+                    data-font-family="{{$font.Family}}"
+                    aria-label="{{$font.Label}}"
+                    aria-pressed="{{if eq $index 0}}true{{else}}false{{end}}"
+                  >
+                    <span class="font-chip-preview" data-font-preview>印</span>
+                  </button>
+                  {{end}}
+                </div>
+
+                <fieldset class="shape-fieldset">
+                  <label class="option-chip">
+                    <input type="radio" name="shape" value="square" checked>
+                    <span>角印</span>
+                  </label>
+                  <label class="option-chip">
+                    <input type="radio" name="shape" value="round">
+                    <span>丸印</span>
+                  </label>
+                </fieldset>
+              </div>
+            </aside>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="primary" data-next-step="2">材質選びへ進む</button>
+          </div>
+        </section>
+
+        <section class="step-panel" data-step-panel="2">
+          <div class="section-title-wrap">
+            <h2>材質を選ぶ</h2>
+            <p>使用感と価格を見ながら材質を決めます。</p>
+          </div>
+
+          <div class="material-grid">
+            {{range $index, $m := .Materials}}
+            <label class="material-card">
+              <input
+                type="radio"
+                name="material"
+                value="{{$m.Key}}"
+                data-label="{{$m.Label}}"
+                data-price="{{$m.Price}}"
+                {{if eq $index 0}}checked{{end}}
+              >
+              <span class="material-name">{{$m.Label}}</span>
+              <span class="material-description">{{$m.Description}}</span>
+              <span class="material-price">¥{{yen $m.Price}}</span>
+            </label>
+            {{end}}
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="ghost" data-prev-step="1">戻る</button>
+            <button type="button" class="primary" data-next-step="3">購入へ進む</button>
+          </div>
+        </section>
+
+        <section class="step-panel" data-step-panel="3">
+          <div class="section-title-wrap">
+            <h2>購入</h2>
+            <p>内容を確認して、モック注文を確定します。</p>
+          </div>
+
+          <div class="purchase-grid">
+            <section class="summary-card">
+              <h3>注文サマリー</h3>
+              <dl class="summary-list">
+                <div>
+                  <dt>印影テキスト</dt>
+                  <dd id="summary-seal-lines">-</dd>
+                </div>
+                <div>
+                  <dt>形状</dt>
+                  <dd id="summary-shape">-</dd>
+                </div>
+                <div>
+                  <dt>フォント</dt>
+                  <dd id="summary-font">-</dd>
+                </div>
+                <div>
+                  <dt>材質</dt>
+                  <dd id="summary-material">-</dd>
+                </div>
+                <div>
+                  <dt>価格</dt>
+                  <dd id="summary-price">-</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="checkout-card">
+              <label class="field-label" for="email">メールアドレス</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autocomplete="email"
+                placeholder="you@example.com"
+              >
+              <p class="field-hint">モックのため実決済は行われず、確認メッセージのみ表示します。</p>
+              <button
+                type="button"
+                class="primary full"
+                hx-post="/mock/purchase"
+                hx-target="#purchase-result"
+                hx-swap="innerHTML"
+                hx-include="#order-form"
+              >
+                購入を確定（モック）
+              </button>
+              <div id="purchase-result" class="purchase-result"></div>
+            </section>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="ghost" data-prev-step="2">戻る</button>
+          </div>
+        </section>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "kanji_suggestions"}}
+{{if .Suggestions}}
+<p class="suggestion-title">{{.RealName}} さんへの候補（Geminiモック）</p>
+<div class="suggestion-chips">
+  {{range .Suggestions}}
+  <button type="button" class="kanji-chip" data-kanji="{{.}}">{{.}}</button>
+  {{end}}
+</div>
+<p class="field-hint">候補をクリックすると2行の印影テキストに反映されます。</p>
+{{else}}
+<p class="placeholder">候補を表示するには本名を入力してください。</p>
+{{end}}
+{{end}}
+
+{{define "purchase_result"}}
+{{if .Error}}
+<div class="result-card is-error">
+  <p>{{.Error}}</p>
+</div>
+{{else}}
+<div class="result-card is-success">
+  <h4>注文を受け付けました（モック）</h4>
+  <p>印影: {{.SealLine1}}{{if .SealLine2}} / {{.SealLine2}}{{end}}</p>
+  <p>{{.ShapeLabel}} / {{.MaterialLabel}} / {{.FontLabel}}</p>
+  <p>合計: ¥{{yen .Price}}</p>
+  <p>確認メール送信先: {{.Email}}</p>
+</div>
+{{end}}
+{{end}}
