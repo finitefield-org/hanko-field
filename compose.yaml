@@ -8,35 +8,17 @@ services:
       - "3051:3051"
       - "3052:3052"
     environment:
-      - GOOGLE_CLOUD_PROJECT=hanko-field
-      - FIREBASE_PROJECT_ID=hanko-field
-      - FIRESTORE_EMULATOR_HOST=firebase:8081
-      - API_FIRESTORE_EMULATOR_HOST=firebase:8081
-      - FIREBASE_AUTH_EMULATOR_HOST=firebase:9099
-      - FIRESTORE_PROJECT_ID=hanko-field
-      - API_FIREBASE_PROJECT_ID=hanko-field
-      - API_FIRESTORE_PROJECT_ID=hanko-field
-      - API_STORAGE_ASSETS_BUCKET=local-assets
-      - API_STORAGE_SIGNER_KEY=secret://Storage.SignerKey
-      - API_PSP_STRIPE_API_KEY=secret://PSP.StripeAPIKey
-      - API_PSP_STRIPE_WEBHOOK_SECRET=secret://PSP.StripeWebhookSecret
-      - API_WEBHOOK_SIGNING_SECRET=secret://Webhooks.SigningSecret
-      - ADMIN_ALLOW_INSECURE_AUTH=1
-      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/hanko-field-firebase-adminsdk-fbsvc.json
-      - API_FIREBASE_CREDENTIALS_FILE=/workspace/hanko-field-firebase-adminsdk-fbsvc.json
-    depends_on:
-      - firebase
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-hanko-field-test}
+      - GOOGLE_CLOUD_PROJECT=${FIREBASE_PROJECT_ID:-hanko-field-test}
+      - FIRESTORE_PROJECT_ID=${FIREBASE_PROJECT_ID:-hanko-field-test}
+      - API_FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-hanko-field-test}
+      - API_FIRESTORE_PROJECT_ID=${FIREBASE_PROJECT_ID:-hanko-field-test}
+      - API_STORAGE_ASSETS_BUCKET=${API_STORAGE_ASSETS_BUCKET:-local-assets}
+      - API_STORAGE_SIGNER_KEY=${API_STORAGE_SIGNER_KEY:-secret://Storage.SignerKey}
+      - API_PSP_STRIPE_API_KEY=${API_PSP_STRIPE_API_KEY:-secret://PSP.StripeAPIKey}
+      - API_PSP_STRIPE_WEBHOOK_SECRET=${API_PSP_STRIPE_WEBHOOK_SECRET:-secret://PSP.StripeWebhookSecret}
+      - API_WEBHOOK_SIGNING_SECRET=${API_WEBHOOK_SIGNING_SECRET:-secret://Webhooks.SigningSecret}
+      - ADMIN_ALLOW_INSECURE_AUTH=${ADMIN_ALLOW_INSECURE_AUTH:-1}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/workspace/hanko-field-firebase-adminsdk-fbsvc.json}
+      - API_FIREBASE_CREDENTIALS_FILE=${API_FIREBASE_CREDENTIALS_FILE:-/workspace/hanko-field-firebase-adminsdk-fbsvc.json}
     command: sleep infinity
-
-  firebase:
-    build: .
-    volumes:
-      - .:/workspace:cached
-    ports:
-      - "3053:3053"
-      - "8081:8081"
-      - "9099:9099"
-    command: >
-      bash -c "
-        devbox run -- npx -y firebase-tools emulators:start --project=hanko-field --import=./firebase-data --export-on-exit=./firebase-data
-      "

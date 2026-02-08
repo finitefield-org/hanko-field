@@ -7,7 +7,7 @@
 
 ## Docker + devbox でのローカル環境
 
-Docker と devbox で、Go/Flutter/Firebase Emulator をまとめて用意できます。
+Docker と devbox で、Go/Flutter と Firebase テスト環境向けのローカル作業環境を用意できます。
 
 ```bash
 make docker-up
@@ -21,6 +21,42 @@ make docker-api
 make docker-admin
 make docker-web
 make docker-dev
+```
+
+### Docker Compose で直接起動する手順
+
+`make` を使わずに直接起動する場合は以下を実行してください。
+この構成では Firebase Emulator は起動せず、Firebase 上のテストプロジェクトを使います。
+
+```bash
+cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
+
+# test project settings (example)
+export FIREBASE_PROJECT_ID=<your-firebase-test-project-id>
+export GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path>
+export API_FIREBASE_CREDENTIALS_FILE=/workspace/<service-account-json-path>
+```
+
+```bash
+cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
+
+# build and start workspace only
+docker compose build
+docker compose up -d workspace
+```
+
+別ターミナルで開発シェルに入ります。
+
+```bash
+cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
+docker compose exec workspace devbox shell
+```
+
+停止時は以下を実行します。
+
+```bash
+cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
+docker compose down
 ```
 
 ### Web/Admin のアセット生成（ironframe）
@@ -47,7 +83,7 @@ devbox run ironframe -- watch -i <input.css> -o <output.css> "<glob>..."
 API / Admin / Web の既定ポートはそれぞれ `3050 / 3051 / 3052` です。
 
 ```bash
-# API (Firestore emulator uses firebase:8081 from compose env)
+# API (uses Firebase test project)
 API_SERVER_PORT=3050 \
 API_FIREBASE_PROJECT_ID=hanko-field-dev \
 API_FIRESTORE_PROJECT_ID=hanko-field-dev \
@@ -64,5 +100,3 @@ make -C admin dev
 HANKO_WEB_PORT=3052 \
 make -C web dev
 ```
-
-Firebase Emulator UI は `http://localhost:3053` で確認できます。
