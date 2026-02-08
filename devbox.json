@@ -3,7 +3,6 @@
     "go@1.22",
     "flutter",
     "air",
-    "jdk@21",
     "nodejs@20",
     "curl",
     "rustc@1.92.0",
