@@ -84,8 +84,7 @@
   }
 
   .panel {
-    @apply rounded-[22px] border border-hf-line bg-hf-bg-panel p-[26px];
-    box-shadow: 0 18px 40px rgb(35 24 12 / 0.12);
+    @apply p-[26px];
   }
 
   .step-track {
@@ -145,12 +144,28 @@
     @apply mt-3 mb-1.5 block text-[0.92rem] font-bold;
   }
 
+  .field-label-row {
+    @apply mt-3 mb-1.5 flex items-center justify-between gap-2;
+  }
+
+  .field-label-row .field-label {
+    @apply m-0;
+  }
+
+  .mode-toggle-button {
+    @apply rounded-lg border border-[#d8ccbc] bg-white px-3 py-1.5 text-[0.8rem] text-hf-muted;
+  }
+
   .field-label.compact {
     @apply mt-0;
   }
 
   .seal-lines-input {
     @apply grid grid-cols-2 gap-2.5;
+  }
+
+  .name-line-input {
+    @apply w-[5.8rem] text-center tracking-[0.08em];
   }
 
   .field-hint {
@@ -199,9 +214,19 @@
   }
 
   .kanji-chip {
-    @apply cursor-pointer rounded-full border px-3 py-1.5 font-kiwi-maru text-hf-accent-2;
+    @apply min-w-[3.3rem] cursor-pointer rounded-xl border px-3 py-1.5 text-center leading-tight whitespace-pre-line font-kiwi-maru text-hf-accent-2;
     border-color: rgb(15 107 99 / 0.35);
     background-color: rgb(15 107 99 / 0.08);
+  }
+
+  .kanji-chip.is-selected {
+    @apply text-hf-accent;
+    border-color: rgb(182 54 43 / 0.45);
+    background-color: rgb(182 54 43 / 0.1);
+  }
+
+  .suggestion-reason {
+    @apply mt-2 rounded-[10px] border border-[#e6d7c3] bg-[#fffaf3] px-3 py-2 text-[0.82rem] text-hf-muted;
   }
 
   .preview-card {
@@ -270,6 +295,10 @@
     --seal-line-gap: 0.5rem;
   }
 
+  #preview-caption {
+    @apply mt-2.5 mb-0 text-center text-[0.85rem] text-hf-muted;
+  }
+
   .preview-config {
     @apply mt-[14px] border-t border-dashed border-[#d8ccbc] pt-[14px];
   }
@@ -328,6 +357,22 @@
 
   .purchase-grid {
     @apply mt-[18px] grid grid-cols-2 gap-4;
+  }
+
+  .checkout-form-grid {
+    @apply grid grid-cols-2 gap-3;
+  }
+
+  .field-span-full {
+    @apply col-span-2;
+  }
+
+  .terms-check {
+    @apply mt-3 inline-flex items-start gap-2 text-[0.86rem] text-hf-muted;
+  }
+
+  .terms-check input {
+    @apply mt-1;
   }
 
   .summary-card h3,
@@ -410,8 +455,13 @@
     .design-grid,
     .material-grid,
     .purchase-grid,
+    .checkout-form-grid,
     .step-track {
       @apply grid-cols-1;
+    }
+
+    .field-span-full {
+      @apply col-span-1;
     }
 
     .summary-list div {

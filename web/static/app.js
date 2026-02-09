@@ -11,24 +11,33 @@
   const line2Input = document.getElementById("seal_line2");
   const sealTextError = document.getElementById("seal_text_error");
   const fontInput = document.getElementById("font");
+  const toggleWritingModeButton = document.getElementById("toggle-writing-mode");
+  const countrySelect = document.getElementById("country");
   const fontChips = Array.from(document.querySelectorAll(".font-chip"));
   const preview = document.getElementById("seal-preview");
   const previewLine1 = document.getElementById("seal-preview-line1");
   const previewLine2 = document.getElementById("seal-preview-line2");
+  const previewCaption = document.getElementById("preview-caption");
 
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
   const summaryFont = document.getElementById("summary-font");
   const summaryMaterial = document.getElementById("summary-material");
-  const summaryPrice = document.getElementById("summary-price");
+  const summaryCountry = document.getElementById("summary-country");
+  const summarySubtotal = document.getElementById("summary-subtotal");
+  const summaryShipping = document.getElementById("summary-shipping");
+  const summaryTotal = document.getElementById("summary-total");
 
   let currentStep = 1;
-
-  const lineRegex = /^[一-龯々〆〤ぁ-ゖァ-ヶA-Za-z0-9]{1,2}$/;
 
   const shapeLabelMap = {
     square: "角印",
     round: "丸印",
+  };
+
+  const previewShapeMap = {
+    square: "角",
+    round: "丸",
   };
 
   function formatYen(amount) {
@@ -65,7 +74,17 @@
     const { line1, line2 } = getSealLines();
 
     if ([...line1].length === 0) {
-      sealTextError.textContent = "印影テキスト1行目を入力してください。";
+      sealTextError.textContent = "お名前を入力してください。";
+      return false;
+    }
+
+    if (/\s/u.test(line1)) {
+      sealTextError.textContent = "1行目に空白は使えません。";
+      return false;
+    }
+
+    if (line2 !== "" && /\s/u.test(line2)) {
+      sealTextError.textContent = "2行目に空白は使えません。";
       return false;
     }
 
@@ -79,16 +98,6 @@
       return false;
     }
 
-    if (!lineRegex.test(line1)) {
-      sealTextError.textContent = "1行目で使える文字は漢字・ひらがな・カタカナ・英字・数字のみです。";
-      return false;
-    }
-
-    if (line2 !== "" && !lineRegex.test(line2)) {
-      sealTextError.textContent = "2行目で使える文字は漢字・ひらがな・カタカナ・英字・数字のみです。";
-      return false;
-    }
-
     sealTextError.textContent = "";
     return true;
   }
@@ -99,6 +108,14 @@
 
   function selectedMaterial() {
     return form.querySelector("input[name='material']:checked");
+  }
+
+  function selectedCountry() {
+    if (!countrySelect) {
+      return null;
+    }
+
+    return countrySelect.selectedOptions[0] || null;
   }
 
   function getSelectedFontChip() {
@@ -143,8 +160,28 @@
     });
   }
 
+  function swapCrossLineCharacters() {
+    if (!line1Input || !line2Input) {
+      return;
+    }
+
+    const line1Chars = Array.from(line1Input.value.trim());
+    const line2Chars = Array.from(line2Input.value.trim());
+
+    if (line1Chars.length < 2 || line2Chars.length < 1) {
+      return;
+    }
+
+    const line1Second = line1Chars[1];
+    line1Chars[1] = line2Chars[0];
+    line2Chars[0] = line1Second;
+
+    line1Input.value = line1Chars.slice(0, 2).join("");
+    line2Input.value = line2Chars.slice(0, 2).join("");
+  }
+
   function updatePreview() {
-    if (!preview || !previewLine1 || !previewLine2) {
+    if (!preview || !previewLine1 || !previewLine2 || !previewCaption) {
       return;
     }
 
@@ -168,10 +205,21 @@
     preview.classList.toggle("mode-two-lines", hasSecondLine);
     preview.classList.toggle("mode-single-char", !hasSecondLine && [...previewLine1Text].length === 1);
     preview.classList.toggle("mode-single-line", !hasSecondLine && [...previewLine1Text].length > 1);
+
+    previewCaption.textContent = `${previewShapeMap[shape] || "角"} / ${selectedFontChip?.dataset.fontLabel || "Zen Maru Gothic"}`;
   }
 
   function updateSummary() {
-    if (!summarySealLines || !summaryShape || !summaryFont || !summaryMaterial || !summaryPrice) {
+    if (
+      !summarySealLines ||
+      !summaryShape ||
+      !summaryFont ||
+      !summaryMaterial ||
+      !summaryCountry ||
+      !summarySubtotal ||
+      !summaryShipping ||
+      !summaryTotal
+    ) {
       return;
     }
 
@@ -190,7 +238,15 @@
 
     const material = selectedMaterial();
     summaryMaterial.textContent = material?.dataset.label || "-";
-    summaryPrice.textContent = material ? formatYen(material.dataset.price || 0) : "-";
+
+    const country = selectedCountry();
+    const shipping = Number(country?.dataset.shipping || 0);
+    summaryCountry.textContent = country?.dataset.label || "-";
+
+    const subtotal = Number(material?.dataset.price || 0);
+    summarySubtotal.textContent = material ? formatYen(subtotal) : "-";
+    summaryShipping.textContent = country ? formatYen(shipping) : "-";
+    summaryTotal.textContent = material && country ? formatYen(subtotal + shipping) : "-";
   }
 
   form.querySelectorAll("[data-next-step]").forEach((button) => {
@@ -241,22 +297,50 @@
     radio.addEventListener("change", updateSummary);
   });
 
+  countrySelect?.addEventListener("change", updateSummary);
+  toggleWritingModeButton?.addEventListener("click", () => {
+    swapCrossLineCharacters();
+    validateSealText();
+    updateFontChipPreviews();
+    updatePreview();
+    updateSummary();
+  });
+
   document.body.addEventListener("click", (event) => {
     const chip = event.target.closest(".kanji-chip");
     if (!chip || !line1Input || !line2Input) {
       return;
     }
 
-    const candidate = (chip.dataset.kanji || chip.textContent || "").trim();
-    const chars = Array.from(candidate).slice(0, 4);
+    const line1 = (chip.dataset.line1 || "").trim();
+    const line2 = (chip.dataset.line2 || "").trim();
 
-    line1Input.value = chars.slice(0, 2).join("");
-    line2Input.value = chars.slice(2, 4).join("");
+    if (line1 !== "" || line2 !== "") {
+      line1Input.value = line1.slice(0, 2);
+      line2Input.value = line2.slice(0, 2);
+    } else {
+      const candidate = (chip.textContent || "").trim();
+      const chars = Array.from(candidate).slice(0, 4);
+      line1Input.value = chars.slice(0, 2).join("");
+      line2Input.value = chars.slice(2, 4).join("");
+    }
 
     validateSealText();
     updateFontChipPreviews();
     updatePreview();
     updateSummary();
+
+    const suggestionsContainer = chip.closest("#kanji-suggestions");
+    if (suggestionsContainer) {
+      suggestionsContainer.querySelectorAll(".kanji-chip").forEach((button) => {
+        button.classList.toggle("is-selected", button === chip);
+      });
+
+      const reasonBox = suggestionsContainer.querySelector("[data-kanji-reason]");
+      if (reasonBox) {
+        reasonBox.textContent = chip.dataset.reason || "この候補の理由を表示できませんでした。";
+      }
+    }
   });
 
   setSelectedFontChip(getSelectedFontChip());

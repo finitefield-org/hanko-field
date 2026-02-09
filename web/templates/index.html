@@ -35,18 +35,21 @@
 
           <div class="design-grid">
             <div class="design-controls">
-              <p class="field-label">お名前</p>
+              <div class="field-label-row">
+                <p class="field-label">お名前（印影テキスト）</p>
+                <button type="button" id="toggle-writing-mode" class="mode-toggle-button">縦横変換</button>
+              </div>
               <div class="seal-lines-input">
                 <div>
                   <label class="field-label compact" for="seal_line1">1行目</label>
                   <input
                     id="seal_line1"
                     name="seal_line1"
+                    class="name-line-input"
                     type="text"
                     maxlength="2"
                     required
                     autocomplete="off"
-                    placeholder="例: 山田 / Ta / A1"
                   >
                 </div>
                 <div>
@@ -54,10 +57,10 @@
                   <input
                     id="seal_line2"
                     name="seal_line2"
+                    class="name-line-input"
                     type="text"
                     maxlength="2"
                     autocomplete="off"
-                    placeholder="例: 太郎 / ro / 23"
                   >
                 </div>
               </div>
@@ -65,8 +68,7 @@
               <p class="field-error" id="seal_text_error" role="alert" aria-live="polite"></p>
 
               <div class="ai-box">
-                <h3>外国籍ユーザ向け 漢字名提案</h3>
-                <p>本名から Gemini を使って漢字候補（4文字以内）を提案し、2行（各2文字）へ反映する想定のモックです。</p>
+                <h3>漢字名提案</h3>
                 <label class="field-label" for="real_name">本名</label>
                 <input
                   id="real_name"
@@ -83,7 +85,7 @@
                   hx-swap="innerHTML"
                   hx-include="#real_name"
                 >
-                  Geminiで候補を表示（モック）
+                  候補を生成
                 </button>
                 <div id="kanji-suggestions" class="suggestions-box">
                   <p class="placeholder">本名を入力して候補を生成してください。</p>
@@ -99,6 +101,7 @@
                   <span id="seal-preview-line2" hidden></span>
                 </div>
               </div>
+              <p id="preview-caption">角 / {{(index .Fonts 0).Label}}</p>
 
               <div class="preview-config">
                 <input type="hidden" id="font" name="font" value="{{(index .Fonts 0).Key}}">
@@ -194,22 +197,136 @@
                   <dd id="summary-material">-</dd>
                 </div>
                 <div>
-                  <dt>価格</dt>
-                  <dd id="summary-price">-</dd>
+                  <dt>配送先の国</dt>
+                  <dd id="summary-country">-</dd>
+                </div>
+                <div>
+                  <dt>商品価格</dt>
+                  <dd id="summary-subtotal">-</dd>
+                </div>
+                <div>
+                  <dt>送料</dt>
+                  <dd id="summary-shipping">-</dd>
+                </div>
+                <div>
+                  <dt>合計</dt>
+                  <dd id="summary-total">-</dd>
                 </div>
               </dl>
             </section>
 
             <section class="checkout-card">
-              <label class="field-label" for="email">メールアドレス</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autocomplete="email"
-                placeholder="you@example.com"
-              >
+              <div class="checkout-form-grid">
+                <div class="field-span-full">
+                  <label class="field-label" for="recipient_name">お届け先氏名</label>
+                  <input
+                    id="recipient_name"
+                    name="recipient_name"
+                    type="text"
+                    required
+                    autocomplete="name"
+                    placeholder="例: 山田 太郎"
+                  >
+                </div>
+
+                <div>
+                  <label class="field-label" for="email">メールアドレス</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                  >
+                </div>
+
+                <div>
+                  <label class="field-label" for="phone">電話番号</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    autocomplete="tel"
+                    placeholder="+81 90 1234 5678"
+                  >
+                </div>
+
+                <div>
+                  <label class="field-label" for="country">国 / Country</label>
+                  <select id="country" name="country" required>
+                    {{range $index, $c := .Countries}}
+                    <option value="{{$c.Code}}" data-label="{{$c.Label}}" data-shipping="{{$c.Shipping}}" {{if eq $index 0}}selected{{end}}>{{$c.Label}} ({{$c.Code}})</option>
+                    {{end}}
+                  </select>
+                </div>
+
+                <div>
+                  <label class="field-label" for="postal_code">郵便番号 / ZIP</label>
+                  <input
+                    id="postal_code"
+                    name="postal_code"
+                    type="text"
+                    required
+                    autocomplete="postal-code"
+                    placeholder="100-0001"
+                  >
+                </div>
+
+                <div>
+                  <label class="field-label" for="state">都道府県 / 州</label>
+                  <input
+                    id="state"
+                    name="state"
+                    type="text"
+                    required
+                    autocomplete="address-level1"
+                    placeholder="東京都"
+                  >
+                </div>
+
+                <div>
+                  <label class="field-label" for="city">市区町村 / City</label>
+                  <input
+                    id="city"
+                    name="city"
+                    type="text"
+                    required
+                    autocomplete="address-level2"
+                    placeholder="千代田区"
+                  >
+                </div>
+
+                <div class="field-span-full">
+                  <label class="field-label" for="address_line1">住所1</label>
+                  <input
+                    id="address_line1"
+                    name="address_line1"
+                    type="text"
+                    required
+                    autocomplete="address-line1"
+                    placeholder="丸の内1-1-1"
+                  >
+                </div>
+
+                <div class="field-span-full">
+                  <label class="field-label" for="address_line2">住所2（任意）</label>
+                  <input
+                    id="address_line2"
+                    name="address_line2"
+                    type="text"
+                    autocomplete="address-line2"
+                    placeholder="建物名・部屋番号など"
+                  >
+                </div>
+              </div>
+
+              <label class="terms-check">
+                <input id="terms_agreed" name="terms_agreed" type="checkbox" required>
+                <span>利用規約に同意する</span>
+              </label>
+
               <p class="field-hint">モックのため実決済は行われず、確認メッセージのみ表示します。</p>
               <button
                 type="button"
@@ -241,9 +358,10 @@
 <p class="suggestion-title">{{.RealName}} さんへの候補（Geminiモック）</p>
 <div class="suggestion-chips">
   {{range .Suggestions}}
-  <button type="button" class="kanji-chip" data-kanji="{{.}}">{{.}}</button>
+  <button type="button" class="kanji-chip" data-line1="{{.Line1}}" data-line2="{{.Line2}}" data-reason="{{.Reason}}">{{.Label}}</button>
   {{end}}
 </div>
+<p class="suggestion-reason" data-kanji-reason>候補をタップすると、提案理由を表示します。</p>
 <p class="field-hint">候補をクリックすると2行の印影テキストに反映されます。</p>
 {{else}}
 <p class="placeholder">候補を表示するには本名を入力してください。</p>
@@ -260,7 +378,9 @@
   <h4>注文を受け付けました（モック）</h4>
   <p>印影: {{.SealLine1}}{{if .SealLine2}} / {{.SealLine2}}{{end}}</p>
   <p>{{.ShapeLabel}} / {{.MaterialLabel}} / {{.FontLabel}}</p>
-  <p>合計: ¥{{yen .Price}}</p>
+  <p>配送先: {{.CountryLabel}} / {{.StripeName}} / {{.StripePhone}}</p>
+  <p>住所: {{.PostalCode}} {{.State}} {{.City}} {{.AddressLine1}}{{if .AddressLine2}} {{.AddressLine2}}{{end}}</p>
+  <p>小計: ¥{{yen .Subtotal}} / 送料: ¥{{yen .Shipping}} / 合計: ¥{{yen .Total}}</p>
   <p>確認メール送信先: {{.Email}}</p>
 </div>
 {{end}}
