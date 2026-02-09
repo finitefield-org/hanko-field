@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +53,10 @@ type server struct {
 	tmpl *template.Template
 
 	mu sync.RWMutex
+
+	mode        runMode
+	sourceLabel string
+	firestore   *firestoreAdminSource
 
 	orders      map[string]*order
 	orderIDs    []string
@@ -197,6 +201,8 @@ type pageData struct {
 	Filters        orderFilter
 	StatusOptions  []statusOption
 	CountryOptions []countryOption
+	SourceLabel    string
+	IsMock         bool
 	OrdersList     orderListData
 	OrderDetail    *orderDetailData
 	MaterialsList  materialListData
@@ -204,10 +210,20 @@ type pageData struct {
 }
 
 func main() {
-	s, err := newServer()
+	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("failed to initialize admin mock: %v", err)
+		log.Fatalf("failed to load config: %v", err)
 	}
+
+	s, err := newServerWithConfig(cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize admin server: %v", err)
+	}
+	defer func() {
+		if err := s.Close(); err != nil {
+			log.Printf("failed to close server resources: %v", err)
+		}
+	}()
 
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -217,18 +233,34 @@ func main() {
 	mux.HandleFunc("/admin/materials/list", s.handleMaterialsList)
 	mux.HandleFunc("/admin/materials/", s.handleMaterialRoute)
 
-	addr := strings.TrimSpace(os.Getenv("ADMIN_HTTP_ADDR"))
-	if addr == "" {
-		addr = ":3051"
+	addr := cfg.HTTPAddr
+	if cfg.FirestoreProjectID == "" {
+		log.Printf("hanko admin listening on http://localhost%s mode=%s source=%s", addr, cfg.Mode, s.sourceLabel)
+	} else {
+		log.Printf(
+			"hanko admin listening on http://localhost%s mode=%s source=%s project=%s",
+			addr,
+			cfg.Mode,
+			s.sourceLabel,
+			cfg.FirestoreProjectID,
+		)
 	}
 
-	log.Printf("hanko admin mock listening on http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func newServer() (*server, error) {
+	return newServerWithConfig(appConfig{
+		HTTPAddr:      ":3051",
+		Mode:          runModeMock,
+		Locale:        "ja",
+		DefaultLocale: "ja",
+	})
+}
+
+func newMockServer() (*server, error) {
 	now := time.Now().UTC()
 	orders := map[string]*order{
 		"ord_1007": {
@@ -437,31 +469,17 @@ func newServer() (*server, error) {
 		},
 	}
 
-	tmpl, err := template.New("index.html").Funcs(template.FuncMap{
-		"yen":              formatYen,
-		"datetime":         formatDateTime,
-		"orderStatusLabel": lookupOrderStatusLabel,
-		"paymentStatusLabel": func(status string) string {
-			if label, ok := paymentStatusLabels[status]; ok {
-				return label
-			}
-			return status
-		},
-		"fulfillmentStatusLabel": func(status string) string {
-			if label, ok := fulfillmentStatusLabels[status]; ok {
-				return label
-			}
-			return status
-		},
-	}).ParseFiles("templates/index.html")
+	tmpl, err := newAdminTemplate()
 	if err != nil {
 		return nil, err
 	}
 
 	s := &server{
-		tmpl:      tmpl,
-		orders:    orders,
-		materials: materials,
+		tmpl:        tmpl,
+		mode:        runModeMock,
+		sourceLabel: "Mock",
+		orders:      orders,
+		materials:   materials,
 		countries: map[string]string{
 			"JP": "日本",
 			"US": "United States",
@@ -481,6 +499,10 @@ func newServer() (*server, error) {
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := s.refreshFromSource(r.Context()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to load admin data: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -514,6 +536,8 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		Filters:        filters,
 		StatusOptions:  statusOptions(),
 		CountryOptions: s.countryOptions(),
+		SourceLabel:    s.sourceLabel,
+		IsMock:         s.firestore == nil,
 		OrdersList: orderListData{
 			Orders: orders,
 		},
@@ -530,6 +554,10 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleOrdersList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := s.refreshFromSource(r.Context()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to load orders: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -553,6 +581,10 @@ func (s *server) handleOrderRoute(w http.ResponseWriter, r *http.Request) {
 	orderID := strings.TrimSpace(parts[0])
 	if orderID == "" {
 		http.NotFound(w, r)
+		return
+	}
+	if err := s.refreshFromSource(r.Context()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to load orders: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -589,7 +621,7 @@ func (s *server) handleOrderStatusPatch(w http.ResponseWriter, r *http.Request, 
 		actorID = "admin.console"
 	}
 
-	err := s.updateOrderStatus(orderID, nextStatus, actorID)
+	err := s.updateOrderStatusWithContext(r.Context(), orderID, nextStatus, actorID)
 	if err != nil {
 		detail, ok := s.getOrderDetail(orderID, "", err.Error())
 		if !ok {
@@ -624,7 +656,7 @@ func (s *server) handleOrderShippingPatch(w http.ResponseWriter, r *http.Request
 		actorID = "admin.console"
 	}
 
-	err := s.updateShipping(orderID, carrier, trackingNo, transition, actorID)
+	err := s.updateShippingWithContext(r.Context(), orderID, carrier, trackingNo, transition, actorID)
 	if err != nil {
 		detail, ok := s.getOrderDetail(orderID, "", err.Error())
 		if !ok {
@@ -650,6 +682,10 @@ func (s *server) handleMaterialsList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if err := s.refreshFromSource(r.Context()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to load materials: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	s.renderTemplate(w, "materials_list", s.listMaterials())
 }
@@ -659,6 +695,10 @@ func (s *server) handleMaterialRoute(w http.ResponseWriter, r *http.Request) {
 	materialKey = strings.Trim(materialKey, "/")
 	if materialKey == "" {
 		http.NotFound(w, r)
+		return
+	}
+	if err := s.refreshFromSource(r.Context()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to load materials: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -717,7 +757,7 @@ func (s *server) handleMaterialPatch(w http.ResponseWriter, r *http.Request, mat
 		IsActive:      r.Form.Get("is_active") != "",
 	}
 
-	if err := s.updateMaterial(materialKey, input); err != nil {
+	if err := s.updateMaterialWithContext(r.Context(), materialKey, input); err != nil {
 		detail, ok := s.getMaterialDetail(materialKey, "", err.Error())
 		if !ok {
 			http.NotFound(w, r)
@@ -738,25 +778,31 @@ func (s *server) handleMaterialPatch(w http.ResponseWriter, r *http.Request, mat
 }
 
 func (s *server) updateOrderStatus(orderID, nextStatus, actorID string) error {
+	return s.updateOrderStatusWithContext(context.Background(), orderID, nextStatus, actorID)
+}
+
+func (s *server) updateOrderStatusWithContext(ctx context.Context, orderID, nextStatus, actorID string) error {
 	nextStatus = strings.TrimSpace(nextStatus)
 	if nextStatus == "" {
 		return errors.New("更新先のステータスを選択してください。")
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	o, ok := s.orders[orderID]
 	if !ok {
+		s.mu.Unlock()
 		return errors.New("注文が見つかりません。")
 	}
 
 	if o.Status == nextStatus {
+		s.mu.Unlock()
 		return errors.New("現在と同じステータスには更新できません。")
 	}
 
 	allowed := statusTransitions[o.Status]
 	if !contains(allowed, nextStatus) {
+		s.mu.Unlock()
 		return fmt.Errorf("%s から %s には遷移できません。", lookupOrderStatusLabel(o.Status), lookupOrderStatusLabel(nextStatus))
 	}
 
@@ -774,11 +820,27 @@ func (s *server) updateOrderStatus(orderID, nextStatus, actorID string) error {
 		AfterStatus:  nextStatus,
 		CreatedAt:    now,
 	})
+	newEvent := o.Events[len(o.Events)-1]
+	updatedOrder := cloneOrder(o)
+	s.mu.Unlock()
+
+	if s.firestore != nil {
+		if err := s.firestore.persistOrderMutation(ctx, updatedOrder, []orderEvent{newEvent}); err != nil {
+			if reloadErr := s.refreshFromSource(context.Background()); reloadErr != nil {
+				log.Printf("failed to rollback from firestore after status update error: %v", reloadErr)
+			}
+			return fmt.Errorf("firestore update failed: %w", err)
+		}
+	}
 
 	return nil
 }
 
 func (s *server) updateShipping(orderID, carrier, trackingNo, transition, actorID string) error {
+	return s.updateShippingWithContext(context.Background(), orderID, carrier, trackingNo, transition, actorID)
+}
+
+func (s *server) updateShippingWithContext(ctx context.Context, orderID, carrier, trackingNo, transition, actorID string) error {
 	if carrier == "" {
 		return errors.New("配送業者を入力してください。")
 	}
@@ -787,26 +849,29 @@ func (s *server) updateShipping(orderID, carrier, trackingNo, transition, actorI
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	o, ok := s.orders[orderID]
 	if !ok {
+		s.mu.Unlock()
 		return errors.New("注文が見つかりません。")
 	}
 
 	if transition != "" && transition != "none" {
 		if o.Status == transition {
+			s.mu.Unlock()
 			return errors.New("現在と同じステータスは指定できません。")
 		}
 
 		allowed := statusTransitions[o.Status]
 		if !contains(allowed, transition) {
+			s.mu.Unlock()
 			return fmt.Errorf("%s から %s には遷移できません。", lookupOrderStatusLabel(o.Status), lookupOrderStatusLabel(transition))
 		}
 	}
 
 	now := time.Now().UTC()
 	beforeStatus := o.Status
+	newEvents := []orderEvent{}
 
 	o.Carrier = carrier
 	o.TrackingNo = trackingNo
@@ -818,6 +883,7 @@ func (s *server) updateShipping(orderID, carrier, trackingNo, transition, actorI
 		Note:      carrier + " / " + trackingNo,
 		CreatedAt: now,
 	})
+	newEvents = append(newEvents, o.Events[len(o.Events)-1])
 
 	if transition != "" && transition != "none" {
 		o.Status = transition
@@ -831,6 +897,18 @@ func (s *server) updateShipping(orderID, carrier, trackingNo, transition, actorI
 			AfterStatus:  transition,
 			CreatedAt:    now,
 		})
+		newEvents = append(newEvents, o.Events[len(o.Events)-1])
+	}
+	updatedOrder := cloneOrder(o)
+	s.mu.Unlock()
+
+	if s.firestore != nil {
+		if err := s.firestore.persistOrderMutation(ctx, updatedOrder, newEvents); err != nil {
+			if reloadErr := s.refreshFromSource(context.Background()); reloadErr != nil {
+				log.Printf("failed to rollback from firestore after shipping update error: %v", reloadErr)
+			}
+			return fmt.Errorf("firestore update failed: %w", err)
+		}
 	}
 
 	return nil
@@ -847,6 +925,10 @@ type materialPatchInput struct {
 }
 
 func (s *server) updateMaterial(key string, input materialPatchInput) error {
+	return s.updateMaterialWithContext(context.Background(), key, input)
+}
+
+func (s *server) updateMaterialWithContext(ctx context.Context, key string, input materialPatchInput) error {
 	if input.LabelJA == "" || input.LabelEN == "" {
 		return errors.New("材質名（ja/en）は必須です。")
 	}
@@ -861,10 +943,10 @@ func (s *server) updateMaterial(key string, input materialPatchInput) error {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	m, ok := s.materials[key]
 	if !ok {
+		s.mu.Unlock()
 		return errors.New("材質が見つかりません。")
 	}
 
@@ -880,6 +962,17 @@ func (s *server) updateMaterial(key string, input materialPatchInput) error {
 	m.UpdatedAt = now
 
 	s.refreshMaterialIDsLocked()
+	updatedMaterial := cloneMaterial(m)
+	s.mu.Unlock()
+
+	if s.firestore != nil {
+		if err := s.firestore.persistMaterialMutation(ctx, updatedMaterial); err != nil {
+			if reloadErr := s.refreshFromSource(context.Background()); reloadErr != nil {
+				log.Printf("failed to rollback from firestore after material update error: %v", reloadErr)
+			}
+			return fmt.Errorf("firestore update failed: %w", err)
+		}
+	}
 	return nil
 }
 

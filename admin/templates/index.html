@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hanko Field Admin Mock</title>
+  <title>{{if .IsMock}}Hanko Field Admin Mock{{else}}Hanko Field Admin{{end}}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
@@ -16,8 +16,14 @@
   <main class="layout">
     <header class="hero">
       <p class="eyebrow">Hanko Field Admin</p>
+      {{if .IsMock}}
       <h1>管理画面モック</h1>
       <p>注文ステータス更新と材質マスタ編集を、ポーリングなしの htmx で確認できます。</p>
+      {{else}}
+      <h1>管理画面</h1>
+      <p>注文ステータス更新と材質マスタ編集を、ポーリングなしの htmx で運用できます。</p>
+      {{end}}
+      <p class="muted">データソース: {{.SourceLabel}}</p>
     </header>
 
     <section class="card">

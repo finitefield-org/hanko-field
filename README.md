@@ -92,9 +92,9 @@ make -C api run
 
 # Admin
 ADMIN_HTTP_ADDR=:3051 \
-ADMIN_ALLOW_INSECURE_AUTH=1 \
-FIRESTORE_PROJECT_ID=hanko-field-dev \
-make -C admin dev
+HANKO_ADMIN_FIREBASE_PROJECT_ID_DEV=hanko-field-dev \
+GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path> \
+make -C admin dev MODE=dev LOCALE=ja
 
 # Web
 HANKO_WEB_PORT=3052 \
@@ -135,4 +135,40 @@ make -C web dev MODE=dev LOCALE=ja
 HANKO_WEB_FIREBASE_PROJECT_ID_PROD=hanko-field-prod \
 GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path> \
 make -C web dev MODE=prod LOCALE=ja
+```
+
+### Admin データソース切替（mock / Firebase dev / Firebase prod）
+
+`admin` は `HANKO_ADMIN_MODE` でデータソースを切り替えられます。
+
+- `mock` (既定): 内蔵モックデータを使用
+- `dev`: Firestore（開発用プロジェクト）を使用
+- `prod`: Firestore（本番プロジェクト）を使用
+
+主要な環境変数:
+
+- `HANKO_ADMIN_MODE`: `mock` / `dev` / `prod`
+- `HANKO_ADMIN_LOCALE`: 表示ロケール（既定 `ja`）
+- `HANKO_ADMIN_DEFAULT_LOCALE`: i18n フォールバック（既定 `ja`）
+- `HANKO_ADMIN_FIREBASE_PROJECT_ID_DEV`: `dev` モードの project id
+- `HANKO_ADMIN_FIREBASE_PROJECT_ID_PROD`: `prod` モードの project id
+- `HANKO_ADMIN_FIREBASE_CREDENTIALS_FILE_DEV`: `dev` モードの認証 JSON パス（任意）
+- `HANKO_ADMIN_FIREBASE_CREDENTIALS_FILE_PROD`: `prod` モードの認証 JSON パス（任意）
+- `GOOGLE_APPLICATION_CREDENTIALS`: サービスアカウント JSON パス（ADC 使用時は不要）
+
+`make -C admin dev` 利用時は、`MODE` と `LOCALE` も指定できます。
+
+```bash
+# mock (default)
+make -C admin dev
+
+# Firebase dev
+HANKO_ADMIN_FIREBASE_PROJECT_ID_DEV=hanko-field-dev \
+GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path> \
+make -C admin dev MODE=dev LOCALE=ja
+
+# Firebase prod
+HANKO_ADMIN_FIREBASE_PROJECT_ID_PROD=hanko-field-prod \
+GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path> \
+make -C admin dev MODE=prod LOCALE=ja
 ```
