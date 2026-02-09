@@ -18,7 +18,7 @@
 
   <main class="layout">
     <header class="hero">
-      <p class="hero-eyebrow">Hanko Field Mock</p>
+      <p class="hero-eyebrow">Hanko Field {{.SourceLabel}}</p>
     </header>
 
     <section class="panel">
@@ -80,7 +80,7 @@
                 <button
                   type="button"
                   class="secondary"
-                  hx-post="/mock/kanji"
+                  hx-post="/kanji"
                   hx-target="#kanji-suggestions"
                   hx-swap="innerHTML"
                   hx-include="#real_name"
@@ -327,16 +327,22 @@
                 <span>利用規約に同意する</span>
               </label>
 
-              <p class="field-hint">モックのため実決済は行われず、確認メッセージのみ表示します。</p>
+              <p class="field-hint">
+                {{if .IsMock}}
+                mock モードのため実決済は行われず、確認メッセージのみ表示します。
+                {{else}}
+                カタログは Firebase データを参照しています。決済処理は現在モックです。
+                {{end}}
+              </p>
               <button
                 type="button"
                 class="primary full"
-                hx-post="/mock/purchase"
+                hx-post="/purchase"
                 hx-target="#purchase-result"
                 hx-swap="innerHTML"
                 hx-include="#order-form"
               >
-                購入を確定（モック）
+                {{if .IsMock}}購入を確定（モック）{{else}}購入を確定（検証）{{end}}
               </button>
               <div id="purchase-result" class="purchase-result"></div>
             </section>
@@ -375,7 +381,8 @@
 </div>
 {{else}}
 <div class="result-card is-success">
-  <h4>注文を受け付けました（モック）</h4>
+  <h4>{{if .IsMock}}注文を受け付けました（モック）{{else}}注文内容を受け付けました（検証）{{end}}</h4>
+  <p>データソース: {{.SourceLabel}}</p>
   <p>印影: {{.SealLine1}}{{if .SealLine2}} / {{.SealLine2}}{{end}}</p>
   <p>{{.ShapeLabel}} / {{.MaterialLabel}} / {{.FontLabel}}</p>
   <p>配送先: {{.CountryLabel}} / {{.StripeName}} / {{.StripePhone}}</p>

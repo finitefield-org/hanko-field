@@ -15,3 +15,6 @@
 
 ## 関連ドキュメント
 - Firebase Firestore 設計（本番向け・多言語対応）: `doc/firebase-firestore-design.md`
+
+## タスク
+- [x] 管理画面（`admin`）の初期モック実装を追加

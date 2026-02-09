@@ -1,0 +1,376 @@
+{{define "page"}}
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hanko Field Admin Mock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/static/admin.js" defer></script>
+</head>
+<body>
+  <main class="layout">
+    <header class="hero">
+      <p class="eyebrow">Hanko Field Admin</p>
+      <h1>管理画面モック</h1>
+      <p>注文ステータス更新と材質マスタ編集を、ポーリングなしの htmx で確認できます。</p>
+    </header>
+
+    <section class="card">
+      <div class="card-title">
+        <h2>注文管理</h2>
+      </div>
+
+      <form
+        id="order-filter-form"
+        class="filter-form"
+        hx-get="/admin/orders/list"
+        hx-target="#orders-list"
+        hx-swap="innerHTML"
+      >
+        <label>
+          ステータス
+          <select name="status">
+            <option value="">すべて</option>
+            {{range .StatusOptions}}
+            <option value="{{.Value}}" {{if eq $.Filters.Status .Value}}selected{{end}}>{{.Label}}</option>
+            {{end}}
+          </select>
+        </label>
+
+        <label>
+          配送国
+          <select name="country">
+            <option value="">すべて</option>
+            {{range .CountryOptions}}
+            <option value="{{.Code}}" {{if eq $.Filters.Country .Code}}selected{{end}}>{{.Label}} ({{.Code}})</option>
+            {{end}}
+          </select>
+        </label>
+
+        <label>
+          Email
+          <input type="text" name="email" value="{{.Filters.Email}}" placeholder="example@domain.com">
+        </label>
+
+        <div class="button-row">
+          <button type="submit" class="button-primary">検索</button>
+          <a href="/" class="button-ghost">リセット</a>
+        </div>
+      </form>
+
+      <div class="grid-2">
+        <div
+          id="orders-list"
+          class="panel"
+          hx-get="/admin/orders/list"
+          hx-trigger="order-updated from:body"
+          hx-include="#order-filter-form"
+          hx-target="this"
+          hx-swap="innerHTML"
+        >
+          {{template "orders_list" .OrdersList}}
+        </div>
+
+        <div id="order-detail" class="panel">
+          {{if .OrderDetail}}
+          {{template "order_detail" .OrderDetail}}
+          {{else}}
+          <p class="empty">注文を選択してください。</p>
+          {{end}}
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">
+        <h2>材質マスタ</h2>
+      </div>
+
+      <div class="grid-2">
+        <div
+          id="materials-list"
+          class="panel"
+          hx-get="/admin/materials/list"
+          hx-trigger="material-updated from:body"
+          hx-target="this"
+          hx-swap="innerHTML"
+        >
+          {{template "materials_list" .MaterialsList}}
+        </div>
+
+        <div id="material-detail" class="panel">
+          {{if .MaterialDetail}}
+          {{template "material_detail" .MaterialDetail}}
+          {{else}}
+          <p class="empty">材質を選択してください。</p>
+          {{end}}
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "orders_list"}}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Order No</th>
+      <th>Status</th>
+      <th>Payment</th>
+      <th>配送</th>
+      <th>国</th>
+      <th>合計</th>
+      <th>詳細</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{if .Orders}}
+    {{range .Orders}}
+    <tr>
+      <td>
+        <strong>{{.OrderNo}}</strong>
+        <small>{{datetime .CreatedAt}}</small>
+      </td>
+      <td>{{orderStatusLabel .Status}}</td>
+      <td>{{paymentStatusLabel .PaymentStatus}}</td>
+      <td>{{fulfillmentStatusLabel .FulfillmentStatus}}</td>
+      <td>{{.CountryLabel}}</td>
+      <td>¥{{yen .TotalJPY}}</td>
+      <td>
+        <button
+          type="button"
+          class="button-link"
+          hx-get="/admin/orders/{{.ID}}"
+          hx-target="#order-detail"
+          hx-swap="innerHTML"
+        >
+          開く
+        </button>
+      </td>
+    </tr>
+    {{end}}
+    {{else}}
+    <tr>
+      <td colspan="7" class="empty">条件に一致する注文はありません。</td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{define "order_detail"}}
+<article class="detail">
+  <header>
+    <h3>{{.OrderNo}}</h3>
+    <p class="muted">更新: {{datetime .UpdatedAt}}</p>
+  </header>
+
+  {{if .Message}}
+  <p class="message-success">{{.Message}}</p>
+  {{end}}
+  {{if .Error}}
+  <p class="message-error">{{.Error}}</p>
+  {{end}}
+
+  <dl class="detail-list">
+    <div><dt>注文日時</dt><dd>{{datetime .CreatedAt}}</dd></div>
+    <div><dt>ステータス</dt><dd>{{orderStatusLabel .Status}}</dd></div>
+    <div><dt>支払い</dt><dd>{{paymentStatusLabel .PaymentStatus}}</dd></div>
+    <div><dt>配送進捗</dt><dd>{{fulfillmentStatusLabel .FulfillmentStatus}}</dd></div>
+    <div><dt>チャネル</dt><dd>{{.Channel}}</dd></div>
+    <div><dt>ロケール</dt><dd>{{.Locale}}</dd></div>
+    <div><dt>配送国</dt><dd>{{.CountryLabel}} ({{.CountryCode}})</dd></div>
+    <div><dt>Email</dt><dd>{{.ContactEmail}}</dd></div>
+    <div><dt>印面</dt><dd>{{.SealLine1}}{{if .SealLine2}} / {{.SealLine2}}{{end}}</dd></div>
+    <div><dt>材質</dt><dd>{{.MaterialLabelJA}}</dd></div>
+    <div><dt>合計</dt><dd>¥{{yen .TotalJPY}}</dd></div>
+    <div><dt>追跡番号</dt><dd>{{if .TrackingNo}}{{.TrackingNo}}{{else}}-{{end}}</dd></div>
+  </dl>
+
+  <section class="sub-section">
+    <h4>ステータス更新</h4>
+    {{if .NextStatuses}}
+    <form
+      class="stack-form"
+      hx-patch="/admin/orders/{{.ID}}/status"
+      hx-target="#order-detail"
+      hx-swap="innerHTML"
+    >
+      <label>
+        次ステータス
+        <select name="next_status" required>
+          <option value="">選択してください</option>
+          {{range .NextStatuses}}
+          <option value="{{.Value}}">{{.Label}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label>
+        実行者ID
+        <input type="text" name="actor_id" value="admin.console">
+      </label>
+      <button type="submit" class="button-primary">ステータス反映</button>
+    </form>
+    {{else}}
+    <p class="muted">この注文はこれ以上ステータス遷移できません。</p>
+    {{end}}
+  </section>
+
+  <section class="sub-section">
+    <h4>出荷情報更新</h4>
+    <form
+      class="stack-form"
+      hx-patch="/admin/orders/{{.ID}}/shipping"
+      hx-target="#order-detail"
+      hx-swap="innerHTML"
+    >
+      <label>
+        配送業者
+        <input type="text" name="carrier" value="{{.Carrier}}" placeholder="ヤマト運輸 / DHL など" required>
+      </label>
+      <label>
+        追跡番号
+        <input type="text" name="tracking_no" value="{{.TrackingNo}}" required>
+      </label>
+      <label>
+        ステータス遷移
+        <select name="shipping_transition">
+          {{range .ShippingTransitions}}
+          <option value="{{.Value}}">{{.Label}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label>
+        実行者ID
+        <input type="text" name="actor_id" value="admin.console">
+      </label>
+      <button type="submit" class="button-primary">出荷情報を保存</button>
+    </form>
+  </section>
+
+  <section class="sub-section">
+    <h4>監査イベント</h4>
+    <ul class="event-list">
+      {{range .Events}}
+      <li>
+        <p>
+          <strong>{{.Type}}</strong>
+          <span class="muted">{{datetime .CreatedAt}}</span>
+        </p>
+        <p class="muted">actor: {{.ActorType}}{{if .ActorID}} / {{.ActorID}}{{end}}</p>
+        {{if .BeforeStatus}}
+        <p class="muted">{{orderStatusLabel .BeforeStatus}} → {{orderStatusLabel .AfterStatus}}</p>
+        {{end}}
+        {{if .Note}}
+        <p class="muted">{{.Note}}</p>
+        {{end}}
+      </li>
+      {{end}}
+    </ul>
+  </section>
+</article>
+{{end}}
+
+{{define "materials_list"}}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>材質名</th>
+      <th>価格</th>
+      <th>公開</th>
+      <th>version</th>
+      <th>更新</th>
+      <th>編集</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Materials}}
+    <tr>
+      <td>{{.Key}}</td>
+      <td>{{.LabelJA}}</td>
+      <td>¥{{yen .PriceJPY}}</td>
+      <td>{{if .IsActive}}有効{{else}}無効{{end}}</td>
+      <td>{{.Version}}</td>
+      <td>{{datetime .UpdatedAt}}</td>
+      <td>
+        <button
+          type="button"
+          class="button-link"
+          hx-get="/admin/materials/{{.Key}}"
+          hx-target="#material-detail"
+          hx-swap="innerHTML"
+        >
+          開く
+        </button>
+      </td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{define "material_detail"}}
+<article class="detail">
+  <header>
+    <h3>{{.Key}}</h3>
+    <p class="muted">version {{.Version}} / 更新 {{datetime .UpdatedAt}}</p>
+  </header>
+
+  {{if .Message}}
+  <p class="message-success">{{.Message}}</p>
+  {{end}}
+  {{if .Error}}
+  <p class="message-error">{{.Error}}</p>
+  {{end}}
+
+  <form
+    class="stack-form"
+    hx-patch="/admin/materials/{{.Key}}"
+    hx-target="#material-detail"
+    hx-swap="innerHTML"
+  >
+    <label>
+      材質名 (ja)
+      <input type="text" name="label_ja" value="{{.LabelJA}}" required>
+    </label>
+    <label>
+      Material Name (en)
+      <input type="text" name="label_en" value="{{.LabelEN}}" required>
+    </label>
+    <label>
+      説明 (ja)
+      <textarea name="description_ja" rows="3" required>{{.DescriptionJA}}</textarea>
+    </label>
+    <label>
+      Description (en)
+      <textarea name="description_en" rows="3" required>{{.DescriptionEN}}</textarea>
+    </label>
+
+    <div class="inline-grid">
+      <label>
+        価格 (JPY)
+        <input type="number" name="price_jpy" min="0" value="{{.PriceJPY}}" required>
+      </label>
+      <label>
+        表示順
+        <input type="number" name="sort_order" min="0" value="{{.SortOrder}}" required>
+      </label>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" name="is_active" value="1" {{if .IsActive}}checked{{end}}>
+      公開する
+    </label>
+
+    <button type="submit" class="button-primary">保存</button>
+  </form>
+</article>
+{{end}}

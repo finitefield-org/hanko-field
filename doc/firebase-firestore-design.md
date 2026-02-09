@@ -298,3 +298,4 @@ Stripe webhook の重複処理防止。`provider_event_id` は Stripe event ID�
 - [x] Firestore データベース設計書を本番向けへ更新
 - [x] 多言語（日本語/英語）対応要件を Firestore 設計へ反映
 - [x] `materials` で写真を管理できるスキーマへ更新
+- [x] `web` で `mock` / `dev` / `prod` を切り替え、Firestore 実データ参照を可能にする
