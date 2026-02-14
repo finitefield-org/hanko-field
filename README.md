@@ -7,7 +7,7 @@
 
 ## Docker + devbox でのローカル環境
 
-Docker と devbox で、Go/Flutter と Firebase テスト環境向けのローカル作業環境を用意できます。
+Docker と devbox で、Go/Rust/Flutter と Firebase テスト環境向けのローカル作業環境を用意できます。
 
 ```bash
 make docker-up
@@ -104,6 +104,11 @@ make -C web dev
 ### Web データソース切替（mock / Firebase dev / Firebase prod）
 
 `web` は `HANKO_WEB_MODE` でデータソースを切り替えられます。
+
+Web 実装で利用する Rust crate:
+
+- Firebase 接続: `firebase-sdk-rust`（`/Users/kazuyoshitoshiya/Documents/GitHub/firebase-sdk-rust`）
+- Go の `html/template` 相当: `go-html-template`（`/Users/kazuyoshitoshiya/Documents/GitHub/go-html-template`）
 
 - `mock` (既定): 内蔵モックデータを使用
 - `dev`: Firestore（開発用プロジェクト）を使用
