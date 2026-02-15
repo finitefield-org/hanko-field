@@ -3,6 +3,7 @@ services:
     build: .
     volumes:
       - .:/workspace:cached
+      - ../firebase-sdk-rust:/firebase-sdk-rust:cached
     ports:
       - "3050:3050"
       - "3051:3051"

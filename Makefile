@@ -45,13 +45,13 @@ docker-shell:
 	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc '$(ENV_LOAD_CMD) exec devbox shell'
 
 docker-api:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)}'
 
 docker-admin:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
 
 docker-web:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
 
 docker-dev:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace; make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)} & api_pid=$$!; make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)} & admin_pid=$$!; trap '"'"'kill $$api_pid $$admin_pid 2>/dev/null || true'"'"' INT TERM EXIT; make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace; devbox run -- make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)} & api_pid=$$!; devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)} & admin_pid=$$!; trap '"'"'kill $$api_pid $$admin_pid 2>/dev/null || true'"'"' INT TERM EXIT; devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'

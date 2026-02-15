@@ -81,21 +81,38 @@ docker compose --env-file .env.dev down
 
 ### Web/Admin のアセット生成（ironframe）
 
-`ironframe` は `devbox run ironframe` で実行し、`0.3.1` に固定しています。
+`ironframe` は `scripts/ironframe.sh` 経由で実行し、`0.3.1` に固定しています。
 初回実行時に `cargo install` で `.devbox/bin/ironframe` を作成します。
 
 ```bash
-devbox run ironframe -- --version
+devbox run -- ./scripts/ironframe.sh --help
+```
+
+`devbox run` を使わずに直接インストールする場合は、以下を実行してください。
+
+```bash
+cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
+export CARGO_HOME="$PWD/.devbox/cargo"
+cargo install ironframe --version 0.3.1 --locked --force --root "$PWD/.devbox"
+export PATH="$PWD/.devbox/bin:$PATH"
+ironframe --version
+```
+
+Docker コンテナ内で直接インストールする場合:
+
+```bash
+docker compose exec workspace sh -lc 'cd /workspace && CARGO_HOME=/workspace/.devbox/cargo cargo install ironframe --version 0.3.1 --locked --force --root /workspace/.devbox'
+docker compose exec workspace sh -lc '/workspace/.devbox/bin/ironframe --version'
 ```
 
 ビルド・ウォッチは以下のように実行してください。
 
 ```bash
 # build
-devbox run ironframe -- build -i <input.css> -o <output.css> "<glob>..."
+devbox run -- ./scripts/ironframe.sh build -i <input.css> -o <output.css> "<glob>..."
 
 # watch
-devbox run ironframe -- watch -i <input.css> -o <output.css> "<glob>..."
+devbox run -- ./scripts/ironframe.sh watch -i <input.css> -o <output.css> "<glob>..."
 ```
 
 ### 開発サーバー例（ポート競合を避ける）
