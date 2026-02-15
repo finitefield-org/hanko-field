@@ -8,20 +8,21 @@
 ```
 /
 ├── app/ # Flutterアプリ
-├── api/ # Go API
-├── admin/ # 管理画面 (Go)
+├── api/ # Rust API
+├── admin/ # 管理画面 (Rust)
 ├── web/ # ウェブ (Rust)
 ├── doc/ # ドキュメント
 ```
 
 ## 管理画面(admin)
-- Go
+- Rust
 - htmx
 - ironframe (Tailwind CSS v4.1 clone crate in Rust)
+- テンプレートエンジンは `askama` crate を使用すること。
 - **ポリシー**: 管理画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しないこと。
 
 ## バックエンド(api)
-- Go
+- Rust
 - Cloud Run
 - Firestore
 - Firebase Auth

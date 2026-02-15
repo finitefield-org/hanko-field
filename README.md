@@ -7,7 +7,7 @@
 
 ## Docker + devbox でのローカル環境
 
-Docker と devbox で、Go/Rust/Flutter と Firebase テスト環境向けのローカル作業環境を用意できます。
+Docker と devbox で、Rust/Flutter と Firebase テスト環境向けのローカル作業環境を用意できます。
 
 ```bash
 make docker-up
@@ -182,6 +182,11 @@ make -C web dev MODE=prod LOCALE=ja
 ### Admin データソース切替（mock / Firebase dev / Firebase prod）
 
 `admin` は `HANKO_ADMIN_MODE` でデータソースを切り替えられます。
+
+Admin 実装で利用する Rust crate:
+
+- Firebase 接続: `firebase-sdk-rust`
+- テンプレートエンジン: `askama`
 
 - `mock` (既定): 内蔵モックデータを使用
 - `dev`: Firestore（開発用プロジェクト）を使用

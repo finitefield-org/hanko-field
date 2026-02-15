@@ -1,0 +1,45 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th>Order No</th>
+      <th>Status</th>
+      <th>Payment</th>
+      <th>配送</th>
+      <th>国</th>
+      <th>合計</th>
+      <th>詳細</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if has_orders %}
+    {% for order in orders %}
+    <tr>
+      <td>
+        <strong>{{ order.order_no }}</strong>
+        <small>{{ order.created_at }}</small>
+      </td>
+      <td>{{ order.status_label }}</td>
+      <td>{{ order.payment_status_label }}</td>
+      <td>{{ order.fulfillment_status_label }}</td>
+      <td>{{ order.country_label }}</td>
+      <td>¥{{ order.total_jpy }}</td>
+      <td>
+        <button
+          type="button"
+          class="button-link"
+          hx-get="/admin/orders/{{ order.id }}"
+          hx-target="#order-detail"
+          hx-swap="innerHTML"
+        >
+          開く
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr>
+      <td colspan="7" class="empty">条件に一致する注文はありません。</td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>

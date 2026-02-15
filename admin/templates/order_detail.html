@@ -1,0 +1,110 @@
+<article class="detail">
+  <header>
+    <h3>{{ detail.order_no }}</h3>
+    <p class="muted">更新: {{ detail.updated_at }}</p>
+  </header>
+
+  {% if detail.has_message %}
+  <p class="message-success">{{ detail.message }}</p>
+  {% endif %}
+  {% if detail.has_error %}
+  <p class="message-error">{{ detail.error }}</p>
+  {% endif %}
+
+  <dl class="detail-list">
+    <div><dt>注文日時</dt><dd>{{ detail.created_at }}</dd></div>
+    <div><dt>ステータス</dt><dd>{{ detail.status_label }}</dd></div>
+    <div><dt>支払い</dt><dd>{{ detail.payment_status_label }}</dd></div>
+    <div><dt>配送進捗</dt><dd>{{ detail.fulfillment_status_label }}</dd></div>
+    <div><dt>チャネル</dt><dd>{{ detail.channel }}</dd></div>
+    <div><dt>ロケール</dt><dd>{{ detail.locale }}</dd></div>
+    <div><dt>配送国</dt><dd>{{ detail.country_label }} ({{ detail.country_code }})</dd></div>
+    <div><dt>Email</dt><dd>{{ detail.contact_email }}</dd></div>
+    <div><dt>印面</dt><dd>{{ detail.seal_line1 }}{% if detail.has_seal_line2 %} / {{ detail.seal_line2 }}{% endif %}</dd></div>
+    <div><dt>材質</dt><dd>{{ detail.material_label_ja }}</dd></div>
+    <div><dt>合計</dt><dd>¥{{ detail.total_jpy }}</dd></div>
+    <div><dt>追跡番号</dt><dd>{% if detail.has_tracking_no %}{{ detail.tracking_no }}{% else %}-{% endif %}</dd></div>
+  </dl>
+
+  <section class="sub-section">
+    <h4>ステータス更新</h4>
+    {% if detail.has_next_statuses %}
+    <form
+      class="stack-form"
+      hx-patch="/admin/orders/{{ detail.id }}/status"
+      hx-target="#order-detail"
+      hx-swap="innerHTML"
+    >
+      <label>
+        次ステータス
+        <select name="next_status" required>
+          <option value="">選択してください</option>
+          {% for option in detail.next_statuses %}
+          <option value="{{ option.value }}">{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        実行者ID
+        <input type="text" name="actor_id" value="admin.console">
+      </label>
+      <button type="submit" class="button-primary">ステータス反映</button>
+    </form>
+    {% else %}
+    <p class="muted">この注文はこれ以上ステータス遷移できません。</p>
+    {% endif %}
+  </section>
+
+  <section class="sub-section">
+    <h4>出荷情報更新</h4>
+    <form
+      class="stack-form"
+      hx-patch="/admin/orders/{{ detail.id }}/shipping"
+      hx-target="#order-detail"
+      hx-swap="innerHTML"
+    >
+      <label>
+        配送業者
+        <input type="text" name="carrier" value="{{ detail.carrier }}" placeholder="ヤマト運輸 / DHL など" required>
+      </label>
+      <label>
+        追跡番号
+        <input type="text" name="tracking_no" value="{{ detail.tracking_no }}" required>
+      </label>
+      <label>
+        ステータス遷移
+        <select name="shipping_transition">
+          {% for option in detail.shipping_transitions %}
+          <option value="{{ option.value }}">{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        実行者ID
+        <input type="text" name="actor_id" value="admin.console">
+      </label>
+      <button type="submit" class="button-primary">出荷情報を保存</button>
+    </form>
+  </section>
+
+  <section class="sub-section">
+    <h4>監査イベント</h4>
+    <ul class="event-list">
+      {% for event in detail.events %}
+      <li>
+        <p>
+          <strong>{{ event.kind }}</strong>
+          <span class="muted">{{ event.created_at }}</span>
+        </p>
+        <p class="muted">actor: {{ event.actor_type }}{% if event.has_actor_id %} / {{ event.actor_id }}{% endif %}</p>
+        {% if event.has_before_status %}
+        <p class="muted">{{ event.before_status_label }} → {{ event.after_status_label }}</p>
+        {% endif %}
+        {% if event.has_note %}
+        <p class="muted">{{ event.note }}</p>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</article>

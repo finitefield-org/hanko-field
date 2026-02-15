@@ -1,0 +1,42 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>材質名</th>
+      <th>価格</th>
+      <th>公開</th>
+      <th>version</th>
+      <th>更新</th>
+      <th>編集</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if has_materials %}
+    {% for material in materials %}
+    <tr>
+      <td>{{ material.key }}</td>
+      <td>{{ material.label_ja }}</td>
+      <td>¥{{ material.price_jpy }}</td>
+      <td>{% if material.is_active %}有効{% else %}無効{% endif %}</td>
+      <td>{{ material.version }}</td>
+      <td>{{ material.updated_at }}</td>
+      <td>
+        <button
+          type="button"
+          class="button-link"
+          hx-get="/admin/materials/{{ material.key }}"
+          hx-target="#material-detail"
+          hx-swap="innerHTML"
+        >
+          開く
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    <tr>
+      <td colspan="7" class="empty">材質がありません。</td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>

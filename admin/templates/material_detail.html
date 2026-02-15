@@ -1,0 +1,55 @@
+<article class="detail">
+  <header>
+    <h3>{{ detail.key }}</h3>
+    <p class="muted">version {{ detail.version }} / 更新 {{ detail.updated_at }}</p>
+  </header>
+
+  {% if detail.has_message %}
+  <p class="message-success">{{ detail.message }}</p>
+  {% endif %}
+  {% if detail.has_error %}
+  <p class="message-error">{{ detail.error }}</p>
+  {% endif %}
+
+  <form
+    class="stack-form"
+    hx-patch="/admin/materials/{{ detail.key }}"
+    hx-target="#material-detail"
+    hx-swap="innerHTML"
+  >
+    <label>
+      材質名 (ja)
+      <input type="text" name="label_ja" value="{{ detail.label_ja }}" required>
+    </label>
+    <label>
+      Material Name (en)
+      <input type="text" name="label_en" value="{{ detail.label_en }}" required>
+    </label>
+    <label>
+      説明 (ja)
+      <textarea name="description_ja" rows="3" required>{{ detail.description_ja }}</textarea>
+    </label>
+    <label>
+      Description (en)
+      <textarea name="description_en" rows="3" required>{{ detail.description_en }}</textarea>
+    </label>
+
+    <div class="inline-grid">
+      <label>
+        価格 (JPY)
+        <input type="number" name="price_jpy" min="0" value="{{ detail.price_jpy }}" required>
+      </label>
+      <label>
+        表示順
+        <input type="number" name="sort_order" min="0" value="{{ detail.sort_order }}" required>
+      </label>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" name="is_active" value="1" {% if detail.is_active %}checked{% endif %}>
+      公開する
+    </label>
+
+    <button type="submit" class="button-primary">保存</button>
+  </form>
+</article>
