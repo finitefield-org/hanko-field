@@ -108,7 +108,7 @@ make -C web dev
 Web 実装で利用する Rust crate:
 
 - Firebase 接続: `firebase-sdk-rust`（`/Users/kazuyoshitoshiya/Documents/GitHub/firebase-sdk-rust`）
-- Go の `html/template` 相当: `go-html-template`（`/Users/kazuyoshitoshiya/Documents/GitHub/go-html-template`）
+- テンプレートエンジン: `askama`
 
 - `mock` (既定): 内蔵モックデータを使用
 - `dev`: Firestore（開発用プロジェクト）を使用

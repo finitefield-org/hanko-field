@@ -9,7 +9,7 @@ css-watch:
 	ironframe watch -i static/input.css -o static/style.css "templates/**/*.html" "static/*.js"
 
 dev: css
-	HANKO_WEB_PORT=$(PORT) HANKO_WEB_MODE=$(MODE) HANKO_WEB_LOCALE=$(LOCALE) go run .
+	HANKO_WEB_PORT=$(PORT) HANKO_WEB_MODE=$(MODE) HANKO_WEB_LOCALE=$(LOCALE) cargo run
 
 test:
-	go test ./...
+	cargo test

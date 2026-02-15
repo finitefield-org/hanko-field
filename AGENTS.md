@@ -32,7 +32,7 @@
 - htmx
 - ironframe (Tailwind CSS v4.1 clone crate in Rust)
 - Firebase 連携は `firebase-sdk-rust` crate（`/Users/kazuyoshitoshiya/Documents/GitHub/firebase-sdk-rust`）を使用すること。
-- Go の `html/template` 相当は `go-html-template` crate（`/Users/kazuyoshitoshiya/Documents/GitHub/go-html-template`）を使用すること。
+- テンプレートエンジンは `askama` crate を使用すること。
 - **ポリシー**: ユーザ向けウェブ画面ではポーリングやストリーミング（SSE / WebSocket 等）を実装しないこと。
 
 ## アプリ(app)

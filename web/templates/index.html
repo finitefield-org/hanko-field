@@ -1,4 +1,3 @@
-{{define "page"}}
 <!doctype html>
 <html lang="ja">
 <head>
@@ -18,7 +17,7 @@
 
   <main class="layout">
     <header class="hero">
-      <p class="hero-eyebrow">Hanko Field {{.SourceLabel}}</p>
+      <p class="hero-eyebrow">Hanko Field {{ source_label }}</p>
     </header>
 
     <section class="panel">
@@ -101,24 +100,24 @@
                   <span id="seal-preview-line2" hidden></span>
                 </div>
               </div>
-              <p id="preview-caption">角 / {{(index .Fonts 0).Label}}</p>
+              <p id="preview-caption">角 / {{ default_font_label }}</p>
 
               <div class="preview-config">
-                <input type="hidden" id="font" name="font" value="{{(index .Fonts 0).Key}}">
+                <input type="hidden" id="font" name="font" value="{{ default_font_key }}">
                 <div class="font-chip-list" role="listbox" aria-label="フォント選択">
-                  {{range $index, $font := .Fonts}}
+                  {% for font in fonts %}
                   <button
                     type="button"
-                    class="font-chip{{if eq $index 0}} is-selected{{end}}"
-                    data-font-key="{{$font.Key}}"
-                    data-font-label="{{$font.Label}}"
-                    data-font-family="{{$font.Family}}"
-                    aria-label="{{$font.Label}}"
-                    aria-pressed="{{if eq $index 0}}true{{else}}false{{end}}"
+                    class="font-chip{% if loop.first %} is-selected{% endif %}"
+                    data-font-key="{{ font.key }}"
+                    data-font-label="{{ font.label }}"
+                    data-font-family="{{ font.family }}"
+                    aria-label="{{ font.label }}"
+                    aria-pressed="{% if loop.first %}true{% else %}false{% endif %}"
                   >
                     <span class="font-chip-preview" data-font-preview>印</span>
                   </button>
-                  {{end}}
+                  {% endfor %}
                 </div>
 
                 <fieldset class="shape-fieldset">
@@ -147,21 +146,21 @@
           </div>
 
           <div class="material-grid">
-            {{range $index, $m := .Materials}}
+            {% for m in materials %}
             <label class="material-card">
               <input
                 type="radio"
                 name="material"
-                value="{{$m.Key}}"
-                data-label="{{$m.Label}}"
-                data-price="{{$m.Price}}"
-                {{if eq $index 0}}checked{{end}}
+                value="{{ m.key }}"
+                data-label="{{ m.label }}"
+                data-price="{{ m.price }}"
+                {% if loop.first %}checked{% endif %}
               >
-              <span class="material-name">{{$m.Label}}</span>
-              <span class="material-description">{{$m.Description}}</span>
-              <span class="material-price">¥{{yen $m.Price}}</span>
+              <span class="material-name">{{ m.label }}</span>
+              <span class="material-description">{{ m.description }}</span>
+              <span class="material-price">¥{{ m.price_display }}</span>
             </label>
-            {{end}}
+            {% endfor %}
           </div>
 
           <div class="step-actions">
@@ -256,9 +255,9 @@
                 <div>
                   <label class="field-label" for="country">国 / Country</label>
                   <select id="country" name="country" required>
-                    {{range $index, $c := .Countries}}
-                    <option value="{{$c.Code}}" data-label="{{$c.Label}}" data-shipping="{{$c.Shipping}}" {{if eq $index 0}}selected{{end}}>{{$c.Label}} ({{$c.Code}})</option>
-                    {{end}}
+                    {% for c in countries %}
+                    <option value="{{ c.code }}" data-label="{{ c.label }}" data-shipping="{{ c.shipping }}" {% if loop.first %}selected{% endif %}>{{ c.label }} ({{ c.code }})</option>
+                    {% endfor %}
                   </select>
                 </div>
 
@@ -328,11 +327,11 @@
               </label>
 
               <p class="field-hint">
-                {{if .IsMock}}
+                {% if is_mock %}
                 mock モードのため実決済は行われず、確認メッセージのみ表示します。
-                {{else}}
+                {% else %}
                 カタログは Firebase データを参照しています。決済処理は現在モックです。
-                {{end}}
+                {% endif %}
               </p>
               <button
                 type="button"
@@ -342,7 +341,7 @@
                 hx-swap="innerHTML"
                 hx-include="#order-form"
               >
-                {{if .IsMock}}購入を確定（モック）{{else}}購入を確定（検証）{{end}}
+                {% if is_mock %}購入を確定（モック）{% else %}購入を確定（検証）{% endif %}
               </button>
               <div id="purchase-result" class="purchase-result"></div>
             </section>
@@ -357,38 +356,3 @@
   </main>
 </body>
 </html>
-{{end}}
-
-{{define "kanji_suggestions"}}
-{{if .Suggestions}}
-<p class="suggestion-title">{{.RealName}} さんへの候補（Geminiモック）</p>
-<div class="suggestion-chips">
-  {{range .Suggestions}}
-  <button type="button" class="kanji-chip" data-line1="{{.Line1}}" data-line2="{{.Line2}}" data-reason="{{.Reason}}">{{.Label}}</button>
-  {{end}}
-</div>
-<p class="suggestion-reason" data-kanji-reason>候補をタップすると、提案理由を表示します。</p>
-<p class="field-hint">候補をクリックすると2行の印影テキストに反映されます。</p>
-{{else}}
-<p class="placeholder">候補を表示するには本名を入力してください。</p>
-{{end}}
-{{end}}
-
-{{define "purchase_result"}}
-{{if .Error}}
-<div class="result-card is-error">
-  <p>{{.Error}}</p>
-</div>
-{{else}}
-<div class="result-card is-success">
-  <h4>{{if .IsMock}}注文を受け付けました（モック）{{else}}注文内容を受け付けました（検証）{{end}}</h4>
-  <p>データソース: {{.SourceLabel}}</p>
-  <p>印影: {{.SealLine1}}{{if .SealLine2}} / {{.SealLine2}}{{end}}</p>
-  <p>{{.ShapeLabel}} / {{.MaterialLabel}} / {{.FontLabel}}</p>
-  <p>配送先: {{.CountryLabel}} / {{.StripeName}} / {{.StripePhone}}</p>
-  <p>住所: {{.PostalCode}} {{.State}} {{.City}} {{.AddressLine1}}{{if .AddressLine2}} {{.AddressLine2}}{{end}}</p>
-  <p>小計: ¥{{yen .Subtotal}} / 送料: ¥{{yen .Shipping}} / 合計: ¥{{yen .Total}}</p>
-  <p>確認メール送信先: {{.Email}}</p>
-</div>
-{{end}}
-{{end}}
