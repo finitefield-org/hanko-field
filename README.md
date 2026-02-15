@@ -14,6 +14,30 @@ make docker-up
 make docker-shell
 ```
 
+### 開発用/本番用 `.env` ファイルの切替
+
+ルート `Makefile` は `ENV=dev|prod` に応じて、`.env.dev` / `.env.prod` を自動で読み込みます。
+（明示的に `ENV_FILE=<path>` を指定することもできます）
+
+まずはサンプルから作成してください。
+
+```bash
+cp .env.dev.example .env.dev
+cp .env.prod.example .env.prod
+```
+
+起動例:
+
+```bash
+# 開発環境
+make docker-up ENV=dev
+make docker-dev ENV=dev
+
+# 本番相当環境
+make docker-up ENV=prod
+make docker-dev ENV=prod
+```
+
 Docker が起動済みの場合は、以下でコンテナ内から各サービスを起動できます。
 
 ```bash
@@ -29,8 +53,6 @@ make docker-dev
 この構成では Firebase Emulator は起動せず、Firebase 上のテストプロジェクトを使います。
 
 ```bash
-cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
-
 # test project settings (example)
 export FIREBASE_PROJECT_ID=<your-firebase-test-project-id>
 export GOOGLE_APPLICATION_CREDENTIALS=/workspace/<service-account-json-path>
@@ -38,25 +60,23 @@ export API_FIREBASE_CREDENTIALS_FILE=/workspace/<service-account-json-path>
 ```
 
 ```bash
-cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
-
 # build and start workspace only
-docker compose build
-docker compose up -d workspace
+docker compose --env-file .env.dev build
+docker compose --env-file .env.dev up -d workspace
 ```
+
+本番相当の値で起動する場合は `.env.dev` を `.env.prod` に置き換えてください。
 
 別ターミナルで開発シェルに入ります。
 
 ```bash
-cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
 docker compose exec workspace devbox shell
 ```
 
 停止時は以下を実行します。
 
 ```bash
-cd /Users/kazuyoshitoshiya/Documents/GitHub/hanko-field
-docker compose down
+docker compose --env-file .env.dev down
 ```
 
 ### Web/Admin のアセット生成（ironframe）
@@ -107,7 +127,7 @@ make -C web dev
 
 Web 実装で利用する Rust crate:
 
-- Firebase 接続: `firebase-sdk-rust`（`/Users/kazuyoshitoshiya/Documents/GitHub/firebase-sdk-rust`）
+- Firebase 接続: `firebase-sdk-rust`
 - テンプレートエンジン: `askama`
 
 - `mock` (既定): 内蔵モックデータを使用

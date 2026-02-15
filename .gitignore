@@ -27,6 +27,11 @@ infra/terraform/.terraform.lock.hcl
 # Logs
 *.log
 
+# Environment files
+.env
+.env.*
+!.env.*.example
+
 # Coverage
 coverage*.txt
 coverage*.out
@@ -50,4 +55,3 @@ api/.secrets.local
 node_modules/
 
 .editorconfig
-
