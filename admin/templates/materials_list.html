@@ -5,11 +5,13 @@
         <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
           <th class="border-b border-admin-line/70 px-3 py-2">Key</th>
           <th class="border-b border-admin-line/70 px-3 py-2">材質名</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">写真</th>
           <th class="border-b border-admin-line/70 px-3 py-2">価格</th>
           <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
           <th class="border-b border-admin-line/70 px-3 py-2">version</th>
           <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
           <th class="border-b border-admin-line/70 px-3 py-2">編集</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">削除</th>
         </tr>
       </thead>
       <tbody>
@@ -18,6 +20,14 @@
         <tr class="align-top">
           <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ material.key }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ material.label_ja }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-xs text-admin-muted">
+            {% if material.has_photo %}
+            <p class="font-semibold text-admin-ink">登録済み</p>
+            <p class="mt-1 break-all">{{ material.primary_photo_path }}</p>
+            {% else %}
+            -
+            {% endif %}
+          </td>
           <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">¥{{ material.price_jpy }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{% if material.is_active %}有効{% else %}無効{% endif %}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ material.version }}</td>
@@ -30,11 +40,23 @@
               編集
             </a>
           </td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="inline-flex rounded-[10px] border border-admin-alert/45 bg-[rgb(157_47_36_/_0.08)] px-3 py-[9px] text-xs font-semibold text-admin-alert transition hover:brightness-[1.04]"
+              hx-delete="/admin/materials/{{ material.key }}"
+              hx-confirm="材質「{{ material.label_ja }}」を削除します。よろしいですか？"
+              hx-target="#materials-list"
+              hx-swap="innerHTML"
+            >
+              削除
+            </button>
+          </td>
         </tr>
         {% endfor %}
         {% else %}
         <tr>
-          <td colspan="7" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
+          <td colspan="9" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
         </tr>
         {% endif %}
       </tbody>

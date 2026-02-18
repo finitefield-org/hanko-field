@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="/static/admin.js" defer></script>
+  <script src="/static/admin.js?v=20260218c" defer></script>
 </head>
 <body>
   <main class="mx-auto max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
@@ -34,11 +34,16 @@
     </header>
 
     <section class="mt-6 rounded-[24px] border border-admin-line/75 bg-admin-panel px-4 py-5 shadow-[0_10px_28px_rgb(30_41_37_/_0.07)] sm:px-6 sm:py-6">
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-[1.35rem] leading-tight font-bold">材質マスタ一覧</h2>
-        <p class="text-xs font-semibold tracking-[0.08em] text-admin-muted uppercase">Materials</p>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-[1.35rem] leading-tight font-bold">材質マスタ一覧</h2>
+          <p class="mt-1 text-sm font-semibold text-admin-muted">各材質の「編集」から詳細編集ページへ移動します。</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <p class="text-xs font-semibold tracking-[0.08em] text-admin-muted uppercase">Materials</p>
+          <a href="/admin/materials/new" class="rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">材質を作成</a>
+        </div>
       </div>
-      <p class="mt-3 text-sm font-semibold text-admin-muted">各材質の「編集」から詳細編集ページへ移動します。</p>
 
       <div
         id="materials-list"

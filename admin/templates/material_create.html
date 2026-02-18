@@ -1,45 +1,48 @@
 <article class="flex flex-col gap-5 p-4 sm:p-5">
   <header>
-    <h3 class="text-xl leading-tight font-bold">{{ detail.key }}</h3>
-    <p class="mt-1 text-xs font-semibold tracking-[0.06em] text-admin-muted uppercase">version {{ detail.version }} / 更新 {{ detail.updated_at }}</p>
+    <h3 class="text-xl leading-tight font-bold">新規材質作成</h3>
+    <p class="mt-1 text-xs font-semibold tracking-[0.06em] text-admin-muted uppercase">key は英小文字・数字・ハイフン・アンダースコアを利用できます</p>
   </header>
 
-  {% if detail.has_message %}
-  <p class="rounded-xl border border-admin-accent/30 bg-admin-accent-soft px-3 py-2 text-sm font-semibold text-admin-accent">{{ detail.message }}</p>
+  {% if view.has_message %}
+  <p class="rounded-xl border border-admin-accent/30 bg-admin-accent-soft px-3 py-2 text-sm font-semibold text-admin-accent">{{ view.message }}</p>
   {% endif %}
-  {% if detail.has_error %}
-  <p class="rounded-xl border border-admin-alert/35 bg-[rgb(157_47_36_/_0.08)] px-3 py-2 text-sm font-semibold text-admin-alert">{{ detail.error }}</p>
+  {% if view.has_error %}
+  <p class="rounded-xl border border-admin-alert/35 bg-[rgb(157_47_36_/_0.08)] px-3 py-2 text-sm font-semibold text-admin-alert">{{ view.error }}</p>
   {% endif %}
 
   <form
     class="flex flex-col gap-3 rounded-xl border border-admin-line/70 bg-white p-4"
-    hx-patch="/admin/materials/{{ detail.key }}"
-    hx-target="#material-edit"
+    hx-post="/admin/materials"
+    hx-target="#material-create"
     hx-swap="innerHTML"
   >
-    <input type="hidden" name="material_key" value="{{ detail.key }}">
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>材質キー</span>
+      <input type="text" name="key" value="{{ view.key }}" placeholder="titanium" pattern="[a-z0-9_-]+" maxlength="64" required>
+    </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>材質名 (ja)</span>
-      <input type="text" name="label_ja" value="{{ detail.label_ja }}" required>
+      <input type="text" name="label_ja" value="{{ view.label_ja }}" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>Material Name (en)</span>
-      <input type="text" name="label_en" value="{{ detail.label_en }}" required>
+      <input type="text" name="label_en" value="{{ view.label_en }}" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>説明 (ja)</span>
-      <textarea name="description_ja" rows="3" required>{{ detail.description_ja }}</textarea>
+      <textarea name="description_ja" rows="3" required>{{ view.description_ja }}</textarea>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>Description (en)</span>
-      <textarea name="description_en" rows="3" required>{{ detail.description_en }}</textarea>
+      <textarea name="description_en" rows="3" required>{{ view.description_en }}</textarea>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>写真 Storage パス（自動入力）</span>
-      <input type="text" name="photo_storage_path" value="{{ detail.photo_storage_path }}" placeholder="画像アップロード後に自動入力されます" readonly>
+      <input type="text" name="photo_storage_path" value="{{ view.photo_storage_path }}" placeholder="画像アップロード後に自動入力されます" readonly>
     </label>
     <div class="rounded-xl border border-admin-line/60 bg-admin-bg/40 p-3">
-      <p class="text-[0.82rem] font-semibold text-admin-muted">画像選択で自動アップロードし、Storage パスを自動入力します。</p>
+      <p class="text-[0.82rem] font-semibold text-admin-muted">画像選択で自動アップロードし、Storage パスを自動入力します（材質キー入力後）。</p>
       <div class="mt-2 flex flex-wrap items-center gap-2">
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" data-photo-file-input>
         <button type="button" class="rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]" data-photo-upload-button>手動で再アップロード</button>
@@ -52,30 +55,30 @@
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>写真代替テキスト (ja)</span>
-        <input type="text" name="photo_alt_ja" value="{{ detail.photo_alt_ja }}" placeholder="チタン材質の写真">
+        <input type="text" name="photo_alt_ja" value="{{ view.photo_alt_ja }}" placeholder="チタン材質の写真">
       </label>
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>Photo Alt (en)</span>
-        <input type="text" name="photo_alt_en" value="{{ detail.photo_alt_en }}" placeholder="Titanium material photo">
+        <input type="text" name="photo_alt_en" value="{{ view.photo_alt_en }}" placeholder="Titanium material photo">
       </label>
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>価格 (JPY)</span>
-        <input type="number" name="price_jpy" min="0" value="{{ detail.price_jpy }}" required>
+        <input type="number" name="price_jpy" min="0" value="{{ view.price_jpy }}" required>
       </label>
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>表示順</span>
-        <input type="number" name="sort_order" min="0" value="{{ detail.sort_order }}" required>
+        <input type="number" name="sort_order" min="0" value="{{ view.sort_order }}" required>
       </label>
     </div>
 
     <label class="inline-flex items-center gap-2 text-sm font-semibold">
-      <input type="checkbox" name="is_active" value="1" {% if detail.is_active %}checked{% endif %}>
+      <input type="checkbox" name="is_active" value="1" {% if view.is_active %}checked{% endif %}>
       <span>公開する</span>
     </label>
 
-    <button type="submit" class="w-fit rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">保存</button>
+    <button type="submit" class="w-fit rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">材質を作成</button>
   </form>
 </article>
