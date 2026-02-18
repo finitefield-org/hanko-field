@@ -23,15 +23,12 @@
           <td class="border-b border-admin-line/60 px-3 py-3">{{ material.version }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ material.updated_at }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">
-            <button
-              type="button"
-              class="rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
-              hx-get="/admin/materials/{{ material.key }}"
-              hx-target="#material-detail"
-              hx-swap="innerHTML"
+            <a
+              href="/admin/materials/{{ material.key }}/edit"
+              class="inline-flex rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
             >
-              開く
-            </button>
+              編集
+            </a>
           </td>
         </tr>
         {% endfor %}

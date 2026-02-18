@@ -11,7 +11,7 @@ use axum::{
     Router,
     extract::{Form, Path, Query, State, rejection::FormRejection},
     http::{HeaderValue, StatusCode, header},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, patch},
 };
 use chrono::{DateTime, Local, SecondsFormat, Utc};
@@ -213,12 +213,11 @@ struct OrderFilter {
 }
 
 #[derive(Debug, Default, Deserialize)]
-struct IndexQuery {
+struct OrdersPageQuery {
     status: Option<String>,
     country: Option<String>,
     email: Option<String>,
     order_id: Option<String>,
-    material_key: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -331,8 +330,8 @@ struct MaterialPatchInput {
 }
 
 #[derive(Template)]
-#[template(path = "page.html")]
-struct PageTemplate {
+#[template(path = "orders_page.html")]
+struct OrdersPageTemplate {
     filters: OrderFilter,
     status_options: Vec<StatusOptionView>,
     country_options: Vec<CountryOptionView>,
@@ -341,9 +340,23 @@ struct PageTemplate {
     orders_list_html: String,
     order_detail_html: String,
     has_order_detail: bool,
+}
+
+#[derive(Template)]
+#[template(path = "materials_page.html")]
+struct MaterialsPageTemplate {
+    source_label: String,
+    is_mock: bool,
     materials_list_html: String,
+}
+
+#[derive(Template)]
+#[template(path = "material_edit_page.html")]
+struct MaterialEditPageTemplate {
+    source_label: String,
+    is_mock: bool,
+    material_key: String,
     material_detail_html: String,
-    has_material_detail: bool,
 }
 
 #[derive(Template)]
@@ -385,7 +398,8 @@ async fn run() -> Result<()> {
     let server = build_server(&cfg).await?;
 
     let app = Router::new()
-        .route("/", get(handle_index))
+        .route("/", get(handle_root))
+        .route("/admin/orders", get(handle_orders_page))
         .route("/admin/orders/list", get(handle_orders_list))
         .route("/admin/orders/{order_id}", get(handle_order_detail))
         .route(
@@ -396,7 +410,12 @@ async fn run() -> Result<()> {
             "/admin/orders/{order_id}/shipping",
             patch(handle_order_shipping_patch),
         )
+        .route("/admin/materials", get(handle_materials_page))
         .route("/admin/materials/list", get(handle_materials_list))
+        .route(
+            "/admin/materials/{material_key}/edit",
+            get(handle_material_edit_page),
+        )
         .route(
             "/admin/materials/{material_key}",
             get(handle_material_detail).patch(handle_material_patch),
@@ -606,11 +625,18 @@ async fn build_server(cfg: &AppConfig) -> Result<Arc<ServerState>> {
     }))
 }
 
-async fn handle_index(State(state): State<AppState>, Query(query): Query<IndexQuery>) -> Response {
+async fn handle_root() -> Redirect {
+    Redirect::to("/admin/orders")
+}
+
+async fn handle_orders_page(
+    State(state): State<AppState>,
+    Query(query): Query<OrdersPageQuery>,
+) -> Response {
     if let Err(error) = state.server.refresh_from_source().await {
         return plain_error(
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to load admin data: {error}"),
+            format!("failed to load orders: {error}"),
         );
     }
 
@@ -661,48 +687,7 @@ async fn handle_index(State(state): State<AppState>, Query(query): Query<IndexQu
         String::new()
     };
 
-    let materials = state.server.list_materials().await;
-    let materials_list_html = match render_materials_list(&materials) {
-        Ok(html) => html,
-        Err(error) => {
-            return plain_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to render materials list: {error}"),
-            );
-        }
-    };
-
-    let mut selected_material_key = normalize_query_value(query.material_key);
-    if selected_material_key.is_empty() {
-        if let Some(first) = materials.first() {
-            selected_material_key = first.key.clone();
-        }
-    }
-
-    let material_detail = if selected_material_key.is_empty() {
-        None
-    } else {
-        state
-            .server
-            .get_material_detail(&selected_material_key, "", "")
-            .await
-    };
-
-    let material_detail_html = if let Some(detail) = material_detail.as_ref() {
-        match render_material_detail(detail) {
-            Ok(html) => html,
-            Err(error) => {
-                return plain_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to render material detail: {error}"),
-                );
-            }
-        }
-    } else {
-        String::new()
-    };
-
-    let page = PageTemplate {
+    let page = OrdersPageTemplate {
         filters,
         status_options: status_options(),
         country_options: state.server.country_options().await,
@@ -711,9 +696,6 @@ async fn handle_index(State(state): State<AppState>, Query(query): Query<IndexQu
         orders_list_html,
         order_detail_html,
         has_order_detail: order_detail.is_some(),
-        materials_list_html,
-        material_detail_html,
-        has_material_detail: material_detail.is_some(),
     };
 
     render_template(&page)
@@ -721,7 +703,7 @@ async fn handle_index(State(state): State<AppState>, Query(query): Query<IndexQu
 
 async fn handle_orders_list(
     State(state): State<AppState>,
-    Query(query): Query<IndexQuery>,
+    Query(query): Query<OrdersPageQuery>,
 ) -> Response {
     if let Err(error) = state.server.refresh_from_source().await {
         return plain_error(
@@ -906,6 +888,34 @@ async fn handle_order_shipping_patch(
     }
 }
 
+async fn handle_materials_page(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load materials: {error}"),
+        );
+    }
+
+    let materials = state.server.list_materials().await;
+    let materials_list_html = match render_materials_list(&materials) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render materials list: {error}"),
+            );
+        }
+    };
+
+    let page = MaterialsPageTemplate {
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        materials_list_html,
+    };
+
+    render_template(&page)
+}
+
 async fn handle_materials_list(State(state): State<AppState>) -> Response {
     if let Err(error) = state.server.refresh_from_source().await {
         return plain_error(
@@ -922,6 +932,45 @@ async fn handle_materials_list(State(state): State<AppState>) -> Response {
             format!("failed to render materials list: {error}"),
         ),
     }
+}
+
+async fn handle_material_edit_page(
+    State(state): State<AppState>,
+    Path(material_key): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load materials: {error}"),
+        );
+    }
+
+    let Some(detail) = state
+        .server
+        .get_material_detail(&material_key, "", "")
+        .await
+    else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    let material_detail_html = match render_material_detail(&detail) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render material detail: {error}"),
+            );
+        }
+    };
+
+    let page = MaterialEditPageTemplate {
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        material_key,
+        material_detail_html,
+    };
+
+    render_template(&page)
 }
 
 async fn handle_material_detail(
