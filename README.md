@@ -1,54 +1,83 @@
 # hanko-field
 
-## Docker + devbox でのローカル環境
+## 前提
 
-Docker と devbox で、Go/Flutter/Firebase Emulator をまとめて用意できます。
+- [Jetify Devbox のインストール](https://www.jetify.com/docs/devbox/installing_devbox/)
+- Docker / Docker Compose
 
-```bash
-make docker-up
-make docker-shell
-```
-
-Docker が起動済みの場合は、以下でコンテナ内から各サービスを起動できます。
+`.env` ファイルをまだ作っていない場合だけ実行してください。
 
 ```bash
-make docker-api
-make docker-admin
-make docker-web
-make docker-dev
+cp .env.dev.example .env.dev
+cp .env.prod.example .env.prod
 ```
 
-### Web のアセット生成（Tailwind CLI）
+## クイックスタート（推奨）
 
-`make docker-web` は `web/public/assets` を生成するため、コンテナ内に Tailwind CLI が必要です。
-Tailwind CLI は `web/` と `admin/` にローカル（npm）で入れています。初回のみそれぞれで `npm install` を実行してください。
+開発用途でまず動かすなら、以下の 2 コマンドだけで十分です。
 
 ```bash
-cd web && npm install
-cd admin && npm install
+make docker-up ENV=dev
+make docker-dev ENV=dev
 ```
 
-### 開発サーバー例（ポート競合を避ける）
+起動後:
 
-API / Admin / Web の既定ポートはそれぞれ `3050 / 3051 / 3052` です。
+- API: `http://localhost:3050`
+- Admin: `http://localhost:3051`
+- Web: `http://localhost:3052`
+
+停止:
 
 ```bash
-# API (Firestore emulator uses firebase:8081 from compose env)
-API_SERVER_PORT=3050 \
-API_FIREBASE_PROJECT_ID=hanko-field-dev \
-API_FIRESTORE_PROJECT_ID=hanko-field-dev \
-API_STORAGE_ASSETS_BUCKET=local-assets \
-make -C api run
-
-# Admin
-ADMIN_HTTP_ADDR=:3051 \
-ADMIN_ALLOW_INSECURE_AUTH=1 \
-FIRESTORE_PROJECT_ID=hanko-field-dev \
-make -C admin dev
-
-# Web
-HANKO_WEB_PORT=3052 \
-make -C web dev
+make docker-down ENV=dev
 ```
 
-Firebase Emulator UI は `http://localhost:3053` で確認できます。
+## 単体で起動する
+
+Docker コンテナを先に起動:
+
+```bash
+make docker-up ENV=dev
+```
+
+必要なサービスだけ起動:
+
+```bash
+make docker-api ENV=dev
+make docker-admin ENV=dev
+make docker-web ENV=dev
+```
+
+## よく使うコマンド
+
+```bash
+# コンテナ内シェル
+make docker-shell ENV=dev
+
+# 使えるターゲット一覧
+make help
+```
+
+## モード切替（mock / dev / prod）
+
+既定は `mock` です。`dev` や `prod` を使うときは `.env.dev` / `.env.prod` に必要な Firebase 設定を入れてください。
+
+```bash
+# 全サービスを本番相当設定で起動
+make docker-up ENV=prod
+make docker-dev ENV=prod
+```
+
+```bash
+# Admin だけ dev モードで起動
+HANKO_ADMIN_MODE=dev make docker-admin ENV=dev
+
+# Web だけ prod モードで起動
+HANKO_WEB_MODE=prod make docker-web ENV=prod
+```
+
+## 補足
+
+- Web/Admin の CSS (`ironframe`) は `make docker-admin` / `make docker-web` / `make docker-dev` 実行時に自動ビルドされます。
+- 通常開発では `docker compose` 直実行や `ironframe` 手動インストールは不要です。

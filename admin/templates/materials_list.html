@@ -1,0 +1,46 @@
+<div class="h-full p-4 sm:p-5">
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0 text-sm">
+      <thead>
+        <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
+          <th class="border-b border-admin-line/70 px-3 py-2">Key</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">材質名</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">価格</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">version</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">編集</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if has_materials %}
+        {% for material in materials %}
+        <tr class="align-top">
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ material.key }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ material.label_ja }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">¥{{ material.price_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{% if material.is_active %}有効{% else %}無効{% endif %}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ material.version }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ material.updated_at }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
+              hx-get="/admin/materials/{{ material.key }}"
+              hx-target="#material-detail"
+              hx-swap="innerHTML"
+            >
+              開く
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="7" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

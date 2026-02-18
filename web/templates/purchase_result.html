@@ -1,0 +1,16 @@
+{% if has_error %}
+<div class="result-card is-error">
+  <p>{{ error }}</p>
+</div>
+{% else %}
+<div class="result-card is-success">
+  <h4>{% if is_mock %}注文を受け付けました（モック）{% else %}注文内容を受け付けました（検証）{% endif %}</h4>
+  <p>データソース: {{ source_label }}</p>
+  <p>印影: {{ seal_line1 }}{% if has_seal_line2 %} / {{ seal_line2 }}{% endif %}</p>
+  <p>{{ shape_label }} / {{ material_label }} / {{ font_label }}</p>
+  <p>配送先: {{ country_label }} / {{ stripe_name }} / {{ stripe_phone }}</p>
+  <p>住所: {{ postal_code }} {{ state }} {{ city }} {{ address_line1 }}{% if has_address_line2 %} {{ address_line2 }}{% endif %}</p>
+  <p>小計: ¥{{ subtotal_display }} / 送料: ¥{{ shipping_display }} / 合計: ¥{{ total_display }}</p>
+  <p>確認メール送信先: {{ email }}</p>
+</div>
+{% endif %}

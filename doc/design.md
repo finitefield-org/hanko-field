@@ -3,23 +3,20 @@
 ハンコフィールドは、アプリでユーザが自分の印鑑をデザインし、注文できるサービスです。
 
 - アプリフレームワーク: Flutter
-- ウェブ: Cloud Run (Go)
-- 管理画面: Cloud Run (Go)
+- ウェブ: Cloud Run (Rust)
+- 管理画面: Cloud Run (Rust)
 - データベース: Firestore
-- API: Cloud Run (Go)
+- API: Cloud Run (Rust)
 - ストレージ: Firebase Storage
 - 認証: Firebase Auth
 - 支払い: Stripe
 - 管理画面/ウェブ: ポーリングやストリーミング（SSE / WebSocket 等）を実装しない
+- 対応言語: 日本語（`ja`）/ 英語（`en`）を初期対応し、追加可能な多言語設計にする
 
-## ドキュメント構成
+## 関連ドキュメント
+- Firebase Firestore 設計（本番向け・多言語対応）: `doc/firebase-firestore-design.md`
 
-- doc/customer_journey/persona.md: ペルソナ
-- doc/customer_journey/customer_journey.md: カスタマージャーニー
-- doc/design.md: 全体設計
-- doc/db/db_design.md: データベース設計
-- doc/db/schema/*.md: データスキーマ
-- doc/api/api_design.md: API設計
-- doc/app/app_design.md: アプリ設計
-- doc/web/web_design.md: ウェブ設計
-- doc/admin/admin_design.md: 管理画面設計
+## タスク
+- [x] 管理画面（`admin`）の初期モック実装を追加
+- [x] 管理画面（`admin`）で `mock` / `dev` / `prod` のデータソース切替を追加
+- [x] `api` / `admin` / `web` の実装言語を Rust に統一

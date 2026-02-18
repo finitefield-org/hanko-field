@@ -1,21 +1,25 @@
 {
   "packages": [
-    "go@1.22",
-    "flutter",
-    "air",
-    "jdk@21",
-    "nodejs@20",
-    "curl"
+    "go@1.25",
+    "flutter@latest",
+    "air@latest",
+    "curl@latest",
+    "rustc@1.92.0",
+    "cargo@1.92.0"
   ],
   "env": {
     "GOPATH": "$DEVBOX_PROJECT_ROOT/.go",
-    "NPM_CONFIG_PREFIX": "$DEVBOX_PROJECT_ROOT/.devbox/npm",
-    "NODE_PATH": "$DEVBOX_PROJECT_ROOT/.devbox/npm/lib/node_modules",
-    "PATH": "$DEVBOX_PROJECT_ROOT/.devbox/npm/bin:$GOPATH/bin:$PATH"
+    "CARGO_HOME": "$DEVBOX_PROJECT_ROOT/.devbox/cargo",
+    "PATH": "$DEVBOX_PROJECT_ROOT/.devbox/bin:$GOPATH/bin:$PATH"
   },
   "shell": {
     "init_hook": [
-      "echo 'Hanko Field devbox ready (Go/Flutter/Firebase).'"
-    ]
+      "echo 'Hanko Field devbox ready (Go/Flutter/Firebase/Ironframe).'"
+    ],
+    "scripts": {
+      "ironframe": [
+        "./scripts/ironframe.sh"
+      ]
+    }
   }
 }

@@ -27,6 +27,11 @@ infra/terraform/.terraform.lock.hcl
 # Logs
 *.log
 
+# Environment files
+.env
+.env.*
+!.env.*.example
+
 # Coverage
 coverage*.txt
 coverage*.out
@@ -43,8 +48,11 @@ system-field-firebase-setup/
 
 hanko-field-firebase-adminsdk-fbsvc.json
 hanko-field-firebase-adminsdk-fbsvc-7360f8f95f.json
+hanko-field-firebase-adminsdk-fbsvc*.json
 
 api/.secrets.local
 
 # Node
 node_modules/
+
+.editorconfig

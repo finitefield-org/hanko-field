@@ -1,0 +1,12 @@
+{% if has_suggestions %}
+<p class="suggestion-title">{{ real_name }} さんへの候補（Geminiモック）</p>
+<div class="suggestion-chips">
+  {% for suggestion in suggestions %}
+  <button type="button" class="kanji-chip" data-line1="{{ suggestion.line1 }}" data-line2="{{ suggestion.line2 }}" data-reason="{{ suggestion.reason }}">{{ suggestion.label }}</button>
+  {% endfor %}
+</div>
+<p class="suggestion-reason" data-kanji-reason>候補をタップすると、提案理由を表示します。</p>
+<p class="field-hint">候補をクリックすると2行の印影テキストに反映されます。</p>
+{% else %}
+<p class="placeholder">候補を表示するには本名を入力してください。</p>
+{% endif %}

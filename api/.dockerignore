@@ -1,9 +1,0 @@
-bin
-vendor
-.git
-.gitignore
-Dockerfile
-coverage.unit.out
-coverage.integration.out
-coverage.out
-firebase-debug.log

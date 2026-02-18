@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "LINE Seed JP", sans-serif;
+  --font-body: "Zen Kaku Gothic New", sans-serif;
+
+  --color-admin-bg: #f5f6ef;
+  --color-admin-panel: #fffef9;
+  --color-admin-ink: #1e2925;
+  --color-admin-muted: #5d6b65;
+  --color-admin-line: #d9ded8;
+  --color-admin-accent: #006b54;
+  --color-admin-accent-soft: #d8eee7;
+  --color-admin-alert: #9d2f24;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-admin-bg font-body text-admin-ink;
+    background:
+      radial-gradient(circle at 8% 4%, rgb(255 255 255 / 0.82) 0, rgb(255 255 255 / 0.82) 24%, transparent 25%),
+      radial-gradient(circle at 88% 3%, rgb(224 236 220 / 0.65) 0, rgb(224 236 220 / 0.65) 17%, transparent 18%),
+      linear-gradient(140deg, #f5f6ef 0%, #ebeee1 100%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  p {
+    @apply m-0;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  select,
+  textarea {
+    @apply w-full rounded-[10px] border border-admin-line bg-white px-3 py-[10px] text-[0.95rem] text-admin-ink;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="number"]:focus,
+  input[type="password"]:focus,
+  input[type="search"]:focus,
+  input[type="tel"]:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid rgb(0 107 84 / 0.24);
+    outline-offset: 0;
+    border-color: var(--color-admin-accent);
+  }
+
+  input[type="checkbox"] {
+    @apply size-4 rounded-[4px] border border-admin-line bg-white;
+  }
+
+  input[type="checkbox"]:focus {
+    outline: 2px solid rgb(0 107 84 / 0.2);
+    outline-offset: 1px;
+    border-color: var(--color-admin-accent);
+  }
+
+  button {
+    @apply cursor-pointer rounded-[10px] border px-3 py-[10px] text-[0.92rem];
+  }
+}
