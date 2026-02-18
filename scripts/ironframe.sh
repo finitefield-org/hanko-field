@@ -4,7 +4,12 @@ set -euo pipefail
 
 IRONFRAME_VERSION="0.3.1"
 PROJECT_ROOT="${DEVBOX_PROJECT_ROOT:-$(pwd)}"
-INSTALL_ROOT="${PROJECT_ROOT}/.devbox"
+
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
+PLATFORM_KEY="${OS}-${ARCH}"
+
+INSTALL_ROOT="${PROJECT_ROOT}/.devbox/ironframe/${PLATFORM_KEY}"
 IRONFRAME_BIN="${INSTALL_ROOT}/bin/ironframe"
 VERSION_FILE="${INSTALL_ROOT}/.ironframe-version"
 
@@ -29,7 +34,7 @@ if [ -f "${VERSION_FILE}" ]; then
 fi
 
 if [ ! -x "${IRONFRAME_BIN}" ] || [ "${current_version}" != "${IRONFRAME_VERSION}" ]; then
-  echo "Installing ironframe ${IRONFRAME_VERSION}..."
+  echo "Installing ironframe ${IRONFRAME_VERSION} for ${PLATFORM_KEY}..."
   mkdir -p "${INSTALL_ROOT}" "${CARGO_HOME}"
   cargo install ironframe --version "${IRONFRAME_VERSION}" --locked --force --root "${INSTALL_ROOT}"
   printf '%s\n' "${IRONFRAME_VERSION}" > "${VERSION_FILE}"
