@@ -1,45 +1,49 @@
-<table class="table">
-  <thead>
-    <tr>
-      <th>Order No</th>
-      <th>Status</th>
-      <th>Payment</th>
-      <th>配送</th>
-      <th>国</th>
-      <th>合計</th>
-      <th>詳細</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% if has_orders %}
-    {% for order in orders %}
-    <tr>
-      <td>
-        <strong>{{ order.order_no }}</strong>
-        <small>{{ order.created_at }}</small>
-      </td>
-      <td>{{ order.status_label }}</td>
-      <td>{{ order.payment_status_label }}</td>
-      <td>{{ order.fulfillment_status_label }}</td>
-      <td>{{ order.country_label }}</td>
-      <td>¥{{ order.total_jpy }}</td>
-      <td>
-        <button
-          type="button"
-          class="button-link"
-          hx-get="/admin/orders/{{ order.id }}"
-          hx-target="#order-detail"
-          hx-swap="innerHTML"
-        >
-          開く
-        </button>
-      </td>
-    </tr>
-    {% endfor %}
-    {% else %}
-    <tr>
-      <td colspan="7" class="empty">条件に一致する注文はありません。</td>
-    </tr>
-    {% endif %}
-  </tbody>
-</table>
+<div class="h-full p-4 sm:p-5">
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0 text-sm">
+      <thead>
+        <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
+          <th class="border-b border-admin-line/70 px-3 py-2">Order No</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">Status</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">Payment</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">配送</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">国</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">合計</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">詳細</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if has_orders %}
+        {% for order in orders %}
+        <tr class="align-top">
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <p class="font-semibold">{{ order.order_no }}</p>
+            <p class="mt-1 text-xs text-admin-muted">{{ order.created_at }}</p>
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-ink">{{ order.status_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-ink">{{ order.payment_status_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-ink">{{ order.fulfillment_status_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-ink">{{ order.country_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold text-admin-ink">¥{{ order.total_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
+              hx-get="/admin/orders/{{ order.id }}"
+              hx-target="#order-detail"
+              hx-swap="innerHTML"
+            >
+              開く
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="7" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">条件に一致する注文はありません。</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

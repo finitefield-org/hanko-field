@@ -35,13 +35,27 @@
     @apply m-0;
   }
 
-  input,
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
   select,
   textarea {
     @apply w-full rounded-[10px] border border-admin-line bg-white px-3 py-[10px] text-[0.95rem] text-admin-ink;
   }
 
-  input:focus,
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="number"]:focus,
+  input[type="password"]:focus,
+  input[type="search"]:focus,
+  input[type="tel"]:focus,
   select:focus,
   textarea:focus {
     outline: 2px solid rgb(0 107 84 / 0.24);
@@ -49,9 +63,17 @@
     border-color: var(--color-admin-accent);
   }
 
-  button,
-  .button-ghost,
-  .button-link {
+  input[type="checkbox"] {
+    @apply size-4 rounded-[4px] border border-admin-line bg-white;
+  }
+
+  input[type="checkbox"]:focus {
+    outline: 2px solid rgb(0 107 84 / 0.2);
+    outline-offset: 1px;
+    border-color: var(--color-admin-accent);
+  }
+
+  button {
     @apply cursor-pointer rounded-[10px] border px-3 py-[10px] text-[0.92rem];
   }
 }

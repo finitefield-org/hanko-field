@@ -1,55 +1,55 @@
-<article class="detail">
+<article class="flex flex-col gap-5 p-4 sm:p-5">
   <header>
-    <h3>{{ detail.key }}</h3>
-    <p class="muted">version {{ detail.version }} / 更新 {{ detail.updated_at }}</p>
+    <h3 class="text-xl leading-tight font-bold">{{ detail.key }}</h3>
+    <p class="mt-1 text-xs font-semibold tracking-[0.06em] text-admin-muted uppercase">version {{ detail.version }} / 更新 {{ detail.updated_at }}</p>
   </header>
 
   {% if detail.has_message %}
-  <p class="message-success">{{ detail.message }}</p>
+  <p class="rounded-xl border border-admin-accent/30 bg-admin-accent-soft px-3 py-2 text-sm font-semibold text-admin-accent">{{ detail.message }}</p>
   {% endif %}
   {% if detail.has_error %}
-  <p class="message-error">{{ detail.error }}</p>
+  <p class="rounded-xl border border-admin-alert/35 bg-[rgb(157_47_36_/_0.08)] px-3 py-2 text-sm font-semibold text-admin-alert">{{ detail.error }}</p>
   {% endif %}
 
   <form
-    class="stack-form"
+    class="flex flex-col gap-3 rounded-xl border border-admin-line/70 bg-white p-4"
     hx-patch="/admin/materials/{{ detail.key }}"
     hx-target="#material-detail"
     hx-swap="innerHTML"
   >
-    <label>
-      材質名 (ja)
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>材質名 (ja)</span>
       <input type="text" name="label_ja" value="{{ detail.label_ja }}" required>
     </label>
-    <label>
-      Material Name (en)
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>Material Name (en)</span>
       <input type="text" name="label_en" value="{{ detail.label_en }}" required>
     </label>
-    <label>
-      説明 (ja)
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>説明 (ja)</span>
       <textarea name="description_ja" rows="3" required>{{ detail.description_ja }}</textarea>
     </label>
-    <label>
-      Description (en)
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>Description (en)</span>
       <textarea name="description_en" rows="3" required>{{ detail.description_en }}</textarea>
     </label>
 
-    <div class="inline-grid">
-      <label>
-        価格 (JPY)
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>価格 (JPY)</span>
         <input type="number" name="price_jpy" min="0" value="{{ detail.price_jpy }}" required>
       </label>
-      <label>
-        表示順
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>表示順</span>
         <input type="number" name="sort_order" min="0" value="{{ detail.sort_order }}" required>
       </label>
     </div>
 
-    <label class="checkbox-row">
+    <label class="inline-flex items-center gap-2 text-sm font-semibold">
       <input type="checkbox" name="is_active" value="1" {% if detail.is_active %}checked{% endif %}>
-      公開する
+      <span>公開する</span>
     </label>
 
-    <button type="submit" class="button-primary">保存</button>
+    <button type="submit" class="w-fit rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">保存</button>
   </form>
 </article>
