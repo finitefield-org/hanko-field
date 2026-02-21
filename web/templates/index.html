@@ -338,7 +338,7 @@
                 {% if is_mock %}
                 mock モードのため実決済は行われず、確認メッセージのみ表示します。
                 {% else %}
-                カタログは Firebase データを参照しています。決済処理は現在モックです。
+                Stripe Checkout に遷移して決済します。
                 {% endif %}
               </p>
               <button
@@ -349,7 +349,7 @@
                 hx-swap="innerHTML"
                 hx-include="#order-form"
               >
-                {% if is_mock %}購入を確定（モック）{% else %}購入を確定（検証）{% endif %}
+                {% if is_mock %}購入を確定（モック）{% else %}Stripeで支払う{% endif %}
               </button>
               <div id="purchase-result" class="purchase-result"></div>
             </section>

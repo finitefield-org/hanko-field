@@ -135,6 +135,7 @@
 | `pricing.total_jpy` | int | Yes | 請求合計 |
 | `pricing.currency` | string | Yes | `JPY` 固定 |
 | `payment.provider` | string | Yes | `stripe` |
+| `payment.checkout_session_id` | string | No | Checkout Session ID（作成後に更新） |
 | `payment.intent_id` | string | No | PaymentIntent ID（作成後に更新） |
 | `payment.status` | string | Yes | `unpaid` / `processing` / `paid` / `failed` / `refunded` |
 | `payment.last_event_id` | string | No | 最終反映 webhook イベント ID |
@@ -235,6 +236,11 @@ Stripe webhook の重複処理防止。`provider_event_id` は Stripe event ID�
 - 新規時は `order_no_counters` を更新して `order_no` を採番。
 - `orders` 作成と `orders/{order_id}/events`（`order_created`）作成。
 
+### `POST /v1/payments/stripe/checkout-session`
+- `order_id` を受け取り、`orders.status == pending_payment` かつ `orders.payment.status == unpaid` を検証する。
+- Stripe Checkout Session を作成し、`metadata.order_id` を設定する。
+- `orders.payment.checkout_session_id` を更新する。
+
 ### `POST /v1/payments/stripe/webhook`
 - `payment_webhook_events` を先に記録し、未処理イベントのみ反映。
 - `orders.payment.*` と `orders.status` を更新。
@@ -303,3 +309,4 @@ Stripe webhook の重複処理防止。`provider_event_id` は Stripe event ID�
 - [x] `materials` に材質形状（`square` / `round`）を追加
 - [x] `web` で `mock` / `dev` / `prod` を切り替え、Firestore 実データ参照を可能にする
 - [x] `admin` で `mock` / `dev` / `prod` を切り替え、Firestore 実データ参照を可能にする
+- [x] `api` に Stripe Checkout Session 作成エンドポイントを追加

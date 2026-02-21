@@ -36,6 +36,10 @@ const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";
 const DEFAULT_LOCALE: &str = "ja";
 const STRIPE_SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
+const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
+    "http://localhost:3052/?checkout=success&session_id={CHECKOUT_SESSION_ID}";
+const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/?checkout=cancel";
+const STRIPE_CHECKOUT_SESSIONS_ENDPOINT: &str = "https://api.stripe.com/v1/checkout/sessions";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
@@ -45,7 +49,10 @@ struct AppConfig {
     addr: String,
     firestore_project_id: String,
     storage_assets_bucket: String,
+    stripe_api_key: String,
     stripe_webhook_secret: String,
+    stripe_checkout_success_url: String,
+    stripe_checkout_cancel_url: String,
     gemini_api_key: String,
     gemini_model: String,
     gemini_base_url: String,
@@ -57,8 +64,16 @@ struct AppState {
     store: Arc<FirestoreStore>,
     storage_assets_bucket: String,
     stripe_webhook_secret: String,
+    stripe_checkout: StripeCheckoutConfig,
     gemini: GeminiClientConfig,
     http_client: reqwest::Client,
+}
+
+#[derive(Debug, Clone)]
+struct StripeCheckoutConfig {
+    api_key: String,
+    success_url: String,
+    cancel_url: String,
 }
 
 #[derive(Debug, Clone)]
@@ -176,6 +191,17 @@ struct ContactInput {
 }
 
 #[derive(Debug, Clone)]
+struct OrderCheckoutContext {
+    order_id: String,
+    order_no: String,
+    status: String,
+    payment_status: String,
+    total_jpy: i64,
+    currency: String,
+    contact_email: String,
+}
+
+#[derive(Debug, Clone)]
 struct StripeWebhookEvent {
     provider_event_id: String,
     event_type: String,
@@ -287,6 +313,33 @@ struct CreateOrderContactRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateStripeCheckoutSessionRequest {
+    order_id: String,
+    customer_email: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct CreateStripeCheckoutSessionInput {
+    order_id: String,
+    customer_email: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct StripeCheckoutSessionResponse {
+    id: String,
+    url: Option<String>,
+    payment_intent: Option<JsonValue>,
+}
+
+#[derive(Debug, Clone)]
+struct CreateStripeCheckoutSessionResult {
+    session_id: String,
+    checkout_url: String,
+    payment_intent_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct StripeEventEnvelope {
     id: String,
     #[serde(rename = "type")]
@@ -357,6 +410,11 @@ async fn run() -> Result<()> {
         store,
         storage_assets_bucket: cfg.storage_assets_bucket,
         stripe_webhook_secret: cfg.stripe_webhook_secret,
+        stripe_checkout: StripeCheckoutConfig {
+            api_key: cfg.stripe_api_key,
+            success_url: cfg.stripe_checkout_success_url,
+            cancel_url: cfg.stripe_checkout_cancel_url,
+        },
         gemini: GeminiClientConfig {
             api_key: cfg.gemini_api_key,
             model: cfg.gemini_model,
@@ -374,6 +432,10 @@ async fn run() -> Result<()> {
             post(handle_generate_kanji_candidates),
         )
         .route("/v1/orders", post(handle_create_order))
+        .route(
+            "/v1/payments/stripe/checkout-session",
+            post(handle_create_stripe_checkout_session),
+        )
         .route("/v1/payments/stripe/webhook", post(handle_stripe_webhook))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
         .with_state(state);
@@ -417,8 +479,19 @@ fn load_config() -> Result<AppConfig> {
     let storage_assets_bucket = first_non_empty(&[std::env::var("API_STORAGE_ASSETS_BUCKET").ok()])
         .unwrap_or_else(|| "local-assets".to_owned());
 
+    let stripe_api_key =
+        first_non_empty(&[std::env::var("API_PSP_STRIPE_API_KEY").ok()]).unwrap_or_default();
+
     let stripe_webhook_secret =
         first_non_empty(&[std::env::var("API_PSP_STRIPE_WEBHOOK_SECRET").ok()]).unwrap_or_default();
+
+    let stripe_checkout_success_url =
+        first_non_empty(&[std::env::var("API_PSP_STRIPE_CHECKOUT_SUCCESS_URL").ok()])
+            .unwrap_or_else(|| DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL.to_owned());
+
+    let stripe_checkout_cancel_url =
+        first_non_empty(&[std::env::var("API_PSP_STRIPE_CHECKOUT_CANCEL_URL").ok()])
+            .unwrap_or_else(|| DEFAULT_STRIPE_CHECKOUT_CANCEL_URL.to_owned());
 
     let gemini_api_key = first_non_empty(&[
         std::env::var("API_GEMINI_API_KEY").ok(),
@@ -441,7 +514,10 @@ fn load_config() -> Result<AppConfig> {
         addr: format!(":{}", port.trim()),
         firestore_project_id,
         storage_assets_bucket,
+        stripe_api_key,
         stripe_webhook_secret,
+        stripe_checkout_success_url,
+        stripe_checkout_cancel_url,
         gemini_api_key,
         gemini_model,
         gemini_base_url,
@@ -770,6 +846,131 @@ async fn handle_create_order(State(state): State<AppState>, body: Bytes) -> Resp
             )
         }
     }
+}
+
+async fn handle_create_stripe_checkout_session(
+    State(state): State<AppState>,
+    body: Bytes,
+) -> Response {
+    if state.stripe_checkout.api_key.trim().is_empty() {
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "stripe_not_configured",
+            "stripe api key is not configured",
+        );
+    }
+    if state.stripe_checkout.success_url.trim().is_empty()
+        || state.stripe_checkout.cancel_url.trim().is_empty()
+    {
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "stripe_not_configured",
+            "stripe checkout urls are not configured",
+        );
+    }
+
+    let request = match serde_json::from_slice::<CreateStripeCheckoutSessionRequest>(&body) {
+        Ok(v) => v,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_json",
+                &format!("invalid JSON: {err}"),
+            );
+        }
+    };
+
+    let input = match validate_create_stripe_checkout_session_request(request) {
+        Ok(v) => v,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "validation_error",
+                &err.to_string(),
+            );
+        }
+    };
+
+    let Some(order) = (match state
+        .store
+        .get_order_checkout_context(&input.order_id)
+        .await
+    {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load order for stripe checkout session: {err}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            );
+        }
+    }) else {
+        return error_response(StatusCode::NOT_FOUND, "order_not_found", "order not found");
+    };
+
+    if order.status != "pending_payment" || order.payment_status != "unpaid" {
+        return error_response(
+            StatusCode::CONFLICT,
+            "order_not_payable",
+            "order is not payable",
+        );
+    }
+    if order.total_jpy <= 0 {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_order_total",
+            "order total must be greater than zero",
+        );
+    }
+    if order.currency.trim().is_empty() {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_order_currency",
+            "order currency is required",
+        );
+    }
+
+    let customer_email = if input.customer_email.is_empty() {
+        order.contact_email.clone()
+    } else {
+        input.customer_email.clone()
+    };
+
+    let session = match create_stripe_checkout_session(&state, &order, &customer_email).await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to create stripe checkout session: {err:#}");
+            return error_response(
+                StatusCode::BAD_GATEWAY,
+                "stripe_checkout_failed",
+                "failed to create stripe checkout session",
+            );
+        }
+    };
+
+    if let Err(err) = state
+        .store
+        .set_order_checkout_session(&order.order_id, &session.session_id)
+        .await
+    {
+        eprintln!("failed to persist stripe checkout session id: {err}");
+        return error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal",
+            "internal server error",
+        );
+    }
+
+    json_response(
+        StatusCode::CREATED,
+        json!({
+            "order_id": order.order_id,
+            "session_id": session.session_id,
+            "checkout_url": session.checkout_url,
+            "payment_intent_id": session.payment_intent_id,
+        }),
+    )
 }
 
 async fn handle_stripe_webhook(
@@ -1169,6 +1370,81 @@ impl FirestoreStore {
             currency: "JPY".to_owned(),
             idempotent_replay: false,
         })
+    }
+
+    async fn get_order_checkout_context(
+        &self,
+        order_id: &str,
+    ) -> Result<Option<OrderCheckoutContext>, StoreError> {
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+
+        let order_doc = match client
+            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .await
+        {
+            Ok(doc) => doc,
+            Err(err) if is_not_found(&err) => return Ok(None),
+            Err(err) => return Err(StoreError::Internal(anyhow!(err))),
+        };
+
+        let payment = read_map_field(&order_doc.fields, "payment");
+        let pricing = read_map_field(&order_doc.fields, "pricing");
+        let contact = read_map_field(&order_doc.fields, "contact");
+
+        Ok(Some(OrderCheckoutContext {
+            order_id: order_id.to_owned(),
+            order_no: read_string_field(&order_doc.fields, "order_no"),
+            status: read_string_field(&order_doc.fields, "status"),
+            payment_status: read_string_field(&payment, "status"),
+            total_jpy: read_int_field(&pricing, "total_jpy").unwrap_or_default(),
+            currency: read_string_field(&pricing, "currency"),
+            contact_email: read_string_field(&contact, "email"),
+        }))
+    }
+
+    async fn set_order_checkout_session(
+        &self,
+        order_id: &str,
+        session_id: &str,
+    ) -> Result<(), StoreError> {
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+
+        let mut order_doc = client
+            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        let mut payment = read_map_field(&order_doc.fields, "payment");
+        payment.insert("provider".to_owned(), fs_string("stripe"));
+        payment.insert(
+            "checkout_session_id".to_owned(),
+            fs_string(session_id.to_owned()),
+        );
+        order_doc
+            .fields
+            .insert("payment".to_owned(), fs_map(payment));
+        order_doc
+            .fields
+            .insert("updated_at".to_owned(), fs_timestamp(Utc::now()));
+
+        client
+            .patch_document(
+                &order_doc_name,
+                &order_doc,
+                &PatchDocumentOptions::default(),
+            )
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        Ok(())
     }
 
     async fn try_idempotent_replay(
@@ -2002,6 +2278,148 @@ fn read_json_string(value: &JsonValue, keys: &[&str]) -> String {
     String::new()
 }
 
+fn validate_create_stripe_checkout_session_request(
+    request: CreateStripeCheckoutSessionRequest,
+) -> Result<CreateStripeCheckoutSessionInput> {
+    let order_id = request.order_id.trim().to_owned();
+    if order_id.is_empty() {
+        bail!("order_id is required");
+    }
+
+    let customer_email = request.customer_email.unwrap_or_default().trim().to_owned();
+    if !customer_email.is_empty() && !is_valid_email(&customer_email) {
+        bail!("customer_email must be valid");
+    }
+
+    Ok(CreateStripeCheckoutSessionInput {
+        order_id,
+        customer_email,
+    })
+}
+
+async fn create_stripe_checkout_session(
+    state: &AppState,
+    order: &OrderCheckoutContext,
+    customer_email: &str,
+) -> Result<CreateStripeCheckoutSessionResult> {
+    let currency = order.currency.trim().to_lowercase();
+    if currency.is_empty() {
+        bail!("order currency is required");
+    }
+
+    let product_name = if order.order_no.trim().is_empty() {
+        "Hanko Field Order".to_owned()
+    } else {
+        format!("Hanko Field Order {}", order.order_no.trim())
+    };
+
+    let mut params = vec![
+        ("mode".to_owned(), "payment".to_owned()),
+        (
+            "success_url".to_owned(),
+            state.stripe_checkout.success_url.clone(),
+        ),
+        (
+            "cancel_url".to_owned(),
+            state.stripe_checkout.cancel_url.clone(),
+        ),
+        ("line_items[0][quantity]".to_owned(), "1".to_owned()),
+        ("line_items[0][price_data][currency]".to_owned(), currency),
+        (
+            "line_items[0][price_data][unit_amount]".to_owned(),
+            order.total_jpy.to_string(),
+        ),
+        (
+            "line_items[0][price_data][product_data][name]".to_owned(),
+            product_name,
+        ),
+        ("metadata[order_id]".to_owned(), order.order_id.clone()),
+        (
+            "payment_intent_data[metadata][order_id]".to_owned(),
+            order.order_id.clone(),
+        ),
+    ];
+
+    if !customer_email.trim().is_empty() {
+        params.push((
+            "customer_email".to_owned(),
+            customer_email.trim().to_owned(),
+        ));
+    }
+
+    let response = state
+        .http_client
+        .post(STRIPE_CHECKOUT_SESSIONS_ENDPOINT)
+        .header(
+            "Authorization",
+            format!("Bearer {}", state.stripe_checkout.api_key.trim()),
+        )
+        .header(
+            "Idempotency-Key",
+            format!("checkout_session_{}", order.order_id),
+        )
+        .form(&params)
+        .send()
+        .await
+        .context("failed to request stripe checkout session")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+        bail!(
+            "stripe checkout session request failed status={} body={}",
+            status,
+            body
+        );
+    }
+
+    let payload = response
+        .json::<StripeCheckoutSessionResponse>()
+        .await
+        .context("failed to parse stripe checkout session response")?;
+
+    let session_id = payload.id.trim().to_owned();
+    if session_id.is_empty() {
+        bail!("stripe checkout session response is missing id");
+    }
+    let checkout_url = payload.url.unwrap_or_default().trim().to_owned();
+    if checkout_url.is_empty() {
+        bail!("stripe checkout session response is missing url");
+    }
+
+    let payment_intent_id = payload
+        .payment_intent
+        .as_ref()
+        .and_then(stripe_payment_intent_id)
+        .unwrap_or_default();
+
+    Ok(CreateStripeCheckoutSessionResult {
+        session_id,
+        checkout_url,
+        payment_intent_id,
+    })
+}
+
+fn stripe_payment_intent_id(value: &JsonValue) -> Option<String> {
+    if let Some(id) = value.as_str() {
+        let trimmed = id.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_owned());
+        }
+    }
+
+    value
+        .as_object()
+        .and_then(|object| object.get("id"))
+        .and_then(JsonValue::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
 fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOrderInput> {
     let idempotency_key_pattern =
         Regex::new(r"^[A-Za-z0-9_-]{8,128}$").expect("idempotency key regex must compile");
@@ -2674,6 +3092,29 @@ mod tests {
         };
 
         assert!(validate_create_order_request(request).is_err());
+    }
+
+    #[test]
+    fn validate_create_stripe_checkout_session_request_accepts_valid_payload() {
+        let request = CreateStripeCheckoutSessionRequest {
+            order_id: "order_1".to_owned(),
+            customer_email: Some("buyer@example.com".to_owned()),
+        };
+
+        let input = validate_create_stripe_checkout_session_request(request)
+            .expect("request must be valid");
+        assert_eq!(input.order_id, "order_1");
+        assert_eq!(input.customer_email, "buyer@example.com");
+    }
+
+    #[test]
+    fn validate_create_stripe_checkout_session_request_rejects_invalid_email() {
+        let request = CreateStripeCheckoutSessionRequest {
+            order_id: "order_1".to_owned(),
+            customer_email: Some("invalid".to_owned()),
+        };
+
+        assert!(validate_create_stripe_checkout_session_request(request).is_err());
     }
 
     #[test]

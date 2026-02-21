@@ -10,18 +10,20 @@ use askama::Template;
 use axum::{
     Router,
     extract::{Form, State, rejection::FormRejection},
-    http::{StatusCode, header},
+    http::{HeaderName, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use firebase_sdk_rust::firebase_firestore::{Document, FirebaseFirestoreClient, RunQueryRequest};
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value as JsonValue, json};
 use tower_http::services::ServeDir;
+use uuid::Uuid;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
+const HX_REDIRECT_HEADER: &str = "hx-redirect";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -148,6 +150,71 @@ struct KanjiCandidatesApiItem {
     reading_hiragana: String,
     reading_romaji: String,
     reason: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateOrderApiRequest {
+    channel: String,
+    locale: String,
+    idempotency_key: String,
+    terms_agreed: bool,
+    seal: CreateOrderSealApiRequest,
+    material_key: String,
+    shipping: CreateOrderShippingApiRequest,
+    contact: CreateOrderContactApiRequest,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateOrderSealApiRequest {
+    line1: String,
+    line2: String,
+    shape: String,
+    font_key: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateOrderShippingApiRequest {
+    country_code: String,
+    recipient_name: String,
+    phone: String,
+    postal_code: String,
+    state: String,
+    city: String,
+    address_line1: String,
+    address_line2: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateOrderContactApiRequest {
+    email: String,
+    preferred_locale: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateOrderApiResponse {
+    order_id: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateStripeCheckoutSessionApiRequest {
+    order_id: String,
+    customer_email: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateStripeCheckoutSessionApiResponse {
+    checkout_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ApiErrorEnvelope {
+    error: ApiErrorBody,
+}
+
+#[derive(Debug, Deserialize)]
+struct ApiErrorBody {
+    code: String,
+    message: String,
 }
 
 #[derive(Template)]
@@ -500,6 +567,73 @@ impl KanjiApiClient {
 
         Ok(suggestions)
     }
+
+    async fn create_order(
+        &self,
+        request: &CreateOrderApiRequest,
+    ) -> Result<CreateOrderApiResponse> {
+        let endpoint = format!("{}/v1/orders", self.base_url.trim_end_matches('/'));
+        let response = self
+            .http_client
+            .post(endpoint)
+            .json(request)
+            .send()
+            .await
+            .context("failed to request order creation")?;
+
+        decode_api_response(response, "create order")
+            .await
+            .context("failed to decode create order response")
+    }
+
+    async fn create_stripe_checkout_session(
+        &self,
+        request: &CreateStripeCheckoutSessionApiRequest,
+    ) -> Result<CreateStripeCheckoutSessionApiResponse> {
+        let endpoint = format!(
+            "{}/v1/payments/stripe/checkout-session",
+            self.base_url.trim_end_matches('/')
+        );
+        let response = self
+            .http_client
+            .post(endpoint)
+            .json(request)
+            .send()
+            .await
+            .context("failed to request stripe checkout session")?;
+
+        decode_api_response(response, "create stripe checkout session")
+            .await
+            .context("failed to decode stripe checkout session response")
+    }
+}
+
+async fn decode_api_response<T: DeserializeOwned>(
+    response: reqwest::Response,
+    op: &str,
+) -> Result<T> {
+    let status = response.status();
+    let body = response
+        .bytes()
+        .await
+        .with_context(|| format!("failed to read response body for {op}"))?;
+
+    if !status.is_success() {
+        if let Ok(err) = serde_json::from_slice::<ApiErrorEnvelope>(&body) {
+            bail!(
+                "{} failed status={} code={} message={}",
+                op,
+                status,
+                err.error.code,
+                err.error.message
+            );
+        }
+
+        let text = String::from_utf8_lossy(&body);
+        bail!("{op} failed status={} body={}", status, text);
+    }
+
+    serde_json::from_slice::<T>(&body).with_context(|| format!("invalid JSON for {op}"))
 }
 
 #[derive(Clone)]
@@ -1070,6 +1204,36 @@ async fn handle_purchase(
 
     let subtotal = material.price;
     let shipping = country.shipping;
+    let total = subtotal + shipping;
+    let order_locale = state.locale.trim().to_lowercase();
+
+    let create_order_request = CreateOrderApiRequest {
+        channel: "web".to_owned(),
+        locale: order_locale.clone(),
+        idempotency_key: generate_idempotency_key(),
+        terms_agreed: true,
+        seal: CreateOrderSealApiRequest {
+            line1: seal_line1.clone(),
+            line2: seal_line2.clone(),
+            shape: shape_key.clone(),
+            font_key: font_key.clone(),
+        },
+        material_key: material_key.clone(),
+        shipping: CreateOrderShippingApiRequest {
+            country_code: country_code.clone(),
+            recipient_name: recipient_name.clone(),
+            phone: phone.clone(),
+            postal_code: postal_code.clone(),
+            state: state_name.clone(),
+            city: city.clone(),
+            address_line1: address_line1.clone(),
+            address_line2: address_line2.clone(),
+        },
+        contact: CreateOrderContactApiRequest {
+            email: email.clone(),
+            preferred_locale: order_locale,
+        },
+    };
 
     result.seal_line1 = seal_line1;
     result.seal_line2 = seal_line2;
@@ -1086,10 +1250,41 @@ async fn handle_purchase(
     result.address_line2 = address_line2;
     result.subtotal = subtotal;
     result.shipping = shipping;
-    result.total = subtotal + shipping;
+    result.total = total;
     result.email = email;
 
-    render_purchase_result(&result)
+    if result.is_mock {
+        return render_purchase_result(&result);
+    }
+
+    let order = match state.kanji_api.create_order(&create_order_request).await {
+        Ok(order) => order,
+        Err(error) => {
+            eprintln!("failed to create order for stripe checkout: {error:#}");
+            result.error = "注文の作成に失敗しました。時間をおいて再度お試しください。".to_owned();
+            return render_purchase_result(&result);
+        }
+    };
+
+    let checkout_request = CreateStripeCheckoutSessionApiRequest {
+        order_id: order.order_id,
+        customer_email: result.email.clone(),
+    };
+    let checkout_session = match state
+        .kanji_api
+        .create_stripe_checkout_session(&checkout_request)
+        .await
+    {
+        Ok(session) => session,
+        Err(error) => {
+            eprintln!("failed to create stripe checkout session: {error:#}");
+            result.error =
+                "決済画面の作成に失敗しました。時間をおいて再度お試しください。".to_owned();
+            return render_purchase_result(&result);
+        }
+    };
+
+    hx_redirect_response(&checkout_session.checkout_url)
 }
 
 fn render_purchase_result(data: &PurchaseResultData) -> Response {
@@ -1126,6 +1321,33 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
             format!("failed to render purchase result: {error}"),
         ),
     }
+}
+
+fn hx_redirect_response(url: &str) -> Response {
+    let redirect = url.trim();
+    if redirect.is_empty() {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "failed to redirect to checkout".to_owned(),
+        );
+    }
+
+    let mut response = StatusCode::OK.into_response();
+    if let Ok(value) = HeaderValue::from_str(redirect) {
+        response
+            .headers_mut()
+            .insert(HeaderName::from_static(HX_REDIRECT_HEADER), value);
+        return response;
+    }
+
+    plain_error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "failed to redirect to checkout".to_owned(),
+    )
+}
+
+fn generate_idempotency_key() -> String {
+    format!("web_{}", Uuid::new_v4().as_simple())
 }
 
 fn render_html<T: Template>(template: &T) -> Result<String> {
