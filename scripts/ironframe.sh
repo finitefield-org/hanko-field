@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-IRONFRAME_VERSION="0.3.1"
+IRONFRAME_VERSION="1.0.0"
 PROJECT_ROOT="${DEVBOX_PROJECT_ROOT:-$(pwd)}"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

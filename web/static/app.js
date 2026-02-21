@@ -41,6 +41,37 @@
     round: "丸",
   };
   const MAX_SEAL_CHAR_TOTAL = 2;
+  const STEP_HASH_TO_VALUE = {
+    "#step-2": 2,
+    "#step-3": 3,
+  };
+  const STEP_VALUE_TO_HASH = {
+    1: "",
+    2: "#step-2",
+    3: "#step-3",
+  };
+
+  function normalizeStep(step) {
+    return step === 2 || step === 3 ? step : 1;
+  }
+
+  function stepFromHash(hash = window.location.hash) {
+    return STEP_HASH_TO_VALUE[(hash || "").toLowerCase()] || 1;
+  }
+
+  function syncHashToStep(step) {
+    const nextHash = STEP_VALUE_TO_HASH[step] || "";
+    if ((window.location.hash || "") === nextHash) {
+      return;
+    }
+
+    if (nextHash === "") {
+      window.history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
+      return;
+    }
+
+    window.location.hash = nextHash;
+  }
 
   function formatYen(amount) {
     return `¥${Number(amount).toLocaleString("ja-JP")}`;
@@ -65,19 +96,24 @@
     };
   }
 
-  function showStep(step) {
-    currentStep = step;
+  function showStep(step, { syncHash = true } = {}) {
+    const normalizedStep = normalizeStep(step);
+    currentStep = normalizedStep;
 
     panels.forEach((panel) => {
       const panelStep = Number(panel.dataset.stepPanel);
-      panel.classList.toggle("is-active", panelStep === step);
+      panel.classList.toggle("is-active", panelStep === normalizedStep);
     });
 
     indicators.forEach((indicator) => {
       const indicatorStep = Number(indicator.dataset.stepIndicator);
-      indicator.classList.toggle("is-active", indicatorStep === step);
-      indicator.classList.toggle("is-done", indicatorStep < step);
+      indicator.classList.toggle("is-active", indicatorStep === normalizedStep);
+      indicator.classList.toggle("is-done", indicatorStep < normalizedStep);
     });
+
+    if (syncHash) {
+      syncHashToStep(normalizedStep);
+    }
   }
 
   function validateSealText() {
@@ -395,5 +431,8 @@
   syncMaterialOptionsByShape();
   setSelectedFontChip(getSelectedFontChip());
   refreshSealUi();
-  showStep(currentStep);
+  window.addEventListener("hashchange", () => {
+    showStep(stepFromHash(), { syncHash: false });
+  });
+  showStep(stepFromHash(), { syncHash: false });
 })();

@@ -342,6 +342,20 @@
     @apply pointer-events-none absolute opacity-0;
   }
 
+  .material-photo {
+    @apply block h-[118px] w-full rounded-[10px] border border-[#e2d6c5] bg-[#f8f2e8] object-cover;
+  }
+
+  .material-photo-placeholder {
+    @apply grid place-items-center text-[0.8rem] text-hf-muted;
+    background:
+      linear-gradient(145deg, #f7efe5 0%, #f0e5d7 52%, #e9d9c8 100%);
+  }
+
+  .material-photo-placeholder::before {
+    content: "写真準備中";
+  }
+
   .material-card:has(input:checked) {
     @apply border-hf-accent bg-[#fff7f5];
     box-shadow: inset 0 0 0 1px rgb(182 54 43 / 0.35);

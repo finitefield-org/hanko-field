@@ -51,6 +51,7 @@ struct AppConfig {
     api_base_url: String,
     firestore_project_id: Option<String>,
     credentials_file: Option<String>,
+    storage_assets_bucket: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +70,9 @@ struct MaterialOption {
     shape_label: String,
     price: i64,
     price_display: String,
+    photo_url: String,
+    photo_alt: String,
+    has_photo: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -282,6 +286,7 @@ struct FirestoreCatalogSource {
     locale: String,
     default_locale: String,
     label: String,
+    storage_assets_bucket: String,
     token_provider: Arc<dyn TokenProvider>,
 }
 
@@ -384,6 +389,13 @@ impl FirestoreCatalogSource {
                 "",
             );
             let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
+            let (photo_url, photo_alt, has_photo) =
+                resolve_material_photo(&document.fields, &self.storage_assets_bucket, &self.locale, &self.default_locale);
+            let photo_alt = if has_photo && photo_alt.is_empty() {
+                format!("{label}の写真")
+            } else {
+                photo_alt
+            };
 
             materials.push(MaterialOption {
                 key: doc_id,
@@ -393,6 +405,9 @@ impl FirestoreCatalogSource {
                 shape_label: material_shape_label(shape).to_owned(),
                 price,
                 price_display: format_yen(price),
+                photo_url,
+                photo_alt,
+                has_photo,
             });
         }
 
@@ -736,6 +751,7 @@ fn load_config() -> Result<AppConfig> {
             .to_owned(),
         firestore_project_id: None,
         credentials_file: None,
+        storage_assets_bucket: None,
     };
 
     if cfg.port.is_empty() {
@@ -769,7 +785,8 @@ fn load_config() -> Result<AppConfig> {
         _ => bail!("invalid HANKO_WEB_MODE {mode_value:?}: use mock, dev, or prod"),
     }
 
-    let (project_id_keys, credentials_keys): (&[&str], &[&str]) = match cfg.mode {
+    let (project_id_keys, credentials_keys, storage_bucket_keys): (&[&str], &[&str], &[&str]) =
+        match cfg.mode {
         RunMode::Dev => (
             &[
                 "HANKO_WEB_FIREBASE_PROJECT_ID_DEV",
@@ -781,6 +798,11 @@ fn load_config() -> Result<AppConfig> {
                 "HANKO_WEB_FIREBASE_CREDENTIALS_FILE_DEV",
                 "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
                 "GOOGLE_APPLICATION_CREDENTIALS",
+            ],
+            &[
+                "HANKO_WEB_STORAGE_ASSETS_BUCKET_DEV",
+                "HANKO_WEB_STORAGE_ASSETS_BUCKET",
+                "API_STORAGE_ASSETS_BUCKET",
             ],
         ),
         RunMode::Prod => (
@@ -795,8 +817,13 @@ fn load_config() -> Result<AppConfig> {
                 "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
                 "GOOGLE_APPLICATION_CREDENTIALS",
             ],
+            &[
+                "HANKO_WEB_STORAGE_ASSETS_BUCKET_PROD",
+                "HANKO_WEB_STORAGE_ASSETS_BUCKET",
+                "API_STORAGE_ASSETS_BUCKET",
+            ],
         ),
-        RunMode::Mock => (&[], &[]),
+        RunMode::Mock => (&[], &[], &[]),
     };
 
     let project_id = env_first(project_id_keys);
@@ -812,6 +839,10 @@ fn load_config() -> Result<AppConfig> {
     let credentials_file = env_first(credentials_keys);
     if !credentials_file.is_empty() {
         cfg.credentials_file = Some(credentials_file);
+    }
+    let storage_assets_bucket = env_first(storage_bucket_keys);
+    if !storage_assets_bucket.is_empty() {
+        cfg.storage_assets_bucket = Some(storage_assets_bucket);
     }
 
     Ok(cfg)
@@ -861,6 +892,7 @@ async fn new_catalog_source(cfg: &AppConfig) -> Result<CatalogSource> {
                 locale: cfg.locale.clone(),
                 default_locale: cfg.default_locale.clone(),
                 label,
+                storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
                 token_provider,
             }))
         }
@@ -906,6 +938,9 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape_label: "角印".to_owned(),
                     price: 3600,
                     price_display: format_yen(3600),
+                    photo_url: "https://picsum.photos/seed/hf-boxwood/640/420".to_owned(),
+                    photo_alt: "柘植材の写真".to_owned(),
+                    has_photo: true,
                 },
                 MaterialOption {
                     key: "black_buffalo".to_owned(),
@@ -915,6 +950,9 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape_label: "丸印".to_owned(),
                     price: 4800,
                     price_display: format_yen(4800),
+                    photo_url: "https://picsum.photos/seed/hf-black-buffalo/640/420".to_owned(),
+                    photo_alt: "黒水牛材の写真".to_owned(),
+                    has_photo: true,
                 },
                 MaterialOption {
                     key: "titanium".to_owned(),
@@ -924,6 +962,9 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape_label: "角印".to_owned(),
                     price: 9800,
                     price_display: format_yen(9800),
+                    photo_url: "https://picsum.photos/seed/hf-titanium/640/420".to_owned(),
+                    photo_alt: "チタン材の写真".to_owned(),
+                    has_photo: true,
                 },
             ],
             countries: vec![
@@ -1614,4 +1655,164 @@ fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashM
     }
 
     result
+}
+
+fn resolve_material_photo(
+    data: &BTreeMap<String, JsonValue>,
+    storage_assets_bucket: &str,
+    locale: &str,
+    default_locale: &str,
+) -> (String, String, bool) {
+    let mut photo_url = resolve_localized_field(
+        data,
+        "photo_url_i18n",
+        "photo_url",
+        locale,
+        default_locale,
+        "",
+    );
+    if photo_url.is_empty() {
+        photo_url = resolve_localized_field(
+            data,
+            "image_url_i18n",
+            "image_url",
+            locale,
+            default_locale,
+            "",
+        );
+    }
+
+    let mut photo_alt = resolve_localized_field(
+        data,
+        "photo_alt_i18n",
+        "photo_alt",
+        locale,
+        default_locale,
+        "",
+    );
+
+    if photo_url.is_empty() {
+        if let Some((storage_path, storage_alt)) = select_primary_material_photo(data, locale, default_locale) {
+            photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
+            if photo_alt.is_empty() {
+                photo_alt = storage_alt;
+            }
+        }
+    }
+
+    let has_photo = !photo_url.is_empty();
+    (photo_url, photo_alt, has_photo)
+}
+
+fn select_primary_material_photo(
+    data: &BTreeMap<String, JsonValue>,
+    locale: &str,
+    default_locale: &str,
+) -> Option<(String, String)> {
+    let mut selected_rank: Option<(i32, i64, usize)> = None;
+    let mut selected_path = String::new();
+    let mut selected_alt = String::new();
+
+    for (index, photo) in read_array_field(data, "photos").into_iter().enumerate() {
+        let Some(fields) = photo
+            .get("mapValue")
+            .and_then(|map| map.get("fields"))
+            .and_then(JsonValue::as_object)
+        else {
+            continue;
+        };
+
+        let fields = fields
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<BTreeMap<_, _>>();
+
+        let storage_path = normalize_storage_path(&read_string_field(&fields, "storage_path"));
+        if storage_path.is_empty() {
+            continue;
+        }
+
+        let alt = resolve_localized_text(&read_string_map_field(&fields, "alt_i18n"), locale, default_locale);
+        let is_primary = read_bool_field(&fields, "is_primary").unwrap_or(false);
+        let sort_order = read_int_field(&fields, "sort_order").unwrap_or_default();
+        let rank = (if is_primary { 0 } else { 1 }, sort_order, index);
+
+        let should_replace = match selected_rank {
+            Some(current_rank) => rank < current_rank,
+            None => true,
+        };
+        if should_replace {
+            selected_rank = Some(rank);
+            selected_path = storage_path;
+            selected_alt = alt;
+        }
+    }
+
+    if selected_path.is_empty() {
+        None
+    } else {
+        Some((selected_path, selected_alt))
+    }
+}
+
+fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
+    let normalized_bucket = normalize_storage_bucket_name(bucket_name);
+    let normalized_path = normalize_storage_path(storage_path);
+    if normalized_bucket.is_empty() || normalized_path.is_empty() {
+        return String::new();
+    }
+
+    let mut endpoint = match reqwest::Url::parse("https://storage.googleapis.com/storage/v1/b") {
+        Ok(endpoint) => endpoint,
+        Err(_) => return String::new(),
+    };
+
+    {
+        let mut path_segments = match endpoint.path_segments_mut() {
+            Ok(path_segments) => path_segments,
+            Err(_) => return String::new(),
+        };
+        path_segments.extend([
+            normalized_bucket.as_str(),
+            "o",
+            normalized_path.as_str(),
+        ]);
+    }
+    endpoint.query_pairs_mut().append_pair("alt", "media");
+    endpoint.to_string()
+}
+
+fn normalize_storage_bucket_name(value: &str) -> String {
+    value
+        .trim()
+        .trim_start_matches("gs://")
+        .trim_start_matches("GS://")
+        .trim_matches('/')
+        .to_owned()
+}
+
+fn normalize_storage_path(value: &str) -> String {
+    value.trim().trim_start_matches('/').to_owned()
+}
+
+fn read_bool_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<bool> {
+    let value = data.get(key)?;
+    value
+        .get("booleanValue")
+        .and_then(JsonValue::as_bool)
+        .or_else(|| value.as_bool())
+}
+
+fn read_array_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Vec<JsonValue> {
+    let Some(value) = data.get(key) else {
+        return Vec::new();
+    };
+
+    value
+        .get("arrayValue")
+        .and_then(|array| array.get("values"))
+        .and_then(JsonValue::as_array)
+        .cloned()
+        .or_else(|| value.as_array().cloned())
+        .unwrap_or_default()
 }

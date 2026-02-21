@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Kosugi+Maru&family=Potta+One&family=Kiwi+Maru:wght@400;700&family=WDXL+Lubrifont+JP+N&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="/static/app.js?v=20260221-2" defer></script>
+  <script src="/static/app.js?v=20260221-3" defer></script>
 </head>
 <body>
   <div class="bg-shape bg-shape-left"></div>
@@ -163,6 +163,11 @@
                 data-price="{{ m.price }}"
                 {% if loop.first %}checked{% endif %}
               >
+              {% if m.has_photo %}
+              <img class="material-photo" src="{{ m.photo_url }}" alt="{{ m.photo_alt }}" loading="lazy">
+              {% else %}
+              <div class="material-photo material-photo-placeholder" aria-hidden="true"></div>
+              {% endif %}
               <span class="material-name">{{ m.label }}</span>
               <span class="material-description">{{ m.shape_label }}</span>
               <span class="material-description">{{ m.description }}</span>
