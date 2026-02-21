@@ -1762,7 +1762,7 @@ fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
         return String::new();
     }
 
-    let mut endpoint = match reqwest::Url::parse("https://storage.googleapis.com/storage/v1/b") {
+    let mut endpoint = match reqwest::Url::parse("https://firebasestorage.googleapis.com/v0/b") {
         Ok(endpoint) => endpoint,
         Err(_) => return String::new(),
     };
