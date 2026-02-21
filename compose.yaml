@@ -16,7 +16,7 @@ services:
       - API_FIRESTORE_PROJECT_ID=${FIREBASE_PROJECT_ID:-hanko-field-test}
       - API_STORAGE_ASSETS_BUCKET=${API_STORAGE_ASSETS_BUCKET:-local-assets}
       - API_GEMINI_API_KEY=${API_GEMINI_API_KEY:-}
-      - API_GEMINI_MODEL=${API_GEMINI_MODEL:-gemini-2.0-flash}
+      - API_GEMINI_MODEL=${API_GEMINI_MODEL:-gemini-2.5-flash-lite}
       - API_STORAGE_SIGNER_KEY=${API_STORAGE_SIGNER_KEY:-secret://Storage.SignerKey}
       - API_PSP_STRIPE_API_KEY=${API_PSP_STRIPE_API_KEY:-secret://PSP.StripeAPIKey}
       - API_PSP_STRIPE_WEBHOOK_SECRET=${API_PSP_STRIPE_WEBHOOK_SECRET:-secret://PSP.StripeWebhookSecret}

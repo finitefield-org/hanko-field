@@ -36,7 +36,7 @@ const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";
 const DEFAULT_LOCALE: &str = "ja";
 const STRIPE_SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
-const DEFAULT_GEMINI_MODEL: &str = "gemini-2.0-flash";
+const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
 
