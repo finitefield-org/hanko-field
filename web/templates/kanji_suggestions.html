@@ -1,5 +1,5 @@
 {% if has_suggestions %}
-<p class="suggestion-title">{{ real_name }} さんへの候補（Gemini）</p>
+<p class="suggestion-title">{{ real_name }} さんへの候補</p>
 <div class="suggestion-chips">
   {% for suggestion in suggestions %}
   <button
@@ -13,9 +13,9 @@
   >{{ suggestion.kanji }}</button>
   {% endfor %}
 </div>
-<p class="suggestion-reading" data-kanji-reading>候補をタップすると、読み方を表示します。</p>
-<p class="suggestion-reason" data-kanji-reason>候補をタップすると、提案理由を表示します。</p>
-<p class="field-hint">候補をクリックすると2行の印影テキストに反映されます。</p>
+<p class="suggestion-reading" data-kanji-reading>読み方</p>
+<p class="suggestion-reason" data-kanji-reason>提案理由</p>
+<p class="field-hint">候補をタップすると印影テキストに反映されます。</p>
 {% else %}
   {% if !error.is_empty() %}
 <p class="field-error">{{ error }}</p>
