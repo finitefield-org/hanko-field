@@ -229,6 +229,10 @@
     @apply mt-2 rounded-[10px] border border-[#e6d7c3] bg-[#fffaf3] px-3 py-2 text-[0.82rem] text-hf-muted;
   }
 
+  .suggestion-reading {
+    @apply mt-2 rounded-[10px] border border-[#d8e6f2] bg-[#f4f9ff] px-3 py-2 text-[0.82rem] text-hf-muted;
+  }
+
   .preview-card {
     @apply flex flex-col justify-start;
   }

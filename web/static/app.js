@@ -39,15 +39,28 @@
     square: "角",
     round: "丸",
   };
+  const MAX_SEAL_CHAR_TOTAL = 2;
 
   function formatYen(amount) {
     return `¥${Number(amount).toLocaleString("ja-JP")}`;
   }
 
-  function getSealLines() {
+  function getRawSealLines() {
     return {
       line1: line1Input?.value.trim() || "",
       line2: line2Input?.value.trim() || "",
+    };
+  }
+
+  function getPreviewSealLines() {
+    const { line1, line2 } = getRawSealLines();
+    const line1Chars = Array.from(line1).slice(0, MAX_SEAL_CHAR_TOTAL);
+    const remainingForLine2 = Math.max(0, MAX_SEAL_CHAR_TOTAL - line1Chars.length);
+    const line2Chars = Array.from(line2).slice(0, remainingForLine2);
+
+    return {
+      line1: line1Chars.join(""),
+      line2: line2Chars.join(""),
     };
   }
 
@@ -71,7 +84,7 @@
       return true;
     }
 
-    const { line1, line2 } = getSealLines();
+    const { line1, line2 } = getRawSealLines();
 
     if ([...line1].length === 0) {
       sealTextError.textContent = "お名前を入力してください。";
@@ -88,13 +101,8 @@
       return false;
     }
 
-    if ([...line1].length > 2) {
-      sealTextError.textContent = "印影テキスト1行目は2文字以内で入力してください。";
-      return false;
-    }
-
-    if ([...line2].length > 2) {
-      sealTextError.textContent = "印影テキスト2行目は2文字以内で入力してください。";
+    if ([...line1].length + [...line2].length > MAX_SEAL_CHAR_TOTAL) {
+      sealTextError.textContent = "印影テキストは1行目と2行目の合計で2文字以内で入力してください。";
       return false;
     }
 
@@ -148,7 +156,7 @@
   }
 
   function updateFontChipPreviews() {
-    const { line1, line2 } = getSealLines();
+    const { line1, line2 } = getPreviewSealLines();
     const previewText = line1 ? (line2 ? `${line1}\n${line2}` : line1) : "印";
 
     fontChips.forEach((chip) => {
@@ -168,16 +176,17 @@
     const line1Chars = Array.from(line1Input.value.trim());
     const line2Chars = Array.from(line2Input.value.trim());
 
-    if (line1Chars.length < 2 || line2Chars.length < 1) {
+    if (line1Chars.length >= 2 && line2Chars.length === 0) {
+      line1Input.value = line1Chars.slice(0, 1).join("");
+      line2Input.value = line1Chars.slice(1, 2).join("");
       return;
     }
 
-    const line1Second = line1Chars[1];
-    line1Chars[1] = line2Chars[0];
-    line2Chars[0] = line1Second;
-
-    line1Input.value = line1Chars.slice(0, 2).join("");
-    line2Input.value = line2Chars.slice(0, 2).join("");
+    if (line1Chars.length >= 1 && line2Chars.length >= 1) {
+      line1Input.value = `${line1Chars[0]}${line2Chars[0]}`;
+      line2Input.value = "";
+      return;
+    }
   }
 
   function updatePreview() {
@@ -185,7 +194,7 @@
       return;
     }
 
-    const { line1, line2 } = getSealLines();
+    const { line1, line2 } = getPreviewSealLines();
 
     const previewLine1Text = line1 || "印";
     const hasSecondLine = line2 !== "";
@@ -223,7 +232,7 @@
       return;
     }
 
-    const { line1, line2 } = getSealLines();
+    const { line1, line2 } = getPreviewSealLines();
     if (line1 === "") {
       summarySealLines.textContent = "-";
     } else {
@@ -269,13 +278,16 @@
     });
   });
 
+  function refreshSealUi() {
+    validateSealText();
+    updateFontChipPreviews();
+    updatePreview();
+    updateSummary();
+  }
+
   [line1Input, line2Input].forEach((input) => {
-    input?.addEventListener("input", () => {
-      validateSealText();
-      updateFontChipPreviews();
-      updatePreview();
-      updateSummary();
-    });
+    input?.addEventListener("input", refreshSealUi);
+    input?.addEventListener("change", refreshSealUi);
   });
 
   fontChips.forEach((chip) => {
@@ -300,10 +312,7 @@
   countrySelect?.addEventListener("change", updateSummary);
   toggleWritingModeButton?.addEventListener("click", () => {
     swapCrossLineCharacters();
-    validateSealText();
-    updateFontChipPreviews();
-    updatePreview();
-    updateSummary();
+    refreshSealUi();
   });
 
   document.body.addEventListener("click", (event) => {
@@ -320,15 +329,12 @@
       line2Input.value = line2.slice(0, 2);
     } else {
       const candidate = (chip.textContent || "").trim();
-      const chars = Array.from(candidate).slice(0, 4);
-      line1Input.value = chars.slice(0, 2).join("");
-      line2Input.value = chars.slice(2, 4).join("");
+      const chars = Array.from(candidate).slice(0, MAX_SEAL_CHAR_TOTAL);
+      line1Input.value = chars.join("");
+      line2Input.value = "";
     }
 
-    validateSealText();
-    updateFontChipPreviews();
-    updatePreview();
-    updateSummary();
+    refreshSealUi();
 
     const suggestionsContainer = chip.closest("#kanji-suggestions");
     if (suggestionsContainer) {
@@ -340,12 +346,23 @@
       if (reasonBox) {
         reasonBox.textContent = chip.dataset.reason || "この候補の理由を表示できませんでした。";
       }
+
+      const readingBox = suggestionsContainer.querySelector("[data-kanji-reading]");
+      if (readingBox) {
+        const hiragana = (chip.dataset.hiragana || "").trim();
+        const romaji = (chip.dataset.romaji || "").trim();
+        if (hiragana && romaji) {
+          readingBox.textContent = `読み方: ${hiragana} / ${romaji}`;
+        } else if (hiragana) {
+          readingBox.textContent = `読み方: ${hiragana}`;
+        } else {
+          readingBox.textContent = "この候補の読み方を表示できませんでした。";
+        }
+      }
     }
   });
 
   setSelectedFontChip(getSelectedFontChip());
-  updateFontChipPreviews();
-  updatePreview();
-  updateSummary();
+  refreshSealUi();
   showStep(currentStep);
 })();

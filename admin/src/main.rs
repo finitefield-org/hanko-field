@@ -117,12 +117,37 @@ struct Material {
 }
 
 #[derive(Debug, Clone)]
+struct Font {
+    key: String,
+    label_i18n: HashMap<String, String>,
+    font_family: String,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+struct Country {
+    code: String,
+    label_i18n: HashMap<String, String>,
+    shipping_fee_jpy: i64,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 struct AdminSnapshot {
     orders: HashMap<String, Order>,
     order_ids: Vec<String>,
+    fonts: HashMap<String, Font>,
+    font_ids: Vec<String>,
     materials: HashMap<String, Material>,
     material_ids: Vec<String>,
-    countries: HashMap<String, String>,
+    countries: HashMap<String, Country>,
+    country_ids: Vec<String>,
 }
 
 impl AdminSnapshot {
@@ -158,6 +183,38 @@ impl AdminSnapshot {
             }
         });
         self.material_ids = keys;
+    }
+
+    fn refresh_font_ids(&mut self) {
+        let mut keys = self.fonts.keys().cloned().collect::<Vec<_>>();
+        keys.sort_by(|left, right| {
+            let left_font = self.fonts.get(left);
+            let right_font = self.fonts.get(right);
+            match (left_font, right_font) {
+                (Some(left_font), Some(right_font)) => left_font
+                    .sort_order
+                    .cmp(&right_font.sort_order)
+                    .then_with(|| left_font.key.cmp(&right_font.key)),
+                _ => left.cmp(right),
+            }
+        });
+        self.font_ids = keys;
+    }
+
+    fn refresh_country_ids(&mut self) {
+        let mut codes = self.countries.keys().cloned().collect::<Vec<_>>();
+        codes.sort_by(|left, right| {
+            let left_country = self.countries.get(left);
+            let right_country = self.countries.get(right);
+            match (left_country, right_country) {
+                (Some(left_country), Some(right_country)) => left_country
+                    .sort_order
+                    .cmp(&right_country.sort_order)
+                    .then_with(|| left_country.code.cmp(&right_country.code)),
+                _ => left.cmp(right),
+            }
+        });
+        self.country_ids = codes;
     }
 }
 
@@ -197,6 +254,27 @@ impl DataSource {
         match self {
             Self::Mock => Ok(()),
             Self::Firestore(source) => source.persist_material_mutation(material).await,
+        }
+    }
+
+    async fn persist_font_mutation(&self, font: &Font) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_font_mutation(font).await,
+        }
+    }
+
+    async fn persist_country_mutation(&self, country: &Country) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_country_mutation(country).await,
+        }
+    }
+
+    async fn persist_country_deletion(&self, country_code: &str) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_country_deletion(country_code).await,
         }
     }
 
@@ -263,6 +341,11 @@ struct OrdersPageQuery {
     country: Option<String>,
     email: Option<String>,
     order_id: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct CountriesPageQuery {
+    country_code: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -348,6 +431,17 @@ struct MaterialListItemView {
 }
 
 #[derive(Debug, Clone)]
+struct FontListItemView {
+    key: String,
+    label_ja: String,
+    font_family: String,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone)]
 struct MaterialDetailView {
     key: String,
     label_ja: String,
@@ -362,6 +456,63 @@ struct MaterialDetailView {
     photo_alt_en: String,
     version: i64,
     updated_at: String,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FontDetailView {
+    key: String,
+    label_ja: String,
+    label_en: String,
+    font_family: String,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: String,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CountryListItemView {
+    code: String,
+    label_ja: String,
+    label_en: String,
+    shipping_fee_jpy: String,
+    is_active: bool,
+    version: i64,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+struct CountryDetailView {
+    code: String,
+    label_ja: String,
+    label_en: String,
+    shipping_fee_jpy: i64,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: String,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CountryCreateView {
+    code: String,
+    label_ja: String,
+    label_en: String,
+    shipping_fee_jpy: String,
+    sort_order: String,
+    is_active: bool,
     message: String,
     has_message: bool,
     error: String,
@@ -416,6 +567,34 @@ struct MaterialPatchInput {
     is_active: bool,
 }
 
+#[derive(Debug, Clone)]
+struct FontPatchInput {
+    label_ja: String,
+    label_en: String,
+    font_family: String,
+    sort_order: i64,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CountryPatchInput {
+    label_ja: String,
+    label_en: String,
+    shipping_fee_jpy: i64,
+    sort_order: i64,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CountryCreateInput {
+    code: String,
+    label_ja: String,
+    label_en: String,
+    shipping_fee_jpy: i64,
+    sort_order: i64,
+    is_active: bool,
+}
+
 #[derive(Template)]
 #[template(path = "orders_page.html")]
 struct OrdersPageTemplate {
@@ -438,6 +617,14 @@ struct MaterialsPageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "fonts_page.html")]
+struct FontsPageTemplate {
+    source_label: String,
+    is_mock: bool,
+    fonts_list_html: String,
+}
+
+#[derive(Template)]
 #[template(path = "material_edit_page.html")]
 struct MaterialEditPageTemplate {
     source_label: String,
@@ -447,11 +634,31 @@ struct MaterialEditPageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "font_edit_page.html")]
+struct FontEditPageTemplate {
+    source_label: String,
+    is_mock: bool,
+    font_key: String,
+    font_detail_html: String,
+}
+
+#[derive(Template)]
 #[template(path = "material_create_page.html")]
 struct MaterialCreatePageTemplate {
     source_label: String,
     is_mock: bool,
     material_create_html: String,
+}
+
+#[derive(Template)]
+#[template(path = "countries_page.html")]
+struct CountriesPageTemplate {
+    source_label: String,
+    is_mock: bool,
+    country_create_html: String,
+    countries_list_html: String,
+    country_detail_html: String,
+    has_country_detail: bool,
 }
 
 #[derive(Template)]
@@ -475,15 +682,47 @@ struct MaterialsListTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "fonts_list.html")]
+struct FontsListTemplate {
+    fonts: Vec<FontListItemView>,
+    has_fonts: bool,
+}
+
+#[derive(Template)]
 #[template(path = "material_detail.html")]
 struct MaterialDetailTemplate {
     detail: MaterialDetailView,
 }
 
 #[derive(Template)]
+#[template(path = "font_detail.html")]
+struct FontDetailTemplate {
+    detail: FontDetailView,
+}
+
+#[derive(Template)]
 #[template(path = "material_create.html")]
 struct MaterialCreateTemplate {
     view: MaterialCreateView,
+}
+
+#[derive(Template)]
+#[template(path = "countries_list.html")]
+struct CountriesListTemplate {
+    countries: Vec<CountryListItemView>,
+    has_countries: bool,
+}
+
+#[derive(Template)]
+#[template(path = "country_detail.html")]
+struct CountryDetailTemplate {
+    detail: CountryDetailView,
+}
+
+#[derive(Template)]
+#[template(path = "country_create.html")]
+struct CountryCreateTemplate {
+    view: CountryCreateView,
 }
 
 #[tokio::main]
@@ -530,6 +769,24 @@ async fn run() -> Result<()> {
             get(handle_material_detail)
                 .patch(handle_material_patch)
                 .delete(handle_material_delete),
+        )
+        .route("/admin/fonts", get(handle_fonts_page))
+        .route("/admin/fonts/list", get(handle_fonts_list))
+        .route("/admin/fonts/{font_key}/edit", get(handle_font_edit_page))
+        .route(
+            "/admin/fonts/{font_key}",
+            get(handle_font_detail).patch(handle_font_patch),
+        )
+        .route(
+            "/admin/countries",
+            get(handle_countries_page).post(handle_country_create),
+        )
+        .route("/admin/countries/list", get(handle_countries_list))
+        .route(
+            "/admin/countries/{country_code}",
+            get(handle_country_detail)
+                .patch(handle_country_patch)
+                .delete(handle_country_delete),
         )
         .nest_service("/static", ServeDir::new("static"))
         .with_state(AppState {
@@ -1448,6 +1705,506 @@ async fn handle_material_patch(
     }
 }
 
+async fn handle_fonts_page(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let fonts = state.server.list_fonts().await;
+    let fonts_list_html = match render_fonts_list(&fonts) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render fonts list: {error}"),
+            );
+        }
+    };
+
+    let page = FontsPageTemplate {
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        fonts_list_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_fonts_list(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let fonts = state.server.list_fonts().await;
+    match render_fonts_list(&fonts) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render fonts list: {error}"),
+        ),
+    }
+}
+
+async fn handle_font_edit_page(
+    State(state): State<AppState>,
+    Path(font_key): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let Some(detail) = state.server.get_font_detail(&font_key, "", "").await else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    let font_detail_html = match render_font_detail(&detail) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render font detail: {error}"),
+            );
+        }
+    };
+
+    let page = FontEditPageTemplate {
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        font_key,
+        font_detail_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_font_detail(
+    State(state): State<AppState>,
+    Path(font_key): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let Some(detail) = state.server.get_font_detail(&font_key, "", "").await else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    match render_font_detail(&detail) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render font detail: {error}"),
+        ),
+    }
+}
+
+async fn handle_font_patch(
+    State(state): State<AppState>,
+    Path(font_key): Path<String>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_font_detail(&font_key, "", "表示順は整数で入力してください。")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_font_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render font detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let input = FontPatchInput {
+        label_ja: form_value(&form, "label_ja"),
+        label_en: form_value(&form, "label_en"),
+        font_family: form_value(&form, "font_family"),
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    };
+
+    match state.server.update_font(&font_key, input).await {
+        Ok(()) => {
+            let Some(detail) = state
+                .server
+                .get_font_detail(&font_key, "フォントマスタを更新しました。", "")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_font_detail(&detail) {
+                Ok(html) => html_response_with_trigger(StatusCode::OK, html, "font-updated"),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render font detail: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => {
+            let Some(detail) = state
+                .server
+                .get_font_detail(&font_key, "", &error_message)
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_font_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render font detail: {error}"),
+                ),
+            }
+        }
+    }
+}
+
+async fn handle_countries_page(
+    State(state): State<AppState>,
+    Query(query): Query<CountriesPageQuery>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    let countries = state.server.list_countries().await;
+    let country_create_html = match render_country_create(&new_country_create_view("", "")) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render country create: {error}"),
+            );
+        }
+    };
+    let countries_list_html = match render_countries_list(&countries) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render countries list: {error}"),
+            );
+        }
+    };
+
+    let mut selected_country_code = normalize_query_value(query.country_code).to_uppercase();
+    if selected_country_code.is_empty() {
+        if let Some(first) = countries.first() {
+            selected_country_code = first.code.clone();
+        }
+    }
+
+    let country_detail = if selected_country_code.is_empty() {
+        None
+    } else {
+        state
+            .server
+            .get_country_detail(&selected_country_code, "", "")
+            .await
+    };
+
+    let country_detail_html = if let Some(detail) = country_detail.as_ref() {
+        match render_country_detail(detail) {
+            Ok(html) => html,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                );
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    let page = CountriesPageTemplate {
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        country_create_html,
+        countries_list_html,
+        country_detail_html,
+        has_country_detail: country_detail.is_some(),
+    };
+
+    render_template(&page)
+}
+
+async fn handle_country_create(
+    State(state): State<AppState>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    let shipping_fee_jpy = match form_value(&form, "shipping_fee_jpy").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_country_create_response(
+                StatusCode::BAD_REQUEST,
+                &country_create_view_from_form(&form, "", "送料は整数で入力してください。"),
+            );
+        }
+    };
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_country_create_response(
+                StatusCode::BAD_REQUEST,
+                &country_create_view_from_form(&form, "", "表示順は整数で入力してください。"),
+            );
+        }
+    };
+
+    let input = CountryCreateInput {
+        code: form_value(&form, "code"),
+        label_ja: form_value(&form, "label_ja"),
+        label_en: form_value(&form, "label_en"),
+        shipping_fee_jpy,
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    };
+    let created_code = input.code.to_uppercase();
+
+    match state.server.create_country(input).await {
+        Ok(()) => render_country_create_response_with_trigger(
+            StatusCode::CREATED,
+            &new_country_create_view(&format!("配送国「{created_code}」を作成しました。"), ""),
+            "country-updated",
+        ),
+        Err(error_message) => render_country_create_response(
+            StatusCode::BAD_REQUEST,
+            &country_create_view_from_form(&form, "", &error_message),
+        ),
+    }
+}
+
+async fn handle_countries_list(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    let countries = state.server.list_countries().await;
+    match render_countries_list(&countries) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render countries list: {error}"),
+        ),
+    }
+}
+
+async fn handle_country_delete(
+    State(state): State<AppState>,
+    Path(country_code): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    match state.server.delete_country(&country_code).await {
+        Ok(()) => {
+            let countries = state.server.list_countries().await;
+            match render_countries_list(&countries) {
+                Ok(html) => html_response_with_trigger(StatusCode::OK, html, "country-updated"),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render countries list: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => plain_error(StatusCode::BAD_REQUEST, error_message),
+    }
+}
+
+async fn handle_country_detail(
+    State(state): State<AppState>,
+    Path(country_code): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    let Some(detail) = state
+        .server
+        .get_country_detail(&country_code.to_uppercase(), "", "")
+        .await
+    else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    match render_country_detail(&detail) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render country detail: {error}"),
+        ),
+    }
+}
+
+async fn handle_country_patch(
+    State(state): State<AppState>,
+    Path(country_code): Path<String>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load countries: {error}"),
+        );
+    }
+
+    let shipping_fee_jpy = match form_value(&form, "shipping_fee_jpy").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_country_detail(
+                    &country_code.to_uppercase(),
+                    "",
+                    "送料は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_country_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_country_detail(
+                    &country_code.to_uppercase(),
+                    "",
+                    "表示順は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_country_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let input = CountryPatchInput {
+        label_ja: form_value(&form, "label_ja"),
+        label_en: form_value(&form, "label_en"),
+        shipping_fee_jpy,
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    };
+
+    let normalized_code = country_code.to_uppercase();
+    match state.server.update_country(&normalized_code, input).await {
+        Ok(()) => {
+            let Some(detail) = state
+                .server
+                .get_country_detail(&normalized_code, "配送国マスタを更新しました。", "")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_country_detail(&detail) {
+                Ok(html) => html_response_with_trigger(StatusCode::OK, html, "country-updated"),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => {
+            let Some(detail) = state
+                .server
+                .get_country_detail(&normalized_code, "", &error_message)
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_country_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                ),
+            }
+        }
+    }
+}
+
 impl ServerState {
     async fn refresh_from_source(&self) -> Result<()> {
         if self.source.is_mock() {
@@ -1646,20 +2403,239 @@ impl ServerState {
         })
     }
 
+    async fn list_fonts(&self) -> Vec<FontListItemView> {
+        let data = self.data.read().await;
+        let mut items = Vec::with_capacity(data.font_ids.len());
+
+        for key in &data.font_ids {
+            let Some(font) = data.fonts.get(key) else {
+                continue;
+            };
+
+            items.push(FontListItemView {
+                key: font.key.clone(),
+                label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
+                font_family: font.font_family.clone(),
+                is_active: font.is_active,
+                sort_order: font.sort_order,
+                version: font.version,
+                updated_at: format_datetime(font.updated_at),
+            });
+        }
+
+        items
+    }
+
+    async fn get_font_detail(
+        &self,
+        key: &str,
+        message: &str,
+        render_error: &str,
+    ) -> Option<FontDetailView> {
+        let data = self.data.read().await;
+        let font = data.fonts.get(key)?;
+
+        Some(FontDetailView {
+            key: font.key.clone(),
+            label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
+            label_en: font.label_i18n.get("en").cloned().unwrap_or_default(),
+            font_family: font.font_family.clone(),
+            is_active: font.is_active,
+            sort_order: font.sort_order,
+            version: font.version,
+            updated_at: format_datetime(font.updated_at),
+            message: message.to_owned(),
+            has_message: !message.is_empty(),
+            error: render_error.to_owned(),
+            has_error: !render_error.is_empty(),
+        })
+    }
+
+    async fn list_countries(&self) -> Vec<CountryListItemView> {
+        let data = self.data.read().await;
+        let mut items = Vec::with_capacity(data.country_ids.len());
+
+        for code in &data.country_ids {
+            let Some(country) = data.countries.get(code) else {
+                continue;
+            };
+
+            items.push(CountryListItemView {
+                code: country.code.clone(),
+                label_ja: country.label_i18n.get("ja").cloned().unwrap_or_default(),
+                label_en: country.label_i18n.get("en").cloned().unwrap_or_default(),
+                shipping_fee_jpy: format_yen(country.shipping_fee_jpy),
+                is_active: country.is_active,
+                version: country.version,
+                updated_at: format_datetime(country.updated_at),
+            });
+        }
+
+        items
+    }
+
+    async fn get_country_detail(
+        &self,
+        code: &str,
+        message: &str,
+        render_error: &str,
+    ) -> Option<CountryDetailView> {
+        let data = self.data.read().await;
+        let country = data.countries.get(code)?;
+
+        Some(CountryDetailView {
+            code: country.code.clone(),
+            label_ja: country.label_i18n.get("ja").cloned().unwrap_or_default(),
+            label_en: country.label_i18n.get("en").cloned().unwrap_or_default(),
+            shipping_fee_jpy: country.shipping_fee_jpy,
+            is_active: country.is_active,
+            sort_order: country.sort_order,
+            version: country.version,
+            updated_at: format_datetime(country.updated_at),
+            message: message.to_owned(),
+            has_message: !message.is_empty(),
+            error: render_error.to_owned(),
+            has_error: !render_error.is_empty(),
+        })
+    }
+
     async fn country_options(&self) -> Vec<CountryOptionView> {
         let data = self.data.read().await;
-
-        let mut options = data
-            .countries
+        data.country_ids
             .iter()
-            .map(|(code, label)| CountryOptionView {
-                code: code.clone(),
-                label: label.clone(),
+            .filter_map(|code| data.countries.get(code))
+            .map(|country| CountryOptionView {
+                code: country.code.clone(),
+                label: country_display_label(country),
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    }
 
-        options.sort_by(|left, right| left.code.cmp(&right.code));
-        options
+    async fn create_country(&self, input: CountryCreateInput) -> std::result::Result<(), String> {
+        let normalized_code = input.code.trim().to_uppercase();
+        validate_country_code(&normalized_code)?;
+
+        let label_ja = input.label_ja.trim().to_owned();
+        let label_en = input.label_en.trim().to_owned();
+        validate_country_values(
+            &label_ja,
+            &label_en,
+            input.shipping_fee_jpy,
+            input.sort_order,
+        )?;
+
+        let country = {
+            let mut data = self.data.write().await;
+            if data.countries.contains_key(&normalized_code) {
+                return Err("同じ国コードは既に存在します。".to_owned());
+            }
+
+            let now = Utc::now();
+            let country = Country {
+                code: normalized_code.clone(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), label_ja),
+                    ("en".to_owned(), label_en),
+                ]),
+                shipping_fee_jpy: input.shipping_fee_jpy,
+                is_active: input.is_active,
+                sort_order: input.sort_order,
+                version: 1,
+                updated_at: now,
+            };
+
+            data.countries.insert(normalized_code, country.clone());
+            data.refresh_country_ids();
+            country
+        };
+
+        if let Err(error) = self.source.persist_country_mutation(&country).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after country create error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn delete_country(&self, code: &str) -> std::result::Result<(), String> {
+        let normalized_code = code.trim().to_uppercase();
+        if normalized_code.is_empty() {
+            return Err("国コードが不正です。".to_owned());
+        }
+
+        {
+            let mut data = self.data.write().await;
+            let Some(_) = data.countries.remove(&normalized_code) else {
+                return Err("配送国が見つかりません。".to_owned());
+            };
+            data.refresh_country_ids();
+        }
+
+        if let Err(error) = self.source.persist_country_deletion(&normalized_code).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after country delete error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore delete failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn update_country(
+        &self,
+        code: &str,
+        input: CountryPatchInput,
+    ) -> std::result::Result<(), String> {
+        let normalized_code = code.trim().to_uppercase();
+        if normalized_code.is_empty() {
+            return Err("国コードが不正です。".to_owned());
+        }
+
+        let label_ja = input.label_ja.trim().to_owned();
+        let label_en = input.label_en.trim().to_owned();
+        validate_country_values(
+            &label_ja,
+            &label_en,
+            input.shipping_fee_jpy,
+            input.sort_order,
+        )?;
+
+        let updated_country = {
+            let mut data = self.data.write().await;
+            let Some(country) = data.countries.get_mut(&normalized_code) else {
+                return Err("配送国が見つかりません。".to_owned());
+            };
+
+            let now = Utc::now();
+            country.label_i18n.insert("ja".to_owned(), label_ja);
+            country.label_i18n.insert("en".to_owned(), label_en);
+            country.shipping_fee_jpy = input.shipping_fee_jpy;
+            country.sort_order = input.sort_order;
+            country.is_active = input.is_active;
+            country.version += 1;
+            country.updated_at = now;
+
+            let updated = country.clone();
+            data.refresh_country_ids();
+            updated
+        };
+
+        if let Err(error) = self.source.persist_country_mutation(&updated_country).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after country update error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
     }
 
     async fn update_order_status(
@@ -1894,6 +2870,53 @@ impl ServerState {
         Ok(())
     }
 
+    async fn update_font(
+        &self,
+        key: &str,
+        input: FontPatchInput,
+    ) -> std::result::Result<(), String> {
+        let normalized_key = key.trim().to_owned();
+        if normalized_key.is_empty() {
+            return Err("フォントキーが不正です。".to_owned());
+        }
+
+        let label_ja = input.label_ja.trim().to_owned();
+        let label_en = input.label_en.trim().to_owned();
+        let font_family = input.font_family.trim().to_owned();
+        validate_font_values(&label_ja, &label_en, &font_family, input.sort_order)?;
+
+        let updated_font = {
+            let mut data = self.data.write().await;
+            let Some(font) = data.fonts.get_mut(&normalized_key) else {
+                return Err("フォントが見つかりません。".to_owned());
+            };
+
+            let now = Utc::now();
+            font.label_i18n.insert("ja".to_owned(), label_ja);
+            font.label_i18n.insert("en".to_owned(), label_en);
+            font.font_family = font_family;
+            font.sort_order = input.sort_order;
+            font.is_active = input.is_active;
+            font.version += 1;
+            font.updated_at = now;
+
+            let updated = font.clone();
+            data.refresh_font_ids();
+            updated
+        };
+
+        if let Err(error) = self.source.persist_font_mutation(&updated_font).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after font update error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
     async fn create_material(&self, input: MaterialCreateInput) -> std::result::Result<(), String> {
         let key = input.key.trim().to_owned();
         validate_material_key(&key)?;
@@ -2040,13 +3063,26 @@ impl FirestoreAdminSource {
         let client = self.firestore_client().await?;
 
         let orders = self.load_orders(&client).await?;
+        let fonts = self.load_fonts(&client).await?;
         let materials = self.load_materials(&client).await?;
         let mut countries = self.load_countries(&client).await?;
 
         if countries.is_empty() {
             for order in orders.values() {
                 if !order.country_code.is_empty() {
-                    countries.insert(order.country_code.clone(), order.country_code.clone());
+                    let code = order.country_code.to_uppercase();
+                    countries.insert(
+                        code.clone(),
+                        Country {
+                            code: code.clone(),
+                            label_i18n: HashMap::from([("ja".to_owned(), code)]),
+                            shipping_fee_jpy: 0,
+                            is_active: true,
+                            sort_order: 9999,
+                            version: 1,
+                            updated_at: Utc::now(),
+                        },
+                    );
                 }
             }
         }
@@ -2054,12 +3090,17 @@ impl FirestoreAdminSource {
         let mut snapshot = AdminSnapshot {
             orders,
             order_ids: Vec::new(),
+            fonts,
+            font_ids: Vec::new(),
             materials,
             material_ids: Vec::new(),
             countries,
+            country_ids: Vec::new(),
         };
         snapshot.refresh_order_ids();
+        snapshot.refresh_font_ids();
         snapshot.refresh_material_ids();
+        snapshot.refresh_country_ids();
         Ok(snapshot)
     }
 
@@ -2318,10 +3359,75 @@ impl FirestoreAdminSource {
         Ok(materials)
     }
 
+    async fn load_fonts(&self, client: &FirebaseFirestoreClient) -> Result<HashMap<String, Font>> {
+        let query = RunQueryRequest {
+            structured_query: Some(json!({
+                "from": [{ "collectionId": "fonts" }],
+                "orderBy": [{
+                    "field": { "fieldPath": "sort_order" },
+                    "direction": "ASCENDING"
+                }]
+            })),
+            ..RunQueryRequest::default()
+        };
+
+        let rows = client
+            .run_query(&self.parent, &query)
+            .await
+            .context("failed to load fonts")?;
+
+        let mut fonts = HashMap::new();
+        for row in rows {
+            let Some(document) = row.document else {
+                continue;
+            };
+            let Some(doc_id) = document_id(&document) else {
+                continue;
+            };
+
+            let data = &document.fields;
+            let mut label_i18n = read_string_map_field(data, "label_i18n");
+            if label_i18n.is_empty() {
+                let legacy = read_string_field(data, "label");
+                if !legacy.is_empty() {
+                    label_i18n.insert("ja".to_owned(), legacy);
+                }
+            }
+
+            let mut font_family = read_string_field(data, "font_family");
+            if font_family.is_empty() {
+                font_family = read_string_field(data, "family");
+            }
+            if font_family.is_empty() {
+                continue;
+            }
+
+            let is_active = read_bool_field(data, "is_active").unwrap_or(true);
+            let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
+            let version = read_int_field(data, "version").unwrap_or(1);
+            let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
+
+            fonts.insert(
+                doc_id.clone(),
+                Font {
+                    key: doc_id,
+                    label_i18n,
+                    font_family,
+                    is_active,
+                    sort_order,
+                    version,
+                    updated_at,
+                },
+            );
+        }
+
+        Ok(fonts)
+    }
+
     async fn load_countries(
         &self,
         client: &FirebaseFirestoreClient,
-    ) -> Result<HashMap<String, String>> {
+    ) -> Result<HashMap<String, Country>> {
         let query = RunQueryRequest {
             structured_query: Some(json!({
                 "from": [{ "collectionId": "countries" }],
@@ -2347,15 +3453,39 @@ impl FirestoreAdminSource {
                 continue;
             };
 
-            let label = resolve_localized_field(
-                &document.fields,
-                "label_i18n",
-                "label",
-                &self.locale,
-                &self.default_locale,
-                &doc_id,
+            let code = doc_id.to_uppercase();
+            let data = &document.fields;
+            let shipping_fee_jpy = read_int_field(data, "shipping_fee_jpy")
+                .or_else(|| read_int_field(data, "shipping"))
+                .unwrap_or_default();
+            let is_active = read_bool_field(data, "is_active").unwrap_or(true);
+            let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
+            let version = read_int_field(data, "version").unwrap_or(1);
+            let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
+
+            let mut label_i18n = read_string_map_field(data, "label_i18n");
+            if label_i18n.is_empty() {
+                let legacy = read_string_field(data, "label");
+                if !legacy.is_empty() {
+                    label_i18n.insert("ja".to_owned(), legacy);
+                }
+            }
+            if label_i18n.is_empty() {
+                label_i18n.insert("ja".to_owned(), code.clone());
+            }
+
+            countries.insert(
+                code.clone(),
+                Country {
+                    code,
+                    label_i18n,
+                    shipping_fee_jpy,
+                    is_active,
+                    sort_order,
+                    version,
+                    updated_at,
+                },
             );
-            countries.insert(doc_id.to_uppercase(), label);
         }
 
         Ok(countries)
@@ -2368,12 +3498,14 @@ impl FirestoreAdminSource {
         content_type: Option<&str>,
         bytes: &[u8],
     ) -> Result<String> {
-        let bucket = self.storage_assets_bucket.trim().trim_matches('/');
+        let bucket = normalize_storage_bucket_name(&self.storage_assets_bucket);
         if bucket.is_empty() {
             bail!(
                 "storage bucket is not configured (set HANKO_ADMIN_STORAGE_ASSETS_BUCKET[_DEV|_PROD] or API_STORAGE_ASSETS_BUCKET)"
             );
         }
+        validate_storage_bucket_name(&bucket)
+            .map_err(|error| anyhow!("invalid storage bucket `{}`: {}", bucket, error))?;
 
         let normalized_content_type = normalize_image_content_type(file_name, content_type)
             .ok_or_else(|| anyhow!("unsupported image type"))?;
@@ -2389,10 +3521,16 @@ impl FirestoreAdminSource {
             .await
             .context("failed to acquire storage access token")?;
 
+        let mut endpoint =
+            reqwest::Url::parse("https://storage.googleapis.com/upload/storage/v1/b")
+                .context("failed to construct storage upload endpoint")?;
+        endpoint
+            .path_segments_mut()
+            .map_err(|_| anyhow!("failed to construct storage upload endpoint"))?
+            .extend([bucket.as_str(), "o"]);
+
         let response = reqwest::Client::new()
-            .post(format!(
-                "https://storage.googleapis.com/upload/storage/v1/b/{bucket}/o"
-            ))
+            .post(endpoint)
             .bearer_auth(access_token.as_str())
             .query(&[("uploadType", "media"), ("name", storage_path.as_str())])
             .header(reqwest::header::CONTENT_TYPE, normalized_content_type)
@@ -2542,6 +3680,96 @@ impl FirestoreAdminSource {
         Ok(())
     }
 
+    async fn persist_font_mutation(&self, font: &Font) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let font_name = format!("{}/fonts/{}", self.parent, font.key);
+        let document = Document {
+            name: Some(font_name.clone()),
+            fields: btree_from_pairs(vec![
+                ("label_i18n", fs_string_map(&font.label_i18n)),
+                ("font_family", fs_string(font.font_family.clone())),
+                ("is_active", fs_bool(font.is_active)),
+                ("sort_order", fs_int(font.sort_order)),
+                ("version", fs_int(font.version)),
+                ("updated_at", fs_timestamp(font.updated_at)),
+            ]),
+            ..Document::default()
+        };
+
+        client
+            .patch_document(
+                &font_name,
+                &document,
+                &PatchDocumentOptions {
+                    update_mask_field_paths: vec![
+                        "label_i18n".to_owned(),
+                        "font_family".to_owned(),
+                        "is_active".to_owned(),
+                        "sort_order".to_owned(),
+                        "version".to_owned(),
+                        "updated_at".to_owned(),
+                    ],
+                    ..PatchDocumentOptions::default()
+                },
+            )
+            .await
+            .context("failed to persist font mutation")?;
+
+        Ok(())
+    }
+
+    async fn persist_country_mutation(&self, country: &Country) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let country_name = format!("{}/countries/{}", self.parent, country.code);
+        let document = Document {
+            name: Some(country_name.clone()),
+            fields: btree_from_pairs(vec![
+                ("label_i18n", fs_string_map(&country.label_i18n)),
+                ("shipping_fee_jpy", fs_int(country.shipping_fee_jpy)),
+                ("is_active", fs_bool(country.is_active)),
+                ("sort_order", fs_int(country.sort_order)),
+                ("version", fs_int(country.version)),
+                ("updated_at", fs_timestamp(country.updated_at)),
+            ]),
+            ..Document::default()
+        };
+
+        client
+            .patch_document(
+                &country_name,
+                &document,
+                &PatchDocumentOptions {
+                    update_mask_field_paths: vec![
+                        "label_i18n".to_owned(),
+                        "shipping_fee_jpy".to_owned(),
+                        "is_active".to_owned(),
+                        "sort_order".to_owned(),
+                        "version".to_owned(),
+                        "updated_at".to_owned(),
+                    ],
+                    ..PatchDocumentOptions::default()
+                },
+            )
+            .await
+            .context("failed to persist country mutation")?;
+
+        Ok(())
+    }
+
+    async fn persist_country_deletion(&self, country_code: &str) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let country_name = format!("{}/countries/{}", self.parent, country_code);
+        client
+            .delete_document(&country_name, &DeleteDocumentOptions::default())
+            .await
+            .context("failed to persist country deletion")?;
+
+        Ok(())
+    }
+
     async fn persist_material_deletion(&self, material_key: &str) -> Result<()> {
         let client = self.firestore_client().await?;
 
@@ -2577,14 +3805,46 @@ fn render_materials_list(materials: &[MaterialListItemView]) -> Result<String> {
     render_html(&template)
 }
 
+fn render_fonts_list(fonts: &[FontListItemView]) -> Result<String> {
+    let template = FontsListTemplate {
+        fonts: fonts.to_vec(),
+        has_fonts: !fonts.is_empty(),
+    };
+    render_html(&template)
+}
+
 fn render_material_detail(detail: &MaterialDetailView) -> Result<String> {
     render_html(&MaterialDetailTemplate {
         detail: detail.clone(),
     })
 }
 
+fn render_font_detail(detail: &FontDetailView) -> Result<String> {
+    render_html(&FontDetailTemplate {
+        detail: detail.clone(),
+    })
+}
+
 fn render_material_create(view: &MaterialCreateView) -> Result<String> {
     render_html(&MaterialCreateTemplate { view: view.clone() })
+}
+
+fn render_countries_list(countries: &[CountryListItemView]) -> Result<String> {
+    let template = CountriesListTemplate {
+        countries: countries.to_vec(),
+        has_countries: !countries.is_empty(),
+    };
+    render_html(&template)
+}
+
+fn render_country_detail(detail: &CountryDetailView) -> Result<String> {
+    render_html(&CountryDetailTemplate {
+        detail: detail.clone(),
+    })
+}
+
+fn render_country_create(view: &CountryCreateView) -> Result<String> {
+    render_html(&CountryCreateTemplate { view: view.clone() })
 }
 
 fn render_template<T: Template>(template: &T) -> Response {
@@ -2716,6 +3976,64 @@ fn render_material_create_response_with_trigger(
     }
 }
 
+fn new_country_create_view(message: &str, render_error: &str) -> CountryCreateView {
+    CountryCreateView {
+        code: String::new(),
+        label_ja: String::new(),
+        label_en: String::new(),
+        shipping_fee_jpy: "0".to_owned(),
+        sort_order: "0".to_owned(),
+        is_active: true,
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn country_create_view_from_form(
+    form: &HashMap<String, String>,
+    message: &str,
+    render_error: &str,
+) -> CountryCreateView {
+    CountryCreateView {
+        code: form_value(form, "code"),
+        label_ja: form_value(form, "label_ja"),
+        label_en: form_value(form, "label_en"),
+        shipping_fee_jpy: form_value(form, "shipping_fee_jpy"),
+        sort_order: form_value(form, "sort_order"),
+        is_active: form.contains_key("is_active"),
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn render_country_create_response(status: StatusCode, view: &CountryCreateView) -> Response {
+    match render_country_create(view) {
+        Ok(html) => html_response(status, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render country create: {error}"),
+        ),
+    }
+}
+
+fn render_country_create_response_with_trigger(
+    status: StatusCode,
+    view: &CountryCreateView,
+    trigger: &str,
+) -> Response {
+    match render_country_create(view) {
+        Ok(html) => html_response_with_trigger(status, html, trigger),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render country create: {error}"),
+        ),
+    }
+}
+
 fn validate_material_key(key: &str) -> std::result::Result<(), String> {
     if key.is_empty() {
         return Err("材質キーは必須です。".to_owned());
@@ -2733,6 +4051,16 @@ fn validate_material_key(key: &str) -> std::result::Result<(), String> {
         return Err(
             "材質キーは英小文字・数字・ハイフン・アンダースコアのみ使用できます。".to_owned(),
         );
+    }
+    Ok(())
+}
+
+fn validate_country_code(code: &str) -> std::result::Result<(), String> {
+    if code.is_empty() {
+        return Err("国コードは必須です。".to_owned());
+    }
+    if code.chars().count() != 2 || !code.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        return Err("国コードは ISO alpha-2（英字2文字）で入力してください。".to_owned());
     }
     Ok(())
 }
@@ -2762,8 +4090,66 @@ fn validate_material_values(
     Ok(())
 }
 
+fn validate_font_values(
+    label_ja: &str,
+    label_en: &str,
+    font_family: &str,
+    sort_order: i64,
+) -> std::result::Result<(), String> {
+    if label_ja.is_empty() || label_en.is_empty() {
+        return Err("フォント名（ja/en）は必須です。".to_owned());
+    }
+    if font_family.is_empty() {
+        return Err("font-family は必須です。".to_owned());
+    }
+    if sort_order < 0 {
+        return Err("表示順は 0 以上で入力してください。".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_country_values(
+    label_ja: &str,
+    label_en: &str,
+    shipping_fee_jpy: i64,
+    sort_order: i64,
+) -> std::result::Result<(), String> {
+    if label_ja.is_empty() || label_en.is_empty() {
+        return Err("配送国名（ja/en）は必須です。".to_owned());
+    }
+    if shipping_fee_jpy < 0 {
+        return Err("送料は 0 以上で入力してください。".to_owned());
+    }
+    if sort_order < 0 {
+        return Err("表示順は 0 以上で入力してください。".to_owned());
+    }
+    Ok(())
+}
+
 fn normalize_storage_path(value: &str) -> String {
     value.trim().trim_start_matches('/').to_owned()
+}
+
+fn normalize_storage_bucket_name(value: &str) -> String {
+    value
+        .trim()
+        .trim_start_matches("gs://")
+        .trim_start_matches("GS://")
+        .trim_matches('/')
+        .to_owned()
+}
+
+fn validate_storage_bucket_name(bucket: &str) -> std::result::Result<(), String> {
+    if bucket.is_empty() {
+        return Err("bucket name is empty".to_owned());
+    }
+    if bucket.chars().any(|ch| ch.is_whitespace()) {
+        return Err("bucket name must not contain whitespace".to_owned());
+    }
+    if bucket.contains('/') {
+        return Err("bucket must be a bucket name only (no path segments)".to_owned());
+    }
+    Ok(())
 }
 
 fn normalize_image_content_type(
@@ -3037,11 +4423,27 @@ fn shipping_transition_options(current: &str) -> Vec<StatusOptionView> {
     options
 }
 
-fn country_label(countries: &HashMap<String, String>, code: &str) -> String {
+fn country_display_label(country: &Country) -> String {
+    let label = resolve_localized_text(&country.label_i18n, "ja", "ja");
+    if label.is_empty() {
+        country.code.clone()
+    } else {
+        label
+    }
+}
+
+fn country_label(countries: &HashMap<String, Country>, code: &str) -> String {
+    let normalized = code.trim().to_uppercase();
     countries
-        .get(code)
-        .cloned()
-        .unwrap_or_else(|| code.to_owned())
+        .get(&normalized)
+        .map(country_display_label)
+        .unwrap_or_else(|| {
+            if normalized.is_empty() {
+                code.to_owned()
+            } else {
+                normalized
+            }
+        })
 }
 
 fn apply_derived_statuses(order: &mut Order) {
@@ -3864,6 +5266,54 @@ fn new_mock_snapshot() -> AdminSnapshot {
         apply_derived_statuses(order);
     }
 
+    let fonts = HashMap::from([
+        (
+            "zen_maru_gothic".to_owned(),
+            Font {
+                key: "zen_maru_gothic".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "Zen Maru Gothic".to_owned()),
+                    ("en".to_owned(), "Zen Maru Gothic".to_owned()),
+                ]),
+                font_family: "'Zen Maru Gothic', sans-serif".to_owned(),
+                is_active: true,
+                sort_order: 10,
+                version: 4,
+                updated_at: now - chrono::Duration::hours(28),
+            },
+        ),
+        (
+            "potta_one".to_owned(),
+            Font {
+                key: "potta_one".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "Potta One".to_owned()),
+                    ("en".to_owned(), "Potta One".to_owned()),
+                ]),
+                font_family: "'Potta One', cursive".to_owned(),
+                is_active: true,
+                sort_order: 20,
+                version: 2,
+                updated_at: now - chrono::Duration::hours(52),
+            },
+        ),
+        (
+            "wdxl_lubrifont_jp_n".to_owned(),
+            Font {
+                key: "wdxl_lubrifont_jp_n".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "WDXL Lubrifont JP N".to_owned()),
+                    ("en".to_owned(), "WDXL Lubrifont JP N".to_owned()),
+                ]),
+                font_family: "'WDXL Lubrifont JP N', sans-serif".to_owned(),
+                is_active: false,
+                sort_order: 30,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(72),
+            },
+        ),
+    ]);
+
     let materials = HashMap::from([
         (
             "boxwood".to_owned(),
@@ -3970,23 +5420,112 @@ fn new_mock_snapshot() -> AdminSnapshot {
     ]);
 
     let countries = HashMap::from([
-        ("JP".to_owned(), "日本".to_owned()),
-        ("US".to_owned(), "United States".to_owned()),
-        ("CA".to_owned(), "Canada".to_owned()),
-        ("GB".to_owned(), "United Kingdom".to_owned()),
-        ("AU".to_owned(), "Australia".to_owned()),
-        ("SG".to_owned(), "Singapore".to_owned()),
+        (
+            "JP".to_owned(),
+            Country {
+                code: "JP".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "日本".to_owned()),
+                    ("en".to_owned(), "Japan".to_owned()),
+                ]),
+                shipping_fee_jpy: 600,
+                is_active: true,
+                sort_order: 10,
+                version: 3,
+                updated_at: now - chrono::Duration::hours(24),
+            },
+        ),
+        (
+            "US".to_owned(),
+            Country {
+                code: "US".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "アメリカ合衆国".to_owned()),
+                    ("en".to_owned(), "United States".to_owned()),
+                ]),
+                shipping_fee_jpy: 1800,
+                is_active: true,
+                sort_order: 20,
+                version: 4,
+                updated_at: now - chrono::Duration::hours(18),
+            },
+        ),
+        (
+            "CA".to_owned(),
+            Country {
+                code: "CA".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "カナダ".to_owned()),
+                    ("en".to_owned(), "Canada".to_owned()),
+                ]),
+                shipping_fee_jpy: 1900,
+                is_active: true,
+                sort_order: 30,
+                version: 2,
+                updated_at: now - chrono::Duration::hours(32),
+            },
+        ),
+        (
+            "GB".to_owned(),
+            Country {
+                code: "GB".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "イギリス".to_owned()),
+                    ("en".to_owned(), "United Kingdom".to_owned()),
+                ]),
+                shipping_fee_jpy: 2000,
+                is_active: true,
+                sort_order: 40,
+                version: 2,
+                updated_at: now - chrono::Duration::hours(30),
+            },
+        ),
+        (
+            "AU".to_owned(),
+            Country {
+                code: "AU".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "オーストラリア".to_owned()),
+                    ("en".to_owned(), "Australia".to_owned()),
+                ]),
+                shipping_fee_jpy: 2100,
+                is_active: true,
+                sort_order: 50,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(54),
+            },
+        ),
+        (
+            "SG".to_owned(),
+            Country {
+                code: "SG".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "シンガポール".to_owned()),
+                    ("en".to_owned(), "Singapore".to_owned()),
+                ]),
+                shipping_fee_jpy: 1300,
+                is_active: true,
+                sort_order: 60,
+                version: 3,
+                updated_at: now - chrono::Duration::hours(20),
+            },
+        ),
     ]);
 
     let mut snapshot = AdminSnapshot {
         orders,
         order_ids: Vec::new(),
+        fonts,
+        font_ids: Vec::new(),
         materials,
         material_ids: Vec::new(),
         countries,
+        country_ids: Vec::new(),
     };
     snapshot.refresh_order_ids();
+    snapshot.refresh_font_ids();
     snapshot.refresh_material_ids();
+    snapshot.refresh_country_ids();
     snapshot
 }
 
@@ -4057,10 +5596,154 @@ mod tests {
         assert_eq!(before.tracking_no, after.tracking_no);
     }
 
+    #[tokio::test]
+    async fn update_country_updates_shipping_fee() {
+        let state = mock_server_state();
+
+        let result = state
+            .update_country(
+                "JP",
+                CountryPatchInput {
+                    label_ja: "日本国内".to_owned(),
+                    label_en: "Japan Domestic".to_owned(),
+                    shipping_fee_jpy: 900,
+                    sort_order: 15,
+                    is_active: true,
+                },
+            )
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_country_detail("JP", "", "")
+            .await
+            .expect("country should exist");
+        assert_eq!(detail.label_ja, "日本国内");
+        assert_eq!(detail.shipping_fee_jpy, 900);
+        assert_eq!(detail.sort_order, 15);
+    }
+
+    #[tokio::test]
+    async fn update_country_rejects_negative_shipping_fee() {
+        let state = mock_server_state();
+
+        let result = state
+            .update_country(
+                "JP",
+                CountryPatchInput {
+                    label_ja: "日本".to_owned(),
+                    label_en: "Japan".to_owned(),
+                    shipping_fee_jpy: -1,
+                    sort_order: 10,
+                    is_active: true,
+                },
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn update_font_updates_family_and_sort_order() {
+        let state = mock_server_state();
+
+        let result = state
+            .update_font(
+                "zen_maru_gothic",
+                FontPatchInput {
+                    label_ja: "Zen 丸".to_owned(),
+                    label_en: "Zen Maru".to_owned(),
+                    font_family: "'Zen Maru Gothic', 'Noto Sans JP', sans-serif".to_owned(),
+                    sort_order: 15,
+                    is_active: true,
+                },
+            )
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_font_detail("zen_maru_gothic", "", "")
+            .await
+            .expect("font should exist");
+        assert_eq!(detail.label_ja, "Zen 丸");
+        assert_eq!(
+            detail.font_family,
+            "'Zen Maru Gothic', 'Noto Sans JP', sans-serif"
+        );
+        assert_eq!(detail.sort_order, 15);
+    }
+
+    #[tokio::test]
+    async fn create_country_adds_country() {
+        let state = mock_server_state();
+
+        let result = state
+            .create_country(CountryCreateInput {
+                code: "kr".to_owned(),
+                label_ja: "韓国".to_owned(),
+                label_en: "Korea".to_owned(),
+                shipping_fee_jpy: 1700,
+                sort_order: 70,
+                is_active: true,
+            })
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_country_detail("KR", "", "")
+            .await
+            .expect("country should exist");
+        assert_eq!(detail.code, "KR");
+        assert_eq!(detail.shipping_fee_jpy, 1700);
+    }
+
+    #[tokio::test]
+    async fn create_country_rejects_duplicate_code() {
+        let state = mock_server_state();
+
+        let result = state
+            .create_country(CountryCreateInput {
+                code: "JP".to_owned(),
+                label_ja: "日本".to_owned(),
+                label_en: "Japan".to_owned(),
+                shipping_fee_jpy: 600,
+                sort_order: 10,
+                is_active: true,
+            })
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_country_removes_country() {
+        let state = mock_server_state();
+
+        let result = state.delete_country("SG").await;
+        assert!(result.is_ok());
+        assert!(state.get_country_detail("SG", "", "").await.is_none());
+    }
+
     #[test]
     fn format_yen_with_separator() {
         assert_eq!(format_yen(0), "0");
         assert_eq!(format_yen(1200), "1,200");
         assert_eq!(format_yen(1234567), "1,234,567");
+    }
+
+    #[test]
+    fn normalize_storage_bucket_name_accepts_gs_uri() {
+        assert_eq!(
+            normalize_storage_bucket_name("gs://hanko-field.firebasestorage.app"),
+            "hanko-field.firebasestorage.app"
+        );
+        assert_eq!(
+            normalize_storage_bucket_name("hanko-field.firebasestorage.app/"),
+            "hanko-field.firebasestorage.app"
+        );
+    }
+
+    #[test]
+    fn validate_storage_bucket_name_rejects_path_segments() {
+        let result = validate_storage_bucket_name("hanko-field.firebasestorage.app/path");
+        assert!(result.is_err());
     }
 }

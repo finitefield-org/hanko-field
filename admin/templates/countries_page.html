@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if is_mock %}Hanko Field Admin Mock | 配送国マスタ{% else %}Hanko Field Admin | 配送国マスタ{% endif %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/static/admin.js?v=20260218c" defer></script>
+</head>
+<body>
+  <main class="mx-auto max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
+    <header class="rounded-[26px] border border-admin-line/75 bg-admin-panel px-6 py-7 shadow-[0_12px_32px_rgb(30_41_37_/_0.08)] sm:px-8">
+      <p class="text-[0.8rem] font-bold tracking-[0.12em] text-admin-accent uppercase">Hanko Field Admin</p>
+      {% if is_mock %}
+      <h1 class="mt-2 text-[clamp(1.9rem,4vw,2.6rem)] leading-[1.2] font-bold">配送国マスタ</h1>
+      <p class="mt-2 max-w-[920px] text-sm text-admin-muted sm:text-base">国ごとの送料を編集し、注文時の送料計算に反映できます。</p>
+      {% else %}
+      <h1 class="mt-2 text-[clamp(1.9rem,4vw,2.6rem)] leading-[1.2] font-bold">配送国マスタ</h1>
+      <p class="mt-2 max-w-[920px] text-sm text-admin-muted sm:text-base">国ごとの送料を編集し、運用に反映できます。</p>
+      {% endif %}
+      <p class="mt-3 inline-flex items-center gap-2 rounded-full border border-admin-line/80 bg-white px-3 py-1 text-[0.78rem] font-semibold text-admin-muted">
+        <span class="inline-block size-2 rounded-full bg-admin-accent"></span>
+        データソース: {{ source_label }}
+      </p>
+
+      <nav class="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
+        <a href="/admin/orders" class="rounded-full border border-admin-line bg-white px-4 py-2 text-admin-muted transition hover:bg-admin-bg">注文管理</a>
+        <a href="/admin/fonts" class="rounded-full border border-admin-line bg-white px-4 py-2 text-admin-muted transition hover:bg-admin-bg">フォントマスタ</a>
+        <a href="/admin/materials" class="rounded-full border border-admin-line bg-white px-4 py-2 text-admin-muted transition hover:bg-admin-bg">材質マスタ</a>
+        <a href="/admin/countries" class="rounded-full border border-admin-accent bg-admin-accent px-4 py-2 text-white">配送国マスタ</a>
+      </nav>
+    </header>
+
+    <section class="mt-6 rounded-[24px] border border-admin-line/75 bg-admin-panel px-4 py-5 shadow-[0_10px_28px_rgb(30_41_37_/_0.07)] sm:px-6 sm:py-6">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-[1.35rem] leading-tight font-bold">配送国一覧</h2>
+          <p class="mt-1 text-sm font-semibold text-admin-muted">配送国を選択すると送料を編集できます。</p>
+        </div>
+        <p class="text-xs font-semibold tracking-[0.08em] text-admin-muted uppercase">Countries</p>
+      </div>
+
+      <div
+        id="country-create"
+        class="mt-4 overflow-hidden rounded-2xl border border-admin-line/75 bg-white"
+      >
+        {{ country_create_html|safe }}
+      </div>
+
+      <div class="mt-4 grid gap-4 xl:grid-cols-2">
+        <div
+          id="countries-list"
+          class="min-h-[320px] overflow-hidden rounded-2xl border border-admin-line/75 bg-white"
+          hx-get="/admin/countries/list"
+          hx-trigger="country-updated from:body"
+          hx-target="this"
+          hx-swap="innerHTML"
+        >
+          {{ countries_list_html|safe }}
+        </div>
+
+        <div id="country-detail" class="min-h-[320px] overflow-hidden rounded-2xl border border-admin-line/75 bg-white">
+          {% if has_country_detail %}
+          {{ country_detail_html|safe }}
+          {% else %}
+          <p class="p-5 text-sm font-semibold text-admin-muted">配送国を選択してください。</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

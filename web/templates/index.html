@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Kosugi+Maru&family=Potta+One&family=Kiwi+Maru:wght@400;700&family=WDXL+Lubrifont+JP+N&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js?v=20260221-2" defer></script>
 </head>
 <body>
   <div class="bg-shape bg-shape-left"></div>
@@ -63,7 +63,7 @@
                   >
                 </div>
               </div>
-              <p class="field-hint">各行2文字まで</p>
+              <p class="field-hint">1行目と2行目の合計2文字まで</p>
               <p class="field-error" id="seal_text_error" role="alert" aria-live="polite"></p>
 
               <div class="ai-box">
@@ -76,13 +76,22 @@
                   autocomplete="off"
                   placeholder="例: Michael Smith"
                 >
+                <label class="field-label" for="reason_language">理由の言語</label>
+                <input
+                  id="reason_language"
+                  name="reason_language"
+                  type="text"
+                  value="en"
+                  autocomplete="off"
+                  placeholder="例: en / ja"
+                >
                 <button
                   type="button"
                   class="secondary"
                   hx-post="/kanji"
                   hx-target="#kanji-suggestions"
                   hx-swap="innerHTML"
-                  hx-include="#real_name"
+                  hx-include="#real_name,#reason_language"
                 >
                   候補を生成
                 </button>

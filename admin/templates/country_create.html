@@ -1,0 +1,51 @@
+<article class="flex flex-col gap-5 p-4 sm:p-5">
+  <header>
+    <h3 class="text-xl leading-tight font-bold">配送国を追加</h3>
+    <p class="mt-1 text-xs font-semibold tracking-[0.06em] text-admin-muted uppercase">国コードは ISO alpha-2（例: JP / US）</p>
+  </header>
+
+  {% if view.has_message %}
+  <p class="rounded-xl border border-admin-accent/30 bg-admin-accent-soft px-3 py-2 text-sm font-semibold text-admin-accent">{{ view.message }}</p>
+  {% endif %}
+  {% if view.has_error %}
+  <p class="rounded-xl border border-admin-alert/35 bg-[rgb(157_47_36_/_0.08)] px-3 py-2 text-sm font-semibold text-admin-alert">{{ view.error }}</p>
+  {% endif %}
+
+  <form
+    class="flex flex-col gap-3 rounded-xl border border-admin-line/70 bg-white p-4"
+    hx-post="/admin/countries"
+    hx-target="#country-create"
+    hx-swap="innerHTML"
+  >
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>国コード</span>
+      <input type="text" name="code" value="{{ view.code }}" placeholder="JP" maxlength="2" required>
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>配送国名 (ja)</span>
+      <input type="text" name="label_ja" value="{{ view.label_ja }}" required>
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>Country Name (en)</span>
+      <input type="text" name="label_en" value="{{ view.label_en }}" required>
+    </label>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>送料 (JPY)</span>
+        <input type="number" name="shipping_fee_jpy" min="0" value="{{ view.shipping_fee_jpy }}" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>表示順</span>
+        <input type="number" name="sort_order" min="0" value="{{ view.sort_order }}" required>
+      </label>
+    </div>
+
+    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+      <input type="checkbox" name="is_active" value="1" {% if view.is_active %}checked{% endif %}>
+      <span>公開する</span>
+    </label>
+
+    <button type="submit" class="w-fit rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">配送国を追加</button>
+  </form>
+</article>

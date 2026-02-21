@@ -3,6 +3,7 @@ use std::{
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
+    time::Duration as StdDuration,
 };
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -35,6 +36,9 @@ const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";
 const DEFAULT_LOCALE: &str = "ja";
 const STRIPE_SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
+const DEFAULT_GEMINI_MODEL: &str = "gemini-2.0-flash";
+const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
+const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
 
 #[derive(Debug, Clone)]
 struct AppConfig {
@@ -42,6 +46,9 @@ struct AppConfig {
     firestore_project_id: String,
     storage_assets_bucket: String,
     stripe_webhook_secret: String,
+    gemini_api_key: String,
+    gemini_model: String,
+    gemini_base_url: String,
     credentials_file: Option<String>,
 }
 
@@ -50,6 +57,15 @@ struct AppState {
     store: Arc<FirestoreStore>,
     storage_assets_bucket: String,
     stripe_webhook_secret: String,
+    gemini: GeminiClientConfig,
+    http_client: reqwest::Client,
+}
+
+#[derive(Debug, Clone)]
+struct GeminiClientConfig {
+    api_key: String,
+    model: String,
+    base_url: String,
 }
 
 #[derive(Clone)]
@@ -173,6 +189,29 @@ struct QueryLocale {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct GenerateKanjiCandidatesRequest {
+    real_name: String,
+    reason_language: Option<String>,
+    count: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
+struct GenerateKanjiCandidatesInput {
+    real_name: String,
+    reason_language: String,
+    count: usize,
+}
+
+#[derive(Debug, Clone)]
+struct KanjiNameCandidate {
+    kanji: String,
+    reading_hiragana: String,
+    reading_romaji: String,
+    reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateOrderRequest {
     channel: String,
     locale: String,
@@ -273,16 +312,31 @@ async fn run() -> Result<()> {
         jst: FixedOffset::east_opt(9 * 60 * 60).expect("valid JST offset"),
     });
 
+    let http_client = reqwest::Client::builder()
+        .timeout(StdDuration::from_secs(20))
+        .build()
+        .context("failed to initialize http client")?;
+
     let state = AppState {
         store,
         storage_assets_bucket: cfg.storage_assets_bucket,
         stripe_webhook_secret: cfg.stripe_webhook_secret,
+        gemini: GeminiClientConfig {
+            api_key: cfg.gemini_api_key,
+            model: cfg.gemini_model,
+            base_url: cfg.gemini_base_url,
+        },
+        http_client,
     };
 
     let app = Router::new()
         .route("/healthz", get(handle_healthz))
         .route("/v1/config/public", get(handle_public_config))
         .route("/v1/catalog", get(handle_catalog))
+        .route(
+            "/v1/kanji-candidates",
+            post(handle_generate_kanji_candidates),
+        )
         .route("/v1/orders", post(handle_create_order))
         .route("/v1/payments/stripe/webhook", post(handle_stripe_webhook))
         .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
@@ -330,6 +384,18 @@ fn load_config() -> Result<AppConfig> {
     let stripe_webhook_secret =
         first_non_empty(&[std::env::var("API_PSP_STRIPE_WEBHOOK_SECRET").ok()]).unwrap_or_default();
 
+    let gemini_api_key = first_non_empty(&[
+        std::env::var("API_GEMINI_API_KEY").ok(),
+        std::env::var("GEMINI_API_KEY").ok(),
+    ])
+    .unwrap_or_default();
+
+    let gemini_model = first_non_empty(&[std::env::var("API_GEMINI_MODEL").ok()])
+        .unwrap_or_else(|| DEFAULT_GEMINI_MODEL.to_owned());
+
+    let gemini_base_url = first_non_empty(&[std::env::var("API_GEMINI_BASE_URL").ok()])
+        .unwrap_or_else(|| "https://generativelanguage.googleapis.com".to_owned());
+
     let credentials_file = first_non_empty(&[
         std::env::var("API_FIREBASE_CREDENTIALS_FILE").ok(),
         std::env::var("GOOGLE_APPLICATION_CREDENTIALS").ok(),
@@ -340,6 +406,9 @@ fn load_config() -> Result<AppConfig> {
         firestore_project_id,
         storage_assets_bucket,
         stripe_webhook_secret,
+        gemini_api_key,
+        gemini_model,
+        gemini_base_url,
         credentials_file,
     })
 }
@@ -511,6 +580,74 @@ async fn handle_catalog(
             "fonts": font_resp,
             "materials": material_resp,
             "countries": country_resp,
+        }),
+    )
+}
+
+async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: Bytes) -> Response {
+    if state.gemini.api_key.trim().is_empty() {
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "gemini_not_configured",
+            "gemini api key is not configured",
+        );
+    }
+
+    let request = match serde_json::from_slice::<GenerateKanjiCandidatesRequest>(&body) {
+        Ok(value) => value,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_json",
+                &format!("invalid JSON: {err}"),
+            );
+        }
+    };
+
+    let input = match validate_generate_kanji_candidates_request(request) {
+        Ok(value) => value,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "validation_error",
+                &err.to_string(),
+            );
+        }
+    };
+
+    let candidates = match generate_kanji_candidates_with_gemini(&state, &input).await {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("failed to generate kanji candidates with gemini: {err:#}");
+            return error_response(
+                StatusCode::BAD_GATEWAY,
+                "gemini_generation_failed",
+                "failed to generate kanji candidates",
+            );
+        }
+    };
+
+    if candidates.is_empty() {
+        return error_response(
+            StatusCode::BAD_GATEWAY,
+            "gemini_generation_failed",
+            "gemini returned no valid candidates",
+        );
+    }
+
+    json_response(
+        StatusCode::OK,
+        json!({
+            "real_name": input.real_name,
+            "reason_language": input.reason_language,
+            "candidates": candidates.into_iter().map(|candidate| {
+                json!({
+                    "kanji": candidate.kanji,
+                    "reading_hiragana": candidate.reading_hiragana,
+                    "reading_romaji": candidate.reading_romaji,
+                    "reason": candidate.reason,
+                })
+            }).collect::<Vec<_>>(),
         }),
     )
 }
@@ -1574,6 +1711,229 @@ fn hash_order_request(input: &CreateOrderInput) -> Result<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+fn validate_generate_kanji_candidates_request(
+    request: GenerateKanjiCandidatesRequest,
+) -> Result<GenerateKanjiCandidatesInput> {
+    let real_name = request.real_name.trim().to_owned();
+    if real_name.is_empty() {
+        bail!("real_name is required");
+    }
+    if real_name.chars().count() > 120 {
+        bail!("real_name must be 120 characters or fewer");
+    }
+
+    let reason_language = request
+        .reason_language
+        .unwrap_or_else(|| "en".to_owned())
+        .trim()
+        .to_owned();
+    if reason_language.is_empty() {
+        bail!("reason_language is required");
+    }
+    if reason_language.chars().count() > 32 {
+        bail!("reason_language must be 32 characters or fewer");
+    }
+
+    let count = request.count.unwrap_or(DEFAULT_KANJI_CANDIDATE_COUNT);
+    if count == 0 || count > MAX_KANJI_CANDIDATE_COUNT {
+        bail!("count must be in range 1-{}", MAX_KANJI_CANDIDATE_COUNT);
+    }
+
+    Ok(GenerateKanjiCandidatesInput {
+        real_name,
+        reason_language,
+        count,
+    })
+}
+
+async fn generate_kanji_candidates_with_gemini(
+    state: &AppState,
+    input: &GenerateKanjiCandidatesInput,
+) -> Result<Vec<KanjiNameCandidate>> {
+    let prompt = build_kanji_candidates_prompt(input);
+
+    let endpoint = format!(
+        "{}/v1beta/models/{}:generateContent",
+        state.gemini.base_url.trim_end_matches('/'),
+        state.gemini.model.trim()
+    );
+
+    let response = state
+        .http_client
+        .post(endpoint)
+        .query(&[("key", state.gemini.api_key.as_str())])
+        .json(&json!({
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": prompt,
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.7,
+                "responseMimeType": "application/json",
+            }
+        }))
+        .send()
+        .await
+        .context("failed to call gemini generateContent")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+        bail!("gemini request failed status={} body={}", status, body);
+    }
+
+    let payload = response
+        .json::<JsonValue>()
+        .await
+        .context("failed to parse gemini response payload")?;
+
+    let text = extract_gemini_response_text(&payload)
+        .ok_or_else(|| anyhow!("gemini response did not include text"))?;
+
+    parse_kanji_candidates_from_gemini_text(&text, input.count)
+}
+
+fn build_kanji_candidates_prompt(input: &GenerateKanjiCandidatesInput) -> String {
+    format!(
+        "Generate {} unique Japanese name candidates for a hanko seal.\n\
+Input name: \"{}\"\n\
+For each candidate, return these fields:\n\
+- kanji: 1-2 Japanese Kanji characters (no spaces)\n\
+- reading_hiragana: reading in hiragana\n\
+- reading_romaji: reading in lowercase romaji\n\
+- reason: why this Kanji name was chosen, written in {}\n\
+Return only JSON (no markdown, no explanation) in this exact shape:\n\
+{{\"candidates\":[{{\"kanji\":\"\",\"reading_hiragana\":\"\",\"reading_romaji\":\"\",\"reason\":\"\"}}]}}",
+        input.count, input.real_name, input.reason_language
+    )
+}
+
+fn extract_gemini_response_text(payload: &JsonValue) -> Option<String> {
+    let candidates = payload.get("candidates")?.as_array()?;
+    for candidate in candidates {
+        let Some(parts) = candidate
+            .get("content")
+            .and_then(|content| content.get("parts"))
+            .and_then(JsonValue::as_array)
+        else {
+            continue;
+        };
+        for part in parts {
+            if let Some(text) = part.get("text").and_then(JsonValue::as_str) {
+                let trimmed = text.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_owned());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_kanji_candidates_from_gemini_text(
+    raw_text: &str,
+    max_count: usize,
+) -> Result<Vec<KanjiNameCandidate>> {
+    let parsed = parse_json_value_loose(raw_text)?;
+    let array = parsed
+        .get("candidates")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| anyhow!("gemini response JSON must contain candidates array"))?;
+
+    let mut candidates = Vec::with_capacity(array.len());
+    let mut seen = HashSet::new();
+    for entry in array {
+        let Some(candidate) = normalize_kanji_candidate(entry) else {
+            continue;
+        };
+        if !seen.insert(candidate.kanji.clone()) {
+            continue;
+        }
+        candidates.push(candidate);
+        if candidates.len() >= max_count {
+            break;
+        }
+    }
+
+    Ok(candidates)
+}
+
+fn parse_json_value_loose(raw_text: &str) -> Result<JsonValue> {
+    let trimmed = raw_text.trim();
+    if trimmed.is_empty() {
+        bail!("gemini response text is empty");
+    }
+
+    if let Ok(value) = serde_json::from_str::<JsonValue>(trimmed) {
+        return Ok(value);
+    }
+
+    let content = trimmed
+        .trim_start_matches("```json")
+        .trim_start_matches("```")
+        .trim_end_matches("```")
+        .trim();
+    if let Ok(value) = serde_json::from_str::<JsonValue>(content) {
+        return Ok(value);
+    }
+
+    if let (Some(start), Some(end)) = (trimmed.find('{'), trimmed.rfind('}'))
+        && start < end
+    {
+        let slice = &trimmed[start..=end];
+        if let Ok(value) = serde_json::from_str::<JsonValue>(slice) {
+            return Ok(value);
+        }
+    }
+
+    bail!("failed to parse json from gemini response text")
+}
+
+fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
+    let kanji = read_json_string(value, &["kanji", "name_kanji"]);
+    if kanji.is_empty() {
+        return None;
+    }
+    if kanji.chars().count() > 2 || kanji.chars().any(char::is_whitespace) {
+        return None;
+    }
+
+    let reading_hiragana = read_json_string(value, &["reading_hiragana", "hiragana"]);
+    let reading_romaji = read_json_string(value, &["reading_romaji", "romaji"]);
+    let reason = read_json_string(value, &["reason"]);
+    if reading_hiragana.is_empty() || reading_romaji.is_empty() || reason.is_empty() {
+        return None;
+    }
+
+    Some(KanjiNameCandidate {
+        kanji,
+        reading_hiragana,
+        reading_romaji,
+        reason,
+    })
+}
+
+fn read_json_string(value: &JsonValue, keys: &[&str]) -> String {
+    for key in keys {
+        if let Some(text) = value.get(*key).and_then(JsonValue::as_str) {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_owned();
+            }
+        }
+    }
+    String::new()
+}
+
 fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOrderInput> {
     let idempotency_key_pattern =
         Regex::new(r"^[A-Za-z0-9_-]{8,128}$").expect("idempotency key regex must compile");
@@ -2262,5 +2622,50 @@ mod tests {
         assert_eq!(event.provider_event_id, "evt_1");
         assert_eq!(event.payment_intent_id, "pi_1");
         assert_eq!(event.order_id, "order_1");
+    }
+
+    #[test]
+    fn validate_generate_kanji_candidates_request_accepts_defaults() {
+        let request = GenerateKanjiCandidatesRequest {
+            real_name: "Michael Smith".to_owned(),
+            reason_language: None,
+            count: None,
+        };
+
+        let input =
+            validate_generate_kanji_candidates_request(request).expect("request must be valid");
+        assert_eq!(input.reason_language, "en");
+        assert_eq!(input.count, DEFAULT_KANJI_CANDIDATE_COUNT);
+    }
+
+    #[test]
+    fn parse_kanji_candidates_from_gemini_text_accepts_markdown_json() {
+        let payload = r#"
+```json
+{
+  "candidates": [
+    {
+      "kanji": "蒼真",
+      "reading_hiragana": "そうま",
+      "reading_romaji": "soma",
+      "reason": "Balanced and clear for seal engraving."
+    },
+    {
+      "kanji": "悠花",
+      "reading_hiragana": "ゆうか",
+      "reading_romaji": "yuka",
+      "reason": "Soft sound and elegant strokes."
+    }
+  ]
+}
+```
+"#;
+
+        let candidates =
+            parse_kanji_candidates_from_gemini_text(payload, 5).expect("payload must parse");
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[0].kanji, "蒼真");
+        assert_eq!(candidates[0].reading_hiragana, "そうま");
+        assert_eq!(candidates[0].reading_romaji, "soma");
     }
 }

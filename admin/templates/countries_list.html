@@ -1,0 +1,62 @@
+<div class="h-full p-4 sm:p-5">
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0 text-sm">
+      <thead>
+        <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
+          <th class="border-b border-admin-line/70 px-3 py-2">Code</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">配送国名</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">送料</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">version</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">編集</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">削除</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if has_countries %}
+        {% for country in countries %}
+        <tr class="align-top">
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ country.code }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <p>{{ country.label_ja }}</p>
+            <p class="mt-1 text-xs text-admin-muted">{{ country.label_en }}</p>
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">¥{{ country.shipping_fee_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{% if country.is_active %}有効{% else %}無効{% endif %}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ country.version }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ country.updated_at }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="inline-flex rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
+              hx-get="/admin/countries/{{ country.code }}"
+              hx-target="#country-detail"
+              hx-swap="innerHTML"
+            >
+              編集
+            </button>
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="inline-flex rounded-[10px] border border-admin-alert/45 bg-[rgb(157_47_36_/_0.08)] px-3 py-[9px] text-xs font-semibold text-admin-alert transition hover:brightness-[1.04]"
+              hx-delete="/admin/countries/{{ country.code }}"
+              hx-confirm="配送国「{{ country.code }}」を削除します。よろしいですか？"
+              hx-target="#countries-list"
+              hx-swap="innerHTML"
+            >
+              削除
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="8" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">配送国がありません。</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

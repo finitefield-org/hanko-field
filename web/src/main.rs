@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     env,
     sync::Arc,
     time::Duration,
@@ -16,10 +16,13 @@ use axum::{
 };
 use firebase_sdk_rust::firebase_firestore::{Document, FirebaseFirestoreClient, RunQueryRequest};
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use tower_http::services::ServeDir;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
+const DEFAULT_KANJI_REASON_LANGUAGE: &str = "en";
+const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -44,6 +47,7 @@ struct AppConfig {
     mode: RunMode,
     locale: String,
     default_locale: String,
+    api_base_url: String,
     firestore_project_id: Option<String>,
     credentials_file: Option<String>,
 }
@@ -80,9 +84,11 @@ struct CatalogData {
 
 #[derive(Debug, Clone)]
 struct KanjiCandidate {
-    label: String,
+    kanji: String,
     line1: String,
     line2: String,
+    reading_hiragana: String,
+    reading_romaji: String,
     reason: String,
 }
 
@@ -126,8 +132,23 @@ struct PageTemplate {
 #[template(path = "kanji_suggestions.html")]
 struct KanjiSuggestionsTemplate {
     real_name: String,
+    reason_language: String,
     suggestions: Vec<KanjiCandidate>,
     has_suggestions: bool,
+    error: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct KanjiCandidatesApiResponse {
+    candidates: Vec<KanjiCandidatesApiItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct KanjiCandidatesApiItem {
+    kanji: String,
+    reading_hiragana: String,
+    reading_romaji: String,
+    reason: String,
 }
 
 #[derive(Template)]
@@ -401,8 +422,86 @@ impl FirestoreCatalogSource {
 }
 
 #[derive(Clone)]
+struct KanjiApiClient {
+    base_url: String,
+    http_client: reqwest::Client,
+}
+
+impl KanjiApiClient {
+    async fn generate_candidates(
+        &self,
+        real_name: &str,
+        reason_language: &str,
+    ) -> Result<Vec<KanjiCandidate>> {
+        let endpoint = format!(
+            "{}/v1/kanji-candidates",
+            self.base_url.trim_end_matches('/')
+        );
+
+        let response = self
+            .http_client
+            .post(endpoint)
+            .json(&json!({
+                "real_name": real_name,
+                "reason_language": reason_language,
+                "count": DEFAULT_KANJI_CANDIDATE_COUNT,
+            }))
+            .send()
+            .await
+            .context("failed to request kanji candidates")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+            bail!("kanji candidate API failed status={} body={}", status, body);
+        }
+
+        let payload = response
+            .json::<KanjiCandidatesApiResponse>()
+            .await
+            .context("failed to decode kanji candidates response")?;
+
+        let suggestions = payload
+            .candidates
+            .into_iter()
+            .filter_map(|item| {
+                let kanji = item.kanji.trim().to_owned();
+                if kanji.is_empty()
+                    || kanji.chars().count() > 2
+                    || kanji.chars().any(char::is_whitespace)
+                {
+                    return None;
+                }
+
+                let reading_hiragana = item.reading_hiragana.trim().to_owned();
+                let reading_romaji = item.reading_romaji.trim().to_owned();
+                let reason = item.reason.trim().to_owned();
+                if reading_hiragana.is_empty() || reading_romaji.is_empty() || reason.is_empty() {
+                    return None;
+                }
+
+                Some(KanjiCandidate {
+                    kanji: kanji.clone(),
+                    line1: kanji,
+                    line2: String::new(),
+                    reading_hiragana,
+                    reading_romaji,
+                    reason,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        Ok(suggestions)
+    }
+}
+
+#[derive(Clone)]
 struct AppState {
     source: Arc<CatalogSource>,
+    kanji_api: Arc<KanjiApiClient>,
 }
 
 #[tokio::main]
@@ -429,20 +528,22 @@ async fn run() -> Result<()> {
     let addr = format!("0.0.0.0:{}", cfg.port);
     if let Some(project_id) = cfg.firestore_project_id.as_deref() {
         println!(
-            "hanko web listening on http://localhost:{} mode={} source={} project={} locale={}",
+            "hanko web listening on http://localhost:{} mode={} source={} project={} locale={} kanji_api={}",
             cfg.port,
             cfg.mode.as_str(),
             state.source.label(),
             project_id,
-            cfg.locale
+            cfg.locale,
+            cfg.api_base_url
         );
     } else {
         println!(
-            "hanko web listening on http://localhost:{} mode={} source={} locale={}",
+            "hanko web listening on http://localhost:{} mode={} source={} locale={} kanji_api={}",
             cfg.port,
             cfg.mode.as_str(),
             state.source.label(),
-            cfg.locale
+            cfg.locale,
+            cfg.api_base_url
         );
     }
 
@@ -457,10 +558,18 @@ async fn run() -> Result<()> {
 
 async fn build_state(cfg: &AppConfig) -> Result<AppState> {
     let source = Arc::new(new_catalog_source(cfg).await?);
+    let kanji_http_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .context("failed to initialize kanji API client")?;
+    let kanji_api = Arc::new(KanjiApiClient {
+        base_url: cfg.api_base_url.clone(),
+        http_client: kanji_http_client,
+    });
 
     let _catalog = load_catalog_with_timeout(source.as_ref()).await?;
 
-    Ok(AppState { source })
+    Ok(AppState { source, kanji_api })
 }
 
 fn load_config() -> Result<AppConfig> {
@@ -478,6 +587,10 @@ fn load_config() -> Result<AppConfig> {
             .unwrap_or_default()
             .trim()
             .to_owned(),
+        api_base_url: env::var("HANKO_WEB_API_BASE_URL")
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
         firestore_project_id: None,
         credentials_file: None,
     };
@@ -492,6 +605,10 @@ fn load_config() -> Result<AppConfig> {
 
     if cfg.default_locale.is_empty() {
         cfg.default_locale = "ja".to_owned();
+    }
+
+    if cfg.api_base_url.is_empty() {
+        cfg.api_base_url = "http://localhost:3050".to_owned();
     }
 
     let mut mode_value = env_first(&["HANKO_WEB_MODE", "HANKO_WEB_ENV"]).to_lowercase();
@@ -756,6 +873,7 @@ async fn handle_index(State(state): State<AppState>) -> Response {
 }
 
 async fn handle_kanji_suggestions(
+    State(state): State<AppState>,
     form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
 ) -> Response {
     let Form(form) = match form {
@@ -764,11 +882,40 @@ async fn handle_kanji_suggestions(
     };
 
     let real_name = form_value(&form, "real_name");
-    let suggestions = suggest_kanji_candidates(&real_name);
+    let reason_language = {
+        let requested = form_value(&form, "reason_language");
+        if requested.is_empty() {
+            DEFAULT_KANJI_REASON_LANGUAGE.to_owned()
+        } else {
+            requested
+        }
+    };
+
+    let (suggestions, error) = if real_name.is_empty() {
+        (Vec::new(), String::new())
+    } else {
+        match state
+            .kanji_api
+            .generate_candidates(&real_name, &reason_language)
+            .await
+        {
+            Ok(suggestions) => (suggestions, String::new()),
+            Err(error) => {
+                eprintln!("failed to load kanji candidates: {error:#}");
+                (
+                    Vec::new(),
+                    "候補を生成できませんでした。時間をおいて再度お試しください。".to_owned(),
+                )
+            }
+        }
+    };
+
     let template = KanjiSuggestionsTemplate {
         real_name,
+        reason_language,
         has_suggestions: !suggestions.is_empty(),
         suggestions,
+        error,
     };
 
     match render_html(&template) {
@@ -1011,12 +1158,8 @@ fn validate_seal_lines(line1: &str, line2: &str) -> std::result::Result<(), Stri
         return Err("2行目に空白は使えません。".to_owned());
     }
 
-    if first.chars().count() > 2 {
-        return Err("印影テキスト1行目は2文字以内で入力してください。".to_owned());
-    }
-
-    if second.chars().count() > 2 {
-        return Err("印影テキスト2行目は2文字以内で入力してください。".to_owned());
+    if first.chars().count() + second.chars().count() > 2 {
+        return Err("印影テキストは1行目と2行目の合計で2文字以内で入力してください。".to_owned());
     }
 
     Ok(())
@@ -1024,72 +1167,6 @@ fn validate_seal_lines(line1: &str, line2: &str) -> std::result::Result<(), Stri
 
 fn contains_whitespace(value: &str) -> bool {
     value.chars().any(char::is_whitespace)
-}
-
-fn suggest_kanji_candidates(real_name: &str) -> Vec<KanjiCandidate> {
-    let name = real_name.trim();
-    if name.is_empty() {
-        return Vec::new();
-    }
-
-    let prefixes = ["蒼", "悠", "和", "紬", "凛", "奏", "晴", "結", "明", "直"];
-    let suffixes = ["真", "希", "翔", "音", "花", "斗", "香", "雅", "心", "人"];
-
-    let sum = name
-        .to_lowercase()
-        .chars()
-        .map(|ch| ch as usize)
-        .sum::<usize>();
-
-    let mut base_candidates = Vec::with_capacity(3);
-    let mut seen = HashSet::new();
-    for i in 0..24usize {
-        if base_candidates.len() >= 3 {
-            break;
-        }
-
-        let candidate = format!(
-            "{}{}",
-            prefixes[(sum + i * 2) % prefixes.len()],
-            suffixes[(sum + i * 3) % suffixes.len()]
-        );
-
-        if candidate.chars().count() > 4 {
-            continue;
-        }
-        if !seen.insert(candidate.clone()) {
-            continue;
-        }
-        base_candidates.push(candidate);
-    }
-
-    let mut results = Vec::with_capacity(base_candidates.len() * 2);
-    for candidate in base_candidates {
-        results.push(KanjiCandidate {
-            label: candidate.clone(),
-            line1: candidate.clone(),
-            line2: String::new(),
-            reason: format!(
-                "本名の響きから、印影としてまとまりが出る2文字名「{candidate}」を提案しました。"
-            ),
-        });
-
-        let mut chars = candidate.chars();
-        if let (Some(c1), Some(c2)) = (chars.next(), chars.next()) {
-            let line1 = c1.to_string();
-            let line2 = c2.to_string();
-            results.push(KanjiCandidate {
-                label: format!("{line1}\n{line2}"),
-                line1: line1.clone(),
-                line2: line2.clone(),
-                reason: format!(
-                    "「{line1}」と「{line2}」を1文字ずつ縦に配置する想定です。視認性が高く、印影のバランスが取りやすい構成です。"
-                ),
-            });
-        }
-    }
-
-    results
 }
 
 fn format_yen(price: i64) -> String {
