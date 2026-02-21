@@ -159,10 +159,12 @@
                 name="material"
                 value="{{ m.key }}"
                 data-label="{{ m.label }}"
+                data-shape="{{ m.shape }}"
                 data-price="{{ m.price }}"
                 {% if loop.first %}checked{% endif %}
               >
               <span class="material-name">{{ m.label }}</span>
+              <span class="material-description">{{ m.shape_label }}</span>
               <span class="material-description">{{ m.description }}</span>
               <span class="material-price">¥{{ m.price_display }}</span>
             </label>

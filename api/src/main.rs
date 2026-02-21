@@ -105,6 +105,7 @@ struct Material {
     key: String,
     label_i18n: HashMap<String, String>,
     description_i18n: HashMap<String, String>,
+    shape: String,
     photos: Vec<MaterialPhoto>,
     price_jpy: i64,
     version: i64,
@@ -306,6 +307,8 @@ enum StoreError {
     InvalidReference,
     #[error("inactive reference")]
     InactiveReference,
+    #[error("material shape mismatch")]
+    MaterialShapeMismatch,
     #[error("idempotency key conflict")]
     IdempotencyConflict,
     #[error("internal: {0}")]
@@ -585,6 +588,7 @@ async fn handle_catalog(
                 "key": material.key,
                 "label": resolve_localized(&material.label_i18n, &requested_locale, &cfg.default_locale),
                 "description": resolve_localized(&material.description_i18n, &requested_locale, &cfg.default_locale),
+                "shape": material.shape,
                 "price_jpy": material.price_jpy,
                 "version": material.version,
                 "photos": photos,
@@ -746,6 +750,11 @@ async fn handle_create_order(State(state): State<AppState>, body: Bytes) -> Resp
             StatusCode::BAD_REQUEST,
             "inactive_reference",
             "inactive font/material/country",
+        ),
+        Err(StoreError::MaterialShapeMismatch) => error_response(
+            StatusCode::BAD_REQUEST,
+            "material_shape_mismatch",
+            "selected material does not support seal shape",
         ),
         Err(StoreError::IdempotencyConflict) => error_response(
             StatusCode::CONFLICT,
@@ -912,6 +921,7 @@ impl FirestoreStore {
                 key,
                 label_i18n: read_string_map_field(&document.fields, "label_i18n"),
                 description_i18n: read_string_map_field(&document.fields, "description_i18n"),
+                shape: read_material_shape(&document.fields),
                 photos,
                 price_jpy,
                 version: read_int_field(&document.fields, "version").unwrap_or(1),
@@ -1030,6 +1040,9 @@ impl FirestoreStore {
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
+        if normalized.seal.shape != material.shape {
+            return Err(StoreError::MaterialShapeMismatch);
+        }
 
         let now = Utc::now();
         let subtotal = material.price_jpy;
@@ -1264,6 +1277,7 @@ impl FirestoreStore {
             key: key.to_owned(),
             label_i18n: read_string_map_field(&doc.fields, "label_i18n"),
             description_i18n: read_string_map_field(&doc.fields, "description_i18n"),
+            shape: read_material_shape(&doc.fields),
             photos: read_material_photos(&doc.fields),
             price_jpy: read_int_field(&doc.fields, "price_jpy")
                 .or_else(|| read_int_field(&doc.fields, "price"))
@@ -1541,6 +1555,7 @@ fn build_order_fields(
             fs_map(btree_from_pairs(vec![
                 ("key", fs_string(material.key.clone())),
                 ("label_i18n", fs_string_map(&material.label_i18n)),
+                ("shape", fs_string(material.shape.clone())),
                 ("unit_price_jpy", fs_int(material.price_jpy)),
                 ("version", fs_int(material.version)),
             ])),
@@ -2376,6 +2391,17 @@ fn document_id(document: &Document) -> Option<String> {
         .as_deref()
         .and_then(|name| name.rsplit('/').next())
         .map(ToOwned::to_owned)
+}
+
+fn normalize_material_shape(raw: &str) -> &'static str {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "round" => "round",
+        _ => "square",
+    }
+}
+
+fn read_material_shape(data: &BTreeMap<String, JsonValue>) -> String {
+    normalize_material_shape(&read_string_field(data, "shape")).to_owned()
 }
 
 fn read_material_photos(data: &BTreeMap<String, JsonValue>) -> Vec<MaterialPhoto> {

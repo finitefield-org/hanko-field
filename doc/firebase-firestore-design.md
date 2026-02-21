@@ -64,6 +64,7 @@
 | --- | --- | --- | --- |
 | `label_i18n` | map<string,string> | Yes | 材質名（例: `ja`, `en`） |
 | `description_i18n` | map<string,string> | Yes | 説明文（例: `ja`, `en`） |
+| `shape` | string | Yes | `square` or `round` |
 | `photos` | array<map> | Yes | 材質写真一覧（1件以上、`sort_order` 昇順で利用） |
 | `photos[].asset_id` | string | Yes | 画像 ID（例: `mat_xxxxx`） |
 | `photos[].storage_path` | string | Yes | Storage パス（例: `materials/boxwood/mat_xxxxx.webp`） |
@@ -111,6 +112,7 @@
 | `seal.font_version` | int | Yes | 注文時点フォントバージョン |
 | `material.key` | string | Yes | 選択材質キー |
 | `material.label_i18n` | map<string,string> | Yes | 注文時点材質名スナップショット |
+| `material.shape` | string | Yes | 注文時点の材質形状（`square` or `round`） |
 | `material.unit_price_jpy` | int | Yes | 注文時点の単価 |
 | `material.version` | int | Yes | 注文時点の材質バージョン |
 | `shipping.country_code` | string | Yes | 配送先国コード |
@@ -248,7 +250,7 @@ Stripe webhook の重複処理防止。`provider_event_id` は Stripe event ID�
 - 監査イベントを追加。
 
 ### `PATCH /admin/materials/{material_key}`
-- 材質名・説明・価格に加え、`photos`（追加/削除/並び替え/代表画像変更）を更新する。
+- 材質名・説明・形状・価格に加え、`photos`（追加/削除/並び替え/代表画像変更）を更新する。
 - 画像アップロードは API が発行するアップロード手段経由で Firebase Storage に保存し、保存後に `photos[].storage_path` を登録する。
 
 ## 8. 必要インデックス
@@ -298,5 +300,6 @@ Stripe webhook の重複処理防止。`provider_event_id` は Stripe event ID�
 - [x] Firestore データベース設計書を本番向けへ更新
 - [x] 多言語（日本語/英語）対応要件を Firestore 設計へ反映
 - [x] `materials` で写真を管理できるスキーマへ更新
+- [x] `materials` に材質形状（`square` / `round`）を追加
 - [x] `web` で `mock` / `dev` / `prod` を切り替え、Firestore 実データ参照を可能にする
 - [x] `admin` で `mock` / `dev` / `prod` を切り替え、Firestore 実データ参照を可能にする

@@ -18,6 +18,7 @@
   const previewLine1 = document.getElementById("seal-preview-line1");
   const previewLine2 = document.getElementById("seal-preview-line2");
   const previewCaption = document.getElementById("preview-caption");
+  const materialRadios = Array.from(form.querySelectorAll("input[name='material']"));
 
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
@@ -115,7 +116,7 @@
   }
 
   function selectedMaterial() {
-    return form.querySelector("input[name='material']:checked");
+    return materialRadios.find((radio) => radio.checked && !radio.disabled) || null;
   }
 
   function selectedCountry() {
@@ -258,6 +259,34 @@
     summaryTotal.textContent = material && country ? formatYen(subtotal + shipping) : "-";
   }
 
+  function syncMaterialOptionsByShape() {
+    const shape = selectedShape();
+    const visibleRadios = [];
+    let selectedVisibleRadio = null;
+
+    materialRadios.forEach((radio) => {
+      const card = radio.closest(".material-card");
+      const matchesShape = (radio.dataset.shape || "square") === shape;
+      radio.disabled = !matchesShape;
+      if (card) {
+        card.hidden = !matchesShape;
+      }
+      if (!matchesShape && radio.checked) {
+        radio.checked = false;
+      }
+      if (matchesShape) {
+        visibleRadios.push(radio);
+        if (radio.checked) {
+          selectedVisibleRadio = radio;
+        }
+      }
+    });
+
+    if (!selectedVisibleRadio && visibleRadios.length > 0) {
+      visibleRadios[0].checked = true;
+    }
+  }
+
   form.querySelectorAll("[data-next-step]").forEach((button) => {
     button.addEventListener("click", () => {
       const next = Number(button.dataset.nextStep);
@@ -300,12 +329,13 @@
 
   form.querySelectorAll("input[name='shape']").forEach((radio) => {
     radio.addEventListener("change", () => {
+      syncMaterialOptionsByShape();
       updatePreview();
       updateSummary();
     });
   });
 
-  form.querySelectorAll("input[name='material']").forEach((radio) => {
+  materialRadios.forEach((radio) => {
     radio.addEventListener("change", updateSummary);
   });
 
@@ -362,6 +392,7 @@
     }
   });
 
+  syncMaterialOptionsByShape();
   setSelectedFontChip(getSelectedFontChip());
   refreshSealUi();
   showStep(currentStep);

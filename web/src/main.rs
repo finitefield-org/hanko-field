@@ -63,6 +63,8 @@ struct MaterialOption {
     key: String,
     label: String,
     description: String,
+    shape: String,
+    shape_label: String,
     price: i64,
     price_display: String,
 }
@@ -314,11 +316,14 @@ impl FirestoreCatalogSource {
                 &self.default_locale,
                 "",
             );
+            let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
 
             materials.push(MaterialOption {
                 key: doc_id,
                 label,
                 description,
+                shape: shape.to_owned(),
+                shape_label: material_shape_label(shape).to_owned(),
                 price,
                 price_display: format_yen(price),
             });
@@ -763,6 +768,8 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     key: "boxwood".to_owned(),
                     label: "柘植".to_owned(),
                     description: "軽くて扱いやすい定番材".to_owned(),
+                    shape: "square".to_owned(),
+                    shape_label: "角印".to_owned(),
                     price: 3600,
                     price_display: format_yen(3600),
                 },
@@ -770,6 +777,8 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     key: "black_buffalo".to_owned(),
                     label: "黒水牛".to_owned(),
                     description: "しっとりした質感で耐久性が高い".to_owned(),
+                    shape: "round".to_owned(),
+                    shape_label: "丸印".to_owned(),
                     price: 4800,
                     price_display: format_yen(4800),
                 },
@@ -777,6 +786,8 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     key: "titanium".to_owned(),
                     label: "チタン".to_owned(),
                     description: "重厚で摩耗に強いプレミアム材".to_owned(),
+                    shape: "square".to_owned(),
+                    shape_label: "角印".to_owned(),
                     price: 9800,
                     price_display: format_yen(9800),
                 },
@@ -995,7 +1006,7 @@ async fn handle_purchase(
         return render_purchase_result(&result);
     };
 
-    let Some(shape_label) = shape_label(&shape_key) else {
+    let Some(selected_shape_label) = shape_label(&shape_key) else {
         result.error = "印鑑の形状を選択してください。".to_owned();
         return render_purchase_result(&result);
     };
@@ -1004,6 +1015,13 @@ async fn handle_purchase(
         result.error = "材質を選択してください。".to_owned();
         return render_purchase_result(&result);
     };
+    if material.shape != shape_key {
+        result.error = format!(
+            "{}に対応する材質を選択してください。",
+            shape_label(&shape_key).unwrap_or("印鑑の形状")
+        );
+        return render_purchase_result(&result);
+    }
 
     let Some(country) = country_by_code.get(&country_code) else {
         result.error = "配送先の国を選択してください。".to_owned();
@@ -1056,7 +1074,7 @@ async fn handle_purchase(
     result.seal_line1 = seal_line1;
     result.seal_line2 = seal_line2;
     result.font_label = font.label.clone();
-    result.shape_label = shape_label.to_owned();
+    result.shape_label = selected_shape_label.to_owned();
     result.material_label = material.label.clone();
     result.stripe_name = recipient_name;
     result.stripe_phone = phone;
@@ -1135,6 +1153,20 @@ fn normalize_candidate_gender(raw: &str) -> &'static str {
         "male" => "male",
         "female" => "female",
         _ => "unspecified",
+    }
+}
+
+fn normalize_material_shape(raw: &str) -> &'static str {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "round" => "round",
+        _ => "square",
+    }
+}
+
+fn material_shape_label(shape_key: &str) -> &'static str {
+    match shape_key {
+        "round" => "丸印",
+        _ => "角印",
     }
 }
 

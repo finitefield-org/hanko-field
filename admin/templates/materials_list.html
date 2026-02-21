@@ -5,6 +5,7 @@
         <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
           <th class="border-b border-admin-line/70 px-3 py-2">Key</th>
           <th class="border-b border-admin-line/70 px-3 py-2">材質名</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">形状</th>
           <th class="border-b border-admin-line/70 px-3 py-2">写真</th>
           <th class="border-b border-admin-line/70 px-3 py-2">価格</th>
           <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
@@ -20,6 +21,7 @@
         <tr class="align-top">
           <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ material.key }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ material.label_ja }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ material.shape_label }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3 text-xs text-admin-muted">
             {% if material.has_photo %}
             <p class="font-semibold text-admin-ink">登録済み</p>
@@ -56,7 +58,7 @@
         {% endfor %}
         {% else %}
         <tr>
-          <td colspan="9" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
+          <td colspan="10" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
         </tr>
         {% endif %}
       </tbody>

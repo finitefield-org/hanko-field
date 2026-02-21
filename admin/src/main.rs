@@ -108,6 +108,7 @@ struct Material {
     key: String,
     label_i18n: HashMap<String, String>,
     description_i18n: HashMap<String, String>,
+    shape: String,
     photos: Vec<MaterialPhoto>,
     price_jpy: i64,
     is_active: bool,
@@ -422,6 +423,7 @@ struct OrderDetailView {
 struct MaterialListItemView {
     key: String,
     label_ja: String,
+    shape_label: String,
     primary_photo_path: String,
     has_photo: bool,
     price_jpy: String,
@@ -448,6 +450,7 @@ struct MaterialDetailView {
     label_en: String,
     description_ja: String,
     description_en: String,
+    shape: String,
     price_jpy: i64,
     is_active: bool,
     sort_order: i64,
@@ -526,6 +529,7 @@ struct MaterialCreateView {
     label_en: String,
     description_ja: String,
     description_en: String,
+    shape: String,
     price_jpy: String,
     sort_order: String,
     photo_storage_path: String,
@@ -545,6 +549,7 @@ struct MaterialCreateInput {
     label_en: String,
     description_ja: String,
     description_en: String,
+    shape: String,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: String,
@@ -559,6 +564,7 @@ struct MaterialPatchInput {
     label_en: String,
     description_ja: String,
     description_en: String,
+    shape: String,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: String,
@@ -1551,6 +1557,7 @@ async fn handle_material_create(
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
+        shape: form_value(&form, "shape"),
         price_jpy,
         sort_order,
         photo_storage_path: form_value(&form, "photo_storage_path"),
@@ -1661,6 +1668,7 @@ async fn handle_material_patch(
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
+        shape: form_value(&form, "shape"),
         price_jpy,
         sort_order,
         photo_storage_path: form_value(&form, "photo_storage_path"),
@@ -2344,6 +2352,7 @@ impl ServerState {
             items.push(MaterialListItemView {
                 key: material.key.clone(),
                 label_ja: material.label_i18n.get("ja").cloned().unwrap_or_default(),
+                shape_label: material_shape_label(&material.shape).to_owned(),
                 primary_photo_path: primary_photo
                     .map(|photo| photo.storage_path.clone())
                     .unwrap_or_default(),
@@ -2382,6 +2391,7 @@ impl ServerState {
                 .get("en")
                 .cloned()
                 .unwrap_or_default(),
+            shape: material.shape.clone(),
             price_jpy: material.price_jpy,
             is_active: material.is_active,
             sort_order: material.sort_order,
@@ -2808,6 +2818,9 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
+        let shape = normalize_material_shape(&input.shape)
+            .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
+            .to_owned();
         let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
@@ -2816,6 +2829,7 @@ impl ServerState {
             &label_en,
             &description_ja,
             &description_en,
+            &shape,
             input.price_jpy,
             input.sort_order,
             &photo_storage_path,
@@ -2836,6 +2850,7 @@ impl ServerState {
             material
                 .description_i18n
                 .insert("en".to_owned(), description_en);
+            material.shape = shape;
             material.price_jpy = input.price_jpy;
             material.sort_order = input.sort_order;
             material.is_active = input.is_active;
@@ -2925,6 +2940,9 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
+        let shape = normalize_material_shape(&input.shape)
+            .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
+            .to_owned();
         let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
@@ -2933,6 +2951,7 @@ impl ServerState {
             &label_en,
             &description_ja,
             &description_en,
+            &shape,
             input.price_jpy,
             input.sort_order,
             &photo_storage_path,
@@ -2955,6 +2974,7 @@ impl ServerState {
                     ("ja".to_owned(), description_ja),
                     ("en".to_owned(), description_en),
                 ]),
+                shape,
                 photos: build_single_material_photos(
                     &key,
                     &photo_storage_path,
@@ -3320,6 +3340,7 @@ impl FirestoreAdminSource {
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
+            let shape = material_shape_or_default(&read_string_field(data, "shape"));
             let photos = read_material_photos(data);
 
             let mut label_i18n = read_string_map_field(data, "label_i18n");
@@ -3346,6 +3367,7 @@ impl FirestoreAdminSource {
                     key: doc_id,
                     label_i18n,
                     description_i18n,
+                    shape,
                     photos,
                     price_jpy,
                     is_active,
@@ -3646,6 +3668,7 @@ impl FirestoreAdminSource {
                     "description_i18n",
                     fs_string_map(&material.description_i18n),
                 ),
+                ("shape", fs_string(material.shape.clone())),
                 ("photos", fs_material_photos(&material.photos)),
                 ("price_jpy", fs_int(material.price_jpy)),
                 ("is_active", fs_bool(material.is_active)),
@@ -3664,6 +3687,7 @@ impl FirestoreAdminSource {
                     update_mask_field_paths: vec![
                         "label_i18n".to_owned(),
                         "description_i18n".to_owned(),
+                        "shape".to_owned(),
                         "photos".to_owned(),
                         "price_jpy".to_owned(),
                         "is_active".to_owned(),
@@ -3915,6 +3939,7 @@ fn new_material_create_view(message: &str, render_error: &str) -> MaterialCreate
         label_en: String::new(),
         description_ja: String::new(),
         description_en: String::new(),
+        shape: "square".to_owned(),
         price_jpy: "0".to_owned(),
         sort_order: "0".to_owned(),
         photo_storage_path: String::new(),
@@ -3939,6 +3964,7 @@ fn material_create_view_from_form(
         label_en: form_value(form, "label_en"),
         description_ja: form_value(form, "description_ja"),
         description_en: form_value(form, "description_en"),
+        shape: material_shape_or_default(&form_value(form, "shape")),
         price_jpy: form_value(form, "price_jpy"),
         sort_order: form_value(form, "sort_order"),
         photo_storage_path: form_value(form, "photo_storage_path"),
@@ -4070,6 +4096,7 @@ fn validate_material_values(
     label_en: &str,
     description_ja: &str,
     description_en: &str,
+    shape: &str,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: &str,
@@ -4079,6 +4106,9 @@ fn validate_material_values(
     }
     if description_ja.is_empty() || description_en.is_empty() {
         return Err("説明文（ja/en）は必須です。".to_owned());
+    }
+    if normalize_material_shape(shape).is_none() {
+        return Err("材質の形状は角印か丸印を選択してください。".to_owned());
     }
     if price_jpy < 0 {
         return Err("価格は 0 以上で入力してください。".to_owned());
@@ -4128,6 +4158,25 @@ fn validate_country_values(
 
 fn normalize_storage_path(value: &str) -> String {
     value.trim().trim_start_matches('/').to_owned()
+}
+
+fn normalize_material_shape(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "square" => Some("square"),
+        "round" => Some("round"),
+        _ => None,
+    }
+}
+
+fn material_shape_or_default(raw: &str) -> String {
+    normalize_material_shape(raw).unwrap_or("square").to_owned()
+}
+
+fn material_shape_label(shape: &str) -> &'static str {
+    match shape {
+        "round" => "丸印",
+        _ => "角印",
+    }
 }
 
 fn normalize_storage_bucket_name(value: &str) -> String {
@@ -5330,6 +5379,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                         "A standard wood that is lightweight and easy to handle.".to_owned(),
                     ),
                 ]),
+                shape: "square".to_owned(),
                 photos: vec![MaterialPhoto {
                     asset_id: "mat_boxwood_01".to_owned(),
                     storage_path: "materials/boxwood/mat_boxwood_01.webp".to_owned(),
@@ -5364,6 +5414,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                         "Durable material with a smooth texture.".to_owned(),
                     ),
                 ]),
+                shape: "round".to_owned(),
                 photos: vec![MaterialPhoto {
                     asset_id: "mat_black_buffalo_01".to_owned(),
                     storage_path: "materials/black_buffalo/mat_black_buffalo_01.webp".to_owned(),
@@ -5398,6 +5449,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                         "Premium material with excellent wear resistance.".to_owned(),
                     ),
                 ]),
+                shape: "square".to_owned(),
                 photos: vec![MaterialPhoto {
                     asset_id: "mat_titanium_01".to_owned(),
                     storage_path: "materials/titanium/mat_titanium_01.webp".to_owned(),

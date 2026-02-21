@@ -34,6 +34,19 @@
       <span>Description (en)</span>
       <textarea name="description_en" rows="3" required>{{ detail.description_en }}</textarea>
     </label>
+    <fieldset class="flex flex-col gap-1.5 text-sm font-semibold">
+      <legend>形状</legend>
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="shape" value="square" {% if detail.shape == "square" %}checked{% endif %}>
+          <span>角印</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="shape" value="round" {% if detail.shape == "round" %}checked{% endif %}>
+          <span>丸印</span>
+        </label>
+      </div>
+    </fieldset>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>写真 Storage パス（自動入力）</span>
       <input type="text" name="photo_storage_path" value="{{ detail.photo_storage_path }}" placeholder="画像アップロード後に自動入力されます" readonly>
