@@ -121,7 +121,6 @@ struct PageTemplate {
     fonts: Vec<FontOption>,
     materials: Vec<MaterialOption>,
     countries: Vec<CountryOption>,
-    source_label: String,
     is_mock: bool,
     default_font_key: String,
     default_font_label: String,
@@ -864,7 +863,6 @@ async fn handle_index(State(state): State<AppState>) -> Response {
         fonts: catalog.fonts,
         materials: catalog.materials,
         countries: catalog.countries,
-        source_label: state.source.label().to_owned(),
         is_mock: state.source.is_mock(),
     };
 

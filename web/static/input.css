@@ -201,7 +201,7 @@
   }
 
   .suggestions-box {
-    @apply mt-2.5 min-h-14 rounded-[10px] border border-[#e2d5c5] bg-white p-3;
+    @apply mt-2.5 min-h-14;
   }
 
   .placeholder,
@@ -226,11 +226,11 @@
   }
 
   .suggestion-reason {
-    @apply mt-2 rounded-[10px] border border-[#e6d7c3] bg-[#fffaf3] px-3 py-2 text-[0.82rem] text-hf-muted;
+    @apply mt-2 text-[0.82rem] text-hf-muted;
   }
 
   .suggestion-reading {
-    @apply mt-2 rounded-[10px] border border-[#d8e6f2] bg-[#f4f9ff] px-3 py-2 text-[0.82rem] text-hf-muted;
+    @apply mt-2 text-[0.82rem] text-hf-muted;
   }
 
   .preview-card {
