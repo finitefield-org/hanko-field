@@ -21,7 +21,6 @@ use serde_json::{Value as JsonValue, json};
 use tower_http::services::ServeDir;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
-const DEFAULT_KANJI_REASON_LANGUAGE: &str = "en";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,7 +131,6 @@ struct PageTemplate {
 #[template(path = "kanji_suggestions.html")]
 struct KanjiSuggestionsTemplate {
     real_name: String,
-    reason_language: String,
     suggestions: Vec<KanjiCandidate>,
     has_suggestions: bool,
     error: String,
@@ -432,6 +430,7 @@ impl KanjiApiClient {
         &self,
         real_name: &str,
         reason_language: &str,
+        gender: &str,
     ) -> Result<Vec<KanjiCandidate>> {
         let endpoint = format!(
             "{}/v1/kanji-candidates",
@@ -444,6 +443,7 @@ impl KanjiApiClient {
             .json(&json!({
                 "real_name": real_name,
                 "reason_language": reason_language,
+                "gender": gender,
                 "count": DEFAULT_KANJI_CANDIDATE_COUNT,
             }))
             .send()
@@ -502,6 +502,7 @@ impl KanjiApiClient {
 struct AppState {
     source: Arc<CatalogSource>,
     kanji_api: Arc<KanjiApiClient>,
+    locale: String,
 }
 
 #[tokio::main]
@@ -569,7 +570,11 @@ async fn build_state(cfg: &AppConfig) -> Result<AppState> {
 
     let _catalog = load_catalog_with_timeout(source.as_ref()).await?;
 
-    Ok(AppState { source, kanji_api })
+    Ok(AppState {
+        source,
+        kanji_api,
+        locale: cfg.locale.clone(),
+    })
 }
 
 fn load_config() -> Result<AppConfig> {
@@ -882,21 +887,15 @@ async fn handle_kanji_suggestions(
     };
 
     let real_name = form_value(&form, "real_name");
-    let reason_language = {
-        let requested = form_value(&form, "reason_language");
-        if requested.is_empty() {
-            DEFAULT_KANJI_REASON_LANGUAGE.to_owned()
-        } else {
-            requested
-        }
-    };
+    let reason_language = state.locale.trim().to_owned();
+    let candidate_gender = normalize_candidate_gender(&form_value(&form, "candidate_gender"));
 
     let (suggestions, error) = if real_name.is_empty() {
         (Vec::new(), String::new())
     } else {
         match state
             .kanji_api
-            .generate_candidates(&real_name, &reason_language)
+            .generate_candidates(&real_name, &reason_language, candidate_gender)
             .await
         {
             Ok(suggestions) => (suggestions, String::new()),
@@ -912,7 +911,6 @@ async fn handle_kanji_suggestions(
 
     let template = KanjiSuggestionsTemplate {
         real_name,
-        reason_language,
         has_suggestions: !suggestions.is_empty(),
         suggestions,
         error,
@@ -1132,6 +1130,14 @@ fn form_value(form: &HashMap<String, String>, key: &str) -> String {
     form.get(key)
         .map(|value| value.trim().to_owned())
         .unwrap_or_default()
+}
+
+fn normalize_candidate_gender(raw: &str) -> &'static str {
+    match raw.trim().to_lowercase().as_str() {
+        "male" => "male",
+        "female" => "female",
+        _ => "unspecified",
+    }
 }
 
 fn shape_label(shape_key: &str) -> Option<&'static str> {

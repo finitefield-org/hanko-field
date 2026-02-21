@@ -192,6 +192,7 @@ struct QueryLocale {
 struct GenerateKanjiCandidatesRequest {
     real_name: String,
     reason_language: Option<String>,
+    gender: Option<String>,
     count: Option<usize>,
 }
 
@@ -199,7 +200,39 @@ struct GenerateKanjiCandidatesRequest {
 struct GenerateKanjiCandidatesInput {
     real_name: String,
     reason_language: String,
+    gender: CandidateGender,
     count: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CandidateGender {
+    Unspecified,
+    Male,
+    Female,
+}
+
+impl CandidateGender {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Unspecified => "unspecified",
+            Self::Male => "male",
+            Self::Female => "female",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Unspecified => {
+                "Gender preference: unspecified. Do not force masculine/feminine bias."
+            }
+            Self::Male => {
+                "Gender preference: male. Prefer names with masculine impression while staying natural."
+            }
+            Self::Female => {
+                "Gender preference: female. Prefer names with feminine impression while staying natural."
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -640,6 +673,7 @@ async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: B
         json!({
             "real_name": input.real_name,
             "reason_language": input.reason_language,
+            "gender": input.gender.as_str(),
             "candidates": candidates.into_iter().map(|candidate| {
                 json!({
                     "kanji": candidate.kanji,
@@ -1734,6 +1768,8 @@ fn validate_generate_kanji_candidates_request(
         bail!("reason_language must be 32 characters or fewer");
     }
 
+    let gender = parse_candidate_gender(request.gender.as_deref())?;
+
     let count = request.count.unwrap_or(DEFAULT_KANJI_CANDIDATE_COUNT);
     if count == 0 || count > MAX_KANJI_CANDIDATE_COUNT {
         bail!("count must be in range 1-{}", MAX_KANJI_CANDIDATE_COUNT);
@@ -1742,8 +1778,23 @@ fn validate_generate_kanji_candidates_request(
     Ok(GenerateKanjiCandidatesInput {
         real_name,
         reason_language,
+        gender,
         count,
     })
+}
+
+fn parse_candidate_gender(raw: Option<&str>) -> Result<CandidateGender> {
+    let normalized = raw.unwrap_or("unspecified").trim().to_lowercase();
+    if normalized.is_empty() || normalized == "unspecified" || normalized == "none" {
+        return Ok(CandidateGender::Unspecified);
+    }
+    if normalized == "male" {
+        return Ok(CandidateGender::Male);
+    }
+    if normalized == "female" {
+        return Ok(CandidateGender::Female);
+    }
+    bail!("gender must be one of unspecified, male, female")
 }
 
 async fn generate_kanji_candidates_with_gemini(
@@ -1803,9 +1854,11 @@ async fn generate_kanji_candidates_with_gemini(
 }
 
 fn build_kanji_candidates_prompt(input: &GenerateKanjiCandidatesInput) -> String {
+    let gender_instruction = input.gender.prompt_instruction();
     format!(
         "Generate {} unique Japanese name candidates for a hanko seal.\n\
 Input name: \"{}\"\n\
+{}\n\
 For each candidate, return these fields:\n\
 - kanji: 1-2 Japanese Kanji characters (no spaces)\n\
 - reading_hiragana: reading in hiragana\n\
@@ -1813,7 +1866,7 @@ For each candidate, return these fields:\n\
 - reason: why this Kanji name was chosen, written in {}\n\
 Return only JSON (no markdown, no explanation) in this exact shape:\n\
 {{\"candidates\":[{{\"kanji\":\"\",\"reading_hiragana\":\"\",\"reading_romaji\":\"\",\"reason\":\"\"}}]}}",
-        input.count, input.real_name, input.reason_language
+        input.count, input.real_name, gender_instruction, input.reason_language
     )
 }
 
@@ -2629,13 +2682,30 @@ mod tests {
         let request = GenerateKanjiCandidatesRequest {
             real_name: "Michael Smith".to_owned(),
             reason_language: None,
+            gender: None,
             count: None,
         };
 
         let input =
             validate_generate_kanji_candidates_request(request).expect("request must be valid");
         assert_eq!(input.reason_language, "en");
+        assert_eq!(input.gender, CandidateGender::Unspecified);
         assert_eq!(input.count, DEFAULT_KANJI_CANDIDATE_COUNT);
+    }
+
+    #[test]
+    fn validate_generate_kanji_candidates_request_accepts_gender() {
+        let request = GenerateKanjiCandidatesRequest {
+            real_name: "John".to_owned(),
+            reason_language: Some("en".to_owned()),
+            gender: Some("male".to_owned()),
+            count: Some(3),
+        };
+
+        let input =
+            validate_generate_kanji_candidates_request(request).expect("request must be valid");
+        assert_eq!(input.gender, CandidateGender::Male);
+        assert_eq!(input.count, 3);
     }
 
     #[test]

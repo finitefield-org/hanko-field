@@ -76,22 +76,19 @@
                   autocomplete="off"
                   placeholder="例: Michael Smith"
                 >
-                <label class="field-label" for="reason_language">理由の言語</label>
-                <input
-                  id="reason_language"
-                  name="reason_language"
-                  type="text"
-                  value="en"
-                  autocomplete="off"
-                  placeholder="例: en / ja"
-                >
+                <label class="field-label" for="candidate_gender">性別</label>
+                <select id="candidate_gender" name="candidate_gender">
+                  <option value="unspecified" selected>選択なし</option>
+                  <option value="male">男性</option>
+                  <option value="female">女性</option>
+                </select>
                 <button
                   type="button"
                   class="secondary"
                   hx-post="/kanji"
                   hx-target="#kanji-suggestions"
                   hx-swap="innerHTML"
-                  hx-include="#real_name,#reason_language"
+                  hx-include="#real_name,#candidate_gender"
                 >
                   候補を生成
                 </button>
