@@ -6,6 +6,8 @@
           <th class="border-b border-admin-line/70 px-3 py-2">Key</th>
           <th class="border-b border-admin-line/70 px-3 py-2">フォント名</th>
           <th class="border-b border-admin-line/70 px-3 py-2">font-family</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">Google Fonts URL</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">スタイル</th>
           <th class="border-b border-admin-line/70 px-3 py-2">表示順</th>
           <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
           <th class="border-b border-admin-line/70 px-3 py-2">version</th>
@@ -22,6 +24,10 @@
           <td class="border-b border-admin-line/60 px-3 py-3 text-xs text-admin-muted">
             <p class="break-all">{{ font.font_family }}</p>
           </td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-xs text-admin-muted">
+            <p class="break-all">{{ font.font_stylesheet_url }}</p>
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ font.kanji_style_label }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ font.sort_order }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{% if font.is_active %}有効{% else %}無効{% endif %}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ font.version }}</td>
@@ -38,7 +44,7 @@
         {% endfor %}
         {% else %}
         <tr>
-          <td colspan="8" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">フォントがありません。</td>
+          <td colspan="10" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">フォントがありません。</td>
         </tr>
         {% endif %}
       </tbody>

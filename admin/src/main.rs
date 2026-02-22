@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     env,
     sync::Arc,
     time::Duration,
@@ -122,6 +122,8 @@ struct Font {
     key: String,
     label_i18n: HashMap<String, String>,
     font_family: String,
+    font_stylesheet_url: String,
+    kanji_style: String,
     is_active: bool,
     sort_order: i64,
     version: i64,
@@ -437,6 +439,8 @@ struct FontListItemView {
     key: String,
     label_ja: String,
     font_family: String,
+    font_stylesheet_url: String,
+    kanji_style_label: String,
     is_active: bool,
     sort_order: i64,
     version: i64,
@@ -471,6 +475,8 @@ struct FontDetailView {
     label_ja: String,
     label_en: String,
     font_family: String,
+    font_stylesheet_url: String,
+    kanji_style: String,
     is_active: bool,
     sort_order: i64,
     version: i64,
@@ -578,6 +584,8 @@ struct FontPatchInput {
     label_ja: String,
     label_en: String,
     font_family: String,
+    font_stylesheet_url: String,
+    kanji_style: String,
     sort_order: i64,
     is_active: bool,
 }
@@ -607,6 +615,7 @@ struct OrdersPageTemplate {
     filters: OrderFilter,
     status_options: Vec<StatusOptionView>,
     country_options: Vec<CountryOptionView>,
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     orders_list_html: String,
@@ -617,6 +626,7 @@ struct OrdersPageTemplate {
 #[derive(Template)]
 #[template(path = "materials_page.html")]
 struct MaterialsPageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     materials_list_html: String,
@@ -625,6 +635,7 @@ struct MaterialsPageTemplate {
 #[derive(Template)]
 #[template(path = "fonts_page.html")]
 struct FontsPageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     fonts_list_html: String,
@@ -633,6 +644,7 @@ struct FontsPageTemplate {
 #[derive(Template)]
 #[template(path = "material_edit_page.html")]
 struct MaterialEditPageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     material_key: String,
@@ -642,6 +654,7 @@ struct MaterialEditPageTemplate {
 #[derive(Template)]
 #[template(path = "font_edit_page.html")]
 struct FontEditPageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     font_key: String,
@@ -651,6 +664,7 @@ struct FontEditPageTemplate {
 #[derive(Template)]
 #[template(path = "material_create_page.html")]
 struct MaterialCreatePageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     material_create_html: String,
@@ -659,6 +673,7 @@ struct MaterialCreatePageTemplate {
 #[derive(Template)]
 #[template(path = "countries_page.html")]
 struct CountriesPageTemplate {
+    font_stylesheet_urls: Vec<String>,
     source_label: String,
     is_mock: bool,
     country_create_html: String,
@@ -1039,6 +1054,7 @@ async fn handle_orders_page(
     };
 
     let orders = state.server.filter_orders(&filters).await;
+    let font_stylesheet_urls = state.server.font_stylesheet_urls().await;
     let orders_list_html = match render_orders_list(&orders) {
         Ok(html) => html,
         Err(error) => {
@@ -1083,6 +1099,7 @@ async fn handle_orders_page(
         filters,
         status_options: status_options(),
         country_options: state.server.country_options().await,
+        font_stylesheet_urls,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         orders_list_html,
@@ -1289,6 +1306,7 @@ async fn handle_materials_page(State(state): State<AppState>) -> Response {
     }
 
     let materials = state.server.list_materials().await;
+    let font_stylesheet_urls = state.server.font_stylesheet_urls().await;
     let materials_list_html = match render_materials_list(&materials) {
         Ok(html) => html,
         Err(error) => {
@@ -1300,6 +1318,7 @@ async fn handle_materials_page(State(state): State<AppState>) -> Response {
     };
 
     let page = MaterialsPageTemplate {
+        font_stylesheet_urls,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         materials_list_html,
@@ -1345,6 +1364,7 @@ async fn handle_material_create_page(State(state): State<AppState>) -> Response 
     };
 
     let page = MaterialCreatePageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         material_create_html,
@@ -1383,6 +1403,7 @@ async fn handle_material_edit_page(
     };
 
     let page = MaterialEditPageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         material_key,
@@ -1722,6 +1743,7 @@ async fn handle_fonts_page(State(state): State<AppState>) -> Response {
     }
 
     let fonts = state.server.list_fonts().await;
+    let font_stylesheet_urls = state.server.font_stylesheet_urls().await;
     let fonts_list_html = match render_fonts_list(&fonts) {
         Ok(html) => html,
         Err(error) => {
@@ -1733,6 +1755,7 @@ async fn handle_fonts_page(State(state): State<AppState>) -> Response {
     };
 
     let page = FontsPageTemplate {
+        font_stylesheet_urls,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         fonts_list_html,
@@ -1785,6 +1808,7 @@ async fn handle_font_edit_page(
     };
 
     let page = FontEditPageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         font_key,
@@ -1859,6 +1883,8 @@ async fn handle_font_patch(
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
         font_family: form_value(&form, "font_family"),
+        font_stylesheet_url: form_value(&form, "font_stylesheet_url"),
+        kanji_style: form_value(&form, "kanji_style"),
         sort_order,
         is_active: form.contains_key("is_active"),
     };
@@ -1961,6 +1987,7 @@ async fn handle_countries_page(
     };
 
     let page = CountriesPageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
         source_label: state.server.source_label.clone(),
         is_mock: state.server.source.is_mock(),
         country_create_html,
@@ -2426,6 +2453,8 @@ impl ServerState {
                 key: font.key.clone(),
                 label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
                 font_family: font.font_family.clone(),
+                font_stylesheet_url: font.font_stylesheet_url.clone(),
+                kanji_style_label: kanji_style_label(&font.kanji_style).to_owned(),
                 is_active: font.is_active,
                 sort_order: font.sort_order,
                 version: font.version,
@@ -2450,6 +2479,10 @@ impl ServerState {
             label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
             label_en: font.label_i18n.get("en").cloned().unwrap_or_default(),
             font_family: font.font_family.clone(),
+            font_stylesheet_url: font.font_stylesheet_url.clone(),
+            kanji_style: normalize_kanji_style(&font.kanji_style)
+                .unwrap_or("japanese")
+                .to_owned(),
             is_active: font.is_active,
             sort_order: font.sort_order,
             version: font.version,
@@ -2459,6 +2492,27 @@ impl ServerState {
             error: render_error.to_owned(),
             has_error: !render_error.is_empty(),
         })
+    }
+
+    async fn font_stylesheet_urls(&self) -> Vec<String> {
+        let data = self.data.read().await;
+        let mut seen = HashSet::new();
+        let mut urls = Vec::new();
+
+        for key in &data.font_ids {
+            let Some(font) = data.fonts.get(key) else {
+                continue;
+            };
+            let url = font.font_stylesheet_url.trim();
+            if url.is_empty() {
+                continue;
+            }
+            if seen.insert(url.to_owned()) {
+                urls.push(url.to_owned());
+            }
+        }
+
+        urls
     }
 
     async fn list_countries(&self) -> Vec<CountryListItemView> {
@@ -2898,7 +2952,18 @@ impl ServerState {
         let label_ja = input.label_ja.trim().to_owned();
         let label_en = input.label_en.trim().to_owned();
         let font_family = input.font_family.trim().to_owned();
-        validate_font_values(&label_ja, &label_en, &font_family, input.sort_order)?;
+        let font_stylesheet_url = input.font_stylesheet_url.trim().to_owned();
+        let kanji_style = normalize_kanji_style(&input.kanji_style)
+            .ok_or_else(|| "スタイルは日本・中国・台湾から選択してください。".to_owned())?
+            .to_owned();
+        validate_font_values(
+            &label_ja,
+            &label_en,
+            &font_family,
+            &font_stylesheet_url,
+            &kanji_style,
+            input.sort_order,
+        )?;
 
         let updated_font = {
             let mut data = self.data.write().await;
@@ -2910,6 +2975,8 @@ impl ServerState {
             font.label_i18n.insert("ja".to_owned(), label_ja);
             font.label_i18n.insert("en".to_owned(), label_en);
             font.font_family = font_family;
+            font.font_stylesheet_url = font_stylesheet_url;
+            font.kanji_style = kanji_style;
             font.sort_order = input.sort_order;
             font.is_active = input.is_active;
             font.version += 1;
@@ -3423,6 +3490,17 @@ impl FirestoreAdminSource {
             if font_family.is_empty() {
                 continue;
             }
+            let mut font_stylesheet_url = read_string_field(data, "font_stylesheet_url");
+            if font_stylesheet_url.is_empty() {
+                font_stylesheet_url = read_string_field(data, "font_url");
+            }
+            let mut kanji_style = read_string_field(data, "kanji_style");
+            if kanji_style.is_empty() {
+                kanji_style = read_string_field(data, "style");
+            }
+            let kanji_style = normalize_kanji_style(&kanji_style)
+                .unwrap_or("japanese")
+                .to_owned();
 
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
@@ -3435,6 +3513,8 @@ impl FirestoreAdminSource {
                     key: doc_id,
                     label_i18n,
                     font_family,
+                    font_stylesheet_url,
+                    kanji_style,
                     is_active,
                     sort_order,
                     version,
@@ -3713,6 +3793,11 @@ impl FirestoreAdminSource {
             fields: btree_from_pairs(vec![
                 ("label_i18n", fs_string_map(&font.label_i18n)),
                 ("font_family", fs_string(font.font_family.clone())),
+                (
+                    "font_stylesheet_url",
+                    fs_string(font.font_stylesheet_url.clone()),
+                ),
+                ("kanji_style", fs_string(font.kanji_style.clone())),
                 ("is_active", fs_bool(font.is_active)),
                 ("sort_order", fs_int(font.sort_order)),
                 ("version", fs_int(font.version)),
@@ -3729,6 +3814,8 @@ impl FirestoreAdminSource {
                     update_mask_field_paths: vec![
                         "label_i18n".to_owned(),
                         "font_family".to_owned(),
+                        "font_stylesheet_url".to_owned(),
+                        "kanji_style".to_owned(),
                         "is_active".to_owned(),
                         "sort_order".to_owned(),
                         "version".to_owned(),
@@ -4124,6 +4211,8 @@ fn validate_font_values(
     label_ja: &str,
     label_en: &str,
     font_family: &str,
+    font_stylesheet_url: &str,
+    kanji_style: &str,
     sort_order: i64,
 ) -> std::result::Result<(), String> {
     if label_ja.is_empty() || label_en.is_empty() {
@@ -4132,8 +4221,30 @@ fn validate_font_values(
     if font_family.is_empty() {
         return Err("font-family は必須です。".to_owned());
     }
+    if font_stylesheet_url.is_empty() {
+        return Err("Google Fonts URL は必須です。".to_owned());
+    }
+    validate_google_fonts_stylesheet_url(font_stylesheet_url)?;
+    if normalize_kanji_style(kanji_style).is_none() {
+        return Err("スタイルは日本・中国・台湾から選択してください。".to_owned());
+    }
     if sort_order < 0 {
         return Err("表示順は 0 以上で入力してください。".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_google_fonts_stylesheet_url(url: &str) -> std::result::Result<(), String> {
+    let parsed = reqwest::Url::parse(url)
+        .map_err(|_| "Google Fonts URL の形式が正しくありません。".to_owned())?;
+    if parsed.scheme() != "https"
+        || parsed.host_str() != Some("fonts.googleapis.com")
+        || !parsed.path().starts_with("/css2")
+    {
+        return Err(
+            "Google Fonts URL は https://fonts.googleapis.com/css2?... を指定してください。"
+                .to_owned(),
+        );
     }
     Ok(())
 }
@@ -4165,6 +4276,23 @@ fn normalize_material_shape(raw: &str) -> Option<&'static str> {
         "square" => Some("square"),
         "round" => Some("round"),
         _ => None,
+    }
+}
+
+fn normalize_kanji_style(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "japanese" | "japan" | "jp" => Some("japanese"),
+        "chinese" | "china" | "cn" => Some("chinese"),
+        "taiwanese" | "taiwan" | "tw" => Some("taiwanese"),
+        _ => None,
+    }
+}
+
+fn kanji_style_label(style: &str) -> &'static str {
+    match normalize_kanji_style(style) {
+        Some("chinese") => "中国スタイル",
+        Some("taiwanese") => "台湾スタイル",
+        _ => "日本スタイル",
     }
 }
 
@@ -5325,6 +5453,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "Zen Maru Gothic".to_owned()),
                 ]),
                 font_family: "'Zen Maru Gothic', sans-serif".to_owned(),
+                font_stylesheet_url:
+                    "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
+                        .to_owned(),
+                kanji_style: "japanese".to_owned(),
                 is_active: true,
                 sort_order: 10,
                 version: 4,
@@ -5340,6 +5472,9 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "Potta One".to_owned()),
                 ]),
                 font_family: "'Potta One', cursive".to_owned(),
+                font_stylesheet_url:
+                    "https://fonts.googleapis.com/css2?family=Potta+One&display=swap".to_owned(),
+                kanji_style: "japanese".to_owned(),
                 is_active: true,
                 sort_order: 20,
                 version: 2,
@@ -5355,6 +5490,10 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "WDXL Lubrifont JP N".to_owned()),
                 ]),
                 font_family: "'WDXL Lubrifont JP N', sans-serif".to_owned(),
+                font_stylesheet_url:
+                    "https://fonts.googleapis.com/css2?family=WDXL+Lubrifont+JP+N&display=swap"
+                        .to_owned(),
+                kanji_style: "japanese".to_owned(),
                 is_active: false,
                 sort_order: 30,
                 version: 1,
@@ -5705,6 +5844,10 @@ mod tests {
                     label_ja: "Zen 丸".to_owned(),
                     label_en: "Zen Maru".to_owned(),
                     font_family: "'Zen Maru Gothic', 'Noto Sans JP', sans-serif".to_owned(),
+                    font_stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
+                            .to_owned(),
+                    kanji_style: "taiwanese".to_owned(),
                     sort_order: 15,
                     is_active: true,
                 },
@@ -5721,6 +5864,11 @@ mod tests {
             detail.font_family,
             "'Zen Maru Gothic', 'Noto Sans JP', sans-serif"
         );
+        assert_eq!(
+            detail.font_stylesheet_url,
+            "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
+        );
+        assert_eq!(detail.kanji_style, "taiwanese");
         assert_eq!(detail.sort_order, 15);
     }
 

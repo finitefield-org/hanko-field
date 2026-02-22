@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     env,
     sync::Arc,
     time::Duration,
@@ -59,6 +59,8 @@ struct FontOption {
     key: String,
     label: String,
     family: String,
+    stylesheet_url: String,
+    kanji_style: String,
 }
 
 #[derive(Debug, Clone)]
@@ -127,6 +129,7 @@ struct PurchaseResultData {
 #[template(path = "index.html")]
 struct PageTemplate {
     fonts: Vec<FontOption>,
+    font_stylesheet_urls: Vec<String>,
     materials: Vec<MaterialOption>,
     countries: Vec<CountryOption>,
     is_mock: bool,
@@ -330,6 +333,13 @@ impl FirestoreCatalogSource {
             if family.is_empty() {
                 bail!("fonts/{doc_id} is missing font_family");
             }
+            let mut stylesheet_url = read_string_field(&document.fields, "font_stylesheet_url");
+            if stylesheet_url.is_empty() {
+                stylesheet_url = read_string_field(&document.fields, "font_url");
+            }
+            if stylesheet_url.is_empty() {
+                bail!("fonts/{doc_id} is missing font_stylesheet_url");
+            }
 
             let label = resolve_localized_field(
                 &document.fields,
@@ -339,11 +349,18 @@ impl FirestoreCatalogSource {
                 &self.default_locale,
                 &doc_id,
             );
+            let mut kanji_style = read_string_field(&document.fields, "kanji_style");
+            if kanji_style.is_empty() {
+                kanji_style = read_string_field(&document.fields, "style");
+            }
+            let kanji_style = normalize_kanji_style(&kanji_style).to_owned();
 
             fonts.push(FontOption {
                 key: doc_id,
                 label,
                 family,
+                stylesheet_url,
+                kanji_style,
             });
         }
 
@@ -389,8 +406,12 @@ impl FirestoreCatalogSource {
                 "",
             );
             let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
-            let (photo_url, photo_alt, has_photo) =
-                resolve_material_photo(&document.fields, &self.storage_assets_bucket, &self.locale, &self.default_locale);
+            let (photo_url, photo_alt, has_photo) = resolve_material_photo(
+                &document.fields,
+                &self.storage_assets_bucket,
+                &self.locale,
+                &self.default_locale,
+            );
             let photo_alt = if has_photo && photo_alt.is_empty() {
                 format!("{label}の写真")
             } else {
@@ -517,6 +538,7 @@ impl KanjiApiClient {
         real_name: &str,
         reason_language: &str,
         gender: &str,
+        kanji_style: &str,
     ) -> Result<Vec<KanjiCandidate>> {
         let endpoint = format!(
             "{}/v1/kanji-candidates",
@@ -530,6 +552,7 @@ impl KanjiApiClient {
                 "real_name": real_name,
                 "reason_language": reason_language,
                 "gender": gender,
+                "kanji_style": kanji_style,
                 "count": DEFAULT_KANJI_CANDIDATE_COUNT,
             }))
             .send()
@@ -787,44 +810,44 @@ fn load_config() -> Result<AppConfig> {
 
     let (project_id_keys, credentials_keys, storage_bucket_keys): (&[&str], &[&str], &[&str]) =
         match cfg.mode {
-        RunMode::Dev => (
-            &[
-                "HANKO_WEB_FIREBASE_PROJECT_ID_DEV",
-                "HANKO_WEB_FIREBASE_PROJECT_ID",
-                "FIREBASE_PROJECT_ID",
-                "GOOGLE_CLOUD_PROJECT",
-            ],
-            &[
-                "HANKO_WEB_FIREBASE_CREDENTIALS_FILE_DEV",
-                "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
-                "GOOGLE_APPLICATION_CREDENTIALS",
-            ],
-            &[
-                "HANKO_WEB_STORAGE_ASSETS_BUCKET_DEV",
-                "HANKO_WEB_STORAGE_ASSETS_BUCKET",
-                "API_STORAGE_ASSETS_BUCKET",
-            ],
-        ),
-        RunMode::Prod => (
-            &[
-                "HANKO_WEB_FIREBASE_PROJECT_ID_PROD",
-                "HANKO_WEB_FIREBASE_PROJECT_ID",
-                "FIREBASE_PROJECT_ID",
-                "GOOGLE_CLOUD_PROJECT",
-            ],
-            &[
-                "HANKO_WEB_FIREBASE_CREDENTIALS_FILE_PROD",
-                "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
-                "GOOGLE_APPLICATION_CREDENTIALS",
-            ],
-            &[
-                "HANKO_WEB_STORAGE_ASSETS_BUCKET_PROD",
-                "HANKO_WEB_STORAGE_ASSETS_BUCKET",
-                "API_STORAGE_ASSETS_BUCKET",
-            ],
-        ),
-        RunMode::Mock => (&[], &[], &[]),
-    };
+            RunMode::Dev => (
+                &[
+                    "HANKO_WEB_FIREBASE_PROJECT_ID_DEV",
+                    "HANKO_WEB_FIREBASE_PROJECT_ID",
+                    "FIREBASE_PROJECT_ID",
+                    "GOOGLE_CLOUD_PROJECT",
+                ],
+                &[
+                    "HANKO_WEB_FIREBASE_CREDENTIALS_FILE_DEV",
+                    "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
+                    "GOOGLE_APPLICATION_CREDENTIALS",
+                ],
+                &[
+                    "HANKO_WEB_STORAGE_ASSETS_BUCKET_DEV",
+                    "HANKO_WEB_STORAGE_ASSETS_BUCKET",
+                    "API_STORAGE_ASSETS_BUCKET",
+                ],
+            ),
+            RunMode::Prod => (
+                &[
+                    "HANKO_WEB_FIREBASE_PROJECT_ID_PROD",
+                    "HANKO_WEB_FIREBASE_PROJECT_ID",
+                    "FIREBASE_PROJECT_ID",
+                    "GOOGLE_CLOUD_PROJECT",
+                ],
+                &[
+                    "HANKO_WEB_FIREBASE_CREDENTIALS_FILE_PROD",
+                    "HANKO_WEB_FIREBASE_CREDENTIALS_FILE",
+                    "GOOGLE_APPLICATION_CREDENTIALS",
+                ],
+                &[
+                    "HANKO_WEB_STORAGE_ASSETS_BUCKET_PROD",
+                    "HANKO_WEB_STORAGE_ASSETS_BUCKET",
+                    "API_STORAGE_ASSETS_BUCKET",
+                ],
+            ),
+            RunMode::Mock => (&[], &[], &[]),
+        };
 
     let project_id = env_first(project_id_keys);
     if project_id.is_empty() {
@@ -907,26 +930,46 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     key: "zen_maru_gothic".to_owned(),
                     label: "Zen Maru Gothic".to_owned(),
                     family: "'Zen Maru Gothic', sans-serif".to_owned(),
+                    stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
+                            .to_owned(),
+                    kanji_style: "japanese".to_owned(),
                 },
                 FontOption {
                     key: "kosugi_maru".to_owned(),
                     label: "Kosugi Maru".to_owned(),
                     family: "'Kosugi Maru', sans-serif".to_owned(),
+                    stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap"
+                            .to_owned(),
+                    kanji_style: "chinese".to_owned(),
                 },
                 FontOption {
                     key: "potta_one".to_owned(),
                     label: "Potta One".to_owned(),
                     family: "'Potta One', sans-serif".to_owned(),
+                    stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=Potta+One&display=swap"
+                            .to_owned(),
+                    kanji_style: "taiwanese".to_owned(),
                 },
                 FontOption {
                     key: "kiwi_maru".to_owned(),
                     label: "Kiwi Maru".to_owned(),
                     family: "'Kiwi Maru', sans-serif".to_owned(),
+                    stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;700&display=swap"
+                            .to_owned(),
+                    kanji_style: "japanese".to_owned(),
                 },
                 FontOption {
                     key: "wdxl_lubrifont_jp_n".to_owned(),
                     label: "WDXL Lubrifont JP N".to_owned(),
                     family: "'WDXL Lubrifont JP N', sans-serif".to_owned(),
+                    stylesheet_url:
+                        "https://fonts.googleapis.com/css2?family=WDXL+Lubrifont+JP+N&display=swap"
+                            .to_owned(),
+                    kanji_style: "chinese".to_owned(),
                 },
             ],
             materials: vec![
@@ -1025,6 +1068,23 @@ fn validate_catalog(catalog: &CatalogData) -> Result<()> {
     Ok(())
 }
 
+fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut urls = Vec::new();
+
+    for font in fonts {
+        let url = font.stylesheet_url.trim();
+        if url.is_empty() {
+            continue;
+        }
+        if seen.insert(url.to_owned()) {
+            urls.push(url.to_owned());
+        }
+    }
+
+    urls
+}
+
 async fn handle_index(State(state): State<AppState>) -> Response {
     let catalog = match load_catalog_with_timeout(state.source.as_ref()).await {
         Ok(catalog) => catalog,
@@ -1036,7 +1096,12 @@ async fn handle_index(State(state): State<AppState>) -> Response {
         }
     };
 
-    let Some(default_font) = catalog.fonts.first() else {
+    let Some(default_font) = catalog
+        .fonts
+        .iter()
+        .find(|font| font.kanji_style == "japanese")
+        .or_else(|| catalog.fonts.first())
+    else {
         return plain_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "catalog validation failed: fonts is empty".to_owned(),
@@ -1044,6 +1109,7 @@ async fn handle_index(State(state): State<AppState>) -> Response {
     };
 
     let template = PageTemplate {
+        font_stylesheet_urls: collect_font_stylesheet_urls(&catalog.fonts),
         default_font_key: default_font.key.clone(),
         default_font_label: default_font.label.clone(),
         fonts: catalog.fonts,
@@ -1073,13 +1139,14 @@ async fn handle_kanji_suggestions(
     let real_name = form_value(&form, "real_name");
     let reason_language = state.locale.trim().to_owned();
     let candidate_gender = normalize_candidate_gender(&form_value(&form, "candidate_gender"));
+    let kanji_style = normalize_kanji_style(&form_value(&form, "kanji_style"));
 
     let (suggestions, error) = if real_name.is_empty() {
         (Vec::new(), String::new())
     } else {
         match state
             .kanji_api
-            .generate_candidates(&real_name, &reason_language, candidate_gender)
+            .generate_candidates(&real_name, &reason_language, candidate_gender, kanji_style)
             .await
         {
             Ok(suggestions) => (suggestions, String::new()),
@@ -1419,6 +1486,14 @@ fn normalize_candidate_gender(raw: &str) -> &'static str {
     }
 }
 
+fn normalize_kanji_style(raw: &str) -> &'static str {
+    match raw.trim().to_lowercase().as_str() {
+        "chinese" => "chinese",
+        "taiwanese" => "taiwanese",
+        _ => "japanese",
+    }
+}
+
 fn normalize_material_shape(raw: &str) -> &'static str {
     match raw.trim().to_ascii_lowercase().as_str() {
         "round" => "round",
@@ -1692,7 +1767,9 @@ fn resolve_material_photo(
     );
 
     if photo_url.is_empty() {
-        if let Some((storage_path, storage_alt)) = select_primary_material_photo(data, locale, default_locale) {
+        if let Some((storage_path, storage_alt)) =
+            select_primary_material_photo(data, locale, default_locale)
+        {
             photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
             if photo_alt.is_empty() {
                 photo_alt = storage_alt;
@@ -1732,7 +1809,11 @@ fn select_primary_material_photo(
             continue;
         }
 
-        let alt = resolve_localized_text(&read_string_map_field(&fields, "alt_i18n"), locale, default_locale);
+        let alt = resolve_localized_text(
+            &read_string_map_field(&fields, "alt_i18n"),
+            locale,
+            default_locale,
+        );
         let is_primary = read_bool_field(&fields, "is_primary").unwrap_or(false);
         let sort_order = read_int_field(&fields, "sort_order").unwrap_or_default();
         let rank = (if is_primary { 0 } else { 1 }, sort_order, index);
@@ -1772,11 +1853,7 @@ fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
             Ok(path_segments) => path_segments,
             Err(_) => return String::new(),
         };
-        path_segments.extend([
-            normalized_bucket.as_str(),
-            "o",
-            normalized_path.as_str(),
-        ]);
+        path_segments.extend([normalized_bucket.as_str(), "o", normalized_path.as_str()]);
     }
     endpoint.query_pairs_mut().append_pair("alt", "media");
     endpoint.to_string()

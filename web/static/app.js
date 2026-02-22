@@ -10,6 +10,7 @@
   const line1Input = document.getElementById("seal_line1");
   const line2Input = document.getElementById("seal_line2");
   const sealTextError = document.getElementById("seal_text_error");
+  const kanjiStyleSelect = document.getElementById("kanji_style");
   const fontInput = document.getElementById("font");
   const toggleWritingModeButton = document.getElementById("toggle-writing-mode");
   const countrySelect = document.getElementById("country");
@@ -40,6 +41,7 @@
     square: "角",
     round: "丸",
   };
+  const DEFAULT_KANJI_STYLE = "japanese";
   const MAX_SEAL_CHAR_TOTAL = 2;
   const STEP_HASH_TO_VALUE = {
     "#step-2": 2,
@@ -163,24 +165,37 @@
     return countrySelect.selectedOptions[0] || null;
   }
 
+  function selectedKanjiStyle() {
+    const style = (kanjiStyleSelect?.value || "").trim().toLowerCase();
+    if (style === "chinese" || style === "taiwanese") {
+      return style;
+    }
+    return DEFAULT_KANJI_STYLE;
+  }
+
+  function styleMatchedFontChips() {
+    const selectedStyle = selectedKanjiStyle();
+    return fontChips.filter((chip) => {
+      const chipStyle = (chip.dataset.fontStyle || DEFAULT_KANJI_STYLE).trim().toLowerCase();
+      return chipStyle === selectedStyle && !chip.hidden && !chip.disabled;
+    });
+  }
+
   function getSelectedFontChip() {
     if (fontChips.length === 0) {
       return null;
     }
 
-    const selectedByInput = fontChips.find((chip) => chip.dataset.fontKey === fontInput?.value);
+    const matchedChips = styleMatchedFontChips();
+    const selectedByInput = matchedChips.find((chip) => chip.dataset.fontKey === fontInput?.value);
     if (selectedByInput) {
       return selectedByInput;
     }
 
-    return fontChips[0];
+    return matchedChips[0] || null;
   }
 
   function setSelectedFontChip(chip) {
-    if (!chip) {
-      return;
-    }
-
     fontChips.forEach((currentChip) => {
       const isSelected = currentChip === chip;
       currentChip.classList.toggle("is-selected", isSelected);
@@ -188,8 +203,27 @@
     });
 
     if (fontInput) {
-      fontInput.value = chip.dataset.fontKey || "";
+      fontInput.value = chip?.dataset.fontKey || "";
     }
+  }
+
+  function syncFontOptionsByStyle() {
+    const selectedStyle = selectedKanjiStyle();
+    const visibleChips = [];
+
+    fontChips.forEach((chip) => {
+      const chipStyle = (chip.dataset.fontStyle || DEFAULT_KANJI_STYLE).trim().toLowerCase();
+      const matchesStyle = chipStyle === selectedStyle;
+      chip.hidden = !matchesStyle;
+      chip.disabled = !matchesStyle;
+      chip.setAttribute("aria-disabled", matchesStyle ? "false" : "true");
+      if (matchesStyle) {
+        visibleChips.push(chip);
+      }
+    });
+
+    const selectedByInput = visibleChips.find((chip) => chip.dataset.fontKey === fontInput?.value);
+    setSelectedFontChip(selectedByInput || visibleChips[0] || null);
   }
 
   function updateFontChipPreviews() {
@@ -252,7 +286,7 @@
     preview.classList.toggle("mode-single-char", !hasSecondLine && [...previewLine1Text].length === 1);
     preview.classList.toggle("mode-single-line", !hasSecondLine && [...previewLine1Text].length > 1);
 
-    previewCaption.textContent = `${previewShapeMap[shape] || "角"} / ${selectedFontChip?.dataset.fontLabel || "Zen Maru Gothic"}`;
+    previewCaption.textContent = `${previewShapeMap[shape] || "角"} / ${selectedFontChip?.dataset.fontLabel || "-"}`;
   }
 
   function updateSummary() {
@@ -363,6 +397,11 @@
     });
   });
 
+  kanjiStyleSelect?.addEventListener("change", () => {
+    syncFontOptionsByStyle();
+    refreshSealUi();
+  });
+
   form.querySelectorAll("input[name='shape']").forEach((radio) => {
     radio.addEventListener("change", () => {
       syncMaterialOptionsByShape();
@@ -429,7 +468,7 @@
   });
 
   syncMaterialOptionsByShape();
-  setSelectedFontChip(getSelectedFontChip());
+  syncFontOptionsByStyle();
   refreshSealUi();
   window.addEventListener("hashchange", () => {
     showStep(stepFromHash(), { syncHash: false });

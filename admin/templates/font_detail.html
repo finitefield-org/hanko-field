@@ -30,6 +30,24 @@
       <span>font-family</span>
       <input type="text" name="font_family" value="{{ detail.font_family }}" required>
     </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>Google Fonts URL</span>
+      <input
+        type="url"
+        name="font_stylesheet_url"
+        value="{{ detail.font_stylesheet_url }}"
+        placeholder="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap"
+        required
+      >
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>スタイル</span>
+      <select name="kanji_style" required>
+        <option value="japanese" {% if detail.kanji_style == "japanese" %}selected{% endif %}>日本スタイル</option>
+        <option value="chinese" {% if detail.kanji_style == "chinese" %}selected{% endif %}>中国スタイル</option>
+        <option value="taiwanese" {% if detail.kanji_style == "taiwanese" %}selected{% endif %}>台湾スタイル</option>
+      </select>
+    </label>
     <p class="rounded-lg border border-admin-line/60 bg-admin-bg/40 px-3 py-2 text-sm">
       プレビュー:
       <span class="ml-2 text-base" style="font-family: {{ detail.font_family }};">印 例 サンプル</span>

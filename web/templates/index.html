@@ -6,7 +6,10 @@
   <title>Stone Signature | Hand-carved Stone Seals</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Kosugi+Maru&family=Potta+One&family=Kiwi+Maru:wght@400;700&family=WDXL+Lubrifont+JP+N&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
+  {% for font_stylesheet_url in font_stylesheet_urls %}
+  <link href="{{ font_stylesheet_url }}" rel="stylesheet">
+  {% endfor %}
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script src="/static/app.js?v=20260221-3" defer></script>
@@ -66,6 +69,13 @@
               </div>
               <p class="field-hint">1行目と2行目の合計2文字まで</p>
               <p class="field-error" id="seal_text_error" role="alert" aria-live="polite"></p>
+              <label class="field-label" for="kanji_style">フォントスタイル</label>
+              <select id="kanji_style" name="kanji_style">
+                <option value="japanese" selected>日本スタイル</option>
+                <option value="chinese">中国スタイル</option>
+                <option value="taiwanese">台湾スタイル</option>
+              </select>
+              <p class="field-hint">漢字名提案は選択したスタイルに合わせて生成されます。</p>
 
               <div class="ai-box">
                 <h3>漢字名提案</h3>
@@ -89,7 +99,7 @@
                   hx-post="/kanji"
                   hx-target="#kanji-suggestions"
                   hx-swap="innerHTML"
-                  hx-include="#real_name,#candidate_gender"
+                  hx-include="#real_name,#candidate_gender,#kanji_style"
                 >
                   候補を生成
                 </button>
@@ -115,12 +125,13 @@
                   {% for font in fonts %}
                   <button
                     type="button"
-                    class="font-chip{% if loop.first %} is-selected{% endif %}"
+                    class="font-chip{% if font.key == default_font_key %} is-selected{% endif %}"
                     data-font-key="{{ font.key }}"
                     data-font-label="{{ font.label }}"
                     data-font-family="{{ font.family }}"
+                    data-font-style="{{ font.kanji_style }}"
                     aria-label="{{ font.label }}"
-                    aria-pressed="{% if loop.first %}true{% else %}false{% endif %}"
+                    aria-pressed="{% if font.key == default_font_key %}true{% else %}false{% endif %}"
                   >
                     <span class="font-chip-preview" data-font-preview>印</span>
                   </button>

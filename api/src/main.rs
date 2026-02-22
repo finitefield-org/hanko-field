@@ -220,6 +220,7 @@ struct GenerateKanjiCandidatesRequest {
     real_name: String,
     reason_language: Option<String>,
     gender: Option<String>,
+    kanji_style: Option<String>,
     count: Option<usize>,
 }
 
@@ -228,6 +229,7 @@ struct GenerateKanjiCandidatesInput {
     real_name: String,
     reason_language: String,
     gender: CandidateGender,
+    kanji_style: KanjiStyle,
     count: usize,
 }
 
@@ -257,6 +259,37 @@ impl CandidateGender {
             }
             Self::Female => {
                 "Gender preference: female. Prefer names with feminine impression while staying natural."
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KanjiStyle {
+    Japanese,
+    Chinese,
+    Taiwanese,
+}
+
+impl KanjiStyle {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Japanese => "japanese",
+            Self::Chinese => "chinese",
+            Self::Taiwanese => "taiwanese",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Japanese => {
+                "Style preference: Japanese style. Follow Japanese naming conventions and aesthetics."
+            }
+            Self::Chinese => {
+                "Style preference: Chinese style. Follow modern Chinese naming conventions and aesthetics."
+            }
+            Self::Taiwanese => {
+                "Style preference: Taiwanese style. Prefer Traditional Chinese naming conventions common in Taiwan."
             }
         }
     }
@@ -754,6 +787,7 @@ async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: B
             "real_name": input.real_name,
             "reason_language": input.reason_language,
             "gender": input.gender.as_str(),
+            "kanji_style": input.kanji_style.as_str(),
             "candidates": candidates.into_iter().map(|candidate| {
                 json!({
                     "kanji": candidate.kanji,
@@ -2060,6 +2094,7 @@ fn validate_generate_kanji_candidates_request(
     }
 
     let gender = parse_candidate_gender(request.gender.as_deref())?;
+    let kanji_style = parse_kanji_style(request.kanji_style.as_deref())?;
 
     let count = request.count.unwrap_or(DEFAULT_KANJI_CANDIDATE_COUNT);
     if count == 0 || count > MAX_KANJI_CANDIDATE_COUNT {
@@ -2070,6 +2105,7 @@ fn validate_generate_kanji_candidates_request(
         real_name,
         reason_language,
         gender,
+        kanji_style,
         count,
     })
 }
@@ -2086,6 +2122,24 @@ fn parse_candidate_gender(raw: Option<&str>) -> Result<CandidateGender> {
         return Ok(CandidateGender::Female);
     }
     bail!("gender must be one of unspecified, male, female")
+}
+
+fn parse_kanji_style(raw: Option<&str>) -> Result<KanjiStyle> {
+    let normalized = raw.unwrap_or("japanese").trim().to_lowercase();
+    if normalized.is_empty()
+        || normalized == "japanese"
+        || normalized == "japan"
+        || normalized == "jp"
+    {
+        return Ok(KanjiStyle::Japanese);
+    }
+    if normalized == "chinese" || normalized == "china" || normalized == "cn" {
+        return Ok(KanjiStyle::Chinese);
+    }
+    if normalized == "taiwanese" || normalized == "taiwan" || normalized == "tw" {
+        return Ok(KanjiStyle::Taiwanese);
+    }
+    bail!("kanji_style must be one of japanese, chinese, taiwanese")
 }
 
 async fn generate_kanji_candidates_with_gemini(
@@ -2146,18 +2200,20 @@ async fn generate_kanji_candidates_with_gemini(
 
 fn build_kanji_candidates_prompt(input: &GenerateKanjiCandidatesInput) -> String {
     let gender_instruction = input.gender.prompt_instruction();
+    let style_instruction = input.kanji_style.prompt_instruction();
     format!(
         "Generate {} unique Japanese name candidates for a hanko seal.\n\
 Input name: \"{}\"\n\
 {}\n\
+{}\n\
 For each candidate, return these fields:\n\
-- kanji: 1-2 Japanese Kanji characters (no spaces)\n\
+- kanji: 1-2 CJK Han characters suitable for a seal (no spaces)\n\
 - reading_hiragana: reading in hiragana\n\
 - reading_romaji: reading in lowercase romaji\n\
 - reason: why this Kanji name was chosen, written in {}\n\
 Return only JSON (no markdown, no explanation) in this exact shape:\n\
 {{\"candidates\":[{{\"kanji\":\"\",\"reading_hiragana\":\"\",\"reading_romaji\":\"\",\"reason\":\"\"}}]}}",
-        input.count, input.real_name, gender_instruction, input.reason_language
+        input.count, input.real_name, gender_instruction, style_instruction, input.reason_language
     )
 }
 
@@ -3150,6 +3206,7 @@ mod tests {
             real_name: "Michael Smith".to_owned(),
             reason_language: None,
             gender: None,
+            kanji_style: None,
             count: None,
         };
 
@@ -3157,6 +3214,7 @@ mod tests {
             validate_generate_kanji_candidates_request(request).expect("request must be valid");
         assert_eq!(input.reason_language, "en");
         assert_eq!(input.gender, CandidateGender::Unspecified);
+        assert_eq!(input.kanji_style, KanjiStyle::Japanese);
         assert_eq!(input.count, DEFAULT_KANJI_CANDIDATE_COUNT);
     }
 
@@ -3166,13 +3224,33 @@ mod tests {
             real_name: "John".to_owned(),
             reason_language: Some("en".to_owned()),
             gender: Some("male".to_owned()),
+            kanji_style: Some("chinese".to_owned()),
             count: Some(3),
         };
 
         let input =
             validate_generate_kanji_candidates_request(request).expect("request must be valid");
         assert_eq!(input.gender, CandidateGender::Male);
+        assert_eq!(input.kanji_style, KanjiStyle::Chinese);
         assert_eq!(input.count, 3);
+    }
+
+    #[test]
+    fn validate_generate_kanji_candidates_request_rejects_unknown_style() {
+        let request = GenerateKanjiCandidatesRequest {
+            real_name: "John".to_owned(),
+            reason_language: Some("en".to_owned()),
+            gender: Some("male".to_owned()),
+            kanji_style: Some("korean".to_owned()),
+            count: Some(3),
+        };
+
+        let err = validate_generate_kanji_candidates_request(request)
+            .expect_err("request must fail for unknown style");
+        assert!(
+            err.to_string()
+                .contains("kanji_style must be one of japanese, chinese, taiwanese")
+        );
     }
 
     #[test]

@@ -51,6 +51,7 @@
 | --- | --- | --- | --- |
 | `label_i18n` | map<string,string> | Yes | 表示名（例: `ja`, `en`） |
 | `font_family` | string | Yes | CSS `font-family` 文字列 |
+| `font_stylesheet_url` | string | Yes | Google Fonts の CSS URL（例: `https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap`） |
 | `is_active` | bool | Yes | 選択可能フラグ |
 | `sort_order` | int | Yes | 表示順（昇順） |
 | `version` | int | Yes | 業務用バージョン（更新ごとに +1） |
