@@ -408,10 +408,23 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("materials document is missing name"))?;
 
-            let price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
+            let mut price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
+            if price_by_currency.is_empty() {
+                price_by_currency =
+                    read_legacy_currency_map(&document.fields, "price_usd", "price_jpy");
+                if !price_by_currency.is_empty() {
+                    eprintln!(
+                        "warning: materials/{doc_id} uses deprecated price_usd/price_jpy; migrate to price_by_currency"
+                    );
+                }
+            }
 
-            let price = resolve_amount_for_currency(&price_by_currency, "USD")
-                .ok_or_else(|| anyhow!("materials/{doc_id} is missing price_by_currency"))?;
+            let Some(price) = resolve_amount_for_currency(&price_by_currency, "USD") else {
+                eprintln!(
+                    "warning: skipping materials/{doc_id}: missing or empty price_by_currency"
+                );
+                continue;
+            };
 
             let label = resolve_localized_field(
                 &document.fields,
@@ -477,11 +490,28 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("countries document is missing name"))?;
 
-            let shipping_fee_by_currency =
+            let mut shipping_fee_by_currency =
                 read_int_map_field(&document.fields, "shipping_fee_by_currency");
+            if shipping_fee_by_currency.is_empty() {
+                shipping_fee_by_currency = read_legacy_currency_map(
+                    &document.fields,
+                    "shipping_fee_usd",
+                    "shipping_fee_jpy",
+                );
+                if !shipping_fee_by_currency.is_empty() {
+                    eprintln!(
+                        "warning: countries/{doc_id} uses deprecated shipping_fee_usd/shipping_fee_jpy; migrate to shipping_fee_by_currency"
+                    );
+                }
+            }
 
-            let shipping = resolve_amount_for_currency(&shipping_fee_by_currency, "USD")
-                .ok_or_else(|| anyhow!("countries/{doc_id} is missing shipping_fee_by_currency"))?;
+            let Some(shipping) = resolve_amount_for_currency(&shipping_fee_by_currency, "USD")
+            else {
+                eprintln!(
+                    "warning: skipping countries/{doc_id}: missing or empty shipping_fee_by_currency"
+                );
+                continue;
+            };
 
             let label = resolve_localized_field(
                 &document.fields,
@@ -1896,6 +1926,21 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
         }
     }
 
+    result
+}
+
+fn read_legacy_currency_map(
+    data: &BTreeMap<String, JsonValue>,
+    usd_field: &str,
+    jpy_field: &str,
+) -> HashMap<String, i64> {
+    let mut result = HashMap::new();
+    if let Some(amount) = read_int_field(data, usd_field) {
+        result.insert("USD".to_owned(), amount.max(0));
+    }
+    if let Some(amount) = read_int_field(data, jpy_field) {
+        result.insert("JPY".to_owned(), amount.max(0));
+    }
     result
 }
 
