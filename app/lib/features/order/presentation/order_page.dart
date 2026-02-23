@@ -1168,35 +1168,18 @@ class _PurchaseStep extends StatelessWidget {
           style: TextStyle(color: HfPalette.muted),
         ),
         const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final twoColumns = constraints.maxWidth >= 920;
-            final summary = _buildSummaryCard();
-            final checkout = _buildCheckoutCard();
-
-            if (twoColumns) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 6, child: summary),
-                  const SizedBox(width: 14),
-                  Expanded(flex: 8, child: checkout),
-                ],
-              );
-            }
-
-            return Column(
-              children: [summary, const SizedBox(height: 12), checkout],
-            );
-          },
-        ),
+        _buildPersonalInfoCard(),
+        const SizedBox(height: 12),
+        _buildSummaryCard(),
+        const SizedBox(height: 12),
+        _buildPaymentCard(),
         const SizedBox(height: 16),
         OutlinedButton(onPressed: onPrev, child: const Text('戻る')),
       ],
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildPersonalInfoCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1204,43 +1187,10 @@ class _PurchaseStep extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '注文サマリー',
+              'お届け先情報',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 12),
-            _SummaryRow(label: '印影テキスト', value: state.sealDisplay),
-            _SummaryRow(label: '形状', value: state.shape.label),
-            _SummaryRow(label: 'フォント', value: state.selectedFont.label),
-            _SummaryRow(label: '材質', value: state.selectedMaterial.label),
-            _SummaryRow(label: '配送先の国', value: state.selectedCountry.label),
-            _SummaryRow(
-              label: '商品価格',
-              value: formatMoney(state.subtotal, state.effectiveCurrency),
-            ),
-            _SummaryRow(
-              label: '送料',
-              value: formatMoney(state.shipping, state.effectiveCurrency),
-            ),
-            _SummaryRow(
-              label: '合計',
-              value: formatMoney(state.total, state.effectiveCurrency),
-              emphasize: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckoutCard() {
-    final result = state.purchaseResult;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
             _LabeledField(
               label: 'お届け先氏名',
               child: TextFormField(
@@ -1334,6 +1284,61 @@ class _PurchaseStep extends StatelessWidget {
                 onChanged: onAddress2Changed,
                 decoration: const InputDecoration(hintText: '建物名・部屋番号など'),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '注文サマリー',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            _SummaryRow(label: '印影テキスト', value: state.sealDisplay),
+            _SummaryRow(label: '形状', value: state.shape.label),
+            _SummaryRow(label: 'フォント', value: state.selectedFont.label),
+            _SummaryRow(label: '材質', value: state.selectedMaterial.label),
+            _SummaryRow(label: '配送先の国', value: state.selectedCountry.label),
+            _SummaryRow(
+              label: '商品価格',
+              value: formatMoney(state.subtotal, state.effectiveCurrency),
+            ),
+            _SummaryRow(
+              label: '送料',
+              value: formatMoney(state.shipping, state.effectiveCurrency),
+            ),
+            _SummaryRow(
+              label: '合計',
+              value: formatMoney(state.total, state.effectiveCurrency),
+              emphasize: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentCard() {
+    final result = state.purchaseResult;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'お支払い',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 10),
             Row(

@@ -374,7 +374,7 @@
   }
 
   .purchase-grid {
-    @apply mt-[18px] grid grid-cols-2 gap-4;
+    @apply mt-[18px] grid grid-cols-1 gap-4;
   }
 
   .checkout-form-grid {
