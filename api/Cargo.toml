@@ -10,12 +10,12 @@ chrono = { version = "0.4", features = ["clock"] }
 firebase_sdk_rust = { path = "../../firebase-sdk-rust" }
 gcp_auth = "0.12"
 hex = "0.4"
-hmac = "0.12"
 regex = "1.12"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
+stripe-sdk = "0.3.0"
 thiserror = "2.0"
 tokio = { version = "1.44", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
 uuid = { version = "1.18", features = ["v4"] }

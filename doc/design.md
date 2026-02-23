@@ -34,3 +34,5 @@
 - [x] `web` の候補生成で理由言語指定UIを廃止し画面ロケールを利用、性別（選択なし/男性/女性）指定を Gemini プロンプトに反映
 - [x] `api` に Stripe Checkout Session 作成エンドポイントを追加
 - [x] `web` の購入フローを Stripe Checkout に接続
+- [x] `api` の Stripe Checkout 連携を `crates.io/stripe-sdk` ベースへ移行
+- [x] `api` の Stripe Webhook 検証/パースを `stripe-sdk v0.3.0` の `webhook` ヘルパーへ移行

@@ -438,12 +438,12 @@ dependencies = [
  "firebase_sdk_rust",
  "gcp_auth",
  "hex",
- "hmac",
  "regex",
  "reqwest",
  "serde",
  "serde_json",
  "sha2",
+ "stripe-sdk",
  "thiserror",
  "tokio",
  "uuid",
@@ -1328,6 +1328,22 @@ name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
+
+[[package]]
+name = "stripe-sdk"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87fafbfe239251afe53e1de108d200500e57f07a7f21f886dc84641e3b7e10fc"
+dependencies = [
+ "hmac",
+ "percent-encoding",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "url",
+]
 
 [[package]]
 name = "subtle"

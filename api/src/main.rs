@@ -21,25 +21,23 @@ use firebase_sdk_rust::firebase_firestore::{
     GetDocumentOptions, PatchDocumentOptions, RunQueryRequest,
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
-use hmac::{Hmac, Mac};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use sha2::{Digest, Sha256};
+use stripe_sdk::{
+    Event as StripeEvent, PostCheckoutSessionsRequest, StripeClient, webhook as stripe_webhook,
+};
 use tokio::net::TcpListener;
 use uuid::Uuid;
-
-type HmacSha256 = Hmac<Sha256>;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";
 const DEFAULT_LOCALE: &str = "ja";
-const STRIPE_SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
 const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
     "http://localhost:3052/?checkout=success&session_id={CHECKOUT_SESSION_ID}";
 const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/?checkout=cancel";
-const STRIPE_CHECKOUT_SESSIONS_ENDPOINT: &str = "https://api.stripe.com/v1/checkout/sessions";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
@@ -64,6 +62,7 @@ struct AppState {
     store: Arc<FirestoreStore>,
     storage_assets_bucket: String,
     stripe_webhook_secret: String,
+    stripe_client: Option<StripeClient>,
     stripe_checkout: StripeCheckoutConfig,
     gemini: GeminiClientConfig,
     http_client: reqwest::Client,
@@ -71,7 +70,6 @@ struct AppState {
 
 #[derive(Debug, Clone)]
 struct StripeCheckoutConfig {
-    api_key: String,
     success_url: String,
     cancel_url: String,
 }
@@ -358,31 +356,11 @@ struct CreateStripeCheckoutSessionInput {
     customer_email: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct StripeCheckoutSessionResponse {
-    id: String,
-    url: Option<String>,
-    payment_intent: Option<JsonValue>,
-}
-
 #[derive(Debug, Clone)]
 struct CreateStripeCheckoutSessionResult {
     session_id: String,
     checkout_url: String,
     payment_intent_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct StripeEventEnvelope {
-    id: String,
-    #[serde(rename = "type")]
-    event_type: String,
-    data: StripeEventData,
-}
-
-#[derive(Debug, Deserialize)]
-struct StripeEventData {
-    object: JsonValue,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -439,12 +417,23 @@ async fn run() -> Result<()> {
         .build()
         .context("failed to initialize http client")?;
 
+    let stripe_client = if cfg.stripe_api_key.trim().is_empty() {
+        None
+    } else {
+        Some(
+            StripeClient::builder(cfg.stripe_api_key.trim().to_owned())
+                .http_client(http_client.clone())
+                .build()
+                .context("failed to initialize stripe client")?,
+        )
+    };
+
     let state = AppState {
         store,
         storage_assets_bucket: cfg.storage_assets_bucket,
         stripe_webhook_secret: cfg.stripe_webhook_secret,
+        stripe_client,
         stripe_checkout: StripeCheckoutConfig {
-            api_key: cfg.stripe_api_key,
             success_url: cfg.stripe_checkout_success_url,
             cancel_url: cfg.stripe_checkout_cancel_url,
         },
@@ -886,11 +875,11 @@ async fn handle_create_stripe_checkout_session(
     State(state): State<AppState>,
     body: Bytes,
 ) -> Response {
-    if state.stripe_checkout.api_key.trim().is_empty() {
+    if state.stripe_client.is_none() {
         return error_response(
             StatusCode::SERVICE_UNAVAILABLE,
             "stripe_not_configured",
-            "stripe api key is not configured",
+            "stripe client is not configured",
         );
     }
     if state.stripe_checkout.success_url.trim().is_empty()
@@ -1017,15 +1006,38 @@ async fn handle_stripe_webhook(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default();
 
-    if let Err(err) = verify_stripe_signature(&body, signature, &state.stripe_webhook_secret) {
-        return error_response(
-            StatusCode::UNAUTHORIZED,
-            "invalid_signature",
-            &err.to_string(),
-        );
-    }
+    let sdk_event = if state.stripe_webhook_secret.trim().is_empty() {
+        match serde_json::from_slice::<StripeEvent>(&body) {
+            Ok(event) => event,
+            Err(err) => {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_payload",
+                    &err.to_string(),
+                );
+            }
+        }
+    } else {
+        match stripe_webhook::construct_event(&body, signature, &state.stripe_webhook_secret) {
+            Ok(event) => event,
+            Err(stripe_webhook::StripeWebhookError::Json(err)) => {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_payload",
+                    &err.to_string(),
+                );
+            }
+            Err(err) => {
+                return error_response(
+                    StatusCode::UNAUTHORIZED,
+                    "invalid_signature",
+                    &err.to_string(),
+                );
+            }
+        }
+    };
 
-    let event = match parse_stripe_event(&body) {
+    let event = match parse_stripe_event(sdk_event) {
         Ok(event) => event,
         Err(err) => {
             return error_response(StatusCode::BAD_REQUEST, "invalid_payload", &err.to_string());
@@ -2358,6 +2370,11 @@ async fn create_stripe_checkout_session(
     order: &OrderCheckoutContext,
     customer_email: &str,
 ) -> Result<CreateStripeCheckoutSessionResult> {
+    let stripe_client = state
+        .stripe_client
+        .as_ref()
+        .ok_or_else(|| anyhow!("stripe client is not configured"))?;
+
     let currency = order.currency.trim().to_lowercase();
     if currency.is_empty() {
         bail!("order currency is required");
@@ -2369,73 +2386,56 @@ async fn create_stripe_checkout_session(
         format!("Hanko Field Order {}", order.order_no.trim())
     };
 
-    let mut params = vec![
-        ("mode".to_owned(), "payment".to_owned()),
-        (
-            "success_url".to_owned(),
-            state.stripe_checkout.success_url.clone(),
-        ),
-        (
-            "cancel_url".to_owned(),
-            state.stripe_checkout.cancel_url.clone(),
-        ),
-        ("line_items[0][quantity]".to_owned(), "1".to_owned()),
-        ("line_items[0][price_data][currency]".to_owned(), currency),
-        (
-            "line_items[0][price_data][unit_amount]".to_owned(),
-            order.total_jpy.to_string(),
-        ),
-        (
-            "line_items[0][price_data][product_data][name]".to_owned(),
-            product_name,
-        ),
-        ("metadata[order_id]".to_owned(), order.order_id.clone()),
-        (
-            "payment_intent_data[metadata][order_id]".to_owned(),
-            order.order_id.clone(),
-        ),
-    ];
+    let mut body = json!({
+        "mode": "payment",
+        "success_url": state.stripe_checkout.success_url.clone(),
+        "cancel_url": state.stripe_checkout.cancel_url.clone(),
+        "line_items": [
+            {
+                "quantity": 1,
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": order.total_jpy,
+                    "product_data": {
+                        "name": product_name,
+                    },
+                },
+            }
+        ],
+        "metadata": {
+            "order_id": order.order_id.clone(),
+        },
+        "payment_intent_data": {
+            "metadata": {
+                "order_id": order.order_id.clone(),
+            },
+        },
+    });
 
     if !customer_email.trim().is_empty() {
-        params.push((
-            "customer_email".to_owned(),
-            customer_email.trim().to_owned(),
-        ));
+        body["customer_email"] = JsonValue::String(customer_email.trim().to_owned());
     }
 
-    let response = state
-        .http_client
-        .post(STRIPE_CHECKOUT_SESSIONS_ENDPOINT)
-        .header(
-            "Authorization",
-            format!("Bearer {}", state.stripe_checkout.api_key.trim()),
+    let response = stripe_client
+        .post_checkout_sessions(
+            PostCheckoutSessionsRequest::new()
+                .with_idempotency_key(format!("checkout_session_{}", order.order_id))
+                .with_body(body),
         )
-        .header(
-            "Idempotency-Key",
-            format!("checkout_session_{}", order.order_id),
-        )
-        .form(&params)
-        .send()
         .await
         .context("failed to request stripe checkout session")?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+    if response.status < 200 || response.status >= 300 {
+        let response_body = serde_json::to_string(&response.body)
+            .unwrap_or_else(|_| "<unable to serialize response body>".to_owned());
         bail!(
             "stripe checkout session request failed status={} body={}",
-            status,
-            body
+            response.status,
+            response_body
         );
     }
 
-    let payload = response
-        .json::<StripeCheckoutSessionResponse>()
-        .await
-        .context("failed to parse stripe checkout session response")?;
+    let payload = response.body;
 
     let session_id = payload.id.trim().to_owned();
     if session_id.is_empty() {
@@ -2670,12 +2670,9 @@ fn lookup_locale(values: &HashMap<String, String>, target: &str) -> Option<Strin
     None
 }
 
-fn parse_stripe_event(payload: &[u8]) -> Result<StripeWebhookEvent> {
-    let env: StripeEventEnvelope =
-        serde_json::from_slice(payload).context("failed to parse stripe event")?;
-
-    let provider_event_id = env.id.trim().to_owned();
-    let event_type = env.event_type.trim().to_owned();
+fn parse_stripe_event(event: StripeEvent) -> Result<StripeWebhookEvent> {
+    let provider_event_id = event.id.trim().to_owned();
+    let event_type = event.param_type.trim().to_owned();
     if provider_event_id.is_empty() || event_type.is_empty() {
         bail!("stripe event must include id and type");
     }
@@ -2683,7 +2680,7 @@ fn parse_stripe_event(payload: &[u8]) -> Result<StripeWebhookEvent> {
     let mut payment_intent_id = String::new();
     let mut order_id = String::new();
 
-    if let Some(object) = env.data.object.as_object() {
+    if let Some(object) = event.data.object.as_object() {
         if let Some(id) = object.get("id").and_then(JsonValue::as_str)
             && id.trim().starts_with("pi_")
         {
@@ -2718,85 +2715,6 @@ fn parse_stripe_event(payload: &[u8]) -> Result<StripeWebhookEvent> {
         payment_intent_id,
         order_id,
     })
-}
-
-fn verify_stripe_signature(payload: &[u8], signature_header: &str, secret: &str) -> Result<()> {
-    verify_stripe_signature_at(payload, signature_header, secret, Utc::now())
-}
-
-fn verify_stripe_signature_at(
-    payload: &[u8],
-    signature_header: &str,
-    secret: &str,
-    now: DateTime<Utc>,
-) -> Result<()> {
-    if secret.trim().is_empty() {
-        return Ok(());
-    }
-
-    let signature = signature_header.trim();
-    if signature.is_empty() {
-        bail!("missing Stripe-Signature header");
-    }
-
-    let (timestamp, signatures) = parse_stripe_signature_header(signature)?;
-    let event_time = DateTime::<Utc>::from_timestamp(timestamp, 0)
-        .ok_or_else(|| anyhow!("invalid stripe signature timestamp"))?;
-
-    let age = (now - event_time).num_seconds();
-    if age.abs() > STRIPE_SIGNATURE_TOLERANCE_SECONDS {
-        bail!("stripe signature timestamp is outside tolerance");
-    }
-
-    let signed_payload = format!("{}.{}", timestamp, String::from_utf8_lossy(payload));
-    let mut mac =
-        HmacSha256::new_from_slice(secret.as_bytes()).context("invalid signing secret")?;
-    mac.update(signed_payload.as_bytes());
-    let expected = mac.finalize().into_bytes();
-
-    for candidate in signatures {
-        let decoded = match hex::decode(candidate) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-        if decoded.len() == expected.len() && decoded.eq(expected.as_slice()) {
-            return Ok(());
-        }
-    }
-
-    bail!("invalid stripe signature")
-}
-
-fn parse_stripe_signature_header(value: &str) -> Result<(i64, Vec<String>)> {
-    let mut timestamp: Option<i64> = None;
-    let mut signatures = Vec::new();
-
-    for part in value
-        .split(',')
-        .map(str::trim)
-        .filter(|part| !part.is_empty())
-    {
-        let mut segments = part.splitn(2, '=');
-        let key = segments.next().unwrap_or_default().trim();
-        let value = segments.next().unwrap_or_default().trim();
-        if key == "t" {
-            timestamp = Some(
-                value
-                    .parse::<i64>()
-                    .context("invalid stripe signature timestamp")?,
-            );
-        } else if key == "v1" && !value.is_empty() {
-            signatures.push(value.to_owned());
-        }
-    }
-
-    let timestamp =
-        timestamp.ok_or_else(|| anyhow!("stripe signature does not include timestamp"))?;
-    if signatures.is_empty() {
-        bail!("stripe signature does not include v1");
-    }
-
-    Ok((timestamp, signatures))
 }
 
 fn normalize_webhook_event(event: StripeWebhookEvent) -> StripeWebhookEvent {
@@ -3174,27 +3092,22 @@ mod tests {
     }
 
     #[test]
-    fn verify_stripe_signature_accepts_valid_signature() {
+    fn stripe_webhook_sdk_rejects_outdated_signature_timestamp() {
         let payload = br#"{"id":"evt_1","type":"payment_intent.succeeded","data":{"object":{"id":"pi_1","metadata":{"order_id":"order_1"}}}}"#;
-        let secret = "whsec_test";
-        let now = DateTime::from_timestamp(1_770_638_400, 0).expect("valid timestamp");
-        let timestamp = now.timestamp();
-
-        let signed_payload = format!("{timestamp}.{}", String::from_utf8_lossy(payload));
-        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("valid secret");
-        mac.update(signed_payload.as_bytes());
-        let signature = hex::encode(mac.finalize().into_bytes());
-        let header = format!("t={timestamp},v1={signature}");
-
-        assert!(verify_stripe_signature_at(payload, &header, secret, now).is_ok());
-        assert!(verify_stripe_signature_at(payload, &header, "wrong", now).is_err());
+        let error = stripe_webhook::construct_event(payload, "t=1700000000,v1=00", "whsec_test")
+            .expect_err("signature timestamp must be rejected");
+        assert!(matches!(
+            error,
+            stripe_webhook::StripeWebhookError::TimestampOutsideTolerance
+        ));
     }
 
     #[test]
     fn parse_stripe_event_extracts_core_fields() {
-        let payload = br#"{"id":"evt_1","type":"payment_intent.succeeded","data":{"object":{"id":"pi_1","metadata":{"order_id":"order_1"}}}}"#;
-
-        let event = parse_stripe_event(payload).expect("payload must parse");
+        let payload = br#"{"id":"evt_1","type":"payment_intent.succeeded","created":1770638400,"livemode":false,"object":"event","pending_webhooks":1,"data":{"object":{"id":"pi_1","metadata":{"order_id":"order_1"}}}}"#;
+        let sdk_event =
+            serde_json::from_slice::<StripeEvent>(payload).expect("payload must parse as event");
+        let event = parse_stripe_event(sdk_event).expect("event must map");
         assert_eq!(event.provider_event_id, "evt_1");
         assert_eq!(event.payment_intent_id, "pi_1");
         assert_eq!(event.order_id, "order_1");
