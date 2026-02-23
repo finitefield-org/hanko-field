@@ -3568,9 +3568,14 @@ impl FirestoreAdminSource {
         let seal = read_map_field(data, "seal");
         let material_data = read_map_field(data, "material");
         let pricing = read_map_field(data, "pricing");
-        let pricing_currency = read_string_field(&pricing, "currency");
-
-        let total = read_int_field(&pricing, "total").unwrap_or_default();
+        let raw_locale = read_string_field(data, "locale");
+        let locale = if raw_locale.is_empty() {
+            read_string_field(&contact, "preferred_locale")
+        } else {
+            raw_locale
+        };
+        let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
+        let total = resolve_order_total(data, &pricing, &pricing_currency);
 
         let material_label_ja = {
             let localized = resolve_localized_field(
@@ -3597,7 +3602,7 @@ impl FirestoreAdminSource {
             id: order_id.to_owned(),
             order_no: read_string_field(data, "order_no"),
             channel: read_string_field(data, "channel"),
-            locale: read_string_field(data, "locale"),
+            locale,
             currency: pricing_currency,
             status: read_string_field(data, "status"),
             status_updated_at,
@@ -5108,6 +5113,85 @@ fn fill_derived_statuses(order: &mut Order) {
     }
 }
 
+fn resolve_order_currency(
+    data: &BTreeMap<String, JsonValue>,
+    pricing: &BTreeMap<String, JsonValue>,
+    payment: &BTreeMap<String, JsonValue>,
+    locale: &str,
+) -> String {
+    let mut resolved = [
+        read_string_field(pricing, "currency"),
+        read_string_field(pricing, "pricing_currency"),
+        read_string_field(payment, "currency"),
+        read_string_field(data, "currency"),
+        read_string_field(data, "pricing_currency"),
+    ]
+    .into_iter()
+    .find_map(|value| normalize_currency_code(&value));
+
+    if let Some(expected) = currency_hint_for_locale(locale) {
+        match resolved.as_deref() {
+            Some(current) if current != expected => {
+                eprintln!(
+                    "warning: order currency mismatch locale={locale} stored={current}; using {expected}"
+                );
+                resolved = Some(expected.to_owned());
+            }
+            None => resolved = Some(expected.to_owned()),
+            _ => {}
+        }
+    }
+
+    resolved.unwrap_or_else(|| "USD".to_owned())
+}
+
+fn resolve_order_total(
+    data: &BTreeMap<String, JsonValue>,
+    pricing: &BTreeMap<String, JsonValue>,
+    currency: &str,
+) -> i64 {
+    if let Some(total) = read_int_field(pricing, "total") {
+        return total;
+    }
+    if let Some(total) = read_int_field(data, "total") {
+        return total;
+    }
+
+    if currency.trim().eq_ignore_ascii_case("JPY")
+        && let Some(total) = read_int_field(data, "total_jpy")
+    {
+        return total;
+    }
+    if currency.trim().eq_ignore_ascii_case("USD")
+        && let Some(total) = read_int_field(data, "total_usd")
+    {
+        return total;
+    }
+
+    if let Some(total) = read_int_field(data, "total_usd") {
+        return total;
+    }
+    if let Some(total) = read_int_field(data, "total_jpy") {
+        return total;
+    }
+
+    0
+}
+
+fn currency_hint_for_locale(locale: &str) -> Option<&'static str> {
+    let normalized = locale.trim().to_lowercase();
+    if normalized.is_empty() {
+        return None;
+    }
+    if normalized == "ja" || normalized.starts_with("ja-") {
+        return Some("JPY");
+    }
+    if normalized == "en" || normalized.starts_with("en-") {
+        return Some("USD");
+    }
+    None
+}
+
 fn format_datetime(value: DateTime<Utc>) -> String {
     value
         .with_timezone(&Local)
@@ -5533,12 +5617,16 @@ fn country_shipping_fee_by_currency_from_fields(
     read_int_map_field(data, "shipping_fee_by_currency")
 }
 
-fn normalize_currency_map_key(key: &str) -> Option<String> {
+fn normalize_currency_code(key: &str) -> Option<String> {
     let normalized = key.trim().to_ascii_uppercase();
     if normalized.len() != 3 || !normalized.chars().all(|ch| ch.is_ascii_alphabetic()) {
         return None;
     }
     Some(normalized)
+}
+
+fn normalize_currency_map_key(key: &str) -> Option<String> {
+    normalize_currency_code(key)
 }
 
 fn fs_string(value: impl Into<String>) -> JsonValue {
@@ -6533,6 +6621,29 @@ mod tests {
         assert_eq!(format_jpy(0), "0円");
         assert_eq!(format_jpy(1200), "1,200円");
         assert_eq!(format_jpy(1234567), "1,234,567円");
+    }
+
+    #[test]
+    fn resolve_order_currency_prefers_locale_when_mismatched() {
+        let mut data = BTreeMap::new();
+        data.insert("locale".to_owned(), fs_string("en"));
+        data.insert("currency".to_owned(), fs_string("JPY"));
+
+        let pricing = btree_from_pairs(vec![("currency", fs_string("JPY"))]);
+        let payment = BTreeMap::new();
+
+        let resolved = resolve_order_currency(&data, &pricing, &payment, "en");
+        assert_eq!(resolved, "USD");
+    }
+
+    #[test]
+    fn resolve_order_total_falls_back_to_legacy_currency_total() {
+        let mut data = BTreeMap::new();
+        data.insert("total_usd".to_owned(), fs_int(11600));
+
+        let pricing = BTreeMap::new();
+        let resolved = resolve_order_total(&data, &pricing, "USD");
+        assert_eq!(resolved, 11600);
     }
 
     #[test]
