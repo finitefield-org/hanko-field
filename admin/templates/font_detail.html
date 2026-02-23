@@ -30,16 +30,12 @@
       <span>font-family</span>
       <input type="text" name="font_family" value="{{ detail.font_family }}" required>
     </label>
-    <label class="flex flex-col gap-1.5 text-sm font-semibold">
-      <span>Google Fonts URL</span>
-      <input
-        type="url"
-        name="font_stylesheet_url"
-        value="{{ detail.font_stylesheet_url }}"
-        placeholder="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap"
-        required
-      >
-    </label>
+    <p class="rounded-lg border border-admin-line/60 bg-admin-bg/40 px-3 py-2 text-sm">
+      Google Fonts URL は `font-family` の先頭フォント名から自動生成されます。
+    </p>
+    <p class="rounded-lg border border-admin-line/60 bg-admin-bg/40 px-3 py-2 text-xs text-admin-muted break-all">
+      生成 URL: {{ detail.font_stylesheet_url }}
+    </p>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>スタイル</span>
       <select name="kanji_style" required>

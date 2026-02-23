@@ -584,7 +584,6 @@ struct FontPatchInput {
     label_ja: String,
     label_en: String,
     font_family: String,
-    font_stylesheet_url: String,
     kanji_style: String,
     sort_order: i64,
     is_active: bool,
@@ -1883,7 +1882,6 @@ async fn handle_font_patch(
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
         font_family: form_value(&form, "font_family"),
-        font_stylesheet_url: form_value(&form, "font_stylesheet_url"),
         kanji_style: form_value(&form, "kanji_style"),
         sort_order,
         is_active: form.contains_key("is_active"),
@@ -2952,15 +2950,13 @@ impl ServerState {
         let label_ja = input.label_ja.trim().to_owned();
         let label_en = input.label_en.trim().to_owned();
         let font_family = input.font_family.trim().to_owned();
-        let font_stylesheet_url = input.font_stylesheet_url.trim().to_owned();
         let kanji_style = normalize_kanji_style(&input.kanji_style)
             .ok_or_else(|| "スタイルは日本・中国・台湾から選択してください。".to_owned())?
             .to_owned();
-        validate_font_values(
+        let font_stylesheet_url = validate_font_values(
             &label_ja,
             &label_en,
             &font_family,
-            &font_stylesheet_url,
             &kanji_style,
             input.sort_order,
         )?;
@@ -3493,6 +3489,10 @@ impl FirestoreAdminSource {
             let mut font_stylesheet_url = read_string_field(data, "font_stylesheet_url");
             if font_stylesheet_url.is_empty() {
                 font_stylesheet_url = read_string_field(data, "font_url");
+            }
+            if font_stylesheet_url.is_empty() {
+                font_stylesheet_url =
+                    build_google_fonts_stylesheet_url(&font_family).unwrap_or_default();
             }
             let mut kanji_style = read_string_field(data, "kanji_style");
             if kanji_style.is_empty() {
@@ -4211,42 +4211,95 @@ fn validate_font_values(
     label_ja: &str,
     label_en: &str,
     font_family: &str,
-    font_stylesheet_url: &str,
     kanji_style: &str,
     sort_order: i64,
-) -> std::result::Result<(), String> {
+) -> std::result::Result<String, String> {
     if label_ja.is_empty() || label_en.is_empty() {
         return Err("フォント名（ja/en）は必須です。".to_owned());
     }
     if font_family.is_empty() {
         return Err("font-family は必須です。".to_owned());
     }
-    if font_stylesheet_url.is_empty() {
-        return Err("Google Fonts URL は必須です。".to_owned());
-    }
-    validate_google_fonts_stylesheet_url(font_stylesheet_url)?;
     if normalize_kanji_style(kanji_style).is_none() {
         return Err("スタイルは日本・中国・台湾から選択してください。".to_owned());
     }
     if sort_order < 0 {
         return Err("表示順は 0 以上で入力してください。".to_owned());
     }
-    Ok(())
+    build_google_fonts_stylesheet_url(font_family)
 }
 
-fn validate_google_fonts_stylesheet_url(url: &str) -> std::result::Result<(), String> {
-    let parsed = reqwest::Url::parse(url)
-        .map_err(|_| "Google Fonts URL の形式が正しくありません。".to_owned())?;
-    if parsed.scheme() != "https"
-        || parsed.host_str() != Some("fonts.googleapis.com")
-        || !parsed.path().starts_with("/css2")
-    {
+fn build_google_fonts_stylesheet_url(font_family: &str) -> std::result::Result<String, String> {
+    let first_font_name = extract_primary_font_name(font_family)
+        .ok_or_else(|| "font-family の先頭にフォント名を指定してください。".to_owned())?;
+    if is_generic_css_font_family(&first_font_name) {
         return Err(
-            "Google Fonts URL は https://fonts.googleapis.com/css2?... を指定してください。"
-                .to_owned(),
+            "font-family の先頭には Google Fonts のフォント名を指定してください。".to_owned(),
         );
     }
-    Ok(())
+
+    let mut url = reqwest::Url::parse("https://fonts.googleapis.com/css2")
+        .map_err(|_| "Google Fonts URL の生成に失敗しました。".to_owned())?;
+    {
+        let mut query = url.query_pairs_mut();
+        query.append_pair("family", &first_font_name);
+        query.append_pair("display", "swap");
+    }
+
+    Ok(url.to_string())
+}
+
+fn extract_primary_font_name(font_family: &str) -> Option<String> {
+    let first = font_family.split(',').next()?.trim();
+    if first.is_empty() {
+        return None;
+    }
+
+    let unquoted = first
+        .strip_prefix('\'')
+        .and_then(|value| value.strip_suffix('\''))
+        .or_else(|| {
+            first
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+        })
+        .unwrap_or(first)
+        .trim();
+    if unquoted.is_empty() {
+        return None;
+    }
+
+    let normalized = unquoted.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn is_generic_css_font_family(font_name: &str) -> bool {
+    let normalized = font_name.trim().to_ascii_lowercase();
+    matches!(
+        normalized.as_str(),
+        "serif"
+            | "sans-serif"
+            | "monospace"
+            | "cursive"
+            | "fantasy"
+            | "system-ui"
+            | "ui-serif"
+            | "ui-sans-serif"
+            | "ui-monospace"
+            | "ui-rounded"
+            | "emoji"
+            | "math"
+            | "fangsong"
+            | "inherit"
+            | "initial"
+            | "unset"
+            | "revert"
+            | "revert-layer"
+    )
 }
 
 fn validate_country_values(
@@ -5844,9 +5897,6 @@ mod tests {
                     label_ja: "Zen 丸".to_owned(),
                     label_en: "Zen Maru".to_owned(),
                     font_family: "'Zen Maru Gothic', 'Noto Sans JP', sans-serif".to_owned(),
-                    font_stylesheet_url:
-                        "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
-                            .to_owned(),
                     kanji_style: "taiwanese".to_owned(),
                     sort_order: 15,
                     is_active: true,
@@ -5866,10 +5916,27 @@ mod tests {
         );
         assert_eq!(
             detail.font_stylesheet_url,
-            "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
+            "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic&display=swap"
         );
         assert_eq!(detail.kanji_style, "taiwanese");
         assert_eq!(detail.sort_order, 15);
+    }
+
+    #[test]
+    fn build_google_fonts_stylesheet_url_uses_primary_font_name() {
+        let url =
+            build_google_fonts_stylesheet_url("'Zen Maru Gothic', 'Noto Sans JP', sans-serif")
+                .expect("url should be generated");
+        assert_eq!(
+            url,
+            "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic&display=swap"
+        );
+    }
+
+    #[test]
+    fn build_google_fonts_stylesheet_url_rejects_generic_family() {
+        let result = build_google_fonts_stylesheet_url("sans-serif, serif");
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -338,7 +338,11 @@ impl FirestoreCatalogSource {
                 stylesheet_url = read_string_field(&document.fields, "font_url");
             }
             if stylesheet_url.is_empty() {
-                bail!("fonts/{doc_id} is missing font_stylesheet_url");
+                stylesheet_url = build_google_fonts_stylesheet_url(&family).map_err(|error| {
+                    anyhow!(
+                        "fonts/{doc_id} is missing font_stylesheet_url and URL generation failed: {error}"
+                    )
+                })?;
             }
 
             let label = resolve_localized_field(
@@ -1066,6 +1070,76 @@ fn validate_catalog(catalog: &CatalogData) -> Result<()> {
         bail!("catalog validation failed: countries is empty");
     }
     Ok(())
+}
+
+fn build_google_fonts_stylesheet_url(font_family: &str) -> Result<String> {
+    let first_font_name = extract_primary_font_name(font_family)
+        .ok_or_else(|| anyhow!("font-family does not contain a primary font name"))?;
+    if is_generic_css_font_family(&first_font_name) {
+        bail!("font-family primary value must be a concrete Google Fonts family name");
+    }
+
+    let mut url = reqwest::Url::parse("https://fonts.googleapis.com/css2")
+        .context("failed to parse Google Fonts css2 endpoint")?;
+    {
+        let mut query = url.query_pairs_mut();
+        query.append_pair("family", &first_font_name);
+        query.append_pair("display", "swap");
+    }
+    Ok(url.to_string())
+}
+
+fn extract_primary_font_name(font_family: &str) -> Option<String> {
+    let first = font_family.split(',').next()?.trim();
+    if first.is_empty() {
+        return None;
+    }
+
+    let unquoted = first
+        .strip_prefix('\'')
+        .and_then(|value| value.strip_suffix('\''))
+        .or_else(|| {
+            first
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+        })
+        .unwrap_or(first)
+        .trim();
+    if unquoted.is_empty() {
+        return None;
+    }
+
+    let normalized = unquoted.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn is_generic_css_font_family(font_name: &str) -> bool {
+    let normalized = font_name.trim().to_ascii_lowercase();
+    matches!(
+        normalized.as_str(),
+        "serif"
+            | "sans-serif"
+            | "monospace"
+            | "cursive"
+            | "fantasy"
+            | "system-ui"
+            | "ui-serif"
+            | "ui-sans-serif"
+            | "ui-monospace"
+            | "ui-rounded"
+            | "emoji"
+            | "math"
+            | "fangsong"
+            | "inherit"
+            | "initial"
+            | "unset"
+            | "revert"
+            | "revert-layer"
+    )
 }
 
 fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
