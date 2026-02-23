@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -27,6 +29,8 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   bool _syncingSealControllers = false;
   bool _initializedFromState = false;
   bool _bootstrapped = false;
+  ProviderSubscription<OrderScreenState>? _orderStateSubscription;
+  String _lastAutoOpenedCheckoutToken = '';
 
   @override
   void initState() {
@@ -52,6 +56,33 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    _orderStateSubscription ??= ref.listenManual<OrderScreenState>(
+      orderViewModel,
+      (previous, next) {
+        final nextResult = next.purchaseResult;
+        if (nextResult == null) {
+          return;
+        }
+
+        final checkoutUrl = nextResult.checkoutUrl.trim();
+        if (checkoutUrl.isEmpty) {
+          return;
+        }
+
+        final previousToken = _checkoutToken(previous?.purchaseResult);
+        final nextToken = _checkoutToken(nextResult);
+        if (nextToken.isEmpty || nextToken == previousToken) {
+          return;
+        }
+        if (nextToken == _lastAutoOpenedCheckoutToken) {
+          return;
+        }
+
+        _lastAutoOpenedCheckoutToken = nextToken;
+        unawaited(_openCheckoutUrl(checkoutUrl));
+      },
+    );
+
     if (!_bootstrapped) {
       _bootstrapped = true;
       ref.invoke(orderViewModel.initialize());
@@ -71,6 +102,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
 
   @override
   void dispose() {
+    _orderStateSubscription?.close();
     _sealLine1Controller.dispose();
     _sealLine2Controller.dispose();
     super.dispose();
@@ -116,6 +148,19 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Checkout URL を開けませんでした。')));
     }
+  }
+
+  String _checkoutToken(PurchaseResultData? result) {
+    if (result == null) {
+      return '';
+    }
+
+    final sessionId = result.checkoutSessionId.trim();
+    if (sessionId.isNotEmpty) {
+      return sessionId;
+    }
+
+    return result.checkoutUrl.trim();
   }
 
   @override
@@ -265,7 +310,6 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         onTermsChanged: (checked) =>
             ref.invoke(orderViewModel.setTermsAgreed(checked)),
         onSubmit: () => ref.invoke(orderViewModel.submitPurchase()),
-        onOpenCheckout: _openCheckoutUrl,
         onOpenPaymentSuccess: widget.onOpenPaymentSuccess,
         onOpenPaymentFailure: widget.onOpenPaymentFailure,
       ),
@@ -1089,7 +1133,6 @@ class _PurchaseStep extends StatelessWidget {
     required this.onAddress2Changed,
     required this.onTermsChanged,
     required this.onSubmit,
-    required this.onOpenCheckout,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
   });
@@ -1107,7 +1150,6 @@ class _PurchaseStep extends StatelessWidget {
   final ValueChanged<String> onAddress2Changed;
   final ValueChanged<bool> onTermsChanged;
   final VoidCallback onSubmit;
-  final ValueChanged<String> onOpenCheckout;
   final ValueChanged<String?> onOpenPaymentSuccess;
   final VoidCallback onOpenPaymentFailure;
 
@@ -1327,7 +1369,6 @@ class _PurchaseStep extends StatelessWidget {
               const SizedBox(height: 12),
               _PurchaseResultCard(
                 result: result,
-                onOpenCheckout: onOpenCheckout,
                 onOpenPaymentSuccess: onOpenPaymentSuccess,
                 onOpenPaymentFailure: onOpenPaymentFailure,
               ),
@@ -1405,13 +1446,11 @@ class _LabeledField extends StatelessWidget {
 class _PurchaseResultCard extends StatelessWidget {
   const _PurchaseResultCard({
     required this.result,
-    required this.onOpenCheckout,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
   });
 
   final PurchaseResultData result;
-  final ValueChanged<String> onOpenCheckout;
   final ValueChanged<String?> onOpenPaymentSuccess;
   final VoidCallback onOpenPaymentFailure;
 
@@ -1466,12 +1505,6 @@ class _PurchaseResultCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              FilledButton(
-                onPressed: result.checkoutUrl.trim().isEmpty
-                    ? null
-                    : () => onOpenCheckout(result.checkoutUrl),
-                child: const Text('Stripe Checkout を開く'),
-              ),
               FilledButton.tonal(
                 onPressed: () => onOpenPaymentSuccess(result.checkoutSessionId),
                 child: const Text('支払い成功画面へ（確認用）'),
