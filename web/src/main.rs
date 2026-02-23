@@ -96,8 +96,7 @@ struct KanjiCandidate {
     kanji: String,
     line1: String,
     line2: String,
-    reading_hiragana: String,
-    reading_romaji: String,
+    reading: String,
     reason: String,
 }
 
@@ -141,6 +140,7 @@ struct PageTemplate {
 #[template(path = "kanji_suggestions.html")]
 struct KanjiSuggestionsTemplate {
     real_name: String,
+    kanji_style: String,
     suggestions: Vec<KanjiCandidate>,
     has_suggestions: bool,
     error: String,
@@ -154,8 +154,8 @@ struct KanjiCandidatesApiResponse {
 #[derive(Debug, Deserialize)]
 struct KanjiCandidatesApiItem {
     kanji: String,
-    reading_hiragana: String,
-    reading_romaji: String,
+    #[serde(alias = "reading_romaji", alias = "romaji")]
+    reading: String,
     reason: String,
 }
 
@@ -587,10 +587,9 @@ impl KanjiApiClient {
                     return None;
                 }
 
-                let reading_hiragana = item.reading_hiragana.trim().to_owned();
-                let reading_romaji = item.reading_romaji.trim().to_owned();
+                let reading = item.reading.trim().to_owned();
                 let reason = item.reason.trim().to_owned();
-                if reading_hiragana.is_empty() || reading_romaji.is_empty() || reason.is_empty() {
+                if reading.is_empty() || reason.is_empty() {
                     return None;
                 }
 
@@ -598,8 +597,7 @@ impl KanjiApiClient {
                     kanji: kanji.clone(),
                     line1: kanji,
                     line2: String::new(),
-                    reading_hiragana,
-                    reading_romaji,
+                    reading,
                     reason,
                 })
             })
@@ -1234,6 +1232,7 @@ async fn handle_kanji_suggestions(
 
     let template = KanjiSuggestionsTemplate {
         real_name,
+        kanji_style: kanji_style.to_owned(),
         has_suggestions: !suggestions.is_empty(),
         suggestions,
         error,

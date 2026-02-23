@@ -7,9 +7,9 @@
     class="kanji-chip"
     data-line1="{{ suggestion.line1 }}"
     data-line2="{{ suggestion.line2 }}"
+    data-kanji-style="{{ kanji_style }}"
     data-reason="{{ suggestion.reason }}"
-    data-hiragana="{{ suggestion.reading_hiragana }}"
-    data-romaji="{{ suggestion.reading_romaji }}"
+    data-reading="{{ suggestion.reading }}"
   >{{ suggestion.kanji }}</button>
   {% endfor %}
 </div>

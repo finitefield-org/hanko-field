@@ -281,13 +281,13 @@ impl KanjiStyle {
     fn prompt_instruction(self) -> &'static str {
         match self {
             Self::Japanese => {
-                "Style preference: Japanese style. Follow Japanese naming conventions and aesthetics."
+                "Style preference: Japanese style. Follow Japanese naming conventions and aesthetics. reading must be lowercase romaji."
             }
             Self::Chinese => {
-                "Style preference: Chinese style. Follow modern Chinese naming conventions and aesthetics."
+                "Style preference: Chinese style. Follow modern Chinese naming conventions and aesthetics. reading must be lowercase Hanyu Pinyin without tone marks."
             }
             Self::Taiwanese => {
-                "Style preference: Taiwanese style. Prefer Traditional Chinese naming conventions common in Taiwan."
+                "Style preference: Taiwanese style. Prefer Traditional Chinese naming conventions common in Taiwan. reading must be lowercase Hanyu Pinyin without tone marks."
             }
         }
     }
@@ -296,8 +296,7 @@ impl KanjiStyle {
 #[derive(Debug, Clone)]
 struct KanjiNameCandidate {
     kanji: String,
-    reading_hiragana: String,
-    reading_romaji: String,
+    reading: String,
     reason: String,
 }
 
@@ -780,8 +779,7 @@ async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: B
             "candidates": candidates.into_iter().map(|candidate| {
                 json!({
                     "kanji": candidate.kanji,
-                    "reading_hiragana": candidate.reading_hiragana,
-                    "reading_romaji": candidate.reading_romaji,
+                    "reading": candidate.reading,
                     "reason": candidate.reason,
                 })
             }).collect::<Vec<_>>(),
@@ -2215,17 +2213,16 @@ fn build_kanji_candidates_prompt(input: &GenerateKanjiCandidatesInput) -> String
     let gender_instruction = input.gender.prompt_instruction();
     let style_instruction = input.kanji_style.prompt_instruction();
     format!(
-        "Generate {} unique Japanese name candidates for a hanko seal.\n\
+        "Generate {} unique Kanji name candidates for a hanko seal.\n\
 Input name: \"{}\"\n\
 {}\n\
 {}\n\
 For each candidate, return these fields:\n\
 - kanji: 1-2 CJK Han characters suitable for a seal (no spaces)\n\
-- reading_hiragana: reading in hiragana\n\
-- reading_romaji: reading in lowercase romaji\n\
+- reading: lowercase romaji for japanese style, lowercase Hanyu Pinyin without tone marks for chinese/taiwanese styles\n\
 - reason: why this Kanji name was chosen, written in {}\n\
 Return only JSON (no markdown, no explanation) in this exact shape:\n\
-{{\"candidates\":[{{\"kanji\":\"\",\"reading_hiragana\":\"\",\"reading_romaji\":\"\",\"reason\":\"\"}}]}}",
+{{\"candidates\":[{{\"kanji\":\"\",\"reading\":\"\",\"reason\":\"\"}}]}}",
         input.count, input.real_name, gender_instruction, style_instruction, input.reason_language
     )
 }
@@ -2320,17 +2317,15 @@ fn normalize_kanji_candidate(value: &JsonValue) -> Option<KanjiNameCandidate> {
         return None;
     }
 
-    let reading_hiragana = read_json_string(value, &["reading_hiragana", "hiragana"]);
-    let reading_romaji = read_json_string(value, &["reading_romaji", "romaji"]);
+    let reading = read_json_string(value, &["reading", "reading_romaji", "romaji"]);
     let reason = read_json_string(value, &["reason"]);
-    if reading_hiragana.is_empty() || reading_romaji.is_empty() || reason.is_empty() {
+    if reading.is_empty() || reason.is_empty() {
         return None;
     }
 
     Some(KanjiNameCandidate {
         kanji,
-        reading_hiragana,
-        reading_romaji,
+        reading,
         reason,
     })
 }
@@ -3189,14 +3184,12 @@ mod tests {
   "candidates": [
     {
       "kanji": "蒼真",
-      "reading_hiragana": "そうま",
-      "reading_romaji": "soma",
+      "reading": "soma",
       "reason": "Balanced and clear for seal engraving."
     },
     {
       "kanji": "悠花",
-      "reading_hiragana": "ゆうか",
-      "reading_romaji": "yuka",
+      "reading": "yuka",
       "reason": "Soft sound and elegant strokes."
     }
   ]
@@ -3208,7 +3201,6 @@ mod tests {
             parse_kanji_candidates_from_gemini_text(payload, 5).expect("payload must parse");
         assert_eq!(candidates.len(), 2);
         assert_eq!(candidates[0].kanji, "蒼真");
-        assert_eq!(candidates[0].reading_hiragana, "そうま");
-        assert_eq!(candidates[0].reading_romaji, "soma");
+        assert_eq!(candidates[0].reading, "soma");
     }
 }

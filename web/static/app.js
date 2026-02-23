@@ -41,6 +41,36 @@
     square: "角",
     round: "丸",
   };
+  const PINYIN_TONE_MAP = {
+    ā: "a",
+    á: "a",
+    ǎ: "a",
+    à: "a",
+    ē: "e",
+    é: "e",
+    ě: "e",
+    è: "e",
+    ī: "i",
+    í: "i",
+    ǐ: "i",
+    ì: "i",
+    ō: "o",
+    ó: "o",
+    ǒ: "o",
+    ò: "o",
+    ū: "u",
+    ú: "u",
+    ǔ: "u",
+    ù: "u",
+    ǖ: "ü",
+    ǘ: "ü",
+    ǚ: "ü",
+    ǜ: "ü",
+    ń: "n",
+    ň: "n",
+    ǹ: "n",
+    ḿ: "m",
+  };
   const DEFAULT_KANJI_STYLE = "japanese";
   const MAX_SEAL_CHAR_TOTAL = 2;
   const STEP_HASH_TO_VALUE = {
@@ -171,6 +201,21 @@
       return style;
     }
     return DEFAULT_KANJI_STYLE;
+  }
+
+  function isChineseStyle(style) {
+    return style === "chinese" || style === "taiwanese";
+  }
+
+  function normalizePinyinWithoutTone(rawReading) {
+    const normalized = Array.from((rawReading || "").trim().toLowerCase())
+      .map((char) => PINYIN_TONE_MAP[char] || char)
+      .join("")
+      .replace(/u:/g, "ü")
+      .replace(/[1-5]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return normalized;
   }
 
   function styleMatchedFontChips() {
@@ -454,12 +499,18 @@
 
       const readingBox = suggestionsContainer.querySelector("[data-kanji-reading]");
       if (readingBox) {
-        const hiragana = (chip.dataset.hiragana || "").trim();
-        const romaji = (chip.dataset.romaji || "").trim();
-        if (hiragana && romaji) {
-          readingBox.textContent = `読み方: ${hiragana} / ${romaji}`;
-        } else if (hiragana) {
-          readingBox.textContent = `読み方: ${hiragana}`;
+        const reading = (chip.dataset.reading || "").trim();
+        const style = (chip.dataset.kanjiStyle || selectedKanjiStyle()).trim().toLowerCase();
+
+        if (isChineseStyle(style)) {
+          const pinyin = normalizePinyinWithoutTone(reading);
+          if (pinyin) {
+            readingBox.textContent = `読み方(拼音): ${pinyin}`;
+          } else {
+            readingBox.textContent = "この候補の読み方を表示できませんでした。";
+          }
+        } else if (reading) {
+          readingBox.textContent = `読み方(ローマ字): ${reading.toLowerCase()}`;
         } else {
           readingBox.textContent = "この候補の読み方を表示できませんでした。";
         }
