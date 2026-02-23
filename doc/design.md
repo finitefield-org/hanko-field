@@ -49,3 +49,4 @@
 - [x] 漢字名提案の読み方表示をスタイル別に変更し、日本スタイルはローマ字、中国/台湾スタイルは声調なし拼音で表示する
 - [x] 漢字名提案レスポンスの読み方キーを `reading` に統一し、ひらがな項目を廃止する
 - [x] `app` に `web` と同等の注文フロー画面（デザイン/材質/購入）と支払い成功・失敗画面を追加
+- [x] `app` を `api`（`/v1/config/public`, `/v1/catalog`, `/v1/kanji-candidates`, `/v1/orders`, `/v1/payments/stripe/checkout-session`）に接続し、実データを利用する

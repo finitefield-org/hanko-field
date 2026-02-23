@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
-import '../data/mock_catalog.dart';
+import '../../../app/config/app_runtime_config.dart';
+import '../data/order_api_repository.dart';
 import '../domain/order_models.dart';
 
 @immutable
@@ -10,6 +13,10 @@ class OrderScreenState {
   static const _noChange = Object();
 
   final CatalogData catalog;
+  final bool isLoadingCatalog;
+  final String catalogError;
+  final String locale;
+  final String currency;
   final OrderStep step;
   final String sealLine1;
   final String sealLine2;
@@ -24,6 +31,7 @@ class OrderScreenState {
   final List<KanjiCandidate> suggestions;
   final int? selectedSuggestionIndex;
   final String suggestionsError;
+  final bool isGeneratingSuggestions;
   final String recipientName;
   final String email;
   final String phone;
@@ -33,11 +41,16 @@ class OrderScreenState {
   final String addressLine1;
   final String addressLine2;
   final bool termsAgreed;
+  final bool isSubmittingPurchase;
   final PurchaseResultData? purchaseResult;
   final String purchaseError;
 
   const OrderScreenState({
     required this.catalog,
+    required this.isLoadingCatalog,
+    required this.catalogError,
+    required this.locale,
+    required this.currency,
     required this.step,
     required this.sealLine1,
     required this.sealLine2,
@@ -52,6 +65,7 @@ class OrderScreenState {
     required this.suggestions,
     required this.selectedSuggestionIndex,
     required this.suggestionsError,
+    required this.isGeneratingSuggestions,
     required this.recipientName,
     required this.email,
     required this.phone,
@@ -61,12 +75,17 @@ class OrderScreenState {
     required this.addressLine1,
     required this.addressLine2,
     required this.termsAgreed,
+    required this.isSubmittingPurchase,
     required this.purchaseResult,
     required this.purchaseError,
   });
 
   OrderScreenState copyWith({
     CatalogData? catalog,
+    bool? isLoadingCatalog,
+    String? catalogError,
+    String? locale,
+    String? currency,
     OrderStep? step,
     String? sealLine1,
     String? sealLine2,
@@ -81,6 +100,7 @@ class OrderScreenState {
     List<KanjiCandidate>? suggestions,
     Object? selectedSuggestionIndex = _noChange,
     String? suggestionsError,
+    bool? isGeneratingSuggestions,
     String? recipientName,
     String? email,
     String? phone,
@@ -90,11 +110,16 @@ class OrderScreenState {
     String? addressLine1,
     String? addressLine2,
     bool? termsAgreed,
+    bool? isSubmittingPurchase,
     Object? purchaseResult = _noChange,
     String? purchaseError,
   }) {
     return OrderScreenState(
       catalog: catalog ?? this.catalog,
+      isLoadingCatalog: isLoadingCatalog ?? this.isLoadingCatalog,
+      catalogError: catalogError ?? this.catalogError,
+      locale: locale ?? this.locale,
+      currency: currency ?? this.currency,
       step: step ?? this.step,
       sealLine1: sealLine1 ?? this.sealLine1,
       sealLine2: sealLine2 ?? this.sealLine2,
@@ -111,6 +136,8 @@ class OrderScreenState {
           ? this.selectedSuggestionIndex
           : selectedSuggestionIndex as int?,
       suggestionsError: suggestionsError ?? this.suggestionsError,
+      isGeneratingSuggestions:
+          isGeneratingSuggestions ?? this.isGeneratingSuggestions,
       recipientName: recipientName ?? this.recipientName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
@@ -120,6 +147,7 @@ class OrderScreenState {
       addressLine1: addressLine1 ?? this.addressLine1,
       addressLine2: addressLine2 ?? this.addressLine2,
       termsAgreed: termsAgreed ?? this.termsAgreed,
+      isSubmittingPurchase: isSubmittingPurchase ?? this.isSubmittingPurchase,
       purchaseResult: identical(purchaseResult, _noChange)
           ? this.purchaseResult
           : purchaseResult as PurchaseResultData?,
@@ -127,35 +155,110 @@ class OrderScreenState {
     );
   }
 
+  bool get hasCatalog {
+    return catalog.fonts.isNotEmpty &&
+        catalog.materials.isNotEmpty &&
+        catalog.countries.isNotEmpty;
+  }
+
+  String get effectiveCurrency {
+    final normalized = currency.trim().toUpperCase();
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+    return 'USD';
+  }
+
   List<FontOption> get visibleFonts {
-    return catalog.fonts.where((f) => f.kanjiStyle == kanjiStyle).toList();
+    if (!hasCatalog) {
+      return const [];
+    }
+
+    final filtered = catalog.fonts
+        .where((font) => font.kanjiStyle == kanjiStyle)
+        .toList();
+    if (filtered.isNotEmpty) {
+      return filtered;
+    }
+
+    return catalog.fonts;
+  }
+
+  FontOption? get selectedFontOrNull {
+    if (!hasCatalog) {
+      return null;
+    }
+
+    final visible = visibleFonts;
+    final matched = visible.where((font) => font.key == selectedFontKey);
+    if (matched.isNotEmpty) {
+      return matched.first;
+    }
+    return visible.isNotEmpty ? visible.first : catalog.fonts.first;
   }
 
   FontOption get selectedFont {
-    final visible = visibleFonts;
-    final matched = visible.where((f) => f.key == selectedFontKey);
-    if (matched.isNotEmpty) {
-      return matched.first;
-    }
-    return visible.first;
+    return selectedFontOrNull ??
+        const FontOption(
+          key: '',
+          label: '-',
+          family: 'sans-serif',
+          kanjiStyle: KanjiStyle.japanese,
+        );
   }
 
   List<MaterialOption> get visibleMaterials {
-    return catalog.materials.where((m) => m.shape == shape).toList();
+    if (!hasCatalog) {
+      return const [];
+    }
+
+    final filtered = catalog.materials
+        .where((material) => material.shape == shape)
+        .toList();
+    if (filtered.isNotEmpty) {
+      return filtered;
+    }
+
+    return catalog.materials;
   }
 
-  MaterialOption get selectedMaterial {
+  MaterialOption? get selectedMaterialOrNull {
+    if (!hasCatalog) {
+      return null;
+    }
+
     final visible = visibleMaterials;
-    final matched = visible.where((m) => m.key == selectedMaterialKey);
+    final matched = visible.where(
+      (material) => material.key == selectedMaterialKey,
+    );
     if (matched.isNotEmpty) {
       return matched.first;
     }
-    return visible.first;
+    return visible.isNotEmpty ? visible.first : catalog.materials.first;
   }
 
-  CountryOption get selectedCountry {
+  MaterialOption get selectedMaterial {
+    return selectedMaterialOrNull ??
+        const MaterialOption(
+          key: '',
+          label: '-',
+          description: '',
+          shape: SealShape.square,
+          shapeLabel: '角印',
+          price: 0,
+          photoUrl: '',
+          photoAlt: '',
+          hasPhoto: false,
+        );
+  }
+
+  CountryOption? get selectedCountryOrNull {
+    if (!hasCatalog) {
+      return null;
+    }
+
     final matched = catalog.countries.where(
-      (c) => c.code == selectedCountryCode,
+      (country) => country.code == selectedCountryCode,
     );
     if (matched.isNotEmpty) {
       return matched.first;
@@ -163,8 +266,13 @@ class OrderScreenState {
     return catalog.countries.first;
   }
 
-  int get subtotal => selectedMaterial.price;
-  int get shipping => selectedCountry.shipping;
+  CountryOption get selectedCountry {
+    return selectedCountryOrNull ??
+        const CountryOption(code: '--', label: '-', shipping: 0);
+  }
+
+  int get subtotal => selectedMaterialOrNull?.price ?? 0;
+  int get shipping => selectedCountryOrNull?.shipping ?? 0;
   int get total => subtotal + shipping;
 
   String get sealDisplay {
@@ -194,34 +302,29 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
   @override
   OrderScreenState build(Ref ref) {
-    final catalog = mockCatalog;
-    final defaultStyle = KanjiStyle.japanese;
-    final defaultFont = catalog.fonts.firstWhere(
-      (font) => font.kanjiStyle == defaultStyle,
-      orElse: () => catalog.fonts.first,
-    );
-    final defaultShape = SealShape.square;
-    final defaultMaterial = catalog.materials.firstWhere(
-      (material) => material.shape == defaultShape,
-      orElse: () => catalog.materials.first,
-    );
+    final runtime = ref.watch(appRuntimeConfigProvider);
 
     return OrderScreenState(
-      catalog: catalog,
+      catalog: CatalogData.empty,
+      isLoadingCatalog: false,
+      catalogError: '',
+      locale: runtime.preferredLocale,
+      currency: 'USD',
       step: OrderStep.design,
       sealLine1: '',
       sealLine2: '',
       sealTextError: '',
-      kanjiStyle: defaultStyle,
-      selectedFontKey: defaultFont.key,
-      shape: defaultShape,
-      selectedMaterialKey: defaultMaterial.key,
-      selectedCountryCode: catalog.countries.first.code,
+      kanjiStyle: KanjiStyle.japanese,
+      selectedFontKey: '',
+      shape: SealShape.square,
+      selectedMaterialKey: '',
+      selectedCountryCode: '',
       realName: '',
       candidateGender: CandidateGender.unspecified,
       suggestions: const [],
       selectedSuggestionIndex: null,
       suggestionsError: '',
+      isGeneratingSuggestions: false,
       recipientName: '',
       email: '',
       phone: '',
@@ -231,11 +334,13 @@ class OrderViewModel extends Provider<OrderScreenState> {
       addressLine1: '',
       addressLine2: '',
       termsAgreed: false,
+      isSubmittingPurchase: false,
       purchaseResult: null,
       purchaseError: '',
     );
   }
 
+  late final initializeMut = mutation<void>(#initialize);
   late final updateSealLine1Mut = mutation<void>(#updateSealLine1);
   late final updateSealLine2Mut = mutation<void>(#updateSealLine2);
   late final toggleWritingModeMut = mutation<void>(#toggleWritingMode);
@@ -260,6 +365,64 @@ class OrderViewModel extends Provider<OrderScreenState> {
   late final updateAddressLine2Mut = mutation<void>(#updateAddressLine2);
   late final setTermsAgreedMut = mutation<void>(#setTermsAgreed);
   late final submitPurchaseMut = mutation<void>(#submitPurchase);
+
+  Call<void, OrderScreenState> initialize() {
+    return mutate(initializeMut, (ref) async {
+      final current = ref.watch(this);
+      if (current.isLoadingCatalog) {
+        return;
+      }
+
+      ref.state = current.copyWith(isLoadingCatalog: true, catalogError: '');
+
+      try {
+        final runtime = ref.watch(appRuntimeConfigProvider);
+        final api = ref.watch(orderApiRepositoryProvider);
+        final publicConfig = await api.fetchPublicConfig();
+        final locale = _resolveLocale(runtime.preferredLocale, publicConfig);
+
+        final catalogResponse = await api.fetchCatalog(locale: locale);
+        final catalog = catalogResponse.catalog;
+        if (catalog.fonts.isEmpty ||
+            catalog.materials.isEmpty ||
+            catalog.countries.isEmpty) {
+          throw Exception('catalog is empty');
+        }
+
+        final style = KanjiStyle.japanese;
+        final defaultFont = _pickInitialFont(catalog, style);
+        final defaultShape = _pickInitialShape(catalog);
+        final defaultMaterial = _pickInitialMaterial(catalog, defaultShape);
+        final defaultCountry = catalog.countries.first;
+
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              catalog: catalog,
+              isLoadingCatalog: false,
+              catalogError: '',
+              locale: catalogResponse.locale,
+              currency: catalogResponse.currency,
+              step: OrderStep.design,
+              kanjiStyle: style,
+              selectedFontKey: defaultFont.key,
+              shape: defaultShape,
+              selectedMaterialKey: defaultMaterial.key,
+              selectedCountryCode: defaultCountry.code,
+            );
+      } catch (error) {
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              isLoadingCatalog: false,
+              catalogError: _apiErrorMessage(
+                error,
+                fallback: 'カタログの取得に失敗しました。',
+              ),
+            );
+      }
+    });
+  }
 
   Call<void, OrderScreenState> updateSealLine1(String value) {
     return mutate(updateSealLine1Mut, (ref) async {
@@ -320,15 +483,21 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> selectKanjiStyle(KanjiStyle style) {
     return mutate(selectKanjiStyleMut, (ref) async {
       final current = ref.watch(this);
-      final visibleFonts = current.catalog.fonts
-          .where((font) => font.kanjiStyle == style)
-          .toList();
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      final visibleFonts = _visibleFontsFor(
+        catalog: current.catalog,
+        style: style,
+      );
       final hasSelected = visibleFonts.any(
         (font) => font.key == current.selectedFontKey,
       );
       final nextFontKey = hasSelected
           ? current.selectedFontKey
           : visibleFonts.first.key;
+
       ref.state = current.copyWith(
         kanjiStyle: style,
         selectedFontKey: nextFontKey,
@@ -340,10 +509,15 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> selectFont(String key) {
     return mutate(selectFontMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
       final allowed = current.visibleFonts.any((font) => font.key == key);
       if (!allowed) {
         return;
       }
+
       ref.state = current.copyWith(selectedFontKey: key);
     });
   }
@@ -351,15 +525,21 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> selectShape(SealShape shape) {
     return mutate(selectShapeMut, (ref) async {
       final current = ref.watch(this);
-      final visibleMaterials = current.catalog.materials
-          .where((material) => material.shape == shape)
-          .toList();
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      final visibleMaterials = _visibleMaterialsFor(
+        catalog: current.catalog,
+        shape: shape,
+      );
       final hasSelected = visibleMaterials.any(
         (material) => material.key == current.selectedMaterialKey,
       );
       final nextMaterialKey = hasSelected
           ? current.selectedMaterialKey
           : visibleMaterials.first.key;
+
       ref.state = current.copyWith(
         shape: shape,
         selectedMaterialKey: nextMaterialKey,
@@ -371,12 +551,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> selectMaterial(String key) {
     return mutate(selectMaterialMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
       final allowed = current.visibleMaterials.any(
         (material) => material.key == key,
       );
       if (!allowed) {
         return;
       }
+
       ref.state = current.copyWith(
         selectedMaterialKey: key,
         purchaseResult: null,
@@ -387,12 +572,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> selectCountry(String code) {
     return mutate(selectCountryMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
       final allowed = current.catalog.countries.any(
         (country) => country.code == code,
       );
       if (!allowed) {
         return;
       }
+
       ref.state = current.copyWith(
         selectedCountryCode: code,
         purchaseResult: null,
@@ -403,6 +593,10 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> nextStep() {
     return mutate(nextStepMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
       if (current.step == OrderStep.design) {
         final sealError = _validateSealText(
           line1: current.sealLine1,
@@ -416,6 +610,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
           return;
         }
       }
+
       ref.state = current.copyWith(step: current.step.next());
     });
   }
@@ -444,6 +639,10 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> generateSuggestions() {
     return mutate(generateSuggestionsMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
       final realName = current.realName.trim();
       if (realName.isEmpty) {
         ref.state = current.copyWith(
@@ -454,17 +653,41 @@ class OrderViewModel extends Provider<OrderScreenState> {
         return;
       }
 
-      final suggestions = _mockSuggestions(
-        realName: realName,
-        style: current.kanjiStyle,
-        gender: current.candidateGender,
-      );
-
       ref.state = current.copyWith(
-        suggestions: suggestions,
-        selectedSuggestionIndex: suggestions.isEmpty ? null : 0,
+        isGeneratingSuggestions: true,
         suggestionsError: '',
       );
+
+      try {
+        final api = ref.watch(orderApiRepositoryProvider);
+        final suggestions = await api.generateKanjiCandidates(
+          realName: realName,
+          gender: current.candidateGender,
+          style: current.kanjiStyle,
+          reasonLanguage: current.locale,
+        );
+
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              suggestions: suggestions,
+              selectedSuggestionIndex: suggestions.isEmpty ? null : 0,
+              suggestionsError: suggestions.isEmpty ? '候補を生成できませんでした。' : '',
+              isGeneratingSuggestions: false,
+            );
+      } catch (error) {
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              suggestions: const [],
+              selectedSuggestionIndex: null,
+              suggestionsError: _apiErrorMessage(
+                error,
+                fallback: '候補生成に失敗しました。',
+              ),
+              isGeneratingSuggestions: false,
+            );
+      }
     });
   }
 
@@ -559,6 +782,9 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> submitPurchase() {
     return mutate(submitPurchaseMut, (ref) async {
       final current = ref.watch(this);
+      if (!current.hasCatalog || current.isSubmittingPurchase) {
+        return;
+      }
 
       final sealError = _validateSealText(
         line1: current.sealLine1,
@@ -582,32 +808,83 @@ class OrderViewModel extends Provider<OrderScreenState> {
         return;
       }
 
-      final next = current.copyWith(
+      ref.state = current.copyWith(
+        isSubmittingPurchase: true,
         purchaseError: '',
-        purchaseResult: PurchaseResultData(
+      );
+
+      try {
+        final api = ref.watch(orderApiRepositoryProvider);
+        final order = await api.createOrder(
+          locale: current.locale,
+          idempotencyKey: _newIdempotencyKey(),
+          termsAgreed: current.termsAgreed,
           sealLine1: current.sealLine1,
           sealLine2: current.sealLine2,
-          fontLabel: current.selectedFont.label,
-          shapeLabel: current.shape.label,
-          materialLabel: current.selectedMaterial.label,
-          stripeName: current.recipientName.trim(),
-          stripePhone: current.phone.trim(),
-          countryLabel: current.selectedCountry.label,
+          shape: current.shape,
+          fontKey: current.selectedFont.key,
+          materialKey: current.selectedMaterial.key,
+          countryCode: current.selectedCountry.code,
+          recipientName: current.recipientName.trim(),
+          phone: current.phone.trim(),
           postalCode: current.postalCode.trim(),
           state: current.stateName.trim(),
           city: current.city.trim(),
           addressLine1: current.addressLine1.trim(),
           addressLine2: current.addressLine2.trim(),
-          subtotal: current.subtotal,
-          shipping: current.shipping,
-          total: current.total,
           email: current.email.trim(),
-          sourceLabel: 'Mock',
-          isMock: true,
-        ),
-      );
+        );
 
-      ref.state = next;
+        final checkout = await api.createStripeCheckoutSession(
+          orderId: order.orderId,
+          customerEmail: current.email.trim(),
+        );
+
+        final currency = order.currency.isNotEmpty
+            ? order.currency
+            : current.effectiveCurrency;
+        final total = order.total > 0 ? order.total : current.total;
+
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              isSubmittingPurchase: false,
+              purchaseError: '',
+              purchaseResult: PurchaseResultData(
+                sealLine1: current.sealLine1,
+                sealLine2: current.sealLine2,
+                fontLabel: current.selectedFont.label,
+                shapeLabel: current.shape.label,
+                materialLabel: current.selectedMaterial.label,
+                stripeName: current.recipientName.trim(),
+                stripePhone: current.phone.trim(),
+                countryLabel: current.selectedCountry.label,
+                postalCode: current.postalCode.trim(),
+                state: current.stateName.trim(),
+                city: current.city.trim(),
+                addressLine1: current.addressLine1.trim(),
+                addressLine2: current.addressLine2.trim(),
+                subtotal: current.subtotal,
+                shipping: current.shipping,
+                total: total,
+                email: current.email.trim(),
+                sourceLabel: 'API',
+                currency: currency,
+                orderId: order.orderId,
+                checkoutSessionId: checkout.sessionId,
+                checkoutUrl: checkout.checkoutUrl,
+                paymentIntentId: checkout.paymentIntentId,
+              ),
+            );
+      } catch (error) {
+        ref.state = ref
+            .watch(this)
+            .copyWith(
+              isSubmittingPurchase: false,
+              purchaseError: _apiErrorMessage(error, fallback: '購入処理に失敗しました。'),
+              purchaseResult: null,
+            );
+      }
     });
   }
 }
@@ -615,6 +892,69 @@ class OrderViewModel extends Provider<OrderScreenState> {
 final orderViewModel = OrderViewModel();
 
 const _maxSealCharTotal = 2;
+
+String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
+  final supported = publicConfig.supportedLocales;
+  final normalizedPreferred = preferredLocale.trim().toLowerCase();
+
+  if (supported.contains(normalizedPreferred)) {
+    return normalizedPreferred;
+  }
+
+  final defaultLocale = publicConfig.defaultLocale.trim().toLowerCase();
+  if (defaultLocale.isNotEmpty && supported.contains(defaultLocale)) {
+    return defaultLocale;
+  }
+
+  if (supported.isNotEmpty) {
+    return supported.first;
+  }
+
+  return normalizedPreferred.isNotEmpty ? normalizedPreferred : 'ja';
+}
+
+FontOption _pickInitialFont(CatalogData catalog, KanjiStyle style) {
+  final visibleFonts = _visibleFontsFor(catalog: catalog, style: style);
+  return visibleFonts.first;
+}
+
+SealShape _pickInitialShape(CatalogData catalog) {
+  if (catalog.materials.any((material) => material.shape == SealShape.square)) {
+    return SealShape.square;
+  }
+  return catalog.materials.first.shape;
+}
+
+MaterialOption _pickInitialMaterial(CatalogData catalog, SealShape shape) {
+  final visibleMaterials = _visibleMaterialsFor(catalog: catalog, shape: shape);
+  return visibleMaterials.first;
+}
+
+List<FontOption> _visibleFontsFor({
+  required CatalogData catalog,
+  required KanjiStyle style,
+}) {
+  final filtered = catalog.fonts
+      .where((font) => font.kanjiStyle == style)
+      .toList();
+  if (filtered.isNotEmpty) {
+    return filtered;
+  }
+  return catalog.fonts;
+}
+
+List<MaterialOption> _visibleMaterialsFor({
+  required CatalogData catalog,
+  required SealShape shape,
+}) {
+  final filtered = catalog.materials
+      .where((material) => material.shape == shape)
+      .toList();
+  if (filtered.isNotEmpty) {
+    return filtered;
+  }
+  return catalog.materials;
+}
 
 (String, String) _normalizedSealLines(String first, String second) {
   final trimmedFirst = first.trim();
@@ -684,155 +1024,25 @@ String _validatePurchase(OrderScreenState state) {
   return '';
 }
 
-List<KanjiCandidate> _mockSuggestions({
-  required String realName,
-  required KanjiStyle style,
-  required CandidateGender gender,
-}) {
-  final genderHint = switch (gender) {
-    CandidateGender.male => '男性イメージを重視しています。',
-    CandidateGender.female => '女性イメージを重視しています。',
-    CandidateGender.unspecified => '性別指定なしで提案しています。',
-  };
+String _newIdempotencyKey() {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final randomPart = Random.secure().nextInt(0x7fffffff).toRadixString(16);
+  return 'app_${now}_$randomPart';
+}
 
-  final firstWord = realName.split(RegExp(r'\s+')).first;
+String _apiErrorMessage(Object error, {required String fallback}) {
+  if (error is OrderApiException) {
+    if (error.message.trim().isNotEmpty) {
+      return error.message;
+    }
+    return fallback;
+  }
 
-  final base = switch (style) {
-    KanjiStyle.japanese => <KanjiCandidate>[
-      KanjiCandidate(
-        kanji: '光真',
-        line1: '光真',
-        line2: '',
-        reading: 'koma',
-        reason: '$firstWord の音に近く、明るさを感じる組み合わせです。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '雅蓮',
-        line1: '雅蓮',
-        line2: '',
-        reading: 'garen',
-        reason: '上品で印影バランスが安定しやすい構成です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '成和',
-        line1: '成和',
-        line2: '',
-        reading: 'seiwa',
-        reason: '穏やかで信頼感のある響きに寄せています。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '誠道',
-        line1: '誠道',
-        line2: '',
-        reading: 'seido',
-        reason: '力強さと誠実さの印象を両立しやすい候補です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '悠仁',
-        line1: '悠仁',
-        line2: '',
-        reading: 'yuji',
-        reason: '長く使う印鑑向けに落ち着いた字面でまとめています。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '景香',
-        line1: '景香',
-        line2: '',
-        reading: 'keika',
-        reason: '読みやすさと印面の収まりを優先した候補です。$genderHint',
-      ),
-    ],
-    KanjiStyle.chinese => <KanjiCandidate>[
-      KanjiCandidate(
-        kanji: '明辰',
-        line1: '明辰',
-        line2: '',
-        reading: 'míng chén',
-        reason: '$firstWord の発音傾向に合わせ、簡潔な字面で構成しています。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '文澤',
-        line1: '文澤',
-        line2: '',
-        reading: 'wén zé',
-        reason: '知的な印象と視認性のバランスを重視した候補です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '安祐',
-        line1: '安祐',
-        line2: '',
-        reading: 'ān yòu',
-        reason: '穏やかで縁起のよい意味を優先して選定しています。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '子宣',
-        line1: '子宣',
-        line2: '',
-        reading: 'zǐ xuān',
-        reason: '輪郭がはっきりし、丸印でも崩れにくい組み合わせです。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '景恩',
-        line1: '景恩',
-        line2: '',
-        reading: 'jǐng ēn',
-        reason: '柔らかい響きとフォーマルさを両立する構成です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '嘉寧',
-        line1: '嘉寧',
-        line2: '',
-        reading: 'jiā níng',
-        reason: '画数バランスが整いやすく実印用途にも向きます。$genderHint',
-      ),
-    ],
-    KanjiStyle.taiwanese => <KanjiCandidate>[
-      KanjiCandidate(
-        kanji: '承宇',
-        line1: '承宇',
-        line2: '',
-        reading: 'chéng yǔ',
-        reason: '$firstWord の音節感に寄せ、現代的な字面で構成しています。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '語晴',
-        line1: '語晴',
-        line2: '',
-        reading: 'yǔ qíng',
-        reason: '台湾向けで好まれる柔らかい印象の漢字を選びました。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '柏睿',
-        line1: '柏睿',
-        line2: '',
-        reading: 'bó ruì',
-        reason: '実用性と個性のバランスを取りやすい候補です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '立宸',
-        line1: '立宸',
-        line2: '',
-        reading: 'lì chén',
-        reason: '縦書きでも横書きでも形が安定しやすい組み合わせです。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '映彤',
-        line1: '映彤',
-        line2: '',
-        reading: 'yìng tóng',
-        reason: '明るさと華やかさを重視したスタイル候補です。$genderHint',
-      ),
-      KanjiCandidate(
-        kanji: '岳霖',
-        line1: '岳霖',
-        line2: '',
-        reading: 'yuè lín',
-        reason: '重厚感のある文字構成で印影の存在感を出しやすいです。$genderHint',
-      ),
-    ],
-  };
-
-  return base;
+  final text = error.toString().trim();
+  if (text.isEmpty) {
+    return fallback;
+  }
+  return text;
 }
 
 String normalizePinyinWithoutTone(String input) {

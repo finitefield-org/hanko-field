@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniriverpod/miniriverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/hf_theme.dart';
 import '../domain/order_models.dart';
@@ -25,6 +26,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   late final TextEditingController _sealLine2Controller;
   bool _syncingSealControllers = false;
   bool _initializedFromState = false;
+  bool _bootstrapped = false;
 
   @override
   void initState() {
@@ -49,9 +51,16 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    if (!_bootstrapped) {
+      _bootstrapped = true;
+      ref.invoke(orderViewModel.initialize());
+    }
+
     if (_initializedFromState) {
       return;
     }
+
     final state = ref.read(orderViewModel);
     _syncingSealControllers = true;
     _sealLine1Controller.text = state.sealLine1;
@@ -89,6 +98,26 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     _syncingSealControllers = false;
   }
 
+  Future<void> _openCheckoutUrl(String url) async {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Checkout URL が不正です。')));
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Checkout URL を開けませんでした。')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(orderViewModel);
@@ -123,17 +152,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                         color: HfPalette.bgPanel,
                         child: Padding(
                           padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _StepTrack(step: state.step),
-                              const SizedBox(height: 20),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 220),
-                                child: _buildStepPanel(state),
-                              ),
-                            ],
-                          ),
+                          child: _buildMainPanel(state),
                         ),
                       ),
                     ],
@@ -144,6 +163,49 @@ class _OrderPageState extends ConsumerState<OrderPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMainPanel(OrderScreenState state) {
+    if (state.isLoadingCatalog && !state.hasCatalog) {
+      return const _CatalogLoadingPanel();
+    }
+
+    if (!state.hasCatalog) {
+      return _CatalogErrorPanel(
+        message: state.catalogError.isEmpty
+            ? 'カタログを取得できませんでした。'
+            : state.catalogError,
+        onRetry: () => ref.invoke(orderViewModel.initialize()),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _StepTrack(step: state.step),
+        const SizedBox(height: 20),
+        if (state.catalogError.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF2F1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFF1D1CE)),
+            ),
+            child: Text(
+              state.catalogError,
+              style: const TextStyle(color: Color(0xFF8F2219), fontSize: 13),
+            ),
+          ),
+        ],
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: _buildStepPanel(state),
+        ),
+      ],
     );
   }
 
@@ -203,10 +265,64 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         onTermsChanged: (checked) =>
             ref.invoke(orderViewModel.setTermsAgreed(checked)),
         onSubmit: () => ref.invoke(orderViewModel.submitPurchase()),
+        onOpenCheckout: _openCheckoutUrl,
         onOpenPaymentSuccess: widget.onOpenPaymentSuccess,
         onOpenPaymentFailure: widget.onOpenPaymentFailure,
       ),
     };
+  }
+}
+
+class _CatalogLoadingPanel extends StatelessWidget {
+  const _CatalogLoadingPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 42),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2.4),
+            ),
+            SizedBox(height: 12),
+            Text('カタログを読み込み中です...'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogErrorPanel extends StatelessWidget {
+  const _CatalogErrorPanel({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF8F2219)),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: onRetry, child: const Text('再読み込み')),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -489,6 +605,7 @@ class _DesignStep extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             DropdownButtonFormField<KanjiStyle>(
+              key: ValueKey('kanji_style_${state.kanjiStyle.code}'),
               initialValue: state.kanjiStyle,
               items: KanjiStyle.values
                   .map(
@@ -547,6 +664,9 @@ class _DesignStep extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<CandidateGender>(
+                    key: ValueKey(
+                      'candidate_gender_${state.candidateGender.code}',
+                    ),
                     initialValue: state.candidateGender,
                     items: CandidateGender.values
                         .map(
@@ -564,8 +684,12 @@ class _DesignStep extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton(
-                    onPressed: onGenerateSuggestions,
-                    child: const Text('候補を生成'),
+                    onPressed: state.isGeneratingSuggestions
+                        ? null
+                        : onGenerateSuggestions,
+                    child: Text(
+                      state.isGeneratingSuggestions ? '生成中...' : '候補を生成',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _SuggestionBox(
@@ -732,6 +856,13 @@ class _SuggestionBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (state.isGeneratingSuggestions) {
+      return const Text(
+        '候補を生成しています...',
+        style: TextStyle(fontSize: 13, color: HfPalette.muted),
+      );
+    }
+
     if (state.suggestions.isEmpty) {
       final message = state.suggestionsError.isEmpty
           ? '本名を入力して候補を生成してください。'
@@ -911,7 +1042,10 @@ class _MaterialStep extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              formatUsd(material.price),
+                              formatMoney(
+                                material.price,
+                                state.effectiveCurrency,
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: HfPalette.accent,
@@ -955,6 +1089,7 @@ class _PurchaseStep extends StatelessWidget {
     required this.onAddress2Changed,
     required this.onTermsChanged,
     required this.onSubmit,
+    required this.onOpenCheckout,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
   });
@@ -972,6 +1107,7 @@ class _PurchaseStep extends StatelessWidget {
   final ValueChanged<String> onAddress2Changed;
   final ValueChanged<bool> onTermsChanged;
   final VoidCallback onSubmit;
+  final ValueChanged<String> onOpenCheckout;
   final ValueChanged<String?> onOpenPaymentSuccess;
   final VoidCallback onOpenPaymentFailure;
 
@@ -986,7 +1122,7 @@ class _PurchaseStep extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         const Text(
-          '内容を確認して、モック注文を確定します。',
+          '内容を確認して、Stripe Checkout へ進みます。',
           style: TextStyle(color: HfPalette.muted),
         ),
         const SizedBox(height: 16),
@@ -1035,11 +1171,17 @@ class _PurchaseStep extends StatelessWidget {
             _SummaryRow(label: 'フォント', value: state.selectedFont.label),
             _SummaryRow(label: '材質', value: state.selectedMaterial.label),
             _SummaryRow(label: '配送先の国', value: state.selectedCountry.label),
-            _SummaryRow(label: '商品価格', value: formatUsd(state.subtotal)),
-            _SummaryRow(label: '送料', value: formatUsd(state.shipping)),
+            _SummaryRow(
+              label: '商品価格',
+              value: formatMoney(state.subtotal, state.effectiveCurrency),
+            ),
+            _SummaryRow(
+              label: '送料',
+              value: formatMoney(state.shipping, state.effectiveCurrency),
+            ),
             _SummaryRow(
               label: '合計',
-              value: formatUsd(state.total),
+              value: formatMoney(state.total, state.effectiveCurrency),
               emphasize: true,
             ),
           ],
@@ -1089,6 +1231,7 @@ class _PurchaseStep extends StatelessWidget {
             _LabeledField(
               label: '国 / Country',
               child: DropdownButtonFormField<String>(
+                key: ValueKey('country_${state.selectedCountry.code}'),
                 initialValue: state.selectedCountry.code,
                 items: state.catalog.countries
                     .map(
@@ -1162,15 +1305,15 @@ class _PurchaseStep extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             const Text(
-              'mock モードのため実決済は行われず、確認メッセージのみ表示します。',
+              '注文作成後、Stripe Checkout に遷移します。',
               style: TextStyle(fontSize: 12, color: HfPalette.muted),
             ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: onSubmit,
-                child: const Text('購入を確定（モック）'),
+                onPressed: state.isSubmittingPurchase ? null : onSubmit,
+                child: Text(state.isSubmittingPurchase ? '処理中...' : '支払いへ進む'),
               ),
             ),
             if (state.purchaseError.isNotEmpty) ...[
@@ -1184,6 +1327,7 @@ class _PurchaseStep extends StatelessWidget {
               const SizedBox(height: 12),
               _PurchaseResultCard(
                 result: result,
+                onOpenCheckout: onOpenCheckout,
                 onOpenPaymentSuccess: onOpenPaymentSuccess,
                 onOpenPaymentFailure: onOpenPaymentFailure,
               ),
@@ -1261,11 +1405,13 @@ class _LabeledField extends StatelessWidget {
 class _PurchaseResultCard extends StatelessWidget {
   const _PurchaseResultCard({
     required this.result,
+    required this.onOpenCheckout,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
   });
 
   final PurchaseResultData result;
+  final ValueChanged<String> onOpenCheckout;
   final ValueChanged<String?> onOpenPaymentSuccess;
   final VoidCallback onOpenPaymentFailure;
 
@@ -1285,15 +1431,17 @@ class _PurchaseResultCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            result.isMock ? '注文を受け付けました（モック）' : '注文内容を受け付けました（検証）',
-            style: const TextStyle(
+          const Text(
+            '注文を受け付けました',
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               color: HfPalette.accent2,
             ),
           ),
           const SizedBox(height: 6),
           Text('データソース: ${result.sourceLabel}'),
+          Text('注文ID: ${result.orderId}'),
+          Text('Checkout Session ID: ${result.checkoutSessionId}'),
           Text(
             '印影: ${result.sealLine1}${hasLine2 ? ' / ${result.sealLine2}' : ''}',
           ),
@@ -1308,9 +1456,9 @@ class _PurchaseResultCard extends StatelessWidget {
             '${result.addressLine1}${hasAddress2 ? ' ${result.addressLine2}' : ''}',
           ),
           Text(
-            '小計: ${formatUsd(result.subtotal)} / '
-            '送料: ${formatUsd(result.shipping)} / '
-            '合計: ${formatUsd(result.total)}',
+            '小計: ${formatMoney(result.subtotal, result.currency)} / '
+            '送料: ${formatMoney(result.shipping, result.currency)} / '
+            '合計: ${formatMoney(result.total, result.currency)}',
           ),
           Text('確認メール送信先: ${result.email}'),
           const SizedBox(height: 10),
@@ -1318,17 +1466,19 @@ class _PurchaseResultCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
+              FilledButton(
+                onPressed: result.checkoutUrl.trim().isEmpty
+                    ? null
+                    : () => onOpenCheckout(result.checkoutUrl),
+                child: const Text('Stripe Checkout を開く'),
+              ),
               FilledButton.tonal(
-                onPressed: () {
-                  final sessionId =
-                      'mock_${DateTime.now().millisecondsSinceEpoch}';
-                  onOpenPaymentSuccess(sessionId);
-                },
-                child: const Text('支払い成功画面へ'),
+                onPressed: () => onOpenPaymentSuccess(result.checkoutSessionId),
+                child: const Text('支払い成功画面へ（確認用）'),
               ),
               OutlinedButton(
                 onPressed: onOpenPaymentFailure,
-                child: const Text('支払い失敗画面へ'),
+                child: const Text('支払い失敗画面へ（確認用）'),
               ),
             ],
           ),

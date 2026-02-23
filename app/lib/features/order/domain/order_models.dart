@@ -11,6 +11,8 @@ class CatalogData {
     required this.materials,
     required this.countries,
   });
+
+  static const empty = CatalogData(fonts: [], materials: [], countries: []);
 }
 
 enum OrderStep {
@@ -48,6 +50,15 @@ enum KanjiStyle {
   final String label;
 
   bool get isChineseStyle => this == chinese || this == taiwanese;
+
+  static KanjiStyle fromCode(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    return switch (normalized) {
+      'chinese' || 'china' || 'cn' => KanjiStyle.chinese,
+      'taiwanese' || 'taiwan' || 'tw' => KanjiStyle.taiwanese,
+      _ => KanjiStyle.japanese,
+    };
+  }
 }
 
 enum CandidateGender {
@@ -68,6 +79,12 @@ enum SealShape {
   final String code;
   final String label;
   final String previewLabel;
+
+  static SealShape fromCode(String raw) {
+    return raw.trim().toLowerCase() == 'round'
+        ? SealShape.round
+        : SealShape.square;
+  }
 }
 
 @immutable
@@ -160,7 +177,11 @@ class PurchaseResultData {
   final int total;
   final String email;
   final String sourceLabel;
-  final bool isMock;
+  final String currency;
+  final String orderId;
+  final String checkoutSessionId;
+  final String checkoutUrl;
+  final String paymentIntentId;
 
   const PurchaseResultData({
     required this.sealLine1,
@@ -181,17 +202,28 @@ class PurchaseResultData {
     required this.total,
     required this.email,
     required this.sourceLabel,
-    required this.isMock,
+    required this.currency,
+    required this.orderId,
+    required this.checkoutSessionId,
+    required this.checkoutUrl,
+    required this.paymentIntentId,
   });
 }
 
-String formatUsd(int amountCents) {
-  final sign = amountCents < 0 ? '-' : '';
-  final cents = amountCents.abs();
-  final whole = cents ~/ 100;
-  final fraction = cents % 100;
-  final wholeDisplay = _groupedNumber(whole);
-  return '${sign}USD $wholeDisplay.${fraction.toString().padLeft(2, '0')}';
+String formatMoney(int amount, String currency) {
+  final normalizedCurrency = currency.trim().toUpperCase();
+  final sign = amount < 0 ? '-' : '';
+  final absolute = amount.abs();
+
+  final isZeroDecimal =
+      normalizedCurrency == 'JPY' || normalizedCurrency == 'KRW';
+  if (isZeroDecimal) {
+    return '$sign$normalizedCurrency ${_groupedNumber(absolute)}';
+  }
+
+  final whole = absolute ~/ 100;
+  final fraction = absolute % 100;
+  return '$sign$normalizedCurrency ${_groupedNumber(whole)}.${fraction.toString().padLeft(2, '0')}';
 }
 
 String _groupedNumber(int value) {
