@@ -71,6 +71,10 @@
     @apply mb-[26px];
   }
 
+  .hero-top-row {
+    @apply flex items-start justify-between gap-3;
+  }
+
   .hero-eyebrow {
     @apply m-0 text-[0.8rem] font-bold tracking-[0.08em] text-hf-accent uppercase;
   }
@@ -81,6 +85,24 @@
 
   .hero-description {
     @apply m-0 max-w-[760px] text-hf-muted;
+  }
+
+  .language-select-wrap {
+    @apply inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8ccbc] bg-white px-2.5 py-1;
+  }
+
+  .language-icon {
+    @apply text-[0.95rem];
+    line-height: 1;
+  }
+
+  .language-select-wrap select {
+    @apply w-auto min-w-[6.8rem] border-0 bg-transparent px-0 py-1 text-[0.86rem] text-hf-ink;
+  }
+
+  .language-select-wrap select:focus {
+    outline: none;
+    border-color: transparent;
   }
 
   .panel {
@@ -488,6 +510,10 @@
 
     .layout {
       @apply px-[14px] pt-[26px] pb-10;
+    }
+
+    .hero-top-row {
+      @apply flex-col;
     }
 
     .panel {

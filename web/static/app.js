@@ -1,4 +1,55 @@
 (() => {
+  const localeSelects = Array.from(document.querySelectorAll("[data-locale-select]"));
+  const localeInput = document.getElementById("locale");
+
+  function parseLocale(raw) {
+    const normalized = (raw || "").trim().toLowerCase();
+    if (normalized.startsWith("en")) {
+      return "en";
+    }
+    if (normalized.startsWith("ja")) {
+      return "ja";
+    }
+    return "";
+  }
+
+  function rememberLocale(locale) {
+    try {
+      window.localStorage.setItem("hanko-field-lang", locale);
+    } catch (_) {}
+  }
+
+  function readRememberedLocale() {
+    try {
+      return parseLocale(window.localStorage.getItem("hanko-field-lang") || "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  const currentUrl = new URL(window.location.href);
+  const queryLocale = parseLocale(currentUrl.searchParams.get("lang") || "");
+  const rememberedLocale = readRememberedLocale();
+  const initialLocale = queryLocale || rememberedLocale || parseLocale(localeInput?.value || "") || "ja";
+
+  if (localeInput) {
+    localeInput.value = initialLocale;
+  }
+  localeSelects.forEach((select) => {
+    select.value = initialLocale;
+    select.addEventListener("change", () => {
+      const nextLocale = parseLocale(select.value) || "ja";
+      rememberLocale(nextLocale);
+      if (localeInput) {
+        localeInput.value = nextLocale;
+      }
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("lang", nextLocale);
+      window.location.assign(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+    });
+  });
+  rememberLocale(initialLocale);
+
   const form = document.getElementById("order-form");
   if (!form) {
     return;

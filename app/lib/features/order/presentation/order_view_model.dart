@@ -345,6 +345,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
   }
 
   late final initializeMut = mutation<void>(#initialize);
+  late final selectLocaleMut = mutation<void>(#selectLocale);
   late final updateSealLine1Mut = mutation<void>(#updateSealLine1);
   late final updateSealLine2Mut = mutation<void>(#updateSealLine2);
   late final toggleWritingModeMut = mutation<void>(#toggleWritingMode);
@@ -405,7 +406,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
               catalog: catalog,
               isLoadingCatalog: false,
               catalogError: '',
-              locale: catalogResponse.locale,
+              locale: normalizeUiLocale(catalogResponse.locale),
               currency: catalogResponse.currency,
               step: OrderStep.design,
               kanjiStyle: style,
@@ -424,6 +425,102 @@ class OrderViewModel extends Provider<OrderScreenState> {
                 fallback: 'カタログの取得に失敗しました。',
               ),
             );
+      }
+    });
+  }
+
+  Call<void, OrderScreenState> selectLocale(String locale) {
+    return mutate(selectLocaleMut, (ref) async {
+      final current = ref.watch(this);
+      final nextLocale = normalizeUiLocale(locale);
+      if (nextLocale == current.locale) {
+        return;
+      }
+
+      ref.state = current.copyWith(
+        locale: nextLocale,
+        purchaseResult: null,
+        suggestions: const [],
+        selectedSuggestionIndex: null,
+        suggestionsError: '',
+      );
+
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      final snapshot = ref.watch(this);
+      ref.state = snapshot.copyWith(isLoadingCatalog: true, catalogError: '');
+
+      try {
+        final api = ref.watch(orderApiRepositoryProvider);
+        final catalogResponse = await api.fetchCatalog(locale: nextLocale);
+        final catalog = catalogResponse.catalog;
+        if (catalog.fonts.isEmpty ||
+            catalog.materials.isEmpty ||
+            catalog.countries.isEmpty) {
+          throw Exception('catalog is empty');
+        }
+
+        final active = ref.watch(this);
+        var nextStyle = active.kanjiStyle;
+        var visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
+        if (visibleFonts.isEmpty) {
+          nextStyle = catalog.fonts.first.kanjiStyle;
+          visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
+        }
+        final nextFontKey =
+            visibleFonts.any((font) => font.key == active.selectedFontKey)
+            ? active.selectedFontKey
+            : visibleFonts.first.key;
+
+        var nextShape = active.shape;
+        var visibleMaterials = _visibleMaterialsFor(
+          catalog: catalog,
+          shape: nextShape,
+        );
+        if (visibleMaterials.isEmpty) {
+          nextShape = _pickInitialShape(catalog);
+          visibleMaterials = _visibleMaterialsFor(
+            catalog: catalog,
+            shape: nextShape,
+          );
+        }
+        final nextMaterialKey =
+            visibleMaterials.any(
+              (material) => material.key == active.selectedMaterialKey,
+            )
+            ? active.selectedMaterialKey
+            : visibleMaterials.first.key;
+
+        final nextCountryCode =
+            catalog.countries.any(
+              (country) => country.code == active.selectedCountryCode,
+            )
+            ? active.selectedCountryCode
+            : catalog.countries.first.code;
+
+        ref.state = active.copyWith(
+          catalog: catalog,
+          isLoadingCatalog: false,
+          catalogError: '',
+          locale: normalizeUiLocale(catalogResponse.locale),
+          currency: catalogResponse.currency,
+          kanjiStyle: nextStyle,
+          selectedFontKey: nextFontKey,
+          shape: nextShape,
+          selectedMaterialKey: nextMaterialKey,
+          selectedCountryCode: nextCountryCode,
+        );
+      } catch (error) {
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          isLoadingCatalog: false,
+          catalogError: _apiErrorMessage(
+            error,
+            fallback: _catalogLoadErrorMessage(nextLocale),
+          ),
+        );
       }
     });
   }
@@ -860,7 +957,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
                 sealLine1: current.sealLine1,
                 sealLine2: current.sealLine2,
                 fontLabel: current.selectedFont.label,
-                shapeLabel: current.shape.label,
+                shapeLabel: current.shape.localizedLabel(current.locale),
                 materialLabel: current.selectedMaterial.label,
                 stripeName: current.recipientName.trim(),
                 stripePhone: current.phone.trim(),
@@ -1033,6 +1130,13 @@ String _newIdempotencyKey() {
   final now = DateTime.now().millisecondsSinceEpoch;
   final randomPart = Random.secure().nextInt(0x7fffffff).toRadixString(16);
   return 'app_${now}_$randomPart';
+}
+
+String _catalogLoadErrorMessage(String locale) {
+  if (isEnglishLocale(locale)) {
+    return 'Failed to load catalog.';
+  }
+  return 'カタログの取得に失敗しました。';
 }
 
 String _apiErrorMessage(Object error, {required String fallback}) {

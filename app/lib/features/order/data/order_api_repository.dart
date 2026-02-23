@@ -164,7 +164,7 @@ class OrderApiRepository {
             label: _asString(map['label']),
             description: _asString(map['description']),
             shape: shape,
-            shapeLabel: shape.label,
+            shapeLabel: shape.localizedLabel(resolvedLocale),
             price: _asInt(map['price']),
             photoUrl: photoUrl,
             photoAlt: photoAlt,

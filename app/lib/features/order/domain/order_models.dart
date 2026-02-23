@@ -51,6 +51,17 @@ enum KanjiStyle {
 
   bool get isChineseStyle => this == chinese || this == taiwanese;
 
+  String localizedLabel(String locale) {
+    if (isEnglishLocale(locale)) {
+      return switch (this) {
+        KanjiStyle.japanese => 'Japanese style',
+        KanjiStyle.chinese => 'Chinese style',
+        KanjiStyle.taiwanese => 'Taiwanese style',
+      };
+    }
+    return label;
+  }
+
   static KanjiStyle fromCode(String raw) {
     final normalized = raw.trim().toLowerCase();
     return switch (normalized) {
@@ -69,6 +80,17 @@ enum CandidateGender {
   const CandidateGender(this.code, this.label);
   final String code;
   final String label;
+
+  String localizedLabel(String locale) {
+    if (isEnglishLocale(locale)) {
+      return switch (this) {
+        CandidateGender.unspecified => 'Unspecified',
+        CandidateGender.male => 'Male',
+        CandidateGender.female => 'Female',
+      };
+    }
+    return label;
+  }
 }
 
 enum SealShape {
@@ -79,6 +101,26 @@ enum SealShape {
   final String code;
   final String label;
   final String previewLabel;
+
+  String localizedLabel(String locale) {
+    if (isEnglishLocale(locale)) {
+      return switch (this) {
+        SealShape.square => 'Square',
+        SealShape.round => 'Round',
+      };
+    }
+    return label;
+  }
+
+  String localizedPreviewLabel(String locale) {
+    if (isEnglishLocale(locale)) {
+      return switch (this) {
+        SealShape.square => 'Square',
+        SealShape.round => 'Round',
+      };
+    }
+    return previewLabel;
+  }
 
   static SealShape fromCode(String raw) {
     return raw.trim().toLowerCase() == 'round'
@@ -236,4 +278,16 @@ String _groupedNumber(int value) {
     buffer.write(raw[i]);
   }
   return buffer.toString();
+}
+
+bool isEnglishLocale(String locale) {
+  return normalizeUiLocale(locale) == 'en';
+}
+
+String normalizeUiLocale(String locale) {
+  final normalized = locale.trim().toLowerCase();
+  if (normalized.startsWith('en')) {
+    return 'en';
+  }
+  return 'ja';
 }

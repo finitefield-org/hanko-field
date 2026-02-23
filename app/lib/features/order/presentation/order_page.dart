@@ -5,17 +5,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/localization/app_locale_view_model.dart';
 import '../../../app/theme/hf_theme.dart';
+import '../../../app/widgets/app_settings_button.dart';
 import '../domain/order_models.dart';
 import 'order_view_model.dart';
 
 class OrderPage extends ConsumerStatefulWidget {
   const OrderPage({
     super.key,
+    required this.locale,
+    required this.onSelectLocale,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
   });
 
+  final AppLocale locale;
+  final ValueChanged<AppLocale> onSelectLocale;
   final ValueChanged<String?> onOpenPaymentSuccess;
   final VoidCallback onOpenPaymentFailure;
 
@@ -191,7 +197,10 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _HeroHeader(),
+                      _HeroHeader(
+                        locale: widget.locale,
+                        onSelectLocale: widget.onSelectLocale,
+                      ),
                       const SizedBox(height: 18),
                       Card(
                         color: HfPalette.bgPanel,
@@ -228,7 +237,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTrack(step: state.step),
+        _StepTrack(step: state.step, locale: state.locale),
         const SizedBox(height: 20),
         if (state.catalogError.isNotEmpty) ...[
           Container(
@@ -258,6 +267,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     return switch (state.step) {
       OrderStep.design => _DesignStep(
         key: const ValueKey('design_step'),
+        locale: state.locale,
         state: state,
         sealLine1Controller: _sealLine1Controller,
         sealLine2Controller: _sealLine2Controller,
@@ -280,6 +290,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
       ),
       OrderStep.material => _MaterialStep(
         key: const ValueKey('material_step'),
+        locale: state.locale,
         state: state,
         onSelectMaterial: (key) =>
             ref.invoke(orderViewModel.selectMaterial(key)),
@@ -288,6 +299,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
       ),
       OrderStep.purchase => _PurchaseStep(
         key: const ValueKey('purchase_step'),
+        locale: state.locale,
         state: state,
         onPrev: () => ref.invoke(orderViewModel.prevStep()),
         onCountryChanged: (code) =>
@@ -371,26 +383,40 @@ class _CatalogErrorPanel extends StatelessWidget {
 }
 
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader();
+  const _HeroHeader({required this.locale, required this.onSelectLocale});
+
+  final AppLocale locale;
+  final ValueChanged<AppLocale> onSelectLocale;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Stone Signature',
-          style: TextStyle(
-            fontSize: 12,
-            letterSpacing: 1.2,
-            color: HfPalette.accent,
-            fontWeight: FontWeight.w700,
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Stone Signature',
+                style: TextStyle(
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                  color: HfPalette.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Hand-carved Stone Seals',
+                style: TextStyle(fontSize: 16, color: HfPalette.muted),
+              ),
+            ],
           ),
         ),
-        SizedBox(height: 8),
-        Text(
-          'Hand-carved Stone Seals',
-          style: TextStyle(fontSize: 16, color: HfPalette.muted),
+        AppSettingsButton(
+          selectedLocale: locale,
+          onSelectLocale: onSelectLocale,
         ),
       ],
     );
@@ -422,16 +448,17 @@ class _BackgroundShape extends StatelessWidget {
 }
 
 class _StepTrack extends StatelessWidget {
-  const _StepTrack({required this.step});
+  const _StepTrack({required this.step, required this.locale});
 
   final OrderStep step;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
     final labels = <OrderStep, String>{
-      OrderStep.design: '1. デザイン',
-      OrderStep.material: '2. 材質',
-      OrderStep.purchase: '3. 購入',
+      OrderStep.design: isEnglishLocale(locale) ? '1. Design' : '1. デザイン',
+      OrderStep.material: isEnglishLocale(locale) ? '2. Material' : '2. 材質',
+      OrderStep.purchase: isEnglishLocale(locale) ? '3. Purchase' : '3. 購入',
     };
 
     return Row(
@@ -486,6 +513,7 @@ class _StepTrack extends StatelessWidget {
 class _DesignStep extends StatelessWidget {
   const _DesignStep({
     super.key,
+    required this.locale,
     required this.state,
     required this.sealLine1Controller,
     required this.sealLine2Controller,
@@ -500,6 +528,7 @@ class _DesignStep extends StatelessWidget {
     required this.onNext,
   });
 
+  final String locale;
   final OrderScreenState state;
   final TextEditingController sealLine1Controller;
   final TextEditingController sealLine2Controller;
@@ -543,7 +572,9 @@ class _DesignStep extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: FilledButton(
                 onPressed: onNext,
-                child: const Text('材質選びへ進む'),
+                child: Text(
+                  isEnglishLocale(locale) ? 'Next: Material' : '材質選びへ進む',
+                ),
               ),
             ),
           ],
@@ -655,7 +686,7 @@ class _DesignStep extends StatelessWidget {
                   .map(
                     (style) => DropdownMenuItem(
                       value: style,
-                      child: Text(style.label),
+                      child: Text(style.localizedLabel(locale)),
                     ),
                   )
                   .toList(growable: false),
@@ -716,7 +747,7 @@ class _DesignStep extends StatelessWidget {
                         .map(
                           (gender) => DropdownMenuItem(
                             value: gender,
-                            child: Text(gender.label),
+                            child: Text(gender.localizedLabel(locale)),
                           ),
                         )
                         .toList(growable: false),
@@ -817,7 +848,7 @@ class _DesignStep extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${state.shape.previewLabel} / ${state.selectedFont.label}',
+              '${state.shape.localizedPreviewLabel(locale)} / ${state.selectedFont.label}',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: HfPalette.muted),
             ),
@@ -878,7 +909,7 @@ class _DesignStep extends StatelessWidget {
               children: SealShape.values
                   .map((shape) {
                     return ChoiceChip(
-                      label: Text(shape.label),
+                      label: Text(shape.localizedLabel(locale)),
                       selected: state.shape == shape,
                       onSelected: (_) => onSelectShape(shape),
                     );
@@ -984,12 +1015,14 @@ class _SuggestionBox extends StatelessWidget {
 class _MaterialStep extends StatelessWidget {
   const _MaterialStep({
     super.key,
+    required this.locale,
     required this.state,
     required this.onSelectMaterial,
     required this.onPrev,
     required this.onNext,
   });
 
+  final String locale;
   final OrderScreenState state;
   final ValueChanged<String> onSelectMaterial;
   final VoidCallback onPrev;
@@ -997,18 +1030,22 @@ class _MaterialStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = isEnglishLocale(locale) ? 'Choose Material' : '材質を選ぶ';
+    final subtitle = isEnglishLocale(locale)
+        ? 'Compare feel and price to pick your material.'
+        : '使用感と価格を見ながら材質を決めます。';
+    final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
+    final nextLabel = isEnglishLocale(locale) ? 'Next: Purchase' : '購入へ進む';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '材質を選ぶ',
+        Text(
+          title,
           style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '使用感と価格を見ながら材質を決めます。',
-          style: TextStyle(color: HfPalette.muted),
-        ),
+        Text(subtitle, style: TextStyle(color: HfPalette.muted)),
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -1107,9 +1144,9 @@ class _MaterialStep extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: [
-            OutlinedButton(onPressed: onPrev, child: const Text('戻る')),
+            OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
             const SizedBox(width: 8),
-            FilledButton(onPressed: onNext, child: const Text('購入へ進む')),
+            FilledButton(onPressed: onNext, child: Text(nextLabel)),
           ],
         ),
       ],
@@ -1120,6 +1157,7 @@ class _MaterialStep extends StatelessWidget {
 class _PurchaseStep extends StatelessWidget {
   const _PurchaseStep({
     super.key,
+    required this.locale,
     required this.state,
     required this.onPrev,
     required this.onCountryChanged,
@@ -1137,6 +1175,7 @@ class _PurchaseStep extends StatelessWidget {
     required this.onOpenPaymentFailure,
   });
 
+  final String locale;
   final OrderScreenState state;
   final VoidCallback onPrev;
   final ValueChanged<String> onCountryChanged;
@@ -1155,18 +1194,21 @@ class _PurchaseStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = isEnglishLocale(locale) ? 'Purchase' : '購入';
+    final subtitle = isEnglishLocale(locale)
+        ? 'Review details, then proceed to Stripe Checkout.'
+        : '内容を確認して、Stripe Checkout へ進みます。';
+    final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '購入',
+        Text(
+          title,
           style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '内容を確認して、Stripe Checkout へ進みます。',
-          style: TextStyle(color: HfPalette.muted),
-        ),
+        Text(subtitle, style: TextStyle(color: HfPalette.muted)),
         const SizedBox(height: 16),
         _buildPersonalInfoCard(),
         const SizedBox(height: 12),
@@ -1174,7 +1216,7 @@ class _PurchaseStep extends StatelessWidget {
         const SizedBox(height: 12),
         _buildPaymentCard(),
         const SizedBox(height: 16),
-        OutlinedButton(onPressed: onPrev, child: const Text('戻る')),
+        OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
       ],
     );
   }
@@ -1304,7 +1346,7 @@ class _PurchaseStep extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _SummaryRow(label: '印影テキスト', value: state.sealDisplay),
-            _SummaryRow(label: '形状', value: state.shape.label),
+            _SummaryRow(label: '形状', value: state.shape.localizedLabel(locale)),
             _SummaryRow(label: 'フォント', value: state.selectedFont.label),
             _SummaryRow(label: '材質', value: state.selectedMaterial.label),
             _SummaryRow(label: '配送先の国', value: state.selectedCountry.label),

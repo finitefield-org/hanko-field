@@ -134,6 +134,8 @@ struct PageTemplate {
     is_mock: bool,
     default_font_key: String,
     default_font_label: String,
+    selected_locale: String,
+    privacy_policy_url: String,
 }
 
 #[derive(Template)]
@@ -257,20 +259,32 @@ struct PurchaseResultTemplate {
 struct PaymentSuccessTemplate {
     has_session_id: bool,
     session_id: String,
+    selected_locale: String,
+    privacy_policy_url: String,
 }
 
 #[derive(Template)]
 #[template(path = "payment_failure.html")]
-struct PaymentFailureTemplate;
+struct PaymentFailureTemplate {
+    selected_locale: String,
+    privacy_policy_url: String,
+}
 
 #[derive(Debug, Deserialize, Default)]
 struct CheckoutQuery {
     checkout: Option<String>,
+    lang: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 struct PaymentSuccessQuery {
     session_id: Option<String>,
+    lang: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct LocaleQuery {
+    lang: Option<String>,
 }
 
 #[derive(Clone)]
@@ -733,6 +747,7 @@ struct AppState {
     source: Arc<CatalogSource>,
     kanji_api: Arc<KanjiApiClient>,
     locale: String,
+    default_locale: String,
 }
 
 #[tokio::main]
@@ -806,6 +821,7 @@ async fn build_state(cfg: &AppConfig) -> Result<AppState> {
         source,
         kanji_api,
         locale: cfg.locale.clone(),
+        default_locale: cfg.default_locale.clone(),
     })
 }
 
@@ -1215,7 +1231,10 @@ async fn handle_index(
     State(state): State<AppState>,
     Query(query): Query<CheckoutQuery>,
 ) -> Response {
-    if let Some(path) = checkout_redirect_path(&query) {
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+
+    if let Some(path) = checkout_redirect_path(&query, &selected_locale) {
         return Redirect::to(&path).into_response();
     }
 
@@ -1249,6 +1268,8 @@ async fn handle_index(
         materials: catalog.materials,
         countries: catalog.countries,
         is_mock: state.source.is_mock(),
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+        selected_locale,
     };
 
     match render_html(&template) {
@@ -1260,20 +1281,27 @@ async fn handle_index(
     }
 }
 
-fn checkout_redirect_path(query: &CheckoutQuery) -> Option<String> {
+fn checkout_redirect_path(query: &CheckoutQuery, locale: &str) -> Option<String> {
     let checkout = query.checkout.as_deref()?.trim().to_lowercase();
     match checkout.as_str() {
-        "success" => Some("/payment/success".to_owned()),
-        "cancel" => Some("/payment/failure".to_owned()),
+        "success" => Some(format!("/payment/success?lang={locale}")),
+        "cancel" => Some(format!("/payment/failure?lang={locale}")),
         _ => None,
     }
 }
 
-async fn handle_payment_success(Query(query): Query<PaymentSuccessQuery>) -> Response {
+async fn handle_payment_success(
+    State(state): State<AppState>,
+    Query(query): Query<PaymentSuccessQuery>,
+) -> Response {
     let session_id = query.session_id.unwrap_or_default().trim().to_owned();
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
     let template = PaymentSuccessTemplate {
         has_session_id: !session_id.is_empty(),
         session_id,
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+        selected_locale,
     };
 
     match render_html(&template) {
@@ -1285,8 +1313,16 @@ async fn handle_payment_success(Query(query): Query<PaymentSuccessQuery>) -> Res
     }
 }
 
-async fn handle_payment_failure() -> Response {
-    let template = PaymentFailureTemplate;
+async fn handle_payment_failure(
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let template = PaymentFailureTemplate {
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+        selected_locale,
+    };
     match render_html(&template) {
         Ok(html) => html_response(html),
         Err(error) => plain_error(
@@ -1306,7 +1342,12 @@ async fn handle_kanji_suggestions(
     };
 
     let real_name = form_value(&form, "real_name");
-    let reason_language = state.locale.trim().to_owned();
+    let requested_locale = form_value(&form, "locale");
+    let reason_language = resolve_request_locale(
+        Some(&requested_locale),
+        &state.locale,
+        &state.default_locale,
+    );
     let candidate_gender = normalize_candidate_gender(&form_value(&form, "candidate_gender"));
     let kanji_style = normalize_kanji_style(&form_value(&form, "kanji_style"));
 
@@ -1399,6 +1440,7 @@ async fn handle_purchase(
     let address_line2 = form_value(&form, "address_line2");
     let email = form_value(&form, "email");
     let terms_value = form_value(&form, "terms_agreed");
+    let requested_locale = form_value(&form, "locale");
     let terms_agreed =
         terms_value == "on" || terms_value == "1" || terms_value.eq_ignore_ascii_case("true");
 
@@ -1483,7 +1525,11 @@ async fn handle_purchase(
     let subtotal = material.price;
     let shipping = country.shipping;
     let total = subtotal + shipping;
-    let order_locale = state.locale.trim().to_lowercase();
+    let order_locale = resolve_request_locale(
+        Some(&requested_locale),
+        &state.locale,
+        &state.default_locale,
+    );
 
     let create_order_request = CreateOrderApiRequest {
         channel: "web".to_owned(),
@@ -1646,6 +1692,38 @@ fn form_value(form: &HashMap<String, String>, key: &str) -> String {
     form.get(key)
         .map(|value| value.trim().to_owned())
         .unwrap_or_default()
+}
+
+fn resolve_request_locale(requested: Option<&str>, locale: &str, default_locale: &str) -> String {
+    if let Some(value) = requested.and_then(parse_supported_locale) {
+        return value.to_owned();
+    }
+    if let Some(value) = parse_supported_locale(locale) {
+        return value.to_owned();
+    }
+    if let Some(value) = parse_supported_locale(default_locale) {
+        return value.to_owned();
+    }
+    "ja".to_owned()
+}
+
+fn parse_supported_locale(raw: &str) -> Option<&'static str> {
+    let normalized = raw.trim().to_lowercase();
+    if normalized.starts_with("ja") {
+        return Some("ja");
+    }
+    if normalized.starts_with("en") {
+        return Some("en");
+    }
+    None
+}
+
+fn privacy_policy_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    if normalized == "ja" {
+        return "https://finitefield.org/privacy/".to_owned();
+    }
+    format!("https://finitefield.org/{normalized}/privacy/")
 }
 
 fn normalize_candidate_gender(raw: &str) -> &'static str {
