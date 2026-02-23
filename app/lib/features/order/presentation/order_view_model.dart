@@ -174,14 +174,9 @@ class OrderScreenState {
       return const [];
     }
 
-    final filtered = catalog.fonts
+    return catalog.fonts
         .where((font) => font.kanjiStyle == kanjiStyle)
-        .toList();
-    if (filtered.isNotEmpty) {
-      return filtered;
-    }
-
-    return catalog.fonts;
+        .toList(growable: false);
   }
 
   FontOption? get selectedFontOrNull {
@@ -194,7 +189,16 @@ class OrderScreenState {
     if (matched.isNotEmpty) {
       return matched.first;
     }
-    return visible.isNotEmpty ? visible.first : catalog.fonts.first;
+    if (visible.isNotEmpty) {
+      return visible.first;
+    }
+
+    final fallback = catalog.fonts.where((font) => font.key == selectedFontKey);
+    if (fallback.isNotEmpty) {
+      return fallback.first;
+    }
+
+    return catalog.fonts.first;
   }
 
   FontOption get selectedFont {
@@ -496,7 +500,9 @@ class OrderViewModel extends Provider<OrderScreenState> {
       );
       final nextFontKey = hasSelected
           ? current.selectedFontKey
-          : visibleFonts.first.key;
+          : visibleFonts.isNotEmpty
+          ? visibleFonts.first.key
+          : '';
 
       ref.state = current.copyWith(
         kanjiStyle: style,
@@ -915,7 +921,10 @@ String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
 
 FontOption _pickInitialFont(CatalogData catalog, KanjiStyle style) {
   final visibleFonts = _visibleFontsFor(catalog: catalog, style: style);
-  return visibleFonts.first;
+  if (visibleFonts.isNotEmpty) {
+    return visibleFonts.first;
+  }
+  return catalog.fonts.first;
 }
 
 SealShape _pickInitialShape(CatalogData catalog) {
@@ -934,13 +943,9 @@ List<FontOption> _visibleFontsFor({
   required CatalogData catalog,
   required KanjiStyle style,
 }) {
-  final filtered = catalog.fonts
+  return catalog.fonts
       .where((font) => font.kanjiStyle == style)
-      .toList();
-  if (filtered.isNotEmpty) {
-    return filtered;
-  }
-  return catalog.fonts;
+      .toList(growable: false);
 }
 
 List<MaterialOption> _visibleMaterialsFor({

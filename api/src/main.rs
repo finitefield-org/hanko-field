@@ -103,6 +103,7 @@ struct Font {
     key: String,
     label: String,
     font_family: String,
+    kanji_style: String,
     version: i64,
 }
 
@@ -673,6 +674,7 @@ async fn handle_catalog(
                 "key": font.key,
                 "label": font.label,
                 "font_family": font.font_family,
+                "kanji_style": font.kanji_style,
                 "version": font.version,
             })
         })
@@ -1159,11 +1161,17 @@ impl FirestoreStore {
                 bail!("fonts/{key} is missing font_family");
             }
             let label = resolve_font_label_field(&document.fields, &key);
+            let mut kanji_style = read_string_field(&document.fields, "kanji_style");
+            if kanji_style.is_empty() {
+                kanji_style = read_string_field(&document.fields, "style");
+            }
+            let kanji_style = normalize_catalog_kanji_style(&kanji_style).to_owned();
 
             fonts.push(Font {
                 key,
                 label,
                 font_family,
+                kanji_style,
                 version: read_int_field(&document.fields, "version").unwrap_or(1),
             });
         }
@@ -1637,6 +1645,14 @@ impl FirestoreStore {
             key: key.to_owned(),
             label: resolve_font_label_field(&doc.fields, key),
             font_family: read_string_field(&doc.fields, "font_family"),
+            kanji_style: normalize_catalog_kanji_style(
+                &first_non_empty(&[
+                    Some(read_string_field(&doc.fields, "kanji_style")),
+                    Some(read_string_field(&doc.fields, "style")),
+                ])
+                .unwrap_or_default(),
+            )
+            .to_owned(),
             version: read_int_field(&doc.fields, "version").unwrap_or(1),
         })
     }
@@ -2333,6 +2349,15 @@ fn parse_kanji_style(raw: Option<&str>) -> Result<KanjiStyle> {
         return Ok(KanjiStyle::Taiwanese);
     }
     bail!("kanji_style must be one of japanese, chinese, taiwanese")
+}
+
+fn normalize_catalog_kanji_style(raw: &str) -> &'static str {
+    let normalized = raw.trim().to_lowercase();
+    match normalized.as_str() {
+        "chinese" | "china" | "cn" => "chinese",
+        "taiwanese" | "taiwan" | "tw" => "taiwanese",
+        _ => "japanese",
+    }
 }
 
 async fn generate_kanji_candidates_with_gemini(

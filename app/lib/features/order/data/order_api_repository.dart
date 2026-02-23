@@ -130,11 +130,15 @@ class OrderApiRepository {
     final fonts = _asList(payload['fonts'])
         .map((entry) {
           final map = _asMap(entry);
+          final rawKanjiStyle = _firstNonEmptyString([
+            map['kanji_style'],
+            map['style'],
+          ]);
           return FontOption(
             key: _asString(map['key']),
             label: _asString(map['label']),
             family: _asString(map['font_family']),
-            kanjiStyle: KanjiStyle.fromCode(_asString(map['kanji_style'])),
+            kanjiStyle: KanjiStyle.fromCode(rawKanjiStyle),
           );
         })
         .where((font) {
@@ -372,6 +376,16 @@ class OrderApiRepository {
 
     throw OrderApiException(statusCode: status, code: code, message: message);
   }
+}
+
+String _firstNonEmptyString(List<dynamic> values) {
+  for (final value in values) {
+    final text = _asString(value);
+    if (text.isNotEmpty) {
+      return text;
+    }
+  }
+  return '';
 }
 
 final orderApiRepositoryProvider = Provider<OrderApiRepository>((ref) {
