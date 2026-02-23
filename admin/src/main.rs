@@ -120,7 +120,7 @@ struct Material {
 #[derive(Debug, Clone)]
 struct Font {
     key: String,
-    label_i18n: HashMap<String, String>,
+    label: String,
     font_family: String,
     font_stylesheet_url: String,
     kanji_style: String,
@@ -437,7 +437,7 @@ struct MaterialListItemView {
 #[derive(Debug, Clone)]
 struct FontListItemView {
     key: String,
-    label_ja: String,
+    label: String,
     font_family: String,
     font_stylesheet_url: String,
     kanji_style_label: String,
@@ -472,8 +472,7 @@ struct MaterialDetailView {
 #[derive(Debug, Clone)]
 struct FontDetailView {
     key: String,
-    label_ja: String,
-    label_en: String,
+    label: String,
     font_family: String,
     font_stylesheet_url: String,
     kanji_style: String,
@@ -549,6 +548,20 @@ struct MaterialCreateView {
 }
 
 #[derive(Debug, Clone)]
+struct FontCreateView {
+    key: String,
+    label: String,
+    font_family: String,
+    kanji_style: String,
+    sort_order: String,
+    is_active: bool,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
 struct MaterialCreateInput {
     key: String,
     label_ja: String,
@@ -561,6 +574,16 @@ struct MaterialCreateInput {
     photo_storage_path: String,
     photo_alt_ja: String,
     photo_alt_en: String,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FontCreateInput {
+    key: String,
+    label: String,
+    font_family: String,
+    kanji_style: String,
+    sort_order: i64,
     is_active: bool,
 }
 
@@ -581,8 +604,7 @@ struct MaterialPatchInput {
 
 #[derive(Debug, Clone)]
 struct FontPatchInput {
-    label_ja: String,
-    label_en: String,
+    label: String,
     font_family: String,
     kanji_style: String,
     sort_order: i64,
@@ -661,6 +683,15 @@ struct FontEditPageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "font_create_page.html")]
+struct FontCreatePageTemplate {
+    font_stylesheet_urls: Vec<String>,
+    source_label: String,
+    is_mock: bool,
+    font_create_html: String,
+}
+
+#[derive(Template)]
 #[template(path = "material_create_page.html")]
 struct MaterialCreatePageTemplate {
     font_stylesheet_urls: Vec<String>,
@@ -727,6 +758,12 @@ struct MaterialCreateTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "font_create.html")]
+struct FontCreateTemplate {
+    view: FontCreateView,
+}
+
+#[derive(Template)]
 #[template(path = "countries_list.html")]
 struct CountriesListTemplate {
     countries: Vec<CountryListItemView>,
@@ -790,8 +827,12 @@ async fn run() -> Result<()> {
                 .patch(handle_material_patch)
                 .delete(handle_material_delete),
         )
-        .route("/admin/fonts", get(handle_fonts_page))
+        .route(
+            "/admin/fonts",
+            get(handle_fonts_page).post(handle_font_create),
+        )
         .route("/admin/fonts/list", get(handle_fonts_list))
+        .route("/admin/fonts/new", get(handle_font_create_page))
         .route("/admin/fonts/{font_key}/edit", get(handle_font_edit_page))
         .route(
             "/admin/fonts/{font_key}",
@@ -1781,6 +1822,83 @@ async fn handle_fonts_list(State(state): State<AppState>) -> Response {
     }
 }
 
+async fn handle_font_create_page(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let font_create_html = match render_font_create(&new_font_create_view("", "")) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render font create: {error}"),
+            );
+        }
+    };
+
+    let page = FontCreatePageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        font_create_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_font_create(
+    State(state): State<AppState>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load fonts: {error}"),
+        );
+    }
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_font_create_response(
+                StatusCode::BAD_REQUEST,
+                &font_create_view_from_form(&form, "", "表示順は整数で入力してください。"),
+            );
+        }
+    };
+
+    let input = FontCreateInput {
+        key: form_value(&form, "key"),
+        label: form_value(&form, "label"),
+        font_family: form_value(&form, "font_family"),
+        kanji_style: form_value(&form, "kanji_style"),
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    };
+    let created_key = input.key.clone();
+
+    match state.server.create_font(input).await {
+        Ok(()) => render_font_create_response_with_trigger(
+            StatusCode::CREATED,
+            &new_font_create_view(&format!("フォント「{created_key}」を作成しました。"), ""),
+            "font-updated",
+        ),
+        Err(error_message) => render_font_create_response(
+            StatusCode::BAD_REQUEST,
+            &font_create_view_from_form(&form, "", &error_message),
+        ),
+    }
+}
+
 async fn handle_font_edit_page(
     State(state): State<AppState>,
     Path(font_key): Path<String>,
@@ -1879,8 +1997,7 @@ async fn handle_font_patch(
     };
 
     let input = FontPatchInput {
-        label_ja: form_value(&form, "label_ja"),
-        label_en: form_value(&form, "label_en"),
+        label: form_value(&form, "label"),
         font_family: form_value(&form, "font_family"),
         kanji_style: form_value(&form, "kanji_style"),
         sort_order,
@@ -2449,7 +2566,7 @@ impl ServerState {
 
             items.push(FontListItemView {
                 key: font.key.clone(),
-                label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
+                label: font.label.clone(),
                 font_family: font.font_family.clone(),
                 font_stylesheet_url: font.font_stylesheet_url.clone(),
                 kanji_style_label: kanji_style_label(&font.kanji_style).to_owned(),
@@ -2474,8 +2591,7 @@ impl ServerState {
 
         Some(FontDetailView {
             key: font.key.clone(),
-            label_ja: font.label_i18n.get("ja").cloned().unwrap_or_default(),
-            label_en: font.label_i18n.get("en").cloned().unwrap_or_default(),
+            label: font.label.clone(),
             font_family: font.font_family.clone(),
             font_stylesheet_url: font.font_stylesheet_url.clone(),
             kanji_style: normalize_kanji_style(&font.kanji_style)
@@ -2947,19 +3063,13 @@ impl ServerState {
             return Err("フォントキーが不正です。".to_owned());
         }
 
-        let label_ja = input.label_ja.trim().to_owned();
-        let label_en = input.label_en.trim().to_owned();
+        let label = input.label.trim().to_owned();
         let font_family = input.font_family.trim().to_owned();
         let kanji_style = normalize_kanji_style(&input.kanji_style)
             .ok_or_else(|| "スタイルは日本・中国・台湾から選択してください。".to_owned())?
             .to_owned();
-        let font_stylesheet_url = validate_font_values(
-            &label_ja,
-            &label_en,
-            &font_family,
-            &kanji_style,
-            input.sort_order,
-        )?;
+        let font_stylesheet_url =
+            validate_font_values(&label, &font_family, &kanji_style, input.sort_order)?;
 
         let updated_font = {
             let mut data = self.data.write().await;
@@ -2968,8 +3078,7 @@ impl ServerState {
             };
 
             let now = Utc::now();
-            font.label_i18n.insert("ja".to_owned(), label_ja);
-            font.label_i18n.insert("en".to_owned(), label_en);
+            font.label = label;
             font.font_family = font_family;
             font.font_stylesheet_url = font_stylesheet_url;
             font.kanji_style = kanji_style;
@@ -2987,6 +3096,54 @@ impl ServerState {
             if let Err(refresh_error) = self.refresh_from_source().await {
                 eprintln!(
                     "failed to rollback from firestore after font update error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn create_font(&self, input: FontCreateInput) -> std::result::Result<(), String> {
+        let key = input.key.trim().to_owned();
+        validate_font_key(&key)?;
+
+        let label = input.label.trim().to_owned();
+        let font_family = input.font_family.trim().to_owned();
+        let kanji_style = normalize_kanji_style(&input.kanji_style)
+            .ok_or_else(|| "スタイルは日本・中国・台湾から選択してください。".to_owned())?
+            .to_owned();
+        let font_stylesheet_url =
+            validate_font_values(&label, &font_family, &kanji_style, input.sort_order)?;
+
+        let font = {
+            let mut data = self.data.write().await;
+            if data.fonts.contains_key(&key) {
+                return Err("同じフォントキーは既に存在します。".to_owned());
+            }
+
+            let now = Utc::now();
+            let font = Font {
+                key: key.clone(),
+                label,
+                font_family,
+                font_stylesheet_url,
+                kanji_style,
+                is_active: input.is_active,
+                sort_order: input.sort_order,
+                version: 1,
+                updated_at: now,
+            };
+
+            data.fonts.insert(key, font.clone());
+            data.refresh_font_ids();
+            font
+        };
+
+        if let Err(error) = self.source.persist_font_mutation(&font).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after font create error: {refresh_error}"
                 );
             }
             return Err(format!("firestore update failed: {error}"));
@@ -3471,13 +3628,7 @@ impl FirestoreAdminSource {
             };
 
             let data = &document.fields;
-            let mut label_i18n = read_string_map_field(data, "label_i18n");
-            if label_i18n.is_empty() {
-                let legacy = read_string_field(data, "label");
-                if !legacy.is_empty() {
-                    label_i18n.insert("ja".to_owned(), legacy);
-                }
-            }
+            let label = resolve_font_label_field(data, &doc_id);
 
             let mut font_family = read_string_field(data, "font_family");
             if font_family.is_empty() {
@@ -3511,7 +3662,7 @@ impl FirestoreAdminSource {
                 doc_id.clone(),
                 Font {
                     key: doc_id,
-                    label_i18n,
+                    label,
                     font_family,
                     font_stylesheet_url,
                     kanji_style,
@@ -3791,7 +3942,7 @@ impl FirestoreAdminSource {
         let document = Document {
             name: Some(font_name.clone()),
             fields: btree_from_pairs(vec![
-                ("label_i18n", fs_string_map(&font.label_i18n)),
+                ("label", fs_string(font.label.clone())),
                 ("font_family", fs_string(font.font_family.clone())),
                 (
                     "font_stylesheet_url",
@@ -3812,7 +3963,7 @@ impl FirestoreAdminSource {
                 &document,
                 &PatchDocumentOptions {
                     update_mask_field_paths: vec![
-                        "label_i18n".to_owned(),
+                        "label".to_owned(),
                         "font_family".to_owned(),
                         "font_stylesheet_url".to_owned(),
                         "kanji_style".to_owned(),
@@ -3938,6 +4089,10 @@ fn render_font_detail(detail: &FontDetailView) -> Result<String> {
 
 fn render_material_create(view: &MaterialCreateView) -> Result<String> {
     render_html(&MaterialCreateTemplate { view: view.clone() })
+}
+
+fn render_font_create(view: &FontCreateView) -> Result<String> {
+    render_html(&FontCreateTemplate { view: view.clone() })
 }
 
 fn render_countries_list(countries: &[CountryListItemView]) -> Result<String> {
@@ -4089,6 +4244,66 @@ fn render_material_create_response_with_trigger(
     }
 }
 
+fn new_font_create_view(message: &str, render_error: &str) -> FontCreateView {
+    FontCreateView {
+        key: String::new(),
+        label: String::new(),
+        font_family: String::new(),
+        kanji_style: "japanese".to_owned(),
+        sort_order: "0".to_owned(),
+        is_active: true,
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn font_create_view_from_form(
+    form: &HashMap<String, String>,
+    message: &str,
+    render_error: &str,
+) -> FontCreateView {
+    FontCreateView {
+        key: form_value(form, "key"),
+        label: form_value(form, "label"),
+        font_family: form_value(form, "font_family"),
+        kanji_style: normalize_kanji_style(&form_value(form, "kanji_style"))
+            .unwrap_or("japanese")
+            .to_owned(),
+        sort_order: form_value(form, "sort_order"),
+        is_active: form.contains_key("is_active"),
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn render_font_create_response(status: StatusCode, view: &FontCreateView) -> Response {
+    match render_font_create(view) {
+        Ok(html) => html_response(status, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render font create: {error}"),
+        ),
+    }
+}
+
+fn render_font_create_response_with_trigger(
+    status: StatusCode,
+    view: &FontCreateView,
+    trigger: &str,
+) -> Response {
+    match render_font_create(view) {
+        Ok(html) => html_response_with_trigger(status, html, trigger),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render font create: {error}"),
+        ),
+    }
+}
+
 fn new_country_create_view(message: &str, render_error: &str) -> CountryCreateView {
     CountryCreateView {
         code: String::new(),
@@ -4168,6 +4383,27 @@ fn validate_material_key(key: &str) -> std::result::Result<(), String> {
     Ok(())
 }
 
+fn validate_font_key(key: &str) -> std::result::Result<(), String> {
+    if key.is_empty() {
+        return Err("フォントキーは必須です。".to_owned());
+    }
+    if key.len() > 64 {
+        return Err("フォントキーは 64 文字以内で入力してください。".to_owned());
+    }
+    if key.starts_with("__") && key.ends_with("__") {
+        return Err("フォントキーに `__...__` 形式は利用できません。".to_owned());
+    }
+    if !key
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || matches!(ch, '-' | '_'))
+    {
+        return Err(
+            "フォントキーは英小文字・数字・ハイフン・アンダースコアのみ使用できます。".to_owned(),
+        );
+    }
+    Ok(())
+}
+
 fn validate_country_code(code: &str) -> std::result::Result<(), String> {
     if code.is_empty() {
         return Err("国コードは必須です。".to_owned());
@@ -4208,14 +4444,13 @@ fn validate_material_values(
 }
 
 fn validate_font_values(
-    label_ja: &str,
-    label_en: &str,
+    label: &str,
     font_family: &str,
     kanji_style: &str,
     sort_order: i64,
 ) -> std::result::Result<String, String> {
-    if label_ja.is_empty() || label_en.is_empty() {
-        return Err("フォント名（ja/en）は必須です。".to_owned());
+    if label.is_empty() {
+        return Err("フォント名は必須です。".to_owned());
     }
     if font_family.is_empty() {
         return Err("font-family は必須です。".to_owned());
@@ -4778,6 +5013,20 @@ fn resolve_localized_field(
         if !legacy.is_empty() {
             return legacy;
         }
+    }
+
+    fallback.to_owned()
+}
+
+fn resolve_font_label_field(data: &BTreeMap<String, JsonValue>, fallback: &str) -> String {
+    let label = read_string_field(data, "label");
+    if !label.is_empty() {
+        return label;
+    }
+
+    let localized = resolve_localized_text(&read_string_map_field(data, "label_i18n"), "ja", "ja");
+    if !localized.is_empty() {
+        return localized;
     }
 
     fallback.to_owned()
@@ -5501,10 +5750,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
             "zen_maru_gothic".to_owned(),
             Font {
                 key: "zen_maru_gothic".to_owned(),
-                label_i18n: HashMap::from([
-                    ("ja".to_owned(), "Zen Maru Gothic".to_owned()),
-                    ("en".to_owned(), "Zen Maru Gothic".to_owned()),
-                ]),
+                label: "Zen Maru Gothic".to_owned(),
                 font_family: "'Zen Maru Gothic', sans-serif".to_owned(),
                 font_stylesheet_url:
                     "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap"
@@ -5520,10 +5766,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
             "potta_one".to_owned(),
             Font {
                 key: "potta_one".to_owned(),
-                label_i18n: HashMap::from([
-                    ("ja".to_owned(), "Potta One".to_owned()),
-                    ("en".to_owned(), "Potta One".to_owned()),
-                ]),
+                label: "Potta One".to_owned(),
                 font_family: "'Potta One', cursive".to_owned(),
                 font_stylesheet_url:
                     "https://fonts.googleapis.com/css2?family=Potta+One&display=swap".to_owned(),
@@ -5538,10 +5781,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
             "wdxl_lubrifont_jp_n".to_owned(),
             Font {
                 key: "wdxl_lubrifont_jp_n".to_owned(),
-                label_i18n: HashMap::from([
-                    ("ja".to_owned(), "WDXL Lubrifont JP N".to_owned()),
-                    ("en".to_owned(), "WDXL Lubrifont JP N".to_owned()),
-                ]),
+                label: "WDXL Lubrifont JP N".to_owned(),
                 font_family: "'WDXL Lubrifont JP N', sans-serif".to_owned(),
                 font_stylesheet_url:
                     "https://fonts.googleapis.com/css2?family=WDXL+Lubrifont+JP+N&display=swap"
@@ -5894,8 +6134,7 @@ mod tests {
             .update_font(
                 "zen_maru_gothic",
                 FontPatchInput {
-                    label_ja: "Zen 丸".to_owned(),
-                    label_en: "Zen Maru".to_owned(),
+                    label: "Zen 丸".to_owned(),
                     font_family: "'Zen Maru Gothic', 'Noto Sans JP', sans-serif".to_owned(),
                     kanji_style: "taiwanese".to_owned(),
                     sort_order: 15,
@@ -5909,7 +6148,7 @@ mod tests {
             .get_font_detail("zen_maru_gothic", "", "")
             .await
             .expect("font should exist");
-        assert_eq!(detail.label_ja, "Zen 丸");
+        assert_eq!(detail.label, "Zen 丸");
         assert_eq!(
             detail.font_family,
             "'Zen Maru Gothic', 'Noto Sans JP', sans-serif"
@@ -5920,6 +6159,52 @@ mod tests {
         );
         assert_eq!(detail.kanji_style, "taiwanese");
         assert_eq!(detail.sort_order, 15);
+    }
+
+    #[tokio::test]
+    async fn create_font_adds_font() {
+        let state = mock_server_state();
+
+        let result = state
+            .create_font(FontCreateInput {
+                key: "kiwi_maru".to_owned(),
+                label: "Kiwi Maru".to_owned(),
+                font_family: "'Kiwi Maru', sans-serif".to_owned(),
+                kanji_style: "japanese".to_owned(),
+                sort_order: 40,
+                is_active: true,
+            })
+            .await;
+        assert!(result.is_ok());
+
+        let detail = state
+            .get_font_detail("kiwi_maru", "", "")
+            .await
+            .expect("font should exist");
+        assert_eq!(detail.key, "kiwi_maru");
+        assert_eq!(detail.label, "Kiwi Maru");
+        assert_eq!(detail.kanji_style, "japanese");
+        assert_eq!(
+            detail.font_stylesheet_url,
+            "https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap"
+        );
+    }
+
+    #[tokio::test]
+    async fn create_font_rejects_duplicate_key() {
+        let state = mock_server_state();
+
+        let result = state
+            .create_font(FontCreateInput {
+                key: "zen_maru_gothic".to_owned(),
+                label: "Zen Maru Gothic".to_owned(),
+                font_family: "'Zen Maru Gothic', sans-serif".to_owned(),
+                kanji_style: "japanese".to_owned(),
+                sort_order: 10,
+                is_active: true,
+            })
+            .await;
+        assert!(result.is_err());
     }
 
     #[test]

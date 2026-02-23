@@ -97,7 +97,7 @@ struct PublicConfig {
 #[derive(Debug, Clone)]
 struct Font {
     key: String,
-    label_i18n: HashMap<String, String>,
+    label: String,
     font_family: String,
     version: i64,
 }
@@ -655,7 +655,7 @@ async fn handle_catalog(
         .map(|font| {
             json!({
                 "key": font.key,
-                "label": resolve_localized(&font.label_i18n, &requested_locale, &cfg.default_locale),
+                "label": font.label,
                 "font_family": font.font_family,
                 "version": font.version,
             })
@@ -1135,10 +1135,11 @@ impl FirestoreStore {
             if font_family.is_empty() {
                 bail!("fonts/{key} is missing font_family");
             }
+            let label = resolve_font_label_field(&document.fields, &key);
 
             fonts.push(Font {
                 key,
-                label_i18n: read_string_map_field(&document.fields, "label_i18n"),
+                label,
                 font_family,
                 version: read_int_field(&document.fields, "version").unwrap_or(1),
             });
@@ -1568,7 +1569,7 @@ impl FirestoreStore {
 
         Ok(Font {
             key: key.to_owned(),
-            label_i18n: read_string_map_field(&doc.fields, "label_i18n"),
+            label: resolve_font_label_field(&doc.fields, key),
             font_family: read_string_field(&doc.fields, "font_family"),
             version: read_int_field(&doc.fields, "version").unwrap_or(1),
         })
@@ -1868,7 +1869,7 @@ fn build_order_fields(
                 ("line2", fs_string(input.seal.line2.clone())),
                 ("shape", fs_string(input.seal.shape.clone())),
                 ("font_key", fs_string(font.key.clone())),
-                ("font_label_i18n", fs_string_map(&font.label_i18n)),
+                ("font_label", fs_string(font.label.clone())),
                 ("font_version", fs_int(font.version)),
             ])),
         ),
@@ -2639,6 +2640,20 @@ fn resolve_localized(
         .and_then(|key| values.get(key))
         .map(|value| value.trim().to_owned())
         .unwrap_or_default()
+}
+
+fn resolve_font_label_field(data: &BTreeMap<String, JsonValue>, fallback: &str) -> String {
+    let label = read_string_field(data, "label");
+    if !label.is_empty() {
+        return label;
+    }
+
+    let localized = resolve_localized(&read_string_map_field(data, "label_i18n"), "ja", "ja");
+    if !localized.is_empty() {
+        return localized;
+    }
+
+    fallback.trim().to_owned()
 }
 
 fn lookup_locale(values: &HashMap<String, String>, target: &str) -> Option<String> {

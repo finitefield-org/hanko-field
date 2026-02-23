@@ -345,10 +345,8 @@ impl FirestoreCatalogSource {
                 })?;
             }
 
-            let label = resolve_localized_field(
+            let label = resolve_font_label_field(
                 &document.fields,
-                "label_i18n",
-                "label",
                 &self.locale,
                 &self.default_locale,
                 &doc_id,
@@ -1663,6 +1661,29 @@ fn resolve_localized_field(
         if !legacy.is_empty() {
             return legacy;
         }
+    }
+
+    fallback.to_owned()
+}
+
+fn resolve_font_label_field(
+    data: &BTreeMap<String, JsonValue>,
+    locale: &str,
+    default_locale: &str,
+    fallback: &str,
+) -> String {
+    let label = read_string_field(data, "label");
+    if !label.is_empty() {
+        return label;
+    }
+
+    let localized = resolve_localized_text(
+        &read_string_map_field(data, "label_i18n"),
+        locale,
+        default_locale,
+    );
+    if !localized.is_empty() {
+        return localized;
     }
 
     fallback.to_owned()

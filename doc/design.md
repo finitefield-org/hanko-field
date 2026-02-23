@@ -36,3 +36,4 @@
 - [x] `web` の購入フローを Stripe Checkout に接続
 - [x] `api` の Stripe Checkout 連携を `crates.io/stripe-sdk` ベースへ移行
 - [x] `api` の Stripe Webhook 検証/パースを `stripe-sdk v0.3.0` の `webhook` ヘルパーへ移行
+- [x] フォントマスタのフォント名を言語別（`ja` / `en`）ではなく単一 `label` で管理する
