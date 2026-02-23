@@ -64,6 +64,7 @@ struct Order {
     order_no: String,
     channel: String,
     locale: String,
+    currency: String,
     status: String,
     status_updated_at: DateTime<Utc>,
     payment_status: String,
@@ -75,7 +76,7 @@ struct Order {
     seal_line1: String,
     seal_line2: String,
     material_label_ja: String,
-    total_jpy: i64,
+    total: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     events: Vec<OrderEvent>,
@@ -110,6 +111,7 @@ struct Material {
     description_i18n: HashMap<String, String>,
     shape: String,
     photos: Vec<MaterialPhoto>,
+    price_usd: i64,
     price_jpy: i64,
     is_active: bool,
     sort_order: i64,
@@ -134,6 +136,7 @@ struct Font {
 struct Country {
     code: String,
     label_i18n: HashMap<String, String>,
+    shipping_fee_usd: i64,
     shipping_fee_jpy: i64,
     is_active: bool,
     sort_order: i64,
@@ -372,7 +375,7 @@ struct OrderListItemView {
     payment_status_label: String,
     fulfillment_status_label: String,
     country_label: String,
-    total_jpy: String,
+    total: String,
 }
 
 #[derive(Debug, Clone)]
@@ -410,7 +413,7 @@ struct OrderDetailView {
     seal_line2: String,
     has_seal_line2: bool,
     material_label_ja: String,
-    total_jpy: String,
+    total: String,
     next_statuses: Vec<StatusOptionView>,
     has_next_statuses: bool,
     shipping_transitions: Vec<StatusOptionView>,
@@ -428,6 +431,7 @@ struct MaterialListItemView {
     shape_label: String,
     primary_photo_path: String,
     has_photo: bool,
+    price_usd: String,
     price_jpy: String,
     is_active: bool,
     version: i64,
@@ -455,6 +459,7 @@ struct MaterialDetailView {
     description_ja: String,
     description_en: String,
     shape: String,
+    price_usd: i64,
     price_jpy: i64,
     is_active: bool,
     sort_order: i64,
@@ -491,6 +496,7 @@ struct CountryListItemView {
     code: String,
     label_ja: String,
     label_en: String,
+    shipping_fee_usd: String,
     shipping_fee_jpy: String,
     is_active: bool,
     version: i64,
@@ -502,6 +508,7 @@ struct CountryDetailView {
     code: String,
     label_ja: String,
     label_en: String,
+    shipping_fee_usd: i64,
     shipping_fee_jpy: i64,
     is_active: bool,
     sort_order: i64,
@@ -518,6 +525,7 @@ struct CountryCreateView {
     code: String,
     label_ja: String,
     label_en: String,
+    shipping_fee_usd: String,
     shipping_fee_jpy: String,
     sort_order: String,
     is_active: bool,
@@ -535,6 +543,7 @@ struct MaterialCreateView {
     description_ja: String,
     description_en: String,
     shape: String,
+    price_usd: String,
     price_jpy: String,
     sort_order: String,
     photo_storage_path: String,
@@ -569,6 +578,7 @@ struct MaterialCreateInput {
     description_ja: String,
     description_en: String,
     shape: String,
+    price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: String,
@@ -594,6 +604,7 @@ struct MaterialPatchInput {
     description_ja: String,
     description_en: String,
     shape: String,
+    price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: String,
@@ -615,6 +626,7 @@ struct FontPatchInput {
 struct CountryPatchInput {
     label_ja: String,
     label_en: String,
+    shipping_fee_usd: i64,
     shipping_fee_jpy: i64,
     sort_order: i64,
     is_active: bool,
@@ -625,6 +637,7 @@ struct CountryCreateInput {
     code: String,
     label_ja: String,
     label_en: String,
+    shipping_fee_usd: i64,
     shipping_fee_jpy: i64,
     sort_order: i64,
     is_active: bool,
@@ -1592,12 +1605,26 @@ async fn handle_material_create(
         );
     }
 
+    let price_usd = match form_value(&form, "price_usd").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_material_create_response(
+                StatusCode::BAD_REQUEST,
+                &material_create_view_from_form(
+                    &form,
+                    "",
+                    "価格（USD cents）は整数で入力してください。",
+                ),
+            );
+        }
+    };
+
     let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
         Ok(value) => value,
         Err(_) => {
             return render_material_create_response(
                 StatusCode::BAD_REQUEST,
-                &material_create_view_from_form(&form, "", "価格は整数で入力してください。"),
+                &material_create_view_from_form(&form, "", "価格（JPY）は整数で入力してください。"),
             );
         }
     };
@@ -1619,6 +1646,7 @@ async fn handle_material_create(
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
         shape: form_value(&form, "shape"),
+        price_usd,
         price_jpy,
         sort_order,
         photo_storage_path: form_value(&form, "photo_storage_path"),
@@ -1684,12 +1712,36 @@ async fn handle_material_patch(
         );
     }
 
+    let price_usd = match form_value(&form, "price_usd").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_material_detail(
+                    &material_key,
+                    "",
+                    "価格（USD cents）は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_material_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render material detail: {error}"),
+                ),
+            };
+        }
+    };
+
     let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
         Ok(value) => value,
         Err(_) => {
             let Some(detail) = state
                 .server
-                .get_material_detail(&material_key, "", "価格は整数で入力してください。")
+                .get_material_detail(&material_key, "", "価格（JPY）は整数で入力してください。")
                 .await
             else {
                 return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
@@ -1730,6 +1782,7 @@ async fn handle_material_patch(
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
         shape: form_value(&form, "shape"),
+        price_usd,
         price_jpy,
         sort_order,
         photo_storage_path: form_value(&form, "photo_storage_path"),
@@ -2130,12 +2183,26 @@ async fn handle_country_create(
         );
     }
 
+    let shipping_fee_usd = match form_value(&form, "shipping_fee_usd").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_country_create_response(
+                StatusCode::BAD_REQUEST,
+                &country_create_view_from_form(
+                    &form,
+                    "",
+                    "送料（USD cents）は整数で入力してください。",
+                ),
+            );
+        }
+    };
+
     let shipping_fee_jpy = match form_value(&form, "shipping_fee_jpy").parse::<i64>() {
         Ok(value) => value,
         Err(_) => {
             return render_country_create_response(
                 StatusCode::BAD_REQUEST,
-                &country_create_view_from_form(&form, "", "送料は整数で入力してください。"),
+                &country_create_view_from_form(&form, "", "送料（JPY）は整数で入力してください。"),
             );
         }
     };
@@ -2154,6 +2221,7 @@ async fn handle_country_create(
         code: form_value(&form, "code"),
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
+        shipping_fee_usd,
         shipping_fee_jpy,
         sort_order,
         is_active: form.contains_key("is_active"),
@@ -2262,6 +2330,30 @@ async fn handle_country_patch(
         );
     }
 
+    let shipping_fee_usd = match form_value(&form, "shipping_fee_usd").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_country_detail(
+                    &country_code.to_uppercase(),
+                    "",
+                    "送料（USD cents）は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_country_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render country detail: {error}"),
+                ),
+            };
+        }
+    };
+
     let shipping_fee_jpy = match form_value(&form, "shipping_fee_jpy").parse::<i64>() {
         Ok(value) => value,
         Err(_) => {
@@ -2270,7 +2362,7 @@ async fn handle_country_patch(
                 .get_country_detail(
                     &country_code.to_uppercase(),
                     "",
-                    "送料は整数で入力してください。",
+                    "送料（JPY）は整数で入力してください。",
                 )
                 .await
             else {
@@ -2313,6 +2405,7 @@ async fn handle_country_patch(
     let input = CountryPatchInput {
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
+        shipping_fee_usd,
         shipping_fee_jpy,
         sort_order,
         is_active: form.contains_key("is_active"),
@@ -2405,7 +2498,7 @@ impl ServerState {
                 fulfillment_status_label: fulfillment_status_label(&order.fulfillment_status)
                     .to_owned(),
                 country_label: country_label(&data.countries, &order.country_code),
-                total_jpy: format_yen(order.total_jpy),
+                total: format_order_amount(order.total, &order.currency),
             });
         }
 
@@ -2469,7 +2562,7 @@ impl ServerState {
             seal_line2: order.seal_line2.clone(),
             has_seal_line2: !order.seal_line2.is_empty(),
             material_label_ja: order.material_label_ja.clone(),
-            total_jpy: format_yen(order.total_jpy),
+            total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
             next_statuses,
             shipping_transitions,
@@ -2499,7 +2592,8 @@ impl ServerState {
                     .map(|photo| photo.storage_path.clone())
                     .unwrap_or_default(),
                 has_photo: primary_photo.is_some(),
-                price_jpy: format_yen(material.price_jpy),
+                price_usd: format_usd(material.price_usd),
+                price_jpy: format_jpy(material.price_jpy),
                 is_active: material.is_active,
                 version: material.version,
                 updated_at: format_datetime(material.updated_at),
@@ -2534,6 +2628,7 @@ impl ServerState {
                 .cloned()
                 .unwrap_or_default(),
             shape: material.shape.clone(),
+            price_usd: material.price_usd,
             price_jpy: material.price_jpy,
             is_active: material.is_active,
             sort_order: material.sort_order,
@@ -2642,7 +2737,8 @@ impl ServerState {
                 code: country.code.clone(),
                 label_ja: country.label_i18n.get("ja").cloned().unwrap_or_default(),
                 label_en: country.label_i18n.get("en").cloned().unwrap_or_default(),
-                shipping_fee_jpy: format_yen(country.shipping_fee_jpy),
+                shipping_fee_usd: format_usd(country.shipping_fee_usd),
+                shipping_fee_jpy: format_jpy(country.shipping_fee_jpy),
                 is_active: country.is_active,
                 version: country.version,
                 updated_at: format_datetime(country.updated_at),
@@ -2665,6 +2761,7 @@ impl ServerState {
             code: country.code.clone(),
             label_ja: country.label_i18n.get("ja").cloned().unwrap_or_default(),
             label_en: country.label_i18n.get("en").cloned().unwrap_or_default(),
+            shipping_fee_usd: country.shipping_fee_usd,
             shipping_fee_jpy: country.shipping_fee_jpy,
             is_active: country.is_active,
             sort_order: country.sort_order,
@@ -2698,6 +2795,7 @@ impl ServerState {
         validate_country_values(
             &label_ja,
             &label_en,
+            input.shipping_fee_usd,
             input.shipping_fee_jpy,
             input.sort_order,
         )?;
@@ -2715,6 +2813,7 @@ impl ServerState {
                     ("ja".to_owned(), label_ja),
                     ("en".to_owned(), label_en),
                 ]),
+                shipping_fee_usd: input.shipping_fee_usd,
                 shipping_fee_jpy: input.shipping_fee_jpy,
                 is_active: input.is_active,
                 sort_order: input.sort_order,
@@ -2780,6 +2879,7 @@ impl ServerState {
         validate_country_values(
             &label_ja,
             &label_en,
+            input.shipping_fee_usd,
             input.shipping_fee_jpy,
             input.sort_order,
         )?;
@@ -2793,6 +2893,7 @@ impl ServerState {
             let now = Utc::now();
             country.label_i18n.insert("ja".to_owned(), label_ja);
             country.label_i18n.insert("en".to_owned(), label_en);
+            country.shipping_fee_usd = input.shipping_fee_usd;
             country.shipping_fee_jpy = input.shipping_fee_jpy;
             country.sort_order = input.sort_order;
             country.is_active = input.is_active;
@@ -2998,6 +3099,7 @@ impl ServerState {
             &description_ja,
             &description_en,
             &shape,
+            input.price_usd,
             input.price_jpy,
             input.sort_order,
             &photo_storage_path,
@@ -3019,6 +3121,7 @@ impl ServerState {
                 .description_i18n
                 .insert("en".to_owned(), description_en);
             material.shape = shape;
+            material.price_usd = input.price_usd;
             material.price_jpy = input.price_jpy;
             material.sort_order = input.sort_order;
             material.is_active = input.is_active;
@@ -3172,6 +3275,7 @@ impl ServerState {
             &description_ja,
             &description_en,
             &shape,
+            input.price_usd,
             input.price_jpy,
             input.sort_order,
             &photo_storage_path,
@@ -3201,6 +3305,7 @@ impl ServerState {
                     &photo_alt_ja,
                     &photo_alt_en,
                 ),
+                price_usd: input.price_usd,
                 price_jpy: input.price_jpy,
                 is_active: input.is_active,
                 sort_order: input.sort_order,
@@ -3316,6 +3421,7 @@ impl FirestoreAdminSource {
                         Country {
                             code: code.clone(),
                             label_i18n: HashMap::from([("ja".to_owned(), code)]),
+                            shipping_fee_usd: 0,
                             shipping_fee_jpy: 0,
                             is_active: true,
                             sort_order: 9999,
@@ -3462,10 +3568,9 @@ impl FirestoreAdminSource {
         let seal = read_map_field(data, "seal");
         let material_data = read_map_field(data, "material");
         let pricing = read_map_field(data, "pricing");
+        let pricing_currency = read_string_field(&pricing, "currency");
 
-        let total_jpy = read_int_field(&pricing, "total_jpy")
-            .or_else(|| read_int_field(data, "total_jpy"))
-            .unwrap_or_default();
+        let total = read_int_field(&pricing, "total").unwrap_or_default();
 
         let material_label_ja = {
             let localized = resolve_localized_field(
@@ -3493,6 +3598,7 @@ impl FirestoreAdminSource {
             order_no: read_string_field(data, "order_no"),
             channel: read_string_field(data, "channel"),
             locale: read_string_field(data, "locale"),
+            currency: pricing_currency,
             status: read_string_field(data, "status"),
             status_updated_at,
             payment_status: read_string_field(&payment, "status"),
@@ -3504,7 +3610,7 @@ impl FirestoreAdminSource {
             seal_line1: read_string_field(&seal, "line1"),
             seal_line2: read_string_field(&seal, "line2"),
             material_label_ja,
-            total_jpy,
+            total,
             created_at,
             updated_at,
             events: Vec::new(),
@@ -3515,6 +3621,9 @@ impl FirestoreAdminSource {
         }
         if order.locale.is_empty() {
             order.locale = self.default_locale.clone();
+        }
+        if order.currency.trim().is_empty() {
+            order.currency = "USD".to_owned();
         }
         if order.status.is_empty() {
             order.status = "pending_payment".to_owned();
@@ -3554,9 +3663,9 @@ impl FirestoreAdminSource {
             };
 
             let data = &document.fields;
-            let price_jpy = read_int_field(data, "price_jpy")
-                .or_else(|| read_int_field(data, "price"))
-                .unwrap_or_default();
+            let price_by_currency = material_price_by_currency_from_fields(data);
+            let price_usd = price_by_currency.get("USD").copied().unwrap_or_default();
+            let price_jpy = price_by_currency.get("JPY").copied().unwrap_or(price_usd);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
@@ -3589,6 +3698,7 @@ impl FirestoreAdminSource {
                     description_i18n,
                     shape,
                     photos,
+                    price_usd,
                     price_jpy,
                     is_active,
                     sort_order,
@@ -3708,9 +3818,15 @@ impl FirestoreAdminSource {
 
             let code = doc_id.to_uppercase();
             let data = &document.fields;
-            let shipping_fee_jpy = read_int_field(data, "shipping_fee_jpy")
-                .or_else(|| read_int_field(data, "shipping"))
+            let shipping_fee_by_currency = country_shipping_fee_by_currency_from_fields(data);
+            let shipping_fee_usd = shipping_fee_by_currency
+                .get("USD")
+                .copied()
                 .unwrap_or_default();
+            let shipping_fee_jpy = shipping_fee_by_currency
+                .get("JPY")
+                .copied()
+                .unwrap_or(shipping_fee_usd);
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
@@ -3732,6 +3848,7 @@ impl FirestoreAdminSource {
                 Country {
                     code,
                     label_i18n,
+                    shipping_fee_usd,
                     shipping_fee_jpy,
                     is_active,
                     sort_order,
@@ -3891,6 +4008,10 @@ impl FirestoreAdminSource {
         let client = self.firestore_client().await?;
 
         let material_name = format!("{}/materials/{}", self.parent, material.key);
+        let price_by_currency = HashMap::from([
+            ("USD".to_owned(), material.price_usd.max(0)),
+            ("JPY".to_owned(), material.price_jpy.max(0)),
+        ]);
         let document = Document {
             name: Some(material_name.clone()),
             fields: btree_from_pairs(vec![
@@ -3901,7 +4022,7 @@ impl FirestoreAdminSource {
                 ),
                 ("shape", fs_string(material.shape.clone())),
                 ("photos", fs_material_photos(&material.photos)),
-                ("price_jpy", fs_int(material.price_jpy)),
+                ("price_by_currency", fs_int_map(&price_by_currency)),
                 ("is_active", fs_bool(material.is_active)),
                 ("sort_order", fs_int(material.sort_order)),
                 ("version", fs_int(material.version)),
@@ -3920,7 +4041,7 @@ impl FirestoreAdminSource {
                         "description_i18n".to_owned(),
                         "shape".to_owned(),
                         "photos".to_owned(),
-                        "price_jpy".to_owned(),
+                        "price_by_currency".to_owned(),
                         "is_active".to_owned(),
                         "sort_order".to_owned(),
                         "version".to_owned(),
@@ -3985,11 +4106,18 @@ impl FirestoreAdminSource {
         let client = self.firestore_client().await?;
 
         let country_name = format!("{}/countries/{}", self.parent, country.code);
+        let shipping_fee_by_currency = HashMap::from([
+            ("USD".to_owned(), country.shipping_fee_usd.max(0)),
+            ("JPY".to_owned(), country.shipping_fee_jpy.max(0)),
+        ]);
         let document = Document {
             name: Some(country_name.clone()),
             fields: btree_from_pairs(vec![
                 ("label_i18n", fs_string_map(&country.label_i18n)),
-                ("shipping_fee_jpy", fs_int(country.shipping_fee_jpy)),
+                (
+                    "shipping_fee_by_currency",
+                    fs_int_map(&shipping_fee_by_currency),
+                ),
                 ("is_active", fs_bool(country.is_active)),
                 ("sort_order", fs_int(country.sort_order)),
                 ("version", fs_int(country.version)),
@@ -4005,7 +4133,7 @@ impl FirestoreAdminSource {
                 &PatchDocumentOptions {
                     update_mask_field_paths: vec![
                         "label_i18n".to_owned(),
-                        "shipping_fee_jpy".to_owned(),
+                        "shipping_fee_by_currency".to_owned(),
                         "is_active".to_owned(),
                         "sort_order".to_owned(),
                         "version".to_owned(),
@@ -4182,6 +4310,7 @@ fn new_material_create_view(message: &str, render_error: &str) -> MaterialCreate
         description_ja: String::new(),
         description_en: String::new(),
         shape: "square".to_owned(),
+        price_usd: "0".to_owned(),
         price_jpy: "0".to_owned(),
         sort_order: "0".to_owned(),
         photo_storage_path: String::new(),
@@ -4207,6 +4336,7 @@ fn material_create_view_from_form(
         description_ja: form_value(form, "description_ja"),
         description_en: form_value(form, "description_en"),
         shape: material_shape_or_default(&form_value(form, "shape")),
+        price_usd: form_value(form, "price_usd"),
         price_jpy: form_value(form, "price_jpy"),
         sort_order: form_value(form, "sort_order"),
         photo_storage_path: form_value(form, "photo_storage_path"),
@@ -4309,6 +4439,7 @@ fn new_country_create_view(message: &str, render_error: &str) -> CountryCreateVi
         code: String::new(),
         label_ja: String::new(),
         label_en: String::new(),
+        shipping_fee_usd: "0".to_owned(),
         shipping_fee_jpy: "0".to_owned(),
         sort_order: "0".to_owned(),
         is_active: true,
@@ -4328,6 +4459,7 @@ fn country_create_view_from_form(
         code: form_value(form, "code"),
         label_ja: form_value(form, "label_ja"),
         label_en: form_value(form, "label_en"),
+        shipping_fee_usd: form_value(form, "shipping_fee_usd"),
         shipping_fee_jpy: form_value(form, "shipping_fee_jpy"),
         sort_order: form_value(form, "sort_order"),
         is_active: form.contains_key("is_active"),
@@ -4420,6 +4552,7 @@ fn validate_material_values(
     description_ja: &str,
     description_en: &str,
     shape: &str,
+    price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
     photo_storage_path: &str,
@@ -4433,8 +4566,11 @@ fn validate_material_values(
     if normalize_material_shape(shape).is_none() {
         return Err("材質の形状は角印か丸印を選択してください。".to_owned());
     }
+    if price_usd < 0 {
+        return Err("価格（USD cents）は 0 以上で入力してください。".to_owned());
+    }
     if price_jpy < 0 {
-        return Err("価格は 0 以上で入力してください。".to_owned());
+        return Err("価格（JPY）は 0 以上で入力してください。".to_owned());
     }
     if sort_order < 0 {
         return Err("表示順は 0 以上で入力してください。".to_owned());
@@ -4540,14 +4676,18 @@ fn is_generic_css_font_family(font_name: &str) -> bool {
 fn validate_country_values(
     label_ja: &str,
     label_en: &str,
+    shipping_fee_usd: i64,
     shipping_fee_jpy: i64,
     sort_order: i64,
 ) -> std::result::Result<(), String> {
     if label_ja.is_empty() || label_en.is_empty() {
         return Err("配送国名（ja/en）は必須です。".to_owned());
     }
+    if shipping_fee_usd < 0 {
+        return Err("送料（USD cents）は 0 以上で入力してください。".to_owned());
+    }
     if shipping_fee_jpy < 0 {
-        return Err("送料は 0 以上で入力してください。".to_owned());
+        return Err("送料（JPY）は 0 以上で入力してください。".to_owned());
     }
     if sort_order < 0 {
         return Err("表示順は 0 以上で入力してください。".to_owned());
@@ -4975,23 +5115,42 @@ fn format_datetime(value: DateTime<Utc>) -> String {
         .to_string()
 }
 
-fn format_yen(value: i64) -> String {
+fn format_usd(value_cents: i64) -> String {
+    let sign = if value_cents < 0 { "-" } else { "" };
+    let cents = value_cents.abs();
+    let whole = cents / 100;
+    let fraction = cents % 100;
+    let whole_display = format_with_grouping(whole);
+    format!("{sign}USD {whole_display}.{fraction:02}")
+}
+
+fn format_jpy(value_yen: i64) -> String {
+    let sign = if value_yen < 0 { "-" } else { "" };
+    let whole_display = format_with_grouping(value_yen.abs());
+    format!("{sign}{whole_display}円")
+}
+
+fn format_order_amount(value: i64, currency: &str) -> String {
+    if currency.trim().eq_ignore_ascii_case("JPY") {
+        return format_jpy(value);
+    }
+    format_usd(value)
+}
+
+fn format_with_grouping(value: i64) -> String {
     if value == 0 {
         return "0".to_owned();
     }
 
-    let sign = if value < 0 { "-" } else { "" };
-    let digits = value.abs().to_string();
-    let mut out = String::with_capacity(digits.len() + digits.len() / 3 + 1);
-
+    let digits = value.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
     for (index, ch) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index) % 3 == 0 {
             out.push(',');
         }
         out.push(ch);
     }
-
-    format!("{sign}{out}")
+    out
 }
 
 fn resolve_localized_field(
@@ -5203,6 +5362,34 @@ fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> 
         .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
 }
 
+fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, i64> {
+    let Some(value) = data.get(key) else {
+        return HashMap::new();
+    };
+
+    let Some(fields) = value
+        .get("mapValue")
+        .and_then(|map_value| map_value.get("fields"))
+        .and_then(JsonValue::as_object)
+        .or_else(|| value.as_object())
+    else {
+        return HashMap::new();
+    };
+
+    let mut result = HashMap::new();
+    for (map_key, map_value) in fields {
+        let mut container = BTreeMap::new();
+        container.insert("amount".to_owned(), map_value.clone());
+        if let Some(amount) = read_int_field(&container, "amount")
+            && let Some(currency) = normalize_currency_map_key(map_key)
+        {
+            result.insert(currency, amount.max(0));
+        }
+    }
+
+    result
+}
+
 fn read_bool_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<bool> {
     let value = data.get(key)?;
     if let Some(boolean_value) = value.get("booleanValue").and_then(JsonValue::as_bool) {
@@ -5334,6 +5521,26 @@ fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashM
     result
 }
 
+fn material_price_by_currency_from_fields(
+    data: &BTreeMap<String, JsonValue>,
+) -> HashMap<String, i64> {
+    read_int_map_field(data, "price_by_currency")
+}
+
+fn country_shipping_fee_by_currency_from_fields(
+    data: &BTreeMap<String, JsonValue>,
+) -> HashMap<String, i64> {
+    read_int_map_field(data, "shipping_fee_by_currency")
+}
+
+fn normalize_currency_map_key(key: &str) -> Option<String> {
+    let normalized = key.trim().to_ascii_uppercase();
+    if normalized.len() != 3 || !normalized.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        return None;
+    }
+    Some(normalized)
+}
+
 fn fs_string(value: impl Into<String>) -> JsonValue {
     json!({ "stringValue": value.into() })
 }
@@ -5370,6 +5577,24 @@ fn fs_string_map(values: &HashMap<String, String>) -> JsonValue {
     for key in keys {
         if let Some(value) = values.get(&key) {
             fields.insert(key, fs_string(value.clone()));
+        }
+    }
+
+    fs_map(fields)
+}
+
+fn fs_int_map(values: &HashMap<String, i64>) -> JsonValue {
+    if values.is_empty() {
+        return fs_map(BTreeMap::new());
+    }
+
+    let mut keys = values.keys().cloned().collect::<Vec<_>>();
+    keys.sort();
+
+    let mut fields = BTreeMap::new();
+    for key in keys {
+        if let Some(value) = values.get(&key) {
+            fields.insert(key, fs_int((*value).max(0)));
         }
     }
 
@@ -5420,6 +5645,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260209-1007".to_owned(),
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
+                currency: "JPY".to_owned(),
                 status: "manufacturing".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(4),
                 payment_status: String::new(),
@@ -5431,7 +5657,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
                 material_label_ja: "黒水牛".to_owned(),
-                total_jpy: 5400,
+                total: 5400,
                 created_at: now - chrono::Duration::hours(9),
                 updated_at: now - chrono::Duration::hours(4),
                 events: vec![
@@ -5472,6 +5698,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260209-1006".to_owned(),
                 channel: "app".to_owned(),
                 locale: "en".to_owned(),
+                currency: "USD".to_owned(),
                 status: "paid".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(2),
                 payment_status: String::new(),
@@ -5483,7 +5710,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
                 material_label_ja: "チタン".to_owned(),
-                total_jpy: 11600,
+                total: 11600,
                 created_at: now - chrono::Duration::hours(12),
                 updated_at: now - chrono::Duration::hours(2),
                 events: vec![
@@ -5515,6 +5742,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260209-1005".to_owned(),
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
+                currency: "JPY".to_owned(),
                 status: "shipped".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(26),
                 payment_status: String::new(),
@@ -5526,7 +5754,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
                 material_label_ja: "柘植".to_owned(),
-                total_jpy: 4900,
+                total: 4900,
                 created_at: now - chrono::Duration::hours(36),
                 updated_at: now - chrono::Duration::hours(26),
                 events: vec![
@@ -5585,6 +5813,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260208-1004".to_owned(),
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
+                currency: "JPY".to_owned(),
                 status: "delivered".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(72),
                 payment_status: String::new(),
@@ -5596,7 +5825,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
                 material_label_ja: "柘植".to_owned(),
-                total_jpy: 4200,
+                total: 4200,
                 created_at: now - chrono::Duration::hours(96),
                 updated_at: now - chrono::Duration::hours(72),
                 events: vec![
@@ -5628,6 +5857,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260208-1003".to_owned(),
                 channel: "web".to_owned(),
                 locale: "en".to_owned(),
+                currency: "USD".to_owned(),
                 status: "pending_payment".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(8),
                 payment_status: String::new(),
@@ -5639,7 +5869,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
                 material_label_ja: "チタン".to_owned(),
-                total_jpy: 11800,
+                total: 11800,
                 created_at: now - chrono::Duration::hours(30),
                 updated_at: now - chrono::Duration::hours(8),
                 events: vec![OrderEvent {
@@ -5660,6 +5890,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260207-1002".to_owned(),
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
+                currency: "JPY".to_owned(),
                 status: "refunded".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(130),
                 payment_status: String::new(),
@@ -5671,7 +5902,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
                 material_label_ja: "黒水牛".to_owned(),
-                total_jpy: 6900,
+                total: 6900,
                 created_at: now - chrono::Duration::hours(150),
                 updated_at: now - chrono::Duration::hours(130),
                 events: vec![
@@ -5703,6 +5934,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 order_no: "HF-20260207-1001".to_owned(),
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
+                currency: "JPY".to_owned(),
                 status: "canceled".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(80),
                 payment_status: String::new(),
@@ -5714,7 +5946,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
                 material_label_ja: "柘植".to_owned(),
-                total_jpy: 5600,
+                total: 5600,
                 created_at: now - chrono::Duration::hours(120),
                 updated_at: now - chrono::Duration::hours(80),
                 events: vec![
@@ -5824,6 +6056,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     width: 1200,
                     height: 1200,
                 }],
+                price_usd: 3600,
                 price_jpy: 3600,
                 is_active: true,
                 sort_order: 10,
@@ -5859,6 +6092,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     width: 1200,
                     height: 1200,
                 }],
+                price_usd: 4800,
                 price_jpy: 4800,
                 is_active: true,
                 sort_order: 20,
@@ -5894,6 +6128,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     width: 1200,
                     height: 1200,
                 }],
+                price_usd: 9800,
                 price_jpy: 9800,
                 is_active: false,
                 sort_order: 30,
@@ -5912,6 +6147,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "日本".to_owned()),
                     ("en".to_owned(), "Japan".to_owned()),
                 ]),
+                shipping_fee_usd: 600,
                 shipping_fee_jpy: 600,
                 is_active: true,
                 sort_order: 10,
@@ -5927,6 +6163,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "アメリカ合衆国".to_owned()),
                     ("en".to_owned(), "United States".to_owned()),
                 ]),
+                shipping_fee_usd: 1800,
                 shipping_fee_jpy: 1800,
                 is_active: true,
                 sort_order: 20,
@@ -5942,6 +6179,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "カナダ".to_owned()),
                     ("en".to_owned(), "Canada".to_owned()),
                 ]),
+                shipping_fee_usd: 1900,
                 shipping_fee_jpy: 1900,
                 is_active: true,
                 sort_order: 30,
@@ -5957,6 +6195,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "イギリス".to_owned()),
                     ("en".to_owned(), "United Kingdom".to_owned()),
                 ]),
+                shipping_fee_usd: 2000,
                 shipping_fee_jpy: 2000,
                 is_active: true,
                 sort_order: 40,
@@ -5972,6 +6211,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "オーストラリア".to_owned()),
                     ("en".to_owned(), "Australia".to_owned()),
                 ]),
+                shipping_fee_usd: 2100,
                 shipping_fee_jpy: 2100,
                 is_active: true,
                 sort_order: 50,
@@ -5987,6 +6227,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("ja".to_owned(), "シンガポール".to_owned()),
                     ("en".to_owned(), "Singapore".to_owned()),
                 ]),
+                shipping_fee_usd: 1300,
                 shipping_fee_jpy: 1300,
                 is_active: true,
                 sort_order: 60,
@@ -6090,7 +6331,8 @@ mod tests {
                 CountryPatchInput {
                     label_ja: "日本国内".to_owned(),
                     label_en: "Japan Domestic".to_owned(),
-                    shipping_fee_jpy: 900,
+                    shipping_fee_usd: 900,
+                    shipping_fee_jpy: 1200,
                     sort_order: 15,
                     is_active: true,
                 },
@@ -6103,7 +6345,8 @@ mod tests {
             .await
             .expect("country should exist");
         assert_eq!(detail.label_ja, "日本国内");
-        assert_eq!(detail.shipping_fee_jpy, 900);
+        assert_eq!(detail.shipping_fee_usd, 900);
+        assert_eq!(detail.shipping_fee_jpy, 1200);
         assert_eq!(detail.sort_order, 15);
     }
 
@@ -6117,7 +6360,8 @@ mod tests {
                 CountryPatchInput {
                     label_ja: "日本".to_owned(),
                     label_en: "Japan".to_owned(),
-                    shipping_fee_jpy: -1,
+                    shipping_fee_usd: -1,
+                    shipping_fee_jpy: 800,
                     sort_order: 10,
                     is_active: true,
                 },
@@ -6233,7 +6477,8 @@ mod tests {
                 code: "kr".to_owned(),
                 label_ja: "韓国".to_owned(),
                 label_en: "Korea".to_owned(),
-                shipping_fee_jpy: 1700,
+                shipping_fee_usd: 1700,
+                shipping_fee_jpy: 2400,
                 sort_order: 70,
                 is_active: true,
             })
@@ -6245,7 +6490,8 @@ mod tests {
             .await
             .expect("country should exist");
         assert_eq!(detail.code, "KR");
-        assert_eq!(detail.shipping_fee_jpy, 1700);
+        assert_eq!(detail.shipping_fee_usd, 1700);
+        assert_eq!(detail.shipping_fee_jpy, 2400);
     }
 
     #[tokio::test]
@@ -6257,6 +6503,7 @@ mod tests {
                 code: "JP".to_owned(),
                 label_ja: "日本".to_owned(),
                 label_en: "Japan".to_owned(),
+                shipping_fee_usd: 600,
                 shipping_fee_jpy: 600,
                 sort_order: 10,
                 is_active: true,
@@ -6275,10 +6522,17 @@ mod tests {
     }
 
     #[test]
-    fn format_yen_with_separator() {
-        assert_eq!(format_yen(0), "0");
-        assert_eq!(format_yen(1200), "1,200");
-        assert_eq!(format_yen(1234567), "1,234,567");
+    fn format_usd_with_separator() {
+        assert_eq!(format_usd(0), "USD 0.00");
+        assert_eq!(format_usd(1200), "USD 12.00");
+        assert_eq!(format_usd(1234567), "USD 12,345.67");
+    }
+
+    #[test]
+    fn format_jpy_with_separator() {
+        assert_eq!(format_jpy(0), "0円");
+        assert_eq!(format_jpy(1200), "1,200円");
+        assert_eq!(format_jpy(1234567), "1,234,567円");
     }
 
     #[test]

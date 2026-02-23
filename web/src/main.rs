@@ -9,9 +9,9 @@ use anyhow::{Context, Result, anyhow, bail};
 use askama::Template;
 use axum::{
     Router,
-    extract::{Form, State, rejection::FormRejection},
+    extract::{Form, Query, State, rejection::FormRejection},
     http::{HeaderName, HeaderValue, StatusCode, header},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use firebase_sdk_rust::firebase_firestore::{Document, FirebaseFirestoreClient, RunQueryRequest};
@@ -252,6 +252,27 @@ struct PurchaseResultTemplate {
     is_mock: bool,
 }
 
+#[derive(Template)]
+#[template(path = "payment_success.html")]
+struct PaymentSuccessTemplate {
+    has_session_id: bool,
+    session_id: String,
+}
+
+#[derive(Template)]
+#[template(path = "payment_failure.html")]
+struct PaymentFailureTemplate;
+
+#[derive(Debug, Deserialize, Default)]
+struct CheckoutQuery {
+    checkout: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct PaymentSuccessQuery {
+    session_id: Option<String>,
+}
+
 #[derive(Clone)]
 enum CatalogSource {
     Mock(MockCatalogSource),
@@ -387,9 +408,10 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("materials document is missing name"))?;
 
-            let price = read_int_field(&document.fields, "price_jpy")
-                .or_else(|| read_int_field(&document.fields, "price"))
-                .ok_or_else(|| anyhow!("materials/{doc_id} is missing price_jpy"))?;
+            let price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
+
+            let price = resolve_amount_for_currency(&price_by_currency, "USD")
+                .ok_or_else(|| anyhow!("materials/{doc_id} is missing price_by_currency"))?;
 
             let label = resolve_localized_field(
                 &document.fields,
@@ -427,7 +449,7 @@ impl FirestoreCatalogSource {
                 shape: shape.to_owned(),
                 shape_label: material_shape_label(shape).to_owned(),
                 price,
-                price_display: format_yen(price),
+                price_display: format_usd(price),
                 photo_url,
                 photo_alt,
                 has_photo,
@@ -455,9 +477,11 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("countries document is missing name"))?;
 
-            let shipping = read_int_field(&document.fields, "shipping_fee_jpy")
-                .or_else(|| read_int_field(&document.fields, "shipping"))
-                .ok_or_else(|| anyhow!("countries/{doc_id} is missing shipping_fee_jpy"))?;
+            let shipping_fee_by_currency =
+                read_int_map_field(&document.fields, "shipping_fee_by_currency");
+
+            let shipping = resolve_amount_for_currency(&shipping_fee_by_currency, "USD")
+                .ok_or_else(|| anyhow!("countries/{doc_id} is missing shipping_fee_by_currency"))?;
 
             let label = resolve_localized_field(
                 &document.fields,
@@ -695,6 +719,8 @@ async fn run() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handle_index))
+        .route("/payment/success", get(handle_payment_success))
+        .route("/payment/failure", get(handle_payment_failure))
         .route("/kanji", post(handle_kanji_suggestions))
         .route("/purchase", post(handle_purchase))
         .route("/mock/kanji", post(handle_kanji_suggestions))
@@ -980,7 +1006,7 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape: "square".to_owned(),
                     shape_label: "角印".to_owned(),
                     price: 3600,
-                    price_display: format_yen(3600),
+                    price_display: format_usd(3600),
                     photo_url: "https://picsum.photos/seed/hf-boxwood/640/420".to_owned(),
                     photo_alt: "柘植材の写真".to_owned(),
                     has_photo: true,
@@ -992,7 +1018,7 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape: "round".to_owned(),
                     shape_label: "丸印".to_owned(),
                     price: 4800,
-                    price_display: format_yen(4800),
+                    price_display: format_usd(4800),
                     photo_url: "https://picsum.photos/seed/hf-black-buffalo/640/420".to_owned(),
                     photo_alt: "黒水牛材の写真".to_owned(),
                     has_photo: true,
@@ -1004,7 +1030,7 @@ fn new_mock_catalog_source() -> MockCatalogSource {
                     shape: "square".to_owned(),
                     shape_label: "角印".to_owned(),
                     price: 9800,
-                    price_display: format_yen(9800),
+                    price_display: format_usd(9800),
                     photo_url: "https://picsum.photos/seed/hf-titanium/640/420".to_owned(),
                     photo_alt: "チタン材の写真".to_owned(),
                     has_photo: true,
@@ -1155,7 +1181,14 @@ fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
     urls
 }
 
-async fn handle_index(State(state): State<AppState>) -> Response {
+async fn handle_index(
+    State(state): State<AppState>,
+    Query(query): Query<CheckoutQuery>,
+) -> Response {
+    if let Some(path) = checkout_redirect_path(&query) {
+        return Redirect::to(&path).into_response();
+    }
+
     let catalog = match load_catalog_with_timeout(state.source.as_ref()).await {
         Ok(catalog) => catalog,
         Err(error) => {
@@ -1193,6 +1226,42 @@ async fn handle_index(State(state): State<AppState>) -> Response {
         Err(error) => plain_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to render page: {error}"),
+        ),
+    }
+}
+
+fn checkout_redirect_path(query: &CheckoutQuery) -> Option<String> {
+    let checkout = query.checkout.as_deref()?.trim().to_lowercase();
+    match checkout.as_str() {
+        "success" => Some("/payment/success".to_owned()),
+        "cancel" => Some("/payment/failure".to_owned()),
+        _ => None,
+    }
+}
+
+async fn handle_payment_success(Query(query): Query<PaymentSuccessQuery>) -> Response {
+    let session_id = query.session_id.unwrap_or_default().trim().to_owned();
+    let template = PaymentSuccessTemplate {
+        has_session_id: !session_id.is_empty(),
+        session_id,
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render payment success page: {error}"),
+        ),
+    }
+}
+
+async fn handle_payment_failure() -> Response {
+    let template = PaymentFailureTemplate;
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render payment failure page: {error}"),
         ),
     }
 }
@@ -1485,9 +1554,9 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
         address_line1: data.address_line1.clone(),
         address_line2: data.address_line2.clone(),
         has_address_line2: !data.address_line2.is_empty(),
-        subtotal_display: format_yen(data.subtotal),
-        shipping_display: format_yen(data.shipping),
-        total_display: format_yen(data.total),
+        subtotal_display: format_usd(data.subtotal),
+        shipping_display: format_usd(data.shipping),
+        total_display: format_usd(data.total),
         email: data.email.clone(),
         source_label: data.source_label.clone(),
         is_mock: data.is_mock,
@@ -1614,23 +1683,29 @@ fn contains_whitespace(value: &str) -> bool {
     value.chars().any(char::is_whitespace)
 }
 
-fn format_yen(price: i64) -> String {
-    if price == 0 {
+fn format_usd(amount_cents: i64) -> String {
+    let sign = if amount_cents < 0 { "-" } else { "" };
+    let cents = amount_cents.abs();
+    let whole = cents / 100;
+    let fraction = cents % 100;
+    let whole_display = format_with_grouping(whole);
+    format!("{sign}USD {whole_display}.{fraction:02}")
+}
+
+fn format_with_grouping(value: i64) -> String {
+    if value == 0 {
         return "0".to_owned();
     }
 
-    let sign = if price < 0 { "-" } else { "" };
-    let digits = price.abs().to_string();
-    let mut out = String::with_capacity(digits.len() + digits.len() / 3 + 1);
-
+    let digits = value.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
     for (index, ch) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index) % 3 == 0 {
             out.push(',');
         }
         out.push(ch);
     }
-
-    format!("{sign}{out}")
+    out
 }
 
 fn document_id(document: &Document) -> Option<String> {
@@ -1796,6 +1871,51 @@ fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> 
     value
         .as_i64()
         .or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok()))
+}
+
+fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, i64> {
+    let Some(value) = data.get(key) else {
+        return HashMap::new();
+    };
+
+    let Some(fields) = value
+        .get("mapValue")
+        .and_then(|map_value| map_value.get("fields"))
+        .and_then(JsonValue::as_object)
+        .or_else(|| value.as_object())
+    else {
+        return HashMap::new();
+    };
+
+    let mut result = HashMap::new();
+    for (map_key, map_value) in fields {
+        let mut field = BTreeMap::new();
+        field.insert("amount".to_owned(), map_value.clone());
+        if let Some(amount) = read_int_field(&field, "amount") {
+            result.insert(map_key.trim().to_ascii_uppercase(), amount);
+        }
+    }
+
+    result
+}
+
+fn resolve_amount_for_currency(values: &HashMap<String, i64>, currency: &str) -> Option<i64> {
+    let code = currency.trim().to_ascii_uppercase();
+    if let Some(amount) = values.get(&code).copied() {
+        return Some(amount.max(0));
+    }
+    if let Some(amount) = values.get("USD").copied() {
+        return Some(amount.max(0));
+    }
+    if let Some(amount) = values.get("JPY").copied() {
+        return Some(amount.max(0));
+    }
+
+    let mut keys = values.keys().cloned().collect::<Vec<_>>();
+    keys.sort();
+    keys.into_iter()
+        .find_map(|key| values.get(&key).copied())
+        .map(|amount| amount.max(0))
 }
 
 fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, String> {

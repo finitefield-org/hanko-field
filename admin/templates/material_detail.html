@@ -73,7 +73,11 @@
       </label>
     </div>
 
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>価格 (USD cents)</span>
+        <input type="number" name="price_usd" min="0" value="{{ detail.price_usd }}" required>
+      </label>
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>価格 (JPY)</span>
         <input type="number" name="price_jpy" min="0" value="{{ detail.price_jpy }}" required>

@@ -34,6 +34,15 @@
 - [x] `web` の候補生成で理由言語指定UIを廃止し画面ロケールを利用、性別（選択なし/男性/女性）指定を Gemini プロンプトに反映
 - [x] `api` に Stripe Checkout Session 作成エンドポイントを追加
 - [x] `web` の購入フローを Stripe Checkout に接続
+- [x] `web` に支払い成功画面と支払い失敗画面を追加
+- [x] Stripe Checkout の商品名をロケール別に変更（日本語: `宝石印鑑 (材質、丸/角)` / 英語: `Stone seal (material; circle/square)`）、住所・電話番号を渡す
+- [x] Stripe / Web の金額表示を `pricing.currency` に基づく通貨別表示へ対応
+- [x] 材質・送料マスタ金額を `price_by_currency` / `shipping_fee_by_currency`（`map<string,int>`）で管理
+- [x] 将来のロケール別通貨切り替えを見据え、`app_config/public` に通貨ポリシー（`default_currency` / `currency_by_locale`）を追加
+- [x] `ja` ロケールの決済通貨を `JPY` に設定（`en` は `USD`）
+- [x] 管理画面（材質/配送国マスタ）で USD に加えて JPY 金額も編集できるようにする
+- [x] `orders.pricing` の金額フィールドを通貨非依存名（`subtotal` / `shipping` / `tax` / `discount` / `total`）へ変更
+- [x] 互換用の旧金額フィールド（`price_usd` / `price_jpy` / `shipping_fee_usd` / `shipping_fee_jpy` / `total_usd`）の読み書きを削除
 - [x] `api` の Stripe Checkout 連携を `crates.io/stripe-sdk` ベースへ移行
 - [x] `api` の Stripe Webhook 検証/パースを `stripe-sdk v0.3.0` の `webhook` ヘルパーへ移行
 - [x] フォントマスタのフォント名を言語別（`ja` / `en`）ではなく単一 `label` で管理する

@@ -105,8 +105,14 @@
     window.location.hash = nextHash;
   }
 
-  function formatYen(amount) {
-    return `¥${Number(amount).toLocaleString("ja-JP")}`;
+  function formatUsd(cents) {
+    const normalized = Number(cents);
+    const amountCents = Number.isFinite(normalized) ? Math.trunc(normalized) : 0;
+    const sign = amountCents < 0 ? "-" : "";
+    const absoluteCents = Math.abs(amountCents);
+    const whole = Math.floor(absoluteCents / 100);
+    const fraction = absoluteCents % 100;
+    return `${sign}USD ${whole.toLocaleString("en-US")}.${String(fraction).padStart(2, "0")}`;
   }
 
   function getRawSealLines() {
@@ -369,9 +375,9 @@
     summaryCountry.textContent = country?.dataset.label || "-";
 
     const subtotal = Number(material?.dataset.price || 0);
-    summarySubtotal.textContent = material ? formatYen(subtotal) : "-";
-    summaryShipping.textContent = country ? formatYen(shipping) : "-";
-    summaryTotal.textContent = material && country ? formatYen(subtotal + shipping) : "-";
+    summarySubtotal.textContent = material ? formatUsd(subtotal) : "-";
+    summaryShipping.textContent = country ? formatUsd(shipping) : "-";
+    summaryTotal.textContent = material && country ? formatUsd(subtotal + shipping) : "-";
   }
 
   function syncMaterialOptionsByShape() {
@@ -499,7 +505,7 @@
 
       const readingBox = suggestionsContainer.querySelector("[data-kanji-reading]");
       if (readingBox) {
-        const reading = (chip.dataset.reading || "").trim();
+        const reading = (chip.dataset.reading || chip.dataset.romaji || "").trim();
         const style = (chip.dataset.kanjiStyle || selectedKanjiStyle()).trim().toLowerCase();
 
         if (isChineseStyle(style)) {

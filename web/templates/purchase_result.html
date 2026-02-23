@@ -10,7 +10,7 @@
   <p>{{ shape_label }} / {{ material_label }} / {{ font_label }}</p>
   <p>配送先: {{ country_label }} / {{ stripe_name }} / {{ stripe_phone }}</p>
   <p>住所: {{ postal_code }} {{ state }} {{ city }} {{ address_line1 }}{% if has_address_line2 %} {{ address_line2 }}{% endif %}</p>
-  <p>小計: ¥{{ subtotal_display }} / 送料: ¥{{ shipping_display }} / 合計: ¥{{ total_display }}</p>
+  <p>小計: {{ subtotal_display }} / 送料: {{ shipping_display }} / 合計: {{ total_display }}</p>
   <p>確認メール送信先: {{ email }}</p>
 </div>
 {% endif %}

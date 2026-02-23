@@ -5,7 +5,8 @@
         <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
           <th class="border-b border-admin-line/70 px-3 py-2">Code</th>
           <th class="border-b border-admin-line/70 px-3 py-2">配送国名</th>
-          <th class="border-b border-admin-line/70 px-3 py-2">送料</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">送料 (USD)</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">送料 (JPY)</th>
           <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
           <th class="border-b border-admin-line/70 px-3 py-2">version</th>
           <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
@@ -22,7 +23,8 @@
             <p>{{ country.label_ja }}</p>
             <p class="mt-1 text-xs text-admin-muted">{{ country.label_en }}</p>
           </td>
-          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">¥{{ country.shipping_fee_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ country.shipping_fee_usd }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ country.shipping_fee_jpy }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{% if country.is_active %}有効{% else %}無効{% endif %}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ country.version }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ country.updated_at }}</td>
@@ -53,7 +55,7 @@
         {% endfor %}
         {% else %}
         <tr>
-          <td colspan="8" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">配送国がありません。</td>
+          <td colspan="9" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">配送国がありません。</td>
         </tr>
         {% endif %}
       </tbody>

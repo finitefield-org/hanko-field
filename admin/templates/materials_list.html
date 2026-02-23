@@ -7,7 +7,8 @@
           <th class="border-b border-admin-line/70 px-3 py-2">材質名</th>
           <th class="border-b border-admin-line/70 px-3 py-2">形状</th>
           <th class="border-b border-admin-line/70 px-3 py-2">写真</th>
-          <th class="border-b border-admin-line/70 px-3 py-2">価格</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">価格 (USD)</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">価格 (JPY)</th>
           <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
           <th class="border-b border-admin-line/70 px-3 py-2">version</th>
           <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
@@ -30,7 +31,8 @@
             -
             {% endif %}
           </td>
-          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">¥{{ material.price_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ material.price_usd }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ material.price_jpy }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{% if material.is_active %}有効{% else %}無効{% endif %}</td>
           <td class="border-b border-admin-line/60 px-3 py-3">{{ material.version }}</td>
           <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ material.updated_at }}</td>
@@ -58,7 +60,7 @@
         {% endfor %}
         {% else %}
         <tr>
-          <td colspan="10" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
+          <td colspan="11" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">材質がありません。</td>
         </tr>
         {% endif %}
       </tbody>

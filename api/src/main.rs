@@ -35,9 +35,11 @@ const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const MAX_REQUEST_BODY_BYTES: usize = 1 << 20;
 const DEFAULT_PORT: &str = "3050";
 const DEFAULT_LOCALE: &str = "ja";
+const DEFAULT_CURRENCY: &str = "USD";
+const DEFAULT_JA_CURRENCY: &str = "JPY";
 const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
-    "http://localhost:3052/?checkout=success&session_id={CHECKOUT_SESSION_ID}";
-const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/?checkout=cancel";
+    "http://localhost:3052/payment/success?session_id={CHECKOUT_SESSION_ID}";
+const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/payment/failure";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
@@ -92,6 +94,8 @@ struct FirestoreStore {
 struct PublicConfig {
     supported_locales: Vec<String>,
     default_locale: String,
+    default_currency: String,
+    currency_by_locale: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -120,7 +124,7 @@ struct Material {
     description_i18n: HashMap<String, String>,
     shape: String,
     photos: Vec<MaterialPhoto>,
-    price_jpy: i64,
+    price_by_currency: HashMap<String, i64>,
     version: i64,
 }
 
@@ -128,7 +132,7 @@ struct Material {
 struct Country {
     code: String,
     label_i18n: HashMap<String, String>,
-    shipping_fee_jpy: i64,
+    shipping_fee_by_currency: HashMap<String, i64>,
     version: i64,
 }
 
@@ -139,7 +143,7 @@ struct CreateOrderResult {
     status: String,
     payment_status: String,
     fulfillment_status: String,
-    total_jpy: i64,
+    total: i64,
     currency: String,
     idempotent_replay: bool,
 }
@@ -191,10 +195,20 @@ struct ContactInput {
 #[derive(Debug, Clone)]
 struct OrderCheckoutContext {
     order_id: String,
-    order_no: String,
+    order_locale: String,
     status: String,
     payment_status: String,
-    total_jpy: i64,
+    material_label: String,
+    seal_shape: String,
+    shipping_country_code: String,
+    shipping_recipient_name: String,
+    shipping_phone: String,
+    shipping_postal_code: String,
+    shipping_state: String,
+    shipping_city: String,
+    shipping_address_line1: String,
+    shipping_address_line2: String,
+    total: i64,
     currency: String,
     contact_email: String,
 }
@@ -566,6 +580,8 @@ async fn handle_public_config(State(state): State<AppState>) -> Response {
             json!({
                 "supported_locales": cfg.supported_locales,
                 "default_locale": cfg.default_locale,
+                "default_currency": cfg.default_currency,
+                "currency_by_locale": cfg.currency_by_locale,
             }),
         ),
         Err(err) => {
@@ -600,6 +616,7 @@ async fn handle_catalog(
         .unwrap_or_else(|| cfg.default_locale.clone())
         .trim()
         .to_lowercase();
+    let pricing_currency = resolve_pricing_currency(&cfg, &requested_locale);
 
     if !cfg
         .supported_locales
@@ -664,6 +681,7 @@ async fn handle_catalog(
     let material_resp = materials
         .into_iter()
         .map(|material| {
+            let resolved_price = material_price_for_currency(&material, &pricing_currency);
             let photos = material
                 .photos
                 .into_iter()
@@ -686,7 +704,8 @@ async fn handle_catalog(
                 "label": resolve_localized(&material.label_i18n, &requested_locale, &cfg.default_locale),
                 "description": resolve_localized(&material.description_i18n, &requested_locale, &cfg.default_locale),
                 "shape": material.shape,
-                "price_jpy": material.price_jpy,
+                "price": resolved_price,
+                "price_by_currency": material.price_by_currency,
                 "version": material.version,
                 "photos": photos,
             })
@@ -699,7 +718,8 @@ async fn handle_catalog(
             json!({
                 "code": country.code,
                 "label": resolve_localized(&country.label_i18n, &requested_locale, &cfg.default_locale),
-                "shipping_fee_jpy": country.shipping_fee_jpy,
+                "shipping_fee": country_shipping_fee_for_currency(&country, &pricing_currency),
+                "shipping_fee_by_currency": country.shipping_fee_by_currency,
                 "version": country.version,
             })
         })
@@ -711,6 +731,9 @@ async fn handle_catalog(
             "locale": requested_locale,
             "supported_locales": cfg.supported_locales,
             "default_locale": cfg.default_locale,
+            "default_currency": cfg.default_currency,
+            "currency_by_locale": cfg.currency_by_locale,
+            "currency": pricing_currency,
             "fonts": font_resp,
             "materials": material_resp,
             "countries": country_resp,
@@ -826,7 +849,7 @@ async fn handle_create_order(State(state): State<AppState>, body: Bytes) -> Resp
                     "payment_status": result.payment_status,
                     "fulfillment_status": result.fulfillment_status,
                     "pricing": {
-                        "total_jpy": result.total_jpy,
+                        "total": result.total,
                         "currency": result.currency,
                     },
                     "idempotent_replay": result.idempotent_replay,
@@ -937,18 +960,11 @@ async fn handle_create_stripe_checkout_session(
             "order is not payable",
         );
     }
-    if order.total_jpy <= 0 {
+    if order.total <= 0 {
         return error_response(
             StatusCode::BAD_REQUEST,
             "invalid_order_total",
             "order total must be greater than zero",
-        );
-    }
-    if order.currency.trim().is_empty() {
-        return error_response(
-            StatusCode::BAD_REQUEST,
-            "invalid_order_currency",
-            "order currency is required",
         );
     }
 
@@ -1109,9 +1125,18 @@ impl FirestoreStore {
             Ok(document) => {
                 let supported = read_string_array_from_map(&document.fields, "supported_locales");
                 let default_locale = read_string_field(&document.fields, "default_locale");
+                let default_currency = first_non_empty(&[
+                    Some(read_string_field(&document.fields, "default_currency")),
+                    Some(read_string_field(&document.fields, "currency")),
+                ])
+                .unwrap_or_default();
+                let currency_by_locale =
+                    read_string_map_field(&document.fields, "currency_by_locale");
                 Ok(normalize_public_config(PublicConfig {
                     supported_locales: supported,
                     default_locale,
+                    default_currency,
+                    currency_by_locale,
                 }))
             }
             Err(err) if is_not_found(&err) => Ok(default_public_config()),
@@ -1157,9 +1182,10 @@ impl FirestoreStore {
         for document in documents {
             let key = document_id(&document)
                 .ok_or_else(|| anyhow!("materials document is missing name"))?;
-            let price_jpy = read_int_field(&document.fields, "price_jpy")
-                .or_else(|| read_int_field(&document.fields, "price"))
-                .ok_or_else(|| anyhow!("materials/{key} is missing price_jpy"))?;
+            let price_by_currency = material_price_by_currency_from_fields(&document.fields);
+            if price_by_currency.is_empty() {
+                bail!("materials/{key} is missing price_by_currency");
+            }
 
             let photos = read_material_photos(&document.fields);
 
@@ -1169,7 +1195,7 @@ impl FirestoreStore {
                 description_i18n: read_string_map_field(&document.fields, "description_i18n"),
                 shape: read_material_shape(&document.fields),
                 photos,
-                price_jpy,
+                price_by_currency,
                 version: read_int_field(&document.fields, "version").unwrap_or(1),
             });
         }
@@ -1188,14 +1214,16 @@ impl FirestoreStore {
         for document in documents {
             let code = document_id(&document)
                 .ok_or_else(|| anyhow!("countries document is missing name"))?;
-            let shipping_fee_jpy = read_int_field(&document.fields, "shipping_fee_jpy")
-                .or_else(|| read_int_field(&document.fields, "shipping"))
-                .ok_or_else(|| anyhow!("countries/{code} is missing shipping_fee_jpy"))?;
+            let shipping_fee_by_currency =
+                country_shipping_fee_by_currency_from_fields(&document.fields);
+            if shipping_fee_by_currency.is_empty() {
+                bail!("countries/{code} is missing shipping_fee_by_currency");
+            }
 
             countries.push(Country {
                 code,
                 label_i18n: read_string_map_field(&document.fields, "label_i18n"),
-                shipping_fee_jpy,
+                shipping_fee_by_currency,
                 version: read_int_field(&document.fields, "version").unwrap_or(1),
             });
         }
@@ -1263,6 +1291,7 @@ impl FirestoreStore {
         {
             return Err(StoreError::UnsupportedLocale);
         }
+        let pricing_currency = resolve_pricing_currency(&cfg, &normalized.locale);
 
         let client = self
             .firestore_client()
@@ -1291,8 +1320,8 @@ impl FirestoreStore {
         }
 
         let now = Utc::now();
-        let subtotal = material.price_jpy;
-        let shipping = country.shipping_fee_jpy;
+        let subtotal = material_price_for_currency(&material, &pricing_currency);
+        let shipping = country_shipping_fee_for_currency(&country, &pricing_currency);
         let tax = 0_i64;
         let discount = 0_i64;
         let total = (subtotal + shipping + tax - discount).max(0);
@@ -1319,6 +1348,7 @@ impl FirestoreStore {
                 tax,
                 discount,
                 total,
+                &pricing_currency,
                 now,
             ),
             ..Document::default()
@@ -1346,7 +1376,8 @@ impl FirestoreStore {
                     "payload",
                     fs_map(btree_from_pairs(vec![
                         ("channel", fs_string(normalized.channel.clone())),
-                        ("total_jpy", fs_int(total)),
+                        ("total", fs_int(total)),
+                        ("currency", fs_string(pricing_currency.clone())),
                     ])),
                 ),
                 ("created_at", fs_timestamp(now)),
@@ -1411,8 +1442,8 @@ impl FirestoreStore {
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
             fulfillment_status: "pending".to_owned(),
-            total_jpy: total,
-            currency: "JPY".to_owned(),
+            total,
+            currency: pricing_currency,
             idempotent_replay: false,
         })
     }
@@ -1439,14 +1470,51 @@ impl FirestoreStore {
         let payment = read_map_field(&order_doc.fields, "payment");
         let pricing = read_map_field(&order_doc.fields, "pricing");
         let contact = read_map_field(&order_doc.fields, "contact");
+        let seal = read_map_field(&order_doc.fields, "seal");
+        let material = read_map_field(&order_doc.fields, "material");
+        let shipping = read_map_field(&order_doc.fields, "shipping");
+        let order_locale = read_string_field(&order_doc.fields, "locale");
+        let resolved_order_locale = if order_locale.trim().is_empty() {
+            DEFAULT_LOCALE.to_owned()
+        } else {
+            order_locale.trim().to_lowercase()
+        };
+        let material_label = resolve_localized(
+            &read_string_map_field(&material, "label_i18n"),
+            &resolved_order_locale,
+            DEFAULT_LOCALE,
+        );
+        let fallback_material_label = read_string_field(&material, "label");
+        let material_key = read_string_field(&material, "key");
+        let seal_shape = first_non_empty(&[
+            Some(read_string_field(&seal, "shape")),
+            Some(read_string_field(&material, "shape")),
+        ])
+        .unwrap_or_default();
+        let resolved_material_label = first_non_empty(&[
+            Some(material_label),
+            Some(fallback_material_label),
+            Some(material_key),
+        ])
+        .unwrap_or_default();
 
         Ok(Some(OrderCheckoutContext {
             order_id: order_id.to_owned(),
-            order_no: read_string_field(&order_doc.fields, "order_no"),
+            order_locale: resolved_order_locale,
             status: read_string_field(&order_doc.fields, "status"),
             payment_status: read_string_field(&payment, "status"),
-            total_jpy: read_int_field(&pricing, "total_jpy").unwrap_or_default(),
-            currency: read_string_field(&pricing, "currency"),
+            material_label: resolved_material_label,
+            seal_shape,
+            shipping_country_code: read_string_field(&shipping, "country_code"),
+            shipping_recipient_name: read_string_field(&shipping, "recipient_name"),
+            shipping_phone: read_string_field(&shipping, "phone"),
+            shipping_postal_code: read_string_field(&shipping, "postal_code"),
+            shipping_state: read_string_field(&shipping, "state"),
+            shipping_city: read_string_field(&shipping, "city"),
+            shipping_address_line1: read_string_field(&shipping, "address_line1"),
+            shipping_address_line2: read_string_field(&shipping, "address_line2"),
+            total: pricing_total(&pricing),
+            currency: pricing_currency(&pricing),
             contact_email: read_string_field(&contact, "email"),
         }))
     }
@@ -1538,8 +1606,8 @@ impl FirestoreStore {
             status,
             payment_status: read_string_field(&payment, "status"),
             fulfillment_status: read_string_field(&fulfillment, "status"),
-            total_jpy: read_int_field(&pricing, "total_jpy").unwrap_or_default(),
-            currency: read_string_field(&pricing, "currency"),
+            total: pricing_total(&pricing),
+            currency: pricing_currency(&pricing),
             idempotent_replay: true,
         }))
     }
@@ -1600,9 +1668,7 @@ impl FirestoreStore {
             description_i18n: read_string_map_field(&doc.fields, "description_i18n"),
             shape: read_material_shape(&doc.fields),
             photos: read_material_photos(&doc.fields),
-            price_jpy: read_int_field(&doc.fields, "price_jpy")
-                .or_else(|| read_int_field(&doc.fields, "price"))
-                .unwrap_or_default(),
+            price_by_currency: material_price_by_currency_from_fields(&doc.fields),
             version: read_int_field(&doc.fields, "version").unwrap_or(1),
         })
     }
@@ -1631,9 +1697,7 @@ impl FirestoreStore {
         Ok(Country {
             code: code.to_owned(),
             label_i18n: read_string_map_field(&doc.fields, "label_i18n"),
-            shipping_fee_jpy: read_int_field(&doc.fields, "shipping_fee_jpy")
-                .or_else(|| read_int_field(&doc.fields, "shipping"))
-                .unwrap_or_default(),
+            shipping_fee_by_currency: country_shipping_fee_by_currency_from_fields(&doc.fields),
             version: read_int_field(&doc.fields, "version").unwrap_or(1),
         })
     }
@@ -1852,8 +1916,12 @@ fn build_order_fields(
     tax: i64,
     discount: i64,
     total: i64,
+    currency: &str,
     now: DateTime<Utc>,
 ) -> BTreeMap<String, JsonValue> {
+    let pricing_currency =
+        normalize_currency_code(currency).unwrap_or_else(|| DEFAULT_CURRENCY.to_owned());
+
     btree_from_pairs(vec![
         ("order_no", fs_string(order_no)),
         ("channel", fs_string(input.channel.clone())),
@@ -1877,7 +1945,7 @@ fn build_order_fields(
                 ("key", fs_string(material.key.clone())),
                 ("label_i18n", fs_string_map(&material.label_i18n)),
                 ("shape", fs_string(material.shape.clone())),
-                ("unit_price_jpy", fs_int(material.price_jpy)),
+                ("unit_price", fs_int(subtotal)),
                 ("version", fs_int(material.version)),
             ])),
         ),
@@ -1887,7 +1955,7 @@ fn build_order_fields(
                 ("country_code", fs_string(country.code.clone())),
                 ("country_label_i18n", fs_string_map(&country.label_i18n)),
                 ("country_version", fs_int(country.version)),
-                ("fee_jpy", fs_int(country.shipping_fee_jpy)),
+                ("fee", fs_int(shipping)),
                 (
                     "recipient_name",
                     fs_string(input.shipping.recipient_name.clone()),
@@ -1919,12 +1987,12 @@ fn build_order_fields(
         (
             "pricing",
             fs_map(btree_from_pairs(vec![
-                ("subtotal_jpy", fs_int(subtotal)),
-                ("shipping_jpy", fs_int(shipping)),
-                ("tax_jpy", fs_int(tax)),
-                ("discount_jpy", fs_int(discount)),
-                ("total_jpy", fs_int(total)),
-                ("currency", fs_string("JPY")),
+                ("subtotal", fs_int(subtotal)),
+                ("shipping", fs_int(shipping)),
+                ("tax", fs_int(tax)),
+                ("discount", fs_int(discount)),
+                ("total", fs_int(total)),
+                ("currency", fs_string(pricing_currency)),
             ])),
         ),
         (
@@ -1981,9 +2049,15 @@ async fn upsert_named_document(
 }
 
 fn default_public_config() -> PublicConfig {
+    let mut currency_by_locale = HashMap::new();
+    currency_by_locale.insert("ja".to_owned(), DEFAULT_JA_CURRENCY.to_owned());
+    currency_by_locale.insert("en".to_owned(), DEFAULT_CURRENCY.to_owned());
+
     PublicConfig {
         supported_locales: vec!["ja".to_owned(), "en".to_owned()],
         default_locale: DEFAULT_LOCALE.to_owned(),
+        default_currency: DEFAULT_CURRENCY.to_owned(),
+        currency_by_locale,
     }
 }
 
@@ -2011,10 +2085,118 @@ fn normalize_public_config(cfg: PublicConfig) -> PublicConfig {
         normalized.insert(0, default_locale.clone());
     }
 
+    let default_currency = normalize_currency_code(&cfg.default_currency)
+        .unwrap_or_else(|| DEFAULT_CURRENCY.to_owned());
+
+    let mut currency_by_locale = HashMap::new();
+    for (locale, currency) in cfg.currency_by_locale {
+        let locale = locale.trim().to_lowercase();
+        if locale.is_empty() || !contains(&normalized, &locale) {
+            continue;
+        }
+        let Some(currency) = normalize_currency_code(&currency) else {
+            continue;
+        };
+        currency_by_locale.insert(locale, currency);
+    }
+    for locale in &normalized {
+        let fallback_currency = if locale == DEFAULT_LOCALE {
+            DEFAULT_JA_CURRENCY.to_owned()
+        } else {
+            default_currency.clone()
+        };
+        currency_by_locale
+            .entry(locale.clone())
+            .or_insert(fallback_currency);
+    }
+
     PublicConfig {
         supported_locales: normalized,
         default_locale,
+        default_currency,
+        currency_by_locale,
     }
+}
+
+fn normalize_currency_code(raw: &str) -> Option<String> {
+    let value = raw.trim().to_uppercase();
+    if value.len() != 3 || !value.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        return None;
+    }
+    Some(value)
+}
+
+fn resolve_currency_for_locale(cfg: &PublicConfig, locale: &str) -> String {
+    if let Some(value) = lookup_locale(&cfg.currency_by_locale, locale)
+        && let Some(currency) = normalize_currency_code(&value)
+    {
+        return currency;
+    }
+    if let Some(value) = lookup_locale(&cfg.currency_by_locale, &cfg.default_locale)
+        && let Some(currency) = normalize_currency_code(&value)
+    {
+        return currency;
+    }
+    cfg.default_currency.clone()
+}
+
+fn resolve_pricing_currency(cfg: &PublicConfig, locale: &str) -> String {
+    resolve_currency_for_locale(cfg, locale)
+}
+
+fn material_price_for_currency(material: &Material, currency: &str) -> i64 {
+    resolve_amount_for_currency(&material.price_by_currency, currency)
+}
+
+fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
+    resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
+}
+
+fn resolve_amount_for_currency(values: &HashMap<String, i64>, currency: &str) -> i64 {
+    if let Some(amount) =
+        normalize_currency_code(currency).and_then(|code| values.get(&code).copied())
+    {
+        return amount.max(0);
+    }
+
+    if let Some(amount) = values.get("USD").copied() {
+        return amount.max(0);
+    }
+    if let Some(amount) = values.get("JPY").copied() {
+        return amount.max(0);
+    }
+
+    let mut fallback_keys = values.keys().cloned().collect::<Vec<_>>();
+    fallback_keys.sort();
+    for key in fallback_keys {
+        if let Some(amount) = values.get(&key).copied() {
+            return amount.max(0);
+        }
+    }
+
+    0
+}
+
+fn material_price_by_currency_from_fields(
+    data: &BTreeMap<String, JsonValue>,
+) -> HashMap<String, i64> {
+    normalize_currency_amount_map(read_int_map_field(data, "price_by_currency"))
+}
+
+fn country_shipping_fee_by_currency_from_fields(
+    data: &BTreeMap<String, JsonValue>,
+) -> HashMap<String, i64> {
+    normalize_currency_amount_map(read_int_map_field(data, "shipping_fee_by_currency"))
+}
+
+fn normalize_currency_amount_map(values: HashMap<String, i64>) -> HashMap<String, i64> {
+    let mut normalized = HashMap::new();
+    for (key, amount) in values {
+        if let Some(currency) = normalize_currency_code(&key) {
+            normalized.insert(currency, amount.max(0));
+        }
+    }
+    normalized
 }
 
 fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
@@ -2371,16 +2553,8 @@ async fn create_stripe_checkout_session(
         .as_ref()
         .ok_or_else(|| anyhow!("stripe client is not configured"))?;
 
-    let currency = order.currency.trim().to_lowercase();
-    if currency.is_empty() {
-        bail!("order currency is required");
-    }
-
-    let product_name = if order.order_no.trim().is_empty() {
-        "Hanko Field Order".to_owned()
-    } else {
-        format!("Hanko Field Order {}", order.order_no.trim())
-    };
+    let product_name = build_checkout_product_name(order);
+    let checkout_currency = stripe_checkout_currency(&order.currency);
 
     let mut body = json!({
         "mode": "payment",
@@ -2390,8 +2564,8 @@ async fn create_stripe_checkout_session(
             {
                 "quantity": 1,
                 "price_data": {
-                    "currency": currency,
-                    "unit_amount": order.total_jpy,
+                    "currency": checkout_currency,
+                    "unit_amount": order.total,
                     "product_data": {
                         "name": product_name,
                     },
@@ -2410,6 +2584,9 @@ async fn create_stripe_checkout_session(
 
     if !customer_email.trim().is_empty() {
         body["customer_email"] = JsonValue::String(customer_email.trim().to_owned());
+    }
+    if let Some(shipping) = build_payment_intent_shipping(order) {
+        body["payment_intent_data"]["shipping"] = shipping;
     }
 
     let response = stripe_client
@@ -2453,6 +2630,115 @@ async fn create_stripe_checkout_session(
         checkout_url,
         payment_intent_id,
     })
+}
+
+fn build_checkout_product_name(order: &OrderCheckoutContext) -> String {
+    let material_label = order.material_label.trim();
+    if is_japanese_locale(&order.order_locale) {
+        let shape_label = checkout_shape_label_ja(&order.seal_shape);
+        return format!(
+            "宝石印鑑 ({}、{})",
+            display_or_dash(material_label),
+            display_or_dash(shape_label),
+        );
+    }
+
+    let shape_label = checkout_shape_label_en(&order.seal_shape);
+    format!(
+        "Stone seal ({}; {})",
+        display_or_dash(material_label),
+        display_or_dash(shape_label),
+    )
+}
+
+fn is_japanese_locale(locale: &str) -> bool {
+    locale.trim().to_lowercase().starts_with("ja")
+}
+
+fn checkout_shape_label_ja(shape: &str) -> &str {
+    match shape.trim().to_lowercase().as_str() {
+        "round" => "丸",
+        "square" => "角",
+        _ => "",
+    }
+}
+
+fn checkout_shape_label_en(shape: &str) -> &str {
+    match shape.trim().to_lowercase().as_str() {
+        "round" => "circle",
+        "square" => "square",
+        _ => "",
+    }
+}
+
+fn build_payment_intent_shipping(order: &OrderCheckoutContext) -> Option<JsonValue> {
+    let country = order.shipping_country_code.trim().to_uppercase();
+    let recipient_name = order.shipping_recipient_name.trim();
+    let postal_code = order.shipping_postal_code.trim();
+    let city = order.shipping_city.trim();
+    let line1 = order.shipping_address_line1.trim();
+
+    // Stripe shipping requires core address fields.
+    if country.is_empty()
+        || recipient_name.is_empty()
+        || postal_code.is_empty()
+        || city.is_empty()
+        || line1.is_empty()
+    {
+        return None;
+    }
+
+    let mut address = serde_json::Map::new();
+    address.insert("country".to_owned(), JsonValue::String(country));
+    address.insert(
+        "postal_code".to_owned(),
+        JsonValue::String(postal_code.to_owned()),
+    );
+    address.insert("city".to_owned(), JsonValue::String(city.to_owned()));
+    address.insert("line1".to_owned(), JsonValue::String(line1.to_owned()));
+
+    let state = order.shipping_state.trim();
+    if !state.is_empty() {
+        address.insert("state".to_owned(), JsonValue::String(state.to_owned()));
+    }
+
+    let line2 = order.shipping_address_line2.trim();
+    if !line2.is_empty() {
+        address.insert("line2".to_owned(), JsonValue::String(line2.to_owned()));
+    }
+
+    let mut shipping = serde_json::Map::new();
+    shipping.insert(
+        "name".to_owned(),
+        JsonValue::String(recipient_name.to_owned()),
+    );
+    shipping.insert("address".to_owned(), JsonValue::Object(address));
+
+    let phone = order.shipping_phone.trim();
+    if !phone.is_empty() {
+        shipping.insert("phone".to_owned(), JsonValue::String(phone.to_owned()));
+    }
+
+    Some(JsonValue::Object(shipping))
+}
+
+fn display_or_dash(value: &str) -> &str {
+    if value.is_empty() { "-" } else { value }
+}
+
+fn pricing_currency(pricing: &BTreeMap<String, JsonValue>) -> String {
+    normalize_currency_code(&read_string_field(pricing, "currency"))
+        .unwrap_or_else(|| DEFAULT_CURRENCY.to_owned())
+}
+
+fn pricing_total(pricing: &BTreeMap<String, JsonValue>) -> i64 {
+    read_int_field(pricing, "total").unwrap_or_default()
+}
+
+fn stripe_checkout_currency(currency: &str) -> String {
+    normalize_currency_code(currency)
+        .unwrap_or_else(|| DEFAULT_CURRENCY.to_owned())
+        .to_lowercase()
 }
 
 fn stripe_payment_intent_id(value: &JsonValue) -> Option<String> {
@@ -2888,6 +3174,32 @@ fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> 
         .or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok()))
 }
 
+fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, i64> {
+    let Some(value) = data.get(key) else {
+        return HashMap::new();
+    };
+
+    let Some(fields) = value
+        .get("mapValue")
+        .and_then(|map_value| map_value.get("fields"))
+        .and_then(JsonValue::as_object)
+        .or_else(|| value.as_object())
+    else {
+        return HashMap::new();
+    };
+
+    let mut result = HashMap::new();
+    for (currency, amount_value) in fields {
+        let mut container = BTreeMap::new();
+        container.insert("amount".to_owned(), amount_value.clone());
+        if let Some(amount) = read_int_field(&container, "amount") {
+            result.insert(currency.trim().to_owned(), amount);
+        }
+    }
+
+    result
+}
+
 fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, String> {
     let Some(value) = data.get(key) else {
         return HashMap::new();
@@ -3009,6 +3321,229 @@ mod tests {
         assert_eq!(resolve_localized(&values, "en", "ja"), "Boxwood");
         assert_eq!(resolve_localized(&values, "fr", "en"), "Boxwood");
         assert_eq!(resolve_localized(&values, "fr", "ko"), "柘植");
+    }
+
+    #[test]
+    fn default_public_config_sets_ja_to_jpy() {
+        let cfg = default_public_config();
+        assert_eq!(
+            cfg.currency_by_locale.get("ja").map(String::as_str),
+            Some("JPY")
+        );
+        assert_eq!(
+            cfg.currency_by_locale.get("en").map(String::as_str),
+            Some("USD")
+        );
+    }
+
+    #[test]
+    fn resolve_currency_for_locale_uses_locale_map_and_default() {
+        let mut currency_by_locale = HashMap::new();
+        currency_by_locale.insert("ja".to_owned(), "JPY".to_owned());
+        currency_by_locale.insert("en".to_owned(), "USD".to_owned());
+
+        let cfg = PublicConfig {
+            supported_locales: vec!["ja".to_owned(), "en".to_owned()],
+            default_locale: "ja".to_owned(),
+            default_currency: "USD".to_owned(),
+            currency_by_locale,
+        };
+
+        assert_eq!(resolve_currency_for_locale(&cfg, "ja"), "JPY");
+        assert_eq!(resolve_currency_for_locale(&cfg, "ja-jp"), "JPY");
+        assert_eq!(resolve_currency_for_locale(&cfg, "fr"), "JPY");
+    }
+
+    #[test]
+    fn resolve_pricing_currency_uses_locale_currency() {
+        let mut currency_by_locale = HashMap::new();
+        currency_by_locale.insert("ja".to_owned(), "JPY".to_owned());
+        currency_by_locale.insert("en".to_owned(), "USD".to_owned());
+
+        let cfg = PublicConfig {
+            supported_locales: vec!["ja".to_owned(), "en".to_owned()],
+            default_locale: "ja".to_owned(),
+            default_currency: "USD".to_owned(),
+            currency_by_locale,
+        };
+
+        assert_eq!(resolve_pricing_currency(&cfg, "ja"), "JPY");
+        assert_eq!(resolve_pricing_currency(&cfg, "en"), "USD");
+        assert_eq!(resolve_pricing_currency(&cfg, "ja-jp"), "JPY");
+    }
+
+    #[test]
+    fn stripe_checkout_currency_normalizes_iso_code() {
+        assert_eq!(stripe_checkout_currency("usd"), "usd");
+        assert_eq!(stripe_checkout_currency(" JpY "), "jpy");
+        assert_eq!(stripe_checkout_currency(""), "usd");
+    }
+
+    #[test]
+    fn material_price_for_currency_uses_currency_specific_field() {
+        let material = Material {
+            key: "boxwood".to_owned(),
+            label_i18n: HashMap::new(),
+            description_i18n: HashMap::new(),
+            shape: "square".to_owned(),
+            photos: Vec::new(),
+            price_by_currency: HashMap::from([("USD".to_owned(), 3600), ("JPY".to_owned(), 5200)]),
+            version: 1,
+        };
+
+        assert_eq!(material_price_for_currency(&material, "USD"), 3600);
+        assert_eq!(material_price_for_currency(&material, "JPY"), 5200);
+    }
+
+    #[test]
+    fn country_shipping_fee_for_currency_uses_currency_specific_field() {
+        let country = Country {
+            code: "JP".to_owned(),
+            label_i18n: HashMap::new(),
+            shipping_fee_by_currency: HashMap::from([
+                ("USD".to_owned(), 600),
+                ("JPY".to_owned(), 800),
+            ]),
+            version: 1,
+        };
+
+        assert_eq!(country_shipping_fee_for_currency(&country, "USD"), 600);
+        assert_eq!(country_shipping_fee_for_currency(&country, "JPY"), 800);
+    }
+
+    #[test]
+    fn pricing_total_reads_neutral_key_only() {
+        let pricing_neutral = btree_from_pairs(vec![("total", fs_int(1234))]);
+        assert_eq!(pricing_total(&pricing_neutral), 1234);
+    }
+
+    #[test]
+    fn build_checkout_product_name_uses_japanese_format_for_ja_locale() {
+        let order = OrderCheckoutContext {
+            order_id: "order_1".to_owned(),
+            order_locale: "ja".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            material_label: "柘植".to_owned(),
+            seal_shape: "square".to_owned(),
+            shipping_country_code: "JP".to_owned(),
+            shipping_recipient_name: "田中 太郎".to_owned(),
+            shipping_phone: "09000001111".to_owned(),
+            shipping_postal_code: "1000001".to_owned(),
+            shipping_state: "東京都".to_owned(),
+            shipping_city: "千代田区".to_owned(),
+            shipping_address_line1: "1-1-1".to_owned(),
+            shipping_address_line2: "テストビル101".to_owned(),
+            total: 12345,
+            currency: DEFAULT_CURRENCY.to_owned(),
+            contact_email: "buyer@example.com".to_owned(),
+        };
+
+        assert_eq!(build_checkout_product_name(&order), "宝石印鑑 (柘植、角)");
+    }
+
+    #[test]
+    fn build_checkout_product_name_uses_english_format_for_non_ja_locale() {
+        let order = OrderCheckoutContext {
+            order_id: "order_1".to_owned(),
+            order_locale: "en".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            material_label: "Boxwood".to_owned(),
+            seal_shape: "round".to_owned(),
+            shipping_country_code: "US".to_owned(),
+            shipping_recipient_name: "John Doe".to_owned(),
+            shipping_phone: "5551234567".to_owned(),
+            shipping_postal_code: "10001".to_owned(),
+            shipping_state: "NY".to_owned(),
+            shipping_city: "New York".to_owned(),
+            shipping_address_line1: "1 Main St".to_owned(),
+            shipping_address_line2: "Suite 101".to_owned(),
+            total: 12345,
+            currency: DEFAULT_CURRENCY.to_owned(),
+            contact_email: "buyer@example.com".to_owned(),
+        };
+
+        assert_eq!(
+            build_checkout_product_name(&order),
+            "Stone seal (Boxwood; circle)"
+        );
+    }
+
+    #[test]
+    fn build_payment_intent_shipping_includes_address_and_phone() {
+        let order = OrderCheckoutContext {
+            order_id: "order_1".to_owned(),
+            order_locale: "ja".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            material_label: "柘植".to_owned(),
+            seal_shape: "round".to_owned(),
+            shipping_country_code: "jp".to_owned(),
+            shipping_recipient_name: "田中 太郎".to_owned(),
+            shipping_phone: "09000001111".to_owned(),
+            shipping_postal_code: "1000001".to_owned(),
+            shipping_state: "東京都".to_owned(),
+            shipping_city: "千代田区".to_owned(),
+            shipping_address_line1: "1-1-1".to_owned(),
+            shipping_address_line2: "テストビル101".to_owned(),
+            total: 12345,
+            currency: DEFAULT_CURRENCY.to_owned(),
+            contact_email: "buyer@example.com".to_owned(),
+        };
+
+        let shipping = build_payment_intent_shipping(&order).expect("shipping must be present");
+        let shipping_obj = shipping.as_object().expect("shipping must be object");
+        let address = shipping_obj
+            .get("address")
+            .and_then(JsonValue::as_object)
+            .expect("address must be object");
+
+        assert_eq!(
+            shipping_obj.get("name").and_then(JsonValue::as_str),
+            Some("田中 太郎")
+        );
+        assert_eq!(
+            shipping_obj.get("phone").and_then(JsonValue::as_str),
+            Some("09000001111")
+        );
+        assert_eq!(
+            address.get("country").and_then(JsonValue::as_str),
+            Some("JP")
+        );
+        assert_eq!(
+            address.get("line1").and_then(JsonValue::as_str),
+            Some("1-1-1")
+        );
+        assert_eq!(
+            address.get("line2").and_then(JsonValue::as_str),
+            Some("テストビル101")
+        );
+    }
+
+    #[test]
+    fn build_payment_intent_shipping_returns_none_when_address_is_missing() {
+        let order = OrderCheckoutContext {
+            order_id: "order_1".to_owned(),
+            order_locale: "ja".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            material_label: "柘植".to_owned(),
+            seal_shape: "round".to_owned(),
+            shipping_country_code: "JP".to_owned(),
+            shipping_recipient_name: "田中 太郎".to_owned(),
+            shipping_phone: "09000001111".to_owned(),
+            shipping_postal_code: "".to_owned(),
+            shipping_state: "東京都".to_owned(),
+            shipping_city: "千代田区".to_owned(),
+            shipping_address_line1: "1-1-1".to_owned(),
+            shipping_address_line2: "".to_owned(),
+            total: 12345,
+            currency: DEFAULT_CURRENCY.to_owned(),
+            contact_email: "buyer@example.com".to_owned(),
+        };
+
+        assert!(build_payment_intent_shipping(&order).is_none());
     }
 
     #[test]
