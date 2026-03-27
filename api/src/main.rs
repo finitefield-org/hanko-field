@@ -1176,10 +1176,6 @@ impl FirestoreStore {
             });
         }
 
-        if fonts.is_empty() {
-            bail!("no active fonts found in firestore");
-        }
-
         Ok(fonts)
     }
 
@@ -1208,10 +1204,6 @@ impl FirestoreStore {
             });
         }
 
-        if materials.is_empty() {
-            bail!("no active materials found in firestore");
-        }
-
         Ok(materials)
     }
 
@@ -1236,34 +1228,43 @@ impl FirestoreStore {
             });
         }
 
-        if countries.is_empty() {
-            bail!("no active countries found in firestore");
-        }
-
         Ok(countries)
     }
 
     async fn query_active_documents(&self, collection: &str) -> Result<Vec<Document>> {
         let client = self.firestore_client().await?;
+        let documents = self.run_documents_query(&client, collection, true).await?;
+        if documents.is_empty() {
+            bail!("no active {collection} found in firestore");
+        }
+
+        Ok(documents)
+    }
+
+    async fn run_documents_query(
+        &self,
+        client: &FirebaseFirestoreClient,
+        collection: &str,
+        active_only: bool,
+    ) -> Result<Vec<Document>> {
         let query = RunQueryRequest {
-            structured_query: Some(json!({
-                "from": [
-                    { "collectionId": collection }
-                ],
-                "where": {
-                    "fieldFilter": {
-                        "field": { "fieldPath": "is_active" },
-                        "op": "EQUAL",
-                        "value": { "booleanValue": true }
-                    }
-                },
-                "orderBy": [
-                    {
-                        "field": { "fieldPath": "sort_order" },
-                        "direction": "ASCENDING"
-                    }
-                ]
-            })),
+            structured_query: Some({
+                let mut query = json!({
+                    "from": [
+                        { "collectionId": collection }
+                    ],
+                });
+                if active_only {
+                    query["where"] = json!({
+                        "fieldFilter": {
+                            "field": { "fieldPath": "is_active" },
+                            "op": "EQUAL",
+                            "value": { "booleanValue": true }
+                        }
+                    });
+                }
+                query
+            }),
             ..RunQueryRequest::default()
         };
 
@@ -1272,15 +1273,17 @@ impl FirestoreStore {
             .await
             .with_context(|| format!("failed to load {collection}"))?;
 
-        let documents = rows
+        let mut documents = rows
             .into_iter()
             .filter_map(|row| row.document)
             .collect::<Vec<_>>();
-
-        if documents.is_empty() {
-            bail!("no active {collection} found in firestore");
-        }
-
+        documents.sort_by(|left, right| {
+            let left_sort_order = read_int_field(&left.fields, "sort_order").unwrap_or_default();
+            let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
+            left_sort_order
+                .cmp(&right_sort_order)
+                .then_with(|| document_id(left).cmp(&document_id(right)))
+        });
         Ok(documents)
     }
 
@@ -1636,7 +1639,6 @@ impl FirestoreStore {
                     StoreError::Internal(anyhow!(err))
                 }
             })?;
-
         if !read_bool_field(&doc.fields, "is_active").unwrap_or(false) {
             return Err(StoreError::InactiveReference);
         }
@@ -1673,7 +1675,6 @@ impl FirestoreStore {
                     StoreError::Internal(anyhow!(err))
                 }
             })?;
-
         if !read_bool_field(&doc.fields, "is_active").unwrap_or(false) {
             return Err(StoreError::InactiveReference);
         }
@@ -1705,7 +1706,6 @@ impl FirestoreStore {
                     StoreError::Internal(anyhow!(err))
                 }
             })?;
-
         if !read_bool_field(&doc.fields, "is_active").unwrap_or(false) {
             return Err(StoreError::InactiveReference);
         }
@@ -2580,11 +2580,25 @@ async fn create_stripe_checkout_session(
 
     let product_name = build_checkout_product_name(order);
     let checkout_currency = stripe_checkout_currency(&order.currency);
+    let success_url = append_query_params(
+        &state.stripe_checkout.success_url,
+        &[
+            ("order_id", order.order_id.as_str()),
+            ("lang", order.order_locale.as_str()),
+        ],
+    );
+    let cancel_url = append_query_params(
+        &state.stripe_checkout.cancel_url,
+        &[
+            ("order_id", order.order_id.as_str()),
+            ("lang", order.order_locale.as_str()),
+        ],
+    );
 
     let mut body = json!({
         "mode": "payment",
-        "success_url": state.stripe_checkout.success_url.clone(),
-        "cancel_url": state.stripe_checkout.cancel_url.clone(),
+        "success_url": success_url,
+        "cancel_url": cancel_url,
         "line_items": [
             {
                 "quantity": 1,
@@ -2655,6 +2669,33 @@ async fn create_stripe_checkout_session(
         checkout_url,
         payment_intent_id,
     })
+}
+
+fn append_query_params(base_url: &str, params: &[(&str, &str)]) -> String {
+    let mut url = base_url.trim().to_owned();
+    let mut first_param = !url.contains('?') || url.ends_with('?') || url.ends_with('&');
+
+    for (key, value) in params {
+        let value = value.trim();
+        if value.is_empty() {
+            continue;
+        }
+
+        if first_param {
+            first_param = false;
+            if !url.ends_with('?') && !url.ends_with('&') {
+                url.push(if url.contains('?') { '&' } else { '?' });
+            }
+        } else {
+            url.push('&');
+        }
+
+        url.push_str(key);
+        url.push('=');
+        url.push_str(value);
+    }
+
+    url
 }
 
 fn build_checkout_product_name(order: &OrderCheckoutContext) -> String {
@@ -3569,6 +3610,32 @@ mod tests {
         };
 
         assert!(build_payment_intent_shipping(&order).is_none());
+    }
+
+    #[test]
+    fn append_query_params_preserves_existing_query_string() {
+        let url = append_query_params(
+            "https://example.com/payment/success?session_id={CHECKOUT_SESSION_ID}",
+            &[("order_id", "order_1"), ("lang", "ja")],
+        );
+
+        assert_eq!(
+            url,
+            "https://example.com/payment/success?session_id={CHECKOUT_SESSION_ID}&order_id=order_1&lang=ja"
+        );
+    }
+
+    #[test]
+    fn append_query_params_adds_query_string_when_missing() {
+        let url = append_query_params(
+            "https://example.com/payment/failure",
+            &[("order_id", "order_1"), ("lang", "en")],
+        );
+
+        assert_eq!(
+            url,
+            "https://example.com/payment/failure?order_id=order_1&lang=en"
+        );
     }
 
     #[test]

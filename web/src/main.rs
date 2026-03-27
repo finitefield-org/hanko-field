@@ -5,19 +5,19 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use askama::Template;
 use axum::{
-    Router,
-    extract::{Form, Query, State, rejection::FormRejection},
-    http::{HeaderName, HeaderValue, StatusCode, header},
+    extract::{rejection::FormRejection, Form, Query, State},
+    http::{header, HeaderName, HeaderValue, StatusCode},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
+    Router,
 };
 use firebase_sdk_rust::firebase_firestore::{Document, FirebaseFirestoreClient, RunQueryRequest};
-use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use serde_json::{Value as JsonValue, json};
+use gcp_auth::{provider, CustomServiceAccount, TokenProvider};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
 use tower_http::services::ServeDir;
 use uuid::Uuid;
 
@@ -68,6 +68,9 @@ struct MaterialOption {
     key: String,
     label: String,
     description: String,
+    comparison_texture: String,
+    comparison_weight: String,
+    comparison_usage: String,
     shape: String,
     shape_label: String,
     price: i64,
@@ -103,6 +106,7 @@ struct KanjiCandidate {
 #[derive(Debug, Clone, Default)]
 struct PurchaseResultData {
     error: String,
+    selected_locale: String,
     seal_line1: String,
     seal_line2: String,
     font_label: String,
@@ -135,6 +139,8 @@ struct PageTemplate {
     default_font_key: String,
     default_font_label: String,
     selected_locale: String,
+    terms_url: String,
+    commercial_transactions_url: String,
     privacy_policy_url: String,
 }
 
@@ -143,6 +149,7 @@ struct PageTemplate {
 struct KanjiSuggestionsTemplate {
     real_name: String,
     kanji_style: String,
+    selected_locale: String,
     suggestions: Vec<KanjiCandidate>,
     has_suggestions: bool,
     error: String,
@@ -231,6 +238,7 @@ struct ApiErrorBody {
 struct PurchaseResultTemplate {
     has_error: bool,
     error: String,
+    selected_locale: String,
     seal_line1: String,
     seal_line2: String,
     has_seal_line2: bool,
@@ -259,26 +267,49 @@ struct PurchaseResultTemplate {
 struct PaymentSuccessTemplate {
     has_session_id: bool,
     session_id: String,
+    has_order_id: bool,
+    order_id: String,
     selected_locale: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    contact_url: String,
     privacy_policy_url: String,
 }
 
 #[derive(Template)]
 #[template(path = "payment_failure.html")]
 struct PaymentFailureTemplate {
+    has_order_id: bool,
+    order_id: String,
     selected_locale: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    contact_url: String,
+    privacy_policy_url: String,
+}
+
+#[derive(Template)]
+#[template(path = "commercial_transactions.html")]
+struct CommercialTransactionsTemplate {
+    selected_locale: String,
+    terms_url: String,
+    contact_url: String,
+    privacy_policy_url: String,
+}
+
+#[derive(Template)]
+#[template(path = "terms.html")]
+struct TermsTemplate {
+    selected_locale: String,
+    commercial_transactions_url: String,
     privacy_policy_url: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
-struct CheckoutQuery {
+struct PaymentRedirectQuery {
     checkout: Option<String>,
-    lang: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Default)]
-struct PaymentSuccessQuery {
     session_id: Option<String>,
+    order_id: Option<String>,
     lang: Option<String>,
 }
 
@@ -325,6 +356,7 @@ struct FirestoreCatalogSource {
     default_locale: String,
     label: String,
     storage_assets_bucket: String,
+    allow_mock_fallback: bool,
     token_provider: Arc<dyn TokenProvider>,
 }
 
@@ -338,10 +370,46 @@ impl FirestoreCatalogSource {
 
         let client = FirebaseFirestoreClient::new(access_token.as_str().to_owned());
         let parent = format!("projects/{}/databases/(default)/documents", self.project_id);
+        let fallback_catalog = self
+            .allow_mock_fallback
+            .then(|| new_mock_catalog_source(&self.locale).catalog);
 
-        let fonts = self.load_fonts(&client, &parent).await?;
-        let materials = self.load_materials(&client, &parent).await?;
-        let countries = self.load_countries(&client, &parent).await?;
+        let fonts = match self.load_fonts(&client, &parent).await {
+            Ok(fonts) => fonts,
+            Err(error) => match fallback_catalog.as_ref() {
+                Some(fallback_catalog) => {
+                    eprintln!(
+                        "warning: failed to load fonts from firestore: {error}; using mock fonts for dev"
+                    );
+                    fallback_catalog.fonts.clone()
+                }
+                None => return Err(error),
+            },
+        };
+        let materials = match self.load_materials(&client, &parent).await {
+            Ok(materials) => materials,
+            Err(error) => match fallback_catalog.as_ref() {
+                Some(fallback_catalog) => {
+                    eprintln!(
+                        "warning: failed to load materials from firestore: {error}; using mock materials for dev"
+                    );
+                    fallback_catalog.materials.clone()
+                }
+                None => return Err(error),
+            },
+        };
+        let countries = match self.load_countries(&client, &parent).await {
+            Ok(countries) => countries,
+            Err(error) => match fallback_catalog.as_ref() {
+                Some(fallback_catalog) => {
+                    eprintln!(
+                        "warning: failed to load countries from firestore: {error}; using mock countries for dev"
+                    );
+                    fallback_catalog.countries.clone()
+                }
+                None => return Err(error),
+            },
+        };
 
         Ok(CatalogData {
             fonts,
@@ -456,6 +524,8 @@ impl FirestoreCatalogSource {
                 &self.default_locale,
                 "",
             );
+            let (comparison_texture, comparison_weight, comparison_usage) =
+                material_comparison_profile(&doc_id, &self.locale);
             let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
             let (photo_url, photo_alt, has_photo) = resolve_material_photo(
                 &document.fields,
@@ -473,8 +543,11 @@ impl FirestoreCatalogSource {
                 key: doc_id,
                 label,
                 description,
+                comparison_texture,
+                comparison_weight,
+                comparison_usage,
                 shape: shape.to_owned(),
-                shape_label: material_shape_label(shape).to_owned(),
+                shape_label: material_shape_label(shape, &self.locale).to_owned(),
                 price,
                 price_display: format_usd(price),
                 photo_url,
@@ -556,25 +629,41 @@ impl FirestoreCatalogSource {
         parent: &str,
         collection: &str,
     ) -> Result<Vec<Document>> {
+        let documents = self
+            .run_documents_query(client, parent, collection, true)
+            .await?;
+        if documents.is_empty() {
+            bail!("no active {collection} found in firestore");
+        }
+
+        Ok(documents)
+    }
+
+    async fn run_documents_query(
+        &self,
+        client: &FirebaseFirestoreClient,
+        parent: &str,
+        collection: &str,
+        active_only: bool,
+    ) -> Result<Vec<Document>> {
         let query = RunQueryRequest {
-            structured_query: Some(json!({
-                "from": [
-                    { "collectionId": collection }
-                ],
-                "where": {
-                    "fieldFilter": {
-                        "field": { "fieldPath": "is_active" },
-                        "op": "EQUAL",
-                        "value": { "booleanValue": true }
-                    }
-                },
-                "orderBy": [
-                    {
-                        "field": { "fieldPath": "sort_order" },
-                        "direction": "ASCENDING"
-                    }
-                ]
-            })),
+            structured_query: Some({
+                let mut query = json!({
+                    "from": [
+                        { "collectionId": collection }
+                    ],
+                });
+                if active_only {
+                    query["where"] = json!({
+                        "fieldFilter": {
+                            "field": { "fieldPath": "is_active" },
+                            "op": "EQUAL",
+                            "value": { "booleanValue": true }
+                        }
+                    });
+                }
+                query
+            }),
             ..RunQueryRequest::default()
         };
 
@@ -583,15 +672,17 @@ impl FirestoreCatalogSource {
             .await
             .with_context(|| format!("failed to load {collection}"))?;
 
-        let documents = rows
+        let mut documents = rows
             .into_iter()
             .filter_map(|row| row.document)
             .collect::<Vec<_>>();
-
-        if documents.is_empty() {
-            bail!("no active {collection} found in firestore");
-        }
-
+        documents.sort_by(|left, right| {
+            let left_sort_order = read_int_field(&left.fields, "sort_order").unwrap_or_default();
+            let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
+            left_sort_order
+                .cmp(&right_sort_order)
+                .then_with(|| document_id(left).cmp(&document_id(right)))
+        });
         Ok(documents)
     }
 }
@@ -764,6 +855,11 @@ async fn run() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handle_index))
+        .route("/terms", get(handle_terms))
+        .route(
+            "/commercial-transactions",
+            get(handle_commercial_transactions),
+        )
         .route("/payment/success", get(handle_payment_success))
         .route("/payment/failure", get(handle_payment_failure))
         .route("/kanji", post(handle_kanji_suggestions))
@@ -957,7 +1053,7 @@ fn env_first(keys: &[&str]) -> String {
 
 async fn new_catalog_source(cfg: &AppConfig) -> Result<CatalogSource> {
     match cfg.mode {
-        RunMode::Mock => Ok(CatalogSource::Mock(new_mock_catalog_source())),
+        RunMode::Mock => Ok(CatalogSource::Mock(new_mock_catalog_source(&cfg.locale))),
         RunMode::Dev | RunMode::Prod => {
             let label = if cfg.mode == RunMode::Prod {
                 "Firebase Prod"
@@ -988,13 +1084,16 @@ async fn new_catalog_source(cfg: &AppConfig) -> Result<CatalogSource> {
                 default_locale: cfg.default_locale.clone(),
                 label,
                 storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
+                allow_mock_fallback: cfg.mode == RunMode::Dev,
                 token_provider,
             }))
         }
     }
 }
 
-fn new_mock_catalog_source() -> MockCatalogSource {
+fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
+    let english = parse_supported_locale(locale) == Some("en");
+
     MockCatalogSource {
         catalog: CatalogData {
             fonts: vec![
@@ -1047,70 +1146,159 @@ fn new_mock_catalog_source() -> MockCatalogSource {
             materials: vec![
                 MaterialOption {
                     key: "boxwood".to_owned(),
-                    label: "柘植".to_owned(),
-                    description: "軽くて扱いやすい定番材".to_owned(),
+                    label: if english { "Boxwood" } else { "柘植" }.to_owned(),
+                    description: if english {
+                        "A light, easy-to-handle classic with soft wood grain"
+                    } else {
+                        "軽くて扱いやすい、木目のやわらかい定番材"
+                    }
+                    .to_owned(),
+                    comparison_texture: if english {
+                        "Soft wood grain"
+                    } else {
+                        "さらりとした木目"
+                    }
+                    .to_owned(),
+                    comparison_weight: if english {
+                        "Light and easy to handle"
+                    } else {
+                        "軽めで扱いやすい"
+                    }
+                    .to_owned(),
+                    comparison_usage: if english {
+                        "Good for everyday square seals"
+                    } else {
+                        "日常使いの角印向き"
+                    }
+                    .to_owned(),
                     shape: "square".to_owned(),
-                    shape_label: "角印".to_owned(),
+                    shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
                     price: 3600,
                     price_display: format_usd(3600),
                     photo_url: "https://picsum.photos/seed/hf-boxwood/640/420".to_owned(),
-                    photo_alt: "柘植材の写真".to_owned(),
+                    photo_alt: if english {
+                        "Boxwood photo"
+                    } else {
+                        "柘植材の写真"
+                    }
+                    .to_owned(),
                     has_photo: true,
                 },
                 MaterialOption {
                     key: "black_buffalo".to_owned(),
-                    label: "黒水牛".to_owned(),
-                    description: "しっとりした質感で耐久性が高い".to_owned(),
+                    label: if english {
+                        "Black buffalo"
+                    } else {
+                        "黒水牛"
+                    }
+                    .to_owned(),
+                    description: if english {
+                        "Smooth, slightly glossy, and durable"
+                    } else {
+                        "しっとりした質感で、落ち着いた印象と耐久性を両立"
+                    }
+                    .to_owned(),
+                    comparison_texture: if english {
+                        "Smooth, slightly glossy finish"
+                    } else {
+                        "しっとりした艶感"
+                    }
+                    .to_owned(),
+                    comparison_weight: if english {
+                        "Medium weight with a stable feel"
+                    } else {
+                        "中量で安定感がある"
+                    }
+                    .to_owned(),
+                    comparison_usage: if english {
+                        "A popular choice for round seals"
+                    } else {
+                        "丸印の定番として選びやすい"
+                    }
+                    .to_owned(),
                     shape: "round".to_owned(),
-                    shape_label: "丸印".to_owned(),
+                    shape_label: if english { "Round seal" } else { "丸印" }.to_owned(),
                     price: 4800,
                     price_display: format_usd(4800),
                     photo_url: "https://picsum.photos/seed/hf-black-buffalo/640/420".to_owned(),
-                    photo_alt: "黒水牛材の写真".to_owned(),
+                    photo_alt: if english {
+                        "Black buffalo photo"
+                    } else {
+                        "黒水牛材の写真"
+                    }
+                    .to_owned(),
                     has_photo: true,
                 },
                 MaterialOption {
                     key: "titanium".to_owned(),
-                    label: "チタン".to_owned(),
-                    description: "重厚で摩耗に強いプレミアム材".to_owned(),
+                    label: if english { "Titanium" } else { "チタン" }.to_owned(),
+                    description: if english {
+                        "Premium, heavy, and highly wear-resistant"
+                    } else {
+                        "重厚感があり、摩耗に強いプレミアム材"
+                    }
+                    .to_owned(),
+                    comparison_texture: if english {
+                        "Clean metallic finish"
+                    } else {
+                        "金属らしいシャープな質感"
+                    }
+                    .to_owned(),
+                    comparison_weight: if english {
+                        "Heavy and dense"
+                    } else {
+                        "重めで高密度"
+                    }
+                    .to_owned(),
+                    comparison_usage: if english {
+                        "Ideal for long-term durability"
+                    } else {
+                        "長期使用や耐久性重視に向く"
+                    }
+                    .to_owned(),
                     shape: "square".to_owned(),
-                    shape_label: "角印".to_owned(),
+                    shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
                     price: 9800,
                     price_display: format_usd(9800),
                     photo_url: "https://picsum.photos/seed/hf-titanium/640/420".to_owned(),
-                    photo_alt: "チタン材の写真".to_owned(),
+                    photo_alt: if english {
+                        "Titanium photo"
+                    } else {
+                        "チタン材の写真"
+                    }
+                    .to_owned(),
                     has_photo: true,
                 },
             ],
             countries: vec![
                 CountryOption {
                     code: "JP".to_owned(),
-                    label: "日本".to_owned(),
+                    label: if english { "Japan" } else { "日本" }.to_owned(),
                     shipping: 600,
                 },
                 CountryOption {
                     code: "US".to_owned(),
-                    label: "アメリカ".to_owned(),
+                    label: if english { "United States" } else { "アメリカ" }.to_owned(),
                     shipping: 1800,
                 },
                 CountryOption {
                     code: "CA".to_owned(),
-                    label: "カナダ".to_owned(),
+                    label: if english { "Canada" } else { "カナダ" }.to_owned(),
                     shipping: 1900,
                 },
                 CountryOption {
                     code: "GB".to_owned(),
-                    label: "イギリス".to_owned(),
+                    label: if english { "United Kingdom" } else { "イギリス" }.to_owned(),
                     shipping: 2000,
                 },
                 CountryOption {
                     code: "AU".to_owned(),
-                    label: "オーストラリア".to_owned(),
+                    label: if english { "Australia" } else { "オーストラリア" }.to_owned(),
                     shipping: 2100,
                 },
                 CountryOption {
                     code: "SG".to_owned(),
-                    label: "シンガポール".to_owned(),
+                    label: if english { "Singapore" } else { "シンガポール" }.to_owned(),
                     shipping: 1300,
                 },
             ],
@@ -1229,7 +1417,7 @@ fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
 
 async fn handle_index(
     State(state): State<AppState>,
-    Query(query): Query<CheckoutQuery>,
+    Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
@@ -1268,6 +1456,8 @@ async fn handle_index(
         materials: catalog.materials,
         countries: catalog.countries,
         is_mock: state.source.is_mock(),
+        terms_url: terms_url(&selected_locale),
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
     };
@@ -1281,25 +1471,51 @@ async fn handle_index(
     }
 }
 
-fn checkout_redirect_path(query: &CheckoutQuery, locale: &str) -> Option<String> {
+fn checkout_redirect_path(query: &PaymentRedirectQuery, locale: &str) -> Option<String> {
     let checkout = query.checkout.as_deref()?.trim().to_lowercase();
-    match checkout.as_str() {
-        "success" => Some(format!("/payment/success?lang={locale}")),
-        "cancel" => Some(format!("/payment/failure?lang={locale}")),
-        _ => None,
+    let base_path = match checkout.as_str() {
+        "success" => "/payment/success",
+        "cancel" => "/payment/failure",
+        _ => return None,
+    };
+
+    let mut params = vec![format!("lang={locale}")];
+    if let Some(session_id) = query
+        .session_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("session_id={session_id}"));
     }
+    if let Some(order_id) = query
+        .order_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("order_id={order_id}"));
+    }
+
+    Some(format!("{base_path}?{}", params.join("&")))
 }
 
 async fn handle_payment_success(
     State(state): State<AppState>,
-    Query(query): Query<PaymentSuccessQuery>,
+    Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
     let session_id = query.session_id.unwrap_or_default().trim().to_owned();
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let order_id = query.order_id.unwrap_or_default().trim().to_owned();
     let template = PaymentSuccessTemplate {
+        contact_url: inquiry_url(&selected_locale),
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        has_order_id: !order_id.is_empty(),
+        order_id,
         has_session_id: !session_id.is_empty(),
         session_id,
+        terms_url: terms_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
     };
@@ -1315,11 +1531,17 @@ async fn handle_payment_success(
 
 async fn handle_payment_failure(
     State(state): State<AppState>,
-    Query(query): Query<LocaleQuery>,
+    Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let order_id = query.order_id.unwrap_or_default().trim().to_owned();
     let template = PaymentFailureTemplate {
+        contact_url: inquiry_url(&selected_locale),
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        has_order_id: !order_id.is_empty(),
+        order_id,
+        terms_url: terms_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
     };
@@ -1328,6 +1550,46 @@ async fn handle_payment_failure(
         Err(error) => plain_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to render payment failure page: {error}"),
+        ),
+    }
+}
+
+async fn handle_commercial_transactions(
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let template = CommercialTransactionsTemplate {
+        contact_url: inquiry_url(&selected_locale),
+        terms_url: terms_url(&selected_locale),
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+        selected_locale,
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render commercial transactions page: {error}"),
+        ),
+    }
+}
+
+async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQuery>) -> Response {
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let template = TermsTemplate {
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+        selected_locale,
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render terms page: {error}"),
         ),
     }
 }
@@ -1343,11 +1605,12 @@ async fn handle_kanji_suggestions(
 
     let real_name = form_value(&form, "real_name");
     let requested_locale = form_value(&form, "locale");
-    let reason_language = resolve_request_locale(
+    let selected_locale = resolve_request_locale(
         Some(&requested_locale),
         &state.locale,
         &state.default_locale,
     );
+    let reason_language = selected_locale.clone();
     let candidate_gender = normalize_candidate_gender(&form_value(&form, "candidate_gender"));
     let kanji_style = normalize_kanji_style(&form_value(&form, "kanji_style"));
 
@@ -1364,7 +1627,11 @@ async fn handle_kanji_suggestions(
                 eprintln!("failed to load kanji candidates: {error:#}");
                 (
                     Vec::new(),
-                    "候補を生成できませんでした。時間をおいて再度お試しください。".to_owned(),
+                    localized_text(
+                        &selected_locale,
+                        "候補を生成できませんでした。時間をおいて再度お試しください。",
+                        "Could not generate suggestions. Please try again later.",
+                    ),
                 )
             }
         }
@@ -1373,6 +1640,7 @@ async fn handle_kanji_suggestions(
     let template = KanjiSuggestionsTemplate {
         real_name,
         kanji_style: kanji_style.to_owned(),
+        selected_locale,
         has_suggestions: !suggestions.is_empty(),
         suggestions,
         error,
@@ -1441,96 +1709,145 @@ async fn handle_purchase(
     let email = form_value(&form, "email");
     let terms_value = form_value(&form, "terms_agreed");
     let requested_locale = form_value(&form, "locale");
+    let order_locale = resolve_request_locale(
+        Some(&requested_locale),
+        &state.locale,
+        &state.default_locale,
+    );
     let terms_agreed =
         terms_value == "on" || terms_value == "1" || terms_value.eq_ignore_ascii_case("true");
 
     let mut result = PurchaseResultData {
         source_label: state.source.label().to_owned(),
         is_mock: state.source.is_mock(),
+        selected_locale: order_locale.clone(),
         ..PurchaseResultData::default()
     };
 
-    if let Err(message) = validate_seal_lines(&seal_line1, &seal_line2) {
+    if let Err(message) = validate_seal_lines(&order_locale, &seal_line1, &seal_line2) {
         result.error = message;
         return render_purchase_result(&result);
     }
 
     let Some(font) = font_by_key.get(&font_key) else {
-        result.error = "フォントを選択してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "フォントを選択してください。",
+            "Please choose a font.",
+        );
         return render_purchase_result(&result);
     };
 
-    let Some(selected_shape_label) = shape_label(&shape_key) else {
-        result.error = "印鑑の形状を選択してください。".to_owned();
+    let Some(selected_shape_label) = shape_label_for_locale(&shape_key, &order_locale) else {
+        result.error = localized_text(
+            &order_locale,
+            "印鑑の形状を選択してください。",
+            "Please choose a seal shape.",
+        );
         return render_purchase_result(&result);
     };
 
     let Some(material) = material_by_key.get(&material_key) else {
-        result.error = "材質を選択してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "材質を選択してください。",
+            "Please choose a material.",
+        );
         return render_purchase_result(&result);
     };
     if material.shape != shape_key {
-        result.error = format!(
-            "{}に対応する材質を選択してください。",
-            shape_label(&shape_key).unwrap_or("印鑑の形状")
+        result.error = localized_text(
+            &order_locale,
+            "選択した形状に対応する材質を選択してください。",
+            "Please choose a material that matches the selected shape.",
         );
         return render_purchase_result(&result);
     }
 
     let Some(country) = country_by_code.get(&country_code) else {
-        result.error = "配送先の国を選択してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "配送先の国を選択してください。",
+            "Please choose a shipping country.",
+        );
         return render_purchase_result(&result);
     };
 
     if recipient_name.is_empty() {
-        result.error = "購入者名を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "購入者名を入力してください。",
+            "Enter the recipient name.",
+        );
         return render_purchase_result(&result);
     }
 
     if phone.is_empty() {
-        result.error = "電話番号を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "電話番号を入力してください。",
+            "Enter a phone number.",
+        );
         return render_purchase_result(&result);
     }
 
     if postal_code.is_empty() {
-        result.error = "郵便番号を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "郵便番号を入力してください。",
+            "Enter a postal code.",
+        );
         return render_purchase_result(&result);
     }
 
     if state_name.is_empty() {
-        result.error = "都道府県 / 州を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "都道府県 / 州を入力してください。",
+            "Enter a state or prefecture.",
+        );
         return render_purchase_result(&result);
     }
 
     if city.is_empty() {
-        result.error = "市区町村 / City を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "市区町村 / City を入力してください。",
+            "Enter a city.",
+        );
         return render_purchase_result(&result);
     }
 
     if address_line1.is_empty() {
-        result.error = "住所1を入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "住所1を入力してください。",
+            "Enter address line 1.",
+        );
         return render_purchase_result(&result);
     }
 
     if email.is_empty() {
-        result.error = "購入確認用のメールアドレスを入力してください。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "購入確認用のメールアドレスを入力してください。",
+            "Enter the confirmation email address.",
+        );
         return render_purchase_result(&result);
     }
 
     if !terms_agreed {
-        result.error = "利用規約への同意が必要です。".to_owned();
+        result.error = localized_text(
+            &order_locale,
+            "利用規約への同意が必要です。",
+            "Please agree to the terms of service.",
+        );
         return render_purchase_result(&result);
     }
 
     let subtotal = material.price;
     let shipping = country.shipping;
     let total = subtotal + shipping;
-    let order_locale = resolve_request_locale(
-        Some(&requested_locale),
-        &state.locale,
-        &state.default_locale,
-    );
-
     let create_order_request = CreateOrderApiRequest {
         channel: "web".to_owned(),
         locale: order_locale.clone(),
@@ -1555,7 +1872,7 @@ async fn handle_purchase(
         },
         contact: CreateOrderContactApiRequest {
             email: email.clone(),
-            preferred_locale: order_locale,
+            preferred_locale: order_locale.clone(),
         },
     };
 
@@ -1585,7 +1902,11 @@ async fn handle_purchase(
         Ok(order) => order,
         Err(error) => {
             eprintln!("failed to create order for stripe checkout: {error:#}");
-            result.error = "注文の作成に失敗しました。時間をおいて再度お試しください。".to_owned();
+            result.error = localized_text(
+                &order_locale,
+                "注文の作成に失敗しました。時間をおいて再度お試しください。",
+                "Could not create the order. Please try again later.",
+            );
             return render_purchase_result(&result);
         }
     };
@@ -1602,8 +1923,11 @@ async fn handle_purchase(
         Ok(session) => session,
         Err(error) => {
             eprintln!("failed to create stripe checkout session: {error:#}");
-            result.error =
-                "決済画面の作成に失敗しました。時間をおいて再度お試しください。".to_owned();
+            result.error = localized_text(
+                &order_locale,
+                "決済画面の作成に失敗しました。時間をおいて再度お試しください。",
+                "Could not create the checkout session. Please try again later.",
+            );
             return render_purchase_result(&result);
         }
     };
@@ -1615,6 +1939,7 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
     let template = PurchaseResultTemplate {
         has_error: !data.error.is_empty(),
         error: data.error.clone(),
+        selected_locale: data.selected_locale.clone(),
         seal_line1: data.seal_line1.clone(),
         seal_line2: data.seal_line2.clone(),
         has_seal_line2: !data.seal_line2.is_empty(),
@@ -1726,6 +2051,32 @@ fn privacy_policy_url(locale: &str) -> String {
     format!("https://finitefield.org/{normalized}/privacy/")
 }
 
+fn commercial_transactions_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    format!("/commercial-transactions?lang={normalized}")
+}
+
+fn terms_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    format!("/terms?lang={normalized}")
+}
+
+fn inquiry_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    if normalized == "ja" {
+        return "https://finitefield.org/inquiry/".to_owned();
+    }
+    format!("https://finitefield.org/{normalized}/inquiry/")
+}
+
+fn localized_text(locale: &str, ja: &str, en: &str) -> String {
+    if parse_supported_locale(locale) == Some("en") {
+        en.to_owned()
+    } else {
+        ja.to_owned()
+    }
+}
+
 fn normalize_candidate_gender(raw: &str) -> &'static str {
     match raw.trim().to_lowercase().as_str() {
         "male" => "male",
@@ -1749,39 +2100,134 @@ fn normalize_material_shape(raw: &str) -> &'static str {
     }
 }
 
-fn material_shape_label(shape_key: &str) -> &'static str {
+fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
+    let english = parse_supported_locale(locale) == Some("en");
     match shape_key {
-        "round" => "丸印",
-        _ => "角印",
+        "round" => {
+            if english {
+                "Round seal"
+            } else {
+                "丸印"
+            }
+        }
+        _ => {
+            if english {
+                "Square seal"
+            } else {
+                "角印"
+            }
+        }
     }
 }
 
-fn shape_label(shape_key: &str) -> Option<&'static str> {
+fn material_comparison_profile(material_key: &str, locale: &str) -> (String, String, String) {
+    let is_english = parse_supported_locale(locale) == Some("en");
+
+    let profile = match material_key {
+        "boxwood" => {
+            if is_english {
+                (
+                    "Dry, natural wood grain",
+                    "Light and easy to handle",
+                    "Best for everyday square seals",
+                )
+            } else {
+                ("さらりとした木目", "軽めで扱いやすい", "日常使いの角印向き")
+            }
+        }
+        "black_buffalo" => {
+            if is_english {
+                (
+                    "Smooth and slightly glossy",
+                    "Medium weight with stability",
+                    "A safe choice for round seals",
+                )
+            } else {
+                (
+                    "しっとりした艶感",
+                    "中量で安定感がある",
+                    "丸印の定番として選びやすい",
+                )
+            }
+        }
+        "titanium" => {
+            if is_english {
+                (
+                    "Crisp metallic finish",
+                    "Heavy and dense",
+                    "Suited to long-term durable use",
+                )
+            } else {
+                (
+                    "金属らしいシャープな質感",
+                    "重めで高密度",
+                    "長期使用や耐久性重視に向く",
+                )
+            }
+        }
+        _ => {
+            if is_english {
+                (
+                    "Balanced, neutral texture",
+                    "Medium weight",
+                    "General-purpose use",
+                )
+            } else {
+                ("標準的な質感", "中程度の重さ", "汎用的")
+            }
+        }
+    };
+
+    (
+        profile.0.to_owned(),
+        profile.1.to_owned(),
+        profile.2.to_owned(),
+    )
+}
+
+fn shape_label_for_locale(shape_key: &str, locale: &str) -> Option<&'static str> {
+    let english = parse_supported_locale(locale) == Some("en");
     match shape_key {
-        "square" => Some("角印"),
-        "round" => Some("丸印"),
+        "square" => Some(if english { "Square seal" } else { "角印" }),
+        "round" => Some(if english { "Round seal" } else { "丸印" }),
         _ => None,
     }
 }
 
-fn validate_seal_lines(line1: &str, line2: &str) -> std::result::Result<(), String> {
+fn validate_seal_lines(locale: &str, line1: &str, line2: &str) -> std::result::Result<(), String> {
     let first = line1.trim();
     let second = line2.trim();
 
     if first.is_empty() {
-        return Err("お名前を入力してください。".to_owned());
+        return Err(localized_text(
+            locale,
+            "お名前を入力してください。",
+            "Enter your name.",
+        ));
     }
 
     if contains_whitespace(first) {
-        return Err("1行目に空白は使えません。".to_owned());
+        return Err(localized_text(
+            locale,
+            "1行目に空白は使えません。",
+            "Line 1 cannot contain spaces.",
+        ));
     }
 
     if !second.is_empty() && contains_whitespace(second) {
-        return Err("2行目に空白は使えません。".to_owned());
+        return Err(localized_text(
+            locale,
+            "2行目に空白は使えません。",
+            "Line 2 cannot contain spaces.",
+        ));
     }
 
     if first.chars().count() + second.chars().count() > 2 {
-        return Err("印影テキストは1行目と2行目の合計で2文字以内で入力してください。".to_owned());
+        return Err(localized_text(
+            locale,
+            "印影テキストは1行目と2行目の合計で2文字以内で入力してください。",
+            "Use up to 2 characters total across lines 1 and 2.",
+        ));
     }
 
     Ok(())

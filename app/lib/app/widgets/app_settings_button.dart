@@ -36,6 +36,7 @@ class AppSettingsButton extends StatelessWidget {
     final isEnglish = selectedLocale == AppLocale.en;
     final title = isEnglish ? 'Settings' : '設定';
     final languageTitle = isEnglish ? 'Language' : '言語';
+    final legalLabel = isEnglish ? 'Legal Notice' : '特定商取引法に基づく表記';
     final privacyLabel = isEnglish ? 'Privacy Policy' : 'プライバシーポリシー';
 
     showModalBottomSheet<void>(
@@ -89,6 +90,19 @@ class AppSettingsButton extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(
+                    Icons.receipt_long_outlined,
+                    color: HfPalette.accent,
+                  ),
+                  title: Text(legalLabel),
+                  trailing: const Icon(Icons.open_in_new, size: 18),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _openCommercialTransactions(context, selectedLocale);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
                     Icons.privacy_tip_outlined,
                     color: HfPalette.accent,
                   ),
@@ -105,6 +119,22 @@ class AppSettingsButton extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _openCommercialTransactions(
+    BuildContext context,
+    AppLocale locale,
+  ) async {
+    final uri = Uri.parse(commercialTransactionsUrlForLocale(locale));
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      final message = locale == AppLocale.en
+          ? 'Could not open the legal notice.'
+          : '特定商取引法に基づく表記を開けませんでした。';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Future<void> _openPrivacyPolicy(

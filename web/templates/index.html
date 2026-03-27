@@ -12,7 +12,7 @@
   {% endfor %}
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="/static/app.js?v=20260223-2" defer></script>
+  <script src="/static/app.js?v=20260327-1" defer></script>
 </head>
 <body>
   <div class="bg-shape bg-shape-left"></div>
@@ -36,10 +36,10 @@
     </header>
 
     <section class="panel">
-      <ol class="step-track" aria-label="注文ステップ">
-        <li class="step-dot is-active" data-step-indicator="1">1. デザイン</li>
-        <li class="step-dot" data-step-indicator="2">2. 材質</li>
-        <li class="step-dot" data-step-indicator="3">3. 購入</li>
+      <ol class="step-track" aria-label="{% if selected_locale == "ja" %}注文ステップ{% else %}Order steps{% endif %}">
+        <li class="step-dot is-active" data-step-indicator="1">{% if selected_locale == "ja" %}1. デザイン{% else %}1. Design{% endif %}</li>
+        <li class="step-dot" data-step-indicator="2">{% if selected_locale == "ja" %}2. 材質{% else %}2. Material{% endif %}</li>
+        <li class="step-dot" data-step-indicator="3">{% if selected_locale == "ja" %}3. 購入{% else %}3. Purchase{% endif %}</li>
       </ol>
 
       <form id="order-form" class="flow-form">
@@ -51,89 +51,63 @@
           <div class="design-grid">
             <div class="design-controls">
               <div class="field-label-row">
-                <p class="field-label">お名前（印影テキスト）</p>
-                <button type="button" id="toggle-writing-mode" class="mode-toggle-button">縦横変換</button>
+                <p class="field-label">{% if selected_locale == "ja" %}お名前（印影テキスト）{% else %}Name for the seal text{% endif %}</p>
+                <button type="button" id="toggle-writing-mode" class="mode-toggle-button">{% if selected_locale == "ja" %}縦横変換{% else %}Swap layout{% endif %}</button>
               </div>
               <div class="seal-lines-input">
                 <div>
-                  <label class="field-label compact" for="seal_line1">1行目</label>
+                  <label class="field-label compact" for="seal_line1">{% if selected_locale == "ja" %}1行目{% else %}Line 1{% endif %}</label>
                   <input
                     id="seal_line1"
                     name="seal_line1"
                     class="name-line-input"
+                    data-seal-line-input
                     type="text"
                     maxlength="2"
                     required
                     autocomplete="off"
+                    aria-describedby="seal_text_error"
                   >
                 </div>
                 <div>
-                  <label class="field-label compact" for="seal_line2">2行目</label>
+                  <label class="field-label compact" for="seal_line2">{% if selected_locale == "ja" %}2行目{% else %}Line 2{% endif %}</label>
                   <input
                     id="seal_line2"
                     name="seal_line2"
                     class="name-line-input"
+                    data-seal-line-input
                     type="text"
                     maxlength="2"
                     autocomplete="off"
+                    aria-describedby="seal_text_error"
                   >
                 </div>
               </div>
-              <p class="field-hint">1行目と2行目の合計2文字まで</p>
+              <p class="field-hint">{% if selected_locale == "ja" %}1行目と2行目の合計2文字まで{% else %}Use up to 2 characters total across the two lines.{% endif %}</p>
               <p class="field-error" id="seal_text_error" role="alert" aria-live="polite"></p>
-              <label class="field-label" for="kanji_style">フォントスタイル</label>
+              <label class="field-label" for="kanji_style">{% if selected_locale == "ja" %}フォントスタイル{% else %}Font style{% endif %}</label>
               <select id="kanji_style" name="kanji_style">
-                <option value="japanese" selected>日本スタイル</option>
-                <option value="chinese">中国スタイル</option>
-                <option value="taiwanese">台湾スタイル</option>
+                <option value="japanese" selected>{% if selected_locale == "ja" %}日本スタイル{% else %}Japanese style{% endif %}</option>
+                <option value="chinese">{% if selected_locale == "ja" %}中国スタイル{% else %}Chinese style{% endif %}</option>
+                <option value="taiwanese">{% if selected_locale == "ja" %}台湾スタイル{% else %}Taiwanese style{% endif %}</option>
               </select>
-              <p class="field-hint">漢字名提案は選択したスタイルに合わせて生成されます。</p>
-
-              <div class="ai-box">
-                <h3>漢字名提案</h3>
-                <label class="field-label" for="real_name">本名</label>
-                <input
-                  id="real_name"
-                  name="real_name"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="例: Michael Smith"
-                >
-                <label class="field-label" for="candidate_gender">性別</label>
-                <select id="candidate_gender" name="candidate_gender">
-                  <option value="unspecified" selected>選択なし</option>
-                  <option value="male">男性</option>
-                  <option value="female">女性</option>
-                </select>
-                <button
-                  type="button"
-                  class="secondary"
-                  hx-post="/kanji"
-                  hx-target="#kanji-suggestions"
-                  hx-swap="innerHTML"
-                  hx-include="#real_name,#candidate_gender,#kanji_style,#locale"
-                >
-                  候補を生成
-                </button>
-                <div id="kanji-suggestions" class="suggestions-box">
-                  <p class="placeholder">本名を入力して候補を生成してください。</p>
-                </div>
-              </div>
+              <p class="field-hint">{% if selected_locale == "ja" %}選んだスタイルに合わせてフォントが表示されます。{% else %}Fonts are filtered to the selected style.{% endif %}</p>
             </div>
 
             <aside class="preview-card">
-              <h3>プレビュー</h3>
+              <h3>{% if selected_locale == "ja" %}プレビュー{% else %}Preview{% endif %}</h3>
               <div id="seal-preview" class="seal-preview is-square mode-single-char" aria-live="polite">
                 <div id="seal-preview-text" class="seal-preview-text">
                   <span id="seal-preview-line1">印</span>
                   <span id="seal-preview-line2" hidden></span>
                 </div>
               </div>
-              <p id="preview-caption">角 / {{ default_font_label }}</p>
+              <p id="preview-caption">{% if selected_locale == "ja" %}角{% else %}Square{% endif %} / {{ default_font_label }}</p>
 
               <div class="preview-config">
                 <input type="hidden" id="font" name="font" value="{{ default_font_key }}">
-                <div class="font-chip-list" role="listbox" aria-label="フォント選択">
+                <p class="field-label compact">{% if selected_locale == "ja" %}フォント一覧{% else %}Font list{% endif %}</p>
+                <div class="font-chip-list" role="listbox" aria-label="{% if selected_locale == "ja" %}フォント選択{% else %}Font selection{% endif %}">
                   {% for font in fonts %}
                   <button
                     type="button"
@@ -146,33 +120,89 @@
                     aria-pressed="{% if font.key == default_font_key %}true{% else %}false{% endif %}"
                   >
                     <span class="font-chip-preview" data-font-preview>印</span>
+                    <span class="font-chip-label">{{ font.label }}</span>
                   </button>
                   {% endfor %}
                 </div>
 
                 <fieldset class="shape-fieldset">
+                  <legend>{% if selected_locale == "ja" %}形状{% else %}Shape{% endif %}</legend>
                   <label class="option-chip">
                     <input type="radio" name="shape" value="square" checked>
-                    <span>角印</span>
+                    <span>{% if selected_locale == "ja" %}角印{% else %}Square seal{% endif %}</span>
                   </label>
                   <label class="option-chip">
                     <input type="radio" name="shape" value="round">
-                    <span>丸印</span>
+                    <span>{% if selected_locale == "ja" %}丸印{% else %}Round seal{% endif %}</span>
                   </label>
                 </fieldset>
+
+                <div class="shape-switch-note" role="note">
+                  {% if selected_locale == "en" %}
+                  <strong>Note:</strong> Changing the shape may automatically switch the material to a compatible option.
+                  {% else %}
+                  <strong>補足:</strong> 形状を変えると、対応する材質へ自動で切り替わることがあります。
+                  {% endif %}
+                </div>
               </div>
             </aside>
           </div>
 
           <div class="step-actions">
-            <button type="button" class="primary" data-next-step="2">材質選びへ進む</button>
+            <button type="button" class="primary" data-next-step="2">{% if selected_locale == "ja" %}材質選びへ進む{% else %}Next: Material{% endif %}</button>
           </div>
+
+          <details class="optional-ai-box">
+            <summary class="optional-ai-summary">
+              <div class="optional-ai-summary-copy-wrap">
+                <p class="optional-ai-title">{% if selected_locale == "ja" %}漢字名提案{% else %}Kanji name suggestions{% endif %}</p>
+                <p class="optional-ai-copy">{% if selected_locale == "ja" %}必要なときだけ開いて、現在のスタイルに合う候補を生成できます。{% else %}Open this only if you want suggestions that match the selected style.{% endif %}</p>
+              </div>
+              <span class="optional-ai-badge">{% if selected_locale == "ja" %}任意{% else %}Optional{% endif %}</span>
+              <span class="optional-ai-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="optional-ai-body">
+              <label class="field-label compact" for="real_name">{% if selected_locale == "ja" %}本名{% else %}Name{% endif %}</label>
+              <input
+                id="real_name"
+                name="real_name"
+                type="text"
+                autocomplete="off"
+                placeholder="{% if selected_locale == "ja" %}例: 山田 太郎{% else %}e.g. Michael Smith{% endif %}"
+              >
+              <label class="field-label" for="candidate_gender">{% if selected_locale == "ja" %}性別{% else %}Gender{% endif %}</label>
+              <select id="candidate_gender" name="candidate_gender">
+                <option value="unspecified" selected>{% if selected_locale == "ja" %}選択なし{% else %}Unspecified{% endif %}</option>
+                <option value="male">{% if selected_locale == "ja" %}男性{% else %}Male{% endif %}</option>
+                <option value="female">{% if selected_locale == "ja" %}女性{% else %}Female{% endif %}</option>
+              </select>
+              <button
+                type="button"
+                class="secondary"
+                hx-post="/kanji"
+                hx-target="#kanji-suggestions"
+                hx-swap="innerHTML"
+                hx-include="#real_name,#candidate_gender,#kanji_style,#locale"
+              >
+                {% if selected_locale == "ja" %}候補を生成{% else %}Generate suggestions{% endif %}
+              </button>
+              <div id="kanji-suggestions" class="suggestions-box" role="status" aria-live="polite" aria-atomic="true">
+                <p class="placeholder">{% if selected_locale == "ja" %}本名を入力して候補を生成してください。{% else %}Enter your name to generate suggestions.{% endif %}</p>
+              </div>
+            </div>
+          </details>
         </section>
 
         <section class="step-panel" data-step-panel="2">
           <div class="section-title-wrap">
-            <h2>材質を選ぶ</h2>
-            <p>使用感と価格を見ながら材質を決めます。</p>
+            <h2>{% if selected_locale == "ja" %}材質を選ぶ{% else %}Choose material{% endif %}</h2>
+            <p>
+              {% if selected_locale == "ja" %}
+              質感・重さ・用途と価格を見ながら材質を決めます。形状を変えた場合は、対応する材質へ自動で切り替わることがあります。
+              {% else %}
+              Compare texture, weight, use, and price to pick your material. Changing the shape may automatically switch to a compatible material.
+              {% endif %}
+            </p>
           </div>
 
           <div class="material-grid">
@@ -195,65 +225,79 @@
               <span class="material-name">{{ m.label }}</span>
               <span class="material-description">{{ m.shape_label }}</span>
               <span class="material-description">{{ m.description }}</span>
+              <div class="material-comparison" aria-label="{% if selected_locale == "ja" %}比較ポイント{% else %}Comparison points{% endif %}">
+                <span class="material-comparison-item">
+                  <span class="material-comparison-label">{% if selected_locale == "ja" %}質感{% else %}Texture{% endif %}</span>
+                  <span class="material-comparison-value">{{ m.comparison_texture }}</span>
+                </span>
+                <span class="material-comparison-item">
+                  <span class="material-comparison-label">{% if selected_locale == "ja" %}重さ{% else %}Weight{% endif %}</span>
+                  <span class="material-comparison-value">{{ m.comparison_weight }}</span>
+                </span>
+                <span class="material-comparison-item">
+                  <span class="material-comparison-label">{% if selected_locale == "ja" %}用途{% else %}Use{% endif %}</span>
+                  <span class="material-comparison-value">{{ m.comparison_usage }}</span>
+                </span>
+              </div>
               <span class="material-price">{{ m.price_display }}</span>
             </label>
             {% endfor %}
           </div>
 
           <div class="step-actions">
-            <button type="button" class="ghost" data-prev-step="1">戻る</button>
-            <button type="button" class="primary" data-next-step="3">購入へ進む</button>
+            <button type="button" class="ghost" data-prev-step="1">{% if selected_locale == "ja" %}戻る{% else %}Back{% endif %}</button>
+            <button type="button" class="primary" data-next-step="3">{% if selected_locale == "ja" %}購入へ進む{% else %}Next: Purchase{% endif %}</button>
           </div>
         </section>
 
         <section class="step-panel" data-step-panel="3">
           <div class="section-title-wrap">
-            <h2>購入</h2>
-            <p>内容を確認して、モック注文を確定します。</p>
+            <h2>{% if selected_locale == "ja" %}購入{% else %}Purchase{% endif %}</h2>
+            <p>{% if selected_locale == "ja" %}内容を確認して、モック注文を確定します。{% else %}Review the details, then place your order.{% endif %}</p>
           </div>
 
           <div class="purchase-grid">
             <section class="checkout-card">
-              <h3>お届け先情報</h3>
+              <h3>{% if selected_locale == "ja" %}お届け先情報{% else %}Shipping details{% endif %}</h3>
               <div class="checkout-form-grid">
                 <div class="field-span-full">
-                  <label class="field-label" for="recipient_name">お届け先氏名</label>
+                  <label class="field-label" for="recipient_name">{% if selected_locale == "ja" %}お届け先氏名{% else %}Recipient name{% endif %}</label>
                   <input
                     id="recipient_name"
                     name="recipient_name"
                     type="text"
                     required
                     autocomplete="name"
-                    placeholder="例: 山田 太郎"
+                    placeholder="{% if selected_locale == "ja" %}例: 山田 太郎{% else %}e.g. Michael Smith{% endif %}"
                   >
                 </div>
 
                 <div>
-                  <label class="field-label" for="email">メールアドレス</label>
+                  <label class="field-label" for="email">{% if selected_locale == "ja" %}メールアドレス{% else %}Email address{% endif %}</label>
                   <input
                     id="email"
                     name="email"
                     type="email"
                     required
                     autocomplete="email"
-                    placeholder="you@example.com"
+                    placeholder="{% if selected_locale == "ja" %}you@example.com{% else %}name@example.com{% endif %}"
                   >
                 </div>
 
                 <div>
-                  <label class="field-label" for="phone">電話番号</label>
+                  <label class="field-label" for="phone">{% if selected_locale == "ja" %}電話番号{% else %}Phone number{% endif %}</label>
                   <input
                     id="phone"
                     name="phone"
                     type="tel"
                     required
                     autocomplete="tel"
-                    placeholder="+81 90 1234 5678"
+                    placeholder="{% if selected_locale == "ja" %}+81 90 1234 5678{% else %}+1 415 555 0123{% endif %}"
                   >
                 </div>
 
                 <div>
-                  <label class="field-label" for="country">国 / Country</label>
+                  <label class="field-label" for="country">{% if selected_locale == "ja" %}国 / Country{% else %}Country{% endif %}</label>
                   <select id="country" name="country" required>
                     {% for c in countries %}
                     <option value="{{ c.code }}" data-label="{{ c.label }}" data-shipping="{{ c.shipping }}" {% if loop.first %}selected{% endif %}>{{ c.label }} ({{ c.code }})</option>
@@ -262,140 +306,178 @@
                 </div>
 
                 <div>
-                  <label class="field-label" for="postal_code">郵便番号 / ZIP</label>
+                  <label class="field-label" for="postal_code">{% if selected_locale == "ja" %}郵便番号 / ZIP{% else %}Postal code{% endif %}</label>
                   <input
                     id="postal_code"
                     name="postal_code"
                     type="text"
                     required
                     autocomplete="postal-code"
-                    placeholder="100-0001"
+                    placeholder="{% if selected_locale == "ja" %}100-0001{% else %}94103{% endif %}"
                   >
                 </div>
 
                 <div>
-                  <label class="field-label" for="state">都道府県 / 州</label>
+                  <label class="field-label" for="state">{% if selected_locale == "ja" %}都道府県 / 州{% else %}State / Prefecture{% endif %}</label>
                   <input
                     id="state"
                     name="state"
                     type="text"
                     required
                     autocomplete="address-level1"
-                    placeholder="東京都"
+                    placeholder="{% if selected_locale == "ja" %}東京都{% else %}California{% endif %}"
                   >
                 </div>
 
                 <div>
-                  <label class="field-label" for="city">市区町村 / City</label>
+                  <label class="field-label" for="city">{% if selected_locale == "ja" %}市区町村 / City{% else %}City{% endif %}</label>
                   <input
                     id="city"
                     name="city"
                     type="text"
                     required
                     autocomplete="address-level2"
-                    placeholder="千代田区"
+                    placeholder="{% if selected_locale == "ja" %}千代田区{% else %}San Francisco{% endif %}"
                   >
                 </div>
 
                 <div class="field-span-full">
-                  <label class="field-label" for="address_line1">住所1</label>
+                  <label class="field-label" for="address_line1">{% if selected_locale == "ja" %}住所1{% else %}Address line 1{% endif %}</label>
                   <input
                     id="address_line1"
                     name="address_line1"
                     type="text"
                     required
                     autocomplete="address-line1"
-                    placeholder="丸の内1-1-1"
+                    placeholder="{% if selected_locale == "ja" %}丸の内1-1-1{% else %}1 Market St{% endif %}"
                   >
                 </div>
 
                 <div class="field-span-full">
-                  <label class="field-label" for="address_line2">住所2（任意）</label>
+                  <label class="field-label" for="address_line2">{% if selected_locale == "ja" %}住所2（任意）{% else %}Address line 2 (optional){% endif %}</label>
                   <input
                     id="address_line2"
                     name="address_line2"
                     type="text"
                     autocomplete="address-line2"
-                    placeholder="建物名・部屋番号など"
+                    placeholder="{% if selected_locale == "ja" %}建物名・部屋番号など{% else %}Apt 12B, building name, etc.{% endif %}"
                   >
                 </div>
               </div>
             </section>
 
             <section class="summary-card">
-              <h3>注文サマリー</h3>
+              <h3>{% if selected_locale == "ja" %}注文サマリー{% else %}Order summary{% endif %}</h3>
               <dl class="summary-list">
                 <div>
-                  <dt>印影テキスト</dt>
+                  <dt>{% if selected_locale == "ja" %}印影テキスト{% else %}Seal text{% endif %}</dt>
                   <dd id="summary-seal-lines">-</dd>
                 </div>
                 <div>
-                  <dt>形状</dt>
+                  <dt>{% if selected_locale == "ja" %}形状{% else %}Shape{% endif %}</dt>
                   <dd id="summary-shape">-</dd>
                 </div>
                 <div>
-                  <dt>フォント</dt>
+                  <dt>{% if selected_locale == "ja" %}フォント{% else %}Font{% endif %}</dt>
                   <dd id="summary-font">-</dd>
                 </div>
                 <div>
-                  <dt>材質</dt>
+                  <dt>{% if selected_locale == "ja" %}材質{% else %}Material{% endif %}</dt>
                   <dd id="summary-material">-</dd>
                 </div>
                 <div>
-                  <dt>配送先の国</dt>
+                  <dt>{% if selected_locale == "ja" %}配送先の国{% else %}Shipping country{% endif %}</dt>
                   <dd id="summary-country">-</dd>
                 </div>
                 <div>
-                  <dt>商品価格</dt>
+                  <dt>{% if selected_locale == "ja" %}商品価格{% else %}Item total{% endif %}</dt>
                   <dd id="summary-subtotal">-</dd>
                 </div>
                 <div>
-                  <dt>送料</dt>
+                  <dt>{% if selected_locale == "ja" %}送料{% else %}Shipping{% endif %}</dt>
                   <dd id="summary-shipping">-</dd>
                 </div>
                 <div>
-                  <dt>合計</dt>
+                  <dt>{% if selected_locale == "ja" %}合計{% else %}Total{% endif %}</dt>
                   <dd id="summary-total">-</dd>
                 </div>
               </dl>
             </section>
 
             <section class="checkout-card purchase-action-card">
-              <h3>お支払い</h3>
+              <h3>{% if selected_locale == "ja" %}お支払い{% else %}Payment{% endif %}</h3>
               <label class="terms-check">
                 <input id="terms_agreed" name="terms_agreed" type="checkbox" required>
-                <span>利用規約に同意する</span>
+                <span>
+                  {% if selected_locale == "ja" %}
+                  <a
+                    href="{{ terms_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="color:inherit;text-decoration:underline;"
+                  >利用規約</a>に同意する
+                  {% else %}
+                  I agree to the <a
+                    href="{{ terms_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="color:inherit;text-decoration:underline;"
+                  >terms of service</a>
+                  {% endif %}
+                </span>
               </label>
 
               <p class="field-hint">
                 {% if is_mock %}
-                mock モードのため実決済は行われず、確認メッセージのみ表示します。
+                {% if selected_locale == "ja" %}mock モードのため実決済は行われず、確認メッセージのみ表示します。{% else %}This is a mock mode, so no real payment will be processed and only a confirmation message will appear.{% endif %}
                 {% else %}
-                Stripe Checkout に遷移して決済します。
+                {% if selected_locale == "ja" %}Stripe Checkout に遷移して決済します。{% else %}You will be redirected to Stripe Checkout to complete payment.{% endif %}
                 {% endif %}
               </p>
               <button
+                id="purchase-submit"
                 type="button"
                 class="primary full"
+                data-ready-label="{% if is_mock %}{% if selected_locale == "ja" %}購入を確定（モック）{% else %}Confirm order (mock){% endif %}{% else %}{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}{% endif %}"
+                data-submitting-label="{% if selected_locale == "ja" %}送信中...{% else %}Submitting...{% endif %}"
                 hx-post="/purchase"
                 hx-target="#purchase-result"
                 hx-swap="innerHTML"
                 hx-include="#order-form"
               >
-                {% if is_mock %}購入を確定（モック）{% else %}支払う{% endif %}
+                {% if is_mock %}{% if selected_locale == "ja" %}購入を確定（モック）{% else %}Confirm order (mock){% endif %}{% else %}{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}{% endif %}
               </button>
-              <div id="purchase-result" class="purchase-result"></div>
+              <div id="purchase-status" class="purchase-status" role="status" aria-live="polite"></div>
+              <div id="purchase-result" class="purchase-result" role="status" aria-live="polite" aria-atomic="true"></div>
             </section>
           </div>
 
           <div class="step-actions">
-            <button type="button" class="ghost" data-prev-step="2">戻る</button>
+            <button type="button" class="ghost" data-prev-step="2">{% if selected_locale == "ja" %}戻る{% else %}Back{% endif %}</button>
           </div>
         </section>
       </form>
     </section>
 
     <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
+      <a
+        href="{{ terms_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
+      <a
+        href="{{ commercial_transactions_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Legal notice{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
       <a
         href="{{ privacy_policy_url }}"
         target="_blank"

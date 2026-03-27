@@ -43,21 +43,29 @@ class _AppRoot extends ConsumerWidget {
       return OrderPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onOpenPaymentSuccess: (sessionId) {
-          ref.invoke(appNavViewModel.showPaymentSuccess(sessionId: sessionId));
+        onOpenPaymentSuccess: (sessionId, orderId) {
+          ref.invoke(
+            appNavViewModel.showPaymentSuccess(
+              sessionId: sessionId,
+              orderId: orderId,
+            ),
+          );
         },
-        onOpenPaymentFailure: () {
-          ref.invoke(appNavViewModel.showPaymentFailure());
+        onOpenPaymentFailure: (orderId) {
+          ref.invoke(appNavViewModel.showPaymentFailure(orderId: orderId));
         },
       );
     }
 
     if (page.key.startsWith(AppPageKey.paymentSuccess)) {
-      final sessionId = page.data is String ? page.data as String : null;
+      final data = page.data is PaymentPageData
+          ? page.data as PaymentPageData
+          : null;
       return PaymentSuccessPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        sessionId: sessionId,
+        orderId: data?.orderId,
+        sessionId: data?.sessionId,
         onBackToTop: () {
           ref.invoke(appNavViewModel.popToRoot());
         },
@@ -65,9 +73,13 @@ class _AppRoot extends ConsumerWidget {
     }
 
     if (page.key.startsWith(AppPageKey.paymentFailure)) {
+      final data = page.data is PaymentPageData
+          ? page.data as PaymentPageData
+          : null;
       return PaymentFailurePage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
+        orderId: data?.orderId,
         onBackToTop: () {
           ref.invoke(appNavViewModel.popToRoot());
         },

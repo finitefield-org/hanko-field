@@ -47,6 +47,15 @@ ThemeData buildHfTheme() {
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: HfPalette.accent, width: 1.5),
       ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF8F2219), width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF8F2219), width: 1.5),
+      ),
+      errorStyle: const TextStyle(color: Color(0xFF8F2219)),
     ),
     cardTheme: CardThemeData(
       color: Colors.white,

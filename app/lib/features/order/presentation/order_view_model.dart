@@ -5,8 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 import '../../../app/config/app_runtime_config.dart';
+import '../data/order_draft_storage.dart';
 import '../data/order_api_repository.dart';
 import '../domain/order_models.dart';
+
+@immutable
+class PurchaseValidationGroup {
+  const PurchaseValidationGroup({required this.label, required this.items});
+
+  final String label;
+  final List<String> items;
+}
 
 @immutable
 class OrderScreenState {
@@ -159,6 +168,101 @@ class OrderScreenState {
     return catalog.fonts.isNotEmpty &&
         catalog.materials.isNotEmpty &&
         catalog.countries.isNotEmpty;
+  }
+
+  List<PurchaseValidationGroup> get purchaseValidationGroups {
+    final locale = this.locale;
+    final groups = <PurchaseValidationGroup>[];
+
+    final sealTextError = _validateSealText(
+      locale: locale,
+      line1: sealLine1,
+      line2: sealLine2,
+    );
+    if (sealTextError.isNotEmpty) {
+      groups.add(
+        PurchaseValidationGroup(
+          label: localizedUiText(locale, ja: '印影テキスト', en: 'Seal text'),
+          items: [sealTextError],
+        ),
+      );
+    }
+
+    final shippingIssues = <String>[];
+    if (recipientName.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: 'お届け先氏名', en: 'Recipient name'),
+      );
+    }
+    if (email.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: 'メールアドレス', en: 'Email address'),
+      );
+    } else if (!email.contains('@')) {
+      shippingIssues.add(
+        localizedUiText(
+          locale,
+          ja: 'メールアドレスの形式が正しくありません。',
+          en: 'Enter a valid email address.',
+        ),
+      );
+    }
+    if (phone.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: '電話番号', en: 'Phone number'),
+      );
+    }
+    if (postalCode.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: '郵便番号', en: 'Postal code'),
+      );
+    }
+    if (stateName.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: '都道府県 / 州', en: 'State / Prefecture'),
+      );
+    }
+    if (city.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: '市区町村 / City', en: 'City'),
+      );
+    }
+    if (addressLine1.trim().isEmpty) {
+      shippingIssues.add(
+        localizedUiText(locale, ja: '住所1', en: 'Address line 1'),
+      );
+    }
+    if (shippingIssues.isNotEmpty) {
+      groups.add(
+        PurchaseValidationGroup(
+          label: localizedUiText(locale, ja: 'お届け先情報', en: 'Shipping details'),
+          items: shippingIssues,
+        ),
+      );
+    }
+
+    if (!termsAgreed) {
+      groups.add(
+        PurchaseValidationGroup(
+          label: localizedUiText(locale, ja: '同意', en: 'Agreement'),
+          items: [
+            localizedUiText(
+              locale,
+              ja: '利用規約への同意',
+              en: 'Agree to the terms of service',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return groups;
+  }
+
+  bool get canSubmitPurchase {
+    return hasCatalog &&
+        !isSubmittingPurchase &&
+        purchaseValidationGroups.isEmpty;
   }
 
   String get effectiveCurrency {
@@ -380,11 +484,23 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
       ref.state = current.copyWith(isLoadingCatalog: true, catalogError: '');
 
+      final draftStorage = ref.watch(orderDraftStorageProvider);
+      final savedDraft = await draftStorage.load();
+      if (savedDraft != null) {
+        ref.state = _stateWithDraft(ref.watch(this), savedDraft);
+      }
+
       try {
         final runtime = ref.watch(appRuntimeConfigProvider);
         final api = ref.watch(orderApiRepositoryProvider);
         final publicConfig = await api.fetchPublicConfig();
-        final locale = _resolveLocale(runtime.preferredLocale, publicConfig);
+        final requestedLocale = ref.watch(this).locale.trim();
+        final locale = _resolveLocale(
+          requestedLocale.isNotEmpty
+              ? requestedLocale
+              : runtime.preferredLocale,
+          publicConfig,
+        );
 
         final catalogResponse = await api.fetchCatalog(locale: locale);
         final catalog = catalogResponse.catalog;
@@ -394,27 +510,14 @@ class OrderViewModel extends Provider<OrderScreenState> {
           throw Exception('catalog is empty');
         }
 
-        final style = KanjiStyle.japanese;
-        final defaultFont = _pickInitialFont(catalog, style);
-        final defaultShape = _pickInitialShape(catalog);
-        final defaultMaterial = _pickInitialMaterial(catalog, defaultShape);
-        final defaultCountry = catalog.countries.first;
+        final nextState = _stateWithCatalog(
+          state: ref.watch(this),
+          catalog: catalog,
+          locale: normalizeUiLocale(catalogResponse.locale),
+          currency: catalogResponse.currency,
+        );
 
-        ref.state = ref
-            .watch(this)
-            .copyWith(
-              catalog: catalog,
-              isLoadingCatalog: false,
-              catalogError: '',
-              locale: normalizeUiLocale(catalogResponse.locale),
-              currency: catalogResponse.currency,
-              step: OrderStep.design,
-              kanjiStyle: style,
-              selectedFontKey: defaultFont.key,
-              shape: defaultShape,
-              selectedMaterialKey: defaultMaterial.key,
-              selectedCountryCode: defaultCountry.code,
-            );
+        ref.state = nextState;
       } catch (error) {
         ref.state = ref
             .watch(this)
@@ -440,12 +543,13 @@ class OrderViewModel extends Provider<OrderScreenState> {
       ref.state = current.copyWith(
         locale: nextLocale,
         purchaseResult: null,
+        purchaseError: '',
         suggestions: const [],
         selectedSuggestionIndex: null,
         suggestionsError: '',
       );
 
-      if (!current.hasCatalog) {
+      if (current.isLoadingCatalog || !current.hasCatalog) {
         return;
       }
 
@@ -529,12 +633,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
     return mutate(updateSealLine1Mut, (ref) async {
       final current = ref.watch(this);
       final (line1, line2) = _normalizedSealLines(value, current.sealLine2);
-      final sealError = _validateSealText(line1: line1, line2: line2);
+      final sealError = _validateSealText(
+        locale: current.locale,
+        line1: line1,
+        line2: line2,
+      );
       ref.state = current.copyWith(
         sealLine1: line1,
         sealLine2: line2,
         sealTextError: sealError,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -543,12 +652,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
     return mutate(updateSealLine2Mut, (ref) async {
       final current = ref.watch(this);
       final (line1, line2) = _normalizedSealLines(current.sealLine1, value);
-      final sealError = _validateSealText(line1: line1, line2: line2);
+      final sealError = _validateSealText(
+        locale: current.locale,
+        line1: line1,
+        line2: line2,
+      );
       ref.state = current.copyWith(
         sealLine1: line1,
         sealLine2: line2,
         sealTextError: sealError,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -571,12 +685,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
       }
 
       final (line1, line2) = _normalizedSealLines(nextLine1, nextLine2);
-      final sealError = _validateSealText(line1: line1, line2: line2);
+      final sealError = _validateSealText(
+        locale: current.locale,
+        line1: line1,
+        line2: line2,
+      );
       ref.state = current.copyWith(
         sealLine1: line1,
         sealLine2: line2,
         sealTextError: sealError,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -605,6 +724,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         kanjiStyle: style,
         selectedFontKey: nextFontKey,
         selectedSuggestionIndex: null,
+        purchaseError: '',
       );
     });
   }
@@ -621,7 +741,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         return;
       }
 
-      ref.state = current.copyWith(selectedFontKey: key);
+      ref.state = current.copyWith(selectedFontKey: key, purchaseError: '');
     });
   }
 
@@ -647,6 +767,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         shape: shape,
         selectedMaterialKey: nextMaterialKey,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -668,6 +789,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
       ref.state = current.copyWith(
         selectedMaterialKey: key,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -689,6 +811,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
       ref.state = current.copyWith(
         selectedCountryCode: code,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -702,6 +825,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
       if (current.step == OrderStep.design) {
         final sealError = _validateSealText(
+          locale: current.locale,
           line1: current.sealLine1,
           line2: current.sealLine2,
         );
@@ -728,14 +852,14 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> updateRealName(String value) {
     return mutate(updateRealNameMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(realName: value);
+      ref.state = current.copyWith(realName: value, purchaseError: '');
     });
   }
 
   Call<void, OrderScreenState> selectCandidateGender(CandidateGender gender) {
     return mutate(selectCandidateGenderMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(candidateGender: gender);
+      ref.state = current.copyWith(candidateGender: gender, purchaseError: '');
     });
   }
 
@@ -751,7 +875,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
         ref.state = current.copyWith(
           suggestions: const [],
           selectedSuggestionIndex: null,
-          suggestionsError: '候補を表示するには本名を入力してください。',
+          suggestionsError: localizedUiText(
+            current.locale,
+            ja: '候補を表示するには本名を入力してください。',
+            en: 'Enter your name to see suggestions.',
+          ),
         );
         return;
       }
@@ -775,7 +903,13 @@ class OrderViewModel extends Provider<OrderScreenState> {
             .copyWith(
               suggestions: suggestions,
               selectedSuggestionIndex: suggestions.isEmpty ? null : 0,
-              suggestionsError: suggestions.isEmpty ? '候補を生成できませんでした。' : '',
+              suggestionsError: suggestions.isEmpty
+                  ? localizedUiText(
+                      current.locale,
+                      ja: '候補を生成できませんでした。',
+                      en: 'No suggestions were generated.',
+                    )
+                  : '',
               isGeneratingSuggestions: false,
             );
       } catch (error) {
@@ -786,7 +920,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
               selectedSuggestionIndex: null,
               suggestionsError: _apiErrorMessage(
                 error,
-                fallback: '候補生成に失敗しました。',
+                fallback: localizedUiText(
+                  current.locale,
+                  ja: '候補生成に失敗しました。',
+                  en: 'Failed to generate suggestions.',
+                ),
               ),
               isGeneratingSuggestions: false,
             );
@@ -807,7 +945,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
           : candidate.kanji;
       final sourceLine2 = candidate.line2;
       final (line1, line2) = _normalizedSealLines(sourceLine1, sourceLine2);
-      final sealError = _validateSealText(line1: line1, line2: line2);
+      final sealError = _validateSealText(
+        locale: current.locale,
+        line1: line1,
+        line2: line2,
+      );
 
       ref.state = current.copyWith(
         selectedSuggestionIndex: index,
@@ -815,6 +957,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         sealLine2: line2,
         sealTextError: sealError,
         purchaseResult: null,
+        purchaseError: '',
       );
     });
   }
@@ -822,63 +965,99 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> updateRecipientName(String value) {
     return mutate(updateRecipientNameMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(recipientName: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        recipientName: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updateEmail(String value) {
     return mutate(updateEmailMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(email: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        email: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updatePhone(String value) {
     return mutate(updatePhoneMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(phone: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        phone: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updatePostalCode(String value) {
     return mutate(updatePostalCodeMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(postalCode: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        postalCode: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updateStateName(String value) {
     return mutate(updateStateNameMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(stateName: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        stateName: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updateCity(String value) {
     return mutate(updateCityMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(city: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        city: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updateAddressLine1(String value) {
     return mutate(updateAddressLine1Mut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(addressLine1: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        addressLine1: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> updateAddressLine2(String value) {
     return mutate(updateAddressLine2Mut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(addressLine2: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        addressLine2: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
   Call<void, OrderScreenState> setTermsAgreed(bool value) {
     return mutate(setTermsAgreedMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(termsAgreed: value, purchaseResult: null);
+      ref.state = current.copyWith(
+        termsAgreed: value,
+        purchaseResult: null,
+        purchaseError: '',
+      );
     });
   }
 
@@ -890,6 +1069,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
       }
 
       final sealError = _validateSealText(
+        locale: current.locale,
         line1: current.sealLine1,
         line2: current.sealLine2,
       );
@@ -914,6 +1094,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
       ref.state = current.copyWith(
         isSubmittingPurchase: true,
         purchaseError: '',
+        purchaseResult: null,
       );
 
       try {
@@ -984,7 +1165,14 @@ class OrderViewModel extends Provider<OrderScreenState> {
             .watch(this)
             .copyWith(
               isSubmittingPurchase: false,
-              purchaseError: _apiErrorMessage(error, fallback: '購入処理に失敗しました。'),
+              purchaseError: _apiErrorMessage(
+                error,
+                fallback: localizedUiText(
+                  current.locale,
+                  ja: '購入処理に失敗しました。',
+                  en: 'Failed to process the purchase.',
+                ),
+              ),
               purchaseResult: null,
             );
       }
@@ -995,6 +1183,97 @@ class OrderViewModel extends Provider<OrderScreenState> {
 final orderViewModel = OrderViewModel();
 
 const _maxSealCharTotal = 2;
+
+OrderScreenState _stateWithDraft(OrderScreenState state, OrderDraftData draft) {
+  final (sealLine1, sealLine2) = _normalizedSealLines(
+    draft.sealLine1,
+    draft.sealLine2,
+  );
+
+  return state.copyWith(
+    step: OrderStep.fromValue(draft.stepValue),
+    sealLine1: sealLine1,
+    sealLine2: sealLine2,
+    sealTextError: '',
+    kanjiStyle: KanjiStyle.fromCode(draft.kanjiStyleCode),
+    selectedFontKey: draft.selectedFontKey,
+    shape: SealShape.fromCode(draft.shapeCode),
+    selectedMaterialKey: draft.selectedMaterialKey,
+    selectedCountryCode: draft.selectedCountryCode,
+    realName: draft.realName,
+    candidateGender: CandidateGender.fromCode(draft.candidateGenderCode),
+    suggestions: const [],
+    selectedSuggestionIndex: null,
+    suggestionsError: '',
+    isGeneratingSuggestions: false,
+    recipientName: draft.recipientName,
+    email: draft.email,
+    phone: draft.phone,
+    postalCode: draft.postalCode,
+    stateName: draft.stateName,
+    city: draft.city,
+    addressLine1: draft.addressLine1,
+    addressLine2: draft.addressLine2,
+    termsAgreed: draft.termsAgreed,
+    isSubmittingPurchase: false,
+    purchaseResult: null,
+    purchaseError: '',
+  );
+}
+
+OrderScreenState _stateWithCatalog({
+  required OrderScreenState state,
+  required CatalogData catalog,
+  required String locale,
+  required String currency,
+}) {
+  var nextStyle = state.kanjiStyle;
+  var visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
+  if (visibleFonts.isEmpty) {
+    nextStyle = catalog.fonts.first.kanjiStyle;
+    visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
+  }
+
+  final nextFontKey =
+      visibleFonts.any((font) => font.key == state.selectedFontKey)
+      ? state.selectedFontKey
+      : visibleFonts.first.key;
+
+  var nextShape = state.shape;
+  if (!catalog.materials.any((material) => material.shape == nextShape)) {
+    nextShape = _pickInitialShape(catalog);
+  }
+  final visibleMaterials = _visibleMaterialsFor(
+    catalog: catalog,
+    shape: nextShape,
+  );
+  final nextMaterialKey =
+      visibleMaterials.any(
+        (material) => material.key == state.selectedMaterialKey,
+      )
+      ? state.selectedMaterialKey
+      : visibleMaterials.first.key;
+
+  final nextCountryCode =
+      catalog.countries.any(
+        (country) => country.code == state.selectedCountryCode,
+      )
+      ? state.selectedCountryCode
+      : catalog.countries.first.code;
+
+  return state.copyWith(
+    catalog: catalog,
+    isLoadingCatalog: false,
+    catalogError: '',
+    locale: normalizeUiLocale(locale),
+    currency: currency,
+    kanjiStyle: nextStyle,
+    selectedFontKey: nextFontKey,
+    shape: nextShape,
+    selectedMaterialKey: nextMaterialKey,
+    selectedCountryCode: nextCountryCode,
+  );
+}
 
 String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
   final supported = publicConfig.supportedLocales;
@@ -1016,24 +1295,11 @@ String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
   return normalizedPreferred.isNotEmpty ? normalizedPreferred : 'ja';
 }
 
-FontOption _pickInitialFont(CatalogData catalog, KanjiStyle style) {
-  final visibleFonts = _visibleFontsFor(catalog: catalog, style: style);
-  if (visibleFonts.isNotEmpty) {
-    return visibleFonts.first;
-  }
-  return catalog.fonts.first;
-}
-
 SealShape _pickInitialShape(CatalogData catalog) {
   if (catalog.materials.any((material) => material.shape == SealShape.square)) {
     return SealShape.square;
   }
   return catalog.materials.first.shape;
-}
-
-MaterialOption _pickInitialMaterial(CatalogData catalog, SealShape shape) {
-  final visibleMaterials = _visibleMaterialsFor(catalog: catalog, shape: shape);
-  return visibleMaterials.first;
 }
 
 List<FontOption> _visibleFontsFor({
@@ -1071,21 +1337,37 @@ List<MaterialOption> _visibleMaterialsFor({
   return (firstChars, secondChars);
 }
 
-String _validateSealText({required String line1, required String line2}) {
+String _validateSealText({
+  required String locale,
+  required String line1,
+  required String line2,
+}) {
   if (line1.characters.isEmpty) {
-    return 'お名前を入力してください。';
+    return localizedUiText(locale, ja: 'お名前を入力してください。', en: 'Enter your name.');
   }
 
   if (_containsWhitespace(line1)) {
-    return '1行目に空白は使えません。';
+    return localizedUiText(
+      locale,
+      ja: '1行目に空白は使えません。',
+      en: 'Line 1 cannot contain spaces.',
+    );
   }
 
   if (line2.isNotEmpty && _containsWhitespace(line2)) {
-    return '2行目に空白は使えません。';
+    return localizedUiText(
+      locale,
+      ja: '2行目に空白は使えません。',
+      en: 'Line 2 cannot contain spaces.',
+    );
   }
 
   if (line1.characters.length + line2.characters.length > _maxSealCharTotal) {
-    return '印影テキストは1行目と2行目の合計で2文字以内で入力してください。';
+    return localizedUiText(
+      locale,
+      ja: '印影テキストは1行目と2行目の合計で2文字以内で入力してください。',
+      en: 'Use up to 2 characters total across lines 1 and 2.',
+    );
   }
 
   return '';
@@ -1096,34 +1378,22 @@ bool _containsWhitespace(String value) {
 }
 
 String _validatePurchase(OrderScreenState state) {
-  if (state.recipientName.trim().isEmpty) {
-    return 'お届け先氏名を入力してください。';
+  final groups = state.purchaseValidationGroups;
+  if (groups.isEmpty) {
+    return '';
   }
-  if (state.email.trim().isEmpty) {
-    return 'メールアドレスを入力してください。';
-  }
-  if (!state.email.contains('@')) {
-    return 'メールアドレスの形式が正しくありません。';
-  }
-  if (state.phone.trim().isEmpty) {
-    return '電話番号を入力してください。';
-  }
-  if (state.postalCode.trim().isEmpty) {
-    return '郵便番号を入力してください。';
-  }
-  if (state.stateName.trim().isEmpty) {
-    return '都道府県 / 州を入力してください。';
-  }
-  if (state.city.trim().isEmpty) {
-    return '市区町村 / City を入力してください。';
-  }
-  if (state.addressLine1.trim().isEmpty) {
-    return '住所1を入力してください。';
-  }
-  if (!state.termsAgreed) {
-    return '利用規約に同意してください。';
-  }
-  return '';
+  return _formatPurchaseValidationMessage(groups);
+}
+
+String _formatPurchaseValidationMessage(List<PurchaseValidationGroup> groups) {
+  return groups
+      .map((group) {
+        if (group.items.length == 1) {
+          return group.items.first;
+        }
+        return '${group.label}: ${group.items.join(' / ')}';
+      })
+      .join('\n');
 }
 
 String _newIdempotencyKey() {

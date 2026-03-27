@@ -458,6 +458,9 @@ struct MaterialDetailView {
     label_en: String,
     description_ja: String,
     description_en: String,
+    comparison_texture: String,
+    comparison_weight: String,
+    comparison_usage: String,
     shape: String,
     price_usd: i64,
     price_jpy: i64,
@@ -2612,6 +2615,8 @@ impl ServerState {
         let data = self.data.read().await;
         let material = data.materials.get(key)?;
         let primary_photo = select_primary_material_photo(&material.photos);
+        let (comparison_texture, comparison_weight, comparison_usage) =
+            material_comparison_profile(&material.key);
 
         Some(MaterialDetailView {
             key: material.key.clone(),
@@ -2627,6 +2632,9 @@ impl ServerState {
                 .get("en")
                 .cloned()
                 .unwrap_or_default(),
+            comparison_texture: comparison_texture.to_owned(),
+            comparison_weight: comparison_weight.to_owned(),
+            comparison_usage: comparison_usage.to_owned(),
             shape: material.shape.clone(),
             price_usd: material.price_usd,
             price_jpy: material.price_jpy,
@@ -4740,6 +4748,23 @@ fn material_shape_label(shape: &str) -> &'static str {
     }
 }
 
+fn material_comparison_profile(material_key: &str) -> (&'static str, &'static str, &'static str) {
+    match material_key {
+        "boxwood" => ("さらりとした木目", "軽めで扱いやすい", "日常使いの角印向き"),
+        "black_buffalo" => (
+            "しっとりした艶感",
+            "中量で安定感がある",
+            "丸印の定番として選びやすい",
+        ),
+        "titanium" => (
+            "金属らしいシャープな質感",
+            "重めで高密度",
+            "長期使用や耐久性重視に向く",
+        ),
+        _ => ("標準的な質感", "中程度の重さ", "汎用的"),
+    }
+}
+
 fn normalize_storage_bucket_name(value: &str) -> String {
     value
         .trim()
@@ -6125,10 +6150,14 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "Boxwood".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
-                    ("ja".to_owned(), "軽くて扱いやすい定番材".to_owned()),
+                    (
+                        "ja".to_owned(),
+                        "軽くて扱いやすい、木目のやわらかい定番材".to_owned(),
+                    ),
                     (
                         "en".to_owned(),
-                        "A standard wood that is lightweight and easy to handle.".to_owned(),
+                        "A classic wood with a soft grain that is lightweight and easy to handle."
+                            .to_owned(),
                     ),
                 ]),
                 shape: "square".to_owned(),
@@ -6161,10 +6190,13 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "Black Buffalo".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
-                    ("ja".to_owned(), "しっとりした質感で耐久性が高い".to_owned()),
+                    (
+                        "ja".to_owned(),
+                        "しっとりした質感で、落ち着いた印象と耐久性を両立".to_owned(),
+                    ),
                     (
                         "en".to_owned(),
-                        "Durable material with a smooth texture.".to_owned(),
+                        "A durable material with a smooth, composed presence.".to_owned(),
                     ),
                 ]),
                 shape: "round".to_owned(),
@@ -6197,10 +6229,14 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     ("en".to_owned(), "Titanium".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
-                    ("ja".to_owned(), "重厚で摩耗に強いプレミアム材".to_owned()),
+                    (
+                        "ja".to_owned(),
+                        "重厚感があり、摩耗に強いプレミアム材".to_owned(),
+                    ),
                     (
                         "en".to_owned(),
-                        "Premium material with excellent wear resistance.".to_owned(),
+                        "A premium material with a substantial feel and excellent wear resistance."
+                            .to_owned(),
                     ),
                 ]),
                 shape: "square".to_owned(),

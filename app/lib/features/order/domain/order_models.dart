@@ -23,6 +23,14 @@ enum OrderStep {
   const OrderStep(this.value);
   final int value;
 
+  static OrderStep fromValue(int value) {
+    return switch (value) {
+      2 => OrderStep.material,
+      3 => OrderStep.purchase,
+      _ => OrderStep.design,
+    };
+  }
+
   OrderStep next() {
     return switch (this) {
       OrderStep.design => OrderStep.material,
@@ -80,6 +88,15 @@ enum CandidateGender {
   const CandidateGender(this.code, this.label);
   final String code;
   final String label;
+
+  static CandidateGender fromCode(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    return switch (normalized) {
+      'male' => CandidateGender.male,
+      'female' => CandidateGender.female,
+      _ => CandidateGender.unspecified,
+    };
+  }
 
   String localizedLabel(String locale) {
     if (isEnglishLocale(locale)) {
@@ -252,6 +269,130 @@ class PurchaseResultData {
   });
 }
 
+@immutable
+class OrderDraftData {
+  static const int version = 1;
+
+  final int stepValue;
+  final String sealLine1;
+  final String sealLine2;
+  final String kanjiStyleCode;
+  final String selectedFontKey;
+  final String shapeCode;
+  final String selectedMaterialKey;
+  final String selectedCountryCode;
+  final String realName;
+  final String candidateGenderCode;
+  final String recipientName;
+  final String email;
+  final String phone;
+  final String postalCode;
+  final String stateName;
+  final String city;
+  final String addressLine1;
+  final String addressLine2;
+  final bool termsAgreed;
+
+  const OrderDraftData({
+    required this.stepValue,
+    required this.sealLine1,
+    required this.sealLine2,
+    required this.kanjiStyleCode,
+    required this.selectedFontKey,
+    required this.shapeCode,
+    required this.selectedMaterialKey,
+    required this.selectedCountryCode,
+    required this.realName,
+    required this.candidateGenderCode,
+    required this.recipientName,
+    required this.email,
+    required this.phone,
+    required this.postalCode,
+    required this.stateName,
+    required this.city,
+    required this.addressLine1,
+    required this.addressLine2,
+    required this.termsAgreed,
+  });
+
+  Map<String, Object?> toJson() {
+    return {
+      'version': version,
+      'step': stepValue,
+      'seal_line1': sealLine1,
+      'seal_line2': sealLine2,
+      'kanji_style': kanjiStyleCode,
+      'selected_font_key': selectedFontKey,
+      'shape': shapeCode,
+      'selected_material_key': selectedMaterialKey,
+      'selected_country_code': selectedCountryCode,
+      'real_name': realName,
+      'candidate_gender': candidateGenderCode,
+      'recipient_name': recipientName,
+      'email': email,
+      'phone': phone,
+      'postal_code': postalCode,
+      'state_name': stateName,
+      'city': city,
+      'address_line1': addressLine1,
+      'address_line2': addressLine2,
+      'terms_agreed': termsAgreed,
+    };
+  }
+
+  factory OrderDraftData.fromJson(Map<String, Object?> json) {
+    return OrderDraftData(
+      stepValue: _asInt(json['step']),
+      sealLine1: _asString(json['seal_line1']),
+      sealLine2: _asString(json['seal_line2']),
+      kanjiStyleCode: _asString(json['kanji_style']),
+      selectedFontKey: _asString(json['selected_font_key']),
+      shapeCode: _asString(json['shape']),
+      selectedMaterialKey: _asString(json['selected_material_key']),
+      selectedCountryCode: _asString(json['selected_country_code']),
+      realName: _asString(json['real_name']),
+      candidateGenderCode: _asString(json['candidate_gender']),
+      recipientName: _asString(json['recipient_name']),
+      email: _asString(json['email']),
+      phone: _asString(json['phone']),
+      postalCode: _asString(json['postal_code']),
+      stateName: _asString(json['state_name']),
+      city: _asString(json['city']),
+      addressLine1: _asString(json['address_line1']),
+      addressLine2: _asString(json['address_line2']),
+      termsAgreed: _asBool(json['terms_agreed']),
+    );
+  }
+}
+
+int _asInt(Object? value, {int fallback = 0}) {
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value.trim()) ?? fallback;
+  }
+  return fallback;
+}
+
+String _asString(Object? value) {
+  return value?.toString().trim() ?? '';
+}
+
+bool _asBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'on';
+  }
+  return false;
+}
+
 String formatMoney(int amount, String currency) {
   final normalizedCurrency = currency.trim().toUpperCase();
   final sign = amount < 0 ? '-' : '';
@@ -290,4 +431,12 @@ String normalizeUiLocale(String locale) {
     return 'en';
   }
   return 'ja';
+}
+
+String localizedUiText(
+  String locale, {
+  required String ja,
+  required String en,
+}) {
+  return isEnglishLocale(locale) ? en : ja;
 }

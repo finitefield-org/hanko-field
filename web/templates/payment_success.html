@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>支払い完了 | Stone Signature</title>
+  <title>{% if selected_locale == "ja" %}支払い完了{% else %}Payment complete{% endif %} | Stone Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js?v=20260223-2" defer></script>
+  <script src="/static/app.js?v=20260319-1" defer></script>
 </head>
 <body>
   <div class="bg-shape bg-shape-left"></div>
@@ -19,8 +19,8 @@
       <div class="hero-top-row">
         <div>
           <p class="hero-eyebrow">Stone Signature</p>
-          <h1>お支払いが完了しました</h1>
-          <p class="hero-description">ご注文ありがとうございます。確認メールを送信後、順次製作を開始します。</p>
+          <h1>{% if selected_locale == "ja" %}お支払いが完了しました{% else %}Payment completed{% endif %}</h1>
+          <p class="hero-description">{% if selected_locale == "ja" %}ご注文ありがとうございます。確認メールを送信後、順次製作を開始します。{% else %}Thank you for your order. We will start production after the confirmation email is sent.{% endif %}</p>
         </div>
         <label class="language-select-wrap" aria-label="Language selector">
           <span class="language-icon" aria-hidden="true">🌐</span>
@@ -34,19 +34,56 @@
 
     <section class="panel">
       <div class="result-card is-success">
-        <h4>決済を受け付けました</h4>
-        <p>内容確認後、手彫り印鑑の製作に進みます。</p>
+        <h4>{% if selected_locale == "ja" %}決済を受け付けました{% else %}Payment received{% endif %}</h4>
+        <p>{% if selected_locale == "ja" %}内容確認後、手彫り印鑑の製作に進みます。{% else %}We will proceed with crafting your hand-carved seal after a review of the order details.{% endif %}</p>
+        {% if has_order_id %}
+        <p>{% if selected_locale == "ja" %}注文ID{% else %}Order ID{% endif %}: {{ order_id }}</p>
+        {% endif %}
         {% if has_session_id %}
-        <p>決済セッションID: {{ session_id }}</p>
+        <p>{% if selected_locale == "ja" %}決済セッションID{% else %}Session ID{% endif %}: {{ session_id }}</p>
         {% endif %}
       </div>
 
-      <div class="step-actions">
-        <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">トップへ戻る</button>
+      <div class="result-card is-info payment-followup-card">
+        <h4>{% if selected_locale == "ja" %}次のアクション{% else %}Next steps{% endif %}</h4>
+        <ul class="payment-followup-list">
+          <li>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Check your confirmation email.{% endif %}</li>
+          <li>{% if selected_locale == "ja" %}注文IDは問い合わせ時にお伝えください。{% else %}Keep your order ID for support.{% endif %}</li>
+          <li>{% if selected_locale == "ja" %}メールが届かない場合はお問い合わせください。{% else %}If the email does not arrive, contact us.{% endif %}</li>
+        </ul>
+        <div class="step-actions">
+          <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">{% if selected_locale == "ja" %}トップへ戻る{% else %}Back to top{% endif %}</button>
+          <a
+            class="action-link"
+            href="{{ contact_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {% if selected_locale == "ja" %}お問い合わせ{% else %}Contact us{% endif %}
+          </a>
+        </div>
       </div>
     </section>
 
     <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
+      <a
+        href="{{ terms_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
+      <a
+        href="{{ commercial_transactions_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Legal notice{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
       <a
         href="{{ privacy_policy_url }}"
         target="_blank"

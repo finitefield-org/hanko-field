@@ -67,7 +67,7 @@
 | フィールド | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `label_i18n` | map<string,string> | Yes | 材質名（例: `ja`, `en`） |
-| `description_i18n` | map<string,string> | Yes | 説明文（例: `ja`, `en`） |
+| `description_i18n` | map<string,string> | Yes | 説明文（質感・重さ・用途が判断しやすい比較説明、例: `ja`, `en`） |
 | `shape` | string | Yes | `square` or `round` |
 | `photos` | array<map> | Yes | 材質写真一覧（1件以上、`sort_order` 昇順で利用） |
 | `photos[].asset_id` | string | Yes | 画像 ID（例: `mat_xxxxx`） |
