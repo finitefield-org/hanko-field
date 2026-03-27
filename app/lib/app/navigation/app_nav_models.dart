@@ -9,6 +9,14 @@ class AppPageKey {
 }
 
 @immutable
+class PaymentPageData {
+  final String? orderId;
+  final String? sessionId;
+
+  const PaymentPageData({this.orderId, this.sessionId});
+}
+
+@immutable
 class AppNavState {
   final List<PageEntry> pages;
   final int serial;

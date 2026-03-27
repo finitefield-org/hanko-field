@@ -19,7 +19,10 @@ class AppNavViewModel extends Provider<AppNavState> {
   late final popTopMut = mutation<void>(#popTop);
   late final popToRootMut = mutation<void>(#popToRoot);
 
-  Call<void, AppNavState> showPaymentSuccess({String? sessionId}) {
+  Call<void, AppNavState> showPaymentSuccess({
+    String? sessionId,
+    String? orderId,
+  }) {
     return mutate(showPaymentSuccessMut, (ref) async {
       final current = ref.watch(this);
       final nextSerial = current.serial + 1;
@@ -30,14 +33,14 @@ class AppNavViewModel extends Provider<AppNavState> {
           PageEntry(
             key: '${AppPageKey.paymentSuccess}_$nextSerial',
             name: '/payment/success',
-            data: sessionId,
+            data: PaymentPageData(orderId: orderId, sessionId: sessionId),
           ),
         ],
       );
     });
   }
 
-  Call<void, AppNavState> showPaymentFailure() {
+  Call<void, AppNavState> showPaymentFailure({String? orderId}) {
     return mutate(showPaymentFailureMut, (ref) async {
       final current = ref.watch(this);
       final nextSerial = current.serial + 1;
@@ -48,6 +51,7 @@ class AppNavViewModel extends Provider<AppNavState> {
           PageEntry(
             key: '${AppPageKey.paymentFailure}_$nextSerial',
             name: '/payment/failure',
+            data: PaymentPageData(orderId: orderId),
           ),
         ],
       );

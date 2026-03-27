@@ -61,3 +61,24 @@ String privacyPolicyUrlForLocaleCode(String code) {
 String privacyPolicyUrlForLocale(AppLocale locale) {
   return privacyPolicyUrlForLocaleCode(locale.code);
 }
+
+String inquiryUrlForLocaleCode(String code) {
+  final locale = normalizeUiLocale(code);
+  if (locale == 'ja') {
+    return 'https://finitefield.org/inquiry/';
+  }
+  return 'https://finitefield.org/$locale/inquiry/';
+}
+
+String inquiryUrlForLocale(AppLocale locale) {
+  return inquiryUrlForLocaleCode(locale.code);
+}
+
+String commercialTransactionsUrlForLocaleCode(String code) {
+  final locale = normalizeUiLocale(code);
+  return 'https://finitefield.org/commercial-transactions?lang=$locale';
+}
+
+String commercialTransactionsUrlForLocale(AppLocale locale) {
+  return commercialTransactionsUrlForLocaleCode(locale.code);
+}

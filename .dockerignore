@@ -1,0 +1,11 @@
+.git
+.gitignore
+.devbox
+**/.devbox
+**/target
+**/build
+**/.dart_tool
+**/Pods
+.env*
+*.log
+.DS_Store

@@ -1,6 +1,10 @@
 (() => {
   const localeSelects = Array.from(document.querySelectorAll("[data-locale-select]"));
   const localeInput = document.getElementById("locale");
+  const isEnglishLocale = (document.documentElement.lang || "")
+    .trim()
+    .toLowerCase()
+    .startsWith("en");
 
   function parseLocale(raw) {
     const normalized = (raw || "").trim().toLowerCase();
@@ -11,6 +15,10 @@
       return "ja";
     }
     return "";
+  }
+
+  function localizedText(ja, en) {
+    return isEnglishLocale ? en : ja;
   }
 
   function rememberLocale(locale) {
@@ -43,6 +51,7 @@
       if (localeInput) {
         localeInput.value = nextLocale;
       }
+      saveDraft();
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("lang", nextLocale);
       window.location.assign(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
@@ -66,6 +75,10 @@
   const toggleWritingModeButton = document.getElementById("toggle-writing-mode");
   const countrySelect = document.getElementById("country");
   const fontChips = Array.from(document.querySelectorAll(".font-chip"));
+  const sealLineInputs = [line1Input, line2Input].filter(Boolean);
+  const shapeOptionChips = Array.from(
+    document.querySelectorAll(".shape-fieldset .option-chip"),
+  );
   const preview = document.getElementById("seal-preview");
   const previewLine1 = document.getElementById("seal-preview-line1");
   const previewLine2 = document.getElementById("seal-preview-line2");
@@ -80,18 +93,59 @@
   const summarySubtotal = document.getElementById("summary-subtotal");
   const summaryShipping = document.getElementById("summary-shipping");
   const summaryTotal = document.getElementById("summary-total");
+  const purchaseButton = document.getElementById("purchase-submit");
+  const purchaseStatus = document.getElementById("purchase-status");
+  const purchaseResult = document.getElementById("purchase-result");
+  const recipientNameInput = document.getElementById("recipient_name");
+  const emailInput = document.getElementById("email");
+  const phoneInput = document.getElementById("phone");
+  const postalCodeInput = document.getElementById("postal_code");
+  const stateInput = document.getElementById("state");
+  const cityInput = document.getElementById("city");
+  const addressLine1Input = document.getElementById("address_line1");
+  const termsAgreedInput = document.getElementById("terms_agreed");
+
+  let purchaseSubmitting = false;
+  let purchaseErrorMessage = "";
+
+  form.addEventListener("input", () => {
+    saveDraft();
+    if (!purchaseSubmitting) {
+      clearPurchaseResult();
+      purchaseErrorMessage = "";
+    }
+    renderPurchaseStatus();
+  });
+  form.addEventListener("change", () => {
+    saveDraft();
+    if (!purchaseSubmitting) {
+      clearPurchaseResult();
+      purchaseErrorMessage = "";
+    }
+    renderPurchaseStatus();
+  });
 
   let currentStep = 1;
 
-  const shapeLabelMap = {
-    square: "角印",
-    round: "丸印",
-  };
+  const shapeLabelMap = isEnglishLocale
+    ? {
+        square: "Square seal",
+        round: "Round seal",
+      }
+    : {
+        square: "角印",
+        round: "丸印",
+      };
 
-  const previewShapeMap = {
-    square: "角",
-    round: "丸",
-  };
+  const previewShapeMap = isEnglishLocale
+    ? {
+        square: "Square",
+        round: "Round",
+      }
+    : {
+        square: "角",
+        round: "丸",
+      };
   const PINYIN_TONE_MAP = {
     ā: "a",
     á: "a",
@@ -133,6 +187,179 @@
     2: "#step-2",
     3: "#step-3",
   };
+  const DRAFT_STORAGE_KEY = "hanko-field-order-draft-v1";
+  const DRAFT_VERSION = 1;
+
+  function hasStepHash(hash = window.location.hash) {
+    return Object.prototype.hasOwnProperty.call(
+      STEP_HASH_TO_VALUE,
+      (hash || "").toLowerCase(),
+    );
+  }
+
+  function readDraft() {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) {
+        return null;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") {
+        return null;
+      }
+
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveDraft() {
+    if (!form) {
+      return;
+    }
+
+    const payload = {
+      version: DRAFT_VERSION,
+      step: currentStep,
+      seal_line1: line1Input?.value.trim() || "",
+      seal_line2: line2Input?.value.trim() || "",
+      kanji_style: selectedKanjiStyle(),
+      selected_font_key: fontInput?.value.trim() || "",
+      shape: selectedShape(),
+      selected_material_key: selectedMaterial()?.value || "",
+      selected_country_code: countrySelect?.value.trim() || "",
+      real_name: document.getElementById("real_name")?.value || "",
+      candidate_gender: document.getElementById("candidate_gender")?.value || "unspecified",
+      recipient_name: document.getElementById("recipient_name")?.value || "",
+      email: document.getElementById("email")?.value || "",
+      phone: document.getElementById("phone")?.value || "",
+      postal_code: document.getElementById("postal_code")?.value || "",
+      state_name: document.getElementById("state")?.value || "",
+      city: document.getElementById("city")?.value || "",
+      address_line1: document.getElementById("address_line1")?.value || "",
+      address_line2: document.getElementById("address_line2")?.value || "",
+      terms_agreed: document.getElementById("terms_agreed")?.checked || false,
+    };
+
+    try {
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    } catch (_) {}
+  }
+
+  function normalizeDraftStep(rawStep) {
+    const parsed = Number.parseInt(String(rawStep || ""), 10);
+    return normalizeStep(Number.isFinite(parsed) ? parsed : 1);
+  }
+
+  function normalizeDraftStyle(rawStyle) {
+    const normalized = (rawStyle || "").trim().toLowerCase();
+    if (normalized === "chinese" || normalized === "taiwanese") {
+      return normalized;
+    }
+    return DEFAULT_KANJI_STYLE;
+  }
+
+  function normalizeDraftShape(rawShape) {
+    return (rawShape || "").trim().toLowerCase() === "round" ? "round" : "square";
+  }
+
+  function normalizeDraftGender(rawGender) {
+    const normalized = (rawGender || "").trim().toLowerCase();
+    if (normalized === "male" || normalized === "female") {
+      return normalized;
+    }
+    return "unspecified";
+  }
+
+  function restoreDraft(draft) {
+    if (!draft || typeof draft !== "object") {
+      return;
+    }
+
+    if (line1Input) {
+      line1Input.value = (draft.seal_line1 || "").trim();
+    }
+    if (line2Input) {
+      line2Input.value = (draft.seal_line2 || "").trim();
+    }
+    if (kanjiStyleSelect) {
+      kanjiStyleSelect.value = normalizeDraftStyle(draft.kanji_style);
+    }
+    if (fontInput) {
+      fontInput.value = (draft.selected_font_key || "").trim();
+    }
+
+    const selectedShapeValue = normalizeDraftShape(draft.shape);
+    form
+      .querySelectorAll("input[name='shape']")
+      .forEach((radio) => {
+        radio.checked = radio.value === selectedShapeValue;
+      });
+
+    const selectedMaterialValue = (draft.selected_material_key || "").trim();
+    materialRadios.forEach((radio) => {
+      radio.checked = radio.value === selectedMaterialValue;
+    });
+
+    if (countrySelect) {
+      const selectedCountryValue = (draft.selected_country_code || "").trim();
+      countrySelect.value = selectedCountryValue;
+      if (
+        selectedCountryValue !== "" &&
+        countrySelect.value !== selectedCountryValue &&
+        countrySelect.options.length > 0
+      ) {
+        countrySelect.selectedIndex = 0;
+      }
+    }
+
+    const realNameInput = document.getElementById("real_name");
+    if (realNameInput) {
+      realNameInput.value = draft.real_name || "";
+    }
+    const candidateGenderInput = document.getElementById("candidate_gender");
+    if (candidateGenderInput) {
+      candidateGenderInput.value = normalizeDraftGender(draft.candidate_gender);
+    }
+    const recipientNameInput = document.getElementById("recipient_name");
+    if (recipientNameInput) {
+      recipientNameInput.value = draft.recipient_name || "";
+    }
+    const emailInput = document.getElementById("email");
+    if (emailInput) {
+      emailInput.value = draft.email || "";
+    }
+    const phoneInput = document.getElementById("phone");
+    if (phoneInput) {
+      phoneInput.value = draft.phone || "";
+    }
+    const postalCodeInput = document.getElementById("postal_code");
+    if (postalCodeInput) {
+      postalCodeInput.value = draft.postal_code || "";
+    }
+    const stateInput = document.getElementById("state");
+    if (stateInput) {
+      stateInput.value = draft.state_name || "";
+    }
+    const cityInput = document.getElementById("city");
+    if (cityInput) {
+      cityInput.value = draft.city || "";
+    }
+    const addressLine1Input = document.getElementById("address_line1");
+    if (addressLine1Input) {
+      addressLine1Input.value = draft.address_line1 || "";
+    }
+    const addressLine2Input = document.getElementById("address_line2");
+    if (addressLine2Input) {
+      addressLine2Input.value = draft.address_line2 || "";
+    }
+    const termsAgreedInput = document.getElementById("terms_agreed");
+    if (termsAgreedInput) {
+      termsAgreedInput.checked = Boolean(draft.terms_agreed);
+    }
+  }
 
   function normalizeStep(step) {
     return step === 2 || step === 3 ? step : 1;
@@ -203,6 +430,30 @@
     if (syncHash) {
       syncHashToStep(normalizedStep);
     }
+
+    saveDraft();
+  }
+
+  function syncShapeOptionStates() {
+    shapeOptionChips.forEach((chip) => {
+      const radio = chip.querySelector("input[name='shape']");
+      chip.classList.toggle("is-selected", Boolean(radio?.checked));
+    });
+  }
+
+  function setSealTextErrorState(message) {
+    if (!sealTextError) {
+      return;
+    }
+
+    const hasError = message !== "";
+    sealTextError.textContent = message;
+    sealTextError.classList.toggle("is-visible", hasError);
+
+    sealLineInputs.forEach((input) => {
+      input.classList.toggle("is-invalid", hasError);
+      input.setAttribute("aria-invalid", hasError ? "true" : "false");
+    });
   }
 
   function validateSealText() {
@@ -213,26 +464,37 @@
     const { line1, line2 } = getRawSealLines();
 
     if ([...line1].length === 0) {
-      sealTextError.textContent = "お名前を入力してください。";
+      setSealTextErrorState(
+        localizedText("お名前を入力してください。", "Enter the seal text."),
+      );
       return false;
     }
 
     if (/\s/u.test(line1)) {
-      sealTextError.textContent = "1行目に空白は使えません。";
+      setSealTextErrorState(
+        localizedText("1行目に空白は使えません。", "No spaces are allowed in line 1."),
+      );
       return false;
     }
 
     if (line2 !== "" && /\s/u.test(line2)) {
-      sealTextError.textContent = "2行目に空白は使えません。";
+      setSealTextErrorState(
+        localizedText("2行目に空白は使えません。", "No spaces are allowed in line 2."),
+      );
       return false;
     }
 
     if ([...line1].length + [...line2].length > MAX_SEAL_CHAR_TOTAL) {
-      sealTextError.textContent = "印影テキストは1行目と2行目の合計で2文字以内で入力してください。";
+      setSealTextErrorState(
+        localizedText(
+          "印影テキストは1行目と2行目の合計で2文字以内で入力してください。",
+          "Enter at most 2 characters total across lines 1 and 2.",
+        ),
+      );
       return false;
     }
 
-    sealTextError.textContent = "";
+    setSealTextErrorState("");
     return true;
   }
 
@@ -429,6 +691,213 @@
     summarySubtotal.textContent = material ? formatUsd(subtotal) : "-";
     summaryShipping.textContent = country ? formatUsd(shipping) : "-";
     summaryTotal.textContent = material && country ? formatUsd(subtotal + shipping) : "-";
+
+    saveDraft();
+  }
+
+  function clearPurchaseResult() {
+    if (!purchaseResult) {
+      return;
+    }
+
+    purchaseResult.replaceChildren();
+  }
+
+  function setPurchaseErrorMessage(message) {
+    purchaseErrorMessage = message;
+  }
+
+  function purchaseValidationGroups() {
+    const groups = [];
+
+    const sealIssues = [];
+    const sealError = (sealTextError?.textContent || "").trim();
+    const sealLine1Value = line1Input?.value.trim() || "";
+    if (sealError !== "") {
+      sealIssues.push(sealError);
+    } else if (sealLine1Value === "") {
+      sealIssues.push(
+        localizedText(
+          "お名前（印影テキスト）を入力してください。",
+          "Enter the seal text.",
+        ),
+      );
+    }
+    if (sealIssues.length > 0) {
+      groups.push({
+        label: localizedText("印影テキスト", "Seal text"),
+        items: sealIssues,
+      });
+    }
+
+    const shippingIssues = [];
+    if ((recipientNameInput?.value.trim() || "") === "") {
+      shippingIssues.push(
+        localizedText("お届け先氏名", "Recipient name"),
+      );
+    }
+
+    const emailValue = emailInput?.value.trim() || "";
+    if (emailValue === "") {
+      shippingIssues.push(localizedText("メールアドレス", "Email address"));
+    } else if (emailInput && !emailInput.checkValidity()) {
+      shippingIssues.push(
+        localizedText(
+          "メールアドレスの形式が正しくありません。",
+          "Enter a valid email address.",
+        ),
+      );
+    }
+
+    if ((phoneInput?.value.trim() || "") === "") {
+      shippingIssues.push(localizedText("電話番号", "Phone number"));
+    }
+    if ((postalCodeInput?.value.trim() || "") === "") {
+      shippingIssues.push(localizedText("郵便番号", "Postal code"));
+    }
+    if ((stateInput?.value.trim() || "") === "") {
+      shippingIssues.push(
+        localizedText("都道府県 / 州", "State / Prefecture"),
+      );
+    }
+    if ((cityInput?.value.trim() || "") === "") {
+      shippingIssues.push(localizedText("市区町村 / City", "City"));
+    }
+    if ((addressLine1Input?.value.trim() || "") === "") {
+      shippingIssues.push(localizedText("住所1", "Address line 1"));
+    }
+    if (shippingIssues.length > 0) {
+      groups.push({
+        label: localizedText("お届け先情報", "Shipping details"),
+        items: shippingIssues,
+      });
+    }
+
+    if (!termsAgreedInput?.checked) {
+      groups.push({
+        label: localizedText("同意", "Agreement"),
+        items: [
+          localizedText(
+            "利用規約への同意",
+            "Agree to the terms of service",
+          ),
+        ],
+      });
+    }
+
+    return groups;
+  }
+
+  function renderPurchaseStatus() {
+    if (!purchaseStatus || !purchaseButton) {
+      return;
+    }
+
+    const groups = purchaseValidationGroups();
+    const isSubmitting = purchaseSubmitting;
+    const isBlocked = !isSubmitting && groups.length > 0;
+    const hasError = !isSubmitting && !isBlocked && purchaseErrorMessage !== "";
+    const state = isSubmitting
+      ? "submitting"
+      : isBlocked
+      ? "blocked"
+      : hasError
+      ? "error"
+      : "ready";
+    const readyLabel =
+      purchaseButton.dataset.readyLabel || purchaseButton.textContent || "";
+    const submittingLabel =
+      purchaseButton.dataset.submittingLabel ||
+      localizedText("送信中...", "Submitting...");
+    const hasPurchaseResult = Boolean(purchaseResult?.childElementCount);
+
+    if (!isSubmitting && !isBlocked && !hasError && hasPurchaseResult) {
+      purchaseButton.disabled = false;
+      purchaseButton.setAttribute("aria-busy", "false");
+      purchaseButton.setAttribute("aria-disabled", "false");
+      purchaseButton.classList.remove("is-loading");
+      purchaseButton.textContent = readyLabel;
+      purchaseStatus.replaceChildren();
+      purchaseStatus.hidden = true;
+      return;
+    }
+
+    purchaseButton.disabled = isSubmitting || isBlocked;
+    purchaseButton.setAttribute("aria-busy", isSubmitting ? "true" : "false");
+    purchaseButton.setAttribute(
+      "aria-disabled",
+      purchaseButton.disabled ? "true" : "false",
+    );
+    purchaseButton.classList.toggle("is-loading", isSubmitting);
+    purchaseButton.textContent = isSubmitting ? submittingLabel : readyLabel;
+
+    purchaseStatus.hidden = false;
+    purchaseStatus.className = `purchase-status is-${state}`;
+    purchaseStatus.replaceChildren();
+
+    const header = document.createElement("div");
+    header.className = "purchase-status__header";
+
+    const title = document.createElement("p");
+    title.className = "purchase-status__title";
+    title.textContent = isSubmitting
+      ? localizedText("送信中", "Submitting")
+      : isBlocked
+      ? localizedText("入力が不足しています", "Missing details")
+      : hasError
+      ? localizedText("送信に失敗しました", "Submission failed")
+      : localizedText("送信準備完了", "Ready to submit");
+
+    header.append(title);
+    purchaseStatus.append(header);
+
+    const message = document.createElement("p");
+    message.className = "purchase-status__message";
+    message.textContent = isSubmitting
+      ? localizedText(
+          "Stripe Checkout への送信を準備しています。",
+          "Submitting the order and preparing Stripe Checkout.",
+        )
+      : isBlocked
+      ? localizedText(
+          "未入力または未確認の項目を確認してください。",
+          "Review the missing or unconfirmed details below.",
+        )
+      : hasError
+      ? purchaseErrorMessage
+      : localizedText(
+          "入力が揃いました。支払いへ進めます。",
+          "All required details are ready. You can proceed to payment.",
+        );
+    purchaseStatus.append(message);
+
+    if (isBlocked) {
+      const groupsWrap = document.createElement("div");
+      groupsWrap.className = "purchase-status__groups";
+
+      groups.forEach((group) => {
+        const groupWrap = document.createElement("div");
+
+        const groupTitle = document.createElement("p");
+        groupTitle.className = "purchase-status__group-title";
+        groupTitle.textContent = group.label;
+        groupWrap.append(groupTitle);
+
+        const chips = document.createElement("div");
+        chips.className = "purchase-status__chips";
+        group.items.forEach((item) => {
+          const chip = document.createElement("span");
+          chip.className = "purchase-status__chip";
+          chip.textContent = item;
+          chips.append(chip);
+        });
+        groupWrap.append(chips);
+
+        groupsWrap.append(groupWrap);
+      });
+
+      purchaseStatus.append(groupsWrap);
+    }
   }
 
   function syncMaterialOptionsByShape() {
@@ -457,6 +926,8 @@
     if (!selectedVisibleRadio && visibleRadios.length > 0) {
       visibleRadios[0].checked = true;
     }
+
+    syncShapeOptionStates();
   }
 
   form.querySelectorAll("[data-next-step]").forEach((button) => {
@@ -484,6 +955,7 @@
     updateFontChipPreviews();
     updatePreview();
     updateSummary();
+    renderPurchaseStatus();
   }
 
   [line1Input, line2Input].forEach((input) => {
@@ -522,6 +994,59 @@
     refreshSealUi();
   });
 
+  purchaseButton?.addEventListener("click", (event) => {
+    if (purchaseSubmitting) {
+      event.preventDefault();
+      return;
+    }
+
+    if (purchaseValidationGroups().length > 0) {
+      event.preventDefault();
+      renderPurchaseStatus();
+    }
+  });
+
+  purchaseButton?.addEventListener("htmx:beforeRequest", () => {
+    purchaseSubmitting = true;
+    purchaseErrorMessage = "";
+    clearPurchaseResult();
+    renderPurchaseStatus();
+  });
+
+  const endPurchaseSubmission = () => {
+    purchaseSubmitting = false;
+    renderPurchaseStatus();
+  };
+
+  purchaseButton?.addEventListener("htmx:afterSwap", endPurchaseSubmission);
+  purchaseButton?.addEventListener("htmx:responseError", () => {
+    setPurchaseErrorMessage(
+      localizedText(
+        "決済リクエストに失敗しました。通信環境を確認して、もう一度お試しください。",
+        "The payment request failed. Check your connection and try again.",
+      ),
+    );
+    endPurchaseSubmission();
+  });
+  purchaseButton?.addEventListener("htmx:timeout", () => {
+    setPurchaseErrorMessage(
+      localizedText(
+        "決済リクエストがタイムアウトしました。通信環境を確認して、もう一度お試しください。",
+        "The payment request timed out. Check your connection and try again.",
+      ),
+    );
+    endPurchaseSubmission();
+  });
+  purchaseButton?.addEventListener("htmx:sendError", () => {
+    setPurchaseErrorMessage(
+      localizedText(
+        "決済リクエストを送信できませんでした。通信環境を確認して、もう一度お試しください。",
+        "The payment request could not be sent. Check your connection and try again.",
+      ),
+    );
+    endPurchaseSubmission();
+  });
+
   document.body.addEventListener("click", (event) => {
     const chip = event.target.closest(".kanji-chip");
     if (!chip || !line1Input || !line2Input) {
@@ -551,7 +1076,12 @@
 
       const reasonBox = suggestionsContainer.querySelector("[data-kanji-reason]");
       if (reasonBox) {
-        reasonBox.textContent = chip.dataset.reason || "この候補の理由を表示できませんでした。";
+        reasonBox.textContent =
+          chip.dataset.reason ||
+          localizedText(
+            "この候補の理由を表示できませんでした。",
+            "Could not show the reason for this suggestion.",
+          );
       }
 
       const readingBox = suggestionsContainer.querySelector("[data-kanji-reading]");
@@ -562,24 +1092,44 @@
         if (isChineseStyle(style)) {
           const pinyin = normalizePinyinWithoutTone(reading);
           if (pinyin) {
-            readingBox.textContent = `読み方(拼音): ${pinyin}`;
+            readingBox.textContent = localizedText(
+              `読み方(拼音): ${pinyin}`,
+              `Reading (Pinyin): ${pinyin}`,
+            );
           } else {
-            readingBox.textContent = "この候補の読み方を表示できませんでした。";
+            readingBox.textContent = localizedText(
+              "この候補の読み方を表示できませんでした。",
+              "Could not show the reading for this suggestion.",
+            );
           }
         } else if (reading) {
-          readingBox.textContent = `読み方(ローマ字): ${reading.toLowerCase()}`;
+          const normalizedReading = reading.toLowerCase();
+          readingBox.textContent = localizedText(
+            `読み方(ローマ字): ${normalizedReading}`,
+            `Reading (Romaji): ${normalizedReading}`,
+          );
         } else {
-          readingBox.textContent = "この候補の読み方を表示できませんでした。";
+          readingBox.textContent = localizedText(
+            "この候補の読み方を表示できませんでした。",
+            "Could not show the reading for this suggestion.",
+          );
         }
       }
     }
   });
 
+  const savedDraft = readDraft();
+  const initialStep = hasStepHash() ? stepFromHash() : normalizeDraftStep(savedDraft?.step);
+  if (savedDraft) {
+    restoreDraft(savedDraft);
+  }
+
   syncMaterialOptionsByShape();
   syncFontOptionsByStyle();
+  showStep(initialStep);
   refreshSealUi();
+  renderPurchaseStatus();
   window.addEventListener("hashchange", () => {
     showStep(stepFromHash(), { syncHash: false });
   });
-  showStep(stepFromHash(), { syncHash: false });
 })();

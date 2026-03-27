@@ -12,6 +12,11 @@ cp .env.dev.example .env.dev
 cp .env.prod.example .env.prod
 ```
 
+`make docker-dev ENV=dev` を使う場合は、Firebase のサービスアカウント JSON を
+リポジトリ直下の `hanko-field-firebase-adminsdk-fbsvc.json` に置くか、
+`.env.dev` / `.env.prod` で `GOOGLE_APPLICATION_CREDENTIALS` と
+`API_FIREBASE_CREDENTIALS_FILE` を実ファイルのパスに変更してください。
+
 ## クイックスタート（推奨）
 
 開発用途でまず動かすなら、以下の 2 コマンドだけで十分です。

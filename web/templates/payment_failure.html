@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>支払い未完了 | Stone Signature</title>
+  <title>{% if selected_locale == "ja" %}支払い未完了{% else %}Payment incomplete{% endif %} | Stone Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js?v=20260223-2" defer></script>
+  <script src="/static/app.js?v=20260319-1" defer></script>
 </head>
 <body>
   <div class="bg-shape bg-shape-left"></div>
@@ -19,8 +19,8 @@
       <div class="hero-top-row">
         <div>
           <p class="hero-eyebrow">Stone Signature</p>
-          <h1>お支払いが完了しませんでした</h1>
-          <p class="hero-description">カード情報の確認や通信状態をご確認のうえ、再度お試しください。</p>
+          <h1>{% if selected_locale == "ja" %}お支払いが完了しませんでした{% else %}Payment was not completed{% endif %}</h1>
+          <p class="hero-description">{% if selected_locale == "ja" %}カード情報の確認や通信状態をご確認のうえ、再度お試しください。{% else %}Please check your card details and connection, then try again.{% endif %}</p>
         </div>
         <label class="language-select-wrap" aria-label="Language selector">
           <span class="language-icon" aria-hidden="true">🌐</span>
@@ -34,16 +34,53 @@
 
     <section class="panel">
       <div class="result-card is-error">
-        <h4>決済を完了できませんでした</h4>
-        <p>注文内容は保存されています。準備ができたら購入画面から再度お手続きください。</p>
+        <h4>{% if selected_locale == "ja" %}決済を完了できませんでした{% else %}Unable to complete payment{% endif %}</h4>
+        <p>{% if selected_locale == "ja" %}注文内容は保存されています。準備ができたら購入画面から再度お手続きください。{% else %}Your order details are saved. When you're ready, please return to the purchase page and try again.{% endif %}</p>
+        {% if has_order_id %}
+        <p>{% if selected_locale == "ja" %}注文ID{% else %}Order ID{% endif %}: {{ order_id }}</p>
+        {% endif %}
       </div>
 
-      <div class="step-actions">
-        <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">購入画面に戻る</button>
+      <div class="result-card is-info payment-followup-card">
+        <h4>{% if selected_locale == "ja" %}次のアクション{% else %}Next steps{% endif %}</h4>
+        <ul class="payment-followup-list">
+          <li>{% if selected_locale == "ja" %}カード情報と通信状態をご確認ください。{% else %}Check your card details and connection.{% endif %}</li>
+          <li>{% if selected_locale == "ja" %}購入画面へ戻って、もう一度お試しください。{% else %}Return to the purchase page and try again.{% endif %}</li>
+          <li>{% if selected_locale == "ja" %}同じエラーが続く場合はお問い合わせください。{% else %}If the issue repeats, contact us.{% endif %}</li>
+        </ul>
+        <div class="step-actions">
+          <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">{% if selected_locale == "ja" %}購入画面に戻る{% else %}Back to purchase{% endif %}</button>
+          <a
+            class="action-link"
+            href="{{ contact_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {% if selected_locale == "ja" %}お問い合わせ{% else %}Contact us{% endif %}
+          </a>
+        </div>
       </div>
     </section>
 
     <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
+      <a
+        href="{{ terms_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
+      <a
+        href="{{ commercial_transactions_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#6a645d;text-decoration:underline;"
+      >
+        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Legal notice{% endif %}
+      </a>
+      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
       <a
         href="{{ privacy_policy_url }}"
         target="_blank"
