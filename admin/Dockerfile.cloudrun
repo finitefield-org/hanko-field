@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1
+
+FROM rust:1.93-bookworm AS builder
+
+WORKDIR /workspace
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential ca-certificates pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CARGO_INCREMENTAL=0
+
+COPY firebase-sdk-rust /workspace/firebase-sdk-rust
+COPY hanko-field /workspace/hanko-field/admin
+
+WORKDIR /workspace/hanko-field/admin
+RUN cargo build --locked -j 1 \
+    --config 'profile.dev.debug=0' \
+    --config 'profile.dev.incremental=false' \
+    --config 'profile.dev.codegen-units=256'
+
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace/hanko-field/admin
+
+# Use the debug binary to keep build memory usage lower on Cloud Build.
+COPY --from=builder /workspace/hanko-field/admin/target/debug/hanko-field-admin /usr/local/bin/hanko-field-admin
+COPY --from=builder /workspace/hanko-field/admin/static /workspace/hanko-field/admin/static
+
+ENV RUST_LOG=info
+
+CMD ["hanko-field-admin"]

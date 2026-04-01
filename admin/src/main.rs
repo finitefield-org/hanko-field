@@ -10,7 +10,8 @@ use askama::Template;
 use axum::{
     Router,
     extract::{Form, Multipart, Path, Query, State, rejection::FormRejection},
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
+    middleware,
     response::{IntoResponse, Redirect, Response},
     routing::{get, patch},
 };
@@ -20,7 +21,9 @@ use firebase_sdk_rust::firebase_firestore::{
     PatchDocumentOptions, RunQueryRequest,
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::Deserialize;
+use serde::Serialize;
 use serde_json::{Value as JsonValue, json};
 use tokio::{net::TcpListener, sync::RwLock};
 use tower_http::services::ServeDir;
@@ -29,6 +32,10 @@ use uuid::Uuid;
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const STORAGE_SCOPE: &str = "https://www.googleapis.com/auth/devstorage.read_write";
 const MAX_PHOTO_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
+const ADMIN_SESSION_COOKIE_NAME: &str = "hanko_admin_session";
+const ADMIN_SESSION_DURATION_SECONDS: i64 = 60 * 60 * 24 * 7;
+const ADMIN_SESSION_ISSUER: &str = "hanko-field-admin";
+const HX_REDIRECT_HEADER: &str = "hx-redirect";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -56,6 +63,7 @@ struct AppConfig {
     firestore_project_id: Option<String>,
     storage_assets_bucket: Option<String>,
     credentials_file: Option<String>,
+    login_passphrase: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -104,11 +112,27 @@ struct MaterialPhoto {
     height: i64,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct MaterialComparisonProfile {
+    texture_ja: &'static str,
+    texture_en: &'static str,
+    weight_ja: &'static str,
+    weight_en: &'static str,
+    usage_ja: &'static str,
+    usage_en: &'static str,
+}
+
 #[derive(Debug, Clone)]
 struct Material {
     key: String,
     label_i18n: HashMap<String, String>,
     description_i18n: HashMap<String, String>,
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
     shape: String,
     photos: Vec<MaterialPhoto>,
     price_usd: i64,
@@ -324,8 +348,15 @@ struct FirestoreAdminSource {
 }
 
 #[derive(Clone)]
+struct AuthState {
+    enabled: bool,
+    login_passphrase: String,
+}
+
+#[derive(Clone)]
 struct AppState {
     server: Arc<ServerState>,
+    auth: Arc<AuthState>,
 }
 
 struct ServerState {
@@ -458,9 +489,12 @@ struct MaterialDetailView {
     label_en: String,
     description_ja: String,
     description_en: String,
-    comparison_texture: String,
-    comparison_weight: String,
-    comparison_usage: String,
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
     shape: String,
     price_usd: i64,
     price_jpy: i64,
@@ -545,6 +579,12 @@ struct MaterialCreateView {
     label_en: String,
     description_ja: String,
     description_en: String,
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
     shape: String,
     price_usd: String,
     price_jpy: String,
@@ -580,6 +620,12 @@ struct MaterialCreateInput {
     label_en: String,
     description_ja: String,
     description_en: String,
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
     shape: String,
     price_usd: i64,
     price_jpy: i64,
@@ -606,6 +652,12 @@ struct MaterialPatchInput {
     label_en: String,
     description_ja: String,
     description_en: String,
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
     shape: String,
     price_usd: i64,
     price_jpy: i64,
@@ -798,6 +850,28 @@ struct CountryCreateTemplate {
     view: CountryCreateView,
 }
 
+#[derive(Template)]
+#[template(path = "admin_login.html")]
+struct AdminLoginTemplate {
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct AdminLoginForm {
+    passphrase: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct AdminSessionClaims {
+    exp: usize,
+    iat: usize,
+    iss: String,
+    sub: String,
+    #[serde(default)]
+    admin: bool,
+}
+
 #[tokio::main]
 async fn main() {
     if let Err(error) = run().await {
@@ -809,9 +883,22 @@ async fn main() {
 async fn run() -> Result<()> {
     let cfg = load_config().context("failed to load config")?;
     let server = build_server(&cfg).await?;
+    let auth = Arc::new(AuthState::from_config(&cfg));
+    let app_state = AppState {
+        server: Arc::clone(&server),
+        auth: Arc::clone(&auth),
+    };
 
-    let app = Router::new()
+    let public_router = Router::new()
         .route("/", get(handle_root))
+        .route(
+            "/admin-login",
+            get(handle_admin_login_page).post(handle_admin_login_submit),
+        )
+        .nest_service("/admin/static", ServeDir::new("static"));
+
+    let protected_router = Router::new()
+        .route("/admin", get(handle_admin_root))
         .route("/admin/orders", get(handle_orders_page))
         .route("/admin/orders/list", get(handle_orders_list))
         .route("/admin/orders/{order_id}", get(handle_order_detail))
@@ -865,10 +952,12 @@ async fn run() -> Result<()> {
                 .patch(handle_country_patch)
                 .delete(handle_country_delete),
         )
-        .nest_service("/static", ServeDir::new("static"))
-        .with_state(AppState {
-            server: Arc::clone(&server),
-        });
+        .layer(middleware::from_fn_with_state(
+            Arc::clone(&auth),
+            require_admin_session,
+        ));
+
+    let app = public_router.merge(protected_router).with_state(app_state);
 
     let bind_addr = normalize_bind_addr(&cfg.http_addr);
     let listener = TcpListener::bind(&bind_addr)
@@ -912,10 +1001,7 @@ fn normalize_bind_addr(http_addr: &str) -> String {
 
 fn load_config() -> Result<AppConfig> {
     let mut cfg = AppConfig {
-        http_addr: env::var("ADMIN_HTTP_ADDR")
-            .unwrap_or_default()
-            .trim()
-            .to_owned(),
+        http_addr: env_first(&["ADMIN_HTTP_ADDR", "PORT"]),
         mode: RunMode::Mock,
         locale: env::var("HANKO_ADMIN_LOCALE")
             .unwrap_or_default()
@@ -928,6 +1014,11 @@ fn load_config() -> Result<AppConfig> {
         firestore_project_id: None,
         storage_assets_bucket: None,
         credentials_file: None,
+        login_passphrase: env::var("HANKO_ADMIN_LOGIN_PASSPHRASE")
+            .or_else(|_| env::var("HANKO_ADMIN_LOGIN_PASSPHRASE_PROD"))
+            .ok()
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty()),
     };
 
     if cfg.http_addr.is_empty() {
@@ -953,6 +1044,12 @@ fn load_config() -> Result<AppConfig> {
         "dev" => cfg.mode = RunMode::Dev,
         "prod" => cfg.mode = RunMode::Prod,
         _ => bail!("invalid HANKO_ADMIN_MODE {mode_value:?}: use mock, dev, or prod"),
+    }
+
+    if matches!(cfg.mode, RunMode::Prod) {
+        if cfg.login_passphrase.is_none() {
+            bail!("prod admin login requires HANKO_ADMIN_LOGIN_PASSPHRASE[_PROD]");
+        }
     }
 
     let (project_id_keys, credential_keys, storage_bucket_keys): (&[&str], &[&str], &[&str]) =
@@ -1088,7 +1185,194 @@ async fn build_server(cfg: &AppConfig) -> Result<Arc<ServerState>> {
     }))
 }
 
+impl AuthState {
+    fn from_config(cfg: &AppConfig) -> Self {
+        let enabled = matches!(cfg.mode, RunMode::Prod);
+        Self {
+            enabled,
+            login_passphrase: cfg.login_passphrase.clone().unwrap_or_default(),
+        }
+    }
+
+    async fn login_session_cookie(&self, passphrase: &str) -> Result<String> {
+        if !self.enabled {
+            return Ok(String::new());
+        }
+
+        if passphrase.trim() != self.login_passphrase {
+            bail!("invalid admin login passphrase");
+        }
+
+        let now = Utc::now().timestamp() as usize;
+        let claims = AdminSessionClaims {
+            exp: (now as i64 + ADMIN_SESSION_DURATION_SECONDS) as usize,
+            iat: now,
+            iss: ADMIN_SESSION_ISSUER.to_owned(),
+            sub: "admin".to_owned(),
+            admin: true,
+        };
+
+        encode(
+            &Header::new(Algorithm::HS256),
+            &claims,
+            &EncodingKey::from_secret(self.login_passphrase.as_bytes()),
+        )
+        .context("failed to sign admin session cookie")
+    }
+
+    async fn is_authenticated(&self, headers: &HeaderMap) -> Result<bool> {
+        if !self.enabled {
+            return Ok(true);
+        }
+
+        let Some(cookie_value) = extract_cookie_value(headers, ADMIN_SESSION_COOKIE_NAME) else {
+            return Ok(false);
+        };
+
+        match self.verify_session_cookie(&cookie_value).await {
+            Ok(claims) => Ok(claims.admin),
+            Err(error) => {
+                eprintln!("failed to verify admin session cookie: {error:#}");
+                Ok(false)
+            }
+        }
+    }
+
+    async fn verify_session_cookie(&self, cookie_value: &str) -> Result<AdminSessionClaims> {
+        let decoding_key = DecodingKey::from_secret(self.login_passphrase.as_bytes());
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = true;
+        validation.set_issuer(&[ADMIN_SESSION_ISSUER]);
+
+        let token = decode::<AdminSessionClaims>(cookie_value, &decoding_key, &validation)
+            .context("failed to verify admin session cookie")?;
+        if !token.claims.admin {
+            bail!("admin session cookie is missing admin claim");
+        }
+
+        Ok(token.claims)
+    }
+}
+
 async fn handle_root() -> Redirect {
+    Redirect::to("/admin-login")
+}
+
+async fn handle_admin_login_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if state.auth.is_authenticated(&headers).await.unwrap_or(false) {
+        return Redirect::to("/admin/orders").into_response();
+    }
+
+    render_admin_login_page("")
+}
+
+async fn handle_admin_login_submit(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    form: Result<Form<AdminLoginForm>, FormRejection>,
+) -> Response {
+    if state.auth.is_authenticated(&headers).await.unwrap_or(false) {
+        return Redirect::to("/admin/orders").into_response();
+    }
+
+    let form = match form {
+        Ok(Form(form)) => form,
+        Err(error) => {
+            return plain_error(
+                StatusCode::BAD_REQUEST,
+                format!("invalid admin login form: {error}"),
+            );
+        }
+    };
+
+    let session_cookie = match state.auth.login_session_cookie(&form.passphrase).await {
+        Ok(cookie) => cookie,
+        Err(error) => {
+            eprintln!("admin login failed: {error:#}");
+            return render_admin_login_page("パスフレーズが正しくありません。");
+        }
+    };
+
+    let cookie_header = format!(
+        "{name}={value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={max_age}",
+        name = ADMIN_SESSION_COOKIE_NAME,
+        value = session_cookie,
+        max_age = ADMIN_SESSION_DURATION_SECONDS
+    );
+
+    (
+        [(header::SET_COOKIE, cookie_header)],
+        Redirect::to("/admin/orders"),
+    )
+        .into_response()
+}
+
+async fn require_admin_session(
+    State(auth): State<Arc<AuthState>>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+    next: middleware::Next,
+) -> Response {
+    if !auth.enabled {
+        return next.run(request).await;
+    }
+
+    if auth.is_authenticated(&headers).await.unwrap_or(false) {
+        return next.run(request).await;
+    }
+
+    redirect_to_admin_login(headers.contains_key("hx-request"))
+}
+
+fn render_admin_login_page(error: &str) -> Response {
+    let template = AdminLoginTemplate {
+        error: error.to_owned(),
+        has_error: !error.trim().is_empty(),
+    };
+
+    match template.render() {
+        Ok(html) => (
+            StatusCode::OK,
+            [("content-type", "text/html; charset=utf-8")],
+            html,
+        )
+            .into_response(),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render admin login page: {error}"),
+        ),
+    }
+}
+
+fn redirect_to_admin_login(hx_request: bool) -> Response {
+    if hx_request {
+        (
+            StatusCode::UNAUTHORIZED,
+            [(
+                header::HeaderName::from_static(HX_REDIRECT_HEADER),
+                HeaderValue::from_static("/admin-login"),
+            )],
+            "",
+        )
+            .into_response()
+    } else {
+        Redirect::to("/admin-login").into_response()
+    }
+}
+
+fn extract_cookie_value(headers: &HeaderMap, cookie_name: &str) -> Option<String> {
+    let cookie_header = headers.get(header::COOKIE)?.to_str().ok()?;
+    for cookie in cookie_header.split(';') {
+        let (name, value) = cookie.split_once('=')?;
+        if name.trim() == cookie_name {
+            return Some(value.trim().to_owned());
+        }
+    }
+
+    None
+}
+
+async fn handle_admin_root() -> Redirect {
     Redirect::to("/admin/orders")
 }
 
@@ -1608,7 +1892,7 @@ async fn handle_material_create(
         );
     }
 
-    let price_usd = match form_value(&form, "price_usd").parse::<i64>() {
+    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
         Ok(value) => value,
         Err(_) => {
             return render_material_create_response(
@@ -1616,7 +1900,7 @@ async fn handle_material_create(
                 &material_create_view_from_form(
                     &form,
                     "",
-                    "価格（USD cents）は整数で入力してください。",
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
                 ),
             );
         }
@@ -1648,6 +1932,12 @@ async fn handle_material_create(
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
+        comparison_texture_ja: form_value(&form, "comparison_texture_ja"),
+        comparison_texture_en: form_value(&form, "comparison_texture_en"),
+        comparison_weight_ja: form_value(&form, "comparison_weight_ja"),
+        comparison_weight_en: form_value(&form, "comparison_weight_en"),
+        comparison_usage_ja: form_value(&form, "comparison_usage_ja"),
+        comparison_usage_en: form_value(&form, "comparison_usage_en"),
         shape: form_value(&form, "shape"),
         price_usd,
         price_jpy,
@@ -1715,7 +2005,7 @@ async fn handle_material_patch(
         );
     }
 
-    let price_usd = match form_value(&form, "price_usd").parse::<i64>() {
+    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
         Ok(value) => value,
         Err(_) => {
             let Some(detail) = state
@@ -1723,7 +2013,7 @@ async fn handle_material_patch(
                 .get_material_detail(
                     &material_key,
                     "",
-                    "価格（USD cents）は整数で入力してください。",
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
                 )
                 .await
             else {
@@ -1784,6 +2074,12 @@ async fn handle_material_patch(
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
+        comparison_texture_ja: form_value(&form, "comparison_texture_ja"),
+        comparison_texture_en: form_value(&form, "comparison_texture_en"),
+        comparison_weight_ja: form_value(&form, "comparison_weight_ja"),
+        comparison_weight_en: form_value(&form, "comparison_weight_en"),
+        comparison_usage_ja: form_value(&form, "comparison_usage_ja"),
+        comparison_usage_en: form_value(&form, "comparison_usage_en"),
         shape: form_value(&form, "shape"),
         price_usd,
         price_jpy,
@@ -2615,8 +2911,6 @@ impl ServerState {
         let data = self.data.read().await;
         let material = data.materials.get(key)?;
         let primary_photo = select_primary_material_photo(&material.photos);
-        let (comparison_texture, comparison_weight, comparison_usage) =
-            material_comparison_profile(&material.key);
 
         Some(MaterialDetailView {
             key: material.key.clone(),
@@ -2632,9 +2926,12 @@ impl ServerState {
                 .get("en")
                 .cloned()
                 .unwrap_or_default(),
-            comparison_texture: comparison_texture.to_owned(),
-            comparison_weight: comparison_weight.to_owned(),
-            comparison_usage: comparison_usage.to_owned(),
+            comparison_texture_ja: material.comparison_texture_ja.clone(),
+            comparison_texture_en: material.comparison_texture_en.clone(),
+            comparison_weight_ja: material.comparison_weight_ja.clone(),
+            comparison_weight_en: material.comparison_weight_en.clone(),
+            comparison_usage_ja: material.comparison_usage_ja.clone(),
+            comparison_usage_en: material.comparison_usage_en.clone(),
             shape: material.shape.clone(),
             price_usd: material.price_usd,
             price_jpy: material.price_jpy,
@@ -3095,6 +3392,12 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
+        let comparison_texture_ja = input.comparison_texture_ja.trim().to_owned();
+        let comparison_texture_en = input.comparison_texture_en.trim().to_owned();
+        let comparison_weight_ja = input.comparison_weight_ja.trim().to_owned();
+        let comparison_weight_en = input.comparison_weight_en.trim().to_owned();
+        let comparison_usage_ja = input.comparison_usage_ja.trim().to_owned();
+        let comparison_usage_en = input.comparison_usage_en.trim().to_owned();
         let shape = normalize_material_shape(&input.shape)
             .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
             .to_owned();
@@ -3106,6 +3409,12 @@ impl ServerState {
             &label_en,
             &description_ja,
             &description_en,
+            &comparison_texture_ja,
+            &comparison_texture_en,
+            &comparison_weight_ja,
+            &comparison_weight_en,
+            &comparison_usage_ja,
+            &comparison_usage_en,
             &shape,
             input.price_usd,
             input.price_jpy,
@@ -3128,6 +3437,12 @@ impl ServerState {
             material
                 .description_i18n
                 .insert("en".to_owned(), description_en);
+            material.comparison_texture_ja = comparison_texture_ja;
+            material.comparison_texture_en = comparison_texture_en;
+            material.comparison_weight_ja = comparison_weight_ja;
+            material.comparison_weight_en = comparison_weight_en;
+            material.comparison_usage_ja = comparison_usage_ja;
+            material.comparison_usage_en = comparison_usage_en;
             material.shape = shape;
             material.price_usd = input.price_usd;
             material.price_jpy = input.price_jpy;
@@ -3271,6 +3586,12 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
+        let comparison_texture_ja = input.comparison_texture_ja.trim().to_owned();
+        let comparison_texture_en = input.comparison_texture_en.trim().to_owned();
+        let comparison_weight_ja = input.comparison_weight_ja.trim().to_owned();
+        let comparison_weight_en = input.comparison_weight_en.trim().to_owned();
+        let comparison_usage_ja = input.comparison_usage_ja.trim().to_owned();
+        let comparison_usage_en = input.comparison_usage_en.trim().to_owned();
         let shape = normalize_material_shape(&input.shape)
             .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
             .to_owned();
@@ -3282,6 +3603,12 @@ impl ServerState {
             &label_en,
             &description_ja,
             &description_en,
+            &comparison_texture_ja,
+            &comparison_texture_en,
+            &comparison_weight_ja,
+            &comparison_weight_en,
+            &comparison_usage_ja,
+            &comparison_usage_en,
             &shape,
             input.price_usd,
             input.price_jpy,
@@ -3306,6 +3633,12 @@ impl ServerState {
                     ("ja".to_owned(), description_ja),
                     ("en".to_owned(), description_en),
                 ]),
+                comparison_texture_ja,
+                comparison_texture_en,
+                comparison_weight_ja,
+                comparison_weight_en,
+                comparison_usage_ja,
+                comparison_usage_en,
                 shape,
                 photos: build_single_material_photos(
                     &key,
@@ -3407,9 +3740,7 @@ impl FirestoreAdminSource {
             .await
             .context("failed to acquire firestore access token")?;
 
-        Ok(FirebaseFirestoreClient::new(
-            access_token.as_str().to_owned(),
-        ))
+        firestore_client_from_access_token(access_token.as_str())
     }
 
     async fn load_snapshot(&self) -> Result<AdminSnapshot> {
@@ -3676,12 +4007,37 @@ impl FirestoreAdminSource {
             };
 
             let data = &document.fields;
+            let comparison_defaults = material_comparison_profile(&doc_id);
             let price_by_currency = material_price_by_currency_from_fields(data);
             let price_usd = price_by_currency.get("USD").copied().unwrap_or_default();
             let price_jpy = price_by_currency.get("JPY").copied().unwrap_or(price_usd);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
+            let comparison_texture_ja = fallback_text(
+                read_string_field(data, "comparison_texture_ja"),
+                comparison_defaults.texture_ja,
+            );
+            let comparison_texture_en = fallback_text(
+                read_string_field(data, "comparison_texture_en"),
+                comparison_defaults.texture_en,
+            );
+            let comparison_weight_ja = fallback_text(
+                read_string_field(data, "comparison_weight_ja"),
+                comparison_defaults.weight_ja,
+            );
+            let comparison_weight_en = fallback_text(
+                read_string_field(data, "comparison_weight_en"),
+                comparison_defaults.weight_en,
+            );
+            let comparison_usage_ja = fallback_text(
+                read_string_field(data, "comparison_usage_ja"),
+                comparison_defaults.usage_ja,
+            );
+            let comparison_usage_en = fallback_text(
+                read_string_field(data, "comparison_usage_en"),
+                comparison_defaults.usage_en,
+            );
             let shape = material_shape_or_default(&read_string_field(data, "shape"));
             let photos = read_material_photos(data);
 
@@ -3709,6 +4065,12 @@ impl FirestoreAdminSource {
                     key: doc_id,
                     label_i18n,
                     description_i18n,
+                    comparison_texture_ja,
+                    comparison_texture_en,
+                    comparison_weight_ja,
+                    comparison_weight_en,
+                    comparison_usage_ja,
+                    comparison_usage_en,
                     shape,
                     photos,
                     price_usd,
@@ -4033,6 +4395,30 @@ impl FirestoreAdminSource {
                     "description_i18n",
                     fs_string_map(&material.description_i18n),
                 ),
+                (
+                    "comparison_texture_ja",
+                    fs_string(material.comparison_texture_ja.clone()),
+                ),
+                (
+                    "comparison_texture_en",
+                    fs_string(material.comparison_texture_en.clone()),
+                ),
+                (
+                    "comparison_weight_ja",
+                    fs_string(material.comparison_weight_ja.clone()),
+                ),
+                (
+                    "comparison_weight_en",
+                    fs_string(material.comparison_weight_en.clone()),
+                ),
+                (
+                    "comparison_usage_ja",
+                    fs_string(material.comparison_usage_ja.clone()),
+                ),
+                (
+                    "comparison_usage_en",
+                    fs_string(material.comparison_usage_en.clone()),
+                ),
                 ("shape", fs_string(material.shape.clone())),
                 ("photos", fs_material_photos(&material.photos)),
                 ("price_by_currency", fs_int_map(&price_by_currency)),
@@ -4052,6 +4438,12 @@ impl FirestoreAdminSource {
                     update_mask_field_paths: vec![
                         "label_i18n".to_owned(),
                         "description_i18n".to_owned(),
+                        "comparison_texture_ja".to_owned(),
+                        "comparison_texture_en".to_owned(),
+                        "comparison_weight_ja".to_owned(),
+                        "comparison_weight_en".to_owned(),
+                        "comparison_usage_ja".to_owned(),
+                        "comparison_usage_en".to_owned(),
                         "shape".to_owned(),
                         "photos".to_owned(),
                         "price_by_currency".to_owned(),
@@ -4270,6 +4662,10 @@ fn render_html<T: Template>(template: &T) -> Result<String> {
         .map_err(|error| anyhow!(error.to_string()))
 }
 
+fn firestore_client_from_access_token(access_token: &str) -> Result<FirebaseFirestoreClient> {
+    Ok(FirebaseFirestoreClient::new(access_token.to_owned()))
+}
+
 fn html_response(status: StatusCode, body: String) -> Response {
     (
         status,
@@ -4322,6 +4718,12 @@ fn new_material_create_view(message: &str, render_error: &str) -> MaterialCreate
         label_en: String::new(),
         description_ja: String::new(),
         description_en: String::new(),
+        comparison_texture_ja: String::new(),
+        comparison_texture_en: String::new(),
+        comparison_weight_ja: String::new(),
+        comparison_weight_en: String::new(),
+        comparison_usage_ja: String::new(),
+        comparison_usage_en: String::new(),
         shape: "square".to_owned(),
         price_usd: "0".to_owned(),
         price_jpy: "0".to_owned(),
@@ -4348,6 +4750,12 @@ fn material_create_view_from_form(
         label_en: form_value(form, "label_en"),
         description_ja: form_value(form, "description_ja"),
         description_en: form_value(form, "description_en"),
+        comparison_texture_ja: form_value(form, "comparison_texture_ja"),
+        comparison_texture_en: form_value(form, "comparison_texture_en"),
+        comparison_weight_ja: form_value(form, "comparison_weight_ja"),
+        comparison_weight_en: form_value(form, "comparison_weight_en"),
+        comparison_usage_ja: form_value(form, "comparison_usage_ja"),
+        comparison_usage_en: form_value(form, "comparison_usage_en"),
         shape: material_shape_or_default(&form_value(form, "shape")),
         price_usd: form_value(form, "price_usd"),
         price_jpy: form_value(form, "price_jpy"),
@@ -4564,6 +4972,12 @@ fn validate_material_values(
     label_en: &str,
     description_ja: &str,
     description_en: &str,
+    comparison_texture_ja: &str,
+    comparison_texture_en: &str,
+    comparison_weight_ja: &str,
+    comparison_weight_en: &str,
+    comparison_usage_ja: &str,
+    comparison_usage_en: &str,
     shape: &str,
     price_usd: i64,
     price_jpy: i64,
@@ -4575,6 +4989,15 @@ fn validate_material_values(
     }
     if description_ja.is_empty() || description_en.is_empty() {
         return Err("説明文（ja/en）は必須です。".to_owned());
+    }
+    if comparison_texture_ja.is_empty() || comparison_texture_en.is_empty() {
+        return Err("比較プレビュー（質感）の ja/en は必須です。".to_owned());
+    }
+    if comparison_weight_ja.is_empty() || comparison_weight_en.is_empty() {
+        return Err("比較プレビュー（重さ）の ja/en は必須です。".to_owned());
+    }
+    if comparison_usage_ja.is_empty() || comparison_usage_en.is_empty() {
+        return Err("比較プレビュー（用途）の ja/en は必須です。".to_owned());
     }
     if normalize_material_shape(shape).is_none() {
         return Err("材質の形状は角印か丸印を選択してください。".to_owned());
@@ -4590,6 +5013,72 @@ fn validate_material_values(
     }
     validate_material_photo_storage_path(photo_storage_path)?;
     Ok(())
+}
+
+fn parse_usd_cents_input(raw: &str) -> std::result::Result<i64, String> {
+    let value = raw.trim();
+    if value.is_empty() {
+        return Err("価格（USD）は必須です。".to_owned());
+    }
+
+    if let Some((whole, fraction)) = value.split_once('.') {
+        if whole.trim().is_empty() {
+            return Err(
+                "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。"
+                    .to_owned(),
+            );
+        }
+        let dollars = whole.trim().parse::<i64>().map_err(|_| {
+            "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。"
+                .to_owned()
+        })?;
+        if dollars < 0 {
+            return Err("価格（USD）は 0 以上で入力してください。".to_owned());
+        }
+
+        let fraction = fraction.trim();
+        if fraction.is_empty() {
+            return dollars
+                .checked_mul(100)
+                .ok_or_else(|| "価格（USD）が大きすぎます。".to_owned());
+        }
+        if !fraction.chars().all(|ch| ch.is_ascii_digit()) {
+            return Err(
+                "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。"
+                    .to_owned(),
+            );
+        }
+        if fraction.len() > 2 {
+            return Err("価格（USD）の小数は 2 桁までです。".to_owned());
+        }
+
+        let cents =
+            match fraction.len() {
+                1 => fraction.parse::<i64>().map_err(|_| {
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。"
+                        .to_owned()
+                })? * 10,
+                2 => fraction.parse::<i64>().map_err(|_| {
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。"
+                        .to_owned()
+                })?,
+                _ => 0,
+            };
+
+        return dollars
+            .checked_mul(100)
+            .and_then(|value| value.checked_add(cents))
+            .ok_or_else(|| "価格（USD）が大きすぎます。".to_owned());
+    }
+
+    let cents = value.parse::<i64>().map_err(|_| {
+        "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。".to_owned()
+    })?;
+    if cents < 0 {
+        return Err("価格（USD）は 0 以上で入力してください。".to_owned());
+    }
+
+    Ok(cents)
 }
 
 fn validate_font_values(
@@ -4748,20 +5237,72 @@ fn material_shape_label(shape: &str) -> &'static str {
     }
 }
 
-fn material_comparison_profile(material_key: &str) -> (&'static str, &'static str, &'static str) {
+fn fallback_text(value: String, fallback: &str) -> String {
+    if value.trim().is_empty() {
+        fallback.to_owned()
+    } else {
+        value
+    }
+}
+
+fn material_comparison_profile(material_key: &str) -> MaterialComparisonProfile {
     match material_key {
-        "boxwood" => ("さらりとした木目", "軽めで扱いやすい", "日常使いの角印向き"),
-        "black_buffalo" => (
-            "しっとりした艶感",
-            "中量で安定感がある",
-            "丸印の定番として選びやすい",
-        ),
-        "titanium" => (
-            "金属らしいシャープな質感",
-            "重めで高密度",
-            "長期使用や耐久性重視に向く",
-        ),
-        _ => ("標準的な質感", "中程度の重さ", "汎用的"),
+        "rose_quartz" => MaterialComparisonProfile {
+            texture_ja: "淡い桃色のやわらかな透明感",
+            texture_en: "Soft, translucent pink sheen",
+            weight_ja: "やや軽やかで手になじみやすい",
+            weight_en: "Light and gentle to handle",
+            usage_ja: "やわらかな印象を出しやすい",
+            usage_en: "A soft, friendly finish",
+        },
+        "lapis_lazuli" => MaterialComparisonProfile {
+            texture_ja: "深い青にきらめきが入る石目",
+            texture_en: "Deep blue stone with bright flecks",
+            weight_ja: "ほどよい重さで存在感がある",
+            weight_en: "Medium-heavy with a strong presence",
+            usage_ja: "印象を強めやすい",
+            usage_en: "A vivid, distinctive finish",
+        },
+        "jade" => MaterialComparisonProfile {
+            texture_ja: "しっとりした緑石の艶感",
+            texture_en: "Polished green stone with a calm sheen",
+            weight_ja: "ほどよく重く、落ち着いた安定感",
+            weight_en: "Substantial and steady",
+            usage_ja: "落ち着いた格調を出しやすい",
+            usage_en: "A calm, dignified finish",
+        },
+        "boxwood" => MaterialComparisonProfile {
+            texture_ja: "木目がやわらかく見える素朴な質感",
+            texture_en: "A simple wood grain with a gentle feel",
+            weight_ja: "軽くて扱いやすい",
+            weight_en: "Light and easy to handle",
+            usage_ja: "日常使いしやすい定番",
+            usage_en: "A dependable everyday standard",
+        },
+        "black_buffalo" => MaterialComparisonProfile {
+            texture_ja: "深い黒のしっとりした質感",
+            texture_en: "Smooth, deep black finish",
+            weight_ja: "ほどよい重さで落ち着きがある",
+            weight_en: "Moderately weighted and steady",
+            usage_ja: "落ち着いた印象を出したいときに向く",
+            usage_en: "Well suited to a calm, formal look",
+        },
+        "a_maru" => MaterialComparisonProfile {
+            texture_ja: "標準的な質感",
+            texture_en: "Balanced, neutral texture",
+            weight_ja: "中程度の重さ",
+            weight_en: "Medium weight",
+            usage_ja: "汎用的",
+            usage_en: "Versatile",
+        },
+        _ => MaterialComparisonProfile {
+            texture_ja: "標準的な質感",
+            texture_en: "Balanced, neutral texture",
+            weight_ja: "中程度の重さ",
+            weight_en: "Medium weight",
+            usage_ja: "汎用的",
+            usage_en: "Versatile",
+        },
     }
 }
 
@@ -4947,7 +5488,7 @@ fn validate_material_photo_storage_path(storage_path: &str) -> std::result::Resu
         || lowered.starts_with("gs://")
     {
         return Err(
-            "写真は URL ではなく Storage パス（例: materials/titanium/mat_titanium_01.webp）を入力してください。".to_owned(),
+            "写真は URL ではなく Storage パス（例: materials/jade/mat_jade_01.webp）を入力してください。".to_owned(),
         );
     }
 
@@ -6140,123 +6681,142 @@ fn new_mock_snapshot() -> AdminSnapshot {
         ),
     ]);
 
+    let rose_quartz = material_comparison_profile("rose_quartz");
+    let lapis_lazuli = material_comparison_profile("lapis_lazuli");
+    let jade = material_comparison_profile("jade");
     let materials = HashMap::from([
         (
-            "boxwood".to_owned(),
+            "rose_quartz".to_owned(),
             Material {
-                key: "boxwood".to_owned(),
+                key: "rose_quartz".to_owned(),
                 label_i18n: HashMap::from([
-                    ("ja".to_owned(), "柘植".to_owned()),
-                    ("en".to_owned(), "Boxwood".to_owned()),
+                    ("ja".to_owned(), "ローズクオーツ".to_owned()),
+                    ("en".to_owned(), "Rose Quartz".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
                     (
                         "ja".to_owned(),
-                        "軽くて扱いやすい、木目のやわらかい定番材".to_owned(),
+                        "やわらかな色合いで、親しみやすい印象の石材".to_owned(),
                     ),
                     (
                         "en".to_owned(),
-                        "A classic wood with a soft grain that is lightweight and easy to handle."
-                            .to_owned(),
+                        "A soft-toned stone with a warm, approachable presence.".to_owned(),
                     ),
                 ]),
+                comparison_texture_ja: rose_quartz.texture_ja.to_owned(),
+                comparison_texture_en: rose_quartz.texture_en.to_owned(),
+                comparison_weight_ja: rose_quartz.weight_ja.to_owned(),
+                comparison_weight_en: rose_quartz.weight_en.to_owned(),
+                comparison_usage_ja: rose_quartz.usage_ja.to_owned(),
+                comparison_usage_en: rose_quartz.usage_en.to_owned(),
                 shape: "square".to_owned(),
                 photos: vec![MaterialPhoto {
-                    asset_id: "mat_boxwood_01".to_owned(),
-                    storage_path: "materials/boxwood/mat_boxwood_01.webp".to_owned(),
+                    asset_id: "mat_rose_quartz_01".to_owned(),
+                    storage_path: "materials/rose_quartz/mat_rose_quartz_01.webp".to_owned(),
                     alt_i18n: HashMap::from([
-                        ("ja".to_owned(), "柘植の材質サンプル".to_owned()),
-                        ("en".to_owned(), "Boxwood material sample".to_owned()),
+                        ("ja".to_owned(), "ローズクオーツの材質サンプル".to_owned()),
+                        ("en".to_owned(), "Rose quartz material sample".to_owned()),
                     ]),
                     sort_order: 0,
                     is_primary: true,
                     width: 1200,
                     height: 1200,
                 }],
-                price_usd: 3600,
-                price_jpy: 3600,
+                price_usd: 16500,
+                price_jpy: 28000,
                 is_active: true,
                 sort_order: 10,
-                version: 3,
+                version: 1,
                 updated_at: now - chrono::Duration::hours(36),
             },
         ),
         (
-            "black_buffalo".to_owned(),
+            "lapis_lazuli".to_owned(),
             Material {
-                key: "black_buffalo".to_owned(),
+                key: "lapis_lazuli".to_owned(),
                 label_i18n: HashMap::from([
-                    ("ja".to_owned(), "黒水牛".to_owned()),
-                    ("en".to_owned(), "Black Buffalo".to_owned()),
+                    ("ja".to_owned(), "ラピスラビリ".to_owned()),
+                    ("en".to_owned(), "Lapis Lazuli".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
                     (
                         "ja".to_owned(),
-                        "しっとりした質感で、落ち着いた印象と耐久性を両立".to_owned(),
+                        "深い青が印象的な、存在感のある石材".to_owned(),
                     ),
                     (
                         "en".to_owned(),
-                        "A durable material with a smooth, composed presence.".to_owned(),
+                        "A deep-blue stone with a strong, distinctive presence.".to_owned(),
                     ),
                 ]),
+                comparison_texture_ja: lapis_lazuli.texture_ja.to_owned(),
+                comparison_texture_en: lapis_lazuli.texture_en.to_owned(),
+                comparison_weight_ja: lapis_lazuli.weight_ja.to_owned(),
+                comparison_weight_en: lapis_lazuli.weight_en.to_owned(),
+                comparison_usage_ja: lapis_lazuli.usage_ja.to_owned(),
+                comparison_usage_en: lapis_lazuli.usage_en.to_owned(),
                 shape: "round".to_owned(),
                 photos: vec![MaterialPhoto {
-                    asset_id: "mat_black_buffalo_01".to_owned(),
-                    storage_path: "materials/black_buffalo/mat_black_buffalo_01.webp".to_owned(),
+                    asset_id: "mat_lapis_lazuli_01".to_owned(),
+                    storage_path: "materials/lapis_lazuli/mat_lapis_lazuli_01.webp".to_owned(),
                     alt_i18n: HashMap::from([
-                        ("ja".to_owned(), "黒水牛の材質サンプル".to_owned()),
-                        ("en".to_owned(), "Black buffalo material sample".to_owned()),
+                        ("ja".to_owned(), "ラピスラビリの材質サンプル".to_owned()),
+                        ("en".to_owned(), "Lapis lazuli material sample".to_owned()),
                     ]),
                     sort_order: 0,
                     is_primary: true,
                     width: 1200,
                     height: 1200,
                 }],
-                price_usd: 4800,
-                price_jpy: 4800,
+                price_usd: 32500,
+                price_jpy: 55000,
                 is_active: true,
                 sort_order: 20,
-                version: 5,
+                version: 1,
                 updated_at: now - chrono::Duration::hours(24),
             },
         ),
         (
-            "titanium".to_owned(),
+            "jade".to_owned(),
             Material {
-                key: "titanium".to_owned(),
+                key: "jade".to_owned(),
                 label_i18n: HashMap::from([
-                    ("ja".to_owned(), "チタン".to_owned()),
-                    ("en".to_owned(), "Titanium".to_owned()),
+                    ("ja".to_owned(), "翡翠".to_owned()),
+                    ("en".to_owned(), "Jade".to_owned()),
                 ]),
                 description_i18n: HashMap::from([
                     (
                         "ja".to_owned(),
-                        "重厚感があり、摩耗に強いプレミアム材".to_owned(),
+                        "落ち着いた緑の艶が映える、格調ある石材".to_owned(),
                     ),
                     (
                         "en".to_owned(),
-                        "A premium material with a substantial feel and excellent wear resistance."
-                            .to_owned(),
+                        "A dignified stone with a calm green sheen.".to_owned(),
                     ),
                 ]),
+                comparison_texture_ja: jade.texture_ja.to_owned(),
+                comparison_texture_en: jade.texture_en.to_owned(),
+                comparison_weight_ja: jade.weight_ja.to_owned(),
+                comparison_weight_en: jade.weight_en.to_owned(),
+                comparison_usage_ja: jade.usage_ja.to_owned(),
+                comparison_usage_en: jade.usage_en.to_owned(),
                 shape: "square".to_owned(),
                 photos: vec![MaterialPhoto {
-                    asset_id: "mat_titanium_01".to_owned(),
-                    storage_path: "materials/titanium/mat_titanium_01.webp".to_owned(),
+                    asset_id: "mat_jade_01".to_owned(),
+                    storage_path: "materials/jade/mat_jade_01.webp".to_owned(),
                     alt_i18n: HashMap::from([
-                        ("ja".to_owned(), "チタンの材質サンプル".to_owned()),
-                        ("en".to_owned(), "Titanium material sample".to_owned()),
+                        ("ja".to_owned(), "翡翠の材質サンプル".to_owned()),
+                        ("en".to_owned(), "Jade material sample".to_owned()),
                     ]),
                     sort_order: 0,
                     is_primary: true,
                     width: 1200,
                     height: 1200,
                 }],
-                price_usd: 9800,
-                price_jpy: 9800,
-                is_active: false,
+                price_usd: 88500,
+                price_jpy: 150000,
+                is_active: true,
                 sort_order: 30,
-                version: 2,
+                version: 1,
                 updated_at: now - chrono::Duration::hours(12),
             },
         ),
@@ -6381,12 +6941,29 @@ fn new_mock_snapshot() -> AdminSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::to_bytes;
+    use axum::extract::{Form, State};
+    use std::sync::Arc;
 
     fn mock_server_state() -> ServerState {
         ServerState {
             source_label: "Mock".to_owned(),
             source: DataSource::Mock,
             data: RwLock::new(new_mock_snapshot()),
+        }
+    }
+
+    fn mock_auth_state() -> Arc<AuthState> {
+        Arc::new(AuthState {
+            enabled: false,
+            login_passphrase: String::new(),
+        })
+    }
+
+    fn mock_app_state() -> AppState {
+        AppState {
+            server: Arc::new(mock_server_state()),
+            auth: mock_auth_state(),
         }
     }
 
@@ -6420,6 +6997,74 @@ mod tests {
         assert_eq!(detail.status_label, "製造中");
         assert_eq!(detail.payment_status_label, "支払い済み");
         assert_eq!(detail.fulfillment_status_label, "製造中");
+    }
+
+    #[tokio::test]
+    async fn create_material_accepts_decimal_usd_input() {
+        let form = HashMap::from([
+            ("key".to_owned(), "rose_quartz_variant".to_owned()),
+            ("label_ja".to_owned(), "ローズクオーツ".to_owned()),
+            ("label_en".to_owned(), "Rose Quartz".to_owned()),
+            (
+                "description_ja".to_owned(),
+                "やわらかな色合いで、親しみやすい印象の石材".to_owned(),
+            ),
+            (
+                "description_en".to_owned(),
+                "A soft-toned stone with a warm, approachable presence".to_owned(),
+            ),
+            (
+                "comparison_texture_ja".to_owned(),
+                "淡い桃色のやわらかな透明感".to_owned(),
+            ),
+            (
+                "comparison_texture_en".to_owned(),
+                "Soft, translucent pink sheen".to_owned(),
+            ),
+            (
+                "comparison_weight_ja".to_owned(),
+                "やや軽やかで手になじみやすい".to_owned(),
+            ),
+            (
+                "comparison_weight_en".to_owned(),
+                "Light and comfortable to handle".to_owned(),
+            ),
+            (
+                "comparison_usage_ja".to_owned(),
+                "やさしい印象を出したいときに向く".to_owned(),
+            ),
+            (
+                "comparison_usage_en".to_owned(),
+                "Well suited when you want a gentle impression".to_owned(),
+            ),
+            ("shape".to_owned(), "square".to_owned()),
+            ("price_usd".to_owned(), "165.00".to_owned()),
+            ("price_jpy".to_owned(), "28000".to_owned()),
+            ("sort_order".to_owned(), "11".to_owned()),
+            ("photo_storage_path".to_owned(), String::new()),
+            ("photo_alt_ja".to_owned(), String::new()),
+            ("photo_alt_en".to_owned(), String::new()),
+            ("is_active".to_owned(), "1".to_owned()),
+        ]);
+
+        let state = mock_app_state();
+        let response = handle_material_create(State(state.clone()), Ok(Form(form.clone()))).await;
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be readable");
+        let html = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
+        assert!(html.contains("材質「rose_quartz_variant」を作成しました。"));
+
+        let detail = state
+            .server
+            .get_material_detail("rose_quartz_variant", "", "")
+            .await;
+        assert!(
+            detail.is_some(),
+            "material should be inserted into mock state"
+        );
     }
 
     #[tokio::test]
@@ -6698,5 +7343,19 @@ mod tests {
     fn validate_storage_bucket_name_rejects_path_segments() {
         let result = validate_storage_bucket_name("hanko-field.firebasestorage.app/path");
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn redirect_to_admin_login_for_htmx_uses_lowercase_header() {
+        let response = redirect_to_admin_login(true);
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            response
+                .headers()
+                .get("hx-redirect")
+                .and_then(|value| value.to_str().ok()),
+            Some("/admin-login")
+        );
     }
 }

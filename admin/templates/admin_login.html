@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hanko Field Admin | ログイン</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/static/style.css?v=20260401e">
+  <script src="/admin/static/admin.js?v=20260218c" defer></script>
+</head>
+<body>
+  <main class="mx-auto flex min-h-screen max-w-[1320px] items-center px-4 py-10 sm:px-6 lg:px-8">
+    <section class="mx-auto w-full max-w-[520px] rounded-[28px] border border-admin-line/75 bg-admin-panel px-6 py-8 shadow-[0_14px_40px_rgb(30_41_37_/_0.12)] sm:px-8">
+      <p class="text-[0.8rem] font-bold tracking-[0.12em] text-admin-accent uppercase">Hanko Field Admin</p>
+      <h1 class="mt-2 text-[clamp(1.9rem,4vw,2.6rem)] leading-[1.15] font-bold">管理画面にログイン</h1>
+      <p class="mt-2 text-sm text-admin-muted sm:text-base">パスフレーズを入力して、注文管理・マスタ編集に進みます。</p>
+
+      <form class="mt-6 space-y-4" method="post" action="/admin-login">
+        <label class="flex flex-col gap-1.5 text-sm font-semibold text-admin-ink">
+          <span>パスフレーズ</span>
+          <input
+            type="password"
+            name="passphrase"
+            autocomplete="current-password"
+            required
+            class="rounded-[12px] border border-admin-line bg-white px-4 py-3 text-base text-admin-ink shadow-[0_1px_0_rgb(255_255_255_/_0.8)] outline-none transition placeholder:text-admin-muted focus:border-admin-accent focus:ring-2 focus:ring-admin-accent/15"
+          >
+        </label>
+
+        {% if has_error %}
+        <div class="rounded-2xl border border-admin-accent/30 bg-admin-accent/10 px-4 py-3 text-sm font-semibold text-admin-muted">
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <button
+          type="submit"
+          class="inline-flex w-full items-center justify-center rounded-[12px] border border-admin-accent bg-admin-accent px-4 py-3 text-[0.95rem] font-semibold text-white transition hover:brightness-[1.05]"
+        >
+          ログイン
+        </button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

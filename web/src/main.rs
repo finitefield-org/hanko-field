@@ -5,25 +5,27 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use askama::Template;
 use axum::{
-    extract::{rejection::FormRejection, Form, Query, State},
-    http::{header, HeaderName, HeaderValue, StatusCode},
-    response::{IntoResponse, Redirect, Response},
-    routing::{get, post},
     Router,
+    extract::{Form, Query, State, rejection::FormRejection},
+    http::{HeaderName, HeaderValue, StatusCode, header},
+    response::{IntoResponse, Redirect, Response},
+    routing::{any, get, post},
 };
 use firebase_sdk_rust::firebase_firestore::{Document, FirebaseFirestoreClient, RunQueryRequest};
-use gcp_auth::{provider, CustomServiceAccount, TokenProvider};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{json, Value as JsonValue};
+use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde_json::{Value as JsonValue, json};
 use tower_http::services::ServeDir;
 use uuid::Uuid;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
+const ADMIN_PROXY_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 const HX_REDIRECT_HEADER: &str = "hx-redirect";
+const WEB_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -49,6 +51,7 @@ struct AppConfig {
     locale: String,
     default_locale: String,
     api_base_url: String,
+    admin_base_url: String,
     firestore_project_id: Option<String>,
     credentials_file: Option<String>,
     storage_assets_bucket: Option<String>,
@@ -71,6 +74,7 @@ struct MaterialOption {
     comparison_texture: String,
     comparison_weight: String,
     comparison_usage: String,
+    price_by_currency: HashMap<String, i64>,
     shape: String,
     shape_label: String,
     price: i64,
@@ -84,6 +88,7 @@ struct MaterialOption {
 struct CountryOption {
     code: String,
     label: String,
+    shipping_fee_by_currency: HashMap<String, i64>,
     shipping: i64,
 }
 
@@ -129,16 +134,29 @@ struct PurchaseResultData {
 }
 
 #[derive(Template)]
+#[template(path = "top.html")]
+struct TopPageTemplate {
+    selected_locale: String,
+    top_url: String,
+    design_url: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    privacy_policy_url: String,
+}
+
+#[derive(Template)]
 #[template(path = "index.html")]
 struct PageTemplate {
     fonts: Vec<FontOption>,
     font_stylesheet_urls: Vec<String>,
     materials: Vec<MaterialOption>,
     countries: Vec<CountryOption>,
-    is_mock: bool,
     default_font_key: String,
     default_font_label: String,
     selected_locale: String,
+    purchase_action_path: String,
+    purchase_note: String,
+    top_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
@@ -270,6 +288,9 @@ struct PaymentSuccessTemplate {
     has_order_id: bool,
     order_id: String,
     selected_locale: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    top_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -282,6 +303,10 @@ struct PaymentFailureTemplate {
     has_order_id: bool,
     order_id: String,
     selected_locale: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    top_url: String,
+    design_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -292,7 +317,10 @@ struct PaymentFailureTemplate {
 #[template(path = "commercial_transactions.html")]
 struct CommercialTransactionsTemplate {
     selected_locale: String,
+    top_url: String,
+    design_url: String,
     terms_url: String,
+    commercial_transactions_url: String,
     contact_url: String,
     privacy_policy_url: String,
 }
@@ -300,7 +328,11 @@ struct CommercialTransactionsTemplate {
 #[derive(Template)]
 #[template(path = "terms.html")]
 struct TermsTemplate {
+    design_url: String,
+    contact_url: String,
     selected_locale: String,
+    top_url: String,
+    terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
 }
@@ -332,14 +364,13 @@ impl CatalogSource {
         }
     }
 
-    fn is_mock(&self) -> bool {
-        matches!(self, Self::Mock(_))
-    }
-
-    async fn load_catalog(&self) -> Result<CatalogData> {
+    async fn load_catalog(&self, locale: &str) -> Result<CatalogData> {
         match self {
-            Self::Mock(source) => Ok(source.catalog.clone()),
-            Self::Firestore(source) => source.load_catalog().await,
+            Self::Mock(source) => {
+                let _ = &source.catalog;
+                Ok(new_mock_catalog_source(locale).catalog)
+            }
+            Self::Firestore(source) => source.load_catalog(locale).await,
         }
     }
 }
@@ -352,7 +383,6 @@ struct MockCatalogSource {
 #[derive(Clone)]
 struct FirestoreCatalogSource {
     project_id: String,
-    locale: String,
     default_locale: String,
     label: String,
     storage_assets_bucket: String,
@@ -361,20 +391,20 @@ struct FirestoreCatalogSource {
 }
 
 impl FirestoreCatalogSource {
-    async fn load_catalog(&self) -> Result<CatalogData> {
+    async fn load_catalog(&self, locale: &str) -> Result<CatalogData> {
         let access_token = self
             .token_provider
             .token(&[DATASTORE_SCOPE])
             .await
             .context("failed to acquire firestore access token")?;
 
-        let client = FirebaseFirestoreClient::new(access_token.as_str().to_owned());
+        let client = Self::firestore_client_from_access_token(access_token.as_str())?;
         let parent = format!("projects/{}/databases/(default)/documents", self.project_id);
         let fallback_catalog = self
             .allow_mock_fallback
-            .then(|| new_mock_catalog_source(&self.locale).catalog);
+            .then(|| new_mock_catalog_source(locale).catalog);
 
-        let fonts = match self.load_fonts(&client, &parent).await {
+        let fonts = match self.load_fonts(&client, &parent, locale).await {
             Ok(fonts) => fonts,
             Err(error) => match fallback_catalog.as_ref() {
                 Some(fallback_catalog) => {
@@ -386,7 +416,7 @@ impl FirestoreCatalogSource {
                 None => return Err(error),
             },
         };
-        let materials = match self.load_materials(&client, &parent).await {
+        let materials = match self.load_materials(&client, &parent, locale).await {
             Ok(materials) => materials,
             Err(error) => match fallback_catalog.as_ref() {
                 Some(fallback_catalog) => {
@@ -398,7 +428,7 @@ impl FirestoreCatalogSource {
                 None => return Err(error),
             },
         };
-        let countries = match self.load_countries(&client, &parent).await {
+        let countries = match self.load_countries(&client, &parent, locale).await {
             Ok(countries) => countries,
             Err(error) => match fallback_catalog.as_ref() {
                 Some(fallback_catalog) => {
@@ -418,10 +448,15 @@ impl FirestoreCatalogSource {
         })
     }
 
+    fn firestore_client_from_access_token(access_token: &str) -> Result<FirebaseFirestoreClient> {
+        Ok(FirebaseFirestoreClient::new(access_token.to_owned()))
+    }
+
     async fn load_fonts(
         &self,
         client: &FirebaseFirestoreClient,
         parent: &str,
+        locale: &str,
     ) -> Result<Vec<FontOption>> {
         let documents = self.query_active_documents(client, parent, "fonts").await?;
 
@@ -450,7 +485,7 @@ impl FirestoreCatalogSource {
 
             let label = resolve_font_label_field(
                 &document.fields,
-                &self.locale,
+                locale,
                 &self.default_locale,
                 &doc_id,
             );
@@ -480,6 +515,7 @@ impl FirestoreCatalogSource {
         &self,
         client: &FirebaseFirestoreClient,
         parent: &str,
+        locale: &str,
     ) -> Result<Vec<MaterialOption>> {
         let documents = self
             .query_active_documents(client, parent, "materials")
@@ -501,7 +537,9 @@ impl FirestoreCatalogSource {
                 }
             }
 
-            let Some(price) = resolve_amount_for_currency(&price_by_currency, "USD") else {
+            let price_currency = locale_currency_code(locale);
+            let Some(price) = resolve_amount_for_currency(&price_by_currency, price_currency)
+            else {
                 eprintln!(
                     "warning: skipping materials/{doc_id}: missing or empty price_by_currency"
                 );
@@ -512,7 +550,7 @@ impl FirestoreCatalogSource {
                 &document.fields,
                 "label_i18n",
                 "label",
-                &self.locale,
+                locale,
                 &self.default_locale,
                 &doc_id,
             );
@@ -520,17 +558,41 @@ impl FirestoreCatalogSource {
                 &document.fields,
                 "description_i18n",
                 "description",
-                &self.locale,
+                locale,
                 &self.default_locale,
                 "",
             );
-            let (comparison_texture, comparison_weight, comparison_usage) =
-                material_comparison_profile(&doc_id, &self.locale);
+            let (comparison_default_texture, comparison_default_weight, comparison_default_usage) =
+                material_comparison_profile(&doc_id, locale);
+            let comparison_texture = fallback_text(
+                if parse_supported_locale(locale) == Some("en") {
+                    read_string_field(&document.fields, "comparison_texture_en")
+                } else {
+                    read_string_field(&document.fields, "comparison_texture_ja")
+                },
+                comparison_default_texture.as_str(),
+            );
+            let comparison_weight = fallback_text(
+                if parse_supported_locale(locale) == Some("en") {
+                    read_string_field(&document.fields, "comparison_weight_en")
+                } else {
+                    read_string_field(&document.fields, "comparison_weight_ja")
+                },
+                comparison_default_weight.as_str(),
+            );
+            let comparison_usage = fallback_text(
+                if parse_supported_locale(locale) == Some("en") {
+                    read_string_field(&document.fields, "comparison_usage_en")
+                } else {
+                    read_string_field(&document.fields, "comparison_usage_ja")
+                },
+                comparison_default_usage.as_str(),
+            );
             let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
             let (photo_url, photo_alt, has_photo) = resolve_material_photo(
                 &document.fields,
                 &self.storage_assets_bucket,
-                &self.locale,
+                locale,
                 &self.default_locale,
             );
             let photo_alt = if has_photo && photo_alt.is_empty() {
@@ -546,10 +608,11 @@ impl FirestoreCatalogSource {
                 comparison_texture,
                 comparison_weight,
                 comparison_usage,
+                price_by_currency,
                 shape: shape.to_owned(),
-                shape_label: material_shape_label(shape, &self.locale).to_owned(),
+                shape_label: material_shape_label(shape, locale).to_owned(),
                 price,
-                price_display: format_usd(price),
+                price_display: format_currency_amount(price, price_currency),
                 photo_url,
                 photo_alt,
                 has_photo,
@@ -567,6 +630,7 @@ impl FirestoreCatalogSource {
         &self,
         client: &FirebaseFirestoreClient,
         parent: &str,
+        locale: &str,
     ) -> Result<Vec<CountryOption>> {
         let documents = self
             .query_active_documents(client, parent, "countries")
@@ -592,7 +656,9 @@ impl FirestoreCatalogSource {
                 }
             }
 
-            let Some(shipping) = resolve_amount_for_currency(&shipping_fee_by_currency, "USD")
+            let shipping_currency = locale_currency_code(locale);
+            let Some(shipping) =
+                resolve_amount_for_currency(&shipping_fee_by_currency, shipping_currency)
             else {
                 eprintln!(
                     "warning: skipping countries/{doc_id}: missing or empty shipping_fee_by_currency"
@@ -604,7 +670,7 @@ impl FirestoreCatalogSource {
                 &document.fields,
                 "label_i18n",
                 "label",
-                &self.locale,
+                locale,
                 &self.default_locale,
                 &doc_id,
             );
@@ -612,6 +678,7 @@ impl FirestoreCatalogSource {
             countries.push(CountryOption {
                 code: doc_id,
                 label,
+                shipping_fee_by_currency,
                 shipping,
             });
         }
@@ -689,6 +756,12 @@ impl FirestoreCatalogSource {
 
 #[derive(Clone)]
 struct KanjiApiClient {
+    base_url: String,
+    http_client: reqwest::Client,
+}
+
+#[derive(Clone)]
+struct AdminProxyClient {
     base_url: String,
     http_client: reqwest::Client,
 }
@@ -837,6 +910,8 @@ async fn decode_api_response<T: DeserializeOwned>(
 struct AppState {
     source: Arc<CatalogSource>,
     kanji_api: Arc<KanjiApiClient>,
+    admin_proxy: Arc<AdminProxyClient>,
+    mode: RunMode,
     locale: String,
     default_locale: String,
 }
@@ -854,7 +929,8 @@ async fn run() -> Result<()> {
     let state = build_state(&cfg).await?;
 
     let app = Router::new()
-        .route("/", get(handle_index))
+        .route("/", get(handle_top))
+        .route("/design", get(handle_design))
         .route("/terms", get(handle_terms))
         .route(
             "/commercial-transactions",
@@ -865,8 +941,11 @@ async fn run() -> Result<()> {
         .route("/kanji", post(handle_kanji_suggestions))
         .route("/purchase", post(handle_purchase))
         .route("/mock/kanji", post(handle_kanji_suggestions))
-        .route("/mock/purchase", post(handle_purchase))
-        .nest_service("/static", ServeDir::new("static"))
+        .route("/mock/purchase", post(handle_mock_purchase))
+        .route("/admin-login", any(handle_admin_proxy))
+        .route("/admin", any(handle_admin_proxy))
+        .route("/admin/{*path}", any(handle_admin_proxy))
+        .nest_service("/static", ServeDir::new(WEB_STATIC_DIR))
         .with_state(state.clone());
 
     let addr = format!("0.0.0.0:{}", cfg.port);
@@ -910,12 +989,22 @@ async fn build_state(cfg: &AppConfig) -> Result<AppState> {
         base_url: cfg.api_base_url.clone(),
         http_client: kanji_http_client,
     });
+    let admin_proxy_http_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .context("failed to initialize admin proxy client")?;
+    let admin_proxy = Arc::new(AdminProxyClient {
+        base_url: cfg.admin_base_url.clone(),
+        http_client: admin_proxy_http_client,
+    });
 
-    let _catalog = load_catalog_with_timeout(source.as_ref()).await?;
+    let _catalog = load_catalog_with_timeout(source.as_ref(), &cfg.locale).await?;
 
     Ok(AppState {
         source,
         kanji_api,
+        admin_proxy,
+        mode: cfg.mode,
         locale: cfg.locale.clone(),
         default_locale: cfg.default_locale.clone(),
     })
@@ -923,10 +1012,7 @@ async fn build_state(cfg: &AppConfig) -> Result<AppState> {
 
 fn load_config() -> Result<AppConfig> {
     let mut cfg = AppConfig {
-        port: env::var("HANKO_WEB_PORT")
-            .unwrap_or_default()
-            .trim()
-            .to_owned(),
+        port: env_first(&["HANKO_WEB_PORT", "PORT"]),
         mode: RunMode::Mock,
         locale: env::var("HANKO_WEB_LOCALE")
             .unwrap_or_default()
@@ -940,6 +1026,10 @@ fn load_config() -> Result<AppConfig> {
             .unwrap_or_default()
             .trim()
             .to_owned(),
+        admin_base_url: env_first(&[
+            "HANKO_WEB_ADMIN_BASE_URL_PROD",
+            "HANKO_WEB_ADMIN_BASE_URL",
+        ]),
         firestore_project_id: None,
         credentials_file: None,
         storage_assets_bucket: None,
@@ -974,6 +1064,13 @@ fn load_config() -> Result<AppConfig> {
         "dev" => cfg.mode = RunMode::Dev,
         "prod" => cfg.mode = RunMode::Prod,
         _ => bail!("invalid HANKO_WEB_MODE {mode_value:?}: use mock, dev, or prod"),
+    }
+
+    if cfg.admin_base_url.is_empty() {
+        if matches!(cfg.mode, RunMode::Prod) {
+            bail!("prod web requires HANKO_WEB_ADMIN_BASE_URL[_PROD]");
+        }
+        cfg.admin_base_url = "http://localhost:3051".to_owned();
     }
 
     let (project_id_keys, credentials_keys, storage_bucket_keys): (&[&str], &[&str], &[&str]) =
@@ -1080,15 +1177,105 @@ async fn new_catalog_source(cfg: &AppConfig) -> Result<CatalogSource> {
                     .firestore_project_id
                     .clone()
                     .context("firestore project id is empty")?,
-                locale: cfg.locale.clone(),
                 default_locale: cfg.default_locale.clone(),
                 label,
                 storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
-                allow_mock_fallback: cfg.mode == RunMode::Dev,
+                allow_mock_fallback: false,
                 token_provider,
             }))
         }
     }
+}
+
+impl AdminProxyClient {
+    async fn proxy(&self, request: axum::extract::Request) -> Response {
+        let (parts, body) = request.into_parts();
+
+        let path_and_query = parts
+            .uri
+            .path_and_query()
+            .map(|value| value.as_str())
+            .unwrap_or("/");
+        let target = match reqwest::Url::parse(self.base_url.trim_end_matches('/'))
+            .and_then(|base| base.join(path_and_query))
+        {
+            Ok(url) => url,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::BAD_GATEWAY,
+                    format!("failed to build admin proxy URL: {error}"),
+                );
+            }
+        };
+
+        let body = match axum::body::to_bytes(body, ADMIN_PROXY_MAX_BODY_BYTES).await {
+            Ok(body) => body,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    format!("failed to read admin proxy request body: {error}"),
+                );
+            }
+        };
+
+        let mut request_builder = self
+            .http_client
+            .request(parts.method.clone(), target)
+            .body(body.to_vec());
+
+        for (name, value) in &parts.headers {
+            if should_forward_admin_request_header(name) {
+                request_builder = request_builder.header(name, value);
+            }
+        }
+
+        let upstream = match request_builder.send().await {
+            Ok(response) => response,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::BAD_GATEWAY,
+                    format!("failed to proxy admin request: {error}"),
+                );
+            }
+        };
+
+        let status = upstream.status();
+        let upstream_headers = upstream.headers().clone();
+        let body = match upstream.bytes().await {
+            Ok(body) => body,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::BAD_GATEWAY,
+                    format!("failed to read admin proxy response: {error}"),
+                );
+            }
+        };
+
+        let mut response_builder = Response::builder().status(status);
+        if let Some(content_type) = upstream_headers.get(header::CONTENT_TYPE) {
+            response_builder = response_builder.header(header::CONTENT_TYPE, content_type);
+        }
+        for (name, value) in &upstream_headers {
+            if should_forward_admin_response_header(name) {
+                response_builder = response_builder.header(name, value);
+            }
+        }
+
+        match response_builder.body(axum::body::Body::from(body.to_vec())) {
+            Ok(response) => response,
+            Err(error) => plain_error(
+                StatusCode::BAD_GATEWAY,
+                format!("failed to build admin proxy response: {error}"),
+            ),
+        }
+    }
+}
+
+async fn handle_admin_proxy(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+) -> Response {
+    state.admin_proxy.proxy(request).await
 }
 
 fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
@@ -1145,126 +1332,155 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
             ],
             materials: vec![
                 MaterialOption {
-                    key: "boxwood".to_owned(),
-                    label: if english { "Boxwood" } else { "柘植" }.to_owned(),
-                    description: if english {
-                        "A light, easy-to-handle classic with soft wood grain"
+                    key: "rose_quartz".to_owned(),
+                    label: if english {
+                        "Rose Quartz"
                     } else {
-                        "軽くて扱いやすい、木目のやわらかい定番材"
+                        "ローズクオーツ"
+                    }
+                    .to_owned(),
+                    description: if english {
+                        "A soft-toned stone with a warm, approachable presence"
+                    } else {
+                        "やわらかな色合いで、親しみやすい印象の石材"
                     }
                     .to_owned(),
                     comparison_texture: if english {
-                        "Soft wood grain"
+                        "Soft, translucent pink sheen"
                     } else {
-                        "さらりとした木目"
+                        "淡い桃色のやわらかな透明感"
                     }
                     .to_owned(),
                     comparison_weight: if english {
-                        "Light and easy to handle"
+                        "Light and gentle to handle"
                     } else {
-                        "軽めで扱いやすい"
+                        "やや軽やかで手になじみやすい"
                     }
                     .to_owned(),
                     comparison_usage: if english {
-                        "Good for everyday square seals"
+                        "A soft, friendly finish"
                     } else {
-                        "日常使いの角印向き"
+                        "やわらかな印象を出しやすい"
                     }
                     .to_owned(),
+                    price_by_currency: HashMap::from([
+                        ("USD".to_owned(), 16500),
+                        ("JPY".to_owned(), 28000),
+                    ]),
                     shape: "square".to_owned(),
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
-                    price: 3600,
-                    price_display: format_usd(3600),
-                    photo_url: "https://picsum.photos/seed/hf-boxwood/640/420".to_owned(),
-                    photo_alt: if english {
-                        "Boxwood photo"
+                    price: if english { 16500 } else { 28000 },
+                    price_display: if english {
+                        format_usd(16500)
                     } else {
-                        "柘植材の写真"
+                        format_jpy(28000)
+                    },
+                    photo_url: "https://picsum.photos/seed/hf-rose-quartz/640/420".to_owned(),
+                    photo_alt: if english {
+                        "Rose quartz photo"
+                    } else {
+                        "ローズクオーツ材の写真"
                     }
                     .to_owned(),
                     has_photo: true,
                 },
                 MaterialOption {
-                    key: "black_buffalo".to_owned(),
+                    key: "lapis_lazuli".to_owned(),
                     label: if english {
-                        "Black buffalo"
+                        "Lapis Lazuli"
                     } else {
-                        "黒水牛"
+                        "ラピスラビリ"
                     }
                     .to_owned(),
                     description: if english {
-                        "Smooth, slightly glossy, and durable"
+                        "A deep-blue stone with a strong, distinctive presence"
                     } else {
-                        "しっとりした質感で、落ち着いた印象と耐久性を両立"
+                        "深い青が印象的な、存在感のある石材"
                     }
                     .to_owned(),
                     comparison_texture: if english {
-                        "Smooth, slightly glossy finish"
+                        "Deep blue stone with bright flecks"
                     } else {
-                        "しっとりした艶感"
+                        "深い青にきらめきが入る石目"
                     }
                     .to_owned(),
                     comparison_weight: if english {
-                        "Medium weight with a stable feel"
+                        "Medium-heavy with a strong presence"
                     } else {
-                        "中量で安定感がある"
+                        "ほどよい重さで存在感がある"
                     }
                     .to_owned(),
                     comparison_usage: if english {
-                        "A popular choice for round seals"
+                        "A vivid, distinctive finish"
                     } else {
-                        "丸印の定番として選びやすい"
+                        "印象を強めやすい"
                     }
                     .to_owned(),
+                    price_by_currency: HashMap::from([
+                        ("USD".to_owned(), 32500),
+                        ("JPY".to_owned(), 55000),
+                    ]),
                     shape: "round".to_owned(),
                     shape_label: if english { "Round seal" } else { "丸印" }.to_owned(),
-                    price: 4800,
-                    price_display: format_usd(4800),
-                    photo_url: "https://picsum.photos/seed/hf-black-buffalo/640/420".to_owned(),
-                    photo_alt: if english {
-                        "Black buffalo photo"
+                    price: if english { 32500 } else { 55000 },
+                    price_display: if english {
+                        format_usd(32500)
                     } else {
-                        "黒水牛材の写真"
+                        format_jpy(55000)
+                    },
+                    photo_url: "https://picsum.photos/seed/hf-lapis-lazuli/640/420".to_owned(),
+                    photo_alt: if english {
+                        "Lapis lazuli photo"
+                    } else {
+                        "ラピスラビリ材の写真"
                     }
                     .to_owned(),
                     has_photo: true,
                 },
                 MaterialOption {
-                    key: "titanium".to_owned(),
-                    label: if english { "Titanium" } else { "チタン" }.to_owned(),
+                    key: "jade".to_owned(),
+                    label: if english { "Jade" } else { "翡翠" }.to_owned(),
                     description: if english {
-                        "Premium, heavy, and highly wear-resistant"
+                        "A dignified stone with a calm green sheen"
                     } else {
-                        "重厚感があり、摩耗に強いプレミアム材"
+                        "落ち着いた緑の艶が映える、格調ある石材"
                     }
                     .to_owned(),
                     comparison_texture: if english {
-                        "Clean metallic finish"
+                        "Polished green stone with a calm sheen"
                     } else {
-                        "金属らしいシャープな質感"
+                        "しっとりした緑石の艶感"
                     }
                     .to_owned(),
                     comparison_weight: if english {
-                        "Heavy and dense"
+                        "Substantial and steady"
                     } else {
-                        "重めで高密度"
+                        "ほどよく重く、落ち着いた安定感"
                     }
                     .to_owned(),
                     comparison_usage: if english {
-                        "Ideal for long-term durability"
+                        "A calm, dignified finish"
                     } else {
-                        "長期使用や耐久性重視に向く"
+                        "落ち着いた格調を出しやすい"
                     }
                     .to_owned(),
+                    price_by_currency: HashMap::from([
+                        ("USD".to_owned(), 88500),
+                        ("JPY".to_owned(), 150000),
+                    ]),
                     shape: "square".to_owned(),
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
-                    price: 9800,
-                    price_display: format_usd(9800),
-                    photo_url: "https://picsum.photos/seed/hf-titanium/640/420".to_owned(),
-                    photo_alt: if english {
-                        "Titanium photo"
+                    price: if english { 88500 } else { 150000 },
+                    price_display: if english {
+                        format_usd(88500)
                     } else {
-                        "チタン材の写真"
+                        format_jpy(150000)
+                    },
+                    photo_url: "https://picsum.photos/seed/hf-jade/640/420".to_owned(),
+                    photo_alt: if english {
+                        "Jade photo"
+                    } else {
+                        "翡翠材の写真"
                     }
                     .to_owned(),
                     has_photo: true,
@@ -1274,31 +1490,55 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                 CountryOption {
                     code: "JP".to_owned(),
                     label: if english { "Japan" } else { "日本" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 600),
+                        ("JPY".to_owned(), 600),
+                    ]),
                     shipping: 600,
                 },
                 CountryOption {
                     code: "US".to_owned(),
                     label: if english { "United States" } else { "アメリカ" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 1800),
+                        ("JPY".to_owned(), 1800),
+                    ]),
                     shipping: 1800,
                 },
                 CountryOption {
                     code: "CA".to_owned(),
                     label: if english { "Canada" } else { "カナダ" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 1900),
+                        ("JPY".to_owned(), 1900),
+                    ]),
                     shipping: 1900,
                 },
                 CountryOption {
                     code: "GB".to_owned(),
                     label: if english { "United Kingdom" } else { "イギリス" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 2000),
+                        ("JPY".to_owned(), 2000),
+                    ]),
                     shipping: 2000,
                 },
                 CountryOption {
                     code: "AU".to_owned(),
                     label: if english { "Australia" } else { "オーストラリア" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 2100),
+                        ("JPY".to_owned(), 2100),
+                    ]),
                     shipping: 2100,
                 },
                 CountryOption {
                     code: "SG".to_owned(),
                     label: if english { "Singapore" } else { "シンガポール" }.to_owned(),
+                    shipping_fee_by_currency: HashMap::from([
+                        ("USD".to_owned(), 1300),
+                        ("JPY".to_owned(), 1300),
+                    ]),
                     shipping: 1300,
                 },
             ],
@@ -1306,8 +1546,8 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
     }
 }
 
-async fn load_catalog_with_timeout(source: &CatalogSource) -> Result<CatalogData> {
-    let catalog = tokio::time::timeout(Duration::from_secs(7), source.load_catalog())
+async fn load_catalog_with_timeout(source: &CatalogSource, locale: &str) -> Result<CatalogData> {
+    let catalog = tokio::time::timeout(Duration::from_secs(7), source.load_catalog(locale))
         .await
         .context("catalog load timed out after 7s")??;
 
@@ -1415,7 +1655,7 @@ fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
     urls
 }
 
-async fn handle_index(
+async fn handle_top(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
@@ -1426,7 +1666,36 @@ async fn handle_index(
         return Redirect::to(&path).into_response();
     }
 
-    let catalog = match load_catalog_with_timeout(state.source.as_ref()).await {
+    let template = TopPageTemplate {
+        selected_locale: selected_locale.clone(),
+        top_url: top_url(&selected_locale),
+        design_url: design_url(&selected_locale),
+        terms_url: terms_url(&selected_locale),
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        privacy_policy_url: privacy_policy_url(&selected_locale),
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render page: {error}"),
+        ),
+    }
+}
+
+async fn handle_design(
+    State(state): State<AppState>,
+    Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    let selected_locale =
+        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+
+    if let Some(path) = checkout_redirect_path(&query, &selected_locale) {
+        return Redirect::to(&path).into_response();
+    }
+
+    let catalog = match load_catalog_with_timeout(state.source.as_ref(), &selected_locale).await {
         Ok(catalog) => catalog,
         Err(error) => {
             return plain_error(
@@ -1435,6 +1704,7 @@ async fn handle_index(
             );
         }
     };
+    let catalog = localize_catalog_prices(catalog, &selected_locale);
 
     let Some(default_font) = catalog
         .fonts
@@ -1455,7 +1725,25 @@ async fn handle_index(
         fonts: catalog.fonts,
         materials: catalog.materials,
         countries: catalog.countries,
-        is_mock: state.source.is_mock(),
+        purchase_action_path: if state.mode == RunMode::Mock {
+            "/mock/purchase".to_owned()
+        } else {
+            "/purchase".to_owned()
+        },
+        purchase_note: if state.mode == RunMode::Mock {
+            localized_text(
+                &selected_locale,
+                "モック注文を確定します。",
+                "This confirms a mock order.",
+            )
+        } else {
+            localized_text(
+                &selected_locale,
+                "Stripe Checkout に遷移して決済します。",
+                "You will be redirected to Stripe Checkout to complete payment.",
+            )
+        },
+        top_url: top_url(&selected_locale),
         terms_url: terms_url(&selected_locale),
         commercial_transactions_url: commercial_transactions_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
@@ -1500,14 +1788,60 @@ fn checkout_redirect_path(query: &PaymentRedirectQuery, locale: &str) -> Option<
     Some(format!("{base_path}?{}", params.join("&")))
 }
 
+fn payment_result_locale_url(
+    base_path: &str,
+    query: &PaymentRedirectQuery,
+    locale: &str,
+) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    let mut params = vec![format!("lang={normalized}")];
+
+    if let Some(checkout) = query
+        .checkout
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("checkout={checkout}"));
+    }
+    if let Some(session_id) = query
+        .session_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("session_id={session_id}"));
+    }
+    if let Some(order_id) = query
+        .order_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("order_id={order_id}"));
+    }
+
+    format!("{base_path}?{}", params.join("&"))
+}
+
 async fn handle_payment_success(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
-    let session_id = query.session_id.unwrap_or_default().trim().to_owned();
+    let session_id = query
+        .session_id
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
-    let order_id = query.order_id.unwrap_or_default().trim().to_owned();
+    let order_id = query
+        .order_id
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
     let template = PaymentSuccessTemplate {
         contact_url: inquiry_url(&selected_locale),
         commercial_transactions_url: commercial_transactions_url(&selected_locale),
@@ -1515,6 +1849,9 @@ async fn handle_payment_success(
         order_id,
         has_session_id: !session_id.is_empty(),
         session_id,
+        lang_en_url: payment_result_locale_url("/payment/success", &query, "en"),
+        lang_ja_url: payment_result_locale_url("/payment/success", &query, "ja"),
+        top_url: top_url(&selected_locale),
         terms_url: terms_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
@@ -1535,12 +1872,21 @@ async fn handle_payment_failure(
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
-    let order_id = query.order_id.unwrap_or_default().trim().to_owned();
+    let order_id = query
+        .order_id
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
     let template = PaymentFailureTemplate {
         contact_url: inquiry_url(&selected_locale),
         commercial_transactions_url: commercial_transactions_url(&selected_locale),
         has_order_id: !order_id.is_empty(),
         order_id,
+        lang_en_url: payment_result_locale_url("/payment/failure", &query, "en"),
+        lang_ja_url: payment_result_locale_url("/payment/failure", &query, "ja"),
+        top_url: top_url(&selected_locale),
+        design_url: design_url(&selected_locale),
         terms_url: terms_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
@@ -1562,6 +1908,9 @@ async fn handle_commercial_transactions(
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
     let template = CommercialTransactionsTemplate {
         contact_url: inquiry_url(&selected_locale),
+        top_url: top_url(&selected_locale),
+        design_url: design_url(&selected_locale),
+        commercial_transactions_url: commercial_transactions_url(&selected_locale),
         terms_url: terms_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
         selected_locale,
@@ -1580,8 +1929,12 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
     let template = TermsTemplate {
+        design_url: design_url(&selected_locale),
+        contact_url: inquiry_url(&selected_locale),
+        terms_url: terms_url(&selected_locale),
         commercial_transactions_url: commercial_transactions_url(&selected_locale),
         privacy_policy_url: privacy_policy_url(&selected_locale),
+        top_url: top_url(&selected_locale),
         selected_locale,
     };
 
@@ -1659,12 +2012,34 @@ async fn handle_purchase(
     State(state): State<AppState>,
     form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
 ) -> Response {
+    handle_purchase_impl(state, form, false).await
+}
+
+async fn handle_mock_purchase(
+    State(state): State<AppState>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    handle_purchase_impl(state, form, true).await
+}
+
+async fn handle_purchase_impl(
+    state: AppState,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+    show_mock_confirmation: bool,
+) -> Response {
     let Form(form) = match form {
         Ok(form) => form,
         Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
     };
 
-    let catalog = match load_catalog_with_timeout(state.source.as_ref()).await {
+    let requested_locale = form_value(&form, "locale");
+    let order_locale = resolve_request_locale(
+        Some(&requested_locale),
+        &state.locale,
+        &state.default_locale,
+    );
+
+    let catalog = match load_catalog_with_timeout(state.source.as_ref(), &order_locale).await {
         Ok(catalog) => catalog,
         Err(error) => {
             return plain_error(
@@ -1673,6 +2048,7 @@ async fn handle_purchase(
             );
         }
     };
+    let catalog = localize_catalog_prices(catalog, &order_locale);
 
     let font_by_key = catalog
         .fonts
@@ -1708,18 +2084,14 @@ async fn handle_purchase(
     let address_line2 = form_value(&form, "address_line2");
     let email = form_value(&form, "email");
     let terms_value = form_value(&form, "terms_agreed");
-    let requested_locale = form_value(&form, "locale");
-    let order_locale = resolve_request_locale(
-        Some(&requested_locale),
-        &state.locale,
-        &state.default_locale,
-    );
     let terms_agreed =
         terms_value == "on" || terms_value == "1" || terms_value.eq_ignore_ascii_case("true");
 
+    let is_mock_confirmation = show_mock_confirmation || state.mode == RunMode::Mock;
+
     let mut result = PurchaseResultData {
         source_label: state.source.label().to_owned(),
-        is_mock: state.source.is_mock(),
+        is_mock: is_mock_confirmation,
         selected_locale: order_locale.clone(),
         ..PurchaseResultData::default()
     };
@@ -1755,7 +2127,7 @@ async fn handle_purchase(
         );
         return render_purchase_result(&result);
     };
-    if material.shape != shape_key {
+    if !material_supports_shape(&material.key, &material.shape, &shape_key) {
         result.error = localized_text(
             &order_locale,
             "選択した形状に対応する材質を選択してください。",
@@ -1894,7 +2266,7 @@ async fn handle_purchase(
     result.total = total;
     result.email = email;
 
-    if result.is_mock {
+    if is_mock_confirmation {
         return render_purchase_result(&result);
     }
 
@@ -1955,9 +2327,9 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
         address_line1: data.address_line1.clone(),
         address_line2: data.address_line2.clone(),
         has_address_line2: !data.address_line2.is_empty(),
-        subtotal_display: format_usd(data.subtotal),
-        shipping_display: format_usd(data.shipping),
-        total_display: format_usd(data.total),
+        subtotal_display: format_locale_amount(data.subtotal, &data.selected_locale),
+        shipping_display: format_locale_amount(data.shipping, &data.selected_locale),
+        total_display: format_locale_amount(data.total, &data.selected_locale),
         email: data.email.clone(),
         source_label: data.source_label.clone(),
         is_mock: data.is_mock,
@@ -2003,6 +2375,41 @@ fn render_html<T: Template>(template: &T) -> Result<String> {
     template
         .render()
         .map_err(|error| anyhow!(error.to_string()))
+}
+
+fn should_forward_admin_request_header(name: &HeaderName) -> bool {
+    let name = name.as_str().to_ascii_lowercase();
+    !matches!(
+        name.as_str(),
+        "accept-encoding"
+            | "connection"
+            | "content-length"
+            | "host"
+            | "keep-alive"
+            | "proxy-authenticate"
+            | "proxy-authorization"
+            | "te"
+            | "trailer"
+            | "transfer-encoding"
+            | "upgrade"
+    )
+}
+
+fn should_forward_admin_response_header(name: &HeaderName) -> bool {
+    let name = name.as_str().to_ascii_lowercase();
+    !matches!(
+        name.as_str(),
+        "connection"
+            | "content-type"
+            | "content-length"
+            | "keep-alive"
+            | "proxy-authenticate"
+            | "proxy-authorization"
+            | "te"
+            | "trailer"
+            | "transfer-encoding"
+            | "upgrade"
+    )
 }
 
 fn html_response(body: String) -> Response {
@@ -2056,6 +2463,16 @@ fn commercial_transactions_url(locale: &str) -> String {
     format!("/commercial-transactions?lang={normalized}")
 }
 
+fn top_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    format!("/?lang={normalized}")
+}
+
+fn design_url(locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+    format!("/design?lang={normalized}")
+}
+
 fn terms_url(locale: &str) -> String {
     let normalized = parse_supported_locale(locale).unwrap_or("ja");
     format!("/terms?lang={normalized}")
@@ -2100,6 +2517,14 @@ fn normalize_material_shape(raw: &str) -> &'static str {
     }
 }
 
+fn material_supports_shape(material_key: &str, material_shape: &str, seal_shape: &str) -> bool {
+    material_is_shape_flexible(material_key) || material_shape == seal_shape
+}
+
+fn material_is_shape_flexible(material_key: &str) -> bool {
+    matches!(material_key, "rose_quartz" | "lapis_lazuli" | "jade")
+}
+
 fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
     let english = parse_supported_locale(locale) == Some("en");
     match shape_key {
@@ -2120,48 +2545,97 @@ fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
     }
 }
 
+fn fallback_text(value: String, fallback: &str) -> String {
+    if value.trim().is_empty() {
+        fallback.to_owned()
+    } else {
+        value
+    }
+}
+
 fn material_comparison_profile(material_key: &str, locale: &str) -> (String, String, String) {
     let is_english = parse_supported_locale(locale) == Some("en");
 
     let profile = match material_key {
+        "rose_quartz" => {
+            if is_english {
+                (
+                    "Soft, translucent pink sheen",
+                    "Light and gentle to handle",
+                    "A soft, friendly finish",
+                )
+            } else {
+                (
+                    "淡い桃色のやわらかな透明感",
+                    "やや軽やかで手になじみやすい",
+                    "やわらかな印象を出しやすい",
+                )
+            }
+        }
         "boxwood" => {
             if is_english {
                 (
-                    "Dry, natural wood grain",
+                    "A simple wood grain with a gentle feel",
                     "Light and easy to handle",
-                    "Best for everyday square seals",
+                    "A dependable everyday standard",
                 )
             } else {
-                ("さらりとした木目", "軽めで扱いやすい", "日常使いの角印向き")
+                (
+                    "木目がやわらかく見える素朴な質感",
+                    "軽くて扱いやすい",
+                    "日常使いしやすい定番",
+                )
             }
         }
         "black_buffalo" => {
             if is_english {
                 (
-                    "Smooth and slightly glossy",
-                    "Medium weight with stability",
-                    "A safe choice for round seals",
+                    "Smooth, deep black finish",
+                    "Moderately weighted and steady",
+                    "Well suited to a calm, formal look",
                 )
             } else {
                 (
-                    "しっとりした艶感",
-                    "中量で安定感がある",
-                    "丸印の定番として選びやすい",
+                    "深い黒のしっとりした質感",
+                    "ほどよい重さで落ち着きがある",
+                    "落ち着いた印象を出したいときに向く",
                 )
             }
         }
-        "titanium" => {
+        "a_maru" => {
+            if is_english {
+                ("Balanced, neutral texture", "Medium weight", "Versatile")
+            } else {
+                ("標準的な質感", "中程度の重さ", "汎用的")
+            }
+        }
+        "lapis_lazuli" => {
             if is_english {
                 (
-                    "Crisp metallic finish",
-                    "Heavy and dense",
-                    "Suited to long-term durable use",
+                    "Deep blue stone with bright flecks",
+                    "Medium-heavy with a strong presence",
+                    "A vivid, distinctive finish",
                 )
             } else {
                 (
-                    "金属らしいシャープな質感",
-                    "重めで高密度",
-                    "長期使用や耐久性重視に向く",
+                    "深い青にきらめきが入る石目",
+                    "ほどよい重さで存在感がある",
+                    "印象を強めやすい",
+                )
+            }
+        }
+        "jade" => {
+            if is_english {
+                (
+                    "Polished green stone with a calm sheen",
+                    "Substantial and steady",
+                    "A calm, dignified finish",
+                )
+            } else {
+                (
+                    "しっとりした緑石の艶感",
+                    "ほどよく重く、落ち着いた安定感",
+                    "落ち着いた格調を出しやすい",
                 )
             }
         }
@@ -2244,6 +2718,24 @@ fn format_usd(amount_cents: i64) -> String {
     let fraction = cents % 100;
     let whole_display = format_with_grouping(whole);
     format!("{sign}USD {whole_display}.{fraction:02}")
+}
+
+fn format_jpy(amount_yen: i64) -> String {
+    let sign = if amount_yen < 0 { "-" } else { "" };
+    let yen = amount_yen.abs();
+    format!("{sign}JPY {}", format_with_grouping(yen))
+}
+
+fn format_currency_amount(amount: i64, currency: &str) -> String {
+    let normalized = currency.trim().to_ascii_uppercase();
+    match normalized.as_str() {
+        "JPY" => format_jpy(amount),
+        _ => format_usd(amount),
+    }
+}
+
+fn format_locale_amount(amount: i64, locale: &str) -> String {
+    format_currency_amount(amount, locale_currency_code(locale))
 }
 
 fn format_with_grouping(value: i64) -> String {
@@ -2468,6 +2960,35 @@ fn read_legacy_currency_map(
     result
 }
 
+fn locale_currency_code(locale: &str) -> &'static str {
+    if parse_supported_locale(locale) == Some("en") {
+        "USD"
+    } else {
+        "JPY"
+    }
+}
+
+fn localize_catalog_prices(mut catalog: CatalogData, locale: &str) -> CatalogData {
+    let currency = locale_currency_code(locale);
+
+    for material in &mut catalog.materials {
+        if let Some(price) = resolve_amount_for_currency(&material.price_by_currency, currency) {
+            material.price = price;
+            material.price_display = format_currency_amount(price, currency);
+        }
+    }
+
+    for country in &mut catalog.countries {
+        if let Some(shipping) =
+            resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
+        {
+            country.shipping = shipping;
+        }
+    }
+
+    catalog
+}
+
 fn resolve_amount_for_currency(values: &HashMap<String, i64>, currency: &str) -> Option<i64> {
     let code = currency.trim().to_ascii_uppercase();
     if let Some(amount) = values.get(&code).copied() {
@@ -2675,4 +3196,106 @@ fn read_array_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Vec<JsonVa
         .cloned()
         .or_else(|| value.as_array().cloned())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+    use axum::extract::Form;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    fn mock_state() -> AppState {
+        AppState {
+            source: Arc::new(CatalogSource::Mock(new_mock_catalog_source("ja"))),
+            kanji_api: Arc::new(KanjiApiClient {
+                base_url: "http://localhost:3050".to_owned(),
+                http_client: reqwest::Client::new(),
+            }),
+            admin_proxy: Arc::new(AdminProxyClient {
+                base_url: "http://localhost:3051".to_owned(),
+                http_client: reqwest::Client::new(),
+            }),
+            mode: RunMode::Mock,
+            locale: "ja".to_owned(),
+            default_locale: "ja".to_owned(),
+        }
+    }
+
+    fn valid_purchase_form() -> HashMap<String, String> {
+        HashMap::from([
+            ("locale".to_owned(), "ja".to_owned()),
+            ("seal_line1".to_owned(), "黒".to_owned()),
+            ("seal_line2".to_owned(), String::new()),
+            ("font".to_owned(), "zen_maru_gothic".to_owned()),
+            ("shape".to_owned(), "square".to_owned()),
+            ("material".to_owned(), "rose_quartz".to_owned()),
+            ("recipient_name".to_owned(), "小野光".to_owned()),
+            ("phone".to_owned(), "+81 80 6242 2597".to_owned()),
+            ("country".to_owned(), "JP".to_owned()),
+            ("postal_code".to_owned(), "5500012".to_owned()),
+            ("state".to_owned(), "大阪府".to_owned()),
+            ("city".to_owned(), "大阪市西区".to_owned()),
+            ("address_line1".to_owned(), "立売堀5丁目5-9".to_owned()),
+            (
+                "address_line2".to_owned(),
+                "第二レジデンス春日井503".to_owned(),
+            ),
+            ("email".to_owned(), "ono@finitefield.org".to_owned()),
+            ("terms_agreed".to_owned(), "on".to_owned()),
+        ])
+    }
+
+    #[tokio::test]
+    async fn catalog_load_uses_requested_locale_for_mock_source() {
+        let source = CatalogSource::Mock(new_mock_catalog_source("ja"));
+        let catalog = load_catalog_with_timeout(&source, "en")
+            .await
+            .expect("catalog should load");
+
+        let rose_quartz = catalog
+            .materials
+            .iter()
+            .find(|material| material.key == "rose_quartz")
+            .expect("rose_quartz material should exist");
+
+        assert_eq!(rose_quartz.label, "Rose Quartz");
+        assert_eq!(
+            rose_quartz.description,
+            "A soft-toned stone with a warm, approachable presence"
+        );
+        assert_eq!(rose_quartz.shape_label, "Square seal");
+    }
+
+    #[tokio::test]
+    async fn mock_purchase_returns_confirmation_without_api() {
+        let response =
+            handle_purchase_impl(mock_state(), Ok(Form(valid_purchase_form())), false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be readable");
+        let html = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
+
+        assert!(html.contains("注文を受け付けました（モック）"));
+    }
+
+    #[test]
+    fn top_page_uses_locale_aware_privacy_policy_url() {
+        let template = TopPageTemplate {
+            selected_locale: "en".to_owned(),
+            top_url: "/".to_owned(),
+            design_url: "/design".to_owned(),
+            terms_url: "/terms".to_owned(),
+            commercial_transactions_url: "/commercial-transactions".to_owned(),
+            privacy_policy_url: privacy_policy_url("en"),
+        };
+
+        let html = render_html(&template).expect("top page should render");
+
+        assert!(html.contains("href=\"https://finitefield.org/en/privacy/\""));
+    }
 }

@@ -61,3 +61,4 @@
 - [x] `web` / `app` のモバイル表示で、ステップ表示・材質一覧・フォント一覧の視認性を改善する
 - [x] `app` の確認用導線を `mock` / `dev` のみに限定し、本番ユーザには表示しない
 - [x] `web` の結果更新領域に `aria-live` を付け、購入結果や候補更新が読み上げられるようにする
+- [x] Firebase の dev / prod プロジェクトを `hanko-field` / `hanko-field-prod` に分け、Firestore は `(default)` を使う

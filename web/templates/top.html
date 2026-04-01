@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="{{ selected_locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stone Signature | 印鑑フィールド</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&family=Noto+Serif+JP:wght@400;700;900&family=Noto+Serif:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="top-page">
+  <header class="top-header">
+    <div class="top-header__inner">
+      <a class="top-brand__link" href="{{ top_url }}">
+        <div class="top-brand">
+          <h1 class="top-brand__title">Stone Signature</h1>
+          <span class="top-brand__subtitle">印鑑フィールド</span>
+        </div>
+      </a>
+      <div class="top-header__action">
+        <details class="top-language-switcher" data-language-switcher>
+          <summary class="top-language-switcher__toggle" aria-label="Language selector">
+            <span class="material-symbols-outlined top-brand__icon" aria-hidden="true">language</span>
+          </summary>
+          <div class="top-language-switcher__menu" role="menu" aria-label="Language options">
+            <a class="top-language-switcher__item{% if selected_locale == "ja" %} is-active{% endif %}" href="?lang=ja" hreflang="ja" data-language-option="ja">日本語</a>
+            <a class="top-language-switcher__item{% if selected_locale == "en" %} is-active{% endif %}" href="?lang=en" hreflang="en" data-language-option="en">English</a>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="top-header__divider"></div>
+  </header>
+
+  <main>
+    <section class="top-hero">
+      <div class="top-hero__background">
+        <img
+          alt="Craftsman hands carving gemstone"
+          class="top-hero__image"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5cLu880OVzWOnNyf9ZD8XcLvMqrMQc9P2yYVHcoN-KgbnKfMWey16b0zf7R3fFa7H-VSCAqs42ltG1JCCyxdbtQkjxXihFB5El_2xJKqjbKOdd3GIGlRb4HbTAiBNZGpLyQFWhCV6j81PL1Ij60jvqLGQs25Adi_yHKMzrB2shzvBbn8gidOur5_a_iDxLBPlKCtGyXWQv7l06Ng_ConMMKlojtfNITI-0fmeyT57m3XpXNeVLHXcK4ObXpAuN59rk6gzHqKQKVk"
+        >
+        <div class="top-hero__overlay"></div>
+      </div>
+
+      <div class="top-hero__content">
+        <h2 class="top-hero__title">
+          {% if selected_locale == "ja" %}あなただけの宝石印鑑{% else %}A gemstone seal made just for you.{% endif %}
+        </h2>
+        <p class="top-hero__copy">
+          Authentic Hand-Carved Gemstone Seals from the Orient
+        </p>
+        <button
+          type="button"
+          class="top-cta"
+          onclick="window.location.href='{{ design_url }}'"
+        >
+          <span class="top-cta__label">{% if selected_locale == "ja" %}デザインする{% else %}Start designing{% endif %}</span>
+          <span class="top-cta__sheen" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="top-footer">
+    <div class="top-footer__inner">
+      <div class="top-footer__brand">
+        <a class="top-footer__brand-link" href="{{ top_url }}">
+          <div class="top-footer__brand-title">Stone Signature</div>
+        </a>
+      </div>
+      <div class="top-footer__links">
+        <a class="top-footer__link" href="{{ commercial_transactions_url }}">{% if selected_locale == "ja" %}特商法に基づく表記{% else %}Legal Notice{% endif %}</a>
+        <a class="top-footer__link" href="{{ terms_url }}">{% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}</a>
+        <a class="top-footer__link" href="{{ privacy_policy_url }}">{% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}</a>
+        <a class="top-footer__link" href="https://finitefield.org/company/">{% if selected_locale == "ja" %}運営会社{% else %}Company{% endif %}</a>
+      </div>
+      <div class="top-footer__copyright">
+        © Stone Signature
+      </div>
+    </div>
+    <div class="top-footer__accent"></div>
+  </footer>
+
+  <div class="top-mark">
+    <div class="top-mark__square"></div>
+    <div class="top-mark__label">
+      <span>石<br>印</span>
+    </div>
+  </div>
+</body>
+</html>

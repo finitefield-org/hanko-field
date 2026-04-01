@@ -6,6 +6,8 @@ bin/
 *.exe
 *.test
 *.out
+!api/src/bin/
+!api/src/bin/*.rs
 
 # Go module caches
 api/.gocache/

@@ -540,75 +540,193 @@ class _StepTrack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = <OrderStep, String>{
-      OrderStep.design: isEnglishLocale(locale) ? '1. Design' : '1. デザイン',
-      OrderStep.material: isEnglishLocale(locale) ? '2. Material' : '2. 材質',
-      OrderStep.purchase: isEnglishLocale(locale) ? '3. Purchase' : '3. 購入',
-    };
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 420;
+        final steps = OrderStep.values;
+        final isCompact = constraints.maxWidth < 720;
 
-        return Row(
-          children: labels.entries
-              .map((entry) {
-                final isActive = step == entry.key;
-                final isDone = step.value > entry.key.value;
-
-                final borderColor = isActive
-                    ? HfPalette.accent
-                    : isDone
-                    ? HfPalette.accent2.withValues(alpha: 0.35)
-                    : HfPalette.line;
-                final backgroundColor = isActive
-                    ? HfPalette.accent
-                    : isDone
-                    ? HfPalette.accent2.withValues(alpha: 0.08)
-                    : Colors.white;
-                final textColor = isActive
-                    ? Colors.white
-                    : isDone
-                    ? HfPalette.accent2
-                    : HfPalette.muted;
-
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 4),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 8 : 10,
-                        vertical: compact ? 9 : 11,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: borderColor),
-                        color: backgroundColor,
-                      ),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            entry.value,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: compact ? 12 : 14,
-                              fontWeight: FontWeight.w700,
-                              height: 1.05,
-                            ),
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: HfPalette.line),
+            ),
+            child: isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var index = 0; index < steps.length; index++) ...[
+                        _StepTrackItem(
+                          step: steps[index],
+                          activeStep: step,
+                          locale: locale,
+                          isCompact: true,
+                          isLast: index == steps.length - 1,
+                        ),
+                        if (index != steps.length - 1)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: HfPalette.line,
+                          ),
+                      ],
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var index = 0; index < steps.length; index++)
+                        Expanded(
+                          child: _StepTrackItem(
+                            step: steps[index],
+                            activeStep: step,
+                            locale: locale,
+                            isCompact: false,
+                            isLast: index == steps.length - 1,
                           ),
                         ),
-                      ),
-                    ),
+                    ],
                   ),
-                );
-              })
-              .toList(growable: false),
+          ),
         );
       },
     );
+  }
+}
+
+class _StepTrackItem extends StatelessWidget {
+  const _StepTrackItem({
+    required this.step,
+    required this.activeStep,
+    required this.locale,
+    required this.isCompact,
+    required this.isLast,
+  });
+
+  final OrderStep step;
+  final OrderStep activeStep;
+  final String locale;
+  final bool isCompact;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = activeStep.value > step.value;
+    final isCurrent = step == activeStep;
+    final markerBorderColor = isDone || isCurrent
+        ? HfPalette.accent
+        : HfPalette.line;
+    final markerFillColor = isDone ? HfPalette.accent : Colors.white;
+    final markerTextColor = isDone
+        ? Colors.white
+        : isCurrent
+        ? HfPalette.accent
+        : HfPalette.muted;
+    final labelColor = isDone
+        ? HfPalette.ink
+        : isCurrent
+        ? HfPalette.accent
+        : HfPalette.muted;
+    final titleLabel = switch (step) {
+      OrderStep.design => localizedUiText(locale, ja: 'デザイン', en: 'Design'),
+      OrderStep.material => localizedUiText(locale, ja: '材質', en: 'Material'),
+      OrderStep.purchase => localizedUiText(locale, ja: '購入', en: 'Purchase'),
+    };
+    final content = Padding(
+      padding: EdgeInsets.fromLTRB(24, 16, isCompact || isLast ? 24 : 32, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: markerFillColor,
+              border: Border.all(color: markerBorderColor, width: 2),
+            ),
+            child: Center(
+              child: isDone
+                  ? const Icon(Icons.check, size: 20, color: Colors.white)
+                  : Text(
+                      step.value.toString().padLeft(2, '0'),
+                      style: TextStyle(
+                        color: markerTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.0,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              titleLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: labelColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (isCompact) {
+      return content;
+    }
+
+    return Stack(
+      children: [
+        content,
+        if (!isLast)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: 20,
+                  child: CustomPaint(
+                    painter: _StepArrowSeparatorPainter(HfPalette.line),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StepArrowSeparatorPainter extends CustomPainter {
+  const _StepArrowSeparatorPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, size.height / 2)
+      ..lineTo(0, size.height);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StepArrowSeparatorPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -1025,7 +1143,6 @@ class _DesignStep extends StatelessWidget {
       ja: 'フォント一覧',
       en: 'Font list',
     );
-    final shapeLabel = localizedUiText(locale, ja: '形状', en: 'Shape');
 
     return Card(
       child: Padding(
@@ -1201,11 +1318,8 @@ class _DesignStep extends StatelessWidget {
               },
             ),
             const SizedBox(height: 12),
-            Text(
-              shapeLabel,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
+            _buildSuggestionPanel(),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               children: SealShape.values
@@ -1265,8 +1379,8 @@ class _DesignStep extends StatelessWidget {
                     TextSpan(
                       text: localizedUiText(
                         locale,
-                        ja: '形状を変えると、対応する材質へ自動で切り替わることがあります。',
-                        en: 'Changing the shape may automatically switch the material to a compatible option.',
+                        ja: '宝石材質は丸印・角印のどちらでも選べます。',
+                        en: 'The gemstone materials can be used with either shape.',
                       ),
                     ),
                   ],
@@ -1280,6 +1394,69 @@ class _DesignStep extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFCEB79F),
+          style: BorderStyle.solid,
+        ),
+        color: const Color(0xFFFFFBF5),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('漢字名提案', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text(
+            '本名',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            initialValue: state.realName,
+            onChanged: onRealNameChanged,
+            decoration: const InputDecoration(hintText: '例: Michael Smith'),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '性別',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<CandidateGender>(
+            key: ValueKey('candidate_gender_${state.candidateGender.code}'),
+            initialValue: state.candidateGender,
+            items: CandidateGender.values
+                .map(
+                  (gender) => DropdownMenuItem(
+                    value: gender,
+                    child: Text(gender.localizedLabel(locale)),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (gender) {
+              if (gender != null) {
+                onGenderChanged(gender);
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: state.isGeneratingSuggestions
+                ? null
+                : onGenerateSuggestions,
+            child: Text(state.isGeneratingSuggestions ? '生成中...' : '候補を生成'),
+          ),
+          const SizedBox(height: 10),
+          _SuggestionBox(state: state, onSelectSuggestion: onSelectSuggestion),
+        ],
       ),
     );
   }
@@ -1416,8 +1593,8 @@ class _MaterialStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = isEnglishLocale(locale) ? 'Choose Material' : '材質を選ぶ';
     final subtitle = isEnglishLocale(locale)
-        ? 'Compare texture, weight, use, and price to pick your material. If you change the shape, the material may switch to a compatible option automatically.'
-        : '質感・重さ・用途と価格を見ながら材質を決めます。形状を変えた場合は、対応する材質へ自動で切り替わることがあります。';
+        ? 'Compare texture, weight, use, and price to pick your material. The gemstone materials can be used with either shape.'
+        : '質感・重さ・用途と価格を見ながら材質を決めます。宝石材質は丸印・角印のどちらでも選べます。';
     final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
     final nextLabel = isEnglishLocale(locale) ? 'Next: Purchase' : '購入へ進む';
 
@@ -2385,46 +2562,50 @@ List<_MaterialComparisonFact> _materialComparisonFacts(
   final english = isEnglishLocale(locale);
 
   return switch (material.key) {
-    'boxwood' => [
+    'rose_quartz' => [
       _MaterialComparisonFact(
         label: english ? 'Texture' : '質感',
-        value: english ? 'Dry wood grain' : 'さらりとした木目',
+        value: english ? 'Soft, translucent pink sheen' : '淡い桃色のやわらかな透明感',
       ),
       _MaterialComparisonFact(
         label: english ? 'Weight' : '重さ',
-        value: english ? 'Light and easy to handle' : '軽めで扱いやすい',
+        value: english ? 'Light and gentle to handle' : 'やや軽やかで手になじみやすい',
       ),
       _MaterialComparisonFact(
         label: english ? 'Use' : '用途',
-        value: english ? 'Everyday square seals' : '日常使いの角印向き',
+        value: english ? 'A soft, friendly finish' : 'やわらかな印象を出しやすい',
       ),
     ],
-    'black_buffalo' => [
+    'lapis_lazuli' => [
       _MaterialComparisonFact(
         label: english ? 'Texture' : '質感',
-        value: english ? 'Smooth and slightly glossy' : 'しっとりした艶感',
+        value: english ? 'Deep blue stone with bright flecks' : '深い青にきらめきが入る石目',
       ),
       _MaterialComparisonFact(
         label: english ? 'Weight' : '重さ',
-        value: english ? 'Medium weight with stability' : '中量で安定感がある',
+        value: english
+            ? 'Medium-heavy with a strong presence'
+            : 'ほどよい重さで存在感がある',
       ),
       _MaterialComparisonFact(
         label: english ? 'Use' : '用途',
-        value: english ? 'A safe choice for round seals' : '丸印の定番として選びやすい',
+        value: english ? 'A vivid, distinctive finish' : '印象を強めやすい',
       ),
     ],
-    'titanium' => [
+    'jade' => [
       _MaterialComparisonFact(
         label: english ? 'Texture' : '質感',
-        value: english ? 'Crisp metallic finish' : '金属らしいシャープな質感',
+        value: english
+            ? 'Polished green stone with a calm sheen'
+            : 'しっとりした緑石の艶感',
       ),
       _MaterialComparisonFact(
         label: english ? 'Weight' : '重さ',
-        value: english ? 'Heavy and dense' : '重めで高密度',
+        value: english ? 'Substantial and steady' : 'ほどよく重く、落ち着いた安定感',
       ),
       _MaterialComparisonFact(
         label: english ? 'Use' : '用途',
-        value: english ? 'Long-term durable use' : '長期使用や耐久性重視に向く',
+        value: english ? 'A calm, dignified finish' : '落ち着いた格調を出しやすい',
       ),
     ],
     _ => [

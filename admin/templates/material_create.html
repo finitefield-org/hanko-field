@@ -19,7 +19,7 @@
   >
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>材質キー</span>
-      <input type="text" name="key" value="{{ view.key }}" placeholder="titanium" pattern="[a-z0-9_-]+" maxlength="64" required>
+      <input type="text" name="key" value="{{ view.key }}" placeholder="jade" pattern="[a-z0-9_-]+" maxlength="64" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>材質名 (ja)</span>
@@ -40,6 +40,32 @@
     <p class="rounded-xl border border-admin-line/60 bg-admin-bg/40 px-3 py-2 text-xs font-semibold text-admin-muted">
       説明文は、質感・重さ・用途の比較に使われる前提で、差が分かる文章にしてください。
     </p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>比較プレビュー (質感) - ja</span>
+        <textarea name="comparison_texture_ja" rows="2" required>{{ view.comparison_texture_ja }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Comparison preview (texture) - en</span>
+        <textarea name="comparison_texture_en" rows="2" required>{{ view.comparison_texture_en }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>比較プレビュー (重さ) - ja</span>
+        <textarea name="comparison_weight_ja" rows="2" required>{{ view.comparison_weight_ja }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Comparison preview (weight) - en</span>
+        <textarea name="comparison_weight_en" rows="2" required>{{ view.comparison_weight_en }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>比較プレビュー (用途) - ja</span>
+        <textarea name="comparison_usage_ja" rows="2" required>{{ view.comparison_usage_ja }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Comparison preview (usage) - en</span>
+        <textarea name="comparison_usage_en" rows="2" required>{{ view.comparison_usage_en }}</textarea>
+      </label>
+    </div>
     <fieldset class="flex flex-col gap-1.5 text-sm font-semibold">
       <legend>形状</legend>
       <div class="flex flex-wrap items-center gap-3">
@@ -71,11 +97,11 @@
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>写真代替テキスト (ja)</span>
-        <input type="text" name="photo_alt_ja" value="{{ view.photo_alt_ja }}" placeholder="チタン材質の写真">
+        <input type="text" name="photo_alt_ja" value="{{ view.photo_alt_ja }}" placeholder="翡翠材質の写真">
       </label>
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>Photo Alt (en)</span>
-        <input type="text" name="photo_alt_en" value="{{ view.photo_alt_en }}" placeholder="Titanium material photo">
+        <input type="text" name="photo_alt_en" value="{{ view.photo_alt_en }}" placeholder="Jade material photo">
       </label>
     </div>
 
@@ -83,6 +109,7 @@
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>価格 (USD cents)</span>
         <input type="number" name="price_usd" min="0" value="{{ view.price_usd }}" required>
+        <span class="text-xs font-semibold text-admin-muted">整数の cents で入力してください。165.00 のような小数も保存できます。</span>
       </label>
       <label class="flex flex-col gap-1.5 text-sm font-semibold">
         <span>価格 (JPY)</span>

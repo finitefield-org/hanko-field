@@ -9,8 +9,12 @@ ADMIN_PORT ?= 3051
 WEB_PORT ?= 3052
 MODE ?= mock
 LOCALE ?= ja
+STRIPE_WEBHOOK_URL ?= http://localhost:3050/v1/payments/stripe/webhook
 
-.PHONY: help docker-up docker-down docker-shell docker-api docker-admin docker-web docker-dev
+ADMIN_MODE_EXPORT := $(if $(HANKO_ADMIN_MODE),export HANKO_ADMIN_MODE=$(HANKO_ADMIN_MODE);,)
+WEB_MODE_EXPORT := $(if $(HANKO_WEB_MODE),export HANKO_WEB_MODE=$(HANKO_WEB_MODE);,)
+
+.PHONY: help docker-up docker-down docker-shell docker-api docker-admin docker-web docker-dev stripe-listen
 
 ifneq ($(wildcard $(ENV_FILE)),)
 COMPOSE_ENV_FILE_OPT := --env-file $(ENV_FILE)
@@ -18,7 +22,7 @@ else
 COMPOSE_ENV_FILE_OPT :=
 endif
 
-ENV_LOAD_CMD = if [ -f "/workspace/$(ENV_FILE)" ]; then set -a; . "/workspace/$(ENV_FILE)"; set +a; fi;
+ENV_LOAD_CMD = HANKO_ADMIN_MODE_SAVED=$${HANKO_ADMIN_MODE:-}; HANKO_WEB_MODE_SAVED=$${HANKO_WEB_MODE:-}; if [ -f "/workspace/$(ENV_FILE)" ]; then set -a; . "/workspace/$(ENV_FILE)"; set +a; fi; if [ -n "$$HANKO_ADMIN_MODE_SAVED" ]; then export HANKO_ADMIN_MODE="$$HANKO_ADMIN_MODE_SAVED"; fi; if [ -n "$$HANKO_WEB_MODE_SAVED" ]; then export HANKO_WEB_MODE="$$HANKO_WEB_MODE_SAVED"; fi;
 
 help:
 	@echo "Available targets:"
@@ -29,10 +33,12 @@ help:
 	@echo "  make docker-admin   # Run Admin server in container"
 	@echo "  make docker-web     # Run Web server in container"
 	@echo "  make docker-dev     # Run API/Admin/Web together in container"
+	@echo "  make stripe-listen  # Forward Stripe webhooks to the local API"
 	@echo ""
 	@echo "Options:"
 	@echo "  ENV=dev|prod"
 	@echo "  ENV_FILE=.env.dev|.env.prod"
+	@echo "  STRIPE_WEBHOOK_URL=http://localhost:3050/v1/payments/stripe/webhook"
 
 docker-up:
 	$(COMPOSE) $(COMPOSE_ENV_FILE_OPT) build
@@ -48,10 +54,13 @@ docker-api:
 	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)}'
 
 docker-admin:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)}'
 
 docker-web:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
 
 docker-dev:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ENV_LOAD_CMD) cd /workspace; devbox run -- sh -lc "set -e; ./scripts/ironframe.sh build -i admin/static/input.css -o admin/static/style.css \"admin/templates/**/*.html\" \"admin/static/*.js\"; ./scripts/ironframe.sh build -i web/static/input.css -o web/static/style.css \"web/templates/**/*.html\" \"web/static/*.js\"; make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)} & api_pid=\$$!; make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)} IRONFRAME=true & admin_pid=\$$!; set +e; make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)} IRONFRAME=true; status=\$$?; set -e; kill \$$api_pid \$$admin_pid 2>/dev/null || true; wait \$$api_pid \$$admin_pid 2>/dev/null || true; exit \$$status"'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace; devbox run -- sh -lc "set -e; ./scripts/ironframe.sh build -i admin/static/input.css -o admin/static/style.css \"admin/templates/**/*.html\" \"admin/static/*.js\"; ./scripts/ironframe.sh build -i web/static/input.css -o web/static/style.css \"web/templates/**/*.html\" \"web/static/*.js\"; make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)} & api_pid=\$$!; make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)} IRONFRAME=true & admin_pid=\$$!; set +e; make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)} IRONFRAME=true; status=\$$?; set -e; kill \$$api_pid \$$admin_pid 2>/dev/null || true; wait \$$api_pid \$$admin_pid 2>/dev/null || true; exit \$$status"'
+
+stripe-listen:
+	@set -e; if [ -f "$(ENV_FILE)" ]; then set -a; . "$(ENV_FILE)"; set +a; fi; stripe listen --forward-to "$${STRIPE_WEBHOOK_URL:-$(STRIPE_WEBHOOK_URL)}"

@@ -321,7 +321,7 @@ class OrderScreenState {
     }
 
     final filtered = catalog.materials
-        .where((material) => material.shape == shape)
+        .where((material) => _materialSupportsShape(material, shape))
         .toList();
     if (filtered.isNotEmpty) {
       return filtered;
@@ -1240,7 +1240,7 @@ OrderScreenState _stateWithCatalog({
       : visibleFonts.first.key;
 
   var nextShape = state.shape;
-  if (!catalog.materials.any((material) => material.shape == nextShape)) {
+  if (_visibleMaterialsFor(catalog: catalog, shape: nextShape).isEmpty) {
     nextShape = _pickInitialShape(catalog);
   }
   final visibleMaterials = _visibleMaterialsFor(
@@ -1296,8 +1296,11 @@ String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
 }
 
 SealShape _pickInitialShape(CatalogData catalog) {
-  if (catalog.materials.any((material) => material.shape == SealShape.square)) {
+  if (_visibleMaterialsFor(catalog: catalog, shape: SealShape.square).isNotEmpty) {
     return SealShape.square;
+  }
+  if (_visibleMaterialsFor(catalog: catalog, shape: SealShape.round).isNotEmpty) {
+    return SealShape.round;
   }
   return catalog.materials.first.shape;
 }
@@ -1316,13 +1319,24 @@ List<MaterialOption> _visibleMaterialsFor({
   required SealShape shape,
 }) {
   final filtered = catalog.materials
-      .where((material) => material.shape == shape)
+      .where((material) => _materialSupportsShape(material, shape))
       .toList();
   if (filtered.isNotEmpty) {
     return filtered;
   }
   return catalog.materials;
 }
+
+bool _materialSupportsShape(MaterialOption material, SealShape shape) {
+  return _shapeFlexibleMaterialKeys.contains(material.key) ||
+      material.shape == shape;
+}
+
+const _shapeFlexibleMaterialKeys = {
+  'rose_quartz',
+  'lapis_lazuli',
+  'jade',
+};
 
 (String, String) _normalizedSealLines(String first, String second) {
   final trimmedFirst = first.trim();
