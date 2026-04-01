@@ -6,114 +6,202 @@
   <title>{% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Specified Commercial Transactions Act{% endif %} | Stone Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&family=Noto+Serif+JP:wght@400;700;900&family=Noto+Serif:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js?v=20260327-1" defer></script>
 </head>
-<body>
-  <div class="bg-shape bg-shape-left"></div>
-  <div class="bg-shape bg-shape-right"></div>
-
-  <main class="layout">
-    <header class="hero">
-      <div class="hero-top-row">
-        <div>
-          <p class="hero-eyebrow">Stone Signature</p>
-          <h1>{% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Specified Commercial Transactions Act{% endif %}</h1>
+<body class="top-page legal-page">
+  <header class="top-header">
+    <div class="top-header__inner">
+      <a class="top-brand__link" href="{{ top_url }}">
+        <div class="top-brand">
+          <h1 class="top-brand__title">Stone Signature</h1>
+          <span class="top-brand__subtitle">印鑑フィールド</span>
         </div>
-        <label class="language-select-wrap" aria-label="Language selector">
-          <span class="language-icon" aria-hidden="true">🌐</span>
-          <select id="language-select" data-locale-select>
-            <option value="ja" {% if selected_locale == "ja" %}selected{% endif %}>日本語</option>
-            <option value="en" {% if selected_locale == "en" %}selected{% endif %}>English</option>
-          </select>
-        </label>
+      </a>
+      <div class="top-header__action">
+        <details class="top-language-switcher" data-language-switcher>
+          <summary class="top-language-switcher__toggle" aria-label="Language selector">
+            <span class="material-symbols-outlined top-brand__icon" aria-hidden="true">language</span>
+          </summary>
+          <div class="top-language-switcher__menu" role="menu" aria-label="Language options">
+            <a class="top-language-switcher__item{% if selected_locale == "ja" %} is-active{% endif %}" href="?lang=ja" hreflang="ja" data-language-option="ja">日本語</a>
+            <a class="top-language-switcher__item{% if selected_locale == "en" %} is-active{% endif %}" href="?lang=en" hreflang="en" data-language-option="en">English</a>
+          </div>
+        </details>
       </div>
-    </header>
+    </div>
+    <div class="top-header__divider"></div>
+  </header>
 
-    <section class="panel">
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}1. 販売業者・運営者情報{% else %}1. Seller and operator information{% endif %}</h4>
-        <ul class="payment-followup-list">
-          <li>{% if selected_locale == "ja" %}販売業者: 株式会社ファイナイトフィールド{% else %}Seller: Finite Field, K.K.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}運営統括責任者: 代表取締役 一好 俊也{% else %}Operations manager: Toshiya Kazuyoshi, Representative Director{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}所在地: 〒879-0151 大分県宇佐市大字宮熊550番地{% else %}Address: 550 Oaza Miyaguma, Usa City, Oita 879-0151, Japan{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}電話番号: 050-3033-2975{% else %}Phone: +81-50-3033-2975{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}受付時間: 平日 10:00〜17:00（土日祝日を除く）{% else %}Business hours: Weekdays 10:00-17:00 (excluding weekends and public holidays){% endif %}</li>
-          <li>
-            {% if selected_locale == "ja" %}メールアドレス: {% else %}Email: {% endif %}
-            <a href="mailto:dev@finitefield.org">dev@finitefield.org</a>
-          </li>
-          <li>
-            {% if selected_locale == "ja" %}サイトURL: {% else %}Website URL: {% endif %}
-            <a href="https://inkanfield.org" target="_blank" rel="noopener noreferrer">https://inkanfield.org</a>
-          </li>
-          <li>
-            {% if selected_locale == "ja" %}お問い合わせ: {% else %}Contact: {% endif %}
-            <a href="{{ contact_url }}" target="_blank" rel="noopener noreferrer">
-              {% if selected_locale == "ja" %}お問い合わせフォーム{% else %}Inquiry form{% endif %}
-            </a>
-          </li>
-        </ul>
-      </div>
+  <main class="legal-page__main">
+    <div class="legal-page__lead">
+      <h2 class="legal-page__title">
+        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Specified Commercial Transactions Act{% endif %}
+      </h2>
+    </div>
 
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}2. 販売条件{% else %}2. Sales terms{% endif %}</h4>
-        <ul class="payment-followup-list">
-          <li>{% if selected_locale == "ja" %}販売価格: 各商品ページに表示（消費税込み）{% else %}Price: Displayed on each product page (tax included){% endif %}</li>
-          <li>
+    <div class="legal-page__sections">
+      <section class="legal-section" id="section-1">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">01</span>
+          <span>{% if selected_locale == "ja" %}販売業者・運営者情報{% else %}Seller and operator information{% endif %}</span>
+        </h3>
+        <dl class="legal-definition-list">
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}販売業者{% else %}Seller{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}株式会社ファイナイトフィールド{% else %}Finite Field, K.K.{% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}運営統括責任者{% else %}Operations manager{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}代表取締役 一好 俊也{% else %}Toshiya Kazuyoshi, Representative Director{% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}所在地{% else %}Address{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}〒879-0151 大分県宇佐市大字宮熊550番地{% else %}550 Oaza Miyaguma, Usa City, Oita 879-0151, Japan{% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}電話番号{% else %}Phone{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}050-3033-2975{% else %}+81-50-3033-2975{% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}受付時間{% else %}Business hours{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}平日 10:00〜17:00（土日祝日を除く）{% else %}Weekdays 10:00-17:00 (excluding weekends and public holidays){% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}メールアドレス{% else %}Email{% endif %}</dt>
+            <dd class="legal-definition-desc">
+              <a class="legal-link" href="mailto:dev@finitefield.org">dev@finitefield.org</a>
+            </dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}サイトURL{% else %}Website URL{% endif %}</dt>
+            <dd class="legal-definition-desc">
+              <a class="legal-link" href="https://inkanfield.org" target="_blank" rel="noopener noreferrer">https://inkanfield.org</a>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="legal-section" id="section-2">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">02</span>
+          <span>{% if selected_locale == "ja" %}販売条件{% else %}Sales terms{% endif %}</span>
+        </h3>
+        <dl class="legal-definition-list">
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}販売価格{% else %}Price{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}各商品ページに表示（消費税込み）{% else %}Displayed on each product page (tax included){% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}商品代金以外の必要料金{% else %}Additional charges{% endif %}</dt>
+            <dd class="legal-definition-desc">
+              {% if selected_locale == "ja" %}
+              送料（地域別）に加え、配送先や通関状況により関税・輸入消費税・通関手数料等が発生する場合があります。
+              {% else %}
+              Shipping varies by destination. Depending on the destination and customs clearance status, customs duties, import consumption tax, brokerage fees, and similar charges may apply.
+              {% endif %}
+            </dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}お支払い方法{% else %}Payment method{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}Stripe Checkout（クレジットカード、Apple Pay、Google Pay等）{% else %}Stripe Checkout (credit card, Apple Pay, Google Pay, and similar methods){% endif %}</dd>
+          </div>
+          <div class="legal-definition-row">
+            <dt class="legal-definition-term">{% if selected_locale == "ja" %}支払時期{% else %}Payment timing{% endif %}</dt>
+            <dd class="legal-definition-desc">{% if selected_locale == "ja" %}ご注文確定時（前払い）{% else %}At the time the order is confirmed (prepayment){% endif %}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="legal-section" id="section-3">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">03</span>
+          <span>{% if selected_locale == "ja" %}商品の引渡し{% else %}Delivery{% endif %}</span>
+        </h3>
+        <div class="legal-notes">
+          <div class="legal-note">
+            <p class="legal-note__label">{% if selected_locale == "ja" %}Production Origin{% else %}Production Origin{% endif %}</p>
+            <p class="legal-note__text">{% if selected_locale == "ja" %}中国（当社提携工房にて一本ずつ製作）{% else %}China (each item is produced by our partner workshop){% endif %}</p>
+          </div>
+          <div class="legal-note">
+            <p class="legal-note__label">{% if selected_locale == "ja" %}Estimated Delivery{% else %}Estimated Delivery{% endif %}</p>
+            <p class="legal-note__text">{% if selected_locale == "ja" %}製作期間: 5〜10営業日 / 配送期間: 7〜14日程度{% else %}Production period: 5-10 business days / Shipping period: about 7-14 days{% endif %}</p>
+          </div>
+        </div>
+        <p class="legal-section__body">
+          {% if selected_locale == "ja" %}
+          本商品は完全受注生産です。製作開始後、通関手続きや配送状況、大型連休の影響により、お届けまで通常より時間がかかる場合があります。
+          {% else %}
+          This product is made to order. After production begins, customs procedures, delivery conditions, and long holiday periods may extend the time required for delivery.
+          {% endif %}
+        </p>
+      </section>
+
+      <section class="legal-section" id="section-4">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">04</span>
+          <span>{% if selected_locale == "ja" %}返品・交換・キャンセル{% else %}Returns, exchanges, and cancellations{% endif %}</span>
+        </h3>
+        <div class="legal-section__copy">
+          <p>
             {% if selected_locale == "ja" %}
-            商品代金以外の必要料金:<br>
-            送料: 配送地域により異なります。詳細は決済画面にてご確認ください。<br>
-            関税・輸入消費税（海外配送および日本への輸入時）: 本商品は中国の提携工房より直接発送されます。配送先や通関状況により、受け取り時に関税、消費税、通関手数料等が発生する場合があります。これらは購入者（受取人）様のご負担となり、事前に確定できない場合がありますので、あらかじめご了承ください。
+            当ブランドの商品はすべてお客様一人ひとりに合わせたオーダーメイド品です。
             {% else %}
-            Additional charges:<br>
-            Shipping: Varies by destination. Please check the checkout screen for details.<br>
-            Customs duties and import consumption tax (for overseas shipping and imports into Japan): This product is shipped directly from our partner workshop in China. Depending on the destination and customs clearance status, customs duties, consumption tax, brokerage fees, and other import charges may be payable upon delivery. These costs are borne by the purchaser (recipient) and may not be determinable in advance.
+            All products are custom-made for each individual customer.
             {% endif %}
-          </li>
-          <li>{% if selected_locale == "ja" %}支払方法: Stripe Checkout（クレジットカード、Apple Pay、Google Pay、その他各国の決済手段）{% else %}Payment method: Stripe Checkout (credit card, Apple Pay, Google Pay, and other local payment methods){% endif %}</li>
-          <li>{% if selected_locale == "ja" %}支払時期: ご注文確定時にお支払い（前払い）{% else %}Payment timing: Paid when the order is confirmed (prepayment){% endif %}</li>
-        </ul>
-      </div>
+          </p>
+          <ul class="legal-list">
+            <li>
+              {% if selected_locale == "ja" %}
+              お客様都合による返品・交換はお受けできません。
+              {% else %}
+              We cannot accept returns or exchanges for customer convenience.
+              {% endif %}
+            </li>
+            <li>
+              {% if selected_locale == "ja" %}
+              不良品・誤配送の場合、到着後7日以内にご連絡いただければ再製作いたします。
+              {% else %}
+              If an item is defective or incorrectly delivered, please contact us within 7 days of receipt and we will remake it.
+              {% endif %}
+            </li>
+            <li>
+              {% if selected_locale == "ja" %}
+              石材の個体差は天然素材の特性であり、不良品の対象外となります。
+              {% else %}
+              Natural variations in stone are inherent to the material and are not considered defects.
+              {% endif %}
+            </li>
+            <li>
+              {% if selected_locale == "ja" %}
+              ご注文後、製作工程に入る前に限りキャンセルが可能です。至急お問い合わせフォームよりご連絡ください。
+              {% else %}
+              Cancellation is possible only before production starts. Please contact us through the inquiry form as soon as possible.
+              {% endif %}
+            </li>
+          </ul>
+        </div>
+      </section>
 
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}3. 商品の引渡し{% else %}3. Delivery{% endif %}</h4>
-        <ul class="payment-followup-list">
-          <li>{% if selected_locale == "ja" %}発送元: 中国（当社提携工房より直接発送）{% else %}Shipping origin: China (direct shipment from our partner workshop){% endif %}</li>
-          <li>
-            {% if selected_locale == "ja" %}
-            引渡時期: 本商品は完全受注生産品です。<br>
-            製作期間: ご注文確定（およびデザイン確定）後、通常 5〜10 営業日以内に製作が完了します。<br>
-            配送期間: 発送後、通常 7〜14 日程度でお手元に到着します。<br>
-            ※通関手続きや配送状況、大型連休（春節等）の影響により、上記よりお時間をいただく場合があります。
-            {% else %}
-            Delivery timing: This product is made to order.<br>
-            Production period: Production usually completes within 5-10 business days after the order and design are confirmed.<br>
-            Shipping period: After dispatch, delivery typically takes 7-14 days.<br>
-            * Customs procedures, delivery conditions, and long holiday periods (including Lunar New Year) may extend the delivery time.
-            {% endif %}
-          </li>
-        </ul>
-      </div>
-
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}4. 返品・交換・キャンセル{% else %}4. Returns, exchanges, and cancellations{% endif %}</h4>
-        <ul class="payment-followup-list">
-          <li>{% if selected_locale == "ja" %}お客様都合による返品・交換: 本商品はオーダーメイド（受注生産）の性質上、お客様のご都合（イメージ違い、注文間違い等）による製作開始後のキャンセル、返品、交換は一切お受けできません。{% else %}Customer-initiated returns or exchanges: Because this product is made to order, we do not accept cancellations, returns, or exchanges after production has started for reasons such as a change of mind or ordering mistake.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}不良品・誤配送: お届けした商品に著しい破損、汚損、または彫刻内容の誤り等、当社の過失による不備があった場合は、商品到着後 7日以内にお問い合わせフォームよりご連絡ください。確認後、無償で再製作・再発送をさせていただきます。{% else %}Defective or incorrectly shipped items: If the delivered item has significant damage, stains, or engraving errors caused by our fault, please contact us through the inquiry form within 7 days of receipt. After confirmation, we will remake and reship the item at no cost.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}注意: 石材特有の個体差（模様や色味の差異）については、不良品の対象外となります。{% else %}Note: Natural variations in stone patterns and color are not considered defects.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}製作開始前のキャンセル: ご注文後、製作工程に入る前に限りキャンセルが可能です。至急お問い合わせフォームよりご連絡ください。{% else %}Cancellation before production: Cancellation is possible only before production begins. Please contact us through the inquiry form as soon as possible.{% endif %}</li>
-        </ul>
-      </div>
-
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}5. お問い合わせ{% else %}5. Contact{% endif %}</h4>
-        <p>{% if selected_locale == "ja" %}ご不明点やご質問がございましたら、お問い合わせフォームよりご連絡ください。{% else %}If you have any questions, please contact us through the inquiry form.{% endif %}</p>
-        <div class="step-actions">
-          <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">{% if selected_locale == "ja" %}購入画面に戻る{% else %}Back to purchase{% endif %}</button>
+      <section class="legal-section" id="section-5">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">05</span>
+          <span>{% if selected_locale == "ja" %}お問い合わせ{% else %}Contact{% endif %}</span>
+        </h3>
+        <p class="legal-section__body">
+          {% if selected_locale == "ja" %}
+          ご不明点やご質問がございましたら、お問い合わせフォームよりご連絡ください。
+          {% else %}
+          If you have any questions, please contact us through the inquiry form.
+          {% endif %}
+        </p>
+        <div class="legal-actions">
+          <button type="button" class="legal-button legal-button--primary" onclick="window.location.href='{{ design_url }}'">
+            {% if selected_locale == "ja" %}購入画面に戻る{% else %}Back to purchase{% endif %}
+          </button>
           <a
-            class="action-link"
+            class="legal-button legal-button--secondary"
             href="{{ contact_url }}"
             target="_blank"
             rel="noopener noreferrer"
@@ -121,28 +209,28 @@
             {% if selected_locale == "ja" %}お問い合わせ{% else %}Contact us{% endif %}
           </a>
         </div>
-      </div>
-    </section>
-
-    <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
-      <a
-        href="{{ terms_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
-      </a>
-      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
-      <a
-        href="{{ privacy_policy_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}
-      </a>
-    </footer>
+      </section>
+    </div>
   </main>
+
+  <footer class="top-footer">
+    <div class="top-footer__inner">
+      <div class="top-footer__brand">
+        <a class="top-footer__brand-link" href="{{ top_url }}">
+          <div class="top-footer__brand-title">Stone Signature</div>
+        </a>
+      </div>
+      <div class="top-footer__links">
+        <a class="top-footer__link" href="{{ commercial_transactions_url }}">{% if selected_locale == "ja" %}特商法に基づく表記{% else %}Legal Notice{% endif %}</a>
+        <a class="top-footer__link" href="{{ terms_url }}">{% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}</a>
+        <a class="top-footer__link" href="{{ privacy_policy_url }}">{% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}</a>
+        <a class="top-footer__link" href="https://finitefield.org/company/">{% if selected_locale == "ja" %}運営会社{% else %}Company{% endif %}</a>
+      </div>
+      <div class="top-footer__copyright">
+        © Stone Signature
+      </div>
+    </div>
+    <div class="top-footer__accent"></div>
+  </footer>
 </body>
 </html>

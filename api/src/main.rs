@@ -41,6 +41,7 @@ const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
     "http://localhost:3052/payment/success?session_id={CHECKOUT_SESSION_ID}";
 const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/payment/failure";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
+const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
 
@@ -1104,6 +1105,10 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> Response {
     )
 }
 
+fn firestore_client_from_access_token(access_token: &str) -> Result<FirebaseFirestoreClient> {
+    Ok(FirebaseFirestoreClient::new(access_token.to_owned()))
+}
+
 impl FirestoreStore {
     async fn firestore_client(&self) -> Result<FirebaseFirestoreClient> {
         let access_token = self
@@ -1111,9 +1116,7 @@ impl FirestoreStore {
             .token(&[DATASTORE_SCOPE])
             .await
             .context("failed to acquire firestore access token")?;
-        Ok(FirebaseFirestoreClient::new(
-            access_token.as_str().to_owned(),
-        ))
+        firestore_client_from_access_token(access_token.as_str())
     }
 
     async fn get_public_config(&self) -> Result<PublicConfig> {
@@ -1326,7 +1329,7 @@ impl FirestoreStore {
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
-        if normalized.seal.shape != material.shape {
+        if !material_supports_shape(&material, &normalized.seal.shape) {
             return Err(StoreError::MaterialShapeMismatch);
         }
 
@@ -2168,6 +2171,13 @@ fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
     resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
 }
 
+fn material_supports_shape(material: &Material, shape: &str) -> bool {
+    matches!(
+        material.key.as_str(),
+        "rose_quartz" | "lapis_lazuli" | "jade"
+    ) || material.shape == shape
+}
+
 fn resolve_amount_for_currency(values: &HashMap<String, i64>, currency: &str) -> i64 {
     if let Some(amount) =
         normalize_currency_code(currency).and_then(|code| values.get(&code).copied())
@@ -2364,7 +2374,7 @@ async fn generate_kanji_candidates_with_gemini(
     state: &AppState,
     input: &GenerateKanjiCandidatesInput,
 ) -> Result<Vec<KanjiNameCandidate>> {
-    let prompt = build_kanji_candidates_prompt(input);
+    let request_body = build_kanji_candidates_request_body(input);
 
     let endpoint = format!(
         "{}/v1beta/models/{}:generateContent",
@@ -2376,22 +2386,7 @@ async fn generate_kanji_candidates_with_gemini(
         .http_client
         .post(endpoint)
         .query(&[("key", state.gemini.api_key.as_str())])
-        .json(&json!({
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "text": prompt,
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "responseMimeType": "application/json",
-            }
-        }))
+        .json(&request_body)
         .send()
         .await
         .context("failed to call gemini generateContent")?;
@@ -2416,22 +2411,89 @@ async fn generate_kanji_candidates_with_gemini(
     parse_kanji_candidates_from_gemini_text(&text, input.count)
 }
 
+fn build_kanji_candidates_request_body(input: &GenerateKanjiCandidatesInput) -> JsonValue {
+    json!({
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": build_kanji_candidates_prompt(input),
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.4,
+            "responseMimeType": "application/json",
+            "responseJsonSchema": build_kanji_candidates_response_schema(input.count),
+            "thinkingConfig": {
+                "thinkingBudget": DEFAULT_GEMINI_THINKING_BUDGET,
+            }
+        }
+    })
+}
+
+fn build_kanji_candidates_response_schema(max_count: usize) -> JsonValue {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "candidates": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": max_count,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "kanji": {
+                            "type": "string",
+                            "description": "1-2 CJK Han characters suitable for a seal.",
+                        },
+                        "reading": {
+                            "type": "string",
+                            "description": "Lowercase romaji for Japanese style or lowercase Hanyu Pinyin without tone marks for Chinese/Taiwanese styles.",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Why this Kanji name was chosen.",
+                        },
+                    },
+                    "required": ["kanji", "reading", "reason"],
+                },
+            },
+        },
+        "required": ["candidates"],
+    })
+}
+
 fn build_kanji_candidates_prompt(input: &GenerateKanjiCandidatesInput) -> String {
     let gender_instruction = input.gender.prompt_instruction();
     let style_instruction = input.kanji_style.prompt_instruction();
+    let reason_language = reason_language_label(&input.reason_language);
     format!(
         "Generate {} unique Kanji name candidates for a hanko seal.\n\
 Input name: \"{}\"\n\
 {}\n\
 {}\n\
+Think through the name fit internally before answering. Consider balance, seal suitability, stroke shape, and pronunciation, but do not reveal your chain of thought.\n\
 For each candidate, return these fields:\n\
 - kanji: 1-2 CJK Han characters suitable for a seal (no spaces)\n\
 - reading: lowercase romaji for japanese style, lowercase Hanyu Pinyin without tone marks for chinese/taiwanese styles\n\
 - reason: why this Kanji name was chosen, written in {}\n\
 Return only JSON (no markdown, no explanation) in this exact shape:\n\
 {{\"candidates\":[{{\"kanji\":\"\",\"reading\":\"\",\"reason\":\"\"}}]}}",
-        input.count, input.real_name, gender_instruction, style_instruction, input.reason_language
+        input.count, input.real_name, gender_instruction, style_instruction, reason_language
     )
+}
+
+fn reason_language_label(raw: &str) -> &'static str {
+    match raw.trim().to_lowercase().as_str() {
+        "ja" | "ja-jp" | "japanese" => "Japanese",
+        "en" | "en-us" | "english" => "English",
+        _ => "English",
+    }
 }
 
 fn extract_gemini_response_text(payload: &JsonValue) -> Option<String> {
@@ -3381,12 +3443,12 @@ mod tests {
     #[test]
     fn resolve_localized_uses_fallback_order() {
         let mut values = HashMap::new();
-        values.insert("ja".to_owned(), "柘植".to_owned());
-        values.insert("en".to_owned(), "Boxwood".to_owned());
+        values.insert("ja".to_owned(), "翡翠".to_owned());
+        values.insert("en".to_owned(), "Jade".to_owned());
 
-        assert_eq!(resolve_localized(&values, "en", "ja"), "Boxwood");
-        assert_eq!(resolve_localized(&values, "fr", "en"), "Boxwood");
-        assert_eq!(resolve_localized(&values, "fr", "ko"), "柘植");
+        assert_eq!(resolve_localized(&values, "en", "ja"), "Jade");
+        assert_eq!(resolve_localized(&values, "fr", "en"), "Jade");
+        assert_eq!(resolve_localized(&values, "fr", "ko"), "翡翠");
     }
 
     #[test]
@@ -3448,17 +3510,39 @@ mod tests {
     #[test]
     fn material_price_for_currency_uses_currency_specific_field() {
         let material = Material {
-            key: "boxwood".to_owned(),
+            key: "jade".to_owned(),
             label_i18n: HashMap::new(),
             description_i18n: HashMap::new(),
             shape: "square".to_owned(),
             photos: Vec::new(),
-            price_by_currency: HashMap::from([("USD".to_owned(), 3600), ("JPY".to_owned(), 5200)]),
+            price_by_currency: HashMap::from([
+                ("USD".to_owned(), 88500),
+                ("JPY".to_owned(), 150000),
+            ]),
             version: 1,
         };
 
-        assert_eq!(material_price_for_currency(&material, "USD"), 3600);
-        assert_eq!(material_price_for_currency(&material, "JPY"), 5200);
+        assert_eq!(material_price_for_currency(&material, "USD"), 88500);
+        assert_eq!(material_price_for_currency(&material, "JPY"), 150000);
+    }
+
+    #[test]
+    fn material_supports_shape_allows_gemstones_for_both_shapes() {
+        let material = Material {
+            key: "jade".to_owned(),
+            label_i18n: HashMap::new(),
+            description_i18n: HashMap::new(),
+            shape: "square".to_owned(),
+            photos: Vec::new(),
+            price_by_currency: HashMap::from([
+                ("USD".to_owned(), 88500),
+                ("JPY".to_owned(), 150000),
+            ]),
+            version: 1,
+        };
+
+        assert!(material_supports_shape(&material, "square"));
+        assert!(material_supports_shape(&material, "round"));
     }
 
     #[test]
@@ -3490,7 +3574,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
-            material_label: "柘植".to_owned(),
+            material_label: "翡翠".to_owned(),
             seal_shape: "square".to_owned(),
             shipping_country_code: "JP".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -3505,7 +3589,7 @@ mod tests {
             contact_email: "buyer@example.com".to_owned(),
         };
 
-        assert_eq!(build_checkout_product_name(&order), "宝石印鑑 (柘植、角)");
+        assert_eq!(build_checkout_product_name(&order), "宝石印鑑 (翡翠、角)");
     }
 
     #[test]
@@ -3515,7 +3599,7 @@ mod tests {
             order_locale: "en".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
-            material_label: "Boxwood".to_owned(),
+            material_label: "Jade".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "US".to_owned(),
             shipping_recipient_name: "John Doe".to_owned(),
@@ -3532,7 +3616,7 @@ mod tests {
 
         assert_eq!(
             build_checkout_product_name(&order),
-            "Stone seal (Boxwood; circle)"
+            "Stone seal (Jade; circle)"
         );
     }
 
@@ -3543,7 +3627,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
-            material_label: "柘植".to_owned(),
+            material_label: "翡翠".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "jp".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -3594,7 +3678,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
-            material_label: "柘植".to_owned(),
+            material_label: "翡翠".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "JP".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -3651,7 +3735,7 @@ mod tests {
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
             },
-            material_key: "boxwood".to_owned(),
+            material_key: "jade".to_owned(),
             shipping: CreateOrderShippingRequest {
                 country_code: "jp".to_owned(),
                 recipient_name: "田中 太郎".to_owned(),
@@ -3685,7 +3769,7 @@ mod tests {
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
             },
-            material_key: "boxwood".to_owned(),
+            material_key: "jade".to_owned(),
             shipping: CreateOrderShippingRequest {
                 country_code: "JP".to_owned(),
                 recipient_name: "田中 太郎".to_owned(),
@@ -3829,5 +3913,51 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert_eq!(candidates[0].kanji, "蒼真");
         assert_eq!(candidates[0].reading, "soma");
+    }
+
+    #[test]
+    fn build_kanji_candidates_prompt_uses_human_language_names() {
+        let input = GenerateKanjiCandidatesInput {
+            real_name: "山田 太郎".to_owned(),
+            reason_language: "ja".to_owned(),
+            gender: CandidateGender::Male,
+            kanji_style: KanjiStyle::Japanese,
+            count: 6,
+        };
+
+        let prompt = build_kanji_candidates_prompt(&input);
+        assert!(prompt.contains("written in Japanese"));
+        assert!(!prompt.contains("written in ja"));
+        assert!(prompt.contains("Think through the name fit internally"));
+    }
+
+    #[test]
+    fn build_kanji_candidates_request_body_enables_thinking_and_schema() {
+        let input = GenerateKanjiCandidatesInput {
+            real_name: "山田 太郎".to_owned(),
+            reason_language: "en".to_owned(),
+            gender: CandidateGender::Unspecified,
+            kanji_style: KanjiStyle::Chinese,
+            count: 4,
+        };
+
+        let body = build_kanji_candidates_request_body(&input);
+        assert_eq!(
+            body["generationConfig"]["thinkingConfig"]["thinkingBudget"],
+            json!(DEFAULT_GEMINI_THINKING_BUDGET)
+        );
+        assert_eq!(
+            body["generationConfig"]["responseMimeType"],
+            json!("application/json")
+        );
+        assert_eq!(body["generationConfig"]["temperature"], json!(0.4));
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["candidates"]["maxItems"],
+            json!(4)
+        );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["candidates"]["items"]["required"],
+            json!(["kanji", "reading", "reason"])
+        );
     }
 }

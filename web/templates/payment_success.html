@@ -6,93 +6,137 @@
   <title>{% if selected_locale == "ja" %}支払い完了{% else %}Payment complete{% endif %} | Stone Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&family=Noto+Serif+JP:wght@400;700;900&family=Noto+Serif:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js?v=20260319-1" defer></script>
 </head>
-<body>
-  <div class="bg-shape bg-shape-left"></div>
-  <div class="bg-shape bg-shape-right"></div>
-
-  <main class="layout">
-    <header class="hero">
-      <div class="hero-top-row">
-        <div>
-          <p class="hero-eyebrow">Stone Signature</p>
-          <h1>{% if selected_locale == "ja" %}お支払いが完了しました{% else %}Payment completed{% endif %}</h1>
-          <p class="hero-description">{% if selected_locale == "ja" %}ご注文ありがとうございます。確認メールを送信後、順次製作を開始します。{% else %}Thank you for your order. We will start production after the confirmation email is sent.{% endif %}</p>
+<body class="top-page legal-page">
+  <header class="top-header">
+    <div class="top-header__inner">
+      <a class="top-brand__link" href="{{ top_url }}">
+        <div class="top-brand">
+          <h1 class="top-brand__title">Stone Signature</h1>
+          <span class="top-brand__subtitle">印鑑フィールド</span>
         </div>
-        <label class="language-select-wrap" aria-label="Language selector">
-          <span class="language-icon" aria-hidden="true">🌐</span>
-          <select id="language-select" data-locale-select>
-            <option value="ja" {% if selected_locale == "ja" %}selected{% endif %}>日本語</option>
-            <option value="en" {% if selected_locale == "en" %}selected{% endif %}>English</option>
-          </select>
-        </label>
+      </a>
+      <div class="top-header__action">
+        <details class="top-language-switcher" data-language-switcher>
+          <summary class="top-language-switcher__toggle" aria-label="Language selector">
+            <span class="material-symbols-outlined top-brand__icon" aria-hidden="true">language</span>
+          </summary>
+          <div class="top-language-switcher__menu" role="menu" aria-label="Language options">
+            <a class="top-language-switcher__item{% if selected_locale == "ja" %} is-active{% endif %}" href="{{ lang_ja_url }}" hreflang="ja" data-language-option="ja">日本語</a>
+            <a class="top-language-switcher__item{% if selected_locale == "en" %} is-active{% endif %}" href="{{ lang_en_url }}" hreflang="en" data-language-option="en">English</a>
+          </div>
+        </details>
       </div>
-    </header>
+    </div>
+    <div class="top-header__divider"></div>
+  </header>
 
-    <section class="panel">
-      <div class="result-card is-success">
-        <h4>{% if selected_locale == "ja" %}決済を受け付けました{% else %}Payment received{% endif %}</h4>
-        <p>{% if selected_locale == "ja" %}内容確認後、手彫り印鑑の製作に進みます。{% else %}We will proceed with crafting your hand-carved seal after a review of the order details.{% endif %}</p>
-        {% if has_order_id %}
-        <p>{% if selected_locale == "ja" %}注文ID{% else %}Order ID{% endif %}: {{ order_id }}</p>
-        {% endif %}
-        {% if has_session_id %}
-        <p>{% if selected_locale == "ja" %}決済セッションID{% else %}Session ID{% endif %}: {{ session_id }}</p>
-        {% endif %}
-      </div>
+  <main class="legal-page__main">
+    <div class="legal-page__lead">
+      <h2 class="legal-page__title">
+        {% if selected_locale == "ja" %}お支払いが完了しました{% else %}Payment completed{% endif %}
+      </h2>
+    </div>
 
-      <div class="result-card is-info payment-followup-card">
-        <h4>{% if selected_locale == "ja" %}次のアクション{% else %}Next steps{% endif %}</h4>
-        <ul class="payment-followup-list">
-          <li>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Check your confirmation email.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}注文IDは問い合わせ時にお伝えください。{% else %}Keep your order ID for support.{% endif %}</li>
-          <li>{% if selected_locale == "ja" %}メールが届かない場合はお問い合わせください。{% else %}If the email does not arrive, contact us.{% endif %}</li>
-        </ul>
-        <div class="step-actions">
-          <button type="button" class="primary" onclick="window.location.href='/?lang={{ selected_locale }}'">{% if selected_locale == "ja" %}トップへ戻る{% else %}Back to top{% endif %}</button>
-          <a
-            class="action-link"
-            href="{{ contact_url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {% if selected_locale == "ja" %}お問い合わせ{% else %}Contact us{% endif %}
-          </a>
+    <div class="legal-page__sections">
+      <section class="legal-section" id="section-1">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">01</span>
+          <span>{% if selected_locale == "ja" %}決済完了{% else %}Payment confirmed{% endif %}</span>
+        </h3>
+        <div class="legal-section__copy">
+          <p>{% if selected_locale == "ja" %}ご注文ありがとうございます。確認メール送信後、順次製作を開始します。{% else %}Thank you for your order. We will start production after the confirmation email is sent.{% endif %}</p>
+          <div class="legal-notes">
+            <div class="legal-note">
+              <p class="legal-note__label">{% if selected_locale == "ja" %}状態{% else %}Status{% endif %}</p>
+              <p class="legal-note__text">{% if selected_locale == "ja" %}決済を受け付けました{% else %}Payment received{% endif %}</p>
+            </div>
+            <div class="legal-note">
+              <p class="legal-note__label">{% if selected_locale == "ja" %}製作開始{% else %}Production{% endif %}</p>
+              <p class="legal-note__text">{% if selected_locale == "ja" %}確認メール送信後に製作を開始します。{% else %}We will begin production after the confirmation email is sent.{% endif %}</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
-      <a
-        href="{{ terms_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
-      </a>
-      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
-      <a
-        href="{{ commercial_transactions_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Legal notice{% endif %}
-      </a>
-      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
-      <a
-        href="{{ privacy_policy_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}
-      </a>
-    </footer>
+      <section class="legal-section" id="section-2">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">02</span>
+          <span>{% if selected_locale == "ja" %}注文情報{% else %}Order information{% endif %}</span>
+        </h3>
+        <div class="legal-section__copy">
+          {% if has_order_id || has_session_id %}
+          <dl class="legal-definition-list">
+            {% if has_order_id %}
+            <div class="legal-definition-row">
+              <dt class="legal-definition-term">{% if selected_locale == "ja" %}注文ID{% else %}Order ID{% endif %}</dt>
+              <dd class="legal-definition-desc">{{ order_id }}</dd>
+            </div>
+            {% endif %}
+            {% if has_session_id %}
+            <div class="legal-definition-row">
+              <dt class="legal-definition-term">{% if selected_locale == "ja" %}決済セッションID{% else %}Session ID{% endif %}</dt>
+              <dd class="legal-definition-desc">{{ session_id }}</dd>
+            </div>
+            {% endif %}
+          </dl>
+          {% else %}
+          <p>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Please check your confirmation email.{% endif %}</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="legal-section" id="section-3">
+        <h3 class="legal-section__heading">
+          <span class="legal-section__index">03</span>
+          <span>{% if selected_locale == "ja" %}次のステップ{% else %}Next steps{% endif %}</span>
+        </h3>
+        <div class="legal-section__copy">
+          <p class="legal-section__body">{% if selected_locale == "ja" %}ご不明点はお問い合わせフォームからご連絡ください。{% else %}If you have any questions, please contact us through the inquiry form.{% endif %}</p>
+          <ul class="legal-list">
+            <li>{% if selected_locale == "ja" %}確認メールをご確認ください。{% else %}Check your confirmation email.{% endif %}</li>
+            <li>{% if selected_locale == "ja" %}注文IDは問い合わせ時にお伝えください。{% else %}Keep your order ID for support.{% endif %}</li>
+            <li>{% if selected_locale == "ja" %}メールが届かない場合はお問い合わせください。{% else %}If the email does not arrive, contact us.{% endif %}</li>
+          </ul>
+          <div class="legal-actions">
+            <button type="button" class="legal-button legal-button--primary" onclick="window.location.href='{{ top_url }}'">
+              {% if selected_locale == "ja" %}トップへ戻る{% else %}Back to top{% endif %}
+            </button>
+            <a
+              class="legal-button legal-button--secondary"
+              href="{{ contact_url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {% if selected_locale == "ja" %}お問い合わせ{% else %}Contact us{% endif %}
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
   </main>
+
+  <footer class="top-footer">
+    <div class="top-footer__inner">
+      <div class="top-footer__brand">
+        <a class="top-footer__brand-link" href="{{ top_url }}">
+          <div class="top-footer__brand-title">Stone Signature</div>
+        </a>
+      </div>
+      <div class="top-footer__links">
+        <a class="top-footer__link" href="{{ commercial_transactions_url }}">{% if selected_locale == "ja" %}特商法に基づく表記{% else %}Legal Notice{% endif %}</a>
+        <a class="top-footer__link" href="{{ terms_url }}">{% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}</a>
+        <a class="top-footer__link" href="{{ privacy_policy_url }}">{% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}</a>
+        <a class="top-footer__link" href="https://finitefield.org/company/">{% if selected_locale == "ja" %}運営会社{% else %}Company{% endif %}</a>
+      </div>
+      <div class="top-footer__copyright">
+        © Stone Signature
+      </div>
+    </div>
+    <div class="top-footer__accent"></div>
+  </footer>
 </body>
 </html>

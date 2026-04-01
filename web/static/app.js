@@ -59,6 +59,53 @@
   });
   rememberLocale(initialLocale);
 
+  const languageSwitchers = Array.from(
+    document.querySelectorAll("[data-language-switcher]"),
+  );
+  const languageOptions = Array.from(
+    document.querySelectorAll("[data-language-option]"),
+  );
+
+  languageOptions.forEach((option) => {
+    option.addEventListener("click", (event) => {
+      event.preventDefault();
+      const nextLocale = parseLocale(option.dataset.languageOption || "") || "ja";
+      rememberLocale(nextLocale);
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("lang", nextLocale);
+      window.location.assign(
+        `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+      );
+    });
+  });
+
+  if (languageSwitchers.length > 0) {
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (languageSwitchers.some((switcher) => switcher.contains(target))) {
+        return;
+      }
+
+      languageSwitchers.forEach((switcher) => {
+        switcher.removeAttribute("open");
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      languageSwitchers.forEach((switcher) => {
+        switcher.removeAttribute("open");
+      });
+    });
+  }
+
   const form = document.getElementById("order-form");
   if (!form) {
     return;
@@ -84,6 +131,7 @@
   const previewLine2 = document.getElementById("seal-preview-line2");
   const previewCaption = document.getElementById("preview-caption");
   const materialRadios = Array.from(form.querySelectorAll("input[name='material']"));
+  const flexibleMaterialKeys = new Set(["rose_quartz", "lapis_lazuli", "jade"]);
 
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
@@ -188,7 +236,6 @@
     3: "#step-3",
   };
   const DRAFT_STORAGE_KEY = "hanko-field-order-draft-v1";
-  const DRAFT_VERSION = 1;
 
   function hasStepHash(hash = window.location.hash) {
     return Object.prototype.hasOwnProperty.call(
@@ -197,168 +244,14 @@
     );
   }
 
-  function readDraft() {
+  function clearDraftStorage() {
     try {
-      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (!raw) {
-        return null;
-      }
-
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") {
-        return null;
-      }
-
-      return parsed;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function saveDraft() {
-    if (!form) {
-      return;
-    }
-
-    const payload = {
-      version: DRAFT_VERSION,
-      step: currentStep,
-      seal_line1: line1Input?.value.trim() || "",
-      seal_line2: line2Input?.value.trim() || "",
-      kanji_style: selectedKanjiStyle(),
-      selected_font_key: fontInput?.value.trim() || "",
-      shape: selectedShape(),
-      selected_material_key: selectedMaterial()?.value || "",
-      selected_country_code: countrySelect?.value.trim() || "",
-      real_name: document.getElementById("real_name")?.value || "",
-      candidate_gender: document.getElementById("candidate_gender")?.value || "unspecified",
-      recipient_name: document.getElementById("recipient_name")?.value || "",
-      email: document.getElementById("email")?.value || "",
-      phone: document.getElementById("phone")?.value || "",
-      postal_code: document.getElementById("postal_code")?.value || "",
-      state_name: document.getElementById("state")?.value || "",
-      city: document.getElementById("city")?.value || "",
-      address_line1: document.getElementById("address_line1")?.value || "",
-      address_line2: document.getElementById("address_line2")?.value || "",
-      terms_agreed: document.getElementById("terms_agreed")?.checked || false,
-    };
-
-    try {
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch (_) {}
   }
 
-  function normalizeDraftStep(rawStep) {
-    const parsed = Number.parseInt(String(rawStep || ""), 10);
-    return normalizeStep(Number.isFinite(parsed) ? parsed : 1);
-  }
-
-  function normalizeDraftStyle(rawStyle) {
-    const normalized = (rawStyle || "").trim().toLowerCase();
-    if (normalized === "chinese" || normalized === "taiwanese") {
-      return normalized;
-    }
-    return DEFAULT_KANJI_STYLE;
-  }
-
-  function normalizeDraftShape(rawShape) {
-    return (rawShape || "").trim().toLowerCase() === "round" ? "round" : "square";
-  }
-
-  function normalizeDraftGender(rawGender) {
-    const normalized = (rawGender || "").trim().toLowerCase();
-    if (normalized === "male" || normalized === "female") {
-      return normalized;
-    }
-    return "unspecified";
-  }
-
-  function restoreDraft(draft) {
-    if (!draft || typeof draft !== "object") {
-      return;
-    }
-
-    if (line1Input) {
-      line1Input.value = (draft.seal_line1 || "").trim();
-    }
-    if (line2Input) {
-      line2Input.value = (draft.seal_line2 || "").trim();
-    }
-    if (kanjiStyleSelect) {
-      kanjiStyleSelect.value = normalizeDraftStyle(draft.kanji_style);
-    }
-    if (fontInput) {
-      fontInput.value = (draft.selected_font_key || "").trim();
-    }
-
-    const selectedShapeValue = normalizeDraftShape(draft.shape);
-    form
-      .querySelectorAll("input[name='shape']")
-      .forEach((radio) => {
-        radio.checked = radio.value === selectedShapeValue;
-      });
-
-    const selectedMaterialValue = (draft.selected_material_key || "").trim();
-    materialRadios.forEach((radio) => {
-      radio.checked = radio.value === selectedMaterialValue;
-    });
-
-    if (countrySelect) {
-      const selectedCountryValue = (draft.selected_country_code || "").trim();
-      countrySelect.value = selectedCountryValue;
-      if (
-        selectedCountryValue !== "" &&
-        countrySelect.value !== selectedCountryValue &&
-        countrySelect.options.length > 0
-      ) {
-        countrySelect.selectedIndex = 0;
-      }
-    }
-
-    const realNameInput = document.getElementById("real_name");
-    if (realNameInput) {
-      realNameInput.value = draft.real_name || "";
-    }
-    const candidateGenderInput = document.getElementById("candidate_gender");
-    if (candidateGenderInput) {
-      candidateGenderInput.value = normalizeDraftGender(draft.candidate_gender);
-    }
-    const recipientNameInput = document.getElementById("recipient_name");
-    if (recipientNameInput) {
-      recipientNameInput.value = draft.recipient_name || "";
-    }
-    const emailInput = document.getElementById("email");
-    if (emailInput) {
-      emailInput.value = draft.email || "";
-    }
-    const phoneInput = document.getElementById("phone");
-    if (phoneInput) {
-      phoneInput.value = draft.phone || "";
-    }
-    const postalCodeInput = document.getElementById("postal_code");
-    if (postalCodeInput) {
-      postalCodeInput.value = draft.postal_code || "";
-    }
-    const stateInput = document.getElementById("state");
-    if (stateInput) {
-      stateInput.value = draft.state_name || "";
-    }
-    const cityInput = document.getElementById("city");
-    if (cityInput) {
-      cityInput.value = draft.city || "";
-    }
-    const addressLine1Input = document.getElementById("address_line1");
-    if (addressLine1Input) {
-      addressLine1Input.value = draft.address_line1 || "";
-    }
-    const addressLine2Input = document.getElementById("address_line2");
-    if (addressLine2Input) {
-      addressLine2Input.value = draft.address_line2 || "";
-    }
-    const termsAgreedInput = document.getElementById("terms_agreed");
-    if (termsAgreedInput) {
-      termsAgreedInput.checked = Boolean(draft.terms_agreed);
-    }
+  function saveDraft() {
+    clearDraftStorage();
   }
 
   function normalizeStep(step) {
@@ -393,6 +286,18 @@
     return `${sign}USD ${whole.toLocaleString("en-US")}.${String(fraction).padStart(2, "0")}`;
   }
 
+  function formatJpy(yen) {
+    const normalized = Number(yen);
+    const amountYen = Number.isFinite(normalized) ? Math.trunc(normalized) : 0;
+    const sign = amountYen < 0 ? "-" : "";
+    const absoluteYen = Math.abs(amountYen);
+    return `${sign}JPY ${absoluteYen.toLocaleString("ja-JP")}`;
+  }
+
+  function formatMoney(amount) {
+    return isEnglishLocale ? formatUsd(amount) : formatJpy(amount);
+  }
+
   function getRawSealLines() {
     return {
       line1: line1Input?.value.trim() || "",
@@ -425,6 +330,11 @@
       const indicatorStep = Number(indicator.dataset.stepIndicator);
       indicator.classList.toggle("is-active", indicatorStep === normalizedStep);
       indicator.classList.toggle("is-done", indicatorStep < normalizedStep);
+      if (indicatorStep === normalizedStep) {
+        indicator.setAttribute("aria-current", "step");
+      } else {
+        indicator.removeAttribute("aria-current");
+      }
     });
 
     if (syncHash) {
@@ -433,6 +343,23 @@
 
     saveDraft();
   }
+
+  indicators.forEach((indicator) => {
+    indicator.addEventListener("click", () => {
+      const target = Number(indicator.dataset.stepIndicator);
+      if (!Number.isFinite(target)) {
+        return;
+      }
+
+      if (target > currentStep && !validateSealText()) {
+        showStep(1);
+        return;
+      }
+
+      updateSummary();
+      showStep(target);
+    });
+  });
 
   function syncShapeOptionStates() {
     shapeOptionChips.forEach((chip) => {
@@ -688,9 +615,9 @@
     summaryCountry.textContent = country?.dataset.label || "-";
 
     const subtotal = Number(material?.dataset.price || 0);
-    summarySubtotal.textContent = material ? formatUsd(subtotal) : "-";
-    summaryShipping.textContent = country ? formatUsd(shipping) : "-";
-    summaryTotal.textContent = material && country ? formatUsd(subtotal + shipping) : "-";
+    summarySubtotal.textContent = material ? formatMoney(subtotal) : "-";
+    summaryShipping.textContent = country ? formatMoney(shipping) : "-";
+    summaryTotal.textContent = material && country ? formatMoney(subtotal + shipping) : "-";
 
     saveDraft();
   }
@@ -907,7 +834,10 @@
 
     materialRadios.forEach((radio) => {
       const card = radio.closest(".material-card");
-      const matchesShape = (radio.dataset.shape || "square") === shape;
+      const materialKey = (radio.value || "").trim();
+      const matchesShape =
+        flexibleMaterialKeys.has(materialKey) ||
+        (radio.dataset.shape || "square") === shape;
       radio.disabled = !matchesShape;
       if (card) {
         card.hidden = !matchesShape;
@@ -1018,7 +948,23 @@
     renderPurchaseStatus();
   };
 
-  purchaseButton?.addEventListener("htmx:afterSwap", endPurchaseSubmission);
+  purchaseButton?.addEventListener("htmx:afterRequest", (event) => {
+    const redirectUrl = event.detail?.xhr
+      ?.getResponseHeader("HX-Redirect")
+      ?.trim();
+
+    // HX-Redirect responses do not swap content, so finish the loading state
+    // when the request succeeds and let the browser handle the navigation.
+    if (redirectUrl) {
+      endPurchaseSubmission();
+      window.location.assign(redirectUrl);
+      return;
+    }
+
+    if (event.detail?.successful) {
+      endPurchaseSubmission();
+    }
+  });
   purchaseButton?.addEventListener("htmx:responseError", () => {
     setPurchaseErrorMessage(
       localizedText(
@@ -1118,15 +1064,21 @@
     }
   });
 
-  const savedDraft = readDraft();
-  const initialStep = hasStepHash() ? stepFromHash() : normalizeDraftStep(savedDraft?.step);
-  if (savedDraft) {
-    restoreDraft(savedDraft);
+  // Keep the checkout stateless so a cache clear or hard reload returns to step 1.
+  clearDraftStorage();
+  form.reset();
+  if (localeInput) {
+    localeInput.value = initialLocale;
   }
-
+  clearPurchaseResult();
   syncMaterialOptionsByShape();
   syncFontOptionsByStyle();
-  showStep(initialStep);
+  showStep(1, { syncHash: false });
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}`,
+  );
   refreshSealUi();
   renderPurchaseStatus();
   window.addEventListener("hashchange", () => {

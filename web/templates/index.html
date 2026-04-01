@@ -3,51 +3,129 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Stone Signature | Hand-carved Stone Seals</title>
+  <title>{% if selected_locale == "ja" %}デザイン作成{% else %}Design{% endif %} | Stone Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&family=Noto+Serif+JP:wght@400;700;900&family=Noto+Serif:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   {% for font_stylesheet_url in font_stylesheet_urls %}
   <link href="{{ font_stylesheet_url }}" rel="stylesheet">
   {% endfor %}
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="/static/app.js?v=20260327-1" defer></script>
+  <script src="/static/app.js?v=20260331-1" defer></script>
 </head>
-<body>
-  <div class="bg-shape bg-shape-left"></div>
-  <div class="bg-shape bg-shape-right"></div>
-
-  <main class="layout">
-    <header class="hero">
-      <div class="hero-top-row">
-        <div>
-          <p class="hero-eyebrow">Stone Signature</p>
-          <p class="hero-description">Hand-carved Stone Seals</p>
+<body class="top-page design-page">
+  <header class="top-header">
+    <div class="top-header__inner">
+      <a class="top-brand__link" href="{{ top_url }}">
+        <div class="top-brand">
+          <h1 class="top-brand__title">Stone Signature</h1>
+          <span class="top-brand__subtitle">印鑑フィールド</span>
         </div>
-        <label class="language-select-wrap" aria-label="Language selector">
-          <span class="language-icon" aria-hidden="true">🌐</span>
-          <select id="language-select" data-locale-select>
-            <option value="ja" {% if selected_locale == "ja" %}selected{% endif %}>日本語</option>
-            <option value="en" {% if selected_locale == "en" %}selected{% endif %}>English</option>
-          </select>
-        </label>
+      </a>
+      <div class="top-header__action">
+        <details class="top-language-switcher" data-language-switcher>
+          <summary class="top-language-switcher__toggle" aria-label="Language selector">
+            <span class="material-symbols-outlined top-brand__icon" aria-hidden="true">language</span>
+          </summary>
+          <div class="top-language-switcher__menu" role="menu" aria-label="Language options">
+            <a class="top-language-switcher__item{% if selected_locale == "ja" %} is-active{% endif %}" href="?lang=ja" hreflang="ja" data-language-option="ja">日本語</a>
+            <a class="top-language-switcher__item{% if selected_locale == "en" %} is-active{% endif %}" href="?lang=en" hreflang="en" data-language-option="en">English</a>
+          </div>
+        </details>
       </div>
-    </header>
+    </div>
+    <div class="top-header__divider"></div>
+  </header>
 
-    <section class="panel">
-      <ol class="step-track" aria-label="{% if selected_locale == "ja" %}注文ステップ{% else %}Order steps{% endif %}">
-        <li class="step-dot is-active" data-step-indicator="1">{% if selected_locale == "ja" %}1. デザイン{% else %}1. Design{% endif %}</li>
-        <li class="step-dot" data-step-indicator="2">{% if selected_locale == "ja" %}2. 材質{% else %}2. Material{% endif %}</li>
-        <li class="step-dot" data-step-indicator="3">{% if selected_locale == "ja" %}3. 購入{% else %}3. Purchase{% endif %}</li>
-      </ol>
+  <main class="design-page__main">
+    <div class="design-page__lead">
+      <div class="design-page__lead-copy">
+        <h2 class="design-page__title">
+          {% if selected_locale == "ja" %}デザイン作成{% else %}Design{% endif %}
+        </h2>
+        <p class="design-page__intro">
+          {% if selected_locale == "ja" %}
+          印影、材質、お届け先を順に選んで、そのまま購入まで進めます。
+          {% else %}
+          Choose the seal text, material, and shipping details, then continue to checkout.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <section class="design-page__content">
+      <nav class="step-track" aria-label="{% if selected_locale == "ja" %}注文ステップ{% else %}Order steps{% endif %}">
+        <ol class="step-track-list" role="list">
+          <li class="step-track-item">
+            <button
+              type="button"
+              class="step-track-link is-active"
+              data-step-indicator="1"
+              aria-current="step"
+            >
+              <span class="step-track-content">
+                <span class="step-track-step">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="step-track-check">
+                    <path d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" fill-rule="evenodd" />
+                  </svg>
+                  <span class="step-track-number">01</span>
+                </span>
+                <span class="step-track-title">{% if selected_locale == "ja" %}デザイン{% else %}Design{% endif %}</span>
+              </span>
+            </button>
+            <div aria-hidden="true" class="step-track-separator">
+              <svg viewBox="0 0 22 80" fill="none" preserveAspectRatio="none" class="step-track-separator-icon">
+                <path d="M0 -2L20 40L0 82" stroke="currentColor" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </li>
+          <li class="step-track-item">
+            <button
+              type="button"
+              class="step-track-link"
+              data-step-indicator="2"
+            >
+              <span class="step-track-content">
+                <span class="step-track-step">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="step-track-check">
+                    <path d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" fill-rule="evenodd" />
+                  </svg>
+                  <span class="step-track-number">02</span>
+                </span>
+                <span class="step-track-title">{% if selected_locale == "ja" %}材質{% else %}Material{% endif %}</span>
+              </span>
+            </button>
+            <div aria-hidden="true" class="step-track-separator">
+              <svg viewBox="0 0 22 80" fill="none" preserveAspectRatio="none" class="step-track-separator-icon">
+                <path d="M0 -2L20 40L0 82" stroke="currentColor" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </li>
+          <li class="step-track-item">
+            <button
+              type="button"
+              class="step-track-link"
+              data-step-indicator="3"
+            >
+              <span class="step-track-content">
+                <span class="step-track-step">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="step-track-check">
+                    <path d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" fill-rule="evenodd" />
+                  </svg>
+                  <span class="step-track-number">03</span>
+                </span>
+                <span class="step-track-title">{% if selected_locale == "ja" %}購入{% else %}Purchase{% endif %}</span>
+              </span>
+            </button>
+          </li>
+        </ol>
+      </nav>
 
       <form id="order-form" class="flow-form">
         <input id="locale" name="locale" type="hidden" value="{{ selected_locale }}">
         <section class="step-panel is-active" data-step-panel="1">
-          <div class="section-title-wrap">
-          </div>
-
           <div class="design-grid">
             <div class="design-controls">
               <div class="field-label-row">
@@ -92,6 +170,39 @@
                 <option value="taiwanese">{% if selected_locale == "ja" %}台湾スタイル{% else %}Taiwanese style{% endif %}</option>
               </select>
               <p class="field-hint">{% if selected_locale == "ja" %}選んだスタイルに合わせてフォントが表示されます。{% else %}Fonts are filtered to the selected style.{% endif %}</p>
+
+              <div class="ai-box">
+                <h3>{% if selected_locale == "ja" %}漢字名提案{% else %}Kanji name suggestions{% endif %}</h3>
+                <p>{% if selected_locale == "ja" %}本名と性別を入力して、今選んでいるフォントスタイルに合う候補を生成できます。{% else %}Enter a name and gender to generate suggestions that match the selected font style.{% endif %}</p>
+                <label class="field-label" for="real_name">{% if selected_locale == "ja" %}本名{% else %}Name{% endif %}</label>
+                <input
+                  id="real_name"
+                  name="real_name"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="{% if selected_locale == "ja" %}例: 山田 太郎{% else %}e.g. Michael Smith{% endif %}"
+                >
+                <label class="field-label" for="candidate_gender">{% if selected_locale == "ja" %}性別{% else %}Gender{% endif %}</label>
+                <select id="candidate_gender" name="candidate_gender">
+                  <option value="unspecified" selected>{% if selected_locale == "ja" %}選択なし{% else %}Unspecified{% endif %}</option>
+                  <option value="male">{% if selected_locale == "ja" %}男性{% else %}Male{% endif %}</option>
+                  <option value="female">{% if selected_locale == "ja" %}女性{% else %}Female{% endif %}</option>
+                </select>
+                <button
+                  type="button"
+                  class="secondary"
+                  hx-post="/kanji"
+                  hx-target="#kanji-suggestions"
+                  hx-swap="innerHTML"
+                  hx-include="#real_name,#candidate_gender,#kanji_style,#locale"
+                >
+                  {% if selected_locale == "ja" %}候補を生成{% else %}Generate suggestions{% endif %}
+                </button>
+                <div id="kanji-suggestions" class="suggestions-box" role="status" aria-live="polite" aria-atomic="true">
+                  <p class="placeholder">{% if selected_locale == "ja" %}本名を入力して候補を生成してください。{% else %}Enter your name to generate suggestions.{% endif %}</p>
+                </div>
+              </div>
+
             </div>
 
             <aside class="preview-card">
@@ -103,6 +214,26 @@
                 </div>
               </div>
               <p id="preview-caption">{% if selected_locale == "ja" %}角{% else %}Square{% endif %} / {{ default_font_label }}</p>
+
+              <fieldset class="shape-fieldset">
+                <legend>{% if selected_locale == "ja" %}形状{% else %}Shape{% endif %}</legend>
+                <label class="option-chip">
+                  <input type="radio" name="shape" value="square" checked>
+                  <span>{% if selected_locale == "ja" %}角印{% else %}Square seal{% endif %}</span>
+                </label>
+                <label class="option-chip">
+                  <input type="radio" name="shape" value="round">
+                  <span>{% if selected_locale == "ja" %}丸印{% else %}Round seal{% endif %}</span>
+                </label>
+              </fieldset>
+
+              <div class="shape-switch-note" role="note">
+                {% if selected_locale == "en" %}
+                <strong>Note:</strong> The gemstone materials can be used with either shape.
+                {% else %}
+                <strong>補足:</strong> 宝石材質は丸印・角印のどちらでも選べます。
+                {% endif %}
+              </div>
 
               <div class="preview-config">
                 <input type="hidden" id="font" name="font" value="{{ default_font_key }}">
@@ -124,26 +255,6 @@
                   </button>
                   {% endfor %}
                 </div>
-
-                <fieldset class="shape-fieldset">
-                  <legend>{% if selected_locale == "ja" %}形状{% else %}Shape{% endif %}</legend>
-                  <label class="option-chip">
-                    <input type="radio" name="shape" value="square" checked>
-                    <span>{% if selected_locale == "ja" %}角印{% else %}Square seal{% endif %}</span>
-                  </label>
-                  <label class="option-chip">
-                    <input type="radio" name="shape" value="round">
-                    <span>{% if selected_locale == "ja" %}丸印{% else %}Round seal{% endif %}</span>
-                  </label>
-                </fieldset>
-
-                <div class="shape-switch-note" role="note">
-                  {% if selected_locale == "en" %}
-                  <strong>Note:</strong> Changing the shape may automatically switch the material to a compatible option.
-                  {% else %}
-                  <strong>補足:</strong> 形状を変えると、対応する材質へ自動で切り替わることがあります。
-                  {% endif %}
-                </div>
               </div>
             </aside>
           </div>
@@ -151,46 +262,6 @@
           <div class="step-actions">
             <button type="button" class="primary" data-next-step="2">{% if selected_locale == "ja" %}材質選びへ進む{% else %}Next: Material{% endif %}</button>
           </div>
-
-          <details class="optional-ai-box">
-            <summary class="optional-ai-summary">
-              <div class="optional-ai-summary-copy-wrap">
-                <p class="optional-ai-title">{% if selected_locale == "ja" %}漢字名提案{% else %}Kanji name suggestions{% endif %}</p>
-                <p class="optional-ai-copy">{% if selected_locale == "ja" %}必要なときだけ開いて、現在のスタイルに合う候補を生成できます。{% else %}Open this only if you want suggestions that match the selected style.{% endif %}</p>
-              </div>
-              <span class="optional-ai-badge">{% if selected_locale == "ja" %}任意{% else %}Optional{% endif %}</span>
-              <span class="optional-ai-chevron" aria-hidden="true">⌄</span>
-            </summary>
-            <div class="optional-ai-body">
-              <label class="field-label compact" for="real_name">{% if selected_locale == "ja" %}本名{% else %}Name{% endif %}</label>
-              <input
-                id="real_name"
-                name="real_name"
-                type="text"
-                autocomplete="off"
-                placeholder="{% if selected_locale == "ja" %}例: 山田 太郎{% else %}e.g. Michael Smith{% endif %}"
-              >
-              <label class="field-label" for="candidate_gender">{% if selected_locale == "ja" %}性別{% else %}Gender{% endif %}</label>
-              <select id="candidate_gender" name="candidate_gender">
-                <option value="unspecified" selected>{% if selected_locale == "ja" %}選択なし{% else %}Unspecified{% endif %}</option>
-                <option value="male">{% if selected_locale == "ja" %}男性{% else %}Male{% endif %}</option>
-                <option value="female">{% if selected_locale == "ja" %}女性{% else %}Female{% endif %}</option>
-              </select>
-              <button
-                type="button"
-                class="secondary"
-                hx-post="/kanji"
-                hx-target="#kanji-suggestions"
-                hx-swap="innerHTML"
-                hx-include="#real_name,#candidate_gender,#kanji_style,#locale"
-              >
-                {% if selected_locale == "ja" %}候補を生成{% else %}Generate suggestions{% endif %}
-              </button>
-              <div id="kanji-suggestions" class="suggestions-box" role="status" aria-live="polite" aria-atomic="true">
-                <p class="placeholder">{% if selected_locale == "ja" %}本名を入力して候補を生成してください。{% else %}Enter your name to generate suggestions.{% endif %}</p>
-              </div>
-            </div>
-          </details>
         </section>
 
         <section class="step-panel" data-step-panel="2">
@@ -198,9 +269,9 @@
             <h2>{% if selected_locale == "ja" %}材質を選ぶ{% else %}Choose material{% endif %}</h2>
             <p>
               {% if selected_locale == "ja" %}
-              質感・重さ・用途と価格を見ながら材質を決めます。形状を変えた場合は、対応する材質へ自動で切り替わることがあります。
+              質感・重さ・用途と価格を見ながら材質を決めます。宝石材質は丸印・角印のどちらでも選べます。
               {% else %}
-              Compare texture, weight, use, and price to pick your material. Changing the shape may automatically switch to a compatible material.
+              Compare texture, weight, use, and price to pick your material. The gemstone materials can be used with either shape.
               {% endif %}
             </p>
           </div>
@@ -253,7 +324,7 @@
         <section class="step-panel" data-step-panel="3">
           <div class="section-title-wrap">
             <h2>{% if selected_locale == "ja" %}購入{% else %}Purchase{% endif %}</h2>
-            <p>{% if selected_locale == "ja" %}内容を確認して、モック注文を確定します。{% else %}Review the details, then place your order.{% endif %}</p>
+            <p>{% if selected_locale == "ja" %}内容を確認して、支払いへ進みます。{% else %}Review the details, then continue to payment.{% endif %}</p>
           </div>
 
           <div class="purchase-grid">
@@ -427,25 +498,19 @@
                 </span>
               </label>
 
-              <p class="field-hint">
-                {% if is_mock %}
-                {% if selected_locale == "ja" %}mock モードのため実決済は行われず、確認メッセージのみ表示します。{% else %}This is a mock mode, so no real payment will be processed and only a confirmation message will appear.{% endif %}
-                {% else %}
-                {% if selected_locale == "ja" %}Stripe Checkout に遷移して決済します。{% else %}You will be redirected to Stripe Checkout to complete payment.{% endif %}
-                {% endif %}
-              </p>
+              <p class="field-hint">{{ purchase_note }}</p>
               <button
                 id="purchase-submit"
                 type="button"
                 class="primary full"
-                data-ready-label="{% if is_mock %}{% if selected_locale == "ja" %}購入を確定（モック）{% else %}Confirm order (mock){% endif %}{% else %}{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}{% endif %}"
+                data-ready-label="{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}"
                 data-submitting-label="{% if selected_locale == "ja" %}送信中...{% else %}Submitting...{% endif %}"
-                hx-post="/purchase"
+                hx-post="{{ purchase_action_path }}"
                 hx-target="#purchase-result"
                 hx-swap="innerHTML"
                 hx-include="#order-form"
               >
-                {% if is_mock %}{% if selected_locale == "ja" %}購入を確定（モック）{% else %}Confirm order (mock){% endif %}{% else %}{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}{% endif %}
+                {% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}
               </button>
               <div id="purchase-status" class="purchase-status" role="status" aria-live="polite"></div>
               <div id="purchase-result" class="purchase-result" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -458,35 +523,26 @@
         </section>
       </form>
     </section>
-
-    <footer style="margin-top:16px;text-align:center;font-size:0.86rem;color:#6a645d;">
-      <a
-        href="{{ terms_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}
-      </a>
-      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
-      <a
-        href="{{ commercial_transactions_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}特定商取引法に基づく表記{% else %}Legal notice{% endif %}
-      </a>
-      <span aria-hidden="true" style="margin:0 0.5rem;">・</span>
-      <a
-        href="{{ privacy_policy_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="color:#6a645d;text-decoration:underline;"
-      >
-        {% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}
-      </a>
-    </footer>
   </main>
+
+  <footer class="top-footer">
+    <div class="top-footer__inner">
+      <div class="top-footer__brand">
+        <a class="top-footer__brand-link" href="{{ top_url }}">
+          <div class="top-footer__brand-title">Stone Signature</div>
+        </a>
+      </div>
+      <div class="top-footer__links">
+        <a class="top-footer__link" href="{{ commercial_transactions_url }}">{% if selected_locale == "ja" %}特商法に基づく表記{% else %}Legal Notice{% endif %}</a>
+        <a class="top-footer__link" href="{{ terms_url }}">{% if selected_locale == "ja" %}利用規約{% else %}Terms of Service{% endif %}</a>
+        <a class="top-footer__link" href="{{ privacy_policy_url }}">{% if selected_locale == "ja" %}プライバシーポリシー{% else %}Privacy Policy{% endif %}</a>
+        <a class="top-footer__link" href="https://finitefield.org/company/">{% if selected_locale == "ja" %}運営会社{% else %}Company{% endif %}</a>
+      </div>
+      <div class="top-footer__copyright">
+        © Stone Signature
+      </div>
+    </div>
+    <div class="top-footer__accent"></div>
+  </footer>
 </body>
 </html>

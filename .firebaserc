@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "dev": "hanko-field",
+    "prod": "hanko-field-prod"
+  }
+}
