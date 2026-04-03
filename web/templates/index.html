@@ -12,6 +12,8 @@
   <link href="{{ font_stylesheet_url }}" rel="stylesheet">
   {% endfor %}
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="icon" type="image/png" href="/static/site-logo.png">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script src="/static/app.js?v=20260331-1" defer></script>
 </head>
@@ -20,8 +22,11 @@
     <div class="top-header__inner">
       <a class="top-brand__link" href="{{ top_url }}">
         <div class="top-brand">
-          <h1 class="top-brand__title">Stone Signature</h1>
-          <span class="top-brand__subtitle">印鑑フィールド</span>
+          <img class="top-brand__logo" src="/static/site-logo.png" alt="" aria-hidden="true">
+          <div class="top-brand__text">
+            <h1 class="top-brand__title">Stone Signature</h1>
+            <span class="top-brand__subtitle">印鑑フィールド</span>
+          </div>
         </div>
       </a>
       <div class="top-header__action">
@@ -529,6 +534,7 @@
     <div class="top-footer__inner">
       <div class="top-footer__brand">
         <a class="top-footer__brand-link" href="{{ top_url }}">
+          <img class="top-footer__brand-logo" src="/static/site-logo.png" alt="" aria-hidden="true">
           <div class="top-footer__brand-title">Stone Signature</div>
         </a>
       </div>

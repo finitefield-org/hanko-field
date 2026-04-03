@@ -26,6 +26,8 @@ const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const ADMIN_PROXY_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 const HX_REDIRECT_HEADER: &str = "hx-redirect";
 const WEB_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
+const ROBOTS_TXT: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/robots.txt"));
+const SITEMAP_XML: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/sitemap.xml"));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -483,12 +485,8 @@ impl FirestoreCatalogSource {
                 })?;
             }
 
-            let label = resolve_font_label_field(
-                &document.fields,
-                locale,
-                &self.default_locale,
-                &doc_id,
-            );
+            let label =
+                resolve_font_label_field(&document.fields, locale, &self.default_locale, &doc_id);
             let mut kanji_style = read_string_field(&document.fields, "kanji_style");
             if kanji_style.is_empty() {
                 kanji_style = read_string_field(&document.fields, "style");
@@ -930,6 +928,8 @@ async fn run() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(handle_top))
+        .route("/robots.txt", get(handle_robots_txt))
+        .route("/sitemap.xml", get(handle_sitemap_xml))
         .route("/design", get(handle_design))
         .route("/terms", get(handle_terms))
         .route(
@@ -1026,10 +1026,7 @@ fn load_config() -> Result<AppConfig> {
             .unwrap_or_default()
             .trim()
             .to_owned(),
-        admin_base_url: env_first(&[
-            "HANKO_WEB_ADMIN_BASE_URL_PROD",
-            "HANKO_WEB_ADMIN_BASE_URL",
-        ]),
+        admin_base_url: env_first(&["HANKO_WEB_ADMIN_BASE_URL_PROD", "HANKO_WEB_ADMIN_BASE_URL"]),
         firestore_project_id: None,
         credentials_file: None,
         storage_assets_bucket: None,
@@ -1822,6 +1819,22 @@ fn payment_result_locale_url(
     }
 
     format!("{base_path}?{}", params.join("&"))
+}
+
+async fn handle_robots_txt() -> Response {
+    (
+        [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+        ROBOTS_TXT,
+    )
+        .into_response()
+}
+
+async fn handle_sitemap_xml() -> Response {
+    (
+        [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
+        SITEMAP_XML,
+    )
+        .into_response()
 }
 
 async fn handle_payment_success(
@@ -3297,5 +3310,104 @@ mod tests {
         let html = render_html(&template).expect("top page should render");
 
         assert!(html.contains("href=\"https://finitefield.org/en/privacy/\""));
+    }
+
+    #[test]
+    fn top_page_uses_logo_image_left_of_title() {
+        let template = TopPageTemplate {
+            selected_locale: "ja".to_owned(),
+            top_url: "/".to_owned(),
+            design_url: "/design".to_owned(),
+            terms_url: "/terms".to_owned(),
+            commercial_transactions_url: "/commercial-transactions".to_owned(),
+            privacy_policy_url: privacy_policy_url("ja"),
+        };
+
+        let html = render_html(&template).expect("top page should render");
+
+        assert!(html.contains(r#"<link rel="icon" type="image/png" href="/static/favicon.png">"#));
+
+        let header_logo = html
+            .find(r#"<img class="top-brand__logo" src="/static/site-logo.png" alt="" aria-hidden="true">"#)
+            .expect("header logo should be rendered");
+        let header_title = html
+            .find(r#"<h1 class="top-brand__title">Stone Signature</h1>"#)
+            .expect("header title should be rendered");
+        assert!(header_logo < header_title);
+
+        let footer_logo = html
+            .find(r#"<img class="top-footer__brand-logo" src="/static/site-logo.png" alt="" aria-hidden="true">"#)
+            .expect("footer logo should be rendered");
+        let footer_title = html
+            .find(r#"<div class="top-footer__brand-title">Stone Signature</div>"#)
+            .expect("footer title should be rendered");
+        assert!(footer_logo < footer_title);
+    }
+
+    #[tokio::test]
+    async fn robots_txt_is_served_as_plain_text() {
+        let response = handle_robots_txt().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get("content-type")
+                .and_then(|value| value.to_str().ok()),
+            Some("text/plain; charset=utf-8")
+        );
+
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be readable");
+        let robots_txt = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
+
+        assert!(robots_txt.contains("User-agent: *"));
+        assert!(robots_txt.contains("Disallow: /admin"));
+        assert!(robots_txt.contains("Disallow: /mock"));
+        assert!(robots_txt.contains("Disallow: /kanji"));
+        assert!(robots_txt.contains("Disallow: /purchase"));
+        assert!(robots_txt.contains("Disallow: /payment/"));
+        assert!(robots_txt.contains("Sitemap: https://finitefield.org/sitemap.xml"));
+    }
+
+    #[tokio::test]
+    async fn sitemap_xml_is_served_as_xml() {
+        let response = handle_sitemap_xml().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get("content-type")
+                .and_then(|value| value.to_str().ok()),
+            Some("application/xml; charset=utf-8")
+        );
+
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be readable");
+        let sitemap_xml = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
+
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/?lang=ja</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/?lang=en" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/design?lang=ja</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design?lang=en" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/terms?lang=ja</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms?lang=en" />"#
+        ));
+        assert!(
+            sitemap_xml
+                .contains("<loc>https://finitefield.org/commercial-transactions?lang=ja</loc>")
+        );
+        assert!(
+            sitemap_xml
+                .contains(r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions?lang=en" />"#)
+        );
     }
 }

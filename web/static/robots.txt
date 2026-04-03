@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin
+Disallow: /mock
+Disallow: /kanji
+Disallow: /purchase
+Disallow: /payment/
+Sitemap: https://finitefield.org/sitemap.xml
