@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://finitefield.org/?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/?lang=en" />
+  </url>
+  <url>
+    <loc>https://finitefield.org/design?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/design?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design?lang=en" />
+  </url>
+  <url>
+    <loc>https://finitefield.org/terms?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/terms?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms?lang=en" />
+  </url>
+  <url>
+    <loc>https://finitefield.org/commercial-transactions?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/commercial-transactions?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions?lang=en" />
+  </url>
+</urlset>
