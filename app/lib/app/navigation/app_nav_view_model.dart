@@ -9,15 +9,33 @@ class AppNavViewModel extends Provider<AppNavState> {
   @override
   AppNavState build(Ref ref) {
     return const AppNavState(
-      pages: [PageEntry(key: AppPageKey.order, name: '/')],
+      pages: [PageEntry(key: AppPageKey.top, name: '/')],
       serial: 0,
     );
   }
 
+  late final showDesignMut = mutation<void>(#showDesign);
   late final showPaymentSuccessMut = mutation<void>(#showPaymentSuccess);
   late final showPaymentFailureMut = mutation<void>(#showPaymentFailure);
   late final popTopMut = mutation<void>(#popTop);
   late final popToRootMut = mutation<void>(#popToRoot);
+
+  Call<void, AppNavState> showDesign() {
+    return mutate(showDesignMut, (ref) async {
+      final current = ref.watch(this);
+      if (current.pages.isNotEmpty &&
+          current.pages.last.key == AppPageKey.order) {
+        return;
+      }
+
+      ref.state = current.copyWith(
+        pages: [
+          ...current.pages,
+          const PageEntry(key: AppPageKey.order, name: '/design'),
+        ],
+      );
+    });
+  }
 
   Call<void, AppNavState> showPaymentSuccess({
     String? sessionId,

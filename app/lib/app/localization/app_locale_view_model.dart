@@ -82,3 +82,12 @@ String commercialTransactionsUrlForLocaleCode(String code) {
 String commercialTransactionsUrlForLocale(AppLocale locale) {
   return commercialTransactionsUrlForLocaleCode(locale.code);
 }
+
+String termsUrlForLocaleCode(String code) {
+  final locale = normalizeUiLocale(code);
+  return 'https://finitefield.org/terms?lang=$locale';
+}
+
+String termsUrlForLocale(AppLocale locale) {
+  return termsUrlForLocaleCode(locale.code);
+}

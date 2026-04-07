@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class AppPageKey {
+  static const top = 'top';
   static const order = 'order';
   static const paymentSuccess = 'payment_success';
   static const paymentFailure = 'payment_failure';

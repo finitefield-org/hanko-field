@@ -484,6 +484,23 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
       ref.state = current.copyWith(isLoadingCatalog: true, catalogError: '');
 
+      final runtime = ref.watch(appRuntimeConfigProvider);
+      if (runtime.mode == AppMode.mock) {
+        final latest = ref.watch(this);
+        final fallback = _mockCatalogResponse(
+          locale: latest.locale.isNotEmpty
+              ? latest.locale
+              : runtime.preferredLocale,
+        );
+        ref.state = _stateWithCatalog(
+          state: latest,
+          catalog: fallback.catalog,
+          locale: fallback.locale,
+          currency: fallback.currency,
+        );
+        return;
+      }
+
       final draftStorage = ref.watch(orderDraftStorageProvider);
       final savedDraft = await draftStorage.load();
       if (savedDraft != null) {
@@ -491,7 +508,6 @@ class OrderViewModel extends Provider<OrderScreenState> {
       }
 
       try {
-        final runtime = ref.watch(appRuntimeConfigProvider);
         final api = ref.watch(orderApiRepositoryProvider);
         final publicConfig = await api.fetchPublicConfig();
         final requestedLocale = ref.watch(this).locale.trim();
@@ -519,6 +535,22 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
         ref.state = nextState;
       } catch (error) {
+        if (runtime.mode == AppMode.mock) {
+          final latest = ref.watch(this);
+          final fallback = _mockCatalogResponse(
+            locale: latest.locale.isNotEmpty
+                ? latest.locale
+                : runtime.preferredLocale,
+          );
+          ref.state = _stateWithCatalog(
+            state: latest,
+            catalog: fallback.catalog,
+            locale: fallback.locale,
+            currency: fallback.currency,
+          );
+          return;
+        }
+
         ref.state = ref
             .watch(this)
             .copyWith(
@@ -540,6 +572,8 @@ class OrderViewModel extends Provider<OrderScreenState> {
         return;
       }
 
+      final runtime = ref.watch(appRuntimeConfigProvider);
+
       ref.state = current.copyWith(
         locale: nextLocale,
         purchaseResult: null,
@@ -555,6 +589,18 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
       final snapshot = ref.watch(this);
       ref.state = snapshot.copyWith(isLoadingCatalog: true, catalogError: '');
+
+      if (runtime.mode == AppMode.mock) {
+        final latest = ref.watch(this);
+        final fallback = _mockCatalogResponse(locale: nextLocale);
+        ref.state = _stateWithCatalog(
+          state: latest,
+          catalog: fallback.catalog,
+          locale: fallback.locale,
+          currency: fallback.currency,
+        );
+        return;
+      }
 
       try {
         final api = ref.watch(orderApiRepositoryProvider);
@@ -617,6 +663,18 @@ class OrderViewModel extends Provider<OrderScreenState> {
           selectedCountryCode: nextCountryCode,
         );
       } catch (error) {
+        if (runtime.mode == AppMode.mock) {
+          final latest = ref.watch(this);
+          final fallback = _mockCatalogResponse(locale: nextLocale);
+          ref.state = _stateWithCatalog(
+            state: latest,
+            catalog: fallback.catalog,
+            locale: fallback.locale,
+            currency: fallback.currency,
+          );
+          return;
+        }
+
         final latest = ref.watch(this);
         ref.state = latest.copyWith(
           isLoadingCatalog: false,
@@ -852,7 +910,13 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> updateRealName(String value) {
     return mutate(updateRealNameMut, (ref) async {
       final current = ref.watch(this);
-      ref.state = current.copyWith(realName: value, purchaseError: '');
+      ref.state = current.copyWith(
+        realName: value,
+        suggestions: const [],
+        selectedSuggestionIndex: null,
+        suggestionsError: '',
+        purchaseError: '',
+      );
     });
   }
 
@@ -866,6 +930,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> generateSuggestions() {
     return mutate(generateSuggestionsMut, (ref) async {
       final current = ref.watch(this);
+      final runtime = ref.watch(appRuntimeConfigProvider);
       if (!current.hasCatalog) {
         return;
       }
@@ -877,8 +942,8 @@ class OrderViewModel extends Provider<OrderScreenState> {
           selectedSuggestionIndex: null,
           suggestionsError: localizedUiText(
             current.locale,
-            ja: '候補を表示するには本名を入力してください。',
-            en: 'Enter your name to see suggestions.',
+            ja: 'お名前を入力してください。',
+            en: 'Enter your name.',
           ),
         );
         return;
@@ -888,6 +953,23 @@ class OrderViewModel extends Provider<OrderScreenState> {
         isGeneratingSuggestions: true,
         suggestionsError: '',
       );
+
+      if (runtime.mode == AppMode.mock) {
+        final latest = ref.watch(this);
+        final suggestions = _mockKanjiCandidates(
+          locale: latest.locale,
+          realName: latest.realName,
+          gender: latest.candidateGender,
+          style: latest.kanjiStyle,
+        );
+        ref.state = latest.copyWith(
+          suggestions: suggestions,
+          selectedSuggestionIndex: suggestions.isEmpty ? null : 0,
+          suggestionsError: '',
+          isGeneratingSuggestions: false,
+        );
+        return;
+      }
 
       try {
         final api = ref.watch(orderApiRepositoryProvider);
@@ -913,6 +995,23 @@ class OrderViewModel extends Provider<OrderScreenState> {
               isGeneratingSuggestions: false,
             );
       } catch (error) {
+        if (runtime.mode == AppMode.mock) {
+          final latest = ref.watch(this);
+          final suggestions = _mockKanjiCandidates(
+            locale: latest.locale,
+            realName: latest.realName,
+            gender: latest.candidateGender,
+            style: latest.kanjiStyle,
+          );
+          ref.state = latest.copyWith(
+            suggestions: suggestions,
+            selectedSuggestionIndex: suggestions.isEmpty ? null : 0,
+            suggestionsError: '',
+            isGeneratingSuggestions: false,
+          );
+          return;
+        }
+
         ref.state = ref
             .watch(this)
             .copyWith(
@@ -1064,6 +1163,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
   Call<void, OrderScreenState> submitPurchase() {
     return mutate(submitPurchaseMut, (ref) async {
       final current = ref.watch(this);
+      final runtime = ref.watch(appRuntimeConfigProvider);
       if (!current.hasCatalog || current.isSubmittingPurchase) {
         return;
       }
@@ -1096,6 +1196,43 @@ class OrderViewModel extends Provider<OrderScreenState> {
         purchaseError: '',
         purchaseResult: null,
       );
+
+      if (runtime.mode == AppMode.mock) {
+        final latest = ref.watch(this);
+        final mockOrderId =
+            'mock_order_${DateTime.now().millisecondsSinceEpoch}';
+        final mockSessionId = 'mock_session_$mockOrderId';
+        ref.state = latest.copyWith(
+          isSubmittingPurchase: false,
+          purchaseError: '',
+          purchaseResult: PurchaseResultData(
+            sealLine1: current.sealLine1,
+            sealLine2: current.sealLine2,
+            fontLabel: current.selectedFont.label,
+            shapeLabel: current.shape.localizedLabel(current.locale),
+            materialLabel: current.selectedMaterial.label,
+            stripeName: current.recipientName.trim(),
+            stripePhone: current.phone.trim(),
+            countryLabel: current.selectedCountry.label,
+            postalCode: current.postalCode.trim(),
+            state: current.stateName.trim(),
+            city: current.city.trim(),
+            addressLine1: current.addressLine1.trim(),
+            addressLine2: current.addressLine2.trim(),
+            subtotal: current.subtotal,
+            shipping: current.shipping,
+            total: current.total,
+            email: current.email.trim(),
+            sourceLabel: 'Mock',
+            currency: current.effectiveCurrency,
+            orderId: mockOrderId,
+            checkoutSessionId: mockSessionId,
+            checkoutUrl: '',
+            paymentIntentId: 'mock_pi_$mockOrderId',
+          ),
+        );
+        return;
+      }
 
       try {
         final api = ref.watch(orderApiRepositoryProvider);
@@ -1161,6 +1298,43 @@ class OrderViewModel extends Provider<OrderScreenState> {
               ),
             );
       } catch (error) {
+        if (runtime.mode == AppMode.mock) {
+          final latest = ref.watch(this);
+          final mockOrderId =
+              'mock_order_${DateTime.now().millisecondsSinceEpoch}';
+          final mockSessionId = 'mock_session_$mockOrderId';
+          ref.state = latest.copyWith(
+            isSubmittingPurchase: false,
+            purchaseError: '',
+            purchaseResult: PurchaseResultData(
+              sealLine1: current.sealLine1,
+              sealLine2: current.sealLine2,
+              fontLabel: current.selectedFont.label,
+              shapeLabel: current.shape.localizedLabel(current.locale),
+              materialLabel: current.selectedMaterial.label,
+              stripeName: current.recipientName.trim(),
+              stripePhone: current.phone.trim(),
+              countryLabel: current.selectedCountry.label,
+              postalCode: current.postalCode.trim(),
+              state: current.stateName.trim(),
+              city: current.city.trim(),
+              addressLine1: current.addressLine1.trim(),
+              addressLine2: current.addressLine2.trim(),
+              subtotal: current.subtotal,
+              shipping: current.shipping,
+              total: current.total,
+              email: current.email.trim(),
+              sourceLabel: 'Mock',
+              currency: current.effectiveCurrency,
+              orderId: mockOrderId,
+              checkoutSessionId: mockSessionId,
+              checkoutUrl: '',
+              paymentIntentId: 'mock_pi_$mockOrderId',
+            ),
+          );
+          return;
+        }
+
         ref.state = ref
             .watch(this)
             .copyWith(
@@ -1296,10 +1470,16 @@ String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
 }
 
 SealShape _pickInitialShape(CatalogData catalog) {
-  if (_visibleMaterialsFor(catalog: catalog, shape: SealShape.square).isNotEmpty) {
+  if (_visibleMaterialsFor(
+    catalog: catalog,
+    shape: SealShape.square,
+  ).isNotEmpty) {
     return SealShape.square;
   }
-  if (_visibleMaterialsFor(catalog: catalog, shape: SealShape.round).isNotEmpty) {
+  if (_visibleMaterialsFor(
+    catalog: catalog,
+    shape: SealShape.round,
+  ).isNotEmpty) {
     return SealShape.round;
   }
   return catalog.materials.first.shape;
@@ -1332,11 +1512,7 @@ bool _materialSupportsShape(MaterialOption material, SealShape shape) {
       material.shape == shape;
 }
 
-const _shapeFlexibleMaterialKeys = {
-  'rose_quartz',
-  'lapis_lazuli',
-  'jade',
-};
+const _shapeFlexibleMaterialKeys = {'rose_quartz', 'lapis_lazuli', 'jade'};
 
 (String, String) _normalizedSealLines(String first, String second) {
   final trimmedFirst = first.trim();
@@ -1482,4 +1658,239 @@ String normalizePinyinWithoutTone(String input) {
       .trim();
 
   return normalized;
+}
+
+({String locale, String currency, CatalogData catalog}) _mockCatalogResponse({
+  required String locale,
+}) {
+  final normalizedLocale = normalizeUiLocale(locale);
+  final english = isEnglishLocale(normalizedLocale);
+  final currency = english ? 'USD' : 'JPY';
+
+  return (
+    locale: normalizedLocale,
+    currency: currency,
+    catalog: CatalogData(
+      fonts: const [
+        FontOption(
+          key: 'zen_maru_gothic',
+          label: 'Zen Maru Gothic',
+          family: "'Zen Maru Gothic', sans-serif",
+          kanjiStyle: KanjiStyle.japanese,
+        ),
+        FontOption(
+          key: 'kosugi_maru',
+          label: 'Kosugi Maru',
+          family: "'Kosugi Maru', sans-serif",
+          kanjiStyle: KanjiStyle.chinese,
+        ),
+        FontOption(
+          key: 'potta_one',
+          label: 'Potta One',
+          family: "'Potta One', sans-serif",
+          kanjiStyle: KanjiStyle.taiwanese,
+        ),
+        FontOption(
+          key: 'kiwi_maru',
+          label: 'Kiwi Maru',
+          family: "'Kiwi Maru', sans-serif",
+          kanjiStyle: KanjiStyle.japanese,
+        ),
+        FontOption(
+          key: 'wdxl_lubrifont_jp_n',
+          label: 'WDXL Lubrifont JP N',
+          family: "'WDXL Lubrifont JP N', sans-serif",
+          kanjiStyle: KanjiStyle.chinese,
+        ),
+      ],
+      materials: [
+        MaterialOption(
+          key: 'rose_quartz',
+          label: english ? 'Rose Quartz' : 'ローズクオーツ',
+          description: english
+              ? 'A soft-toned stone with a warm, approachable presence'
+              : 'やわらかな色合いで、親しみやすい印象の石材',
+          shape: SealShape.square,
+          shapeLabel: english ? 'Square seal' : '角印',
+          price: english ? 16500 : 28000,
+          photoUrl: 'https://picsum.photos/seed/hf-rose-quartz/640/420',
+          photoAlt: english ? 'Rose quartz photo' : 'ローズクオーツ材の写真',
+          hasPhoto: true,
+        ),
+        MaterialOption(
+          key: 'lapis_lazuli',
+          label: english ? 'Lapis Lazuli' : 'ラピスラビリ',
+          description: english
+              ? 'A deep-blue stone with a strong, distinctive presence'
+              : '深い青が印象的な、存在感のある石材',
+          shape: SealShape.round,
+          shapeLabel: english ? 'Round seal' : '丸印',
+          price: english ? 32500 : 55000,
+          photoUrl: 'https://picsum.photos/seed/hf-lapis-lazuli/640/420',
+          photoAlt: english ? 'Lapis lazuli photo' : 'ラピスラビリ材の写真',
+          hasPhoto: true,
+        ),
+        MaterialOption(
+          key: 'jade',
+          label: english ? 'Jade' : '翡翠',
+          description: english
+              ? 'A dignified stone with a calm green sheen'
+              : '落ち着いた緑の艶が映える、格調ある石材',
+          shape: SealShape.square,
+          shapeLabel: english ? 'Square seal' : '角印',
+          price: english ? 88500 : 150000,
+          photoUrl: 'https://picsum.photos/seed/hf-jade/640/420',
+          photoAlt: english ? 'Jade photo' : '翡翠材の写真',
+          hasPhoto: true,
+        ),
+      ],
+      countries: [
+        CountryOption(
+          code: 'JP',
+          label: english ? 'Japan' : '日本',
+          shipping: 600,
+        ),
+        CountryOption(
+          code: 'US',
+          label: english ? 'United States' : 'アメリカ',
+          shipping: 1800,
+        ),
+        CountryOption(
+          code: 'CA',
+          label: english ? 'Canada' : 'カナダ',
+          shipping: 1900,
+        ),
+        CountryOption(
+          code: 'GB',
+          label: english ? 'United Kingdom' : 'イギリス',
+          shipping: 2000,
+        ),
+        CountryOption(
+          code: 'AU',
+          label: english ? 'Australia' : 'オーストラリア',
+          shipping: 2100,
+        ),
+        CountryOption(
+          code: 'SG',
+          label: english ? 'Singapore' : 'シンガポール',
+          shipping: 1300,
+        ),
+      ],
+    ),
+  );
+}
+
+List<KanjiCandidate> _mockKanjiCandidates({
+  required String locale,
+  required String realName,
+  required CandidateGender gender,
+  required KanjiStyle style,
+}) {
+  final normalizedLocale = normalizeUiLocale(locale);
+  final english = isEnglishLocale(normalizedLocale);
+  final nameLabel = realName.trim().isEmpty
+      ? (english ? 'your name' : 'お名前')
+      : realName.trim();
+  final tone = switch (gender) {
+    CandidateGender.male => english ? 'Steady and grounded.' : '芯のある印象。',
+    CandidateGender.female => english ? 'Soft and elegant.' : 'やわらかく上品な印象。',
+    CandidateGender.unspecified =>
+      english ? 'Balanced and refined.' : 'バランスのよい印象。',
+  };
+
+  final descriptors = switch (style) {
+    KanjiStyle.japanese => <({String kanji, String reading, String reason})>[
+      (
+        kanji: '悠',
+        reading: 'yuu',
+        reason: english
+            ? 'A calm, spacious choice for $nameLabel.'
+            : '$nameLabel に落ち着きを添える候補です。',
+      ),
+      (
+        kanji: '凛',
+        reading: 'rin',
+        reason: english
+            ? 'A crisp, composed choice for $nameLabel.'
+            : '$nameLabel に端正さを添える候補です。',
+      ),
+      (
+        kanji: '匠',
+        reading: 'takumi',
+        reason: english
+            ? 'A crafted, dependable choice for $nameLabel.'
+            : '$nameLabel に確かさを感じさせる候補です。',
+      ),
+    ],
+    KanjiStyle.chinese => <({String kanji, String reading, String reason})>[
+      (
+        kanji: '安',
+        reading: 'an',
+        reason: english
+            ? 'A steady, grounded choice for $nameLabel.'
+            : '$nameLabel に安定感を添える候補です。',
+      ),
+      (
+        kanji: '明',
+        reading: 'ming',
+        reason: english
+            ? 'A bright, clear choice for $nameLabel.'
+            : '$nameLabel に明るさを添える候補です。',
+      ),
+      (
+        kanji: '辰',
+        reading: 'chen',
+        reason: english
+            ? 'A dignified, forward-looking choice for $nameLabel.'
+            : '$nameLabel に格調と前向きさを添える候補です。',
+      ),
+    ],
+    KanjiStyle.taiwanese => <({String kanji, String reading, String reason})>[
+      (
+        kanji: '宏',
+        reading: 'hong',
+        reason: english
+            ? 'A broad, confident choice for $nameLabel.'
+            : '$nameLabel に広がりを感じさせる候補です。',
+      ),
+      (
+        kanji: '寧',
+        reading: 'ning',
+        reason: english
+            ? 'A calm, graceful choice for $nameLabel.'
+            : '$nameLabel に静かな優雅さを添える候補です。',
+      ),
+      (
+        kanji: '昇',
+        reading: 'sheng',
+        reason: english
+            ? 'An uplifting, optimistic choice for $nameLabel.'
+            : '$nameLabel に前向きな印象を添える候補です。',
+      ),
+    ],
+  };
+
+  return descriptors
+      .map((descriptor) {
+        final reading = english
+            ? descriptor.reading
+            : switch (style) {
+                KanjiStyle.japanese => descriptor.reading,
+                KanjiStyle.chinese => normalizePinyinWithoutTone(
+                  descriptor.reading,
+                ),
+                KanjiStyle.taiwanese => normalizePinyinWithoutTone(
+                  descriptor.reading,
+                ),
+              };
+
+        return KanjiCandidate(
+          kanji: descriptor.kanji,
+          line1: descriptor.kanji,
+          line2: '',
+          reading: reading,
+          reason: '${descriptor.reason} $tone',
+        );
+      })
+      .toList(growable: false);
 }

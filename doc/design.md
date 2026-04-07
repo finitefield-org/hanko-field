@@ -52,6 +52,8 @@
 - [x] `app` を `api`（`/v1/config/public`, `/v1/catalog`, `/v1/kanji-candidates`, `/v1/orders`, `/v1/payments/stripe/checkout-session`）に接続し、実データを利用する
 - [x] `web` / `app` のロケール切替で入力途中の注文内容を保持し、再読込で消えないようにする
 - [x] `web` / `app` の入力例・案内文をロケール別に整え、英語ユーザにも自然に伝わるようにする
+- [x] `web` の公開ページで canonical / hreflang を絶対URL + `x-default` 付きで整え、英語 URL を正規、`ja` を代替として公開する
+- [x] `web` の主要 SEO メタ（title / meta description / robots / OG / Twitter）をロケール別に整え、英語 URL で英語表示にする
 - [x] `web` / `app` のデザインステップで、印影テキスト・フォント・形状の選択状態とエラー表示をより明確にする
 - [x] 材質マスタの比較情報を拡充し、質感・重さ・用途が判断しやすい説明を表示する
 - [x] 形状変更による材質の自動切替をユーザに明示する
