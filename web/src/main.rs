@@ -19,6 +19,7 @@ use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value as JsonValue, json};
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 use uuid::Uuid;
 
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
@@ -26,8 +27,7 @@ const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const ADMIN_PROXY_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 const HX_REDIRECT_HEADER: &str = "hx-redirect";
 const WEB_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
-const ROBOTS_TXT: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/robots.txt"));
-const SITEMAP_XML: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/sitemap.xml"));
+const EXTERNAL_LEGAL_BASE_URL: &str = "https://finitefield.org";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -52,6 +52,7 @@ struct AppConfig {
     mode: RunMode,
     locale: String,
     default_locale: String,
+    site_base_url: String,
     api_base_url: String,
     admin_base_url: String,
     firestore_project_id: Option<String>,
@@ -139,6 +140,13 @@ struct PurchaseResultData {
 #[template(path = "top.html")]
 struct TopPageTemplate {
     selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
     top_url: String,
     design_url: String,
     terms_url: String,
@@ -156,7 +164,14 @@ struct PageTemplate {
     default_font_key: String,
     default_font_label: String,
     selected_locale: String,
-    purchase_action_path: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
+    purchase_action_url: String,
     purchase_note: String,
     top_url: String,
     terms_url: String,
@@ -290,8 +305,13 @@ struct PaymentSuccessTemplate {
     has_order_id: bool,
     order_id: String,
     selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
     lang_ja_url: String,
     lang_en_url: String,
+    company_url: String,
     top_url: String,
     terms_url: String,
     commercial_transactions_url: String,
@@ -305,8 +325,13 @@ struct PaymentFailureTemplate {
     has_order_id: bool,
     order_id: String,
     selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
     lang_ja_url: String,
     lang_en_url: String,
+    company_url: String,
     top_url: String,
     design_url: String,
     terms_url: String,
@@ -319,6 +344,13 @@ struct PaymentFailureTemplate {
 #[template(path = "commercial_transactions.html")]
 struct CommercialTransactionsTemplate {
     selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
     top_url: String,
     design_url: String,
     terms_url: String,
@@ -333,6 +365,13 @@ struct TermsTemplate {
     design_url: String,
     contact_url: String,
     selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
     top_url: String,
     terms_url: String,
     commercial_transactions_url: String,
@@ -912,6 +951,7 @@ struct AppState {
     mode: RunMode,
     locale: String,
     default_locale: String,
+    site_base_url: String,
 }
 
 #[tokio::main]
@@ -946,6 +986,10 @@ async fn run() -> Result<()> {
         .route("/admin", any(handle_admin_proxy))
         .route("/admin/{*path}", any(handle_admin_proxy))
         .nest_service("/static", ServeDir::new(WEB_STATIC_DIR))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+        ))
         .with_state(state.clone());
 
     let addr = format!("0.0.0.0:{}", cfg.port);
@@ -1007,6 +1051,7 @@ async fn build_state(cfg: &AppConfig) -> Result<AppState> {
         mode: cfg.mode,
         locale: cfg.locale.clone(),
         default_locale: cfg.default_locale.clone(),
+        site_base_url: cfg.site_base_url.clone(),
     })
 }
 
@@ -1019,6 +1064,10 @@ fn load_config() -> Result<AppConfig> {
             .trim()
             .to_owned(),
         default_locale: env::var("HANKO_WEB_DEFAULT_LOCALE")
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
+        site_base_url: env::var("HANKO_WEB_SITE_BASE_URL")
             .unwrap_or_default()
             .trim()
             .to_owned(),
@@ -1037,15 +1086,23 @@ fn load_config() -> Result<AppConfig> {
     }
 
     if cfg.locale.is_empty() {
-        cfg.locale = "ja".to_owned();
+        cfg.locale = "en".to_owned();
     }
 
     if cfg.default_locale.is_empty() {
-        cfg.default_locale = "ja".to_owned();
+        cfg.default_locale = "en".to_owned();
     }
 
+    if cfg.site_base_url.is_empty() {
+        if matches!(cfg.mode, RunMode::Prod) {
+            bail!("prod web requires HANKO_WEB_SITE_BASE_URL");
+        }
+        cfg.site_base_url = "http://127.0.0.1:3052".to_owned();
+    }
+    cfg.site_base_url = normalize_site_base_url(&cfg.site_base_url)?;
+
     if cfg.api_base_url.is_empty() {
-        cfg.api_base_url = "http://localhost:3050".to_owned();
+        cfg.api_base_url = "http://127.0.0.1:3050".to_owned();
     }
 
     let mut mode_value = env_first(&["HANKO_WEB_MODE", "HANKO_WEB_ENV"]).to_lowercase();
@@ -1128,6 +1185,8 @@ fn load_config() -> Result<AppConfig> {
     let storage_assets_bucket = env_first(storage_bucket_keys);
     if !storage_assets_bucket.is_empty() {
         cfg.storage_assets_bucket = Some(storage_assets_bucket);
+    } else if matches!(cfg.mode, RunMode::Dev) {
+        cfg.storage_assets_bucket = Some("hanko-field-dev".to_owned());
     }
 
     Ok(cfg)
@@ -1658,18 +1717,34 @@ async fn handle_top(
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
 
-    if let Some(path) = checkout_redirect_path(&query, &selected_locale) {
+    if let Some(path) = checkout_redirect_path(site_base_url, &query, &selected_locale) {
         return Redirect::to(&path).into_response();
     }
 
     let template = TopPageTemplate {
+        page_title: localized_text(
+            &selected_locale,
+            "宝石印鑑をオンラインでデザイン | Stone Signature",
+            "Custom gemstone seals | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "宝石印鑑をオンラインでデザインして、日本語または英語で注文できます。",
+            "Design custom hand-carved gemstone seals online and order in English or Japanese.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: top_url(site_base_url, "en"),
+        lang_ja_url: top_url(site_base_url, "ja"),
+        lang_en_url: top_url(site_base_url, "en"),
+        company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
-        top_url: top_url(&selected_locale),
-        design_url: design_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
+        top_url: top_url(site_base_url, &selected_locale),
+        design_url: design_url(site_base_url, &selected_locale),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
     };
 
     match render_html(&template) {
@@ -1687,8 +1762,9 @@ async fn handle_design(
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
 
-    if let Some(path) = checkout_redirect_path(&query, &selected_locale) {
+    if let Some(path) = checkout_redirect_path(site_base_url, &query, &selected_locale) {
         return Redirect::to(&path).into_response();
     }
 
@@ -1722,10 +1798,21 @@ async fn handle_design(
         fonts: catalog.fonts,
         materials: catalog.materials,
         countries: catalog.countries,
-        purchase_action_path: if state.mode == RunMode::Mock {
-            "/mock/purchase".to_owned()
+        page_title: localized_text(
+            &selected_locale,
+            "デザイン作成 | Stone Signature",
+            "Design your seal | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "印影、材質、お届け先を順に選んで、そのまま購入まで進めます。",
+            "Choose the seal text, material, and shipping details, then continue to checkout.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        purchase_action_url: if state.mode == RunMode::Mock {
+            site_url(site_base_url, "/mock/purchase")
         } else {
-            "/purchase".to_owned()
+            site_url(site_base_url, "/purchase")
         },
         purchase_note: if state.mode == RunMode::Mock {
             localized_text(
@@ -1740,10 +1827,14 @@ async fn handle_design(
                 "You will be redirected to Stripe Checkout to complete payment.",
             )
         },
-        top_url: top_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
+        canonical_url: design_url(site_base_url, "en"),
+        lang_ja_url: design_url(site_base_url, "ja"),
+        lang_en_url: design_url(site_base_url, "en"),
+        company_url: company_url(site_base_url),
+        top_url: top_url(site_base_url, &selected_locale),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
 
@@ -1756,7 +1847,11 @@ async fn handle_design(
     }
 }
 
-fn checkout_redirect_path(query: &PaymentRedirectQuery, locale: &str) -> Option<String> {
+fn checkout_redirect_path(
+    base_url: &str,
+    query: &PaymentRedirectQuery,
+    locale: &str,
+) -> Option<String> {
     let checkout = query.checkout.as_deref()?.trim().to_lowercase();
     let base_path = match checkout.as_str() {
         "success" => "/payment/success",
@@ -1764,7 +1859,7 @@ fn checkout_redirect_path(query: &PaymentRedirectQuery, locale: &str) -> Option<
         _ => return None,
     };
 
-    let mut params = vec![format!("lang={locale}")];
+    let mut params = locale_query_params(locale);
     if let Some(session_id) = query
         .session_id
         .as_deref()
@@ -1782,16 +1877,23 @@ fn checkout_redirect_path(query: &PaymentRedirectQuery, locale: &str) -> Option<
         params.push(format!("order_id={order_id}"));
     }
 
-    Some(format!("{base_path}?{}", params.join("&")))
+    let query = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.join("&"))
+    };
+
+    Some(site_url(base_url, &format!("{base_path}{query}")))
 }
 
 fn payment_result_locale_url(
+    base_url: &str,
     base_path: &str,
     query: &PaymentRedirectQuery,
     locale: &str,
 ) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    let mut params = vec![format!("lang={normalized}")];
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    let mut params = locale_query_params(normalized);
 
     if let Some(checkout) = query
         .checkout
@@ -1818,21 +1920,27 @@ fn payment_result_locale_url(
         params.push(format!("order_id={order_id}"));
     }
 
-    format!("{base_path}?{}", params.join("&"))
+    let query = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.join("&"))
+    };
+
+    site_url(base_url, &format!("{base_path}{query}"))
 }
 
-async fn handle_robots_txt() -> Response {
+async fn handle_robots_txt(State(state): State<AppState>) -> Response {
     (
         [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
-        ROBOTS_TXT,
+        build_robots_txt(&state.site_base_url),
     )
         .into_response()
 }
 
-async fn handle_sitemap_xml() -> Response {
+async fn handle_sitemap_xml(State(state): State<AppState>) -> Response {
     (
         [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
-        SITEMAP_XML,
+        build_sitemap_xml(&state.site_base_url),
     )
         .into_response()
 }
@@ -1849,6 +1957,7 @@ async fn handle_payment_success(
         .to_owned();
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
     let order_id = query
         .order_id
         .as_deref()
@@ -1856,17 +1965,30 @@ async fn handle_payment_success(
         .trim()
         .to_owned();
     let template = PaymentSuccessTemplate {
-        contact_url: inquiry_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        contact_url: inquiry_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        page_title: localized_text(
+            &selected_locale,
+            "支払い完了 | Stone Signature",
+            "Payment complete | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "ご注文の支払いが完了しました。確認メールをご確認ください。",
+            "Your payment was received. Check your confirmation email for order details and next steps.",
+        ),
+        robots_meta: "noindex,follow".to_owned(),
+        canonical_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
         has_order_id: !order_id.is_empty(),
         order_id,
         has_session_id: !session_id.is_empty(),
         session_id,
-        lang_en_url: payment_result_locale_url("/payment/success", &query, "en"),
-        lang_ja_url: payment_result_locale_url("/payment/success", &query, "ja"),
-        top_url: top_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
+        lang_en_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
+        lang_ja_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "ja"),
+        company_url: company_url(site_base_url),
+        top_url: top_url(site_base_url, &selected_locale),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
 
@@ -1885,6 +2007,7 @@ async fn handle_payment_failure(
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
     let order_id = query
         .order_id
         .as_deref()
@@ -1892,16 +2015,29 @@ async fn handle_payment_failure(
         .trim()
         .to_owned();
     let template = PaymentFailureTemplate {
-        contact_url: inquiry_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
+        contact_url: inquiry_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        page_title: localized_text(
+            &selected_locale,
+            "支払い未完了 | Stone Signature",
+            "Payment incomplete | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "お支払いが完了しませんでした。カード情報をご確認のうえ、購入画面から再度お試しください。",
+            "Payment did not complete. Check your card details and return to the purchase page to try again.",
+        ),
+        robots_meta: "noindex,follow".to_owned(),
+        canonical_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
         has_order_id: !order_id.is_empty(),
         order_id,
-        lang_en_url: payment_result_locale_url("/payment/failure", &query, "en"),
-        lang_ja_url: payment_result_locale_url("/payment/failure", &query, "ja"),
-        top_url: top_url(&selected_locale),
-        design_url: design_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
+        lang_en_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
+        lang_ja_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "ja"),
+        company_url: company_url(site_base_url),
+        top_url: top_url(site_base_url, &selected_locale),
+        design_url: design_url(site_base_url, &selected_locale),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
     match render_html(&template) {
@@ -1919,13 +2055,31 @@ async fn handle_commercial_transactions(
 ) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
+    let lang_ja_url = commercial_transactions_url(site_base_url, "ja");
+    let lang_en_url = commercial_transactions_url(site_base_url, "en");
     let template = CommercialTransactionsTemplate {
-        contact_url: inquiry_url(&selected_locale),
-        top_url: top_url(&selected_locale),
-        design_url: design_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
+        contact_url: inquiry_url(site_base_url, &selected_locale),
+        page_title: localized_text(
+            &selected_locale,
+            "特定商取引法に基づく表記 | Stone Signature",
+            "Legal Notice | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "販売業者情報、支払い方法、配送、返品など、特定商取引法に基づく表記をご確認ください。",
+            "Read the legal notice for Stone Signature, including seller information, payment methods, delivery, and returns.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: lang_en_url.clone(),
+        lang_ja_url,
+        lang_en_url,
+        company_url: company_url(site_base_url),
+        top_url: top_url(site_base_url, &selected_locale),
+        design_url: design_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
 
@@ -1941,13 +2095,31 @@ async fn handle_commercial_transactions(
 async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQuery>) -> Response {
     let selected_locale =
         resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let site_base_url = state.site_base_url.as_str();
+    let lang_ja_url = terms_url(site_base_url, "ja");
+    let lang_en_url = terms_url(site_base_url, "en");
     let template = TermsTemplate {
-        design_url: design_url(&selected_locale),
-        contact_url: inquiry_url(&selected_locale),
-        terms_url: terms_url(&selected_locale),
-        commercial_transactions_url: commercial_transactions_url(&selected_locale),
-        privacy_policy_url: privacy_policy_url(&selected_locale),
-        top_url: top_url(&selected_locale),
+        design_url: design_url(site_base_url, &selected_locale),
+        contact_url: inquiry_url(site_base_url, &selected_locale),
+        page_title: localized_text(
+            &selected_locale,
+            "利用規約 | Stone Signature",
+            "Terms of Service | Stone Signature",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "注文、支払い、配送、返品、準拠法など、Stone Signature の利用規約をご確認ください。",
+            "Read the Stone Signature terms of service, including order formation, payment, delivery, returns, and governing law.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: lang_en_url.clone(),
+        lang_ja_url,
+        lang_en_url,
+        company_url: company_url(site_base_url),
+        terms_url: terms_url(site_base_url, &selected_locale),
+        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
+        top_url: top_url(site_base_url, &selected_locale),
         selected_locale,
     };
 
@@ -2449,12 +2621,12 @@ fn resolve_request_locale(requested: Option<&str>, locale: &str, default_locale:
     if let Some(value) = parse_supported_locale(default_locale) {
         return value.to_owned();
     }
-    "ja".to_owned()
+    "en".to_owned()
 }
 
 fn parse_supported_locale(raw: &str) -> Option<&'static str> {
     let normalized = raw.trim().to_lowercase();
-    if normalized.starts_with("ja") {
+    if normalized.starts_with("ja") || normalized == "jp" {
         return Some("ja");
     }
     if normalized.starts_with("en") {
@@ -2463,40 +2635,106 @@ fn parse_supported_locale(raw: &str) -> Option<&'static str> {
     None
 }
 
-fn privacy_policy_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    if normalized == "ja" {
-        return "https://finitefield.org/privacy/".to_owned();
+fn site_url(base_url: &str, path: &str) -> String {
+    let base = reqwest::Url::parse(base_url.trim_end_matches('/'))
+        .expect("site base URL must be a valid absolute URL");
+    base.join(path)
+        .expect("failed to join site base URL with path")
+        .to_string()
+}
+
+fn normalize_site_base_url(raw: &str) -> Result<String> {
+    let trimmed = raw.trim().trim_end_matches('/');
+    let url = reqwest::Url::parse(trimmed)
+        .with_context(|| format!("invalid HANKO_WEB_SITE_BASE_URL {trimmed:?}"))?;
+    if url.scheme() != "http" && url.scheme() != "https" {
+        bail!("HANKO_WEB_SITE_BASE_URL must use http or https");
     }
-    format!("https://finitefield.org/{normalized}/privacy/")
+    Ok(url.as_str().trim_end_matches('/').to_owned())
 }
 
-fn commercial_transactions_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    format!("/commercial-transactions?lang={normalized}")
-}
-
-fn top_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    format!("/?lang={normalized}")
-}
-
-fn design_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    format!("/design?lang={normalized}")
-}
-
-fn terms_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
-    format!("/terms?lang={normalized}")
-}
-
-fn inquiry_url(locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("ja");
+fn locale_query_params(locale: &str) -> Vec<String> {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
     if normalized == "ja" {
-        return "https://finitefield.org/inquiry/".to_owned();
+        vec!["lang=ja".to_owned()]
+    } else {
+        Vec::new()
     }
-    format!("https://finitefield.org/{normalized}/inquiry/")
+}
+
+fn localized_page_path(path: &str, locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    if normalized == "ja" {
+        format!("{path}?lang=ja")
+    } else {
+        path.to_owned()
+    }
+}
+
+fn localized_page_url(base_url: &str, path: &str, locale: &str) -> String {
+    site_url(base_url, &localized_page_path(path, locale))
+}
+
+fn privacy_policy_url(_base_url: &str, locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    if normalized == "ja" {
+        return site_url(EXTERNAL_LEGAL_BASE_URL, "/privacy/");
+    }
+    site_url(EXTERNAL_LEGAL_BASE_URL, &format!("/{normalized}/privacy/"))
+}
+
+fn commercial_transactions_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/commercial-transactions", locale)
+}
+
+fn top_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/", locale)
+}
+
+fn design_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/design", locale)
+}
+
+fn terms_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/terms", locale)
+}
+
+fn inquiry_url(_base_url: &str, locale: &str) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    if normalized == "ja" {
+        return site_url(EXTERNAL_LEGAL_BASE_URL, "/inquiry/");
+    }
+    site_url(EXTERNAL_LEGAL_BASE_URL, &format!("/{normalized}/inquiry/"))
+}
+
+fn company_url(_base_url: &str) -> String {
+    site_url(EXTERNAL_LEGAL_BASE_URL, "/company/")
+}
+
+fn build_robots_txt(base_url: &str) -> String {
+    let sitemap_url = site_url(base_url, "/sitemap.xml");
+    format!(
+        "User-agent: *\nDisallow: /admin\nDisallow: /mock\nDisallow: /kanji\nDisallow: /purchase\nDisallow: /payment/\nSitemap: {sitemap_url}\n"
+    )
+}
+
+fn sitemap_url_entry(base_url: &str, path: &str) -> String {
+    let en_url = localized_page_url(base_url, path, "en");
+    let ja_url = localized_page_url(base_url, path, "ja");
+    format!(
+        "  <url>\n    <loc>{en_url}</loc>\n    <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{en_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"ja\" href=\"{ja_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{en_url}\" />\n  </url>\n"
+    )
+}
+
+fn build_sitemap_xml(base_url: &str) -> String {
+    let mut sitemap = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n",
+    );
+    for path in ["/", "/design", "/terms", "/commercial-transactions"] {
+        sitemap.push_str(&sitemap_url_entry(base_url, path));
+    }
+    sitemap.push_str("</urlset>\n");
+    sitemap
 }
 
 fn localized_text(locale: &str, ja: &str, en: &str) -> String {
@@ -3055,6 +3293,36 @@ fn resolve_material_photo(
     locale: &str,
     default_locale: &str,
 ) -> (String, String, bool) {
+    if let Some((storage_path, storage_alt)) =
+        select_primary_material_photo(data, locale, default_locale)
+    {
+        let photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
+        if !photo_url.is_empty() {
+            let photo_alt = if storage_alt.is_empty() {
+                resolve_localized_field(
+                    data,
+                    "photo_alt_i18n",
+                    "photo_alt",
+                    locale,
+                    default_locale,
+                    "",
+                )
+            } else {
+                storage_alt
+            };
+            return (photo_url, photo_alt, true);
+        }
+    }
+
+    let photo_alt = resolve_localized_field(
+        data,
+        "photo_alt_i18n",
+        "photo_alt",
+        locale,
+        default_locale,
+        "",
+    );
+
     let mut photo_url = resolve_localized_field(
         data,
         "photo_url_i18n",
@@ -3072,26 +3340,6 @@ fn resolve_material_photo(
             default_locale,
             "",
         );
-    }
-
-    let mut photo_alt = resolve_localized_field(
-        data,
-        "photo_alt_i18n",
-        "photo_alt",
-        locale,
-        default_locale,
-        "",
-    );
-
-    if photo_url.is_empty() {
-        if let Some((storage_path, storage_alt)) =
-            select_primary_material_photo(data, locale, default_locale)
-        {
-            photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
-            if photo_alt.is_empty() {
-                photo_alt = storage_alt;
-            }
-        }
     }
 
     let has_photo = !photo_url.is_empty();
@@ -3160,20 +3408,10 @@ fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
         return String::new();
     }
 
-    let mut endpoint = match reqwest::Url::parse("https://firebasestorage.googleapis.com/v0/b") {
-        Ok(endpoint) => endpoint,
-        Err(_) => return String::new(),
-    };
-
-    {
-        let mut path_segments = match endpoint.path_segments_mut() {
-            Ok(path_segments) => path_segments,
-            Err(_) => return String::new(),
-        };
-        path_segments.extend([normalized_bucket.as_str(), "o", normalized_path.as_str()]);
-    }
-    endpoint.query_pairs_mut().append_pair("alt", "media");
-    endpoint.to_string()
+    format!(
+        "https://storage.googleapis.com/{}/{}",
+        normalized_bucket, normalized_path
+    )
 }
 
 fn normalize_storage_bucket_name(value: &str) -> String {
@@ -3216,8 +3454,12 @@ mod tests {
     use super::*;
     use axum::body::to_bytes;
     use axum::extract::Form;
-    use std::collections::HashMap;
+    use serde_json::json;
+    use std::collections::{BTreeMap, HashMap};
     use std::sync::Arc;
+
+    const TEST_SITE_BASE_URL: &str = "https://finitefield.org";
+    const TEST_ALT_SITE_BASE_URL: &str = "https://inkanfield.org";
 
     fn mock_state() -> AppState {
         AppState {
@@ -3233,6 +3475,7 @@ mod tests {
             mode: RunMode::Mock,
             locale: "ja".to_owned(),
             default_locale: "ja".to_owned(),
+            site_base_url: TEST_SITE_BASE_URL.to_owned(),
         }
     }
 
@@ -3281,6 +3524,65 @@ mod tests {
         assert_eq!(rose_quartz.shape_label, "Square seal");
     }
 
+    #[test]
+    fn material_photo_prefers_firestore_photos_over_legacy_photo_url() {
+        let mut data = BTreeMap::new();
+        data.insert(
+            "photo_url".to_owned(),
+            json!({
+                "stringValue": "https://picsum.photos/seed/legacy-material/640/420"
+            }),
+        );
+        data.insert(
+            "photo_alt".to_owned(),
+            json!({
+                "stringValue": "legacy alt"
+            }),
+        );
+        data.insert(
+            "photos".to_owned(),
+            json!({
+                "arrayValue": {
+                    "values": [
+                        {
+                            "mapValue": {
+                                "fields": {
+                                    "asset_id": { "stringValue": "mat_rose_quartz_01" },
+                                    "storage_path": {
+                                        "stringValue": "materials/rose_quartz/mat_rose_quartz_01.webp"
+                                    },
+                                    "alt_i18n": {
+                                        "mapValue": {
+                                            "fields": {
+                                                "ja": {
+                                                    "stringValue": "ローズクオーツの材質サンプル"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "sort_order": { "integerValue": "0" },
+                                    "is_primary": { "booleanValue": true },
+                                    "width": { "integerValue": "1200" },
+                                    "height": { "integerValue": "1200" }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }),
+        );
+
+        let (photo_url, photo_alt, has_photo) =
+            resolve_material_photo(&data, "hanko-field-prod", "ja", "ja");
+
+        assert_eq!(
+            photo_url,
+            "https://storage.googleapis.com/hanko-field-prod/materials/rose_quartz/mat_rose_quartz_01.webp"
+        );
+        assert_eq!(photo_alt, "ローズクオーツの材質サンプル");
+        assert!(has_photo);
+    }
+
     #[tokio::test]
     async fn mock_purchase_returns_confirmation_without_api() {
         let response =
@@ -3300,27 +3602,62 @@ mod tests {
     fn top_page_uses_locale_aware_privacy_policy_url() {
         let template = TopPageTemplate {
             selected_locale: "en".to_owned(),
-            top_url: "/".to_owned(),
-            design_url: "/design".to_owned(),
-            terms_url: "/terms".to_owned(),
-            commercial_transactions_url: "/commercial-transactions".to_owned(),
-            privacy_policy_url: privacy_policy_url("en"),
+            page_title: "Custom gemstone seals | Stone Signature".to_owned(),
+            meta_description:
+                "Design custom hand-carved gemstone seals online and order in English or Japanese."
+                    .to_owned(),
+            robots_meta: "index,follow".to_owned(),
+            canonical_url: top_url(TEST_SITE_BASE_URL, "en"),
+            lang_ja_url: top_url(TEST_SITE_BASE_URL, "ja"),
+            lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
+            company_url: company_url(TEST_SITE_BASE_URL),
+            top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            design_url: design_url(TEST_SITE_BASE_URL, "en"),
+            terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
+            commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
+            privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "en"),
         };
 
         let html = render_html(&template).expect("top page should render");
 
+        assert!(html.contains(r#"<link rel="canonical" href="https://finitefield.org/">"#));
+        assert!(html.contains(r#"<title>Custom gemstone seals | Stone Signature</title>"#));
+        assert!(html.contains(
+            r#"<meta name="description" content="Design custom hand-carved gemstone seals online and order in English or Japanese.">"#
+        ));
+        assert!(html.contains(r#"<meta name="robots" content="index,follow">"#));
+        assert!(html.contains(
+            r#"<link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja">"#
+        ));
+        assert!(
+            html.contains(
+                r#"<link rel="alternate" hreflang="en" href="https://finitefield.org/">"#
+            )
+        );
+        assert!(html.contains(
+            r#"<link rel="alternate" hreflang="x-default" href="https://finitefield.org/">"#
+        ));
         assert!(html.contains("href=\"https://finitefield.org/en/privacy/\""));
+        assert!(html.contains("href=\"https://finitefield.org/company/\""));
     }
 
     #[test]
     fn top_page_uses_logo_image_left_of_title() {
         let template = TopPageTemplate {
             selected_locale: "ja".to_owned(),
-            top_url: "/".to_owned(),
-            design_url: "/design".to_owned(),
-            terms_url: "/terms".to_owned(),
-            commercial_transactions_url: "/commercial-transactions".to_owned(),
-            privacy_policy_url: privacy_policy_url("ja"),
+            page_title: "宝石印鑑をオンラインでデザイン | Stone Signature".to_owned(),
+            meta_description:
+                "宝石印鑑をオンラインでデザインして、日本語または英語で注文できます。".to_owned(),
+            robots_meta: "index,follow".to_owned(),
+            canonical_url: top_url(TEST_SITE_BASE_URL, "en"),
+            lang_ja_url: top_url(TEST_SITE_BASE_URL, "ja"),
+            lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
+            company_url: company_url(TEST_SITE_BASE_URL),
+            top_url: top_url(TEST_SITE_BASE_URL, "ja"),
+            design_url: design_url(TEST_SITE_BASE_URL, "ja"),
+            terms_url: terms_url(TEST_SITE_BASE_URL, "ja"),
+            commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "ja"),
+            privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "ja"),
         };
 
         let html = render_html(&template).expect("top page should render");
@@ -3344,9 +3681,176 @@ mod tests {
         assert!(footer_logo < footer_title);
     }
 
+    #[test]
+    fn seo_metadata_marks_payment_pages_noindex() {
+        let success_template = PaymentSuccessTemplate {
+            has_session_id: true,
+            session_id: "sess_123".to_owned(),
+            has_order_id: true,
+            order_id: "ord_456".to_owned(),
+            selected_locale: "en".to_owned(),
+            page_title: "Payment complete | Stone Signature".to_owned(),
+            meta_description: "Your payment was received. Check your confirmation email for order details and next steps.".to_owned(),
+            robots_meta: "noindex,follow".to_owned(),
+            canonical_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/success",
+                &PaymentRedirectQuery::default(),
+                "en",
+            ),
+            lang_ja_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/success",
+                &PaymentRedirectQuery::default(),
+                "ja",
+            ),
+            lang_en_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/success",
+                &PaymentRedirectQuery::default(),
+                "en",
+            ),
+            company_url: company_url(TEST_SITE_BASE_URL),
+            top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
+            commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
+            contact_url: inquiry_url(TEST_SITE_BASE_URL, "en"),
+            privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "en"),
+        };
+
+        let success_html = render_html(&success_template).expect("payment success should render");
+        assert!(success_html.contains(r#"<title>Payment complete | Stone Signature</title>"#));
+        assert!(success_html.contains(r#"<meta name="robots" content="noindex,follow">"#));
+
+        let failure_template = PaymentFailureTemplate {
+            has_order_id: true,
+            order_id: "ord_456".to_owned(),
+            selected_locale: "en".to_owned(),
+            page_title: "Payment incomplete | Stone Signature".to_owned(),
+            meta_description: "Payment did not complete. Check your card details and return to the purchase page to try again.".to_owned(),
+            robots_meta: "noindex,follow".to_owned(),
+            canonical_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/failure",
+                &PaymentRedirectQuery::default(),
+                "en",
+            ),
+            lang_ja_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/failure",
+                &PaymentRedirectQuery::default(),
+                "ja",
+            ),
+            lang_en_url: payment_result_locale_url(
+                TEST_SITE_BASE_URL,
+                "/payment/failure",
+                &PaymentRedirectQuery::default(),
+                "en",
+            ),
+            company_url: company_url(TEST_SITE_BASE_URL),
+            top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            design_url: design_url(TEST_SITE_BASE_URL, "en"),
+            terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
+            commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
+            contact_url: inquiry_url(TEST_SITE_BASE_URL, "en"),
+            privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "en"),
+        };
+
+        let failure_html = render_html(&failure_template).expect("payment failure should render");
+        assert!(failure_html.contains(r#"<title>Payment incomplete | Stone Signature</title>"#));
+        assert!(failure_html.contains(r#"<meta name="robots" content="noindex,follow">"#));
+    }
+
+    #[test]
+    fn locale_urls_use_english_as_the_main_variant() {
+        assert_eq!(
+            top_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/"
+        );
+        assert_eq!(
+            top_url(TEST_SITE_BASE_URL, "ja"),
+            "https://finitefield.org/?lang=ja"
+        );
+        assert_eq!(
+            top_url(TEST_SITE_BASE_URL, "jp"),
+            "https://finitefield.org/?lang=ja"
+        );
+        assert_eq!(
+            design_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/design"
+        );
+        assert_eq!(
+            design_url(TEST_SITE_BASE_URL, "ja"),
+            "https://finitefield.org/design?lang=ja"
+        );
+        assert_eq!(
+            terms_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/terms"
+        );
+        assert_eq!(
+            commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/commercial-transactions"
+        );
+        assert_eq!(
+            privacy_policy_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/en/privacy/"
+        );
+        assert_eq!(
+            inquiry_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/en/inquiry/"
+        );
+        assert_eq!(
+            company_url(TEST_SITE_BASE_URL),
+            "https://finitefield.org/company/"
+        );
+    }
+
+    #[test]
+    fn legal_urls_still_point_to_finitefield_org_on_other_hosts() {
+        assert_eq!(
+            privacy_policy_url(TEST_ALT_SITE_BASE_URL, "ja"),
+            "https://finitefield.org/privacy/"
+        );
+        assert_eq!(
+            privacy_policy_url(TEST_ALT_SITE_BASE_URL, "en"),
+            "https://finitefield.org/en/privacy/"
+        );
+        assert_eq!(
+            inquiry_url(TEST_ALT_SITE_BASE_URL, "ja"),
+            "https://finitefield.org/inquiry/"
+        );
+        assert_eq!(
+            inquiry_url(TEST_ALT_SITE_BASE_URL, "en"),
+            "https://finitefield.org/en/inquiry/"
+        );
+        assert_eq!(
+            company_url(TEST_ALT_SITE_BASE_URL),
+            "https://finitefield.org/company/"
+        );
+    }
+
+    #[test]
+    fn payment_result_locale_url_uses_clean_english_urls() {
+        let query = PaymentRedirectQuery {
+            checkout: Some("success".to_owned()),
+            session_id: Some("sess_123".to_owned()),
+            order_id: Some("ord_456".to_owned()),
+            lang: None,
+        };
+
+        assert_eq!(
+            payment_result_locale_url(TEST_SITE_BASE_URL, "/payment/success", &query, "en"),
+            "https://finitefield.org/payment/success?checkout=success&session_id=sess_123&order_id=ord_456"
+        );
+        assert_eq!(
+            payment_result_locale_url(TEST_SITE_BASE_URL, "/payment/success", &query, "ja"),
+            "https://finitefield.org/payment/success?lang=ja&checkout=success&session_id=sess_123&order_id=ord_456"
+        );
+    }
+
     #[tokio::test]
     async fn robots_txt_is_served_as_plain_text() {
-        let response = handle_robots_txt().await;
+        let response = handle_robots_txt(State(mock_state())).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -3373,7 +3877,7 @@ mod tests {
 
     #[tokio::test]
     async fn sitemap_xml_is_served_as_xml() {
-        let response = handle_sitemap_xml().await;
+        let response = handle_sitemap_xml(State(mock_state())).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -3389,25 +3893,48 @@ mod tests {
             .expect("response body should be readable");
         let sitemap_xml = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
 
-        assert!(sitemap_xml.contains("<loc>https://finitefield.org/?lang=ja</loc>"));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/</loc>"));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/?lang=en" />"#
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/" />"#
         ));
-        assert!(sitemap_xml.contains("<loc>https://finitefield.org/design?lang=ja</loc>"));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design?lang=en" />"#
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja" />"#
         ));
-        assert!(sitemap_xml.contains("<loc>https://finitefield.org/terms?lang=ja</loc>"));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms?lang=en" />"#
+            r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />"#
         ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/design</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/design?lang=ja" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/design" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/terms</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/terms?lang=ja" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/terms" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/commercial-transactions</loc>"));
         assert!(
             sitemap_xml
-                .contains("<loc>https://finitefield.org/commercial-transactions?lang=ja</loc>")
+                .contains(r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions" />"#)
         );
         assert!(
             sitemap_xml
-                .contains(r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions?lang=en" />"#)
+                .contains(r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/commercial-transactions?lang=ja" />"#)
+        );
+        assert!(
+            sitemap_xml
+                .contains(r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/commercial-transactions" />"#)
         );
     }
 }

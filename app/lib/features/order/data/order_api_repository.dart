@@ -416,38 +416,7 @@ String _resolveMaterialPhotoUrl(Map<String, dynamic>? photo) {
     return '';
   }
 
-  final raw = _asString(photo['asset_url']).trim();
-  if (raw.isEmpty) {
-    return '';
-  }
-
-  final uri = Uri.tryParse(raw);
-  if (uri == null) {
-    return raw;
-  }
-
-  if (uri.scheme != 'https' || uri.host != 'storage.googleapis.com') {
-    return raw;
-  }
-
-  final segments = uri.pathSegments
-      .where((segment) => segment.isNotEmpty)
-      .toList(growable: false);
-  if (segments.length < 2) {
-    return raw;
-  }
-
-  final bucket = segments.first;
-  final objectPath = segments.skip(1).join('/');
-  if (bucket.isEmpty || objectPath.isEmpty) {
-    return raw;
-  }
-
-  return Uri.https(
-    'firebasestorage.googleapis.com',
-    '/v0/b/$bucket/o/${Uri.encodeComponent(objectPath)}',
-    const {'alt': 'media'},
-  ).toString();
+  return _asString(photo['asset_url']).trim();
 }
 
 Map<String, dynamic> _asMap(Object? value) {

@@ -8,11 +8,11 @@
 
   function parseLocale(raw) {
     const normalized = (raw || "").trim().toLowerCase();
+    if (normalized.startsWith("ja") || normalized === "jp") {
+      return "ja";
+    }
     if (normalized.startsWith("en")) {
       return "en";
-    }
-    if (normalized.startsWith("ja")) {
-      return "ja";
     }
     return "";
   }
@@ -35,10 +35,26 @@
     }
   }
 
+  function buildLocalizedUrl(nextLocale) {
+    const nextUrl = new URL(window.location.href);
+    if (nextLocale === "ja") {
+      nextUrl.searchParams.set("lang", "ja");
+    } else {
+      nextUrl.searchParams.delete("lang");
+    }
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+  }
+
   const currentUrl = new URL(window.location.href);
   const queryLocale = parseLocale(currentUrl.searchParams.get("lang") || "");
   const rememberedLocale = readRememberedLocale();
-  const initialLocale = queryLocale || rememberedLocale || parseLocale(localeInput?.value || "") || "ja";
+  const pageLocale = parseLocale(document.documentElement.lang || "");
+  const initialLocale =
+    queryLocale ||
+    parseLocale(localeInput?.value || "") ||
+    pageLocale ||
+    rememberedLocale ||
+    "en";
 
   if (localeInput) {
     localeInput.value = initialLocale;
@@ -46,15 +62,13 @@
   localeSelects.forEach((select) => {
     select.value = initialLocale;
     select.addEventListener("change", () => {
-      const nextLocale = parseLocale(select.value) || "ja";
+      const nextLocale = parseLocale(select.value) || "en";
       rememberLocale(nextLocale);
       if (localeInput) {
         localeInput.value = nextLocale;
       }
       saveDraft();
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set("lang", nextLocale);
-      window.location.assign(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      window.location.assign(buildLocalizedUrl(nextLocale));
     });
   });
   rememberLocale(initialLocale);
@@ -69,13 +83,9 @@
   languageOptions.forEach((option) => {
     option.addEventListener("click", (event) => {
       event.preventDefault();
-      const nextLocale = parseLocale(option.dataset.languageOption || "") || "ja";
+      const nextLocale = parseLocale(option.dataset.languageOption || "") || "en";
       rememberLocale(nextLocale);
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set("lang", nextLocale);
-      window.location.assign(
-        `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
-      );
+      window.location.assign(buildLocalizedUrl(nextLocale));
     });
   });
 

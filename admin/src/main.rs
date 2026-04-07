@@ -32,6 +32,7 @@ use uuid::Uuid;
 const DATASTORE_SCOPE: &str = "https://www.googleapis.com/auth/datastore";
 const STORAGE_SCOPE: &str = "https://www.googleapis.com/auth/devstorage.read_write";
 const MAX_PHOTO_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
+const ADMIN_SOURCE_LOAD_TIMEOUT: Duration = Duration::from_secs(20);
 const ADMIN_SESSION_COOKIE_NAME: &str = "hanko_admin_session";
 const ADMIN_SESSION_DURATION_SECONDS: i64 = 60 * 60 * 24 * 7;
 const ADMIN_SESSION_ISSUER: &str = "hanko-field-admin";
@@ -361,6 +362,7 @@ struct AppState {
 
 struct ServerState {
     source_label: String,
+    storage_assets_bucket: String,
     source: DataSource,
     data: RwLock<AdminSnapshot>,
 }
@@ -460,7 +462,7 @@ struct MaterialListItemView {
     key: String,
     label_ja: String,
     shape_label: String,
-    primary_photo_path: String,
+    primary_photo_url: String,
     has_photo: bool,
     price_usd: String,
     price_jpy: String,
@@ -501,8 +503,10 @@ struct MaterialDetailView {
     is_active: bool,
     sort_order: i64,
     photo_storage_path: String,
+    primary_photo_url: String,
     photo_alt_ja: String,
     photo_alt_en: String,
+    has_photo: bool,
     version: i64,
     updated_at: String,
     message: String,
@@ -1113,6 +1117,8 @@ fn load_config() -> Result<AppConfig> {
     let storage_assets_bucket = env_first(storage_bucket_keys);
     if !storage_assets_bucket.is_empty() {
         cfg.storage_assets_bucket = Some(storage_assets_bucket);
+    } else if matches!(cfg.mode, RunMode::Dev | RunMode::Mock) {
+        cfg.storage_assets_bucket = Some("hanko-field-dev".to_owned());
     }
 
     Ok(cfg)
@@ -1173,13 +1179,14 @@ async fn build_server(cfg: &AppConfig) -> Result<Arc<ServerState>> {
     let snapshot = if source.is_mock() {
         new_mock_snapshot()
     } else {
-        tokio::time::timeout(Duration::from_secs(7), source.load_snapshot())
+        tokio::time::timeout(ADMIN_SOURCE_LOAD_TIMEOUT, source.load_snapshot())
             .await
-            .context("admin data load timed out after 7s")??
+            .context("admin data load timed out after 20s")??
     };
 
     Ok(Arc::new(ServerState {
         source_label: source.label().to_owned(),
+        storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
         source,
         data: RwLock::new(snapshot),
     }))
@@ -2753,9 +2760,9 @@ impl ServerState {
             return Ok(());
         }
 
-        let snapshot = tokio::time::timeout(Duration::from_secs(7), self.source.load_snapshot())
+        let snapshot = tokio::time::timeout(ADMIN_SOURCE_LOAD_TIMEOUT, self.source.load_snapshot())
             .await
-            .context("admin data load timed out after 7s")??;
+            .context("admin data load timed out after 20s")??;
 
         let mut data = self.data.write().await;
         *data = snapshot;
@@ -2882,15 +2889,18 @@ impl ServerState {
                 continue;
             };
             let primary_photo = select_primary_material_photo(&material.photos);
+            let primary_photo_path = primary_photo
+                .map(|photo| photo.storage_path.clone())
+                .unwrap_or_default();
+            let primary_photo_url =
+                build_storage_media_url(&self.storage_assets_bucket, &primary_photo_path);
 
             items.push(MaterialListItemView {
                 key: material.key.clone(),
                 label_ja: material.label_i18n.get("ja").cloned().unwrap_or_default(),
                 shape_label: material_shape_label(&material.shape).to_owned(),
-                primary_photo_path: primary_photo
-                    .map(|photo| photo.storage_path.clone())
-                    .unwrap_or_default(),
-                has_photo: primary_photo.is_some(),
+                primary_photo_url: primary_photo_url.clone(),
+                has_photo: !primary_photo_url.is_empty(),
                 price_usd: format_usd(material.price_usd),
                 price_jpy: format_jpy(material.price_jpy),
                 is_active: material.is_active,
@@ -2911,6 +2921,11 @@ impl ServerState {
         let data = self.data.read().await;
         let material = data.materials.get(key)?;
         let primary_photo = select_primary_material_photo(&material.photos);
+        let photo_storage_path = primary_photo
+            .map(|photo| photo.storage_path.clone())
+            .unwrap_or_default();
+        let primary_photo_url =
+            build_storage_media_url(&self.storage_assets_bucket, &photo_storage_path);
 
         Some(MaterialDetailView {
             key: material.key.clone(),
@@ -2937,15 +2952,15 @@ impl ServerState {
             price_jpy: material.price_jpy,
             is_active: material.is_active,
             sort_order: material.sort_order,
-            photo_storage_path: primary_photo
-                .map(|photo| photo.storage_path.clone())
-                .unwrap_or_default(),
+            photo_storage_path,
+            primary_photo_url: primary_photo_url.clone(),
             photo_alt_ja: primary_photo
                 .and_then(|photo| photo.alt_i18n.get("ja").cloned())
                 .unwrap_or_default(),
             photo_alt_en: primary_photo
                 .and_then(|photo| photo.alt_i18n.get("en").cloned())
                 .unwrap_or_default(),
+            has_photo: !primary_photo_url.is_empty(),
             version: material.version,
             updated_at: format_datetime(material.updated_at),
             message: message.to_owned(),
@@ -4612,6 +4627,19 @@ fn render_material_detail(detail: &MaterialDetailView) -> Result<String> {
     render_html(&MaterialDetailTemplate {
         detail: detail.clone(),
     })
+}
+
+fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
+    let normalized_bucket = normalize_storage_bucket_name(bucket_name);
+    let normalized_path = normalize_storage_path(storage_path);
+    if normalized_bucket.is_empty() || normalized_path.is_empty() {
+        return String::new();
+    }
+
+    format!(
+        "https://storage.googleapis.com/{}/{}",
+        normalized_bucket, normalized_path
+    )
 }
 
 fn render_font_detail(detail: &FontDetailView) -> Result<String> {
@@ -6948,6 +6976,7 @@ mod tests {
     fn mock_server_state() -> ServerState {
         ServerState {
             source_label: "Mock".to_owned(),
+            storage_assets_bucket: "hanko-field-dev".to_owned(),
             source: DataSource::Mock,
             data: RwLock::new(new_mock_snapshot()),
         }
@@ -7336,6 +7365,17 @@ mod tests {
         assert_eq!(
             normalize_storage_bucket_name("hanko-field.firebasestorage.app/"),
             "hanko-field.firebasestorage.app"
+        );
+    }
+
+    #[test]
+    fn build_storage_media_url_uses_public_gcs_url() {
+        assert_eq!(
+            build_storage_media_url(
+                "gs://hanko-field-dev/",
+                "materials/rose_quartz/mat_rose_quartz_01.webp",
+            ),
+            "https://storage.googleapis.com/hanko-field-dev/materials/rose_quartz/mat_rose_quartz_01.webp"
         );
     }
 

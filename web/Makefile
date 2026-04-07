@@ -1,6 +1,6 @@
 PORT ?= 3052
 MODE ?= mock
-LOCALE ?= ja
+LOCALE ?= en
 IRONFRAME ?= devbox run -- ./scripts/ironframe.sh
 
 css:

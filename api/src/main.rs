@@ -38,8 +38,8 @@ const DEFAULT_LOCALE: &str = "ja";
 const DEFAULT_CURRENCY: &str = "USD";
 const DEFAULT_JA_CURRENCY: &str = "JPY";
 const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
-    "http://localhost:3052/payment/success?session_id={CHECKOUT_SESSION_ID}";
-const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://localhost:3052/payment/failure";
+    "http://127.0.0.1:3052/payment/success?session_id={CHECKOUT_SESSION_ID}";
+const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://127.0.0.1:3052/payment/failure";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
@@ -514,7 +514,7 @@ fn load_config() -> Result<AppConfig> {
     })?;
 
     let storage_assets_bucket = first_non_empty(&[std::env::var("API_STORAGE_ASSETS_BUCKET").ok()])
-        .unwrap_or_else(|| "local-assets".to_owned());
+        .unwrap_or_else(|| "hanko-field-dev".to_owned());
 
     let stripe_api_key =
         first_non_empty(&[std::env::var("API_PSP_STRIPE_API_KEY").ok()]).unwrap_or_default();

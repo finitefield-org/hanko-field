@@ -1,166 +1,586 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/localization/app_locale_view_model.dart';
-import '../../../app/theme/hf_theme.dart';
-import '../../../app/widgets/app_settings_button.dart';
+import '../../../app/widgets/app_site_chrome.dart';
+import '../../order/domain/order_models.dart';
+
+const _legalPageInk = Color(0xFF1B1C1A);
+const _legalPageMuted = Color(0xFF6A645D);
+const _legalPageAccent = Color(0xFF851217);
+const _legalPageLine = Color(0xFFD8CCBC);
+const _legalPageDivider = Color(0x1A8C716E);
+const _legalPageNotes = Color(0xFFF5F3F0);
 
 class PaymentFailurePage extends StatelessWidget {
   const PaymentFailurePage({
     super.key,
     required this.locale,
     required this.onSelectLocale,
-    required this.onBackToTop,
+    required this.onBackToPurchase,
     this.orderId,
   });
 
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
-  final VoidCallback onBackToTop;
+  final VoidCallback onBackToPurchase;
   final String? orderId;
 
   @override
   Widget build(BuildContext context) {
-    final isEnglish = locale == AppLocale.en;
-    final title = isEnglish ? 'Payment was not completed' : 'お支払いが完了しませんでした';
-    final description = isEnglish
-        ? 'Please check your card details and connection, then try again.'
-        : 'カード情報の確認や通信状態をご確認のうえ、再度お試しください。';
-    final cardTitle = isEnglish
-        ? 'Unable to complete payment'
-        : '決済を完了できませんでした';
-    final cardBody = isEnglish
-        ? 'Your order details are saved. Please try again from the purchase screen.'
-        : '注文内容は保存されています。準備ができたら購入画面から再度お手続きください。';
-    final orderLabel = isEnglish ? 'Order ID' : '注文ID';
-    final nextStepsTitle = isEnglish ? 'Next steps' : '次のアクション';
-    final nextStep1 = isEnglish
-        ? 'Check your card details and network connection.'
-        : 'カード情報と通信状態をご確認ください。';
-    final nextStep2 = isEnglish
-        ? 'Return to the purchase page and try again.'
-        : '購入画面へ戻って、もう一度お試しください。';
-    final nextStep3 = isEnglish
-        ? 'If the issue repeats, contact us.'
-        : '同じエラーが続く場合はお問い合わせください。';
-    final backLabel = isEnglish ? 'Back to purchase' : '購入画面に戻る';
-    final contactLabel = isEnglish ? 'Contact us' : 'お問い合わせ';
-    final contactUrl = inquiryUrlForLocale(locale);
     final normalizedOrderId = orderId?.trim() ?? '';
+    final hasOrderId = normalizedOrderId.isNotEmpty;
+    final contactUrl = inquiryUrlForLocale(locale);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Stone Signature',
-                          style: TextStyle(
-                            fontSize: 12,
-                            letterSpacing: 1.2,
-                            color: HfPalette.accent,
-                            fontWeight: FontWeight.w700,
-                          ),
+        child: Column(
+          children: [
+            AppSiteHeader(
+              locale: locale,
+              onSelectLocale: onSelectLocale,
+              onBrandTap: onBackToPurchase,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1152),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final width = constraints.maxWidth;
+                            final isCompact = width < 640;
+                            final horizontalPadding = isCompact ? 16.0 : 24.0;
+                            final topPadding = isCompact ? 100.0 : 112.0;
+                            final bottomPadding = isCompact ? 48.0 : 64.0;
+                            final titleSize =
+                                (isCompact ? width * 0.09 : width * 0.04)
+                                    .clamp(
+                                      isCompact ? 28.0 : 32.0,
+                                      isCompact ? 40.0 : 52.0,
+                                    )
+                                    .toDouble();
+                            final sectionTitleSize = (width * 0.02)
+                                .clamp(17.0, 23.0)
+                                .toDouble();
+                            final sectionGap = isCompact ? 48.0 : 64.0;
+
+                            return Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                topPadding,
+                                horizontalPadding,
+                                bottomPadding,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    localizedUiText(
+                                      locale.code,
+                                      ja: 'お支払いが完了しませんでした',
+                                      en: 'Payment was not completed',
+                                    ),
+                                    style: GoogleFonts.notoSerifJp(
+                                      fontSize: titleSize,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.2,
+                                      letterSpacing: 0.02,
+                                      color: _legalPageInk,
+                                    ),
+                                  ),
+                                  SizedBox(height: isCompact ? 32 : 48),
+                                  _PaymentSection(
+                                    index: '01',
+                                    title: localizedUiText(
+                                      locale.code,
+                                      ja: '決済未完了',
+                                      en: 'Payment not completed',
+                                    ),
+                                    titleSize: sectionTitleSize,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          localizedUiText(
+                                            locale.code,
+                                            ja: 'カード情報の確認や通信状態をご確認のうえ、再度お試しください。',
+                                            en: 'Please check your card details and connection, then try again.',
+                                          ),
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 15,
+                                            height: 1.8,
+                                            color: _legalPageInk,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        _PaymentNoteGrid(
+                                          isCompact: isCompact,
+                                          notes: [
+                                            (
+                                              label: localizedUiText(
+                                                locale.code,
+                                                ja: '状態',
+                                                en: 'Status',
+                                              ),
+                                              text: localizedUiText(
+                                                locale.code,
+                                                ja: 'お支払いは完了していません',
+                                                en: 'The payment was not completed',
+                                              ),
+                                            ),
+                                            (
+                                              label: localizedUiText(
+                                                locale.code,
+                                                ja: '次の対応',
+                                                en: 'Next step',
+                                              ),
+                                              text: localizedUiText(
+                                                locale.code,
+                                                ja: '購入画面へ戻って、もう一度お試しください。',
+                                                en: 'Please return to the purchase page and try again.',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(height: sectionGap),
+                                  _PaymentSection(
+                                    index: '02',
+                                    title: localizedUiText(
+                                      locale.code,
+                                      ja: '確認事項',
+                                      en: 'Things to check',
+                                    ),
+                                    titleSize: sectionTitleSize,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (hasOrderId) ...[
+                                          _PaymentDefinitionList(
+                                            isCompact: isCompact,
+                                            rows: [
+                                              (
+                                                label: localizedUiText(
+                                                  locale.code,
+                                                  ja: '注文ID',
+                                                  en: 'Order ID',
+                                                ),
+                                                value: normalizedOrderId,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        _PaymentBulletList(
+                                          items: [
+                                            localizedUiText(
+                                              locale.code,
+                                              ja: 'カード情報と通信状態をご確認ください。',
+                                              en: 'Check your card details and connection.',
+                                            ),
+                                            localizedUiText(
+                                              locale.code,
+                                              ja: '購入画面へ戻って、もう一度お試しください。',
+                                              en: 'Return to the purchase page and try again.',
+                                            ),
+                                            localizedUiText(
+                                              locale.code,
+                                              ja: '同じエラーが続く場合はお問い合わせください。',
+                                              en: 'If the issue repeats, contact us.',
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(height: sectionGap),
+                                  _PaymentSection(
+                                    index: '03',
+                                    title: localizedUiText(
+                                      locale.code,
+                                      ja: '次のステップ',
+                                      en: 'Next steps',
+                                    ),
+                                    titleSize: sectionTitleSize,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          localizedUiText(
+                                            locale.code,
+                                            ja: 'ご不明点はお問い合わせフォームからご連絡ください。',
+                                            en: 'If you have any questions, please contact us through the inquiry form.',
+                                          ),
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 15,
+                                            height: 1.8,
+                                            color: _legalPageInk,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Wrap(
+                                          spacing: 16,
+                                          runSpacing: 16,
+                                          children: [
+                                            _LegalActionButton(
+                                              label: localizedUiText(
+                                                locale.code,
+                                                ja: '購入画面に戻る',
+                                                en: 'Back to purchase',
+                                              ),
+                                              backgroundColor: _legalPageAccent,
+                                              borderColor: _legalPageAccent,
+                                              foregroundColor: Colors.white,
+                                              onTap: onBackToPurchase,
+                                            ),
+                                            _LegalActionButton(
+                                              label: localizedUiText(
+                                                locale.code,
+                                                ja: 'お問い合わせ',
+                                                en: 'Contact us',
+                                              ),
+                                              backgroundColor: Colors.white,
+                                              borderColor: _legalPageLine,
+                                              foregroundColor: _legalPageInk,
+                                              onTap: () => _openInquiryUrl(
+                                                context,
+                                                locale,
+                                                contactUrl,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      AppSettingsButton(
-                        selectedLocale: locale,
-                        onSelectLocale: onSelectLocale,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: const TextStyle(color: HfPalette.muted),
-                  ),
-                  const SizedBox(height: 20),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            cardTitle,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF8F2219),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(cardBody),
-                          if (normalizedOrderId.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            SelectableText('$orderLabel: $normalizedOrderId'),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nextStepsTitle,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF8F2219),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(nextStep1),
-                          const SizedBox(height: 4),
-                          Text(nextStep2),
-                          const SizedBox(height: 4),
-                          Text(nextStep3),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              FilledButton(
-                                onPressed: onBackToTop,
-                                child: Text(backLabel),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () => _openInquiryUrl(
-                                  context,
-                                  locale,
-                                  contactUrl,
-                                ),
-                                icon: const Icon(Icons.open_in_new),
-                                label: Text(contactLabel),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: 56),
+                    AppSiteFooter(locale: locale, onBrandTap: onBackToPurchase),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentSection extends StatelessWidget {
+  const _PaymentSection({
+    required this.index,
+    required this.title,
+    required this.titleSize,
+    required this.child,
+  });
+
+  final String index;
+  final String title;
+  final double titleSize;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              index,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2.8,
+                color: _legalPageAccent,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.notoSerifJp(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                  color: _legalPageInk,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        child,
+      ],
+    );
+  }
+}
+
+class _PaymentNoteGrid extends StatelessWidget {
+  const _PaymentNoteGrid({required this.isCompact, required this.notes});
+
+  final bool isCompact;
+  final List<({String label, String text})> notes;
+
+  @override
+  Widget build(BuildContext context) {
+    final noteWidgets = notes
+        .map((note) => _PaymentNote(label: note.label, text: note.text))
+        .toList(growable: false);
+
+    if (isCompact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [noteWidgets[0], const SizedBox(height: 24), noteWidgets[1]],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: noteWidgets[0]),
+        const SizedBox(width: 24),
+        Expanded(child: noteWidgets[1]),
+      ],
+    );
+  }
+}
+
+class _PaymentNote extends StatelessWidget {
+  const _PaymentNote({required this.label, required this.text});
+
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _legalPageNotes,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.6,
+              color: _legalPageMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              height: 1.7,
+              color: _legalPageInk,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentDefinitionList extends StatelessWidget {
+  const _PaymentDefinitionList({required this.isCompact, required this.rows});
+
+  final bool isCompact;
+  final List<({String label, String value})> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: _legalPageDivider),
+          bottom: BorderSide(color: _legalPageDivider),
+        ),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < rows.length; index++) ...[
+            _PaymentDefinitionRow(
+              isCompact: isCompact,
+              label: rows[index].label,
+              value: rows[index].value,
+            ),
+            if (index != rows.length - 1)
+              const Divider(height: 1, color: _legalPageDivider),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentDefinitionRow extends StatelessWidget {
+  const _PaymentDefinitionRow({
+    required this.isCompact,
+    required this.label,
+    required this.value,
+  });
+
+  final bool isCompact;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelWidget = Text(
+      label,
+      style: GoogleFonts.manrope(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _legalPageMuted,
+      ),
+    );
+    final valueWidget = Text(
+      value,
+      style: GoogleFonts.manrope(
+        fontSize: 15,
+        height: 1.7,
+        color: _legalPageInk,
+      ),
+    );
+
+    if (isCompact) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [labelWidget, const SizedBox(height: 7), valueWidget],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 176, child: labelWidget),
+          const SizedBox(width: 12),
+          Expanded(child: valueWidget),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentBulletList extends StatelessWidget {
+  const _PaymentBulletList({required this.items});
+
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var index = 0; index < items.length; index++) ...[
+          _PaymentBulletItem(text: items[index]),
+          if (index != items.length - 1) const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _PaymentBulletItem extends StatelessWidget {
+  const _PaymentBulletItem({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 9),
+          child: Container(
+            width: 5,
+            height: 5,
+            decoration: const BoxDecoration(
+              color: _legalPageInk,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              height: 1.7,
+              color: _legalPageInk,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegalActionButton extends StatelessWidget {
+  const _LegalActionButton({
+    required this.label,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.foregroundColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color foregroundColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            border: Border.all(color: borderColor),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2.1,
+                color: foregroundColor,
               ),
             ),
           ),

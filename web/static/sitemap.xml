@@ -1,23 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://finitefield.org/?lang=ja</loc>
+    <loc>https://finitefield.org/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />
   </url>
   <url>
-    <loc>https://finitefield.org/design?lang=ja</loc>
+    <loc>https://finitefield.org/design</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/design?lang=ja" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design?lang=en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/design" />
   </url>
   <url>
-    <loc>https://finitefield.org/terms?lang=ja</loc>
+    <loc>https://finitefield.org/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/terms?lang=ja" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms?lang=en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/terms" />
   </url>
   <url>
-    <loc>https://finitefield.org/commercial-transactions?lang=ja</loc>
+    <loc>https://finitefield.org/commercial-transactions</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/commercial-transactions?lang=ja" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/commercial-transactions?lang=en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/commercial-transactions" />
   </url>
 </urlset>

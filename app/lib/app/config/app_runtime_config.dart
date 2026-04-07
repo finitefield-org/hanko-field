@@ -69,5 +69,7 @@ String _defaultApiBaseUrl() {
   if (defaultTargetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:3050';
   }
-  return 'http://localhost:3050';
+  // iOS simulator and desktop dev should use IPv4 loopback so we do not
+  // depend on localhost resolving to IPv6 ::1.
+  return 'http://127.0.0.1:3050';
 }

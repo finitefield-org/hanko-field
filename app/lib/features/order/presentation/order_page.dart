@@ -6,10 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../app/config/app_runtime_config.dart';
 import '../../../app/localization/app_locale_view_model.dart';
 import '../../../app/theme/hf_theme.dart';
-import '../../../app/widgets/app_settings_button.dart';
+import '../../../app/widgets/app_site_chrome.dart';
 import '../data/order_draft_storage.dart';
 import '../domain/order_models.dart';
 import 'order_view_model.dart';
@@ -19,14 +18,18 @@ class OrderPage extends ConsumerStatefulWidget {
     super.key,
     required this.locale,
     required this.onSelectLocale,
+    required this.onBackToTop,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
+    required this.showConfirmationLinks,
   });
 
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
+  final VoidCallback onBackToTop;
   final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
   final ValueChanged<String?> onOpenPaymentFailure;
+  final bool showConfirmationLinks;
 
   @override
   ConsumerState<OrderPage> createState() => _OrderPageState();
@@ -230,42 +233,43 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     _syncSealControllers(state);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFFFBF9F6),
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            const Positioned(
-              left: -110,
-              top: -90,
-              child: _BackgroundShape(angle: 0.42),
+            AppSiteHeader(
+              locale: widget.locale,
+              onSelectLocale: widget.onSelectLocale,
+              onBrandTap: widget.onBackToTop,
             ),
-            const Positioned(
-              right: -120,
-              bottom: -110,
-              child: _BackgroundShape(angle: 0.34),
-            ),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _HeroHeader(
-                        locale: widget.locale,
-                        onSelectLocale: widget.onSelectLocale,
-                      ),
-                      const SizedBox(height: 18),
-                      Card(
-                        color: HfPalette.bgPanel,
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1152),
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: _buildMainPanel(state),
+                          padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _DesignLead(locale: state.locale),
+                              const SizedBox(height: 48),
+                              _buildMainPanel(state),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 56),
+                    AppSiteFooter(
+                      locale: widget.locale,
+                      onBrandTap: widget.onBackToTop,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -298,7 +302,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _StepTrack(step: state.step, locale: state.locale),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         if (state.catalogError.isNotEmpty) ...[
           Container(
             width: double.infinity,
@@ -317,21 +321,13 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         ],
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
-          child: _buildStepPanel(
-            state,
-            showConfirmationLinks: ref
-                .watch(appRuntimeConfigProvider)
-                .showConfirmationLinks,
-          ),
+          child: _buildStepPanel(state),
         ),
       ],
     );
   }
 
-  Widget _buildStepPanel(
-    OrderScreenState state, {
-    required bool showConfirmationLinks,
-  }) {
+  Widget _buildStepPanel(OrderScreenState state) {
     return switch (state.step) {
       OrderStep.design => _DesignStep(
         key: const ValueKey('design_step'),
@@ -392,7 +388,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         onSubmit: () => ref.invoke(orderViewModel.submitPurchase()),
         onOpenPaymentSuccess: widget.onOpenPaymentSuccess,
         onOpenPaymentFailure: widget.onOpenPaymentFailure,
-        showConfirmationLinks: showConfirmationLinks,
+        showConfirmationLinks: widget.showConfirmationLinks,
       ),
     };
   }
@@ -467,67 +463,57 @@ class _CatalogErrorPanel extends StatelessWidget {
   }
 }
 
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.locale, required this.onSelectLocale});
+class _DesignLead extends StatelessWidget {
+  const _DesignLead({required this.locale});
 
-  final AppLocale locale;
-  final ValueChanged<AppLocale> onSelectLocale;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Stone Signature',
-                style: TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 1.2,
-                  color: HfPalette.accent,
-                  fontWeight: FontWeight.w700,
+    final title = localizedUiText(locale, ja: 'デザイン作成', en: 'Design');
+    final intro = localizedUiText(
+      locale,
+      ja: '印影、材質、お届け先を順に選んで、そのまま購入まで進めます。',
+      en: 'Choose the seal text, material, and shipping details, then continue to checkout.',
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isCompact = width < 640;
+        final titleSize = (isCompact ? width * 0.09 : width * 0.04)
+            .clamp(isCompact ? 28.0 : 32.0, isCompact ? 40.0 : 52.0)
+            .toDouble();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.notoSerifJp(
+                fontSize: titleSize,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+                letterSpacing: 0.02,
+                color: HfPalette.ink,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 768),
+              child: Text(
+                intro,
+                style: GoogleFonts.manrope(
+                  fontSize: isCompact ? 14 : 15,
+                  fontWeight: FontWeight.w400,
+                  height: 1.8,
+                  color: HfPalette.muted,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                'Hand-carved Stone Seals',
-                style: TextStyle(fontSize: 16, color: HfPalette.muted),
-              ),
-            ],
-          ),
-        ),
-        AppSettingsButton(
-          selectedLocale: locale,
-          onSelectLocale: onSelectLocale,
-        ),
-      ],
-    );
-  }
-}
-
-class _BackgroundShape extends StatelessWidget {
-  const _BackgroundShape({required this.angle});
-
-  final double angle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: angle,
-      child: Container(
-        width: 340,
-        height: 340,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: HfPalette.accent.withValues(alpha: 0.15),
-            width: 2,
-          ),
-        ),
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -546,7 +532,7 @@ class _StepTrack extends StatelessWidget {
         final isCompact = constraints.maxWidth < 720;
 
         return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(6),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -574,7 +560,7 @@ class _StepTrack extends StatelessWidget {
                     ],
                   )
                 : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (var index = 0; index < steps.length; index++)
                         Expanded(
@@ -634,7 +620,7 @@ class _StepTrackItem extends StatelessWidget {
       OrderStep.purchase => localizedUiText(locale, ja: '購入', en: 'Purchase'),
     };
     final content = Padding(
-      padding: EdgeInsets.fromLTRB(24, 16, isCompact || isLast ? 24 : 32, 16),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
       child: Row(
         children: [
           Container(
@@ -768,7 +754,7 @@ class _DesignStep extends StatelessWidget {
       builder: (context, constraints) {
         final twoColumns = constraints.maxWidth >= 920;
         final controls = _buildControls();
-        final preview = _buildPreview();
+        final preview = _buildPreview(onSelectShape: onSelectShape);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -797,8 +783,6 @@ class _DesignStep extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            _buildOptionalSuggestionSection(),
           ],
         );
       },
@@ -963,22 +947,10 @@ class _DesignStep extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 6),
-            DropdownButtonFormField<KanjiStyle>(
-              key: ValueKey('kanji_style_${state.kanjiStyle.code}'),
-              initialValue: state.kanjiStyle,
-              items: KanjiStyle.values
-                  .map(
-                    (style) => DropdownMenuItem(
-                      value: style,
-                      child: Text(style.localizedLabel(locale)),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (style) {
-                if (style != null) {
-                  onStyleChanged(style);
-                }
-              },
+            _KanjiStyleSelectField(
+              locale: locale,
+              value: state.kanjiStyle,
+              onChanged: onStyleChanged,
             ),
             const SizedBox(height: 6),
             Text(
@@ -991,128 +963,7 @@ class _DesignStep extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionalSuggestionSection() {
-    final suggestionsTitle = localizedUiText(
-      locale,
-      ja: '漢字名提案',
-      en: 'Kanji name suggestions',
-    );
-    final optionalBadge = localizedUiText(locale, ja: '任意', en: 'Optional');
-    final suggestionsHint = localizedUiText(
-      locale,
-      ja: '必要なときだけ開いて、現在のスタイルに合う候補を生成できます。',
-      en: 'Open this only if you want suggestions that match the selected style.',
-    );
-    final realNameLabel = localizedUiText(locale, ja: '本名', en: 'Name');
-    final realNameExample = localizedUiText(
-      locale,
-      ja: '例: 山田 太郎',
-      en: 'e.g. Michael Smith',
-    );
-    final genderLabel = localizedUiText(locale, ja: '性別', en: 'Gender');
-    final generatingLabel = localizedUiText(
-      locale,
-      ja: '生成中...',
-      en: 'Generating...',
-    );
-    final generateLabel = localizedUiText(
-      locale,
-      ja: '候補を生成',
-      en: 'Generate suggestions',
-    );
-
-    return Card(
-      child: ExpansionTile(
-        maintainState: true,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                suggestionsTitle,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: HfPalette.line),
-                color: HfPalette.bgPanel,
-              ),
-              child: Text(
-                optionalBadge,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: HfPalette.muted,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            suggestionsHint,
-            style: const TextStyle(fontSize: 12, color: HfPalette.muted),
-          ),
-        ),
-        children: [
-          Text(
-            realNameLabel,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            initialValue: state.realName,
-            onChanged: onRealNameChanged,
-            decoration: InputDecoration(hintText: realNameExample),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            genderLabel,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<CandidateGender>(
-            key: ValueKey('candidate_gender_${state.candidateGender.code}'),
-            initialValue: state.candidateGender,
-            items: CandidateGender.values
-                .map(
-                  (gender) => DropdownMenuItem(
-                    value: gender,
-                    child: Text(gender.localizedLabel(locale)),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (gender) {
-              if (gender != null) {
-                onGenderChanged(gender);
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: state.isGeneratingSuggestions
-                ? null
-                : onGenerateSuggestions,
-            child: Text(
-              state.isGeneratingSuggestions ? generatingLabel : generateLabel,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _SuggestionBox(state: state, onSelectSuggestion: onSelectSuggestion),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreview() {
+  Widget _buildPreview({required ValueChanged<SealShape> onSelectShape}) {
     final line1 = state.sealLine1.isEmpty ? '印' : state.sealLine1;
     final line2 = state.sealLine2;
     final hasLine2 = line2.isNotEmpty;
@@ -1138,6 +989,7 @@ class _DesignStep extends StatelessWidget {
         ? -12.0
         : 0.0;
     final previewTitle = localizedUiText(locale, ja: 'プレビュー', en: 'Preview');
+    final shapeOptionsLabel = localizedUiText(locale, ja: '形状選択', en: 'Shape');
     final fontOptionsLabel = localizedUiText(
       locale,
       ja: 'フォント一覧',
@@ -1215,6 +1067,50 @@ class _DesignStep extends StatelessWidget {
               style: const TextStyle(fontSize: 13, color: HfPalette.muted),
             ),
             const SizedBox(height: 14),
+            Text(
+              shapeOptionsLabel,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: SealShape.values
+                  .map((shape) {
+                    return ChoiceChip(
+                      label: Text(shape.localizedLabel(locale)),
+                      selected: state.shape == shape,
+                      onSelected: (_) => onSelectShape(shape),
+                      showCheckmark: true,
+                      checkmarkColor: HfPalette.accent,
+                      selectedColor: HfPalette.accentSoft,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: state.shape == shape
+                            ? HfPalette.accent
+                            : HfPalette.line,
+                        width: state.shape == shape ? 1.4 : 1,
+                      ),
+                      labelStyle: TextStyle(
+                        color: state.shape == shape
+                            ? HfPalette.accent
+                            : HfPalette.ink,
+                        fontWeight: state.shape == shape
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 12),
             const Divider(color: Color(0xFFD8CCBC), height: 1),
             const SizedBox(height: 12),
             Text(
@@ -1320,44 +1216,6 @@ class _DesignStep extends StatelessWidget {
             const SizedBox(height: 12),
             _buildSuggestionPanel(),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: SealShape.values
-                  .map((shape) {
-                    return ChoiceChip(
-                      label: Text(shape.localizedLabel(locale)),
-                      selected: state.shape == shape,
-                      onSelected: (_) => onSelectShape(shape),
-                      showCheckmark: true,
-                      checkmarkColor: HfPalette.accent,
-                      selectedColor: HfPalette.accentSoft,
-                      backgroundColor: Colors.white,
-                      side: BorderSide(
-                        color: state.shape == shape
-                            ? HfPalette.accent
-                            : HfPalette.line,
-                        width: state.shape == shape ? 1.4 : 1,
-                      ),
-                      labelStyle: TextStyle(
-                        color: state.shape == shape
-                            ? HfPalette.accent
-                            : HfPalette.ink,
-                        fontWeight: state.shape == shape
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    );
-                  })
-                  .toList(growable: false),
-            ),
-            const SizedBox(height: 12),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -1399,6 +1257,34 @@ class _DesignStep extends StatelessWidget {
   }
 
   Widget _buildSuggestionPanel() {
+    final title = localizedUiText(
+      locale,
+      ja: '漢字名提案',
+      en: 'Kanji name suggestions',
+    );
+    final description = localizedUiText(
+      locale,
+      ja: '本名と性別を入力して、今選んでいるフォントスタイルに合う候補を生成できます。',
+      en: 'Enter a name and gender to generate suggestions that match the selected font style.',
+    );
+    final nameLabel = localizedUiText(locale, ja: '本名', en: 'Name');
+    final nameHint = localizedUiText(
+      locale,
+      ja: '例: 山田 太郎',
+      en: 'e.g. Michael Smith',
+    );
+    final genderLabel = localizedUiText(locale, ja: '性別', en: 'Gender');
+    final generateLabel = localizedUiText(
+      locale,
+      ja: '候補を生成',
+      en: 'Generate suggestions',
+    );
+    final generatingLabel = localizedUiText(
+      locale,
+      ja: '生成中...',
+      en: 'Generating suggestions...',
+    );
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -1412,52 +1298,343 @@ class _DesignStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('漢字名提案', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: HfPalette.muted,
+            ),
+          ),
           const SizedBox(height: 8),
-          const Text(
-            '本名',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          Text(
+            nameLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
           const SizedBox(height: 6),
           TextFormField(
             initialValue: state.realName,
             onChanged: onRealNameChanged,
-            decoration: const InputDecoration(hintText: '例: Michael Smith'),
+            decoration: InputDecoration(hintText: nameHint),
           ),
           const SizedBox(height: 10),
-          const Text(
-            '性別',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          Text(
+            genderLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
           const SizedBox(height: 6),
-          DropdownButtonFormField<CandidateGender>(
-            key: ValueKey('candidate_gender_${state.candidateGender.code}'),
-            initialValue: state.candidateGender,
-            items: CandidateGender.values
-                .map(
-                  (gender) => DropdownMenuItem(
-                    value: gender,
-                    child: Text(gender.localizedLabel(locale)),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (gender) {
-              if (gender != null) {
-                onGenderChanged(gender);
-              }
-            },
+          _GenderSelectField(
+            locale: locale,
+            value: state.candidateGender,
+            onChanged: onGenderChanged,
           ),
           const SizedBox(height: 10),
           OutlinedButton(
             onPressed: state.isGeneratingSuggestions
                 ? null
                 : onGenerateSuggestions,
-            child: Text(state.isGeneratingSuggestions ? '生成中...' : '候補を生成'),
+            child: Text(
+              state.isGeneratingSuggestions ? generatingLabel : generateLabel,
+            ),
           ),
           const SizedBox(height: 10),
           _SuggestionBox(state: state, onSelectSuggestion: onSelectSuggestion),
         ],
       ),
+    );
+  }
+}
+
+class _GenderSelectField extends StatelessWidget {
+  const _GenderSelectField({
+    required this.locale,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String locale;
+  final CandidateGender value;
+  final ValueChanged<CandidateGender> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openSheet(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: HfPalette.bgPanel,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: HfPalette.line),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value.localizedLabel(locale),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: HfPalette.ink,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: HfPalette.accent,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openSheet(BuildContext context) {
+    final isEnglish = isEnglishLocale(locale);
+    final title = isEnglish ? 'Gender' : '性別';
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: HfPalette.bgPanel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.notoSerifJp(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    color: HfPalette.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...CandidateGender.values.map((gender) {
+                  final selected = gender == value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        if (!selected) {
+                          onChanged(gender);
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? HfPalette.accentSoft.withValues(alpha: 0.45)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected ? HfPalette.accent : HfPalette.line,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                gender.localizedLabel(locale),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: selected
+                                      ? HfPalette.accent
+                                      : HfPalette.ink,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              selected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: selected
+                                  ? HfPalette.accent
+                                  : HfPalette.muted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _KanjiStyleSelectField extends StatelessWidget {
+  const _KanjiStyleSelectField({
+    required this.locale,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String locale;
+  final KanjiStyle value;
+  final ValueChanged<KanjiStyle> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openSheet(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: HfPalette.bgPanel,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: HfPalette.line),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value.localizedLabel(locale),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: HfPalette.ink,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: HfPalette.accent,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openSheet(BuildContext context) {
+    final isEnglish = isEnglishLocale(locale);
+    final title = isEnglish ? 'Font style' : 'フォントスタイル';
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: HfPalette.bgPanel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.notoSerifJp(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    color: HfPalette.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...KanjiStyle.values.map((style) {
+                  final selected = style == value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        if (!selected) {
+                          onChanged(style);
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? HfPalette.accentSoft.withValues(alpha: 0.45)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected ? HfPalette.accent : HfPalette.line,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                style.localizedLabel(locale),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: selected
+                                      ? HfPalette.accent
+                                      : HfPalette.ink,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              selected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: selected
+                                  ? HfPalette.accent
+                                  : HfPalette.muted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1482,16 +1659,23 @@ class _SuggestionBox extends StatelessWidget {
     }
 
     if (state.suggestions.isEmpty) {
-      final message = state.suggestionsError.isEmpty
+      final hasName = state.realName.trim().isNotEmpty;
+      final message = state.suggestionsError.isNotEmpty
+          ? state.suggestionsError
+          : hasName
           ? localizedUiText(
               state.locale,
-              ja: '本名を入力して候補を生成してください。',
-              en: 'Enter your name to generate suggestions.',
+              ja: '候補を生成してください。',
+              en: 'Generate suggestions.',
             )
-          : state.suggestionsError;
-      final color = state.suggestionsError.isEmpty
-          ? HfPalette.muted
-          : const Color(0xFF8F2219);
+          : localizedUiText(
+              state.locale,
+              ja: 'お名前を入力してください。',
+              en: 'Enter your name.',
+            );
+      final color = state.suggestionsError.isNotEmpty
+          ? const Color(0xFF8F2219)
+          : HfPalette.muted;
       return Text(message, style: TextStyle(fontSize: 13, color: color));
     }
 
@@ -2439,6 +2623,128 @@ class _PurchaseStatusChip extends StatelessWidget {
   }
 }
 
+class _PurchaseResultCard extends StatelessWidget {
+  const _PurchaseResultCard({
+    required this.locale,
+    required this.result,
+    required this.onOpenPaymentSuccess,
+    required this.onOpenPaymentFailure,
+    required this.showConfirmationLinks,
+  });
+
+  final String locale;
+  final PurchaseResultData result;
+  final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
+  final ValueChanged<String?> onOpenPaymentFailure;
+  final bool showConfirmationLinks;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLine2 = result.sealLine2.isNotEmpty;
+    final hasAddress2 = result.addressLine2.isNotEmpty;
+    final title = localizedUiText(
+      locale,
+      ja: '注文を受け付けました',
+      en: 'Order received',
+    );
+    final sourceLabel = localizedUiText(locale, ja: 'データソース', en: 'Source');
+    final orderIdLabel = localizedUiText(locale, ja: '注文ID', en: 'Order ID');
+    final checkoutLabel = localizedUiText(
+      locale,
+      ja: '決済セッションID',
+      en: 'Checkout Session ID',
+    );
+    final sealLabel = localizedUiText(locale, ja: '印影', en: 'Seal');
+    final shippingLabel = localizedUiText(locale, ja: '配送先', en: 'Shipping to');
+    final addressLabel = localizedUiText(locale, ja: '住所', en: 'Address');
+    final subtotalLabel = localizedUiText(locale, ja: '小計', en: 'Subtotal');
+    final totalLabel = localizedUiText(locale, ja: '合計', en: 'Total');
+    final emailLabel = localizedUiText(
+      locale,
+      ja: '確認メール送信先',
+      en: 'Confirmation email',
+    );
+    final successButtonLabel = localizedUiText(
+      locale,
+      ja: '支払い成功画面へ（確認用）',
+      en: 'Open payment success page',
+    );
+    final failureButtonLabel = localizedUiText(
+      locale,
+      ja: '支払い失敗画面へ（確認用）',
+      en: 'Open payment failure page',
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: HfPalette.accent2.withValues(alpha: 0.35)),
+        color: HfPalette.accent2.withValues(alpha: 0.08),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: HfPalette.accent,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$sourceLabel: ${result.sourceLabel} / $orderIdLabel: ${result.orderId} / $checkoutLabel: ${result.checkoutSessionId}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$sealLabel: ${result.sealLine1}${hasLine2 ? ' / ${result.sealLine2}' : ''}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          Text(
+            '$shippingLabel: ${result.countryLabel} / ${result.stripeName} / ${result.stripePhone}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          Text(
+            '$addressLabel: ${result.postalCode} ${result.state} ${result.city} ${result.addressLine1}${hasAddress2 ? ' ${result.addressLine2}' : ''}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          Text(
+            '$subtotalLabel: ${formatMoney(result.subtotal, result.currency)} / ${localizedUiText(locale, ja: '送料', en: 'Shipping')}: ${formatMoney(result.shipping, result.currency)} / $totalLabel: ${formatMoney(result.total, result.currency)}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          Text(
+            '$emailLabel: ${result.email}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          if (showConfirmationLinks) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: () => onOpenPaymentSuccess(
+                    result.checkoutSessionId,
+                    result.orderId,
+                  ),
+                  child: Text(successButtonLabel),
+                ),
+                OutlinedButton(
+                  onPressed: () => onOpenPaymentFailure(result.orderId),
+                  child: Text(failureButtonLabel),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 enum _PurchaseStatusKind { submitting, blocked, error, ready }
 
 class _SummaryRow extends StatelessWidget {
@@ -2623,125 +2929,6 @@ List<_MaterialComparisonFact> _materialComparisonFacts(
       ),
     ],
   };
-}
-
-class _PurchaseResultCard extends StatelessWidget {
-  const _PurchaseResultCard({
-    required this.locale,
-    required this.result,
-    required this.onOpenPaymentSuccess,
-    required this.onOpenPaymentFailure,
-    required this.showConfirmationLinks,
-  });
-
-  final String locale;
-  final PurchaseResultData result;
-  final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
-  final ValueChanged<String?> onOpenPaymentFailure;
-  final bool showConfirmationLinks;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasLine2 = result.sealLine2.isNotEmpty;
-    final hasAddress2 = result.addressLine2.isNotEmpty;
-    final title = localizedUiText(
-      locale,
-      ja: '注文を受け付けました',
-      en: 'Order received',
-    );
-    final sourceLabel = localizedUiText(locale, ja: 'データソース', en: 'Source');
-    final orderIdLabel = localizedUiText(locale, ja: '注文ID', en: 'Order ID');
-    final checkoutLabel = localizedUiText(
-      locale,
-      ja: '決済セッションID',
-      en: 'Checkout Session ID',
-    );
-    final sealLabel = localizedUiText(locale, ja: '印影', en: 'Seal');
-    final shippingLabel = localizedUiText(locale, ja: '配送先', en: 'Shipping to');
-    final addressLabel = localizedUiText(locale, ja: '住所', en: 'Address');
-    final subtotalLabel = localizedUiText(locale, ja: '小計', en: 'Subtotal');
-    final totalLabel = localizedUiText(locale, ja: '合計', en: 'Total');
-    final emailLabel = localizedUiText(
-      locale,
-      ja: '確認メール送信先',
-      en: 'Confirmation email',
-    );
-    final successButtonLabel = localizedUiText(
-      locale,
-      ja: '支払い成功画面へ（確認用）',
-      en: 'Open payment success page',
-    );
-    final failureButtonLabel = localizedUiText(
-      locale,
-      ja: '支払い失敗画面へ（確認用）',
-      en: 'Open payment failure page',
-    );
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: HfPalette.accent2.withValues(alpha: 0.35)),
-        color: HfPalette.accent2.withValues(alpha: 0.08),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: HfPalette.accent2,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text('$sourceLabel: ${result.sourceLabel}'),
-          Text('$orderIdLabel: ${result.orderId}'),
-          Text('$checkoutLabel: ${result.checkoutSessionId}'),
-          Text(
-            '$sealLabel: ${result.sealLine1}${hasLine2 ? ' / ${result.sealLine2}' : ''}',
-          ),
-          Text(
-            '${result.shapeLabel} / ${result.materialLabel} / ${result.fontLabel}',
-          ),
-          Text(
-            '$shippingLabel: ${result.countryLabel} / ${result.stripeName} / ${result.stripePhone}',
-          ),
-          Text(
-            '$addressLabel: ${result.postalCode} ${result.state} ${result.city} '
-            '${result.addressLine1}${hasAddress2 ? ' ${result.addressLine2}' : ''}',
-          ),
-          Text(
-            '$subtotalLabel: ${formatMoney(result.subtotal, result.currency)} / '
-            '${localizedUiText(locale, ja: '送料', en: 'Shipping')}: ${formatMoney(result.shipping, result.currency)} / '
-            '$totalLabel: ${formatMoney(result.total, result.currency)}',
-          ),
-          Text('$emailLabel: ${result.email}'),
-          if (showConfirmationLinks) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.tonal(
-                  onPressed: () => onOpenPaymentSuccess(
-                    result.checkoutSessionId,
-                    result.orderId,
-                  ),
-                  child: Text(successButtonLabel),
-                ),
-                OutlinedButton(
-                  onPressed: () => onOpenPaymentFailure(result.orderId),
-                  child: Text(failureButtonLabel),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 TextStyle _stampFontStyle({
