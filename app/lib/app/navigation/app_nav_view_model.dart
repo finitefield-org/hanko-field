@@ -15,6 +15,8 @@ class AppNavViewModel extends Provider<AppNavState> {
   }
 
   late final showDesignMut = mutation<void>(#showDesign);
+  late final showLegalNoticeMut = mutation<void>(#showLegalNotice);
+  late final showTermsMut = mutation<void>(#showTerms);
   late final showPaymentSuccessMut = mutation<void>(#showPaymentSuccess);
   late final showPaymentFailureMut = mutation<void>(#showPaymentFailure);
   late final popTopMut = mutation<void>(#popTop);
@@ -33,6 +35,28 @@ class AppNavViewModel extends Provider<AppNavState> {
           ...current.pages,
           const PageEntry(key: AppPageKey.order, name: '/design'),
         ],
+      );
+    });
+  }
+
+  Call<void, AppNavState> showLegalNotice() {
+    return mutate(showLegalNoticeMut, (ref) async {
+      final current = ref.watch(this);
+      _openLegalPage(
+        ref,
+        current,
+        const PageEntry(key: AppPageKey.legalNotice, name: '/legal-notice'),
+      );
+    });
+  }
+
+  Call<void, AppNavState> showTerms() {
+    return mutate(showTermsMut, (ref) async {
+      final current = ref.watch(this);
+      _openLegalPage(
+        ref,
+        current,
+        const PageEntry(key: AppPageKey.terms, name: '/terms'),
       );
     });
   }
@@ -74,6 +98,25 @@ class AppNavViewModel extends Provider<AppNavState> {
         ],
       );
     });
+  }
+
+  void _openLegalPage(Ref ref, AppNavState current, PageEntry nextPage) {
+    if (current.pages.isNotEmpty && current.pages.last.key == nextPage.key) {
+      return;
+    }
+
+    final nextPages = [...current.pages];
+    if (nextPages.isNotEmpty && _isLegalPage(nextPages.last.key)) {
+      nextPages[nextPages.length - 1] = nextPage;
+    } else {
+      nextPages.add(nextPage);
+    }
+
+    ref.state = current.copyWith(pages: nextPages);
+  }
+
+  bool _isLegalPage(String key) {
+    return key == AppPageKey.legalNotice || key == AppPageKey.terms;
   }
 
   Call<void, AppNavState> popTop() {

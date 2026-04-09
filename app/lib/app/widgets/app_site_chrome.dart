@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../fonts/app_fonts.dart';
 import '../localization/app_locale_view_model.dart';
 
 const _siteChromeCream = Color(0xFFFBF9F6);
@@ -28,119 +28,160 @@ class AppSiteHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _siteChromeCream,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1440),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 15),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _SiteBrand(onTap: onBrandTap),
-                    const Spacer(),
-                    _SiteLanguageButton(
-                      locale: locale,
-                      onSelectLocale: onSelectLocale,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth <= 960;
+        final horizontalPadding = isCompact ? 16.0 : 24.0;
+
+        return Container(
+          color: _siteChromeCream,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1440),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      20,
+                      horizontalPadding,
+                      20,
                     ),
-                  ],
-                ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _SiteBrand(onTap: onBrandTap),
+                        const Spacer(),
+                        _SiteLanguageButton(
+                          locale: locale,
+                          onSelectLocale: onSelectLocale,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 1,
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(color: _siteChromeDivider),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(
-                height: 1,
-                width: double.infinity,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: _siteChromeDivider),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class AppSiteFooter extends StatelessWidget {
-  const AppSiteFooter({super.key, required this.locale, this.onBrandTap});
+  const AppSiteFooter({
+    super.key,
+    required this.locale,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
+    this.onBrandTap,
+  });
 
   final AppLocale locale;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
   final VoidCallback? onBrandTap;
 
   @override
   Widget build(BuildContext context) {
-    final isEnglish = locale == AppLocale.en;
-    final legalLabel = isEnglish ? 'Legal Notice' : '特商法に基づく表記';
-    final termsLabel = isEnglish ? 'Terms of Service' : '利用規約';
-    final privacyLabel = isEnglish ? 'Privacy Policy' : 'プライバシーポリシー';
-    final companyLabel = isEnglish ? 'Company' : '運営会社';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 768;
+        final horizontalPadding = isCompact ? 16.0 : 24.0;
+        final verticalPadding = isCompact ? 48.0 : 64.0;
+        final isEnglish = locale == AppLocale.en;
+        final legalLabel = isEnglish ? 'LEGAL NOTICE' : '特商法に基づく表記';
+        final termsLabel = isEnglish ? 'TERMS OF SERVICE' : '利用規約';
+        final privacyLabel = isEnglish ? 'PRIVACY POLICY' : 'プライバシーポリシー';
+        final companyLabel = isEnglish ? 'COMPANY' : '運営会社';
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          color: _siteChromeFooter,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1440),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _SiteFooterBrand(onTap: onBrandTap),
-                    const SizedBox(height: 28),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 28,
-                      runSpacing: 14,
-                      children: [
-                        _SiteFooterLink(
-                          label: legalLabel,
-                          url: commercialTransactionsUrlForLocale(locale),
-                        ),
-                        _SiteFooterLink(
-                          label: termsLabel,
-                          url: termsUrlForLocale(locale),
-                        ),
-                        _SiteFooterLink(
-                          label: privacyLabel,
-                          url: privacyPolicyUrlForLocale(locale),
-                        ),
-                        _SiteFooterLink(
-                          label: companyLabel,
-                          url: 'https://finitefield.org/company/',
-                        ),
-                      ],
+        final Widget links = Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 48,
+          runSpacing: 32,
+          children: [
+            _SiteFooterLink(label: legalLabel, onPressed: onOpenLegalNotice),
+            _SiteFooterLink(label: termsLabel, onPressed: onOpenTerms),
+            _SiteFooterLink(
+              label: privacyLabel,
+              url: privacyPolicyUrlForLocale(locale),
+            ),
+            _SiteFooterLink(
+              label: companyLabel,
+              url: 'https://finitefield.org/company/',
+            ),
+          ],
+        );
+
+        final copyright = Text(
+          '© STONE SIGNATURE',
+          textAlign: TextAlign.center,
+          style: AppFonts.manrope(
+            fontSize: 10,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 0.2,
+            color: _siteChromeMuted,
+          ),
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              color: _siteChromeFooter,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1440),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      verticalPadding,
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '© STONE SIGNATURE',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0.2,
-                        color: _siteChromeMuted,
-                      ),
-                    ),
-                  ],
+                    child: isCompact
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _SiteFooterBrand(onTap: onBrandTap),
+                              const SizedBox(height: 32),
+                              links,
+                              const SizedBox(height: 32),
+                              copyright,
+                            ],
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              _SiteFooterBrand(onTap: onBrandTap),
+                              const SizedBox(width: 24),
+                              Expanded(child: Center(child: links)),
+                              const SizedBox(width: 24),
+                              copyright,
+                            ],
+                          ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(
-          height: 4,
-          width: double.infinity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: _siteChromeFooterBar),
-          ),
-        ),
-      ],
+            const SizedBox(
+              height: 4,
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: _siteChromeFooterBar),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -169,7 +210,7 @@ class _SiteBrand extends StatelessWidget {
           children: [
             Text(
               'STONE SIGNATURE',
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 height: 1,
@@ -180,7 +221,7 @@ class _SiteBrand extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '印鑑フィールド',
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 height: 1,
@@ -227,7 +268,7 @@ class _SiteLanguageButton extends StatelessWidget {
           child: Icon(
             Icons.language_outlined,
             color: _siteChromeAccent,
-            size: 22,
+            size: 24,
           ),
         ),
       ),
@@ -304,7 +345,7 @@ class _SiteFooterBrand extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           'STONE SIGNATURE',
-          style: GoogleFonts.notoSerifJp(
+          style: AppFonts.notoSerifJp(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             height: 1,
@@ -327,15 +368,17 @@ class _SiteFooterBrand extends StatelessWidget {
 }
 
 class _SiteFooterLink extends StatelessWidget {
-  const _SiteFooterLink({required this.label, required this.url});
+  const _SiteFooterLink({required this.label, this.url, this.onPressed})
+    : assert(url != null || onPressed != null);
 
   final String label;
-  final String url;
+  final String? url;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      onPressed: () => _openUrl(context, url),
+      onPressed: onPressed ?? () => _openUrl(context, url!),
       style: TextButton.styleFrom(
         foregroundColor: _siteChromeMuted,
         padding: EdgeInsets.zero,
@@ -344,7 +387,7 @@ class _SiteFooterLink extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.manrope(
+        style: AppFonts.manrope(
           fontSize: 12,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.15,

@@ -269,10 +269,10 @@ impl CandidateGender {
                 "Gender preference: unspecified. Do not force masculine/feminine bias."
             }
             Self::Male => {
-                "Gender preference: male. Prefer names with masculine impression while staying natural."
+                "Gender preference: masculine. Prefer names with masculine impression while staying natural."
             }
             Self::Female => {
-                "Gender preference: female. Prefer names with feminine impression while staying natural."
+                "Gender preference: feminine. Prefer names with feminine impression while staying natural."
             }
         }
     }

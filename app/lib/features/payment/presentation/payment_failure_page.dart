@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/fonts/app_fonts.dart';
 import '../../../app/localization/app_locale_view_model.dart';
 import '../../../app/widgets/app_site_chrome.dart';
 import '../../order/domain/order_models.dart';
@@ -18,13 +18,17 @@ class PaymentFailurePage extends StatelessWidget {
     super.key,
     required this.locale,
     required this.onSelectLocale,
-    required this.onBackToPurchase,
+    required this.onBackToTop,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
     this.orderId,
   });
 
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
-  final VoidCallback onBackToPurchase;
+  final VoidCallback onBackToTop;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
   final String? orderId;
 
   @override
@@ -41,7 +45,7 @@ class PaymentFailurePage extends StatelessWidget {
             AppSiteHeader(
               locale: locale,
               onSelectLocale: onSelectLocale,
-              onBrandTap: onBackToPurchase,
+              onBrandTap: onBackToTop,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -87,7 +91,7 @@ class PaymentFailurePage extends StatelessWidget {
                                       ja: 'お支払いが完了しませんでした',
                                       en: 'Payment was not completed',
                                     ),
-                                    style: GoogleFonts.notoSerifJp(
+                                    style: AppFonts.notoSerifJp(
                                       fontSize: titleSize,
                                       fontWeight: FontWeight.w700,
                                       height: 1.2,
@@ -114,7 +118,7 @@ class PaymentFailurePage extends StatelessWidget {
                                             ja: 'カード情報の確認や通信状態をご確認のうえ、再度お試しください。',
                                             en: 'Please check your card details and connection, then try again.',
                                           ),
-                                          style: GoogleFonts.manrope(
+                                          style: AppFonts.manrope(
                                             fontSize: 15,
                                             height: 1.8,
                                             color: _legalPageInk,
@@ -223,7 +227,7 @@ class PaymentFailurePage extends StatelessWidget {
                                             ja: 'ご不明点はお問い合わせフォームからご連絡ください。',
                                             en: 'If you have any questions, please contact us through the inquiry form.',
                                           ),
-                                          style: GoogleFonts.manrope(
+                                          style: AppFonts.manrope(
                                             fontSize: 15,
                                             height: 1.8,
                                             color: _legalPageInk,
@@ -237,13 +241,13 @@ class PaymentFailurePage extends StatelessWidget {
                                             _LegalActionButton(
                                               label: localizedUiText(
                                                 locale.code,
-                                                ja: '購入画面に戻る',
-                                                en: 'Back to purchase',
+                                                ja: 'トップへ戻る',
+                                                en: 'Back to TOP',
                                               ),
                                               backgroundColor: _legalPageAccent,
                                               borderColor: _legalPageAccent,
                                               foregroundColor: Colors.white,
-                                              onTap: onBackToPurchase,
+                                              onTap: onBackToTop,
                                             ),
                                             _LegalActionButton(
                                               label: localizedUiText(
@@ -273,7 +277,12 @@ class PaymentFailurePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 56),
-                    AppSiteFooter(locale: locale, onBrandTap: onBackToPurchase),
+                    AppSiteFooter(
+                      locale: locale,
+                      onOpenLegalNotice: onOpenLegalNotice,
+                      onOpenTerms: onOpenTerms,
+                      onBrandTap: onBackToTop,
+                    ),
                   ],
                 ),
               ),
@@ -308,7 +317,7 @@ class _PaymentSection extends StatelessWidget {
           children: [
             Text(
               index,
-              style: GoogleFonts.manrope(
+              style: AppFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.8,
@@ -319,7 +328,7 @@ class _PaymentSection extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: GoogleFonts.notoSerifJp(
+                style: AppFonts.notoSerifJp(
                   fontSize: titleSize,
                   fontWeight: FontWeight.w700,
                   height: 1.4,
@@ -382,7 +391,7 @@ class _PaymentNote extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
@@ -392,7 +401,7 @@ class _PaymentNote extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             text,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 15,
               height: 1.7,
               color: _legalPageInk,
@@ -451,7 +460,7 @@ class _PaymentDefinitionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelWidget = Text(
       label,
-      style: GoogleFonts.manrope(
+      style: AppFonts.manrope(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: _legalPageMuted,
@@ -459,11 +468,7 @@ class _PaymentDefinitionRow extends StatelessWidget {
     );
     final valueWidget = Text(
       value,
-      style: GoogleFonts.manrope(
-        fontSize: 15,
-        height: 1.7,
-        color: _legalPageInk,
-      ),
+      style: AppFonts.manrope(fontSize: 15, height: 1.7, color: _legalPageInk),
     );
 
     if (isCompact) {
@@ -533,7 +538,7 @@ class _PaymentBulletItem extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 15,
               height: 1.7,
               color: _legalPageInk,
@@ -576,7 +581,7 @@ class _LegalActionButton extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.manrope(
+              style: AppFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.1,

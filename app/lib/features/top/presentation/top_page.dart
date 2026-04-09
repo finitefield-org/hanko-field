@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/fonts/app_fonts.dart';
 import '../../../app/localization/app_locale_view_model.dart';
 
 const _topPageCream = Color(0xFFFBF9F6);
@@ -21,11 +21,15 @@ class TopPage extends StatelessWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onStartDesign,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
   });
 
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onStartDesign;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +61,11 @@ class TopPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      _TopFooter(locale: locale),
+                      _TopFooter(
+                        locale: locale,
+                        onOpenLegalNotice: onOpenLegalNotice,
+                        onOpenTerms: onOpenTerms,
+                      ),
                     ],
                   ),
                 ),
@@ -252,7 +260,7 @@ class _TopBrand extends StatelessWidget {
           children: [
             Text(
               'STONE SIGNATURE',
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 height: 1,
@@ -263,7 +271,7 @@ class _TopBrand extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '印鑑フィールド',
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 height: 1,
@@ -380,7 +388,7 @@ class _TopHero extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: titleSize,
                 fontWeight: FontWeight.w300,
                 height: 1.25,
@@ -399,7 +407,7 @@ class _TopHero extends StatelessWidget {
             Text(
               copy,
               textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
+              style: AppFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.w300,
                 height: 1.8,
@@ -438,7 +446,7 @@ class _StartDesignButton extends StatelessWidget {
                 Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.notoSerifJp(
+                  style: AppFonts.notoSerifJp(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     height: 1,
@@ -469,9 +477,15 @@ class _StartDesignButton extends StatelessWidget {
 }
 
 class _TopFooter extends StatelessWidget {
-  const _TopFooter({required this.locale});
+  const _TopFooter({
+    required this.locale,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
+  });
 
   final AppLocale locale;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
 
   @override
   Widget build(BuildContext context) {
@@ -503,11 +517,11 @@ class _TopFooter extends StatelessWidget {
                       children: [
                         _TopFooterLink(
                           label: legalLabel,
-                          url: commercialTransactionsUrlForLocale(locale),
+                          onPressed: onOpenLegalNotice,
                         ),
                         _TopFooterLink(
                           label: termsLabel,
-                          url: termsUrlForLocale(locale),
+                          onPressed: onOpenTerms,
                         ),
                         _TopFooterLink(
                           label: privacyLabel,
@@ -523,7 +537,7 @@ class _TopFooter extends StatelessWidget {
                     Text(
                       '© STONE SIGNATURE',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
+                      style: AppFonts.manrope(
                         fontSize: 10,
                         fontWeight: FontWeight.w400,
                         letterSpacing: 0.2,
@@ -567,7 +581,7 @@ class _TopFooterBrand extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           'STONE SIGNATURE',
-          style: GoogleFonts.notoSerifJp(
+          style: AppFonts.notoSerifJp(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             height: 1,
@@ -581,15 +595,17 @@ class _TopFooterBrand extends StatelessWidget {
 }
 
 class _TopFooterLink extends StatelessWidget {
-  const _TopFooterLink({required this.label, required this.url});
+  const _TopFooterLink({required this.label, this.url, this.onPressed})
+    : assert(url != null || onPressed != null);
 
   final String label;
-  final String url;
+  final String? url;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
-      onPressed: () => _openUrl(context, url),
+      onPressed: onPressed ?? () => _openUrl(context, url!),
       style: TextButton.styleFrom(
         foregroundColor: _topPageMuted,
         padding: EdgeInsets.zero,
@@ -598,7 +614,7 @@ class _TopFooterLink extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.manrope(
+        style: AppFonts.manrope(
           fontSize: 12,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.15,

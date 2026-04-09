@@ -101,9 +101,9 @@ enum CandidateGender {
   String localizedLabel(String locale) {
     if (isEnglishLocale(locale)) {
       return switch (this) {
-        CandidateGender.unspecified => 'Unspecified',
-        CandidateGender.male => 'Male',
-        CandidateGender.female => 'Female',
+        CandidateGender.unspecified => 'No preference',
+        CandidateGender.male => 'Masculine',
+        CandidateGender.female => 'Feminine',
       };
     }
     return label;

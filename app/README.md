@@ -1,6 +1,9 @@
-# hankofield
+# STONE SIGNATURE
 
-A new Flutter project.
+STONE SIGNATURE の Flutter アプリです。
+
+リリースビルドでは、API 経由で本番 Firestore と本番 Stripe を使います。
+必要に応じて `HANKO_APP_PROD_API_BASE_URL` で本番 API の URL を上書きできます。
 
 ## Getting Started
 

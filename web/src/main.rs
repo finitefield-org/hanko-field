@@ -1726,8 +1726,8 @@ async fn handle_top(
     let template = TopPageTemplate {
         page_title: localized_text(
             &selected_locale,
-            "宝石印鑑をオンラインでデザイン | Stone Signature",
-            "Custom gemstone seals | Stone Signature",
+            "宝石印鑑をオンラインでデザイン | STONE SIGNATURE",
+            "Custom gemstone seals | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
@@ -1800,8 +1800,8 @@ async fn handle_design(
         countries: catalog.countries,
         page_title: localized_text(
             &selected_locale,
-            "デザイン作成 | Stone Signature",
-            "Design your seal | Stone Signature",
+            "デザイン作成 | STONE SIGNATURE",
+            "Design your seal | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
@@ -1969,8 +1969,8 @@ async fn handle_payment_success(
         commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
-            "支払い完了 | Stone Signature",
-            "Payment complete | Stone Signature",
+            "支払い完了 | STONE SIGNATURE",
+            "Payment complete | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
@@ -2019,8 +2019,8 @@ async fn handle_payment_failure(
         commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
-            "支払い未完了 | Stone Signature",
-            "Payment incomplete | Stone Signature",
+            "支払い未完了 | STONE SIGNATURE",
+            "Payment incomplete | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
@@ -2062,13 +2062,13 @@ async fn handle_commercial_transactions(
         contact_url: inquiry_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
-            "特定商取引法に基づく表記 | Stone Signature",
-            "Legal Notice | Stone Signature",
+            "特定商取引法に基づく表記 | STONE SIGNATURE",
+            "Legal Notice | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
             "販売業者情報、支払い方法、配送、返品など、特定商取引法に基づく表記をご確認ください。",
-            "Read the legal notice for Stone Signature, including seller information, payment methods, delivery, and returns.",
+            "Read the legal notice for STONE SIGNATURE, including seller information, payment methods, delivery, and returns.",
         ),
         robots_meta: "index,follow".to_owned(),
         canonical_url: lang_en_url.clone(),
@@ -2103,13 +2103,13 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
         contact_url: inquiry_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
-            "利用規約 | Stone Signature",
-            "Terms of Service | Stone Signature",
+            "利用規約 | STONE SIGNATURE",
+            "Terms of Service | STONE SIGNATURE",
         ),
         meta_description: localized_text(
             &selected_locale,
-            "注文、支払い、配送、返品、準拠法など、Stone Signature の利用規約をご確認ください。",
-            "Read the Stone Signature terms of service, including order formation, payment, delivery, returns, and governing law.",
+            "注文、支払い、配送、返品、準拠法など、STONE SIGNATURE の利用規約をご確認ください。",
+            "Read the STONE SIGNATURE terms of service, including order formation, payment, delivery, returns, and governing law.",
         ),
         robots_meta: "index,follow".to_owned(),
         canonical_url: lang_en_url.clone(),
@@ -2702,9 +2702,9 @@ fn terms_url(base_url: &str, locale: &str) -> String {
 fn inquiry_url(_base_url: &str, locale: &str) -> String {
     let normalized = parse_supported_locale(locale).unwrap_or("en");
     if normalized == "ja" {
-        return site_url(EXTERNAL_LEGAL_BASE_URL, "/inquiry/");
+        return site_url(EXTERNAL_LEGAL_BASE_URL, "/contact/");
     }
-    site_url(EXTERNAL_LEGAL_BASE_URL, &format!("/{normalized}/inquiry/"))
+    site_url(EXTERNAL_LEGAL_BASE_URL, &format!("/{normalized}/contact/"))
 }
 
 fn company_url(_base_url: &str) -> String {
@@ -3602,7 +3602,7 @@ mod tests {
     fn top_page_uses_locale_aware_privacy_policy_url() {
         let template = TopPageTemplate {
             selected_locale: "en".to_owned(),
-            page_title: "Custom gemstone seals | Stone Signature".to_owned(),
+            page_title: "Custom gemstone seals | STONE SIGNATURE".to_owned(),
             meta_description:
                 "Design custom hand-carved gemstone seals online and order in English or Japanese."
                     .to_owned(),
@@ -3621,7 +3621,7 @@ mod tests {
         let html = render_html(&template).expect("top page should render");
 
         assert!(html.contains(r#"<link rel="canonical" href="https://finitefield.org/">"#));
-        assert!(html.contains(r#"<title>Custom gemstone seals | Stone Signature</title>"#));
+        assert!(html.contains(r#"<title>Custom gemstone seals | STONE SIGNATURE</title>"#));
         assert!(html.contains(
             r#"<meta name="description" content="Design custom hand-carved gemstone seals online and order in English or Japanese.">"#
         ));
@@ -3645,7 +3645,7 @@ mod tests {
     fn top_page_uses_logo_image_left_of_title() {
         let template = TopPageTemplate {
             selected_locale: "ja".to_owned(),
-            page_title: "宝石印鑑をオンラインでデザイン | Stone Signature".to_owned(),
+            page_title: "宝石印鑑をオンラインでデザイン | STONE SIGNATURE".to_owned(),
             meta_description:
                 "宝石印鑑をオンラインでデザインして、日本語または英語で注文できます。".to_owned(),
             robots_meta: "index,follow".to_owned(),
@@ -3668,7 +3668,7 @@ mod tests {
             .find(r#"<img class="top-brand__logo" src="/static/site-logo.png" alt="" aria-hidden="true">"#)
             .expect("header logo should be rendered");
         let header_title = html
-            .find(r#"<h1 class="top-brand__title">Stone Signature</h1>"#)
+            .find(r#"<h1 class="top-brand__title">STONE SIGNATURE</h1>"#)
             .expect("header title should be rendered");
         assert!(header_logo < header_title);
 
@@ -3676,7 +3676,7 @@ mod tests {
             .find(r#"<img class="top-footer__brand-logo" src="/static/site-logo.png" alt="" aria-hidden="true">"#)
             .expect("footer logo should be rendered");
         let footer_title = html
-            .find(r#"<div class="top-footer__brand-title">Stone Signature</div>"#)
+            .find(r#"<div class="top-footer__brand-title">STONE SIGNATURE</div>"#)
             .expect("footer title should be rendered");
         assert!(footer_logo < footer_title);
     }
@@ -3689,7 +3689,7 @@ mod tests {
             has_order_id: true,
             order_id: "ord_456".to_owned(),
             selected_locale: "en".to_owned(),
-            page_title: "Payment complete | Stone Signature".to_owned(),
+            page_title: "Payment complete | STONE SIGNATURE".to_owned(),
             meta_description: "Your payment was received. Check your confirmation email for order details and next steps.".to_owned(),
             robots_meta: "noindex,follow".to_owned(),
             canonical_url: payment_result_locale_url(
@@ -3719,14 +3719,14 @@ mod tests {
         };
 
         let success_html = render_html(&success_template).expect("payment success should render");
-        assert!(success_html.contains(r#"<title>Payment complete | Stone Signature</title>"#));
+        assert!(success_html.contains(r#"<title>Payment complete | STONE SIGNATURE</title>"#));
         assert!(success_html.contains(r#"<meta name="robots" content="noindex,follow">"#));
 
         let failure_template = PaymentFailureTemplate {
             has_order_id: true,
             order_id: "ord_456".to_owned(),
             selected_locale: "en".to_owned(),
-            page_title: "Payment incomplete | Stone Signature".to_owned(),
+            page_title: "Payment incomplete | STONE SIGNATURE".to_owned(),
             meta_description: "Payment did not complete. Check your card details and return to the purchase page to try again.".to_owned(),
             robots_meta: "noindex,follow".to_owned(),
             canonical_url: payment_result_locale_url(
@@ -3757,7 +3757,7 @@ mod tests {
         };
 
         let failure_html = render_html(&failure_template).expect("payment failure should render");
-        assert!(failure_html.contains(r#"<title>Payment incomplete | Stone Signature</title>"#));
+        assert!(failure_html.contains(r#"<title>Payment incomplete | STONE SIGNATURE</title>"#));
         assert!(failure_html.contains(r#"<meta name="robots" content="noindex,follow">"#));
     }
 
@@ -3797,7 +3797,7 @@ mod tests {
         );
         assert_eq!(
             inquiry_url(TEST_SITE_BASE_URL, "en"),
-            "https://finitefield.org/en/inquiry/"
+            "https://finitefield.org/en/contact/"
         );
         assert_eq!(
             company_url(TEST_SITE_BASE_URL),
@@ -3817,16 +3817,55 @@ mod tests {
         );
         assert_eq!(
             inquiry_url(TEST_ALT_SITE_BASE_URL, "ja"),
-            "https://finitefield.org/inquiry/"
+            "https://finitefield.org/contact/"
         );
         assert_eq!(
             inquiry_url(TEST_ALT_SITE_BASE_URL, "en"),
-            "https://finitefield.org/en/inquiry/"
+            "https://finitefield.org/en/contact/"
         );
         assert_eq!(
             company_url(TEST_ALT_SITE_BASE_URL),
             "https://finitefield.org/company/"
         );
+    }
+
+    #[tokio::test]
+    async fn legal_pages_back_buttons_point_to_top() {
+        let commercial_response = handle_commercial_transactions(
+            State(mock_state()),
+            Query(LocaleQuery {
+                lang: Some("en".to_owned()),
+            }),
+        )
+        .await;
+        let commercial_html = String::from_utf8(
+            to_bytes(commercial_response.into_body(), usize::MAX)
+                .await
+                .expect("commercial transactions body should be readable")
+                .to_vec(),
+        )
+        .expect("commercial transactions body should be utf-8");
+
+        assert!(commercial_html.contains("Back to TOP"));
+        assert!(commercial_html.contains("window.location.href='https://finitefield.org/'"));
+
+        let terms_response = handle_terms(
+            State(mock_state()),
+            Query(LocaleQuery {
+                lang: Some("en".to_owned()),
+            }),
+        )
+        .await;
+        let terms_html = String::from_utf8(
+            to_bytes(terms_response.into_body(), usize::MAX)
+                .await
+                .expect("terms body should be readable")
+                .to_vec(),
+        )
+        .expect("terms body should be utf-8");
+
+        assert!(terms_html.contains("Back to TOP"));
+        assert!(terms_html.contains("window.location.href='https://finitefield.org/'"));
     }
 
     #[test]

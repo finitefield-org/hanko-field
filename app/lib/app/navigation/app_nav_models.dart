@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 class AppPageKey {
   static const top = 'top';
   static const order = 'order';
+  static const legalNotice = 'legal_notice';
+  static const terms = 'terms';
   static const paymentSuccess = 'payment_success';
   static const paymentFailure = 'payment_failure';
 }
