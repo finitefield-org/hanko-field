@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/fonts/app_fonts.dart';
 import '../../../app/localization/app_locale_view_model.dart';
 import '../../../app/theme/hf_theme.dart';
 import '../../../app/widgets/app_site_chrome.dart';
@@ -19,6 +19,8 @@ class OrderPage extends ConsumerStatefulWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBackToTop,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
     required this.showConfirmationLinks,
@@ -27,6 +29,8 @@ class OrderPage extends ConsumerStatefulWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBackToTop;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
   final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
   final ValueChanged<String?> onOpenPaymentFailure;
   final bool showConfirmationLinks;
@@ -267,6 +271,8 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                     const SizedBox(height: 56),
                     AppSiteFooter(
                       locale: widget.locale,
+                      onOpenLegalNotice: widget.onOpenLegalNotice,
+                      onOpenTerms: widget.onOpenTerms,
                       onBrandTap: widget.onBackToTop,
                     ),
                   ],
@@ -490,7 +496,7 @@ class _DesignLead extends StatelessWidget {
           children: [
             Text(
               title,
-              style: GoogleFonts.notoSerifJp(
+              style: AppFonts.notoSerifJp(
                 fontSize: titleSize,
                 fontWeight: FontWeight.w700,
                 height: 1.2,
@@ -503,7 +509,7 @@ class _DesignLead extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 768),
               child: Text(
                 intro,
-                style: GoogleFonts.manrope(
+                style: AppFonts.manrope(
                   fontSize: isCompact ? 14 : 15,
                   fontWeight: FontWeight.w400,
                   height: 1.8,
@@ -1265,7 +1271,7 @@ class _DesignStep extends StatelessWidget {
     final description = localizedUiText(
       locale,
       ja: '本名と性別を入力して、今選んでいるフォントスタイルに合う候補を生成できます。',
-      en: 'Enter a name and gender to generate suggestions that match the selected font style.',
+      en: 'Enter a name and gender preference to generate suggestions that match the selected font style.',
     );
     final nameLabel = localizedUiText(locale, ja: '本名', en: 'Name');
     final nameHint = localizedUiText(
@@ -1273,7 +1279,11 @@ class _DesignStep extends StatelessWidget {
       ja: '例: 山田 太郎',
       en: 'e.g. Michael Smith',
     );
-    final genderLabel = localizedUiText(locale, ja: '性別', en: 'Gender');
+    final genderLabel = localizedUiText(
+      locale,
+      ja: '性別',
+      en: 'Gender preference',
+    );
     final generateLabel = localizedUiText(
       locale,
       ja: '候補を生成',
@@ -1399,7 +1409,7 @@ class _GenderSelectField extends StatelessWidget {
 
   void _openSheet(BuildContext context) {
     final isEnglish = isEnglishLocale(locale);
-    final title = isEnglish ? 'Gender' : '性別';
+    final title = isEnglish ? 'Gender preference' : '性別';
 
     showModalBottomSheet<void>(
       context: context,
@@ -1418,7 +1428,7 @@ class _GenderSelectField extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.notoSerifJp(
+                  style: AppFonts.notoSerifJp(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     height: 1.2,
@@ -1493,16 +1503,27 @@ class _GenderSelectField extends StatelessWidget {
   }
 }
 
-class _KanjiStyleSelectField extends StatelessWidget {
-  const _KanjiStyleSelectField({
-    required this.locale,
-    required this.value,
+class _BottomSheetSelectOption<T> {
+  const _BottomSheetSelectOption({required this.value, required this.label});
+
+  final T value;
+  final String label;
+}
+
+class _BottomSheetSelectField<T> extends StatelessWidget {
+  const _BottomSheetSelectField({
+    required this.title,
+    required this.selectedValue,
+    required this.selectedLabel,
+    required this.options,
     required this.onChanged,
   });
 
-  final String locale;
-  final KanjiStyle value;
-  final ValueChanged<KanjiStyle> onChanged;
+  final String title;
+  final T selectedValue;
+  final String selectedLabel;
+  final List<_BottomSheetSelectOption<T>> options;
+  final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1523,7 +1544,7 @@ class _KanjiStyleSelectField extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  value.localizedLabel(locale),
+                  selectedLabel,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1544,9 +1565,6 @@ class _KanjiStyleSelectField extends StatelessWidget {
   }
 
   void _openSheet(BuildContext context) {
-    final isEnglish = isEnglishLocale(locale);
-    final title = isEnglish ? 'Font style' : 'フォントスタイル';
-
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -1564,7 +1582,7 @@ class _KanjiStyleSelectField extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.notoSerifJp(
+                  style: AppFonts.notoSerifJp(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     height: 1.2,
@@ -1572,8 +1590,8 @@ class _KanjiStyleSelectField extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...KanjiStyle.values.map((style) {
-                  final selected = style == value;
+                ...options.map((option) {
+                  final selected = option.value == selectedValue;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: InkWell(
@@ -1581,7 +1599,7 @@ class _KanjiStyleSelectField extends StatelessWidget {
                       onTap: () {
                         Navigator.of(sheetContext).pop();
                         if (!selected) {
-                          onChanged(style);
+                          onChanged(option.value);
                         }
                       },
                       child: Container(
@@ -1603,7 +1621,7 @@ class _KanjiStyleSelectField extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                style.localizedLabel(locale),
+                                option.label,
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: selected
@@ -1635,6 +1653,66 @@ class _KanjiStyleSelectField extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _CountrySelectField extends StatelessWidget {
+  const _CountrySelectField({
+    required this.locale,
+    required this.value,
+    required this.selectedLabel,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String locale;
+  final String value;
+  final String selectedLabel;
+  final List<_BottomSheetSelectOption<String>> options;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = isEnglishLocale(locale) ? 'Country' : '国';
+    return _BottomSheetSelectField<String>(
+      title: title,
+      selectedValue: value,
+      selectedLabel: selectedLabel,
+      options: options,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _KanjiStyleSelectField extends StatelessWidget {
+  const _KanjiStyleSelectField({
+    required this.locale,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String locale;
+  final KanjiStyle value;
+  final ValueChanged<KanjiStyle> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnglish = isEnglishLocale(locale);
+    final title = isEnglish ? 'Font style' : 'フォントスタイル';
+    return _BottomSheetSelectField<KanjiStyle>(
+      title: title,
+      selectedValue: value,
+      selectedLabel: value.localizedLabel(locale),
+      options: KanjiStyle.values
+          .map(
+            (style) => _BottomSheetSelectOption<KanjiStyle>(
+              value: style,
+              label: style.localizedLabel(locale),
+            ),
+          )
+          .toList(growable: false),
+      onChanged: onChanged,
     );
   }
 }
@@ -2174,22 +2252,19 @@ class _PurchaseStep extends StatelessWidget {
             const SizedBox(height: 8),
             _LabeledField(
               label: countryLabel,
-              child: DropdownButtonFormField<String>(
-                key: ValueKey('country_${state.selectedCountry.code}'),
-                initialValue: state.selectedCountry.code,
-                items: state.catalog.countries
+              child: _CountrySelectField(
+                locale: locale,
+                value: state.selectedCountry.code,
+                selectedLabel: state.selectedCountry.label,
+                options: state.catalog.countries
                     .map(
-                      (country) => DropdownMenuItem(
+                      (country) => _BottomSheetSelectOption<String>(
                         value: country.code,
-                        child: Text('${country.label} (${country.code})'),
+                        label: country.label,
                       ),
                     )
                     .toList(growable: false),
-                onChanged: (code) {
-                  if (code != null) {
-                    onCountryChanged(code);
-                  }
-                },
+                onChanged: onCountryChanged,
               ),
             ),
             const SizedBox(height: 8),
@@ -2945,7 +3020,7 @@ TextStyle _stampFontStyle({
 
   final primaryFont = _extractPrimaryFontName(family);
   try {
-    return GoogleFonts.getFont(primaryFont, textStyle: base);
+    return AppFonts.getFont(primaryFont, textStyle: base);
   } catch (_) {
     return base;
   }

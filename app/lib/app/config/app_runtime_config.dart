@@ -19,7 +19,8 @@ enum AppMode {
       'mock' => AppMode.mock,
       'dev' => AppMode.dev,
       'prod' => AppMode.prod,
-      _ => kReleaseMode ? AppMode.prod : AppMode.dev,
+      // Debug builds default to mock so the app renders without a backend.
+      _ => kReleaseMode ? AppMode.prod : AppMode.mock,
     };
   }
 }
@@ -43,6 +44,9 @@ final appRuntimeConfigProvider = Provider<AppRuntimeConfig>((ref) {
   final configuredBaseUrl = const String.fromEnvironment(
     'HANKO_APP_API_BASE_URL',
   ).trim();
+  final configuredProdBaseUrl = const String.fromEnvironment(
+    'HANKO_APP_PROD_API_BASE_URL',
+  ).trim();
   final configuredLocale = const String.fromEnvironment(
     'HANKO_APP_LOCALE',
   ).trim().toLowerCase();
@@ -53,10 +57,14 @@ final appRuntimeConfigProvider = Provider<AppRuntimeConfig>((ref) {
       : WidgetsBinding.instance.platformDispatcher.locale.languageCode
             .toLowerCase();
 
+  final mode = AppMode.fromEnvironment(configuredMode);
   final apiBaseUrl = configuredBaseUrl.isNotEmpty
       ? configuredBaseUrl
-      : _defaultApiBaseUrl();
-  final mode = AppMode.fromEnvironment(configuredMode);
+      : defaultApiBaseUrl(
+          useProdBackend: kReleaseMode || mode == AppMode.prod,
+          targetPlatform: defaultTargetPlatform,
+          prodApiBaseUrl: configuredProdBaseUrl,
+        );
 
   return AppRuntimeConfig(
     apiBaseUrl: apiBaseUrl,
@@ -65,8 +73,22 @@ final appRuntimeConfigProvider = Provider<AppRuntimeConfig>((ref) {
   );
 });
 
-String _defaultApiBaseUrl() {
-  if (defaultTargetPlatform == TargetPlatform.android) {
+@visibleForTesting
+String defaultApiBaseUrl({
+  required bool useProdBackend,
+  required TargetPlatform targetPlatform,
+  String? prodApiBaseUrl,
+}) {
+  if (useProdBackend) {
+    final configuredProdApiBaseUrl = prodApiBaseUrl?.trim();
+    if (configuredProdApiBaseUrl != null &&
+        configuredProdApiBaseUrl.isNotEmpty) {
+      return configuredProdApiBaseUrl;
+    }
+    return 'https://hanko-field-api-26orkkye6a-an.a.run.app';
+  }
+
+  if (targetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:3050';
   }
   // iOS simulator and desktop dev should use IPv4 loopback so we do not

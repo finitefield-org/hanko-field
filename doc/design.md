@@ -52,6 +52,7 @@
 - [x] `app` を `api`（`/v1/config/public`, `/v1/catalog`, `/v1/kanji-candidates`, `/v1/orders`, `/v1/payments/stripe/checkout-session`）に接続し、実データを利用する
 - [x] `web` / `app` のロケール切替で入力途中の注文内容を保持し、再読込で消えないようにする
 - [x] `web` / `app` の入力例・案内文をロケール別に整え、英語ユーザにも自然に伝わるようにする
+- [x] `app` の購入ステップで、配送国選択メニューをフォントスタイルと同じ見た目のボトムシートにする
 - [x] `web` の公開ページで canonical / hreflang を絶対URL + `x-default` 付きで整え、英語 URL を正規、`ja` を代替として公開する
 - [x] `web` の主要 SEO メタ（title / meta description / robots / OG / Twitter）をロケール別に整え、英語 URL で英語表示にする
 - [x] `web` / `app` のデザインステップで、印影テキスト・フォント・形状の選択状態とエラー表示をより明確にする
@@ -64,3 +65,4 @@
 - [x] `app` の確認用導線を `mock` / `dev` のみに限定し、本番ユーザには表示しない
 - [x] `web` の結果更新領域に `aria-live` を付け、購入結果や候補更新が読み上げられるようにする
 - [x] Firebase の dev / prod プロジェクトを `hanko-field` / `hanko-field-prod` に分け、Firestore は `(default)` を使う
+- [x] `app` の Google Play Store 掲載準備として Android の release signing / app icon / app name を整備する

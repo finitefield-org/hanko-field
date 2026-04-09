@@ -14,7 +14,7 @@
   <meta property="og:title" content="{{ page_title }}">
   <meta property="og:description" content="{{ meta_description }}">
   <meta property="og:url" content="{{ canonical_url }}">
-  <meta property="og:site_name" content="Stone Signature">
+  <meta property="og:site_name" content="STONE SIGNATURE">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="{{ page_title }}">
   <meta name="twitter:description" content="{{ meta_description }}">
@@ -38,7 +38,7 @@
         <div class="top-brand">
           <img class="top-brand__logo" src="/static/site-logo.png" alt="" aria-hidden="true">
           <div class="top-brand__text">
-            <h1 class="top-brand__title">Stone Signature</h1>
+            <h1 class="top-brand__title">STONE SIGNATURE</h1>
             <span class="top-brand__subtitle">印鑑フィールド</span>
           </div>
         </div>
@@ -192,7 +192,7 @@
 
               <div class="ai-box">
                 <h3>{% if selected_locale == "ja" %}漢字名提案{% else %}Kanji name suggestions{% endif %}</h3>
-                <p>{% if selected_locale == "ja" %}本名と性別を入力して、今選んでいるフォントスタイルに合う候補を生成できます。{% else %}Enter a name and gender to generate suggestions that match the selected font style.{% endif %}</p>
+                <p>{% if selected_locale == "ja" %}本名と性別を入力して、今選んでいるフォントスタイルに合う候補を生成できます。{% else %}Enter a name and gender preference to generate suggestions that match the selected font style.{% endif %}</p>
                 <label class="field-label" for="real_name">{% if selected_locale == "ja" %}本名{% else %}Name{% endif %}</label>
                 <input
                   id="real_name"
@@ -201,11 +201,11 @@
                   autocomplete="off"
                   placeholder="{% if selected_locale == "ja" %}例: 山田 太郎{% else %}e.g. Michael Smith{% endif %}"
                 >
-                <label class="field-label" for="candidate_gender">{% if selected_locale == "ja" %}性別{% else %}Gender{% endif %}</label>
+                <label class="field-label" for="candidate_gender">{% if selected_locale == "ja" %}性別{% else %}Gender preference{% endif %}</label>
                 <select id="candidate_gender" name="candidate_gender">
-                  <option value="unspecified" selected>{% if selected_locale == "ja" %}選択なし{% else %}Unspecified{% endif %}</option>
-                  <option value="male">{% if selected_locale == "ja" %}男性{% else %}Male{% endif %}</option>
-                  <option value="female">{% if selected_locale == "ja" %}女性{% else %}Female{% endif %}</option>
+                  <option value="unspecified" selected>{% if selected_locale == "ja" %}選択なし{% else %}No preference{% endif %}</option>
+                  <option value="male">{% if selected_locale == "ja" %}男性{% else %}Masculine{% endif %}</option>
+                  <option value="female">{% if selected_locale == "ja" %}女性{% else %}Feminine{% endif %}</option>
                 </select>
                 <button
                   type="button"
@@ -549,7 +549,7 @@
       <div class="top-footer__brand">
         <a class="top-footer__brand-link" href="{{ top_url }}">
           <img class="top-footer__brand-logo" src="/static/site-logo.png" alt="" aria-hidden="true">
-          <div class="top-footer__brand-title">Stone Signature</div>
+          <div class="top-footer__brand-title">STONE SIGNATURE</div>
         </a>
       </div>
       <div class="top-footer__links">
@@ -559,7 +559,7 @@
         <a class="top-footer__link" href="{{ company_url }}">{% if selected_locale == "ja" %}運営会社{% else %}Company{% endif %}</a>
       </div>
       <div class="top-footer__copyright">
-        © Stone Signature
+        © STONE SIGNATURE
       </div>
     </div>
     <div class="top-footer__accent"></div>

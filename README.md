@@ -88,6 +88,8 @@ Firebase の project ID は次の通りです。
 - 本番: `hanko-field-prod`
 - Firestore: どちらも `(default)` データベース
 
+`ENV=prod` で Flutter/App の本番ビルドをする場合は、`.env.prod` の `API_FIRESTORE_PROJECT_ID` を `hanko-field-prod` にし、`API_PSP_STRIPE_API_KEY` は Stripe の live secret key を入れてください。アプリは Firestore や Stripe に直接つながらず、API 経由でこれらの設定を使います。
+
 ```bash
 # 全サービスを本番相当設定で起動
 make docker-up ENV=prod

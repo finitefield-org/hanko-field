@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:miniriverpod/miniriverpod.dart';
 
 import '../../../app/config/app_runtime_config.dart';
@@ -535,7 +537,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
 
         ref.state = nextState;
       } catch (error) {
-        if (runtime.mode == AppMode.mock) {
+        if (_shouldUseMockFallback(error, runtime.mode)) {
           final latest = ref.watch(this);
           final fallback = _mockCatalogResponse(
             locale: latest.locale.isNotEmpty
@@ -663,7 +665,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
           selectedCountryCode: nextCountryCode,
         );
       } catch (error) {
-        if (runtime.mode == AppMode.mock) {
+        if (_shouldUseMockFallback(error, runtime.mode)) {
           final latest = ref.watch(this);
           final fallback = _mockCatalogResponse(locale: nextLocale);
           ref.state = _stateWithCatalog(
@@ -995,7 +997,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
               isGeneratingSuggestions: false,
             );
       } catch (error) {
-        if (runtime.mode == AppMode.mock) {
+        if (_shouldUseMockFallback(error, runtime.mode)) {
           final latest = ref.watch(this);
           final suggestions = _mockKanjiCandidates(
             locale: latest.locale,
@@ -1298,7 +1300,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
               ),
             );
       } catch (error) {
-        if (runtime.mode == AppMode.mock) {
+        if (_shouldUseMockFallback(error, runtime.mode)) {
           final latest = ref.watch(this);
           final mockOrderId =
               'mock_order_${DateTime.now().millisecondsSinceEpoch}';
@@ -1612,6 +1614,38 @@ String _apiErrorMessage(Object error, {required String fallback}) {
     return fallback;
   }
   return text;
+}
+
+bool _shouldUseMockFallback(Object error, AppMode mode) {
+  if (mode == AppMode.mock) {
+    return true;
+  }
+
+  if (mode == AppMode.prod) {
+    return false;
+  }
+
+  if (error is TimeoutException) {
+    return true;
+  }
+
+  if (error is http.ClientException) {
+    return _looksLikeNetworkFailure(error.message);
+  }
+
+  return _looksLikeNetworkFailure(error.toString());
+}
+
+bool _looksLikeNetworkFailure(String text) {
+  final normalized = text.toLowerCase();
+  return normalized.contains('connection refused') ||
+      normalized.contains('socketexception') ||
+      normalized.contains('clientexception') ||
+      normalized.contains('failed host lookup') ||
+      normalized.contains('network is unreachable') ||
+      normalized.contains('connection reset') ||
+      normalized.contains('connection timed out') ||
+      normalized.contains('timed out');
 }
 
 String normalizePinyinWithoutTone(String input) {

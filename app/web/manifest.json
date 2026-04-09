@@ -1,11 +1,11 @@
 {
-    "name": "hankofield",
-    "short_name": "hankofield",
+    "name": "STONE SIGNATURE",
+    "short_name": "STONE SIGNATURE",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "STONE SIGNATURE - Custom Japanese seal design and ordering app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

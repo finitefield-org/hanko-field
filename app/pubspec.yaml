@@ -1,8 +1,8 @@
 name: hankofield
-description: "Hanko Field"
+description: "STONE SIGNATURE - Custom Japanese seal design and ordering app."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.2+5
 
 environment:
   sdk: ^3.10.4
@@ -30,6 +30,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: Noto Serif JP
+      fonts:
+        - asset: assets/fonts/NotoSerifJP.ttf
+    - family: Noto Serif
+      fonts:
+        - asset: assets/fonts/NotoSerif.ttf
   assets:
     - assets/site-logo.png
     - assets/top-hero.png

@@ -3,6 +3,9 @@ import 'package:miniriverpod/miniriverpod.dart';
 import '../../features/order/domain/order_models.dart';
 import '../config/app_runtime_config.dart';
 
+const _legalSiteBaseUrl = 'https://inkanfield.org';
+const _companySiteBaseUrl = 'https://finitefield.org';
+
 enum AppLocale {
   ja,
   en;
@@ -53,9 +56,9 @@ final appLocaleViewModel = AppLocaleViewModel();
 String privacyPolicyUrlForLocaleCode(String code) {
   final locale = normalizeUiLocale(code);
   if (locale == 'ja') {
-    return 'https://finitefield.org/privacy/';
+    return '$_companySiteBaseUrl/privacy/';
   }
-  return 'https://finitefield.org/$locale/privacy/';
+  return '$_companySiteBaseUrl/$locale/privacy/';
 }
 
 String privacyPolicyUrlForLocale(AppLocale locale) {
@@ -65,9 +68,9 @@ String privacyPolicyUrlForLocale(AppLocale locale) {
 String inquiryUrlForLocaleCode(String code) {
   final locale = normalizeUiLocale(code);
   if (locale == 'ja') {
-    return 'https://finitefield.org/inquiry/';
+    return '$_companySiteBaseUrl/contact/';
   }
-  return 'https://finitefield.org/$locale/inquiry/';
+  return '$_companySiteBaseUrl/$locale/contact/';
 }
 
 String inquiryUrlForLocale(AppLocale locale) {
@@ -76,7 +79,10 @@ String inquiryUrlForLocale(AppLocale locale) {
 
 String commercialTransactionsUrlForLocaleCode(String code) {
   final locale = normalizeUiLocale(code);
-  return 'https://finitefield.org/commercial-transactions?lang=$locale';
+  if (locale == 'ja') {
+    return '$_legalSiteBaseUrl/commercial-transactions?lang=ja';
+  }
+  return '$_legalSiteBaseUrl/commercial-transactions';
 }
 
 String commercialTransactionsUrlForLocale(AppLocale locale) {
@@ -85,7 +91,10 @@ String commercialTransactionsUrlForLocale(AppLocale locale) {
 
 String termsUrlForLocaleCode(String code) {
   final locale = normalizeUiLocale(code);
-  return 'https://finitefield.org/terms?lang=$locale';
+  if (locale == 'ja') {
+    return '$_legalSiteBaseUrl/terms?lang=ja';
+  }
+  return '$_legalSiteBaseUrl/terms';
 }
 
 String termsUrlForLocale(AppLocale locale) {

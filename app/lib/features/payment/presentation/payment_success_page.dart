@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/fonts/app_fonts.dart';
 import '../../../app/localization/app_locale_view_model.dart';
 import '../../../app/widgets/app_site_chrome.dart';
 import '../../order/domain/order_models.dart';
@@ -19,6 +19,8 @@ class PaymentSuccessPage extends StatelessWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBackToTop,
+    required this.onOpenLegalNotice,
+    required this.onOpenTerms,
     this.orderId,
     this.sessionId,
   });
@@ -26,6 +28,8 @@ class PaymentSuccessPage extends StatelessWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBackToTop;
+  final VoidCallback onOpenLegalNotice;
+  final VoidCallback onOpenTerms;
   final String? orderId;
   final String? sessionId;
 
@@ -91,7 +95,7 @@ class PaymentSuccessPage extends StatelessWidget {
                                       ja: 'お支払いが完了しました',
                                       en: 'Payment completed',
                                     ),
-                                    style: GoogleFonts.notoSerifJp(
+                                    style: AppFonts.notoSerifJp(
                                       fontSize: titleSize,
                                       fontWeight: FontWeight.w700,
                                       height: 1.2,
@@ -118,7 +122,7 @@ class PaymentSuccessPage extends StatelessWidget {
                                             ja: 'ご注文ありがとうございます。確認メール送信後、順次製作を開始します。',
                                             en: 'Thank you for your order. We will start production after the confirmation email is sent.',
                                           ),
-                                          style: GoogleFonts.manrope(
+                                          style: AppFonts.manrope(
                                             fontSize: 15,
                                             height: 1.8,
                                             color: _legalPageInk,
@@ -196,7 +200,7 @@ class PaymentSuccessPage extends StatelessWidget {
                                               ja: '確認メールをご確認ください。',
                                               en: 'Please check your confirmation email.',
                                             ),
-                                            style: GoogleFonts.manrope(
+                                            style: AppFonts.manrope(
                                               fontSize: 15,
                                               height: 1.8,
                                               color: _legalPageInk,
@@ -222,7 +226,7 @@ class PaymentSuccessPage extends StatelessWidget {
                                             ja: 'ご不明点はお問い合わせフォームからご連絡ください。',
                                             en: 'If you have any questions, please contact us through the inquiry form.',
                                           ),
-                                          style: GoogleFonts.manrope(
+                                          style: AppFonts.manrope(
                                             fontSize: 15,
                                             height: 1.8,
                                             color: _legalPageInk,
@@ -257,7 +261,7 @@ class PaymentSuccessPage extends StatelessWidget {
                                               label: localizedUiText(
                                                 locale.code,
                                                 ja: 'トップへ戻る',
-                                                en: 'Back to top',
+                                                en: 'Back to TOP',
                                               ),
                                               backgroundColor: _legalPageAccent,
                                               borderColor: _legalPageAccent,
@@ -292,7 +296,12 @@ class PaymentSuccessPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 56),
-                    AppSiteFooter(locale: locale, onBrandTap: onBackToTop),
+                    AppSiteFooter(
+                      locale: locale,
+                      onOpenLegalNotice: onOpenLegalNotice,
+                      onOpenTerms: onOpenTerms,
+                      onBrandTap: onBackToTop,
+                    ),
                   ],
                 ),
               ),
@@ -327,7 +336,7 @@ class _PaymentSection extends StatelessWidget {
           children: [
             Text(
               index,
-              style: GoogleFonts.manrope(
+              style: AppFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.8,
@@ -338,7 +347,7 @@ class _PaymentSection extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: GoogleFonts.notoSerifJp(
+                style: AppFonts.notoSerifJp(
                   fontSize: titleSize,
                   fontWeight: FontWeight.w700,
                   height: 1.4,
@@ -401,7 +410,7 @@ class _PaymentNote extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
@@ -411,7 +420,7 @@ class _PaymentNote extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             text,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 15,
               height: 1.7,
               color: _legalPageInk,
@@ -470,7 +479,7 @@ class _PaymentDefinitionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelWidget = Text(
       label,
-      style: GoogleFonts.manrope(
+      style: AppFonts.manrope(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: _legalPageMuted,
@@ -478,11 +487,7 @@ class _PaymentDefinitionRow extends StatelessWidget {
     );
     final valueWidget = Text(
       value,
-      style: GoogleFonts.manrope(
-        fontSize: 15,
-        height: 1.7,
-        color: _legalPageInk,
-      ),
+      style: AppFonts.manrope(fontSize: 15, height: 1.7, color: _legalPageInk),
     );
 
     if (isCompact) {
@@ -552,7 +557,7 @@ class _PaymentBulletItem extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.manrope(
+            style: AppFonts.manrope(
               fontSize: 15,
               height: 1.7,
               color: _legalPageInk,
@@ -595,7 +600,7 @@ class _LegalActionButton extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.manrope(
+              style: AppFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.1,

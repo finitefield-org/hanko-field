@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 import 'config/app_runtime_config.dart';
+import '../features/legal/presentation/legal_notice_page.dart';
+import '../features/legal/presentation/terms_page.dart';
 import '../features/top/presentation/top_page.dart';
 import '../features/order/data/order_draft_storage.dart';
 import '../features/order/presentation/order_page.dart';
@@ -22,7 +24,7 @@ class HankoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Hanko Field',
+      title: 'STONE SIGNATURE',
       debugShowCheckedModeBanner: false,
       theme: buildHfTheme(),
       home: const _AppRoot(),
@@ -65,6 +67,11 @@ class _AppRootState extends ConsumerState<_AppRoot> {
     AppLocale locale,
     bool showConfirmationLinks,
   ) {
+    final openLegalNotice = () => ref.invoke(appNavViewModel.showLegalNotice());
+    final openTerms = () => ref.invoke(appNavViewModel.showTerms());
+    final popTop = () => ref.invoke(appNavViewModel.popTop());
+    final popToRoot = () => ref.invoke(appNavViewModel.popToRoot());
+
     if (page.key == AppPageKey.top) {
       return TopPage(
         locale: locale,
@@ -72,6 +79,8 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         onStartDesign: () {
           ref.invoke(appNavViewModel.showDesign());
         },
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
       );
     }
 
@@ -80,8 +89,10 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         onBackToTop: () {
-          ref.invoke(appNavViewModel.popToRoot());
+          popToRoot();
         },
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
         onOpenPaymentSuccess: (sessionId, orderId) {
           ref.invoke(
             appNavViewModel.showPaymentSuccess(
@@ -97,6 +108,26 @@ class _AppRootState extends ConsumerState<_AppRoot> {
       );
     }
 
+    if (page.key == AppPageKey.legalNotice) {
+      return LegalNoticePage(
+        locale: locale,
+        onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
+        onBack: popToRoot,
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
+      );
+    }
+
+    if (page.key == AppPageKey.terms) {
+      return TermsPage(
+        locale: locale,
+        onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
+        onBack: popToRoot,
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
+      );
+    }
+
     if (page.key.startsWith(AppPageKey.paymentSuccess)) {
       final data = page.data is PaymentPageData
           ? page.data as PaymentPageData
@@ -107,8 +138,10 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         orderId: data?.orderId,
         sessionId: data?.sessionId,
         onBackToTop: () {
-          ref.invoke(appNavViewModel.popToRoot());
+          popToRoot();
         },
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
       );
     }
 
@@ -120,9 +153,11 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         orderId: data?.orderId,
-        onBackToPurchase: () {
-          ref.invoke(appNavViewModel.popTop());
+        onBackToTop: () {
+          popToRoot();
         },
+        onOpenLegalNotice: openLegalNotice,
+        onOpenTerms: openTerms,
       );
     }
 
