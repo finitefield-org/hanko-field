@@ -2318,8 +2318,8 @@ async fn handle_design(
             )
         },
         canonical_url: design_url(site_base_url, "en"),
-        lang_ja_url: design_url(site_base_url, "ja"),
-        lang_en_url: design_url(site_base_url, "en"),
+        lang_ja_url: design_url_with_filters(site_base_url, "ja", &material_filter_state),
+        lang_en_url: design_url_with_filters(site_base_url, "en", &material_filter_state),
         company_url: company_url(site_base_url),
         top_url: top_url(site_base_url, &selected_locale),
         terms_url: terms_url(site_base_url, &selected_locale),
@@ -3189,6 +3189,33 @@ fn top_url(base_url: &str, locale: &str) -> String {
 
 fn design_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/design", locale)
+}
+
+fn design_url_with_filters(
+    base_url: &str,
+    locale: &str,
+    filters: &MaterialFilterState,
+) -> String {
+    let base = reqwest::Url::parse(base_url.trim_end_matches('/'))
+        .expect("site base URL must be a valid absolute URL");
+    let mut url = base
+        .join(&localized_page_path("/design", locale))
+        .expect("failed to join site base URL with path");
+
+    {
+        let mut query_pairs = url.query_pairs_mut();
+        if !filters.color_family.is_empty() {
+            query_pairs.append_pair("color_family", &filters.color_family);
+        }
+        if !filters.pattern_primary.is_empty() {
+            query_pairs.append_pair("pattern_primary", &filters.pattern_primary);
+        }
+        if !filters.stone_shape.is_empty() {
+            query_pairs.append_pair("stone_shape", &filters.stone_shape);
+        }
+    }
+
+    url.to_string()
 }
 
 fn terms_url(base_url: &str, locale: &str) -> String {
@@ -4887,6 +4914,24 @@ mod tests {
         assert_eq!(
             company_url(TEST_SITE_BASE_URL),
             "https://finitefield.org/company/"
+        );
+    }
+
+    #[test]
+    fn design_url_with_filters_preserves_selected_facets() {
+        let filters = MaterialFilterState {
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            stone_shape: "oval".to_owned(),
+        };
+
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "en", &filters),
+            "https://finitefield.org/design?color_family=green&pattern_primary=cloud&stone_shape=oval"
+        );
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
+            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud&stone_shape=oval"
         );
     }
 

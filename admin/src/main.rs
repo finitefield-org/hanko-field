@@ -5573,7 +5573,9 @@ impl ServerState {
         }
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
-        let status = "draft".to_owned();
+        let status = normalize_stone_listing_status(&input.status)
+            .ok_or_else(|| "公開状態を選択してください。".to_owned())?
+            .to_owned();
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -5614,6 +5616,11 @@ impl ServerState {
             }
 
             let now = Utc::now();
+            let published_at = if stone_listing_is_published(&status) {
+                Some(now)
+            } else {
+                None
+            };
             let listing = StoneListing {
                 key: key.clone(),
                 listing_code,
@@ -5651,7 +5658,7 @@ impl ServerState {
                 ]),
                 status,
                 is_active: input.is_active,
-                published_at: None,
+                published_at,
                 sort_order: input.sort_order,
                 version: 1,
                 updated_at: now,
@@ -11257,6 +11264,26 @@ mod tests {
         let result = state.create_stone_listing(input).await;
 
         assert!(matches!(result, Err(message) if message.contains("写真")));
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_honors_status_and_publication_time() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.stone_listing_key = "jade_variant_02".to_owned();
+        input.status = "published".to_owned();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(result.is_ok());
+
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_variant_02")
+            .expect("listing should exist after creation");
+        assert_eq!(listing.status, "published");
+        assert!(listing.published_at.is_some());
     }
 
     #[tokio::test]
