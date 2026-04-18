@@ -141,7 +141,23 @@
   const previewLine2 = document.getElementById("seal-preview-line2");
   const previewCaption = document.getElementById("preview-caption");
   const materialRadios = Array.from(form.querySelectorAll("input[name='material']"));
-  const flexibleMaterialKeys = new Set(["rose_quartz", "lapis_lazuli", "jade"]);
+  const materialFilterGroups = Array.from(
+    document.querySelectorAll("[data-material-filter-group]"),
+  );
+  const materialFilterResetButton = document.querySelector(
+    "[data-material-filter-reset]",
+  );
+  const materialFilterSummary = document.querySelector(
+    "[data-material-filter-summary]",
+  );
+  const materialFilterEmpty = document.querySelector(
+    "[data-material-filter-empty]",
+  );
+  const materialFilterState = {
+    color: normalizeMaterialFilterValue(currentUrl.searchParams.get("color_family") || ""),
+    pattern: normalizeMaterialFilterValue(currentUrl.searchParams.get("pattern_primary") || ""),
+    stoneShape: normalizeMaterialFilterValue(currentUrl.searchParams.get("stone_shape") || ""),
+  };
 
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
@@ -366,6 +382,12 @@
         return;
       }
 
+      if (target >= 3 && !selectedMaterial()) {
+        updateSummary();
+        showStep(2);
+        return;
+      }
+
       updateSummary();
       showStep(target);
     });
@@ -441,6 +463,136 @@
 
   function selectedMaterial() {
     return materialRadios.find((radio) => radio.checked && !radio.disabled) || null;
+  }
+
+  function normalizeMaterialFilterValue(rawValue) {
+    return (rawValue || "").trim().toLowerCase();
+  }
+
+  function parseMaterialFilterValues(rawValue) {
+    return (rawValue || "")
+      .split("|")
+      .map((value) => normalizeMaterialFilterValue(value))
+      .filter((value) => value !== "");
+  }
+
+  function updateMaterialFilterChipStates() {
+    materialFilterGroups.forEach((group) => {
+      const groupName = group.dataset.materialFilterGroup || "";
+      const activeValue = normalizeMaterialFilterValue(
+        materialFilterState[groupName] || "",
+      );
+
+      group.querySelectorAll(".material-filter-chip").forEach((button) => {
+        const buttonValue = normalizeMaterialFilterValue(
+          button.dataset.filterValue || "",
+        );
+        const isSelected = buttonValue === activeValue;
+        button.classList.toggle("is-selected", isSelected);
+        button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      });
+    });
+  }
+
+  function syncMaterialFilterUrl() {
+    const nextUrl = new URL(window.location.href);
+
+    if (materialFilterState.color) {
+      nextUrl.searchParams.set("color_family", materialFilterState.color);
+    } else {
+      nextUrl.searchParams.delete("color_family");
+    }
+
+    if (materialFilterState.pattern) {
+      nextUrl.searchParams.set("pattern_primary", materialFilterState.pattern);
+    } else {
+      nextUrl.searchParams.delete("pattern_primary");
+    }
+
+    if (materialFilterState.stoneShape) {
+      nextUrl.searchParams.set("stone_shape", materialFilterState.stoneShape);
+    } else {
+      nextUrl.searchParams.delete("stone_shape");
+    }
+
+    window.history.replaceState(
+      null,
+      "",
+      `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+    );
+  }
+
+  function syncMaterialFilters() {
+    const shape = selectedShape();
+    const visibleRadios = [];
+    let selectedVisibleRadio = null;
+    let visibleCount = 0;
+
+    materialRadios.forEach((radio) => {
+      const card = radio.closest(".material-card");
+      const supportedSealShapes = parseMaterialFilterValues(
+        radio.dataset.supportedSealShapes || "",
+      );
+      const matchesShape =
+        supportedSealShapes.length === 0
+          ? (radio.dataset.shape || "square") === shape
+          : supportedSealShapes.includes(shape);
+      const colorFamily = normalizeMaterialFilterValue(
+        radio.dataset.colorFamily || "",
+      );
+      const patternPrimary = normalizeMaterialFilterValue(
+        radio.dataset.patternPrimary || "",
+      );
+      const stoneShape = normalizeMaterialFilterValue(radio.dataset.stoneShape || "");
+      const colorFilter = normalizeMaterialFilterValue(materialFilterState.color);
+      const patternFilter = normalizeMaterialFilterValue(materialFilterState.pattern);
+      const stoneShapeFilter = normalizeMaterialFilterValue(
+        materialFilterState.stoneShape,
+      );
+      const matchesColor = colorFilter === "" || colorFamily === colorFilter;
+      const matchesPattern = patternFilter === "" || patternPrimary === patternFilter;
+      const matchesStoneShape =
+        stoneShapeFilter === "" || stoneShape === stoneShapeFilter;
+      const matches =
+        matchesShape && matchesColor && matchesPattern && matchesStoneShape;
+
+      radio.disabled = !matches;
+      if (card) {
+        card.hidden = !matches;
+      }
+      if (!matches && radio.checked) {
+        radio.checked = false;
+      }
+      if (matches) {
+        visibleCount += 1;
+        visibleRadios.push(radio);
+        if (radio.checked) {
+          selectedVisibleRadio = radio;
+        }
+      }
+    });
+
+    if (!selectedVisibleRadio && visibleRadios.length > 0) {
+      visibleRadios[0].checked = true;
+      selectedVisibleRadio = visibleRadios[0];
+    }
+
+    updateMaterialFilterChipStates();
+    syncShapeOptionStates();
+    syncMaterialFilterUrl();
+
+    if (materialFilterSummary) {
+      materialFilterSummary.textContent = localizedText(
+        `${visibleCount}件の材質が表示されています。`,
+        `${visibleCount} materials are shown.`,
+      );
+    }
+    if (materialFilterEmpty) {
+      materialFilterEmpty.hidden = visibleCount > 0;
+    }
+
+    renderPurchaseStatus();
+    return selectedVisibleRadio;
   }
 
   function selectedCountry() {
@@ -667,6 +819,18 @@
       });
     }
 
+    if (!selectedMaterial()) {
+      groups.push({
+        label: localizedText("材質", "Material"),
+        items: [
+          localizedText(
+            "材質を選択してください。",
+            "Choose a material before continuing.",
+          ),
+        ],
+      });
+    }
+
     const shippingIssues = [];
     if ((recipientNameInput?.value.trim() || "") === "") {
       shippingIssues.push(
@@ -838,36 +1002,7 @@
   }
 
   function syncMaterialOptionsByShape() {
-    const shape = selectedShape();
-    const visibleRadios = [];
-    let selectedVisibleRadio = null;
-
-    materialRadios.forEach((radio) => {
-      const card = radio.closest(".material-card");
-      const materialKey = (radio.value || "").trim();
-      const matchesShape =
-        flexibleMaterialKeys.has(materialKey) ||
-        (radio.dataset.shape || "square") === shape;
-      radio.disabled = !matchesShape;
-      if (card) {
-        card.hidden = !matchesShape;
-      }
-      if (!matchesShape && radio.checked) {
-        radio.checked = false;
-      }
-      if (matchesShape) {
-        visibleRadios.push(radio);
-        if (radio.checked) {
-          selectedVisibleRadio = radio;
-        }
-      }
-    });
-
-    if (!selectedVisibleRadio && visibleRadios.length > 0) {
-      visibleRadios[0].checked = true;
-    }
-
-    syncShapeOptionStates();
+    syncMaterialFilters();
   }
 
   form.querySelectorAll("[data-next-step]").forEach((button) => {
@@ -875,6 +1010,12 @@
       const next = Number(button.dataset.nextStep);
       if (next >= 2 && !validateSealText()) {
         showStep(1);
+        return;
+      }
+
+      if (next >= 3 && !selectedMaterial()) {
+        updateSummary();
+        showStep(2);
         return;
       }
 
@@ -922,6 +1063,40 @@
       updatePreview();
       updateSummary();
     });
+  });
+
+  materialFilterGroups.forEach((group) => {
+    group.addEventListener("click", (event) => {
+      const button = event.target.closest(".material-filter-chip");
+      if (!button) {
+        return;
+      }
+
+      const groupName = group.dataset.materialFilterGroup || "";
+      if (!groupName || !(groupName in materialFilterState)) {
+        return;
+      }
+
+      const selectedValue = normalizeMaterialFilterValue(
+        button.dataset.filterValue || "",
+      );
+      const currentValue = normalizeMaterialFilterValue(
+        materialFilterState[groupName],
+      );
+      materialFilterState[groupName] = currentValue === selectedValue ? "" : selectedValue;
+      syncMaterialFilters();
+      updatePreview();
+      updateSummary();
+    });
+  });
+
+  materialFilterResetButton?.addEventListener("click", () => {
+    materialFilterState.color = "";
+    materialFilterState.pattern = "";
+    materialFilterState.stoneShape = "";
+    syncMaterialFilters();
+    updatePreview();
+    updateSummary();
   });
 
   materialRadios.forEach((radio) => {

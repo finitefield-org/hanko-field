@@ -295,6 +295,56 @@
             </p>
           </div>
 
+          <div class="material-filter-panel" data-material-filter-panel>
+            <div class="material-filter-panel__header">
+              <p class="material-filter-panel__title">{% if selected_locale == "ja" %}絞り込み{% else %}Filters{% endif %}</p>
+              <button type="button" class="material-filter-reset" data-material-filter-reset>
+                {% if selected_locale == "ja" %}すべて解除{% else %}Clear all{% endif %}
+              </button>
+            </div>
+
+            <div class="material-filter-groups">
+              <div class="material-filter-group">
+                <span class="material-filter-group__label">{% if selected_locale == "ja" %}色{% else %}Color{% endif %}</span>
+                <div class="material-filter-chip-list" data-material-filter-group="color" role="group" aria-label="{% if selected_locale == "ja" %}色で絞り込む{% else %}Filter by color{% endif %}">
+                  <button type="button" class="material-filter-chip{% if selected_color_family == "" %} is-selected{% endif %}" data-filter-value="" aria-pressed="{% if selected_color_family == "" %}true{% else %}false{% endif %}">{% if selected_locale == "ja" %}すべて{% else %}All{% endif %}</button>
+                  {% for option in material_filters.color_options %}
+                  <button type="button" class="material-filter-chip{% if option.value == selected_color_family %} is-selected{% endif %}" data-filter-value="{{ option.value }}" aria-pressed="{% if option.value == selected_color_family %}true{% else %}false{% endif %}">{{ option.label }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="material-filter-group">
+                <span class="material-filter-group__label">{% if selected_locale == "ja" %}模様{% else %}Pattern{% endif %}</span>
+                <div class="material-filter-chip-list" data-material-filter-group="pattern" role="group" aria-label="{% if selected_locale == "ja" %}模様で絞り込む{% else %}Filter by pattern{% endif %}">
+                  <button type="button" class="material-filter-chip{% if selected_pattern_primary == "" %} is-selected{% endif %}" data-filter-value="" aria-pressed="{% if selected_pattern_primary == "" %}true{% else %}false{% endif %}">{% if selected_locale == "ja" %}すべて{% else %}All{% endif %}</button>
+                  {% for option in material_filters.pattern_options %}
+                  <button type="button" class="material-filter-chip{% if option.value == selected_pattern_primary %} is-selected{% endif %}" data-filter-value="{{ option.value }}" aria-pressed="{% if option.value == selected_pattern_primary %}true{% else %}false{% endif %}">{{ option.label }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="material-filter-group">
+                <span class="material-filter-group__label">{% if selected_locale == "ja" %}石の形{% else %}Stone shape{% endif %}</span>
+                <div class="material-filter-chip-list" data-material-filter-group="stoneShape" role="group" aria-label="{% if selected_locale == "ja" %}石の形で絞り込む{% else %}Filter by stone shape{% endif %}">
+                  <button type="button" class="material-filter-chip{% if selected_stone_shape == "" %} is-selected{% endif %}" data-filter-value="" aria-pressed="{% if selected_stone_shape == "" %}true{% else %}false{% endif %}">{% if selected_locale == "ja" %}すべて{% else %}All{% endif %}</button>
+                  {% for option in material_filters.stone_shape_options %}
+                  <button type="button" class="material-filter-chip{% if option.value == selected_stone_shape %} is-selected{% endif %}" data-filter-value="{{ option.value }}" aria-pressed="{% if option.value == selected_stone_shape %}true{% else %}false{% endif %}">{{ option.label }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <p class="material-filter-summary" data-material-filter-summary aria-live="polite"></p>
+            <p class="material-filter-empty" data-material-filter-empty hidden>
+              {% if selected_locale == "ja" %}
+              条件に一致する材質がありません。フィルタを解除してください。
+              {% else %}
+              No materials match the current filters. Clear one or more filters.
+              {% endif %}
+            </p>
+          </div>
+
           <div class="material-grid">
             {% for m in materials %}
             <label class="material-card">
@@ -304,6 +354,10 @@
                 value="{{ m.key }}"
                 data-label="{{ m.label }}"
                 data-shape="{{ m.shape }}"
+                data-color-family="{{ m.color_family }}"
+                data-pattern-primary="{{ m.pattern_primary }}"
+                data-stone-shape="{{ m.stone_shape }}"
+                data-supported-seal-shapes="{{ m.supported_seal_shapes_csv }}"
                 data-price="{{ m.price }}"
                 {% if loop.first %}checked{% endif %}
               >
@@ -315,6 +369,30 @@
               <span class="material-name">{{ m.label }}</span>
               <span class="material-description">{{ m.shape_label }}</span>
               <span class="material-description">{{ m.description }}</span>
+              {% if m.has_color_tag_labels || m.has_pattern_tag_labels %}
+              <div class="material-tags">
+                {% if m.has_color_tag_labels %}
+                <div class="material-tag-group">
+                  <span class="material-tag-group-label">{% if selected_locale == "ja" %}色{% else %}Color{% endif %}</span>
+                  <div class="material-tag-list" role="list">
+                    {% for tag in m.color_tag_labels %}
+                    <span class="material-tag-chip" role="listitem">{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+                {% if m.has_pattern_tag_labels %}
+                <div class="material-tag-group">
+                  <span class="material-tag-group-label">{% if selected_locale == "ja" %}模様{% else %}Pattern{% endif %}</span>
+                  <div class="material-tag-list" role="list">
+                    {% for tag in m.pattern_tag_labels %}
+                    <span class="material-tag-chip" role="listitem">{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
               <div class="material-comparison" aria-label="{% if selected_locale == "ja" %}比較ポイント{% else %}Comparison points{% endif %}">
                 <span class="material-comparison-item">
                   <span class="material-comparison-label">{% if selected_locale == "ja" %}質感{% else %}Texture{% endif %}</span>
