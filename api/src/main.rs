@@ -229,6 +229,7 @@ struct OrderCheckoutContext {
     order_locale: String,
     status: String,
     payment_status: String,
+    listing_key: String,
     listing_label: String,
     listing_code: String,
     material_label: String,
@@ -1168,6 +1169,23 @@ async fn handle_create_stripe_checkout_session(
         Ok(v) => v,
         Err(err) => {
             eprintln!("failed to create stripe checkout session: {err:#}");
+            if let Err(rollback_err) = state
+                .store
+                .cancel_pending_order_and_release_listing(
+                    &order.order_id,
+                    order.listing_key.as_str(),
+                )
+                .await
+            {
+                eprintln!(
+                    "failed to roll back reserved listing after stripe checkout failure: {rollback_err:#}"
+                );
+                return error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    "internal server error",
+                );
+            }
             return error_response(
                 StatusCode::BAD_GATEWAY,
                 "stripe_checkout_failed",
@@ -1182,6 +1200,18 @@ async fn handle_create_stripe_checkout_session(
         .await
     {
         eprintln!("failed to persist stripe checkout session id: {err}");
+        if let Err(rollback_err) = state
+            .store
+            .cancel_pending_order_and_release_listing(
+                &order.order_id,
+                order.listing_key.as_str(),
+            )
+            .await
+        {
+            eprintln!(
+                "failed to roll back reserved listing after persisting stripe checkout session id failed: {rollback_err:#}"
+            );
+        }
         return error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "internal",
@@ -1947,6 +1977,7 @@ impl FirestoreStore {
             order_locale: resolved_order_locale,
             status: read_string_field(&order_doc.fields, "status"),
             payment_status: read_string_field(&payment, "status"),
+            listing_key: read_string_field(&listing, "key"),
             listing_label: first_non_empty(&[
                 Some(listing_label),
                 Some(fallback_listing_label),
@@ -2003,6 +2034,152 @@ impl FirestoreStore {
             .patch_document(
                 &order_doc_name,
                 &order_doc,
+                &PatchDocumentOptions::default(),
+            )
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        Ok(())
+    }
+
+    async fn cancel_pending_order_and_release_listing(
+        &self,
+        order_id: &str,
+        listing_key: &str,
+    ) -> Result<(), StoreError> {
+        let listing_key = listing_key.trim();
+        if listing_key.is_empty() {
+            return Ok(());
+        }
+
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+        let listing_doc_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+        let now = Utc::now();
+
+        let order_doc = client
+            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+        let order_update_time = order_doc.update_time.clone().ok_or_else(|| {
+            StoreError::Internal(anyhow!(
+                "orders/{order_id} is missing update_time"
+            ))
+        })?;
+        let mut payment = read_map_field(&order_doc.fields, "payment");
+        payment.insert("status".to_owned(), fs_string("failed"));
+
+        let mut writes = vec![json!({
+            "update": {
+                "name": order_doc_name,
+                "fields": {
+                    "payment": fs_map(payment),
+                    "status": fs_string("canceled"),
+                    "status_updated_at": fs_timestamp(now),
+                    "updated_at": fs_timestamp(now),
+                }
+            },
+            "updateMask": {
+                "fieldPaths": ["payment", "status", "status_updated_at", "updated_at"]
+            },
+            "currentDocument": {
+                "updateTime": order_update_time
+            }
+        })];
+
+        let listing_doc = client
+            .get_document(&listing_doc_name, &GetDocumentOptions::default())
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+        let target_listing_status = stone_listing_status_after_order_status("canceled")
+            .unwrap_or("published");
+        let current_listing_status = read_string_field(&listing_doc.fields, "status");
+        if !current_listing_status
+            .trim()
+            .eq_ignore_ascii_case(target_listing_status)
+        {
+            let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
+                StoreError::Internal(anyhow!(
+                    "stone_listings/{listing_key} is missing update_time"
+                ))
+            })?;
+            let listing_version =
+                read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+            writes.push(json!({
+                "update": {
+                    "name": listing_doc_name,
+                    "fields": {
+                        "status": fs_string(target_listing_status),
+                        "version": fs_int(listing_version + 1),
+                        "updated_at": fs_timestamp(now),
+                    }
+                },
+                "updateMask": {
+                    "fieldPaths": ["status", "version", "updated_at"]
+                },
+                "currentDocument": {
+                    "updateTime": listing_update_time
+                }
+            }));
+        }
+
+        client
+            .commit(
+                &self.parent,
+                &CommitRequest {
+                    writes,
+                    transaction: None,
+                },
+            )
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        Ok(())
+    }
+
+    async fn update_stone_listing_status(
+        &self,
+        listing_key: &str,
+        next_status: &str,
+    ) -> Result<(), StoreError> {
+        let listing_key = listing_key.trim();
+        if listing_key.is_empty() {
+            return Ok(());
+        }
+
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let listing_doc_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+        let mut listing_doc = client
+            .get_document(&listing_doc_name, &GetDocumentOptions::default())
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        let current_status = read_string_field(&listing_doc.fields, "status");
+        if current_status.trim().eq_ignore_ascii_case(next_status) {
+            return Ok(());
+        }
+
+        let listing_version = read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+        listing_doc
+            .fields
+            .insert("status".to_owned(), fs_string(next_status));
+        listing_doc
+            .fields
+            .insert("version".to_owned(), fs_int(listing_version + 1));
+        listing_doc
+            .fields
+            .insert("updated_at".to_owned(), fs_timestamp(Utc::now()));
+
+        client
+            .patch_document(
+                &listing_doc_name,
+                &listing_doc,
                 &PatchDocumentOptions::default(),
             )
             .await
@@ -2326,7 +2503,16 @@ impl FirestoreStore {
         ]);
         if after_status != order_status {
             event_fields.insert("before_status".to_owned(), fs_string(order_status));
-            event_fields.insert("after_status".to_owned(), fs_string(after_status));
+            event_fields.insert("after_status".to_owned(), fs_string(&after_status));
+        }
+
+        if let Some(listing_status) = stone_listing_status_after_order_status(&after_status) {
+            let listing = read_map_field(&order_doc.fields, "listing");
+            let listing_key = read_string_field(&listing, "key");
+            if !listing_key.is_empty() {
+                self.update_stone_listing_status(&listing_key, listing_status)
+                    .await?;
+            }
         }
 
         client
@@ -3865,6 +4051,14 @@ fn stripe_transition(event_type: &str) -> (&'static str, &'static str, &'static 
     }
 }
 
+fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str> {
+    match status {
+        "paid" => Some("sold"),
+        "canceled" => Some("published"),
+        _ => None,
+    }
+}
+
 fn can_transition(current: &str, next: &str) -> bool {
     match current {
         "pending_payment" => matches!(next, "paid" | "canceled"),
@@ -4261,6 +4455,16 @@ mod tests {
     }
 
     #[test]
+    fn stone_listing_status_follows_paid_and_canceled_orders() {
+        assert_eq!(stone_listing_status_after_order_status("paid"), Some("sold"));
+        assert_eq!(
+            stone_listing_status_after_order_status("canceled"),
+            Some("published")
+        );
+        assert_eq!(stone_listing_status_after_order_status("refunded"), None);
+    }
+
+    #[test]
     fn resolve_currency_for_locale_uses_locale_map_and_default() {
         let mut currency_by_locale = HashMap::new();
         currency_by_locale.insert("ja".to_owned(), "JPY".to_owned());
@@ -4370,6 +4574,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
+            listing_key: String::new(),
             listing_label: String::new(),
             listing_code: String::new(),
             material_label: "翡翠".to_owned(),
@@ -4397,6 +4602,7 @@ mod tests {
             order_locale: "en".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
+            listing_key: String::new(),
             listing_label: String::new(),
             listing_code: String::new(),
             material_label: "Jade".to_owned(),
@@ -4427,6 +4633,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
+            listing_key: String::new(),
             listing_label: String::new(),
             listing_code: String::new(),
             material_label: "翡翠".to_owned(),
@@ -4480,6 +4687,7 @@ mod tests {
             order_locale: "ja".to_owned(),
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
+            listing_key: String::new(),
             listing_label: String::new(),
             listing_code: String::new(),
             material_label: "翡翠".to_owned(),

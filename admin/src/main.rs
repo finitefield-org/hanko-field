@@ -18,7 +18,7 @@ use axum::{
 use chrono::{DateTime, Local, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
     CreateDocumentOptions, DeleteDocumentOptions, Document, FirebaseFirestoreClient,
-    PatchDocumentOptions, RunQueryRequest,
+    GetDocumentOptions, PatchDocumentOptions, RunQueryRequest,
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -6775,6 +6775,11 @@ impl FirestoreAdminSource {
         let client = self.firestore_client().await?;
 
         let order_name = format!("{}/orders/{}", self.parent, order.id);
+        let existing_order = client
+            .get_document(&order_name, &GetDocumentOptions::default())
+            .await
+            .context("failed to load order for listing sync")?;
+        let listing_key = read_string_field(&read_map_field(&existing_order.fields, "listing"), "key");
 
         let mut fulfillment_fields = btree_from_pairs(vec![
             (
@@ -6830,6 +6835,38 @@ impl FirestoreAdminSource {
             )
             .await
             .context("failed to persist order mutation")?;
+
+        if let Some(listing_status) = stone_listing_status_after_order_status(&order.status) {
+            if !listing_key.is_empty() {
+                let listing_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+                let mut listing_doc = client
+                    .get_document(&listing_name, &GetDocumentOptions::default())
+                    .await
+                    .context("failed to load stone listing for order mutation")?;
+                let current_listing_status = read_string_field(&listing_doc.fields, "status");
+                if !current_listing_status.trim().eq_ignore_ascii_case(listing_status) {
+                    let listing_version =
+                        read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+                    listing_doc
+                        .fields
+                        .insert("status".to_owned(), fs_string(listing_status));
+                    listing_doc
+                        .fields
+                        .insert("version".to_owned(), fs_int(listing_version + 1));
+                    listing_doc
+                        .fields
+                        .insert("updated_at".to_owned(), fs_timestamp(order.updated_at));
+                    client
+                        .patch_document(
+                            &listing_name,
+                            &listing_doc,
+                            &PatchDocumentOptions::default(),
+                        )
+                        .await
+                        .context("failed to persist stone listing status")?;
+                }
+            }
+        }
 
         for event in events {
             let event_document = Document {
@@ -8372,6 +8409,14 @@ fn stone_listing_status_label(status: &str) -> &'static str {
         "sold" => "売却済み",
         "archived" => "保管",
         _ => "下書き",
+    }
+}
+
+fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str> {
+    match status.trim() {
+        "paid" => Some("sold"),
+        "canceled" => Some("published"),
+        _ => None,
     }
 }
 
@@ -11309,6 +11354,16 @@ mod tests {
         assert_eq!(detail.status_label, "製造中");
         assert_eq!(detail.payment_status_label, "支払い済み");
         assert_eq!(detail.fulfillment_status_label, "製造中");
+    }
+
+    #[test]
+    fn stone_listing_status_tracks_order_resolution() {
+        assert_eq!(stone_listing_status_after_order_status("paid"), Some("sold"));
+        assert_eq!(
+            stone_listing_status_after_order_status("canceled"),
+            Some("published")
+        );
+        assert_eq!(stone_listing_status_after_order_status("refunded"), None);
     }
 
     #[tokio::test]
