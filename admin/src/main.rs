@@ -153,6 +153,7 @@ struct StoneListing {
     price_by_currency: HashMap<String, i64>,
     status: String,
     is_active: bool,
+    published_at: Option<DateTime<Utc>>,
     sort_order: i64,
     version: i64,
     updated_at: DateTime<Utc>,
@@ -286,6 +287,11 @@ impl AdminSnapshot {
                 (Some(left_listing), Some(right_listing)) => left_listing
                     .sort_order
                     .cmp(&right_listing.sort_order)
+                    .then_with(|| {
+                        stone_listing_published_at_sort_key(left_listing)
+                            .cmp(&stone_listing_published_at_sort_key(right_listing))
+                            .reverse()
+                    })
                     .then_with(|| left_listing.key.cmp(&right_listing.key)),
                 _ => left.cmp(right),
             }
@@ -5567,9 +5573,7 @@ impl ServerState {
         }
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
-        let status = normalize_stone_listing_status(&input.status)
-            .ok_or_else(|| "公開状態を選択してください。".to_owned())?
-            .to_owned();
+        let status = "draft".to_owned();
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -5647,6 +5651,7 @@ impl ServerState {
                 ]),
                 status,
                 is_active: input.is_active,
+                published_at: None,
                 sort_order: input.sort_order,
                 version: 1,
                 updated_at: now,
@@ -5841,6 +5846,7 @@ impl ServerState {
             };
 
             let now = Utc::now();
+            let was_published = stone_listing_is_published(&listing.status);
             listing.listing_code = listing_code;
             listing.material_key = material_key;
             listing.title_i18n.insert("ja".to_owned(), title_ja);
@@ -5864,6 +5870,11 @@ impl ServerState {
                 ("USD".to_owned(), input.price_usd),
                 ("JPY".to_owned(), input.price_jpy),
             ]);
+            if stone_listing_is_published(&status)
+                && (!was_published || listing.published_at.is_none())
+            {
+                listing.published_at = Some(now);
+            }
             listing.status = status;
             listing.is_active = input.is_active;
             listing.sort_order = input.sort_order;
@@ -6396,6 +6407,7 @@ impl FirestoreAdminSource {
                     price_by_currency,
                     status: read_string_field(data, "status"),
                     is_active: read_bool_field(data, "is_active").unwrap_or(true),
+                    published_at: read_timestamp_field(data, "published_at"),
                     sort_order: read_int_field(data, "sort_order").unwrap_or_default(),
                     version: read_int_field(data, "version").unwrap_or(1),
                     updated_at: read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now),
@@ -6844,12 +6856,21 @@ impl FirestoreAdminSource {
                     .await
                     .context("failed to load stone listing for order mutation")?;
                 let current_listing_status = read_string_field(&listing_doc.fields, "status");
-                if !current_listing_status.trim().eq_ignore_ascii_case(listing_status) {
+                let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
+                if !current_listing_status.trim().eq_ignore_ascii_case(listing_status)
+                    || (listing_status.eq_ignore_ascii_case("published")
+                        && current_published_at.is_none())
+                {
                     let listing_version =
                         read_int_field(&listing_doc.fields, "version").unwrap_or_default();
                     listing_doc
                         .fields
                         .insert("status".to_owned(), fs_string(listing_status));
+                    if listing_status.eq_ignore_ascii_case("published") {
+                        listing_doc
+                            .fields
+                            .insert("published_at".to_owned(), fs_timestamp(order.updated_at));
+                    }
                     listing_doc
                         .fields
                         .insert("version".to_owned(), fs_int(listing_version + 1));
@@ -6988,22 +7009,28 @@ impl FirestoreAdminSource {
                 &listing_name,
                 &document,
                 &PatchDocumentOptions {
-                    update_mask_field_paths: vec![
-                        "listing_code".to_owned(),
-                        "material_key".to_owned(),
-                        "title_i18n".to_owned(),
-                        "description_i18n".to_owned(),
-                        "story_i18n".to_owned(),
-                        "facets".to_owned(),
-                        "supported_seal_shapes".to_owned(),
-                        "photos".to_owned(),
-                        "price_by_currency".to_owned(),
-                        "status".to_owned(),
-                        "is_active".to_owned(),
-                        "sort_order".to_owned(),
-                        "version".to_owned(),
-                        "updated_at".to_owned(),
-                    ],
+                    update_mask_field_paths: {
+                        let mut fields = vec![
+                            "listing_code".to_owned(),
+                            "material_key".to_owned(),
+                            "title_i18n".to_owned(),
+                            "description_i18n".to_owned(),
+                            "story_i18n".to_owned(),
+                            "facets".to_owned(),
+                            "supported_seal_shapes".to_owned(),
+                            "photos".to_owned(),
+                            "price_by_currency".to_owned(),
+                            "status".to_owned(),
+                            "is_active".to_owned(),
+                            "sort_order".to_owned(),
+                            "version".to_owned(),
+                            "updated_at".to_owned(),
+                        ];
+                        if listing.published_at.is_some() {
+                            fields.push("published_at".to_owned());
+                        }
+                        fields
+                    },
                     ..PatchDocumentOptions::default()
                 },
             )
@@ -8401,6 +8428,10 @@ fn seal_shape_label(shape: &str) -> &'static str {
     stone_shape_label(shape)
 }
 
+fn stone_listing_is_published(status: &str) -> bool {
+    status.trim().eq_ignore_ascii_case("published")
+}
+
 fn stone_listing_status_label(status: &str) -> &'static str {
     match normalize_stone_listing_status(status).unwrap_or("draft") {
         "draft" => "下書き",
@@ -8417,6 +8448,14 @@ fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str>
         "paid" => Some("sold"),
         "canceled" => Some("published"),
         _ => None,
+    }
+}
+
+fn stone_listing_published_at_sort_key(listing: &StoneListing) -> DateTime<Utc> {
+    if stone_listing_is_published(&listing.status) {
+        listing.published_at.unwrap_or(DateTime::<Utc>::UNIX_EPOCH)
+    } else {
+        DateTime::<Utc>::UNIX_EPOCH
     }
 }
 
@@ -10060,6 +10099,10 @@ fn stone_listing_snapshot_fields(listing: &StoneListing) -> BTreeMap<String, Jso
         ("updated_at", fs_timestamp(listing.updated_at)),
     ]);
 
+    if let Some(published_at) = listing.published_at {
+        fields.insert("published_at".to_owned(), fs_timestamp(published_at));
+    }
+
     if listing.listing_code.trim().is_empty() {
         fields.remove("listing_code");
     }
@@ -10682,6 +10725,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 ]),
                 status: "published".to_owned(),
                 is_active: true,
+                published_at: Some(now - chrono::Duration::hours(40)),
                 sort_order: 10,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(34),
@@ -10745,6 +10789,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 ]),
                 status: "published".to_owned(),
                 is_active: true,
+                published_at: Some(now - chrono::Duration::hours(30)),
                 sort_order: 20,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(28),
@@ -10807,6 +10852,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 ]),
                 status: "reserved".to_owned(),
                 is_active: true,
+                published_at: None,
                 sort_order: 30,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(14),

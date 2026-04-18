@@ -838,7 +838,7 @@ impl FirestoreCatalogSource {
         locale: &str,
     ) -> Result<FacetTagLabels> {
         let documents = match self
-            .run_documents_query(client, parent, "facet_tags", false)
+            .run_documents_query(client, parent, "facet_tags", false, false)
             .await
         {
             Ok(documents) => documents,
@@ -897,7 +897,7 @@ impl FirestoreCatalogSource {
         locale: &str,
     ) -> Result<Vec<StoneListingRecord>> {
         let documents = self
-            .query_active_documents(client, parent, "stone_listings")
+            .run_documents_query(client, parent, "stone_listings", false, true)
             .await?;
 
         let mut listings = Vec::with_capacity(documents.len());
@@ -1091,7 +1091,7 @@ impl FirestoreCatalogSource {
         collection: &str,
     ) -> Result<Vec<Document>> {
         let documents = self
-            .run_documents_query(client, parent, collection, true)
+            .run_documents_query(client, parent, collection, true, false)
             .await?;
         if documents.is_empty() {
             bail!("no active {collection} found in firestore");
@@ -1106,6 +1106,7 @@ impl FirestoreCatalogSource {
         parent: &str,
         collection: &str,
         active_only: bool,
+        sort_by_published_at: bool,
     ) -> Result<Vec<Document>> {
         let query = RunQueryRequest {
             structured_query: Some({
@@ -1142,7 +1143,20 @@ impl FirestoreCatalogSource {
             let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
             left_sort_order
                 .cmp(&right_sort_order)
-                .then_with(|| document_id(left).cmp(&document_id(right)))
+                .then_with(|| {
+                    if sort_by_published_at {
+                        let left_published_at = read_timestamp_field(&left.fields, "published_at")
+                            .unwrap_or_default();
+                        let right_published_at =
+                            read_timestamp_field(&right.fields, "published_at")
+                                .unwrap_or_default();
+                        right_published_at
+                            .cmp(&left_published_at)
+                            .then_with(|| document_id(left).cmp(&document_id(right)))
+                    } else {
+                        document_id(left).cmp(&document_id(right))
+                    }
+                })
         });
         Ok(documents)
     }
@@ -3943,6 +3957,21 @@ fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> 
     value
         .as_i64()
         .or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok()))
+}
+
+fn read_timestamp_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<String> {
+    let value = data.get(key)?;
+    let raw = value
+        .get("timestampValue")
+        .and_then(JsonValue::as_str)
+        .or_else(|| value.as_str())?;
+
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_owned())
+    }
 }
 
 fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, i64> {

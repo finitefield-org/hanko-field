@@ -1428,7 +1428,13 @@ impl FirestoreStore {
     }
 
     async fn list_active_stone_listings(&self) -> Result<Vec<StoneListing>> {
-        let documents = self.query_active_documents("stone_listings").await?;
+        let client = self.firestore_client().await?;
+        let documents = self
+            .run_documents_query(&client, "stone_listings", false, true)
+            .await?;
+        if documents.is_empty() {
+            bail!("no stone_listings found in firestore");
+        }
         let mut listings = Vec::with_capacity(documents.len());
 
         for document in documents {
@@ -1515,7 +1521,9 @@ impl FirestoreStore {
 
     async fn query_active_documents(&self, collection: &str) -> Result<Vec<Document>> {
         let client = self.firestore_client().await?;
-        let documents = self.run_documents_query(&client, collection, true).await?;
+        let documents = self
+            .run_documents_query(&client, collection, true, false)
+            .await?;
         if documents.is_empty() {
             bail!("no active {collection} found in firestore");
         }
@@ -1528,6 +1536,7 @@ impl FirestoreStore {
         client: &FirebaseFirestoreClient,
         collection: &str,
         active_only: bool,
+        sort_by_published_at: bool,
     ) -> Result<Vec<Document>> {
         let query = RunQueryRequest {
             structured_query: Some({
@@ -1564,7 +1573,20 @@ impl FirestoreStore {
             let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
             left_sort_order
                 .cmp(&right_sort_order)
-                .then_with(|| document_id(left).cmp(&document_id(right)))
+                .then_with(|| {
+                    if sort_by_published_at {
+                        let left_published_at = read_timestamp_field(&left.fields, "published_at")
+                            .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
+                        let right_published_at =
+                            read_timestamp_field(&right.fields, "published_at")
+                                .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
+                        right_published_at
+                            .cmp(&left_published_at)
+                            .then_with(|| document_id(left).cmp(&document_id(right)))
+                    } else {
+                        document_id(left).cmp(&document_id(right))
+                    }
+                })
         });
         Ok(documents)
     }
@@ -2097,9 +2119,12 @@ impl FirestoreStore {
         let target_listing_status = stone_listing_status_after_order_status("canceled")
             .unwrap_or("published");
         let current_listing_status = read_string_field(&listing_doc.fields, "status");
+        let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
         if !current_listing_status
             .trim()
             .eq_ignore_ascii_case(target_listing_status)
+            || (target_listing_status.eq_ignore_ascii_case("published")
+                && current_published_at.is_none())
         {
             let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
                 StoreError::Internal(anyhow!(
@@ -2113,12 +2138,13 @@ impl FirestoreStore {
                     "name": listing_doc_name,
                     "fields": {
                         "status": fs_string(target_listing_status),
+                        "published_at": fs_timestamp(now),
                         "version": fs_int(listing_version + 1),
                         "updated_at": fs_timestamp(now),
                     }
                 },
                 "updateMask": {
-                    "fieldPaths": ["status", "version", "updated_at"]
+                    "fieldPaths": ["status", "published_at", "version", "updated_at"]
                 },
                 "currentDocument": {
                     "updateTime": listing_update_time
@@ -2161,7 +2187,10 @@ impl FirestoreStore {
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
 
         let current_status = read_string_field(&listing_doc.fields, "status");
-        if current_status.trim().eq_ignore_ascii_case(next_status) {
+        let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
+        if current_status.trim().eq_ignore_ascii_case(next_status)
+            && (!next_status.eq_ignore_ascii_case("published") || current_published_at.is_some())
+        {
             return Ok(());
         }
 
@@ -2169,6 +2198,11 @@ impl FirestoreStore {
         listing_doc
             .fields
             .insert("status".to_owned(), fs_string(next_status));
+        if next_status.eq_ignore_ascii_case("published") {
+            listing_doc
+                .fields
+                .insert("published_at".to_owned(), fs_timestamp(Utc::now()));
+        }
         listing_doc
             .fields
             .insert("version".to_owned(), fs_int(listing_version + 1));
@@ -4188,6 +4222,19 @@ fn read_bool_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<bool
         return Some(boolean_value);
     }
     value.as_bool()
+}
+
+fn read_timestamp_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<DateTime<Utc>> {
+    let value = data.get(key)?;
+
+    let raw = value
+        .get("timestampValue")
+        .and_then(JsonValue::as_str)
+        .or_else(|| value.as_str())?;
+
+    DateTime::parse_from_rfc3339(raw)
+        .ok()
+        .map(|value| value.with_timezone(&Utc))
 }
 
 fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> {
