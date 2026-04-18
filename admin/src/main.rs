@@ -5964,8 +5964,8 @@ impl FirestoreAdminSource {
         let orders = self.load_orders(&client).await?;
         let fonts = self.load_fonts(&client).await?;
         let materials = self.load_materials(&client).await?;
-        let stone_listings = self.load_stone_listings(&client).await.unwrap_or_default();
-        let facet_tags = self.load_facet_tags(&client).await.unwrap_or_default();
+        let stone_listings = self.load_stone_listings(&client).await?;
+        let facet_tags = self.load_facet_tags(&client).await?;
         let mut countries = self.load_countries(&client).await?;
 
         if countries.is_empty() {
@@ -6798,7 +6798,8 @@ impl FirestoreAdminSource {
             .get_document(&order_name, &GetDocumentOptions::default())
             .await
             .context("failed to load order for listing sync")?;
-        let listing_key = read_string_field(&read_map_field(&existing_order.fields, "listing"), "key");
+        let listing_key =
+            read_string_field(&read_map_field(&existing_order.fields, "listing"), "key");
 
         let mut fulfillment_fields = btree_from_pairs(vec![
             (
@@ -6863,8 +6864,11 @@ impl FirestoreAdminSource {
                     .await
                     .context("failed to load stone listing for order mutation")?;
                 let current_listing_status = read_string_field(&listing_doc.fields, "status");
-                let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
-                if !current_listing_status.trim().eq_ignore_ascii_case(listing_status)
+                let current_published_at =
+                    read_timestamp_field(&listing_doc.fields, "published_at");
+                if !current_listing_status
+                    .trim()
+                    .eq_ignore_ascii_case(listing_status)
                     || (listing_status.eq_ignore_ascii_case("published")
                         && current_published_at.is_none())
                 {
@@ -11431,7 +11435,10 @@ mod tests {
 
     #[test]
     fn stone_listing_status_tracks_order_resolution() {
-        assert_eq!(stone_listing_status_after_order_status("paid"), Some("sold"));
+        assert_eq!(
+            stone_listing_status_after_order_status("paid"),
+            Some("sold")
+        );
         assert_eq!(
             stone_listing_status_after_order_status("canceled"),
             Some("published")

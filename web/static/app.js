@@ -40,7 +40,7 @@
     if (nextLocale === "ja") {
       nextUrl.searchParams.set("lang", "ja");
     } else {
-      nextUrl.searchParams.delete("lang");
+      nextUrl.searchParams.set("lang", "en");
     }
     return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
   }

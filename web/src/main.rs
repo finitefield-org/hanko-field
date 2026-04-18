@@ -1145,22 +1145,19 @@ impl FirestoreCatalogSource {
         documents.sort_by(|left, right| {
             let left_sort_order = read_int_field(&left.fields, "sort_order").unwrap_or_default();
             let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
-            left_sort_order
-                .cmp(&right_sort_order)
-                .then_with(|| {
-                    if sort_by_published_at {
-                        let left_published_at = read_timestamp_field(&left.fields, "published_at")
-                            .unwrap_or_default();
-                        let right_published_at =
-                            read_timestamp_field(&right.fields, "published_at")
-                                .unwrap_or_default();
-                        right_published_at
-                            .cmp(&left_published_at)
-                            .then_with(|| document_id(left).cmp(&document_id(right)))
-                    } else {
-                        document_id(left).cmp(&document_id(right))
-                    }
-                })
+            left_sort_order.cmp(&right_sort_order).then_with(|| {
+                if sort_by_published_at {
+                    let left_published_at =
+                        read_timestamp_field(&left.fields, "published_at").unwrap_or_default();
+                    let right_published_at =
+                        read_timestamp_field(&right.fields, "published_at").unwrap_or_default();
+                    right_published_at
+                        .cmp(&left_published_at)
+                        .then_with(|| document_id(left).cmp(&document_id(right)))
+                } else {
+                    document_id(left).cmp(&document_id(right))
+                }
+            })
         });
         Ok(documents)
     }
@@ -2221,10 +2218,14 @@ async fn handle_top(
         lang_en_url: top_url(site_base_url, "en"),
         company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
     };
 
@@ -2318,9 +2319,13 @@ async fn handle_design(
         lang_ja_url: design_url_with_filters(site_base_url, "ja", &material_filter_state),
         lang_en_url: design_url_with_filters(site_base_url, "en", &material_filter_state),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2340,9 +2345,11 @@ fn material_filter_state_from_query(query: &PaymentRedirectQuery) -> MaterialFil
         pattern_primary: normalize_facet_tag_value(
             query.pattern_primary.as_deref().unwrap_or_default(),
         ),
-        stone_shape: normalize_stone_shape_optional(query.stone_shape.as_deref().unwrap_or_default())
-            .unwrap_or_default()
-            .to_owned(),
+        stone_shape: normalize_stone_shape_optional(
+            query.stone_shape.as_deref().unwrap_or_default(),
+        )
+        .unwrap_or_default()
+        .to_owned(),
     }
 }
 
@@ -2428,6 +2435,49 @@ fn payment_result_locale_url(
     site_url(base_url, &format!("{base_path}{query}"))
 }
 
+fn payment_result_navigation_url(
+    base_url: &str,
+    base_path: &str,
+    query: &PaymentRedirectQuery,
+    locale: &str,
+) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    let mut params = localized_navigation_query_params(normalized);
+
+    if let Some(checkout) = query
+        .checkout
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("checkout={checkout}"));
+    }
+    if let Some(session_id) = query
+        .session_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("session_id={session_id}"));
+    }
+    if let Some(order_id) = query
+        .order_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("order_id={order_id}"));
+    }
+
+    let query = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.join("&"))
+    };
+
+    site_url(base_url, &format!("{base_path}{query}"))
+}
+
 async fn handle_robots_txt(State(state): State<AppState>) -> Response {
     (
         [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
@@ -2465,7 +2515,11 @@ async fn handle_payment_success(
         .to_owned();
     let template = PaymentSuccessTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         page_title: localized_text(
             &selected_locale,
             "支払い完了 | STONE SIGNATURE",
@@ -2485,8 +2539,8 @@ async fn handle_payment_success(
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "ja"),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2515,7 +2569,11 @@ async fn handle_payment_failure(
         .to_owned();
     let template = PaymentFailureTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         page_title: localized_text(
             &selected_locale,
             "支払い未完了 | STONE SIGNATURE",
@@ -2533,9 +2591,9 @@ async fn handle_payment_failure(
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "ja"),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2574,10 +2632,14 @@ async fn handle_commercial_transactions(
         lang_ja_url,
         lang_en_url,
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2598,7 +2660,7 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
     let lang_ja_url = terms_url(site_base_url, "ja");
     let lang_en_url = terms_url(site_base_url, "en");
     let template = TermsTemplate {
-        design_url: design_url(site_base_url, &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         contact_url: inquiry_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
@@ -2615,10 +2677,14 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
         lang_ja_url,
         lang_en_url,
         company_url: company_url(site_base_url),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
-        top_url: top_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
         selected_locale,
     };
 
@@ -3180,6 +3246,28 @@ fn localized_page_url(base_url: &str, path: &str, locale: &str) -> String {
     site_url(base_url, &localized_page_path(path, locale))
 }
 
+fn localized_navigation_query_params(locale: &str) -> Vec<String> {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    if normalized == "ja" || normalized == "en" {
+        vec![format!("lang={normalized}")]
+    } else {
+        Vec::new()
+    }
+}
+
+fn localized_navigation_page_path(path: &str, locale: &str) -> String {
+    let params = localized_navigation_query_params(locale);
+    if params.is_empty() {
+        path.to_owned()
+    } else {
+        format!("{path}?{}", params.join("&"))
+    }
+}
+
+fn localized_navigation_page_url(base_url: &str, path: &str, locale: &str) -> String {
+    site_url(base_url, &localized_navigation_page_path(path, locale))
+}
+
 fn privacy_policy_url(_base_url: &str, locale: &str) -> String {
     let normalized = parse_supported_locale(locale).unwrap_or("en");
     if normalized == "ja" {
@@ -3200,11 +3288,7 @@ fn design_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/design", locale)
 }
 
-fn design_url_with_filters(
-    base_url: &str,
-    locale: &str,
-    filters: &MaterialFilterState,
-) -> String {
+fn design_url_with_filters(base_url: &str, locale: &str, filters: &MaterialFilterState) -> String {
     let base = reqwest::Url::parse(base_url.trim_end_matches('/'))
         .expect("site base URL must be a valid absolute URL");
     let mut url = base
@@ -4986,6 +5070,37 @@ mod tests {
     }
 
     #[test]
+    fn navigation_urls_preserve_the_selected_locale() {
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/", "en"),
+            "https://finitefield.org/?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/design", "en"),
+            "https://finitefield.org/design?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/terms", "en"),
+            "https://finitefield.org/terms?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/commercial-transactions", "en"),
+            "https://finitefield.org/commercial-transactions?lang=en"
+        );
+
+        let query = PaymentRedirectQuery {
+            checkout: Some("success".to_owned()),
+            session_id: Some("sess_123".to_owned()),
+            order_id: Some("ord_456".to_owned()),
+            ..PaymentRedirectQuery::default()
+        };
+        assert_eq!(
+            payment_result_navigation_url(TEST_SITE_BASE_URL, "/payment/success", &query, "en",),
+            "https://finitefield.org/payment/success?lang=en&checkout=success&session_id=sess_123&order_id=ord_456"
+        );
+    }
+
+    #[test]
     fn legal_urls_still_point_to_finitefield_org_on_other_hosts() {
         assert_eq!(
             privacy_policy_url(TEST_ALT_SITE_BASE_URL, "ja"),
@@ -5027,7 +5142,9 @@ mod tests {
         .expect("commercial transactions body should be utf-8");
 
         assert!(commercial_html.contains("Back to TOP"));
-        assert!(commercial_html.contains("window.location.href='https://finitefield.org/'"));
+        assert!(
+            commercial_html.contains("window.location.href='https://finitefield.org/?lang=en'")
+        );
 
         let terms_response = handle_terms(
             State(mock_state()),
@@ -5045,7 +5162,7 @@ mod tests {
         .expect("terms body should be utf-8");
 
         assert!(terms_html.contains("Back to TOP"));
-        assert!(terms_html.contains("window.location.href='https://finitefield.org/'"));
+        assert!(terms_html.contains("window.location.href='https://finitefield.org/?lang=en'"));
     }
 
     #[test]
