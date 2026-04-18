@@ -17,8 +17,8 @@ use axum::{
 };
 use chrono::{DateTime, Duration, FixedOffset, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
-    CreateDocumentOptions, Document, FirebaseFirestoreClient, FirebaseFirestoreError,
-    GetDocumentOptions, PatchDocumentOptions, RunQueryRequest,
+    CommitRequest, CreateDocumentOptions, Document, FirebaseFirestoreClient,
+    FirebaseFirestoreError, GetDocumentOptions, PatchDocumentOptions, RunQueryRequest,
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
 use regex::Regex;
@@ -862,7 +862,11 @@ async fn handle_stone_listings(
 
     let requested_material_key = query.material_key.unwrap_or_default().trim().to_owned();
     let requested_color_family = query.color_family.unwrap_or_default().trim().to_lowercase();
-    let requested_pattern_primary = query.pattern_primary.unwrap_or_default().trim().to_lowercase();
+    let requested_pattern_primary = query
+        .pattern_primary
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
     let requested_stone_shape = query.stone_shape.unwrap_or_default().trim().to_lowercase();
     let requested_seal_shape = query.seal_shape.unwrap_or_default().trim().to_lowercase();
     let requested_status = query
@@ -874,7 +878,8 @@ async fn handle_stone_listings(
     let stone_listings = stone_listings
         .into_iter()
         .filter(|listing| {
-            if !requested_material_key.is_empty() && listing.material_key != requested_material_key {
+            if !requested_material_key.is_empty() && listing.material_key != requested_material_key
+            {
                 return false;
             }
             if !requested_color_family.is_empty()
@@ -1399,6 +1404,9 @@ impl FirestoreStore {
         for document in documents {
             let key = document_id(&document)
                 .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
+            if !stone_listing_is_published(&read_string_field(&document.fields, "status")) {
+                continue;
+            }
             let price_by_currency = stone_listing_price_by_currency_from_fields(&document.fields);
             if price_by_currency.is_empty() {
                 bail!("stone_listings/{key} is missing price_by_currency");
@@ -1439,6 +1447,17 @@ impl FirestoreStore {
         client: &FirebaseFirestoreClient,
         key: &str,
     ) -> Result<StoneListing, StoreError> {
+        let doc = self
+            .get_orderable_stone_listing_document(client, key)
+            .await?;
+        Ok(stone_listing_from_fields(key, &doc.fields))
+    }
+
+    async fn get_orderable_stone_listing_document(
+        &self,
+        client: &FirebaseFirestoreClient,
+        key: &str,
+    ) -> Result<Document, StoreError> {
         let doc_name = format!("{}/stone_listings/{}", self.parent, key);
         let doc = client
             .get_document(&doc_name, &GetDocumentOptions::default())
@@ -1450,11 +1469,18 @@ impl FirestoreStore {
                     StoreError::Internal(anyhow!(err))
                 }
             })?;
-        if !read_bool_field(&doc.fields, "is_active").unwrap_or(false) {
+        let is_active = read_bool_field(&doc.fields, "is_active").unwrap_or(false);
+        let status = read_string_field(&doc.fields, "status");
+        if !stone_listing_is_orderable(is_active, &status) {
             return Err(StoreError::InactiveReference);
         }
+        if stone_listing_price_by_currency_from_fields(&doc.fields).is_empty() {
+            return Err(StoreError::Internal(anyhow!(
+                "stone_listings/{key} is missing price_by_currency"
+            )));
+        }
 
-        Ok(stone_listing_from_fields(key, &doc.fields))
+        Ok(doc)
     }
 
     async fn query_active_documents(&self, collection: &str) -> Result<Vec<Document>> {
@@ -1546,14 +1572,18 @@ impl FirestoreStore {
         let font = self
             .get_active_font(&client, &normalized.seal.font_key)
             .await?;
-        let listing = if let Some(listing_id) = normalized.listing_id.as_deref() {
-            Some(
-                self.get_active_stone_listing(&client, listing_id)
-                    .await?,
-            )
+        let listing_bundle = if let Some(listing_id) = normalized.listing_id.as_deref() {
+            let listing_doc = self
+                .get_orderable_stone_listing_document(&client, listing_id)
+                .await?;
+            let listing = stone_listing_from_fields(listing_id, &listing_doc.fields);
+            Some((listing_id.to_owned(), listing_doc, listing))
         } else {
             None
         };
+        let listing = listing_bundle
+            .as_ref()
+            .map(|(_, _, listing)| listing.clone());
         let material_key = if let Some(listing) = listing.as_ref() {
             if let Some(requested_key) = normalized.material_key.as_deref()
                 && !requested_key.trim().is_empty()
@@ -1568,9 +1598,7 @@ impl FirestoreStore {
                 .clone()
                 .ok_or(StoreError::InvalidReference)?
         };
-        let material = self
-            .get_active_material(&client, &material_key)
-            .await?;
+        let material = self.get_active_material(&client, &material_key).await?;
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
@@ -1602,6 +1630,145 @@ impl FirestoreStore {
             now.with_timezone(&self.jst).format("%Y%m%d"),
             order_suffix
         );
+
+        if let Some((listing_key, listing_doc, listing_snapshot)) = listing_bundle.as_ref() {
+            let order_id = Uuid::new_v4().to_string();
+            let order_doc = Document {
+                name: None,
+                fields: build_order_fields(
+                    &normalized,
+                    &font,
+                    &material,
+                    Some(listing_snapshot),
+                    &country,
+                    &order_no,
+                    subtotal,
+                    shipping,
+                    tax,
+                    discount,
+                    total,
+                    &pricing_currency,
+                    now,
+                ),
+                ..Document::default()
+            };
+            let event_doc = Document {
+                name: None,
+                fields: btree_from_pairs(vec![
+                    ("type", fs_string("order_created")),
+                    ("actor_type", fs_string("system")),
+                    (
+                        "payload",
+                        fs_map(btree_from_pairs(vec![
+                            ("channel", fs_string(normalized.channel.clone())),
+                            ("total", fs_int(total)),
+                            ("currency", fs_string(pricing_currency.clone())),
+                        ])),
+                    ),
+                    ("created_at", fs_timestamp(now)),
+                ]),
+                ..Document::default()
+            };
+            let idempotency_doc = Document {
+                name: None,
+                fields: btree_from_pairs(vec![
+                    ("channel", fs_string(normalized.channel.clone())),
+                    (
+                        "idempotency_key",
+                        fs_string(normalized.idempotency_key.clone()),
+                    ),
+                    ("request_hash", fs_string(request_hash.clone())),
+                    ("order_id", fs_string(order_id.clone())),
+                    ("created_at", fs_timestamp(now)),
+                    ("expire_at", fs_timestamp(now + Duration::days(30))),
+                ]),
+                ..Document::default()
+            };
+            let listing_doc_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+            let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
+                StoreError::Internal(anyhow!(
+                    "stone_listings/{listing_key} is missing update_time"
+                ))
+            })?;
+
+            let commit_result = client
+                .commit(
+                    &self.parent,
+                    &CommitRequest {
+                        writes: vec![
+                            json!({
+                                "update": {
+                                    "name": listing_doc_name,
+                                    "fields": {
+                                        "status": fs_string("reserved"),
+                                        "version": fs_int(listing_snapshot.version + 1),
+                                        "updated_at": fs_timestamp(now),
+                                    }
+                                },
+                                "updateMask": {
+                                    "fieldPaths": ["status", "version", "updated_at"]
+                                },
+                                "currentDocument": {
+                                    "updateTime": listing_update_time
+                                }
+                            }),
+                            json!({
+                                "update": {
+                                    "name": format!("{}/orders/{}", self.parent, order_id),
+                                    "fields": order_doc.fields
+                                },
+                                "currentDocument": {
+                                    "exists": false
+                                }
+                            }),
+                            json!({
+                                "update": {
+                                    "name": format!("{}/orders/{}/events/{}", self.parent, order_id, Uuid::new_v4()),
+                                    "fields": event_doc.fields
+                                },
+                                "currentDocument": {
+                                    "exists": false
+                                }
+                            }),
+                            json!({
+                                "update": {
+                                    "name": format!("{}/idempotency_keys/{}", self.parent, idempotency_id),
+                                    "fields": idempotency_doc.fields
+                                },
+                                "currentDocument": {
+                                    "exists": false
+                                }
+                            }),
+                        ],
+                        transaction: None,
+                    },
+                )
+                .await;
+
+            if let Err(err) = commit_result {
+                if is_conflict(&err) || is_precondition_failed(&err) {
+                    if let Some(result) = self
+                        .try_idempotent_replay(&client, &idempotency_doc_name, &request_hash)
+                        .await?
+                    {
+                        return Ok(result);
+                    }
+                    return Err(StoreError::InactiveReference);
+                }
+                return Err(StoreError::Internal(anyhow!(err)));
+            }
+
+            return Ok(CreateOrderResult {
+                order_id,
+                order_no,
+                status: "pending_payment".to_owned(),
+                payment_status: "unpaid".to_owned(),
+                fulfillment_status: "pending".to_owned(),
+                total,
+                currency: pricing_currency,
+                idempotent_replay: false,
+            });
+        }
 
         let order_doc = Document {
             name: None,
@@ -2446,6 +2613,14 @@ fn stone_listing_price_for_currency(listing: &StoneListing, currency: &str) -> i
     resolve_amount_for_currency(&listing.price_by_currency, currency)
 }
 
+fn stone_listing_is_published(status: &str) -> bool {
+    status.trim().eq_ignore_ascii_case("published")
+}
+
+fn stone_listing_is_orderable(is_active: bool, status: &str) -> bool {
+    is_active && stone_listing_is_published(status)
+}
+
 fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
     resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
 }
@@ -2777,7 +2952,8 @@ fn stone_listing_response(
 ) -> JsonValue {
     let price = stone_listing_price_for_currency(&listing, pricing_currency);
     let title = resolve_localized(&listing.title_i18n, requested_locale, default_locale);
-    let description = resolve_localized(&listing.description_i18n, requested_locale, default_locale);
+    let description =
+        resolve_localized(&listing.description_i18n, requested_locale, default_locale);
     let story = resolve_localized(&listing.story_i18n, requested_locale, default_locale);
     let photos = listing
         .photos
@@ -2837,7 +3013,10 @@ fn stone_listing_snapshot_fields(
         ("title_i18n", fs_string_map(&listing.title_i18n)),
         ("description_i18n", fs_string_map(&listing.description_i18n)),
         ("story_i18n", fs_string_map(&listing.story_i18n)),
-        ("supported_seal_shapes", fs_string_array(&listing.supported_seal_shapes)),
+        (
+            "supported_seal_shapes",
+            fs_string_array(&listing.supported_seal_shapes),
+        ),
         ("unit_price", fs_int(unit_price)),
         ("version", fs_int(listing.version)),
     ]);
@@ -2845,19 +3024,31 @@ fn stone_listing_snapshot_fields(
     fields.insert(
         "facets".to_owned(),
         fs_map(btree_from_pairs(vec![
-            ("color_family", fs_string(listing.facets.color_family.clone())),
+            (
+                "color_family",
+                fs_string(listing.facets.color_family.clone()),
+            ),
             ("color_tags", fs_string_array(&listing.facets.color_tags)),
             (
                 "pattern_primary",
                 fs_string(listing.facets.pattern_primary.clone()),
             ),
-            ("pattern_tags", fs_string_array(&listing.facets.pattern_tags)),
+            (
+                "pattern_tags",
+                fs_string_array(&listing.facets.pattern_tags),
+            ),
             ("stone_shape", fs_string(listing.facets.stone_shape.clone())),
-            ("translucency", fs_string(listing.facets.translucency.clone())),
+            (
+                "translucency",
+                fs_string(listing.facets.translucency.clone()),
+            ),
         ])),
     );
     fields.insert("photos".to_owned(), fs_material_photos(&listing.photos));
-    fields.insert("price_by_currency".to_owned(), fs_int_map(&listing.price_by_currency));
+    fields.insert(
+        "price_by_currency".to_owned(),
+        fs_int_map(&listing.price_by_currency),
+    );
     fields.insert("status".to_owned(), fs_string(listing.status.clone()));
     fields.insert("is_active".to_owned(), fs_bool(listing.is_active));
     fields.insert("sort_order".to_owned(), fs_int(listing.sort_order));
@@ -3426,11 +3617,7 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
         bail!("seal.font_key is required");
     }
 
-    let listing_id = request
-        .listing_id
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
+    let listing_id = request.listing_id.unwrap_or_default().trim().to_owned();
     let listing_id = if listing_id.is_empty() {
         None
     } else {
@@ -3718,6 +3905,13 @@ fn is_conflict(error: &FirebaseFirestoreError) -> bool {
     )
 }
 
+fn is_precondition_failed(error: &FirebaseFirestoreError) -> bool {
+    matches!(
+        error,
+        FirebaseFirestoreError::UnexpectedStatus { status, .. } if status.as_u16() == 412
+    )
+}
+
 fn document_id(document: &Document) -> Option<String> {
     document
         .name
@@ -3987,13 +4181,7 @@ fn fs_string_map(values: &HashMap<String, String>) -> JsonValue {
 }
 
 fn fs_string_array(values: &[String]) -> JsonValue {
-    fs_array(
-        values
-            .iter()
-            .cloned()
-            .map(fs_string)
-            .collect::<Vec<_>>(),
-    )
+    fs_array(values.iter().cloned().map(fs_string).collect::<Vec<_>>())
 }
 
 fn fs_material_photos(photos: &[MaterialPhoto]) -> JsonValue {
@@ -4055,6 +4243,21 @@ mod tests {
             cfg.currency_by_locale.get("en").map(String::as_str),
             Some("USD")
         );
+    }
+
+    #[test]
+    fn stone_listing_status_helper_requires_published() {
+        assert!(stone_listing_is_published("published"));
+        assert!(stone_listing_is_published(" Published "));
+        assert!(!stone_listing_is_published("draft"));
+    }
+
+    #[test]
+    fn stone_listing_orderable_helper_requires_active_and_published() {
+        assert!(stone_listing_is_orderable(true, "published"));
+        assert!(stone_listing_is_orderable(true, " Published "));
+        assert!(!stone_listing_is_orderable(true, "draft"));
+        assert!(!stone_listing_is_orderable(false, "published"));
     }
 
     #[test]

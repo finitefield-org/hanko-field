@@ -904,6 +904,9 @@ impl FirestoreCatalogSource {
         for document in documents {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
+            if !stone_listing_is_published(&read_string_field(&document.fields, "status")) {
+                continue;
+            }
 
             let mut price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
             if price_by_currency.is_empty() {
@@ -2246,7 +2249,6 @@ async fn handle_design(
         stone_shape: normalize_stone_shape(query.stone_shape.as_deref().unwrap_or_default())
             .to_owned(),
     };
-    let materials = filter_materials_by_facets(&catalog.materials, &material_filter_state);
 
     let Some(default_font) = catalog
         .fonts
@@ -2259,6 +2261,7 @@ async fn handle_design(
             "catalog validation failed: fonts is empty".to_owned(),
         );
     };
+    let materials = catalog.materials;
 
     let template = PageTemplate {
         font_stylesheet_urls: collect_font_stylesheet_urls(&catalog.fonts),
@@ -3265,6 +3268,10 @@ fn normalize_stone_shape(raw: &str) -> &'static str {
     }
 }
 
+fn stone_listing_is_published(status: &str) -> bool {
+    status.trim().eq_ignore_ascii_case("published")
+}
+
 fn normalize_facet_tag_value(raw: &str) -> String {
     raw.trim().to_ascii_lowercase()
 }
@@ -3356,6 +3363,19 @@ fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
     }
 }
 
+fn material_supported_shape_label(shapes: &[String], locale: &str) -> String {
+    let mut labels = Vec::new();
+    for shape_key in ["square", "round"] {
+        if shapes
+            .iter()
+            .any(|shape| normalize_material_shape(shape) == shape_key)
+        {
+            labels.push(material_shape_label(shape_key, locale));
+        }
+    }
+    labels.join(" / ")
+}
+
 fn build_material_option_from_listing(
     category: &MaterialCategory,
     listing: &StoneListingRecord,
@@ -3382,7 +3402,16 @@ fn build_material_option_from_listing(
         .first()
         .map(|shape| normalize_material_shape(shape).to_owned())
         .unwrap_or_else(|| category.shape.clone());
-    let shape_label = material_shape_label(&shape, locale).to_owned();
+    let shape_label = if listing.supported_seal_shapes.is_empty() {
+        material_shape_label(&shape, locale).to_owned()
+    } else {
+        let label = material_supported_shape_label(&listing.supported_seal_shapes, locale);
+        if label.is_empty() {
+            material_shape_label(&shape, locale).to_owned()
+        } else {
+            label
+        }
+    };
 
     let (photo_url, photo_alt, has_photo) = resolve_listing_photo(
         &listing.photos,
@@ -3391,7 +3420,7 @@ fn build_material_option_from_listing(
         default_locale,
     );
     let photo_alt = if has_photo && photo_alt.is_empty() {
-        format!("{title}の写真")
+        localized_text(locale, &format!("{title}の写真"), &format!("{title} photo"))
     } else {
         photo_alt
     };
@@ -3510,6 +3539,7 @@ fn collect_stone_shape_filter_options(
     options
 }
 
+#[allow(dead_code)]
 fn filter_materials_by_facets(
     materials: &[MaterialOption],
     filter_state: &MaterialFilterState,
@@ -4394,6 +4424,13 @@ mod tests {
     }
 
     #[test]
+    fn stone_listing_status_helper_requires_published() {
+        assert!(stone_listing_is_published("published"));
+        assert!(stone_listing_is_published(" Published "));
+        assert!(!stone_listing_is_published("draft"));
+    }
+
+    #[test]
     fn stone_listing_tag_labels_use_facet_tag_master() {
         let facet_tag_labels = {
             let mut labels = FacetTagLabels::default();
@@ -4448,6 +4485,99 @@ mod tests {
         assert_eq!(option.pattern_tag_labels, vec!["雲状"]);
         assert!(option.has_color_tag_labels);
         assert!(option.has_pattern_tag_labels);
+    }
+
+    #[test]
+    fn material_option_shows_all_supported_seal_shapes() {
+        let category = MaterialCategory {
+            key: "jade".to_owned(),
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            listing_code: "JDE-0001".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "翡翠の一点物".to_owned(),
+            description: "個体説明".to_owned(),
+            story: "story".to_owned(),
+            price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
+            supported_seal_shapes: vec!["round".to_owned(), "square".to_owned()],
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "oval".to_owned(),
+            photos: vec![],
+            sort_order: 0,
+            version: 1,
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "ja",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.shape_label, "角印 / 丸印");
+    }
+
+    #[test]
+    fn material_option_uses_english_photo_alt_fallback() {
+        let category = MaterialCategory {
+            key: "jade".to_owned(),
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            listing_code: "JDE-0001".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "One-of-a-kind Jade 101".to_owned(),
+            description: "A refined piece with calm green flowing patterns.".to_owned(),
+            story: "story".to_owned(),
+            price_by_currency: HashMap::from([("USD".to_owned(), 92800)]),
+            supported_seal_shapes: vec!["square".to_owned()],
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "oval".to_owned(),
+            photos: vec![MaterialPhoto {
+                asset_id: "mat_jade_01".to_owned(),
+                storage_path: "materials/jade/mat_jade_01.webp".to_owned(),
+                alt_i18n: HashMap::new(),
+                sort_order: 0,
+                is_primary: true,
+                width: 1200,
+                height: 1200,
+            }],
+            sort_order: 0,
+            version: 1,
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "en",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.photo_alt, "One-of-a-kind Jade 101 photo");
+        assert!(option.has_photo);
     }
 
     #[test]
