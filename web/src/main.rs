@@ -215,6 +215,7 @@ struct StoneListingRecord {
     pattern_tags: Vec<String>,
     stone_shape: String,
     photos: Vec<MaterialPhoto>,
+    is_active: bool,
     sort_order: i64,
     version: i64,
 }
@@ -904,7 +905,9 @@ impl FirestoreCatalogSource {
         for document in documents {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
-            if !stone_listing_is_published(&read_string_field(&document.fields, "status")) {
+            let is_active = read_bool_field(&document.fields, "is_active").unwrap_or(true);
+            let status = read_string_field(&document.fields, "status");
+            if !stone_listing_is_catalog_visible(is_active, &status) {
                 continue;
             }
 
@@ -1008,6 +1011,7 @@ impl FirestoreCatalogSource {
                 pattern_tags,
                 stone_shape,
                 photos,
+                is_active,
                 sort_order,
                 version,
             });
@@ -2255,14 +2259,7 @@ async fn handle_design(
         }
     };
     let catalog = localize_catalog_prices(catalog, &selected_locale);
-    let material_filter_state = MaterialFilterState {
-        color_family: normalize_facet_tag_value(query.color_family.as_deref().unwrap_or_default()),
-        pattern_primary: normalize_facet_tag_value(
-            query.pattern_primary.as_deref().unwrap_or_default(),
-        ),
-        stone_shape: normalize_stone_shape(query.stone_shape.as_deref().unwrap_or_default())
-            .to_owned(),
-    };
+    let material_filter_state = material_filter_state_from_query(&query);
 
     let Some(default_font) = catalog
         .fonts
@@ -2334,6 +2331,18 @@ async fn handle_design(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to render page: {error}"),
         ),
+    }
+}
+
+fn material_filter_state_from_query(query: &PaymentRedirectQuery) -> MaterialFilterState {
+    MaterialFilterState {
+        color_family: normalize_facet_tag_value(query.color_family.as_deref().unwrap_or_default()),
+        pattern_primary: normalize_facet_tag_value(
+            query.pattern_primary.as_deref().unwrap_or_default(),
+        ),
+        stone_shape: normalize_stone_shape_optional(query.stone_shape.as_deref().unwrap_or_default())
+            .unwrap_or_default()
+            .to_owned(),
     }
 }
 
@@ -3301,16 +3310,24 @@ fn normalize_material_shape(raw: &str) -> &'static str {
 }
 
 fn normalize_stone_shape(raw: &str) -> &'static str {
+    normalize_stone_shape_optional(raw).unwrap_or("square")
+}
+
+fn normalize_stone_shape_optional(raw: &str) -> Option<&'static str> {
     match raw.trim().to_ascii_lowercase().as_str() {
-        "round" => "round",
-        "square" => "square",
-        "oval" | "ellipse" | "elliptical" => "oval",
-        _ => "square",
+        "round" => Some("round"),
+        "square" => Some("square"),
+        "oval" | "ellipse" | "elliptical" => Some("oval"),
+        _ => None,
     }
 }
 
 fn stone_listing_is_published(status: &str) -> bool {
     status.trim().eq_ignore_ascii_case("published")
+}
+
+fn stone_listing_is_catalog_visible(is_active: bool, status: &str) -> bool {
+    is_active && stone_listing_is_published(status)
 }
 
 fn normalize_facet_tag_value(raw: &str) -> String {
@@ -4487,6 +4504,36 @@ mod tests {
     }
 
     #[test]
+    fn stone_listing_catalog_visibility_requires_active_and_published() {
+        assert!(stone_listing_is_catalog_visible(true, "published"));
+        assert!(stone_listing_is_catalog_visible(true, " Published "));
+        assert!(!stone_listing_is_catalog_visible(false, "published"));
+        assert!(!stone_listing_is_catalog_visible(true, "draft"));
+    }
+
+    #[test]
+    fn material_filter_state_omits_missing_or_invalid_stone_shape() {
+        let missing = material_filter_state_from_query(&PaymentRedirectQuery {
+            color_family: Some("Green".to_owned()),
+            pattern_primary: Some("Cloud".to_owned()),
+            ..PaymentRedirectQuery::default()
+        });
+        assert_eq!(missing.color_family, "green");
+        assert_eq!(missing.pattern_primary, "cloud");
+        assert!(missing.stone_shape.is_empty());
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &missing),
+            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
+        );
+
+        let invalid = material_filter_state_from_query(&PaymentRedirectQuery {
+            stone_shape: Some("triangle".to_owned()),
+            ..PaymentRedirectQuery::default()
+        });
+        assert!(invalid.stone_shape.is_empty());
+    }
+
+    #[test]
     fn stone_listing_tag_labels_use_facet_tag_master() {
         let facet_tag_labels = {
             let mut labels = FacetTagLabels::default();
@@ -4524,6 +4571,7 @@ mod tests {
             pattern_tags: vec!["cloudy".to_owned(), "cloud".to_owned()],
             stone_shape: "oval".to_owned(),
             photos: vec![],
+            is_active: true,
             sort_order: 0,
             version: 1,
         };
@@ -4569,6 +4617,7 @@ mod tests {
             pattern_tags: vec![],
             stone_shape: "oval".to_owned(),
             photos: vec![],
+            is_active: true,
             sort_order: 0,
             version: 1,
         };
@@ -4619,6 +4668,7 @@ mod tests {
                 width: 1200,
                 height: 1200,
             }],
+            is_active: true,
             sort_order: 0,
             version: 1,
         };

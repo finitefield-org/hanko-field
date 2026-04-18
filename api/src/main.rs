@@ -1440,7 +1440,9 @@ impl FirestoreStore {
         for document in documents {
             let key = document_id(&document)
                 .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
-            if !stone_listing_is_published(&read_string_field(&document.fields, "status")) {
+            let is_active = read_bool_field(&document.fields, "is_active").unwrap_or(true);
+            let status = read_string_field(&document.fields, "status");
+            if !stone_listing_is_orderable(is_active, &status) {
                 continue;
             }
             let price_by_currency = stone_listing_price_by_currency_from_fields(&document.fields);
