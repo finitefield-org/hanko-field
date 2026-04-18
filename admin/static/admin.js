@@ -14,7 +14,9 @@
       statusElement: form.querySelector("[data-photo-upload-status]"),
       pathInput: form.querySelector('input[name="photo_storage_path"]'),
       keyInput:
+        form.querySelector('input[name="stone_listing_key"]') ||
         form.querySelector('input[name="material_key"]') ||
+        form.querySelector('input[name="listing_key"]') ||
         form.querySelector('input[name="key"]'),
       uploadButton: form.querySelector("[data-photo-upload-button]"),
       previewWrap: form.querySelector("[data-photo-preview-wrap]"),
@@ -126,7 +128,7 @@
     setPreviewVisible(previewWrap, previewImage, objectUrl);
   };
 
-  const resolveMaterialKey = (form, keyInput) => {
+  const resolveUploadKey = (form, keyInput) => {
     if (keyInput instanceof HTMLInputElement) {
       const value = keyInput.value.trim();
       if (value) {
@@ -139,11 +141,29 @@
       form.getAttribute("hx-post") ||
       form.getAttribute("action") ||
       "";
-    const match = action.match(/\/admin\/materials\/([^/]+)/);
+    const match = action.match(/\/admin\/(?:materials|stone-listings)\/([^/]+)/);
     if (match && match[1]) {
       return decodeURIComponent(match[1]);
     }
     return "";
+  };
+
+  const resolveUploadEndpoint = (form) => {
+    const explicit = form.dataset.photoUploadEndpoint;
+    if (explicit) {
+      return explicit;
+    }
+
+    const action =
+      form.getAttribute("hx-patch") ||
+      form.getAttribute("hx-post") ||
+      form.getAttribute("action") ||
+      "";
+    if (action.includes("/admin/stone-listings")) {
+      return "/admin/stone-listings/photo-upload";
+    }
+
+    return "/admin/materials/photo-upload";
   };
 
   const uploadMaterialPhoto = async (sourceElement, options = {}) => {
@@ -183,16 +203,16 @@
       return;
     }
 
-    const materialKey = resolveMaterialKey(form, keyInput);
-    if (!materialKey) {
+    const uploadKey = resolveUploadKey(form, keyInput);
+    if (!uploadKey) {
       if (silentMissingKey) {
         setUploadStatus(
           statusElement,
-          "材質キーを入力すると Storage パスを自動入力します。",
+          "キーを入力すると Storage パスを自動入力します。",
           false,
         );
       } else {
-        setUploadStatus(statusElement, "材質キーを入力してください。", true);
+        setUploadStatus(statusElement, "キーを入力してください。", true);
       }
       return;
     }
@@ -212,7 +232,11 @@
     }
 
     const formData = new FormData();
-    formData.append("material_key", materialKey);
+    if (form.querySelector('input[name="stone_listing_key"]')) {
+      formData.append("stone_listing_key", uploadKey);
+    } else {
+      formData.append("material_key", uploadKey);
+    }
     formData.append("photo_file", file, file.name);
 
     form.dataset.photoUploadInFlight = "1";
@@ -222,7 +246,7 @@
     setUploadStatus(statusElement, "アップロード中...", false);
 
     try {
-      const response = await fetch("/admin/materials/photo-upload", {
+      const response = await fetch(resolveUploadEndpoint(form), {
         method: "POST",
         body: formData,
       });
@@ -304,7 +328,7 @@
     }
 
     const keyInput = target.closest(
-      'input[name="key"], input[name="material_key"]',
+      'input[name="key"], input[name="material_key"], input[name="stone_listing_key"], input[name="listing_key"]',
     );
     if (!(keyInput instanceof HTMLInputElement)) {
       return;

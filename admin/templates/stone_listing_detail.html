@@ -1,0 +1,236 @@
+<article class="flex flex-col gap-5 p-4 sm:p-5">
+  <header>
+    <h3 class="text-xl leading-tight font-bold">{{ detail.title_ja }}</h3>
+    <p class="mt-1 text-xs font-semibold tracking-[0.06em] text-admin-muted uppercase">version {{ detail.version }} / 更新 {{ detail.updated_at }}</p>
+  </header>
+
+  {% if detail.has_message %}
+  <p class="rounded-xl border border-admin-accent/30 bg-admin-accent-soft px-3 py-2 text-sm font-semibold text-admin-accent">{{ detail.message }}</p>
+  {% endif %}
+  {% if detail.has_error %}
+  <p class="rounded-xl border border-admin-alert/35 bg-[rgb(157_47_36_/_0.08)] px-3 py-2 text-sm font-semibold text-admin-alert">{{ detail.error }}</p>
+  {% endif %}
+
+  <section class="grid gap-3 rounded-xl border border-admin-line/60 bg-admin-bg/35 p-4 sm:grid-cols-2">
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">Key</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.key }}</p>
+    </div>
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">コード</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.listing_code }}</p>
+    </div>
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">素材キー</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.material_key }}</p>
+    </div>
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">状態</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.status_label }}</p>
+    </div>
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">石の形</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.stone_shape_label }}</p>
+    </div>
+    <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">対応印面</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.supported_seal_shapes }}</p>
+    </div>
+  </section>
+
+  {% if detail.has_photo %}
+  <section class="rounded-xl border border-admin-line/60 bg-admin-bg/35 p-4">
+    <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">登録済みプレビュー</p>
+    <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+      <img
+        src="{{ detail.primary_photo_url }}"
+        alt="{{ detail.title_ja }} の写真"
+        class="h-40 w-40 shrink-0 rounded-xl border border-admin-line/60 bg-white object-cover"
+        loading="lazy"
+      >
+      <div class="min-w-0 text-sm">
+        <p class="font-semibold text-admin-ink">Storage パス</p>
+        <p class="mt-1 break-all text-admin-muted">{{ detail.photo_storage_path }}</p>
+        <p class="mt-3 font-semibold text-admin-ink">代替テキスト</p>
+        <p class="mt-1 break-all text-admin-muted">{% if detail.photo_alt_ja != "" %}{{ detail.photo_alt_ja }}{% else %}-{% endif %}</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="rounded-xl border border-admin-line/60 bg-admin-bg/35 p-4">
+    <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">検索用ファセット</p>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+      <div class="rounded-xl border border-admin-line/60 bg-white p-3">
+        <p class="text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">色</p>
+        <p class="mt-2 text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">family</p>
+        <p class="text-sm font-semibold text-admin-ink">{{ detail.color_family }}</p>
+        <p class="mt-2 text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">tags</p>
+        <p class="text-sm font-semibold text-admin-ink">{% if detail.color_tags != "" %}{{ detail.color_tags }}{% else %}-{% endif %}</p>
+      </div>
+      <div class="rounded-xl border border-admin-line/60 bg-white p-3">
+        <p class="text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">模様</p>
+        <p class="mt-2 text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">primary</p>
+        <p class="text-sm font-semibold text-admin-ink">{{ detail.pattern_primary }}</p>
+        <p class="mt-2 text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">tags</p>
+        <p class="text-sm font-semibold text-admin-ink">{% if detail.pattern_tags != "" %}{{ detail.pattern_tags }}{% else %}-{% endif %}</p>
+      </div>
+    </div>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+      <div class="rounded-xl border border-admin-line/60 bg-white p-3">
+        <p class="text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">公開状態</p>
+        <p class="mt-2 text-sm font-semibold text-admin-ink">{{ detail.status_label }}</p>
+      </div>
+      <div class="rounded-xl border border-admin-line/60 bg-white p-3">
+        <p class="text-[0.68rem] font-bold tracking-[0.08em] text-admin-muted uppercase">透過性</p>
+        <p class="mt-2 text-sm font-semibold text-admin-ink">{% if detail.translucency != "" %}{{ detail.translucency }}{% else %}-{% endif %}</p>
+      </div>
+    </div>
+  </section>
+
+  <form
+    class="flex flex-col gap-3 rounded-xl border border-admin-line/70 bg-white p-4"
+    hx-patch="/admin/stone-listings/{{ detail.key }}"
+    hx-target="#stone-listing-edit"
+    hx-swap="innerHTML"
+    data-photo-upload-endpoint="/admin/stone-listings/photo-upload"
+  >
+    <input type="hidden" name="stone_listing_key" value="{{ detail.key }}">
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>一点物コード</span>
+      <input type="text" name="listing_code" value="{{ detail.listing_code }}" placeholder="JDE-0001" pattern="[A-Z0-9_-]+" maxlength="64" required>
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>素材キー</span>
+      <input type="text" name="material_key" value="{{ detail.material_key }}" placeholder="jade" pattern="[a-z0-9_-]+" maxlength="64" required>
+    </label>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>一点物タイトル (ja)</span>
+        <input type="text" name="title_ja" value="{{ detail.title_ja }}" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>One-of-a-kind Title (en)</span>
+        <input type="text" name="title_en" value="{{ detail.title_en }}" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>説明 (ja)</span>
+        <textarea name="description_ja" rows="3" required>{{ detail.description_ja }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Description (en)</span>
+        <textarea name="description_en" rows="3" required>{{ detail.description_en }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>作品紹介 (ja)</span>
+        <textarea name="story_ja" rows="3">{{ detail.story_ja }}</textarea>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Story (en)</span>
+        <textarea name="story_en" rows="3">{{ detail.story_en }}</textarea>
+      </label>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>色ファミリー</span>
+        <input type="text" name="color_family" value="{{ detail.color_family }}" placeholder="green" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>色タグ</span>
+        <input type="text" name="color_tags" value="{{ detail.color_tags }}" placeholder="deep_green, mottled" list="facet-color-tag-options">
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>模様の代表値</span>
+        <input type="text" name="pattern_primary" value="{{ detail.pattern_primary }}" placeholder="cloud" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>模様タグ</span>
+        <input type="text" name="pattern_tags" value="{{ detail.pattern_tags }}" placeholder="banded, cloud" list="facet-pattern-tag-options">
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>透過性</span>
+        <input type="text" name="translucency" value="{{ detail.translucency }}" placeholder="semi_translucent">
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>対応印面形状</span>
+        <input type="text" name="supported_seal_shapes" value="{{ detail.supported_seal_shapes }}" placeholder="square, round" required>
+      </label>
+    </div>
+    <fieldset class="flex flex-col gap-1.5 text-sm font-semibold">
+      <legend>石の形</legend>
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="stone_shape" value="square" {% if detail.stone_shape == "square" %}checked{% endif %}>
+          <span>四角形</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="stone_shape" value="round" {% if detail.stone_shape == "round" %}checked{% endif %}>
+          <span>丸形</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input type="radio" name="stone_shape" value="oval" {% if detail.stone_shape == "oval" %}checked{% endif %}>
+          <span>楕円形</span>
+        </label>
+      </div>
+    </fieldset>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>写真 Storage パス（自動入力）</span>
+      <input type="text" name="photo_storage_path" value="{{ detail.photo_storage_path }}" placeholder="画像アップロード後に自動入力されます" readonly>
+    </label>
+    <div class="rounded-xl border border-admin-line/60 bg-admin-bg/40 p-3">
+      <p class="text-[0.82rem] font-semibold text-admin-muted">画像選択で自動アップロードし、Storage パスを自動入力します。</p>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" data-photo-file-input>
+        <button type="button" class="rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]" data-photo-upload-button>手動で再アップロード</button>
+      </div>
+      <p class="mt-2 text-xs font-semibold text-admin-muted" data-photo-upload-status></p>
+      <div class="mt-2 hidden rounded-lg border border-admin-line/60 bg-white p-2" data-photo-preview-wrap>
+        <img data-photo-preview alt="画像プレビュー" class="h-28 w-28 rounded-md object-cover">
+      </div>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>写真代替テキスト (ja)</span>
+        <input type="text" name="photo_alt_ja" value="{{ detail.photo_alt_ja }}" placeholder="翡翠の一点物写真">
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>Photo Alt (en)</span>
+        <input type="text" name="photo_alt_en" value="{{ detail.photo_alt_en }}" placeholder="One-of-a-kind jade photo">
+      </label>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>価格 (USD cents)</span>
+        <input type="number" name="price_usd" min="0" value="{{ detail.price_usd }}" required>
+        <span class="text-xs font-semibold text-admin-muted">整数の cents で入力してください。165.00 のような小数も保存できます。</span>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>価格 (JPY)</span>
+        <input type="number" name="price_jpy" min="0" value="{{ detail.price_jpy }}" required>
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm font-semibold">
+        <span>表示順</span>
+        <input type="number" name="sort_order" min="0" value="{{ detail.sort_order }}" required>
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>公開状態</span>
+      <select name="status" required>
+        <option value="draft" {% if detail.status == "draft" %}selected{% endif %}>下書き</option>
+        <option value="published" {% if detail.status == "published" %}selected{% endif %}>公開中</option>
+        <option value="reserved" {% if detail.status == "reserved" %}selected{% endif %}>予約中</option>
+        <option value="sold" {% if detail.status == "sold" %}selected{% endif %}>売却済み</option>
+        <option value="archived" {% if detail.status == "archived" %}selected{% endif %}>保管</option>
+      </select>
+    </label>
+
+    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+      <input type="checkbox" name="is_active" value="1" {% if detail.is_active %}checked{% endif %}>
+      <span>公開する</span>
+    </label>
+
+    <button type="submit" class="w-fit rounded-[10px] border border-admin-accent bg-admin-accent px-4 py-[10px] text-[0.92rem] font-semibold text-white transition hover:brightness-[1.05]">保存</button>
+  </form>
+</article>
