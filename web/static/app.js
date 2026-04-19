@@ -153,10 +153,43 @@
   const materialFilterEmpty = document.querySelector(
     "[data-material-filter-empty]",
   );
+  const materialFilterAllowedValues = {};
+  materialFilterGroups.forEach((group) => {
+    const groupName = group.dataset.materialFilterGroup || "";
+    if (!groupName) {
+      return;
+    }
+
+    materialFilterAllowedValues[groupName] = new Set(
+      Array.from(group.querySelectorAll(".material-filter-chip"))
+        .map((button) => normalizeMaterialFilterValue(button.dataset.filterValue || ""))
+        .filter((value) => value !== ""),
+    );
+  });
+
+  function clampMaterialFilterValue(groupName, rawValue) {
+    const value = normalizeMaterialFilterValue(rawValue);
+    if (value === "") {
+      return "";
+    }
+
+    const allowedValues = materialFilterAllowedValues[groupName];
+    return allowedValues && allowedValues.has(value) ? value : "";
+  }
+
   const materialFilterState = {
-    color: normalizeMaterialFilterValue(currentUrl.searchParams.get("color_family") || ""),
-    pattern: normalizeMaterialFilterValue(currentUrl.searchParams.get("pattern_primary") || ""),
-    stoneShape: normalizeMaterialFilterValue(currentUrl.searchParams.get("stone_shape") || ""),
+    color: clampMaterialFilterValue(
+      "color",
+      currentUrl.searchParams.get("color_family") || "",
+    ),
+    pattern: clampMaterialFilterValue(
+      "pattern",
+      currentUrl.searchParams.get("pattern_primary") || "",
+    ),
+    stoneShape: clampMaterialFilterValue(
+      "stoneShape",
+      normalizeStoneShapeFilterValue(currentUrl.searchParams.get("stone_shape") || ""),
+    ),
   };
 
   const summarySealLines = document.getElementById("summary-seal-lines");
@@ -198,6 +231,23 @@
     }
     renderPurchaseStatus();
   });
+  form.addEventListener(
+    "submit",
+    (event) => {
+      if (purchaseSubmitting) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (purchaseValidationGroups().length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        renderPurchaseStatus();
+      }
+    },
+    true,
+  );
 
   let currentStep = 1;
 
@@ -467,6 +517,14 @@
 
   function normalizeMaterialFilterValue(rawValue) {
     return (rawValue || "").trim().toLowerCase();
+  }
+
+  function normalizeStoneShapeFilterValue(rawValue) {
+    const value = normalizeMaterialFilterValue(rawValue);
+    if (value === "ellipse" || value === "elliptical") {
+      return "oval";
+    }
+    return value;
   }
 
   function parseMaterialFilterValues(rawValue) {
@@ -1121,7 +1179,7 @@
     }
   });
 
-  purchaseButton?.addEventListener("htmx:beforeRequest", () => {
+  form.addEventListener("htmx:beforeRequest", () => {
     purchaseSubmitting = true;
     purchaseErrorMessage = "";
     clearPurchaseResult();
@@ -1133,7 +1191,7 @@
     renderPurchaseStatus();
   };
 
-  purchaseButton?.addEventListener("htmx:afterRequest", (event) => {
+  form.addEventListener("htmx:afterRequest", (event) => {
     const redirectUrl = event.detail?.xhr
       ?.getResponseHeader("HX-Redirect")
       ?.trim();
@@ -1150,7 +1208,7 @@
       endPurchaseSubmission();
     }
   });
-  purchaseButton?.addEventListener("htmx:responseError", () => {
+  form.addEventListener("htmx:responseError", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストに失敗しました。通信環境を確認して、もう一度お試しください。",
@@ -1159,7 +1217,7 @@
     );
     endPurchaseSubmission();
   });
-  purchaseButton?.addEventListener("htmx:timeout", () => {
+  form.addEventListener("htmx:timeout", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストがタイムアウトしました。通信環境を確認して、もう一度お試しください。",
@@ -1168,7 +1226,7 @@
     );
     endPurchaseSubmission();
   });
-  purchaseButton?.addEventListener("htmx:sendError", () => {
+  form.addEventListener("htmx:sendError", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストを送信できませんでした。通信環境を確認して、もう一度お試しください。",

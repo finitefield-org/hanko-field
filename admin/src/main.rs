@@ -5598,6 +5598,7 @@ impl ServerState {
         let status = normalize_stone_listing_status(&input.status)
             .ok_or_else(|| "公開状態を選択してください。".to_owned())?
             .to_owned();
+        self.validate_stone_listing_material_key(&material_key).await?;
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -5771,6 +5772,17 @@ impl ServerState {
             .map_err(|error| format!("photo upload failed: {error}"))
     }
 
+    async fn validate_stone_listing_material_key(
+        &self,
+        material_key: &str,
+    ) -> std::result::Result<(), String> {
+        let data = self.data.read().await;
+        match data.materials.get(material_key) {
+            Some(material) if material.is_active => Ok(()),
+            _ => Err("素材キーに対応する有効な材質が見つかりません。".to_owned()),
+        }
+    }
+
     async fn delete_material(&self, key: &str) -> std::result::Result<(), String> {
         let normalized_key = key.trim().to_owned();
         if normalized_key.is_empty() {
@@ -5835,6 +5847,7 @@ impl ServerState {
         let status = normalize_stone_listing_status(&input.status)
             .ok_or_else(|| "公開状態を選択してください。".to_owned())?
             .to_owned();
+        self.validate_stone_listing_material_key(&material_key).await?;
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -11389,6 +11402,41 @@ mod tests {
 
         assert!(
             matches!(result, Err(message) if message.contains("模様タグ") && message.contains("missing_pattern_tag"))
+        );
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_rejects_missing_material() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.material_key = "missing_material".to_owned();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("有効な材質"))
+        );
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_rejects_inactive_material() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            let material = data
+                .materials
+                .get_mut("jade")
+                .expect("jade material should exist");
+            material.is_active = false;
+        }
+
+        let input = valid_stone_listing_patch_input();
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("有効な材質"))
         );
     }
 

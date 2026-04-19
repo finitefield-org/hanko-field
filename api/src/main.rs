@@ -1447,7 +1447,8 @@ impl FirestoreStore {
             }
             let price_by_currency = stone_listing_price_by_currency_from_fields(&document.fields);
             if price_by_currency.is_empty() {
-                bail!("stone_listings/{key} is missing price_by_currency");
+                eprintln!("warning: stone_listings/{key} is missing price data; skipping");
+                continue;
             }
 
             listings.push(stone_listing_from_fields(&key, &document.fields));
@@ -1514,7 +1515,7 @@ impl FirestoreStore {
         }
         if stone_listing_price_by_currency_from_fields(&doc.fields).is_empty() {
             return Err(StoreError::Internal(anyhow!(
-                "stone_listings/{key} is missing price_by_currency"
+                "stone_listings/{key} is missing price data"
             )));
         }
 
@@ -2900,7 +2901,13 @@ fn material_price_by_currency_from_fields(
 fn stone_listing_price_by_currency_from_fields(
     data: &BTreeMap<String, JsonValue>,
 ) -> HashMap<String, i64> {
-    normalize_currency_amount_map(read_int_map_field(data, "price_by_currency"))
+    let price_by_currency =
+        normalize_currency_amount_map(read_int_map_field(data, "price_by_currency"));
+    if !price_by_currency.is_empty() {
+        return price_by_currency;
+    }
+
+    read_legacy_currency_map(data, "price_usd", "price_jpy")
 }
 
 fn country_shipping_fee_by_currency_from_fields(
@@ -4079,9 +4086,9 @@ fn normalize_webhook_event(event: StripeWebhookEvent) -> StripeWebhookEvent {
 fn stripe_transition(event_type: &str) -> (&'static str, &'static str, &'static str) {
     match event_type {
         "payment_intent.succeeded" => ("paid", "paid", "payment_paid"),
-        "payment_intent.payment_failed" | "payment_intent.canceled" => {
-            ("failed", "canceled", "payment_failed")
-        }
+        "payment_intent.payment_failed"
+        | "payment_intent.canceled"
+        | "checkout.session.expired" => ("failed", "canceled", "payment_failed"),
         "charge.refunded" => ("refunded", "refunded", "payment_refunded"),
         _ => ("", "", "payment_event_recorded"),
     }
@@ -4288,6 +4295,21 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
         }
     }
 
+    result
+}
+
+fn read_legacy_currency_map(
+    data: &BTreeMap<String, JsonValue>,
+    usd_field: &str,
+    jpy_field: &str,
+) -> HashMap<String, i64> {
+    let mut result = HashMap::new();
+    if let Some(amount) = read_int_field(data, usd_field) {
+        result.insert("USD".to_owned(), amount.max(0));
+    }
+    if let Some(amount) = read_int_field(data, jpy_field) {
+        result.insert("JPY".to_owned(), amount.max(0));
+    }
     result
 }
 
@@ -4595,6 +4617,19 @@ mod tests {
     }
 
     #[test]
+    fn stone_listing_price_map_uses_legacy_currency_fields() {
+        let fields = btree_from_pairs(vec![
+            ("price_usd", fs_int(88500)),
+            ("price_jpy", fs_int(150000)),
+        ]);
+
+        assert_eq!(
+            stone_listing_price_by_currency_from_fields(&fields),
+            HashMap::from([("USD".to_owned(), 88500), ("JPY".to_owned(), 150000),])
+        );
+    }
+
+    #[test]
     fn country_shipping_fee_for_currency_uses_currency_specific_field() {
         let country = Country {
             code: "JP".to_owned(),
@@ -4895,6 +4930,14 @@ mod tests {
         assert_eq!(event.provider_event_id, "evt_1");
         assert_eq!(event.payment_intent_id, "pi_1");
         assert_eq!(event.order_id, "order_1");
+    }
+
+    #[test]
+    fn stripe_transition_treats_expired_checkout_session_as_canceled() {
+        assert_eq!(
+            stripe_transition("checkout.session.expired"),
+            ("failed", "canceled", "payment_failed")
+        );
     }
 
     #[test]

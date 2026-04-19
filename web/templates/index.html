@@ -142,7 +142,13 @@
         </ol>
       </nav>
 
-      <form id="order-form" class="flow-form">
+      <form
+        id="order-form"
+        class="flow-form"
+        hx-post="{{ purchase_action_url }}"
+        hx-target="#purchase-result"
+        hx-swap="innerHTML"
+      >
         <input id="locale" name="locale" type="hidden" value="{{ selected_locale }}">
         <section class="step-panel is-active" data-step-panel="1">
           <div class="design-grid">
@@ -598,14 +604,10 @@
               <p class="field-hint">{{ purchase_note }}</p>
               <button
                 id="purchase-submit"
-                type="button"
+                type="submit"
                 class="primary full"
                 data-ready-label="{% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}"
                 data-submitting-label="{% if selected_locale == "ja" %}送信中...{% else %}Submitting...{% endif %}"
-                hx-post="{{ purchase_action_url }}"
-                hx-target="#purchase-result"
-                hx-swap="innerHTML"
-                hx-include="#order-form"
               >
                 {% if selected_locale == "ja" %}支払う{% else %}Pay now{% endif %}
               </button>
