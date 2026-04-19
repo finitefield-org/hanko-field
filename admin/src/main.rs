@@ -74,6 +74,7 @@ struct Order {
     channel: String,
     locale: String,
     currency: String,
+    listing_key: String,
     status: String,
     status_updated_at: DateTime<Utc>,
     payment_status: String,
@@ -4673,6 +4674,27 @@ impl ServerState {
 
         {
             let mut data = self.data.write().await;
+            let Some(tag) = data.facet_tags.get(&normalized_id).cloned() else {
+                return Err("タグが見つかりません。".to_owned());
+            };
+            if let Some(listing_key) = data
+                .stone_listings
+                .values()
+                .find(|listing| match tag.facet_type.as_str() {
+                    "color" => listing.facets.color_tags.iter().any(|value| value == &tag.key),
+                    "pattern" => listing
+                        .facets
+                        .pattern_tags
+                        .iter()
+                        .any(|value| value == &tag.key),
+                    _ => false,
+                })
+                .map(|listing| listing.key.clone())
+            {
+                return Err(format!(
+                    "一点物 `{listing_key}` で参照されているため削除できません。"
+                ));
+            }
             let Some(_) = data.facet_tags.remove(&normalized_id) else {
                 return Err("タグが見つかりません。".to_owned());
             };
@@ -5924,6 +5946,22 @@ impl ServerState {
 
         {
             let mut data = self.data.write().await;
+            if let Some(order_label) = data
+                .orders
+                .values()
+                .find(|order| order.listing_key == normalized_key)
+                .map(|order| {
+                    if order.order_no.is_empty() {
+                        order.id.clone()
+                    } else {
+                        order.order_no.clone()
+                    }
+                })
+            {
+                return Err(format!(
+                    "注文 `{order_label}` で参照されているため削除できません。"
+                ));
+            }
             let Some(_) = data.stone_listings.remove(&normalized_key) else {
                 return Err("一点物が見つかりません。".to_owned());
             };
@@ -6125,6 +6163,7 @@ impl FirestoreAdminSource {
 
     fn decode_order(&self, order_id: &str, data: &BTreeMap<String, JsonValue>) -> Order {
         let payment = read_map_field(data, "payment");
+        let listing = read_map_field(data, "listing");
         let fulfillment = read_map_field(data, "fulfillment");
         let shipping = read_map_field(data, "shipping");
         let contact = read_map_field(data, "contact");
@@ -6167,6 +6206,14 @@ impl FirestoreAdminSource {
             channel: read_string_field(data, "channel"),
             locale,
             currency: pricing_currency,
+            listing_key: {
+                let listing_key = read_string_field(&listing, "key");
+                if listing_key.is_empty() {
+                    read_string_field(data, "listing_key")
+                } else {
+                    listing_key
+                }
+            },
             status: read_string_field(data, "status"),
             status_updated_at,
             payment_status: read_string_field(&payment, "status"),
@@ -10156,6 +10203,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "manufacturing".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(4),
                 payment_status: String::new(),
@@ -10209,6 +10257,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "en".to_owned(),
                 currency: "USD".to_owned(),
+                listing_key: String::new(),
                 status: "paid".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(2),
                 payment_status: String::new(),
@@ -10253,6 +10302,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "shipped".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(26),
                 payment_status: String::new(),
@@ -10324,6 +10374,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "delivered".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(72),
                 payment_status: String::new(),
@@ -10368,6 +10419,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "en".to_owned(),
                 currency: "USD".to_owned(),
+                listing_key: String::new(),
                 status: "pending_payment".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(8),
                 payment_status: String::new(),
@@ -10401,6 +10453,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "refunded".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(130),
                 payment_status: String::new(),
@@ -10445,6 +10498,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "canceled".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(80),
                 payment_status: String::new(),
@@ -11335,6 +11389,35 @@ mod tests {
 
         assert!(
             matches!(result, Err(message) if message.contains("模様タグ") && message.contains("missing_pattern_tag"))
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_stone_listing_rejects_order_reference() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            if let Some(order) = data.orders.get_mut("ord_1003") {
+                order.listing_key = "jade_01".to_owned();
+            }
+        }
+
+        let result = state.delete_stone_listing("jade_01").await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("注文") && message.contains("参照"))
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_facet_tag_rejects_referenced_listing() {
+        let state = mock_server_state();
+
+        let result = state.delete_facet_tag("color:deep_green").await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("一点物") && message.contains("参照"))
         );
     }
 
