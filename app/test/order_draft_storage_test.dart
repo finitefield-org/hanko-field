@@ -14,7 +14,7 @@ OrderDraftData _sampleDraft() {
     kanjiStyleCode: 'japanese',
     selectedFontKey: 'zen_maru_gothic',
     shapeCode: 'square',
-    selectedMaterialKey: 'rose_quartz',
+    selectedStoneListingKey: 'rose_quartz_01',
     selectedCountryCode: 'JP',
     realName: '山田太郎',
     candidateGenderCode: 'unspecified',
@@ -45,7 +45,7 @@ void main() {
     expect(loaded!.email, draft.email);
 
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('hanko_field_order_draft_v1');
+    final raw = prefs.getString('hanko_field_order_draft_v2');
     expect(raw, isNotNull);
 
     final decoded = jsonDecode(raw!) as Map<String, dynamic>;
@@ -57,7 +57,7 @@ void main() {
         .subtract(const Duration(minutes: 31))
         .millisecondsSinceEpoch;
     SharedPreferences.setMockInitialValues({
-      'hanko_field_order_draft_v1': jsonEncode({
+      'hanko_field_order_draft_v2': jsonEncode({
         'saved_at_ms': expiredAt,
         ..._sampleDraft().toJson(),
       }),
@@ -69,6 +69,6 @@ void main() {
     expect(loaded, isNull);
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.containsKey('hanko_field_order_draft_v1'), isFalse);
+    expect(prefs.containsKey('hanko_field_order_draft_v2'), isFalse);
   });
 }

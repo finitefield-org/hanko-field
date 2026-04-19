@@ -66,9 +66,9 @@
         </h2>
         <p class="design-page__intro">
           {% if selected_locale == "ja" %}
-          印影、材質、お届け先を順に選んで、そのまま購入まで進めます。
+          印影、出品個体、お届け先を順に選んで、そのまま購入まで進めます。
           {% else %}
-          Choose the seal text, material, and shipping details, then continue to checkout.
+          Choose the seal text, listing, and shipping details, then continue to checkout.
           {% endif %}
         </p>
       </div>
@@ -113,7 +113,7 @@
                   </svg>
                   <span class="step-track-number">02</span>
                 </span>
-                <span class="step-track-title">{% if selected_locale == "ja" %}材質{% else %}Material{% endif %}</span>
+                <span class="step-track-title">{% if selected_locale == "ja" %}出品個体{% else %}Listing{% endif %}</span>
               </span>
             </button>
             <div aria-hidden="true" class="step-track-separator">
@@ -254,9 +254,9 @@
 
               <div class="shape-switch-note" role="note">
                 {% if selected_locale == "en" %}
-                <strong>Note:</strong> The gemstone materials can be used with either shape.
+                <strong>Note:</strong> The gemstone listings can be used with either shape.
                 {% else %}
-                <strong>補足:</strong> 宝石材質は丸印・角印のどちらでも選べます。
+                <strong>補足:</strong> 宝石個体は丸印・角印のどちらでも選べます。
                 {% endif %}
               </div>
 
@@ -285,18 +285,18 @@
           </div>
 
           <div class="step-actions">
-            <button type="button" class="primary" data-next-step="2">{% if selected_locale == "ja" %}材質選びへ進む{% else %}Next: Material{% endif %}</button>
+            <button type="button" class="primary" data-next-step="2">{% if selected_locale == "ja" %}出品個体選びへ進む{% else %}Next: Listing{% endif %}</button>
           </div>
         </section>
 
         <section class="step-panel" data-step-panel="2">
           <div class="section-title-wrap">
-            <h2>{% if selected_locale == "ja" %}材質を選ぶ{% else %}Choose material{% endif %}</h2>
+            <h2>{% if selected_locale == "ja" %}出品個体を選ぶ{% else %}Choose listing{% endif %}</h2>
             <p>
               {% if selected_locale == "ja" %}
-              質感・重さ・用途と価格を見ながら材質を決めます。宝石材質は丸印・角印のどちらでも選べます。
+              質感・重さ・用途と価格を見ながら出品個体を決めます。宝石個体は丸印・角印のどちらでも選べます。
               {% else %}
-              Compare texture, weight, use, and price to pick your material. The gemstone materials can be used with either shape.
+              Compare texture, weight, use, and price to pick your listing. The gemstone listings can be used with either shape.
               {% endif %}
             </p>
           </div>
@@ -344,9 +344,9 @@
             <p class="material-filter-summary" data-material-filter-summary aria-live="polite"></p>
             <p class="material-filter-empty" data-material-filter-empty hidden>
               {% if selected_locale == "ja" %}
-              条件に一致する材質がありません。フィルタを解除してください。
+              条件に一致する出品個体がありません。フィルタを解除してください。
               {% else %}
-              No materials match the current filters. Clear one or more filters.
+              No listings match the current filters. Clear one or more filters.
               {% endif %}
             </p>
           </div>
@@ -356,7 +356,7 @@
             <label class="material-card">
               <input
                 type="radio"
-                name="material"
+                name="listing_id"
                 value="{{ m.key }}"
                 data-label="{{ m.label }}"
                 data-shape="{{ m.shape }}"
@@ -556,8 +556,8 @@
                   <dd id="summary-font">-</dd>
                 </div>
                 <div>
-                  <dt>{% if selected_locale == "ja" %}材質{% else %}Material{% endif %}</dt>
-                  <dd id="summary-material">-</dd>
+                  <dt>{% if selected_locale == "ja" %}出品個体{% else %}Listing{% endif %}</dt>
+                  <dd id="summary-listing">-</dd>
                 </div>
                 <div>
                   <dt>{% if selected_locale == "ja" %}配送先の国{% else %}Shipping country{% endif %}</dt>

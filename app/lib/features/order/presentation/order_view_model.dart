@@ -35,7 +35,7 @@ class OrderScreenState {
   final KanjiStyle kanjiStyle;
   final String selectedFontKey;
   final SealShape shape;
-  final String selectedMaterialKey;
+  final String selectedStoneListingKey;
   final String selectedCountryCode;
   final String realName;
   final CandidateGender candidateGender;
@@ -69,7 +69,7 @@ class OrderScreenState {
     required this.kanjiStyle,
     required this.selectedFontKey,
     required this.shape,
-    required this.selectedMaterialKey,
+    required this.selectedStoneListingKey,
     required this.selectedCountryCode,
     required this.realName,
     required this.candidateGender,
@@ -104,7 +104,7 @@ class OrderScreenState {
     KanjiStyle? kanjiStyle,
     String? selectedFontKey,
     SealShape? shape,
-    String? selectedMaterialKey,
+    String? selectedStoneListingKey,
     String? selectedCountryCode,
     String? realName,
     CandidateGender? candidateGender,
@@ -138,7 +138,8 @@ class OrderScreenState {
       kanjiStyle: kanjiStyle ?? this.kanjiStyle,
       selectedFontKey: selectedFontKey ?? this.selectedFontKey,
       shape: shape ?? this.shape,
-      selectedMaterialKey: selectedMaterialKey ?? this.selectedMaterialKey,
+      selectedStoneListingKey:
+          selectedStoneListingKey ?? this.selectedStoneListingKey,
       selectedCountryCode: selectedCountryCode ?? this.selectedCountryCode,
       realName: realName ?? this.realName,
       candidateGender: candidateGender ?? this.candidateGender,
@@ -168,7 +169,7 @@ class OrderScreenState {
 
   bool get hasCatalog {
     return catalog.fonts.isNotEmpty &&
-        catalog.materials.isNotEmpty &&
+        availableShapes.isNotEmpty &&
         catalog.countries.isNotEmpty;
   }
 
@@ -186,6 +187,21 @@ class OrderScreenState {
         PurchaseValidationGroup(
           label: localizedUiText(locale, ja: '印影テキスト', en: 'Seal text'),
           items: [sealTextError],
+        ),
+      );
+    }
+
+    if (hasCatalog && selectedStoneListingOrNull == null) {
+      groups.add(
+        PurchaseValidationGroup(
+          label: localizedUiText(locale, ja: '出品個体', en: 'Listing'),
+          items: [
+            localizedUiText(
+              locale,
+              ja: '現在の形状に対応する出品個体が見つかりません。',
+              en: 'No listing is available for the selected shape.',
+            ),
+          ],
         ),
       );
     }
@@ -317,44 +333,52 @@ class OrderScreenState {
         );
   }
 
-  List<MaterialOption> get visibleMaterials {
+  List<SealShape> get availableShapes {
+    final shapes = <SealShape>[];
+    for (final candidate in SealShape.values) {
+      final supported = catalog.stoneListings.any(
+        (listing) => listing.supportsShape(candidate),
+      );
+      if (supported) {
+        shapes.add(candidate);
+      }
+    }
+    return shapes;
+  }
+
+  List<StoneListingOption> get visibleStoneListings {
     if (!hasCatalog) {
       return const [];
     }
 
-    final filtered = catalog.materials
-        .where((material) => _materialSupportsShape(material, shape))
-        .toList();
-    if (filtered.isNotEmpty) {
-      return filtered;
-    }
-
-    return catalog.materials;
+    return catalog.stoneListings
+        .where((listing) => listing.supportsShape(shape))
+        .toList(growable: false);
   }
 
-  MaterialOption? get selectedMaterialOrNull {
+  StoneListingOption? get selectedStoneListingOrNull {
     if (!hasCatalog) {
       return null;
     }
 
-    final visible = visibleMaterials;
-    final matched = visible.where(
-      (material) => material.key == selectedMaterialKey,
-    );
-    if (matched.isNotEmpty) {
-      return matched.first;
+    final matches = catalog.stoneListings
+        .where((listing) => listing.key == selectedStoneListingKey)
+        .toList(growable: false);
+    if (matches.isNotEmpty) {
+      return matches.first;
     }
-    return visible.isNotEmpty ? visible.first : catalog.materials.first;
+    return null;
   }
 
-  MaterialOption get selectedMaterial {
-    return selectedMaterialOrNull ??
-        const MaterialOption(
+  StoneListingOption get selectedStoneListing {
+    return selectedStoneListingOrNull ??
+        const StoneListingOption(
           key: '',
-          label: '-',
+          listingCode: '',
+          title: '-',
           description: '',
-          shape: SealShape.square,
-          shapeLabel: '角印',
+          story: '',
+          supportedSealShapes: [],
           price: 0,
           photoUrl: '',
           photoAlt: '',
@@ -381,7 +405,7 @@ class OrderScreenState {
         const CountryOption(code: '--', label: '-', shipping: 0);
   }
 
-  int get subtotal => selectedMaterialOrNull?.price ?? 0;
+  int get subtotal => selectedStoneListingOrNull?.price ?? 0;
   int get shipping => selectedCountryOrNull?.shipping ?? 0;
   int get total => subtotal + shipping;
 
@@ -427,7 +451,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
       kanjiStyle: KanjiStyle.japanese,
       selectedFontKey: '',
       shape: SealShape.square,
-      selectedMaterialKey: '',
+      selectedStoneListingKey: '',
       selectedCountryCode: '',
       realName: '',
       candidateGender: CandidateGender.unspecified,
@@ -458,7 +482,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
   late final selectKanjiStyleMut = mutation<void>(#selectKanjiStyle);
   late final selectFontMut = mutation<void>(#selectFont);
   late final selectShapeMut = mutation<void>(#selectShape);
-  late final selectMaterialMut = mutation<void>(#selectMaterial);
+  late final selectStoneListingMut = mutation<void>(#selectStoneListing);
   late final selectCountryMut = mutation<void>(#selectCountry);
   late final nextStepMut = mutation<void>(#nextStep);
   late final prevStepMut = mutation<void>(#prevStep);
@@ -523,7 +547,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         final catalogResponse = await api.fetchCatalog(locale: locale);
         final catalog = catalogResponse.catalog;
         if (catalog.fonts.isEmpty ||
-            catalog.materials.isEmpty ||
+            _availableShapesForCatalog(catalog).isEmpty ||
             catalog.countries.isEmpty) {
           throw Exception('catalog is empty');
         }
@@ -609,7 +633,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
         final catalogResponse = await api.fetchCatalog(locale: nextLocale);
         final catalog = catalogResponse.catalog;
         if (catalog.fonts.isEmpty ||
-            catalog.materials.isEmpty ||
+            _availableShapesForCatalog(catalog).isEmpty ||
             catalog.countries.isEmpty) {
           throw Exception('catalog is empty');
         }
@@ -627,23 +651,23 @@ class OrderViewModel extends Provider<OrderScreenState> {
             : visibleFonts.first.key;
 
         var nextShape = active.shape;
-        var visibleMaterials = _visibleMaterialsFor(
+        var visibleListings = _visibleStoneListingsFor(
           catalog: catalog,
           shape: nextShape,
         );
-        if (visibleMaterials.isEmpty) {
+        if (visibleListings.isEmpty) {
           nextShape = _pickInitialShape(catalog);
-          visibleMaterials = _visibleMaterialsFor(
+          visibleListings = _visibleStoneListingsFor(
             catalog: catalog,
             shape: nextShape,
           );
         }
-        final nextMaterialKey =
-            visibleMaterials.any(
-              (material) => material.key == active.selectedMaterialKey,
+        final nextListingKey =
+            visibleListings.any(
+              (listing) => listing.key == active.selectedStoneListingKey,
             )
-            ? active.selectedMaterialKey
-            : visibleMaterials.first.key;
+            ? active.selectedStoneListingKey
+            : visibleListings.first.key;
 
         final nextCountryCode =
             catalog.countries.any(
@@ -661,7 +685,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
           kanjiStyle: nextStyle,
           selectedFontKey: nextFontKey,
           shape: nextShape,
-          selectedMaterialKey: nextMaterialKey,
+          selectedStoneListingKey: nextListingKey,
           selectedCountryCode: nextCountryCode,
         );
       } catch (error) {
@@ -812,42 +836,46 @@ class OrderViewModel extends Provider<OrderScreenState> {
         return;
       }
 
-      final visibleMaterials = _visibleMaterialsFor(
+      final visibleListings = _visibleStoneListingsFor(
         catalog: current.catalog,
         shape: shape,
       );
-      final hasSelected = visibleMaterials.any(
-        (material) => material.key == current.selectedMaterialKey,
+      if (visibleListings.isEmpty) {
+        return;
+      }
+
+      final hasSelected = visibleListings.any(
+        (listing) => listing.key == current.selectedStoneListingKey,
       );
-      final nextMaterialKey = hasSelected
-          ? current.selectedMaterialKey
-          : visibleMaterials.first.key;
+      final nextListingKey = hasSelected
+          ? current.selectedStoneListingKey
+          : visibleListings.first.key;
 
       ref.state = current.copyWith(
         shape: shape,
-        selectedMaterialKey: nextMaterialKey,
+        selectedStoneListingKey: nextListingKey,
         purchaseResult: null,
         purchaseError: '',
       );
     });
   }
 
-  Call<void, OrderScreenState> selectMaterial(String key) {
-    return mutate(selectMaterialMut, (ref) async {
+  Call<void, OrderScreenState> selectStoneListing(String key) {
+    return mutate(selectStoneListingMut, (ref) async {
       final current = ref.watch(this);
       if (!current.hasCatalog) {
         return;
       }
 
-      final allowed = current.visibleMaterials.any(
-        (material) => material.key == key,
+      final allowed = current.visibleStoneListings.any(
+        (listing) => listing.key == key,
       );
       if (!allowed) {
         return;
       }
 
       ref.state = current.copyWith(
-        selectedMaterialKey: key,
+        selectedStoneListingKey: key,
         purchaseResult: null,
         purchaseError: '',
       );
@@ -1208,11 +1236,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
           isSubmittingPurchase: false,
           purchaseError: '',
           purchaseResult: PurchaseResultData(
+            listingLabel: current.selectedStoneListing.title,
             sealLine1: current.sealLine1,
             sealLine2: current.sealLine2,
             fontLabel: current.selectedFont.label,
             shapeLabel: current.shape.localizedLabel(current.locale),
-            materialLabel: current.selectedMaterial.label,
             stripeName: current.recipientName.trim(),
             stripePhone: current.phone.trim(),
             countryLabel: current.selectedCountry.label,
@@ -1237,6 +1265,20 @@ class OrderViewModel extends Provider<OrderScreenState> {
       }
 
       try {
+        final selectedListing = current.selectedStoneListingOrNull;
+        if (selectedListing == null) {
+          ref.state = current.copyWith(
+            isSubmittingPurchase: false,
+            purchaseError: localizedUiText(
+              current.locale,
+              ja: '現在の形状に対応する出品個体が見つかりません。',
+              en: 'No listing is available for the selected shape.',
+            ),
+            purchaseResult: null,
+          );
+          return;
+        }
+
         final api = ref.watch(orderApiRepositoryProvider);
         final order = await api.createOrder(
           locale: current.locale,
@@ -1246,7 +1288,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
           sealLine2: current.sealLine2,
           shape: current.shape,
           fontKey: current.selectedFont.key,
-          materialKey: current.selectedMaterial.key,
+          listingId: selectedListing.key,
           countryCode: current.selectedCountry.code,
           recipientName: current.recipientName.trim(),
           phone: current.phone.trim(),
@@ -1274,11 +1316,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
               isSubmittingPurchase: false,
               purchaseError: '',
               purchaseResult: PurchaseResultData(
+                listingLabel: current.selectedStoneListing.title,
                 sealLine1: current.sealLine1,
                 sealLine2: current.sealLine2,
                 fontLabel: current.selectedFont.label,
                 shapeLabel: current.shape.localizedLabel(current.locale),
-                materialLabel: current.selectedMaterial.label,
                 stripeName: current.recipientName.trim(),
                 stripePhone: current.phone.trim(),
                 countryLabel: current.selectedCountry.label,
@@ -1309,11 +1351,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
             isSubmittingPurchase: false,
             purchaseError: '',
             purchaseResult: PurchaseResultData(
+              listingLabel: current.selectedStoneListing.title,
               sealLine1: current.sealLine1,
               sealLine2: current.sealLine2,
               fontLabel: current.selectedFont.label,
               shapeLabel: current.shape.localizedLabel(current.locale),
-              materialLabel: current.selectedMaterial.label,
               stripeName: current.recipientName.trim(),
               stripePhone: current.phone.trim(),
               countryLabel: current.selectedCountry.label,
@@ -1374,7 +1416,7 @@ OrderScreenState _stateWithDraft(OrderScreenState state, OrderDraftData draft) {
     kanjiStyle: KanjiStyle.fromCode(draft.kanjiStyleCode),
     selectedFontKey: draft.selectedFontKey,
     shape: SealShape.fromCode(draft.shapeCode),
-    selectedMaterialKey: draft.selectedMaterialKey,
+    selectedStoneListingKey: draft.selectedStoneListingKey,
     selectedCountryCode: draft.selectedCountryCode,
     realName: draft.realName,
     candidateGender: CandidateGender.fromCode(draft.candidateGenderCode),
@@ -1416,19 +1458,19 @@ OrderScreenState _stateWithCatalog({
       : visibleFonts.first.key;
 
   var nextShape = state.shape;
-  if (_visibleMaterialsFor(catalog: catalog, shape: nextShape).isEmpty) {
+  if (_visibleStoneListingsFor(catalog: catalog, shape: nextShape).isEmpty) {
     nextShape = _pickInitialShape(catalog);
   }
-  final visibleMaterials = _visibleMaterialsFor(
+  final visibleListings = _visibleStoneListingsFor(
     catalog: catalog,
     shape: nextShape,
   );
-  final nextMaterialKey =
-      visibleMaterials.any(
-        (material) => material.key == state.selectedMaterialKey,
+  final nextListingKey =
+      visibleListings.any(
+        (listing) => listing.key == state.selectedStoneListingKey,
       )
-      ? state.selectedMaterialKey
-      : visibleMaterials.first.key;
+      ? state.selectedStoneListingKey
+      : visibleListings.first.key;
 
   final nextCountryCode =
       catalog.countries.any(
@@ -1446,7 +1488,7 @@ OrderScreenState _stateWithCatalog({
     kanjiStyle: nextStyle,
     selectedFontKey: nextFontKey,
     shape: nextShape,
-    selectedMaterialKey: nextMaterialKey,
+    selectedStoneListingKey: nextListingKey,
     selectedCountryCode: nextCountryCode,
   );
 }
@@ -1472,19 +1514,22 @@ String _resolveLocale(String preferredLocale, PublicConfigData publicConfig) {
 }
 
 SealShape _pickInitialShape(CatalogData catalog) {
-  if (_visibleMaterialsFor(
+  if (_visibleStoneListingsFor(
     catalog: catalog,
     shape: SealShape.square,
   ).isNotEmpty) {
     return SealShape.square;
   }
-  if (_visibleMaterialsFor(
+  if (_visibleStoneListingsFor(
     catalog: catalog,
     shape: SealShape.round,
   ).isNotEmpty) {
     return SealShape.round;
   }
-  return catalog.materials.first.shape;
+  return catalog.stoneListings.isNotEmpty &&
+          catalog.stoneListings.first.supportsShape(SealShape.square)
+      ? SealShape.square
+      : SealShape.round;
 }
 
 List<FontOption> _visibleFontsFor({
@@ -1496,25 +1541,24 @@ List<FontOption> _visibleFontsFor({
       .toList(growable: false);
 }
 
-List<MaterialOption> _visibleMaterialsFor({
+List<StoneListingOption> _visibleStoneListingsFor({
   required CatalogData catalog,
   required SealShape shape,
 }) {
-  final filtered = catalog.materials
-      .where((material) => _materialSupportsShape(material, shape))
-      .toList();
-  if (filtered.isNotEmpty) {
-    return filtered;
+  return catalog.stoneListings
+      .where((listing) => listing.supportsShape(shape))
+      .toList(growable: false);
+}
+
+List<SealShape> _availableShapesForCatalog(CatalogData catalog) {
+  final shapes = <SealShape>[];
+  for (final shape in SealShape.values) {
+    if (_visibleStoneListingsFor(catalog: catalog, shape: shape).isNotEmpty) {
+      shapes.add(shape);
+    }
   }
-  return catalog.materials;
+  return shapes;
 }
-
-bool _materialSupportsShape(MaterialOption material, SealShape shape) {
-  return _shapeFlexibleMaterialKeys.contains(material.key) ||
-      material.shape == shape;
-}
-
-const _shapeFlexibleMaterialKeys = {'rose_quartz', 'lapis_lazuli', 'jade'};
 
 (String, String) _normalizedSealLines(String first, String second) {
   final trimmedFirst = first.trim();
@@ -1737,44 +1781,53 @@ String normalizePinyinWithoutTone(String input) {
           kanjiStyle: KanjiStyle.chinese,
         ),
       ],
-      materials: [
-        MaterialOption(
-          key: 'rose_quartz',
-          label: english ? 'Rose Quartz' : 'ローズクオーツ',
+      stoneListings: [
+        StoneListingOption(
+          key: 'rose_quartz_01',
+          listingCode: 'rose_quartz_01',
+          title: english ? 'Rose Quartz 01' : 'ローズクオーツ 01',
           description: english
-              ? 'A soft-toned stone with a warm, approachable presence'
-              : 'やわらかな色合いで、親しみやすい印象の石材',
-          shape: SealShape.square,
-          shapeLabel: english ? 'Square seal' : '角印',
+              ? 'A soft-toned listing with a warm, approachable presence'
+              : 'やわらかな色合いで、親しみやすい印象の個体',
+          story: english
+              ? 'Balanced for everyday use with a gentle finish.'
+              : '日常使いしやすい、やわらかな仕上がりの個体です。',
+          supportedSealShapes: const ['square', 'round'],
           price: english ? 16500 : 28000,
-          photoUrl: 'https://picsum.photos/seed/hf-rose-quartz/640/420',
-          photoAlt: english ? 'Rose quartz photo' : 'ローズクオーツ材の写真',
+          photoUrl: 'https://picsum.photos/seed/hf-rose-quartz-01/640/420',
+          photoAlt: english ? 'Rose quartz listing photo' : 'ローズクオーツ個体の写真',
           hasPhoto: true,
         ),
-        MaterialOption(
-          key: 'lapis_lazuli',
-          label: english ? 'Lapis Lazuli' : 'ラピスラビリ',
+        StoneListingOption(
+          key: 'lapis_lazuli_01',
+          listingCode: 'lapis_lazuli_01',
+          title: english ? 'Lapis Lazuli 01' : 'ラピスラズリ 01',
           description: english
-              ? 'A deep-blue stone with a strong, distinctive presence'
-              : '深い青が印象的な、存在感のある石材',
-          shape: SealShape.round,
-          shapeLabel: english ? 'Round seal' : '丸印',
+              ? 'A deep-blue listing with a strong, distinctive presence'
+              : '深い青が印象的な、存在感のある個体',
+          story: english
+              ? 'Sharp contrast and a vivid finish make it stand out.'
+              : 'コントラストが強く、印象に残る仕上がりです。',
+          supportedSealShapes: const ['square', 'round'],
           price: english ? 32500 : 55000,
-          photoUrl: 'https://picsum.photos/seed/hf-lapis-lazuli/640/420',
-          photoAlt: english ? 'Lapis lazuli photo' : 'ラピスラビリ材の写真',
+          photoUrl: 'https://picsum.photos/seed/hf-lapis-lazuli-01/640/420',
+          photoAlt: english ? 'Lapis lazuli listing photo' : 'ラピスラズリ個体の写真',
           hasPhoto: true,
         ),
-        MaterialOption(
-          key: 'jade',
-          label: english ? 'Jade' : '翡翠',
+        StoneListingOption(
+          key: 'jade_01',
+          listingCode: 'jade_01',
+          title: english ? 'Jade 01' : '翡翠 01',
           description: english
-              ? 'A dignified stone with a calm green sheen'
-              : '落ち着いた緑の艶が映える、格調ある石材',
-          shape: SealShape.square,
-          shapeLabel: english ? 'Square seal' : '角印',
+              ? 'A dignified listing with a calm green sheen'
+              : '落ち着いた緑の艶が映える、格調ある個体',
+          story: english
+              ? 'A composed, refined finish for formal use.'
+              : 'フォーマルな用途にも合う、落ち着いた仕上がりです。',
+          supportedSealShapes: const ['square', 'round'],
           price: english ? 88500 : 150000,
-          photoUrl: 'https://picsum.photos/seed/hf-jade/640/420',
-          photoAlt: english ? 'Jade photo' : '翡翠材の写真',
+          photoUrl: 'https://picsum.photos/seed/hf-jade-01/640/420',
+          photoAlt: english ? 'Jade listing photo' : '翡翠個体の写真',
           hasPhoto: true,
         ),
       ],

@@ -1174,6 +1174,7 @@ async fn handle_create_stripe_checkout_session(
                 .cancel_pending_order_and_release_listing(
                     &order.order_id,
                     order.listing_key.as_str(),
+                    "Stripe checkout session creation failed",
                 )
                 .await
             {
@@ -1205,6 +1206,7 @@ async fn handle_create_stripe_checkout_session(
             .cancel_pending_order_and_release_listing(
                 &order.order_id,
                 order.listing_key.as_str(),
+                "Failed to persist Stripe checkout session id",
             )
             .await
         {
@@ -1574,22 +1576,19 @@ impl FirestoreStore {
         documents.sort_by(|left, right| {
             let left_sort_order = read_int_field(&left.fields, "sort_order").unwrap_or_default();
             let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
-            left_sort_order
-                .cmp(&right_sort_order)
-                .then_with(|| {
-                    if sort_by_published_at {
-                        let left_published_at = read_timestamp_field(&left.fields, "published_at")
-                            .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
-                        let right_published_at =
-                            read_timestamp_field(&right.fields, "published_at")
-                                .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
-                        right_published_at
-                            .cmp(&left_published_at)
-                            .then_with(|| document_id(left).cmp(&document_id(right)))
-                    } else {
-                        document_id(left).cmp(&document_id(right))
-                    }
-                })
+            left_sort_order.cmp(&right_sort_order).then_with(|| {
+                if sort_by_published_at {
+                    let left_published_at = read_timestamp_field(&left.fields, "published_at")
+                        .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
+                    let right_published_at = read_timestamp_field(&right.fields, "published_at")
+                        .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
+                    right_published_at
+                        .cmp(&left_published_at)
+                        .then_with(|| document_id(left).cmp(&document_id(right)))
+                } else {
+                    document_id(left).cmp(&document_id(right))
+                }
+            })
         });
         Ok(documents)
     }
@@ -1627,51 +1626,33 @@ impl FirestoreStore {
         let font = self
             .get_active_font(&client, &normalized.seal.font_key)
             .await?;
-        let listing_bundle = if let Some(listing_id) = normalized.listing_id.as_deref() {
-            let listing_doc = self
-                .get_orderable_stone_listing_document(&client, listing_id)
-                .await?;
-            let listing = stone_listing_from_fields(listing_id, &listing_doc.fields);
-            Some((listing_id.to_owned(), listing_doc, listing))
-        } else {
-            None
-        };
-        let listing = listing_bundle
-            .as_ref()
-            .map(|(_, _, listing)| listing.clone());
-        let material_key = if let Some(listing) = listing.as_ref() {
-            if let Some(requested_key) = normalized.material_key.as_deref()
-                && !requested_key.trim().is_empty()
-                && requested_key.trim() != listing.material_key
-            {
-                return Err(StoreError::InvalidReference);
-            }
-            listing.material_key.clone()
-        } else {
-            normalized
-                .material_key
-                .clone()
-                .ok_or(StoreError::InvalidReference)?
-        };
+        let listing_id = normalized
+            .listing_id
+            .as_deref()
+            .ok_or(StoreError::InvalidReference)?;
+        let listing_doc = self
+            .get_orderable_stone_listing_document(&client, listing_id)
+            .await?;
+        let listing_snapshot = stone_listing_from_fields(listing_id, &listing_doc.fields);
+        if let Some(requested_key) = normalized.material_key.as_deref()
+            && !requested_key.trim().is_empty()
+            && requested_key.trim() != listing_snapshot.material_key
+        {
+            return Err(StoreError::InvalidReference);
+        }
+        let material_key = listing_snapshot.material_key.clone();
         let material = self.get_active_material(&client, &material_key).await?;
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
-        let shape_supports = if let Some(listing) = listing.as_ref() {
-            stone_listing_supports_seal_shape(listing, &normalized.seal.shape)
-        } else {
-            material_supports_shape(&material, &normalized.seal.shape)
-        };
+        let shape_supports =
+            stone_listing_supports_seal_shape(&listing_snapshot, &normalized.seal.shape);
         if !shape_supports {
             return Err(StoreError::MaterialShapeMismatch);
         }
 
         let now = Utc::now();
-        let subtotal = if let Some(listing) = listing.as_ref() {
-            stone_listing_price_for_currency(listing, &pricing_currency)
-        } else {
-            material_price_for_currency(&material, &pricing_currency)
-        };
+        let subtotal = stone_listing_price_for_currency(&listing_snapshot, &pricing_currency);
         let shipping = country_shipping_fee_for_currency(&country, &pricing_currency);
         let tax = 0_i64;
         let discount = 0_i64;
@@ -1686,152 +1667,14 @@ impl FirestoreStore {
             order_suffix
         );
 
-        if let Some((listing_key, listing_doc, listing_snapshot)) = listing_bundle.as_ref() {
-            let order_id = Uuid::new_v4().to_string();
-            let order_doc = Document {
-                name: None,
-                fields: build_order_fields(
-                    &normalized,
-                    &font,
-                    &material,
-                    Some(listing_snapshot),
-                    &country,
-                    &order_no,
-                    subtotal,
-                    shipping,
-                    tax,
-                    discount,
-                    total,
-                    &pricing_currency,
-                    now,
-                ),
-                ..Document::default()
-            };
-            let event_doc = Document {
-                name: None,
-                fields: btree_from_pairs(vec![
-                    ("type", fs_string("order_created")),
-                    ("actor_type", fs_string("system")),
-                    (
-                        "payload",
-                        fs_map(btree_from_pairs(vec![
-                            ("channel", fs_string(normalized.channel.clone())),
-                            ("total", fs_int(total)),
-                            ("currency", fs_string(pricing_currency.clone())),
-                        ])),
-                    ),
-                    ("created_at", fs_timestamp(now)),
-                ]),
-                ..Document::default()
-            };
-            let idempotency_doc = Document {
-                name: None,
-                fields: btree_from_pairs(vec![
-                    ("channel", fs_string(normalized.channel.clone())),
-                    (
-                        "idempotency_key",
-                        fs_string(normalized.idempotency_key.clone()),
-                    ),
-                    ("request_hash", fs_string(request_hash.clone())),
-                    ("order_id", fs_string(order_id.clone())),
-                    ("created_at", fs_timestamp(now)),
-                    ("expire_at", fs_timestamp(now + Duration::days(30))),
-                ]),
-                ..Document::default()
-            };
-            let listing_doc_name = format!("{}/stone_listings/{}", self.parent, listing_key);
-            let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
-                StoreError::Internal(anyhow!(
-                    "stone_listings/{listing_key} is missing update_time"
-                ))
-            })?;
-
-            let commit_result = client
-                .commit(
-                    &self.parent,
-                    &CommitRequest {
-                        writes: vec![
-                            json!({
-                                "update": {
-                                    "name": listing_doc_name,
-                                    "fields": {
-                                        "status": fs_string("reserved"),
-                                        "version": fs_int(listing_snapshot.version + 1),
-                                        "updated_at": fs_timestamp(now),
-                                    }
-                                },
-                                "updateMask": {
-                                    "fieldPaths": ["status", "version", "updated_at"]
-                                },
-                                "currentDocument": {
-                                    "updateTime": listing_update_time
-                                }
-                            }),
-                            json!({
-                                "update": {
-                                    "name": format!("{}/orders/{}", self.parent, order_id),
-                                    "fields": order_doc.fields
-                                },
-                                "currentDocument": {
-                                    "exists": false
-                                }
-                            }),
-                            json!({
-                                "update": {
-                                    "name": format!("{}/orders/{}/events/{}", self.parent, order_id, Uuid::new_v4()),
-                                    "fields": event_doc.fields
-                                },
-                                "currentDocument": {
-                                    "exists": false
-                                }
-                            }),
-                            json!({
-                                "update": {
-                                    "name": format!("{}/idempotency_keys/{}", self.parent, idempotency_id),
-                                    "fields": idempotency_doc.fields
-                                },
-                                "currentDocument": {
-                                    "exists": false
-                                }
-                            }),
-                        ],
-                        transaction: None,
-                    },
-                )
-                .await;
-
-            if let Err(err) = commit_result {
-                if is_conflict(&err) || is_precondition_failed(&err) {
-                    if let Some(result) = self
-                        .try_idempotent_replay(&client, &idempotency_doc_name, &request_hash)
-                        .await?
-                    {
-                        return Ok(result);
-                    }
-                    return Err(StoreError::InactiveReference);
-                }
-                return Err(StoreError::Internal(anyhow!(err)));
-            }
-
-            return Ok(CreateOrderResult {
-                order_id,
-                order_no,
-                status: "pending_payment".to_owned(),
-                payment_status: "unpaid".to_owned(),
-                fulfillment_status: "pending".to_owned(),
-                total,
-                currency: pricing_currency,
-                idempotent_replay: false,
-            });
-        }
-
+        let order_id = Uuid::new_v4().to_string();
         let order_doc = Document {
             name: None,
             fields: build_order_fields(
                 &normalized,
                 &font,
                 &material,
-                listing.as_ref(),
+                Some(&listing_snapshot),
                 &country,
                 &order_no,
                 subtotal,
@@ -1844,20 +1687,6 @@ impl FirestoreStore {
             ),
             ..Document::default()
         };
-
-        let created_order = client
-            .create_document(
-                &self.parent,
-                "orders",
-                &order_doc,
-                &CreateDocumentOptions::default(),
-            )
-            .await
-            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
-
-        let order_id = document_id(&created_order)
-            .ok_or_else(|| StoreError::Internal(anyhow!("created order is missing document id")))?;
-
         let event_doc = Document {
             name: None,
             fields: btree_from_pairs(vec![
@@ -1875,17 +1704,6 @@ impl FirestoreStore {
             ]),
             ..Document::default()
         };
-
-        client
-            .create_document(
-                &format!("{}/orders/{order_id}", self.parent),
-                "events",
-                &event_doc,
-                &CreateDocumentOptions::default(),
-            )
-            .await
-            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
-
         let idempotency_doc = Document {
             name: None,
             fields: btree_from_pairs(vec![
@@ -1901,33 +1719,81 @@ impl FirestoreStore {
             ]),
             ..Document::default()
         };
+        let listing_doc_name = format!("{}/stone_listings/{}", self.parent, listing_id);
+        let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
+            StoreError::Internal(anyhow!(
+                "stone_listings/{listing_id} is missing update_time"
+            ))
+        })?;
 
-        let create_idempotency_result = client
-            .create_document(
+        let commit_result = client
+            .commit(
                 &self.parent,
-                "idempotency_keys",
-                &idempotency_doc,
-                &CreateDocumentOptions {
-                    document_id: Some(idempotency_id.clone()),
-                    ..CreateDocumentOptions::default()
+                &CommitRequest {
+                    writes: vec![
+                        json!({
+                            "update": {
+                                "name": listing_doc_name,
+                                "fields": {
+                                    "status": fs_string("reserved"),
+                                    "version": fs_int(listing_snapshot.version + 1),
+                                    "updated_at": fs_timestamp(now),
+                                }
+                            },
+                            "updateMask": {
+                                "fieldPaths": ["status", "version", "updated_at"]
+                            },
+                            "currentDocument": {
+                                "updateTime": listing_update_time
+                            }
+                        }),
+                        json!({
+                            "update": {
+                                "name": format!("{}/orders/{}", self.parent, order_id),
+                                "fields": order_doc.fields
+                            },
+                            "currentDocument": {
+                                "exists": false
+                            }
+                        }),
+                        json!({
+                            "update": {
+                                "name": format!("{}/orders/{}/events/{}", self.parent, order_id, Uuid::new_v4()),
+                                "fields": event_doc.fields
+                            },
+                            "currentDocument": {
+                                "exists": false
+                            }
+                        }),
+                        json!({
+                            "update": {
+                                "name": format!("{}/idempotency_keys/{}", self.parent, idempotency_id),
+                                "fields": idempotency_doc.fields
+                            },
+                            "currentDocument": {
+                                "exists": false
+                            }
+                        }),
+                    ],
+                    transaction: None,
                 },
             )
             .await;
 
-        if let Err(err) = create_idempotency_result {
-            if is_conflict(&err) {
+        if let Err(err) = commit_result {
+            if is_conflict(&err) || is_precondition_failed(&err) {
                 if let Some(result) = self
                     .try_idempotent_replay(&client, &idempotency_doc_name, &request_hash)
                     .await?
                 {
                     return Ok(result);
                 }
-                return Err(StoreError::IdempotencyConflict);
+                return Err(StoreError::InactiveReference);
             }
             return Err(StoreError::Internal(anyhow!(err)));
         }
 
-        Ok(CreateOrderResult {
+        return Ok(CreateOrderResult {
             order_id,
             order_no,
             status: "pending_payment".to_owned(),
@@ -1936,7 +1802,7 @@ impl FirestoreStore {
             total,
             currency: pricing_currency,
             idempotent_replay: false,
-        })
+        });
     }
 
     async fn get_order_checkout_context(
@@ -2071,11 +1937,9 @@ impl FirestoreStore {
         &self,
         order_id: &str,
         listing_key: &str,
+        rollback_reason: &str,
     ) -> Result<(), StoreError> {
         let listing_key = listing_key.trim();
-        if listing_key.is_empty() {
-            return Ok(());
-        }
 
         let client = self
             .firestore_client()
@@ -2090,10 +1954,9 @@ impl FirestoreStore {
             .await
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
         let order_update_time = order_doc.update_time.clone().ok_or_else(|| {
-            StoreError::Internal(anyhow!(
-                "orders/{order_id} is missing update_time"
-            ))
+            StoreError::Internal(anyhow!("orders/{order_id} is missing update_time"))
         })?;
+        let before_status = read_string_field(&order_doc.fields, "status");
         let mut payment = read_map_field(&order_doc.fields, "payment");
         payment.insert("status".to_owned(), fs_string("failed"));
 
@@ -2115,44 +1978,69 @@ impl FirestoreStore {
             }
         })];
 
-        let listing_doc = client
-            .get_document(&listing_doc_name, &GetDocumentOptions::default())
-            .await
-            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
-        let target_listing_status = stone_listing_status_after_order_status("canceled")
-            .unwrap_or("published");
-        let current_listing_status = read_string_field(&listing_doc.fields, "status");
-        let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
-        if !current_listing_status
-            .trim()
-            .eq_ignore_ascii_case(target_listing_status)
-            || (target_listing_status.eq_ignore_ascii_case("published")
-                && current_published_at.is_none())
-        {
-            let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
-                StoreError::Internal(anyhow!(
-                    "stone_listings/{listing_key} is missing update_time"
-                ))
-            })?;
-            let listing_version =
-                read_int_field(&listing_doc.fields, "version").unwrap_or_default();
-            writes.push(json!({
-                "update": {
-                    "name": listing_doc_name,
-                    "fields": {
-                        "status": fs_string(target_listing_status),
-                        "published_at": fs_timestamp(now),
-                        "version": fs_int(listing_version + 1),
-                        "updated_at": fs_timestamp(now),
+        let event_doc = Document {
+            name: None,
+            fields: btree_from_pairs(vec![
+                ("type", fs_string("status_changed")),
+                ("actor_type", fs_string("system")),
+                ("actor_id", fs_string("stripe.checkout_session")),
+                ("before_status", fs_string(before_status)),
+                ("after_status", fs_string("canceled")),
+                ("note", fs_string(rollback_reason.trim().to_owned())),
+                ("created_at", fs_timestamp(now)),
+            ]),
+            ..Document::default()
+        };
+        writes.push(json!({
+            "update": {
+                "name": format!("{}/orders/{}/events/{}", self.parent, order_id, Uuid::new_v4()),
+                "fields": event_doc.fields
+            },
+            "currentDocument": {
+                "exists": false
+            }
+        }));
+
+        if !listing_key.is_empty() {
+            let listing_doc = client
+                .get_document(&listing_doc_name, &GetDocumentOptions::default())
+                .await
+                .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+            let target_listing_status =
+                stone_listing_status_after_order_status("canceled").unwrap_or("published");
+            let current_listing_status = read_string_field(&listing_doc.fields, "status");
+            let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
+            if !current_listing_status
+                .trim()
+                .eq_ignore_ascii_case(target_listing_status)
+                || (target_listing_status.eq_ignore_ascii_case("published")
+                    && current_published_at.is_none())
+            {
+                let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
+                    StoreError::Internal(anyhow!(
+                        "stone_listings/{listing_key} is missing update_time"
+                    ))
+                })?;
+                let listing_version =
+                    read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+                writes.push(json!({
+                    "update": {
+                        "name": listing_doc_name,
+                        "fields": {
+                            "status": fs_string(target_listing_status),
+                            "published_at": fs_timestamp(now),
+                            "version": fs_int(listing_version + 1),
+                            "updated_at": fs_timestamp(now),
+                        }
+                    },
+                    "updateMask": {
+                        "fieldPaths": ["status", "published_at", "version", "updated_at"]
+                    },
+                    "currentDocument": {
+                        "updateTime": listing_update_time
                     }
-                },
-                "updateMask": {
-                    "fieldPaths": ["status", "published_at", "version", "updated_at"]
-                },
-                "currentDocument": {
-                    "updateTime": listing_update_time
-                }
-            }));
+                }));
+            }
         }
 
         client
@@ -3105,7 +2993,13 @@ fn stone_listing_from_fields(key: &str, data: &BTreeMap<String, JsonValue>) -> S
             description_i18n.insert("ja".to_owned(), legacy_description);
         }
     }
-    let story_i18n = read_string_map_field(data, "story_i18n");
+    let mut story_i18n = read_string_map_field(data, "story_i18n");
+    if story_i18n.is_empty() {
+        let legacy_story = read_string_field(data, "story");
+        if !legacy_story.is_empty() {
+            story_i18n.insert("ja".to_owned(), legacy_story);
+        }
+    }
     let mut supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
     if supported_seal_shapes.is_empty() {
         let fallback_shape = first_non_empty(&[
@@ -3853,16 +3747,16 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
         Some(listing_id)
     };
 
+    if listing_id.is_none() {
+        bail!("listing_id is required");
+    }
+
     let material_key = request.material_key.unwrap_or_default().trim().to_owned();
     let material_key = if material_key.is_empty() {
         None
     } else {
         Some(material_key)
     };
-
-    if listing_id.is_none() && material_key.is_none() {
-        bail!("listing_id or material_key is required");
-    }
 
     let country_code = request.shipping.country_code.trim().to_uppercase();
     if country_code.chars().count() != 2 {
@@ -4527,7 +4421,10 @@ mod tests {
 
     #[test]
     fn stone_listing_status_follows_paid_and_canceled_orders() {
-        assert_eq!(stone_listing_status_after_order_status("paid"), Some("sold"));
+        assert_eq!(
+            stone_listing_status_after_order_status("paid"),
+            Some("sold")
+        );
         assert_eq!(
             stone_listing_status_after_order_status("canceled"),
             Some("published")
@@ -4831,7 +4728,7 @@ mod tests {
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
             },
-            listing_id: None,
+            listing_id: Some("rose_quartz_01".to_owned()),
             material_key: Some("jade".to_owned()),
             shipping: CreateOrderShippingRequest {
                 country_code: "jp".to_owned(),
@@ -4854,6 +4751,40 @@ mod tests {
     }
 
     #[test]
+    fn validate_create_order_request_rejects_missing_listing_id() {
+        let request = CreateOrderRequest {
+            channel: "web".to_owned(),
+            locale: "ja".to_owned(),
+            idempotency_key: "demo_key_123".to_owned(),
+            terms_agreed: true,
+            seal: CreateOrderSealRequest {
+                line1: "田中".to_owned(),
+                line2: "太郎".to_owned(),
+                shape: "square".to_owned(),
+                font_key: "zen_maru_gothic".to_owned(),
+            },
+            listing_id: None,
+            material_key: Some("jade".to_owned()),
+            shipping: CreateOrderShippingRequest {
+                country_code: "JP".to_owned(),
+                recipient_name: "田中 太郎".to_owned(),
+                phone: "09000001111".to_owned(),
+                postal_code: "1000001".to_owned(),
+                state: "東京都".to_owned(),
+                city: "千代田区".to_owned(),
+                address_line1: "1-1-1".to_owned(),
+                address_line2: "".to_owned(),
+            },
+            contact: CreateOrderContactRequest {
+                email: "taro@example.com".to_owned(),
+                preferred_locale: "ja".to_owned(),
+            },
+        };
+
+        assert!(validate_create_order_request(request).is_err());
+    }
+
+    #[test]
     fn validate_create_order_request_rejects_seal_whitespace() {
         let request = CreateOrderRequest {
             channel: "web".to_owned(),
@@ -4866,7 +4797,7 @@ mod tests {
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
             },
-            listing_id: None,
+            listing_id: Some("rose_quartz_01".to_owned()),
             material_key: Some("jade".to_owned()),
             shipping: CreateOrderShippingRequest {
                 country_code: "JP".to_owned(),

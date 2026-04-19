@@ -211,7 +211,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
       kanjiStyleCode: state.kanjiStyle.code,
       selectedFontKey: state.selectedFontKey,
       shapeCode: state.shape.code,
-      selectedMaterialKey: state.selectedMaterialKey,
+      selectedStoneListingKey: state.selectedStoneListingKey,
       selectedCountryCode: state.selectedCountryCode,
       realName: state.realName,
       candidateGenderCode: state.candidateGender.code,
@@ -358,12 +358,12 @@ class _OrderPageState extends ConsumerState<OrderPage> {
             ref.invoke(orderViewModel.selectSuggestion(index)),
         onNext: () => ref.invoke(orderViewModel.nextStep()),
       ),
-      OrderStep.material => _MaterialStep(
-        key: const ValueKey('material_step'),
+      OrderStep.listing => _StoneListingStep(
+        key: const ValueKey('listing_step'),
         locale: state.locale,
         state: state,
-        onSelectMaterial: (key) =>
-            ref.invoke(orderViewModel.selectMaterial(key)),
+        onSelectStoneListing: (key) =>
+            ref.invoke(orderViewModel.selectStoneListing(key)),
         onPrev: () => ref.invoke(orderViewModel.prevStep()),
         onNext: () => ref.invoke(orderViewModel.nextStep()),
       ),
@@ -479,8 +479,8 @@ class _DesignLead extends StatelessWidget {
     final title = localizedUiText(locale, ja: 'デザイン作成', en: 'Design');
     final intro = localizedUiText(
       locale,
-      ja: '印影、材質、お届け先を順に選んで、そのまま購入まで進めます。',
-      en: 'Choose the seal text, material, and shipping details, then continue to checkout.',
+      ja: '印影、出品個体、お届け先を順に選んで、そのまま購入まで進めます。',
+      en: 'Choose the seal text, listing, and shipping details, then continue to checkout.',
     );
 
     return LayoutBuilder(
@@ -622,7 +622,7 @@ class _StepTrackItem extends StatelessWidget {
         : HfPalette.muted;
     final titleLabel = switch (step) {
       OrderStep.design => localizedUiText(locale, ja: 'デザイン', en: 'Design'),
-      OrderStep.material => localizedUiText(locale, ja: '材質', en: 'Material'),
+      OrderStep.listing => localizedUiText(locale, ja: '出品個体', en: 'Listing'),
       OrderStep.purchase => localizedUiText(locale, ja: '購入', en: 'Purchase'),
     };
     final content = Padding(
@@ -785,7 +785,7 @@ class _DesignStep extends StatelessWidget {
               child: FilledButton(
                 onPressed: onNext,
                 child: Text(
-                  isEnglishLocale(locale) ? 'Next: Material' : '材質選びへ進む',
+                  isEnglishLocale(locale) ? 'Next: Listing' : '出品個体選びへ',
                 ),
               ),
             ),
@@ -1081,7 +1081,7 @@ class _DesignStep extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: SealShape.values
+              children: state.availableShapes
                   .map((shape) {
                     return ChoiceChip(
                       label: Text(shape.localizedLabel(locale)),
@@ -1243,8 +1243,8 @@ class _DesignStep extends StatelessWidget {
                     TextSpan(
                       text: localizedUiText(
                         locale,
-                        ja: '宝石材質は丸印・角印のどちらでも選べます。',
-                        en: 'The gemstone materials can be used with either shape.',
+                        ja: '選択した形状に対応する出品個体だけが表示されます。',
+                        en: 'Only listings compatible with the selected shape are shown.',
                       ),
                     ),
                   ],
@@ -1835,30 +1835,196 @@ class _SuggestionBox extends StatelessWidget {
   }
 }
 
-class _MaterialStep extends StatelessWidget {
-  const _MaterialStep({
+class _StoneListingStep extends StatelessWidget {
+  const _StoneListingStep({
     super.key,
     required this.locale,
     required this.state,
-    required this.onSelectMaterial,
+    required this.onSelectStoneListing,
     required this.onPrev,
     required this.onNext,
   });
 
   final String locale;
   final OrderScreenState state;
-  final ValueChanged<String> onSelectMaterial;
+  final ValueChanged<String> onSelectStoneListing;
   final VoidCallback onPrev;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
-    final title = isEnglishLocale(locale) ? 'Choose Material' : '材質を選ぶ';
+    final title = isEnglishLocale(locale) ? 'Choose Listing' : '出品個体を選ぶ';
     final subtitle = isEnglishLocale(locale)
-        ? 'Compare texture, weight, use, and price to pick your material. The gemstone materials can be used with either shape.'
-        : '質感・重さ・用途と価格を見ながら材質を決めます。宝石材質は丸印・角印のどちらでも選べます。';
+        ? 'Pick the exact stone listing you want to order. Only listings compatible with the selected shape are shown.'
+        : '注文する出品個体を選びます。選択中の形状に対応する個体だけを表示します。';
     final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
     final nextLabel = isEnglishLocale(locale) ? 'Next: Purchase' : '購入へ進む';
+    final canAdvance =
+        state.visibleStoneListings.isNotEmpty &&
+        state.selectedStoneListingOrNull != null;
+
+    String shapeLabelForCode(String code) {
+      return switch (code.trim().toLowerCase()) {
+        'square' => localizedUiText(locale, ja: '角印', en: 'Square seal'),
+        'round' => localizedUiText(locale, ja: '丸印', en: 'Round seal'),
+        _ => code,
+      };
+    }
+
+    List<Widget> shapeChips(StoneListingOption listing) {
+      return listing.supportedSealShapes
+          .map(
+            (shapeCode) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: const Color(0xFFFDF9F4),
+                border: Border.all(color: HfPalette.line),
+              ),
+              child: Text(
+                shapeLabelForCode(shapeCode),
+                style: const TextStyle(fontSize: 11.5, color: HfPalette.muted),
+              ),
+            ),
+          )
+          .toList(growable: false);
+    }
+
+    Widget buildListingCard(
+      StoneListingOption listing,
+      bool selected,
+      bool compact,
+    ) {
+      final titleText = listing.title.isNotEmpty
+          ? listing.title
+          : listing.listingCode;
+
+      return GestureDetector(
+        onTap: () => onSelectStoneListing(listing.key),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? HfPalette.accent : HfPalette.line,
+              width: selected ? 1.4 : 1,
+            ),
+            color: Colors.white,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: HfPalette.accent.withValues(alpha: 0.10),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          padding: EdgeInsets.all(compact ? 14 : 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: listing.hasPhoto
+                    ? Image.network(
+                        listing.photoUrl,
+                        height: compact ? 152 : 132,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          height: compact ? 152 : 132,
+                          color: HfPalette.bgMain,
+                        ),
+                      )
+                    : Container(
+                        height: compact ? 152 : 132,
+                        color: HfPalette.bgMain,
+                      ),
+              ),
+              SizedBox(height: compact ? 12 : 10),
+              Text(
+                titleText,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: compact ? 16 : 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                listing.description,
+                style: TextStyle(
+                  fontSize: compact ? 13.5 : 13,
+                  height: 1.4,
+                  color: HfPalette.muted,
+                ),
+              ),
+              if (listing.story.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  listing.story,
+                  style: TextStyle(
+                    fontSize: compact ? 12.5 : 12,
+                    height: 1.45,
+                    color: HfPalette.muted,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: shapeChips(listing)),
+              const SizedBox(height: 8),
+              Text(
+                formatMoney(listing.price, state.effectiveCurrency),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: compact ? 16 : 15,
+                  color: HfPalette.accent,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (state.visibleStoneListings.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle, style: TextStyle(color: HfPalette.muted)),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFF1D1CE)),
+              color: const Color(0xFFFFF2F1),
+            ),
+            child: Text(
+              localizedUiText(
+                locale,
+                ja: '現在の形状に対応する出品個体がありません。別の形状を選んでください。',
+                en: 'No listing matches the current shape. Please choose a different shape.',
+              ),
+              style: const TextStyle(color: Color(0xFF8F2219)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: null, child: Text(nextLabel)),
+            ],
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1882,178 +2048,40 @@ class _MaterialStep extends StatelessWidget {
             final itemWidth =
                 (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-            Widget buildComparisonSection(List<_MaterialComparisonFact> facts) {
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: facts
-                      .asMap()
-                      .entries
-                      .map((entry) {
-                        final fact = entry.value;
-                        final isLast = entry.key == facts.length - 1;
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: isLast ? 0 : 6),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: HfPalette.line),
-                              color: const Color(0xFFFDF9F4),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  width: 48,
-                                  child: Text(
-                                    fact.label,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: HfPalette.muted,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    fact.value,
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      height: 1.35,
-                                      fontWeight: FontWeight.w600,
-                                      color: HfPalette.ink,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                );
-              }
-
-              return Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: facts
-                    .map((fact) => _ComparisonBadge(fact: fact))
-                    .toList(growable: false),
-              );
-            }
-
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
-              children: state.visibleMaterials
-                  .map((material) {
-                    final selected = material.key == state.selectedMaterial.key;
-                    return GestureDetector(
-                      onTap: () => onSelectMaterial(material.key),
-                      child: Container(
-                        width: itemWidth,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: selected ? HfPalette.accent : HfPalette.line,
-                            width: selected ? 1.4 : 1,
-                          ),
-                          color: Colors.white,
-                        ),
-                        padding: EdgeInsets.all(compact ? 14 : 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: material.hasPhoto
-                                  ? Image.network(
-                                      material.photoUrl,
-                                      height: compact ? 152 : 130,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
-                                        height: compact ? 152 : 130,
-                                        color: HfPalette.bgMain,
-                                      ),
-                                    )
-                                  : Container(
-                                      height: compact ? 152 : 130,
-                                      color: HfPalette.bgMain,
-                                    ),
-                            ),
-                            SizedBox(height: compact ? 12 : 10),
-                            Text(
-                              material.label,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: compact ? 16 : 15,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              material.shapeLabel,
-                              style: TextStyle(
-                                fontSize: compact ? 13.5 : 13,
-                                color: HfPalette.muted,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              material.description,
-                              style: TextStyle(
-                                fontSize: compact ? 13.5 : 13,
-                                height: 1.4,
-                                color: HfPalette.muted,
-                              ),
-                            ),
-                            SizedBox(height: compact ? 10 : 8),
-                            Text(
-                              isEnglishLocale(locale) ? 'Comparison' : '比較ポイント',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: HfPalette.muted,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            buildComparisonSection(
-                              _materialComparisonFacts(material, locale),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              formatMoney(
-                                material.price,
-                                state.effectiveCurrency,
-                              ),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: compact ? 16 : 15,
-                                color: HfPalette.accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+              children: state.visibleStoneListings
+                  .map((listing) {
+                    final selected =
+                        listing.key == state.selectedStoneListingOrNull?.key;
+                    return SizedBox(
+                      width: itemWidth,
+                      child: buildListingCard(listing, selected, compact),
                     );
                   })
                   .toList(growable: false),
             );
           },
         ),
+        const SizedBox(height: 12),
+        Text(
+          localizedUiText(
+            locale,
+            ja: '選択中の形状に対応する個体だけを表示しています。',
+            en: 'Only listings compatible with the current shape are shown.',
+          ),
+          style: const TextStyle(fontSize: 12, color: HfPalette.muted),
+        ),
         const SizedBox(height: 16),
         Row(
           children: [
             OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
             const SizedBox(width: 8),
-            FilledButton(onPressed: onNext, child: Text(nextLabel)),
+            FilledButton(
+              onPressed: canAdvance ? onNext : null,
+              child: Text(nextLabel),
+            ),
           ],
         ),
       ],
@@ -2327,7 +2355,7 @@ class _PurchaseStep extends StatelessWidget {
     );
     final shapeLabel = localizedUiText(locale, ja: '形状', en: 'Shape');
     final fontLabel = localizedUiText(locale, ja: 'フォント', en: 'Font');
-    final materialLabel = localizedUiText(locale, ja: '材質', en: 'Material');
+    final listingLabel = localizedUiText(locale, ja: '出品個体', en: 'Listing');
     final countryLabel = localizedUiText(
       locale,
       ja: '配送先の国',
@@ -2355,8 +2383,8 @@ class _PurchaseStep extends StatelessWidget {
             ),
             _SummaryRow(label: fontLabel, value: state.selectedFont.label),
             _SummaryRow(
-              label: materialLabel,
-              value: state.selectedMaterial.label,
+              label: listingLabel,
+              value: state.selectedStoneListing.title,
             ),
             _SummaryRow(
               label: countryLabel,
@@ -2729,6 +2757,7 @@ class _PurchaseResultCard extends StatelessWidget {
       ja: '決済セッションID',
       en: 'Checkout Session ID',
     );
+    final listingLabel = localizedUiText(locale, ja: '出品個体', en: 'Listing');
     final sealLabel = localizedUiText(locale, ja: '印影', en: 'Seal');
     final shippingLabel = localizedUiText(locale, ja: '配送先', en: 'Shipping to');
     final addressLabel = localizedUiText(locale, ja: '住所', en: 'Address');
@@ -2771,6 +2800,10 @@ class _PurchaseResultCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '$sourceLabel: ${result.sourceLabel} / $orderIdLabel: ${result.orderId} / $checkoutLabel: ${result.checkoutSessionId}',
+            style: const TextStyle(fontSize: 12.5, height: 1.45),
+          ),
+          Text(
+            '$listingLabel: ${result.listingLabel}',
             style: const TextStyle(fontSize: 12.5, height: 1.45),
           ),
           const SizedBox(height: 6),
@@ -2883,127 +2916,6 @@ class _LabeledField extends StatelessWidget {
       ],
     );
   }
-}
-
-@immutable
-class _MaterialComparisonFact {
-  const _MaterialComparisonFact({required this.label, required this.value});
-
-  final String label;
-  final String value;
-}
-
-class _ComparisonBadge extends StatelessWidget {
-  const _ComparisonBadge({required this.fact});
-
-  final _MaterialComparisonFact fact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 92),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: HfPalette.line),
-        color: const Color(0xFFFDF9F4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            fact.label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: HfPalette.muted,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            fact.value,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.25,
-              fontWeight: FontWeight.w600,
-              color: HfPalette.ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-List<_MaterialComparisonFact> _materialComparisonFacts(
-  MaterialOption material,
-  String locale,
-) {
-  final english = isEnglishLocale(locale);
-
-  return switch (material.key) {
-    'rose_quartz' => [
-      _MaterialComparisonFact(
-        label: english ? 'Texture' : '質感',
-        value: english ? 'Soft, translucent pink sheen' : '淡い桃色のやわらかな透明感',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Weight' : '重さ',
-        value: english ? 'Light and gentle to handle' : 'やや軽やかで手になじみやすい',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Use' : '用途',
-        value: english ? 'A soft, friendly finish' : 'やわらかな印象を出しやすい',
-      ),
-    ],
-    'lapis_lazuli' => [
-      _MaterialComparisonFact(
-        label: english ? 'Texture' : '質感',
-        value: english ? 'Deep blue stone with bright flecks' : '深い青にきらめきが入る石目',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Weight' : '重さ',
-        value: english
-            ? 'Medium-heavy with a strong presence'
-            : 'ほどよい重さで存在感がある',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Use' : '用途',
-        value: english ? 'A vivid, distinctive finish' : '印象を強めやすい',
-      ),
-    ],
-    'jade' => [
-      _MaterialComparisonFact(
-        label: english ? 'Texture' : '質感',
-        value: english
-            ? 'Polished green stone with a calm sheen'
-            : 'しっとりした緑石の艶感',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Weight' : '重さ',
-        value: english ? 'Substantial and steady' : 'ほどよく重く、落ち着いた安定感',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Use' : '用途',
-        value: english ? 'A calm, dignified finish' : '落ち着いた格調を出しやすい',
-      ),
-    ],
-    _ => [
-      _MaterialComparisonFact(
-        label: english ? 'Texture' : '質感',
-        value: english ? 'Balanced texture' : '標準的な質感',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Weight' : '重さ',
-        value: english ? 'Medium weight' : '中程度の重さ',
-      ),
-      _MaterialComparisonFact(
-        label: english ? 'Use' : '用途',
-        value: english ? 'General-purpose use' : '汎用的',
-      ),
-    ],
-  };
 }
 
 TextStyle _stampFontStyle({

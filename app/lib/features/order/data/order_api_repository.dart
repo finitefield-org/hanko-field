@@ -148,31 +148,34 @@ class OrderApiRepository {
         })
         .toList(growable: false);
 
-    final materials = _asList(payload['materials'])
+    final stoneListings = _asList(payload['stone_listings'])
         .map((entry) {
           final map = _asMap(entry);
           final photos = _asList(
             map['photos'],
           ).map(_asMap).toList(growable: false);
           final primaryPhoto = _pickPrimaryPhoto(photos);
-          final photoUrl = _resolveMaterialPhotoUrl(primaryPhoto);
-          final photoAlt = _asString(primaryPhoto?['alt']);
-          final shape = SealShape.fromCode(_asString(map['shape']));
+          final photoUrl = _resolvePhotoUrl(primaryPhoto);
+          final supportedSealShapes = _asList(map['supported_seal_shapes'])
+              .map((shape) => _asString(shape).toLowerCase())
+              .where((shape) => shape.isNotEmpty)
+              .toList(growable: false);
 
-          return MaterialOption(
+          return StoneListingOption(
             key: _asString(map['key']),
-            label: _asString(map['label']),
+            listingCode: _asString(map['listing_code']),
+            title: _asString(map['title']),
             description: _asString(map['description']),
-            shape: shape,
-            shapeLabel: shape.localizedLabel(resolvedLocale),
+            story: _asString(map['story']),
+            supportedSealShapes: supportedSealShapes,
             price: _asInt(map['price']),
             photoUrl: photoUrl,
-            photoAlt: photoAlt,
+            photoAlt: _asString(primaryPhoto?['alt']),
             hasPhoto: photoUrl.isNotEmpty,
           );
         })
-        .where((material) {
-          return material.key.isNotEmpty && material.label.isNotEmpty;
+        .where((listing) {
+          return listing.key.isNotEmpty && listing.title.isNotEmpty;
         })
         .toList(growable: false);
 
@@ -195,7 +198,7 @@ class OrderApiRepository {
       currency: currency,
       catalog: CatalogData(
         fonts: fonts,
-        materials: materials,
+        stoneListings: stoneListings,
         countries: countries,
       ),
     );
@@ -244,7 +247,7 @@ class OrderApiRepository {
     required String sealLine2,
     required SealShape shape,
     required String fontKey,
-    required String materialKey,
+    required String listingId,
     required String countryCode,
     required String recipientName,
     required String phone,
@@ -266,7 +269,7 @@ class OrderApiRepository {
         'shape': shape.code,
         'font_key': fontKey,
       },
-      'material_key': materialKey,
+      'listing_id': listingId,
       'shipping': {
         'country_code': countryCode,
         'recipient_name': recipientName,
@@ -411,7 +414,7 @@ Map<String, dynamic>? _pickPrimaryPhoto(List<Map<String, dynamic>> photos) {
   return photos.first;
 }
 
-String _resolveMaterialPhotoUrl(Map<String, dynamic>? photo) {
+String _resolvePhotoUrl(Map<String, dynamic>? photo) {
   if (photo == null) {
     return '';
   }

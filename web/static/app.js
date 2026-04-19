@@ -140,7 +140,7 @@
   const previewLine1 = document.getElementById("seal-preview-line1");
   const previewLine2 = document.getElementById("seal-preview-line2");
   const previewCaption = document.getElementById("preview-caption");
-  const materialRadios = Array.from(form.querySelectorAll("input[name='material']"));
+  const listingRadios = Array.from(form.querySelectorAll("input[name='listing_id']"));
   const materialFilterGroups = Array.from(
     document.querySelectorAll("[data-material-filter-group]"),
   );
@@ -195,7 +195,7 @@
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
   const summaryFont = document.getElementById("summary-font");
-  const summaryMaterial = document.getElementById("summary-material");
+  const summaryListing = document.getElementById("summary-listing");
   const summaryCountry = document.getElementById("summary-country");
   const summarySubtotal = document.getElementById("summary-subtotal");
   const summaryShipping = document.getElementById("summary-shipping");
@@ -432,7 +432,7 @@
         return;
       }
 
-      if (target >= 3 && !selectedMaterial()) {
+      if (target >= 3 && !selectedListing()) {
         updateSummary();
         showStep(2);
         return;
@@ -511,8 +511,8 @@
     return form.querySelector("input[name='shape']:checked")?.value || "square";
   }
 
-  function selectedMaterial() {
-    return materialRadios.find((radio) => radio.checked && !radio.disabled) || null;
+  function selectedListing() {
+    return listingRadios.find((radio) => radio.checked && !radio.disabled) || null;
   }
 
   function normalizeMaterialFilterValue(rawValue) {
@@ -586,7 +586,7 @@
     let selectedVisibleRadio = null;
     let visibleCount = 0;
 
-    materialRadios.forEach((radio) => {
+    listingRadios.forEach((radio) => {
       const card = radio.closest(".material-card");
       const supportedSealShapes = parseMaterialFilterValues(
         radio.dataset.supportedSealShapes || "",
@@ -641,8 +641,8 @@
 
     if (materialFilterSummary) {
       materialFilterSummary.textContent = localizedText(
-        `${visibleCount}件の材質が表示されています。`,
-        `${visibleCount} materials are shown.`,
+        `${visibleCount}件の出品個体が表示されています。`,
+        `${visibleCount} listings are shown.`,
       );
     }
     if (materialFilterEmpty) {
@@ -805,7 +805,7 @@
       !summarySealLines ||
       !summaryShape ||
       !summaryFont ||
-      !summaryMaterial ||
+      !summaryListing ||
       !summaryCountry ||
       !summarySubtotal ||
       !summaryShipping ||
@@ -827,17 +827,17 @@
     const selectedFontChip = getSelectedFontChip();
     summaryFont.textContent = selectedFontChip?.dataset.fontLabel || "-";
 
-    const material = selectedMaterial();
-    summaryMaterial.textContent = material?.dataset.label || "-";
+    const listing = selectedListing();
+    summaryListing.textContent = listing?.dataset.label || "-";
 
     const country = selectedCountry();
     const shipping = Number(country?.dataset.shipping || 0);
     summaryCountry.textContent = country?.dataset.label || "-";
 
-    const subtotal = Number(material?.dataset.price || 0);
-    summarySubtotal.textContent = material ? formatMoney(subtotal) : "-";
+    const subtotal = Number(listing?.dataset.price || 0);
+    summarySubtotal.textContent = listing ? formatMoney(subtotal) : "-";
     summaryShipping.textContent = country ? formatMoney(shipping) : "-";
-    summaryTotal.textContent = material && country ? formatMoney(subtotal + shipping) : "-";
+    summaryTotal.textContent = listing && country ? formatMoney(subtotal + shipping) : "-";
 
     saveDraft();
   }
@@ -877,13 +877,13 @@
       });
     }
 
-    if (!selectedMaterial()) {
+    if (!selectedListing()) {
       groups.push({
-        label: localizedText("材質", "Material"),
+        label: localizedText("出品個体", "Listing"),
         items: [
           localizedText(
-            "材質を選択してください。",
-            "Choose a material before continuing.",
+            "出品個体を選択してください。",
+            "Choose a listing before continuing.",
           ),
         ],
       });
@@ -1059,7 +1059,7 @@
     }
   }
 
-  function syncMaterialOptionsByShape() {
+  function syncListingOptionsByShape() {
     syncMaterialFilters();
   }
 
@@ -1071,7 +1071,7 @@
         return;
       }
 
-      if (next >= 3 && !selectedMaterial()) {
+      if (next >= 3 && !selectedListing()) {
         updateSummary();
         showStep(2);
         return;
@@ -1117,7 +1117,7 @@
 
   form.querySelectorAll("input[name='shape']").forEach((radio) => {
     radio.addEventListener("change", () => {
-      syncMaterialOptionsByShape();
+      syncListingOptionsByShape();
       updatePreview();
       updateSummary();
     });
@@ -1157,7 +1157,7 @@
     updateSummary();
   });
 
-  materialRadios.forEach((radio) => {
+  listingRadios.forEach((radio) => {
     radio.addEventListener("change", updateSummary);
   });
 
@@ -1314,7 +1314,7 @@
     localeInput.value = initialLocale;
   }
   clearPurchaseResult();
-  syncMaterialOptionsByShape();
+  syncListingOptionsByShape();
   syncFontOptionsByStyle();
   showStep(1, { syncHash: false });
   window.history.replaceState(

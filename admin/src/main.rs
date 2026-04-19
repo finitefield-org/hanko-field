@@ -4681,7 +4681,11 @@ impl ServerState {
                 .stone_listings
                 .values()
                 .find(|listing| match tag.facet_type.as_str() {
-                    "color" => listing.facets.color_tags.iter().any(|value| value == &tag.key),
+                    "color" => listing
+                        .facets
+                        .color_tags
+                        .iter()
+                        .any(|value| value == &tag.key),
                     "pattern" => listing
                         .facets
                         .pattern_tags
@@ -5598,7 +5602,8 @@ impl ServerState {
         let status = normalize_stone_listing_status(&input.status)
             .ok_or_else(|| "公開状態を選択してください。".to_owned())?
             .to_owned();
-        self.validate_stone_listing_material_key(&material_key).await?;
+        self.validate_stone_listing_material_key(&material_key)
+            .await?;
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -5847,7 +5852,8 @@ impl ServerState {
         let status = normalize_stone_listing_status(&input.status)
             .ok_or_else(|| "公開状態を選択してください。".to_owned())?
             .to_owned();
-        self.validate_stone_listing_material_key(&material_key).await?;
+        self.validate_stone_listing_material_key(&material_key)
+            .await?;
         let facet_tag_lookups = {
             let data = self.data.read().await;
             facet_tag_lookup_maps(&data)
@@ -6440,7 +6446,13 @@ impl FirestoreAdminSource {
             let facets = read_map_field(data, "facets");
             let title_i18n = read_string_map_field(data, "title_i18n");
             let description_i18n = read_string_map_field(data, "description_i18n");
-            let story_i18n = read_string_map_field(data, "story_i18n");
+            let mut story_i18n = read_string_map_field(data, "story_i18n");
+            if story_i18n.is_empty() {
+                let legacy_story = read_string_field(data, "story");
+                if !legacy_story.is_empty() {
+                    story_i18n.insert("ja".to_owned(), legacy_story);
+                }
+            }
             let mut supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
             if supported_seal_shapes.is_empty() {
                 let fallback_shape =
@@ -11413,9 +11425,7 @@ mod tests {
 
         let result = state.create_stone_listing(input).await;
 
-        assert!(
-            matches!(result, Err(message) if message.contains("有効な材質"))
-        );
+        assert!(matches!(result, Err(message) if message.contains("有効な材質")));
     }
 
     #[tokio::test]
@@ -11435,9 +11445,7 @@ mod tests {
 
         let result = state.update_stone_listing("jade_01", input).await;
 
-        assert!(
-            matches!(result, Err(message) if message.contains("有効な材質"))
-        );
+        assert!(matches!(result, Err(message) if message.contains("有効な材質")));
     }
 
     #[tokio::test]

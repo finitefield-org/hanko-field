@@ -253,7 +253,7 @@ struct PurchaseResultData {
     seal_line2: String,
     font_label: String,
     shape_label: String,
-    material_label: String,
+    listing_label: String,
     stripe_name: String,
     stripe_phone: String,
     country_label: String,
@@ -349,7 +349,6 @@ struct CreateOrderApiRequest {
     terms_agreed: bool,
     seal: CreateOrderSealApiRequest,
     listing_id: String,
-    material_key: String,
     shipping: CreateOrderShippingApiRequest,
     contact: CreateOrderContactApiRequest,
 }
@@ -418,7 +417,7 @@ struct PurchaseResultTemplate {
     has_seal_line2: bool,
     font_label: String,
     shape_label: String,
-    material_label: String,
+    listing_label: String,
     stripe_name: String,
     stripe_phone: String,
     country_label: String,
@@ -2293,8 +2292,8 @@ async fn handle_design(
         ),
         meta_description: localized_text(
             &selected_locale,
-            "印影、材質、お届け先を順に選んで、そのまま購入まで進めます。",
-            "Choose the seal text, material, and shipping details, then continue to checkout.",
+            "印影、出品個体、お届け先を順に選んで、そのまま購入まで進めます。",
+            "Choose the seal text, listing, and shipping details, then continue to checkout.",
         ),
         robots_meta: "index,follow".to_owned(),
         purchase_action_url: if state.mode == RunMode::Mock {
@@ -2823,7 +2822,7 @@ async fn handle_purchase_impl(
     let seal_line2 = form_value(&form, "seal_line2");
     let font_key = form_value(&form, "font");
     let shape_key = form_value(&form, "shape");
-    let material_key = form_value(&form, "material");
+    let listing_id = form_value(&form, "listing_id");
     let recipient_name = form_value(&form, "recipient_name");
     let phone = form_value(&form, "phone");
     let country_code = form_value(&form, "country");
@@ -2869,11 +2868,11 @@ async fn handle_purchase_impl(
         return render_purchase_result(&result);
     };
 
-    let Some(listing) = listing_by_key.get(&material_key) else {
+    let Some(listing) = listing_by_key.get(&listing_id) else {
         result.error = localized_text(
             &order_locale,
-            "材質を選択してください。",
-            "Please choose a material.",
+            "出品個体を選択してください。",
+            "Please choose a listing.",
         );
         return render_purchase_result(&result);
     };
@@ -2885,8 +2884,8 @@ async fn handle_purchase_impl(
     {
         result.error = localized_text(
             &order_locale,
-            "選択した形状に対応する材質を選択してください。",
-            "Please choose a material that matches the selected shape.",
+            "選択した形状に対応する出品個体を選択してください。",
+            "Please choose a listing that matches the selected shape.",
         );
         return render_purchase_result(&result);
     }
@@ -2987,7 +2986,6 @@ async fn handle_purchase_impl(
             font_key: font_key.clone(),
         },
         listing_id: listing.key.clone(),
-        material_key: listing.material_key.clone(),
         shipping: CreateOrderShippingApiRequest {
             country_code: country_code.clone(),
             recipient_name: recipient_name.clone(),
@@ -3008,7 +3006,7 @@ async fn handle_purchase_impl(
     result.seal_line2 = seal_line2;
     result.font_label = font.label.clone();
     result.shape_label = selected_shape_label.to_owned();
-    result.material_label = listing.label.clone();
+    result.listing_label = listing.label.clone();
     result.stripe_name = recipient_name;
     result.stripe_phone = phone;
     result.country_label = country.label.clone();
@@ -3073,7 +3071,7 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
         has_seal_line2: !data.seal_line2.is_empty(),
         font_label: data.font_label.clone(),
         shape_label: data.shape_label.clone(),
-        material_label: data.material_label.clone(),
+        listing_label: data.listing_label.clone(),
         stripe_name: data.stripe_name.clone(),
         stripe_phone: data.stripe_phone.clone(),
         country_label: data.country_label.clone(),
@@ -4522,7 +4520,7 @@ mod tests {
             ("seal_line2".to_owned(), String::new()),
             ("font".to_owned(), "zen_maru_gothic".to_owned()),
             ("shape".to_owned(), "square".to_owned()),
-            ("material".to_owned(), "rose_quartz".to_owned()),
+            ("listing_id".to_owned(), "rose_quartz".to_owned()),
             ("recipient_name".to_owned(), "小野光".to_owned()),
             ("phone".to_owned(), "+81 80 6242 2597".to_owned()),
             ("country".to_owned(), "JP".to_owned()),
@@ -4800,9 +4798,7 @@ mod tests {
                                     "alt_i18n": {
                                         "mapValue": {
                                             "fields": {
-                                                "ja": {
-                                                    "stringValue": "ローズクオーツの材質サンプル"
-                                                }
+                                                "ja": { "stringValue": "ローズクオーツの出品個体サンプル" }
                                             }
                                         }
                                     },
@@ -4825,7 +4821,7 @@ mod tests {
             photo_url,
             "https://storage.googleapis.com/hanko-field-prod/materials/rose_quartz/mat_rose_quartz_01.webp"
         );
-        assert_eq!(photo_alt, "ローズクオーツの材質サンプル");
+        assert_eq!(photo_alt, "ローズクオーツの出品個体サンプル");
         assert!(has_photo);
     }
 
