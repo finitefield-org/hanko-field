@@ -188,6 +188,9 @@ class StoneListingOption {
   });
 
   bool supportsShape(SealShape shape) {
+    if (supportedSealShapes.isEmpty) {
+      return true;
+    }
     return supportedSealShapes.any(
       (supportedShape) => supportedShape.trim().toLowerCase() == shape.code,
     );

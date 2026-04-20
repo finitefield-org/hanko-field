@@ -592,9 +592,7 @@
         radio.dataset.supportedSealShapes || "",
       );
       const matchesShape =
-        supportedSealShapes.length === 0
-          ? (radio.dataset.shape || "square") === shape
-          : supportedSealShapes.includes(shape);
+        supportedSealShapes.length === 0 || supportedSealShapes.includes(shape);
       const colorFamily = normalizeMaterialFilterValue(
         radio.dataset.colorFamily || "",
       );

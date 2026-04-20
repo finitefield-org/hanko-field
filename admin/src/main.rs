@@ -6930,12 +6930,15 @@ impl FirestoreAdminSource {
                 let current_listing_status = read_string_field(&listing_doc.fields, "status");
                 let current_published_at =
                     read_timestamp_field(&listing_doc.fields, "published_at");
-                if !current_listing_status
-                    .trim()
-                    .eq_ignore_ascii_case(listing_status)
-                    || (listing_status.eq_ignore_ascii_case("published")
-                        && current_published_at.is_none())
-                {
+                let should_update_listing = if listing_status.eq_ignore_ascii_case("published") {
+                    stone_listing_should_restore_after_canceled_order(
+                        &current_listing_status,
+                        current_published_at.is_none(),
+                    )
+                } else {
+                    !current_listing_status.trim().eq_ignore_ascii_case(listing_status)
+                };
+                if should_update_listing {
                     let listing_version =
                         read_int_field(&listing_doc.fields, "version").unwrap_or_default();
                     listing_doc
@@ -8524,6 +8527,16 @@ fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str>
         "canceled" => Some("published"),
         _ => None,
     }
+}
+
+fn stone_listing_should_restore_after_canceled_order(
+    current_status: &str,
+    current_published_at_is_none: bool,
+) -> bool {
+    let current_status = current_status.trim();
+    current_status.eq_ignore_ascii_case("reserved")
+        || (current_status.eq_ignore_ascii_case("published")
+            && current_published_at_is_none)
 }
 
 fn stone_listing_published_at_sort_key(listing: &StoneListing) -> DateTime<Utc> {
@@ -11523,6 +11536,26 @@ mod tests {
             Some("published")
         );
         assert_eq!(stone_listing_status_after_order_status("refunded"), None);
+    }
+
+    #[test]
+    fn canceled_order_keeps_archived_listings_terminal() {
+        assert!(stone_listing_should_restore_after_canceled_order(
+            "reserved",
+            false,
+        ));
+        assert!(stone_listing_should_restore_after_canceled_order(
+            " published ",
+            true,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "published",
+            false,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "archived",
+            true,
+        ));
     }
 
     #[tokio::test]

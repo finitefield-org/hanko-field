@@ -906,13 +906,7 @@ impl FirestoreCatalogSource {
                 "",
             );
             let facets = read_map_field(&document.fields, "facets");
-            let color_family = resolve_localized_field(
-                &facets,
-                "color_family_i18n",
-                locale,
-                &self.default_locale,
-                "",
-            );
+            let color_family = stone_listing_color_family_from_facets(&facets);
             let pattern_primary = read_string_field(&facets, "pattern_primary");
             let stone_shape =
                 normalize_stone_shape(&read_string_field(&facets, "stone_shape")).to_owned();
@@ -3791,6 +3785,10 @@ fn resolve_localized_field(
     fallback.to_owned()
 }
 
+fn stone_listing_color_family_from_facets(facets: &BTreeMap<String, JsonValue>) -> String {
+    normalize_facet_tag_value(&read_string_field(facets, "color_family"))
+}
+
 fn resolve_font_label_field(
     data: &BTreeMap<String, JsonValue>,
     locale: &str,
@@ -4380,6 +4378,12 @@ mod tests {
         assert!(stone_listing_is_catalog_visible(true, " Published "));
         assert!(!stone_listing_is_catalog_visible(false, "published"));
         assert!(!stone_listing_is_catalog_visible(true, "draft"));
+    }
+
+    #[test]
+    fn stone_listing_color_family_uses_scalar_facet_key() {
+        let facets = BTreeMap::from([("color_family".to_owned(), json!(" Green "))]);
+        assert_eq!(stone_listing_color_family_from_facets(&facets), "green");
     }
 
     #[test]

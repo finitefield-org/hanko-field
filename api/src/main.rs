@@ -1489,7 +1489,7 @@ impl FirestoreStore {
                     StoreError::Internal(anyhow!(err))
                 }
             })?;
-        let is_active = read_bool_field(&doc.fields, "is_active").unwrap_or(false);
+        let is_active = read_bool_field(&doc.fields, "is_active").unwrap_or(true);
         let status = read_string_field(&doc.fields, "status");
         if !stone_listing_is_orderable(is_active, &status) {
             return Err(StoreError::InactiveReference);
@@ -1990,12 +1990,10 @@ impl FirestoreStore {
                 stone_listing_status_after_order_status("canceled").unwrap_or("published");
             let current_listing_status = read_string_field(&listing_doc.fields, "status");
             let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
-            if !current_listing_status
-                .trim()
-                .eq_ignore_ascii_case(target_listing_status)
-                || (target_listing_status.eq_ignore_ascii_case("published")
-                    && current_published_at.is_none())
-            {
+            if stone_listing_should_restore_after_canceled_order(
+                &current_listing_status,
+                current_published_at.is_none(),
+            ) {
                 let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
                     StoreError::Internal(anyhow!(
                         "stone_listings/{listing_key} is missing update_time"
@@ -2059,9 +2057,15 @@ impl FirestoreStore {
 
         let current_status = read_string_field(&listing_doc.fields, "status");
         let current_published_at = read_timestamp_field(&listing_doc.fields, "published_at");
-        if current_status.trim().eq_ignore_ascii_case(next_status)
-            && (!next_status.eq_ignore_ascii_case("published") || current_published_at.is_some())
-        {
+        let should_update = if next_status.eq_ignore_ascii_case("published") {
+            stone_listing_should_restore_after_canceled_order(
+                &current_status,
+                current_published_at.is_none(),
+            )
+        } else {
+            !current_status.trim().eq_ignore_ascii_case(next_status)
+        };
+        if !should_update {
             return Ok(());
         }
 
@@ -3846,6 +3850,16 @@ fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str>
     }
 }
 
+fn stone_listing_should_restore_after_canceled_order(
+    current_status: &str,
+    current_published_at_is_none: bool,
+) -> bool {
+    let current_status = current_status.trim();
+    current_status.eq_ignore_ascii_case("reserved")
+        || (current_status.eq_ignore_ascii_case("published")
+            && current_published_at_is_none)
+}
+
 fn can_transition(current: &str, next: &str) -> bool {
     match current {
         "pending_payment" => matches!(next, "paid" | "canceled"),
@@ -4256,6 +4270,27 @@ mod tests {
             Some("published")
         );
         assert_eq!(stone_listing_status_after_order_status("refunded"), None);
+    }
+
+    #[test]
+    fn canceled_order_only_reopens_reserved_or_backfilled_published_listings() {
+        assert!(stone_listing_should_restore_after_canceled_order(
+            "reserved",
+            false,
+        ));
+        assert!(stone_listing_should_restore_after_canceled_order(
+            " published ",
+            true,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "published",
+            false,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "archived",
+            true,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order("draft", true));
     }
 
     #[test]
