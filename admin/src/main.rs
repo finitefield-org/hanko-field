@@ -144,7 +144,6 @@ struct StoneListing {
     description_i18n: HashMap<String, String>,
     story_i18n: HashMap<String, String>,
     facets: StoneListingFacets,
-    supported_seal_shapes: Vec<String>,
     photos: Vec<MaterialPhoto>,
     price_by_currency: HashMap<String, i64>,
     status: String,
@@ -711,7 +710,6 @@ struct StoneListingListItemView {
     color_family: String,
     pattern_primary: String,
     stone_shape_label: String,
-    supported_seal_shapes_label: String,
     primary_photo_url: String,
     has_photo: bool,
     price_usd: String,
@@ -740,7 +738,6 @@ struct StoneListingDetailView {
     stone_shape: String,
     stone_shape_label: String,
     translucency: String,
-    supported_seal_shapes: String,
     price_usd: i64,
     price_jpy: i64,
     status: String,
@@ -930,7 +927,6 @@ struct StoneListingCreateView {
     pattern_tags: String,
     stone_shape: String,
     translucency: String,
-    supported_seal_shapes: String,
     price_usd: String,
     price_jpy: String,
     sort_order: String,
@@ -999,7 +995,6 @@ struct StoneListingCreateInput {
     pattern_tags: Vec<String>,
     stone_shape: String,
     translucency: String,
-    supported_seal_shapes: Vec<String>,
     price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
@@ -1058,7 +1053,6 @@ struct StoneListingPatchInput {
     pattern_tags: Vec<String>,
     stone_shape: String,
     translucency: String,
-    supported_seal_shapes: Vec<String>,
     price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
@@ -4357,12 +4351,6 @@ impl ServerState {
                 color_family: listing.facets.color_family.clone(),
                 pattern_primary: listing.facets.pattern_primary.clone(),
                 stone_shape_label: stone_shape_label(&listing.facets.stone_shape).to_owned(),
-                supported_seal_shapes_label: listing
-                    .supported_seal_shapes
-                    .iter()
-                    .map(|shape| seal_shape_label(shape).to_owned())
-                    .collect::<Vec<_>>()
-                    .join(" / "),
                 primary_photo_url: primary_photo_url.clone(),
                 has_photo: !primary_photo_url.is_empty(),
                 price_usd: format_usd(
@@ -4393,6 +4381,7 @@ impl ServerState {
         let data = self.data.read().await;
         let mut color_families = BTreeSet::new();
         let mut pattern_primaries = BTreeSet::new();
+        let mut stone_shapes = BTreeSet::new();
 
         for key in &data.stone_listing_ids {
             let Some(listing) = data.stone_listings.get(key) else {
@@ -4404,7 +4393,20 @@ impl ServerState {
             if !listing.facets.pattern_primary.is_empty() {
                 pattern_primaries.insert(listing.facets.pattern_primary.clone());
             }
+            if !listing.facets.stone_shape.trim().is_empty() {
+                stone_shapes.insert(listing.facets.stone_shape.clone());
+            }
         }
+
+        let mut stone_shape_options = stone_shape_filter_options();
+        for known_value in ["square", "round"] {
+            stone_shapes.remove(known_value);
+        }
+        // Unknown stone shapes are kept in the filter list so they can round-trip unchanged.
+        stone_shape_options.extend(stone_shapes.into_iter().map(|value| {
+            let label = stone_shape_label(&value);
+            StoneListingFacetOptionView { value, label }
+        }));
 
         StoneListingFilterOptions {
             color_family_options: color_families
@@ -4415,7 +4417,7 @@ impl ServerState {
                 .into_iter()
                 .map(|value| stone_listing_facet_option_view(&value))
                 .collect(),
-            stone_shape_options: stone_shape_filter_options(),
+            stone_shape_options,
         }
     }
 
@@ -4804,7 +4806,6 @@ impl ServerState {
             stone_shape: listing.facets.stone_shape.clone(),
             stone_shape_label: stone_shape_label(&listing.facets.stone_shape).to_owned(),
             translucency: listing.facets.translucency.clone(),
-            supported_seal_shapes: listing.supported_seal_shapes.join(", "),
             price_usd: listing
                 .price_by_currency
                 .get("USD")
@@ -5577,11 +5578,8 @@ impl ServerState {
         let pattern_primary = normalize_faceted_token(&input.pattern_primary)
             .ok_or_else(|| "模様の代表値は必須です。".to_owned())?;
         let stone_shape = normalize_stone_shape_optional(&input.stone_shape)
-            .ok_or_else(|| "石の形は角形・丸形・楕円形から選択してください。".to_owned())?
-            .to_owned();
+            .ok_or_else(|| "石の形は必須です。".to_owned())?;
         let translucency = normalize_optional_faceted_token(&input.translucency);
-        let supported_seal_shapes =
-            normalize_supported_seal_shape_list(&input.supported_seal_shapes)?;
         let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
         if photo_storage_path.is_empty() {
             return Err("写真は必須です。".to_owned());
@@ -5616,7 +5614,6 @@ impl ServerState {
             &color_family,
             &pattern_primary,
             &stone_shape,
-            &supported_seal_shapes,
             input.price_usd,
             input.price_jpy,
             input.sort_order,
@@ -5662,7 +5659,6 @@ impl ServerState {
                     stone_shape,
                     translucency,
                 },
-                supported_seal_shapes,
                 photos: build_single_stone_listing_photos(
                     &key,
                     &photo_storage_path,
@@ -5851,11 +5847,8 @@ impl ServerState {
         let pattern_primary = normalize_faceted_token(&input.pattern_primary)
             .ok_or_else(|| "模様の代表値は必須です。".to_owned())?;
         let stone_shape = normalize_stone_shape_optional(&input.stone_shape)
-            .ok_or_else(|| "石の形は角形・丸形・楕円形から選択してください。".to_owned())?
-            .to_owned();
+            .ok_or_else(|| "石の形は必須です。".to_owned())?;
         let translucency = normalize_optional_faceted_token(&input.translucency);
-        let supported_seal_shapes =
-            normalize_supported_seal_shape_list(&input.supported_seal_shapes)?;
         let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
@@ -5887,7 +5880,6 @@ impl ServerState {
             &color_family,
             &pattern_primary,
             &stone_shape,
-            &supported_seal_shapes,
             input.price_usd,
             input.price_jpy,
             input.sort_order,
@@ -5923,7 +5915,6 @@ impl ServerState {
             listing.facets.pattern_tags = pattern_tags;
             listing.facets.stone_shape = stone_shape;
             listing.facets.translucency = translucency;
-            listing.supported_seal_shapes = supported_seal_shapes;
             listing.price_by_currency = HashMap::from([
                 ("USD".to_owned(), input.price_usd),
                 ("JPY".to_owned(), input.price_jpy),
@@ -6328,11 +6319,7 @@ impl FirestoreAdminSource {
                 continue;
             };
 
-            let shape = listing
-                .supported_seal_shapes
-                .first()
-                .map(|shape| material_shape_or_default(shape))
-                .unwrap_or_else(|| category.shape.clone());
+            let shape = material_shape_or_default(&listing.facets.stone_shape);
             let mut photos = listing.photos.clone();
             if photos.is_empty() {
                 photos = Vec::new();
@@ -6486,7 +6473,6 @@ impl FirestoreAdminSource {
             let title_i18n = read_string_map_field(data, "title_i18n");
             let description_i18n = read_string_map_field(data, "description_i18n");
             let story_i18n = read_string_map_field(data, "story_i18n");
-            let supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
 
             listings.insert(
                 doc_id.clone(),
@@ -6505,11 +6491,9 @@ impl FirestoreAdminSource {
                         stone_shape: normalize_stone_shape(&read_string_field(
                             &facets,
                             "stone_shape",
-                        ))
-                        .to_owned(),
+                        )),
                         translucency: read_string_field(&facets, "translucency"),
                     },
-                    supported_seal_shapes,
                     photos: read_material_photos(data),
                     price_by_currency,
                     status: read_string_field(data, "status"),
@@ -7118,7 +7102,6 @@ impl FirestoreAdminSource {
                             "description_i18n".to_owned(),
                             "story_i18n".to_owned(),
                             "facets".to_owned(),
-                            "supported_seal_shapes".to_owned(),
                             "photos".to_owned(),
                             "price_by_currency".to_owned(),
                             "status".to_owned(),
@@ -7610,9 +7593,8 @@ fn new_stone_listing_create_view(message: &str, render_error: &str) -> StoneList
         color_tags: String::new(),
         pattern_primary: String::new(),
         pattern_tags: String::new(),
-        stone_shape: "oval".to_owned(),
+        stone_shape: "square".to_owned(),
         translucency: String::new(),
-        supported_seal_shapes: "square, round".to_owned(),
         price_usd: "0".to_owned(),
         price_jpy: "0".to_owned(),
         sort_order: "0".to_owned(),
@@ -7648,10 +7630,8 @@ fn stone_listing_create_view_from_form(
         pattern_primary: form_value(form, "pattern_primary"),
         pattern_tags: form_value(form, "pattern_tags"),
         stone_shape: normalize_stone_shape_optional(&form_value(form, "stone_shape"))
-            .unwrap_or("oval")
-            .to_owned(),
+            .unwrap_or_else(|| "square".to_owned()),
         translucency: form_value(form, "translucency"),
-        supported_seal_shapes: form_value(form, "supported_seal_shapes"),
         price_usd: form_value(form, "price_usd"),
         price_jpy: form_value(form, "price_jpy"),
         sort_order: form_value(form, "sort_order"),
@@ -7696,8 +7676,6 @@ fn stone_listing_create_input_from_form(
         .collect::<Vec<_>>();
     let stone_shape = form_value(form, "stone_shape");
     let translucency = form_value(form, "translucency");
-    let supported_seal_shapes =
-        parse_comma_separated_values(&form_value(form, "supported_seal_shapes"));
     let photo_storage_path = form_value(form, "photo_storage_path");
     let photo_alt_ja = form_value(form, "photo_alt_ja");
     let photo_alt_en = form_value(form, "photo_alt_en");
@@ -7720,7 +7698,6 @@ fn stone_listing_create_input_from_form(
         pattern_tags,
         stone_shape,
         translucency,
-        supported_seal_shapes,
         price_usd,
         price_jpy,
         sort_order,
@@ -7758,8 +7735,6 @@ fn stone_listing_patch_input_from_form(
         .collect::<Vec<_>>();
     let stone_shape = form_value(form, "stone_shape");
     let translucency = form_value(form, "translucency");
-    let supported_seal_shapes =
-        parse_comma_separated_values(&form_value(form, "supported_seal_shapes"));
     let photo_storage_path = form_value(form, "photo_storage_path");
     let photo_alt_ja = form_value(form, "photo_alt_ja");
     let photo_alt_en = form_value(form, "photo_alt_en");
@@ -7781,7 +7756,6 @@ fn stone_listing_patch_input_from_form(
         pattern_tags,
         stone_shape,
         translucency,
-        supported_seal_shapes,
         price_usd,
         price_jpy,
         sort_order,
@@ -8129,30 +8103,6 @@ fn parse_comma_separated_values(raw: &str) -> Vec<String> {
     values
 }
 
-fn normalize_supported_seal_shape_list(
-    values: &[String],
-) -> std::result::Result<Vec<String>, String> {
-    let mut normalized = Vec::with_capacity(values.len());
-    for value in values {
-        if let Some(shape) = normalize_stone_shape_optional(value) {
-            match shape {
-                "square" | "round" => normalized.push(shape.to_owned()),
-                "oval" => {
-                    return Err("対応する印面形状は角印か丸印のみ選択してください。".to_owned());
-                }
-                _ => {}
-            }
-        }
-    }
-    normalized.sort();
-    normalized.dedup();
-    if normalized.is_empty() {
-        Err("対応する印面形状を 1 つ以上選択してください。".to_owned())
-    } else {
-        Ok(normalized)
-    }
-}
-
 fn validate_stone_listing_values(
     title_ja: &str,
     title_en: &str,
@@ -8161,7 +8111,6 @@ fn validate_stone_listing_values(
     color_family: &str,
     pattern_primary: &str,
     stone_shape: &str,
-    supported_seal_shapes: &[String],
     price_usd: i64,
     price_jpy: i64,
     sort_order: i64,
@@ -8182,11 +8131,8 @@ fn validate_stone_listing_values(
     if pattern_primary.is_empty() {
         return Err("模様の代表値は必須です。".to_owned());
     }
-    if normalize_stone_shape_optional(stone_shape).is_none() {
-        return Err("石の形は角形・丸形・楕円形から選択してください。".to_owned());
-    }
-    if supported_seal_shapes.is_empty() {
-        return Err("対応する印面形状を 1 つ以上選択してください。".to_owned());
+    if stone_shape.trim().is_empty() {
+        return Err("石の形は必須です。".to_owned());
     }
     if price_usd < 0 {
         return Err("価格（USD cents）は 0 以上で入力してください。".to_owned());
@@ -8469,21 +8415,21 @@ fn normalize_material_shape(raw: &str) -> Option<&'static str> {
     }
 }
 
-fn normalize_stone_shape(raw: &str) -> &'static str {
+fn normalize_stone_shape(raw: &str) -> String {
+    // Preserve unknown values so existing Firestore data is not coerced to a known shape.
     match raw.trim().to_ascii_lowercase().as_str() {
-        "round" => "round",
-        "square" => "square",
-        "oval" | "ellipse" | "elliptical" => "oval",
-        _ => "square",
+        "round" => "round".to_owned(),
+        "square" => "square".to_owned(),
+        _ => raw.trim().to_owned(),
     }
 }
 
-fn normalize_stone_shape_optional(raw: &str) -> Option<&'static str> {
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "round" => Some("round"),
-        "square" => Some("square"),
-        "oval" | "ellipse" | "elliptical" => Some("oval"),
-        _ => None,
+fn normalize_stone_shape_optional(raw: &str) -> Option<String> {
+    let normalized = normalize_stone_shape(raw);
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
     }
 }
 
@@ -8511,22 +8457,16 @@ fn material_shape_or_default(raw: &str) -> String {
 fn material_shape_label(shape: &str) -> &'static str {
     match shape {
         "round" => "丸印",
-        "oval" => "楕円印",
         _ => "角印",
     }
 }
 
-fn stone_shape_label(shape: &str) -> &'static str {
-    match normalize_stone_shape_optional(shape).unwrap_or("oval") {
-        "square" => "四角形",
-        "round" => "丸形",
-        "oval" => "楕円形",
-        _ => "楕円形",
+fn stone_shape_label(shape: &str) -> String {
+    match normalize_stone_shape(shape).as_str() {
+        "square" => "四角形".to_owned(),
+        "round" => "丸形".to_owned(),
+        other => other.to_owned(),
     }
-}
-
-fn seal_shape_label(shape: &str) -> &'static str {
-    stone_shape_label(shape)
 }
 
 fn stone_listing_is_published(status: &str) -> bool {
@@ -8965,9 +8905,7 @@ fn stone_listing_filter_from_raw(
         color_tags: normalize_faceted_tag_input(color_tags),
         pattern_primary: normalize_faceted_token(pattern_primary).unwrap_or_default(),
         pattern_tags: normalize_faceted_tag_input(pattern_tags),
-        stone_shape: normalize_stone_shape_optional(stone_shape)
-            .unwrap_or_default()
-            .to_owned(),
+        stone_shape: normalize_stone_shape_optional(stone_shape).unwrap_or_default(),
     }
 }
 
@@ -9289,9 +9227,7 @@ fn normalize_stone_listing_filter_with_snapshot(
             lookups.get("pattern"),
         )
         .join(", "),
-        stone_shape: normalize_stone_shape_optional(&filters.stone_shape)
-            .unwrap_or_default()
-            .to_owned(),
+        stone_shape: normalize_stone_shape_optional(&filters.stone_shape).unwrap_or_default(),
     }
 }
 
@@ -9325,7 +9261,7 @@ fn stone_listing_tag_value_label(raw: &str) -> String {
 }
 
 fn stone_shape_filter_options() -> Vec<StoneListingFacetOptionView> {
-    [("square", "四角形"), ("round", "丸形"), ("oval", "楕円形")]
+    [("square", "四角形"), ("round", "丸形")]
         .into_iter()
         .map(|(value, label)| StoneListingFacetOptionView {
             value: value.to_owned(),
@@ -10144,10 +10080,6 @@ fn stone_listing_snapshot_fields(listing: &StoneListing) -> BTreeMap<String, Jso
         ("description_i18n", fs_string_map(&listing.description_i18n)),
         ("story_i18n", fs_string_map(&listing.story_i18n)),
         ("facets", fs_stone_listing_facets(&listing.facets)),
-        (
-            "supported_seal_shapes",
-            fs_string_array(&listing.supported_seal_shapes),
-        ),
         ("photos", fs_material_photos(&listing.photos)),
         ("price_by_currency", fs_int_map(&listing.price_by_currency)),
         ("status", fs_string(listing.status.clone())),
@@ -10768,10 +10700,9 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     color_tags: vec!["soft_pink".to_owned(), "light_rose".to_owned()],
                     pattern_primary: "cloud".to_owned(),
                     pattern_tags: vec!["cloud".to_owned(), "speckled".to_owned()],
-                    stone_shape: "oval".to_owned(),
+                    stone_shape: "square".to_owned(),
                     translucency: "semi_translucent".to_owned(),
                 },
-                supported_seal_shapes: vec!["square".to_owned(), "round".to_owned()],
                 photos: vec![MaterialPhoto {
                     asset_id: "lst_rose_quartz_01".to_owned(),
                     storage_path: "stone_listings/rose_quartz/rose_quartz_01/main.webp".to_owned(),
@@ -10834,7 +10765,6 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     stone_shape: "square".to_owned(),
                     translucency: "opaque".to_owned(),
                 },
-                supported_seal_shapes: vec!["square".to_owned()],
                 photos: vec![MaterialPhoto {
                     asset_id: "lst_lapis_lazuli_01".to_owned(),
                     storage_path: "stone_listings/lapis_lazuli/lapis_lazuli_01/main.webp"
@@ -10895,10 +10825,9 @@ fn new_mock_snapshot() -> AdminSnapshot {
                     color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
                     pattern_primary: "banded".to_owned(),
                     pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
-                    stone_shape: "oval".to_owned(),
+                    stone_shape: "round".to_owned(),
                     translucency: "semi_translucent".to_owned(),
                 },
-                supported_seal_shapes: vec!["round".to_owned(), "square".to_owned()],
                 photos: vec![MaterialPhoto {
                     asset_id: "lst_jade_01".to_owned(),
                     storage_path: "stone_listings/jade/jade_01/main.webp".to_owned(),
@@ -11223,9 +11152,8 @@ mod tests {
             color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
             pattern_primary: "banded".to_owned(),
             pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
-            stone_shape: "oval".to_owned(),
+            stone_shape: "round".to_owned(),
             translucency: "semi_translucent".to_owned(),
-            supported_seal_shapes: vec!["square".to_owned(), "round".to_owned()],
             price_usd: 92800,
             price_jpy: 155000,
             sort_order: 41,
@@ -11251,9 +11179,8 @@ mod tests {
             color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
             pattern_primary: "banded".to_owned(),
             pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
-            stone_shape: "oval".to_owned(),
+            stone_shape: "round".to_owned(),
             translucency: "semi_translucent".to_owned(),
-            supported_seal_shapes: vec!["square".to_owned(), "round".to_owned()],
             price_usd: 92800,
             price_jpy: 155000,
             sort_order: 41,
@@ -11288,7 +11215,7 @@ mod tests {
                 color_tags: String::new(),
                 pattern_primary: "banded".to_owned(),
                 pattern_tags: String::new(),
-                stone_shape: "oval".to_owned(),
+                stone_shape: "round".to_owned(),
             })
             .await;
 
@@ -11345,28 +11272,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_stone_listing_rejects_oval_supported_seal_shape() {
-        let state = mock_server_state();
-        let mut input = valid_stone_listing_create_input();
-        input.supported_seal_shapes = vec!["oval".to_owned()];
-
-        let result = state.create_stone_listing(input).await;
-
-        assert!(matches!(result, Err(message) if message.contains("角印か丸印")));
-    }
-
-    #[tokio::test]
-    async fn update_stone_listing_rejects_oval_supported_seal_shape() {
-        let state = mock_server_state();
-        let mut input = valid_stone_listing_patch_input();
-        input.supported_seal_shapes = vec!["oval".to_owned()];
-
-        let result = state.update_stone_listing("jade_01", input).await;
-
-        assert!(matches!(result, Err(message) if message.contains("角印か丸印")));
-    }
-
-    #[tokio::test]
     async fn create_stone_listing_rejects_unknown_facet_tags() {
         let state = mock_server_state();
         let mut input = valid_stone_listing_create_input();
@@ -11389,6 +11294,33 @@ mod tests {
 
         assert!(
             matches!(result, Err(message) if message.contains("模様タグ") && message.contains("missing_pattern_tag"))
+        );
+    }
+
+    #[tokio::test]
+    async fn stone_listing_filter_options_include_unknown_stone_shape() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            let mut listing = data
+                .stone_listings
+                .get("jade_01")
+                .cloned()
+                .expect("jade_01 listing should exist");
+            listing.key = "jade_freeform_01".to_owned();
+            listing.facets.stone_shape = "freeform".to_owned();
+            data.stone_listings.insert(listing.key.clone(), listing);
+            data.refresh_stone_listing_ids();
+        }
+
+        let options = state.stone_listing_filter_options().await;
+
+        assert!(
+            options
+                .stone_shape_options
+                .iter()
+                .any(|option| option.value == "freeform" && option.label == "freeform")
         );
     }
 
@@ -11429,6 +11361,16 @@ mod tests {
             listing.title_i18n.get("ja").map(String::as_str),
             Some("翡翠の一点物 01 更新")
         );
+    }
+
+    #[test]
+    fn stone_shape_helpers_preserve_unknown_values() {
+        assert_eq!(normalize_stone_shape("freeform"), "freeform");
+        assert_eq!(
+            normalize_stone_shape_optional("freeform"),
+            Some("freeform".to_owned())
+        );
+        assert_eq!(stone_shape_label("freeform"), "freeform");
     }
 
     #[tokio::test]

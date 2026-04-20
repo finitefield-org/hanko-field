@@ -1872,22 +1872,25 @@ class _StoneListingStep extends StatelessWidget {
     }
 
     List<Widget> shapeChips(StoneListingOption listing) {
-      return listing.supportedSealShapes
-          .map(
-            (shapeCode) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: const Color(0xFFFDF9F4),
-                border: Border.all(color: HfPalette.line),
-              ),
-              child: Text(
-                shapeLabelForCode(shapeCode),
-                style: const TextStyle(fontSize: 11.5, color: HfPalette.muted),
-              ),
-            ),
-          )
-          .toList(growable: false);
+      final shapeCode = listing.stoneShape.trim();
+      if (shapeCode.isEmpty) {
+        return const [];
+      }
+
+      return [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: const Color(0xFFFDF9F4),
+            border: Border.all(color: HfPalette.line),
+          ),
+          child: Text(
+            shapeLabelForCode(shapeCode),
+            style: const TextStyle(fontSize: 11.5, color: HfPalette.muted),
+          ),
+        ),
+      ];
     }
 
     Widget buildListingCard(

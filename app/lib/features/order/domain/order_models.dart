@@ -168,7 +168,7 @@ class StoneListingOption {
   final String title;
   final String description;
   final String story;
-  final List<String> supportedSealShapes;
+  final String stoneShape;
   final int price;
   final String photoUrl;
   final String photoAlt;
@@ -180,7 +180,7 @@ class StoneListingOption {
     required this.title,
     required this.description,
     required this.story,
-    required this.supportedSealShapes,
+    required this.stoneShape,
     required this.price,
     required this.photoUrl,
     required this.photoAlt,
@@ -188,12 +188,7 @@ class StoneListingOption {
   });
 
   bool supportsShape(SealShape shape) {
-    if (supportedSealShapes.isEmpty) {
-      return true;
-    }
-    return supportedSealShapes.any(
-      (supportedShape) => supportedShape.trim().toLowerCase() == shape.code,
-    );
+    return stoneShape.trim().toLowerCase() == shape.code;
   }
 }
 

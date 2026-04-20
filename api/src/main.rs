@@ -149,7 +149,6 @@ struct StoneListing {
     description_i18n: HashMap<String, String>,
     story_i18n: HashMap<String, String>,
     facets: StoneListingFacets,
-    supported_seal_shapes: Vec<String>,
     photos: Vec<MaterialPhoto>,
     price_by_currency: HashMap<String, i64>,
     status: String,
@@ -264,7 +263,6 @@ struct QueryStoneListings {
     color_family: Option<String>,
     pattern_primary: Option<String>,
     stone_shape: Option<String>,
-    seal_shape: Option<String>,
     status: Option<String>,
 }
 
@@ -865,7 +863,6 @@ async fn handle_stone_listings(
         .trim()
         .to_lowercase();
     let requested_stone_shape = query.stone_shape.unwrap_or_default().trim().to_lowercase();
-    let requested_seal_shape = query.seal_shape.unwrap_or_default().trim().to_lowercase();
     let requested_status = query
         .status
         .unwrap_or_else(|| "published".to_owned())
@@ -891,14 +888,6 @@ async fn handle_stone_listings(
             }
             if !requested_stone_shape.is_empty()
                 && listing.facets.stone_shape.to_lowercase() != requested_stone_shape
-            {
-                return false;
-            }
-            if !requested_seal_shape.is_empty()
-                && !listing
-                    .supported_seal_shapes
-                    .iter()
-                    .any(|shape| shape.trim().to_lowercase() == requested_seal_shape)
             {
                 return false;
             }
@@ -1197,24 +1186,18 @@ async fn handle_create_stripe_checkout_session(
         .await
     {
         eprintln!("failed to persist stripe checkout session id: {err}");
-        if let Err(rollback_err) = state
+        if let Err(retry_err) = state
             .store
-            .cancel_pending_order_and_release_listing(
-                &order.order_id,
-                order.listing_key.as_str(),
-                "Failed to persist Stripe checkout session id",
-            )
+            .set_order_checkout_session(&order.order_id, &session.session_id)
             .await
         {
-            eprintln!(
-                "failed to roll back reserved listing after persisting stripe checkout session id failed: {rollback_err:#}"
+            eprintln!("failed to retry persisting stripe checkout session id: {retry_err}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
             );
         }
-        return error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "internal",
-            "internal server error",
-        );
     }
 
     json_response(
@@ -1616,8 +1599,7 @@ impl FirestoreStore {
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
-        let shape_supports =
-            stone_listing_supports_seal_shape(&listing_snapshot, &normalized.seal.shape);
+        let shape_supports = stone_listing_shape_matches(&listing_snapshot, &normalized.seal.shape);
         if !shape_supports {
             return Err(StoreError::MaterialShapeMismatch);
         }
@@ -2675,16 +2657,9 @@ fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
     resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
 }
 
-fn stone_listing_supports_seal_shape(listing: &StoneListing, shape: &str) -> bool {
-    if listing.supported_seal_shapes.is_empty() {
-        return true;
-    }
-
+fn stone_listing_shape_matches(listing: &StoneListing, shape: &str) -> bool {
     let normalized_shape = shape.trim().to_lowercase();
-    listing
-        .supported_seal_shapes
-        .iter()
-        .any(|supported| supported.trim().to_lowercase() == normalized_shape)
+    listing.facets.stone_shape.trim().to_lowercase() == normalized_shape
 }
 
 fn resolve_amount_for_currency(values: &HashMap<String, i64>, currency: &str) -> i64 {
@@ -2888,7 +2863,6 @@ fn stone_listing_from_fields(key: &str, data: &BTreeMap<String, JsonValue>) -> S
     let title_i18n = read_string_map_field(data, "title_i18n");
     let description_i18n = read_string_map_field(data, "description_i18n");
     let story_i18n = read_string_map_field(data, "story_i18n");
-    let supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
 
     StoneListing {
         key: key.to_owned(),
@@ -2909,7 +2883,6 @@ fn stone_listing_from_fields(key: &str, data: &BTreeMap<String, JsonValue>) -> S
             stone_shape: read_string_field(&facets_data, "stone_shape"),
             translucency: read_string_field(&facets_data, "translucency"),
         },
-        supported_seal_shapes,
         photos: read_material_photos(data),
         price_by_currency: stone_listing_price_by_currency_from_fields(data),
         status: first_non_empty(&[
@@ -2967,7 +2940,6 @@ fn stone_listing_response(
             "stone_shape": listing.facets.stone_shape,
             "translucency": listing.facets.translucency,
         },
-        "supported_seal_shapes": listing.supported_seal_shapes,
         "price": price,
         "price_by_currency": listing.price_by_currency,
         "status": listing.status,
@@ -2993,10 +2965,6 @@ fn stone_listing_snapshot_fields(
         ("title_i18n", fs_string_map(&listing.title_i18n)),
         ("description_i18n", fs_string_map(&listing.description_i18n)),
         ("story_i18n", fs_string_map(&listing.story_i18n)),
-        (
-            "supported_seal_shapes",
-            fs_string_array(&listing.supported_seal_shapes),
-        ),
         ("unit_price", fs_int(unit_price)),
         ("version", fs_int(listing.version)),
     ]);
@@ -3856,8 +3824,7 @@ fn stone_listing_should_restore_after_canceled_order(
 ) -> bool {
     let current_status = current_status.trim();
     current_status.eq_ignore_ascii_case("reserved")
-        || (current_status.eq_ignore_ascii_case("published")
-            && current_published_at_is_none)
+        || (current_status.eq_ignore_ascii_case("published") && current_published_at_is_none)
 }
 
 fn can_transition(current: &str, next: &str) -> bool {
@@ -4275,8 +4242,7 @@ mod tests {
     #[test]
     fn canceled_order_only_reopens_reserved_or_backfilled_published_listings() {
         assert!(stone_listing_should_restore_after_canceled_order(
-            "reserved",
-            false,
+            "reserved", false,
         ));
         assert!(stone_listing_should_restore_after_canceled_order(
             " published ",
@@ -4287,10 +4253,11 @@ mod tests {
             false,
         ));
         assert!(!stone_listing_should_restore_after_canceled_order(
-            "archived",
-            true,
+            "archived", true,
         ));
-        assert!(!stone_listing_should_restore_after_canceled_order("draft", true));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "draft", true
+        ));
     }
 
     #[test]

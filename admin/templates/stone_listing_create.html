@@ -80,13 +80,9 @@
         <span>透過性</span>
         <input type="text" name="translucency" value="{{ view.translucency }}" placeholder="semi_translucent">
       </label>
-      <label class="flex flex-col gap-1.5 text-sm font-semibold">
-        <span>対応印面形状</span>
-        <input type="text" name="supported_seal_shapes" value="{{ view.supported_seal_shapes }}" placeholder="square, round" required>
-      </label>
     </div>
     <fieldset class="flex flex-col gap-1.5 text-sm font-semibold">
-      <legend>石の形</legend>
+      <legend>石の形 / 印面形状</legend>
       <div class="flex flex-wrap items-center gap-3">
         <label class="inline-flex items-center gap-2">
           <input type="radio" name="stone_shape" value="square" {% if view.stone_shape == "square" %}checked{% endif %}>
@@ -96,10 +92,12 @@
           <input type="radio" name="stone_shape" value="round" {% if view.stone_shape == "round" %}checked{% endif %}>
           <span>丸形</span>
         </label>
+        {% if view.stone_shape != "" && view.stone_shape != "square" && view.stone_shape != "round" %}
         <label class="inline-flex items-center gap-2">
-          <input type="radio" name="stone_shape" value="oval" {% if view.stone_shape == "oval" %}checked{% endif %}>
-          <span>楕円形</span>
+          <input type="radio" name="stone_shape" value="{{ view.stone_shape }}" checked>
+          <span>{{ view.stone_shape }}</span>
         </label>
+        {% endif %}
       </div>
     </fieldset>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">

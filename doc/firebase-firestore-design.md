@@ -120,7 +120,7 @@
 | `facets.color_tags` | array<string> | No | 補助色タグ（例: `deep_green`, `mottled`） |
 | `facets.pattern_primary` | string | Yes | 正規化模様キー（例: `cloud`, `banded`, `speckled`） |
 | `facets.pattern_tags` | array<string> | No | 補助模様タグ |
-| `facets.stone_shape` | string | Yes | 石の外形（`round` / `square` / `oval` / `freeform` など） |
+| `facets.stone_shape` | string | Yes | 石の形状。出品個体の表示形状と印面形状を兼ねる共通フィールド |
 | `photos` | array<map> | Yes | 個体写真一覧（1件以上、`sort_order` 昇順で利用） |
 | `photos[].asset_id` | string | Yes | 画像 ID（例: `stone_xxxxx`） |
 | `photos[].storage_path` | string | Yes | Storage パス（例: `stone_listings/jade/JDE-0007/main.webp`） |
@@ -144,7 +144,7 @@
 
 - `facets.color_tags` / `facets.pattern_tags` は `facet_tags` の canonical `key` を保持する。
 - `facets.*` は検索用の正規化キーであり、表示文言は `*_i18n` で別管理する。
-- `facets.stone_shape` は石そのものの外形であり、印面形状（`seal.shape`）とは別物とする。
+- `facets.stone_shape` は出品個体の共通形状であり、表示と注文の両方で使う。
 - Firestore での多条件フィルタは `facets.color_family` / `facets.pattern_primary` / `facets.stone_shape` のような scalar を優先し、複数選択 UI は API 側でクエリを合成する。
 - `status` 遷移は `draft -> published -> reserved -> sold` を基本とし、キャンセル/期限切れ時は `reserved -> published` に戻す。`archived` は管理画面の明示操作のみで付与する終端状態とし、注文成功/失敗/キャンセルの webhook や rollback では `published` に戻さない。`published_at` は `published` への遷移時に設定し、すでに `published` の旧データで欠落している場合のみ backfill する。
 

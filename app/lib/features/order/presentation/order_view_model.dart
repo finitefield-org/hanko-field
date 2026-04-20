@@ -361,7 +361,7 @@ class OrderScreenState {
       return null;
     }
 
-    final matches = catalog.stoneListings
+    final matches = visibleStoneListings
         .where((listing) => listing.key == selectedStoneListingKey)
         .toList(growable: false);
     if (matches.isNotEmpty) {
@@ -378,7 +378,7 @@ class OrderScreenState {
           title: '-',
           description: '',
           story: '',
-          supportedSealShapes: [],
+          stoneShape: '',
           price: 0,
           photoUrl: '',
           photoAlt: '',
@@ -1792,7 +1792,7 @@ String normalizePinyinWithoutTone(String input) {
           story: english
               ? 'Balanced for everyday use with a gentle finish.'
               : '日常使いしやすい、やわらかな仕上がりの個体です。',
-          supportedSealShapes: const ['square', 'round'],
+          stoneShape: 'square',
           price: english ? 16500 : 28000,
           photoUrl: 'https://picsum.photos/seed/hf-rose-quartz-01/640/420',
           photoAlt: english ? 'Rose quartz listing photo' : 'ローズクオーツ個体の写真',
@@ -1808,7 +1808,7 @@ String normalizePinyinWithoutTone(String input) {
           story: english
               ? 'Sharp contrast and a vivid finish make it stand out.'
               : 'コントラストが強く、印象に残る仕上がりです。',
-          supportedSealShapes: const ['square', 'round'],
+          stoneShape: 'round',
           price: english ? 32500 : 55000,
           photoUrl: 'https://picsum.photos/seed/hf-lapis-lazuli-01/640/420',
           photoAlt: english ? 'Lapis lazuli listing photo' : 'ラピスラズリ個体の写真',
@@ -1824,7 +1824,7 @@ String normalizePinyinWithoutTone(String input) {
           story: english
               ? 'A composed, refined finish for formal use.'
               : 'フォーマルな用途にも合う、落ち着いた仕上がりです。',
-          supportedSealShapes: const ['square', 'round'],
+          stoneShape: 'square',
           price: english ? 88500 : 150000,
           photoUrl: 'https://picsum.photos/seed/hf-jade-01/640/420',
           photoAlt: english ? 'Jade listing photo' : '翡翠個体の写真',

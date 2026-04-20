@@ -29,12 +29,8 @@
       <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.status_label }}</p>
     </div>
     <div>
-      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">石の形</p>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">石の形 / 印面形状</p>
       <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.stone_shape_label }}</p>
-    </div>
-    <div>
-      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">対応印面</p>
-      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.supported_seal_shapes }}</p>
     </div>
   </section>
 
@@ -151,10 +147,6 @@
         <span>透過性</span>
         <input type="text" name="translucency" value="{{ detail.translucency }}" placeholder="semi_translucent">
       </label>
-      <label class="flex flex-col gap-1.5 text-sm font-semibold">
-        <span>対応印面形状</span>
-        <input type="text" name="supported_seal_shapes" value="{{ detail.supported_seal_shapes }}" placeholder="square, round" required>
-      </label>
     </div>
     <fieldset class="flex flex-col gap-1.5 text-sm font-semibold">
       <legend>石の形</legend>
@@ -167,10 +159,12 @@
           <input type="radio" name="stone_shape" value="round" {% if detail.stone_shape == "round" %}checked{% endif %}>
           <span>丸形</span>
         </label>
+        {% if detail.stone_shape != "" && detail.stone_shape != "square" && detail.stone_shape != "round" %}
         <label class="inline-flex items-center gap-2">
-          <input type="radio" name="stone_shape" value="oval" {% if detail.stone_shape == "oval" %}checked{% endif %}>
-          <span>楕円形</span>
+          <input type="radio" name="stone_shape" value="{{ detail.stone_shape }}" checked>
+          <span>{{ detail.stone_shape_label }}</span>
         </label>
+        {% endif %}
       </div>
     </fieldset>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">

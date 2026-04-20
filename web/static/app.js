@@ -520,11 +520,7 @@
   }
 
   function normalizeStoneShapeFilterValue(rawValue) {
-    const value = normalizeMaterialFilterValue(rawValue);
-    if (value === "ellipse" || value === "elliptical") {
-      return "oval";
-    }
-    return value;
+    return normalizeMaterialFilterValue(rawValue);
   }
 
   function parseMaterialFilterValues(rawValue) {
@@ -588,11 +584,8 @@
 
     listingRadios.forEach((radio) => {
       const card = radio.closest(".material-card");
-      const supportedSealShapes = parseMaterialFilterValues(
-        radio.dataset.supportedSealShapes || "",
-      );
-      const matchesShape =
-        supportedSealShapes.length === 0 || supportedSealShapes.includes(shape);
+      const listingShape = normalizeMaterialFilterValue(radio.dataset.shape || "");
+      const matchesShape = listingShape === "" || listingShape === shape;
       const colorFamily = normalizeMaterialFilterValue(
         radio.dataset.colorFamily || "",
       );

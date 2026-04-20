@@ -151,15 +151,15 @@ class OrderApiRepository {
     final stoneListings = _asList(payload['stone_listings'])
         .map((entry) {
           final map = _asMap(entry);
+          final facets = _asMap(map['facets']);
           final photos = _asList(
             map['photos'],
           ).map(_asMap).toList(growable: false);
           final primaryPhoto = _pickPrimaryPhoto(photos);
           final photoUrl = _resolvePhotoUrl(primaryPhoto);
-          final supportedSealShapes = _asList(map['supported_seal_shapes'])
-              .map((shape) => _asString(shape).toLowerCase())
-              .where((shape) => shape.isNotEmpty)
-              .toList(growable: false);
+          final stoneShape = _asString(
+            facets['stone_shape'],
+          ).trim().toLowerCase();
 
           return StoneListingOption(
             key: _asString(map['key']),
@@ -167,7 +167,7 @@ class OrderApiRepository {
             title: _asString(map['title']),
             description: _asString(map['description']),
             story: _asString(map['story']),
-            supportedSealShapes: supportedSealShapes,
+            stoneShape: stoneShape,
             price: _asInt(map['price']),
             photoUrl: photoUrl,
             photoAlt: _asString(primaryPhoto?['alt']),
