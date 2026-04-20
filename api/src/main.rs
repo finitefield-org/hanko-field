@@ -1180,24 +1180,35 @@ async fn handle_create_stripe_checkout_session(
         }
     };
 
-    if let Err(err) = state
+    if state
         .store
         .set_order_checkout_session(&order.order_id, &session.session_id)
         .await
+        .is_err()
     {
-        eprintln!("failed to persist stripe checkout session id: {err}");
-        if let Err(retry_err) = state
+        if let Err(rollback_err) = state
             .store
-            .set_order_checkout_session(&order.order_id, &session.session_id)
+            .cancel_pending_order_and_release_listing(
+                &order.order_id,
+                order.listing_key.as_str(),
+                "Stripe checkout session persistence failed",
+            )
             .await
         {
-            eprintln!("failed to retry persisting stripe checkout session id: {retry_err}");
+            eprintln!(
+                "failed to roll back reserved listing after stripe checkout persistence failure: {rollback_err:#}"
+            );
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
                 "internal server error",
             );
         }
+        return error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal",
+            "internal server error",
+        );
     }
 
     json_response(
@@ -1854,19 +1865,13 @@ impl FirestoreStore {
         (listing_key, listing_label)
     }
 
-    async fn set_order_checkout_session(
-        &self,
-        order_id: &str,
+    async fn try_set_order_checkout_session(
+        client: &FirebaseFirestoreClient,
+        order_doc_name: &str,
         session_id: &str,
     ) -> Result<(), StoreError> {
-        let client = self
-            .firestore_client()
-            .await
-            .map_err(StoreError::Internal)?;
-        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
-
         let mut order_doc = client
-            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .get_document(order_doc_name, &GetDocumentOptions::default())
             .await
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
 
@@ -1884,15 +1889,78 @@ impl FirestoreStore {
             .insert("updated_at".to_owned(), fs_timestamp(Utc::now()));
 
         client
-            .patch_document(
-                &order_doc_name,
-                &order_doc,
-                &PatchDocumentOptions::default(),
-            )
+            .patch_document(order_doc_name, &order_doc, &PatchDocumentOptions::default())
             .await
             .map_err(|err| StoreError::Internal(anyhow!(err)))?;
 
         Ok(())
+    }
+
+    async fn order_checkout_session_is_persisted(
+        client: &FirebaseFirestoreClient,
+        order_doc_name: &str,
+        session_id: &str,
+    ) -> Result<bool, StoreError> {
+        let order_doc = match client
+            .get_document(order_doc_name, &GetDocumentOptions::default())
+            .await
+        {
+            Ok(doc) => doc,
+            Err(err) if is_not_found(&err) => return Ok(false),
+            Err(err) => return Err(StoreError::Internal(anyhow!(err))),
+        };
+
+        let payment = read_map_field(&order_doc.fields, "payment");
+        Ok(read_string_field(&payment, "checkout_session_id") == session_id)
+    }
+
+    async fn set_order_checkout_session(
+        &self,
+        order_id: &str,
+        session_id: &str,
+    ) -> Result<(), StoreError> {
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+
+        if let Err(err) =
+            Self::try_set_order_checkout_session(&client, &order_doc_name, session_id).await
+        {
+            eprintln!("failed to persist stripe checkout session id: {err}");
+        } else {
+            return Ok(());
+        }
+
+        // Firestore can surface an error after the write has already been stored.
+        // Read the order back before treating the failure as definitive.
+        match Self::order_checkout_session_is_persisted(&client, &order_doc_name, session_id).await
+        {
+            Ok(true) => return Ok(()),
+            Ok(false) => {}
+            Err(err) => {
+                eprintln!("failed to verify stripe checkout session persistence: {err}");
+            }
+        }
+
+        if let Err(retry_err) =
+            Self::try_set_order_checkout_session(&client, &order_doc_name, session_id).await
+        {
+            eprintln!("failed to retry persisting stripe checkout session id: {retry_err}");
+        } else {
+            return Ok(());
+        }
+
+        match Self::order_checkout_session_is_persisted(&client, &order_doc_name, session_id).await
+        {
+            Ok(true) => return Ok(()),
+            Ok(false) | Err(_) => {}
+        }
+
+        Err(StoreError::Internal(anyhow!(
+            "failed to persist stripe checkout session id"
+        )))
     }
 
     async fn cancel_pending_order_and_release_listing(
