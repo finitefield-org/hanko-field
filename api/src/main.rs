@@ -192,7 +192,6 @@ struct CreateOrderInput {
     terms_agreed: bool,
     seal: SealInput,
     listing_id: Option<String>,
-    material_key: Option<String>,
     shipping: ShippingInput,
     contact: ContactInput,
 }
@@ -231,8 +230,6 @@ struct OrderCheckoutContext {
     payment_status: String,
     listing_key: String,
     listing_label: String,
-    listing_code: String,
-    material_label: String,
     seal_shape: String,
     shipping_country_code: String,
     shipping_recipient_name: String,
@@ -368,7 +365,6 @@ struct CreateOrderRequest {
     terms_agreed: bool,
     seal: CreateOrderSealRequest,
     listing_id: Option<String>,
-    material_key: Option<String>,
     shipping: CreateOrderShippingRequest,
     contact: CreateOrderContactRequest,
 }
@@ -1375,18 +1371,12 @@ impl FirestoreStore {
         for document in documents {
             let key =
                 document_id(&document).ok_or_else(|| anyhow!("fonts document is missing name"))?;
-            let mut font_family = read_string_field(&document.fields, "font_family");
-            if font_family.is_empty() {
-                font_family = read_string_field(&document.fields, "family");
-            }
+            let font_family = read_string_field(&document.fields, "font_family");
             if font_family.is_empty() {
                 bail!("fonts/{key} is missing font_family");
             }
             let label = resolve_font_label_field(&document.fields, &key);
-            let mut kanji_style = read_string_field(&document.fields, "kanji_style");
-            if kanji_style.is_empty() {
-                kanji_style = read_string_field(&document.fields, "style");
-            }
+            let kanji_style = read_string_field(&document.fields, "kanji_style");
             let kanji_style = normalize_catalog_kanji_style(&kanji_style).to_owned();
 
             fonts.push(Font {
@@ -1481,17 +1471,6 @@ impl FirestoreStore {
         }
 
         Ok(countries)
-    }
-
-    async fn get_active_stone_listing(
-        &self,
-        client: &FirebaseFirestoreClient,
-        key: &str,
-    ) -> Result<StoneListing, StoreError> {
-        let doc = self
-            .get_orderable_stone_listing_document(client, key)
-            .await?;
-        Ok(stone_listing_from_fields(key, &doc.fields))
     }
 
     async fn get_orderable_stone_listing_document(
@@ -1634,14 +1613,6 @@ impl FirestoreStore {
             .get_orderable_stone_listing_document(&client, listing_id)
             .await?;
         let listing_snapshot = stone_listing_from_fields(listing_id, &listing_doc.fields);
-        if let Some(requested_key) = normalized.material_key.as_deref()
-            && !requested_key.trim().is_empty()
-            && requested_key.trim() != listing_snapshot.material_key
-        {
-            return Err(StoreError::InvalidReference);
-        }
-        let material_key = listing_snapshot.material_key.clone();
-        let material = self.get_active_material(&client, &material_key).await?;
         let country = self
             .get_active_country(&client, &normalized.shipping.country_code)
             .await?;
@@ -1673,7 +1644,6 @@ impl FirestoreStore {
             fields: build_order_fields(
                 &normalized,
                 &font,
-                &material,
                 Some(&listing_snapshot),
                 &country,
                 &order_no,
@@ -1828,8 +1798,8 @@ impl FirestoreStore {
         let pricing = read_map_field(&order_doc.fields, "pricing");
         let contact = read_map_field(&order_doc.fields, "contact");
         let seal = read_map_field(&order_doc.fields, "seal");
-        let material = read_map_field(&order_doc.fields, "material");
         let listing = read_map_field(&order_doc.fields, "listing");
+        let material = read_map_field(&order_doc.fields, "material");
         let shipping = read_map_field(&order_doc.fields, "shipping");
         let order_locale = read_string_field(&order_doc.fields, "locale");
         let resolved_order_locale = if order_locale.trim().is_empty() {
@@ -1837,46 +1807,22 @@ impl FirestoreStore {
         } else {
             order_locale.trim().to_lowercase()
         };
-        let material_label = resolve_localized(
-            &read_string_map_field(&material, "label_i18n"),
+        let (listing_key, listing_label) = Self::resolve_order_listing_fields(
+            &order_doc.fields,
+            &listing,
+            &material,
             &resolved_order_locale,
             DEFAULT_LOCALE,
         );
-        let fallback_material_label = read_string_field(&material, "label");
-        let material_key = read_string_field(&material, "key");
-        let listing_label = resolve_localized(
-            &read_string_map_field(&listing, "title_i18n"),
-            &resolved_order_locale,
-            DEFAULT_LOCALE,
-        );
-        let fallback_listing_label = read_string_field(&listing, "title");
-        let listing_code = read_string_field(&listing, "listing_code");
-        let seal_shape = first_non_empty(&[
-            Some(read_string_field(&seal, "shape")),
-            Some(read_string_field(&material, "shape")),
-        ])
-        .unwrap_or_default();
-        let resolved_material_label = first_non_empty(&[
-            Some(material_label),
-            Some(fallback_material_label),
-            Some(material_key),
-        ])
-        .unwrap_or_default();
+        let seal_shape = read_string_field(&seal, "shape");
 
         Ok(Some(OrderCheckoutContext {
             order_id: order_id.to_owned(),
             order_locale: resolved_order_locale,
             status: read_string_field(&order_doc.fields, "status"),
             payment_status: read_string_field(&payment, "status"),
-            listing_key: read_string_field(&listing, "key"),
-            listing_label: first_non_empty(&[
-                Some(listing_label),
-                Some(fallback_listing_label),
-                Some(listing_code.clone()),
-            ])
-            .unwrap_or_default(),
-            listing_code,
-            material_label: resolved_material_label,
+            listing_key,
+            listing_label,
             seal_shape,
             shipping_country_code: read_string_field(&shipping, "country_code"),
             shipping_recipient_name: read_string_field(&shipping, "recipient_name"),
@@ -1890,6 +1836,40 @@ impl FirestoreStore {
             currency: pricing_currency(&pricing),
             contact_email: read_string_field(&contact, "email"),
         }))
+    }
+
+    fn resolve_order_listing_fields(
+        data: &BTreeMap<String, JsonValue>,
+        listing: &BTreeMap<String, JsonValue>,
+        material: &BTreeMap<String, JsonValue>,
+        requested_locale: &str,
+        default_locale: &str,
+    ) -> (String, String) {
+        let listing_key = first_non_empty(&[
+            Some(read_string_field(listing, "key")),
+            Some(read_string_field(data, "listing_key")),
+            Some(read_string_field(material, "key")),
+        ])
+        .unwrap_or_default();
+        let listing_label = first_non_empty(&[
+            Some(resolve_localized(
+                &read_string_map_field(listing, "title_i18n"),
+                requested_locale,
+                default_locale,
+            )),
+            Some(resolve_localized(
+                &read_string_map_field(material, "label_i18n"),
+                requested_locale,
+                default_locale,
+            )),
+            Some(read_string_field(data, "material_label_ja")),
+            Some(read_string_field(listing, "listing_code")),
+            Some(read_string_field(data, "listing_key")),
+            Some(read_string_field(material, "key")),
+        ])
+        .unwrap_or_default();
+
+        (listing_key, listing_label)
     }
 
     async fn set_order_checkout_session(
@@ -2189,45 +2169,11 @@ impl FirestoreStore {
             key: key.to_owned(),
             label: resolve_font_label_field(&doc.fields, key),
             font_family: read_string_field(&doc.fields, "font_family"),
-            kanji_style: normalize_catalog_kanji_style(
-                &first_non_empty(&[
-                    Some(read_string_field(&doc.fields, "kanji_style")),
-                    Some(read_string_field(&doc.fields, "style")),
-                ])
-                .unwrap_or_default(),
-            )
+            kanji_style: normalize_catalog_kanji_style(&read_string_field(
+                &doc.fields,
+                "kanji_style",
+            ))
             .to_owned(),
-            version: read_int_field(&doc.fields, "version").unwrap_or(1),
-        })
-    }
-
-    async fn get_active_material(
-        &self,
-        client: &FirebaseFirestoreClient,
-        key: &str,
-    ) -> Result<Material, StoreError> {
-        let doc_name = format!("{}/materials/{}", self.parent, key);
-        let doc = client
-            .get_document(&doc_name, &GetDocumentOptions::default())
-            .await
-            .map_err(|err| {
-                if is_not_found(&err) {
-                    StoreError::InvalidReference
-                } else {
-                    StoreError::Internal(anyhow!(err))
-                }
-            })?;
-        if !read_bool_field(&doc.fields, "is_active").unwrap_or(false) {
-            return Err(StoreError::InactiveReference);
-        }
-
-        Ok(Material {
-            key: key.to_owned(),
-            label_i18n: read_string_map_field(&doc.fields, "label_i18n"),
-            description_i18n: read_string_map_field(&doc.fields, "description_i18n"),
-            shape: read_material_shape(&doc.fields),
-            photos: read_material_photos(&doc.fields),
-            price_by_currency: material_price_by_currency_from_fields(&doc.fields),
             version: read_int_field(&doc.fields, "version").unwrap_or(1),
         })
     }
@@ -2475,7 +2421,6 @@ impl FirestoreStore {
 fn build_order_fields(
     input: &CreateOrderInput,
     font: &Font,
-    material: &Material,
     listing: Option<&StoneListing>,
     country: &Country,
     order_no: &str,
@@ -2505,16 +2450,6 @@ fn build_order_fields(
                 ("font_key", fs_string(font.key.clone())),
                 ("font_label", fs_string(font.label.clone())),
                 ("font_version", fs_int(font.version)),
-            ])),
-        ),
-        (
-            "material",
-            fs_map(btree_from_pairs(vec![
-                ("key", fs_string(material.key.clone())),
-                ("label_i18n", fs_string_map(&material.label_i18n)),
-                ("shape", fs_string(material.shape.clone())),
-                ("unit_price", fs_int(subtotal)),
-                ("version", fs_int(material.version)),
             ])),
         ),
         (
@@ -2736,13 +2671,6 @@ fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
     resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
 }
 
-fn material_supports_shape(material: &Material, shape: &str) -> bool {
-    matches!(
-        material.key.as_str(),
-        "rose_quartz" | "lapis_lazuli" | "jade"
-    ) || material.shape == shape
-}
-
 fn stone_listing_supports_seal_shape(listing: &StoneListing, shape: &str) -> bool {
     if listing.supported_seal_shapes.is_empty() {
         return true;
@@ -2789,13 +2717,7 @@ fn material_price_by_currency_from_fields(
 fn stone_listing_price_by_currency_from_fields(
     data: &BTreeMap<String, JsonValue>,
 ) -> HashMap<String, i64> {
-    let price_by_currency =
-        normalize_currency_amount_map(read_int_map_field(data, "price_by_currency"));
-    if !price_by_currency.is_empty() {
-        return price_by_currency;
-    }
-
-    read_legacy_currency_map(data, "price_usd", "price_jpy")
+    normalize_currency_amount_map(read_int_map_field(data, "price_by_currency"))
 }
 
 fn country_shipping_fee_by_currency_from_fields(
@@ -2821,12 +2743,6 @@ fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned);
-    let material_key = input
-        .material_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToOwned::to_owned);
 
     CreateOrderInput {
         channel: input.channel.trim().to_lowercase(),
@@ -2840,7 +2756,6 @@ fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
             font_key: input.seal.font_key.trim().to_owned(),
         },
         listing_id,
-        material_key,
         shipping: ShippingInput {
             country_code: input.shipping.country_code.trim().to_uppercase(),
             recipient_name: input.shipping.recipient_name.trim().to_owned(),
@@ -2871,7 +2786,6 @@ fn hash_order_request(input: &CreateOrderInput) -> Result<String> {
             "font_key": input.seal.font_key,
         },
         "listing_id": input.listing_id.clone(),
-        "material_key": input.material_key.clone(),
         "shipping": {
             "country_code": input.shipping.country_code,
             "recipient_name": input.shipping.recipient_name,
@@ -2965,52 +2879,12 @@ fn parse_kanji_style(raw: Option<&str>) -> Result<KanjiStyle> {
     bail!("kanji_style must be one of japanese, chinese, taiwanese")
 }
 
-fn normalize_catalog_kanji_style(raw: &str) -> &'static str {
-    let normalized = raw.trim().to_lowercase();
-    match normalized.as_str() {
-        "chinese" | "china" | "cn" => "chinese",
-        "taiwanese" | "taiwan" | "tw" => "taiwanese",
-        _ => "japanese",
-    }
-}
-
 fn stone_listing_from_fields(key: &str, data: &BTreeMap<String, JsonValue>) -> StoneListing {
     let facets_data = read_map_field(data, "facets");
-    let mut title_i18n = read_string_map_field(data, "title_i18n");
-    if title_i18n.is_empty() {
-        title_i18n = read_string_map_field(data, "label_i18n");
-        if title_i18n.is_empty() {
-            let legacy_title = read_string_field(data, "title");
-            if !legacy_title.is_empty() {
-                title_i18n.insert("ja".to_owned(), legacy_title);
-            }
-        }
-    }
-    let mut description_i18n = read_string_map_field(data, "description_i18n");
-    if description_i18n.is_empty() {
-        let legacy_description = read_string_field(data, "description");
-        if !legacy_description.is_empty() {
-            description_i18n.insert("ja".to_owned(), legacy_description);
-        }
-    }
-    let mut story_i18n = read_string_map_field(data, "story_i18n");
-    if story_i18n.is_empty() {
-        let legacy_story = read_string_field(data, "story");
-        if !legacy_story.is_empty() {
-            story_i18n.insert("ja".to_owned(), legacy_story);
-        }
-    }
-    let mut supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
-    if supported_seal_shapes.is_empty() {
-        let fallback_shape = first_non_empty(&[
-            Some(read_string_field(data, "seal_shape")),
-            Some(read_string_field(data, "shape")),
-        ])
-        .unwrap_or_default();
-        if !fallback_shape.is_empty() {
-            supported_seal_shapes.push(normalize_catalog_shape(&fallback_shape).to_owned());
-        }
-    }
+    let title_i18n = read_string_map_field(data, "title_i18n");
+    let description_i18n = read_string_map_field(data, "description_i18n");
+    let story_i18n = read_string_map_field(data, "story_i18n");
+    let supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
 
     StoneListing {
         key: key.to_owned(),
@@ -3019,38 +2893,17 @@ fn stone_listing_from_fields(key: &str, data: &BTreeMap<String, JsonValue>) -> S
             Some(key.to_owned()),
         ])
         .unwrap_or_else(|| key.to_owned()),
-        material_key: first_non_empty(&[
-            Some(read_string_field(data, "material_key")),
-            Some(read_string_field(data, "material")),
-        ])
-        .unwrap_or_default(),
+        material_key: read_string_field(data, "material_key"),
         title_i18n,
         description_i18n,
         story_i18n,
         facets: StoneListingFacets {
-            color_family: first_non_empty(&[
-                Some(read_string_field(&facets_data, "color_family")),
-                Some(read_string_field(data, "color_family")),
-            ])
-            .unwrap_or_default(),
+            color_family: read_string_field(&facets_data, "color_family"),
             color_tags: read_string_array_field(&facets_data, "color_tags"),
-            pattern_primary: first_non_empty(&[
-                Some(read_string_field(&facets_data, "pattern_primary")),
-                Some(read_string_field(data, "pattern_primary")),
-            ])
-            .unwrap_or_default(),
+            pattern_primary: read_string_field(&facets_data, "pattern_primary"),
             pattern_tags: read_string_array_field(&facets_data, "pattern_tags"),
-            stone_shape: first_non_empty(&[
-                Some(read_string_field(&facets_data, "stone_shape")),
-                Some(read_string_field(data, "stone_shape")),
-            ])
-            .map(|shape| normalize_catalog_shape(&shape).to_owned())
-            .unwrap_or_default(),
-            translucency: first_non_empty(&[
-                Some(read_string_field(&facets_data, "translucency")),
-                Some(read_string_field(data, "translucency")),
-            ])
-            .unwrap_or_default(),
+            stone_shape: read_string_field(&facets_data, "stone_shape"),
+            translucency: read_string_field(&facets_data, "translucency"),
         },
         supported_seal_shapes,
         photos: read_material_photos(data),
@@ -3570,11 +3423,7 @@ fn append_query_params(base_url: &str, params: &[(&str, &str)]) -> String {
 }
 
 fn build_checkout_product_name(order: &OrderCheckoutContext) -> String {
-    let listing_label = if order.listing_label.trim().is_empty() {
-        order.material_label.trim()
-    } else {
-        order.listing_label.trim()
-    };
+    let listing_label = order.listing_label.trim();
     if is_japanese_locale(&order.order_locale) {
         let shape_label = checkout_shape_label_ja(&order.seal_shape);
         return format!(
@@ -3676,6 +3525,15 @@ fn pricing_total(pricing: &BTreeMap<String, JsonValue>) -> i64 {
     read_int_field(pricing, "total").unwrap_or_default()
 }
 
+fn normalize_catalog_kanji_style(raw: &str) -> &'static str {
+    let normalized = raw.trim().to_lowercase();
+    match normalized.as_str() {
+        "chinese" | "china" | "cn" => "chinese",
+        "taiwanese" | "taiwan" | "tw" => "taiwanese",
+        _ => "japanese",
+    }
+}
+
 fn stripe_checkout_currency(currency: &str) -> String {
     normalize_currency_code(currency)
         .unwrap_or_else(|| DEFAULT_CURRENCY.to_owned())
@@ -3751,13 +3609,6 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
         bail!("listing_id is required");
     }
 
-    let material_key = request.material_key.unwrap_or_default().trim().to_owned();
-    let material_key = if material_key.is_empty() {
-        None
-    } else {
-        Some(material_key)
-    };
-
     let country_code = request.shipping.country_code.trim().to_uppercase();
     if country_code.chars().count() != 2 {
         bail!("shipping.country_code must be ISO alpha-2");
@@ -3795,7 +3646,6 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
             font_key,
         },
         listing_id,
-        material_key,
         shipping: ShippingInput {
             country_code,
             recipient_name: request.shipping.recipient_name.trim().to_owned(),
@@ -4058,15 +3908,6 @@ fn normalize_material_shape(raw: &str) -> &'static str {
     }
 }
 
-fn normalize_catalog_shape(raw: &str) -> &'static str {
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "round" => "round",
-        "square" => "square",
-        "oval" | "ellipse" | "elliptical" => "oval",
-        _ => "square",
-    }
-}
-
 fn read_material_shape(data: &BTreeMap<String, JsonValue>) -> String {
     normalize_material_shape(&read_string_field(data, "shape")).to_owned()
 }
@@ -4189,21 +4030,6 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
         }
     }
 
-    result
-}
-
-fn read_legacy_currency_map(
-    data: &BTreeMap<String, JsonValue>,
-    usd_field: &str,
-    jpy_field: &str,
-) -> HashMap<String, i64> {
-    let mut result = HashMap::new();
-    if let Some(amount) = read_int_field(data, usd_field) {
-        result.insert("USD".to_owned(), amount.max(0));
-    }
-    if let Some(amount) = read_int_field(data, jpy_field) {
-        result.insert("JPY".to_owned(), amount.max(0));
-    }
     result
 }
 
@@ -4495,30 +4321,14 @@ mod tests {
     }
 
     #[test]
-    fn material_supports_shape_allows_gemstones_for_both_shapes() {
-        let material = Material {
-            key: "jade".to_owned(),
-            label_i18n: HashMap::new(),
-            description_i18n: HashMap::new(),
-            shape: "square".to_owned(),
-            photos: Vec::new(),
-            price_by_currency: HashMap::from([
-                ("USD".to_owned(), 88500),
-                ("JPY".to_owned(), 150000),
-            ]),
-            version: 1,
-        };
-
-        assert!(material_supports_shape(&material, "square"));
-        assert!(material_supports_shape(&material, "round"));
-    }
-
-    #[test]
-    fn stone_listing_price_map_uses_legacy_currency_fields() {
-        let fields = btree_from_pairs(vec![
-            ("price_usd", fs_int(88500)),
-            ("price_jpy", fs_int(150000)),
-        ]);
+    fn stone_listing_price_map_uses_currency_fields() {
+        let fields = btree_from_pairs(vec![(
+            "price_by_currency",
+            fs_map(btree_from_pairs(vec![
+                ("USD", fs_int(88500)),
+                ("JPY", fs_int(150000)),
+            ])),
+        )]);
 
         assert_eq!(
             stone_listing_price_by_currency_from_fields(&fields),
@@ -4549,6 +4359,24 @@ mod tests {
     }
 
     #[test]
+    fn resolve_order_listing_fields_uses_legacy_material_snapshot() {
+        let data = btree_from_pairs(vec![("material_label_ja", fs_string("翡翠"))]);
+        let listing = BTreeMap::new();
+        let material = btree_from_pairs(vec![("key", fs_string("jade"))]);
+
+        let (listing_key, listing_label) = FirestoreStore::resolve_order_listing_fields(
+            &data,
+            &listing,
+            &material,
+            "ja",
+            DEFAULT_LOCALE,
+        );
+
+        assert_eq!(listing_key, "jade");
+        assert_eq!(listing_label, "翡翠");
+    }
+
+    #[test]
     fn build_checkout_product_name_uses_japanese_format_for_ja_locale() {
         let order = OrderCheckoutContext {
             order_id: "order_1".to_owned(),
@@ -4556,9 +4384,7 @@ mod tests {
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
             listing_key: String::new(),
-            listing_label: String::new(),
-            listing_code: String::new(),
-            material_label: "翡翠".to_owned(),
+            listing_label: "翡翠".to_owned(),
             seal_shape: "square".to_owned(),
             shipping_country_code: "JP".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -4584,9 +4410,7 @@ mod tests {
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
             listing_key: String::new(),
-            listing_label: String::new(),
-            listing_code: String::new(),
-            material_label: "Jade".to_owned(),
+            listing_label: "Jade".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "US".to_owned(),
             shipping_recipient_name: "John Doe".to_owned(),
@@ -4615,9 +4439,7 @@ mod tests {
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
             listing_key: String::new(),
-            listing_label: String::new(),
-            listing_code: String::new(),
-            material_label: "翡翠".to_owned(),
+            listing_label: "翡翠".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "jp".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -4669,9 +4491,7 @@ mod tests {
             status: "pending_payment".to_owned(),
             payment_status: "unpaid".to_owned(),
             listing_key: String::new(),
-            listing_label: String::new(),
-            listing_code: String::new(),
-            material_label: "翡翠".to_owned(),
+            listing_label: "翡翠".to_owned(),
             seal_shape: "round".to_owned(),
             shipping_country_code: "JP".to_owned(),
             shipping_recipient_name: "田中 太郎".to_owned(),
@@ -4729,7 +4549,6 @@ mod tests {
                 font_key: "zen_maru_gothic".to_owned(),
             },
             listing_id: Some("rose_quartz_01".to_owned()),
-            material_key: Some("jade".to_owned()),
             shipping: CreateOrderShippingRequest {
                 country_code: "jp".to_owned(),
                 recipient_name: "田中 太郎".to_owned(),
@@ -4764,7 +4583,6 @@ mod tests {
                 font_key: "zen_maru_gothic".to_owned(),
             },
             listing_id: None,
-            material_key: Some("jade".to_owned()),
             shipping: CreateOrderShippingRequest {
                 country_code: "JP".to_owned(),
                 recipient_name: "田中 太郎".to_owned(),
@@ -4798,7 +4616,6 @@ mod tests {
                 font_key: "zen_maru_gothic".to_owned(),
             },
             listing_id: Some("rose_quartz_01".to_owned()),
-            material_key: Some("jade".to_owned()),
             shipping: CreateOrderShippingRequest {
                 country_code: "JP".to_owned(),
                 recipient_name: "田中 太郎".to_owned(),

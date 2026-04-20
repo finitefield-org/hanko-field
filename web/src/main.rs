@@ -76,15 +76,11 @@ struct MaterialPhoto {
     alt_i18n: HashMap<String, String>,
     sort_order: i64,
     is_primary: bool,
-    width: i64,
-    height: i64,
 }
 
 #[derive(Debug, Clone)]
 struct MaterialOption {
     key: String,
-    listing_code: String,
-    material_key: String,
     label: String,
     description: String,
     comparison_texture: String,
@@ -98,13 +94,10 @@ struct MaterialOption {
     stone_shape: String,
     color_tag_labels: Vec<String>,
     pattern_tag_labels: Vec<String>,
-    color_tag_labels_csv: String,
-    pattern_tag_labels_csv: String,
     has_color_tag_labels: bool,
     has_pattern_tag_labels: bool,
     supported_seal_shapes: Vec<String>,
     supported_seal_shapes_csv: String,
-    story: String,
     price: i64,
     price_display: String,
     photo_url: String,
@@ -114,7 +107,6 @@ struct MaterialOption {
 
 #[derive(Debug, Clone)]
 struct MaterialCategory {
-    key: String,
     label: String,
     description: String,
     comparison_texture: String,
@@ -202,11 +194,9 @@ impl FacetTagLabels {
 #[derive(Debug, Clone)]
 struct StoneListingRecord {
     key: String,
-    listing_code: String,
     material_key: String,
     title: String,
     description: String,
-    story: String,
     price_by_currency: HashMap<String, i64>,
     supported_seal_shapes: Vec<String>,
     color_family: String,
@@ -215,9 +205,6 @@ struct StoneListingRecord {
     pattern_tags: Vec<String>,
     stone_shape: String,
     photos: Vec<MaterialPhoto>,
-    is_active: bool,
-    sort_order: i64,
-    version: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -490,7 +477,6 @@ struct CommercialTransactionsTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
-    design_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -500,7 +486,6 @@ struct CommercialTransactionsTemplate {
 #[derive(Template)]
 #[template(path = "terms.html")]
 struct TermsTemplate {
-    design_url: String,
     contact_url: String,
     selected_locale: String,
     page_title: String,
@@ -669,17 +654,11 @@ impl FirestoreCatalogSource {
         for document in documents {
             let doc_id =
                 document_id(&document).ok_or_else(|| anyhow!("fonts document is missing name"))?;
-            let mut family = read_string_field(&document.fields, "font_family");
-            if family.is_empty() {
-                family = read_string_field(&document.fields, "family");
-            }
+            let family = read_string_field(&document.fields, "font_family");
             if family.is_empty() {
                 bail!("fonts/{doc_id} is missing font_family");
             }
             let mut stylesheet_url = read_string_field(&document.fields, "font_stylesheet_url");
-            if stylesheet_url.is_empty() {
-                stylesheet_url = read_string_field(&document.fields, "font_url");
-            }
             if stylesheet_url.is_empty() {
                 stylesheet_url = build_google_fonts_stylesheet_url(&family).map_err(|error| {
                     anyhow!(
@@ -690,10 +669,7 @@ impl FirestoreCatalogSource {
 
             let label =
                 resolve_font_label_field(&document.fields, locale, &self.default_locale, &doc_id);
-            let mut kanji_style = read_string_field(&document.fields, "kanji_style");
-            if kanji_style.is_empty() {
-                kanji_style = read_string_field(&document.fields, "style");
-            }
+            let kanji_style = read_string_field(&document.fields, "kanji_style");
             let kanji_style = normalize_kanji_style(&kanji_style).to_owned();
 
             fonts.push(FontOption {
@@ -769,7 +745,6 @@ impl FirestoreCatalogSource {
             let label = resolve_localized_field(
                 &document.fields,
                 "label_i18n",
-                "label",
                 locale,
                 &self.default_locale,
                 &doc_id,
@@ -777,7 +752,6 @@ impl FirestoreCatalogSource {
             let description = resolve_localized_field(
                 &document.fields,
                 "description_i18n",
-                "description",
                 locale,
                 &self.default_locale,
                 "",
@@ -813,7 +787,6 @@ impl FirestoreCatalogSource {
             categories.insert(
                 doc_id.clone(),
                 MaterialCategory {
-                    key: doc_id,
                     label,
                     description,
                     comparison_texture,
@@ -878,7 +851,6 @@ impl FirestoreCatalogSource {
             let label = resolve_localized_field(
                 &document.fields,
                 "label_i18n",
-                "label",
                 locale,
                 &self.default_locale,
                 &key,
@@ -910,16 +882,7 @@ impl FirestoreCatalogSource {
                 continue;
             }
 
-            let mut price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
-            if price_by_currency.is_empty() {
-                price_by_currency =
-                    read_legacy_currency_map(&document.fields, "price_usd", "price_jpy");
-                if !price_by_currency.is_empty() {
-                    eprintln!(
-                        "warning: stone_listings/{doc_id} uses deprecated price_usd/price_jpy; migrate to price_by_currency"
-                    );
-                }
-            }
+            let price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
             let price_currency = locale_currency_code(locale);
             if resolve_amount_for_currency(&price_by_currency, price_currency).is_none() {
                 eprintln!(
@@ -931,7 +894,6 @@ impl FirestoreCatalogSource {
             let title = resolve_localized_field(
                 &document.fields,
                 "title_i18n",
-                "title",
                 locale,
                 &self.default_locale,
                 &doc_id,
@@ -939,15 +901,6 @@ impl FirestoreCatalogSource {
             let description = resolve_localized_field(
                 &document.fields,
                 "description_i18n",
-                "description",
-                locale,
-                &self.default_locale,
-                "",
-            );
-            let story = resolve_localized_field(
-                &document.fields,
-                "story_i18n",
-                "story",
                 locale,
                 &self.default_locale,
                 "",
@@ -956,52 +909,24 @@ impl FirestoreCatalogSource {
             let color_family = resolve_localized_field(
                 &facets,
                 "color_family_i18n",
-                "color_family",
                 locale,
                 &self.default_locale,
                 "",
             );
             let pattern_primary = read_string_field(&facets, "pattern_primary");
-            let stone_shape = normalize_stone_shape(
-                &first_non_empty(&[
-                    Some(read_string_field(&facets, "stone_shape")),
-                    Some(read_string_field(&document.fields, "stone_shape")),
-                    Some(read_string_field(&document.fields, "shape")),
-                ])
-                .unwrap_or_default(),
-            )
-            .to_owned();
+            let stone_shape =
+                normalize_stone_shape(&read_string_field(&facets, "stone_shape")).to_owned();
             let color_tags = read_string_array_field(&facets, "color_tags");
             let pattern_tags = read_string_array_field(&facets, "pattern_tags");
-            let supported_seal_shapes = {
-                let mut shapes = read_string_array_field(&document.fields, "supported_seal_shapes");
-                if shapes.is_empty() {
-                    let fallback_shape = normalize_material_shape(&read_string_field(
-                        &document.fields,
-                        "seal_shape",
-                    ))
-                    .to_owned();
-                    if !fallback_shape.is_empty() {
-                        shapes.push(fallback_shape);
-                    }
-                }
-                shapes
-            };
+            let supported_seal_shapes =
+                read_string_array_field(&document.fields, "supported_seal_shapes");
             let photos = read_material_photos(&document.fields);
-            let sort_order = read_int_field(&document.fields, "sort_order").unwrap_or_default();
-            let version = read_int_field(&document.fields, "version").unwrap_or(1);
 
             listings.push(StoneListingRecord {
                 key: doc_id.clone(),
-                listing_code: first_non_empty(&[
-                    Some(read_string_field(&document.fields, "listing_code")),
-                    Some(doc_id.clone()),
-                ])
-                .unwrap_or_else(|| doc_id.clone()),
                 material_key: read_string_field(&document.fields, "material_key"),
                 title,
                 description,
-                story,
                 price_by_currency,
                 supported_seal_shapes,
                 color_family,
@@ -1010,9 +935,6 @@ impl FirestoreCatalogSource {
                 pattern_tags,
                 stone_shape,
                 photos,
-                is_active,
-                sort_order,
-                version,
             });
         }
 
@@ -1038,20 +960,8 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("countries document is missing name"))?;
 
-            let mut shipping_fee_by_currency =
+            let shipping_fee_by_currency =
                 read_int_map_field(&document.fields, "shipping_fee_by_currency");
-            if shipping_fee_by_currency.is_empty() {
-                shipping_fee_by_currency = read_legacy_currency_map(
-                    &document.fields,
-                    "shipping_fee_usd",
-                    "shipping_fee_jpy",
-                );
-                if !shipping_fee_by_currency.is_empty() {
-                    eprintln!(
-                        "warning: countries/{doc_id} uses deprecated shipping_fee_usd/shipping_fee_jpy; migrate to shipping_fee_by_currency"
-                    );
-                }
-            }
 
             let shipping_currency = locale_currency_code(locale);
             let Some(shipping) =
@@ -1066,7 +976,6 @@ impl FirestoreCatalogSource {
             let label = resolve_localized_field(
                 &document.fields,
                 "label_i18n",
-                "label",
                 locale,
                 &self.default_locale,
                 &doc_id,
@@ -1760,8 +1669,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
             materials: vec![
                 MaterialOption {
                     key: "rose_quartz".to_owned(),
-                    listing_code: "RQT-0001".to_owned(),
-                    material_key: "rose_quartz".to_owned(),
                     label: if english {
                         "Rose Quartz"
                     } else {
@@ -1811,26 +1718,10 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     } else {
                         vec!["雲状".to_owned()]
                     },
-                    color_tag_labels_csv: if english {
-                        "Soft Pink".to_owned()
-                    } else {
-                        "淡桃".to_owned()
-                    },
-                    pattern_tag_labels_csv: if english {
-                        "Cloud".to_owned()
-                    } else {
-                        "雲状".to_owned()
-                    },
                     has_color_tag_labels: true,
                     has_pattern_tag_labels: true,
                     supported_seal_shapes: vec!["square".to_owned()],
                     supported_seal_shapes_csv: "square".to_owned(),
-                    story: if english {
-                        "A one-of-one rose quartz piece with a soft, approachable tone"
-                    } else {
-                        "やわらかな印象を持つ、ローズクオーツの一点物"
-                    }
-                    .to_owned(),
                     price: if english { 16500 } else { 28000 },
                     price_display: if english {
                         format_usd(16500)
@@ -1848,8 +1739,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                 },
                 MaterialOption {
                     key: "lapis_lazuli".to_owned(),
-                    listing_code: "LPL-0001".to_owned(),
-                    material_key: "lapis_lazuli".to_owned(),
                     label: if english {
                         "Lapis Lazuli"
                     } else {
@@ -1899,26 +1788,10 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     } else {
                         vec!["点状".to_owned()]
                     },
-                    color_tag_labels_csv: if english {
-                        "Deep Blue".to_owned()
-                    } else {
-                        "深青".to_owned()
-                    },
-                    pattern_tag_labels_csv: if english {
-                        "Speckled".to_owned()
-                    } else {
-                        "点状".to_owned()
-                    },
                     has_color_tag_labels: true,
                     has_pattern_tag_labels: true,
                     supported_seal_shapes: vec!["round".to_owned()],
                     supported_seal_shapes_csv: "round".to_owned(),
-                    story: if english {
-                        "A vivid one-of-one lapis piece with a deep blue presence"
-                    } else {
-                        "深い青が印象的な、ラピスラビリの一点物"
-                    }
-                    .to_owned(),
                     price: if english { 32500 } else { 55000 },
                     price_display: if english {
                         format_usd(32500)
@@ -1936,8 +1809,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                 },
                 MaterialOption {
                     key: "jade".to_owned(),
-                    listing_code: "JDE-0001".to_owned(),
-                    material_key: "jade".to_owned(),
                     label: if english { "Jade" } else { "翡翠" }.to_owned(),
                     description: if english {
                         "A dignified stone with a calm green sheen"
@@ -1982,26 +1853,10 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     } else {
                         vec!["縞".to_owned()]
                     },
-                    color_tag_labels_csv: if english {
-                        "Deep Green".to_owned()
-                    } else {
-                        "濃緑".to_owned()
-                    },
-                    pattern_tag_labels_csv: if english {
-                        "Banded".to_owned()
-                    } else {
-                        "縞".to_owned()
-                    },
                     has_color_tag_labels: true,
                     has_pattern_tag_labels: true,
                     supported_seal_shapes: vec!["square".to_owned()],
                     supported_seal_shapes_csv: "square".to_owned(),
-                    story: if english {
-                        "A composed jade piece selected for its calm green surface"
-                    } else {
-                        "落ち着いた緑の表情を持つ、翡翠の一点物"
-                    }
-                    .to_owned(),
                     price: if english { 88500 } else { 150000 },
                     price_display: if english {
                         format_usd(88500)
@@ -2434,6 +2289,7 @@ fn payment_result_locale_url(
     site_url(base_url, &format!("{base_path}{query}"))
 }
 
+#[cfg(test)]
 fn payment_result_navigation_url(
     base_url: &str,
     base_path: &str,
@@ -2632,7 +2488,6 @@ async fn handle_commercial_transactions(
         lang_en_url,
         company_url: company_url(site_base_url),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
-        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
             "/commercial-transactions",
@@ -2659,7 +2514,6 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
     let lang_ja_url = terms_url(site_base_url, "ja");
     let lang_en_url = terms_url(site_base_url, "en");
     let template = TermsTemplate {
-        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         contact_url: inquiry_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
@@ -3566,16 +3420,12 @@ fn build_material_option_from_listing(
     };
     let color_tag_labels = facet_tag_labels.resolve_list("color", &listing.color_tags);
     let pattern_tag_labels = facet_tag_labels.resolve_list("pattern", &listing.pattern_tags);
-    let color_tag_labels_csv = join_filter_values(&color_tag_labels);
-    let pattern_tag_labels_csv = join_filter_values(&pattern_tag_labels);
     let has_color_tag_labels = !color_tag_labels.is_empty();
     let has_pattern_tag_labels = !pattern_tag_labels.is_empty();
     let supported_seal_shapes_csv = join_filter_values(&listing.supported_seal_shapes);
 
     MaterialOption {
         key: listing.key.clone(),
-        listing_code: listing.listing_code.clone(),
-        material_key: listing.material_key.clone(),
         label: title,
         description,
         comparison_texture: category.comparison_texture.clone(),
@@ -3589,13 +3439,10 @@ fn build_material_option_from_listing(
         stone_shape: listing.stone_shape.clone(),
         color_tag_labels,
         pattern_tag_labels,
-        color_tag_labels_csv,
-        pattern_tag_labels_csv,
         has_color_tag_labels,
         has_pattern_tag_labels,
         supported_seal_shapes: listing.supported_seal_shapes.clone(),
         supported_seal_shapes_csv,
-        story: listing.story.clone(),
         price,
         price_display: format_currency_amount(price, price_currency),
         photo_url,
@@ -3931,7 +3778,6 @@ fn document_id(document: &Document) -> Option<String> {
 fn resolve_localized_field(
     data: &BTreeMap<String, JsonValue>,
     i18n_field: &str,
-    legacy_field: &str,
     locale: &str,
     default_locale: &str,
     fallback: &str,
@@ -3940,13 +3786,6 @@ fn resolve_localized_field(
     let localized = resolve_localized_text(&values, locale, default_locale);
     if !localized.is_empty() {
         return localized;
-    }
-
-    if !legacy_field.is_empty() {
-        let legacy = read_string_field(data, legacy_field);
-        if !legacy.is_empty() {
-            return legacy;
-        }
     }
 
     fallback.to_owned()
@@ -4126,21 +3965,6 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
     result
 }
 
-fn read_legacy_currency_map(
-    data: &BTreeMap<String, JsonValue>,
-    usd_field: &str,
-    jpy_field: &str,
-) -> HashMap<String, i64> {
-    let mut result = HashMap::new();
-    if let Some(amount) = read_int_field(data, usd_field) {
-        result.insert("USD".to_owned(), amount.max(0));
-    }
-    if let Some(amount) = read_int_field(data, jpy_field) {
-        result.insert("JPY".to_owned(), amount.max(0));
-    }
-    result
-}
-
 fn locale_currency_code(locale: &str) -> &'static str {
     if parse_supported_locale(locale) == Some("en") {
         "USD"
@@ -4266,8 +4090,6 @@ fn read_material_photos(data: &BTreeMap<String, JsonValue>) -> Vec<MaterialPhoto
                 alt_i18n: read_string_map_field(&fields, "alt_i18n"),
                 sort_order: read_int_field(&fields, "sort_order").unwrap_or_default(),
                 is_primary: read_bool_field(&fields, "is_primary").unwrap_or(false),
-                width: read_int_field(&fields, "width").unwrap_or_default(),
-                height: read_int_field(&fields, "height").unwrap_or_default(),
             })
         })
         .collect::<Vec<_>>();
@@ -4280,6 +4102,7 @@ fn read_material_photos(data: &BTreeMap<String, JsonValue>) -> Vec<MaterialPhoto
     photos
 }
 
+#[cfg(test)]
 fn resolve_material_photo(
     data: &BTreeMap<String, JsonValue>,
     storage_assets_bucket: &str,
@@ -4292,14 +4115,7 @@ fn resolve_material_photo(
         let photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
         if !photo_url.is_empty() {
             let photo_alt = if storage_alt.is_empty() {
-                resolve_localized_field(
-                    data,
-                    "photo_alt_i18n",
-                    "photo_alt",
-                    locale,
-                    default_locale,
-                    "",
-                )
+                resolve_localized_field(data, "photo_alt_i18n", locale, default_locale, "")
             } else {
                 storage_alt
             };
@@ -4307,36 +4123,8 @@ fn resolve_material_photo(
         }
     }
 
-    let photo_alt = resolve_localized_field(
-        data,
-        "photo_alt_i18n",
-        "photo_alt",
-        locale,
-        default_locale,
-        "",
-    );
-
-    let mut photo_url = resolve_localized_field(
-        data,
-        "photo_url_i18n",
-        "photo_url",
-        locale,
-        default_locale,
-        "",
-    );
-    if photo_url.is_empty() {
-        photo_url = resolve_localized_field(
-            data,
-            "image_url_i18n",
-            "image_url",
-            locale,
-            default_locale,
-            "",
-        );
-    }
-
-    let has_photo = !photo_url.is_empty();
-    (photo_url, photo_alt, has_photo)
+    let photo_alt = resolve_localized_field(data, "photo_alt_i18n", locale, default_locale, "");
+    (String::new(), photo_alt, false)
 }
 
 fn resolve_listing_photo(
@@ -4380,6 +4168,7 @@ fn select_primary_listing_photo(photos: &[MaterialPhoto]) -> Option<&MaterialPho
     selected
 }
 
+#[cfg(test)]
 fn select_primary_material_photo(
     data: &BTreeMap<String, JsonValue>,
     locale: &str,
@@ -4630,7 +4419,6 @@ mod tests {
         };
 
         let category = MaterialCategory {
-            key: "jade".to_owned(),
             label: "翡翠".to_owned(),
             description: "落ち着いた緑の石材".to_owned(),
             comparison_texture: "texture".to_owned(),
@@ -4640,11 +4428,9 @@ mod tests {
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
-            listing_code: "JDE-0001".to_owned(),
             material_key: "jade".to_owned(),
             title: "翡翠の一点物".to_owned(),
             description: "個体説明".to_owned(),
-            story: "story".to_owned(),
             price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
             supported_seal_shapes: vec!["square".to_owned()],
             color_family: "green".to_owned(),
@@ -4653,9 +4439,6 @@ mod tests {
             pattern_tags: vec!["cloudy".to_owned(), "cloud".to_owned()],
             stone_shape: "oval".to_owned(),
             photos: vec![],
-            is_active: true,
-            sort_order: 0,
-            version: 1,
         };
 
         let option = build_material_option_from_listing(
@@ -4676,7 +4459,6 @@ mod tests {
     #[test]
     fn material_option_shows_all_supported_seal_shapes() {
         let category = MaterialCategory {
-            key: "jade".to_owned(),
             label: "翡翠".to_owned(),
             description: "落ち着いた緑の石材".to_owned(),
             comparison_texture: "texture".to_owned(),
@@ -4686,11 +4468,9 @@ mod tests {
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
-            listing_code: "JDE-0001".to_owned(),
             material_key: "jade".to_owned(),
             title: "翡翠の一点物".to_owned(),
             description: "個体説明".to_owned(),
-            story: "story".to_owned(),
             price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
             supported_seal_shapes: vec!["round".to_owned(), "square".to_owned()],
             color_family: "green".to_owned(),
@@ -4699,9 +4479,6 @@ mod tests {
             pattern_tags: vec![],
             stone_shape: "oval".to_owned(),
             photos: vec![],
-            is_active: true,
-            sort_order: 0,
-            version: 1,
         };
 
         let option = build_material_option_from_listing(
@@ -4719,7 +4496,6 @@ mod tests {
     #[test]
     fn material_option_uses_english_photo_alt_fallback() {
         let category = MaterialCategory {
-            key: "jade".to_owned(),
             label: "翡翠".to_owned(),
             description: "落ち着いた緑の石材".to_owned(),
             comparison_texture: "texture".to_owned(),
@@ -4729,11 +4505,9 @@ mod tests {
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
-            listing_code: "JDE-0001".to_owned(),
             material_key: "jade".to_owned(),
             title: "One-of-a-kind Jade 101".to_owned(),
             description: "A refined piece with calm green flowing patterns.".to_owned(),
-            story: "story".to_owned(),
             price_by_currency: HashMap::from([("USD".to_owned(), 92800)]),
             supported_seal_shapes: vec!["square".to_owned()],
             color_family: "green".to_owned(),
@@ -4747,12 +4521,7 @@ mod tests {
                 alt_i18n: HashMap::new(),
                 sort_order: 0,
                 is_primary: true,
-                width: 1200,
-                height: 1200,
             }],
-            is_active: true,
-            sort_order: 0,
-            version: 1,
         };
 
         let option = build_material_option_from_listing(
@@ -4769,20 +4538,8 @@ mod tests {
     }
 
     #[test]
-    fn material_photo_prefers_firestore_photos_over_legacy_photo_url() {
+    fn material_photo_uses_firestore_photos() {
         let mut data = BTreeMap::new();
-        data.insert(
-            "photo_url".to_owned(),
-            json!({
-                "stringValue": "https://picsum.photos/seed/legacy-material/640/420"
-            }),
-        );
-        data.insert(
-            "photo_alt".to_owned(),
-            json!({
-                "stringValue": "legacy alt"
-            }),
-        );
         data.insert(
             "photos".to_owned(),
             json!({

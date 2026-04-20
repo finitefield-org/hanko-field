@@ -15,9 +15,7 @@
       pathInput: form.querySelector('input[name="photo_storage_path"]'),
       keyInput:
         form.querySelector('input[name="stone_listing_key"]') ||
-        form.querySelector('input[name="material_key"]') ||
-        form.querySelector('input[name="listing_key"]') ||
-        form.querySelector('input[name="key"]'),
+        form.querySelector('input[name="material_key"]'),
       uploadButton: form.querySelector("[data-photo-upload-button]"),
       previewWrap: form.querySelector("[data-photo-preview-wrap]"),
       previewImage: form.querySelector("[data-photo-preview]"),
@@ -328,7 +326,7 @@
     }
 
     const keyInput = target.closest(
-      'input[name="key"], input[name="material_key"], input[name="stone_listing_key"], input[name="listing_key"]',
+      'input[name="material_key"], input[name="stone_listing_key"]',
     );
     if (!(keyInput instanceof HTMLInputElement)) {
       return;

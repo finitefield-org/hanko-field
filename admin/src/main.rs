@@ -85,7 +85,7 @@ struct Order {
     contact_email: String,
     seal_line1: String,
     seal_line2: String,
-    material_label_ja: String,
+    listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -116,9 +116,6 @@ struct MaterialPhoto {
 
 #[derive(Debug, Clone)]
 struct MaterialCategory {
-    key: String,
-    label_i18n: HashMap<String, String>,
-    description_i18n: HashMap<String, String>,
     comparison_texture_ja: String,
     comparison_texture_en: String,
     comparison_weight_ja: String,
@@ -126,8 +123,6 @@ struct MaterialCategory {
     comparison_usage_ja: String,
     comparison_usage_en: String,
     shape: String,
-    sort_order: i64,
-    is_active: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -490,7 +485,6 @@ impl DataSource {
 
 #[derive(Clone)]
 struct FirestoreAdminSource {
-    locale: String,
     default_locale: String,
     label: String,
     parent: String,
@@ -638,7 +632,7 @@ struct OrderDetailView {
     seal_line1: String,
     seal_line2: String,
     has_seal_line2: bool,
-    material_label_ja: String,
+    listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
     has_next_statuses: bool,
@@ -831,7 +825,6 @@ struct CountryCreateView {
 struct FacetTagListItemView {
     id: String,
     key: String,
-    facet_type: String,
     facet_type_label: String,
     label_ja: String,
     label_en: String,
@@ -845,7 +838,6 @@ struct FacetTagListItemView {
 struct FacetTagDetailView {
     id: String,
     key: String,
-    facet_type: String,
     facet_type_label: String,
     label_ja: String,
     label_en: String,
@@ -1721,7 +1713,6 @@ async fn build_server(cfg: &AppConfig) -> Result<Arc<ServerState>> {
 
             DataSource::Firestore(FirestoreAdminSource {
                 parent: format!("projects/{project_id}/databases/(default)/documents"),
-                locale: cfg.locale.clone(),
                 default_locale: cfg.default_locale.clone(),
                 label,
                 storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
@@ -2891,7 +2882,7 @@ async fn handle_stone_listing_photo_upload(
         };
 
         match name {
-            "stone_listing_key" | "listing_key" | "key" => {
+            "stone_listing_key" => {
                 stone_listing_key = match field.text().await {
                     Ok(text) => text.trim().to_owned(),
                     Err(error) => {
@@ -4239,7 +4230,7 @@ impl ServerState {
             seal_line1: order.seal_line1.clone(),
             seal_line2: order.seal_line2.clone(),
             has_seal_line2: !order.seal_line2.is_empty(),
-            material_label_ja: order.material_label_ja.clone(),
+            listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
             next_statuses,
@@ -4505,7 +4496,6 @@ impl ServerState {
             items.push(FacetTagListItemView {
                 id: id.clone(),
                 key: tag.key.clone(),
-                facet_type: tag.facet_type.clone(),
                 facet_type_label: facet_tag_type_label(&tag.facet_type).to_owned(),
                 label_ja: tag.label_i18n.get("ja").cloned().unwrap_or_default(),
                 label_en: tag.label_i18n.get("en").cloned().unwrap_or_default(),
@@ -4531,7 +4521,6 @@ impl ServerState {
         Some(FacetTagDetailView {
             id: id.to_owned(),
             key: tag.key.clone(),
-            facet_type: tag.facet_type.clone(),
             facet_type_label: facet_tag_type_label(&tag.facet_type).to_owned(),
             label_ja: tag.label_i18n.get("ja").cloned().unwrap_or_default(),
             label_en: tag.label_i18n.get("en").cloned().unwrap_or_default(),
@@ -6183,11 +6172,11 @@ impl FirestoreAdminSource {
     fn decode_order(&self, order_id: &str, data: &BTreeMap<String, JsonValue>) -> Order {
         let payment = read_map_field(data, "payment");
         let listing = read_map_field(data, "listing");
+        let material = read_map_field(data, "material");
         let fulfillment = read_map_field(data, "fulfillment");
         let shipping = read_map_field(data, "shipping");
         let contact = read_map_field(data, "contact");
         let seal = read_map_field(data, "seal");
-        let material_data = read_map_field(data, "material");
         let pricing = read_map_field(data, "pricing");
         let raw_locale = read_string_field(data, "locale");
         let locale = if raw_locale.is_empty() {
@@ -6196,23 +6185,9 @@ impl FirestoreAdminSource {
             raw_locale
         };
         let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
-        let total = resolve_order_total(data, &pricing, &pricing_currency);
-
-        let material_label_ja = {
-            let localized = resolve_localized_field(
-                &material_data,
-                "label_i18n",
-                "label",
-                &self.locale,
-                &self.default_locale,
-                &read_string_field(&material_data, "key"),
-            );
-            if localized.is_empty() {
-                read_string_field(data, "material_label_ja")
-            } else {
-                localized
-            }
-        };
+        let total = resolve_order_total(data, &pricing);
+        let (listing_key, listing_label_ja) =
+            Self::resolve_order_listing_fields(data, &listing, &material);
 
         let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
         let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
@@ -6225,14 +6200,7 @@ impl FirestoreAdminSource {
             channel: read_string_field(data, "channel"),
             locale,
             currency: pricing_currency,
-            listing_key: {
-                let listing_key = read_string_field(&listing, "key");
-                if listing_key.is_empty() {
-                    read_string_field(data, "listing_key")
-                } else {
-                    listing_key
-                }
-            },
+            listing_key,
             status: read_string_field(data, "status"),
             status_updated_at,
             payment_status: read_string_field(&payment, "status"),
@@ -6243,7 +6211,7 @@ impl FirestoreAdminSource {
             contact_email: read_string_field(&contact, "email"),
             seal_line1: read_string_field(&seal, "line1"),
             seal_line2: read_string_field(&seal, "line2"),
-            material_label_ja,
+            listing_label_ja,
             total,
             created_at,
             updated_at,
@@ -6265,6 +6233,61 @@ impl FirestoreAdminSource {
 
         fill_derived_statuses(&mut order);
         order
+    }
+
+    fn resolve_order_listing_fields(
+        data: &BTreeMap<String, JsonValue>,
+        listing: &BTreeMap<String, JsonValue>,
+        material: &BTreeMap<String, JsonValue>,
+    ) -> (String, String) {
+        let listing_key = {
+            let key = read_string_field(listing, "key");
+            if key.is_empty() {
+                let legacy_listing_key = read_string_field(data, "listing_key");
+                if legacy_listing_key.is_empty() {
+                    read_string_field(material, "key")
+                } else {
+                    legacy_listing_key
+                }
+            } else {
+                key
+            }
+        };
+        let listing_label_ja = {
+            let localized =
+                resolve_localized_text(&read_string_map_field(listing, "title_i18n"), "ja", "ja");
+            if !localized.is_empty() {
+                localized
+            } else {
+                let legacy_localized = resolve_localized_text(
+                    &read_string_map_field(material, "label_i18n"),
+                    "ja",
+                    "ja",
+                );
+                if !legacy_localized.is_empty() {
+                    legacy_localized
+                } else {
+                    let legacy_label_ja = read_string_field(data, "material_label_ja");
+                    if !legacy_label_ja.is_empty() {
+                        legacy_label_ja
+                    } else {
+                        let listing_code = read_string_field(listing, "listing_code");
+                        if !listing_code.is_empty() {
+                            listing_code
+                        } else {
+                            let legacy_listing_key = read_string_field(data, "listing_key");
+                            if !legacy_listing_key.is_empty() {
+                                legacy_listing_key
+                            } else {
+                                read_string_field(material, "key")
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        (listing_key, listing_label_ja)
     }
 
     async fn load_materials(
@@ -6389,9 +6412,6 @@ impl FirestoreAdminSource {
             categories.insert(
                 doc_id.clone(),
                 MaterialCategory {
-                    key: doc_id,
-                    label_i18n: read_string_map_field(data, "label_i18n"),
-                    description_i18n: read_string_map_field(data, "description_i18n"),
                     comparison_texture_ja,
                     comparison_texture_en,
                     comparison_weight_ja,
@@ -6399,8 +6419,6 @@ impl FirestoreAdminSource {
                     comparison_usage_ja,
                     comparison_usage_en,
                     shape: shape.to_owned(),
-                    sort_order: read_int_field(data, "sort_order").unwrap_or_default(),
-                    is_active: read_bool_field(data, "is_active").unwrap_or(true),
                 },
             );
         }
@@ -6446,19 +6464,8 @@ impl FirestoreAdminSource {
             let facets = read_map_field(data, "facets");
             let title_i18n = read_string_map_field(data, "title_i18n");
             let description_i18n = read_string_map_field(data, "description_i18n");
-            let mut story_i18n = read_string_map_field(data, "story_i18n");
-            if story_i18n.is_empty() {
-                let legacy_story = read_string_field(data, "story");
-                if !legacy_story.is_empty() {
-                    story_i18n.insert("ja".to_owned(), legacy_story);
-                }
-            }
-            let mut supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
-            if supported_seal_shapes.is_empty() {
-                let fallback_shape =
-                    material_shape_or_default(&read_string_field(data, "seal_shape"));
-                supported_seal_shapes.push(fallback_shape.to_owned());
-            }
+            let story_i18n = read_string_map_field(data, "story_i18n");
+            let supported_seal_shapes = read_string_array_field(data, "supported_seal_shapes");
 
             listings.insert(
                 doc_id.clone(),
@@ -6621,25 +6628,16 @@ impl FirestoreAdminSource {
             let data = &document.fields;
             let label = resolve_font_label_field(data, &doc_id);
 
-            let mut font_family = read_string_field(data, "font_family");
-            if font_family.is_empty() {
-                font_family = read_string_field(data, "family");
-            }
+            let font_family = read_string_field(data, "font_family");
             if font_family.is_empty() {
                 continue;
             }
             let mut font_stylesheet_url = read_string_field(data, "font_stylesheet_url");
             if font_stylesheet_url.is_empty() {
-                font_stylesheet_url = read_string_field(data, "font_url");
-            }
-            if font_stylesheet_url.is_empty() {
                 font_stylesheet_url =
                     build_google_fonts_stylesheet_url(&font_family).unwrap_or_default();
             }
-            let mut kanji_style = read_string_field(data, "kanji_style");
-            if kanji_style.is_empty() {
-                kanji_style = read_string_field(data, "style");
-            }
+            let kanji_style = read_string_field(data, "kanji_style");
             let kanji_style = normalize_kanji_style(&kanji_style)
                 .unwrap_or("japanese")
                 .to_owned();
@@ -6707,19 +6705,13 @@ impl FirestoreAdminSource {
             let shipping_fee_jpy = shipping_fee_by_currency
                 .get("JPY")
                 .copied()
-                .unwrap_or(shipping_fee_usd);
+                .unwrap_or_default();
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
             let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
 
             let mut label_i18n = read_string_map_field(data, "label_i18n");
-            if label_i18n.is_empty() {
-                let legacy = read_string_field(data, "label");
-                if !legacy.is_empty() {
-                    label_i18n.insert("ja".to_owned(), legacy);
-                }
-            }
             if label_i18n.is_empty() {
                 label_i18n.insert("ja".to_owned(), code.clone());
             }
@@ -9514,32 +9506,10 @@ fn resolve_order_currency(
 }
 
 fn resolve_order_total(
-    data: &BTreeMap<String, JsonValue>,
+    _data: &BTreeMap<String, JsonValue>,
     pricing: &BTreeMap<String, JsonValue>,
-    currency: &str,
 ) -> i64 {
     if let Some(total) = read_int_field(pricing, "total") {
-        return total;
-    }
-    if let Some(total) = read_int_field(data, "total") {
-        return total;
-    }
-
-    if currency.trim().eq_ignore_ascii_case("JPY")
-        && let Some(total) = read_int_field(data, "total_jpy")
-    {
-        return total;
-    }
-    if currency.trim().eq_ignore_ascii_case("USD")
-        && let Some(total) = read_int_field(data, "total_usd")
-    {
-        return total;
-    }
-
-    if let Some(total) = read_int_field(data, "total_usd") {
-        return total;
-    }
-    if let Some(total) = read_int_field(data, "total_jpy") {
         return total;
     }
 
@@ -9603,30 +9573,6 @@ fn format_with_grouping(value: i64) -> String {
         out.push(ch);
     }
     out
-}
-
-fn resolve_localized_field(
-    data: &BTreeMap<String, JsonValue>,
-    i18n_field: &str,
-    legacy_field: &str,
-    locale: &str,
-    default_locale: &str,
-    fallback: &str,
-) -> String {
-    let values = read_string_map_field(data, i18n_field);
-    let localized = resolve_localized_text(&values, locale, default_locale);
-    if !localized.is_empty() {
-        return localized;
-    }
-
-    if !legacy_field.is_empty() {
-        let legacy = read_string_field(data, legacy_field);
-        if !legacy.is_empty() {
-            return legacy;
-        }
-    }
-
-    fallback.to_owned()
 }
 
 fn resolve_font_label_field(data: &BTreeMap<String, JsonValue>, fallback: &str) -> String {
@@ -9988,12 +9934,6 @@ fn read_string_array_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Vec
         .collect::<Vec<_>>()
 }
 
-fn material_price_by_currency_from_fields(
-    data: &BTreeMap<String, JsonValue>,
-) -> HashMap<String, i64> {
-    read_int_map_field(data, "price_by_currency")
-}
-
 fn stone_listing_price_by_currency_from_fields(
     data: &BTreeMap<String, JsonValue>,
 ) -> HashMap<String, i64> {
@@ -10239,7 +10179,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "ito@example.com".to_owned(),
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
-                material_label_ja: "黒水牛".to_owned(),
+                listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
                 updated_at: now - chrono::Duration::hours(4),
@@ -10293,7 +10233,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "jane.smith@example.com".to_owned(),
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
-                material_label_ja: "チタン".to_owned(),
+                listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
                 updated_at: now - chrono::Duration::hours(2),
@@ -10338,7 +10278,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "tanaka@example.com".to_owned(),
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
                 updated_at: now - chrono::Duration::hours(26),
@@ -10410,7 +10350,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "kato@example.com".to_owned(),
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
                 updated_at: now - chrono::Duration::hours(72),
@@ -10455,7 +10395,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "chris@example.com".to_owned(),
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
-                material_label_ja: "チタン".to_owned(),
+                listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
                 updated_at: now - chrono::Duration::hours(8),
@@ -10489,7 +10429,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "suzuki@example.com".to_owned(),
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
-                material_label_ja: "黒水牛".to_owned(),
+                listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
                 updated_at: now - chrono::Duration::hours(130),
@@ -10534,7 +10474,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "yamada@example.com".to_owned(),
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
                 updated_at: now - chrono::Duration::hours(80),
@@ -11904,13 +11844,25 @@ mod tests {
     }
 
     #[test]
-    fn resolve_order_total_falls_back_to_legacy_currency_total() {
-        let mut data = BTreeMap::new();
-        data.insert("total_usd".to_owned(), fs_int(11600));
+    fn resolve_order_total_reads_pricing_total_only() {
+        let data = BTreeMap::new();
 
-        let pricing = BTreeMap::new();
-        let resolved = resolve_order_total(&data, &pricing, "USD");
+        let pricing = btree_from_pairs(vec![("total", fs_int(11600))]);
+        let resolved = resolve_order_total(&data, &pricing);
         assert_eq!(resolved, 11600);
+    }
+
+    #[test]
+    fn resolve_order_listing_fields_uses_legacy_material_snapshot() {
+        let data = btree_from_pairs(vec![("material_label_ja", fs_string("翡翠"))]);
+        let listing = BTreeMap::new();
+        let material = btree_from_pairs(vec![("key", fs_string("jade"))]);
+
+        let (listing_key, listing_label_ja) =
+            FirestoreAdminSource::resolve_order_listing_fields(&data, &listing, &material);
+
+        assert_eq!(listing_key, "jade");
+        assert_eq!(listing_label_ja, "翡翠");
     }
 
     #[test]
