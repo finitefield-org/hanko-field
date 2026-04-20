@@ -70,6 +70,15 @@ struct FontOption {
 }
 
 #[derive(Debug, Clone)]
+struct MaterialPhoto {
+    asset_id: String,
+    storage_path: String,
+    alt_i18n: HashMap<String, String>,
+    sort_order: i64,
+    is_primary: bool,
+}
+
+#[derive(Debug, Clone)]
 struct MaterialOption {
     key: String,
     label: String,
@@ -80,11 +89,119 @@ struct MaterialOption {
     price_by_currency: HashMap<String, i64>,
     shape: String,
     shape_label: String,
+    color_family: String,
+    pattern_primary: String,
+    stone_shape: String,
+    color_tag_labels: Vec<String>,
+    pattern_tag_labels: Vec<String>,
+    has_color_tag_labels: bool,
+    has_pattern_tag_labels: bool,
     price: i64,
     price_display: String,
     photo_url: String,
     photo_alt: String,
     has_photo: bool,
+}
+
+#[derive(Debug, Clone)]
+struct MaterialCategory {
+    label: String,
+    description: String,
+    comparison_texture: String,
+    comparison_weight: String,
+    comparison_usage: String,
+    shape: String,
+}
+
+#[derive(Debug, Clone)]
+struct MaterialFilterOption {
+    value: String,
+    label: String,
+}
+
+#[derive(Debug, Clone, Default)]
+struct MaterialFilters {
+    color_options: Vec<MaterialFilterOption>,
+    pattern_options: Vec<MaterialFilterOption>,
+    stone_shape_options: Vec<MaterialFilterOption>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct MaterialFilterState {
+    color_family: String,
+    pattern_primary: String,
+    stone_shape: String,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FacetTagLabels {
+    labels_by_type: HashMap<String, HashMap<String, String>>,
+}
+
+impl FacetTagLabels {
+    fn insert(&mut self, facet_type: &str, key: &str, label: &str, aliases: &[String]) {
+        let facet_type = normalize_facet_tag_value(facet_type);
+        let key = normalize_facet_tag_value(key);
+        let label = label.trim().to_owned();
+        if facet_type.is_empty() || key.is_empty() || label.is_empty() {
+            return;
+        }
+
+        let labels = self.labels_by_type.entry(facet_type).or_default();
+        labels.insert(key, label.clone());
+        for alias in aliases {
+            let alias = normalize_facet_tag_value(alias);
+            if !alias.is_empty() {
+                labels.insert(alias, label.clone());
+            }
+        }
+    }
+
+    fn resolve_or_raw(&self, facet_type: &str, value: &str) -> String {
+        let facet_type = normalize_facet_tag_value(facet_type);
+        let value = value.trim();
+        if facet_type.is_empty() || value.is_empty() {
+            return String::new();
+        }
+
+        self.labels_by_type
+            .get(&facet_type)
+            .and_then(|labels| labels.get(&normalize_facet_tag_value(value)).cloned())
+            .unwrap_or_else(|| value.to_owned())
+    }
+
+    fn resolve_list(&self, facet_type: &str, values: &[String]) -> Vec<String> {
+        let mut labels = Vec::new();
+        let mut seen = HashSet::new();
+
+        for value in values {
+            let label = self.resolve_or_raw(facet_type, value);
+            if label.is_empty() {
+                continue;
+            }
+
+            if seen.insert(normalize_facet_tag_value(&label)) {
+                labels.push(label);
+            }
+        }
+
+        labels
+    }
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingRecord {
+    key: String,
+    material_key: String,
+    title: String,
+    description: String,
+    price_by_currency: HashMap<String, i64>,
+    color_family: String,
+    pattern_primary: String,
+    color_tags: Vec<String>,
+    pattern_tags: Vec<String>,
+    stone_shape: String,
+    photos: Vec<MaterialPhoto>,
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +217,7 @@ struct CatalogData {
     fonts: Vec<FontOption>,
     materials: Vec<MaterialOption>,
     countries: Vec<CountryOption>,
+    material_filters: MaterialFilters,
 }
 
 #[derive(Debug, Clone)]
@@ -119,7 +237,7 @@ struct PurchaseResultData {
     seal_line2: String,
     font_label: String,
     shape_label: String,
-    material_label: String,
+    listing_label: String,
     stripe_name: String,
     stripe_phone: String,
     country_label: String,
@@ -161,6 +279,10 @@ struct PageTemplate {
     font_stylesheet_urls: Vec<String>,
     materials: Vec<MaterialOption>,
     countries: Vec<CountryOption>,
+    material_filters: MaterialFilters,
+    selected_color_family: String,
+    selected_pattern_primary: String,
+    selected_stone_shape: String,
     default_font_key: String,
     default_font_label: String,
     selected_locale: String,
@@ -210,7 +332,7 @@ struct CreateOrderApiRequest {
     idempotency_key: String,
     terms_agreed: bool,
     seal: CreateOrderSealApiRequest,
-    material_key: String,
+    listing_id: String,
     shipping: CreateOrderShippingApiRequest,
     contact: CreateOrderContactApiRequest,
 }
@@ -279,7 +401,7 @@ struct PurchaseResultTemplate {
     has_seal_line2: bool,
     font_label: String,
     shape_label: String,
-    material_label: String,
+    listing_label: String,
     stripe_name: String,
     stripe_phone: String,
     country_label: String,
@@ -352,7 +474,6 @@ struct CommercialTransactionsTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
-    design_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -362,7 +483,6 @@ struct CommercialTransactionsTemplate {
 #[derive(Template)]
 #[template(path = "terms.html")]
 struct TermsTemplate {
-    design_url: String,
     contact_url: String,
     selected_locale: String,
     page_title: String,
@@ -384,6 +504,9 @@ struct PaymentRedirectQuery {
     session_id: Option<String>,
     order_id: Option<String>,
     lang: Option<String>,
+    color_family: Option<String>,
+    pattern_primary: Option<String>,
+    stone_shape: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -409,7 +532,13 @@ impl CatalogSource {
         match self {
             Self::Mock(source) => {
                 let _ = &source.catalog;
-                Ok(new_mock_catalog_source(locale).catalog)
+                let mut catalog = new_mock_catalog_source(locale).catalog;
+                catalog.material_filters = build_material_filters(
+                    &catalog.materials,
+                    &mock_facet_tag_labels(locale),
+                    locale,
+                );
+                Ok(catalog)
             }
             Self::Firestore(source) => source.load_catalog(locale).await,
         }
@@ -444,6 +573,18 @@ impl FirestoreCatalogSource {
         let fallback_catalog = self
             .allow_mock_fallback
             .then(|| new_mock_catalog_source(locale).catalog);
+        let facet_tag_labels = match self.load_facet_tag_labels(&client, &parent, locale).await {
+            Ok(labels) => labels,
+            Err(error) => match fallback_catalog.as_ref() {
+                Some(_) => {
+                    eprintln!(
+                        "warning: failed to load facet_tags from firestore: {error}; using empty facet labels for dev"
+                    );
+                    FacetTagLabels::default()
+                }
+                None => return Err(error),
+            },
+        };
 
         let fonts = match self.load_fonts(&client, &parent, locale).await {
             Ok(fonts) => fonts,
@@ -457,7 +598,10 @@ impl FirestoreCatalogSource {
                 None => return Err(error),
             },
         };
-        let materials = match self.load_materials(&client, &parent, locale).await {
+        let materials = match self
+            .load_materials(&client, &parent, locale, &facet_tag_labels)
+            .await
+        {
             Ok(materials) => materials,
             Err(error) => match fallback_catalog.as_ref() {
                 Some(fallback_catalog) => {
@@ -481,11 +625,13 @@ impl FirestoreCatalogSource {
                 None => return Err(error),
             },
         };
+        let material_filters = build_material_filters(&materials, &facet_tag_labels, locale);
 
         Ok(CatalogData {
             fonts,
             materials,
             countries,
+            material_filters,
         })
     }
 
@@ -505,17 +651,11 @@ impl FirestoreCatalogSource {
         for document in documents {
             let doc_id =
                 document_id(&document).ok_or_else(|| anyhow!("fonts document is missing name"))?;
-            let mut family = read_string_field(&document.fields, "font_family");
-            if family.is_empty() {
-                family = read_string_field(&document.fields, "family");
-            }
+            let family = read_string_field(&document.fields, "font_family");
             if family.is_empty() {
                 bail!("fonts/{doc_id} is missing font_family");
             }
             let mut stylesheet_url = read_string_field(&document.fields, "font_stylesheet_url");
-            if stylesheet_url.is_empty() {
-                stylesheet_url = read_string_field(&document.fields, "font_url");
-            }
             if stylesheet_url.is_empty() {
                 stylesheet_url = build_google_fonts_stylesheet_url(&family).map_err(|error| {
                     anyhow!(
@@ -526,10 +666,7 @@ impl FirestoreCatalogSource {
 
             let label =
                 resolve_font_label_field(&document.fields, locale, &self.default_locale, &doc_id);
-            let mut kanji_style = read_string_field(&document.fields, "kanji_style");
-            if kanji_style.is_empty() {
-                kanji_style = read_string_field(&document.fields, "style");
-            }
+            let kanji_style = read_string_field(&document.fields, "kanji_style");
             let kanji_style = normalize_kanji_style(&kanji_style).to_owned();
 
             fonts.push(FontOption {
@@ -553,40 +690,58 @@ impl FirestoreCatalogSource {
         client: &FirebaseFirestoreClient,
         parent: &str,
         locale: &str,
+        facet_tag_labels: &FacetTagLabels,
     ) -> Result<Vec<MaterialOption>> {
-        let documents = self
-            .query_active_documents(client, parent, "materials")
+        let categories = self
+            .load_material_categories(client, parent, locale)
             .await?;
+        let listings = self.load_stone_listings(client, parent, locale).await?;
 
-        let mut materials = Vec::with_capacity(documents.len());
-        for document in documents {
-            let doc_id = document_id(&document)
-                .ok_or_else(|| anyhow!("materials document is missing name"))?;
-
-            let mut price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
-            if price_by_currency.is_empty() {
-                price_by_currency =
-                    read_legacy_currency_map(&document.fields, "price_usd", "price_jpy");
-                if !price_by_currency.is_empty() {
-                    eprintln!(
-                        "warning: materials/{doc_id} uses deprecated price_usd/price_jpy; migrate to price_by_currency"
-                    );
-                }
-            }
-
-            let price_currency = locale_currency_code(locale);
-            let Some(price) = resolve_amount_for_currency(&price_by_currency, price_currency)
-            else {
+        let mut materials = Vec::with_capacity(listings.len());
+        for listing in listings {
+            let Some(category) = categories.get(&listing.material_key) else {
                 eprintln!(
-                    "warning: skipping materials/{doc_id}: missing or empty price_by_currency"
+                    "warning: skipping stone_listings/{}: missing materials/{} category",
+                    listing.key, listing.material_key
                 );
                 continue;
             };
 
+            materials.push(build_material_option_from_listing(
+                category,
+                &listing,
+                &facet_tag_labels,
+                locale,
+                &self.default_locale,
+                &self.storage_assets_bucket,
+            ));
+        }
+
+        if materials.is_empty() {
+            bail!("no active materials found in firestore");
+        }
+
+        Ok(materials)
+    }
+
+    async fn load_material_categories(
+        &self,
+        client: &FirebaseFirestoreClient,
+        parent: &str,
+        locale: &str,
+    ) -> Result<HashMap<String, MaterialCategory>> {
+        let documents = self
+            .query_active_documents(client, parent, "materials")
+            .await?;
+
+        let mut categories = HashMap::with_capacity(documents.len());
+        for document in documents {
+            let doc_id = document_id(&document)
+                .ok_or_else(|| anyhow!("materials document is missing name"))?;
+
             let label = resolve_localized_field(
                 &document.fields,
                 "label_i18n",
-                "label",
                 locale,
                 &self.default_locale,
                 &doc_id,
@@ -594,7 +749,6 @@ impl FirestoreCatalogSource {
             let description = resolve_localized_field(
                 &document.fields,
                 "description_i18n",
-                "description",
                 locale,
                 &self.default_locale,
                 "",
@@ -626,41 +780,156 @@ impl FirestoreCatalogSource {
                 comparison_default_usage.as_str(),
             );
             let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
-            let (photo_url, photo_alt, has_photo) = resolve_material_photo(
-                &document.fields,
-                &self.storage_assets_bucket,
-                locale,
-                &self.default_locale,
-            );
-            let photo_alt = if has_photo && photo_alt.is_empty() {
-                format!("{label}の写真")
-            } else {
-                photo_alt
-            };
 
-            materials.push(MaterialOption {
-                key: doc_id,
-                label,
-                description,
-                comparison_texture,
-                comparison_weight,
-                comparison_usage,
-                price_by_currency,
-                shape: shape.to_owned(),
-                shape_label: material_shape_label(shape, locale).to_owned(),
-                price,
-                price_display: format_currency_amount(price, price_currency),
-                photo_url,
-                photo_alt,
-                has_photo,
-            });
+            categories.insert(
+                doc_id.clone(),
+                MaterialCategory {
+                    label,
+                    description,
+                    comparison_texture,
+                    comparison_weight,
+                    comparison_usage,
+                    shape: shape.to_owned(),
+                },
+            );
         }
 
-        if materials.is_empty() {
+        if categories.is_empty() {
             bail!("no active materials found in firestore");
         }
 
-        Ok(materials)
+        Ok(categories)
+    }
+
+    async fn load_facet_tag_labels(
+        &self,
+        client: &FirebaseFirestoreClient,
+        parent: &str,
+        locale: &str,
+    ) -> Result<FacetTagLabels> {
+        let documents = match self
+            .run_documents_query(client, parent, "facet_tags", false, false)
+            .await
+        {
+            Ok(documents) => documents,
+            Err(error) => {
+                eprintln!("warning: failed to load facet_tags from firestore: {error:#}");
+                return Ok(FacetTagLabels::default());
+            }
+        };
+
+        let mut labels = FacetTagLabels::default();
+        for document in documents {
+            if matches!(read_bool_field(&document.fields, "is_active"), Some(false)) {
+                continue;
+            }
+
+            let Some(doc_id) = document_id(&document) else {
+                eprintln!("warning: skipping facet_tags document with missing name");
+                continue;
+            };
+            let facet_type = normalize_facet_tag_value(
+                &first_non_empty(&[
+                    Some(read_string_field(&document.fields, "facet_type")),
+                    doc_id.split_once(':').map(|(prefix, _)| prefix.to_owned()),
+                ])
+                .unwrap_or_default(),
+            );
+            let key = first_non_empty(&[
+                Some(read_string_field(&document.fields, "key")),
+                doc_id.split_once(':').map(|(_, key)| key.to_owned()),
+                Some(doc_id.clone()),
+            ])
+            .unwrap_or_default();
+            if facet_type.is_empty() || key.is_empty() {
+                continue;
+            }
+
+            let label = resolve_localized_field(
+                &document.fields,
+                "label_i18n",
+                locale,
+                &self.default_locale,
+                &key,
+            );
+            let aliases = read_string_array_field(&document.fields, "aliases");
+            labels.insert(&facet_type, &key, &label, &aliases);
+        }
+
+        Ok(labels)
+    }
+
+    async fn load_stone_listings(
+        &self,
+        client: &FirebaseFirestoreClient,
+        parent: &str,
+        locale: &str,
+    ) -> Result<Vec<StoneListingRecord>> {
+        let documents = self
+            .run_documents_query(client, parent, "stone_listings", false, true)
+            .await?;
+
+        let mut listings = Vec::with_capacity(documents.len());
+        for document in documents {
+            let doc_id = document_id(&document)
+                .ok_or_else(|| anyhow!("stone_listings document is missing name"))?;
+            let is_active = read_bool_field(&document.fields, "is_active").unwrap_or(true);
+            let status = read_string_field(&document.fields, "status");
+            if !stone_listing_is_catalog_visible(is_active, &status) {
+                continue;
+            }
+
+            let price_by_currency = read_int_map_field(&document.fields, "price_by_currency");
+            let price_currency = locale_currency_code(locale);
+            if resolve_amount_for_currency(&price_by_currency, price_currency).is_none() {
+                eprintln!(
+                    "warning: skipping stone_listings/{doc_id}: missing or empty price_by_currency"
+                );
+                continue;
+            }
+
+            let title = resolve_localized_field(
+                &document.fields,
+                "title_i18n",
+                locale,
+                &self.default_locale,
+                &doc_id,
+            );
+            let description = resolve_localized_field(
+                &document.fields,
+                "description_i18n",
+                locale,
+                &self.default_locale,
+                "",
+            );
+            let facets = read_map_field(&document.fields, "facets");
+            let color_family = stone_listing_color_family_from_facets(&facets);
+            let pattern_primary = read_string_field(&facets, "pattern_primary");
+            let stone_shape = normalize_stone_shape(&read_string_field(&facets, "stone_shape"));
+            let color_tags = read_string_array_field(&facets, "color_tags");
+            let pattern_tags = read_string_array_field(&facets, "pattern_tags");
+            let photos = read_material_photos(&document.fields);
+
+            listings.push(StoneListingRecord {
+                key: doc_id.clone(),
+                material_key: read_string_field(&document.fields, "material_key"),
+                title,
+                description,
+                price_by_currency,
+                color_family,
+                pattern_primary,
+                color_tags,
+                pattern_tags,
+                stone_shape,
+                photos,
+            });
+        }
+
+        if listings.is_empty() {
+            bail!("no active stone listings found in firestore");
+        }
+
+        Ok(listings)
     }
 
     async fn load_countries(
@@ -678,20 +947,8 @@ impl FirestoreCatalogSource {
             let doc_id = document_id(&document)
                 .ok_or_else(|| anyhow!("countries document is missing name"))?;
 
-            let mut shipping_fee_by_currency =
+            let shipping_fee_by_currency =
                 read_int_map_field(&document.fields, "shipping_fee_by_currency");
-            if shipping_fee_by_currency.is_empty() {
-                shipping_fee_by_currency = read_legacy_currency_map(
-                    &document.fields,
-                    "shipping_fee_usd",
-                    "shipping_fee_jpy",
-                );
-                if !shipping_fee_by_currency.is_empty() {
-                    eprintln!(
-                        "warning: countries/{doc_id} uses deprecated shipping_fee_usd/shipping_fee_jpy; migrate to shipping_fee_by_currency"
-                    );
-                }
-            }
 
             let shipping_currency = locale_currency_code(locale);
             let Some(shipping) =
@@ -706,7 +963,6 @@ impl FirestoreCatalogSource {
             let label = resolve_localized_field(
                 &document.fields,
                 "label_i18n",
-                "label",
                 locale,
                 &self.default_locale,
                 &doc_id,
@@ -734,7 +990,7 @@ impl FirestoreCatalogSource {
         collection: &str,
     ) -> Result<Vec<Document>> {
         let documents = self
-            .run_documents_query(client, parent, collection, true)
+            .run_documents_query(client, parent, collection, true, false)
             .await?;
         if documents.is_empty() {
             bail!("no active {collection} found in firestore");
@@ -749,6 +1005,7 @@ impl FirestoreCatalogSource {
         parent: &str,
         collection: &str,
         active_only: bool,
+        sort_by_published_at: bool,
     ) -> Result<Vec<Document>> {
         let query = RunQueryRequest {
             structured_query: Some({
@@ -783,9 +1040,19 @@ impl FirestoreCatalogSource {
         documents.sort_by(|left, right| {
             let left_sort_order = read_int_field(&left.fields, "sort_order").unwrap_or_default();
             let right_sort_order = read_int_field(&right.fields, "sort_order").unwrap_or_default();
-            left_sort_order
-                .cmp(&right_sort_order)
-                .then_with(|| document_id(left).cmp(&document_id(right)))
+            left_sort_order.cmp(&right_sort_order).then_with(|| {
+                if sort_by_published_at {
+                    let left_published_at =
+                        read_timestamp_field(&left.fields, "published_at").unwrap_or_default();
+                    let right_published_at =
+                        read_timestamp_field(&right.fields, "published_at").unwrap_or_default();
+                    right_published_at
+                        .cmp(&left_published_at)
+                        .then_with(|| document_id(left).cmp(&document_id(right)))
+                } else {
+                    document_id(left).cmp(&document_id(right))
+                }
+            })
         });
         Ok(documents)
     }
@@ -1425,6 +1692,21 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     ]),
                     shape: "square".to_owned(),
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
+                    color_family: "pink".to_owned(),
+                    pattern_primary: "cloud".to_owned(),
+                    stone_shape: "square".to_owned(),
+                    color_tag_labels: if english {
+                        vec!["Soft Pink".to_owned()]
+                    } else {
+                        vec!["淡桃".to_owned()]
+                    },
+                    pattern_tag_labels: if english {
+                        vec!["Cloud".to_owned()]
+                    } else {
+                        vec!["雲状".to_owned()]
+                    },
+                    has_color_tag_labels: true,
+                    has_pattern_tag_labels: true,
                     price: if english { 16500 } else { 28000 },
                     price_display: if english {
                         format_usd(16500)
@@ -1478,6 +1760,21 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     ]),
                     shape: "round".to_owned(),
                     shape_label: if english { "Round seal" } else { "丸印" }.to_owned(),
+                    color_family: "blue".to_owned(),
+                    pattern_primary: "speckled".to_owned(),
+                    stone_shape: "square".to_owned(),
+                    color_tag_labels: if english {
+                        vec!["Deep Blue".to_owned()]
+                    } else {
+                        vec!["深青".to_owned()]
+                    },
+                    pattern_tag_labels: if english {
+                        vec!["Speckled".to_owned()]
+                    } else {
+                        vec!["点状".to_owned()]
+                    },
+                    has_color_tag_labels: true,
+                    has_pattern_tag_labels: true,
                     price: if english { 32500 } else { 55000 },
                     price_display: if english {
                         format_usd(32500)
@@ -1526,6 +1823,21 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     ]),
                     shape: "square".to_owned(),
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
+                    color_family: "green".to_owned(),
+                    pattern_primary: "marble".to_owned(),
+                    stone_shape: "round".to_owned(),
+                    color_tag_labels: if english {
+                        vec!["Deep Green".to_owned()]
+                    } else {
+                        vec!["濃緑".to_owned()]
+                    },
+                    pattern_tag_labels: if english {
+                        vec!["Banded".to_owned()]
+                    } else {
+                        vec!["縞".to_owned()]
+                    },
+                    has_color_tag_labels: true,
+                    has_pattern_tag_labels: true,
                     price: if english { 88500 } else { 150000 },
                     price_display: if english {
                         format_usd(88500)
@@ -1598,6 +1910,7 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     shipping: 1300,
                 },
             ],
+            material_filters: MaterialFilters::default(),
         },
     }
 }
@@ -1740,10 +2053,14 @@ async fn handle_top(
         lang_en_url: top_url(site_base_url, "en"),
         company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
     };
 
@@ -1778,6 +2095,7 @@ async fn handle_design(
         }
     };
     let catalog = localize_catalog_prices(catalog, &selected_locale);
+    let material_filter_state = material_filter_state_from_query(&query);
 
     let Some(default_font) = catalog
         .fonts
@@ -1790,14 +2108,19 @@ async fn handle_design(
             "catalog validation failed: fonts is empty".to_owned(),
         );
     };
+    let materials = catalog.materials;
 
     let template = PageTemplate {
         font_stylesheet_urls: collect_font_stylesheet_urls(&catalog.fonts),
         default_font_key: default_font.key.clone(),
         default_font_label: default_font.label.clone(),
         fonts: catalog.fonts,
-        materials: catalog.materials,
+        materials,
         countries: catalog.countries,
+        material_filters: catalog.material_filters,
+        selected_color_family: material_filter_state.color_family.clone(),
+        selected_pattern_primary: material_filter_state.pattern_primary.clone(),
+        selected_stone_shape: material_filter_state.stone_shape.clone(),
         page_title: localized_text(
             &selected_locale,
             "デザイン作成 | STONE SIGNATURE",
@@ -1805,8 +2128,8 @@ async fn handle_design(
         ),
         meta_description: localized_text(
             &selected_locale,
-            "印影、材質、お届け先を順に選んで、そのまま購入まで進めます。",
-            "Choose the seal text, material, and shipping details, then continue to checkout.",
+            "印影、出品個体、お届け先を順に選んで、そのまま購入まで進めます。",
+            "Choose the seal text, listing, and shipping details, then continue to checkout.",
         ),
         robots_meta: "index,follow".to_owned(),
         purchase_action_url: if state.mode == RunMode::Mock {
@@ -1828,12 +2151,16 @@ async fn handle_design(
             )
         },
         canonical_url: design_url(site_base_url, "en"),
-        lang_ja_url: design_url(site_base_url, "ja"),
-        lang_en_url: design_url(site_base_url, "en"),
+        lang_ja_url: design_url_with_filters(site_base_url, "ja", &material_filter_state),
+        lang_en_url: design_url_with_filters(site_base_url, "en", &material_filter_state),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -1844,6 +2171,19 @@ async fn handle_design(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to render page: {error}"),
         ),
+    }
+}
+
+fn material_filter_state_from_query(query: &PaymentRedirectQuery) -> MaterialFilterState {
+    MaterialFilterState {
+        color_family: normalize_facet_tag_value(query.color_family.as_deref().unwrap_or_default()),
+        pattern_primary: normalize_facet_tag_value(
+            query.pattern_primary.as_deref().unwrap_or_default(),
+        ),
+        stone_shape: normalize_stone_shape_optional(
+            query.stone_shape.as_deref().unwrap_or_default(),
+        )
+        .unwrap_or_default(),
     }
 }
 
@@ -1929,6 +2269,50 @@ fn payment_result_locale_url(
     site_url(base_url, &format!("{base_path}{query}"))
 }
 
+#[cfg(test)]
+fn payment_result_navigation_url(
+    base_url: &str,
+    base_path: &str,
+    query: &PaymentRedirectQuery,
+    locale: &str,
+) -> String {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    let mut params = localized_navigation_query_params(normalized);
+
+    if let Some(checkout) = query
+        .checkout
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("checkout={checkout}"));
+    }
+    if let Some(session_id) = query
+        .session_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("session_id={session_id}"));
+    }
+    if let Some(order_id) = query
+        .order_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(format!("order_id={order_id}"));
+    }
+
+    let query = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.join("&"))
+    };
+
+    site_url(base_url, &format!("{base_path}{query}"))
+}
+
 async fn handle_robots_txt(State(state): State<AppState>) -> Response {
     (
         [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
@@ -1966,7 +2350,11 @@ async fn handle_payment_success(
         .to_owned();
     let template = PaymentSuccessTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         page_title: localized_text(
             &selected_locale,
             "支払い完了 | STONE SIGNATURE",
@@ -1986,8 +2374,8 @@ async fn handle_payment_success(
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "ja"),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2016,7 +2404,11 @@ async fn handle_payment_failure(
         .to_owned();
     let template = PaymentFailureTemplate {
         contact_url: inquiry_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         page_title: localized_text(
             &selected_locale,
             "支払い未完了 | STONE SIGNATURE",
@@ -2034,9 +2426,9 @@ async fn handle_payment_failure(
         lang_en_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "en"),
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "ja"),
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2075,10 +2467,13 @@ async fn handle_commercial_transactions(
         lang_ja_url,
         lang_en_url,
         company_url: company_url(site_base_url),
-        top_url: top_url(site_base_url, &selected_locale),
-        design_url: design_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
-        terms_url: terms_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
     };
@@ -2099,7 +2494,6 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
     let lang_ja_url = terms_url(site_base_url, "ja");
     let lang_en_url = terms_url(site_base_url, "en");
     let template = TermsTemplate {
-        design_url: design_url(site_base_url, &selected_locale),
         contact_url: inquiry_url(site_base_url, &selected_locale),
         page_title: localized_text(
             &selected_locale,
@@ -2116,10 +2510,14 @@ async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQ
         lang_ja_url,
         lang_en_url,
         company_url: company_url(site_base_url),
-        terms_url: terms_url(site_base_url, &selected_locale),
-        commercial_transactions_url: commercial_transactions_url(site_base_url, &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
-        top_url: top_url(site_base_url, &selected_locale),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
         selected_locale,
     };
 
@@ -2241,11 +2639,11 @@ async fn handle_purchase_impl(
         .cloned()
         .map(|font| (font.key.clone(), font))
         .collect::<HashMap<_, _>>();
-    let material_by_key = catalog
+    let listing_by_key = catalog
         .materials
         .iter()
         .cloned()
-        .map(|material| (material.key.clone(), material))
+        .map(|listing| (listing.key.clone(), listing))
         .collect::<HashMap<_, _>>();
     let country_by_code = catalog
         .countries
@@ -2258,7 +2656,7 @@ async fn handle_purchase_impl(
     let seal_line2 = form_value(&form, "seal_line2");
     let font_key = form_value(&form, "font");
     let shape_key = form_value(&form, "shape");
-    let material_key = form_value(&form, "material");
+    let listing_id = form_value(&form, "listing_id");
     let recipient_name = form_value(&form, "recipient_name");
     let phone = form_value(&form, "phone");
     let country_code = form_value(&form, "country");
@@ -2304,19 +2702,19 @@ async fn handle_purchase_impl(
         return render_purchase_result(&result);
     };
 
-    let Some(material) = material_by_key.get(&material_key) else {
+    let Some(listing) = listing_by_key.get(&listing_id) else {
         result.error = localized_text(
             &order_locale,
-            "材質を選択してください。",
-            "Please choose a material.",
+            "出品個体を選択してください。",
+            "Please choose a listing.",
         );
         return render_purchase_result(&result);
     };
-    if !material_supports_shape(&material.key, &material.shape, &shape_key) {
+    if !listing.shape.eq_ignore_ascii_case(&shape_key) {
         result.error = localized_text(
             &order_locale,
-            "選択した形状に対応する材質を選択してください。",
-            "Please choose a material that matches the selected shape.",
+            "選択した形状に対応する出品個体を選択してください。",
+            "Please choose a listing that matches the selected shape.",
         );
         return render_purchase_result(&result);
     }
@@ -2402,7 +2800,7 @@ async fn handle_purchase_impl(
         return render_purchase_result(&result);
     }
 
-    let subtotal = material.price;
+    let subtotal = listing.price;
     let shipping = country.shipping;
     let total = subtotal + shipping;
     let create_order_request = CreateOrderApiRequest {
@@ -2416,7 +2814,7 @@ async fn handle_purchase_impl(
             shape: shape_key.clone(),
             font_key: font_key.clone(),
         },
-        material_key: material_key.clone(),
+        listing_id: listing.key.clone(),
         shipping: CreateOrderShippingApiRequest {
             country_code: country_code.clone(),
             recipient_name: recipient_name.clone(),
@@ -2437,7 +2835,7 @@ async fn handle_purchase_impl(
     result.seal_line2 = seal_line2;
     result.font_label = font.label.clone();
     result.shape_label = selected_shape_label.to_owned();
-    result.material_label = material.label.clone();
+    result.listing_label = listing.label.clone();
     result.stripe_name = recipient_name;
     result.stripe_phone = phone;
     result.country_label = country.label.clone();
@@ -2502,7 +2900,7 @@ fn render_purchase_result(data: &PurchaseResultData) -> Response {
         has_seal_line2: !data.seal_line2.is_empty(),
         font_label: data.font_label.clone(),
         shape_label: data.shape_label.clone(),
-        material_label: data.material_label.clone(),
+        listing_label: data.listing_label.clone(),
         stripe_name: data.stripe_name.clone(),
         stripe_phone: data.stripe_phone.clone(),
         country_label: data.country_label.clone(),
@@ -2675,6 +3073,28 @@ fn localized_page_url(base_url: &str, path: &str, locale: &str) -> String {
     site_url(base_url, &localized_page_path(path, locale))
 }
 
+fn localized_navigation_query_params(locale: &str) -> Vec<String> {
+    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    if normalized == "ja" || normalized == "en" {
+        vec![format!("lang={normalized}")]
+    } else {
+        Vec::new()
+    }
+}
+
+fn localized_navigation_page_path(path: &str, locale: &str) -> String {
+    let params = localized_navigation_query_params(locale);
+    if params.is_empty() {
+        path.to_owned()
+    } else {
+        format!("{path}?{}", params.join("&"))
+    }
+}
+
+fn localized_navigation_page_url(base_url: &str, path: &str, locale: &str) -> String {
+    site_url(base_url, &localized_navigation_page_path(path, locale))
+}
+
 fn privacy_policy_url(_base_url: &str, locale: &str) -> String {
     let normalized = parse_supported_locale(locale).unwrap_or("en");
     if normalized == "ja" {
@@ -2693,6 +3113,29 @@ fn top_url(base_url: &str, locale: &str) -> String {
 
 fn design_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/design", locale)
+}
+
+fn design_url_with_filters(base_url: &str, locale: &str, filters: &MaterialFilterState) -> String {
+    let base = reqwest::Url::parse(base_url.trim_end_matches('/'))
+        .expect("site base URL must be a valid absolute URL");
+    let mut url = base
+        .join(&localized_page_path("/design", locale))
+        .expect("failed to join site base URL with path");
+
+    {
+        let mut query_pairs = url.query_pairs_mut();
+        if !filters.color_family.is_empty() {
+            query_pairs.append_pair("color_family", &filters.color_family);
+        }
+        if !filters.pattern_primary.is_empty() {
+            query_pairs.append_pair("pattern_primary", &filters.pattern_primary);
+        }
+        if !filters.stone_shape.is_empty() {
+            query_pairs.append_pair("stone_shape", &filters.stone_shape);
+        }
+    }
+
+    url.to_string()
 }
 
 fn terms_url(base_url: &str, locale: &str) -> String {
@@ -2745,6 +3188,15 @@ fn localized_text(locale: &str, ja: &str, en: &str) -> String {
     }
 }
 
+fn first_non_empty(values: &[Option<String>]) -> Option<String> {
+    values
+        .iter()
+        .filter_map(|value| value.as_deref())
+        .map(str::trim)
+        .find(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
 fn normalize_candidate_gender(raw: &str) -> &'static str {
     match raw.trim().to_lowercase().as_str() {
         "male" => "male",
@@ -2768,12 +3220,78 @@ fn normalize_material_shape(raw: &str) -> &'static str {
     }
 }
 
-fn material_supports_shape(material_key: &str, material_shape: &str, seal_shape: &str) -> bool {
-    material_is_shape_flexible(material_key) || material_shape == seal_shape
+fn normalize_stone_shape(raw: &str) -> String {
+    // Preserve unknown values so catalog data can round-trip without being coerced.
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "round" => "round".to_owned(),
+        "square" => "square".to_owned(),
+        _ => raw.trim().to_owned(),
+    }
 }
 
-fn material_is_shape_flexible(material_key: &str) -> bool {
-    matches!(material_key, "rose_quartz" | "lapis_lazuli" | "jade")
+fn normalize_stone_shape_optional(raw: &str) -> Option<String> {
+    let normalized = normalize_stone_shape(raw);
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn stone_listing_is_published(status: &str) -> bool {
+    status.trim().eq_ignore_ascii_case("published")
+}
+
+fn stone_listing_is_catalog_visible(is_active: bool, status: &str) -> bool {
+    is_active && stone_listing_is_published(status)
+}
+
+fn normalize_facet_tag_value(raw: &str) -> String {
+    raw.trim().to_ascii_lowercase()
+}
+
+fn stone_shape_filter_label(stone_shape: &str, locale: &str) -> String {
+    let english = parse_supported_locale(locale) == Some("en");
+    match normalize_stone_shape(stone_shape).as_str() {
+        "square" => {
+            if english {
+                "Square".to_owned()
+            } else {
+                "四角".to_owned()
+            }
+        }
+        "round" => {
+            if english {
+                "Round".to_owned()
+            } else {
+                "丸".to_owned()
+            }
+        }
+        other => other.to_owned(),
+    }
+}
+
+fn mock_facet_tag_labels(locale: &str) -> FacetTagLabels {
+    let english = parse_supported_locale(locale) == Some("en");
+    let mut labels = FacetTagLabels::default();
+
+    if english {
+        labels.insert("color", "pink", "Soft Pink", &[]);
+        labels.insert("color", "blue", "Deep Blue", &[]);
+        labels.insert("color", "green", "Deep Green", &[]);
+        labels.insert("pattern", "cloud", "Cloud", &[]);
+        labels.insert("pattern", "speckled", "Speckled", &[]);
+        labels.insert("pattern", "marble", "Banded", &[]);
+    } else {
+        labels.insert("color", "pink", "淡桃", &[]);
+        labels.insert("color", "blue", "深青", &[]);
+        labels.insert("color", "green", "濃緑", &[]);
+        labels.insert("pattern", "cloud", "雲状", &[]);
+        labels.insert("pattern", "speckled", "点状", &[]);
+        labels.insert("pattern", "marble", "縞", &[]);
+    }
+
+    labels
 }
 
 fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
@@ -2793,6 +3311,179 @@ fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
                 "角印"
             }
         }
+    }
+}
+
+fn build_material_option_from_listing(
+    category: &MaterialCategory,
+    listing: &StoneListingRecord,
+    facet_tag_labels: &FacetTagLabels,
+    locale: &str,
+    default_locale: &str,
+    storage_assets_bucket: &str,
+) -> MaterialOption {
+    let price_currency = locale_currency_code(locale);
+    let price =
+        resolve_amount_for_currency(&listing.price_by_currency, price_currency).unwrap_or_default();
+    let title = if listing.title.is_empty() {
+        category.label.clone()
+    } else {
+        listing.title.clone()
+    };
+    let description = if listing.description.is_empty() {
+        category.description.clone()
+    } else {
+        listing.description.clone()
+    };
+    let shape = normalize_stone_shape(&listing.stone_shape);
+    let shape_label = match shape.as_str() {
+        "square" => material_shape_label("square", locale).to_owned(),
+        "round" => material_shape_label("round", locale).to_owned(),
+        _ => shape.clone(),
+    };
+
+    let (photo_url, photo_alt, has_photo) = resolve_listing_photo(
+        &listing.photos,
+        storage_assets_bucket,
+        locale,
+        default_locale,
+    );
+    let photo_alt = if has_photo && photo_alt.is_empty() {
+        localized_text(locale, &format!("{title}の写真"), &format!("{title} photo"))
+    } else {
+        photo_alt
+    };
+    let color_tag_labels = facet_tag_labels.resolve_list("color", &listing.color_tags);
+    let pattern_tag_labels = facet_tag_labels.resolve_list("pattern", &listing.pattern_tags);
+    let has_color_tag_labels = !color_tag_labels.is_empty();
+    let has_pattern_tag_labels = !pattern_tag_labels.is_empty();
+    MaterialOption {
+        key: listing.key.clone(),
+        label: title,
+        description,
+        comparison_texture: category.comparison_texture.clone(),
+        comparison_weight: category.comparison_weight.clone(),
+        comparison_usage: category.comparison_usage.clone(),
+        price_by_currency: listing.price_by_currency.clone(),
+        shape,
+        shape_label,
+        color_family: listing.color_family.clone(),
+        pattern_primary: listing.pattern_primary.clone(),
+        stone_shape: listing.stone_shape.clone(),
+        color_tag_labels,
+        pattern_tag_labels,
+        has_color_tag_labels,
+        has_pattern_tag_labels,
+        price,
+        price_display: format_currency_amount(price, price_currency),
+        photo_url,
+        photo_alt,
+        has_photo,
+    }
+}
+
+fn build_material_filters(
+    materials: &[MaterialOption],
+    facet_tag_labels: &FacetTagLabels,
+    locale: &str,
+) -> MaterialFilters {
+    let color_options = collect_canonical_filter_options(
+        materials,
+        "color",
+        |material| material.color_family.as_str(),
+        facet_tag_labels,
+    );
+    let pattern_options = collect_canonical_filter_options(
+        materials,
+        "pattern",
+        |material| material.pattern_primary.as_str(),
+        facet_tag_labels,
+    );
+    let stone_shape_options = collect_stone_shape_filter_options(materials, locale);
+
+    MaterialFilters {
+        color_options,
+        pattern_options,
+        stone_shape_options,
+    }
+}
+
+fn collect_canonical_filter_options(
+    materials: &[MaterialOption],
+    facet_type: &str,
+    value_fn: impl Fn(&MaterialOption) -> &str,
+    facet_tag_labels: &FacetTagLabels,
+) -> Vec<MaterialFilterOption> {
+    let mut seen = HashSet::new();
+    let mut options = Vec::new();
+
+    for material in materials {
+        let value = normalize_facet_tag_value(value_fn(material));
+        if value.is_empty() || !seen.insert(value.clone()) {
+            continue;
+        }
+
+        options.push(MaterialFilterOption {
+            value: value.clone(),
+            label: facet_tag_labels.resolve_or_raw(facet_type, &value),
+        });
+    }
+
+    options
+}
+
+fn collect_stone_shape_filter_options(
+    materials: &[MaterialOption],
+    locale: &str,
+) -> Vec<MaterialFilterOption> {
+    let mut seen = HashSet::new();
+    let mut options = Vec::new();
+
+    for material in materials {
+        let value = normalize_stone_shape(&material.stone_shape);
+        if value.is_empty() || !seen.insert(value.clone()) {
+            continue;
+        }
+
+        options.push(MaterialFilterOption {
+            label: stone_shape_filter_label(&value, locale),
+            value,
+        });
+    }
+
+    options.sort_by(|left, right| {
+        material_shape_sort_order(&left.value).cmp(&material_shape_sort_order(&right.value))
+    });
+    options
+}
+
+#[allow(dead_code)]
+fn filter_materials_by_facets(
+    materials: &[MaterialOption],
+    filter_state: &MaterialFilterState,
+) -> Vec<MaterialOption> {
+    materials
+        .iter()
+        .filter(|material| {
+            let matches_color_family = filter_state.color_family.is_empty()
+                || normalize_facet_tag_value(&material.color_family) == filter_state.color_family;
+            let matches_pattern_primary = filter_state.pattern_primary.is_empty()
+                || normalize_facet_tag_value(&material.pattern_primary)
+                    == filter_state.pattern_primary;
+            let matches_stone_shape = filter_state.stone_shape.is_empty()
+                || normalize_stone_shape(&material.stone_shape) == filter_state.stone_shape;
+
+            matches_color_family && matches_pattern_primary && matches_stone_shape
+        })
+        .cloned()
+        .collect()
+}
+
+fn material_shape_sort_order(shape: &str) -> i32 {
+    match normalize_stone_shape(shape).as_str() {
+        "square" => 0,
+        "round" => 1,
+        _ => 2,
     }
 }
 
@@ -3016,7 +3707,6 @@ fn document_id(document: &Document) -> Option<String> {
 fn resolve_localized_field(
     data: &BTreeMap<String, JsonValue>,
     i18n_field: &str,
-    legacy_field: &str,
     locale: &str,
     default_locale: &str,
     fallback: &str,
@@ -3027,14 +3717,11 @@ fn resolve_localized_field(
         return localized;
     }
 
-    if !legacy_field.is_empty() {
-        let legacy = read_string_field(data, legacy_field);
-        if !legacy.is_empty() {
-            return legacy;
-        }
-    }
-
     fallback.to_owned()
+}
+
+fn stone_listing_color_family_from_facets(facets: &BTreeMap<String, JsonValue>) -> String {
+    normalize_facet_tag_value(&read_string_field(facets, "color_family"))
 }
 
 fn resolve_font_label_field(
@@ -3170,6 +3857,21 @@ fn read_int_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<i64> 
         .or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok()))
 }
 
+fn read_timestamp_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Option<String> {
+    let value = data.get(key)?;
+    let raw = value
+        .get("timestampValue")
+        .and_then(JsonValue::as_str)
+        .or_else(|| value.as_str())?;
+
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_owned())
+    }
+}
+
 fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<String, i64> {
     let Some(value) = data.get(key) else {
         return HashMap::new();
@@ -3193,21 +3895,6 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
         }
     }
 
-    result
-}
-
-fn read_legacy_currency_map(
-    data: &BTreeMap<String, JsonValue>,
-    usd_field: &str,
-    jpy_field: &str,
-) -> HashMap<String, i64> {
-    let mut result = HashMap::new();
-    if let Some(amount) = read_int_field(data, usd_field) {
-        result.insert("USD".to_owned(), amount.max(0));
-    }
-    if let Some(amount) = read_int_field(data, jpy_field) {
-        result.insert("JPY".to_owned(), amount.max(0));
-    }
     result
 }
 
@@ -3287,6 +3974,68 @@ fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashM
     result
 }
 
+fn read_string_array_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Vec<String> {
+    read_array_field(data, key)
+        .into_iter()
+        .filter_map(|value| {
+            value
+                .get("stringValue")
+                .and_then(JsonValue::as_str)
+                .or_else(|| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .collect::<Vec<_>>()
+}
+
+fn read_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> BTreeMap<String, JsonValue> {
+    data.get(key)
+        .and_then(|value| value.get("mapValue"))
+        .and_then(|map_value| map_value.get("fields"))
+        .and_then(JsonValue::as_object)
+        .map(|fields| {
+            fields
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default()
+}
+
+fn read_material_photos(data: &BTreeMap<String, JsonValue>) -> Vec<MaterialPhoto> {
+    let mut photos = read_array_field(data, "photos")
+        .into_iter()
+        .filter_map(|photo| {
+            let fields = photo
+                .get("mapValue")
+                .and_then(|map| map.get("fields"))
+                .and_then(JsonValue::as_object)?;
+
+            let fields = fields
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect::<BTreeMap<_, _>>();
+
+            Some(MaterialPhoto {
+                asset_id: read_string_field(&fields, "asset_id"),
+                storage_path: read_string_field(&fields, "storage_path"),
+                alt_i18n: read_string_map_field(&fields, "alt_i18n"),
+                sort_order: read_int_field(&fields, "sort_order").unwrap_or_default(),
+                is_primary: read_bool_field(&fields, "is_primary").unwrap_or(false),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    photos.sort_by(|left, right| {
+        left.sort_order
+            .cmp(&right.sort_order)
+            .then(left.asset_id.cmp(&right.asset_id))
+    });
+    photos
+}
+
+#[cfg(test)]
 fn resolve_material_photo(
     data: &BTreeMap<String, JsonValue>,
     storage_assets_bucket: &str,
@@ -3299,14 +4048,7 @@ fn resolve_material_photo(
         let photo_url = build_storage_media_url(storage_assets_bucket, &storage_path);
         if !photo_url.is_empty() {
             let photo_alt = if storage_alt.is_empty() {
-                resolve_localized_field(
-                    data,
-                    "photo_alt_i18n",
-                    "photo_alt",
-                    locale,
-                    default_locale,
-                    "",
-                )
+                resolve_localized_field(data, "photo_alt_i18n", locale, default_locale, "")
             } else {
                 storage_alt
             };
@@ -3314,38 +4056,52 @@ fn resolve_material_photo(
         }
     }
 
-    let photo_alt = resolve_localized_field(
-        data,
-        "photo_alt_i18n",
-        "photo_alt",
-        locale,
-        default_locale,
-        "",
-    );
+    let photo_alt = resolve_localized_field(data, "photo_alt_i18n", locale, default_locale, "");
+    (String::new(), photo_alt, false)
+}
 
-    let mut photo_url = resolve_localized_field(
-        data,
-        "photo_url_i18n",
-        "photo_url",
-        locale,
-        default_locale,
-        "",
-    );
-    if photo_url.is_empty() {
-        photo_url = resolve_localized_field(
-            data,
-            "image_url_i18n",
-            "image_url",
-            locale,
-            default_locale,
-            "",
-        );
-    }
+fn resolve_listing_photo(
+    photos: &[MaterialPhoto],
+    storage_assets_bucket: &str,
+    locale: &str,
+    default_locale: &str,
+) -> (String, String, bool) {
+    let Some(photo) = select_primary_listing_photo(photos) else {
+        return (String::new(), String::new(), false);
+    };
 
+    let photo_url = build_storage_media_url(storage_assets_bucket, &photo.storage_path);
+    let photo_alt = resolve_localized_text(&photo.alt_i18n, locale, default_locale);
     let has_photo = !photo_url.is_empty();
     (photo_url, photo_alt, has_photo)
 }
 
+fn select_primary_listing_photo(photos: &[MaterialPhoto]) -> Option<&MaterialPhoto> {
+    let mut selected: Option<&MaterialPhoto> = None;
+    for photo in photos {
+        if photo.storage_path.trim().is_empty() {
+            continue;
+        }
+        let replace = match selected {
+            Some(current) => {
+                if photo.is_primary != current.is_primary {
+                    photo.is_primary && !current.is_primary
+                } else if photo.sort_order != current.sort_order {
+                    photo.sort_order < current.sort_order
+                } else {
+                    photo.asset_id < current.asset_id
+                }
+            }
+            None => true,
+        };
+        if replace {
+            selected = Some(photo);
+        }
+    }
+    selected
+}
+
+#[cfg(test)]
 fn select_primary_material_photo(
     data: &BTreeMap<String, JsonValue>,
     locale: &str,
@@ -3486,7 +4242,7 @@ mod tests {
             ("seal_line2".to_owned(), String::new()),
             ("font".to_owned(), "zen_maru_gothic".to_owned()),
             ("shape".to_owned(), "square".to_owned()),
-            ("material".to_owned(), "rose_quartz".to_owned()),
+            ("listing_id".to_owned(), "rose_quartz".to_owned()),
             ("recipient_name".to_owned(), "小野光".to_owned()),
             ("phone".to_owned(), "+81 80 6242 2597".to_owned()),
             ("country".to_owned(), "JP".to_owned()),
@@ -3522,23 +4278,251 @@ mod tests {
             "A soft-toned stone with a warm, approachable presence"
         );
         assert_eq!(rose_quartz.shape_label, "Square seal");
+        assert_eq!(rose_quartz.color_tag_labels, vec!["Soft Pink"]);
+        assert_eq!(rose_quartz.pattern_tag_labels, vec!["Cloud"]);
+        assert!(rose_quartz.has_color_tag_labels);
+        assert!(rose_quartz.has_pattern_tag_labels);
+
+        let color_filters = catalog
+            .material_filters
+            .color_options
+            .iter()
+            .map(|option| (option.value.as_str(), option.label.as_str()))
+            .collect::<Vec<_>>();
+        assert!(color_filters.contains(&("pink", "Soft Pink")));
+
+        let stone_shape_filters = catalog
+            .material_filters
+            .stone_shape_options
+            .iter()
+            .map(|option| option.label.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(stone_shape_filters, vec!["Square", "Round"]);
     }
 
     #[test]
-    fn material_photo_prefers_firestore_photos_over_legacy_photo_url() {
+    fn stone_listing_status_helper_requires_published() {
+        assert!(stone_listing_is_published("published"));
+        assert!(stone_listing_is_published(" Published "));
+        assert!(!stone_listing_is_published("draft"));
+    }
+
+    #[test]
+    fn stone_listing_catalog_visibility_requires_active_and_published() {
+        assert!(stone_listing_is_catalog_visible(true, "published"));
+        assert!(stone_listing_is_catalog_visible(true, " Published "));
+        assert!(!stone_listing_is_catalog_visible(false, "published"));
+        assert!(!stone_listing_is_catalog_visible(true, "draft"));
+    }
+
+    #[test]
+    fn stone_listing_color_family_uses_scalar_facet_key() {
+        let facets = BTreeMap::from([("color_family".to_owned(), json!(" Green "))]);
+        assert_eq!(stone_listing_color_family_from_facets(&facets), "green");
+    }
+
+    #[test]
+    fn stone_shape_helpers_preserve_unknown_values() {
+        assert_eq!(normalize_stone_shape("freeform"), "freeform");
+        assert_eq!(stone_shape_filter_label("freeform", "ja"), "freeform");
+    }
+
+    #[test]
+    fn material_filter_state_preserves_unknown_stone_shape() {
+        let missing = material_filter_state_from_query(&PaymentRedirectQuery {
+            color_family: Some("Green".to_owned()),
+            pattern_primary: Some("Cloud".to_owned()),
+            ..PaymentRedirectQuery::default()
+        });
+        assert_eq!(missing.color_family, "green");
+        assert_eq!(missing.pattern_primary, "cloud");
+        assert!(missing.stone_shape.is_empty());
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &missing),
+            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
+        );
+
+        let invalid = material_filter_state_from_query(&PaymentRedirectQuery {
+            stone_shape: Some("triangle".to_owned()),
+            ..PaymentRedirectQuery::default()
+        });
+        assert_eq!(invalid.stone_shape, "triangle");
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &invalid),
+            "https://finitefield.org/design?lang=ja&stone_shape=triangle"
+        );
+    }
+
+    #[test]
+    fn stone_listing_tag_labels_use_facet_tag_master() {
+        let facet_tag_labels = {
+            let mut labels = FacetTagLabels::default();
+            labels.insert(
+                "color",
+                "deep_green",
+                "濃緑",
+                &["forest_green".to_owned(), "dark_green".to_owned()],
+            );
+            labels.insert("pattern", "cloud", "雲状", &["cloudy".to_owned()]);
+            labels
+        };
+
+        let category = MaterialCategory {
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "翡翠の一点物".to_owned(),
+            description: "個体説明".to_owned(),
+            price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec!["forest_green".to_owned()],
+            pattern_tags: vec!["cloudy".to_owned(), "cloud".to_owned()],
+            stone_shape: "square".to_owned(),
+            photos: vec![],
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &facet_tag_labels,
+            "ja",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.color_tag_labels, vec!["濃緑"]);
+        assert_eq!(option.pattern_tag_labels, vec!["雲状"]);
+        assert!(option.has_color_tag_labels);
+        assert!(option.has_pattern_tag_labels);
+    }
+
+    #[test]
+    fn material_option_uses_stone_shape_for_listing_shape() {
+        let category = MaterialCategory {
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "翡翠の一点物".to_owned(),
+            description: "個体説明".to_owned(),
+            price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "round".to_owned(),
+            photos: vec![],
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "ja",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.shape_label, "丸印");
+    }
+
+    #[test]
+    fn material_option_preserves_unknown_stone_shape() {
+        let category = MaterialCategory {
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "翡翠の一点物".to_owned(),
+            description: "個体説明".to_owned(),
+            price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "triangle".to_owned(),
+            photos: vec![],
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "ja",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.shape, "triangle");
+        assert_eq!(option.shape_label, "triangle");
+    }
+
+    #[test]
+    fn material_option_uses_english_photo_alt_fallback() {
+        let category = MaterialCategory {
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "One-of-a-kind Jade 101".to_owned(),
+            description: "A refined piece with calm green flowing patterns.".to_owned(),
+            price_by_currency: HashMap::from([("USD".to_owned(), 92800)]),
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "square".to_owned(),
+            photos: vec![MaterialPhoto {
+                asset_id: "mat_jade_01".to_owned(),
+                storage_path: "materials/jade/mat_jade_01.webp".to_owned(),
+                alt_i18n: HashMap::new(),
+                sort_order: 0,
+                is_primary: true,
+            }],
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "en",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.photo_alt, "One-of-a-kind Jade 101 photo");
+        assert!(option.has_photo);
+    }
+
+    #[test]
+    fn material_photo_uses_firestore_photos() {
         let mut data = BTreeMap::new();
-        data.insert(
-            "photo_url".to_owned(),
-            json!({
-                "stringValue": "https://picsum.photos/seed/legacy-material/640/420"
-            }),
-        );
-        data.insert(
-            "photo_alt".to_owned(),
-            json!({
-                "stringValue": "legacy alt"
-            }),
-        );
         data.insert(
             "photos".to_owned(),
             json!({
@@ -3554,9 +4538,7 @@ mod tests {
                                     "alt_i18n": {
                                         "mapValue": {
                                             "fields": {
-                                                "ja": {
-                                                    "stringValue": "ローズクオーツの材質サンプル"
-                                                }
+                                                "ja": { "stringValue": "ローズクオーツの出品個体サンプル" }
                                             }
                                         }
                                     },
@@ -3579,7 +4561,7 @@ mod tests {
             photo_url,
             "https://storage.googleapis.com/hanko-field-prod/materials/rose_quartz/mat_rose_quartz_01.webp"
         );
-        assert_eq!(photo_alt, "ローズクオーツの材質サンプル");
+        assert_eq!(photo_alt, "ローズクオーツの出品個体サンプル");
         assert!(has_photo);
     }
 
@@ -3806,6 +4788,55 @@ mod tests {
     }
 
     #[test]
+    fn design_url_with_filters_preserves_selected_facets() {
+        let filters = MaterialFilterState {
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            stone_shape: "round".to_owned(),
+        };
+
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "en", &filters),
+            "https://finitefield.org/design?color_family=green&pattern_primary=cloud&stone_shape=round"
+        );
+        assert_eq!(
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
+            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud&stone_shape=round"
+        );
+    }
+
+    #[test]
+    fn navigation_urls_preserve_the_selected_locale() {
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/", "en"),
+            "https://finitefield.org/?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/design", "en"),
+            "https://finitefield.org/design?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/terms", "en"),
+            "https://finitefield.org/terms?lang=en"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/commercial-transactions", "en"),
+            "https://finitefield.org/commercial-transactions?lang=en"
+        );
+
+        let query = PaymentRedirectQuery {
+            checkout: Some("success".to_owned()),
+            session_id: Some("sess_123".to_owned()),
+            order_id: Some("ord_456".to_owned()),
+            ..PaymentRedirectQuery::default()
+        };
+        assert_eq!(
+            payment_result_navigation_url(TEST_SITE_BASE_URL, "/payment/success", &query, "en",),
+            "https://finitefield.org/payment/success?lang=en&checkout=success&session_id=sess_123&order_id=ord_456"
+        );
+    }
+
+    #[test]
     fn legal_urls_still_point_to_finitefield_org_on_other_hosts() {
         assert_eq!(
             privacy_policy_url(TEST_ALT_SITE_BASE_URL, "ja"),
@@ -3847,7 +4878,9 @@ mod tests {
         .expect("commercial transactions body should be utf-8");
 
         assert!(commercial_html.contains("Back to TOP"));
-        assert!(commercial_html.contains("window.location.href='https://finitefield.org/'"));
+        assert!(
+            commercial_html.contains("window.location.href='https://finitefield.org/?lang=en'")
+        );
 
         let terms_response = handle_terms(
             State(mock_state()),
@@ -3865,7 +4898,7 @@ mod tests {
         .expect("terms body should be utf-8");
 
         assert!(terms_html.contains("Back to TOP"));
-        assert!(terms_html.contains("window.location.href='https://finitefield.org/'"));
+        assert!(terms_html.contains("window.location.href='https://finitefield.org/?lang=en'"));
     }
 
     #[test]
@@ -3874,7 +4907,7 @@ mod tests {
             checkout: Some("success".to_owned()),
             session_id: Some("sess_123".to_owned()),
             order_id: Some("ord_456".to_owned()),
-            lang: None,
+            ..PaymentRedirectQuery::default()
         };
 
         assert_eq!(

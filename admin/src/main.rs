@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     env,
     sync::Arc,
     time::Duration,
@@ -18,7 +18,7 @@ use axum::{
 use chrono::{DateTime, Local, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
     CreateDocumentOptions, DeleteDocumentOptions, Document, FirebaseFirestoreClient,
-    PatchDocumentOptions, RunQueryRequest,
+    GetDocumentOptions, PatchDocumentOptions, RunQueryRequest,
 };
 use gcp_auth::{CustomServiceAccount, TokenProvider, provider};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -74,6 +74,7 @@ struct Order {
     channel: String,
     locale: String,
     currency: String,
+    listing_key: String,
     status: String,
     status_updated_at: DateTime<Utc>,
     payment_status: String,
@@ -84,7 +85,7 @@ struct Order {
     contact_email: String,
     seal_line1: String,
     seal_line2: String,
-    material_label_ja: String,
+    listing_label_ja: String,
     total: i64,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -111,6 +112,46 @@ struct MaterialPhoto {
     is_primary: bool,
     width: i64,
     height: i64,
+}
+
+#[derive(Debug, Clone)]
+struct MaterialCategory {
+    comparison_texture_ja: String,
+    comparison_texture_en: String,
+    comparison_weight_ja: String,
+    comparison_weight_en: String,
+    comparison_usage_ja: String,
+    comparison_usage_en: String,
+    shape: String,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingFacets {
+    color_family: String,
+    color_tags: Vec<String>,
+    pattern_primary: String,
+    pattern_tags: Vec<String>,
+    stone_shape: String,
+    translucency: String,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListing {
+    key: String,
+    listing_code: String,
+    material_key: String,
+    title_i18n: HashMap<String, String>,
+    description_i18n: HashMap<String, String>,
+    story_i18n: HashMap<String, String>,
+    facets: StoneListingFacets,
+    photos: Vec<MaterialPhoto>,
+    price_by_currency: HashMap<String, i64>,
+    status: String,
+    is_active: bool,
+    published_at: Option<DateTime<Utc>>,
+    sort_order: i64,
+    version: i64,
+    updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -170,6 +211,18 @@ struct Country {
 }
 
 #[derive(Debug, Clone)]
+struct FacetTag {
+    key: String,
+    facet_type: String,
+    label_i18n: HashMap<String, String>,
+    aliases: Vec<String>,
+    is_active: bool,
+    sort_order: i64,
+    version: i64,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 struct AdminSnapshot {
     orders: HashMap<String, Order>,
     order_ids: Vec<String>,
@@ -177,6 +230,10 @@ struct AdminSnapshot {
     font_ids: Vec<String>,
     materials: HashMap<String, Material>,
     material_ids: Vec<String>,
+    stone_listings: HashMap<String, StoneListing>,
+    stone_listing_ids: Vec<String>,
+    facet_tags: HashMap<String, FacetTag>,
+    facet_tag_ids: Vec<String>,
     countries: HashMap<String, Country>,
     country_ids: Vec<String>,
 }
@@ -214,6 +271,44 @@ impl AdminSnapshot {
             }
         });
         self.material_ids = keys;
+    }
+
+    fn refresh_stone_listing_ids(&mut self) {
+        let mut keys = self.stone_listings.keys().cloned().collect::<Vec<_>>();
+        keys.sort_by(|left, right| {
+            let left_listing = self.stone_listings.get(left);
+            let right_listing = self.stone_listings.get(right);
+            match (left_listing, right_listing) {
+                (Some(left_listing), Some(right_listing)) => left_listing
+                    .sort_order
+                    .cmp(&right_listing.sort_order)
+                    .then_with(|| {
+                        stone_listing_published_at_sort_key(left_listing)
+                            .cmp(&stone_listing_published_at_sort_key(right_listing))
+                            .reverse()
+                    })
+                    .then_with(|| left_listing.key.cmp(&right_listing.key)),
+                _ => left.cmp(right),
+            }
+        });
+        self.stone_listing_ids = keys;
+    }
+
+    fn refresh_facet_tag_ids(&mut self) {
+        let mut keys = self.facet_tags.keys().cloned().collect::<Vec<_>>();
+        keys.sort_by(|left, right| {
+            let left_tag = self.facet_tags.get(left);
+            let right_tag = self.facet_tags.get(right);
+            match (left_tag, right_tag) {
+                (Some(left_tag), Some(right_tag)) => left_tag
+                    .facet_type
+                    .cmp(&right_tag.facet_type)
+                    .then_with(|| left_tag.sort_order.cmp(&right_tag.sort_order))
+                    .then_with(|| left_tag.key.cmp(&right_tag.key)),
+                _ => left.cmp(right),
+            }
+        });
+        self.facet_tag_ids = keys;
     }
 
     fn refresh_font_ids(&mut self) {
@@ -288,6 +383,20 @@ impl DataSource {
         }
     }
 
+    async fn persist_stone_listing_mutation(&self, listing: &StoneListing) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_stone_listing_mutation(listing).await,
+        }
+    }
+
+    async fn persist_facet_tag_mutation(&self, tag: &FacetTag) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_facet_tag_mutation(tag).await,
+        }
+    }
+
     async fn persist_font_mutation(&self, font: &Font) -> Result<()> {
         match self {
             Self::Mock => Ok(()),
@@ -316,6 +425,20 @@ impl DataSource {
         }
     }
 
+    async fn persist_stone_listing_deletion(&self, listing_key: &str) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_stone_listing_deletion(listing_key).await,
+        }
+    }
+
+    async fn persist_facet_tag_deletion(&self, tag_id: &str) -> Result<()> {
+        match self {
+            Self::Mock => Ok(()),
+            Self::Firestore(source) => source.persist_facet_tag_deletion(tag_id).await,
+        }
+    }
+
     async fn upload_material_photo(
         &self,
         material_key: &str,
@@ -336,11 +459,31 @@ impl DataSource {
             }
         }
     }
+
+    async fn upload_stone_listing_photo(
+        &self,
+        stone_listing_key: &str,
+        file_name: &str,
+        content_type: Option<&str>,
+        bytes: &[u8],
+    ) -> Result<String> {
+        match self {
+            Self::Mock => Ok(build_storage_path_for_uploaded_stone_listing_photo(
+                stone_listing_key,
+                file_name,
+                content_type,
+            )),
+            Self::Firestore(source) => {
+                source
+                    .upload_stone_listing_photo(stone_listing_key, file_name, content_type, bytes)
+                    .await
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
 struct FirestoreAdminSource {
-    locale: String,
     default_locale: String,
     label: String,
     parent: String,
@@ -374,6 +517,15 @@ struct OrderFilter {
     email: String,
 }
 
+#[derive(Debug, Clone, Default)]
+struct StoneListingFilter {
+    color_family: String,
+    color_tags: String,
+    pattern_primary: String,
+    pattern_tags: String,
+    stone_shape: String,
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct OrdersPageQuery {
     status: Option<String>,
@@ -383,8 +535,42 @@ struct OrdersPageQuery {
 }
 
 #[derive(Debug, Default, Deserialize)]
+struct StoneListingsPageQuery {
+    color_family: Option<String>,
+    color_tags: Option<String>,
+    pattern_primary: Option<String>,
+    pattern_tags: Option<String>,
+    stone_shape: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
 struct CountriesPageQuery {
     country_code: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingFacetOptionView {
+    value: String,
+    label: String,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingFilterOptions {
+    color_family_options: Vec<StoneListingFacetOptionView>,
+    pattern_primary_options: Vec<StoneListingFacetOptionView>,
+    stone_shape_options: Vec<StoneListingFacetOptionView>,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingTagOptions {
+    color_tag_options: Vec<StoneListingFacetOptionView>,
+    pattern_tag_options: Vec<StoneListingFacetOptionView>,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingFilterBadgeView {
+    label: String,
+    value: String,
 }
 
 #[derive(Debug, Clone)]
@@ -445,7 +631,7 @@ struct OrderDetailView {
     seal_line1: String,
     seal_line2: String,
     has_seal_line2: bool,
-    material_label_ja: String,
+    listing_label_ja: String,
     total: String,
     next_statuses: Vec<StatusOptionView>,
     has_next_statuses: bool,
@@ -500,6 +686,62 @@ struct MaterialDetailView {
     shape: String,
     price_usd: i64,
     price_jpy: i64,
+    is_active: bool,
+    sort_order: i64,
+    photo_storage_path: String,
+    primary_photo_url: String,
+    photo_alt_ja: String,
+    photo_alt_en: String,
+    has_photo: bool,
+    version: i64,
+    updated_at: String,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingListItemView {
+    key: String,
+    listing_code: String,
+    title_ja: String,
+    material_key: String,
+    color_family: String,
+    pattern_primary: String,
+    stone_shape_label: String,
+    primary_photo_url: String,
+    has_photo: bool,
+    price_usd: String,
+    price_jpy: String,
+    status_label: String,
+    is_active: bool,
+    version: i64,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingDetailView {
+    key: String,
+    listing_code: String,
+    material_key: String,
+    title_ja: String,
+    title_en: String,
+    description_ja: String,
+    description_en: String,
+    story_ja: String,
+    story_en: String,
+    color_family: String,
+    color_tags: String,
+    pattern_primary: String,
+    pattern_tags: String,
+    stone_shape: String,
+    stone_shape_label: String,
+    translucency: String,
+    price_usd: i64,
+    price_jpy: i64,
+    status: String,
+    status_label: String,
     is_active: bool,
     sort_order: i64,
     photo_storage_path: String,
@@ -577,6 +819,71 @@ struct CountryCreateView {
 }
 
 #[derive(Debug, Clone)]
+struct FacetTagListItemView {
+    id: String,
+    key: String,
+    facet_type_label: String,
+    label_ja: String,
+    label_en: String,
+    aliases: String,
+    is_active: bool,
+    version: i64,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+struct FacetTagDetailView {
+    id: String,
+    key: String,
+    facet_type_label: String,
+    label_ja: String,
+    label_en: String,
+    aliases: String,
+    sort_order: i64,
+    is_active: bool,
+    version: i64,
+    updated_at: String,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+    key_error: String,
+    has_key_error: bool,
+    aliases_error: String,
+    has_aliases_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FacetTagCreateView {
+    key: String,
+    facet_type: String,
+    label_ja: String,
+    label_en: String,
+    aliases: String,
+    sort_order: String,
+    is_active: bool,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+    key_error: String,
+    has_key_error: bool,
+    aliases_error: String,
+    has_aliases_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FacetTagTypeOptionView {
+    value: String,
+    label: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FacetTagsPageQuery {
+    facet_tag_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 struct MaterialCreateView {
     key: String,
     label_ja: String,
@@ -596,6 +903,37 @@ struct MaterialCreateView {
     photo_storage_path: String,
     photo_alt_ja: String,
     photo_alt_en: String,
+    is_active: bool,
+    message: String,
+    has_message: bool,
+    error: String,
+    has_error: bool,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingCreateView {
+    stone_listing_key: String,
+    listing_code: String,
+    material_key: String,
+    title_ja: String,
+    title_en: String,
+    description_ja: String,
+    description_en: String,
+    story_ja: String,
+    story_en: String,
+    color_family: String,
+    color_tags: String,
+    pattern_primary: String,
+    pattern_tags: String,
+    stone_shape: String,
+    translucency: String,
+    price_usd: String,
+    price_jpy: String,
+    sort_order: String,
+    photo_storage_path: String,
+    photo_alt_ja: String,
+    photo_alt_en: String,
+    status: String,
     is_active: bool,
     message: String,
     has_message: bool,
@@ -641,6 +979,33 @@ struct MaterialCreateInput {
 }
 
 #[derive(Debug, Clone)]
+struct StoneListingCreateInput {
+    stone_listing_key: String,
+    listing_code: String,
+    material_key: String,
+    title_ja: String,
+    title_en: String,
+    description_ja: String,
+    description_en: String,
+    story_ja: String,
+    story_en: String,
+    color_family: String,
+    color_tags: Vec<String>,
+    pattern_primary: String,
+    pattern_tags: Vec<String>,
+    stone_shape: String,
+    translucency: String,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+    photo_storage_path: String,
+    photo_alt_ja: String,
+    photo_alt_en: String,
+    status: String,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
 struct FontCreateInput {
     key: String,
     label: String,
@@ -669,6 +1034,32 @@ struct MaterialPatchInput {
     photo_storage_path: String,
     photo_alt_ja: String,
     photo_alt_en: String,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
+struct StoneListingPatchInput {
+    listing_code: String,
+    material_key: String,
+    title_ja: String,
+    title_en: String,
+    description_ja: String,
+    description_en: String,
+    story_ja: String,
+    story_en: String,
+    color_family: String,
+    color_tags: Vec<String>,
+    pattern_primary: String,
+    pattern_tags: Vec<String>,
+    stone_shape: String,
+    translucency: String,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+    photo_storage_path: String,
+    photo_alt_ja: String,
+    photo_alt_en: String,
+    status: String,
     is_active: bool,
 }
 
@@ -702,6 +1093,26 @@ struct CountryCreateInput {
     is_active: bool,
 }
 
+#[derive(Debug, Clone)]
+struct FacetTagCreateInput {
+    key: String,
+    facet_type: String,
+    label_ja: String,
+    label_en: String,
+    aliases: Vec<String>,
+    sort_order: i64,
+    is_active: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FacetTagPatchInput {
+    label_ja: String,
+    label_en: String,
+    aliases: Vec<String>,
+    sort_order: i64,
+    is_active: bool,
+}
+
 #[derive(Template)]
 #[template(path = "orders_page.html")]
 struct OrdersPageTemplate {
@@ -726,6 +1137,21 @@ struct MaterialsPageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "stone_listings_page.html")]
+struct StoneListingsPageTemplate {
+    filters: StoneListingFilter,
+    color_family_options: Vec<StoneListingFacetOptionView>,
+    pattern_primary_options: Vec<StoneListingFacetOptionView>,
+    stone_shape_options: Vec<StoneListingFacetOptionView>,
+    color_tag_options: Vec<StoneListingFacetOptionView>,
+    pattern_tag_options: Vec<StoneListingFacetOptionView>,
+    font_stylesheet_urls: Vec<String>,
+    source_label: String,
+    is_mock: bool,
+    stone_listings_list_html: String,
+}
+
+#[derive(Template)]
 #[template(path = "fonts_page.html")]
 struct FontsPageTemplate {
     font_stylesheet_urls: Vec<String>,
@@ -742,6 +1168,18 @@ struct MaterialEditPageTemplate {
     is_mock: bool,
     material_key: String,
     material_detail_html: String,
+}
+
+#[derive(Template)]
+#[template(path = "stone_listing_edit_page.html")]
+struct StoneListingEditPageTemplate {
+    font_stylesheet_urls: Vec<String>,
+    source_label: String,
+    is_mock: bool,
+    color_tag_options: Vec<StoneListingFacetOptionView>,
+    pattern_tag_options: Vec<StoneListingFacetOptionView>,
+    stone_listing_key: String,
+    stone_listing_detail_html: String,
 }
 
 #[derive(Template)]
@@ -773,6 +1211,17 @@ struct MaterialCreatePageTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "stone_listing_create_page.html")]
+struct StoneListingCreatePageTemplate {
+    font_stylesheet_urls: Vec<String>,
+    source_label: String,
+    is_mock: bool,
+    color_tag_options: Vec<StoneListingFacetOptionView>,
+    pattern_tag_options: Vec<StoneListingFacetOptionView>,
+    stone_listing_create_html: String,
+}
+
+#[derive(Template)]
 #[template(path = "countries_page.html")]
 struct CountriesPageTemplate {
     font_stylesheet_urls: Vec<String>,
@@ -782,6 +1231,18 @@ struct CountriesPageTemplate {
     countries_list_html: String,
     country_detail_html: String,
     has_country_detail: bool,
+}
+
+#[derive(Template)]
+#[template(path = "facet_tags_page.html")]
+struct FacetTagsPageTemplate {
+    font_stylesheet_urls: Vec<String>,
+    source_label: String,
+    is_mock: bool,
+    facet_tag_create_html: String,
+    facet_tags_list_html: String,
+    facet_tag_detail_html: String,
+    has_facet_tag_detail: bool,
 }
 
 #[derive(Template)]
@@ -805,6 +1266,23 @@ struct MaterialsListTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "facet_tags_list.html")]
+struct FacetTagsListTemplate {
+    facet_tags: Vec<FacetTagListItemView>,
+    has_facet_tags: bool,
+}
+
+#[derive(Template)]
+#[template(path = "stone_listings_list.html")]
+struct StoneListingsListTemplate {
+    stone_listings: Vec<StoneListingListItemView>,
+    has_stone_listings: bool,
+    matching_count: usize,
+    has_active_filters: bool,
+    filter_badges: Vec<StoneListingFilterBadgeView>,
+}
+
+#[derive(Template)]
 #[template(path = "fonts_list.html")]
 struct FontsListTemplate {
     fonts: Vec<FontListItemView>,
@@ -818,6 +1296,18 @@ struct MaterialDetailTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "stone_listing_detail.html")]
+struct StoneListingDetailTemplate {
+    detail: StoneListingDetailView,
+}
+
+#[derive(Template)]
+#[template(path = "facet_tag_detail.html")]
+struct FacetTagDetailTemplate {
+    detail: FacetTagDetailView,
+}
+
+#[derive(Template)]
 #[template(path = "font_detail.html")]
 struct FontDetailTemplate {
     detail: FontDetailView,
@@ -827,6 +1317,12 @@ struct FontDetailTemplate {
 #[template(path = "material_create.html")]
 struct MaterialCreateTemplate {
     view: MaterialCreateView,
+}
+
+#[derive(Template)]
+#[template(path = "stone_listing_create.html")]
+struct StoneListingCreateTemplate {
+    view: StoneListingCreateView,
 }
 
 #[derive(Template)]
@@ -852,6 +1348,13 @@ struct CountryDetailTemplate {
 #[template(path = "country_create.html")]
 struct CountryCreateTemplate {
     view: CountryCreateView,
+}
+
+#[derive(Template)]
+#[template(path = "facet_tag_create.html")]
+struct FacetTagCreateTemplate {
+    view: FacetTagCreateView,
+    facet_tag_type_options: Vec<FacetTagTypeOptionView>,
 }
 
 #[derive(Template)]
@@ -935,6 +1438,32 @@ async fn run() -> Result<()> {
                 .delete(handle_material_delete),
         )
         .route(
+            "/admin/stone-listings",
+            get(handle_stone_listings_page).post(handle_stone_listing_create),
+        )
+        .route(
+            "/admin/stone-listings/photo-upload",
+            axum::routing::post(handle_stone_listing_photo_upload),
+        )
+        .route(
+            "/admin/stone-listings/list",
+            get(handle_stone_listings_list),
+        )
+        .route(
+            "/admin/stone-listings/new",
+            get(handle_stone_listing_create_page),
+        )
+        .route(
+            "/admin/stone-listings/{stone_listing_key}/edit",
+            get(handle_stone_listing_edit_page),
+        )
+        .route(
+            "/admin/stone-listings/{stone_listing_key}",
+            get(handle_stone_listing_detail)
+                .patch(handle_stone_listing_patch)
+                .delete(handle_stone_listing_delete),
+        )
+        .route(
             "/admin/fonts",
             get(handle_fonts_page).post(handle_font_create),
         )
@@ -955,6 +1484,17 @@ async fn run() -> Result<()> {
             get(handle_country_detail)
                 .patch(handle_country_patch)
                 .delete(handle_country_delete),
+        )
+        .route(
+            "/admin/facet-tags",
+            get(handle_facet_tags_page).post(handle_facet_tag_create),
+        )
+        .route("/admin/facet-tags/list", get(handle_facet_tags_list))
+        .route(
+            "/admin/facet-tags/{facet_tag_id}",
+            get(handle_facet_tag_detail)
+                .patch(handle_facet_tag_patch)
+                .delete(handle_facet_tag_delete),
         )
         .layer(middleware::from_fn_with_state(
             Arc::clone(&auth),
@@ -1167,7 +1707,6 @@ async fn build_server(cfg: &AppConfig) -> Result<Arc<ServerState>> {
 
             DataSource::Firestore(FirestoreAdminSource {
                 parent: format!("projects/{project_id}/databases/(default)/documents"),
-                locale: cfg.locale.clone(),
                 default_locale: cfg.default_locale.clone(),
                 label,
                 storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
@@ -2133,6 +2672,531 @@ async fn handle_material_patch(
     }
 }
 
+async fn handle_stone_listings_page(
+    State(state): State<AppState>,
+    Query(query): Query<StoneListingsPageQuery>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let filters = stone_listing_filter_from_query(query);
+    let filters = state.server.normalize_stone_listing_filter(&filters).await;
+    let stone_listings = state.server.filter_stone_listings(&filters).await;
+    let filter_options = state.server.stone_listing_filter_options().await;
+    let tag_options = state.server.stone_listing_tag_options().await;
+    let stone_listings_list_html = match render_stone_listings_list(&stone_listings, &filters) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render stone listings list: {error}"),
+            );
+        }
+    };
+
+    let page = StoneListingsPageTemplate {
+        filters,
+        color_family_options: filter_options.color_family_options,
+        pattern_primary_options: filter_options.pattern_primary_options,
+        stone_shape_options: filter_options.stone_shape_options,
+        color_tag_options: tag_options.color_tag_options,
+        pattern_tag_options: tag_options.pattern_tag_options,
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        stone_listings_list_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_stone_listings_list(
+    State(state): State<AppState>,
+    Query(query): Query<StoneListingsPageQuery>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let filters = stone_listing_filter_from_query(query);
+    let filters = state.server.normalize_stone_listing_filter(&filters).await;
+    let stone_listings = state.server.filter_stone_listings(&filters).await;
+    match render_stone_listings_list(&stone_listings, &filters) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render stone listings list: {error}"),
+        ),
+    }
+}
+
+async fn handle_stone_listing_create_page(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let tag_options = state.server.stone_listing_tag_options().await;
+    let stone_listing_create_html =
+        match render_stone_listing_create(&new_stone_listing_create_view("", "")) {
+            Ok(html) => html,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing create: {error}"),
+                );
+            }
+        };
+
+    let page = StoneListingCreatePageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        color_tag_options: tag_options.color_tag_options,
+        pattern_tag_options: tag_options.pattern_tag_options,
+        stone_listing_create_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_stone_listing_edit_page(
+    State(state): State<AppState>,
+    Path(stone_listing_key): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let Some(detail) = state
+        .server
+        .get_stone_listing_detail(&stone_listing_key, "", "")
+        .await
+    else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    let stone_listing_detail_html = match render_stone_listing_detail(&detail) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render stone listing detail: {error}"),
+            );
+        }
+    };
+
+    let tag_options = state.server.stone_listing_tag_options().await;
+    let page = StoneListingEditPageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        color_tag_options: tag_options.color_tag_options,
+        pattern_tag_options: tag_options.pattern_tag_options,
+        stone_listing_key,
+        stone_listing_detail_html,
+    };
+
+    render_template(&page)
+}
+
+async fn handle_stone_listing_detail(
+    State(state): State<AppState>,
+    Path(stone_listing_key): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let Some(detail) = state
+        .server
+        .get_stone_listing_detail(&stone_listing_key, "", "")
+        .await
+    else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    match render_stone_listing_detail(&detail) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render stone listing detail: {error}"),
+        ),
+    }
+}
+
+async fn handle_stone_listing_photo_upload(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let mut stone_listing_key = String::new();
+    let mut file_name = String::new();
+    let mut content_type: Option<String> = None;
+    let mut bytes = Vec::new();
+
+    loop {
+        let next = match multipart.next_field().await {
+            Ok(next) => next,
+            Err(error) => {
+                return json_error(
+                    StatusCode::BAD_REQUEST,
+                    &format!("invalid multipart: {error}"),
+                );
+            }
+        };
+
+        let Some(field) = next else {
+            break;
+        };
+
+        let Some(name) = field.name() else {
+            continue;
+        };
+
+        match name {
+            "stone_listing_key" => {
+                stone_listing_key = match field.text().await {
+                    Ok(text) => text.trim().to_owned(),
+                    Err(error) => {
+                        return json_error(
+                            StatusCode::BAD_REQUEST,
+                            &format!("invalid stone listing key: {error}"),
+                        );
+                    }
+                };
+            }
+            "photo_file" => {
+                if let Some(value) = field.file_name() {
+                    file_name = value.to_owned();
+                }
+                content_type = field.content_type().map(ToOwned::to_owned);
+
+                let payload = match field.bytes().await {
+                    Ok(payload) => payload,
+                    Err(error) => {
+                        return json_error(
+                            StatusCode::BAD_REQUEST,
+                            &format!("failed to read upload file: {error}"),
+                        );
+                    }
+                };
+
+                bytes = payload.to_vec();
+            }
+            _ => {}
+        }
+    }
+
+    if stone_listing_key.is_empty() {
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "一点物キーを入力してから画像をアップロードしてください。",
+        );
+    }
+
+    if bytes.is_empty() {
+        return json_error(StatusCode::BAD_REQUEST, "画像ファイルを選択してください。");
+    }
+
+    match state
+        .server
+        .upload_stone_listing_photo(
+            &stone_listing_key,
+            &file_name,
+            content_type.as_deref(),
+            &bytes,
+        )
+        .await
+    {
+        Ok(storage_path) => json_response(
+            StatusCode::OK,
+            json!({
+                "storage_path": storage_path,
+            }),
+        ),
+        Err(error_message) => json_error(StatusCode::BAD_REQUEST, &error_message),
+    }
+}
+
+async fn handle_stone_listing_create(
+    State(state): State<AppState>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
+        Ok(value) => value,
+        Err(_) => {
+            return render_stone_listing_create_response(
+                StatusCode::BAD_REQUEST,
+                &stone_listing_create_view_from_form(
+                    &form,
+                    "",
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
+                ),
+            );
+        }
+    };
+
+    let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_stone_listing_create_response(
+                StatusCode::BAD_REQUEST,
+                &stone_listing_create_view_from_form(
+                    &form,
+                    "",
+                    "価格（JPY）は整数で入力してください。",
+                ),
+            );
+        }
+    };
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_stone_listing_create_response(
+                StatusCode::BAD_REQUEST,
+                &stone_listing_create_view_from_form(&form, "", "表示順は整数で入力してください。"),
+            );
+        }
+    };
+
+    let input = stone_listing_create_input_from_form(&form, price_usd, price_jpy, sort_order);
+    let created_key = input.stone_listing_key.clone();
+
+    match state.server.create_stone_listing(input).await {
+        Ok(()) => render_stone_listing_create_response_with_trigger(
+            StatusCode::CREATED,
+            &new_stone_listing_create_view(&format!("一点物「{created_key}」を作成しました。"), ""),
+            "stone-listing-updated",
+        ),
+        Err(error_message) => render_stone_listing_create_response(
+            StatusCode::BAD_REQUEST,
+            &stone_listing_create_view_from_form(&form, "", &error_message),
+        ),
+    }
+}
+
+async fn handle_stone_listing_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(stone_listing_key): Path<String>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let hx_target = headers
+        .get("hx-target")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .unwrap_or("");
+    let is_list_target = hx_target == "stone-listings-list" || hx_target == "#stone-listings-list";
+
+    let form = match form {
+        Ok(Form(form)) => form,
+        Err(_) if is_list_target => {
+            return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned());
+        }
+        Err(_) => HashMap::new(),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    match state.server.delete_stone_listing(&stone_listing_key).await {
+        Ok(()) => {
+            if !is_list_target {
+                return html_response_with_trigger(
+                    StatusCode::OK,
+                    "<p class=\"p-5 text-sm font-semibold text-admin-muted\">一点物を削除しました。</p>"
+                        .to_owned(),
+                    "stone-listing-updated",
+                );
+            }
+
+            let filters = stone_listing_filter_from_form(&form);
+            let filters = state.server.normalize_stone_listing_filter(&filters).await;
+            let stone_listings = state.server.filter_stone_listings(&filters).await;
+            match render_stone_listings_list(&stone_listings, &filters) {
+                Ok(html) => html_response(StatusCode::OK, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listings list: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => plain_error(StatusCode::BAD_REQUEST, error_message),
+    }
+}
+
+async fn handle_stone_listing_patch(
+    State(state): State<AppState>,
+    Path(stone_listing_key): Path<String>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load stone listings: {error}"),
+        );
+    }
+
+    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_stone_listing_detail(
+                    &stone_listing_key,
+                    "",
+                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_stone_listing_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_stone_listing_detail(
+                    &stone_listing_key,
+                    "",
+                    "価格（JPY）は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_stone_listing_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_stone_listing_detail(
+                    &stone_listing_key,
+                    "",
+                    "表示順は整数で入力してください。",
+                )
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_stone_listing_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let input = stone_listing_patch_input_from_form(&form, price_usd, price_jpy, sort_order);
+
+    match state
+        .server
+        .update_stone_listing(&stone_listing_key, input)
+        .await
+    {
+        Ok(()) => {
+            let Some(detail) = state
+                .server
+                .get_stone_listing_detail(&stone_listing_key, "一点物を更新しました。", "")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_stone_listing_detail(&detail) {
+                Ok(html) => {
+                    html_response_with_trigger(StatusCode::OK, html, "stone-listing-updated")
+                }
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing detail: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => {
+            let Some(detail) = state
+                .server
+                .get_stone_listing_detail(&stone_listing_key, "", &error_message)
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_stone_listing_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render stone listing detail: {error}"),
+                ),
+            }
+        }
+    }
+}
+
 async fn handle_fonts_page(State(state): State<AppState>) -> Response {
     if let Err(error) = state.server.refresh_from_source().await {
         return plain_error(
@@ -2471,6 +3535,299 @@ async fn handle_countries_page(
     };
 
     render_template(&page)
+}
+
+async fn handle_facet_tags_page(
+    State(state): State<AppState>,
+    Query(query): Query<FacetTagsPageQuery>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    let facet_tags = state.server.list_facet_tags().await;
+    let facet_tag_create_html =
+        match render_facet_tag_create(&new_facet_tag_create_view("", "", "", "")) {
+            Ok(html) => html,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render facet tag create: {error}"),
+                );
+            }
+        };
+    let facet_tags_list_html = match render_facet_tags_list(&facet_tags) {
+        Ok(html) => html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to render facet tags list: {error}"),
+            );
+        }
+    };
+
+    let mut selected_facet_tag_id = normalize_query_value(query.facet_tag_id);
+    if selected_facet_tag_id.is_empty()
+        && let Some(first) = facet_tags.first()
+    {
+        selected_facet_tag_id = first.id.clone();
+    }
+
+    let facet_tag_detail = if selected_facet_tag_id.is_empty() {
+        None
+    } else {
+        state
+            .server
+            .get_facet_tag_detail(&selected_facet_tag_id, "", "")
+            .await
+    };
+
+    let facet_tag_detail_html = if let Some(detail) = facet_tag_detail.as_ref() {
+        match render_facet_tag_detail(detail) {
+            Ok(html) => html,
+            Err(error) => {
+                return plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render facet tag detail: {error}"),
+                );
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    let page = FacetTagsPageTemplate {
+        font_stylesheet_urls: state.server.font_stylesheet_urls().await,
+        source_label: state.server.source_label.clone(),
+        is_mock: state.server.source.is_mock(),
+        facet_tag_create_html,
+        facet_tags_list_html,
+        facet_tag_detail_html,
+        has_facet_tag_detail: facet_tag_detail.is_some(),
+    };
+
+    render_template(&page)
+}
+
+async fn handle_facet_tags_list(State(state): State<AppState>) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    let facet_tags = state.server.list_facet_tags().await;
+    match render_facet_tags_list(&facet_tags) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render facet tags list: {error}"),
+        ),
+    }
+}
+
+async fn handle_facet_tag_detail(
+    State(state): State<AppState>,
+    Path(facet_tag_id): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    let Some(detail) = state
+        .server
+        .get_facet_tag_detail(&facet_tag_id, "", "")
+        .await
+    else {
+        return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+    };
+
+    match render_facet_tag_detail(&detail) {
+        Ok(html) => html_response(StatusCode::OK, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render facet tag detail: {error}"),
+        ),
+    }
+}
+
+async fn handle_facet_tag_create(
+    State(state): State<AppState>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            return render_facet_tag_create_response(
+                StatusCode::BAD_REQUEST,
+                &facet_tag_create_view_from_form(
+                    &form,
+                    "",
+                    "表示順は整数で入力してください。",
+                    "",
+                    "",
+                ),
+            );
+        }
+    };
+
+    let input = FacetTagCreateInput {
+        key: form_value(&form, "key"),
+        facet_type: form_value(&form, "facet_type"),
+        label_ja: form_value(&form, "label_ja"),
+        label_en: form_value(&form, "label_en"),
+        aliases: parse_comma_separated_values(&form_value(&form, "aliases")),
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    };
+    let created_key = input.key.clone();
+
+    match state.server.create_facet_tag(input).await {
+        Ok(()) => render_facet_tag_create_response_with_trigger(
+            StatusCode::CREATED,
+            &new_facet_tag_create_view(
+                &format!("タグ「{created_key}」を作成しました。"),
+                "",
+                "",
+                "",
+            ),
+            "facet-tag-updated",
+        ),
+        Err(error_message) => {
+            let (key_error, aliases_error) = facet_tag_field_errors_from_message(&error_message);
+            render_facet_tag_create_response(
+                StatusCode::BAD_REQUEST,
+                &facet_tag_create_view_from_form(
+                    &form,
+                    "",
+                    &error_message,
+                    &key_error,
+                    &aliases_error,
+                ),
+            )
+        }
+    }
+}
+
+async fn handle_facet_tag_patch(
+    State(state): State<AppState>,
+    Path(facet_tag_id): Path<String>,
+    form: std::result::Result<Form<HashMap<String, String>>, FormRejection>,
+) -> Response {
+    let Form(form) = match form {
+        Ok(form) => form,
+        Err(_) => return plain_error(StatusCode::BAD_REQUEST, "invalid request".to_owned()),
+    };
+
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => {
+            let Some(detail) = state
+                .server
+                .get_facet_tag_detail(&facet_tag_id, "", "表示順は整数で入力してください。")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            return match render_facet_tag_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render facet tag detail: {error}"),
+                ),
+            };
+        }
+    };
+
+    let input = facet_tag_patch_input_from_form(&form, sort_order);
+
+    match state.server.update_facet_tag(&facet_tag_id, input).await {
+        Ok(()) => {
+            let Some(detail) = state
+                .server
+                .get_facet_tag_detail(&facet_tag_id, "タグを更新しました。", "")
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            match render_facet_tag_detail(&detail) {
+                Ok(html) => html_response_with_trigger(StatusCode::OK, html, "facet-tag-updated"),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render facet tag detail: {error}"),
+                ),
+            }
+        }
+        Err(error_message) => {
+            let (key_error, aliases_error) = facet_tag_field_errors_from_message(&error_message);
+            let Some(mut detail) = state
+                .server
+                .get_facet_tag_detail(&facet_tag_id, "", &error_message)
+                .await
+            else {
+                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
+            };
+            detail.key_error = key_error;
+            detail.has_key_error = !detail.key_error.is_empty();
+            detail.aliases_error = aliases_error;
+            detail.has_aliases_error = !detail.aliases_error.is_empty();
+            match render_facet_tag_detail(&detail) {
+                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
+                Err(error) => plain_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to render facet tag detail: {error}"),
+                ),
+            }
+        }
+    }
+}
+
+async fn handle_facet_tag_delete(
+    State(state): State<AppState>,
+    Path(facet_tag_id): Path<String>,
+) -> Response {
+    if let Err(error) = state.server.refresh_from_source().await {
+        return plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load facet tags: {error}"),
+        );
+    }
+
+    match state.server.delete_facet_tag(&facet_tag_id).await {
+        Ok(()) => html_response_with_trigger(
+            StatusCode::OK,
+            "<p class=\"p-5 text-sm font-semibold text-admin-muted\">タグを削除しました。</p>"
+                .to_owned(),
+            "facet-tag-updated",
+        ),
+        Err(error_message) => plain_error(StatusCode::BAD_REQUEST, error_message),
+    }
 }
 
 async fn handle_country_create(
@@ -2867,7 +4224,7 @@ impl ServerState {
             seal_line1: order.seal_line1.clone(),
             seal_line2: order.seal_line2.clone(),
             has_seal_line2: !order.seal_line2.is_empty(),
-            material_label_ja: order.material_label_ja.clone(),
+            listing_label_ja: order.listing_label_ja.clone(),
             total: format_order_amount(order.total, &order.currency),
             has_next_statuses: !next_statuses.is_empty(),
             next_statuses,
@@ -2910,6 +4267,445 @@ impl ServerState {
         }
 
         items
+    }
+
+    async fn normalize_stone_listing_filter(
+        &self,
+        filters: &StoneListingFilter,
+    ) -> StoneListingFilter {
+        let data = self.data.read().await;
+        normalize_stone_listing_filter_with_snapshot(filters, &data)
+    }
+
+    async fn filter_stone_listings(
+        &self,
+        filters: &StoneListingFilter,
+    ) -> Vec<StoneListingListItemView> {
+        let data = self.data.read().await;
+        let mut items = Vec::with_capacity(data.stone_listing_ids.len());
+        let filters = normalize_stone_listing_filter_with_snapshot(filters, &data);
+
+        let color_family_filter = if filters.color_family.is_empty() {
+            None
+        } else {
+            Some(filters.color_family.as_str())
+        };
+        let color_tag_filters = stone_listing_tag_values(&filters.color_tags);
+        let pattern_primary_filter = if filters.pattern_primary.is_empty() {
+            None
+        } else {
+            Some(filters.pattern_primary.as_str())
+        };
+        let pattern_tag_filters = stone_listing_tag_values(&filters.pattern_tags);
+        let stone_shape_filter = if filters.stone_shape.is_empty() {
+            None
+        } else {
+            Some(filters.stone_shape.as_str())
+        };
+
+        for key in &data.stone_listing_ids {
+            let Some(listing) = data.stone_listings.get(key) else {
+                continue;
+            };
+            if let Some(filter) = color_family_filter
+                && listing.facets.color_family != filter
+            {
+                continue;
+            }
+            if !color_tag_filters.is_empty()
+                && !color_tag_filters
+                    .iter()
+                    .all(|filter| listing.facets.color_tags.iter().any(|tag| tag == filter))
+            {
+                continue;
+            }
+            if let Some(filter) = pattern_primary_filter
+                && listing.facets.pattern_primary != filter
+            {
+                continue;
+            }
+            if !pattern_tag_filters.is_empty()
+                && !pattern_tag_filters
+                    .iter()
+                    .all(|filter| listing.facets.pattern_tags.iter().any(|tag| tag == filter))
+            {
+                continue;
+            }
+            if let Some(filter) = stone_shape_filter
+                && listing.facets.stone_shape != filter
+            {
+                continue;
+            }
+            let primary_photo = select_primary_material_photo(&listing.photos);
+            let primary_photo_path = primary_photo
+                .map(|photo| photo.storage_path.clone())
+                .unwrap_or_default();
+            let primary_photo_url =
+                build_storage_media_url(&self.storage_assets_bucket, &primary_photo_path);
+
+            items.push(StoneListingListItemView {
+                key: listing.key.clone(),
+                listing_code: listing.listing_code.clone(),
+                title_ja: listing.title_i18n.get("ja").cloned().unwrap_or_default(),
+                material_key: listing.material_key.clone(),
+                color_family: listing.facets.color_family.clone(),
+                pattern_primary: listing.facets.pattern_primary.clone(),
+                stone_shape_label: stone_shape_label(&listing.facets.stone_shape).to_owned(),
+                primary_photo_url: primary_photo_url.clone(),
+                has_photo: !primary_photo_url.is_empty(),
+                price_usd: format_usd(
+                    listing
+                        .price_by_currency
+                        .get("USD")
+                        .copied()
+                        .unwrap_or_default(),
+                ),
+                price_jpy: format_jpy(
+                    listing
+                        .price_by_currency
+                        .get("JPY")
+                        .copied()
+                        .unwrap_or_default(),
+                ),
+                status_label: stone_listing_status_label(&listing.status).to_owned(),
+                is_active: listing.is_active,
+                version: listing.version,
+                updated_at: format_datetime(listing.updated_at),
+            });
+        }
+
+        items
+    }
+
+    async fn stone_listing_filter_options(&self) -> StoneListingFilterOptions {
+        let data = self.data.read().await;
+        let mut color_families = BTreeSet::new();
+        let mut pattern_primaries = BTreeSet::new();
+        let mut stone_shapes = BTreeSet::new();
+
+        for key in &data.stone_listing_ids {
+            let Some(listing) = data.stone_listings.get(key) else {
+                continue;
+            };
+            if !listing.facets.color_family.is_empty() {
+                color_families.insert(listing.facets.color_family.clone());
+            }
+            if !listing.facets.pattern_primary.is_empty() {
+                pattern_primaries.insert(listing.facets.pattern_primary.clone());
+            }
+            if !listing.facets.stone_shape.trim().is_empty() {
+                stone_shapes.insert(listing.facets.stone_shape.clone());
+            }
+        }
+
+        let mut stone_shape_options = stone_shape_filter_options();
+        for known_value in ["square", "round"] {
+            stone_shapes.remove(known_value);
+        }
+        // Unknown stone shapes are kept in the filter list so they can round-trip unchanged.
+        stone_shape_options.extend(stone_shapes.into_iter().map(|value| {
+            let label = stone_shape_label(&value);
+            StoneListingFacetOptionView { value, label }
+        }));
+
+        StoneListingFilterOptions {
+            color_family_options: color_families
+                .into_iter()
+                .map(|value| stone_listing_facet_option_view(&value))
+                .collect(),
+            pattern_primary_options: pattern_primaries
+                .into_iter()
+                .map(|value| stone_listing_facet_option_view(&value))
+                .collect(),
+            stone_shape_options,
+        }
+    }
+
+    async fn stone_listing_tag_options(&self) -> StoneListingTagOptions {
+        let data = self.data.read().await;
+        let lookups = facet_tag_lookup_maps(&data);
+        let mut color_tag_options = Vec::new();
+        let mut pattern_tag_options = Vec::new();
+        let mut seen_color_tags = HashSet::new();
+        let mut seen_pattern_tags = HashSet::new();
+
+        for id in &data.facet_tag_ids {
+            let Some(tag) = data.facet_tags.get(id) else {
+                continue;
+            };
+            if !tag.is_active {
+                continue;
+            }
+
+            let option = StoneListingFacetOptionView {
+                value: tag.key.clone(),
+                label: facet_tag_display_label(tag),
+            };
+
+            match tag.facet_type.as_str() {
+                "color" => {
+                    if seen_color_tags.insert(option.value.clone()) {
+                        color_tag_options.push(option);
+                    }
+                }
+                "pattern" => {
+                    if seen_pattern_tags.insert(option.value.clone()) {
+                        pattern_tag_options.push(option);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for id in &data.stone_listing_ids {
+            let Some(listing) = data.stone_listings.get(id) else {
+                continue;
+            };
+
+            for value in normalize_faceted_tag_values_with_lookup(
+                &listing.facets.color_tags,
+                lookups.get("color"),
+            ) {
+                if seen_color_tags.insert(value.clone()) {
+                    color_tag_options.push(stone_listing_facet_option_view(&value));
+                }
+            }
+            for value in normalize_faceted_tag_values_with_lookup(
+                &listing.facets.pattern_tags,
+                lookups.get("pattern"),
+            ) {
+                if seen_pattern_tags.insert(value.clone()) {
+                    pattern_tag_options.push(stone_listing_facet_option_view(&value));
+                }
+            }
+        }
+
+        StoneListingTagOptions {
+            color_tag_options,
+            pattern_tag_options,
+        }
+    }
+
+    async fn list_facet_tags(&self) -> Vec<FacetTagListItemView> {
+        let data = self.data.read().await;
+        let mut items = Vec::with_capacity(data.facet_tag_ids.len());
+
+        for id in &data.facet_tag_ids {
+            let Some(tag) = data.facet_tags.get(id) else {
+                continue;
+            };
+
+            items.push(FacetTagListItemView {
+                id: id.clone(),
+                key: tag.key.clone(),
+                facet_type_label: facet_tag_type_label(&tag.facet_type).to_owned(),
+                label_ja: tag.label_i18n.get("ja").cloned().unwrap_or_default(),
+                label_en: tag.label_i18n.get("en").cloned().unwrap_or_default(),
+                aliases: tag.aliases.join(", "),
+                is_active: tag.is_active,
+                version: tag.version,
+                updated_at: format_datetime(tag.updated_at),
+            });
+        }
+
+        items
+    }
+
+    async fn get_facet_tag_detail(
+        &self,
+        id: &str,
+        message: &str,
+        render_error: &str,
+    ) -> Option<FacetTagDetailView> {
+        let data = self.data.read().await;
+        let tag = data.facet_tags.get(id)?;
+
+        Some(FacetTagDetailView {
+            id: id.to_owned(),
+            key: tag.key.clone(),
+            facet_type_label: facet_tag_type_label(&tag.facet_type).to_owned(),
+            label_ja: tag.label_i18n.get("ja").cloned().unwrap_or_default(),
+            label_en: tag.label_i18n.get("en").cloned().unwrap_or_default(),
+            aliases: tag.aliases.join(", "),
+            sort_order: tag.sort_order,
+            is_active: tag.is_active,
+            version: tag.version,
+            updated_at: format_datetime(tag.updated_at),
+            message: message.to_owned(),
+            has_message: !message.is_empty(),
+            error: render_error.to_owned(),
+            has_error: !render_error.is_empty(),
+            key_error: String::new(),
+            has_key_error: false,
+            aliases_error: String::new(),
+            has_aliases_error: false,
+        })
+    }
+
+    async fn create_facet_tag(
+        &self,
+        input: FacetTagCreateInput,
+    ) -> std::result::Result<(), String> {
+        let key =
+            normalize_faceted_token(&input.key).ok_or_else(|| "タグキーは必須です。".to_owned())?;
+        validate_facet_tag_key(&key)?;
+
+        let facet_type = normalize_facet_tag_type(&input.facet_type)
+            .ok_or_else(|| "タグ種別を選択してください。".to_owned())?
+            .to_owned();
+        let label_ja = input.label_ja.trim().to_owned();
+        let label_en = input.label_en.trim().to_owned();
+        let aliases = normalize_facet_tag_aliases(&input.aliases);
+        if label_ja.is_empty() || label_en.is_empty() {
+            return Err("タグ名（ja/en）は必須です。".to_owned());
+        }
+        if input.sort_order < 0 {
+            return Err("表示順は 0 以上で入力してください。".to_owned());
+        }
+
+        let tag = {
+            let mut data = self.data.write().await;
+            let id = facet_tag_document_id(&facet_type, &key);
+            if data.facet_tags.contains_key(&id) {
+                return Err("同じタグキーは既に存在します。".to_owned());
+            }
+            validate_facet_tag_alias_collisions(&data, &facet_type, &key, &aliases, None)?;
+
+            let now = Utc::now();
+            let tag = FacetTag {
+                key: key.clone(),
+                facet_type: facet_type.clone(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), label_ja),
+                    ("en".to_owned(), label_en),
+                ]),
+                aliases,
+                is_active: input.is_active,
+                sort_order: input.sort_order,
+                version: 1,
+                updated_at: now,
+            };
+
+            data.facet_tags.insert(id, tag.clone());
+            data.refresh_facet_tag_ids();
+            tag
+        };
+
+        if let Err(error) = self.source.persist_facet_tag_mutation(&tag).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after facet tag create error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn update_facet_tag(
+        &self,
+        id: &str,
+        input: FacetTagPatchInput,
+    ) -> std::result::Result<(), String> {
+        let label_ja = input.label_ja.trim().to_owned();
+        let label_en = input.label_en.trim().to_owned();
+        let aliases = normalize_facet_tag_aliases(&input.aliases);
+        if label_ja.is_empty() || label_en.is_empty() {
+            return Err("タグ名（ja/en）は必須です。".to_owned());
+        }
+        if input.sort_order < 0 {
+            return Err("表示順は 0 以上で入力してください。".to_owned());
+        }
+
+        let updated_tag = {
+            let mut data = self.data.write().await;
+            let (facet_type, key) = {
+                let Some(tag) = data.facet_tags.get(id) else {
+                    return Err("タグが見つかりません。".to_owned());
+                };
+                (tag.facet_type.clone(), tag.key.clone())
+            };
+            validate_facet_tag_alias_collisions(&data, &facet_type, &key, &aliases, Some(id))?;
+            let Some(tag) = data.facet_tags.get_mut(id) else {
+                return Err("タグが見つかりません。".to_owned());
+            };
+
+            let now = Utc::now();
+            tag.label_i18n.insert("ja".to_owned(), label_ja);
+            tag.label_i18n.insert("en".to_owned(), label_en);
+            tag.aliases = aliases;
+            tag.is_active = input.is_active;
+            tag.sort_order = input.sort_order;
+            tag.version += 1;
+            tag.updated_at = now;
+
+            let updated = tag.clone();
+            data.refresh_facet_tag_ids();
+            updated
+        };
+
+        if let Err(error) = self.source.persist_facet_tag_mutation(&updated_tag).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after facet tag update error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn delete_facet_tag(&self, id: &str) -> std::result::Result<(), String> {
+        let normalized_id = id.trim().to_owned();
+        if normalized_id.is_empty() {
+            return Err("タグ ID が不正です。".to_owned());
+        }
+
+        {
+            let mut data = self.data.write().await;
+            let Some(tag) = data.facet_tags.get(&normalized_id).cloned() else {
+                return Err("タグが見つかりません。".to_owned());
+            };
+            if let Some(listing_key) = data
+                .stone_listings
+                .values()
+                .find(|listing| match tag.facet_type.as_str() {
+                    "color" => listing
+                        .facets
+                        .color_tags
+                        .iter()
+                        .any(|value| value == &tag.key),
+                    "pattern" => listing
+                        .facets
+                        .pattern_tags
+                        .iter()
+                        .any(|value| value == &tag.key),
+                    _ => false,
+                })
+                .map(|listing| listing.key.clone())
+            {
+                return Err(format!(
+                    "一点物 `{listing_key}` で参照されているため削除できません。"
+                ));
+            }
+            let Some(_) = data.facet_tags.remove(&normalized_id) else {
+                return Err("タグが見つかりません。".to_owned());
+            };
+            data.refresh_facet_tag_ids();
+        }
+
+        if let Err(error) = self.source.persist_facet_tag_deletion(&normalized_id).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after facet tag delete error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore delete failed: {error}"));
+        }
+
+        Ok(())
     }
 
     async fn get_material_detail(
@@ -2963,6 +4759,78 @@ impl ServerState {
             has_photo: !primary_photo_url.is_empty(),
             version: material.version,
             updated_at: format_datetime(material.updated_at),
+            message: message.to_owned(),
+            has_message: !message.is_empty(),
+            error: render_error.to_owned(),
+            has_error: !render_error.is_empty(),
+        })
+    }
+
+    async fn get_stone_listing_detail(
+        &self,
+        key: &str,
+        message: &str,
+        render_error: &str,
+    ) -> Option<StoneListingDetailView> {
+        let data = self.data.read().await;
+        let listing = data.stone_listings.get(key)?;
+        let primary_photo = select_primary_material_photo(&listing.photos);
+        let photo_storage_path = primary_photo
+            .map(|photo| photo.storage_path.clone())
+            .unwrap_or_default();
+        let primary_photo_url =
+            build_storage_media_url(&self.storage_assets_bucket, &photo_storage_path);
+
+        Some(StoneListingDetailView {
+            key: listing.key.clone(),
+            listing_code: listing.listing_code.clone(),
+            material_key: listing.material_key.clone(),
+            title_ja: listing.title_i18n.get("ja").cloned().unwrap_or_default(),
+            title_en: listing.title_i18n.get("en").cloned().unwrap_or_default(),
+            description_ja: listing
+                .description_i18n
+                .get("ja")
+                .cloned()
+                .unwrap_or_default(),
+            description_en: listing
+                .description_i18n
+                .get("en")
+                .cloned()
+                .unwrap_or_default(),
+            story_ja: listing.story_i18n.get("ja").cloned().unwrap_or_default(),
+            story_en: listing.story_i18n.get("en").cloned().unwrap_or_default(),
+            color_family: listing.facets.color_family.clone(),
+            color_tags: listing.facets.color_tags.join(", "),
+            pattern_primary: listing.facets.pattern_primary.clone(),
+            pattern_tags: listing.facets.pattern_tags.join(", "),
+            stone_shape: listing.facets.stone_shape.clone(),
+            stone_shape_label: stone_shape_label(&listing.facets.stone_shape).to_owned(),
+            translucency: listing.facets.translucency.clone(),
+            price_usd: listing
+                .price_by_currency
+                .get("USD")
+                .copied()
+                .unwrap_or_default(),
+            price_jpy: listing
+                .price_by_currency
+                .get("JPY")
+                .copied()
+                .unwrap_or_default(),
+            status: listing.status.clone(),
+            status_label: stone_listing_status_label(&listing.status).to_owned(),
+            is_active: listing.is_active,
+            sort_order: listing.sort_order,
+            photo_storage_path,
+            primary_photo_url: primary_photo_url.clone(),
+            photo_alt_ja: primary_photo
+                .and_then(|photo| photo.alt_i18n.get("ja").cloned())
+                .unwrap_or_default(),
+            photo_alt_en: primary_photo
+                .and_then(|photo| photo.alt_i18n.get("en").cloned())
+                .unwrap_or_default(),
+            has_photo: !primary_photo_url.is_empty(),
+            version: listing.version,
+            updated_at: format_datetime(listing.updated_at),
             message: message.to_owned(),
             has_message: !message.is_empty(),
             error: render_error.to_owned(),
@@ -3686,6 +5554,146 @@ impl ServerState {
         Ok(())
     }
 
+    async fn create_stone_listing(
+        &self,
+        input: StoneListingCreateInput,
+    ) -> std::result::Result<(), String> {
+        let key = input.stone_listing_key.trim().to_owned();
+        validate_material_key(&key)?;
+
+        let listing_code = input.listing_code.trim().to_uppercase();
+        validate_stone_listing_code(&listing_code)?;
+
+        let material_key = input.material_key.trim().to_owned();
+        validate_material_key(&material_key)?;
+
+        let title_ja = input.title_ja.trim().to_owned();
+        let title_en = input.title_en.trim().to_owned();
+        let description_ja = input.description_ja.trim().to_owned();
+        let description_en = input.description_en.trim().to_owned();
+        let story_ja = input.story_ja.trim().to_owned();
+        let story_en = input.story_en.trim().to_owned();
+        let color_family = normalize_faceted_token(&input.color_family)
+            .ok_or_else(|| "色ファミリーは必須です。".to_owned())?;
+        let pattern_primary = normalize_faceted_token(&input.pattern_primary)
+            .ok_or_else(|| "模様の代表値は必須です。".to_owned())?;
+        let stone_shape = normalize_stone_shape_optional(&input.stone_shape)
+            .ok_or_else(|| "石の形は必須です。".to_owned())?;
+        let translucency = normalize_optional_faceted_token(&input.translucency);
+        let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
+        if photo_storage_path.is_empty() {
+            return Err("写真は必須です。".to_owned());
+        }
+        let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
+        let photo_alt_en = input.photo_alt_en.trim().to_owned();
+        let status = normalize_stone_listing_status(&input.status)
+            .ok_or_else(|| "公開状態を選択してください。".to_owned())?
+            .to_owned();
+        self.validate_stone_listing_material_key(&material_key)
+            .await?;
+        let facet_tag_lookups = {
+            let data = self.data.read().await;
+            facet_tag_lookup_maps(&data)
+        };
+        let color_tags = normalize_faceted_tag_values_with_lookup_strict(
+            &input.color_tags,
+            facet_tag_lookups.get("color"),
+            "色タグ",
+        )?;
+        let pattern_tags = normalize_faceted_tag_values_with_lookup_strict(
+            &input.pattern_tags,
+            facet_tag_lookups.get("pattern"),
+            "模様タグ",
+        )?;
+
+        validate_stone_listing_values(
+            &title_ja,
+            &title_en,
+            &description_ja,
+            &description_en,
+            &color_family,
+            &pattern_primary,
+            &stone_shape,
+            input.price_usd,
+            input.price_jpy,
+            input.sort_order,
+            &status,
+            &material_key,
+            &listing_code,
+            &photo_storage_path,
+        )?;
+
+        let listing = {
+            let mut data = self.data.write().await;
+            if data.stone_listings.contains_key(&key) {
+                return Err("同じ一点物キーは既に存在します。".to_owned());
+            }
+
+            let now = Utc::now();
+            let published_at = if stone_listing_is_published(&status) {
+                Some(now)
+            } else {
+                None
+            };
+            let listing = StoneListing {
+                key: key.clone(),
+                listing_code,
+                material_key,
+                title_i18n: HashMap::from([
+                    ("ja".to_owned(), title_ja),
+                    ("en".to_owned(), title_en),
+                ]),
+                description_i18n: HashMap::from([
+                    ("ja".to_owned(), description_ja),
+                    ("en".to_owned(), description_en),
+                ]),
+                story_i18n: HashMap::from([
+                    ("ja".to_owned(), story_ja),
+                    ("en".to_owned(), story_en),
+                ]),
+                facets: StoneListingFacets {
+                    color_family,
+                    color_tags,
+                    pattern_primary,
+                    pattern_tags,
+                    stone_shape,
+                    translucency,
+                },
+                photos: build_single_stone_listing_photos(
+                    &key,
+                    &photo_storage_path,
+                    &photo_alt_ja,
+                    &photo_alt_en,
+                ),
+                price_by_currency: HashMap::from([
+                    ("USD".to_owned(), input.price_usd),
+                    ("JPY".to_owned(), input.price_jpy),
+                ]),
+                status,
+                is_active: input.is_active,
+                published_at,
+                sort_order: input.sort_order,
+                version: 1,
+                updated_at: now,
+            };
+
+            data.stone_listings.insert(key, listing.clone());
+            data.refresh_stone_listing_ids();
+            listing
+        };
+
+        if let Err(error) = self.source.persist_stone_listing_mutation(&listing).await {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after stone listing create error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
     async fn upload_material_photo(
         &self,
         material_key: &str,
@@ -3720,6 +5728,72 @@ impl ServerState {
             .map_err(|error| format!("photo upload failed: {error}"))
     }
 
+    async fn upload_stone_listing_photo(
+        &self,
+        stone_listing_key: &str,
+        file_name: &str,
+        content_type: Option<&str>,
+        bytes: &[u8],
+    ) -> std::result::Result<String, String> {
+        let normalized_key = stone_listing_key.trim().to_owned();
+        validate_material_key(&normalized_key)?;
+
+        if bytes.is_empty() {
+            return Err("画像ファイルが空です。".to_owned());
+        }
+        if bytes.len() > MAX_PHOTO_UPLOAD_BYTES {
+            return Err("画像サイズは 10MB 以下にしてください。".to_owned());
+        }
+
+        let normalized_content_type = normalize_image_content_type(file_name, content_type)
+            .ok_or_else(|| {
+                "対応していない画像形式です。png / jpg / webp / gif / avif を利用してください。"
+                    .to_owned()
+            })?;
+
+        self.source
+            .upload_stone_listing_photo(
+                &normalized_key,
+                file_name,
+                Some(normalized_content_type),
+                bytes,
+            )
+            .await
+            .map_err(|error| format!("photo upload failed: {error}"))
+    }
+
+    async fn validate_stone_listing_material_key(
+        &self,
+        material_key: &str,
+    ) -> std::result::Result<(), String> {
+        let data = self.data.read().await;
+        match data.materials.get(material_key) {
+            Some(material) if material.is_active => Ok(()),
+            _ => Err("素材キーに対応する有効な材質が見つかりません。".to_owned()),
+        }
+    }
+
+    async fn validate_stone_listing_material_key_for_update(
+        &self,
+        stone_listing_key: &str,
+        material_key: &str,
+    ) -> std::result::Result<(), String> {
+        let data = self.data.read().await;
+        if matches!(data.materials.get(material_key), Some(material) if material.is_active) {
+            return Ok(());
+        }
+
+        if data
+            .stone_listings
+            .get(stone_listing_key)
+            .is_some_and(|listing| listing.material_key == material_key)
+        {
+            return Ok(());
+        }
+
+        Err("素材キーに対応する有効な材質が見つかりません。".to_owned())
+    }
+
     async fn delete_material(&self, key: &str) -> std::result::Result<(), String> {
         let normalized_key = key.trim().to_owned();
         if normalized_key.is_empty() {
@@ -3738,6 +5812,190 @@ impl ServerState {
             if let Err(refresh_error) = self.refresh_from_source().await {
                 eprintln!(
                     "failed to rollback from firestore after material delete error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore delete failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn update_stone_listing(
+        &self,
+        key: &str,
+        input: StoneListingPatchInput,
+    ) -> std::result::Result<(), String> {
+        let normalized_key = key.trim().to_owned();
+        if normalized_key.is_empty() {
+            return Err("一点物キーが不正です。".to_owned());
+        }
+
+        let listing_code = input.listing_code.trim().to_uppercase();
+        validate_stone_listing_code(&listing_code)?;
+
+        let material_key = input.material_key.trim().to_owned();
+        validate_material_key(&material_key)?;
+
+        let title_ja = input.title_ja.trim().to_owned();
+        let title_en = input.title_en.trim().to_owned();
+        let description_ja = input.description_ja.trim().to_owned();
+        let description_en = input.description_en.trim().to_owned();
+        let story_ja = input.story_ja.trim().to_owned();
+        let story_en = input.story_en.trim().to_owned();
+        let color_family = normalize_faceted_token(&input.color_family)
+            .ok_or_else(|| "色ファミリーは必須です。".to_owned())?;
+        let pattern_primary = normalize_faceted_token(&input.pattern_primary)
+            .ok_or_else(|| "模様の代表値は必須です。".to_owned())?;
+        let stone_shape = normalize_stone_shape_optional(&input.stone_shape)
+            .ok_or_else(|| "石の形は必須です。".to_owned())?;
+        let translucency = normalize_optional_faceted_token(&input.translucency);
+        let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
+        let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
+        let photo_alt_en = input.photo_alt_en.trim().to_owned();
+        let status = normalize_stone_listing_status(&input.status)
+            .ok_or_else(|| "公開状態を選択してください。".to_owned())?
+            .to_owned();
+        self.validate_stone_listing_material_key_for_update(&normalized_key, &material_key)
+            .await?;
+        let facet_tag_lookups = {
+            let data = self.data.read().await;
+            facet_tag_lookup_maps(&data)
+        };
+        let color_tags = normalize_faceted_tag_values_with_lookup_strict(
+            &input.color_tags,
+            facet_tag_lookups.get("color"),
+            "色タグ",
+        )?;
+        let pattern_tags = normalize_faceted_tag_values_with_lookup_strict(
+            &input.pattern_tags,
+            facet_tag_lookups.get("pattern"),
+            "模様タグ",
+        )?;
+
+        validate_stone_listing_values(
+            &title_ja,
+            &title_en,
+            &description_ja,
+            &description_en,
+            &color_family,
+            &pattern_primary,
+            &stone_shape,
+            input.price_usd,
+            input.price_jpy,
+            input.sort_order,
+            &status,
+            &material_key,
+            &listing_code,
+            &photo_storage_path,
+        )?;
+
+        let updated_listing = {
+            let mut data = self.data.write().await;
+            let Some(listing) = data.stone_listings.get_mut(&normalized_key) else {
+                return Err("一点物が見つかりません。".to_owned());
+            };
+
+            let now = Utc::now();
+            let was_published = stone_listing_is_published(&listing.status);
+            listing.listing_code = listing_code;
+            listing.material_key = material_key;
+            listing.title_i18n.insert("ja".to_owned(), title_ja);
+            listing.title_i18n.insert("en".to_owned(), title_en);
+            listing
+                .description_i18n
+                .insert("ja".to_owned(), description_ja);
+            listing
+                .description_i18n
+                .insert("en".to_owned(), description_en);
+            listing.story_i18n.insert("ja".to_owned(), story_ja);
+            listing.story_i18n.insert("en".to_owned(), story_en);
+            listing.facets.color_family = color_family;
+            listing.facets.color_tags = color_tags;
+            listing.facets.pattern_primary = pattern_primary;
+            listing.facets.pattern_tags = pattern_tags;
+            listing.facets.stone_shape = stone_shape;
+            listing.facets.translucency = translucency;
+            listing.price_by_currency = HashMap::from([
+                ("USD".to_owned(), input.price_usd),
+                ("JPY".to_owned(), input.price_jpy),
+            ]);
+            if stone_listing_is_published(&status)
+                && (!was_published || listing.published_at.is_none())
+            {
+                listing.published_at = Some(now);
+            }
+            listing.status = status;
+            listing.is_active = input.is_active;
+            listing.sort_order = input.sort_order;
+            listing.photos = merge_primary_stone_listing_photo(
+                &listing.photos,
+                &listing.key,
+                &photo_storage_path,
+                &photo_alt_ja,
+                &photo_alt_en,
+            );
+            listing.version += 1;
+            listing.updated_at = now;
+
+            let updated = listing.clone();
+            data.refresh_stone_listing_ids();
+            updated
+        };
+
+        if let Err(error) = self
+            .source
+            .persist_stone_listing_mutation(&updated_listing)
+            .await
+        {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after stone listing update error: {refresh_error}"
+                );
+            }
+            return Err(format!("firestore update failed: {error}"));
+        }
+
+        Ok(())
+    }
+
+    async fn delete_stone_listing(&self, key: &str) -> std::result::Result<(), String> {
+        let normalized_key = key.trim().to_owned();
+        if normalized_key.is_empty() {
+            return Err("一点物キーが不正です。".to_owned());
+        }
+
+        {
+            let mut data = self.data.write().await;
+            if let Some(order_label) = data
+                .orders
+                .values()
+                .find(|order| order.listing_key == normalized_key)
+                .map(|order| {
+                    if order.order_no.is_empty() {
+                        order.id.clone()
+                    } else {
+                        order.order_no.clone()
+                    }
+                })
+            {
+                return Err(format!(
+                    "注文 `{order_label}` で参照されているため削除できません。"
+                ));
+            }
+            let Some(_) = data.stone_listings.remove(&normalized_key) else {
+                return Err("一点物が見つかりません。".to_owned());
+            };
+            data.refresh_stone_listing_ids();
+        }
+
+        if let Err(error) = self
+            .source
+            .persist_stone_listing_deletion(&normalized_key)
+            .await
+        {
+            if let Err(refresh_error) = self.refresh_from_source().await {
+                eprintln!(
+                    "failed to rollback from firestore after stone listing delete error: {refresh_error}"
                 );
             }
             return Err(format!("firestore delete failed: {error}"));
@@ -3764,6 +6022,8 @@ impl FirestoreAdminSource {
         let orders = self.load_orders(&client).await?;
         let fonts = self.load_fonts(&client).await?;
         let materials = self.load_materials(&client).await?;
+        let stone_listings = self.load_stone_listings(&client).await?;
+        let facet_tags = self.load_facet_tags(&client).await?;
         let mut countries = self.load_countries(&client).await?;
 
         if countries.is_empty() {
@@ -3794,12 +6054,19 @@ impl FirestoreAdminSource {
             font_ids: Vec::new(),
             materials,
             material_ids: Vec::new(),
+            stone_listings,
+            stone_listing_ids: Vec::new(),
+            facet_tags,
+            facet_tag_ids: Vec::new(),
             countries,
             country_ids: Vec::new(),
         };
         snapshot.refresh_order_ids();
         snapshot.refresh_font_ids();
         snapshot.refresh_material_ids();
+        snapshot.refresh_stone_listing_ids();
+        snapshot.refresh_facet_tag_ids();
+        normalize_stone_listing_facets_in_snapshot(&mut snapshot);
         snapshot.refresh_country_ids();
         Ok(snapshot)
     }
@@ -3916,11 +6183,12 @@ impl FirestoreAdminSource {
 
     fn decode_order(&self, order_id: &str, data: &BTreeMap<String, JsonValue>) -> Order {
         let payment = read_map_field(data, "payment");
+        let listing = read_map_field(data, "listing");
+        let material = read_map_field(data, "material");
         let fulfillment = read_map_field(data, "fulfillment");
         let shipping = read_map_field(data, "shipping");
         let contact = read_map_field(data, "contact");
         let seal = read_map_field(data, "seal");
-        let material_data = read_map_field(data, "material");
         let pricing = read_map_field(data, "pricing");
         let raw_locale = read_string_field(data, "locale");
         let locale = if raw_locale.is_empty() {
@@ -3929,23 +6197,9 @@ impl FirestoreAdminSource {
             raw_locale
         };
         let pricing_currency = resolve_order_currency(data, &pricing, &payment, &locale);
-        let total = resolve_order_total(data, &pricing, &pricing_currency);
-
-        let material_label_ja = {
-            let localized = resolve_localized_field(
-                &material_data,
-                "label_i18n",
-                "label",
-                &self.locale,
-                &self.default_locale,
-                &read_string_field(&material_data, "key"),
-            );
-            if localized.is_empty() {
-                read_string_field(data, "material_label_ja")
-            } else {
-                localized
-            }
-        };
+        let total = resolve_order_total(data, &pricing);
+        let (listing_key, listing_label_ja) =
+            Self::resolve_order_listing_fields(data, &listing, &material);
 
         let created_at = read_timestamp_field(data, "created_at").unwrap_or_else(Utc::now);
         let updated_at = read_timestamp_field(data, "updated_at").unwrap_or(created_at);
@@ -3958,6 +6212,7 @@ impl FirestoreAdminSource {
             channel: read_string_field(data, "channel"),
             locale,
             currency: pricing_currency,
+            listing_key,
             status: read_string_field(data, "status"),
             status_updated_at,
             payment_status: read_string_field(&payment, "status"),
@@ -3968,7 +6223,7 @@ impl FirestoreAdminSource {
             contact_email: read_string_field(&contact, "email"),
             seal_line1: read_string_field(&seal, "line1"),
             seal_line2: read_string_field(&seal, "line2"),
-            material_label_ja,
+            listing_label_ja,
             total,
             created_at,
             updated_at,
@@ -3992,10 +6247,123 @@ impl FirestoreAdminSource {
         order
     }
 
+    fn resolve_order_listing_fields(
+        data: &BTreeMap<String, JsonValue>,
+        listing: &BTreeMap<String, JsonValue>,
+        material: &BTreeMap<String, JsonValue>,
+    ) -> (String, String) {
+        let listing_key = {
+            let key = read_string_field(listing, "key");
+            if key.is_empty() {
+                let legacy_listing_key = read_string_field(data, "listing_key");
+                if legacy_listing_key.is_empty() {
+                    read_string_field(material, "key")
+                } else {
+                    legacy_listing_key
+                }
+            } else {
+                key
+            }
+        };
+        let listing_label_ja = {
+            let localized =
+                resolve_localized_text(&read_string_map_field(listing, "title_i18n"), "ja", "ja");
+            if !localized.is_empty() {
+                localized
+            } else {
+                let legacy_localized = resolve_localized_text(
+                    &read_string_map_field(material, "label_i18n"),
+                    "ja",
+                    "ja",
+                );
+                if !legacy_localized.is_empty() {
+                    legacy_localized
+                } else {
+                    let legacy_label_ja = read_string_field(data, "material_label_ja");
+                    if !legacy_label_ja.is_empty() {
+                        legacy_label_ja
+                    } else {
+                        let listing_code = read_string_field(listing, "listing_code");
+                        if !listing_code.is_empty() {
+                            listing_code
+                        } else {
+                            let legacy_listing_key = read_string_field(data, "listing_key");
+                            if !legacy_listing_key.is_empty() {
+                                legacy_listing_key
+                            } else {
+                                read_string_field(material, "key")
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        (listing_key, listing_label_ja)
+    }
+
     async fn load_materials(
         &self,
         client: &FirebaseFirestoreClient,
     ) -> Result<HashMap<String, Material>> {
+        let categories = self.load_material_categories(client).await?;
+        let stone_listings = self.load_stone_listings(client).await?;
+
+        let mut materials = HashMap::new();
+        for listing in stone_listings.values() {
+            let Some(category) = categories.get(&listing.material_key) else {
+                eprintln!(
+                    "warning: skipping stone_listings/{}: missing materials/{} category",
+                    listing.key, listing.material_key
+                );
+                continue;
+            };
+
+            let shape = material_shape_or_default(&listing.facets.stone_shape);
+            let mut photos = listing.photos.clone();
+            if photos.is_empty() {
+                photos = Vec::new();
+            }
+
+            materials.insert(
+                listing.key.clone(),
+                Material {
+                    key: listing.key.clone(),
+                    label_i18n: listing.title_i18n.clone(),
+                    description_i18n: listing.description_i18n.clone(),
+                    comparison_texture_ja: category.comparison_texture_ja.clone(),
+                    comparison_texture_en: category.comparison_texture_en.clone(),
+                    comparison_weight_ja: category.comparison_weight_ja.clone(),
+                    comparison_weight_en: category.comparison_weight_en.clone(),
+                    comparison_usage_ja: category.comparison_usage_ja.clone(),
+                    comparison_usage_en: category.comparison_usage_en.clone(),
+                    shape: shape.to_owned(),
+                    photos,
+                    price_usd: listing
+                        .price_by_currency
+                        .get("USD")
+                        .copied()
+                        .unwrap_or_default(),
+                    price_jpy: listing
+                        .price_by_currency
+                        .get("JPY")
+                        .copied()
+                        .unwrap_or_default(),
+                    is_active: listing.is_active,
+                    sort_order: listing.sort_order,
+                    version: listing.version,
+                    updated_at: listing.updated_at,
+                },
+            );
+        }
+
+        return Ok(materials);
+    }
+
+    async fn load_material_categories(
+        &self,
+        client: &FirebaseFirestoreClient,
+    ) -> Result<HashMap<String, MaterialCategory>> {
         let query = RunQueryRequest {
             structured_query: Some(json!({
                 "from": [{ "collectionId": "materials" }],
@@ -4012,7 +6380,7 @@ impl FirestoreAdminSource {
             .await
             .context("failed to load materials")?;
 
-        let mut materials = HashMap::new();
+        let mut categories = HashMap::new();
         for row in rows {
             let Some(document) = row.document else {
                 continue;
@@ -4023,12 +6391,6 @@ impl FirestoreAdminSource {
 
             let data = &document.fields;
             let comparison_defaults = material_comparison_profile(&doc_id);
-            let price_by_currency = material_price_by_currency_from_fields(data);
-            let price_usd = price_by_currency.get("USD").copied().unwrap_or_default();
-            let price_jpy = price_by_currency.get("JPY").copied().unwrap_or(price_usd);
-            let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
-            let version = read_int_field(data, "version").unwrap_or(1);
-            let is_active = read_bool_field(data, "is_active").unwrap_or(true);
             let comparison_texture_ja = fallback_text(
                 read_string_field(data, "comparison_texture_ja"),
                 comparison_defaults.texture_ja,
@@ -4054,42 +6416,183 @@ impl FirestoreAdminSource {
                 comparison_defaults.usage_en,
             );
             let shape = material_shape_or_default(&read_string_field(data, "shape"));
-            let photos = read_material_photos(data);
 
-            let mut label_i18n = read_string_map_field(data, "label_i18n");
-            if label_i18n.is_empty() {
-                let legacy = read_string_field(data, "label");
-                if !legacy.is_empty() {
-                    label_i18n.insert("ja".to_owned(), legacy);
-                }
-            }
-
-            let mut description_i18n = read_string_map_field(data, "description_i18n");
-            if description_i18n.is_empty() {
-                let legacy = read_string_field(data, "description");
-                if !legacy.is_empty() {
-                    description_i18n.insert("ja".to_owned(), legacy);
-                }
-            }
-
-            let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
-
-            materials.insert(
+            categories.insert(
                 doc_id.clone(),
-                Material {
-                    key: doc_id,
-                    label_i18n,
-                    description_i18n,
+                MaterialCategory {
                     comparison_texture_ja,
                     comparison_texture_en,
                     comparison_weight_ja,
                     comparison_weight_en,
                     comparison_usage_ja,
                     comparison_usage_en,
-                    shape,
-                    photos,
-                    price_usd,
-                    price_jpy,
+                    shape: shape.to_owned(),
+                },
+            );
+        }
+
+        Ok(categories)
+    }
+
+    async fn load_stone_listings(
+        &self,
+        client: &FirebaseFirestoreClient,
+    ) -> Result<HashMap<String, StoneListing>> {
+        let query = RunQueryRequest {
+            structured_query: Some(json!({
+                "from": [{ "collectionId": "stone_listings" }],
+                "orderBy": [{
+                    "field": { "fieldPath": "sort_order" },
+                    "direction": "ASCENDING"
+                }]
+            })),
+            ..RunQueryRequest::default()
+        };
+
+        let rows = client
+            .run_query(&self.parent, &query)
+            .await
+            .context("failed to load stone_listings")?;
+
+        let mut listings = HashMap::new();
+        for row in rows {
+            let Some(document) = row.document else {
+                continue;
+            };
+            let Some(doc_id) = document_id(&document) else {
+                continue;
+            };
+
+            let data = &document.fields;
+            let price_by_currency = stone_listing_price_by_currency_from_fields(data);
+            if price_by_currency.is_empty() {
+                continue;
+            }
+
+            let facets = read_map_field(data, "facets");
+            let title_i18n = read_string_map_field(data, "title_i18n");
+            let description_i18n = read_string_map_field(data, "description_i18n");
+            let story_i18n = read_string_map_field(data, "story_i18n");
+
+            listings.insert(
+                doc_id.clone(),
+                StoneListing {
+                    key: doc_id,
+                    listing_code: read_string_field(data, "listing_code"),
+                    material_key: read_string_field(data, "material_key"),
+                    title_i18n,
+                    description_i18n,
+                    story_i18n,
+                    facets: StoneListingFacets {
+                        color_family: read_string_field(&facets, "color_family"),
+                        color_tags: read_string_array_field(&facets, "color_tags"),
+                        pattern_primary: read_string_field(&facets, "pattern_primary"),
+                        pattern_tags: read_string_array_field(&facets, "pattern_tags"),
+                        stone_shape: normalize_stone_shape(&read_string_field(
+                            &facets,
+                            "stone_shape",
+                        )),
+                        translucency: read_string_field(&facets, "translucency"),
+                    },
+                    photos: read_material_photos(data),
+                    price_by_currency,
+                    status: read_string_field(data, "status"),
+                    is_active: read_bool_field(data, "is_active").unwrap_or(true),
+                    published_at: read_timestamp_field(data, "published_at"),
+                    sort_order: read_int_field(data, "sort_order").unwrap_or_default(),
+                    version: read_int_field(data, "version").unwrap_or(1),
+                    updated_at: read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now),
+                },
+            );
+        }
+
+        Ok(listings)
+    }
+
+    async fn load_facet_tags(
+        &self,
+        client: &FirebaseFirestoreClient,
+    ) -> Result<HashMap<String, FacetTag>> {
+        let query = RunQueryRequest {
+            structured_query: Some(json!({
+                "from": [{ "collectionId": "facet_tags" }],
+                "orderBy": [
+                    {
+                        "field": { "fieldPath": "facet_type" },
+                        "direction": "ASCENDING"
+                    },
+                    {
+                        "field": { "fieldPath": "sort_order" },
+                        "direction": "ASCENDING"
+                    },
+                    {
+                        "field": { "fieldPath": "key" },
+                        "direction": "ASCENDING"
+                    }
+                ]
+            })),
+            ..RunQueryRequest::default()
+        };
+
+        let rows = client
+            .run_query(&self.parent, &query)
+            .await
+            .context("failed to load facet_tags")?;
+
+        let mut tags = HashMap::new();
+        for row in rows {
+            let Some(document) = row.document else {
+                continue;
+            };
+            let Some(doc_id) = document_id(&document) else {
+                continue;
+            };
+
+            let data = &document.fields;
+            let mut facet_type = normalize_facet_tag_type(&read_string_field(data, "facet_type"))
+                .unwrap_or_default()
+                .to_owned();
+            let mut key =
+                normalize_faceted_token(&read_string_field(data, "key")).unwrap_or_default();
+
+            if (facet_type.is_empty() || key.is_empty())
+                && let Some((doc_type, doc_key)) = doc_id.split_once(':')
+            {
+                if facet_type.is_empty() {
+                    facet_type = normalize_facet_tag_type(doc_type)
+                        .unwrap_or_default()
+                        .to_owned();
+                }
+                if key.is_empty() {
+                    key = normalize_faceted_token(doc_key).unwrap_or_default();
+                }
+            }
+
+            if facet_type.is_empty() || key.is_empty() {
+                continue;
+            }
+
+            let label_i18n = {
+                let mut values = read_string_map_field(data, "label_i18n");
+                if values.is_empty() {
+                    values.insert("ja".to_owned(), key.replace('_', " "));
+                }
+                values
+            };
+            let aliases = normalize_facet_tag_aliases(&read_string_array_field(data, "aliases"));
+            let is_active = read_bool_field(data, "is_active").unwrap_or(true);
+            let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
+            let version = read_int_field(data, "version").unwrap_or(1);
+            let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
+
+            let id = facet_tag_document_id(&facet_type, &key);
+            tags.insert(
+                id,
+                FacetTag {
+                    key,
+                    facet_type,
+                    label_i18n,
+                    aliases,
                     is_active,
                     sort_order,
                     version,
@@ -4098,7 +6601,7 @@ impl FirestoreAdminSource {
             );
         }
 
-        Ok(materials)
+        Ok(tags)
     }
 
     async fn load_fonts(&self, client: &FirebaseFirestoreClient) -> Result<HashMap<String, Font>> {
@@ -4130,25 +6633,16 @@ impl FirestoreAdminSource {
             let data = &document.fields;
             let label = resolve_font_label_field(data, &doc_id);
 
-            let mut font_family = read_string_field(data, "font_family");
-            if font_family.is_empty() {
-                font_family = read_string_field(data, "family");
-            }
+            let font_family = read_string_field(data, "font_family");
             if font_family.is_empty() {
                 continue;
             }
             let mut font_stylesheet_url = read_string_field(data, "font_stylesheet_url");
             if font_stylesheet_url.is_empty() {
-                font_stylesheet_url = read_string_field(data, "font_url");
-            }
-            if font_stylesheet_url.is_empty() {
                 font_stylesheet_url =
                     build_google_fonts_stylesheet_url(&font_family).unwrap_or_default();
             }
-            let mut kanji_style = read_string_field(data, "kanji_style");
-            if kanji_style.is_empty() {
-                kanji_style = read_string_field(data, "style");
-            }
+            let kanji_style = read_string_field(data, "kanji_style");
             let kanji_style = normalize_kanji_style(&kanji_style)
                 .unwrap_or("japanese")
                 .to_owned();
@@ -4216,19 +6710,13 @@ impl FirestoreAdminSource {
             let shipping_fee_jpy = shipping_fee_by_currency
                 .get("JPY")
                 .copied()
-                .unwrap_or(shipping_fee_usd);
+                .unwrap_or_default();
             let is_active = read_bool_field(data, "is_active").unwrap_or(true);
             let sort_order = read_int_field(data, "sort_order").unwrap_or_default();
             let version = read_int_field(data, "version").unwrap_or(1);
             let updated_at = read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now);
 
             let mut label_i18n = read_string_map_field(data, "label_i18n");
-            if label_i18n.is_empty() {
-                let legacy = read_string_field(data, "label");
-                if !legacy.is_empty() {
-                    label_i18n.insert("ja".to_owned(), legacy);
-                }
-            }
             if label_i18n.is_empty() {
                 label_i18n.insert("ja".to_owned(), code.clone());
             }
@@ -4311,10 +6799,76 @@ impl FirestoreAdminSource {
         Ok(storage_path)
     }
 
+    async fn upload_stone_listing_photo(
+        &self,
+        stone_listing_key: &str,
+        file_name: &str,
+        content_type: Option<&str>,
+        bytes: &[u8],
+    ) -> Result<String> {
+        let bucket = normalize_storage_bucket_name(&self.storage_assets_bucket);
+        if bucket.is_empty() {
+            bail!(
+                "storage bucket is not configured (set HANKO_ADMIN_STORAGE_ASSETS_BUCKET[_DEV|_PROD] or API_STORAGE_ASSETS_BUCKET)"
+            );
+        }
+        validate_storage_bucket_name(&bucket)
+            .map_err(|error| anyhow!("invalid storage bucket `{}`: {}", bucket, error))?;
+
+        let normalized_content_type = normalize_image_content_type(file_name, content_type)
+            .ok_or_else(|| anyhow!("unsupported image type"))?;
+        let storage_path = build_storage_path_for_uploaded_stone_listing_photo(
+            stone_listing_key,
+            file_name,
+            Some(normalized_content_type),
+        );
+
+        let access_token = self
+            .token_provider
+            .token(&[STORAGE_SCOPE])
+            .await
+            .context("failed to acquire storage access token")?;
+
+        let mut endpoint =
+            reqwest::Url::parse("https://storage.googleapis.com/upload/storage/v1/b")
+                .context("failed to construct storage upload endpoint")?;
+        endpoint
+            .path_segments_mut()
+            .map_err(|_| anyhow!("failed to construct storage upload endpoint"))?
+            .extend([bucket.as_str(), "o"]);
+
+        let response = reqwest::Client::new()
+            .post(endpoint)
+            .bearer_auth(access_token.as_str())
+            .query(&[("uploadType", "media"), ("name", storage_path.as_str())])
+            .header(reqwest::header::CONTENT_TYPE, normalized_content_type)
+            .body(bytes.to_vec())
+            .send()
+            .await
+            .context("failed to upload photo to cloud storage")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+            bail!("storage upload failed status={} body={}", status, body);
+        }
+
+        Ok(storage_path)
+    }
+
     async fn persist_order_mutation(&self, order: &Order, events: &[OrderEvent]) -> Result<()> {
         let client = self.firestore_client().await?;
 
         let order_name = format!("{}/orders/{}", self.parent, order.id);
+        let existing_order = client
+            .get_document(&order_name, &GetDocumentOptions::default())
+            .await
+            .context("failed to load order for listing sync")?;
+        let listing_key =
+            read_string_field(&read_map_field(&existing_order.fields, "listing"), "key");
 
         let mut fulfillment_fields = btree_from_pairs(vec![
             (
@@ -4370,6 +6924,56 @@ impl FirestoreAdminSource {
             )
             .await
             .context("failed to persist order mutation")?;
+
+        if let Some(listing_status) = stone_listing_status_after_order_status(&order.status) {
+            if !listing_key.is_empty() {
+                let listing_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+                let mut listing_doc = client
+                    .get_document(&listing_name, &GetDocumentOptions::default())
+                    .await
+                    .context("failed to load stone listing for order mutation")?;
+                let current_listing_status = read_string_field(&listing_doc.fields, "status");
+                let current_published_at =
+                    read_timestamp_field(&listing_doc.fields, "published_at");
+                let should_update_listing = if listing_status.eq_ignore_ascii_case("published") {
+                    stone_listing_should_restore_after_canceled_order(
+                        &current_listing_status,
+                        current_published_at.is_none(),
+                    )
+                } else {
+                    !current_listing_status
+                        .trim()
+                        .eq_ignore_ascii_case(listing_status)
+                };
+                if should_update_listing {
+                    let listing_version =
+                        read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+                    let published_at = current_published_at.unwrap_or(order.updated_at);
+                    listing_doc
+                        .fields
+                        .insert("status".to_owned(), fs_string(listing_status));
+                    if listing_status.eq_ignore_ascii_case("published") {
+                        listing_doc
+                            .fields
+                            .insert("published_at".to_owned(), fs_timestamp(published_at));
+                    }
+                    listing_doc
+                        .fields
+                        .insert("version".to_owned(), fs_int(listing_version + 1));
+                    listing_doc
+                        .fields
+                        .insert("updated_at".to_owned(), fs_timestamp(order.updated_at));
+                    client
+                        .patch_document(
+                            &listing_name,
+                            &listing_doc,
+                            &PatchDocumentOptions::default(),
+                        )
+                        .await
+                        .context("failed to persist stone listing status")?;
+                }
+            }
+        }
 
         for event in events {
             let event_document = Document {
@@ -4472,6 +7076,89 @@ impl FirestoreAdminSource {
             )
             .await
             .context("failed to persist material mutation")?;
+
+        Ok(())
+    }
+
+    async fn persist_stone_listing_mutation(&self, listing: &StoneListing) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let listing_name = format!("{}/stone_listings/{}", self.parent, listing.key);
+        let document = Document {
+            name: Some(listing_name.clone()),
+            fields: stone_listing_snapshot_fields(listing),
+            ..Document::default()
+        };
+
+        client
+            .patch_document(
+                &listing_name,
+                &document,
+                &PatchDocumentOptions {
+                    update_mask_field_paths: {
+                        let mut fields = vec![
+                            "listing_code".to_owned(),
+                            "material_key".to_owned(),
+                            "title_i18n".to_owned(),
+                            "description_i18n".to_owned(),
+                            "story_i18n".to_owned(),
+                            "facets".to_owned(),
+                            "photos".to_owned(),
+                            "price_by_currency".to_owned(),
+                            "status".to_owned(),
+                            "is_active".to_owned(),
+                            "sort_order".to_owned(),
+                            "version".to_owned(),
+                            "updated_at".to_owned(),
+                        ];
+                        if listing.published_at.is_some() {
+                            fields.push("published_at".to_owned());
+                        }
+                        fields
+                    },
+                    ..PatchDocumentOptions::default()
+                },
+            )
+            .await
+            .context("failed to persist stone listing mutation")?;
+
+        Ok(())
+    }
+
+    async fn persist_facet_tag_mutation(&self, tag: &FacetTag) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let tag_name = format!(
+            "{}/facet_tags/{}",
+            self.parent,
+            facet_tag_document_id(&tag.facet_type, &tag.key)
+        );
+        let document = Document {
+            name: Some(tag_name.clone()),
+            fields: facet_tag_snapshot_fields(tag),
+            ..Document::default()
+        };
+
+        client
+            .patch_document(
+                &tag_name,
+                &document,
+                &PatchDocumentOptions {
+                    update_mask_field_paths: vec![
+                        "key".to_owned(),
+                        "facet_type".to_owned(),
+                        "label_i18n".to_owned(),
+                        "aliases".to_owned(),
+                        "is_active".to_owned(),
+                        "sort_order".to_owned(),
+                        "version".to_owned(),
+                        "updated_at".to_owned(),
+                    ],
+                    ..PatchDocumentOptions::default()
+                },
+            )
+            .await
+            .context("failed to persist facet tag mutation")?;
 
         Ok(())
     }
@@ -4591,6 +7278,30 @@ impl FirestoreAdminSource {
 
         Ok(())
     }
+
+    async fn persist_stone_listing_deletion(&self, listing_key: &str) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let listing_name = format!("{}/stone_listings/{}", self.parent, listing_key);
+        client
+            .delete_document(&listing_name, &DeleteDocumentOptions::default())
+            .await
+            .context("failed to persist stone listing deletion")?;
+
+        Ok(())
+    }
+
+    async fn persist_facet_tag_deletion(&self, tag_id: &str) -> Result<()> {
+        let client = self.firestore_client().await?;
+
+        let tag_name = format!("{}/facet_tags/{}", self.parent, tag_id);
+        client
+            .delete_document(&tag_name, &DeleteDocumentOptions::default())
+            .await
+            .context("failed to persist facet tag deletion")?;
+
+        Ok(())
+    }
 }
 
 fn render_orders_list(orders: &[OrderListItemView]) -> Result<String> {
@@ -4615,6 +7326,26 @@ fn render_materials_list(materials: &[MaterialListItemView]) -> Result<String> {
     render_html(&template)
 }
 
+fn render_stone_listings_list(
+    stone_listings: &[StoneListingListItemView],
+    filters: &StoneListingFilter,
+) -> Result<String> {
+    let template = StoneListingsListTemplate {
+        stone_listings: stone_listings.to_vec(),
+        has_stone_listings: !stone_listings.is_empty(),
+        matching_count: stone_listings.len(),
+        has_active_filters: stone_listing_filter_is_active(filters),
+        filter_badges: stone_listing_filter_badges(filters),
+    };
+    render_html(&template)
+}
+
+fn render_stone_listing_detail(detail: &StoneListingDetailView) -> Result<String> {
+    render_html(&StoneListingDetailTemplate {
+        detail: detail.clone(),
+    })
+}
+
 fn render_fonts_list(fonts: &[FontListItemView]) -> Result<String> {
     let template = FontsListTemplate {
         fonts: fonts.to_vec(),
@@ -4627,6 +7358,10 @@ fn render_material_detail(detail: &MaterialDetailView) -> Result<String> {
     render_html(&MaterialDetailTemplate {
         detail: detail.clone(),
     })
+}
+
+fn render_stone_listing_create(view: &StoneListingCreateView) -> Result<String> {
+    render_html(&StoneListingCreateTemplate { view: view.clone() })
 }
 
 fn build_storage_media_url(bucket_name: &str, storage_path: &str) -> String {
@@ -4672,6 +7407,27 @@ fn render_country_detail(detail: &CountryDetailView) -> Result<String> {
 
 fn render_country_create(view: &CountryCreateView) -> Result<String> {
     render_html(&CountryCreateTemplate { view: view.clone() })
+}
+
+fn render_facet_tags_list(facet_tags: &[FacetTagListItemView]) -> Result<String> {
+    let template = FacetTagsListTemplate {
+        facet_tags: facet_tags.to_vec(),
+        has_facet_tags: !facet_tags.is_empty(),
+    };
+    render_html(&template)
+}
+
+fn render_facet_tag_detail(detail: &FacetTagDetailView) -> Result<String> {
+    render_html(&FacetTagDetailTemplate {
+        detail: detail.clone(),
+    })
+}
+
+fn render_facet_tag_create(view: &FacetTagCreateView) -> Result<String> {
+    render_html(&FacetTagCreateTemplate {
+        view: view.clone(),
+        facet_tag_type_options: facet_tag_type_options(),
+    })
 }
 
 fn render_template<T: Template>(template: &T) -> Response {
@@ -4823,6 +7579,222 @@ fn render_material_create_response_with_trigger(
     }
 }
 
+fn new_stone_listing_create_view(message: &str, render_error: &str) -> StoneListingCreateView {
+    StoneListingCreateView {
+        stone_listing_key: String::new(),
+        listing_code: String::new(),
+        material_key: String::new(),
+        title_ja: String::new(),
+        title_en: String::new(),
+        description_ja: String::new(),
+        description_en: String::new(),
+        story_ja: String::new(),
+        story_en: String::new(),
+        color_family: String::new(),
+        color_tags: String::new(),
+        pattern_primary: String::new(),
+        pattern_tags: String::new(),
+        stone_shape: "square".to_owned(),
+        translucency: String::new(),
+        price_usd: "0".to_owned(),
+        price_jpy: "0".to_owned(),
+        sort_order: "0".to_owned(),
+        photo_storage_path: String::new(),
+        photo_alt_ja: String::new(),
+        photo_alt_en: String::new(),
+        status: "draft".to_owned(),
+        is_active: true,
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn stone_listing_create_view_from_form(
+    form: &HashMap<String, String>,
+    message: &str,
+    render_error: &str,
+) -> StoneListingCreateView {
+    StoneListingCreateView {
+        stone_listing_key: form_value(form, "stone_listing_key"),
+        listing_code: form_value(form, "listing_code"),
+        material_key: form_value(form, "material_key"),
+        title_ja: form_value(form, "title_ja"),
+        title_en: form_value(form, "title_en"),
+        description_ja: form_value(form, "description_ja"),
+        description_en: form_value(form, "description_en"),
+        story_ja: form_value(form, "story_ja"),
+        story_en: form_value(form, "story_en"),
+        color_family: form_value(form, "color_family"),
+        color_tags: form_value(form, "color_tags"),
+        pattern_primary: form_value(form, "pattern_primary"),
+        pattern_tags: form_value(form, "pattern_tags"),
+        stone_shape: normalize_stone_shape_optional(&form_value(form, "stone_shape"))
+            .unwrap_or_else(|| "square".to_owned()),
+        translucency: form_value(form, "translucency"),
+        price_usd: form_value(form, "price_usd"),
+        price_jpy: form_value(form, "price_jpy"),
+        sort_order: form_value(form, "sort_order"),
+        photo_storage_path: form_value(form, "photo_storage_path"),
+        photo_alt_ja: form_value(form, "photo_alt_ja"),
+        photo_alt_en: form_value(form, "photo_alt_en"),
+        status: normalize_stone_listing_status(&form_value(form, "status"))
+            .unwrap_or("draft")
+            .to_owned(),
+        is_active: form.contains_key("is_active"),
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+    }
+}
+
+fn stone_listing_create_input_from_form(
+    form: &HashMap<String, String>,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+) -> StoneListingCreateInput {
+    let stone_listing_key = form_value(form, "stone_listing_key");
+    let listing_code = form_value(form, "listing_code");
+    let material_key = form_value(form, "material_key");
+    let title_ja = form_value(form, "title_ja");
+    let title_en = form_value(form, "title_en");
+    let description_ja = form_value(form, "description_ja");
+    let description_en = form_value(form, "description_en");
+    let story_ja = form_value(form, "story_ja");
+    let story_en = form_value(form, "story_en");
+    let color_family = form_value(form, "color_family");
+    let color_tags = parse_comma_separated_values(&form_value(form, "color_tags"))
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>();
+    let pattern_primary = form_value(form, "pattern_primary");
+    let pattern_tags = parse_comma_separated_values(&form_value(form, "pattern_tags"))
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>();
+    let stone_shape = form_value(form, "stone_shape");
+    let translucency = form_value(form, "translucency");
+    let photo_storage_path = form_value(form, "photo_storage_path");
+    let photo_alt_ja = form_value(form, "photo_alt_ja");
+    let photo_alt_en = form_value(form, "photo_alt_en");
+    let status = form_value(form, "status");
+    let is_active = form.contains_key("is_active");
+
+    StoneListingCreateInput {
+        stone_listing_key,
+        listing_code,
+        material_key,
+        title_ja,
+        title_en,
+        description_ja,
+        description_en,
+        story_ja,
+        story_en,
+        color_family,
+        color_tags,
+        pattern_primary,
+        pattern_tags,
+        stone_shape,
+        translucency,
+        price_usd,
+        price_jpy,
+        sort_order,
+        photo_storage_path,
+        photo_alt_ja,
+        photo_alt_en,
+        status,
+        is_active,
+    }
+}
+
+fn stone_listing_patch_input_from_form(
+    form: &HashMap<String, String>,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+) -> StoneListingPatchInput {
+    let listing_code = form_value(form, "listing_code");
+    let material_key = form_value(form, "material_key");
+    let title_ja = form_value(form, "title_ja");
+    let title_en = form_value(form, "title_en");
+    let description_ja = form_value(form, "description_ja");
+    let description_en = form_value(form, "description_en");
+    let story_ja = form_value(form, "story_ja");
+    let story_en = form_value(form, "story_en");
+    let color_family = form_value(form, "color_family");
+    let color_tags = parse_comma_separated_values(&form_value(form, "color_tags"))
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>();
+    let pattern_primary = form_value(form, "pattern_primary");
+    let pattern_tags = parse_comma_separated_values(&form_value(form, "pattern_tags"))
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>();
+    let stone_shape = form_value(form, "stone_shape");
+    let translucency = form_value(form, "translucency");
+    let photo_storage_path = form_value(form, "photo_storage_path");
+    let photo_alt_ja = form_value(form, "photo_alt_ja");
+    let photo_alt_en = form_value(form, "photo_alt_en");
+    let status = form_value(form, "status");
+    let is_active = form.contains_key("is_active");
+
+    StoneListingPatchInput {
+        listing_code,
+        material_key,
+        title_ja,
+        title_en,
+        description_ja,
+        description_en,
+        story_ja,
+        story_en,
+        color_family,
+        color_tags,
+        pattern_primary,
+        pattern_tags,
+        stone_shape,
+        translucency,
+        price_usd,
+        price_jpy,
+        sort_order,
+        photo_storage_path,
+        photo_alt_ja,
+        photo_alt_en,
+        status,
+        is_active,
+    }
+}
+
+fn render_stone_listing_create_response(
+    status: StatusCode,
+    view: &StoneListingCreateView,
+) -> Response {
+    match render_stone_listing_create(view) {
+        Ok(html) => html_response(status, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render stone listing create: {error}"),
+        ),
+    }
+}
+
+fn render_stone_listing_create_response_with_trigger(
+    status: StatusCode,
+    view: &StoneListingCreateView,
+    trigger: &str,
+) -> Response {
+    match render_stone_listing_create(view) {
+        Ok(html) => html_response_with_trigger(status, html, trigger),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render stone listing create: {error}"),
+        ),
+    }
+}
+
 fn new_font_create_view(message: &str, render_error: &str) -> FontCreateView {
     FontCreateView {
         key: String::new(),
@@ -4943,6 +7915,96 @@ fn render_country_create_response_with_trigger(
     }
 }
 
+fn new_facet_tag_create_view(
+    message: &str,
+    render_error: &str,
+    key_error: &str,
+    aliases_error: &str,
+) -> FacetTagCreateView {
+    FacetTagCreateView {
+        key: String::new(),
+        facet_type: "color".to_owned(),
+        label_ja: String::new(),
+        label_en: String::new(),
+        aliases: String::new(),
+        sort_order: "0".to_owned(),
+        is_active: true,
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+        key_error: key_error.to_owned(),
+        has_key_error: !key_error.is_empty(),
+        aliases_error: aliases_error.to_owned(),
+        has_aliases_error: !aliases_error.is_empty(),
+    }
+}
+
+fn facet_tag_create_view_from_form(
+    form: &HashMap<String, String>,
+    message: &str,
+    render_error: &str,
+    key_error: &str,
+    aliases_error: &str,
+) -> FacetTagCreateView {
+    FacetTagCreateView {
+        key: form_value(form, "key"),
+        facet_type: normalize_facet_tag_type(&form_value(form, "facet_type"))
+            .unwrap_or("color")
+            .to_owned(),
+        label_ja: form_value(form, "label_ja"),
+        label_en: form_value(form, "label_en"),
+        aliases: form_value(form, "aliases"),
+        sort_order: form_value(form, "sort_order"),
+        is_active: form.contains_key("is_active"),
+        message: message.to_owned(),
+        has_message: !message.is_empty(),
+        error: render_error.to_owned(),
+        has_error: !render_error.is_empty(),
+        key_error: key_error.to_owned(),
+        has_key_error: !key_error.is_empty(),
+        aliases_error: aliases_error.to_owned(),
+        has_aliases_error: !aliases_error.is_empty(),
+    }
+}
+
+fn facet_tag_patch_input_from_form(
+    form: &HashMap<String, String>,
+    sort_order: i64,
+) -> FacetTagPatchInput {
+    FacetTagPatchInput {
+        label_ja: form_value(form, "label_ja"),
+        label_en: form_value(form, "label_en"),
+        aliases: parse_comma_separated_values(&form_value(form, "aliases")),
+        sort_order,
+        is_active: form.contains_key("is_active"),
+    }
+}
+
+fn render_facet_tag_create_response(status: StatusCode, view: &FacetTagCreateView) -> Response {
+    match render_facet_tag_create(view) {
+        Ok(html) => html_response(status, html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render facet tag create: {error}"),
+        ),
+    }
+}
+
+fn render_facet_tag_create_response_with_trigger(
+    status: StatusCode,
+    view: &FacetTagCreateView,
+    trigger: &str,
+) -> Response {
+    match render_facet_tag_create(view) {
+        Ok(html) => html_response_with_trigger(status, html, trigger),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render facet tag create: {error}"),
+        ),
+    }
+}
+
 fn validate_material_key(key: &str) -> std::result::Result<(), String> {
     if key.is_empty() {
         return Err("材質キーは必須です。".to_owned());
@@ -4983,6 +8045,123 @@ fn validate_font_key(key: &str) -> std::result::Result<(), String> {
         );
     }
     Ok(())
+}
+
+fn validate_stone_listing_code(code: &str) -> std::result::Result<(), String> {
+    if code.is_empty() {
+        return Err("一点物コードは必須です。".to_owned());
+    }
+    if code.len() > 64 {
+        return Err("一点物コードは 64 文字以内で入力してください。".to_owned());
+    }
+    if code.starts_with("__") && code.ends_with("__") {
+        return Err("一点物コードに `__...__` 形式は利用できません。".to_owned());
+    }
+    if !code
+        .chars()
+        .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || matches!(ch, '-' | '_'))
+    {
+        return Err(
+            "一点物コードは英大文字・数字・ハイフン・アンダースコアのみ使用できます。".to_owned(),
+        );
+    }
+    Ok(())
+}
+
+fn normalize_faceted_token(raw: &str) -> Option<String> {
+    let normalized = raw.trim();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let normalized = normalized
+        .chars()
+        .map(|ch| if ch.is_ascii_whitespace() { '_' } else { ch })
+        .collect::<String>()
+        .to_ascii_lowercase()
+        .trim_matches('_')
+        .to_owned();
+
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+fn normalize_optional_faceted_token(raw: &str) -> String {
+    normalize_faceted_token(raw).unwrap_or_default()
+}
+
+fn parse_comma_separated_values(raw: &str) -> Vec<String> {
+    let mut values = raw
+        .split(|ch| matches!(ch, ',' | '\n' | '\r' | '、' | '，'))
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+    values.sort();
+    values.dedup();
+    values
+}
+
+fn validate_stone_listing_values(
+    title_ja: &str,
+    title_en: &str,
+    description_ja: &str,
+    description_en: &str,
+    color_family: &str,
+    pattern_primary: &str,
+    stone_shape: &str,
+    price_usd: i64,
+    price_jpy: i64,
+    sort_order: i64,
+    status: &str,
+    material_key: &str,
+    listing_code: &str,
+    photo_storage_path: &str,
+) -> std::result::Result<(), String> {
+    if title_ja.is_empty() || title_en.is_empty() {
+        return Err("一点物タイトル（ja/en）は必須です。".to_owned());
+    }
+    if description_ja.is_empty() || description_en.is_empty() {
+        return Err("一点物説明（ja/en）は必須です。".to_owned());
+    }
+    if color_family.is_empty() {
+        return Err("色ファミリーは必須です。".to_owned());
+    }
+    if pattern_primary.is_empty() {
+        return Err("模様の代表値は必須です。".to_owned());
+    }
+    if stone_shape.trim().is_empty() {
+        return Err("石の形は必須です。".to_owned());
+    }
+    if price_usd < 0 {
+        return Err("価格（USD cents）は 0 以上で入力してください。".to_owned());
+    }
+    if price_jpy < 0 {
+        return Err("価格（JPY）は 0 以上で入力してください。".to_owned());
+    }
+    if sort_order < 0 {
+        return Err("表示順は 0 以上で入力してください。".to_owned());
+    }
+    if normalize_stone_listing_status(status).is_none() {
+        return Err("公開状態を選択してください。".to_owned());
+    }
+    validate_material_key(material_key)?;
+    validate_stone_listing_code(listing_code)?;
+    validate_material_photo_storage_path(photo_storage_path)?;
+    Ok(())
+}
+
+fn normalize_stone_listing_status(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "draft" => Some("draft"),
+        "published" => Some("published"),
+        "reserved" => Some("reserved"),
+        "sold" => Some("sold"),
+        "archived" => Some("archived"),
+        _ => None,
+    }
 }
 
 fn validate_country_code(code: &str) -> std::result::Result<(), String> {
@@ -5237,6 +8416,24 @@ fn normalize_material_shape(raw: &str) -> Option<&'static str> {
     }
 }
 
+fn normalize_stone_shape(raw: &str) -> String {
+    // Preserve unknown values so existing Firestore data is not coerced to a known shape.
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "round" => "round".to_owned(),
+        "square" => "square".to_owned(),
+        _ => raw.trim().to_owned(),
+    }
+}
+
+fn normalize_stone_shape_optional(raw: &str) -> Option<String> {
+    let normalized = normalize_stone_shape(raw);
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
 fn normalize_kanji_style(raw: &str) -> Option<&'static str> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "japanese" | "japan" | "jp" => Some("japanese"),
@@ -5262,6 +8459,54 @@ fn material_shape_label(shape: &str) -> &'static str {
     match shape {
         "round" => "丸印",
         _ => "角印",
+    }
+}
+
+fn stone_shape_label(shape: &str) -> String {
+    match normalize_stone_shape(shape).as_str() {
+        "square" => "四角形".to_owned(),
+        "round" => "丸形".to_owned(),
+        other => other.to_owned(),
+    }
+}
+
+fn stone_listing_is_published(status: &str) -> bool {
+    status.trim().eq_ignore_ascii_case("published")
+}
+
+fn stone_listing_status_label(status: &str) -> &'static str {
+    match normalize_stone_listing_status(status).unwrap_or("draft") {
+        "draft" => "下書き",
+        "published" => "公開中",
+        "reserved" => "予約中",
+        "sold" => "売却済み",
+        "archived" => "保管",
+        _ => "下書き",
+    }
+}
+
+fn stone_listing_status_after_order_status(status: &str) -> Option<&'static str> {
+    match status.trim() {
+        "paid" => Some("sold"),
+        "canceled" => Some("published"),
+        _ => None,
+    }
+}
+
+fn stone_listing_should_restore_after_canceled_order(
+    current_status: &str,
+    current_published_at_is_none: bool,
+) -> bool {
+    let current_status = current_status.trim();
+    current_status.eq_ignore_ascii_case("reserved")
+        || (current_status.eq_ignore_ascii_case("published") && current_published_at_is_none)
+}
+
+fn stone_listing_published_at_sort_key(listing: &StoneListing) -> DateTime<Utc> {
+    if stone_listing_is_published(&listing.status) {
+        listing.published_at.unwrap_or(DateTime::<Utc>::UNIX_EPOCH)
+    } else {
+        DateTime::<Utc>::UNIX_EPOCH
     }
 }
 
@@ -5505,6 +8750,102 @@ fn merge_primary_material_photo(
     photos
 }
 
+fn build_storage_path_for_uploaded_stone_listing_photo(
+    stone_listing_key: &str,
+    file_name: &str,
+    content_type: Option<&str>,
+) -> String {
+    let normalized_content_type =
+        normalize_image_content_type(file_name, content_type).unwrap_or("image/webp");
+    let extension = image_extension_for_content_type(normalized_content_type);
+    let asset_id = format!("lst_{}", Uuid::new_v4().simple());
+    format!("stone_listings/{stone_listing_key}/{asset_id}.{extension}")
+}
+
+fn build_single_stone_listing_photos(
+    stone_listing_key: &str,
+    storage_path: &str,
+    alt_ja: &str,
+    alt_en: &str,
+) -> Vec<MaterialPhoto> {
+    if storage_path.is_empty() {
+        return Vec::new();
+    }
+
+    let mut alt_i18n = HashMap::new();
+    if !alt_ja.trim().is_empty() {
+        alt_i18n.insert("ja".to_owned(), alt_ja.trim().to_owned());
+    }
+    if !alt_en.trim().is_empty() {
+        alt_i18n.insert("en".to_owned(), alt_en.trim().to_owned());
+    }
+
+    vec![MaterialPhoto {
+        asset_id: format!("lst_{}_01", stone_listing_key),
+        storage_path: storage_path.to_owned(),
+        alt_i18n,
+        sort_order: 0,
+        is_primary: true,
+        width: 0,
+        height: 0,
+    }]
+}
+
+fn merge_primary_stone_listing_photo(
+    existing: &[MaterialPhoto],
+    stone_listing_key: &str,
+    storage_path: &str,
+    alt_ja: &str,
+    alt_en: &str,
+) -> Vec<MaterialPhoto> {
+    if storage_path.is_empty() {
+        return existing.to_vec();
+    }
+
+    if existing.is_empty() {
+        return build_single_stone_listing_photos(stone_listing_key, storage_path, alt_ja, alt_en);
+    }
+
+    let mut photos = existing.to_vec();
+    let primary_index = photos
+        .iter()
+        .position(|photo| photo.is_primary)
+        .unwrap_or(0);
+
+    {
+        let primary = &mut photos[primary_index];
+        primary.storage_path = storage_path.to_owned();
+
+        if alt_ja.trim().is_empty() {
+            primary.alt_i18n.remove("ja");
+        } else {
+            primary
+                .alt_i18n
+                .insert("ja".to_owned(), alt_ja.trim().to_owned());
+        }
+        if alt_en.trim().is_empty() {
+            primary.alt_i18n.remove("en");
+        } else {
+            primary
+                .alt_i18n
+                .insert("en".to_owned(), alt_en.trim().to_owned());
+        }
+
+        if primary.asset_id.trim().is_empty() {
+            primary.asset_id = format!("lst_{}_01", stone_listing_key);
+        }
+        primary.is_primary = true;
+    }
+
+    for (index, photo) in photos.iter_mut().enumerate() {
+        if index != primary_index {
+            photo.is_primary = false;
+        }
+    }
+
+    photos
+}
+
 fn validate_material_photo_storage_path(storage_path: &str) -> std::result::Result<(), String> {
     if storage_path.is_empty() {
         return Ok(());
@@ -5531,6 +8872,403 @@ fn normalize_query_value(value: Option<String>) -> String {
     value
         .map(|value| value.trim().to_owned())
         .unwrap_or_default()
+}
+
+fn stone_listing_filter_from_query(query: StoneListingsPageQuery) -> StoneListingFilter {
+    stone_listing_filter_from_raw(
+        query.color_family.as_deref().unwrap_or_default(),
+        query.color_tags.as_deref().unwrap_or_default(),
+        query.pattern_primary.as_deref().unwrap_or_default(),
+        query.pattern_tags.as_deref().unwrap_or_default(),
+        query.stone_shape.as_deref().unwrap_or_default(),
+    )
+}
+
+fn stone_listing_filter_from_form(form: &HashMap<String, String>) -> StoneListingFilter {
+    stone_listing_filter_from_raw(
+        &form_value(form, "color_family"),
+        &form_value(form, "color_tags"),
+        &form_value(form, "pattern_primary"),
+        &form_value(form, "pattern_tags"),
+        &form_value(form, "stone_shape"),
+    )
+}
+
+fn stone_listing_filter_from_raw(
+    color_family: &str,
+    color_tags: &str,
+    pattern_primary: &str,
+    pattern_tags: &str,
+    stone_shape: &str,
+) -> StoneListingFilter {
+    StoneListingFilter {
+        color_family: normalize_faceted_token(color_family).unwrap_or_default(),
+        color_tags: normalize_faceted_tag_input(color_tags),
+        pattern_primary: normalize_faceted_token(pattern_primary).unwrap_or_default(),
+        pattern_tags: normalize_faceted_tag_input(pattern_tags),
+        stone_shape: normalize_stone_shape_optional(stone_shape).unwrap_or_default(),
+    }
+}
+
+fn stone_listing_filter_is_active(filters: &StoneListingFilter) -> bool {
+    !filters.color_family.is_empty()
+        || !filters.color_tags.is_empty()
+        || !filters.pattern_primary.is_empty()
+        || !filters.pattern_tags.is_empty()
+        || !filters.stone_shape.is_empty()
+}
+
+fn stone_listing_filter_badges(filters: &StoneListingFilter) -> Vec<StoneListingFilterBadgeView> {
+    let mut badges = Vec::new();
+
+    if !filters.color_family.is_empty() {
+        badges.push(StoneListingFilterBadgeView {
+            label: "色".to_owned(),
+            value: filters.color_family.replace('_', " "),
+        });
+    }
+    if !filters.color_tags.is_empty() {
+        badges.push(StoneListingFilterBadgeView {
+            label: "色タグ".to_owned(),
+            value: stone_listing_tag_value_label(&filters.color_tags),
+        });
+    }
+    if !filters.pattern_primary.is_empty() {
+        badges.push(StoneListingFilterBadgeView {
+            label: "模様".to_owned(),
+            value: filters.pattern_primary.replace('_', " "),
+        });
+    }
+    if !filters.pattern_tags.is_empty() {
+        badges.push(StoneListingFilterBadgeView {
+            label: "模様タグ".to_owned(),
+            value: stone_listing_tag_value_label(&filters.pattern_tags),
+        });
+    }
+    if !filters.stone_shape.is_empty() {
+        badges.push(StoneListingFilterBadgeView {
+            label: "石の形".to_owned(),
+            value: stone_shape_label(&filters.stone_shape).to_owned(),
+        });
+    }
+
+    badges
+}
+
+fn stone_listing_facet_option_view(value: &str) -> StoneListingFacetOptionView {
+    StoneListingFacetOptionView {
+        value: value.to_owned(),
+        label: value.replace('_', " "),
+    }
+}
+
+fn facet_tag_display_label(tag: &FacetTag) -> String {
+    let label = resolve_localized_text(&tag.label_i18n, "ja", "ja");
+    if label.is_empty() {
+        tag.key.replace('_', " ")
+    } else {
+        label
+    }
+}
+
+fn facet_tag_document_id(facet_type: &str, key: &str) -> String {
+    format!("{}:{}", facet_type.trim(), key.trim())
+}
+
+fn facet_tag_type_label(facet_type: &str) -> &str {
+    match facet_type {
+        "color" => "色",
+        "pattern" => "模様",
+        _ => facet_type,
+    }
+}
+
+fn facet_tag_type_options() -> Vec<FacetTagTypeOptionView> {
+    vec![
+        FacetTagTypeOptionView {
+            value: "color".to_owned(),
+            label: "色".to_owned(),
+        },
+        FacetTagTypeOptionView {
+            value: "pattern".to_owned(),
+            label: "模様".to_owned(),
+        },
+    ]
+}
+
+fn normalize_facet_tag_type(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "color" => Some("color"),
+        "pattern" => Some("pattern"),
+        _ => None,
+    }
+}
+
+fn normalize_facet_tag_aliases(values: &[String]) -> Vec<String> {
+    let mut aliases = values
+        .iter()
+        .filter_map(|value| normalize_faceted_token(value))
+        .collect::<Vec<_>>();
+    aliases.sort();
+    aliases.dedup();
+    aliases
+}
+
+fn validate_facet_tag_alias_collisions(
+    data: &AdminSnapshot,
+    facet_type: &str,
+    key: &str,
+    aliases: &[String],
+    excluded_id: Option<&str>,
+) -> std::result::Result<(), String> {
+    let mut occupied_tokens = HashMap::<String, String>::new();
+
+    for id in &data.facet_tag_ids {
+        if excluded_id.is_some_and(|excluded_id| id == excluded_id) {
+            continue;
+        }
+        let Some(tag) = data.facet_tags.get(id) else {
+            continue;
+        };
+        if tag.facet_type != facet_type {
+            continue;
+        }
+
+        let owner = facet_tag_conflict_owner(tag);
+        if let Some(token) = normalize_faceted_token(&tag.key) {
+            occupied_tokens
+                .entry(token)
+                .or_insert_with(|| owner.clone());
+        }
+        for alias in &tag.aliases {
+            if let Some(token) = normalize_faceted_token(alias) {
+                occupied_tokens
+                    .entry(token)
+                    .or_insert_with(|| owner.clone());
+            }
+        }
+    }
+
+    let type_label = facet_tag_type_label(facet_type);
+    if let Some(owner) = occupied_tokens.get(key) {
+        return Err(format!(
+            "{}タグのキー `{key}` は既に {owner} と重複しています。",
+            type_label
+        ));
+    }
+
+    for alias in aliases {
+        if alias == key {
+            return Err(format!(
+                "{}タグの別名 `{alias}` はキーと重複しています。",
+                type_label
+            ));
+        }
+        if let Some(owner) = occupied_tokens.get(alias) {
+            return Err(format!(
+                "{}タグの別名 `{alias}` は既に {owner} と重複しています。",
+                type_label
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn facet_tag_conflict_owner(tag: &FacetTag) -> String {
+    let summary = format!("{}:{}", tag.facet_type, tag.key);
+    let label = facet_tag_display_label(tag);
+    if label == tag.key.replace('_', " ") {
+        summary
+    } else {
+        format!("{summary} ({label})")
+    }
+}
+
+fn facet_tag_field_errors_from_message(message: &str) -> (String, String) {
+    let message = message.trim();
+    if message.is_empty() {
+        return (String::new(), String::new());
+    }
+
+    if message.contains("別名") {
+        (String::new(), message.to_owned())
+    } else if message.contains("タグキー") || message.contains("キー") {
+        (message.to_owned(), String::new())
+    } else {
+        (String::new(), String::new())
+    }
+}
+
+fn validate_facet_tag_key(key: &str) -> std::result::Result<(), String> {
+    if key.is_empty() {
+        return Err("タグキーは必須です。".to_owned());
+    }
+    if key.len() > 64 {
+        return Err("タグキーは 64 文字以内で入力してください。".to_owned());
+    }
+    if key.starts_with("__") && key.ends_with("__") {
+        return Err("タグキーに `__...__` 形式は利用できません。".to_owned());
+    }
+    if !key
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || matches!(ch, '-' | '_'))
+    {
+        return Err(
+            "タグキーは英小文字・数字・ハイフン・アンダースコアのみ使用できます。".to_owned(),
+        );
+    }
+    Ok(())
+}
+
+fn normalize_faceted_tag_input(raw: &str) -> String {
+    parse_comma_separated_values(raw)
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn facet_tag_lookup_maps(snapshot: &AdminSnapshot) -> HashMap<String, HashMap<String, String>> {
+    let mut lookups = HashMap::new();
+
+    for id in &snapshot.facet_tag_ids {
+        let Some(tag) = snapshot.facet_tags.get(id) else {
+            continue;
+        };
+
+        let lookup = lookups
+            .entry(tag.facet_type.clone())
+            .or_insert_with(HashMap::new);
+        lookup
+            .entry(tag.key.clone())
+            .or_insert_with(|| tag.key.clone());
+        for alias in &tag.aliases {
+            lookup
+                .entry(alias.clone())
+                .or_insert_with(|| tag.key.clone());
+        }
+    }
+
+    lookups
+}
+
+fn normalize_faceted_token_with_lookup(
+    raw: &str,
+    lookup: Option<&HashMap<String, String>>,
+) -> Option<String> {
+    normalize_faceted_token(raw).map(|token| {
+        lookup
+            .and_then(|lookup| lookup.get(&token).cloned())
+            .unwrap_or(token)
+    })
+}
+
+fn normalize_faceted_token_with_lookup_strict(
+    raw: &str,
+    lookup: Option<&HashMap<String, String>>,
+    facet_label: &str,
+) -> std::result::Result<Option<String>, String> {
+    let Some(token) = normalize_faceted_token(raw) else {
+        return Ok(None);
+    };
+
+    lookup
+        .and_then(|lookup| lookup.get(&token).cloned())
+        .map(Some)
+        .ok_or_else(|| format!("{facet_label} `{token}` はタグマスタに存在しません。"))
+}
+
+fn normalize_faceted_tag_values_with_lookup(
+    values: &[String],
+    lookup: Option<&HashMap<String, String>>,
+) -> Vec<String> {
+    let mut normalized = values
+        .iter()
+        .filter_map(|value| normalize_faceted_token_with_lookup(value, lookup))
+        .collect::<Vec<_>>();
+    normalized.sort();
+    normalized.dedup();
+    normalized
+}
+
+fn normalize_faceted_tag_values_with_lookup_strict(
+    values: &[String],
+    lookup: Option<&HashMap<String, String>>,
+    facet_label: &str,
+) -> std::result::Result<Vec<String>, String> {
+    let mut normalized = values
+        .iter()
+        .map(|value| normalize_faceted_token_with_lookup_strict(value, lookup, facet_label))
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    normalized.sort();
+    normalized.dedup();
+    Ok(normalized)
+}
+
+fn normalize_stone_listing_filter_with_snapshot(
+    filters: &StoneListingFilter,
+    snapshot: &AdminSnapshot,
+) -> StoneListingFilter {
+    let lookups = facet_tag_lookup_maps(snapshot);
+
+    StoneListingFilter {
+        color_family: normalize_faceted_token(&filters.color_family).unwrap_or_default(),
+        color_tags: normalize_faceted_tag_values_with_lookup(
+            &parse_comma_separated_values(&filters.color_tags),
+            lookups.get("color"),
+        )
+        .join(", "),
+        pattern_primary: normalize_faceted_token(&filters.pattern_primary).unwrap_or_default(),
+        pattern_tags: normalize_faceted_tag_values_with_lookup(
+            &parse_comma_separated_values(&filters.pattern_tags),
+            lookups.get("pattern"),
+        )
+        .join(", "),
+        stone_shape: normalize_stone_shape_optional(&filters.stone_shape).unwrap_or_default(),
+    }
+}
+
+fn normalize_stone_listing_facets_in_snapshot(snapshot: &mut AdminSnapshot) {
+    let lookups = facet_tag_lookup_maps(snapshot);
+    for listing in snapshot.stone_listings.values_mut() {
+        listing.facets.color_tags = normalize_faceted_tag_values_with_lookup(
+            &listing.facets.color_tags,
+            lookups.get("color"),
+        );
+        listing.facets.pattern_tags = normalize_faceted_tag_values_with_lookup(
+            &listing.facets.pattern_tags,
+            lookups.get("pattern"),
+        );
+    }
+}
+
+fn stone_listing_tag_values(raw: &str) -> Vec<String> {
+    parse_comma_separated_values(raw)
+        .into_iter()
+        .filter_map(|value| normalize_faceted_token(&value))
+        .collect::<Vec<_>>()
+}
+
+fn stone_listing_tag_value_label(raw: &str) -> String {
+    stone_listing_tag_values(raw)
+        .into_iter()
+        .map(|value| value.replace('_', " "))
+        .collect::<Vec<_>>()
+        .join(" / ")
+}
+
+fn stone_shape_filter_options() -> Vec<StoneListingFacetOptionView> {
+    [("square", "四角形"), ("round", "丸形")]
+        .into_iter()
+        .map(|(value, label)| StoneListingFacetOptionView {
+            value: value.to_owned(),
+            label: label.to_owned(),
+        })
+        .collect()
 }
 
 fn order_status_label(status: &str) -> &str {
@@ -5740,32 +9478,10 @@ fn resolve_order_currency(
 }
 
 fn resolve_order_total(
-    data: &BTreeMap<String, JsonValue>,
+    _data: &BTreeMap<String, JsonValue>,
     pricing: &BTreeMap<String, JsonValue>,
-    currency: &str,
 ) -> i64 {
     if let Some(total) = read_int_field(pricing, "total") {
-        return total;
-    }
-    if let Some(total) = read_int_field(data, "total") {
-        return total;
-    }
-
-    if currency.trim().eq_ignore_ascii_case("JPY")
-        && let Some(total) = read_int_field(data, "total_jpy")
-    {
-        return total;
-    }
-    if currency.trim().eq_ignore_ascii_case("USD")
-        && let Some(total) = read_int_field(data, "total_usd")
-    {
-        return total;
-    }
-
-    if let Some(total) = read_int_field(data, "total_usd") {
-        return total;
-    }
-    if let Some(total) = read_int_field(data, "total_jpy") {
         return total;
     }
 
@@ -5829,30 +9545,6 @@ fn format_with_grouping(value: i64) -> String {
         out.push(ch);
     }
     out
-}
-
-fn resolve_localized_field(
-    data: &BTreeMap<String, JsonValue>,
-    i18n_field: &str,
-    legacy_field: &str,
-    locale: &str,
-    default_locale: &str,
-    fallback: &str,
-) -> String {
-    let values = read_string_map_field(data, i18n_field);
-    let localized = resolve_localized_text(&values, locale, default_locale);
-    if !localized.is_empty() {
-        return localized;
-    }
-
-    if !legacy_field.is_empty() {
-        let legacy = read_string_field(data, legacy_field);
-        if !legacy.is_empty() {
-            return legacy;
-        }
-    }
-
-    fallback.to_owned()
 }
 
 fn resolve_font_label_field(data: &BTreeMap<String, JsonValue>, fallback: &str) -> String {
@@ -6199,7 +9891,22 @@ fn read_string_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashM
     result
 }
 
-fn material_price_by_currency_from_fields(
+fn read_string_array_field(data: &BTreeMap<String, JsonValue>, key: &str) -> Vec<String> {
+    read_array_field(data, key)
+        .into_iter()
+        .filter_map(|value| {
+            value
+                .get("stringValue")
+                .and_then(JsonValue::as_str)
+                .or_else(|| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .collect::<Vec<_>>()
+}
+
+fn stone_listing_price_by_currency_from_fields(
     data: &BTreeMap<String, JsonValue>,
 ) -> HashMap<String, i64> {
     read_int_map_field(data, "price_by_currency")
@@ -6265,6 +9972,23 @@ fn fs_string_map(values: &HashMap<String, String>) -> JsonValue {
     fs_map(fields)
 }
 
+fn fs_string_array(values: &[String]) -> JsonValue {
+    if values.is_empty() {
+        return fs_array(Vec::new());
+    }
+
+    let mut items = values
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    items.sort();
+    items.dedup();
+
+    fs_array(items.into_iter().map(fs_string).collect::<Vec<_>>())
+}
+
 fn fs_int_map(values: &HashMap<String, i64>) -> JsonValue {
     if values.is_empty() {
         return fs_map(BTreeMap::new());
@@ -6309,6 +10033,90 @@ fn fs_material_photos(photos: &[MaterialPhoto]) -> JsonValue {
     fs_array(values)
 }
 
+fn fs_stone_listing_facets(facets: &StoneListingFacets) -> JsonValue {
+    let mut fields = BTreeMap::new();
+
+    if !facets.color_family.trim().is_empty() {
+        fields.insert(
+            "color_family".to_owned(),
+            fs_string(facets.color_family.clone()),
+        );
+    }
+    if !facets.color_tags.is_empty() {
+        fields.insert("color_tags".to_owned(), fs_string_array(&facets.color_tags));
+    }
+    if !facets.pattern_primary.trim().is_empty() {
+        fields.insert(
+            "pattern_primary".to_owned(),
+            fs_string(facets.pattern_primary.clone()),
+        );
+    }
+    if !facets.pattern_tags.is_empty() {
+        fields.insert(
+            "pattern_tags".to_owned(),
+            fs_string_array(&facets.pattern_tags),
+        );
+    }
+    if !facets.stone_shape.trim().is_empty() {
+        fields.insert(
+            "stone_shape".to_owned(),
+            fs_string(facets.stone_shape.clone()),
+        );
+    }
+    if !facets.translucency.trim().is_empty() {
+        fields.insert(
+            "translucency".to_owned(),
+            fs_string(facets.translucency.clone()),
+        );
+    }
+
+    fs_map(fields)
+}
+
+fn stone_listing_snapshot_fields(listing: &StoneListing) -> BTreeMap<String, JsonValue> {
+    let mut fields = btree_from_pairs(vec![
+        ("listing_code", fs_string(listing.listing_code.clone())),
+        ("material_key", fs_string(listing.material_key.clone())),
+        ("title_i18n", fs_string_map(&listing.title_i18n)),
+        ("description_i18n", fs_string_map(&listing.description_i18n)),
+        ("story_i18n", fs_string_map(&listing.story_i18n)),
+        ("facets", fs_stone_listing_facets(&listing.facets)),
+        ("photos", fs_material_photos(&listing.photos)),
+        ("price_by_currency", fs_int_map(&listing.price_by_currency)),
+        ("status", fs_string(listing.status.clone())),
+        ("is_active", fs_bool(listing.is_active)),
+        ("sort_order", fs_int(listing.sort_order)),
+        ("version", fs_int(listing.version)),
+        ("updated_at", fs_timestamp(listing.updated_at)),
+    ]);
+
+    if let Some(published_at) = listing.published_at {
+        fields.insert("published_at".to_owned(), fs_timestamp(published_at));
+    }
+
+    if listing.listing_code.trim().is_empty() {
+        fields.remove("listing_code");
+    }
+    if listing.material_key.trim().is_empty() {
+        fields.remove("material_key");
+    }
+
+    fields
+}
+
+fn facet_tag_snapshot_fields(tag: &FacetTag) -> BTreeMap<String, JsonValue> {
+    btree_from_pairs(vec![
+        ("key", fs_string(tag.key.clone())),
+        ("facet_type", fs_string(tag.facet_type.clone())),
+        ("label_i18n", fs_string_map(&tag.label_i18n)),
+        ("aliases", fs_string_array(&tag.aliases)),
+        ("is_active", fs_bool(tag.is_active)),
+        ("sort_order", fs_int(tag.sort_order)),
+        ("version", fs_int(tag.version)),
+        ("updated_at", fs_timestamp(tag.updated_at)),
+    ])
+}
+
 fn btree_from_pairs(pairs: Vec<(&str, JsonValue)>) -> BTreeMap<String, JsonValue> {
     pairs
         .into_iter()
@@ -6328,6 +10136,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "manufacturing".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(4),
                 payment_status: String::new(),
@@ -6338,7 +10147,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "ito@example.com".to_owned(),
                 seal_line1: "伊".to_owned(),
                 seal_line2: "藤".to_owned(),
-                material_label_ja: "黒水牛".to_owned(),
+                listing_label_ja: "黒水牛".to_owned(),
                 total: 5400,
                 created_at: now - chrono::Duration::hours(9),
                 updated_at: now - chrono::Duration::hours(4),
@@ -6381,6 +10190,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "en".to_owned(),
                 currency: "USD".to_owned(),
+                listing_key: String::new(),
                 status: "paid".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(2),
                 payment_status: String::new(),
@@ -6391,7 +10201,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "jane.smith@example.com".to_owned(),
                 seal_line1: "JA".to_owned(),
                 seal_line2: "NE".to_owned(),
-                material_label_ja: "チタン".to_owned(),
+                listing_label_ja: "チタン".to_owned(),
                 total: 11600,
                 created_at: now - chrono::Duration::hours(12),
                 updated_at: now - chrono::Duration::hours(2),
@@ -6425,6 +10235,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "shipped".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(26),
                 payment_status: String::new(),
@@ -6435,7 +10246,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "tanaka@example.com".to_owned(),
                 seal_line1: "田".to_owned(),
                 seal_line2: "中".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 4900,
                 created_at: now - chrono::Duration::hours(36),
                 updated_at: now - chrono::Duration::hours(26),
@@ -6496,6 +10307,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "delivered".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(72),
                 payment_status: String::new(),
@@ -6506,7 +10318,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "kato@example.com".to_owned(),
                 seal_line1: "加".to_owned(),
                 seal_line2: "藤".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 4200,
                 created_at: now - chrono::Duration::hours(96),
                 updated_at: now - chrono::Duration::hours(72),
@@ -6540,6 +10352,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "en".to_owned(),
                 currency: "USD".to_owned(),
+                listing_key: String::new(),
                 status: "pending_payment".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(8),
                 payment_status: String::new(),
@@ -6550,7 +10363,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "chris@example.com".to_owned(),
                 seal_line1: "CH".to_owned(),
                 seal_line2: "RI".to_owned(),
-                material_label_ja: "チタン".to_owned(),
+                listing_label_ja: "チタン".to_owned(),
                 total: 11800,
                 created_at: now - chrono::Duration::hours(30),
                 updated_at: now - chrono::Duration::hours(8),
@@ -6573,6 +10386,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "app".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "refunded".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(130),
                 payment_status: String::new(),
@@ -6583,7 +10397,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "suzuki@example.com".to_owned(),
                 seal_line1: "鈴".to_owned(),
                 seal_line2: "木".to_owned(),
-                material_label_ja: "黒水牛".to_owned(),
+                listing_label_ja: "黒水牛".to_owned(),
                 total: 6900,
                 created_at: now - chrono::Duration::hours(150),
                 updated_at: now - chrono::Duration::hours(130),
@@ -6617,6 +10431,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 channel: "web".to_owned(),
                 locale: "ja".to_owned(),
                 currency: "JPY".to_owned(),
+                listing_key: String::new(),
                 status: "canceled".to_owned(),
                 status_updated_at: now - chrono::Duration::hours(80),
                 payment_status: String::new(),
@@ -6627,7 +10442,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 contact_email: "yamada@example.com".to_owned(),
                 seal_line1: "山".to_owned(),
                 seal_line2: "田".to_owned(),
-                material_label_ja: "柘植".to_owned(),
+                listing_label_ja: "柘植".to_owned(),
                 total: 5600,
                 created_at: now - chrono::Duration::hours(120),
                 updated_at: now - chrono::Duration::hours(80),
@@ -6850,6 +10665,327 @@ fn new_mock_snapshot() -> AdminSnapshot {
         ),
     ]);
 
+    let stone_listings = HashMap::from([
+        (
+            "rose_quartz_01".to_owned(),
+            StoneListing {
+                key: "rose_quartz_01".to_owned(),
+                listing_code: "RQT-0001".to_owned(),
+                material_key: "rose_quartz".to_owned(),
+                title_i18n: HashMap::from([
+                    ("ja".to_owned(), "ローズクオーツの一点物 01".to_owned()),
+                    ("en".to_owned(), "One-of-a-kind Rose Quartz 01".to_owned()),
+                ]),
+                description_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "やわらかなピンクに細かな模様が入った個体です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "A soft pink piece with delicate natural patterning.".to_owned(),
+                    ),
+                ]),
+                story_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "春の光を思わせる、穏やかな表情が魅力です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "Its calm look evokes the softness of spring light.".to_owned(),
+                    ),
+                ]),
+                facets: StoneListingFacets {
+                    color_family: "pink".to_owned(),
+                    color_tags: vec!["soft_pink".to_owned(), "light_rose".to_owned()],
+                    pattern_primary: "cloud".to_owned(),
+                    pattern_tags: vec!["cloud".to_owned(), "speckled".to_owned()],
+                    stone_shape: "square".to_owned(),
+                    translucency: "semi_translucent".to_owned(),
+                },
+                photos: vec![MaterialPhoto {
+                    asset_id: "lst_rose_quartz_01".to_owned(),
+                    storage_path: "stone_listings/rose_quartz/rose_quartz_01/main.webp".to_owned(),
+                    alt_i18n: HashMap::from([
+                        ("ja".to_owned(), "ローズクオーツの一点物 01".to_owned()),
+                        ("en".to_owned(), "One-of-a-kind Rose Quartz 01".to_owned()),
+                    ]),
+                    sort_order: 0,
+                    is_primary: true,
+                    width: 1200,
+                    height: 1200,
+                }],
+                price_by_currency: HashMap::from([
+                    ("USD".to_owned(), 16800),
+                    ("JPY".to_owned(), 28500),
+                ]),
+                status: "published".to_owned(),
+                is_active: true,
+                published_at: Some(now - chrono::Duration::hours(40)),
+                sort_order: 10,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(34),
+            },
+        ),
+        (
+            "lapis_lazuli_01".to_owned(),
+            StoneListing {
+                key: "lapis_lazuli_01".to_owned(),
+                listing_code: "LPS-0001".to_owned(),
+                material_key: "lapis_lazuli".to_owned(),
+                title_i18n: HashMap::from([
+                    ("ja".to_owned(), "ラピスラズリの一点物 01".to_owned()),
+                    ("en".to_owned(), "One-of-a-kind Lapis Lazuli 01".to_owned()),
+                ]),
+                description_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "深い青に金色の粒が映える、存在感のある個体です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "A strong blue piece with visible golden flecks.".to_owned(),
+                    ),
+                ]),
+                story_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "夜空のような深さを持つ展示向けの石です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "A display-worthy stone with the depth of a night sky.".to_owned(),
+                    ),
+                ]),
+                facets: StoneListingFacets {
+                    color_family: "blue".to_owned(),
+                    color_tags: vec!["deep_blue".to_owned(), "navy".to_owned()],
+                    pattern_primary: "speckled".to_owned(),
+                    pattern_tags: vec!["speckled".to_owned(), "gold_fleck".to_owned()],
+                    stone_shape: "square".to_owned(),
+                    translucency: "opaque".to_owned(),
+                },
+                photos: vec![MaterialPhoto {
+                    asset_id: "lst_lapis_lazuli_01".to_owned(),
+                    storage_path: "stone_listings/lapis_lazuli/lapis_lazuli_01/main.webp"
+                        .to_owned(),
+                    alt_i18n: HashMap::from([
+                        ("ja".to_owned(), "ラピスラズリの一点物 01".to_owned()),
+                        ("en".to_owned(), "One-of-a-kind Lapis Lazuli 01".to_owned()),
+                    ]),
+                    sort_order: 0,
+                    is_primary: true,
+                    width: 1200,
+                    height: 1200,
+                }],
+                price_by_currency: HashMap::from([
+                    ("USD".to_owned(), 34800),
+                    ("JPY".to_owned(), 58000),
+                ]),
+                status: "published".to_owned(),
+                is_active: true,
+                published_at: Some(now - chrono::Duration::hours(30)),
+                sort_order: 20,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(28),
+            },
+        ),
+        (
+            "jade_01".to_owned(),
+            StoneListing {
+                key: "jade_01".to_owned(),
+                listing_code: "JDE-0001".to_owned(),
+                material_key: "jade".to_owned(),
+                title_i18n: HashMap::from([
+                    ("ja".to_owned(), "翡翠の一点物 01".to_owned()),
+                    ("en".to_owned(), "One-of-a-kind Jade 01".to_owned()),
+                ]),
+                description_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "落ち着いた緑の流れが入った、端正な個体です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "A refined piece with calm green flowing patterns.".to_owned(),
+                    ),
+                ]),
+                story_i18n: HashMap::from([
+                    (
+                        "ja".to_owned(),
+                        "格調ある色味が魅力の定番人気の石です。".to_owned(),
+                    ),
+                    (
+                        "en".to_owned(),
+                        "A classic favorite with a dignified color tone.".to_owned(),
+                    ),
+                ]),
+                facets: StoneListingFacets {
+                    color_family: "green".to_owned(),
+                    color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
+                    pattern_primary: "banded".to_owned(),
+                    pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
+                    stone_shape: "round".to_owned(),
+                    translucency: "semi_translucent".to_owned(),
+                },
+                photos: vec![MaterialPhoto {
+                    asset_id: "lst_jade_01".to_owned(),
+                    storage_path: "stone_listings/jade/jade_01/main.webp".to_owned(),
+                    alt_i18n: HashMap::from([
+                        ("ja".to_owned(), "翡翠の一点物 01".to_owned()),
+                        ("en".to_owned(), "One-of-a-kind Jade 01".to_owned()),
+                    ]),
+                    sort_order: 0,
+                    is_primary: true,
+                    width: 1200,
+                    height: 1200,
+                }],
+                price_by_currency: HashMap::from([
+                    ("USD".to_owned(), 92800),
+                    ("JPY".to_owned(), 155000),
+                ]),
+                status: "reserved".to_owned(),
+                is_active: true,
+                published_at: None,
+                sort_order: 30,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(14),
+            },
+        ),
+    ]);
+
+    let facet_tags = HashMap::from([
+        (
+            "color:deep_green".to_owned(),
+            FacetTag {
+                key: "deep_green".to_owned(),
+                facet_type: "color".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "濃緑".to_owned()),
+                    ("en".to_owned(), "Deep Green".to_owned()),
+                ]),
+                aliases: vec!["dark_green".to_owned(), "forest_green".to_owned()],
+                is_active: true,
+                sort_order: 10,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(12),
+            },
+        ),
+        (
+            "color:soft_pink".to_owned(),
+            FacetTag {
+                key: "soft_pink".to_owned(),
+                facet_type: "color".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "淡桃".to_owned()),
+                    ("en".to_owned(), "Soft Pink".to_owned()),
+                ]),
+                aliases: vec!["light_pink".to_owned()],
+                is_active: true,
+                sort_order: 20,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(14),
+            },
+        ),
+        (
+            "color:deep_blue".to_owned(),
+            FacetTag {
+                key: "deep_blue".to_owned(),
+                facet_type: "color".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "深青".to_owned()),
+                    ("en".to_owned(), "Deep Blue".to_owned()),
+                ]),
+                aliases: vec!["navy_blue".to_owned()],
+                is_active: true,
+                sort_order: 30,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(16),
+            },
+        ),
+        (
+            "color:mottled".to_owned(),
+            FacetTag {
+                key: "mottled".to_owned(),
+                facet_type: "color".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "斑".to_owned()),
+                    ("en".to_owned(), "Mottled".to_owned()),
+                ]),
+                aliases: vec!["marbled".to_owned()],
+                is_active: true,
+                sort_order: 40,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(18),
+            },
+        ),
+        (
+            "pattern:banded".to_owned(),
+            FacetTag {
+                key: "banded".to_owned(),
+                facet_type: "pattern".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "縞".to_owned()),
+                    ("en".to_owned(), "Banded".to_owned()),
+                ]),
+                aliases: vec!["striped".to_owned()],
+                is_active: true,
+                sort_order: 10,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(10),
+            },
+        ),
+        (
+            "pattern:cloud".to_owned(),
+            FacetTag {
+                key: "cloud".to_owned(),
+                facet_type: "pattern".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "雲状".to_owned()),
+                    ("en".to_owned(), "Cloud".to_owned()),
+                ]),
+                aliases: vec!["cloudy".to_owned()],
+                is_active: true,
+                sort_order: 20,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(11),
+            },
+        ),
+        (
+            "pattern:speckled".to_owned(),
+            FacetTag {
+                key: "speckled".to_owned(),
+                facet_type: "pattern".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "点状".to_owned()),
+                    ("en".to_owned(), "Speckled".to_owned()),
+                ]),
+                aliases: vec!["spotted".to_owned()],
+                is_active: true,
+                sort_order: 30,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(13),
+            },
+        ),
+        (
+            "pattern:gold_fleck".to_owned(),
+            FacetTag {
+                key: "gold_fleck".to_owned(),
+                facet_type: "pattern".to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), "金斑".to_owned()),
+                    ("en".to_owned(), "Gold Fleck".to_owned()),
+                ]),
+                aliases: vec!["gold_speck".to_owned()],
+                is_active: true,
+                sort_order: 40,
+                version: 1,
+                updated_at: now - chrono::Duration::hours(15),
+            },
+        ),
+    ]);
+
     let countries = HashMap::from([
         (
             "JP".to_owned(),
@@ -6956,12 +11092,18 @@ fn new_mock_snapshot() -> AdminSnapshot {
         font_ids: Vec::new(),
         materials,
         material_ids: Vec::new(),
+        stone_listings,
+        stone_listing_ids: Vec::new(),
+        facet_tags,
+        facet_tag_ids: Vec::new(),
         countries,
         country_ids: Vec::new(),
     };
     snapshot.refresh_order_ids();
     snapshot.refresh_font_ids();
     snapshot.refresh_material_ids();
+    snapshot.refresh_stone_listing_ids();
+    snapshot.refresh_facet_tag_ids();
     snapshot.refresh_country_ids();
     snapshot
 }
@@ -6996,6 +11138,61 @@ mod tests {
         }
     }
 
+    fn valid_stone_listing_create_input() -> StoneListingCreateInput {
+        StoneListingCreateInput {
+            stone_listing_key: "jade_variant_01".to_owned(),
+            listing_code: "JDE-0101".to_owned(),
+            material_key: "jade".to_owned(),
+            title_ja: "翡翠の一点物 101".to_owned(),
+            title_en: "One-of-a-kind Jade 101".to_owned(),
+            description_ja: "落ち着いた緑の流れが入った個体です。".to_owned(),
+            description_en: "A refined piece with calm green flowing patterns.".to_owned(),
+            story_ja: "格調ある色味が魅力の石です。".to_owned(),
+            story_en: "A stone with a dignified color tone.".to_owned(),
+            color_family: "green".to_owned(),
+            color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
+            pattern_primary: "banded".to_owned(),
+            pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
+            stone_shape: "round".to_owned(),
+            translucency: "semi_translucent".to_owned(),
+            price_usd: 92800,
+            price_jpy: 155000,
+            sort_order: 41,
+            photo_storage_path: "stone_listings/jade/jade_variant_01/main.webp".to_owned(),
+            photo_alt_ja: "翡翠の一点物 101".to_owned(),
+            photo_alt_en: "One-of-a-kind Jade 101".to_owned(),
+            status: "published".to_owned(),
+            is_active: true,
+        }
+    }
+
+    fn valid_stone_listing_patch_input() -> StoneListingPatchInput {
+        StoneListingPatchInput {
+            listing_code: "JDE-0101".to_owned(),
+            material_key: "jade".to_owned(),
+            title_ja: "翡翠の一点物 101".to_owned(),
+            title_en: "One-of-a-kind Jade 101".to_owned(),
+            description_ja: "落ち着いた緑の流れが入った個体です。".to_owned(),
+            description_en: "A refined piece with calm green flowing patterns.".to_owned(),
+            story_ja: "格調ある色味が魅力の石です。".to_owned(),
+            story_en: "A stone with a dignified color tone.".to_owned(),
+            color_family: "green".to_owned(),
+            color_tags: vec!["deep_green".to_owned(), "mottled".to_owned()],
+            pattern_primary: "banded".to_owned(),
+            pattern_tags: vec!["banded".to_owned(), "cloud".to_owned()],
+            stone_shape: "round".to_owned(),
+            translucency: "semi_translucent".to_owned(),
+            price_usd: 92800,
+            price_jpy: 155000,
+            sort_order: 41,
+            photo_storage_path: "stone_listings/jade/jade_01/main.webp".to_owned(),
+            photo_alt_ja: "翡翠の一点物 01".to_owned(),
+            photo_alt_en: "One-of-a-kind Jade 01".to_owned(),
+            status: "published".to_owned(),
+            is_active: true,
+        }
+    }
+
     #[tokio::test]
     async fn filter_orders_by_status() {
         let state = mock_server_state();
@@ -7008,6 +11205,300 @@ mod tests {
             .await;
 
         assert!(!orders.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_stone_listings_by_facets() {
+        let state = mock_server_state();
+        let stone_listings = state
+            .filter_stone_listings(&StoneListingFilter {
+                color_family: "green".to_owned(),
+                color_tags: String::new(),
+                pattern_primary: "banded".to_owned(),
+                pattern_tags: String::new(),
+                stone_shape: "round".to_owned(),
+            })
+            .await;
+
+        assert_eq!(stone_listings.len(), 1);
+        assert_eq!(stone_listings[0].key, "jade_01");
+    }
+
+    #[tokio::test]
+    async fn filter_stone_listings_by_tag_aliases() {
+        let state = mock_server_state();
+        let stone_listings = state
+            .filter_stone_listings(&StoneListingFilter {
+                color_family: String::new(),
+                color_tags: "dark_green, marbled".to_owned(),
+                pattern_primary: String::new(),
+                pattern_tags: "striped, cloudy".to_owned(),
+                stone_shape: String::new(),
+            })
+            .await;
+
+        assert_eq!(stone_listings.len(), 1);
+        assert_eq!(stone_listings[0].key, "jade_01");
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_rejects_missing_photo() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.photo_storage_path = String::new();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(matches!(result, Err(message) if message.contains("写真")));
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_honors_status_and_publication_time() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.stone_listing_key = "jade_variant_02".to_owned();
+        input.status = "published".to_owned();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(result.is_ok());
+
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_variant_02")
+            .expect("listing should exist after creation");
+        assert_eq!(listing.status, "published");
+        assert!(listing.published_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_rejects_unknown_facet_tags() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.color_tags = vec!["missing_green_tag".to_owned()];
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("色タグ") && message.contains("missing_green_tag"))
+        );
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_rejects_unknown_facet_tags() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_patch_input();
+        input.pattern_tags = vec!["missing_pattern_tag".to_owned()];
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("模様タグ") && message.contains("missing_pattern_tag"))
+        );
+    }
+
+    #[tokio::test]
+    async fn stone_listing_filter_options_include_unknown_stone_shape() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            let mut listing = data
+                .stone_listings
+                .get("jade_01")
+                .cloned()
+                .expect("jade_01 listing should exist");
+            listing.key = "jade_freeform_01".to_owned();
+            listing.facets.stone_shape = "freeform".to_owned();
+            data.stone_listings.insert(listing.key.clone(), listing);
+            data.refresh_stone_listing_ids();
+        }
+
+        let options = state.stone_listing_filter_options().await;
+
+        assert!(
+            options
+                .stone_shape_options
+                .iter()
+                .any(|option| option.value == "freeform" && option.label == "freeform")
+        );
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_rejects_missing_material() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.material_key = "missing_material".to_owned();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(matches!(result, Err(message) if message.contains("有効な材質")));
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_allows_existing_inactive_material() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            data.materials.remove("jade");
+            data.refresh_material_ids();
+        }
+
+        let mut input = valid_stone_listing_patch_input();
+        input.title_ja = "翡翠の一点物 01 更新".to_owned();
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(result.is_ok());
+
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_01")
+            .expect("listing should still exist after update");
+        assert_eq!(
+            listing.title_i18n.get("ja").map(String::as_str),
+            Some("翡翠の一点物 01 更新")
+        );
+    }
+
+    #[test]
+    fn stone_shape_helpers_preserve_unknown_values() {
+        assert_eq!(normalize_stone_shape("freeform"), "freeform");
+        assert_eq!(
+            normalize_stone_shape_optional("freeform"),
+            Some("freeform".to_owned())
+        );
+        assert_eq!(stone_shape_label("freeform"), "freeform");
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_rejects_switching_to_inactive_material() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            let material = data
+                .materials
+                .get_mut("lapis_lazuli")
+                .expect("lapis_lazuli material should exist");
+            material.is_active = false;
+        }
+
+        let mut input = valid_stone_listing_patch_input();
+        input.material_key = "lapis_lazuli".to_owned();
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(matches!(result, Err(message) if message.contains("有効な材質")));
+    }
+
+    #[tokio::test]
+    async fn delete_stone_listing_rejects_order_reference() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            if let Some(order) = data.orders.get_mut("ord_1003") {
+                order.listing_key = "jade_01".to_owned();
+            }
+        }
+
+        let result = state.delete_stone_listing("jade_01").await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("注文") && message.contains("参照"))
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_facet_tag_rejects_referenced_listing() {
+        let state = mock_server_state();
+
+        let result = state.delete_facet_tag("color:deep_green").await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("一点物") && message.contains("参照"))
+        );
+    }
+
+    #[tokio::test]
+    async fn create_facet_tag_rejects_alias_collision() {
+        let state = mock_server_state();
+        let result = state
+            .create_facet_tag(FacetTagCreateInput {
+                key: "emerald".to_owned(),
+                facet_type: "color".to_owned(),
+                label_ja: "翠".to_owned(),
+                label_en: "Emerald".to_owned(),
+                aliases: vec!["dark_green".to_owned()],
+                sort_order: 90,
+                is_active: true,
+            })
+            .await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("別名") && message.contains("dark_green") && message.contains("color:deep_green"))
+        );
+    }
+
+    #[tokio::test]
+    async fn facet_tag_field_errors_are_classified_by_field() {
+        let (key_error, aliases_error) =
+            facet_tag_field_errors_from_message("タグキーは 64 文字以内で入力してください。");
+        assert_eq!(key_error, "タグキーは 64 文字以内で入力してください。");
+        assert!(aliases_error.is_empty());
+
+        let (key_error, aliases_error) = facet_tag_field_errors_from_message(
+            "色タグの別名 `dark_green` は既に color:deep_green (濃緑) と重複しています。",
+        );
+        assert!(key_error.is_empty());
+        assert_eq!(
+            aliases_error,
+            "色タグの別名 `dark_green` は既に color:deep_green (濃緑) と重複しています。"
+        );
+    }
+
+    #[tokio::test]
+    async fn update_facet_tag_rejects_alias_collision() {
+        let state = mock_server_state();
+        let result = state
+            .update_facet_tag(
+                "color:soft_pink",
+                FacetTagPatchInput {
+                    label_ja: "淡桃".to_owned(),
+                    label_en: "Soft Pink".to_owned(),
+                    aliases: vec!["forest_green".to_owned()],
+                    sort_order: 20,
+                    is_active: true,
+                },
+            )
+            .await;
+
+        assert!(
+            matches!(result, Err(message) if message.contains("別名") && message.contains("forest_green") && message.contains("color:deep_green"))
+        );
+    }
+
+    #[tokio::test]
+    async fn stone_listing_tag_options_use_facet_tags_master() {
+        let state = mock_server_state();
+        let options = state.stone_listing_tag_options().await;
+
+        assert!(
+            options
+                .color_tag_options
+                .iter()
+                .any(|option| option.value == "deep_green" && option.label == "濃緑")
+        );
+        assert!(
+            options
+                .pattern_tag_options
+                .iter()
+                .any(|option| option.value == "cloud" && option.label == "雲状")
+        );
     }
 
     #[tokio::test]
@@ -7026,6 +11517,37 @@ mod tests {
         assert_eq!(detail.status_label, "製造中");
         assert_eq!(detail.payment_status_label, "支払い済み");
         assert_eq!(detail.fulfillment_status_label, "製造中");
+    }
+
+    #[test]
+    fn stone_listing_status_tracks_order_resolution() {
+        assert_eq!(
+            stone_listing_status_after_order_status("paid"),
+            Some("sold")
+        );
+        assert_eq!(
+            stone_listing_status_after_order_status("canceled"),
+            Some("published")
+        );
+        assert_eq!(stone_listing_status_after_order_status("refunded"), None);
+    }
+
+    #[test]
+    fn canceled_order_keeps_archived_listings_terminal() {
+        assert!(stone_listing_should_restore_after_canceled_order(
+            "reserved", false,
+        ));
+        assert!(stone_listing_should_restore_after_canceled_order(
+            " published ",
+            true,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "published",
+            false,
+        ));
+        assert!(!stone_listing_should_restore_after_canceled_order(
+            "archived", true,
+        ));
     }
 
     #[tokio::test]
@@ -7347,13 +11869,25 @@ mod tests {
     }
 
     #[test]
-    fn resolve_order_total_falls_back_to_legacy_currency_total() {
-        let mut data = BTreeMap::new();
-        data.insert("total_usd".to_owned(), fs_int(11600));
+    fn resolve_order_total_reads_pricing_total_only() {
+        let data = BTreeMap::new();
 
-        let pricing = BTreeMap::new();
-        let resolved = resolve_order_total(&data, &pricing, "USD");
+        let pricing = btree_from_pairs(vec![("total", fs_int(11600))]);
+        let resolved = resolve_order_total(&data, &pricing);
         assert_eq!(resolved, 11600);
+    }
+
+    #[test]
+    fn resolve_order_listing_fields_uses_legacy_material_snapshot() {
+        let data = btree_from_pairs(vec![("material_label_ja", fs_string("翡翠"))]);
+        let listing = BTreeMap::new();
+        let material = btree_from_pairs(vec![("key", fs_string("jade"))]);
+
+        let (listing_key, listing_label_ja) =
+            FirestoreAdminSource::resolve_order_listing_fields(&data, &listing, &material);
+
+        assert_eq!(listing_key, "jade");
+        assert_eq!(listing_label_ja, "翡翠");
     }
 
     #[test]

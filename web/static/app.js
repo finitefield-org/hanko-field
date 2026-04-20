@@ -40,7 +40,7 @@
     if (nextLocale === "ja") {
       nextUrl.searchParams.set("lang", "ja");
     } else {
-      nextUrl.searchParams.delete("lang");
+      nextUrl.searchParams.set("lang", "en");
     }
     return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
   }
@@ -140,13 +140,62 @@
   const previewLine1 = document.getElementById("seal-preview-line1");
   const previewLine2 = document.getElementById("seal-preview-line2");
   const previewCaption = document.getElementById("preview-caption");
-  const materialRadios = Array.from(form.querySelectorAll("input[name='material']"));
-  const flexibleMaterialKeys = new Set(["rose_quartz", "lapis_lazuli", "jade"]);
+  const listingRadios = Array.from(form.querySelectorAll("input[name='listing_id']"));
+  const materialFilterGroups = Array.from(
+    document.querySelectorAll("[data-material-filter-group]"),
+  );
+  const materialFilterResetButton = document.querySelector(
+    "[data-material-filter-reset]",
+  );
+  const materialFilterSummary = document.querySelector(
+    "[data-material-filter-summary]",
+  );
+  const materialFilterEmpty = document.querySelector(
+    "[data-material-filter-empty]",
+  );
+  const materialFilterAllowedValues = {};
+  materialFilterGroups.forEach((group) => {
+    const groupName = group.dataset.materialFilterGroup || "";
+    if (!groupName) {
+      return;
+    }
+
+    materialFilterAllowedValues[groupName] = new Set(
+      Array.from(group.querySelectorAll(".material-filter-chip"))
+        .map((button) => normalizeMaterialFilterValue(button.dataset.filterValue || ""))
+        .filter((value) => value !== ""),
+    );
+  });
+
+  function clampMaterialFilterValue(groupName, rawValue) {
+    const value = normalizeMaterialFilterValue(rawValue);
+    if (value === "") {
+      return "";
+    }
+
+    const allowedValues = materialFilterAllowedValues[groupName];
+    return allowedValues && allowedValues.has(value) ? value : "";
+  }
+
+  const materialFilterState = {
+    color: clampMaterialFilterValue(
+      "color",
+      currentUrl.searchParams.get("color_family") || "",
+    ),
+    pattern: clampMaterialFilterValue(
+      "pattern",
+      currentUrl.searchParams.get("pattern_primary") || "",
+    ),
+    stoneShape: clampMaterialFilterValue(
+      "stoneShape",
+      normalizeStoneShapeFilterValue(currentUrl.searchParams.get("stone_shape") || ""),
+    ),
+  };
 
   const summarySealLines = document.getElementById("summary-seal-lines");
   const summaryShape = document.getElementById("summary-shape");
   const summaryFont = document.getElementById("summary-font");
-  const summaryMaterial = document.getElementById("summary-material");
+  const summaryListing = document.getElementById("summary-listing");
   const summaryCountry = document.getElementById("summary-country");
   const summarySubtotal = document.getElementById("summary-subtotal");
   const summaryShipping = document.getElementById("summary-shipping");
@@ -182,6 +231,23 @@
     }
     renderPurchaseStatus();
   });
+  form.addEventListener(
+    "submit",
+    (event) => {
+      if (purchaseSubmitting) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (purchaseValidationGroups().length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        renderPurchaseStatus();
+      }
+    },
+    true,
+  );
 
   let currentStep = 1;
 
@@ -366,6 +432,12 @@
         return;
       }
 
+      if (target >= 3 && !selectedListing()) {
+        updateSummary();
+        showStep(2);
+        return;
+      }
+
       updateSummary();
       showStep(target);
     });
@@ -439,8 +511,137 @@
     return form.querySelector("input[name='shape']:checked")?.value || "square";
   }
 
-  function selectedMaterial() {
-    return materialRadios.find((radio) => radio.checked && !radio.disabled) || null;
+  function selectedListing() {
+    return listingRadios.find((radio) => radio.checked && !radio.disabled) || null;
+  }
+
+  function normalizeMaterialFilterValue(rawValue) {
+    return (rawValue || "").trim().toLowerCase();
+  }
+
+  function normalizeStoneShapeFilterValue(rawValue) {
+    return normalizeMaterialFilterValue(rawValue);
+  }
+
+  function parseMaterialFilterValues(rawValue) {
+    return (rawValue || "")
+      .split("|")
+      .map((value) => normalizeMaterialFilterValue(value))
+      .filter((value) => value !== "");
+  }
+
+  function updateMaterialFilterChipStates() {
+    materialFilterGroups.forEach((group) => {
+      const groupName = group.dataset.materialFilterGroup || "";
+      const activeValue = normalizeMaterialFilterValue(
+        materialFilterState[groupName] || "",
+      );
+
+      group.querySelectorAll(".material-filter-chip").forEach((button) => {
+        const buttonValue = normalizeMaterialFilterValue(
+          button.dataset.filterValue || "",
+        );
+        const isSelected = buttonValue === activeValue;
+        button.classList.toggle("is-selected", isSelected);
+        button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      });
+    });
+  }
+
+  function syncMaterialFilterUrl() {
+    const nextUrl = new URL(window.location.href);
+
+    if (materialFilterState.color) {
+      nextUrl.searchParams.set("color_family", materialFilterState.color);
+    } else {
+      nextUrl.searchParams.delete("color_family");
+    }
+
+    if (materialFilterState.pattern) {
+      nextUrl.searchParams.set("pattern_primary", materialFilterState.pattern);
+    } else {
+      nextUrl.searchParams.delete("pattern_primary");
+    }
+
+    if (materialFilterState.stoneShape) {
+      nextUrl.searchParams.set("stone_shape", materialFilterState.stoneShape);
+    } else {
+      nextUrl.searchParams.delete("stone_shape");
+    }
+
+    window.history.replaceState(
+      null,
+      "",
+      `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+    );
+  }
+
+  function syncMaterialFilters() {
+    const shape = selectedShape();
+    const visibleRadios = [];
+    let selectedVisibleRadio = null;
+    let visibleCount = 0;
+
+    listingRadios.forEach((radio) => {
+      const card = radio.closest(".material-card");
+      const listingShape = normalizeMaterialFilterValue(radio.dataset.shape || "");
+      const matchesShape = listingShape === "" || listingShape === shape;
+      const colorFamily = normalizeMaterialFilterValue(
+        radio.dataset.colorFamily || "",
+      );
+      const patternPrimary = normalizeMaterialFilterValue(
+        radio.dataset.patternPrimary || "",
+      );
+      const stoneShape = normalizeMaterialFilterValue(radio.dataset.stoneShape || "");
+      const colorFilter = normalizeMaterialFilterValue(materialFilterState.color);
+      const patternFilter = normalizeMaterialFilterValue(materialFilterState.pattern);
+      const stoneShapeFilter = normalizeMaterialFilterValue(
+        materialFilterState.stoneShape,
+      );
+      const matchesColor = colorFilter === "" || colorFamily === colorFilter;
+      const matchesPattern = patternFilter === "" || patternPrimary === patternFilter;
+      const matchesStoneShape =
+        stoneShapeFilter === "" || stoneShape === stoneShapeFilter;
+      const matches =
+        matchesShape && matchesColor && matchesPattern && matchesStoneShape;
+
+      radio.disabled = !matches;
+      if (card) {
+        card.hidden = !matches;
+      }
+      if (!matches && radio.checked) {
+        radio.checked = false;
+      }
+      if (matches) {
+        visibleCount += 1;
+        visibleRadios.push(radio);
+        if (radio.checked) {
+          selectedVisibleRadio = radio;
+        }
+      }
+    });
+
+    if (!selectedVisibleRadio && visibleRadios.length > 0) {
+      visibleRadios[0].checked = true;
+      selectedVisibleRadio = visibleRadios[0];
+    }
+
+    updateMaterialFilterChipStates();
+    syncShapeOptionStates();
+    syncMaterialFilterUrl();
+
+    if (materialFilterSummary) {
+      materialFilterSummary.textContent = localizedText(
+        `${visibleCount}件の出品個体が表示されています。`,
+        `${visibleCount} listings are shown.`,
+      );
+    }
+    if (materialFilterEmpty) {
+      materialFilterEmpty.hidden = visibleCount > 0;
+    }
+
+    renderPurchaseStatus();
+    return selectedVisibleRadio;
   }
 
   function selectedCountry() {
@@ -595,7 +796,7 @@
       !summarySealLines ||
       !summaryShape ||
       !summaryFont ||
-      !summaryMaterial ||
+      !summaryListing ||
       !summaryCountry ||
       !summarySubtotal ||
       !summaryShipping ||
@@ -617,17 +818,17 @@
     const selectedFontChip = getSelectedFontChip();
     summaryFont.textContent = selectedFontChip?.dataset.fontLabel || "-";
 
-    const material = selectedMaterial();
-    summaryMaterial.textContent = material?.dataset.label || "-";
+    const listing = selectedListing();
+    summaryListing.textContent = listing?.dataset.label || "-";
 
     const country = selectedCountry();
     const shipping = Number(country?.dataset.shipping || 0);
     summaryCountry.textContent = country?.dataset.label || "-";
 
-    const subtotal = Number(material?.dataset.price || 0);
-    summarySubtotal.textContent = material ? formatMoney(subtotal) : "-";
+    const subtotal = Number(listing?.dataset.price || 0);
+    summarySubtotal.textContent = listing ? formatMoney(subtotal) : "-";
     summaryShipping.textContent = country ? formatMoney(shipping) : "-";
-    summaryTotal.textContent = material && country ? formatMoney(subtotal + shipping) : "-";
+    summaryTotal.textContent = listing && country ? formatMoney(subtotal + shipping) : "-";
 
     saveDraft();
   }
@@ -664,6 +865,18 @@
       groups.push({
         label: localizedText("印影テキスト", "Seal text"),
         items: sealIssues,
+      });
+    }
+
+    if (!selectedListing()) {
+      groups.push({
+        label: localizedText("出品個体", "Listing"),
+        items: [
+          localizedText(
+            "出品個体を選択してください。",
+            "Choose a listing before continuing.",
+          ),
+        ],
       });
     }
 
@@ -837,37 +1050,8 @@
     }
   }
 
-  function syncMaterialOptionsByShape() {
-    const shape = selectedShape();
-    const visibleRadios = [];
-    let selectedVisibleRadio = null;
-
-    materialRadios.forEach((radio) => {
-      const card = radio.closest(".material-card");
-      const materialKey = (radio.value || "").trim();
-      const matchesShape =
-        flexibleMaterialKeys.has(materialKey) ||
-        (radio.dataset.shape || "square") === shape;
-      radio.disabled = !matchesShape;
-      if (card) {
-        card.hidden = !matchesShape;
-      }
-      if (!matchesShape && radio.checked) {
-        radio.checked = false;
-      }
-      if (matchesShape) {
-        visibleRadios.push(radio);
-        if (radio.checked) {
-          selectedVisibleRadio = radio;
-        }
-      }
-    });
-
-    if (!selectedVisibleRadio && visibleRadios.length > 0) {
-      visibleRadios[0].checked = true;
-    }
-
-    syncShapeOptionStates();
+  function syncListingOptionsByShape() {
+    syncMaterialFilters();
   }
 
   form.querySelectorAll("[data-next-step]").forEach((button) => {
@@ -875,6 +1059,12 @@
       const next = Number(button.dataset.nextStep);
       if (next >= 2 && !validateSealText()) {
         showStep(1);
+        return;
+      }
+
+      if (next >= 3 && !selectedListing()) {
+        updateSummary();
+        showStep(2);
         return;
       }
 
@@ -918,13 +1108,47 @@
 
   form.querySelectorAll("input[name='shape']").forEach((radio) => {
     radio.addEventListener("change", () => {
-      syncMaterialOptionsByShape();
+      syncListingOptionsByShape();
       updatePreview();
       updateSummary();
     });
   });
 
-  materialRadios.forEach((radio) => {
+  materialFilterGroups.forEach((group) => {
+    group.addEventListener("click", (event) => {
+      const button = event.target.closest(".material-filter-chip");
+      if (!button) {
+        return;
+      }
+
+      const groupName = group.dataset.materialFilterGroup || "";
+      if (!groupName || !(groupName in materialFilterState)) {
+        return;
+      }
+
+      const selectedValue = normalizeMaterialFilterValue(
+        button.dataset.filterValue || "",
+      );
+      const currentValue = normalizeMaterialFilterValue(
+        materialFilterState[groupName],
+      );
+      materialFilterState[groupName] = currentValue === selectedValue ? "" : selectedValue;
+      syncMaterialFilters();
+      updatePreview();
+      updateSummary();
+    });
+  });
+
+  materialFilterResetButton?.addEventListener("click", () => {
+    materialFilterState.color = "";
+    materialFilterState.pattern = "";
+    materialFilterState.stoneShape = "";
+    syncMaterialFilters();
+    updatePreview();
+    updateSummary();
+  });
+
+  listingRadios.forEach((radio) => {
     radio.addEventListener("change", updateSummary);
   });
 
@@ -946,7 +1170,7 @@
     }
   });
 
-  purchaseButton?.addEventListener("htmx:beforeRequest", () => {
+  form.addEventListener("htmx:beforeRequest", () => {
     purchaseSubmitting = true;
     purchaseErrorMessage = "";
     clearPurchaseResult();
@@ -958,7 +1182,7 @@
     renderPurchaseStatus();
   };
 
-  purchaseButton?.addEventListener("htmx:afterRequest", (event) => {
+  form.addEventListener("htmx:afterRequest", (event) => {
     const redirectUrl = event.detail?.xhr
       ?.getResponseHeader("HX-Redirect")
       ?.trim();
@@ -975,7 +1199,7 @@
       endPurchaseSubmission();
     }
   });
-  purchaseButton?.addEventListener("htmx:responseError", () => {
+  form.addEventListener("htmx:responseError", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストに失敗しました。通信環境を確認して、もう一度お試しください。",
@@ -984,7 +1208,7 @@
     );
     endPurchaseSubmission();
   });
-  purchaseButton?.addEventListener("htmx:timeout", () => {
+  form.addEventListener("htmx:timeout", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストがタイムアウトしました。通信環境を確認して、もう一度お試しください。",
@@ -993,7 +1217,7 @@
     );
     endPurchaseSubmission();
   });
-  purchaseButton?.addEventListener("htmx:sendError", () => {
+  form.addEventListener("htmx:sendError", () => {
     setPurchaseErrorMessage(
       localizedText(
         "決済リクエストを送信できませんでした。通信環境を確認して、もう一度お試しください。",
@@ -1081,7 +1305,7 @@
     localeInput.value = initialLocale;
   }
   clearPurchaseResult();
-  syncMaterialOptionsByShape();
+  syncListingOptionsByShape();
   syncFontOptionsByStyle();
   showStep(1, { syncHash: false });
   window.history.replaceState(

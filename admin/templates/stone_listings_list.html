@@ -1,0 +1,122 @@
+<div class="h-full p-4 sm:p-5">
+  <div class="rounded-2xl border border-admin-line/70 bg-admin-bg/35 px-4 py-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">検索結果</p>
+        <h3 class="mt-1 text-base leading-tight font-bold text-admin-ink">
+          {% if has_active_filters %}適用中のフィルタ{% else %}全件表示{% endif %}
+        </h3>
+      </div>
+      <p class="rounded-full border border-admin-line/70 bg-white px-3 py-1 text-sm font-bold text-admin-ink">
+        {{ matching_count }} 件
+      </p>
+    </div>
+    {% if has_active_filters %}
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for badge in filter_badges %}
+      <span class="inline-flex items-center gap-2 rounded-full border border-admin-line/70 bg-white px-3 py-1 text-xs font-semibold text-admin-ink">
+        <span class="text-admin-muted">{{ badge.label }}</span>
+        <span>{{ badge.value }}</span>
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0 text-sm">
+      <thead>
+        <tr class="text-left text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">
+          <th class="border-b border-admin-line/70 px-3 py-2">Key</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">コード</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">タイトル</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">素材キー</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">色</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">模様</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">石形</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">写真</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">価格 (USD)</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">価格 (JPY)</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">状態</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">公開</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">version</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">更新</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">編集</th>
+          <th class="border-b border-admin-line/70 px-3 py-2">削除</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if has_stone_listings %}
+        {% for stone_listing in stone_listings %}
+        <tr class="align-top">
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ stone_listing.key }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.listing_code }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.title_ja }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.material_key }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.color_family }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.pattern_primary }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.stone_shape_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-xs text-admin-muted">
+            {% if stone_listing.has_photo %}
+            <a
+              href="{{ stone_listing.primary_photo_url }}"
+              class="inline-flex"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="{{ stone_listing.title_ja }} の写真を開く"
+            >
+              <img
+                src="{{ stone_listing.primary_photo_url }}"
+                alt="{{ stone_listing.title_ja }} の写真"
+                class="size-16 shrink-0 rounded-lg border border-admin-line/60 bg-white object-cover"
+                loading="lazy"
+              >
+            </a>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ stone_listing.price_usd }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 font-semibold">{{ stone_listing.price_jpy }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.status_label }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{% if stone_listing.is_active %}有効{% else %}無効{% endif %}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">{{ stone_listing.version }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3 text-admin-muted">{{ stone_listing.updated_at }}</td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <a
+              href="/admin/stone-listings/{{ stone_listing.key }}/edit"
+              class="inline-flex rounded-[10px] border border-admin-accent/40 bg-admin-accent-soft px-3 py-[9px] text-xs font-semibold text-admin-accent transition hover:brightness-[1.04]"
+            >
+              編集
+            </a>
+          </td>
+          <td class="border-b border-admin-line/60 px-3 py-3">
+            <button
+              type="button"
+              class="inline-flex rounded-[10px] border border-admin-alert/45 bg-[rgb(157_47_36_/_0.08)] px-3 py-[9px] text-xs font-semibold text-admin-alert transition hover:brightness-[1.04]"
+              hx-delete="/admin/stone-listings/{{ stone_listing.key }}"
+              hx-include="#stone-listing-filter-form"
+              hx-confirm="一点物「{{ stone_listing.title_ja }}」を削除します。よろしいですか？"
+              hx-target="#stone-listings-list"
+              hx-swap="innerHTML"
+            >
+              削除
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="17" class="px-3 py-8 text-center text-sm font-semibold text-admin-muted">
+            {% if has_active_filters %}
+            条件に一致する一点物がありません。
+            {% else %}
+            一点物がありません。
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

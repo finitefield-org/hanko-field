@@ -3,21 +3,21 @@ import 'package:flutter/foundation.dart';
 @immutable
 class CatalogData {
   final List<FontOption> fonts;
-  final List<MaterialOption> materials;
+  final List<StoneListingOption> stoneListings;
   final List<CountryOption> countries;
 
   const CatalogData({
     required this.fonts,
-    required this.materials,
+    required this.stoneListings,
     required this.countries,
   });
 
-  static const empty = CatalogData(fonts: [], materials: [], countries: []);
+  static const empty = CatalogData(fonts: [], stoneListings: [], countries: []);
 }
 
 enum OrderStep {
   design(1),
-  material(2),
+  listing(2),
   purchase(3);
 
   const OrderStep(this.value);
@@ -25,7 +25,7 @@ enum OrderStep {
 
   static OrderStep fromValue(int value) {
     return switch (value) {
-      2 => OrderStep.material,
+      2 => OrderStep.listing,
       3 => OrderStep.purchase,
       _ => OrderStep.design,
     };
@@ -33,8 +33,8 @@ enum OrderStep {
 
   OrderStep next() {
     return switch (this) {
-      OrderStep.design => OrderStep.material,
-      OrderStep.material => OrderStep.purchase,
+      OrderStep.design => OrderStep.listing,
+      OrderStep.listing => OrderStep.purchase,
       OrderStep.purchase => OrderStep.purchase,
     };
   }
@@ -42,8 +42,8 @@ enum OrderStep {
   OrderStep prev() {
     return switch (this) {
       OrderStep.design => OrderStep.design,
-      OrderStep.material => OrderStep.design,
-      OrderStep.purchase => OrderStep.material,
+      OrderStep.listing => OrderStep.design,
+      OrderStep.purchase => OrderStep.listing,
     };
   }
 }
@@ -162,28 +162,34 @@ class FontOption {
 }
 
 @immutable
-class MaterialOption {
+class StoneListingOption {
   final String key;
-  final String label;
+  final String listingCode;
+  final String title;
   final String description;
-  final SealShape shape;
-  final String shapeLabel;
+  final String story;
+  final String stoneShape;
   final int price;
   final String photoUrl;
   final String photoAlt;
   final bool hasPhoto;
 
-  const MaterialOption({
+  const StoneListingOption({
     required this.key,
-    required this.label,
+    required this.listingCode,
+    required this.title,
     required this.description,
-    required this.shape,
-    required this.shapeLabel,
+    required this.story,
+    required this.stoneShape,
     required this.price,
     required this.photoUrl,
     required this.photoAlt,
     required this.hasPhoto,
   });
+
+  bool supportsShape(SealShape shape) {
+    return stoneShape.trim().toLowerCase() == shape.code;
+  }
 }
 
 @immutable
@@ -218,11 +224,11 @@ class KanjiCandidate {
 
 @immutable
 class PurchaseResultData {
+  final String listingLabel;
   final String sealLine1;
   final String sealLine2;
   final String fontLabel;
   final String shapeLabel;
-  final String materialLabel;
   final String stripeName;
   final String stripePhone;
   final String countryLabel;
@@ -243,11 +249,11 @@ class PurchaseResultData {
   final String paymentIntentId;
 
   const PurchaseResultData({
+    required this.listingLabel,
     required this.sealLine1,
     required this.sealLine2,
     required this.fontLabel,
     required this.shapeLabel,
-    required this.materialLabel,
     required this.stripeName,
     required this.stripePhone,
     required this.countryLabel,
@@ -271,7 +277,7 @@ class PurchaseResultData {
 
 @immutable
 class OrderDraftData {
-  static const int version = 1;
+  static const int version = 2;
 
   final int stepValue;
   final String sealLine1;
@@ -279,7 +285,7 @@ class OrderDraftData {
   final String kanjiStyleCode;
   final String selectedFontKey;
   final String shapeCode;
-  final String selectedMaterialKey;
+  final String selectedStoneListingKey;
   final String selectedCountryCode;
   final String realName;
   final String candidateGenderCode;
@@ -300,7 +306,7 @@ class OrderDraftData {
     required this.kanjiStyleCode,
     required this.selectedFontKey,
     required this.shapeCode,
-    required this.selectedMaterialKey,
+    required this.selectedStoneListingKey,
     required this.selectedCountryCode,
     required this.realName,
     required this.candidateGenderCode,
@@ -324,7 +330,7 @@ class OrderDraftData {
       'kanji_style': kanjiStyleCode,
       'selected_font_key': selectedFontKey,
       'shape': shapeCode,
-      'selected_material_key': selectedMaterialKey,
+      'selected_stone_listing_key': selectedStoneListingKey,
       'selected_country_code': selectedCountryCode,
       'real_name': realName,
       'candidate_gender': candidateGenderCode,
@@ -348,7 +354,7 @@ class OrderDraftData {
       kanjiStyleCode: _asString(json['kanji_style']),
       selectedFontKey: _asString(json['selected_font_key']),
       shapeCode: _asString(json['shape']),
-      selectedMaterialKey: _asString(json['selected_material_key']),
+      selectedStoneListingKey: _asString(json['selected_stone_listing_key']),
       selectedCountryCode: _asString(json['selected_country_code']),
       realName: _asString(json['real_name']),
       candidateGenderCode: _asString(json['candidate_gender']),

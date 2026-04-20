@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/order_models.dart';
 
 class OrderDraftStorage {
-  static const _storageKey = 'hanko_field_order_draft_v1';
+  static const _storageKey = 'hanko_field_order_draft_v2';
   static const _savedAtKey = 'saved_at_ms';
   static const _retention = Duration(minutes: 30);
 
@@ -30,8 +30,7 @@ class OrderDraftStorage {
       );
       final savedAtMillis = _savedAtMillis(payload);
       if (savedAtMillis != null) {
-        final ageMillis =
-            DateTime.now().millisecondsSinceEpoch - savedAtMillis;
+        final ageMillis = DateTime.now().millisecondsSinceEpoch - savedAtMillis;
         if (ageMillis > _retention.inMilliseconds) {
           await prefs.remove(_storageKey);
           return null;
