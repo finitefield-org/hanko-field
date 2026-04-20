@@ -1976,6 +1976,7 @@ impl FirestoreStore {
                 &current_listing_status,
                 current_published_at.is_none(),
             ) {
+                let published_at = current_published_at.unwrap_or_else(|| now.clone());
                 let listing_update_time = listing_doc.update_time.clone().ok_or_else(|| {
                     StoreError::Internal(anyhow!(
                         "stone_listings/{listing_key} is missing update_time"
@@ -1988,7 +1989,7 @@ impl FirestoreStore {
                         "name": listing_doc_name,
                         "fields": {
                             "status": fs_string(target_listing_status),
-                            "published_at": fs_timestamp(now),
+                            "published_at": fs_timestamp(published_at),
                             "version": fs_int(listing_version + 1),
                             "updated_at": fs_timestamp(now),
                         }
@@ -2051,21 +2052,23 @@ impl FirestoreStore {
             return Ok(());
         }
 
+        let now = Utc::now();
         let listing_version = read_int_field(&listing_doc.fields, "version").unwrap_or_default();
         listing_doc
             .fields
             .insert("status".to_owned(), fs_string(next_status));
         if next_status.eq_ignore_ascii_case("published") {
+            let published_at = current_published_at.unwrap_or_else(|| now.clone());
             listing_doc
                 .fields
-                .insert("published_at".to_owned(), fs_timestamp(Utc::now()));
+                .insert("published_at".to_owned(), fs_timestamp(published_at));
         }
         listing_doc
             .fields
             .insert("version".to_owned(), fs_int(listing_version + 1));
         listing_doc
             .fields
-            .insert("updated_at".to_owned(), fs_timestamp(Utc::now()));
+            .insert("updated_at".to_owned(), fs_timestamp(now));
 
         client
             .patch_document(

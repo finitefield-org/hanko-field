@@ -6948,13 +6948,14 @@ impl FirestoreAdminSource {
                 if should_update_listing {
                     let listing_version =
                         read_int_field(&listing_doc.fields, "version").unwrap_or_default();
+                    let published_at = current_published_at.unwrap_or(order.updated_at);
                     listing_doc
                         .fields
                         .insert("status".to_owned(), fs_string(listing_status));
                     if listing_status.eq_ignore_ascii_case("published") {
                         listing_doc
                             .fields
-                            .insert("published_at".to_owned(), fs_timestamp(order.updated_at));
+                            .insert("published_at".to_owned(), fs_timestamp(published_at));
                     }
                     listing_doc
                         .fields

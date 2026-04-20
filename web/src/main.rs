@@ -3335,8 +3335,12 @@ fn build_material_option_from_listing(
     } else {
         listing.description.clone()
     };
-    let shape = normalize_material_shape(&listing.stone_shape).to_owned();
-    let shape_label = material_shape_label(&shape, locale).to_owned();
+    let shape = normalize_stone_shape(&listing.stone_shape);
+    let shape_label = match shape.as_str() {
+        "square" => material_shape_label("square", locale).to_owned(),
+        "round" => material_shape_label("round", locale).to_owned(),
+        _ => shape.clone(),
+    };
 
     let (photo_url, photo_alt, has_photo) = resolve_listing_photo(
         &listing.photos,
@@ -4434,6 +4438,43 @@ mod tests {
         );
 
         assert_eq!(option.shape_label, "丸印");
+    }
+
+    #[test]
+    fn material_option_preserves_unknown_stone_shape() {
+        let category = MaterialCategory {
+            label: "翡翠".to_owned(),
+            description: "落ち着いた緑の石材".to_owned(),
+            comparison_texture: "texture".to_owned(),
+            comparison_weight: "weight".to_owned(),
+            comparison_usage: "usage".to_owned(),
+            shape: "square".to_owned(),
+        };
+        let listing = StoneListingRecord {
+            key: "listing-1".to_owned(),
+            material_key: "jade".to_owned(),
+            title: "翡翠の一点物".to_owned(),
+            description: "個体説明".to_owned(),
+            price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
+            color_family: "green".to_owned(),
+            pattern_primary: "cloud".to_owned(),
+            color_tags: vec![],
+            pattern_tags: vec![],
+            stone_shape: "triangle".to_owned(),
+            photos: vec![],
+        };
+
+        let option = build_material_option_from_listing(
+            &category,
+            &listing,
+            &FacetTagLabels::default(),
+            "ja",
+            "ja",
+            "bucket",
+        );
+
+        assert_eq!(option.shape, "triangle");
+        assert_eq!(option.shape_label, "triangle");
     }
 
     #[test]
