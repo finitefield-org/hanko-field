@@ -5777,6 +5777,27 @@ impl ServerState {
         }
     }
 
+    async fn validate_stone_listing_material_key_for_update(
+        &self,
+        stone_listing_key: &str,
+        material_key: &str,
+    ) -> std::result::Result<(), String> {
+        let data = self.data.read().await;
+        if matches!(data.materials.get(material_key), Some(material) if material.is_active) {
+            return Ok(());
+        }
+
+        if data
+            .stone_listings
+            .get(stone_listing_key)
+            .is_some_and(|listing| listing.material_key == material_key)
+        {
+            return Ok(());
+        }
+
+        Err("素材キーに対応する有効な材質が見つかりません。".to_owned())
+    }
+
     async fn delete_material(&self, key: &str) -> std::result::Result<(), String> {
         let normalized_key = key.trim().to_owned();
         if normalized_key.is_empty() {
@@ -5841,7 +5862,7 @@ impl ServerState {
         let status = normalize_stone_listing_status(&input.status)
             .ok_or_else(|| "公開状態を選択してください。".to_owned())?
             .to_owned();
-        self.validate_stone_listing_material_key(&material_key)
+        self.validate_stone_listing_material_key_for_update(&normalized_key, &material_key)
             .await?;
         let facet_tag_lookups = {
             let data = self.data.read().await;
@@ -6936,7 +6957,9 @@ impl FirestoreAdminSource {
                         current_published_at.is_none(),
                     )
                 } else {
-                    !current_listing_status.trim().eq_ignore_ascii_case(listing_status)
+                    !current_listing_status
+                        .trim()
+                        .eq_ignore_ascii_case(listing_status)
                 };
                 if should_update_listing {
                     let listing_version =
@@ -8535,8 +8558,7 @@ fn stone_listing_should_restore_after_canceled_order(
 ) -> bool {
     let current_status = current_status.trim();
     current_status.eq_ignore_ascii_case("reserved")
-        || (current_status.eq_ignore_ascii_case("published")
-            && current_published_at_is_none)
+        || (current_status.eq_ignore_ascii_case("published") && current_published_at_is_none)
 }
 
 fn stone_listing_published_at_sort_key(listing: &StoneListing) -> DateTime<Utc> {
@@ -11382,19 +11404,48 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_stone_listing_rejects_inactive_material() {
+    async fn update_stone_listing_allows_existing_inactive_material() {
+        let state = mock_server_state();
+
+        {
+            let mut data = state.data.write().await;
+            data.materials.remove("jade");
+            data.refresh_material_ids();
+        }
+
+        let mut input = valid_stone_listing_patch_input();
+        input.title_ja = "翡翠の一点物 01 更新".to_owned();
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(result.is_ok());
+
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_01")
+            .expect("listing should still exist after update");
+        assert_eq!(
+            listing.title_i18n.get("ja").map(String::as_str),
+            Some("翡翠の一点物 01 更新")
+        );
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_rejects_switching_to_inactive_material() {
         let state = mock_server_state();
 
         {
             let mut data = state.data.write().await;
             let material = data
                 .materials
-                .get_mut("jade")
-                .expect("jade material should exist");
+                .get_mut("lapis_lazuli")
+                .expect("lapis_lazuli material should exist");
             material.is_active = false;
         }
 
-        let input = valid_stone_listing_patch_input();
+        let mut input = valid_stone_listing_patch_input();
+        input.material_key = "lapis_lazuli".to_owned();
 
         let result = state.update_stone_listing("jade_01", input).await;
 
@@ -11541,8 +11592,7 @@ mod tests {
     #[test]
     fn canceled_order_keeps_archived_listings_terminal() {
         assert!(stone_listing_should_restore_after_canceled_order(
-            "reserved",
-            false,
+            "reserved", false,
         ));
         assert!(stone_listing_should_restore_after_canceled_order(
             " published ",
@@ -11553,8 +11603,7 @@ mod tests {
             false,
         ));
         assert!(!stone_listing_should_restore_after_canceled_order(
-            "archived",
-            true,
+            "archived", true,
         ));
     }
 
