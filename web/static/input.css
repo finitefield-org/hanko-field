@@ -534,6 +534,81 @@
     @apply mt-[18px] grid grid-cols-3 items-start gap-3;
   }
 
+  .material-filter-panel {
+    @apply mt-[18px] rounded-2xl border border-hf-line bg-white p-[18px];
+  }
+
+  .material-filter-panel__header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-[#d8ccbc] pb-3;
+  }
+
+  .material-filter-panel__title {
+    @apply m-0 text-[0.92rem] font-bold text-hf-ink;
+  }
+
+  .material-filter-reset {
+    @apply rounded-lg border border-[#d8ccbc] bg-white px-3 py-1.5 text-[0.8rem] font-semibold text-hf-muted transition;
+  }
+
+  .material-filter-reset:hover {
+    border-color: #cdb89b;
+    color: var(--color-hf-ink);
+  }
+
+  .material-filter-reset:focus-visible,
+  .material-filter-chip:focus-visible {
+    outline: 2px solid rgb(182 54 43 / 0.26);
+    outline-offset: 2px;
+  }
+
+  .material-filter-groups {
+    @apply grid gap-0;
+  }
+
+  .material-filter-group {
+    @apply grid gap-2.5 py-3;
+  }
+
+  .material-filter-group + .material-filter-group {
+    @apply border-t border-dashed border-[#eadfce];
+  }
+
+  .material-filter-group__label {
+    @apply text-[0.75rem] font-bold tracking-[0.08em] text-hf-accent uppercase;
+  }
+
+  .material-filter-chip-list {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .material-filter-chip {
+    @apply inline-flex min-h-9 items-center justify-center rounded-full border border-[#d8ccbc] bg-[#fffcf7] px-3 py-1.5 text-[0.86rem] leading-[1.35] font-semibold text-hf-muted transition;
+    white-space: normal;
+  }
+
+  .material-filter-chip:hover {
+    border-color: #cdb89b;
+    color: var(--color-hf-ink);
+  }
+
+  .material-filter-chip.is-selected {
+    border-color: var(--color-hf-accent);
+    background-color: #fff7f5;
+    color: var(--color-hf-accent);
+    box-shadow: inset 0 0 0 1px rgb(182 54 43 / 0.22);
+  }
+
+  .material-filter-summary {
+    @apply mt-1 mb-0 text-[0.83rem] text-hf-muted;
+  }
+
+  .material-filter-empty {
+    @apply mt-3 mb-0 rounded-xl border px-3 py-2 text-[0.88rem] leading-[1.5] text-[#8f2219];
+    border-color: rgb(143 34 25 / 0.2);
+    background-color: rgb(143 34 25 / 0.08);
+    font-weight: 600;
+  }
+
   .material-card {
     @apply relative flex cursor-pointer flex-col gap-2 rounded-[14px] border border-hf-line bg-white p-[14px];
   }
@@ -567,24 +642,14 @@
     @apply text-[1.05rem] font-bold;
   }
 
-  .material-description {
+  .material-description,
+  .material-story,
+  .material-tag-chip {
     @apply text-[0.86rem] text-hf-muted;
   }
 
-  .material-comparison {
-    @apply mt-1 grid grid-cols-3 gap-2;
-  }
-
-  .material-comparison-item {
-    @apply flex flex-col gap-0.5 rounded-lg border border-[#eadfce] bg-[#fffaf4] px-2.5 py-2;
-  }
-
-  .material-comparison-label {
-    @apply text-[0.66rem] font-bold tracking-[0.08em] text-hf-accent uppercase;
-  }
-
-  .material-comparison-value {
-    @apply text-[0.8rem] leading-[1.35] text-hf-ink;
+  .material-tags {
+    @apply flex flex-wrap gap-x-2 gap-y-1;
   }
 
   .material-price {
@@ -1581,24 +1646,9 @@
       @apply text-[1rem];
     }
 
-    .material-description {
+    .material-description,
+    .material-story {
       @apply text-[0.84rem];
-    }
-
-    .material-comparison {
-      @apply grid-cols-1 gap-1.5;
-    }
-
-    .material-comparison-item {
-      @apply px-3 py-2.5;
-    }
-
-    .material-comparison-label {
-      @apply text-[0.7rem];
-    }
-
-    .material-comparison-value {
-      @apply text-[0.86rem];
     }
 
     .material-price {

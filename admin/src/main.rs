@@ -115,17 +115,6 @@ struct MaterialPhoto {
 }
 
 #[derive(Debug, Clone)]
-struct MaterialCategory {
-    comparison_texture_ja: String,
-    comparison_texture_en: String,
-    comparison_weight_ja: String,
-    comparison_weight_en: String,
-    comparison_usage_ja: String,
-    comparison_usage_en: String,
-    shape: String,
-}
-
-#[derive(Debug, Clone)]
 struct StoneListingFacets {
     color_family: String,
     color_tags: Vec<String>,
@@ -140,6 +129,7 @@ struct StoneListing {
     key: String,
     listing_code: String,
     material_key: String,
+    size: String,
     title_i18n: HashMap<String, String>,
     description_i18n: HashMap<String, String>,
     story_i18n: HashMap<String, String>,
@@ -162,6 +152,16 @@ struct MaterialComparisonProfile {
     weight_en: &'static str,
     usage_ja: &'static str,
     usage_en: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MaterialMasterSeed {
+    key: &'static str,
+    label_ja: &'static str,
+    label_en: &'static str,
+    description_ja: &'static str,
+    description_en: &'static str,
+    sort_order: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -647,11 +647,6 @@ struct OrderDetailView {
 struct MaterialListItemView {
     key: String,
     label_ja: String,
-    shape_label: String,
-    primary_photo_url: String,
-    has_photo: bool,
-    price_usd: String,
-    price_jpy: String,
     is_active: bool,
     version: i64,
     updated_at: String,
@@ -677,22 +672,7 @@ struct MaterialDetailView {
     label_en: String,
     description_ja: String,
     description_en: String,
-    comparison_texture_ja: String,
-    comparison_texture_en: String,
-    comparison_weight_ja: String,
-    comparison_weight_en: String,
-    comparison_usage_ja: String,
-    comparison_usage_en: String,
-    shape: String,
-    price_usd: i64,
-    price_jpy: i64,
     is_active: bool,
-    sort_order: i64,
-    photo_storage_path: String,
-    primary_photo_url: String,
-    photo_alt_ja: String,
-    photo_alt_en: String,
-    has_photo: bool,
     version: i64,
     updated_at: String,
     message: String,
@@ -707,6 +687,7 @@ struct StoneListingListItemView {
     listing_code: String,
     title_ja: String,
     material_key: String,
+    size: String,
     color_family: String,
     pattern_primary: String,
     stone_shape_label: String,
@@ -725,6 +706,7 @@ struct StoneListingDetailView {
     key: String,
     listing_code: String,
     material_key: String,
+    size: String,
     title_ja: String,
     title_en: String,
     description_ja: String,
@@ -890,19 +872,6 @@ struct MaterialCreateView {
     label_en: String,
     description_ja: String,
     description_en: String,
-    comparison_texture_ja: String,
-    comparison_texture_en: String,
-    comparison_weight_ja: String,
-    comparison_weight_en: String,
-    comparison_usage_ja: String,
-    comparison_usage_en: String,
-    shape: String,
-    price_usd: String,
-    price_jpy: String,
-    sort_order: String,
-    photo_storage_path: String,
-    photo_alt_ja: String,
-    photo_alt_en: String,
     is_active: bool,
     message: String,
     has_message: bool,
@@ -915,6 +884,7 @@ struct StoneListingCreateView {
     stone_listing_key: String,
     listing_code: String,
     material_key: String,
+    size: String,
     title_ja: String,
     title_en: String,
     description_ja: String,
@@ -962,19 +932,6 @@ struct MaterialCreateInput {
     label_en: String,
     description_ja: String,
     description_en: String,
-    comparison_texture_ja: String,
-    comparison_texture_en: String,
-    comparison_weight_ja: String,
-    comparison_weight_en: String,
-    comparison_usage_ja: String,
-    comparison_usage_en: String,
-    shape: String,
-    price_usd: i64,
-    price_jpy: i64,
-    sort_order: i64,
-    photo_storage_path: String,
-    photo_alt_ja: String,
-    photo_alt_en: String,
     is_active: bool,
 }
 
@@ -983,6 +940,7 @@ struct StoneListingCreateInput {
     stone_listing_key: String,
     listing_code: String,
     material_key: String,
+    size: String,
     title_ja: String,
     title_en: String,
     description_ja: String,
@@ -1021,19 +979,6 @@ struct MaterialPatchInput {
     label_en: String,
     description_ja: String,
     description_en: String,
-    comparison_texture_ja: String,
-    comparison_texture_en: String,
-    comparison_weight_ja: String,
-    comparison_weight_en: String,
-    comparison_usage_ja: String,
-    comparison_usage_en: String,
-    shape: String,
-    price_usd: i64,
-    price_jpy: i64,
-    sort_order: i64,
-    photo_storage_path: String,
-    photo_alt_ja: String,
-    photo_alt_en: String,
     is_active: bool,
 }
 
@@ -1041,6 +986,7 @@ struct MaterialPatchInput {
 struct StoneListingPatchInput {
     listing_code: String,
     material_key: String,
+    size: String,
     title_ja: String,
     title_en: String,
     description_ja: String,
@@ -2438,59 +2384,12 @@ async fn handle_material_create(
         );
     }
 
-    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
-        Ok(value) => value,
-        Err(_) => {
-            return render_material_create_response(
-                StatusCode::BAD_REQUEST,
-                &material_create_view_from_form(
-                    &form,
-                    "",
-                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
-                ),
-            );
-        }
-    };
-
-    let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
-        Ok(value) => value,
-        Err(_) => {
-            return render_material_create_response(
-                StatusCode::BAD_REQUEST,
-                &material_create_view_from_form(&form, "", "価格（JPY）は整数で入力してください。"),
-            );
-        }
-    };
-
-    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
-        Ok(value) => value,
-        Err(_) => {
-            return render_material_create_response(
-                StatusCode::BAD_REQUEST,
-                &material_create_view_from_form(&form, "", "表示順は整数で入力してください。"),
-            );
-        }
-    };
-
     let input = MaterialCreateInput {
         key: form_value(&form, "key"),
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
-        comparison_texture_ja: form_value(&form, "comparison_texture_ja"),
-        comparison_texture_en: form_value(&form, "comparison_texture_en"),
-        comparison_weight_ja: form_value(&form, "comparison_weight_ja"),
-        comparison_weight_en: form_value(&form, "comparison_weight_en"),
-        comparison_usage_ja: form_value(&form, "comparison_usage_ja"),
-        comparison_usage_en: form_value(&form, "comparison_usage_en"),
-        shape: form_value(&form, "shape"),
-        price_usd,
-        price_jpy,
-        sort_order,
-        photo_storage_path: form_value(&form, "photo_storage_path"),
-        photo_alt_ja: form_value(&form, "photo_alt_ja"),
-        photo_alt_en: form_value(&form, "photo_alt_en"),
         is_active: form.contains_key("is_active"),
     };
     let created_key = input.key.clone();
@@ -2551,88 +2450,11 @@ async fn handle_material_patch(
         );
     }
 
-    let price_usd = match parse_usd_cents_input(&form_value(&form, "price_usd")) {
-        Ok(value) => value,
-        Err(_) => {
-            let Some(detail) = state
-                .server
-                .get_material_detail(
-                    &material_key,
-                    "",
-                    "価格（USD）は整数の cents、または 165.00 のような小数表記で入力してください。",
-                )
-                .await
-            else {
-                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
-            };
-            return match render_material_detail(&detail) {
-                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
-                Err(error) => plain_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to render material detail: {error}"),
-                ),
-            };
-        }
-    };
-
-    let price_jpy = match form_value(&form, "price_jpy").parse::<i64>() {
-        Ok(value) => value,
-        Err(_) => {
-            let Some(detail) = state
-                .server
-                .get_material_detail(&material_key, "", "価格（JPY）は整数で入力してください。")
-                .await
-            else {
-                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
-            };
-            return match render_material_detail(&detail) {
-                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
-                Err(error) => plain_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to render material detail: {error}"),
-                ),
-            };
-        }
-    };
-
-    let sort_order = match form_value(&form, "sort_order").parse::<i64>() {
-        Ok(value) => value,
-        Err(_) => {
-            let Some(detail) = state
-                .server
-                .get_material_detail(&material_key, "", "表示順は整数で入力してください。")
-                .await
-            else {
-                return plain_error(StatusCode::NOT_FOUND, "not found".to_owned());
-            };
-            return match render_material_detail(&detail) {
-                Ok(html) => html_response(StatusCode::BAD_REQUEST, html),
-                Err(error) => plain_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to render material detail: {error}"),
-                ),
-            };
-        }
-    };
-
     let input = MaterialPatchInput {
         label_ja: form_value(&form, "label_ja"),
         label_en: form_value(&form, "label_en"),
         description_ja: form_value(&form, "description_ja"),
         description_en: form_value(&form, "description_en"),
-        comparison_texture_ja: form_value(&form, "comparison_texture_ja"),
-        comparison_texture_en: form_value(&form, "comparison_texture_en"),
-        comparison_weight_ja: form_value(&form, "comparison_weight_ja"),
-        comparison_weight_en: form_value(&form, "comparison_weight_en"),
-        comparison_usage_ja: form_value(&form, "comparison_usage_ja"),
-        comparison_usage_en: form_value(&form, "comparison_usage_en"),
-        shape: form_value(&form, "shape"),
-        price_usd,
-        price_jpy,
-        sort_order,
-        photo_storage_path: form_value(&form, "photo_storage_path"),
-        photo_alt_ja: form_value(&form, "photo_alt_ja"),
-        photo_alt_en: form_value(&form, "photo_alt_en"),
         is_active: form.contains_key("is_active"),
     };
 
@@ -4245,21 +4067,10 @@ impl ServerState {
             let Some(material) = data.materials.get(key) else {
                 continue;
             };
-            let primary_photo = select_primary_material_photo(&material.photos);
-            let primary_photo_path = primary_photo
-                .map(|photo| photo.storage_path.clone())
-                .unwrap_or_default();
-            let primary_photo_url =
-                build_storage_media_url(&self.storage_assets_bucket, &primary_photo_path);
 
             items.push(MaterialListItemView {
                 key: material.key.clone(),
                 label_ja: material.label_i18n.get("ja").cloned().unwrap_or_default(),
-                shape_label: material_shape_label(&material.shape).to_owned(),
-                primary_photo_url: primary_photo_url.clone(),
-                has_photo: !primary_photo_url.is_empty(),
-                price_usd: format_usd(material.price_usd),
-                price_jpy: format_jpy(material.price_jpy),
                 is_active: material.is_active,
                 version: material.version,
                 updated_at: format_datetime(material.updated_at),
@@ -4348,6 +4159,7 @@ impl ServerState {
                 listing_code: listing.listing_code.clone(),
                 title_ja: listing.title_i18n.get("ja").cloned().unwrap_or_default(),
                 material_key: listing.material_key.clone(),
+                size: listing.size.clone(),
                 color_family: listing.facets.color_family.clone(),
                 pattern_primary: listing.facets.pattern_primary.clone(),
                 stone_shape_label: stone_shape_label(&listing.facets.stone_shape).to_owned(),
@@ -4716,12 +4528,6 @@ impl ServerState {
     ) -> Option<MaterialDetailView> {
         let data = self.data.read().await;
         let material = data.materials.get(key)?;
-        let primary_photo = select_primary_material_photo(&material.photos);
-        let photo_storage_path = primary_photo
-            .map(|photo| photo.storage_path.clone())
-            .unwrap_or_default();
-        let primary_photo_url =
-            build_storage_media_url(&self.storage_assets_bucket, &photo_storage_path);
 
         Some(MaterialDetailView {
             key: material.key.clone(),
@@ -4737,26 +4543,7 @@ impl ServerState {
                 .get("en")
                 .cloned()
                 .unwrap_or_default(),
-            comparison_texture_ja: material.comparison_texture_ja.clone(),
-            comparison_texture_en: material.comparison_texture_en.clone(),
-            comparison_weight_ja: material.comparison_weight_ja.clone(),
-            comparison_weight_en: material.comparison_weight_en.clone(),
-            comparison_usage_ja: material.comparison_usage_ja.clone(),
-            comparison_usage_en: material.comparison_usage_en.clone(),
-            shape: material.shape.clone(),
-            price_usd: material.price_usd,
-            price_jpy: material.price_jpy,
             is_active: material.is_active,
-            sort_order: material.sort_order,
-            photo_storage_path,
-            primary_photo_url: primary_photo_url.clone(),
-            photo_alt_ja: primary_photo
-                .and_then(|photo| photo.alt_i18n.get("ja").cloned())
-                .unwrap_or_default(),
-            photo_alt_en: primary_photo
-                .and_then(|photo| photo.alt_i18n.get("en").cloned())
-                .unwrap_or_default(),
-            has_photo: !primary_photo_url.is_empty(),
             version: material.version,
             updated_at: format_datetime(material.updated_at),
             message: message.to_owned(),
@@ -4785,6 +4572,7 @@ impl ServerState {
             key: listing.key.clone(),
             listing_code: listing.listing_code.clone(),
             material_key: listing.material_key.clone(),
+            size: listing.size.clone(),
             title_ja: listing.title_i18n.get("ja").cloned().unwrap_or_default(),
             title_en: listing.title_i18n.get("en").cloned().unwrap_or_default(),
             description_ja: listing
@@ -5275,35 +5063,7 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
-        let comparison_texture_ja = input.comparison_texture_ja.trim().to_owned();
-        let comparison_texture_en = input.comparison_texture_en.trim().to_owned();
-        let comparison_weight_ja = input.comparison_weight_ja.trim().to_owned();
-        let comparison_weight_en = input.comparison_weight_en.trim().to_owned();
-        let comparison_usage_ja = input.comparison_usage_ja.trim().to_owned();
-        let comparison_usage_en = input.comparison_usage_en.trim().to_owned();
-        let shape = normalize_material_shape(&input.shape)
-            .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
-            .to_owned();
-        let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
-        let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
-        let photo_alt_en = input.photo_alt_en.trim().to_owned();
-        validate_material_values(
-            &label_ja,
-            &label_en,
-            &description_ja,
-            &description_en,
-            &comparison_texture_ja,
-            &comparison_texture_en,
-            &comparison_weight_ja,
-            &comparison_weight_en,
-            &comparison_usage_ja,
-            &comparison_usage_en,
-            &shape,
-            input.price_usd,
-            input.price_jpy,
-            input.sort_order,
-            &photo_storage_path,
-        )?;
+        validate_material_values(&label_ja, &label_en, &description_ja, &description_en)?;
 
         let updated_material = {
             let mut data = self.data.write().await;
@@ -5320,24 +5080,7 @@ impl ServerState {
             material
                 .description_i18n
                 .insert("en".to_owned(), description_en);
-            material.comparison_texture_ja = comparison_texture_ja;
-            material.comparison_texture_en = comparison_texture_en;
-            material.comparison_weight_ja = comparison_weight_ja;
-            material.comparison_weight_en = comparison_weight_en;
-            material.comparison_usage_ja = comparison_usage_ja;
-            material.comparison_usage_en = comparison_usage_en;
-            material.shape = shape;
-            material.price_usd = input.price_usd;
-            material.price_jpy = input.price_jpy;
-            material.sort_order = input.sort_order;
             material.is_active = input.is_active;
-            material.photos = merge_primary_material_photo(
-                &material.photos,
-                &material.key,
-                &photo_storage_path,
-                &photo_alt_ja,
-                &photo_alt_en,
-            );
             material.version += 1;
             material.updated_at = now;
 
@@ -5469,35 +5212,7 @@ impl ServerState {
         let label_en = input.label_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
         let description_en = input.description_en.trim().to_owned();
-        let comparison_texture_ja = input.comparison_texture_ja.trim().to_owned();
-        let comparison_texture_en = input.comparison_texture_en.trim().to_owned();
-        let comparison_weight_ja = input.comparison_weight_ja.trim().to_owned();
-        let comparison_weight_en = input.comparison_weight_en.trim().to_owned();
-        let comparison_usage_ja = input.comparison_usage_ja.trim().to_owned();
-        let comparison_usage_en = input.comparison_usage_en.trim().to_owned();
-        let shape = normalize_material_shape(&input.shape)
-            .ok_or_else(|| "材質の形状は角印か丸印を選択してください。".to_owned())?
-            .to_owned();
-        let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
-        let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
-        let photo_alt_en = input.photo_alt_en.trim().to_owned();
-        validate_material_values(
-            &label_ja,
-            &label_en,
-            &description_ja,
-            &description_en,
-            &comparison_texture_ja,
-            &comparison_texture_en,
-            &comparison_weight_ja,
-            &comparison_weight_en,
-            &comparison_usage_ja,
-            &comparison_usage_en,
-            &shape,
-            input.price_usd,
-            input.price_jpy,
-            input.sort_order,
-            &photo_storage_path,
-        )?;
+        validate_material_values(&label_ja, &label_en, &description_ja, &description_en)?;
 
         let material = {
             let mut data = self.data.write().await;
@@ -5506,6 +5221,7 @@ impl ServerState {
             }
 
             let now = Utc::now();
+            let sort_order = next_material_sort_order(&data.materials);
             let material = Material {
                 key: key.clone(),
                 label_i18n: HashMap::from([
@@ -5516,23 +5232,18 @@ impl ServerState {
                     ("ja".to_owned(), description_ja),
                     ("en".to_owned(), description_en),
                 ]),
-                comparison_texture_ja,
-                comparison_texture_en,
-                comparison_weight_ja,
-                comparison_weight_en,
-                comparison_usage_ja,
-                comparison_usage_en,
-                shape,
-                photos: build_single_material_photos(
-                    &key,
-                    &photo_storage_path,
-                    &photo_alt_ja,
-                    &photo_alt_en,
-                ),
-                price_usd: input.price_usd,
-                price_jpy: input.price_jpy,
+                comparison_texture_ja: String::new(),
+                comparison_texture_en: String::new(),
+                comparison_weight_ja: String::new(),
+                comparison_weight_en: String::new(),
+                comparison_usage_ja: String::new(),
+                comparison_usage_en: String::new(),
+                shape: "square".to_owned(),
+                photos: Vec::new(),
+                price_usd: 0,
+                price_jpy: 0,
                 is_active: input.is_active,
-                sort_order: input.sort_order,
+                sort_order,
                 version: 1,
                 updated_at: now,
             };
@@ -5567,6 +5278,7 @@ impl ServerState {
         let material_key = input.material_key.trim().to_owned();
         validate_material_key(&material_key)?;
 
+        let size = input.size.trim().to_owned();
         let title_ja = input.title_ja.trim().to_owned();
         let title_en = input.title_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
@@ -5581,9 +5293,6 @@ impl ServerState {
             .ok_or_else(|| "石の形は必須です。".to_owned())?;
         let translucency = normalize_optional_faceted_token(&input.translucency);
         let photo_storage_path = normalize_storage_path(&input.photo_storage_path);
-        if photo_storage_path.is_empty() {
-            return Err("写真は必須です。".to_owned());
-        }
         let photo_alt_ja = input.photo_alt_ja.trim().to_owned();
         let photo_alt_en = input.photo_alt_en.trim().to_owned();
         let status = normalize_stone_listing_status(&input.status)
@@ -5611,6 +5320,7 @@ impl ServerState {
             &title_en,
             &description_ja,
             &description_en,
+            &size,
             &color_family,
             &pattern_primary,
             &stone_shape,
@@ -5639,6 +5349,7 @@ impl ServerState {
                 key: key.clone(),
                 listing_code,
                 material_key,
+                size,
                 title_i18n: HashMap::from([
                     ("ja".to_owned(), title_ja),
                     ("en".to_owned(), title_en),
@@ -5836,6 +5547,7 @@ impl ServerState {
         let material_key = input.material_key.trim().to_owned();
         validate_material_key(&material_key)?;
 
+        let size = input.size.trim().to_owned();
         let title_ja = input.title_ja.trim().to_owned();
         let title_en = input.title_en.trim().to_owned();
         let description_ja = input.description_ja.trim().to_owned();
@@ -5877,6 +5589,7 @@ impl ServerState {
             &title_en,
             &description_ja,
             &description_en,
+            &size,
             &color_family,
             &pattern_primary,
             &stone_shape,
@@ -5899,6 +5612,7 @@ impl ServerState {
             let was_published = stone_listing_is_published(&listing.status);
             listing.listing_code = listing_code;
             listing.material_key = material_key;
+            listing.size = size;
             listing.title_i18n.insert("ja".to_owned(), title_ja);
             listing.title_i18n.insert("en".to_owned(), title_en);
             listing
@@ -6306,64 +6020,6 @@ impl FirestoreAdminSource {
         &self,
         client: &FirebaseFirestoreClient,
     ) -> Result<HashMap<String, Material>> {
-        let categories = self.load_material_categories(client).await?;
-        let stone_listings = self.load_stone_listings(client).await?;
-
-        let mut materials = HashMap::new();
-        for listing in stone_listings.values() {
-            let Some(category) = categories.get(&listing.material_key) else {
-                eprintln!(
-                    "warning: skipping stone_listings/{}: missing materials/{} category",
-                    listing.key, listing.material_key
-                );
-                continue;
-            };
-
-            let shape = material_shape_or_default(&listing.facets.stone_shape);
-            let mut photos = listing.photos.clone();
-            if photos.is_empty() {
-                photos = Vec::new();
-            }
-
-            materials.insert(
-                listing.key.clone(),
-                Material {
-                    key: listing.key.clone(),
-                    label_i18n: listing.title_i18n.clone(),
-                    description_i18n: listing.description_i18n.clone(),
-                    comparison_texture_ja: category.comparison_texture_ja.clone(),
-                    comparison_texture_en: category.comparison_texture_en.clone(),
-                    comparison_weight_ja: category.comparison_weight_ja.clone(),
-                    comparison_weight_en: category.comparison_weight_en.clone(),
-                    comparison_usage_ja: category.comparison_usage_ja.clone(),
-                    comparison_usage_en: category.comparison_usage_en.clone(),
-                    shape: shape.to_owned(),
-                    photos,
-                    price_usd: listing
-                        .price_by_currency
-                        .get("USD")
-                        .copied()
-                        .unwrap_or_default(),
-                    price_jpy: listing
-                        .price_by_currency
-                        .get("JPY")
-                        .copied()
-                        .unwrap_or_default(),
-                    is_active: listing.is_active,
-                    sort_order: listing.sort_order,
-                    version: listing.version,
-                    updated_at: listing.updated_at,
-                },
-            );
-        }
-
-        return Ok(materials);
-    }
-
-    async fn load_material_categories(
-        &self,
-        client: &FirebaseFirestoreClient,
-    ) -> Result<HashMap<String, MaterialCategory>> {
         let query = RunQueryRequest {
             structured_query: Some(json!({
                 "from": [{ "collectionId": "materials" }],
@@ -6380,7 +6036,7 @@ impl FirestoreAdminSource {
             .await
             .context("failed to load materials")?;
 
-        let mut categories = HashMap::new();
+        let mut materials = HashMap::new();
         for row in rows {
             let Some(document) = row.document else {
                 continue;
@@ -6390,48 +6046,32 @@ impl FirestoreAdminSource {
             };
 
             let data = &document.fields;
-            let comparison_defaults = material_comparison_profile(&doc_id);
-            let comparison_texture_ja = fallback_text(
-                read_string_field(data, "comparison_texture_ja"),
-                comparison_defaults.texture_ja,
-            );
-            let comparison_texture_en = fallback_text(
-                read_string_field(data, "comparison_texture_en"),
-                comparison_defaults.texture_en,
-            );
-            let comparison_weight_ja = fallback_text(
-                read_string_field(data, "comparison_weight_ja"),
-                comparison_defaults.weight_ja,
-            );
-            let comparison_weight_en = fallback_text(
-                read_string_field(data, "comparison_weight_en"),
-                comparison_defaults.weight_en,
-            );
-            let comparison_usage_ja = fallback_text(
-                read_string_field(data, "comparison_usage_ja"),
-                comparison_defaults.usage_ja,
-            );
-            let comparison_usage_en = fallback_text(
-                read_string_field(data, "comparison_usage_en"),
-                comparison_defaults.usage_en,
-            );
-            let shape = material_shape_or_default(&read_string_field(data, "shape"));
-
-            categories.insert(
+            let price_by_currency = material_price_by_currency_from_fields(data);
+            materials.insert(
                 doc_id.clone(),
-                MaterialCategory {
-                    comparison_texture_ja,
-                    comparison_texture_en,
-                    comparison_weight_ja,
-                    comparison_weight_en,
-                    comparison_usage_ja,
-                    comparison_usage_en,
-                    shape: shape.to_owned(),
+                Material {
+                    key: doc_id,
+                    label_i18n: read_string_map_field(data, "label_i18n"),
+                    description_i18n: read_string_map_field(data, "description_i18n"),
+                    comparison_texture_ja: read_string_field(data, "comparison_texture_ja"),
+                    comparison_texture_en: read_string_field(data, "comparison_texture_en"),
+                    comparison_weight_ja: read_string_field(data, "comparison_weight_ja"),
+                    comparison_weight_en: read_string_field(data, "comparison_weight_en"),
+                    comparison_usage_ja: read_string_field(data, "comparison_usage_ja"),
+                    comparison_usage_en: read_string_field(data, "comparison_usage_en"),
+                    shape: material_shape_or_default(&read_string_field(data, "shape")),
+                    photos: read_material_photos(data),
+                    price_usd: price_by_currency.get("USD").copied().unwrap_or_default(),
+                    price_jpy: price_by_currency.get("JPY").copied().unwrap_or_default(),
+                    is_active: read_bool_field(data, "is_active").unwrap_or(true),
+                    sort_order: read_int_field(data, "sort_order").unwrap_or_default(),
+                    version: read_int_field(data, "version").unwrap_or(1),
+                    updated_at: read_timestamp_field(data, "updated_at").unwrap_or_else(Utc::now),
                 },
             );
         }
 
-        Ok(categories)
+        return Ok(materials);
     }
 
     async fn load_stone_listings(
@@ -6480,6 +6120,7 @@ impl FirestoreAdminSource {
                     key: doc_id,
                     listing_code: read_string_field(data, "listing_code"),
                     material_key: read_string_field(data, "material_key"),
+                    size: read_string_field(data, "size"),
                     title_i18n,
                     description_i18n,
                     story_i18n,
@@ -7099,6 +6740,7 @@ impl FirestoreAdminSource {
                         let mut fields = vec![
                             "listing_code".to_owned(),
                             "material_key".to_owned(),
+                            "size".to_owned(),
                             "title_i18n".to_owned(),
                             "description_i18n".to_owned(),
                             "story_i18n".to_owned(),
@@ -7495,6 +7137,15 @@ fn form_value(form: &HashMap<String, String>, key: &str) -> String {
         .unwrap_or_default()
 }
 
+fn next_material_sort_order(materials: &HashMap<String, Material>) -> i64 {
+    materials
+        .values()
+        .map(|material| material.sort_order)
+        .max()
+        .unwrap_or(0)
+        .saturating_add(10)
+}
+
 fn new_material_create_view(message: &str, render_error: &str) -> MaterialCreateView {
     MaterialCreateView {
         key: String::new(),
@@ -7502,19 +7153,6 @@ fn new_material_create_view(message: &str, render_error: &str) -> MaterialCreate
         label_en: String::new(),
         description_ja: String::new(),
         description_en: String::new(),
-        comparison_texture_ja: String::new(),
-        comparison_texture_en: String::new(),
-        comparison_weight_ja: String::new(),
-        comparison_weight_en: String::new(),
-        comparison_usage_ja: String::new(),
-        comparison_usage_en: String::new(),
-        shape: "square".to_owned(),
-        price_usd: "0".to_owned(),
-        price_jpy: "0".to_owned(),
-        sort_order: "0".to_owned(),
-        photo_storage_path: String::new(),
-        photo_alt_ja: String::new(),
-        photo_alt_en: String::new(),
         is_active: true,
         message: message.to_owned(),
         has_message: !message.is_empty(),
@@ -7534,19 +7172,6 @@ fn material_create_view_from_form(
         label_en: form_value(form, "label_en"),
         description_ja: form_value(form, "description_ja"),
         description_en: form_value(form, "description_en"),
-        comparison_texture_ja: form_value(form, "comparison_texture_ja"),
-        comparison_texture_en: form_value(form, "comparison_texture_en"),
-        comparison_weight_ja: form_value(form, "comparison_weight_ja"),
-        comparison_weight_en: form_value(form, "comparison_weight_en"),
-        comparison_usage_ja: form_value(form, "comparison_usage_ja"),
-        comparison_usage_en: form_value(form, "comparison_usage_en"),
-        shape: material_shape_or_default(&form_value(form, "shape")),
-        price_usd: form_value(form, "price_usd"),
-        price_jpy: form_value(form, "price_jpy"),
-        sort_order: form_value(form, "sort_order"),
-        photo_storage_path: form_value(form, "photo_storage_path"),
-        photo_alt_ja: form_value(form, "photo_alt_ja"),
-        photo_alt_en: form_value(form, "photo_alt_en"),
         is_active: form.contains_key("is_active"),
         message: message.to_owned(),
         has_message: !message.is_empty(),
@@ -7584,6 +7209,7 @@ fn new_stone_listing_create_view(message: &str, render_error: &str) -> StoneList
         stone_listing_key: String::new(),
         listing_code: String::new(),
         material_key: String::new(),
+        size: String::new(),
         title_ja: String::new(),
         title_en: String::new(),
         description_ja: String::new(),
@@ -7620,6 +7246,7 @@ fn stone_listing_create_view_from_form(
         stone_listing_key: form_value(form, "stone_listing_key"),
         listing_code: form_value(form, "listing_code"),
         material_key: form_value(form, "material_key"),
+        size: form_value(form, "size"),
         title_ja: form_value(form, "title_ja"),
         title_en: form_value(form, "title_en"),
         description_ja: form_value(form, "description_ja"),
@@ -7659,6 +7286,7 @@ fn stone_listing_create_input_from_form(
     let stone_listing_key = form_value(form, "stone_listing_key");
     let listing_code = form_value(form, "listing_code");
     let material_key = form_value(form, "material_key");
+    let size = form_value(form, "size");
     let title_ja = form_value(form, "title_ja");
     let title_en = form_value(form, "title_en");
     let description_ja = form_value(form, "description_ja");
@@ -7687,6 +7315,7 @@ fn stone_listing_create_input_from_form(
         stone_listing_key,
         listing_code,
         material_key,
+        size,
         title_ja,
         title_en,
         description_ja,
@@ -7718,6 +7347,7 @@ fn stone_listing_patch_input_from_form(
 ) -> StoneListingPatchInput {
     let listing_code = form_value(form, "listing_code");
     let material_key = form_value(form, "material_key");
+    let size = form_value(form, "size");
     let title_ja = form_value(form, "title_ja");
     let title_en = form_value(form, "title_en");
     let description_ja = form_value(form, "description_ja");
@@ -7745,6 +7375,7 @@ fn stone_listing_patch_input_from_form(
     StoneListingPatchInput {
         listing_code,
         material_key,
+        size,
         title_ja,
         title_en,
         description_ja,
@@ -8109,6 +7740,7 @@ fn validate_stone_listing_values(
     title_en: &str,
     description_ja: &str,
     description_en: &str,
+    size: &str,
     color_family: &str,
     pattern_primary: &str,
     stone_shape: &str,
@@ -8125,6 +7757,9 @@ fn validate_stone_listing_values(
     }
     if description_ja.is_empty() || description_en.is_empty() {
         return Err("一点物説明（ja/en）は必須です。".to_owned());
+    }
+    if size.chars().count() > 80 {
+        return Err("サイズは 80 文字以内で入力してください。".to_owned());
     }
     if color_family.is_empty() {
         return Err("色ファミリーは必須です。".to_owned());
@@ -8179,17 +7814,6 @@ fn validate_material_values(
     label_en: &str,
     description_ja: &str,
     description_en: &str,
-    comparison_texture_ja: &str,
-    comparison_texture_en: &str,
-    comparison_weight_ja: &str,
-    comparison_weight_en: &str,
-    comparison_usage_ja: &str,
-    comparison_usage_en: &str,
-    shape: &str,
-    price_usd: i64,
-    price_jpy: i64,
-    sort_order: i64,
-    photo_storage_path: &str,
 ) -> std::result::Result<(), String> {
     if label_ja.is_empty() || label_en.is_empty() {
         return Err("材質名（ja/en）は必須です。".to_owned());
@@ -8197,28 +7821,6 @@ fn validate_material_values(
     if description_ja.is_empty() || description_en.is_empty() {
         return Err("説明文（ja/en）は必須です。".to_owned());
     }
-    if comparison_texture_ja.is_empty() || comparison_texture_en.is_empty() {
-        return Err("比較プレビュー（質感）の ja/en は必須です。".to_owned());
-    }
-    if comparison_weight_ja.is_empty() || comparison_weight_en.is_empty() {
-        return Err("比較プレビュー（重さ）の ja/en は必須です。".to_owned());
-    }
-    if comparison_usage_ja.is_empty() || comparison_usage_en.is_empty() {
-        return Err("比較プレビュー（用途）の ja/en は必須です。".to_owned());
-    }
-    if normalize_material_shape(shape).is_none() {
-        return Err("材質の形状は角印か丸印を選択してください。".to_owned());
-    }
-    if price_usd < 0 {
-        return Err("価格（USD cents）は 0 以上で入力してください。".to_owned());
-    }
-    if price_jpy < 0 {
-        return Err("価格（JPY）は 0 以上で入力してください。".to_owned());
-    }
-    if sort_order < 0 {
-        return Err("表示順は 0 以上で入力してください。".to_owned());
-    }
-    validate_material_photo_storage_path(photo_storage_path)?;
     Ok(())
 }
 
@@ -8455,13 +8057,6 @@ fn material_shape_or_default(raw: &str) -> String {
     normalize_material_shape(raw).unwrap_or("square").to_owned()
 }
 
-fn material_shape_label(shape: &str) -> &'static str {
-    match shape {
-        "round" => "丸印",
-        _ => "角印",
-    }
-}
-
 fn stone_shape_label(shape: &str) -> String {
     match normalize_stone_shape(shape).as_str() {
         "square" => "四角形".to_owned(),
@@ -8507,14 +8102,6 @@ fn stone_listing_published_at_sort_key(listing: &StoneListing) -> DateTime<Utc> 
         listing.published_at.unwrap_or(DateTime::<Utc>::UNIX_EPOCH)
     } else {
         DateTime::<Utc>::UNIX_EPOCH
-    }
-}
-
-fn fallback_text(value: String, fallback: &str) -> String {
-    if value.trim().is_empty() {
-        fallback.to_owned()
-    } else {
-        value
     }
 }
 
@@ -8577,6 +8164,75 @@ fn material_comparison_profile(material_key: &str) -> MaterialComparisonProfile 
             usage_en: "Versatile",
         },
     }
+}
+
+fn material_master_seeds() -> Vec<MaterialMasterSeed> {
+    vec![
+        MaterialMasterSeed {
+            key: "wood",
+            label_ja: "木材",
+            label_en: "Wood",
+            description_ja: "自然な木目と軽さがあり、あたたかみのある印象に仕上がる材質です。",
+            description_en: "A lightweight material with natural grain that gives the seal a warm, organic feel.",
+            sort_order: 10,
+        },
+        MaterialMasterSeed {
+            key: "qingtian_stone",
+            label_ja: "青田石",
+            label_en: "Qingtian Stone",
+            description_ja: "中国浙江省青田産として知られる代表的な篆刻石で、きめ細かく彫りやすい石材です。",
+            description_en: "A classic seal-carving stone associated with Qingtian, Zhejiang, known for its fine texture and ease of carving.",
+            sort_order: 20,
+        },
+        MaterialMasterSeed {
+            key: "shoushan_stone",
+            label_ja: "寿山石",
+            label_en: "Shoushan Stone",
+            description_ja: "中国福建省寿山産として知られる印材石で、色味の幅と滑らかな彫り心地が特徴です。",
+            description_en: "A seal stone associated with Shoushan, Fujian, valued for its range of colors and smooth carving feel.",
+            sort_order: 30,
+        },
+        MaterialMasterSeed {
+            key: "balin_stone",
+            label_ja: "巴林石",
+            label_en: "Balin Stone",
+            description_ja: "中国内モンゴル産として知られる印材石で、色柄の変化とほどよい硬さを持つ材質です。",
+            description_en: "A seal stone associated with Inner Mongolia, known for varied colors and patterns with moderate hardness.",
+            sort_order: 40,
+        },
+        MaterialMasterSeed {
+            key: "yili_stone",
+            label_ja: "伊犁石",
+            label_en: "Yili Stone",
+            description_ja: "中国新疆ウイグル自治区の伊犁地域に由来する印材石で、落ち着いた色味と素朴な石質が特徴です。",
+            description_en: "A seal stone associated with the Yili region of Xinjiang, with subdued colors and a natural stone texture.",
+            sort_order: 50,
+        },
+        MaterialMasterSeed {
+            key: "laos_stone",
+            label_ja: "ラオス石",
+            label_en: "Laos Stone",
+            description_ja: "ラオス産として流通する印材石で、やわらかめの石質と彫刻しやすさが特徴です。",
+            description_en: "A seal stone commonly traded as Laos stone, known for its softer texture and ease of carving.",
+            sort_order: 60,
+        },
+        MaterialMasterSeed {
+            key: "xixia_stone",
+            label_ja: "西峡石",
+            label_en: "Xixia Stone",
+            description_ja: "中国河南省西峡産として知られる印材石で、緻密で落ち着いた質感を持つ材質です。",
+            description_en: "A seal stone associated with Xixia, Henan, with a dense structure and calm, refined texture.",
+            sort_order: 70,
+        },
+        MaterialMasterSeed {
+            key: "frozen_stone",
+            label_ja: "凍石",
+            label_en: "Frozen Stone",
+            description_ja: "凍ったような半透明感としっとりした質感が特徴の、篆刻向けの石材です。",
+            description_en: "A seal-carving stone with a moist, semi-translucent appearance reminiscent of frozen stone.",
+            sort_order: 80,
+        },
+    ]
 }
 
 fn normalize_storage_bucket_name(value: &str) -> String {
@@ -8664,90 +8320,6 @@ fn select_primary_material_photo(photos: &[MaterialPhoto]) -> Option<&MaterialPh
         .iter()
         .find(|photo| photo.is_primary)
         .or_else(|| photos.first())
-}
-
-fn build_single_material_photos(
-    material_key: &str,
-    storage_path: &str,
-    alt_ja: &str,
-    alt_en: &str,
-) -> Vec<MaterialPhoto> {
-    if storage_path.is_empty() {
-        return Vec::new();
-    }
-
-    let mut alt_i18n = HashMap::new();
-    if !alt_ja.trim().is_empty() {
-        alt_i18n.insert("ja".to_owned(), alt_ja.trim().to_owned());
-    }
-    if !alt_en.trim().is_empty() {
-        alt_i18n.insert("en".to_owned(), alt_en.trim().to_owned());
-    }
-
-    vec![MaterialPhoto {
-        asset_id: format!("mat_{}_01", material_key),
-        storage_path: storage_path.to_owned(),
-        alt_i18n,
-        sort_order: 0,
-        is_primary: true,
-        width: 0,
-        height: 0,
-    }]
-}
-
-fn merge_primary_material_photo(
-    existing: &[MaterialPhoto],
-    material_key: &str,
-    storage_path: &str,
-    alt_ja: &str,
-    alt_en: &str,
-) -> Vec<MaterialPhoto> {
-    if storage_path.is_empty() {
-        return existing.to_vec();
-    }
-
-    if existing.is_empty() {
-        return build_single_material_photos(material_key, storage_path, alt_ja, alt_en);
-    }
-
-    let mut photos = existing.to_vec();
-    let primary_index = photos
-        .iter()
-        .position(|photo| photo.is_primary)
-        .unwrap_or(0);
-
-    {
-        let primary = &mut photos[primary_index];
-        primary.storage_path = storage_path.to_owned();
-
-        if alt_ja.trim().is_empty() {
-            primary.alt_i18n.remove("ja");
-        } else {
-            primary
-                .alt_i18n
-                .insert("ja".to_owned(), alt_ja.trim().to_owned());
-        }
-        if alt_en.trim().is_empty() {
-            primary.alt_i18n.remove("en");
-        } else {
-            primary
-                .alt_i18n
-                .insert("en".to_owned(), alt_en.trim().to_owned());
-        }
-
-        if primary.asset_id.trim().is_empty() {
-            primary.asset_id = format!("mat_{}_01", material_key);
-        }
-        primary.is_primary = true;
-    }
-
-    for (index, photo) in photos.iter_mut().enumerate() {
-        if index != primary_index {
-            photo.is_primary = false;
-        }
-    }
-
-    photos
 }
 
 fn build_storage_path_for_uploaded_stone_listing_photo(
@@ -9912,6 +9484,12 @@ fn stone_listing_price_by_currency_from_fields(
     read_int_map_field(data, "price_by_currency")
 }
 
+fn material_price_by_currency_from_fields(
+    data: &BTreeMap<String, JsonValue>,
+) -> HashMap<String, i64> {
+    read_int_map_field(data, "price_by_currency")
+}
+
 fn country_shipping_fee_by_currency_from_fields(
     data: &BTreeMap<String, JsonValue>,
 ) -> HashMap<String, i64> {
@@ -10077,6 +9655,7 @@ fn stone_listing_snapshot_fields(listing: &StoneListing) -> BTreeMap<String, Jso
     let mut fields = btree_from_pairs(vec![
         ("listing_code", fs_string(listing.listing_code.clone())),
         ("material_key", fs_string(listing.material_key.clone())),
+        ("size", fs_string(listing.size.clone())),
         ("title_i18n", fs_string_map(&listing.title_i18n)),
         ("description_i18n", fs_string_map(&listing.description_i18n)),
         ("story_i18n", fs_string_map(&listing.story_i18n)),
@@ -10099,6 +9678,9 @@ fn stone_listing_snapshot_fields(listing: &StoneListing) -> BTreeMap<String, Jso
     }
     if listing.material_key.trim().is_empty() {
         fields.remove("material_key");
+    }
+    if listing.size.trim().is_empty() {
+        fields.remove("size");
     }
 
     fields
@@ -10527,7 +10109,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
     let rose_quartz = material_comparison_profile("rose_quartz");
     let lapis_lazuli = material_comparison_profile("lapis_lazuli");
     let jade = material_comparison_profile("jade");
-    let materials = HashMap::from([
+    let mut materials = HashMap::from([
         (
             "rose_quartz".to_owned(),
             Material {
@@ -10568,7 +10150,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 price_usd: 16500,
                 price_jpy: 28000,
                 is_active: true,
-                sort_order: 10,
+                sort_order: 110,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(36),
             },
@@ -10613,7 +10195,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 price_usd: 32500,
                 price_jpy: 55000,
                 is_active: true,
-                sort_order: 20,
+                sort_order: 120,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(24),
             },
@@ -10658,12 +10240,42 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 price_usd: 88500,
                 price_jpy: 150000,
                 is_active: true,
-                sort_order: 30,
+                sort_order: 130,
                 version: 1,
                 updated_at: now - chrono::Duration::hours(12),
             },
         ),
     ]);
+    for seed in material_master_seeds() {
+        materials.insert(
+            seed.key.to_owned(),
+            Material {
+                key: seed.key.to_owned(),
+                label_i18n: HashMap::from([
+                    ("ja".to_owned(), seed.label_ja.to_owned()),
+                    ("en".to_owned(), seed.label_en.to_owned()),
+                ]),
+                description_i18n: HashMap::from([
+                    ("ja".to_owned(), seed.description_ja.to_owned()),
+                    ("en".to_owned(), seed.description_en.to_owned()),
+                ]),
+                comparison_texture_ja: String::new(),
+                comparison_texture_en: String::new(),
+                comparison_weight_ja: String::new(),
+                comparison_weight_en: String::new(),
+                comparison_usage_ja: String::new(),
+                comparison_usage_en: String::new(),
+                shape: "square".to_owned(),
+                photos: Vec::new(),
+                price_usd: 0,
+                price_jpy: 0,
+                is_active: true,
+                sort_order: seed.sort_order,
+                version: 1,
+                updated_at: now,
+            },
+        );
+    }
 
     let stone_listings = HashMap::from([
         (
@@ -10672,6 +10284,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 key: "rose_quartz_01".to_owned(),
                 listing_code: "RQT-0001".to_owned(),
                 material_key: "rose_quartz".to_owned(),
+                size: "15mm x 15mm x 60mm".to_owned(),
                 title_i18n: HashMap::from([
                     ("ja".to_owned(), "ローズクオーツの一点物 01".to_owned()),
                     ("en".to_owned(), "One-of-a-kind Rose Quartz 01".to_owned()),
@@ -10734,6 +10347,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 key: "lapis_lazuli_01".to_owned(),
                 listing_code: "LPS-0001".to_owned(),
                 material_key: "lapis_lazuli".to_owned(),
+                size: "18mm x 18mm x 60mm".to_owned(),
                 title_i18n: HashMap::from([
                     ("ja".to_owned(), "ラピスラズリの一点物 01".to_owned()),
                     ("en".to_owned(), "One-of-a-kind Lapis Lazuli 01".to_owned()),
@@ -10797,6 +10411,7 @@ fn new_mock_snapshot() -> AdminSnapshot {
                 key: "jade_01".to_owned(),
                 listing_code: "JDE-0001".to_owned(),
                 material_key: "jade".to_owned(),
+                size: "18mm x 60mm".to_owned(),
                 title_i18n: HashMap::from([
                     ("ja".to_owned(), "翡翠の一点物 01".to_owned()),
                     ("en".to_owned(), "One-of-a-kind Jade 01".to_owned()),
@@ -11143,6 +10758,7 @@ mod tests {
             stone_listing_key: "jade_variant_01".to_owned(),
             listing_code: "JDE-0101".to_owned(),
             material_key: "jade".to_owned(),
+            size: "18mm x 60mm".to_owned(),
             title_ja: "翡翠の一点物 101".to_owned(),
             title_en: "One-of-a-kind Jade 101".to_owned(),
             description_ja: "落ち着いた緑の流れが入った個体です。".to_owned(),
@@ -11170,6 +10786,7 @@ mod tests {
         StoneListingPatchInput {
             listing_code: "JDE-0101".to_owned(),
             material_key: "jade".to_owned(),
+            size: "18mm x 60mm".to_owned(),
             title_ja: "翡翠の一点物 101".to_owned(),
             title_en: "One-of-a-kind Jade 101".to_owned(),
             description_ja: "落ち着いた緑の流れが入った個体です。".to_owned(),
@@ -11242,14 +10859,55 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_stone_listing_rejects_missing_photo() {
+    async fn create_stone_listing_allows_missing_photo() {
         let state = mock_server_state();
         let mut input = valid_stone_listing_create_input();
+        input.stone_listing_key = "jade_variant_without_photo".to_owned();
+        input.listing_code = "JDE-0102".to_owned();
+        input.status = "draft".to_owned();
         input.photo_storage_path = String::new();
 
         let result = state.create_stone_listing(input).await;
 
-        assert!(matches!(result, Err(message) if message.contains("写真")));
+        assert!(result.is_ok());
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_variant_without_photo")
+            .expect("listing should exist after creation");
+        assert!(listing.photos.is_empty());
+        assert_eq!(listing.status, "draft");
+        assert!(listing.published_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_stores_size() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.stone_listing_key = "jade_variant_sized".to_owned();
+        input.listing_code = "JDE-0103".to_owned();
+        input.size = "21mm x 21mm x 60mm".to_owned();
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(result.is_ok());
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_variant_sized")
+            .expect("listing should exist after creation");
+        assert_eq!(listing.size, "21mm x 21mm x 60mm");
+    }
+
+    #[tokio::test]
+    async fn create_stone_listing_rejects_size_over_limit() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_create_input();
+        input.size = "x".repeat(81);
+
+        let result = state.create_stone_listing(input).await;
+
+        assert!(matches!(result, Err(message) if message.contains("サイズ")));
     }
 
     #[tokio::test]
@@ -11270,6 +10928,23 @@ mod tests {
             .expect("listing should exist after creation");
         assert_eq!(listing.status, "published");
         assert!(listing.published_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn update_stone_listing_updates_size() {
+        let state = mock_server_state();
+        let mut input = valid_stone_listing_patch_input();
+        input.size = "15mm x 60mm".to_owned();
+
+        let result = state.update_stone_listing("jade_01", input).await;
+
+        assert!(result.is_ok());
+        let data = state.data.read().await;
+        let listing = data
+            .stone_listings
+            .get("jade_01")
+            .expect("listing should exist after update");
+        assert_eq!(listing.size, "15mm x 60mm");
     }
 
     #[tokio::test]
@@ -11551,7 +11226,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_material_accepts_decimal_usd_input() {
+    async fn create_material_accepts_master_fields_only() {
         let form = HashMap::from([
             ("key".to_owned(), "rose_quartz_variant".to_owned()),
             ("label_ja".to_owned(), "ローズクオーツ".to_owned()),
@@ -11564,37 +11239,6 @@ mod tests {
                 "description_en".to_owned(),
                 "A soft-toned stone with a warm, approachable presence".to_owned(),
             ),
-            (
-                "comparison_texture_ja".to_owned(),
-                "淡い桃色のやわらかな透明感".to_owned(),
-            ),
-            (
-                "comparison_texture_en".to_owned(),
-                "Soft, translucent pink sheen".to_owned(),
-            ),
-            (
-                "comparison_weight_ja".to_owned(),
-                "やや軽やかで手になじみやすい".to_owned(),
-            ),
-            (
-                "comparison_weight_en".to_owned(),
-                "Light and comfortable to handle".to_owned(),
-            ),
-            (
-                "comparison_usage_ja".to_owned(),
-                "やさしい印象を出したいときに向く".to_owned(),
-            ),
-            (
-                "comparison_usage_en".to_owned(),
-                "Well suited when you want a gentle impression".to_owned(),
-            ),
-            ("shape".to_owned(), "square".to_owned()),
-            ("price_usd".to_owned(), "165.00".to_owned()),
-            ("price_jpy".to_owned(), "28000".to_owned()),
-            ("sort_order".to_owned(), "11".to_owned()),
-            ("photo_storage_path".to_owned(), String::new()),
-            ("photo_alt_ja".to_owned(), String::new()),
-            ("photo_alt_en".to_owned(), String::new()),
             ("is_active".to_owned(), "1".to_owned()),
         ]);
 
@@ -11616,6 +11260,29 @@ mod tests {
             detail.is_some(),
             "material should be inserted into mock state"
         );
+    }
+
+    #[tokio::test]
+    async fn mock_material_master_includes_requested_materials() {
+        let state = mock_server_state();
+        let materials = state.list_materials().await;
+        let labels_by_key = materials
+            .iter()
+            .map(|material| (material.key.as_str(), material.label_ja.as_str()))
+            .collect::<HashMap<_, _>>();
+
+        for (key, label_ja) in [
+            ("wood", "木材"),
+            ("qingtian_stone", "青田石"),
+            ("shoushan_stone", "寿山石"),
+            ("balin_stone", "巴林石"),
+            ("yili_stone", "伊犁石"),
+            ("laos_stone", "ラオス石"),
+            ("xixia_stone", "西峡石"),
+            ("frozen_stone", "凍石"),
+        ] {
+            assert_eq!(labels_by_key.get(key).copied(), Some(label_ja));
+        }
     }
 
     #[tokio::test]

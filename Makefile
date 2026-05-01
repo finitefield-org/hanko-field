@@ -63,7 +63,7 @@ docker-web:
 	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace && devbox run -- make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)}'
 
 docker-dev:
-	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace; devbox run -- sh -lc "set -e; ./scripts/ironframe.sh build -i admin/static/input.css -o admin/static/style.css \"admin/templates/**/*.html\" \"admin/static/*.js\"; ./scripts/ironframe.sh build -i web/static/input.css -o web/static/style.css \"web/templates/**/*.html\" \"web/static/*.js\"; make -C api run PORT=$${API_SERVER_PORT:-$(API_PORT)} & api_pid=\$$!; make -C admin dev PORT=$${ADMIN_PORT:-$(ADMIN_PORT)} MODE=$${HANKO_ADMIN_MODE:-$(MODE)} LOCALE=$${HANKO_ADMIN_LOCALE:-$(LOCALE)} IRONFRAME=true & admin_pid=\$$!; set +e; make -C web dev PORT=$${HANKO_WEB_PORT:-$(WEB_PORT)} MODE=$${HANKO_WEB_MODE:-$(MODE)} LOCALE=$${HANKO_WEB_LOCALE:-$(LOCALE)} IRONFRAME=true; status=\$$?; set -e; kill \$$api_pid \$$admin_pid 2>/dev/null || true; wait \$$api_pid \$$admin_pid 2>/dev/null || true; exit \$$status"'
+	$(COMPOSE) exec $(WORKSPACE_SERVICE) sh -lc 'set -e; $(ADMIN_MODE_EXPORT) $(WEB_MODE_EXPORT) $(ENV_LOAD_CMD) cd /workspace; exec devbox run -- bash ./scripts/docker-dev.sh'
 
 deploy-web-prod:
 	./scripts/deploy-web-prod.sh

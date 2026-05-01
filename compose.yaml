@@ -4,7 +4,8 @@ services:
     volumes:
       - .:/workspace:cached
       - ../firebase-sdk-rust:/firebase-sdk-rust:cached
-      - ${HOME}/.config/gcloud/application_default_credentials.json:/workspace/.gcloud/application_default_credentials.json:ro
+      # Mount host ADC at the devbox user's default gcloud location so auth uses ADC discovery.
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/home/devbox/.config/gcloud/application_default_credentials.json:ro
     ports:
       - "3050:3050"
       - "3051:3051"
@@ -27,6 +28,4 @@ services:
       - ADMIN_ALLOW_INSECURE_AUTH=${ADMIN_ALLOW_INSECURE_AUTH:-1}
       - HANKO_WEB_SITE_BASE_URL=${HANKO_WEB_SITE_BASE_URL:-http://127.0.0.1:3052}
       - HANKO_WEB_API_BASE_URL=${HANKO_WEB_API_BASE_URL:-http://127.0.0.1:3050}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/workspace/.gcloud/application_default_credentials.json}
-      - API_FIREBASE_CREDENTIALS_FILE=${API_FIREBASE_CREDENTIALS_FILE:-/workspace/.gcloud/application_default_credentials.json}
     command: sleep infinity
