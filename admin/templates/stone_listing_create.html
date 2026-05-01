@@ -20,15 +20,19 @@
   >
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>一点物キー</span>
-      <input type="text" name="stone_listing_key" value="{{ view.stone_listing_key }}" placeholder="jade_01" pattern="[a-z0-9_-]+" maxlength="64" required>
+      <input type="text" name="stone_listing_key" value="{{ view.stone_listing_key }}" placeholder="jade_01" pattern="[a-z0-9_\-]+" maxlength="64" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>一点物コード</span>
-      <input type="text" name="listing_code" value="{{ view.listing_code }}" placeholder="JDE-0001" pattern="[A-Z0-9_-]+" maxlength="64" required>
+      <input type="text" name="listing_code" value="{{ view.listing_code }}" placeholder="JDE-0001" pattern="[A-Z0-9_\-]+" maxlength="64" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>素材キー</span>
-      <input type="text" name="material_key" value="{{ view.material_key }}" placeholder="jade" pattern="[a-z0-9_-]+" maxlength="64" required>
+      <input type="text" name="material_key" value="{{ view.material_key }}" placeholder="jade" pattern="[a-z0-9_\-]+" maxlength="64" required>
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>サイズ</span>
+      <input type="text" name="size" value="{{ view.size }}" placeholder="18mm x 60mm" maxlength="80">
     </label>
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm font-semibold">

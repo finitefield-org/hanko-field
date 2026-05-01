@@ -19,7 +19,7 @@
   >
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>タグキー</span>
-      <input type="text" name="key" value="{{ view.key }}" placeholder="deep_green" pattern="[a-z0-9_-]+" maxlength="64" required>
+      <input type="text" name="key" value="{{ view.key }}" placeholder="deep_green" pattern="[a-z0-9_\-]+" maxlength="64" required>
       {% if view.has_key_error %}
       <span class="text-xs font-semibold text-admin-alert">{{ view.key_error }}</span>
       {% endif %}

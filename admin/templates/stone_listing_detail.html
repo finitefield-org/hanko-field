@@ -25,6 +25,10 @@
       <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.material_key }}</p>
     </div>
     <div>
+      <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">サイズ</p>
+      <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{% if detail.size != "" %}{{ detail.size }}{% else %}-{% endif %}</p>
+    </div>
+    <div>
       <p class="text-[0.72rem] font-bold tracking-[0.08em] text-admin-muted uppercase">状態</p>
       <p class="mt-1 break-all text-sm font-semibold text-admin-ink">{{ detail.status_label }}</p>
     </div>
@@ -94,11 +98,15 @@
     <input type="hidden" name="stone_listing_key" value="{{ detail.key }}">
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>一点物コード</span>
-      <input type="text" name="listing_code" value="{{ detail.listing_code }}" placeholder="JDE-0001" pattern="[A-Z0-9_-]+" maxlength="64" required>
+      <input type="text" name="listing_code" value="{{ detail.listing_code }}" placeholder="JDE-0001" pattern="[A-Z0-9_\-]+" maxlength="64" required>
     </label>
     <label class="flex flex-col gap-1.5 text-sm font-semibold">
       <span>素材キー</span>
-      <input type="text" name="material_key" value="{{ detail.material_key }}" placeholder="jade" pattern="[a-z0-9_-]+" maxlength="64" required>
+      <input type="text" name="material_key" value="{{ detail.material_key }}" placeholder="jade" pattern="[a-z0-9_\-]+" maxlength="64" required>
+    </label>
+    <label class="flex flex-col gap-1.5 text-sm font-semibold">
+      <span>サイズ</span>
+      <input type="text" name="size" value="{{ detail.size }}" placeholder="18mm x 60mm" maxlength="80">
     </label>
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm font-semibold">

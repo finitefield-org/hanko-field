@@ -1,4 +1,6 @@
 (() => {
+  const photoUploadPromises = new WeakMap();
+
   const getUploadContext = (sourceElement) => {
     if (!(sourceElement instanceof Element)) {
       return null;
@@ -164,78 +166,53 @@
     return "/admin/materials/photo-upload";
   };
 
-  const uploadMaterialPhoto = async (sourceElement, options = {}) => {
-    if (!(sourceElement instanceof Element)) {
-      return;
+  const formAction = (form) => {
+    return (
+      form.getAttribute("hx-patch") ||
+      form.getAttribute("hx-post") ||
+      form.getAttribute("action") ||
+      ""
+    );
+  };
+
+  const isStoneListingCreateForm = (form) => {
+    return formAction(form) === "/admin/stone-listings";
+  };
+
+  const hasStoragePath = (pathInput) => {
+    return pathInput instanceof HTMLInputElement && pathInput.value.trim() !== "";
+  };
+
+  const selectedStoneListingStatus = (form) => {
+    const statusElement = form.querySelector('[name="status"]');
+    if (
+      statusElement instanceof HTMLSelectElement ||
+      statusElement instanceof HTMLInputElement
+    ) {
+      return statusElement.value.trim().toLowerCase();
     }
 
-    const { silentMissingKey = false } = options;
-    const context = getUploadContext(sourceElement);
-    if (!context) {
-      return;
-    }
+    return "";
+  };
 
-    const {
-      form,
-      fileInput,
-      statusElement,
-      pathInput,
-      keyInput,
-      uploadButton,
-    } = context;
+  const stoneListingStatusRequiresPhoto = (form) => {
+    return selectedStoneListingStatus(form) === "published";
+  };
 
+  const selectedPhotoFile = (fileInput) => {
     if (
       !(fileInput instanceof HTMLInputElement) ||
       !fileInput.files ||
       fileInput.files.length === 0
     ) {
-      setUploadStatus(statusElement, "画像ファイルを選択してください。", true);
-      return;
-    }
-    if (!(pathInput instanceof HTMLInputElement)) {
-      setUploadStatus(
-        statusElement,
-        "Storage パス入力欄が見つかりません。",
-        true,
-      );
-      return;
+      return null;
     }
 
-    const uploadKey = resolveUploadKey(form, keyInput);
-    if (!uploadKey) {
-      if (silentMissingKey) {
-        setUploadStatus(
-          statusElement,
-          "キーを入力すると Storage パスを自動入力します。",
-          false,
-        );
-      } else {
-        setUploadStatus(statusElement, "キーを入力してください。", true);
-      }
-      return;
-    }
+    return fileInput.files[0] || null;
+  };
 
-    const file = fileInput.files[0];
-    if (!isSupportedImageFile(file)) {
-      setUploadStatus(
-        statusElement,
-        "画像ファイル（png/jpg/webp/gif/avif）を選択してください。",
-        true,
-      );
-      return;
-    }
-
-    if (form.dataset.photoUploadInFlight === "1") {
-      return;
-    }
-
-    const formData = new FormData();
-    if (form.querySelector('input[name="stone_listing_key"]')) {
-      formData.append("stone_listing_key", uploadKey);
-    } else {
-      formData.append("material_key", uploadKey);
-    }
-    formData.append("photo_file", file, file.name);
+  const performPhotoUpload = async (context, uploadKey, file) => {
+    const { form, statusElement, pathInput, uploadButton } = context;
 
     form.dataset.photoUploadInFlight = "1";
     if (uploadButton instanceof HTMLButtonElement) {
@@ -244,6 +221,14 @@
     setUploadStatus(statusElement, "アップロード中...", false);
 
     try {
+      const formData = new FormData();
+      if (form.querySelector('input[name="stone_listing_key"]')) {
+        formData.append("stone_listing_key", uploadKey);
+      } else {
+        formData.append("material_key", uploadKey);
+      }
+      formData.append("photo_file", file, file.name);
+
       const response = await fetch(resolveUploadEndpoint(form), {
         method: "POST",
         body: formData,
@@ -278,16 +263,85 @@
         `アップロード完了: ${payload.storage_path}`,
         false,
       );
+      return true;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "アップロードに失敗しました。";
       setUploadStatus(statusElement, message, true);
+      return false;
     } finally {
       delete form.dataset.photoUploadInFlight;
+      photoUploadPromises.delete(form);
       if (uploadButton instanceof HTMLButtonElement) {
         uploadButton.disabled = false;
       }
     }
+  };
+
+  const uploadMaterialPhoto = (sourceElement, options = {}) => {
+    if (!(sourceElement instanceof Element)) {
+      return Promise.resolve(false);
+    }
+
+    const { silentMissingKey = false } = options;
+    const context = getUploadContext(sourceElement);
+    if (!context) {
+      return Promise.resolve(false);
+    }
+
+    const {
+      form,
+      fileInput,
+      statusElement,
+      pathInput,
+      keyInput,
+    } = context;
+
+    const existingUpload = photoUploadPromises.get(form);
+    if (existingUpload) {
+      return existingUpload;
+    }
+
+    const file = selectedPhotoFile(fileInput);
+    if (!file) {
+      setUploadStatus(statusElement, "画像ファイルを選択してください。", true);
+      return Promise.resolve(false);
+    }
+    if (!(pathInput instanceof HTMLInputElement)) {
+      setUploadStatus(
+        statusElement,
+        "Storage パス入力欄が見つかりません。",
+        true,
+      );
+      return Promise.resolve(false);
+    }
+
+    const uploadKey = resolveUploadKey(form, keyInput);
+    if (!uploadKey) {
+      if (silentMissingKey) {
+        setUploadStatus(
+          statusElement,
+          "キーを入力すると Storage パスを自動入力します。",
+          false,
+        );
+      } else {
+        setUploadStatus(statusElement, "キーを入力してください。", true);
+      }
+      return Promise.resolve(false);
+    }
+
+    if (!isSupportedImageFile(file)) {
+      setUploadStatus(
+        statusElement,
+        "画像ファイル（png/jpg/webp/gif/avif）を選択してください。",
+        true,
+      );
+      return Promise.resolve(false);
+    }
+
+    const upload = performPhotoUpload(context, uploadKey, file);
+    photoUploadPromises.set(form, upload);
+    return upload;
   };
 
   document.body.addEventListener("click", (event) => {
@@ -349,12 +403,76 @@
     uploadMaterialPhoto(fileInput, { silentMissingKey: true });
   });
 
+  document.body.addEventListener("htmx:beforeRequest", (event) => {
+    const detail = event.detail;
+    const sourceElement = detail && detail.elt;
+    const form =
+      sourceElement instanceof HTMLFormElement
+        ? sourceElement
+        : sourceElement instanceof Element
+          ? sourceElement.closest("form")
+          : null;
+
+    if (!(form instanceof HTMLFormElement) || !isStoneListingCreateForm(form)) {
+      return;
+    }
+
+    const context = getUploadContext(form);
+    if (!context) {
+      return;
+    }
+
+    const { fileInput, statusElement, pathInput } = context;
+    if (hasStoragePath(pathInput)) {
+      return;
+    }
+
+    const file = selectedPhotoFile(fileInput);
+    if (!file) {
+      if (!stoneListingStatusRequiresPhoto(form)) {
+        return;
+      }
+
+      event.preventDefault();
+      setUploadStatus(statusElement, "写真を選択してください。", true);
+      if (fileInput instanceof HTMLInputElement) {
+        fileInput.focus();
+      }
+      return;
+    }
+
+    event.preventDefault();
+    setUploadStatus(statusElement, "写真をアップロードしてから作成します。", false);
+    uploadMaterialPhoto(fileInput).then((uploaded) => {
+      if (uploaded && hasStoragePath(pathInput)) {
+        form.requestSubmit();
+      }
+    });
+  });
+
   window.addEventListener("beforeunload", () => {
     const previews = document.querySelectorAll("[data-photo-preview]");
     for (const preview of previews) {
       if (preview instanceof HTMLImageElement) {
         revokePreviewObjectUrl(preview);
       }
+    }
+  });
+
+  document.body.addEventListener("htmx:beforeSwap", (event) => {
+    const detail = event.detail;
+    if (!detail || !detail.xhr) {
+      return;
+    }
+
+    const contentType = detail.xhr.getResponseHeader("content-type") || "";
+    if (
+      detail.xhr.status >= 400 &&
+      detail.xhr.status < 500 &&
+      contentType.includes("text/html")
+    ) {
+      detail.shouldSwap = true;
+      detail.isError = false;
     }
   });
 

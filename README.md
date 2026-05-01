@@ -15,8 +15,9 @@ cp .env.prod.example .env.prod
 `make docker-dev ENV=dev` や `cargo run` では、Google ADC を使います。
 事前に `gcloud auth application-default login` を実行して、
 `hanko-field` / `hanko-field-prod` へアクセスできる状態にしてください。
-`.env.dev` / `.env.prod` に `GOOGLE_APPLICATION_CREDENTIALS` や
-`API_FIREBASE_CREDENTIALS_FILE` は設定しません。
+Docker ワークスペースはホストの ADC を `/home/devbox/.config/gcloud/application_default_credentials.json`
+にマウントし、`GOOGLE_APPLICATION_CREDENTIALS` は設定しません。
+`.env.dev` / `.env.prod` に `API_FIREBASE_CREDENTIALS_FILE` は設定しません。
 
 ## クイックスタート（推奨）
 

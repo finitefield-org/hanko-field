@@ -373,45 +373,26 @@
               {% endif %}
               <span class="material-name">{{ m.label }}</span>
               <span class="material-description">{{ m.shape_label }}</span>
+              {% if m.has_description %}
               <span class="material-description">{{ m.description }}</span>
+              {% endif %}
+              {% if m.has_story %}
+              <span class="material-story">{{ m.story }}</span>
+              {% endif %}
               {% if m.has_color_tag_labels || m.has_pattern_tag_labels %}
-              <div class="material-tags">
+              <div class="material-tags" role="list">
                 {% if m.has_color_tag_labels %}
-                <div class="material-tag-group">
-                  <span class="material-tag-group-label">{% if selected_locale == "ja" %}色{% else %}Color{% endif %}</span>
-                  <div class="material-tag-list" role="list">
-                    {% for tag in m.color_tag_labels %}
-                    <span class="material-tag-chip" role="listitem">{{ tag }}</span>
-                    {% endfor %}
-                  </div>
-                </div>
+                {% for tag in m.color_tag_labels %}
+                <span class="material-tag-chip" role="listitem">{{ tag }}</span>
+                {% endfor %}
                 {% endif %}
                 {% if m.has_pattern_tag_labels %}
-                <div class="material-tag-group">
-                  <span class="material-tag-group-label">{% if selected_locale == "ja" %}模様{% else %}Pattern{% endif %}</span>
-                  <div class="material-tag-list" role="list">
-                    {% for tag in m.pattern_tag_labels %}
-                    <span class="material-tag-chip" role="listitem">{{ tag }}</span>
-                    {% endfor %}
-                  </div>
-                </div>
+                {% for tag in m.pattern_tag_labels %}
+                <span class="material-tag-chip" role="listitem">{{ tag }}</span>
+                {% endfor %}
                 {% endif %}
               </div>
               {% endif %}
-              <div class="material-comparison" aria-label="{% if selected_locale == "ja" %}比較ポイント{% else %}Comparison points{% endif %}">
-                <span class="material-comparison-item">
-                  <span class="material-comparison-label">{% if selected_locale == "ja" %}質感{% else %}Texture{% endif %}</span>
-                  <span class="material-comparison-value">{{ m.comparison_texture }}</span>
-                </span>
-                <span class="material-comparison-item">
-                  <span class="material-comparison-label">{% if selected_locale == "ja" %}重さ{% else %}Weight{% endif %}</span>
-                  <span class="material-comparison-value">{{ m.comparison_weight }}</span>
-                </span>
-                <span class="material-comparison-item">
-                  <span class="material-comparison-label">{% if selected_locale == "ja" %}用途{% else %}Use{% endif %}</span>
-                  <span class="material-comparison-value">{{ m.comparison_usage }}</span>
-                </span>
-              </div>
               <span class="material-price">{{ m.price_display }}</span>
             </label>
             {% endfor %}

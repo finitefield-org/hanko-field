@@ -83,9 +83,9 @@ struct MaterialOption {
     key: String,
     label: String,
     description: String,
-    comparison_texture: String,
-    comparison_weight: String,
-    comparison_usage: String,
+    story: String,
+    has_description: bool,
+    has_story: bool,
     price_by_currency: HashMap<String, i64>,
     shape: String,
     shape_label: String,
@@ -106,11 +106,6 @@ struct MaterialOption {
 #[derive(Debug, Clone)]
 struct MaterialCategory {
     label: String,
-    description: String,
-    comparison_texture: String,
-    comparison_weight: String,
-    comparison_usage: String,
-    shape: String,
 }
 
 #[derive(Debug, Clone)]
@@ -195,6 +190,7 @@ struct StoneListingRecord {
     material_key: String,
     title: String,
     description: String,
+    story: String,
     price_by_currency: HashMap<String, i64>,
     color_family: String,
     pattern_primary: String,
@@ -746,52 +742,8 @@ impl FirestoreCatalogSource {
                 &self.default_locale,
                 &doc_id,
             );
-            let description = resolve_localized_field(
-                &document.fields,
-                "description_i18n",
-                locale,
-                &self.default_locale,
-                "",
-            );
-            let (comparison_default_texture, comparison_default_weight, comparison_default_usage) =
-                material_comparison_profile(&doc_id, locale);
-            let comparison_texture = fallback_text(
-                if parse_supported_locale(locale) == Some("en") {
-                    read_string_field(&document.fields, "comparison_texture_en")
-                } else {
-                    read_string_field(&document.fields, "comparison_texture_ja")
-                },
-                comparison_default_texture.as_str(),
-            );
-            let comparison_weight = fallback_text(
-                if parse_supported_locale(locale) == Some("en") {
-                    read_string_field(&document.fields, "comparison_weight_en")
-                } else {
-                    read_string_field(&document.fields, "comparison_weight_ja")
-                },
-                comparison_default_weight.as_str(),
-            );
-            let comparison_usage = fallback_text(
-                if parse_supported_locale(locale) == Some("en") {
-                    read_string_field(&document.fields, "comparison_usage_en")
-                } else {
-                    read_string_field(&document.fields, "comparison_usage_ja")
-                },
-                comparison_default_usage.as_str(),
-            );
-            let shape = normalize_material_shape(&read_string_field(&document.fields, "shape"));
 
-            categories.insert(
-                doc_id.clone(),
-                MaterialCategory {
-                    label,
-                    description,
-                    comparison_texture,
-                    comparison_weight,
-                    comparison_usage,
-                    shape: shape.to_owned(),
-                },
-            );
+            categories.insert(doc_id.clone(), MaterialCategory { label });
         }
 
         if categories.is_empty() {
@@ -902,6 +854,13 @@ impl FirestoreCatalogSource {
                 &self.default_locale,
                 "",
             );
+            let story = resolve_localized_field(
+                &document.fields,
+                "story_i18n",
+                locale,
+                &self.default_locale,
+                "",
+            );
             let facets = read_map_field(&document.fields, "facets");
             let color_family = stone_listing_color_family_from_facets(&facets);
             let pattern_primary = read_string_field(&facets, "pattern_primary");
@@ -915,6 +874,7 @@ impl FirestoreCatalogSource {
                 material_key: read_string_field(&document.fields, "material_key"),
                 title,
                 description,
+                story,
                 price_by_currency,
                 color_family,
                 pattern_primary,
@@ -1503,7 +1463,7 @@ async fn new_catalog_source(cfg: &AppConfig) -> Result<CatalogSource> {
                 default_locale: cfg.default_locale.clone(),
                 label,
                 storage_assets_bucket: cfg.storage_assets_bucket.clone().unwrap_or_default(),
-                allow_mock_fallback: false,
+                allow_mock_fallback: matches!(cfg.mode, RunMode::Dev),
                 token_provider,
             }))
         }
@@ -1668,24 +1628,14 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                         "やわらかな色合いで、親しみやすい印象の石材"
                     }
                     .to_owned(),
-                    comparison_texture: if english {
-                        "Soft, translucent pink sheen"
+                    story: if english {
+                        "A gentle rose quartz listing selected for its soft translucent tone and easy everyday presence."
                     } else {
-                        "淡い桃色のやわらかな透明感"
+                        "やわらかな透明感と日常に馴染む穏やかな雰囲気を持つローズクオーツの一点物です。"
                     }
                     .to_owned(),
-                    comparison_weight: if english {
-                        "Light and gentle to handle"
-                    } else {
-                        "やや軽やかで手になじみやすい"
-                    }
-                    .to_owned(),
-                    comparison_usage: if english {
-                        "A soft, friendly finish"
-                    } else {
-                        "やわらかな印象を出しやすい"
-                    }
-                    .to_owned(),
+                    has_description: true,
+                    has_story: true,
                     price_by_currency: HashMap::from([
                         ("USD".to_owned(), 16500),
                         ("JPY".to_owned(), 28000),
@@ -1736,24 +1686,14 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                         "深い青が印象的な、存在感のある石材"
                     }
                     .to_owned(),
-                    comparison_texture: if english {
-                        "Deep blue stone with bright flecks"
+                    story: if english {
+                        "This lapis lazuli listing has a vivid blue field with small bright flecks that make each seal feel distinct."
                     } else {
-                        "深い青にきらめきが入る石目"
+                        "深い青に小さなきらめきが入り、一点物らしい個性が際立つラピスラビリです。"
                     }
                     .to_owned(),
-                    comparison_weight: if english {
-                        "Medium-heavy with a strong presence"
-                    } else {
-                        "ほどよい重さで存在感がある"
-                    }
-                    .to_owned(),
-                    comparison_usage: if english {
-                        "A vivid, distinctive finish"
-                    } else {
-                        "印象を強めやすい"
-                    }
-                    .to_owned(),
+                    has_description: true,
+                    has_story: true,
                     price_by_currency: HashMap::from([
                         ("USD".to_owned(), 32500),
                         ("JPY".to_owned(), 55000),
@@ -1799,24 +1739,14 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                         "落ち着いた緑の艶が映える、格調ある石材"
                     }
                     .to_owned(),
-                    comparison_texture: if english {
-                        "Polished green stone with a calm sheen"
+                    story: if english {
+                        "A jade listing with a quiet green sheen and a composed appearance suited to a refined seal."
                     } else {
-                        "しっとりした緑石の艶感"
+                        "静かな緑の艶と端正な表情を備え、上品な印影に合わせやすい翡翠の一点物です。"
                     }
                     .to_owned(),
-                    comparison_weight: if english {
-                        "Substantial and steady"
-                    } else {
-                        "ほどよく重く、落ち着いた安定感"
-                    }
-                    .to_owned(),
-                    comparison_usage: if english {
-                        "A calm, dignified finish"
-                    } else {
-                        "落ち着いた格調を出しやすい"
-                    }
-                    .to_owned(),
+                    has_description: true,
+                    has_story: true,
                     price_by_currency: HashMap::from([
                         ("USD".to_owned(), 88500),
                         ("JPY".to_owned(), 150000),
@@ -3213,13 +3143,6 @@ fn normalize_kanji_style(raw: &str) -> &'static str {
     }
 }
 
-fn normalize_material_shape(raw: &str) -> &'static str {
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "round" => "round",
-        _ => "square",
-    }
-}
-
 fn normalize_stone_shape(raw: &str) -> String {
     // Preserve unknown values so catalog data can round-trip without being coerced.
     match raw.trim().to_ascii_lowercase().as_str() {
@@ -3330,11 +3253,10 @@ fn build_material_option_from_listing(
     } else {
         listing.title.clone()
     };
-    let description = if listing.description.is_empty() {
-        category.description.clone()
-    } else {
-        listing.description.clone()
-    };
+    let description = listing.description.clone();
+    let story = listing.story.clone();
+    let has_description = !description.trim().is_empty();
+    let has_story = !story.trim().is_empty();
     let shape = normalize_stone_shape(&listing.stone_shape);
     let shape_label = match shape.as_str() {
         "square" => material_shape_label("square", locale).to_owned(),
@@ -3361,9 +3283,9 @@ fn build_material_option_from_listing(
         key: listing.key.clone(),
         label: title,
         description,
-        comparison_texture: category.comparison_texture.clone(),
-        comparison_weight: category.comparison_weight.clone(),
-        comparison_usage: category.comparison_usage.clone(),
+        story,
+        has_description,
+        has_story,
         price_by_currency: listing.price_by_currency.clone(),
         shape,
         shape_label,
@@ -3485,120 +3407,6 @@ fn material_shape_sort_order(shape: &str) -> i32 {
         "round" => 1,
         _ => 2,
     }
-}
-
-fn fallback_text(value: String, fallback: &str) -> String {
-    if value.trim().is_empty() {
-        fallback.to_owned()
-    } else {
-        value
-    }
-}
-
-fn material_comparison_profile(material_key: &str, locale: &str) -> (String, String, String) {
-    let is_english = parse_supported_locale(locale) == Some("en");
-
-    let profile = match material_key {
-        "rose_quartz" => {
-            if is_english {
-                (
-                    "Soft, translucent pink sheen",
-                    "Light and gentle to handle",
-                    "A soft, friendly finish",
-                )
-            } else {
-                (
-                    "淡い桃色のやわらかな透明感",
-                    "やや軽やかで手になじみやすい",
-                    "やわらかな印象を出しやすい",
-                )
-            }
-        }
-        "boxwood" => {
-            if is_english {
-                (
-                    "A simple wood grain with a gentle feel",
-                    "Light and easy to handle",
-                    "A dependable everyday standard",
-                )
-            } else {
-                (
-                    "木目がやわらかく見える素朴な質感",
-                    "軽くて扱いやすい",
-                    "日常使いしやすい定番",
-                )
-            }
-        }
-        "black_buffalo" => {
-            if is_english {
-                (
-                    "Smooth, deep black finish",
-                    "Moderately weighted and steady",
-                    "Well suited to a calm, formal look",
-                )
-            } else {
-                (
-                    "深い黒のしっとりした質感",
-                    "ほどよい重さで落ち着きがある",
-                    "落ち着いた印象を出したいときに向く",
-                )
-            }
-        }
-        "a_maru" => {
-            if is_english {
-                ("Balanced, neutral texture", "Medium weight", "Versatile")
-            } else {
-                ("標準的な質感", "中程度の重さ", "汎用的")
-            }
-        }
-        "lapis_lazuli" => {
-            if is_english {
-                (
-                    "Deep blue stone with bright flecks",
-                    "Medium-heavy with a strong presence",
-                    "A vivid, distinctive finish",
-                )
-            } else {
-                (
-                    "深い青にきらめきが入る石目",
-                    "ほどよい重さで存在感がある",
-                    "印象を強めやすい",
-                )
-            }
-        }
-        "jade" => {
-            if is_english {
-                (
-                    "Polished green stone with a calm sheen",
-                    "Substantial and steady",
-                    "A calm, dignified finish",
-                )
-            } else {
-                (
-                    "しっとりした緑石の艶感",
-                    "ほどよく重く、落ち着いた安定感",
-                    "落ち着いた格調を出しやすい",
-                )
-            }
-        }
-        _ => {
-            if is_english {
-                (
-                    "Balanced, neutral texture",
-                    "Medium weight",
-                    "General-purpose use",
-                )
-            } else {
-                ("標準的な質感", "中程度の重さ", "汎用的")
-            }
-        }
-    };
-
-    (
-        profile.0.to_owned(),
-        profile.1.to_owned(),
-        profile.2.to_owned(),
-    )
 }
 
 fn shape_label_for_locale(shape_key: &str, locale: &str) -> Option<&'static str> {
@@ -4369,17 +4177,13 @@ mod tests {
 
         let category = MaterialCategory {
             label: "翡翠".to_owned(),
-            description: "落ち着いた緑の石材".to_owned(),
-            comparison_texture: "texture".to_owned(),
-            comparison_weight: "weight".to_owned(),
-            comparison_usage: "usage".to_owned(),
-            shape: "square".to_owned(),
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
             material_key: "jade".to_owned(),
             title: "翡翠の一点物".to_owned(),
             description: "個体説明".to_owned(),
+            story: "作品紹介".to_owned(),
             price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
             color_family: "green".to_owned(),
             pattern_primary: "cloud".to_owned(),
@@ -4400,6 +4204,10 @@ mod tests {
 
         assert_eq!(option.color_tag_labels, vec!["濃緑"]);
         assert_eq!(option.pattern_tag_labels, vec!["雲状"]);
+        assert_eq!(option.description, "個体説明");
+        assert_eq!(option.story, "作品紹介");
+        assert!(option.has_description);
+        assert!(option.has_story);
         assert!(option.has_color_tag_labels);
         assert!(option.has_pattern_tag_labels);
     }
@@ -4408,17 +4216,13 @@ mod tests {
     fn material_option_uses_stone_shape_for_listing_shape() {
         let category = MaterialCategory {
             label: "翡翠".to_owned(),
-            description: "落ち着いた緑の石材".to_owned(),
-            comparison_texture: "texture".to_owned(),
-            comparison_weight: "weight".to_owned(),
-            comparison_usage: "usage".to_owned(),
-            shape: "square".to_owned(),
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
             material_key: "jade".to_owned(),
             title: "翡翠の一点物".to_owned(),
             description: "個体説明".to_owned(),
+            story: "作品紹介".to_owned(),
             price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
             color_family: "green".to_owned(),
             pattern_primary: "cloud".to_owned(),
@@ -4444,17 +4248,13 @@ mod tests {
     fn material_option_preserves_unknown_stone_shape() {
         let category = MaterialCategory {
             label: "翡翠".to_owned(),
-            description: "落ち着いた緑の石材".to_owned(),
-            comparison_texture: "texture".to_owned(),
-            comparison_weight: "weight".to_owned(),
-            comparison_usage: "usage".to_owned(),
-            shape: "square".to_owned(),
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
             material_key: "jade".to_owned(),
             title: "翡翠の一点物".to_owned(),
             description: "個体説明".to_owned(),
+            story: "作品紹介".to_owned(),
             price_by_currency: HashMap::from([("JPY".to_owned(), 150000)]),
             color_family: "green".to_owned(),
             pattern_primary: "cloud".to_owned(),
@@ -4481,17 +4281,13 @@ mod tests {
     fn material_option_uses_english_photo_alt_fallback() {
         let category = MaterialCategory {
             label: "翡翠".to_owned(),
-            description: "落ち着いた緑の石材".to_owned(),
-            comparison_texture: "texture".to_owned(),
-            comparison_weight: "weight".to_owned(),
-            comparison_usage: "usage".to_owned(),
-            shape: "square".to_owned(),
         };
         let listing = StoneListingRecord {
             key: "listing-1".to_owned(),
             material_key: "jade".to_owned(),
             title: "One-of-a-kind Jade 101".to_owned(),
             description: "A refined piece with calm green flowing patterns.".to_owned(),
+            story: "A quiet jade piece selected for its flowing green expression.".to_owned(),
             price_by_currency: HashMap::from([("USD".to_owned(), 92800)]),
             color_family: "green".to_owned(),
             pattern_primary: "cloud".to_owned(),
