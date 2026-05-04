@@ -15,6 +15,7 @@
 
 ## 関連ドキュメント
 - Firebase Firestore 設計（本番向け・多言語対応）: `doc/firebase-firestore-design.md`
+- SEO向け静的情報ページ設計（印鑑・宝石・多言語）: `doc/seo-information-pages-design.md`
 
 ## タスク
 - [x] 管理画面（`admin`）の初期モック実装を追加
@@ -73,3 +74,4 @@
 - [x] `app` の Google Play Store 掲載準備として Android の release signing / app icon / app name を整備する
 - [x] 管理画面（`admin`）の最大表示幅を広げる
 - [x] 管理画面（`admin`）と Web を本番環境へデプロイする
+- [x] 印鑑・宝石の多言語SEO静的情報ページ設計を追加する
