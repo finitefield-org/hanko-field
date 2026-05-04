@@ -5,14 +5,21 @@ class CatalogData {
   final List<FontOption> fonts;
   final List<StoneListingOption> stoneListings;
   final List<CountryOption> countries;
+  final MaterialFilters materialFilters;
 
   const CatalogData({
     required this.fonts,
     required this.stoneListings,
     required this.countries,
+    this.materialFilters = MaterialFilters.empty,
   });
 
-  static const empty = CatalogData(fonts: [], stoneListings: [], countries: []);
+  static const empty = CatalogData(
+    fonts: [],
+    stoneListings: [],
+    countries: [],
+    materialFilters: MaterialFilters.empty,
+  );
 }
 
 enum OrderStep {
@@ -122,8 +129,8 @@ enum SealShape {
   String localizedLabel(String locale) {
     if (isEnglishLocale(locale)) {
       return switch (this) {
-        SealShape.square => 'Square',
-        SealShape.round => 'Round',
+        SealShape.square => 'Square seal',
+        SealShape.round => 'Round seal',
       };
     }
     return label;
@@ -144,6 +151,27 @@ enum SealShape {
         ? SealShape.round
         : SealShape.square;
   }
+}
+
+@immutable
+class MaterialFilterOption {
+  final String value;
+  final String label;
+
+  const MaterialFilterOption({required this.value, required this.label});
+}
+
+@immutable
+class MaterialFilters {
+  final List<MaterialFilterOption> colorOptions;
+  final List<MaterialFilterOption> patternOptions;
+
+  const MaterialFilters({
+    required this.colorOptions,
+    required this.patternOptions,
+  });
+
+  static const empty = MaterialFilters(colorOptions: [], patternOptions: []);
 }
 
 @immutable
@@ -169,6 +197,10 @@ class StoneListingOption {
   final String description;
   final String story;
   final String stoneShape;
+  final String colorFamily;
+  final String patternPrimary;
+  final List<String> colorTagLabels;
+  final List<String> patternTagLabels;
   final int price;
   final String photoUrl;
   final String photoAlt;
@@ -181,6 +213,10 @@ class StoneListingOption {
     required this.description,
     required this.story,
     required this.stoneShape,
+    this.colorFamily = '',
+    this.patternPrimary = '',
+    this.colorTagLabels = const [],
+    this.patternTagLabels = const [],
     required this.price,
     required this.photoUrl,
     required this.photoAlt,
@@ -188,7 +224,8 @@ class StoneListingOption {
   });
 
   bool supportsShape(SealShape shape) {
-    return stoneShape.trim().toLowerCase() == shape.code;
+    final normalizedShape = stoneShape.trim().toLowerCase();
+    return normalizedShape.isEmpty || normalizedShape == shape.code;
   }
 }
 
@@ -286,6 +323,8 @@ class OrderDraftData {
   final String selectedFontKey;
   final String shapeCode;
   final String selectedStoneListingKey;
+  final String selectedColorFamily;
+  final String selectedPatternPrimary;
   final String selectedCountryCode;
   final String realName;
   final String candidateGenderCode;
@@ -307,6 +346,8 @@ class OrderDraftData {
     required this.selectedFontKey,
     required this.shapeCode,
     required this.selectedStoneListingKey,
+    this.selectedColorFamily = '',
+    this.selectedPatternPrimary = '',
     required this.selectedCountryCode,
     required this.realName,
     required this.candidateGenderCode,
@@ -331,6 +372,8 @@ class OrderDraftData {
       'selected_font_key': selectedFontKey,
       'shape': shapeCode,
       'selected_stone_listing_key': selectedStoneListingKey,
+      'selected_color_family': selectedColorFamily,
+      'selected_pattern_primary': selectedPatternPrimary,
       'selected_country_code': selectedCountryCode,
       'real_name': realName,
       'candidate_gender': candidateGenderCode,
@@ -355,6 +398,8 @@ class OrderDraftData {
       selectedFontKey: _asString(json['selected_font_key']),
       shapeCode: _asString(json['shape']),
       selectedStoneListingKey: _asString(json['selected_stone_listing_key']),
+      selectedColorFamily: _asString(json['selected_color_family']),
+      selectedPatternPrimary: _asString(json['selected_pattern_primary']),
       selectedCountryCode: _asString(json['selected_country_code']),
       realName: _asString(json['real_name']),
       candidateGenderCode: _asString(json['candidate_gender']),

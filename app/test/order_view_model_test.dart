@@ -57,6 +57,8 @@ OrderScreenState _state({
     selectedFontKey: 'font_01',
     shape: shape,
     selectedStoneListingKey: selectedStoneListingKey,
+    selectedColorFamily: '',
+    selectedPatternPrimary: '',
     selectedCountryCode: 'jp',
     realName: 'Taro Yamada',
     candidateGender: CandidateGender.unspecified,
@@ -95,7 +97,7 @@ void main() {
     expect(state.purchaseValidationGroups.single.label, 'Listing');
     expect(
       state.purchaseValidationGroups.single.items.single,
-      'No listing is available for the selected shape.',
+      'Choose a listing before continuing.',
     );
   });
 }
