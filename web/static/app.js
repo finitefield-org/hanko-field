@@ -153,6 +153,9 @@
   const materialFilterEmpty = document.querySelector(
     "[data-material-filter-empty]",
   );
+  const materialFilterShapeLabel = document.querySelector(
+    "[data-material-filter-shape-label]",
+  );
   const materialFilterAllowedValues = {};
   materialFilterGroups.forEach((group) => {
     const groupName = group.dataset.materialFilterGroup || "";
@@ -185,10 +188,6 @@
     pattern: clampMaterialFilterValue(
       "pattern",
       currentUrl.searchParams.get("pattern_primary") || "",
-    ),
-    stoneShape: clampMaterialFilterValue(
-      "stoneShape",
-      normalizeStoneShapeFilterValue(currentUrl.searchParams.get("stone_shape") || ""),
     ),
   };
 
@@ -519,10 +518,6 @@
     return (rawValue || "").trim().toLowerCase();
   }
 
-  function normalizeStoneShapeFilterValue(rawValue) {
-    return normalizeMaterialFilterValue(rawValue);
-  }
-
   function parseMaterialFilterValues(rawValue) {
     return (rawValue || "")
       .split("|")
@@ -563,11 +558,7 @@
       nextUrl.searchParams.delete("pattern_primary");
     }
 
-    if (materialFilterState.stoneShape) {
-      nextUrl.searchParams.set("stone_shape", materialFilterState.stoneShape);
-    } else {
-      nextUrl.searchParams.delete("stone_shape");
-    }
+    nextUrl.searchParams.delete("stone_shape");
 
     window.history.replaceState(
       null,
@@ -592,18 +583,11 @@
       const patternPrimary = normalizeMaterialFilterValue(
         radio.dataset.patternPrimary || "",
       );
-      const stoneShape = normalizeMaterialFilterValue(radio.dataset.stoneShape || "");
       const colorFilter = normalizeMaterialFilterValue(materialFilterState.color);
       const patternFilter = normalizeMaterialFilterValue(materialFilterState.pattern);
-      const stoneShapeFilter = normalizeMaterialFilterValue(
-        materialFilterState.stoneShape,
-      );
       const matchesColor = colorFilter === "" || colorFamily === colorFilter;
       const matchesPattern = patternFilter === "" || patternPrimary === patternFilter;
-      const matchesStoneShape =
-        stoneShapeFilter === "" || stoneShape === stoneShapeFilter;
-      const matches =
-        matchesShape && matchesColor && matchesPattern && matchesStoneShape;
+      const matches = matchesShape && matchesColor && matchesPattern;
 
       radio.disabled = !matches;
       if (card) {
@@ -627,6 +611,9 @@
     }
 
     updateMaterialFilterChipStates();
+    if (materialFilterShapeLabel) {
+      materialFilterShapeLabel.textContent = shapeLabelMap[shape] || "-";
+    }
     syncShapeOptionStates();
     syncMaterialFilterUrl();
 
@@ -1142,7 +1129,6 @@
   materialFilterResetButton?.addEventListener("click", () => {
     materialFilterState.color = "";
     materialFilterState.pattern = "";
-    materialFilterState.stoneShape = "";
     syncMaterialFilters();
     updatePreview();
     updateSummary();
