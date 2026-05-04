@@ -91,7 +91,6 @@ struct MaterialOption {
     shape_label: String,
     color_family: String,
     pattern_primary: String,
-    stone_shape: String,
     color_tag_labels: Vec<String>,
     pattern_tag_labels: Vec<String>,
     has_color_tag_labels: bool,
@@ -118,14 +117,12 @@ struct MaterialFilterOption {
 struct MaterialFilters {
     color_options: Vec<MaterialFilterOption>,
     pattern_options: Vec<MaterialFilterOption>,
-    stone_shape_options: Vec<MaterialFilterOption>,
 }
 
 #[derive(Debug, Clone, Default)]
 struct MaterialFilterState {
     color_family: String,
     pattern_primary: String,
-    stone_shape: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -278,7 +275,6 @@ struct PageTemplate {
     material_filters: MaterialFilters,
     selected_color_family: String,
     selected_pattern_primary: String,
-    selected_stone_shape: String,
     default_font_key: String,
     default_font_label: String,
     selected_locale: String,
@@ -502,7 +498,6 @@ struct PaymentRedirectQuery {
     lang: Option<String>,
     color_family: Option<String>,
     pattern_primary: Option<String>,
-    stone_shape: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -529,11 +524,8 @@ impl CatalogSource {
             Self::Mock(source) => {
                 let _ = &source.catalog;
                 let mut catalog = new_mock_catalog_source(locale).catalog;
-                catalog.material_filters = build_material_filters(
-                    &catalog.materials,
-                    &mock_facet_tag_labels(locale),
-                    locale,
-                );
+                catalog.material_filters =
+                    build_material_filters(&catalog.materials, &mock_facet_tag_labels(locale));
                 Ok(catalog)
             }
             Self::Firestore(source) => source.load_catalog(locale).await,
@@ -621,7 +613,7 @@ impl FirestoreCatalogSource {
                 None => return Err(error),
             },
         };
-        let material_filters = build_material_filters(&materials, &facet_tag_labels, locale);
+        let material_filters = build_material_filters(&materials, &facet_tag_labels);
 
         Ok(CatalogData {
             fonts,
@@ -1644,7 +1636,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
                     color_family: "pink".to_owned(),
                     pattern_primary: "cloud".to_owned(),
-                    stone_shape: "square".to_owned(),
                     color_tag_labels: if english {
                         vec!["Soft Pink".to_owned()]
                     } else {
@@ -1702,7 +1693,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     shape_label: if english { "Round seal" } else { "丸印" }.to_owned(),
                     color_family: "blue".to_owned(),
                     pattern_primary: "speckled".to_owned(),
-                    stone_shape: "square".to_owned(),
                     color_tag_labels: if english {
                         vec!["Deep Blue".to_owned()]
                     } else {
@@ -1755,7 +1745,6 @@ fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
                     shape_label: if english { "Square seal" } else { "角印" }.to_owned(),
                     color_family: "green".to_owned(),
                     pattern_primary: "marble".to_owned(),
-                    stone_shape: "round".to_owned(),
                     color_tag_labels: if english {
                         vec!["Deep Green".to_owned()]
                     } else {
@@ -2050,7 +2039,6 @@ async fn handle_design(
         material_filters: catalog.material_filters,
         selected_color_family: material_filter_state.color_family.clone(),
         selected_pattern_primary: material_filter_state.pattern_primary.clone(),
-        selected_stone_shape: material_filter_state.stone_shape.clone(),
         page_title: localized_text(
             &selected_locale,
             "デザイン作成 | STONE SIGNATURE",
@@ -2110,10 +2098,6 @@ fn material_filter_state_from_query(query: &PaymentRedirectQuery) -> MaterialFil
         pattern_primary: normalize_facet_tag_value(
             query.pattern_primary.as_deref().unwrap_or_default(),
         ),
-        stone_shape: normalize_stone_shape_optional(
-            query.stone_shape.as_deref().unwrap_or_default(),
-        )
-        .unwrap_or_default(),
     }
 }
 
@@ -3060,9 +3044,6 @@ fn design_url_with_filters(base_url: &str, locale: &str, filters: &MaterialFilte
         if !filters.pattern_primary.is_empty() {
             query_pairs.append_pair("pattern_primary", &filters.pattern_primary);
         }
-        if !filters.stone_shape.is_empty() {
-            query_pairs.append_pair("stone_shape", &filters.stone_shape);
-        }
     }
 
     url.to_string()
@@ -3152,15 +3133,6 @@ fn normalize_stone_shape(raw: &str) -> String {
     }
 }
 
-fn normalize_stone_shape_optional(raw: &str) -> Option<String> {
-    let normalized = normalize_stone_shape(raw);
-    if normalized.is_empty() {
-        None
-    } else {
-        Some(normalized)
-    }
-}
-
 fn stone_listing_is_published(status: &str) -> bool {
     status.trim().eq_ignore_ascii_case("published")
 }
@@ -3171,27 +3143,6 @@ fn stone_listing_is_catalog_visible(is_active: bool, status: &str) -> bool {
 
 fn normalize_facet_tag_value(raw: &str) -> String {
     raw.trim().to_ascii_lowercase()
-}
-
-fn stone_shape_filter_label(stone_shape: &str, locale: &str) -> String {
-    let english = parse_supported_locale(locale) == Some("en");
-    match normalize_stone_shape(stone_shape).as_str() {
-        "square" => {
-            if english {
-                "Square".to_owned()
-            } else {
-                "四角".to_owned()
-            }
-        }
-        "round" => {
-            if english {
-                "Round".to_owned()
-            } else {
-                "丸".to_owned()
-            }
-        }
-        other => other.to_owned(),
-    }
 }
 
 fn mock_facet_tag_labels(locale: &str) -> FacetTagLabels {
@@ -3291,7 +3242,6 @@ fn build_material_option_from_listing(
         shape_label,
         color_family: listing.color_family.clone(),
         pattern_primary: listing.pattern_primary.clone(),
-        stone_shape: listing.stone_shape.clone(),
         color_tag_labels,
         pattern_tag_labels,
         has_color_tag_labels,
@@ -3307,7 +3257,6 @@ fn build_material_option_from_listing(
 fn build_material_filters(
     materials: &[MaterialOption],
     facet_tag_labels: &FacetTagLabels,
-    locale: &str,
 ) -> MaterialFilters {
     let color_options = collect_canonical_filter_options(
         materials,
@@ -3321,12 +3270,10 @@ fn build_material_filters(
         |material| material.pattern_primary.as_str(),
         facet_tag_labels,
     );
-    let stone_shape_options = collect_stone_shape_filter_options(materials, locale);
 
     MaterialFilters {
         color_options,
         pattern_options,
-        stone_shape_options,
     }
 }
 
@@ -3354,31 +3301,6 @@ fn collect_canonical_filter_options(
     options
 }
 
-fn collect_stone_shape_filter_options(
-    materials: &[MaterialOption],
-    locale: &str,
-) -> Vec<MaterialFilterOption> {
-    let mut seen = HashSet::new();
-    let mut options = Vec::new();
-
-    for material in materials {
-        let value = normalize_stone_shape(&material.stone_shape);
-        if value.is_empty() || !seen.insert(value.clone()) {
-            continue;
-        }
-
-        options.push(MaterialFilterOption {
-            label: stone_shape_filter_label(&value, locale),
-            value,
-        });
-    }
-
-    options.sort_by(|left, right| {
-        material_shape_sort_order(&left.value).cmp(&material_shape_sort_order(&right.value))
-    });
-    options
-}
-
 #[allow(dead_code)]
 fn filter_materials_by_facets(
     materials: &[MaterialOption],
@@ -3392,21 +3314,11 @@ fn filter_materials_by_facets(
             let matches_pattern_primary = filter_state.pattern_primary.is_empty()
                 || normalize_facet_tag_value(&material.pattern_primary)
                     == filter_state.pattern_primary;
-            let matches_stone_shape = filter_state.stone_shape.is_empty()
-                || normalize_stone_shape(&material.stone_shape) == filter_state.stone_shape;
 
-            matches_color_family && matches_pattern_primary && matches_stone_shape
+            matches_color_family && matches_pattern_primary
         })
         .cloned()
         .collect()
-}
-
-fn material_shape_sort_order(shape: &str) -> i32 {
-    match normalize_stone_shape(shape).as_str() {
-        "square" => 0,
-        "round" => 1,
-        _ => 2,
-    }
 }
 
 fn shape_label_for_locale(shape_key: &str, locale: &str) -> Option<&'static str> {
@@ -4098,14 +4010,6 @@ mod tests {
             .map(|option| (option.value.as_str(), option.label.as_str()))
             .collect::<Vec<_>>();
         assert!(color_filters.contains(&("pink", "Soft Pink")));
-
-        let stone_shape_filters = catalog
-            .material_filters
-            .stone_shape_options
-            .iter()
-            .map(|option| option.label.as_str())
-            .collect::<Vec<_>>();
-        assert_eq!(stone_shape_filters, vec!["Square", "Round"]);
     }
 
     #[test]
@@ -4132,32 +4036,20 @@ mod tests {
     #[test]
     fn stone_shape_helpers_preserve_unknown_values() {
         assert_eq!(normalize_stone_shape("freeform"), "freeform");
-        assert_eq!(stone_shape_filter_label("freeform", "ja"), "freeform");
     }
 
     #[test]
-    fn material_filter_state_preserves_unknown_stone_shape() {
-        let missing = material_filter_state_from_query(&PaymentRedirectQuery {
+    fn material_filter_state_preserves_color_and_pattern() {
+        let filters = material_filter_state_from_query(&PaymentRedirectQuery {
             color_family: Some("Green".to_owned()),
             pattern_primary: Some("Cloud".to_owned()),
             ..PaymentRedirectQuery::default()
         });
-        assert_eq!(missing.color_family, "green");
-        assert_eq!(missing.pattern_primary, "cloud");
-        assert!(missing.stone_shape.is_empty());
+        assert_eq!(filters.color_family, "green");
+        assert_eq!(filters.pattern_primary, "cloud");
         assert_eq!(
-            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &missing),
+            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
             "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
-        );
-
-        let invalid = material_filter_state_from_query(&PaymentRedirectQuery {
-            stone_shape: Some("triangle".to_owned()),
-            ..PaymentRedirectQuery::default()
-        });
-        assert_eq!(invalid.stone_shape, "triangle");
-        assert_eq!(
-            design_url_with_filters(TEST_SITE_BASE_URL, "ja", &invalid),
-            "https://finitefield.org/design?lang=ja&stone_shape=triangle"
         );
     }
 
@@ -4588,16 +4480,15 @@ mod tests {
         let filters = MaterialFilterState {
             color_family: "green".to_owned(),
             pattern_primary: "cloud".to_owned(),
-            stone_shape: "round".to_owned(),
         };
 
         assert_eq!(
             design_url_with_filters(TEST_SITE_BASE_URL, "en", &filters),
-            "https://finitefield.org/design?color_family=green&pattern_primary=cloud&stone_shape=round"
+            "https://finitefield.org/design?color_family=green&pattern_primary=cloud"
         );
         assert_eq!(
             design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
-            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud&stone_shape=round"
+            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
         );
     }
 

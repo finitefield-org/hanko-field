@@ -546,6 +546,14 @@
     @apply m-0 text-[0.92rem] font-bold text-hf-ink;
   }
 
+  .material-filter-shape {
+    @apply my-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#eadfce] bg-[#fffaf4] px-3 py-2 text-[0.84rem] text-hf-muted;
+  }
+
+  .material-filter-shape strong {
+    @apply text-hf-accent;
+  }
+
   .material-filter-reset {
     @apply rounded-lg border border-[#d8ccbc] bg-white px-3 py-1.5 text-[0.8rem] font-semibold text-hf-muted transition;
   }

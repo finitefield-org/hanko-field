@@ -309,6 +309,11 @@
               </button>
             </div>
 
+            <p class="material-filter-shape">
+              <span>{% if selected_locale == "ja" %}選択中の形状{% else %}Selected shape{% endif %}</span>
+              <strong data-material-filter-shape-label>{% if selected_locale == "ja" %}角印{% else %}Square seal{% endif %}</strong>
+            </p>
+
             <div class="material-filter-groups">
               <div class="material-filter-group">
                 <span class="material-filter-group__label">{% if selected_locale == "ja" %}色{% else %}Color{% endif %}</span>
@@ -326,16 +331,6 @@
                   <button type="button" class="material-filter-chip{% if selected_pattern_primary == "" %} is-selected{% endif %}" data-filter-value="" aria-pressed="{% if selected_pattern_primary == "" %}true{% else %}false{% endif %}">{% if selected_locale == "ja" %}すべて{% else %}All{% endif %}</button>
                   {% for option in material_filters.pattern_options %}
                   <button type="button" class="material-filter-chip{% if option.value == selected_pattern_primary %} is-selected{% endif %}" data-filter-value="{{ option.value }}" aria-pressed="{% if option.value == selected_pattern_primary %}true{% else %}false{% endif %}">{{ option.label }}</button>
-                  {% endfor %}
-                </div>
-              </div>
-
-              <div class="material-filter-group">
-                <span class="material-filter-group__label">{% if selected_locale == "ja" %}石の形{% else %}Stone shape{% endif %}</span>
-                <div class="material-filter-chip-list" data-material-filter-group="stoneShape" role="group" aria-label="{% if selected_locale == "ja" %}石の形で絞り込む{% else %}Filter by stone shape{% endif %}">
-                  <button type="button" class="material-filter-chip{% if selected_stone_shape == "" %} is-selected{% endif %}" data-filter-value="" aria-pressed="{% if selected_stone_shape == "" %}true{% else %}false{% endif %}">{% if selected_locale == "ja" %}すべて{% else %}All{% endif %}</button>
-                  {% for option in material_filters.stone_shape_options %}
-                  <button type="button" class="material-filter-chip{% if option.value == selected_stone_shape %} is-selected{% endif %}" data-filter-value="{{ option.value }}" aria-pressed="{% if option.value == selected_stone_shape %}true{% else %}false{% endif %}">{{ option.label }}</button>
                   {% endfor %}
                 </div>
               </div>
@@ -362,7 +357,6 @@
                 data-shape="{{ m.shape }}"
                 data-color-family="{{ m.color_family }}"
                 data-pattern-primary="{{ m.pattern_primary }}"
-                data-stone-shape="{{ m.stone_shape }}"
                 data-price="{{ m.price }}"
                 {% if loop.first %}checked{% endif %}
               >
