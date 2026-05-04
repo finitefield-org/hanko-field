@@ -36,6 +36,8 @@ class OrderScreenState {
   final String selectedFontKey;
   final SealShape shape;
   final String selectedStoneListingKey;
+  final String selectedColorFamily;
+  final String selectedPatternPrimary;
   final String selectedCountryCode;
   final String realName;
   final CandidateGender candidateGender;
@@ -70,6 +72,8 @@ class OrderScreenState {
     required this.selectedFontKey,
     required this.shape,
     required this.selectedStoneListingKey,
+    required this.selectedColorFamily,
+    required this.selectedPatternPrimary,
     required this.selectedCountryCode,
     required this.realName,
     required this.candidateGender,
@@ -105,6 +109,8 @@ class OrderScreenState {
     String? selectedFontKey,
     SealShape? shape,
     String? selectedStoneListingKey,
+    String? selectedColorFamily,
+    String? selectedPatternPrimary,
     String? selectedCountryCode,
     String? realName,
     CandidateGender? candidateGender,
@@ -140,6 +146,9 @@ class OrderScreenState {
       shape: shape ?? this.shape,
       selectedStoneListingKey:
           selectedStoneListingKey ?? this.selectedStoneListingKey,
+      selectedColorFamily: selectedColorFamily ?? this.selectedColorFamily,
+      selectedPatternPrimary:
+          selectedPatternPrimary ?? this.selectedPatternPrimary,
       selectedCountryCode: selectedCountryCode ?? this.selectedCountryCode,
       realName: realName ?? this.realName,
       candidateGender: candidateGender ?? this.candidateGender,
@@ -169,7 +178,7 @@ class OrderScreenState {
 
   bool get hasCatalog {
     return catalog.fonts.isNotEmpty &&
-        availableShapes.isNotEmpty &&
+        catalog.stoneListings.isNotEmpty &&
         catalog.countries.isNotEmpty;
   }
 
@@ -198,8 +207,8 @@ class OrderScreenState {
           items: [
             localizedUiText(
               locale,
-              ja: '現在の形状に対応する出品個体が見つかりません。',
-              en: 'No listing is available for the selected shape.',
+              ja: '出品個体を選択してください。',
+              en: 'Choose a listing before continuing.',
             ),
           ],
         ),
@@ -334,16 +343,7 @@ class OrderScreenState {
   }
 
   List<SealShape> get availableShapes {
-    final shapes = <SealShape>[];
-    for (final candidate in SealShape.values) {
-      final supported = catalog.stoneListings.any(
-        (listing) => listing.supportsShape(candidate),
-      );
-      if (supported) {
-        shapes.add(candidate);
-      }
-    }
-    return shapes;
+    return SealShape.values;
   }
 
   List<StoneListingOption> get visibleStoneListings {
@@ -352,7 +352,20 @@ class OrderScreenState {
     }
 
     return catalog.stoneListings
-        .where((listing) => listing.supportsShape(shape))
+        .where((listing) {
+          if (!listing.supportsShape(shape)) {
+            return false;
+          }
+          if (selectedColorFamily.isNotEmpty &&
+              listing.colorFamily != selectedColorFamily) {
+            return false;
+          }
+          if (selectedPatternPrimary.isNotEmpty &&
+              listing.patternPrimary != selectedPatternPrimary) {
+            return false;
+          }
+          return true;
+        })
         .toList(growable: false);
   }
 
@@ -452,6 +465,8 @@ class OrderViewModel extends Provider<OrderScreenState> {
       selectedFontKey: '',
       shape: SealShape.square,
       selectedStoneListingKey: '',
+      selectedColorFamily: '',
+      selectedPatternPrimary: '',
       selectedCountryCode: '',
       realName: '',
       candidateGender: CandidateGender.unspecified,
@@ -482,6 +497,9 @@ class OrderViewModel extends Provider<OrderScreenState> {
   late final selectKanjiStyleMut = mutation<void>(#selectKanjiStyle);
   late final selectFontMut = mutation<void>(#selectFont);
   late final selectShapeMut = mutation<void>(#selectShape);
+  late final selectColorFilterMut = mutation<void>(#selectColorFilter);
+  late final selectPatternFilterMut = mutation<void>(#selectPatternFilter);
+  late final clearMaterialFiltersMut = mutation<void>(#clearMaterialFilters);
   late final selectStoneListingMut = mutation<void>(#selectStoneListing);
   late final selectCountryMut = mutation<void>(#selectCountry);
   late final nextStepMut = mutation<void>(#nextStep);
@@ -638,55 +656,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
           throw Exception('catalog is empty');
         }
 
-        final active = ref.watch(this);
-        var nextStyle = active.kanjiStyle;
-        var visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
-        if (visibleFonts.isEmpty) {
-          nextStyle = catalog.fonts.first.kanjiStyle;
-          visibleFonts = _visibleFontsFor(catalog: catalog, style: nextStyle);
-        }
-        final nextFontKey =
-            visibleFonts.any((font) => font.key == active.selectedFontKey)
-            ? active.selectedFontKey
-            : visibleFonts.first.key;
-
-        var nextShape = active.shape;
-        var visibleListings = _visibleStoneListingsFor(
+        ref.state = _stateWithCatalog(
+          state: ref.watch(this),
           catalog: catalog,
-          shape: nextShape,
-        );
-        if (visibleListings.isEmpty) {
-          nextShape = _pickInitialShape(catalog);
-          visibleListings = _visibleStoneListingsFor(
-            catalog: catalog,
-            shape: nextShape,
-          );
-        }
-        final nextListingKey =
-            visibleListings.any(
-              (listing) => listing.key == active.selectedStoneListingKey,
-            )
-            ? active.selectedStoneListingKey
-            : visibleListings.first.key;
-
-        final nextCountryCode =
-            catalog.countries.any(
-              (country) => country.code == active.selectedCountryCode,
-            )
-            ? active.selectedCountryCode
-            : catalog.countries.first.code;
-
-        ref.state = active.copyWith(
-          catalog: catalog,
-          isLoadingCatalog: false,
-          catalogError: '',
-          locale: normalizeUiLocale(catalogResponse.locale),
+          locale: catalogResponse.locale,
           currency: catalogResponse.currency,
-          kanjiStyle: nextStyle,
-          selectedFontKey: nextFontKey,
-          shape: nextShape,
-          selectedStoneListingKey: nextListingKey,
-          selectedCountryCode: nextCountryCode,
         );
       } catch (error) {
         if (_shouldUseMockFallback(error, runtime.mode)) {
@@ -839,23 +813,68 @@ class OrderViewModel extends Provider<OrderScreenState> {
       final visibleListings = _visibleStoneListingsFor(
         catalog: current.catalog,
         shape: shape,
+        colorFamily: current.selectedColorFamily,
+        patternPrimary: current.selectedPatternPrimary,
       );
-      if (visibleListings.isEmpty) {
-        return;
-      }
-
       final hasSelected = visibleListings.any(
         (listing) => listing.key == current.selectedStoneListingKey,
       );
       final nextListingKey = hasSelected
           ? current.selectedStoneListingKey
-          : visibleListings.first.key;
+          : visibleListings.isNotEmpty
+          ? visibleListings.first.key
+          : '';
 
       ref.state = current.copyWith(
         shape: shape,
         selectedStoneListingKey: nextListingKey,
         purchaseResult: null,
         purchaseError: '',
+      );
+    });
+  }
+
+  Call<void, OrderScreenState> selectColorFilter(String value) {
+    return mutate(selectColorFilterMut, (ref) async {
+      final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      final selected = _normalizeFacetValue(value);
+      final nextColor = current.selectedColorFamily == selected ? '' : selected;
+      ref.state = _stateWithMaterialFilters(
+        current.copyWith(selectedColorFamily: nextColor),
+      );
+    });
+  }
+
+  Call<void, OrderScreenState> selectPatternFilter(String value) {
+    return mutate(selectPatternFilterMut, (ref) async {
+      final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      final selected = _normalizeFacetValue(value);
+      final nextPattern = current.selectedPatternPrimary == selected
+          ? ''
+          : selected;
+      ref.state = _stateWithMaterialFilters(
+        current.copyWith(selectedPatternPrimary: nextPattern),
+      );
+    });
+  }
+
+  Call<void, OrderScreenState> clearMaterialFilters() {
+    return mutate(clearMaterialFiltersMut, (ref) async {
+      final current = ref.watch(this);
+      if (!current.hasCatalog) {
+        return;
+      }
+
+      ref.state = _stateWithMaterialFilters(
+        current.copyWith(selectedColorFamily: '', selectedPatternPrimary: ''),
       );
     });
   }
@@ -924,6 +943,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
           );
           return;
         }
+      }
+
+      if (current.step == OrderStep.listing &&
+          current.selectedStoneListingOrNull == null) {
+        return;
       }
 
       ref.state = current.copyWith(step: current.step.next());
@@ -1417,6 +1441,8 @@ OrderScreenState _stateWithDraft(OrderScreenState state, OrderDraftData draft) {
     selectedFontKey: draft.selectedFontKey,
     shape: SealShape.fromCode(draft.shapeCode),
     selectedStoneListingKey: draft.selectedStoneListingKey,
+    selectedColorFamily: draft.selectedColorFamily,
+    selectedPatternPrimary: draft.selectedPatternPrimary,
     selectedCountryCode: draft.selectedCountryCode,
     realName: draft.realName,
     candidateGender: CandidateGender.fromCode(draft.candidateGenderCode),
@@ -1457,20 +1483,38 @@ OrderScreenState _stateWithCatalog({
       ? state.selectedFontKey
       : visibleFonts.first.key;
 
+  final nextColorFamily = _clampMaterialFilterValue(
+    catalog.materialFilters.colorOptions,
+    state.selectedColorFamily,
+  );
+  final nextPatternPrimary = _clampMaterialFilterValue(
+    catalog.materialFilters.patternOptions,
+    state.selectedPatternPrimary,
+  );
+
   var nextShape = state.shape;
-  if (_visibleStoneListingsFor(catalog: catalog, shape: nextShape).isEmpty) {
+  if (_visibleStoneListingsFor(
+    catalog: catalog,
+    shape: nextShape,
+    colorFamily: nextColorFamily,
+    patternPrimary: nextPatternPrimary,
+  ).isEmpty) {
     nextShape = _pickInitialShape(catalog);
   }
   final visibleListings = _visibleStoneListingsFor(
     catalog: catalog,
     shape: nextShape,
+    colorFamily: nextColorFamily,
+    patternPrimary: nextPatternPrimary,
   );
   final nextListingKey =
       visibleListings.any(
         (listing) => listing.key == state.selectedStoneListingKey,
       )
       ? state.selectedStoneListingKey
-      : visibleListings.first.key;
+      : visibleListings.isNotEmpty
+      ? visibleListings.first.key
+      : '';
 
   final nextCountryCode =
       catalog.countries.any(
@@ -1489,7 +1533,32 @@ OrderScreenState _stateWithCatalog({
     selectedFontKey: nextFontKey,
     shape: nextShape,
     selectedStoneListingKey: nextListingKey,
+    selectedColorFamily: nextColorFamily,
+    selectedPatternPrimary: nextPatternPrimary,
     selectedCountryCode: nextCountryCode,
+  );
+}
+
+OrderScreenState _stateWithMaterialFilters(OrderScreenState state) {
+  final visibleListings = _visibleStoneListingsFor(
+    catalog: state.catalog,
+    shape: state.shape,
+    colorFamily: state.selectedColorFamily,
+    patternPrimary: state.selectedPatternPrimary,
+  );
+  final hasSelected = visibleListings.any(
+    (listing) => listing.key == state.selectedStoneListingKey,
+  );
+  final nextListingKey = hasSelected
+      ? state.selectedStoneListingKey
+      : visibleListings.isNotEmpty
+      ? visibleListings.first.key
+      : '';
+
+  return state.copyWith(
+    selectedStoneListingKey: nextListingKey,
+    purchaseResult: null,
+    purchaseError: '',
   );
 }
 
@@ -1544,20 +1613,46 @@ List<FontOption> _visibleFontsFor({
 List<StoneListingOption> _visibleStoneListingsFor({
   required CatalogData catalog,
   required SealShape shape,
+  String colorFamily = '',
+  String patternPrimary = '',
 }) {
+  final selectedColorFamily = _normalizeFacetValue(colorFamily);
+  final selectedPatternPrimary = _normalizeFacetValue(patternPrimary);
   return catalog.stoneListings
-      .where((listing) => listing.supportsShape(shape))
+      .where((listing) {
+        if (!listing.supportsShape(shape)) {
+          return false;
+        }
+        if (selectedColorFamily.isNotEmpty &&
+            listing.colorFamily != selectedColorFamily) {
+          return false;
+        }
+        if (selectedPatternPrimary.isNotEmpty &&
+            listing.patternPrimary != selectedPatternPrimary) {
+          return false;
+        }
+        return true;
+      })
       .toList(growable: false);
 }
 
 List<SealShape> _availableShapesForCatalog(CatalogData catalog) {
-  final shapes = <SealShape>[];
-  for (final shape in SealShape.values) {
-    if (_visibleStoneListingsFor(catalog: catalog, shape: shape).isNotEmpty) {
-      shapes.add(shape);
-    }
+  return catalog.stoneListings.isEmpty ? const [] : SealShape.values;
+}
+
+String _clampMaterialFilterValue(
+  List<MaterialFilterOption> options,
+  String value,
+) {
+  final normalized = _normalizeFacetValue(value);
+  if (normalized.isEmpty) {
+    return '';
   }
-  return shapes;
+  return options.any((option) => option.value == normalized) ? normalized : '';
+}
+
+String _normalizeFacetValue(String value) {
+  return value.trim().toLowerCase();
 }
 
 (String, String) _normalizedSealLines(String first, String second) {
@@ -1793,6 +1888,10 @@ String normalizePinyinWithoutTone(String input) {
               ? 'Balanced for everyday use with a gentle finish.'
               : '日常使いしやすい、やわらかな仕上がりの個体です。',
           stoneShape: 'square',
+          colorFamily: 'pink',
+          patternPrimary: 'cloud',
+          colorTagLabels: english ? ['Soft Pink'] : ['淡桃'],
+          patternTagLabels: english ? ['Cloud'] : ['雲状'],
           price: english ? 16500 : 28000,
           photoUrl: 'https://picsum.photos/seed/hf-rose-quartz-01/640/420',
           photoAlt: english ? 'Rose quartz listing photo' : 'ローズクオーツ個体の写真',
@@ -1809,6 +1908,10 @@ String normalizePinyinWithoutTone(String input) {
               ? 'Sharp contrast and a vivid finish make it stand out.'
               : 'コントラストが強く、印象に残る仕上がりです。',
           stoneShape: 'round',
+          colorFamily: 'blue',
+          patternPrimary: 'speckled',
+          colorTagLabels: english ? ['Deep Blue'] : ['深青'],
+          patternTagLabels: english ? ['Speckled'] : ['点状'],
           price: english ? 32500 : 55000,
           photoUrl: 'https://picsum.photos/seed/hf-lapis-lazuli-01/640/420',
           photoAlt: english ? 'Lapis lazuli listing photo' : 'ラピスラズリ個体の写真',
@@ -1825,6 +1928,10 @@ String normalizePinyinWithoutTone(String input) {
               ? 'A composed, refined finish for formal use.'
               : 'フォーマルな用途にも合う、落ち着いた仕上がりです。',
           stoneShape: 'square',
+          colorFamily: 'green',
+          patternPrimary: 'marble',
+          colorTagLabels: english ? ['Deep Green'] : ['濃緑'],
+          patternTagLabels: english ? ['Banded'] : ['縞'],
           price: english ? 88500 : 150000,
           photoUrl: 'https://picsum.photos/seed/hf-jade-01/640/420',
           photoAlt: english ? 'Jade listing photo' : '翡翠個体の写真',
@@ -1863,6 +1970,33 @@ String normalizePinyinWithoutTone(String input) {
           shipping: 1300,
         ),
       ],
+      materialFilters: MaterialFilters(
+        colorOptions: [
+          MaterialFilterOption(
+            value: 'pink',
+            label: english ? 'Soft Pink' : '淡桃',
+          ),
+          MaterialFilterOption(
+            value: 'blue',
+            label: english ? 'Deep Blue' : '深青',
+          ),
+          MaterialFilterOption(
+            value: 'green',
+            label: english ? 'Deep Green' : '濃緑',
+          ),
+        ],
+        patternOptions: [
+          MaterialFilterOption(value: 'cloud', label: english ? 'Cloud' : '雲状'),
+          MaterialFilterOption(
+            value: 'speckled',
+            label: english ? 'Speckled' : '点状',
+          ),
+          MaterialFilterOption(
+            value: 'marble',
+            label: english ? 'Banded' : '縞',
+          ),
+        ],
+      ),
     ),
   );
 }

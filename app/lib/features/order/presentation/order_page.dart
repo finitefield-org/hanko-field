@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -212,6 +213,8 @@ class _OrderPageState extends ConsumerState<OrderPage> {
       selectedFontKey: state.selectedFontKey,
       shapeCode: state.shape.code,
       selectedStoneListingKey: state.selectedStoneListingKey,
+      selectedColorFamily: state.selectedColorFamily,
+      selectedPatternPrimary: state.selectedPatternPrimary,
       selectedCountryCode: state.selectedCountryCode,
       realName: state.realName,
       candidateGenderCode: state.candidateGender.code,
@@ -362,6 +365,12 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         key: const ValueKey('listing_step'),
         locale: state.locale,
         state: state,
+        onSelectColorFilter: (value) =>
+            ref.invoke(orderViewModel.selectColorFilter(value)),
+        onSelectPatternFilter: (value) =>
+            ref.invoke(orderViewModel.selectPatternFilter(value)),
+        onClearMaterialFilters: () =>
+            ref.invoke(orderViewModel.clearMaterialFilters()),
         onSelectStoneListing: (key) =>
             ref.invoke(orderViewModel.selectStoneListing(key)),
         onPrev: () => ref.invoke(orderViewModel.prevStep()),
@@ -392,6 +401,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         onTermsChanged: (checked) =>
             ref.invoke(orderViewModel.setTermsAgreed(checked)),
         onSubmit: () => ref.invoke(orderViewModel.submitPurchase()),
+        onOpenTerms: widget.onOpenTerms,
         onOpenPaymentSuccess: widget.onOpenPaymentSuccess,
         onOpenPaymentFailure: widget.onOpenPaymentFailure,
         showConfirmationLinks: widget.showConfirmationLinks,
@@ -785,7 +795,7 @@ class _DesignStep extends StatelessWidget {
               child: FilledButton(
                 onPressed: onNext,
                 child: Text(
-                  isEnglishLocale(locale) ? 'Next: Listing' : '出品個体選びへ',
+                  isEnglishLocale(locale) ? 'Next: Listing' : '出品個体選びへ進む',
                 ),
               ),
             ),
@@ -995,7 +1005,7 @@ class _DesignStep extends StatelessWidget {
         ? -12.0
         : 0.0;
     final previewTitle = localizedUiText(locale, ja: 'プレビュー', en: 'Preview');
-    final shapeOptionsLabel = localizedUiText(locale, ja: '形状選択', en: 'Shape');
+    final shapeOptionsLabel = localizedUiText(locale, ja: '形状', en: 'Shape');
     final fontOptionsLabel = localizedUiText(
       locale,
       ja: 'フォント一覧',
@@ -1243,8 +1253,8 @@ class _DesignStep extends StatelessWidget {
                     TextSpan(
                       text: localizedUiText(
                         locale,
-                        ja: '選択した形状に対応する出品個体だけが表示されます。',
-                        en: 'Only listings compatible with the selected shape are shown.',
+                        ja: '宝石個体は丸印・角印のどちらでも選べます。',
+                        en: 'The gemstone listings can be used with either shape.',
                       ),
                     ),
                   ],
@@ -1840,6 +1850,9 @@ class _StoneListingStep extends StatelessWidget {
     super.key,
     required this.locale,
     required this.state,
+    required this.onSelectColorFilter,
+    required this.onSelectPatternFilter,
+    required this.onClearMaterialFilters,
     required this.onSelectStoneListing,
     required this.onPrev,
     required this.onNext,
@@ -1847,21 +1860,21 @@ class _StoneListingStep extends StatelessWidget {
 
   final String locale;
   final OrderScreenState state;
+  final ValueChanged<String> onSelectColorFilter;
+  final ValueChanged<String> onSelectPatternFilter;
+  final VoidCallback onClearMaterialFilters;
   final ValueChanged<String> onSelectStoneListing;
   final VoidCallback onPrev;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
-    final title = isEnglishLocale(locale) ? 'Choose Listing' : '出品個体を選ぶ';
+    final title = isEnglishLocale(locale) ? 'Choose listing' : '出品個体を選ぶ';
     final subtitle = isEnglishLocale(locale)
-        ? 'Pick the exact stone listing you want to order. Only listings compatible with the selected shape are shown.'
-        : '注文する出品個体を選びます。選択中の形状に対応する個体だけを表示します。';
+        ? 'Compare texture, weight, use, and price to pick your listing. The gemstone listings can be used with either shape.'
+        : '質感・重さ・用途と価格を見ながら出品個体を決めます。宝石個体は丸印・角印のどちらでも選べます。';
     final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
     final nextLabel = isEnglishLocale(locale) ? 'Next: Purchase' : '購入へ進む';
-    final canAdvance =
-        state.visibleStoneListings.isNotEmpty &&
-        state.selectedStoneListingOrNull != null;
 
     String shapeLabelForCode(String code) {
       return switch (code.trim().toLowerCase()) {
@@ -1891,6 +1904,157 @@ class _StoneListingStep extends StatelessWidget {
           ),
         ),
       ];
+    }
+
+    Widget buildFilterChip({
+      required String label,
+      required bool selected,
+      required VoidCallback onSelected,
+    }) {
+      return ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onSelected(),
+        showCheckmark: false,
+        selectedColor: HfPalette.accentSoft,
+        backgroundColor: Colors.white,
+        side: BorderSide(
+          color: selected ? HfPalette.accent : HfPalette.line,
+          width: selected ? 1.4 : 1,
+        ),
+        labelStyle: TextStyle(
+          color: selected ? HfPalette.accent : HfPalette.ink,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 12.5,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      );
+    }
+
+    Widget buildFilterGroup({
+      required String label,
+      required String selectedValue,
+      required List<MaterialFilterOption> options,
+      required ValueChanged<String> onSelected,
+    }) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              buildFilterChip(
+                label: localizedUiText(locale, ja: 'すべて', en: 'All'),
+                selected: selectedValue.isEmpty,
+                onSelected: () => onSelected(''),
+              ),
+              ...options.map((option) {
+                return buildFilterChip(
+                  label: option.label,
+                  selected: selectedValue == option.value,
+                  onSelected: () => onSelected(option.value),
+                );
+              }),
+            ],
+          ),
+        ],
+      );
+    }
+
+    Widget buildFilterPanel() {
+      final visibleCount = state.visibleStoneListings.length;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBF5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: HfPalette.line),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    localizedUiText(locale, ja: '絞り込み', en: 'Filters'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onClearMaterialFilters,
+                  child: Text(
+                    localizedUiText(locale, ja: 'すべて解除', en: 'Clear all'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text:
+                        '${localizedUiText(locale, ja: '選択中の形状', en: 'Selected shape')} ',
+                  ),
+                  TextSpan(
+                    text: state.shape.localizedLabel(locale),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5, color: HfPalette.muted),
+            ),
+            const SizedBox(height: 12),
+            buildFilterGroup(
+              label: localizedUiText(locale, ja: '色', en: 'Color'),
+              selectedValue: state.selectedColorFamily,
+              options: state.catalog.materialFilters.colorOptions,
+              onSelected: onSelectColorFilter,
+            ),
+            const SizedBox(height: 12),
+            buildFilterGroup(
+              label: localizedUiText(locale, ja: '模様', en: 'Pattern'),
+              selectedValue: state.selectedPatternPrimary,
+              options: state.catalog.materialFilters.patternOptions,
+              onSelected: onSelectPatternFilter,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              localizedUiText(
+                locale,
+                ja: '$visibleCount件の出品個体が表示されています。',
+                en: '$visibleCount listings are shown.',
+              ),
+              style: const TextStyle(fontSize: 12, color: HfPalette.muted),
+            ),
+            if (visibleCount == 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                localizedUiText(
+                  locale,
+                  ja: '条件に一致する出品個体がありません。フィルタを解除してください。',
+                  en: 'No listings match the current filters. Clear one or more filters.',
+                ),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFF8F2219),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
     }
 
     Widget buildListingCard(
@@ -1953,14 +2117,18 @@ class _StoneListingStep extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                listing.description,
-                style: TextStyle(
-                  fontSize: compact ? 13.5 : 13,
-                  height: 1.4,
-                  color: HfPalette.muted,
+              Wrap(spacing: 6, runSpacing: 6, children: shapeChips(listing)),
+              if (listing.description.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  listing.description,
+                  style: TextStyle(
+                    fontSize: compact ? 13.5 : 13,
+                    height: 1.4,
+                    color: HfPalette.muted,
+                  ),
                 ),
-              ),
+              ],
               if (listing.story.trim().isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -1972,8 +2140,43 @@ class _StoneListingStep extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 8),
-              Wrap(spacing: 6, runSpacing: 6, children: shapeChips(listing)),
+              if (listing.colorTagLabels.isNotEmpty ||
+                  listing.patternTagLabels.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children:
+                      [...listing.colorTagLabels, ...listing.patternTagLabels]
+                          .map((tag) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                color: HfPalette.accent2.withValues(
+                                  alpha: 0.08,
+                                ),
+                                border: Border.all(
+                                  color: HfPalette.accent2.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                tag,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: HfPalette.muted,
+                                ),
+                              ),
+                            );
+                          })
+                          .toList(growable: false),
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 formatMoney(listing.price, state.effectiveCurrency),
@@ -1989,46 +2192,6 @@ class _StoneListingStep extends StatelessWidget {
       );
     }
 
-    if (state.visibleStoneListings.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(color: HfPalette.muted)),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFF1D1CE)),
-              color: const Color(0xFFFFF2F1),
-            ),
-            child: Text(
-              localizedUiText(
-                locale,
-                ja: '現在の形状に対応する出品個体がありません。別の形状を選んでください。',
-                en: 'No listing matches the current shape. Please choose a different shape.',
-              ),
-              style: const TextStyle(color: Color(0xFF8F2219)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: null, child: Text(nextLabel)),
-            ],
-          ),
-        ],
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2039,52 +2202,44 @@ class _StoneListingStep extends StatelessWidget {
         const SizedBox(height: 6),
         Text(subtitle, style: TextStyle(color: HfPalette.muted)),
         const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth > 980
-                ? 3
-                : constraints.maxWidth > 620
-                ? 2
-                : 1;
-            final compact = constraints.maxWidth < 560;
-            final spacing = 12.0;
-            final itemWidth =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        buildFilterPanel(),
+        if (state.visibleStoneListings.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth > 980
+                  ? 3
+                  : constraints.maxWidth > 620
+                  ? 2
+                  : 1;
+              final compact = constraints.maxWidth < 560;
+              final spacing = 12.0;
+              final itemWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: state.visibleStoneListings
-                  .map((listing) {
-                    final selected =
-                        listing.key == state.selectedStoneListingOrNull?.key;
-                    return SizedBox(
-                      width: itemWidth,
-                      child: buildListingCard(listing, selected, compact),
-                    );
-                  })
-                  .toList(growable: false),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        Text(
-          localizedUiText(
-            locale,
-            ja: '選択中の形状に対応する個体だけを表示しています。',
-            en: 'Only listings compatible with the current shape are shown.',
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: state.visibleStoneListings
+                    .map((listing) {
+                      final selected =
+                          listing.key == state.selectedStoneListingOrNull?.key;
+                      return SizedBox(
+                        width: itemWidth,
+                        child: buildListingCard(listing, selected, compact),
+                      );
+                    })
+                    .toList(growable: false),
+              );
+            },
           ),
-          style: const TextStyle(fontSize: 12, color: HfPalette.muted),
-        ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [
             OutlinedButton(onPressed: onPrev, child: Text(backLabel)),
             const SizedBox(width: 8),
-            FilledButton(
-              onPressed: canAdvance ? onNext : null,
-              child: Text(nextLabel),
-            ),
+            FilledButton(onPressed: onNext, child: Text(nextLabel)),
           ],
         ),
       ],
@@ -2109,6 +2264,7 @@ class _PurchaseStep extends StatelessWidget {
     required this.onAddress2Changed,
     required this.onTermsChanged,
     required this.onSubmit,
+    required this.onOpenTerms,
     required this.onOpenPaymentSuccess,
     required this.onOpenPaymentFailure,
     required this.showConfirmationLinks,
@@ -2128,6 +2284,7 @@ class _PurchaseStep extends StatelessWidget {
   final ValueChanged<String> onAddress2Changed;
   final ValueChanged<bool> onTermsChanged;
   final VoidCallback onSubmit;
+  final VoidCallback onOpenTerms;
   final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
   final ValueChanged<String?> onOpenPaymentFailure;
   final bool showConfirmationLinks;
@@ -2136,8 +2293,8 @@ class _PurchaseStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = isEnglishLocale(locale) ? 'Purchase' : '購入';
     final subtitle = isEnglishLocale(locale)
-        ? 'Review details, then proceed to Stripe Checkout.'
-        : '内容を確認して、Stripe Checkout へ進みます。';
+        ? 'Review the details, then continue to payment.'
+        : '内容を確認して、支払いへ進みます。';
     final backLabel = isEnglishLocale(locale) ? 'Back' : '戻る';
 
     return Column(
@@ -2416,25 +2573,16 @@ class _PurchaseStep extends StatelessWidget {
     final result = state.purchaseResult;
     final validationGroups = state.purchaseValidationGroups;
     final title = localizedUiText(locale, ja: 'お支払い', en: 'Payment');
-    final termsLabel = localizedUiText(
-      locale,
-      ja: '利用規約に同意する',
-      en: 'I agree to the terms of service',
-    );
     final helperText = localizedUiText(
       locale,
-      ja: '注文作成後、Stripe Checkout に遷移します。',
-      en: 'After the order is created, you will be redirected to Stripe Checkout.',
+      ja: 'Stripe Checkout に遷移して決済します。',
+      en: 'You will be redirected to Stripe Checkout to complete payment.',
     );
-    final submitLabel = localizedUiText(
-      locale,
-      ja: '支払いへ進む',
-      en: 'Proceed to payment',
-    );
+    final submitLabel = localizedUiText(locale, ja: '支払う', en: 'Pay now');
     final submittingLabel = localizedUiText(
       locale,
-      ja: '処理中...',
-      en: 'Processing...',
+      ja: '送信中...',
+      en: 'Submitting...',
     );
     final canSubmitPurchase = state.canSubmitPurchase;
 
@@ -2455,7 +2603,12 @@ class _PurchaseStep extends StatelessWidget {
                   value: state.termsAgreed,
                   onChanged: (checked) => onTermsChanged(checked ?? false),
                 ),
-                Expanded(child: Text(termsLabel)),
+                Expanded(
+                  child: _TermsAgreementText(
+                    locale: locale,
+                    onOpenTerms: onOpenTerms,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -2506,6 +2659,72 @@ class _PurchaseStep extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TermsAgreementText extends StatefulWidget {
+  const _TermsAgreementText({required this.locale, required this.onOpenTerms});
+
+  final String locale;
+  final VoidCallback onOpenTerms;
+
+  @override
+  State<_TermsAgreementText> createState() => _TermsAgreementTextState();
+}
+
+class _TermsAgreementTextState extends State<_TermsAgreementText> {
+  late final TapGestureRecognizer _termsRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = widget.onOpenTerms;
+  }
+
+  @override
+  void didUpdateWidget(covariant _TermsAgreementText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.onOpenTerms != widget.onOpenTerms) {
+      _termsRecognizer.onTap = widget.onOpenTerms;
+    }
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnglish = isEnglishLocale(widget.locale);
+    final linkStyle = const TextStyle(
+      color: HfPalette.ink,
+      decoration: TextDecoration.underline,
+    );
+
+    return RichText(
+      text: TextSpan(
+        style: DefaultTextStyle.of(context).style,
+        children: isEnglish
+            ? [
+                const TextSpan(text: 'I agree to the '),
+                TextSpan(
+                  text: 'terms of service',
+                  style: linkStyle,
+                  recognizer: _termsRecognizer,
+                ),
+              ]
+            : [
+                TextSpan(
+                  text: '利用規約',
+                  style: linkStyle,
+                  recognizer: _termsRecognizer,
+                ),
+                const TextSpan(text: 'に同意する'),
+              ],
       ),
     );
   }

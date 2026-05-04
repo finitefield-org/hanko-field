@@ -168,6 +168,12 @@ class OrderApiRepository {
             description: _asString(map['description']),
             story: _asString(map['story']),
             stoneShape: stoneShape,
+            colorFamily: _asString(facets['color_family']).trim().toLowerCase(),
+            patternPrimary: _asString(
+              facets['pattern_primary'],
+            ).trim().toLowerCase(),
+            colorTagLabels: _asStringList(map['color_tag_labels']),
+            patternTagLabels: _asStringList(map['pattern_tag_labels']),
             price: _asInt(map['price']),
             photoUrl: photoUrl,
             photoAlt: _asString(primaryPhoto?['alt']),
@@ -200,6 +206,7 @@ class OrderApiRepository {
         fonts: fonts,
         stoneListings: stoneListings,
         countries: countries,
+        materialFilters: _parseMaterialFilters(payload['material_filters']),
       ),
     );
   }
@@ -391,6 +398,27 @@ String _firstNonEmptyString(List<dynamic> values) {
   return '';
 }
 
+MaterialFilters _parseMaterialFilters(Object? value) {
+  final map = _asMap(value);
+  return MaterialFilters(
+    colorOptions: _parseMaterialFilterOptions(map['color_options']),
+    patternOptions: _parseMaterialFilterOptions(map['pattern_options']),
+  );
+}
+
+List<MaterialFilterOption> _parseMaterialFilterOptions(Object? value) {
+  return _asList(value)
+      .map(_asMap)
+      .map((map) {
+        return MaterialFilterOption(
+          value: _asString(map['value']).toLowerCase(),
+          label: _asString(map['label']),
+        );
+      })
+      .where((option) => option.value.isNotEmpty && option.label.isNotEmpty)
+      .toList(growable: false);
+}
+
 final orderApiRepositoryProvider = Provider<OrderApiRepository>((ref) {
   final runtimeConfig = ref.watch(appRuntimeConfigProvider);
   final client = http.Client();
@@ -434,6 +462,12 @@ List<dynamic> _asList(Object? value) {
     return value;
   }
   return const [];
+}
+
+List<String> _asStringList(Object? value) {
+  return _asList(
+    value,
+  ).map(_asString).where((value) => value.isNotEmpty).toList(growable: false);
 }
 
 String _asString(Object? value) {

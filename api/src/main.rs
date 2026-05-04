@@ -167,6 +167,84 @@ struct Country {
 }
 
 #[derive(Debug, Clone)]
+struct FacetTag {
+    facet_type: String,
+    key: String,
+    label_i18n: HashMap<String, String>,
+    aliases: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FacetTagLabels {
+    labels_by_type: HashMap<String, HashMap<String, String>>,
+}
+
+impl FacetTagLabels {
+    fn insert(&mut self, facet_type: &str, key: &str, label: &str, aliases: &[String]) {
+        let Some(facet_type) = normalize_facet_tag_type(facet_type) else {
+            return;
+        };
+        let key = normalize_facet_value(key);
+        let label = label.trim();
+        if key.is_empty() || label.is_empty() {
+            return;
+        }
+
+        let labels = self
+            .labels_by_type
+            .entry(facet_type.to_owned())
+            .or_default();
+        labels.insert(key.clone(), label.to_owned());
+        for alias in aliases {
+            let alias = normalize_facet_value(alias);
+            if !alias.is_empty() {
+                labels.insert(alias, label.to_owned());
+            }
+        }
+    }
+
+    fn resolve_or_raw(&self, facet_type: &str, value: &str) -> String {
+        let Some(facet_type) = normalize_facet_tag_type(facet_type) else {
+            return String::new();
+        };
+        let normalized = normalize_facet_value(value);
+        if normalized.is_empty() {
+            return String::new();
+        }
+
+        self.labels_by_type
+            .get(facet_type)
+            .and_then(|labels| labels.get(&normalized))
+            .cloned()
+            .unwrap_or(normalized)
+    }
+
+    fn resolve_list(&self, facet_type: &str, values: &[String]) -> Vec<String> {
+        let mut labels = Vec::new();
+        let mut seen = HashSet::new();
+
+        for value in values {
+            let label = self.resolve_or_raw(facet_type, value);
+            if label.is_empty() {
+                continue;
+            }
+
+            if seen.insert(normalize_facet_value(&label)) {
+                labels.push(label);
+            }
+        }
+
+        labels
+    }
+}
+
+#[derive(Debug, Clone)]
+struct MaterialFilterOption {
+    value: String,
+    label: String,
+}
+
+#[derive(Debug, Clone)]
 struct CreateOrderResult {
     order_id: String,
     order_no: String,
@@ -703,6 +781,16 @@ async fn handle_catalog(
         }
     };
 
+    let facet_tags = match state.store.list_active_facet_tags().await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load facet tags: {err:#}");
+            Vec::new()
+        }
+    };
+    let facet_tag_labels =
+        build_facet_tag_labels(&facet_tags, &requested_locale, &cfg.default_locale);
+
     let stone_listings = match state.store.list_active_stone_listings().await {
         Ok(v) => v,
         Err(err) => {
@@ -714,14 +802,17 @@ async fn handle_catalog(
             );
         }
     };
+    let material_filters = build_material_filters(&stone_listings, &facet_tag_labels);
     let stone_listing_resp = stone_listings
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|listing| {
             stone_listing_response(
                 &state.storage_assets_bucket,
                 &requested_locale,
                 &cfg.default_locale,
                 &pricing_currency,
+                &facet_tag_labels,
                 listing,
             )
         })
@@ -810,6 +901,7 @@ async fn handle_catalog(
             "currency": pricing_currency,
             "fonts": font_resp,
             "materials": material_resp,
+            "material_filters": material_filters_response(&material_filters),
             "stone_listings": stone_listing_resp,
             "countries": country_resp,
         }),
@@ -910,6 +1002,7 @@ async fn handle_stone_listings(
                 &requested_locale,
                 &cfg.default_locale,
                 &pricing_currency,
+                &FacetTagLabels::default(),
                 listing,
             )
         })
@@ -1473,6 +1566,54 @@ impl FirestoreStore {
         }
 
         Ok(countries)
+    }
+
+    async fn list_active_facet_tags(&self) -> Result<Vec<FacetTag>> {
+        let client = self.firestore_client().await?;
+        let documents = self
+            .run_documents_query(&client, "facet_tags", true, false)
+            .await?;
+        let mut tags = Vec::with_capacity(documents.len());
+
+        for document in documents {
+            let document_id = document_id(&document).unwrap_or_default();
+            let facet_type = first_non_empty(&[
+                Some(read_string_field(&document.fields, "facet_type")),
+                document_id
+                    .split_once(':')
+                    .map(|(facet_type, _)| facet_type.to_owned()),
+            ])
+            .and_then(|raw| normalize_facet_tag_type(&raw).map(ToOwned::to_owned))
+            .unwrap_or_default();
+            let key = first_non_empty(&[
+                Some(read_string_field(&document.fields, "key")),
+                document_id
+                    .split_once(':')
+                    .map(|(_, key)| key.to_owned())
+                    .or_else(|| {
+                        if document_id.is_empty() {
+                            None
+                        } else {
+                            Some(document_id.clone())
+                        }
+                    }),
+            ])
+            .map(|raw| normalize_facet_value(&raw))
+            .unwrap_or_default();
+
+            if facet_type.is_empty() || key.is_empty() {
+                continue;
+            }
+
+            tags.push(FacetTag {
+                facet_type,
+                key,
+                label_i18n: read_string_map_field(&document.fields, "label_i18n"),
+                aliases: read_string_array_field(&document.fields, "aliases"),
+            });
+        }
+
+        Ok(tags)
     }
 
     async fn get_orderable_stone_listing_document(
@@ -2981,6 +3122,7 @@ fn stone_listing_response(
     requested_locale: &str,
     default_locale: &str,
     pricing_currency: &str,
+    facet_tag_labels: &FacetTagLabels,
     listing: StoneListing,
 ) -> JsonValue {
     let price = stone_listing_price_for_currency(&listing, pricing_currency);
@@ -2988,6 +3130,8 @@ fn stone_listing_response(
     let description =
         resolve_localized(&listing.description_i18n, requested_locale, default_locale);
     let story = resolve_localized(&listing.story_i18n, requested_locale, default_locale);
+    let color_tag_labels = facet_tag_labels.resolve_list("color", &listing.facets.color_tags);
+    let pattern_tag_labels = facet_tag_labels.resolve_list("pattern", &listing.facets.pattern_tags);
     let photos = listing
         .photos
         .into_iter()
@@ -3023,6 +3167,8 @@ fn stone_listing_response(
         },
         "price": price,
         "price_by_currency": listing.price_by_currency,
+        "color_tag_labels": color_tag_labels,
+        "pattern_tag_labels": pattern_tag_labels,
         "status": listing.status,
         "is_active": listing.is_active,
         "sort_order": listing.sort_order,
@@ -4073,6 +4219,118 @@ fn make_asset_url(bucket: &str, storage_path: &str) -> String {
 
 fn contains(values: &[String], value: &str) -> bool {
     values.iter().any(|item| item == value)
+}
+
+fn normalize_facet_tag_type(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "color" | "colors" => Some("color"),
+        "pattern" | "patterns" => Some("pattern"),
+        _ => None,
+    }
+}
+
+fn normalize_facet_value(raw: &str) -> String {
+    raw.trim().to_ascii_lowercase()
+}
+
+fn build_facet_tag_labels(
+    tags: &[FacetTag],
+    requested_locale: &str,
+    default_locale: &str,
+) -> FacetTagLabels {
+    let mut labels = FacetTagLabels::default();
+
+    for tag in tags {
+        let label = resolve_localized(&tag.label_i18n, requested_locale, default_locale);
+        let label = if label.is_empty() {
+            tag.key.clone()
+        } else {
+            label
+        };
+        labels.insert(&tag.facet_type, &tag.key, &label, &tag.aliases);
+    }
+
+    labels
+}
+
+fn build_material_filters(
+    listings: &[StoneListing],
+    facet_tag_labels: &FacetTagLabels,
+) -> HashMap<&'static str, Vec<MaterialFilterOption>> {
+    HashMap::from([
+        (
+            "color_options",
+            collect_material_filter_options(
+                listings,
+                "color",
+                |listing| listing.facets.color_family.as_str(),
+                facet_tag_labels,
+            ),
+        ),
+        (
+            "pattern_options",
+            collect_material_filter_options(
+                listings,
+                "pattern",
+                |listing| listing.facets.pattern_primary.as_str(),
+                facet_tag_labels,
+            ),
+        ),
+    ])
+}
+
+fn collect_material_filter_options(
+    listings: &[StoneListing],
+    facet_type: &str,
+    value_fn: impl Fn(&StoneListing) -> &str,
+    facet_tag_labels: &FacetTagLabels,
+) -> Vec<MaterialFilterOption> {
+    let mut seen = HashSet::new();
+    let mut options = Vec::new();
+
+    for listing in listings {
+        let value = normalize_facet_value(value_fn(listing));
+        if value.is_empty() || !seen.insert(value.clone()) {
+            continue;
+        }
+
+        options.push(MaterialFilterOption {
+            value: value.clone(),
+            label: facet_tag_labels.resolve_or_raw(facet_type, &value),
+        });
+    }
+
+    options
+}
+
+fn material_filters_response(
+    filters: &HashMap<&'static str, Vec<MaterialFilterOption>>,
+) -> JsonValue {
+    let empty = Vec::new();
+    let color_options = filters
+        .get("color_options")
+        .unwrap_or(&empty)
+        .iter()
+        .map(material_filter_option_response)
+        .collect::<Vec<_>>();
+    let pattern_options = filters
+        .get("pattern_options")
+        .unwrap_or(&empty)
+        .iter()
+        .map(material_filter_option_response)
+        .collect::<Vec<_>>();
+
+    json!({
+        "color_options": color_options,
+        "pattern_options": pattern_options,
+    })
+}
+
+fn material_filter_option_response(option: &MaterialFilterOption) -> JsonValue {
+    json!({
+        "value": option.value.as_str(),
+        "label": option.label.as_str(),
+    })
 }
 
 fn is_not_found(error: &FirebaseFirestoreError) -> bool {
