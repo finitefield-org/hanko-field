@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" type="image/png" href="/static/favicon.png">
 </head>
-<body class="top-page">
+<body class="top-page blog-page">
   <header class="top-header">
     <div class="top-header__inner">
       <a class="top-brand__link" href="{{ top_url }}">
@@ -39,9 +39,9 @@
       </a>
       <div class="top-header__action">
         <nav class="top-nav" aria-label="Primary navigation">
-          <a class="top-nav__link is-active" href="{{ top_url }}">Home</a>
+          <a class="top-nav__link" href="{{ top_url }}">Home</a>
           <a class="top-nav__link" href="{{ design_url }}">Bespoke</a>
-          <a class="top-nav__link" href="#journal">Journal</a>
+          <a class="top-nav__link is-active" href="{{ blog_index_url }}">Journal</a>
         </nav>
         <details class="top-language-switcher" data-language-switcher>
           <summary class="top-language-switcher__toggle" aria-label="Language selector">
@@ -57,36 +57,8 @@
     <div class="top-header__divider"></div>
   </header>
 
-  <main>
-    <section class="top-hero">
-      <div class="top-hero__background">
-        <img
-          alt="Craftsman hands carving gemstone"
-          class="top-hero__image"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5cLu880OVzWOnNyf9ZD8XcLvMqrMQc9P2yYVHcoN-KgbnKfMWey16b0zf7R3fFa7H-VSCAqs42ltG1JCCyxdbtQkjxXihFB5El_2xJKqjbKOdd3GIGlRb4HbTAiBNZGpLyQFWhCV6j81PL1Ij60jvqLGQs25Adi_yHKMzrB2shzvBbn8gidOur5_a_iDxLBPlKCtGyXWQv7l06Ng_ConMMKlojtfNITI-0fmeyT57m3XpXNeVLHXcK4ObXpAuN59rk6gzHqKQKVk"
-        >
-        <div class="top-hero__overlay"></div>
-      </div>
-
-      <div class="top-hero__content">
-        <h2 class="top-hero__title">
-          {% if selected_locale == "ja" %}あなただけの宝石印鑑{% else %}A gemstone seal made just for you.{% endif %}
-        </h2>
-        <p class="top-hero__copy">
-          Authentic Hand-Carved Gemstone Seals from the Orient
-        </p>
-        <button
-          type="button"
-          class="top-cta"
-          onclick="window.location.href='{{ design_url }}'"
-        >
-          <span class="top-cta__label">{% if selected_locale == "ja" %}デザインする{% else %}Start designing{% endif %}</span>
-          <span class="top-cta__sheen" aria-hidden="true"></span>
-        </button>
-      </div>
-    </section>
-
-    <section id="journal" class="journal-section">
+  <main class="blog-index__main">
+    <section class="journal-section journal-section--index">
       <div class="journal-section__inner">
         <div class="journal-section__heading">
           <h2 class="journal-section__title">Journal</h2>
@@ -114,10 +86,6 @@
             </a>
           </article>
           {% endfor %}
-        </div>
-
-        <div class="journal-section__actions">
-          <a class="journal-section__button" href="{{ blog_index_url }}">View All Stories</a>
         </div>
       </div>
     </section>

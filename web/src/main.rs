@@ -9,7 +9,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use askama::Template;
 use axum::{
     Router,
-    extract::{Form, Query, State, rejection::FormRejection},
+    extract::{Form, Path, Query, State, rejection::FormRejection},
     http::{HeaderName, HeaderValue, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
     routing::{any, get, post},
@@ -27,7 +27,17 @@ const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const ADMIN_PROXY_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 const HX_REDIRECT_HEADER: &str = "hx-redirect";
 const WEB_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
+const WEB_BLOG_POSTS_FILE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/blog/posts.json");
+const WEB_BLOG_ARTICLES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/blog/articles");
 const EXTERNAL_LEGAL_BASE_URL: &str = "https://finitefield.org";
+const DEFAULT_LOCALE: &str = "en";
+const SUPPORTED_LOCALES: &[&str] = &[
+    "en", "ja", "bg", "bn", "cs", "da", "de", "el", "es", "et", "fi", "fr", "hi", "hr", "hu", "id",
+    "it", "is", "ko", "lt", "lv", "nl", "no", "pl", "pt", "ro", "ru", "th", "vi", "zh", "zhtw",
+    "ar", "gu", "he", "kn", "ml", "mr", "sr", "sk", "sl", "sw", "sv", "ta", "te", "tr", "uk", "ur",
+    "be", "sq", "ka", "hy", "az", "kk", "ky", "tg", "uz", "mn", "lo", "km", "my", "ms", "tl", "pa",
+    "si",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -123,6 +133,27 @@ struct MaterialFilters {
 struct MaterialFilterState {
     color_family: String,
     pattern_primary: String,
+}
+
+#[derive(Debug, Clone)]
+struct BlogPostCard {
+    date_display: String,
+    title: String,
+    excerpt: String,
+    image_url: String,
+    image_alt: String,
+    post_url: String,
+    reverse_layout: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct BlogPost {
+    slug: String,
+    date_display: String,
+    title: String,
+    excerpt: String,
+    image_url: String,
+    image_alt: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -260,9 +291,11 @@ struct TopPageTemplate {
     company_url: String,
     top_url: String,
     design_url: String,
+    blog_index_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
+    blog_posts: Vec<BlogPostCard>,
 }
 
 #[derive(Template)]
@@ -488,6 +521,47 @@ struct TermsTemplate {
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
+}
+
+#[derive(Template)]
+#[template(path = "blog_index.html")]
+struct BlogIndexTemplate {
+    selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
+    top_url: String,
+    design_url: String,
+    blog_index_url: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    privacy_policy_url: String,
+    blog_posts: Vec<BlogPostCard>,
+}
+
+#[derive(Template)]
+#[template(path = "blog_article.html")]
+struct BlogArticleTemplate {
+    selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
+    top_url: String,
+    design_url: String,
+    blog_index_url: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    privacy_policy_url: String,
+    post: BlogPost,
+    body_html: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -1190,6 +1264,8 @@ async fn run() -> Result<()> {
         .route("/robots.txt", get(handle_robots_txt))
         .route("/sitemap.xml", get(handle_sitemap_xml))
         .route("/design", get(handle_design))
+        .route("/blog", get(handle_blog_index))
+        .route("/blog/{slug}", get(handle_blog_article))
         .route("/terms", get(handle_terms))
         .route(
             "/commercial-transactions",
@@ -1197,6 +1273,24 @@ async fn run() -> Result<()> {
         )
         .route("/payment/success", get(handle_payment_success))
         .route("/payment/failure", get(handle_payment_failure))
+        .route("/{locale}", get(handle_localized_top))
+        .route("/{locale}/", get(handle_localized_top))
+        .route("/{locale}/design", get(handle_localized_design))
+        .route("/{locale}/blog", get(handle_localized_blog_index))
+        .route("/{locale}/blog/{slug}", get(handle_localized_blog_article))
+        .route("/{locale}/terms", get(handle_localized_terms))
+        .route(
+            "/{locale}/commercial-transactions",
+            get(handle_localized_commercial_transactions),
+        )
+        .route(
+            "/{locale}/payment/success",
+            get(handle_localized_payment_success),
+        )
+        .route(
+            "/{locale}/payment/failure",
+            get(handle_localized_payment_failure),
+        )
         .route("/kanji", post(handle_kanji_suggestions))
         .route("/purchase", post(handle_purchase))
         .route("/mock/kanji", post(handle_kanji_suggestions))
@@ -1943,17 +2037,93 @@ fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
     urls
 }
 
+fn load_blog_posts() -> Result<Vec<BlogPost>> {
+    let posts_json = std::fs::read_to_string(WEB_BLOG_POSTS_FILE)
+        .with_context(|| format!("failed to read blog posts file {WEB_BLOG_POSTS_FILE}"))?;
+    serde_json::from_str(&posts_json)
+        .with_context(|| format!("failed to parse blog posts file {WEB_BLOG_POSTS_FILE}"))
+}
+
+fn blog_post_cards(posts: &[BlogPost], base_url: &str, locale: &str) -> Vec<BlogPostCard> {
+    posts
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(index, post)| BlogPostCard {
+            date_display: post.date_display,
+            title: post.title,
+            excerpt: post.excerpt,
+            image_url: post.image_url,
+            image_alt: post.image_alt,
+            post_url: blog_article_url(base_url, &post.slug, locale),
+            reverse_layout: index % 2 == 1,
+        })
+        .collect()
+}
+
+fn find_blog_post(posts: &[BlogPost], slug: &str) -> Option<BlogPost> {
+    posts.iter().find(|post| post.slug == slug).cloned()
+}
+
+fn read_blog_article_body(slug: &str) -> Result<String> {
+    if !is_safe_slug(slug) {
+        bail!("invalid blog slug");
+    }
+    let path = format!("{WEB_BLOG_ARTICLES_DIR}/{slug}.html");
+    std::fs::read_to_string(&path).with_context(|| format!("failed to read blog article {path}"))
+}
+
+fn is_safe_slug(slug: &str) -> bool {
+    !slug.is_empty()
+        && slug
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+}
+
 async fn handle_top(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    render_top_page(state, query, None).await
+}
+
+async fn handle_localized_top(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    render_top_page(state, query, Some(locale)).await
+}
+
+async fn render_top_page(
+    state: AppState,
+    query: PaymentRedirectQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
 
     if let Some(path) = checkout_redirect_path(site_base_url, &query, &selected_locale) {
         return Redirect::to(&path).into_response();
     }
+
+    let blog_posts = match load_blog_posts() {
+        Ok(posts) => posts,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to load blog posts: {error:#}"),
+            );
+        }
+    };
 
     let template = TopPageTemplate {
         page_title: localized_text(
@@ -1974,6 +2144,7 @@ async fn handle_top(
         selected_locale: selected_locale.clone(),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
         design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        blog_index_url: blog_index_url(site_base_url, &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
@@ -1981,6 +2152,7 @@ async fn handle_top(
             &selected_locale,
         ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
+        blog_posts: blog_post_cards(&blog_posts, site_base_url, &selected_locale),
     };
 
     match render_html(&template) {
@@ -1996,8 +2168,31 @@ async fn handle_design(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    render_design_page(state, query, None).await
+}
+
+async fn handle_localized_design(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    render_design_page(state, query, Some(locale)).await
+}
+
+async fn render_design_page(
+    state: AppState,
+    query: PaymentRedirectQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
 
     if let Some(path) = checkout_redirect_path(site_base_url, &query, &selected_locale) {
@@ -2092,6 +2287,170 @@ async fn handle_design(
     }
 }
 
+async fn handle_blog_index(
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_blog_index_page(state, query, None).await
+}
+
+async fn handle_localized_blog_index(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_blog_index_page(state, query, Some(locale)).await
+}
+
+async fn render_blog_index_page(
+    state: AppState,
+    query: LocaleQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
+    let site_base_url = state.site_base_url.as_str();
+    let blog_posts = match load_blog_posts() {
+        Ok(posts) => posts,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to load blog posts: {error:#}"),
+            );
+        }
+    };
+    let template = BlogIndexTemplate {
+        page_title: localized_text(
+            &selected_locale,
+            "Journal | STONE SIGNATURE",
+            "Journal | STONE SIGNATURE",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "STONE SIGNATURE の石印、手彫り、朱肉にまつわる記事をご覧ください。",
+            "Read STONE SIGNATURE journal stories on gemstone seals, hand carving, and vermilion ink.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: blog_index_url(site_base_url, "en"),
+        lang_ja_url: blog_index_url(site_base_url, "ja"),
+        lang_en_url: blog_index_url(site_base_url, "en"),
+        company_url: company_url(site_base_url),
+        selected_locale: selected_locale.clone(),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        blog_index_url: blog_index_url(site_base_url, &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
+        blog_posts: blog_post_cards(&blog_posts, site_base_url, &selected_locale),
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render blog index page: {error}"),
+        ),
+    }
+}
+
+async fn handle_blog_article(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_blog_article_page(state, slug, query, None).await
+}
+
+async fn handle_localized_blog_article(
+    Path((locale, slug)): Path<(String, String)>,
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_blog_article_page(state, slug, query, Some(locale)).await
+}
+
+async fn render_blog_article_page(
+    state: AppState,
+    slug: String,
+    query: LocaleQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
+    let site_base_url = state.site_base_url.as_str();
+    let blog_posts = match load_blog_posts() {
+        Ok(posts) => posts,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to load blog posts: {error:#}"),
+            );
+        }
+    };
+    let Some(post) = find_blog_post(&blog_posts, &slug) else {
+        return plain_error(StatusCode::NOT_FOUND, "blog article not found".to_owned());
+    };
+    let body_html = match read_blog_article_body(&post.slug) {
+        Ok(body_html) => body_html,
+        Err(error) => {
+            return plain_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to load blog article: {error:#}"),
+            );
+        }
+    };
+
+    let template = BlogArticleTemplate {
+        page_title: format!("{} | STONE SIGNATURE", post.title),
+        meta_description: post.excerpt.clone(),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: blog_article_url(site_base_url, &post.slug, "en"),
+        lang_ja_url: blog_article_url(site_base_url, &post.slug, "ja"),
+        lang_en_url: blog_article_url(site_base_url, &post.slug, "en"),
+        company_url: company_url(site_base_url),
+        selected_locale: selected_locale.clone(),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        blog_index_url: blog_index_url(site_base_url, &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
+        post,
+        body_html,
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render blog article page: {error}"),
+        ),
+    }
+}
+
 fn material_filter_state_from_query(query: &PaymentRedirectQuery) -> MaterialFilterState {
     MaterialFilterState {
         color_family: normalize_facet_tag_value(query.color_family.as_deref().unwrap_or_default()),
@@ -2137,7 +2496,8 @@ fn checkout_redirect_path(
         format!("?{}", params.join("&"))
     };
 
-    Some(site_url(base_url, &format!("{base_path}{query}")))
+    let path = localized_page_path(base_path, locale);
+    Some(site_url(base_url, &format!("{path}{query}")))
 }
 
 fn payment_result_locale_url(
@@ -2180,7 +2540,8 @@ fn payment_result_locale_url(
         format!("?{}", params.join("&"))
     };
 
-    site_url(base_url, &format!("{base_path}{query}"))
+    let path = localized_page_path(base_path, normalized);
+    site_url(base_url, &format!("{path}{query}"))
 }
 
 #[cfg(test)]
@@ -2190,7 +2551,7 @@ fn payment_result_navigation_url(
     query: &PaymentRedirectQuery,
     locale: &str,
 ) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("en");
+    let normalized = parse_supported_locale(locale).unwrap_or(DEFAULT_LOCALE);
     let mut params = localized_navigation_query_params(normalized);
 
     if let Some(checkout) = query
@@ -2224,7 +2585,8 @@ fn payment_result_navigation_url(
         format!("?{}", params.join("&"))
     };
 
-    site_url(base_url, &format!("{base_path}{query}"))
+    let path = localized_page_path(base_path, normalized);
+    site_url(base_url, &format!("{path}{query}"))
 }
 
 async fn handle_robots_txt(State(state): State<AppState>) -> Response {
@@ -2236,16 +2598,38 @@ async fn handle_robots_txt(State(state): State<AppState>) -> Response {
 }
 
 async fn handle_sitemap_xml(State(state): State<AppState>) -> Response {
-    (
-        [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
-        build_sitemap_xml(&state.site_base_url),
-    )
-        .into_response()
+    match build_sitemap_xml(&state.site_base_url) {
+        Ok(sitemap) => (
+            [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
+            sitemap,
+        )
+            .into_response(),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to build sitemap: {error:#}"),
+        ),
+    }
 }
 
 async fn handle_payment_success(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    render_payment_success_page(state, query, None).await
+}
+
+async fn handle_localized_payment_success(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    render_payment_success_page(state, query, Some(locale)).await
+}
+
+async fn render_payment_success_page(
+    state: AppState,
+    query: PaymentRedirectQuery,
+    path_locale: Option<String>,
 ) -> Response {
     let session_id = query
         .session_id
@@ -2253,8 +2637,15 @@ async fn handle_payment_success(
         .unwrap_or_default()
         .trim()
         .to_owned();
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
     let order_id = query
         .order_id
@@ -2307,8 +2698,31 @@ async fn handle_payment_failure(
     State(state): State<AppState>,
     Query(query): Query<PaymentRedirectQuery>,
 ) -> Response {
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    render_payment_failure_page(state, query, None).await
+}
+
+async fn handle_localized_payment_failure(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<PaymentRedirectQuery>,
+) -> Response {
+    render_payment_failure_page(state, query, Some(locale)).await
+}
+
+async fn render_payment_failure_page(
+    state: AppState,
+    query: PaymentRedirectQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
     let order_id = query
         .order_id
@@ -2359,8 +2773,31 @@ async fn handle_commercial_transactions(
     State(state): State<AppState>,
     Query(query): Query<LocaleQuery>,
 ) -> Response {
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    render_commercial_transactions_page(state, query, None).await
+}
+
+async fn handle_localized_commercial_transactions(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_commercial_transactions_page(state, query, Some(locale)).await
+}
+
+async fn render_commercial_transactions_page(
+    state: AppState,
+    query: LocaleQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
     let lang_ja_url = commercial_transactions_url(site_base_url, "ja");
     let lang_en_url = commercial_transactions_url(site_base_url, "en");
@@ -2402,8 +2839,31 @@ async fn handle_commercial_transactions(
 }
 
 async fn handle_terms(State(state): State<AppState>, Query(query): Query<LocaleQuery>) -> Response {
-    let selected_locale =
-        resolve_request_locale(query.lang.as_deref(), &state.locale, &state.default_locale);
+    render_terms_page(state, query, None).await
+}
+
+async fn handle_localized_terms(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_terms_page(state, query, Some(locale)).await
+}
+
+async fn render_terms_page(
+    state: AppState,
+    query: LocaleQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
     let site_base_url = state.site_base_url.as_str();
     let lang_ja_url = terms_url(site_base_url, "ja");
     let lang_en_url = terms_url(site_base_url, "en");
@@ -2933,18 +3393,64 @@ fn resolve_request_locale(requested: Option<&str>, locale: &str, default_locale:
     if let Some(value) = parse_supported_locale(default_locale) {
         return value.to_owned();
     }
-    "en".to_owned()
+    DEFAULT_LOCALE.to_owned()
 }
 
 fn parse_supported_locale(raw: &str) -> Option<&'static str> {
     let normalized = raw.trim().to_lowercase();
-    if normalized.starts_with("ja") || normalized == "jp" {
+    if normalized.is_empty() {
+        return None;
+    }
+    if normalized == "jp" {
         return Some("ja");
     }
-    if normalized.starts_with("en") {
-        return Some("en");
+    if normalized == "zh-tw" || normalized == "zh_tw" || normalized == "zh-hant" {
+        return Some("zhtw");
     }
-    None
+    if let Some(locale) = supported_locale_exact(&normalized) {
+        return Some(locale);
+    }
+    let language = normalized
+        .split(['-', '_'])
+        .next()
+        .unwrap_or(normalized.as_str());
+    supported_locale_exact(language)
+}
+
+fn parse_path_locale(raw: &str) -> Option<&'static str> {
+    let normalized = raw.trim().to_lowercase();
+    if normalized == "jp" {
+        return Some("ja");
+    }
+    if normalized == "zh-tw" || normalized == "zh_tw" || normalized == "zh-hant" {
+        return Some("zhtw");
+    }
+    supported_locale_exact(&normalized)
+}
+
+fn supported_locale_exact(locale: &str) -> Option<&'static str> {
+    SUPPORTED_LOCALES
+        .iter()
+        .copied()
+        .find(|supported| *supported == locale)
+}
+
+fn resolve_page_locale(
+    path_locale: Option<&str>,
+    requested: Option<&str>,
+    locale: &str,
+    default_locale: &str,
+) -> std::result::Result<String, Response> {
+    if let Some(path_locale) = path_locale {
+        if let Some(locale) = parse_path_locale(path_locale) {
+            return Ok(locale.to_owned());
+        }
+        return Err(plain_error(
+            StatusCode::NOT_FOUND,
+            "localized page not found".to_owned(),
+        ));
+    }
+    Ok(resolve_request_locale(requested, locale, default_locale))
 }
 
 fn site_url(base_url: &str, path: &str) -> String {
@@ -2966,20 +3472,25 @@ fn normalize_site_base_url(raw: &str) -> Result<String> {
 }
 
 fn locale_query_params(locale: &str) -> Vec<String> {
-    let normalized = parse_supported_locale(locale).unwrap_or("en");
-    if normalized == "ja" {
-        vec!["lang=ja".to_owned()]
-    } else {
-        Vec::new()
-    }
+    let _ = locale;
+    Vec::new()
 }
 
 fn localized_page_path(path: &str, locale: &str) -> String {
-    let normalized = parse_supported_locale(locale).unwrap_or("en");
-    if normalized == "ja" {
-        format!("{path}?lang=ja")
+    let normalized = parse_supported_locale(locale).unwrap_or(DEFAULT_LOCALE);
+    if normalized == DEFAULT_LOCALE {
+        return path.to_owned();
+    }
+
+    let path = if path.is_empty() { "/" } else { path };
+    if path == "/" {
+        return format!("/{normalized}/");
+    }
+
+    if let Some(path) = path.strip_prefix('/') {
+        format!("/{normalized}/{path}")
     } else {
-        path.to_owned()
+        format!("/{normalized}/{path}")
     }
 }
 
@@ -2987,22 +3498,14 @@ fn localized_page_url(base_url: &str, path: &str, locale: &str) -> String {
     site_url(base_url, &localized_page_path(path, locale))
 }
 
+#[cfg(test)]
 fn localized_navigation_query_params(locale: &str) -> Vec<String> {
-    let normalized = parse_supported_locale(locale).unwrap_or("en");
-    if normalized == "ja" || normalized == "en" {
-        vec![format!("lang={normalized}")]
-    } else {
-        Vec::new()
-    }
+    let _ = locale;
+    Vec::new()
 }
 
 fn localized_navigation_page_path(path: &str, locale: &str) -> String {
-    let params = localized_navigation_query_params(locale);
-    if params.is_empty() {
-        path.to_owned()
-    } else {
-        format!("{path}?{}", params.join("&"))
-    }
+    localized_page_path(path, locale)
 }
 
 fn localized_navigation_page_url(base_url: &str, path: &str, locale: &str) -> String {
@@ -3027,6 +3530,14 @@ fn top_url(base_url: &str, locale: &str) -> String {
 
 fn design_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/design", locale)
+}
+
+fn blog_index_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/blog", locale)
+}
+
+fn blog_article_url(base_url: &str, slug: &str, locale: &str) -> String {
+    localized_page_url(base_url, &format!("/blog/{slug}"), locale)
 }
 
 fn design_url_with_filters(base_url: &str, locale: &str, filters: &MaterialFilterState) -> String {
@@ -3080,15 +3591,27 @@ fn sitemap_url_entry(base_url: &str, path: &str) -> String {
     )
 }
 
-fn build_sitemap_xml(base_url: &str) -> String {
+fn build_sitemap_xml(base_url: &str) -> Result<String> {
     let mut sitemap = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n",
     );
-    for path in ["/", "/design", "/terms", "/commercial-transactions"] {
+    for path in [
+        "/",
+        "/design",
+        "/blog",
+        "/terms",
+        "/commercial-transactions",
+    ] {
         sitemap.push_str(&sitemap_url_entry(base_url, path));
     }
+    for post in load_blog_posts()? {
+        sitemap.push_str(&sitemap_url_entry(
+            base_url,
+            &format!("/blog/{}", post.slug),
+        ));
+    }
     sitemap.push_str("</urlset>\n");
-    sitemap
+    Ok(sitemap)
 }
 
 fn localized_text(locale: &str, ja: &str, en: &str) -> String {
@@ -4049,7 +4572,7 @@ mod tests {
         assert_eq!(filters.pattern_primary, "cloud");
         assert_eq!(
             design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
-            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
+            "https://finitefield.org/ja/design?color_family=green&pattern_primary=cloud"
         );
     }
 
@@ -4283,9 +4806,15 @@ mod tests {
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "en"),
             design_url: design_url(TEST_SITE_BASE_URL, "en"),
+            blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "en"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
             commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
             privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "en"),
+            blog_posts: blog_post_cards(
+                &load_blog_posts().expect("blog posts should load"),
+                TEST_SITE_BASE_URL,
+                "en",
+            ),
         };
 
         let html = render_html(&template).expect("top page should render");
@@ -4297,7 +4826,7 @@ mod tests {
         ));
         assert!(html.contains(r#"<meta name="robots" content="index,follow">"#));
         assert!(html.contains(
-            r#"<link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja">"#
+            r#"<link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/">"#
         ));
         assert!(
             html.contains(
@@ -4309,6 +4838,39 @@ mod tests {
         ));
         assert!(html.contains("href=\"https://finitefield.org/en/privacy/\""));
         assert!(html.contains("href=\"https://finitefield.org/company/\""));
+    }
+
+    #[test]
+    fn top_page_renders_journal_cards() {
+        let template = TopPageTemplate {
+            selected_locale: "en".to_owned(),
+            page_title: "Custom gemstone seals | STONE SIGNATURE".to_owned(),
+            meta_description:
+                "Design custom hand-carved gemstone seals online and order in English or Japanese."
+                    .to_owned(),
+            robots_meta: "index,follow".to_owned(),
+            canonical_url: top_url(TEST_SITE_BASE_URL, "en"),
+            lang_ja_url: top_url(TEST_SITE_BASE_URL, "ja"),
+            lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
+            company_url: company_url(TEST_SITE_BASE_URL),
+            top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            design_url: design_url(TEST_SITE_BASE_URL, "en"),
+            blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "en"),
+            terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
+            commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
+            privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "en"),
+            blog_posts: blog_post_cards(
+                &load_blog_posts().expect("blog posts should load"),
+                TEST_SITE_BASE_URL,
+                "en",
+            ),
+        };
+
+        let html = render_html(&template).expect("top page should render");
+
+        assert!(html.contains(r#"<section id="journal" class="journal-section">"#));
+        assert!(html.contains("The Art of Selection: Identifying the Finest Jadeite for Carving"));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/art-of-selection-jadeite""#));
     }
 
     #[test]
@@ -4325,9 +4887,15 @@ mod tests {
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "ja"),
             design_url: design_url(TEST_SITE_BASE_URL, "ja"),
+            blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "ja"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "ja"),
             commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "ja"),
             privacy_policy_url: privacy_policy_url(TEST_SITE_BASE_URL, "ja"),
+            blog_posts: blog_post_cards(
+                &load_blog_posts().expect("blog posts should load"),
+                TEST_SITE_BASE_URL,
+                "ja",
+            ),
         };
 
         let html = render_html(&template).expect("top page should render");
@@ -4349,6 +4917,45 @@ mod tests {
             .find(r#"<div class="top-footer__brand-title">STONE SIGNATURE</div>"#)
             .expect("footer title should be rendered");
         assert!(footer_logo < footer_title);
+    }
+
+    #[tokio::test]
+    async fn blog_article_page_renders_for_known_slug() {
+        let response = handle_blog_article(
+            State(mock_state()),
+            Path("legacy-of-the-hand".to_owned()),
+            Query(LocaleQuery {
+                lang: Some("en".to_owned()),
+            }),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let html = String::from_utf8(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("blog body should be readable")
+                .to_vec(),
+        )
+        .expect("blog body should be utf-8");
+
+        assert!(html.contains("Legacy of the Hand: Why Hand-Carving Still Matters"));
+        assert!(html.contains(
+            r#"<link rel="canonical" href="https://finitefield.org/blog/legacy-of-the-hand">"#
+        ));
+    }
+
+    #[tokio::test]
+    async fn blog_article_page_returns_not_found_for_unknown_slug() {
+        let response = handle_blog_article(
+            State(mock_state()),
+            Path("missing".to_owned()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     #[test]
@@ -4439,11 +5046,15 @@ mod tests {
         );
         assert_eq!(
             top_url(TEST_SITE_BASE_URL, "ja"),
-            "https://finitefield.org/?lang=ja"
+            "https://finitefield.org/ja/"
         );
         assert_eq!(
             top_url(TEST_SITE_BASE_URL, "jp"),
-            "https://finitefield.org/?lang=ja"
+            "https://finitefield.org/ja/"
+        );
+        assert_eq!(
+            top_url(TEST_SITE_BASE_URL, "fr"),
+            "https://finitefield.org/fr/"
         );
         assert_eq!(
             design_url(TEST_SITE_BASE_URL, "en"),
@@ -4451,7 +5062,23 @@ mod tests {
         );
         assert_eq!(
             design_url(TEST_SITE_BASE_URL, "ja"),
-            "https://finitefield.org/design?lang=ja"
+            "https://finitefield.org/ja/design"
+        );
+        assert_eq!(
+            design_url(TEST_SITE_BASE_URL, "zhtw"),
+            "https://finitefield.org/zhtw/design"
+        );
+        assert_eq!(
+            blog_index_url(TEST_ALT_SITE_BASE_URL, "en"),
+            "https://inkanfield.org/blog"
+        );
+        assert_eq!(
+            blog_article_url(TEST_ALT_SITE_BASE_URL, "art-of-selection-jadeite", "en"),
+            "https://inkanfield.org/blog/art-of-selection-jadeite"
+        );
+        assert_eq!(
+            blog_article_url(TEST_ALT_SITE_BASE_URL, "art-of-selection-jadeite", "ja"),
+            "https://inkanfield.org/ja/blog/art-of-selection-jadeite"
         );
         assert_eq!(
             terms_url(TEST_SITE_BASE_URL, "en"),
@@ -4488,7 +5115,7 @@ mod tests {
         );
         assert_eq!(
             design_url_with_filters(TEST_SITE_BASE_URL, "ja", &filters),
-            "https://finitefield.org/design?lang=ja&color_family=green&pattern_primary=cloud"
+            "https://finitefield.org/ja/design?color_family=green&pattern_primary=cloud"
         );
     }
 
@@ -4496,19 +5123,27 @@ mod tests {
     fn navigation_urls_preserve_the_selected_locale() {
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/", "en"),
-            "https://finitefield.org/?lang=en"
+            "https://finitefield.org/"
         );
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/design", "en"),
-            "https://finitefield.org/design?lang=en"
+            "https://finitefield.org/design"
         );
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/terms", "en"),
-            "https://finitefield.org/terms?lang=en"
+            "https://finitefield.org/terms"
         );
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/commercial-transactions", "en"),
-            "https://finitefield.org/commercial-transactions?lang=en"
+            "https://finitefield.org/commercial-transactions"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/", "ja"),
+            "https://finitefield.org/ja/"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/commercial-transactions", "ja"),
+            "https://finitefield.org/ja/commercial-transactions"
         );
 
         let query = PaymentRedirectQuery {
@@ -4519,7 +5154,7 @@ mod tests {
         };
         assert_eq!(
             payment_result_navigation_url(TEST_SITE_BASE_URL, "/payment/success", &query, "en",),
-            "https://finitefield.org/payment/success?lang=en&checkout=success&session_id=sess_123&order_id=ord_456"
+            "https://finitefield.org/payment/success?checkout=success&session_id=sess_123&order_id=ord_456"
         );
     }
 
@@ -4565,9 +5200,7 @@ mod tests {
         .expect("commercial transactions body should be utf-8");
 
         assert!(commercial_html.contains("Back to TOP"));
-        assert!(
-            commercial_html.contains("window.location.href='https://finitefield.org/?lang=en'")
-        );
+        assert!(commercial_html.contains("window.location.href='https://finitefield.org/'"));
 
         let terms_response = handle_terms(
             State(mock_state()),
@@ -4585,7 +5218,7 @@ mod tests {
         .expect("terms body should be utf-8");
 
         assert!(terms_html.contains("Back to TOP"));
-        assert!(terms_html.contains("window.location.href='https://finitefield.org/?lang=en'"));
+        assert!(terms_html.contains("window.location.href='https://finitefield.org/'"));
     }
 
     #[test]
@@ -4603,7 +5236,7 @@ mod tests {
         );
         assert_eq!(
             payment_result_locale_url(TEST_SITE_BASE_URL, "/payment/success", &query, "ja"),
-            "https://finitefield.org/payment/success?lang=ja&checkout=success&session_id=sess_123&order_id=ord_456"
+            "https://finitefield.org/ja/payment/success?checkout=success&session_id=sess_123&order_id=ord_456"
         );
     }
 
@@ -4657,7 +5290,7 @@ mod tests {
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/" />"#
         ));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/?lang=ja" />"#
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/" />"#
         ));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />"#
@@ -4667,17 +5300,28 @@ mod tests {
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design" />"#
         ));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/design?lang=ja" />"#
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/design" />"#
         ));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/design" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/blog</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog" />"#
+        ));
+        assert!(
+            sitemap_xml
+                .contains("<loc>https://finitefield.org/blog/art-of-selection-jadeite</loc>")
+        );
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog/art-of-selection-jadeite" />"#
         ));
         assert!(sitemap_xml.contains("<loc>https://finitefield.org/terms</loc>"));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms" />"#
         ));
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/terms?lang=ja" />"#
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/terms" />"#
         ));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/terms" />"#
@@ -4689,7 +5333,7 @@ mod tests {
         );
         assert!(
             sitemap_xml
-                .contains(r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/commercial-transactions?lang=ja" />"#)
+                .contains(r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/commercial-transactions" />"#)
         );
         assert!(
             sitemap_xml

@@ -897,6 +897,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 2rem;
   }
 
   .top-language-switcher {
@@ -1172,6 +1173,276 @@
     transform: translateY(0);
   }
 
+  .journal-section {
+    padding: 6rem 2rem;
+    background: #fbf9f6;
+  }
+
+  .journal-section--index {
+    padding-top: 1rem;
+  }
+
+  .journal-section__inner {
+    margin: 0 auto;
+    max-width: 56rem;
+  }
+
+  .journal-section__heading {
+    margin-bottom: 5rem;
+    text-align: center;
+  }
+
+  .journal-section__title {
+    margin: 0 0 1rem;
+    color: #1b1c1a;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: clamp(1.875rem, 3vw, 2.25rem);
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+  }
+
+  .journal-section__rule {
+    width: 3rem;
+    height: 1px;
+    margin: 0 auto;
+    background: rgb(133 18 23 / 0.4);
+  }
+
+  .journal-list {
+    display: grid;
+    gap: 6rem;
+  }
+
+  .journal-card__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .journal-card__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 3rem;
+  }
+
+  .journal-card__media {
+    overflow: hidden;
+    background: #efeeeb;
+  }
+
+  .journal-card__media.is-reversed {
+    order: 2;
+  }
+
+  .journal-card__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .journal-card__body.is-reversed {
+    order: 1;
+  }
+
+  .journal-card__image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    filter: grayscale(1);
+    transform: scale(1);
+    transition: filter 0.7s ease, transform 0.7s ease;
+  }
+
+  .journal-card:hover .journal-card__image {
+    filter: grayscale(0);
+    transform: scale(1.05);
+  }
+
+  .journal-card__date {
+    margin-bottom: 1rem;
+    color: #5f5e5e;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .journal-card__title {
+    margin: 0 0 1.5rem;
+    color: #1b1c1a;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.6;
+    transition: color 0.3s ease;
+  }
+
+  .journal-card:hover .journal-card__title {
+    color: #851217;
+  }
+
+  .journal-card__excerpt {
+    margin: 0 0 2rem;
+    color: #5f5e5e;
+    font-size: 0.875rem;
+    font-weight: 300;
+    line-height: 2;
+  }
+
+  .journal-card__read-more {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgb(133 18 23 / 0.2);
+    color: #851217;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: border-color 0.3s ease;
+  }
+
+  .journal-card:hover .journal-card__read-more {
+    border-color: #851217;
+  }
+
+  .journal-card__icon {
+    font-size: 0.875rem;
+  }
+
+  .journal-section__actions {
+    margin-top: 6rem;
+    text-align: center;
+  }
+
+  .journal-section__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.25rem;
+    border: 1px solid #8c716e;
+    color: #1b1c1a;
+    padding: 1rem 3rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.3em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+
+  .journal-section__button:hover {
+    border-color: #851217;
+    color: #851217;
+  }
+
+  .blog-page {
+    background: #fbf9f6;
+  }
+
+  .blog-index__main,
+  .blog-article__main {
+    margin: 0 auto;
+    padding: 7.5rem 1.5rem 4rem;
+  }
+
+  .blog-article {
+    margin: 0 auto;
+    max-width: 56rem;
+  }
+
+  .blog-article__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 3rem;
+    color: #851217;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .blog-article__back-icon {
+    font-size: 0.875rem;
+  }
+
+  .blog-article__header {
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .blog-article__date {
+    display: block;
+    margin-bottom: 1rem;
+    color: #5f5e5e;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .blog-article__title {
+    margin: 0 auto 1.5rem;
+    max-width: 46rem;
+    color: #1b1c1a;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: clamp(2.25rem, 6vw, 4.75rem);
+    font-weight: 300;
+    line-height: 1.18;
+    letter-spacing: 0.05em;
+  }
+
+  .blog-article__excerpt {
+    margin: 0 auto;
+    max-width: 42rem;
+    color: #5f5e5e;
+    font-size: 0.95rem;
+    font-weight: 300;
+    letter-spacing: 0.03em;
+    line-height: 2;
+  }
+
+  .blog-article__figure {
+    margin: 0 0 4rem;
+    overflow: hidden;
+    background: #efeeeb;
+  }
+
+  .blog-article__image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    filter: grayscale(0.2);
+  }
+
+  .blog-article__content {
+    margin: 0 auto;
+    max-width: 42rem;
+  }
+
+  .blog-article__section + .blog-article__section {
+    margin-top: 3rem;
+  }
+
+  .blog-article__section h2 {
+    margin: 0 0 1rem;
+    color: #1b1c1a;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .blog-article__section p {
+    margin: 0;
+    color: #4c4a47;
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 2.15;
+  }
 
   .top-footer {
     background: #efeeeb;
@@ -1562,6 +1833,10 @@
       padding: 1.25rem 1rem;
     }
 
+    .top-header__action {
+      gap: 1rem;
+    }
+
     .top-hero {
       padding-top: 88px;
     }
@@ -1589,6 +1864,54 @@
 
     .top-footer__inner {
       padding: 3rem 1rem;
+    }
+
+    .journal-section {
+      padding: 5rem 1rem;
+    }
+
+    .journal-section--index {
+      padding-top: 0;
+    }
+
+    .journal-section__heading {
+      margin-bottom: 3.5rem;
+    }
+
+    .journal-list {
+      gap: 4rem;
+    }
+
+    .journal-card__grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .journal-card__media.is-reversed,
+    .journal-card__body.is-reversed {
+      order: initial;
+    }
+
+    .journal-card__title {
+      margin-bottom: 1rem;
+      font-size: 1.35rem;
+    }
+
+    .journal-section__actions {
+      margin-top: 4rem;
+    }
+
+    .blog-index__main,
+    .blog-article__main {
+      padding: 6.5rem 1rem 3rem;
+    }
+
+    .blog-article__title {
+      font-size: clamp(2rem, 9vw, 3.5rem);
+    }
+
+    .blog-article__figure {
+      margin-bottom: 3rem;
     }
 
   .top-brand__logo {

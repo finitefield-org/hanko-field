@@ -55,7 +55,7 @@
 - [x] `web` / `app` のロケール切替で入力途中の注文内容を保持し、再読込で消えないようにする
 - [x] `web` / `app` の入力例・案内文をロケール別に整え、英語ユーザにも自然に伝わるようにする
 - [x] `app` の購入ステップで、配送国選択メニューをフォントスタイルと同じ見た目のボトムシートにする
-- [x] `web` の公開ページで canonical / hreflang を絶対URL + `x-default` 付きで整え、英語 URL を正規、`ja` を代替として公開する
+- [x] `web` の公開ページで canonical / hreflang を絶対URL + `x-default` 付きで整え、英語 URL を正規、`/ja/` を日本語代替として公開する
 - [x] `web` の主要 SEO メタ（title / meta description / robots / OG / Twitter）をロケール別に整え、英語 URL で英語表示にする
 - [x] `web` / `app` のデザインステップで、印影テキスト・フォント・形状の選択状態とエラー表示をより明確にする
 - [x] 材質マスタの比較情報を拡充し、質感・重さ・用途が判断しやすい説明を表示する
@@ -73,3 +73,5 @@
 - [x] `app` の Google Play Store 掲載準備として Android の release signing / app icon / app name を整備する
 - [x] 管理画面（`admin`）の最大表示幅を広げる
 - [x] 管理画面（`admin`）と Web を本番環境へデプロイする
+- [x] `web` に STONE SIGNATURE のブログセクションと `/blog/{slug}` の記事ページを追加する
+- [x] `web` の公開 URL を英語は言語コードなし、その他言語は `/{languageCode}/` 始まりに統一する

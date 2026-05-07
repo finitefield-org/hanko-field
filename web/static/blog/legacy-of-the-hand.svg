@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Hand carving tool</title>
+  <desc id="desc">A hand holding a traditional carving tool over a dark craft table.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#191513"/>
+      <stop offset="0.55" stop-color="#312620"/>
+      <stop offset="1" stop-color="#090706"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0.2" y1="0.2" x2="0.9" y2="0.9">
+      <stop offset="0" stop-color="#c59a73"/>
+      <stop offset="0.45" stop-color="#886047"/>
+      <stop offset="1" stop-color="#3f2b23"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f0e7"/>
+      <stop offset="0.45" stop-color="#8a8178"/>
+      <stop offset="1" stop-color="#2e2b29"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.012 0.038" numOctaves="5" seed="23"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.2"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <ellipse cx="570" cy="735" rx="520" ry="95" fill="#050403" opacity="0.45"/>
+  <g filter="url(#grain)">
+    <path d="M238 486c42-70 96-111 163-123 56-10 128 4 214 42l79 35c39 17 77 36 113 57 27 16 40 39 38 69-2 31-17 54-44 69-26 15-59 15-99 0l-92-35c-42 54-93 84-154 91-72 9-139-14-201-68-39-34-45-79-17-137Z" fill="url(#skin)"/>
+    <path d="M327 408c42-36 91-46 146-29 37 12 72 33 107 63" fill="none" stroke="#e2ba91" stroke-width="11" stroke-linecap="round" opacity="0.32"/>
+    <path d="M367 527c74 34 143 51 207 51 53 0 105-10 156-31" fill="none" stroke="#2f211b" stroke-width="8" stroke-linecap="round" opacity="0.44"/>
+    <path d="M525 559 960 200" fill="none" stroke="#d8d0c5" stroke-width="22" stroke-linecap="round"/>
+    <path d="M521 563 957 203" fill="none" stroke="url(#steel)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M914 240 995 157 1038 157 984 261Z" fill="#bdb4a8"/>
+    <path d="M914 240 995 157 1038 157" fill="none" stroke="#f7f0e3" stroke-width="5" opacity="0.58"/>
+    <path d="M225 600c126 63 270 99 435 106 67 3 128-4 183-20" fill="none" stroke="#c8a180" stroke-width="7" stroke-linecap="round" opacity="0.18"/>
+    <rect x="742" y="598" width="95" height="95" fill="#861a17" opacity="0.82"/>
+    <path d="M760 616h58v58h-58z" fill="none" stroke="#f8dad4" stroke-width="4" opacity="0.46"/>
+    <path d="M781 631v28M804 631v28M773 645h40" stroke="#f8dad4" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  </g>
+</svg>

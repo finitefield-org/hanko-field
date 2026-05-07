@@ -10,12 +10,12 @@
   <link rel="alternate" hreflang="ja" href="{{ lang_ja_url }}">
   <link rel="alternate" hreflang="en" href="{{ lang_en_url }}">
   <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="article">
   <meta property="og:title" content="{{ page_title }}">
   <meta property="og:description" content="{{ meta_description }}">
   <meta property="og:url" content="{{ canonical_url }}">
   <meta property="og:site_name" content="STONE SIGNATURE">
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ page_title }}">
   <meta name="twitter:description" content="{{ meta_description }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" type="image/png" href="/static/favicon.png">
 </head>
-<body class="top-page">
+<body class="top-page blog-page">
   <header class="top-header">
     <div class="top-header__inner">
       <a class="top-brand__link" href="{{ top_url }}">
@@ -39,9 +39,9 @@
       </a>
       <div class="top-header__action">
         <nav class="top-nav" aria-label="Primary navigation">
-          <a class="top-nav__link is-active" href="{{ top_url }}">Home</a>
+          <a class="top-nav__link" href="{{ top_url }}">Home</a>
           <a class="top-nav__link" href="{{ design_url }}">Bespoke</a>
-          <a class="top-nav__link" href="#journal">Journal</a>
+          <a class="top-nav__link is-active" href="{{ blog_index_url }}">Journal</a>
         </nav>
         <details class="top-language-switcher" data-language-switcher>
           <summary class="top-language-switcher__toggle" aria-label="Language selector">
@@ -57,70 +57,26 @@
     <div class="top-header__divider"></div>
   </header>
 
-  <main>
-    <section class="top-hero">
-      <div class="top-hero__background">
-        <img
-          alt="Craftsman hands carving gemstone"
-          class="top-hero__image"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5cLu880OVzWOnNyf9ZD8XcLvMqrMQc9P2yYVHcoN-KgbnKfMWey16b0zf7R3fFa7H-VSCAqs42ltG1JCCyxdbtQkjxXihFB5El_2xJKqjbKOdd3GIGlRb4HbTAiBNZGpLyQFWhCV6j81PL1Ij60jvqLGQs25Adi_yHKMzrB2shzvBbn8gidOur5_a_iDxLBPlKCtGyXWQv7l06Ng_ConMMKlojtfNITI-0fmeyT57m3XpXNeVLHXcK4ObXpAuN59rk6gzHqKQKVk"
-        >
-        <div class="top-hero__overlay"></div>
+  <main class="blog-article__main">
+    <article class="blog-article">
+      <a class="blog-article__back" href="{{ blog_index_url }}">
+        <span class="material-symbols-outlined blog-article__back-icon" aria-hidden="true">arrow_back</span>
+        Journal
+      </a>
+      <header class="blog-article__header">
+        <span class="blog-article__date">{{ post.date_display }}</span>
+        <h1 class="blog-article__title">{{ post.title }}</h1>
+        <p class="blog-article__excerpt">{{ post.excerpt }}</p>
+      </header>
+
+      <figure class="blog-article__figure">
+        <img class="blog-article__image" src="{{ post.image_url }}" alt="{{ post.image_alt }}">
+      </figure>
+
+      <div class="blog-article__content">
+        {{ body_html|safe }}
       </div>
-
-      <div class="top-hero__content">
-        <h2 class="top-hero__title">
-          {% if selected_locale == "ja" %}あなただけの宝石印鑑{% else %}A gemstone seal made just for you.{% endif %}
-        </h2>
-        <p class="top-hero__copy">
-          Authentic Hand-Carved Gemstone Seals from the Orient
-        </p>
-        <button
-          type="button"
-          class="top-cta"
-          onclick="window.location.href='{{ design_url }}'"
-        >
-          <span class="top-cta__label">{% if selected_locale == "ja" %}デザインする{% else %}Start designing{% endif %}</span>
-          <span class="top-cta__sheen" aria-hidden="true"></span>
-        </button>
-      </div>
-    </section>
-
-    <section id="journal" class="journal-section">
-      <div class="journal-section__inner">
-        <div class="journal-section__heading">
-          <h2 class="journal-section__title">Journal</h2>
-          <div class="journal-section__rule" aria-hidden="true"></div>
-        </div>
-
-        <div class="journal-list">
-          {% for post in blog_posts %}
-          <article class="journal-card">
-            <a class="journal-card__link" href="{{ post.post_url }}">
-              <div class="journal-card__grid">
-                <div class="journal-card__media{% if post.reverse_layout %} is-reversed{% endif %}">
-                  <img class="journal-card__image" src="{{ post.image_url }}" alt="{{ post.image_alt }}">
-                </div>
-                <div class="journal-card__body{% if post.reverse_layout %} is-reversed{% endif %}">
-                  <span class="journal-card__date">{{ post.date_display }}</span>
-                  <h3 class="journal-card__title">{{ post.title }}</h3>
-                  <p class="journal-card__excerpt">{{ post.excerpt }}</p>
-                  <span class="journal-card__read-more">
-                    Read More
-                    <span class="material-symbols-outlined journal-card__icon" aria-hidden="true">arrow_forward</span>
-                  </span>
-                </div>
-              </div>
-            </a>
-          </article>
-          {% endfor %}
-        </div>
-
-        <div class="journal-section__actions">
-          <a class="journal-section__button" href="{{ blog_index_url }}">View All Stories</a>
-        </div>
-      </div>
-    </section>
+    </article>
   </main>
 
   <footer class="top-footer">
