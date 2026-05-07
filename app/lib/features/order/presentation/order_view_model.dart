@@ -502,6 +502,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
   late final clearMaterialFiltersMut = mutation<void>(#clearMaterialFilters);
   late final selectStoneListingMut = mutation<void>(#selectStoneListing);
   late final selectCountryMut = mutation<void>(#selectCountry);
+  late final resetToDesignStepMut = mutation<void>(#resetToDesignStep);
   late final nextStepMut = mutation<void>(#nextStep);
   late final prevStepMut = mutation<void>(#prevStep);
   late final updateRealNameMut = mutation<void>(#updateRealName);
@@ -926,6 +927,17 @@ class OrderViewModel extends Provider<OrderScreenState> {
         purchaseResult: null,
         purchaseError: '',
       );
+    });
+  }
+
+  Call<void, OrderScreenState> resetToDesignStep() {
+    return mutate(resetToDesignStepMut, (ref) async {
+      final current = ref.watch(this);
+      if (current.step == OrderStep.design) {
+        return;
+      }
+
+      ref.state = current.copyWith(step: OrderStep.design);
     });
   }
 
