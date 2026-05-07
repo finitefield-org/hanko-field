@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 @immutable
 class AppPageKey {
   static const top = 'top';
+  static const about = 'about';
   static const order = 'order';
   static const legalNotice = 'legal_notice';
   static const terms = 'terms';

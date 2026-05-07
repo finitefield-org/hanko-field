@@ -1172,6 +1172,141 @@
     transform: translateY(0);
   }
 
+  .about-page {
+    background: #fbf9f6;
+    font-family: "Manrope", sans-serif;
+  }
+
+  .about-hero {
+    position: relative;
+    display: flex;
+    min-height: 560px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 120px 1.5rem 64px;
+    color: #fff;
+    text-align: center;
+  }
+
+  .about-hero__background {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .about-hero__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(20%) brightness(82%);
+  }
+
+  .about-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.4);
+  }
+
+  .about-hero__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: min(100%, 840px);
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .about-hero__eyebrow {
+    margin: 0 0 1.125rem;
+    color: #ebd8d2;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .about-hero__title {
+    margin: 0;
+    color: #fff;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: 3rem;
+    font-weight: 300;
+    line-height: 1.22;
+  }
+
+  .about-hero__copy {
+    margin: 1.125rem 0 2rem;
+    color: rgb(255 255 255 / 0.9);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+  }
+
+  .about-story {
+    background: #fbf9f6;
+  }
+
+  .about-story__inner {
+    margin: 0 auto;
+    max-width: 72rem;
+    padding: 4.5rem 1.5rem 5rem;
+  }
+
+  .about-story__lead {
+    max-width: 48.75rem;
+  }
+
+  .about-story__title {
+    margin: 0;
+    color: #1b1c1a;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .about-story__copy {
+    margin-top: 1.125rem;
+    color: #5f5e5e;
+    font-size: 0.9375rem;
+    line-height: 1.85;
+  }
+
+  .about-story__copy p {
+    margin: 0;
+  }
+
+  .about-story__copy p + p {
+    margin-top: 0.25rem;
+  }
+
+  .about-points {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.125rem;
+    margin-top: 2.75rem;
+  }
+
+  .about-point {
+    border-top: 1px solid #d8ccbc;
+    padding-top: 1.125rem;
+  }
+
+  .about-point__title {
+    margin: 0;
+    color: #851217;
+    font-family: "Noto Serif JP", "Noto Serif", serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .about-point__body {
+    margin: 0.625rem 0 0;
+    color: #5f5e5e;
+    font-size: 0.875rem;
+    line-height: 1.75;
+  }
+
 
   .top-footer {
     background: #efeeeb;
@@ -1589,6 +1724,28 @@
 
     .top-footer__inner {
       padding: 3rem 1rem;
+    }
+
+    .about-hero {
+      min-height: 520px;
+      padding: 112px 1.25rem 56px;
+    }
+
+    .about-hero__title {
+      font-size: 2.125rem;
+    }
+
+    .about-hero__copy {
+      font-size: 0.8125rem;
+    }
+
+    .about-story__inner {
+      padding: 4rem 1rem 4.5rem;
+    }
+
+    .about-points {
+      grid-template-columns: 1fr;
+      gap: 1.125rem;
     }
 
   .top-brand__logo {

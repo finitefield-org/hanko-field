@@ -24,8 +24,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="icon" type="image/png" href="/static/site-logo.png">
 </head>
-<body class="top-page">
+<body class="top-page about-page">
   <header class="top-header">
     <div class="top-header__inner">
       <a class="top-brand__link" href="{{ top_url }}">
@@ -53,31 +54,72 @@
   </header>
 
   <main>
-    <section class="top-hero">
-      <div class="top-hero__background">
+    <section class="about-hero">
+      <div class="about-hero__background">
         <img
-          alt="Craftsman hands carving gemstone"
-          class="top-hero__image"
+          alt="{% if selected_locale == "ja" %}宝石印鑑の製作風景{% else %}Gemstone seal craftsmanship{% endif %}"
+          class="about-hero__image"
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5cLu880OVzWOnNyf9ZD8XcLvMqrMQc9P2yYVHcoN-KgbnKfMWey16b0zf7R3fFa7H-VSCAqs42ltG1JCCyxdbtQkjxXihFB5El_2xJKqjbKOdd3GIGlRb4HbTAiBNZGpLyQFWhCV6j81PL1Ij60jvqLGQs25Adi_yHKMzrB2shzvBbn8gidOur5_a_iDxLBPlKCtGyXWQv7l06Ng_ConMMKlojtfNITI-0fmeyT57m3XpXNeVLHXcK4ObXpAuN59rk6gzHqKQKVk"
         >
-        <div class="top-hero__overlay"></div>
+        <div class="about-hero__overlay"></div>
       </div>
 
-      <div class="top-hero__content">
-        <h2 class="top-hero__title">
-          {% if selected_locale == "ja" %}あなただけの宝石印鑑{% else %}A gemstone seal made just for you.{% endif %}
+      <div class="about-hero__content">
+        <p class="about-hero__eyebrow">About STONE SIGNATURE</p>
+        <h2 class="about-hero__title">
+          {% if selected_locale == "ja" %}宝石でつくる、あなたの印鑑{% else %}Your seal, made from gemstone{% endif %}
         </h2>
-        <p class="top-hero__copy">
-          Authentic Hand-Carved Gemstone Seals from the Orient
+        <p class="about-hero__copy">
+          {% if selected_locale == "ja" %}石を選び、印影をデザインして注文できます{% else %}Choose a stone, design the seal impression, and place your order{% endif %}
         </p>
         <button
           type="button"
-          class="top-cta"
+          class="top-cta about-hero__cta"
           onclick="window.location.href='{{ design_url }}'"
         >
-          <span class="top-cta__label">{% if selected_locale == "ja" %}デザインする{% else %}Start designing{% endif %}</span>
+          <span class="top-cta__label">{% if selected_locale == "ja" %}デザインする{% else %}Design{% endif %}</span>
           <span class="top-cta__sheen" aria-hidden="true"></span>
         </button>
+      </div>
+    </section>
+
+    <section class="about-story">
+      <div class="about-story__inner">
+        <div class="about-story__lead">
+          <h2 class="about-story__title">
+            {% if selected_locale == "ja" %}宝石印鑑を、もっと選びやすく。{% else %}An easier way to choose a gemstone seal.{% endif %}
+          </h2>
+          <div class="about-story__copy">
+            {% if selected_locale == "ja" %}
+            <p>STONE SIGNATUREは、宝石を使った印鑑をオンラインで選び、印影をデザインして注文できるサービスです。</p>
+            <p>素材や一点物の個体を確認しながら、自分に合った印鑑を見つけられます。</p>
+            {% else %}
+            <p>STONE SIGNATURE is a service for choosing a gemstone seal online, designing the seal impression, and placing an order.</p>
+            <p>Review the material and one-of-a-kind stone listings as you find the seal that fits you.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="about-points">
+          <article class="about-point">
+            <h3 class="about-point__title">{% if selected_locale == "ja" %}宝石{% else %}Gemstone{% endif %}</h3>
+            <p class="about-point__body">
+              {% if selected_locale == "ja" %}天然石ならではの色や模様を見ながら、印鑑の素材を選べます。{% else %}Choose the seal material while reviewing the colors and patterns unique to natural stone.{% endif %}
+            </p>
+          </article>
+          <article class="about-point">
+            <h3 class="about-point__title">{% if selected_locale == "ja" %}印影デザイン{% else %}Seal design{% endif %}</h3>
+            <p class="about-point__body">
+              {% if selected_locale == "ja" %}彫る文字や印影の雰囲気を確認しながら、注文を進められます。{% else %}Move through the order while checking the carved text and the mood of the seal impression.{% endif %}
+            </p>
+          </article>
+          <article class="about-point">
+            <h3 class="about-point__title">{% if selected_locale == "ja" %}一点物{% else %}One of a kind{% endif %}</h3>
+            <p class="about-point__body">
+              {% if selected_locale == "ja" %}同じ石でも色や模様は少しずつ異なります。気に入った一本を選んで注文できます。{% else %}Even stones of the same type differ in color and pattern. Choose the piece you like and order it.{% endif %}
+            </p>
+          </article>
+        </div>
       </div>
     </section>
   </main>

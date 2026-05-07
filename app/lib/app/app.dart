@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 import 'config/app_runtime_config.dart';
+import '../features/about/presentation/about_page.dart';
 import '../features/legal/presentation/legal_notice_page.dart';
 import '../features/legal/presentation/terms_page.dart';
-import '../features/top/presentation/top_page.dart';
 import '../features/order/data/order_draft_storage.dart';
 import '../features/order/presentation/order_page.dart';
 import '../features/order/presentation/order_view_model.dart';
@@ -67,18 +67,17 @@ class _AppRootState extends ConsumerState<_AppRoot> {
     AppLocale locale,
     bool showConfirmationLinks,
   ) {
+    final openAbout = () => ref.invoke(appNavViewModel.showAbout());
     final openLegalNotice = () => ref.invoke(appNavViewModel.showLegalNotice());
     final openTerms = () => ref.invoke(appNavViewModel.showTerms());
-    final popTop = () => ref.invoke(appNavViewModel.popTop());
     final popToRoot = () => ref.invoke(appNavViewModel.popToRoot());
 
-    if (page.key == AppPageKey.top) {
-      return TopPage(
+    if (page.key == AppPageKey.about) {
+      return AboutPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onStartDesign: () {
-          ref.invoke(appNavViewModel.showDesign());
-        },
+        onBackToDesign: popToRoot,
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
       );
@@ -91,6 +90,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         onBackToTop: () {
           popToRoot();
         },
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
         onOpenPaymentSuccess: (sessionId, orderId) {
@@ -113,6 +113,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         onBack: popToRoot,
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
       );
@@ -123,6 +124,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         onBack: popToRoot,
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
       );
@@ -140,6 +142,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         onBackToTop: () {
           popToRoot();
         },
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
       );
@@ -156,6 +159,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         onBackToTop: () {
           popToRoot();
         },
+        onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
       );
