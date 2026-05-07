@@ -19,6 +19,7 @@ class LegalPageScaffold extends StatelessWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBack,
+    required this.onOpenAbout,
     required this.onOpenLegalNotice,
     required this.onOpenTerms,
     required this.title,
@@ -28,6 +29,7 @@ class LegalPageScaffold extends StatelessWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBack;
+  final VoidCallback onOpenAbout;
   final VoidCallback onOpenLegalNotice;
   final VoidCallback onOpenTerms;
   final String title;
@@ -50,6 +52,7 @@ class LegalPageScaffold extends StatelessWidget {
                   AppSiteFooter(
                     locale: locale,
                     onBrandTap: onBack,
+                    onOpenAbout: onOpenAbout,
                     onOpenLegalNotice: onOpenLegalNotice,
                     onOpenTerms: onOpenTerms,
                   ),

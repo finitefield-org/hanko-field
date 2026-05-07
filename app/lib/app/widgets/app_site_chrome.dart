@@ -80,12 +80,14 @@ class AppSiteFooter extends StatelessWidget {
   const AppSiteFooter({
     super.key,
     required this.locale,
+    required this.onOpenAbout,
     required this.onOpenLegalNotice,
     required this.onOpenTerms,
     this.onBrandTap,
   });
 
   final AppLocale locale;
+  final VoidCallback onOpenAbout;
   final VoidCallback onOpenLegalNotice;
   final VoidCallback onOpenTerms;
   final VoidCallback? onBrandTap;
@@ -98,6 +100,9 @@ class AppSiteFooter extends StatelessWidget {
         final horizontalPadding = isCompact ? 16.0 : 24.0;
         final verticalPadding = isCompact ? 48.0 : 64.0;
         final isEnglish = locale == AppLocale.en;
+        final aboutLabel = isEnglish
+            ? 'ABOUT STONE SIGNATURE'
+            : 'STONE SIGNATUREとは';
         final legalLabel = isEnglish ? 'LEGAL NOTICE' : '特商法に基づく表記';
         final termsLabel = isEnglish ? 'TERMS OF SERVICE' : '利用規約';
         final privacyLabel = isEnglish ? 'PRIVACY POLICY' : 'プライバシーポリシー';
@@ -108,6 +113,7 @@ class AppSiteFooter extends StatelessWidget {
           spacing: 48,
           runSpacing: 32,
           children: [
+            _SiteFooterLink(label: aboutLabel, onPressed: onOpenAbout),
             _SiteFooterLink(label: legalLabel, onPressed: onOpenLegalNotice),
             _SiteFooterLink(label: termsLabel, onPressed: onOpenTerms),
             _SiteFooterLink(

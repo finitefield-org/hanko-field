@@ -19,6 +19,7 @@ class PaymentSuccessPage extends StatelessWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBackToTop,
+    required this.onOpenAbout,
     required this.onOpenLegalNotice,
     required this.onOpenTerms,
     this.orderId,
@@ -28,6 +29,7 @@ class PaymentSuccessPage extends StatelessWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBackToTop;
+  final VoidCallback onOpenAbout;
   final VoidCallback onOpenLegalNotice;
   final VoidCallback onOpenTerms;
   final String? orderId;
@@ -298,6 +300,7 @@ class PaymentSuccessPage extends StatelessWidget {
                     const SizedBox(height: 56),
                     AppSiteFooter(
                       locale: locale,
+                      onOpenAbout: onOpenAbout,
                       onOpenLegalNotice: onOpenLegalNotice,
                       onOpenTerms: onOpenTerms,
                       onBrandTap: onBackToTop,

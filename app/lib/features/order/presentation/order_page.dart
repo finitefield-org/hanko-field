@@ -20,6 +20,7 @@ class OrderPage extends ConsumerStatefulWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBackToTop,
+    required this.onOpenAbout,
     required this.onOpenLegalNotice,
     required this.onOpenTerms,
     required this.onOpenPaymentSuccess,
@@ -30,6 +31,7 @@ class OrderPage extends ConsumerStatefulWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBackToTop;
+  final VoidCallback onOpenAbout;
   final VoidCallback onOpenLegalNotice;
   final VoidCallback onOpenTerms;
   final void Function(String? sessionId, String? orderId) onOpenPaymentSuccess;
@@ -274,6 +276,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                     const SizedBox(height: 56),
                     AppSiteFooter(
                       locale: widget.locale,
+                      onOpenAbout: widget.onOpenAbout,
                       onOpenLegalNotice: widget.onOpenLegalNotice,
                       onOpenTerms: widget.onOpenTerms,
                       onBrandTap: widget.onBackToTop,
@@ -289,48 +292,34 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   }
 
   Widget _buildMainPanel(OrderScreenState state) {
-    if (state.isLoadingCatalog && !state.hasCatalog) {
-      return _CatalogLoadingPanel(locale: state.locale);
-    }
-
-    if (!state.hasCatalog) {
-      return _CatalogErrorPanel(
-        locale: state.locale,
-        message: state.catalogError.isEmpty
-            ? localizedUiText(
-                state.locale,
-                ja: 'カタログを取得できませんでした。',
-                en: 'Could not load the catalog.',
-              )
-            : state.catalogError,
-        onRetry: () => ref.invoke(orderViewModel.initialize()),
-      );
-    }
+    final designState = state.hasCatalog
+        ? state
+        : state.copyWith(step: OrderStep.design);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTrack(step: state.step, locale: state.locale),
+        _StepTrack(step: designState.step, locale: designState.locale),
         const SizedBox(height: 24),
-        if (state.catalogError.isNotEmpty) ...[
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF2F1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFF1D1CE)),
-            ),
-            child: Text(
-              state.catalogError,
-              style: const TextStyle(color: Color(0xFF8F2219), fontSize: 13),
-            ),
-          ),
-        ],
+        if (state.isLoadingCatalog && !state.hasCatalog)
+          _CatalogLoadingPanel(locale: state.locale)
+        else if (!state.hasCatalog)
+          _CatalogErrorPanel(
+            locale: state.locale,
+            message: state.catalogError.isEmpty
+                ? localizedUiText(
+                    state.locale,
+                    ja: 'カタログを取得できませんでした。',
+                    en: 'Could not load the catalog.',
+                  )
+                : state.catalogError,
+            onRetry: () => ref.invoke(orderViewModel.initialize()),
+          )
+        else if (state.catalogError.isNotEmpty)
+          _CatalogInlineError(message: state.catalogError),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
-          child: _buildStepPanel(state),
+          child: _buildStepPanel(designState),
         ),
       ],
     );
@@ -417,27 +406,34 @@ class _CatalogLoadingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 42),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(strokeWidth: 2.4),
-            ),
-            SizedBox(height: 12),
-            Text(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: HfPalette.line),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2.2),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
               localizedUiText(
                 locale,
-                ja: 'カタログを読み込み中です...',
-                en: 'Loading catalog...',
+                ja: 'カタログを読み込み中です。印影テキストとプレビューは先に編集できます。',
+                en: 'Loading catalog. You can start editing the seal text and preview now.',
               ),
+              style: const TextStyle(fontSize: 13, color: HfPalette.muted),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -456,24 +452,67 @@ class _CatalogErrorPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF8F2219)),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2F1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1D1CE)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, size: 20, color: Color(0xFF8F2219)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Color(0xFF8F2219),
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: onRetry,
+                  child: Text(
+                    localizedUiText(locale, ja: '再読み込み', en: 'Retry'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(localizedUiText(locale, ja: '再読み込み', en: 'Retry')),
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CatalogInlineError extends StatelessWidget {
+  const _CatalogInlineError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2F1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFF1D1CE)),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(color: Color(0xFF8F2219), fontSize: 13),
       ),
     );
   }
@@ -486,7 +525,11 @@ class _DesignLead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = localizedUiText(locale, ja: 'デザイン作成', en: 'Design');
+    final tagline = localizedUiText(
+      locale,
+      ja: 'あなただけの宝石印鑑をデザイン。',
+      en: 'A gemstone seal made just for you.',
+    );
     final intro = localizedUiText(
       locale,
       ja: '印影、出品個体、お届け先を順に選んで、そのまま購入まで進めます。',
@@ -497,15 +540,13 @@ class _DesignLead extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final isCompact = width < 640;
-        final titleSize = (isCompact ? width * 0.09 : width * 0.04)
-            .clamp(isCompact ? 28.0 : 32.0, isCompact ? 40.0 : 52.0)
-            .toDouble();
+        final titleSize = isCompact ? 34.0 : 46.0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              tagline,
               style: AppFonts.notoSerifJp(
                 fontSize: titleSize,
                 fontWeight: FontWeight.w700,

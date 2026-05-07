@@ -7,6 +7,12 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />
   </url>
   <url>
+    <loc>https://finitefield.org/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/about" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/about?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/about" />
+  </url>
+  <url>
     <loc>https://finitefield.org/design</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/design" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/design?lang=ja" />

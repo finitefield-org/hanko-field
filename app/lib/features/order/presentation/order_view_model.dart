@@ -762,6 +762,7 @@ class OrderViewModel extends Provider<OrderScreenState> {
     return mutate(selectKanjiStyleMut, (ref) async {
       final current = ref.watch(this);
       if (!current.hasCatalog) {
+        ref.state = current.copyWith(kanjiStyle: style, purchaseError: '');
         return;
       }
 
@@ -807,6 +808,11 @@ class OrderViewModel extends Provider<OrderScreenState> {
     return mutate(selectShapeMut, (ref) async {
       final current = ref.watch(this);
       if (!current.hasCatalog) {
+        ref.state = current.copyWith(
+          shape: shape,
+          purchaseResult: null,
+          purchaseError: '',
+        );
         return;
       }
 
