@@ -9,12 +9,13 @@ class AppNavViewModel extends Provider<AppNavState> {
   @override
   AppNavState build(Ref ref) {
     return const AppNavState(
-      pages: [PageEntry(key: AppPageKey.top, name: '/')],
+      pages: [PageEntry(key: AppPageKey.order, name: '/design')],
       serial: 0,
     );
   }
 
   late final showDesignMut = mutation<void>(#showDesign);
+  late final showAboutMut = mutation<void>(#showAbout);
   late final showLegalNoticeMut = mutation<void>(#showLegalNotice);
   late final showTermsMut = mutation<void>(#showTerms);
   late final showPaymentSuccessMut = mutation<void>(#showPaymentSuccess);
@@ -39,10 +40,21 @@ class AppNavViewModel extends Provider<AppNavState> {
     });
   }
 
+  Call<void, AppNavState> showAbout() {
+    return mutate(showAboutMut, (ref) async {
+      final current = ref.watch(this);
+      _openInfoPage(
+        ref,
+        current,
+        const PageEntry(key: AppPageKey.about, name: '/about'),
+      );
+    });
+  }
+
   Call<void, AppNavState> showLegalNotice() {
     return mutate(showLegalNoticeMut, (ref) async {
       final current = ref.watch(this);
-      _openLegalPage(
+      _openInfoPage(
         ref,
         current,
         const PageEntry(key: AppPageKey.legalNotice, name: '/legal-notice'),
@@ -53,7 +65,7 @@ class AppNavViewModel extends Provider<AppNavState> {
   Call<void, AppNavState> showTerms() {
     return mutate(showTermsMut, (ref) async {
       final current = ref.watch(this);
-      _openLegalPage(
+      _openInfoPage(
         ref,
         current,
         const PageEntry(key: AppPageKey.terms, name: '/terms'),
@@ -100,13 +112,13 @@ class AppNavViewModel extends Provider<AppNavState> {
     });
   }
 
-  void _openLegalPage(Ref ref, AppNavState current, PageEntry nextPage) {
+  void _openInfoPage(Ref ref, AppNavState current, PageEntry nextPage) {
     if (current.pages.isNotEmpty && current.pages.last.key == nextPage.key) {
       return;
     }
 
     final nextPages = [...current.pages];
-    if (nextPages.isNotEmpty && _isLegalPage(nextPages.last.key)) {
+    if (nextPages.isNotEmpty && _isInfoPage(nextPages.last.key)) {
       nextPages[nextPages.length - 1] = nextPage;
     } else {
       nextPages.add(nextPage);
@@ -115,8 +127,10 @@ class AppNavViewModel extends Provider<AppNavState> {
     ref.state = current.copyWith(pages: nextPages);
   }
 
-  bool _isLegalPage(String key) {
-    return key == AppPageKey.legalNotice || key == AppPageKey.terms;
+  bool _isInfoPage(String key) {
+    return key == AppPageKey.about ||
+        key == AppPageKey.legalNotice ||
+        key == AppPageKey.terms;
   }
 
   Call<void, AppNavState> popTop() {

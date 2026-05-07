@@ -290,12 +290,32 @@ struct TopPageTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
+    about_url: String,
     design_url: String,
     blog_index_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
     blog_posts: Vec<BlogPostCard>,
+}
+
+#[derive(Template)]
+#[template(path = "about.html")]
+struct AboutTemplate {
+    selected_locale: String,
+    page_title: String,
+    meta_description: String,
+    robots_meta: String,
+    canonical_url: String,
+    lang_ja_url: String,
+    lang_en_url: String,
+    company_url: String,
+    top_url: String,
+    about_url: String,
+    design_url: String,
+    terms_url: String,
+    commercial_transactions_url: String,
+    privacy_policy_url: String,
 }
 
 #[derive(Template)]
@@ -321,6 +341,7 @@ struct PageTemplate {
     purchase_action_url: String,
     purchase_note: String,
     top_url: String,
+    about_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
@@ -460,6 +481,7 @@ struct PaymentSuccessTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
+    about_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -480,6 +502,7 @@ struct PaymentFailureTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
+    about_url: String,
     design_url: String,
     terms_url: String,
     commercial_transactions_url: String,
@@ -499,6 +522,7 @@ struct CommercialTransactionsTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
+    about_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     contact_url: String,
@@ -518,6 +542,7 @@ struct TermsTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
+    about_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
@@ -1266,6 +1291,7 @@ async fn run() -> Result<()> {
         .route("/design", get(handle_design))
         .route("/blog", get(handle_blog_index))
         .route("/blog/{slug}", get(handle_blog_article))
+        .route("/about", get(handle_about))
         .route("/terms", get(handle_terms))
         .route(
             "/commercial-transactions",
@@ -1275,6 +1301,7 @@ async fn run() -> Result<()> {
         .route("/payment/failure", get(handle_payment_failure))
         .route("/{locale}", get(handle_localized_top))
         .route("/{locale}/", get(handle_localized_top))
+        .route("/{locale}/about", get(handle_localized_about))
         .route("/{locale}/design", get(handle_localized_design))
         .route("/{locale}/blog", get(handle_localized_blog_index))
         .route("/{locale}/blog/{slug}", get(handle_localized_blog_article))
@@ -2143,6 +2170,7 @@ async fn render_top_page(
         company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         blog_index_url: blog_index_url(site_base_url, &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
@@ -2160,6 +2188,73 @@ async fn render_top_page(
         Err(error) => plain_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to render page: {error}"),
+        ),
+    }
+}
+
+async fn handle_about(State(state): State<AppState>, Query(query): Query<LocaleQuery>) -> Response {
+    render_about_page(state, query, None).await
+}
+
+async fn handle_localized_about(
+    Path(locale): Path<String>,
+    State(state): State<AppState>,
+    Query(query): Query<LocaleQuery>,
+) -> Response {
+    render_about_page(state, query, Some(locale)).await
+}
+
+async fn render_about_page(
+    state: AppState,
+    query: LocaleQuery,
+    path_locale: Option<String>,
+) -> Response {
+    let selected_locale = match resolve_page_locale(
+        path_locale.as_deref(),
+        query.lang.as_deref(),
+        &state.locale,
+        &state.default_locale,
+    ) {
+        Ok(locale) => locale,
+        Err(response) => return response,
+    };
+    let site_base_url = state.site_base_url.as_str();
+    let lang_ja_url = about_url(site_base_url, "ja");
+    let lang_en_url = about_url(site_base_url, "en");
+    let template = AboutTemplate {
+        page_title: localized_text(
+            &selected_locale,
+            "STONE SIGNATUREとは | STONE SIGNATURE",
+            "About STONE SIGNATURE | STONE SIGNATURE",
+        ),
+        meta_description: localized_text(
+            &selected_locale,
+            "STONE SIGNATUREは、宝石を使った印鑑をオンラインで選び、印影をデザインして注文できるサービスです。",
+            "Learn how STONE SIGNATURE lets you choose a gemstone seal online, design the seal impression, and place your order.",
+        ),
+        robots_meta: "index,follow".to_owned(),
+        canonical_url: lang_en_url.clone(),
+        lang_ja_url,
+        lang_en_url,
+        company_url: company_url(site_base_url),
+        top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
+        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
+        terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        commercial_transactions_url: localized_navigation_page_url(
+            site_base_url,
+            "/commercial-transactions",
+            &selected_locale,
+        ),
+        privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
+        selected_locale,
+    };
+
+    match render_html(&template) {
+        Ok(html) => html_response(html),
+        Err(error) => plain_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to render about page: {error}"),
         ),
     }
 }
@@ -2268,6 +2363,7 @@ async fn render_design_page(
         lang_en_url: design_url_with_filters(site_base_url, "en", &material_filter_state),
         company_url: company_url(site_base_url),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
@@ -2680,6 +2776,7 @@ async fn render_payment_success_page(
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/success", &query, "ja"),
         company_url: company_url(site_base_url),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
         selected_locale,
@@ -2755,6 +2852,7 @@ async fn render_payment_failure_page(
         lang_ja_url: payment_result_locale_url(site_base_url, "/payment/failure", &query, "ja"),
         company_url: company_url(site_base_url),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
@@ -2819,6 +2917,7 @@ async fn render_commercial_transactions_page(
         lang_en_url,
         company_url: company_url(site_base_url),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
             "/commercial-transactions",
@@ -2885,6 +2984,7 @@ async fn render_terms_page(
         lang_en_url,
         company_url: company_url(site_base_url),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
+        about_url: localized_navigation_page_url(site_base_url, "/about", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
             "/commercial-transactions",
@@ -3528,6 +3628,10 @@ fn top_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/", locale)
 }
 
+fn about_url(base_url: &str, locale: &str) -> String {
+    localized_page_url(base_url, "/about", locale)
+}
+
 fn design_url(base_url: &str, locale: &str) -> String {
     localized_page_url(base_url, "/design", locale)
 }
@@ -3597,6 +3701,7 @@ fn build_sitemap_xml(base_url: &str) -> Result<String> {
     );
     for path in [
         "/",
+        "/about",
         "/design",
         "/blog",
         "/terms",
@@ -4805,6 +4910,7 @@ mod tests {
             lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            about_url: about_url(TEST_SITE_BASE_URL, "en"),
             design_url: design_url(TEST_SITE_BASE_URL, "en"),
             blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "en"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
@@ -4854,6 +4960,7 @@ mod tests {
             lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            about_url: about_url(TEST_SITE_BASE_URL, "en"),
             design_url: design_url(TEST_SITE_BASE_URL, "en"),
             blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "en"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
@@ -4886,6 +4993,7 @@ mod tests {
             lang_en_url: top_url(TEST_SITE_BASE_URL, "en"),
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "ja"),
+            about_url: about_url(TEST_SITE_BASE_URL, "ja"),
             design_url: design_url(TEST_SITE_BASE_URL, "ja"),
             blog_index_url: blog_index_url(TEST_SITE_BASE_URL, "ja"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "ja"),
@@ -4958,6 +5066,65 @@ mod tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
+    #[tokio::test]
+    async fn about_page_renders_localized_copy_and_footer_navigation() {
+        let english_response = handle_about(
+            State(mock_state()),
+            Query(LocaleQuery {
+                lang: Some("en".to_owned()),
+            }),
+        )
+        .await;
+        assert_eq!(english_response.status(), StatusCode::OK);
+        let english_html = String::from_utf8(
+            to_bytes(english_response.into_body(), usize::MAX)
+                .await
+                .expect("about body should be readable")
+                .to_vec(),
+        )
+        .expect("about body should be utf-8");
+
+        assert!(english_html.contains(r#"<title>About STONE SIGNATURE | STONE SIGNATURE</title>"#));
+        assert!(english_html.contains("Your seal, made from gemstone"));
+        assert!(
+            english_html
+                .contains("Choose a stone, design the seal impression, and place your order")
+        );
+        assert!(english_html.contains(r#"<span class="top-cta__label">Design</span>"#));
+        assert!(english_html.contains("An easier way to choose a gemstone seal."));
+        assert!(english_html.contains("choosing a gemstone seal online"));
+        assert!(english_html.contains("Gemstone"));
+        assert!(english_html.contains("Seal design"));
+        assert!(english_html.contains("One of a kind"));
+        assert!(english_html.contains(r#"href="https://finitefield.org/about""#));
+        assert!(english_html.contains("window.location.href='https://finitefield.org/design'"));
+
+        let japanese_response = handle_localized_about(
+            Path("ja".to_owned()),
+            State(mock_state()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+        assert_eq!(japanese_response.status(), StatusCode::OK);
+        let japanese_html = String::from_utf8(
+            to_bytes(japanese_response.into_body(), usize::MAX)
+                .await
+                .expect("about body should be readable")
+                .to_vec(),
+        )
+        .expect("about body should be utf-8");
+
+        assert!(japanese_html.contains("STONE SIGNATUREとは"));
+        assert!(japanese_html.contains("宝石でつくる、あなたの印鑑"));
+        assert!(japanese_html.contains("石を選び、印影をデザインして注文できます"));
+        assert!(japanese_html.contains(r#"<span class="top-cta__label">デザインする</span>"#));
+        assert!(japanese_html.contains("宝石印鑑を、もっと選びやすく。"));
+        assert!(japanese_html.contains("宝石を使った印鑑をオンラインで選び"));
+        assert!(japanese_html.contains("天然石ならではの色や模様"));
+        assert!(japanese_html.contains(r#"href="https://finitefield.org/ja/about""#));
+        assert!(japanese_html.contains("window.location.href='https://finitefield.org/ja/design'"));
+    }
+
     #[test]
     fn seo_metadata_marks_payment_pages_noindex() {
         let success_template = PaymentSuccessTemplate {
@@ -4989,6 +5156,7 @@ mod tests {
             ),
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            about_url: about_url(TEST_SITE_BASE_URL, "en"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
             commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
             contact_url: inquiry_url(TEST_SITE_BASE_URL, "en"),
@@ -5026,6 +5194,7 @@ mod tests {
             ),
             company_url: company_url(TEST_SITE_BASE_URL),
             top_url: top_url(TEST_SITE_BASE_URL, "en"),
+            about_url: about_url(TEST_SITE_BASE_URL, "en"),
             design_url: design_url(TEST_SITE_BASE_URL, "en"),
             terms_url: terms_url(TEST_SITE_BASE_URL, "en"),
             commercial_transactions_url: commercial_transactions_url(TEST_SITE_BASE_URL, "en"),
@@ -5055,6 +5224,14 @@ mod tests {
         assert_eq!(
             top_url(TEST_SITE_BASE_URL, "fr"),
             "https://finitefield.org/fr/"
+        );
+        assert_eq!(
+            about_url(TEST_SITE_BASE_URL, "en"),
+            "https://finitefield.org/about"
+        );
+        assert_eq!(
+            about_url(TEST_SITE_BASE_URL, "ja"),
+            "https://finitefield.org/ja/about"
         );
         assert_eq!(
             design_url(TEST_SITE_BASE_URL, "en"),
@@ -5124,6 +5301,10 @@ mod tests {
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/", "en"),
             "https://finitefield.org/"
+        );
+        assert_eq!(
+            localized_navigation_page_url(TEST_SITE_BASE_URL, "/about", "en"),
+            "https://finitefield.org/about"
         );
         assert_eq!(
             localized_navigation_page_url(TEST_SITE_BASE_URL, "/design", "en"),
@@ -5294,6 +5475,16 @@ mod tests {
         ));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />"#
+        ));
+        assert!(sitemap_xml.contains("<loc>https://finitefield.org/about</loc>"));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/about" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/about" />"#
+        ));
+        assert!(sitemap_xml.contains(
+            r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/about" />"#
         ));
         assert!(sitemap_xml.contains("<loc>https://finitefield.org/design</loc>"));
         assert!(sitemap_xml.contains(

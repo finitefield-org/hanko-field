@@ -14,6 +14,7 @@ class TermsPage extends StatelessWidget {
     required this.locale,
     required this.onSelectLocale,
     required this.onBack,
+    required this.onOpenAbout,
     required this.onOpenLegalNotice,
     required this.onOpenTerms,
   });
@@ -21,6 +22,7 @@ class TermsPage extends StatelessWidget {
   final AppLocale locale;
   final ValueChanged<AppLocale> onSelectLocale;
   final VoidCallback onBack;
+  final VoidCallback onOpenAbout;
   final VoidCallback onOpenLegalNotice;
   final VoidCallback onOpenTerms;
 
@@ -30,6 +32,7 @@ class TermsPage extends StatelessWidget {
       locale: locale,
       onSelectLocale: onSelectLocale,
       onBack: onBack,
+      onOpenAbout: onOpenAbout,
       onOpenLegalNotice: onOpenLegalNotice,
       onOpenTerms: onOpenTerms,
       title: localizedUiText(locale.code, ja: '利用規約', en: 'Terms of Service'),

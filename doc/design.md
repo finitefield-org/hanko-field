@@ -75,3 +75,11 @@
 - [x] 管理画面（`admin`）と Web を本番環境へデプロイする
 - [x] `web` に STONE SIGNATURE のブログセクションと `/blog/{slug}` の記事ページを追加する
 - [x] `web` の公開 URL を英語は言語コードなし、その他言語は `/{languageCode}/` 始まりに統一する
+- [ ] App Store Review Guideline 4.2 対応として、Flutterアプリの起動時初期ルートをDesign画面に変更し、起動直後から印影ライブプレビュー・文字入力・書体/形状選択を見せる
+- [ ] FlutterのDesign画面ヘッダーにブランド名と短いタグラインを追加し、ホーム画面として自然に見えるUIに調整する
+- [ ] 現在のFlutterトップページで使っているブランド画像・主要文言・世界観説明を流用して、About STONE SIGNATURE画面へ移管する
+- [ ] Flutterアプリの設定/メニューからAbout、特商法、利用規約、会社情報へアクセスできるようにし、トップページへの通常導線をAbout導線へ置き換える
+- [ ] Flutterアプリ内で不要になったトップページ専用Widget・未使用アセット・重複文言を整理する。ただしAboutで流用する画像や文言は残す
+- [ ] Flutterアプリでカタログ読み込み中・APIエラー時でも、Design画面の文字入力と印影プレビューが最低限表示されるようにする
+- [ ] FlutterアプリをiPhone / iPadシミュレータで確認し、起動直後にDesign画面とAbout画面が崩れず表示されることを検証する
+- [ ] App Review Notes用に、Flutterネイティブ実装・WebView不使用・印影ライブプレビュー・Aboutへのブランド情報移管・Stripeの用途を説明する文面を用意する
