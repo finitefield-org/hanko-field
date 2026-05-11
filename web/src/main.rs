@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     env,
+    path::Path as FsPath,
     sync::Arc,
     time::Duration,
 };
@@ -27,17 +28,10 @@ const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const ADMIN_PROXY_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 const HX_REDIRECT_HEADER: &str = "hx-redirect";
 const WEB_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/static");
-const WEB_BLOG_POSTS_FILE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/blog/posts.json");
 const WEB_BLOG_ARTICLES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/blog/articles");
 const EXTERNAL_LEGAL_BASE_URL: &str = "https://finitefield.org";
 const DEFAULT_LOCALE: &str = "en";
-const SUPPORTED_LOCALES: &[&str] = &[
-    "en", "ja", "bg", "bn", "cs", "da", "de", "el", "es", "et", "fi", "fr", "hi", "hr", "hu", "id",
-    "it", "is", "ko", "lt", "lv", "nl", "no", "pl", "pt", "ro", "ru", "th", "vi", "zh", "zhtw",
-    "ar", "gu", "he", "kn", "ml", "mr", "sr", "sk", "sl", "sw", "sv", "ta", "te", "tr", "uk", "ur",
-    "be", "sq", "ka", "hy", "az", "kk", "ky", "tg", "uz", "mn", "lo", "km", "my", "ms", "tl", "pa",
-    "si",
-];
+const SUPPORTED_LOCALES: &[&str] = &["en", "ja"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RunMode {
@@ -137,21 +131,37 @@ struct MaterialFilterState {
 
 #[derive(Debug, Clone)]
 struct BlogPostCard {
-    date_display: String,
     title: String,
     excerpt: String,
     image_url: String,
     image_alt: String,
     post_url: String,
-    reverse_layout: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 struct BlogPost {
     slug: String,
+    published_date: String,
+    date_display: String,
+    date_display_ja: String,
+    title: String,
+    title_ja: String,
+    excerpt: String,
+    excerpt_ja: String,
+    meta_description: String,
+    meta_description_ja: String,
+    image_url: String,
+    image_alt: String,
+    image_alt_ja: String,
+}
+
+#[derive(Debug, Clone)]
+struct BlogPostView {
+    published_date: String,
     date_display: String,
     title: String,
     excerpt: String,
+    meta_description: String,
     image_url: String,
     image_alt: String,
 }
@@ -560,8 +570,6 @@ struct BlogIndexTemplate {
     lang_en_url: String,
     company_url: String,
     top_url: String,
-    design_url: String,
-    blog_index_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
@@ -578,14 +586,14 @@ struct BlogArticleTemplate {
     canonical_url: String,
     lang_ja_url: String,
     lang_en_url: String,
+    og_image_url: String,
     company_url: String,
     top_url: String,
-    design_url: String,
     blog_index_url: String,
     terms_url: String,
     commercial_transactions_url: String,
     privacy_policy_url: String,
-    post: BlogPost,
+    post: BlogPostView,
     body_html: String,
 }
 
@@ -1675,7 +1683,7 @@ async fn handle_admin_proxy(
 }
 
 fn new_mock_catalog_source(locale: &str) -> MockCatalogSource {
-    let english = parse_supported_locale(locale) == Some("en");
+    let english = !is_japanese_locale(locale);
 
     MockCatalogSource {
         catalog: CatalogData {
@@ -2065,25 +2073,178 @@ fn collect_font_stylesheet_urls(fonts: &[FontOption]) -> Vec<String> {
 }
 
 fn load_blog_posts() -> Result<Vec<BlogPost>> {
-    let posts_json = std::fs::read_to_string(WEB_BLOG_POSTS_FILE)
-        .with_context(|| format!("failed to read blog posts file {WEB_BLOG_POSTS_FILE}"))?;
-    serde_json::from_str(&posts_json)
-        .with_context(|| format!("failed to parse blog posts file {WEB_BLOG_POSTS_FILE}"))
+    let mut posts = Vec::new();
+    for entry in std::fs::read_dir(WEB_BLOG_ARTICLES_DIR).with_context(|| {
+        format!("failed to read blog articles directory {WEB_BLOG_ARTICLES_DIR}")
+    })? {
+        let entry = entry.with_context(|| {
+            format!("failed to read blog article entry in {WEB_BLOG_ARTICLES_DIR}")
+        })?;
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("html") {
+            continue;
+        }
+        let Some(file_name) = path.file_name().and_then(|file_name| file_name.to_str()) else {
+            continue;
+        };
+        if file_name.ends_with(".ja.html") {
+            continue;
+        }
+
+        let source = std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read blog article {}", path.display()))?;
+        posts.push(parse_blog_post_from_article(&path, &source)?);
+    }
+
+    posts.sort_by(|left, right| {
+        right
+            .published_date
+            .cmp(&left.published_date)
+            .then_with(|| left.slug.cmp(&right.slug))
+    });
+    Ok(posts)
+}
+
+fn parse_blog_post_from_article(path: &FsPath, source: &str) -> Result<BlogPost> {
+    let (front_matter, _) = split_blog_article_source(source)?;
+    let front_matter = front_matter.with_context(|| {
+        format!(
+            "missing blog metadata front matter in article {}",
+            path.display()
+        )
+    })?;
+    let metadata = parse_blog_front_matter(front_matter)
+        .with_context(|| format!("failed to parse blog metadata in {}", path.display()))?;
+    let fallback_slug = path
+        .file_stem()
+        .and_then(|file_stem| file_stem.to_str())
+        .context("blog article file name should be valid utf-8")?
+        .to_owned();
+    let slug = metadata
+        .get("slug")
+        .cloned()
+        .unwrap_or(fallback_slug)
+        .trim()
+        .to_owned();
+    if !is_safe_slug(&slug) {
+        bail!("invalid blog slug in {}: {slug}", path.display());
+    }
+
+    let excerpt = required_blog_metadata(&metadata, "excerpt")?;
+    let excerpt_ja = required_blog_metadata(&metadata, "excerpt_ja")?;
+    Ok(BlogPost {
+        slug,
+        published_date: required_blog_metadata(&metadata, "date")?,
+        date_display: required_blog_metadata(&metadata, "date_display")?,
+        date_display_ja: required_blog_metadata(&metadata, "date_display_ja")?,
+        title: required_blog_metadata(&metadata, "title")?,
+        title_ja: required_blog_metadata(&metadata, "title_ja")?,
+        meta_description: metadata
+            .get("meta_description")
+            .cloned()
+            .unwrap_or_else(|| excerpt.clone()),
+        meta_description_ja: metadata
+            .get("meta_description_ja")
+            .cloned()
+            .unwrap_or_else(|| excerpt_ja.clone()),
+        excerpt,
+        excerpt_ja,
+        image_url: required_blog_metadata(&metadata, "image_url")?,
+        image_alt: required_blog_metadata(&metadata, "image_alt")?,
+        image_alt_ja: required_blog_metadata(&metadata, "image_alt_ja")?,
+    })
+}
+
+fn required_blog_metadata(metadata: &HashMap<String, String>, key: &str) -> Result<String> {
+    metadata
+        .get(key)
+        .filter(|value| !value.trim().is_empty())
+        .cloned()
+        .with_context(|| format!("missing required blog metadata key `{key}`"))
+}
+
+fn split_blog_article_source(source: &str) -> Result<(Option<&str>, &str)> {
+    let source = source.strip_prefix('\u{feff}').unwrap_or(source);
+    let Some(remainder) = source
+        .strip_prefix("---\n")
+        .or_else(|| source.strip_prefix("---\r\n"))
+    else {
+        return Ok((None, source));
+    };
+
+    for delimiter in ["\n---\n", "\r\n---\r\n", "\n---\r\n", "\r\n---\n"] {
+        if let Some(index) = remainder.find(delimiter) {
+            let metadata = &remainder[..index];
+            let body = &remainder[index + delimiter.len()..];
+            return Ok((Some(metadata), body.trim_start()));
+        }
+    }
+
+    bail!("blog article front matter is missing a closing delimiter")
+}
+
+fn parse_blog_front_matter(source: &str) -> Result<HashMap<String, String>> {
+    let mut metadata = HashMap::new();
+    for (line_index, line) in source.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            bail!("invalid metadata line {}: {line}", line_index + 1);
+        };
+        let key = key.trim();
+        if key.is_empty() {
+            bail!("empty metadata key on line {}", line_index + 1);
+        }
+        metadata.insert(
+            key.to_owned(),
+            parse_blog_metadata_value(value.trim())
+                .with_context(|| format!("invalid value for metadata key `{key}`"))?,
+        );
+    }
+    Ok(metadata)
+}
+
+fn parse_blog_metadata_value(value: &str) -> Result<String> {
+    if !(value.starts_with('"') && value.ends_with('"') && value.len() >= 2) {
+        bail!("metadata values must be double-quoted strings");
+    }
+
+    let mut parsed = String::new();
+    let mut chars = value[1..value.len() - 1].chars();
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            parsed.push(ch);
+            continue;
+        }
+
+        let escaped = chars.next().context("unterminated escape sequence")?;
+        match escaped {
+            '"' => parsed.push('"'),
+            '\\' => parsed.push('\\'),
+            'n' => parsed.push('\n'),
+            'r' => parsed.push('\r'),
+            't' => parsed.push('\t'),
+            other => bail!("unsupported escape sequence \\{other}"),
+        }
+    }
+
+    Ok(parsed)
 }
 
 fn blog_post_cards(posts: &[BlogPost], base_url: &str, locale: &str) -> Vec<BlogPostCard> {
     posts
         .iter()
-        .cloned()
-        .enumerate()
-        .map(|(index, post)| BlogPostCard {
-            date_display: post.date_display,
-            title: post.title,
-            excerpt: post.excerpt,
-            image_url: post.image_url,
-            image_alt: post.image_alt,
-            post_url: blog_article_url(base_url, &post.slug, locale),
-            reverse_layout: index % 2 == 1,
+        .map(|post| {
+            let view = localized_blog_post(post, locale);
+            BlogPostCard {
+                title: view.title,
+                excerpt: view.excerpt,
+                image_url: view.image_url,
+                image_alt: view.image_alt,
+                post_url: blog_article_url(base_url, &post.slug, locale),
+            }
         })
         .collect()
 }
@@ -2092,12 +2253,44 @@ fn find_blog_post(posts: &[BlogPost], slug: &str) -> Option<BlogPost> {
     posts.iter().find(|post| post.slug == slug).cloned()
 }
 
-fn read_blog_article_body(slug: &str) -> Result<String> {
+fn localized_blog_post(post: &BlogPost, locale: &str) -> BlogPostView {
+    if is_japanese_locale(locale) {
+        return BlogPostView {
+            published_date: post.published_date.clone(),
+            date_display: post.date_display_ja.clone(),
+            title: post.title_ja.clone(),
+            excerpt: post.excerpt_ja.clone(),
+            meta_description: post.meta_description_ja.clone(),
+            image_url: post.image_url.clone(),
+            image_alt: post.image_alt_ja.clone(),
+        };
+    }
+
+    BlogPostView {
+        published_date: post.published_date.clone(),
+        date_display: post.date_display.clone(),
+        title: post.title.clone(),
+        excerpt: post.excerpt.clone(),
+        meta_description: post.meta_description.clone(),
+        image_url: post.image_url.clone(),
+        image_alt: post.image_alt.clone(),
+    }
+}
+
+fn read_blog_article_body(slug: &str, locale: &str) -> Result<String> {
     if !is_safe_slug(slug) {
         bail!("invalid blog slug");
     }
-    let path = format!("{WEB_BLOG_ARTICLES_DIR}/{slug}.html");
-    std::fs::read_to_string(&path).with_context(|| format!("failed to read blog article {path}"))
+    let path = if is_japanese_locale(locale) {
+        format!("{WEB_BLOG_ARTICLES_DIR}/{slug}.ja.html")
+    } else {
+        format!("{WEB_BLOG_ARTICLES_DIR}/{slug}.html")
+    };
+    let source = std::fs::read_to_string(&path)
+        .with_context(|| format!("failed to read blog article {path}"))?;
+    let (_, body_html) = split_blog_article_source(&source)
+        .with_context(|| format!("failed to split blog article {path}"))?;
+    Ok(body_html.to_owned())
 }
 
 fn is_safe_slug(slug: &str) -> bool {
@@ -2425,7 +2618,7 @@ async fn render_blog_index_page(
     let template = BlogIndexTemplate {
         page_title: localized_text(
             &selected_locale,
-            "Journal | STONE SIGNATURE",
+            "ジャーナル | STONE SIGNATURE",
             "Journal | STONE SIGNATURE",
         ),
         meta_description: localized_text(
@@ -2440,8 +2633,6 @@ async fn render_blog_index_page(
         company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
-        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
-        blog_index_url: blog_index_url(site_base_url, &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
             site_base_url,
@@ -2505,7 +2696,8 @@ async fn render_blog_article_page(
     let Some(post) = find_blog_post(&blog_posts, &slug) else {
         return plain_error(StatusCode::NOT_FOUND, "blog article not found".to_owned());
     };
-    let body_html = match read_blog_article_body(&post.slug) {
+    let localized_post = localized_blog_post(&post, &selected_locale);
+    let body_html = match read_blog_article_body(&post.slug, &selected_locale) {
         Ok(body_html) => body_html,
         Err(error) => {
             return plain_error(
@@ -2516,16 +2708,16 @@ async fn render_blog_article_page(
     };
 
     let template = BlogArticleTemplate {
-        page_title: format!("{} | STONE SIGNATURE", post.title),
-        meta_description: post.excerpt.clone(),
+        page_title: format!("{} | STONE SIGNATURE", &localized_post.title),
+        meta_description: localized_post.meta_description.clone(),
         robots_meta: "index,follow".to_owned(),
         canonical_url: blog_article_url(site_base_url, &post.slug, "en"),
         lang_ja_url: blog_article_url(site_base_url, &post.slug, "ja"),
         lang_en_url: blog_article_url(site_base_url, &post.slug, "en"),
+        og_image_url: absolute_content_url(site_base_url, &localized_post.image_url),
         company_url: company_url(site_base_url),
         selected_locale: selected_locale.clone(),
         top_url: localized_navigation_page_url(site_base_url, "/", &selected_locale),
-        design_url: localized_navigation_page_url(site_base_url, "/design", &selected_locale),
         blog_index_url: blog_index_url(site_base_url, &selected_locale),
         terms_url: localized_navigation_page_url(site_base_url, "/terms", &selected_locale),
         commercial_transactions_url: localized_navigation_page_url(
@@ -2534,7 +2726,7 @@ async fn render_blog_article_page(
             &selected_locale,
         ),
         privacy_policy_url: privacy_policy_url(site_base_url, &selected_locale),
-        post,
+        post: localized_post,
         body_html,
     };
 
@@ -3504,9 +3696,6 @@ fn parse_supported_locale(raw: &str) -> Option<&'static str> {
     if normalized == "jp" {
         return Some("ja");
     }
-    if normalized == "zh-tw" || normalized == "zh_tw" || normalized == "zh-hant" {
-        return Some("zhtw");
-    }
     if let Some(locale) = supported_locale_exact(&normalized) {
         return Some(locale);
     }
@@ -3522,9 +3711,6 @@ fn parse_path_locale(raw: &str) -> Option<&'static str> {
     if normalized == "jp" {
         return Some("ja");
     }
-    if normalized == "zh-tw" || normalized == "zh_tw" || normalized == "zh-hant" {
-        return Some("zhtw");
-    }
     supported_locale_exact(&normalized)
 }
 
@@ -3535,11 +3721,15 @@ fn supported_locale_exact(locale: &str) -> Option<&'static str> {
         .find(|supported| *supported == locale)
 }
 
+fn is_japanese_locale(locale: &str) -> bool {
+    parse_supported_locale(locale) == Some("ja")
+}
+
 fn resolve_page_locale(
     path_locale: Option<&str>,
     requested: Option<&str>,
-    locale: &str,
-    default_locale: &str,
+    _locale: &str,
+    _default_locale: &str,
 ) -> std::result::Result<String, Response> {
     if let Some(path_locale) = path_locale {
         if let Some(locale) = parse_path_locale(path_locale) {
@@ -3550,7 +3740,10 @@ fn resolve_page_locale(
             "localized page not found".to_owned(),
         ));
     }
-    Ok(resolve_request_locale(requested, locale, default_locale))
+    if let Some(locale) = requested.and_then(parse_supported_locale) {
+        return Ok(locale.to_owned());
+    }
+    Ok(DEFAULT_LOCALE.to_owned())
 }
 
 fn site_url(base_url: &str, path: &str) -> String {
@@ -3559,6 +3752,13 @@ fn site_url(base_url: &str, path: &str) -> String {
     base.join(path)
         .expect("failed to join site base URL with path")
         .to_string()
+}
+
+fn absolute_content_url(base_url: &str, path_or_url: &str) -> String {
+    if path_or_url.starts_with("https://") || path_or_url.starts_with("http://") {
+        return path_or_url.to_owned();
+    }
+    site_url(base_url, path_or_url)
 }
 
 fn normalize_site_base_url(raw: &str) -> Result<String> {
@@ -3720,10 +3920,10 @@ fn build_sitemap_xml(base_url: &str) -> Result<String> {
 }
 
 fn localized_text(locale: &str, ja: &str, en: &str) -> String {
-    if parse_supported_locale(locale) == Some("en") {
-        en.to_owned()
-    } else {
+    if is_japanese_locale(locale) {
         ja.to_owned()
+    } else {
+        en.to_owned()
     }
 }
 
@@ -3774,43 +3974,43 @@ fn normalize_facet_tag_value(raw: &str) -> String {
 }
 
 fn mock_facet_tag_labels(locale: &str) -> FacetTagLabels {
-    let english = parse_supported_locale(locale) == Some("en");
+    let japanese = is_japanese_locale(locale);
     let mut labels = FacetTagLabels::default();
 
-    if english {
-        labels.insert("color", "pink", "Soft Pink", &[]);
-        labels.insert("color", "blue", "Deep Blue", &[]);
-        labels.insert("color", "green", "Deep Green", &[]);
-        labels.insert("pattern", "cloud", "Cloud", &[]);
-        labels.insert("pattern", "speckled", "Speckled", &[]);
-        labels.insert("pattern", "marble", "Banded", &[]);
-    } else {
+    if japanese {
         labels.insert("color", "pink", "淡桃", &[]);
         labels.insert("color", "blue", "深青", &[]);
         labels.insert("color", "green", "濃緑", &[]);
         labels.insert("pattern", "cloud", "雲状", &[]);
         labels.insert("pattern", "speckled", "点状", &[]);
         labels.insert("pattern", "marble", "縞", &[]);
+    } else {
+        labels.insert("color", "pink", "Soft Pink", &[]);
+        labels.insert("color", "blue", "Deep Blue", &[]);
+        labels.insert("color", "green", "Deep Green", &[]);
+        labels.insert("pattern", "cloud", "Cloud", &[]);
+        labels.insert("pattern", "speckled", "Speckled", &[]);
+        labels.insert("pattern", "marble", "Banded", &[]);
     }
 
     labels
 }
 
 fn material_shape_label(shape_key: &str, locale: &str) -> &'static str {
-    let english = parse_supported_locale(locale) == Some("en");
+    let japanese = is_japanese_locale(locale);
     match shape_key {
         "round" => {
-            if english {
-                "Round seal"
-            } else {
+            if japanese {
                 "丸印"
+            } else {
+                "Round seal"
             }
         }
         _ => {
-            if english {
-                "Square seal"
-            } else {
+            if japanese {
                 "角印"
+            } else {
+                "Square seal"
             }
         }
     }
@@ -3950,10 +4150,10 @@ fn filter_materials_by_facets(
 }
 
 fn shape_label_for_locale(shape_key: &str, locale: &str) -> Option<&'static str> {
-    let english = parse_supported_locale(locale) == Some("en");
+    let japanese = is_japanese_locale(locale);
     match shape_key {
-        "square" => Some(if english { "Square seal" } else { "角印" }),
-        "round" => Some(if english { "Round seal" } else { "丸印" }),
+        "square" => Some(if japanese { "角印" } else { "Square seal" }),
+        "round" => Some(if japanese { "丸印" } else { "Round seal" }),
         _ => None,
     }
 }
@@ -4247,10 +4447,10 @@ fn read_int_map_field(data: &BTreeMap<String, JsonValue>, key: &str) -> HashMap<
 }
 
 fn locale_currency_code(locale: &str) -> &'static str {
-    if parse_supported_locale(locale) == Some("en") {
-        "USD"
-    } else {
+    if is_japanese_locale(locale) {
         "JPY"
+    } else {
+        "USD"
     }
 }
 
@@ -4896,6 +5096,43 @@ mod tests {
         assert!(html.contains("注文を受け付けました（モック）"));
     }
 
+    #[tokio::test]
+    async fn unprefixed_stone_signature_pages_render_english() {
+        let top_response =
+            handle_top(State(mock_state()), Query(PaymentRedirectQuery::default())).await;
+        assert_eq!(top_response.status(), StatusCode::OK);
+        let top_html = String::from_utf8(
+            to_bytes(top_response.into_body(), usize::MAX)
+                .await
+                .expect("top body should be readable")
+                .to_vec(),
+        )
+        .expect("top body should be utf-8");
+
+        assert!(top_html.contains(r#"<html lang="en">"#));
+        assert!(top_html.contains(r#"<span class="top-brand__subtitle">Seal Field</span>"#));
+        assert!(top_html.contains("A gemstone seal made just for you."));
+        assert!(!top_html.contains("あなただけの宝石印鑑"));
+
+        let about_response = handle_about(State(mock_state()), Query(LocaleQuery::default())).await;
+        assert_eq!(about_response.status(), StatusCode::OK);
+        let about_html = String::from_utf8(
+            to_bytes(about_response.into_body(), usize::MAX)
+                .await
+                .expect("about body should be readable")
+                .to_vec(),
+        )
+        .expect("about body should be utf-8");
+
+        assert!(about_html.contains(r#"<html lang="en">"#));
+        assert!(about_html.contains(r#"<span class="top-brand__subtitle">Seal Field</span>"#));
+        assert!(about_html.contains("Your seal, made from gemstone"));
+        assert!(
+            about_html.contains("STONE SIGNATURE is a service for choosing a gemstone seal online")
+        );
+        assert!(!about_html.contains("宝石でつくる、あなたの印鑑"));
+    }
+
     #[test]
     fn top_page_uses_locale_aware_privacy_policy_url() {
         let template = TopPageTemplate {
@@ -4976,8 +5213,18 @@ mod tests {
         let html = render_html(&template).expect("top page should render");
 
         assert!(html.contains(r#"<section id="journal" class="journal-section">"#));
-        assert!(html.contains("The Art of Selection: Identifying the Finest Jadeite for Carving"));
-        assert!(html.contains(r#"href="https://finitefield.org/blog/art-of-selection-jadeite""#));
+        assert!(html.contains(r#"<div class="journal-grid">"#));
+        assert!(html.contains("What Is a Hanko? A Complete Guide to Japanese Personal Seals"));
+        assert!(html.contains("Hanko vs Inkan: What&#39;s the Difference?"));
+        assert!(html.contains("What Is a Personal Seal? History, Meaning, and Modern Uses"));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/what-is-a-hanko""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/hanko-vs-inkan""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/what-is-a-personal-seal""#));
+        assert!(!html.contains("The Art of Selection: Identifying the Finest Jadeite for Carving"));
+        assert!(!html.contains(r#"href="https://finitefield.org/blog/art-of-selection-jadeite""#));
+        assert!(!html.contains("journal-card__category"));
+        assert!(!html.contains("journal-card__date"));
+        assert!(!html.contains("journal-card__author"));
     }
 
     #[test]
@@ -5031,7 +5278,7 @@ mod tests {
     async fn blog_article_page_renders_for_known_slug() {
         let response = handle_blog_article(
             State(mock_state()),
-            Path("legacy-of-the-hand".to_owned()),
+            Path("hanko-vs-inkan".to_owned()),
             Query(LocaleQuery {
                 lang: Some("en".to_owned()),
             }),
@@ -5048,10 +5295,138 @@ mod tests {
         )
         .expect("blog body should be utf-8");
 
-        assert!(html.contains("Legacy of the Hand: Why Hand-Carving Still Matters"));
+        assert!(html.contains("Hanko vs Inkan: What&#39;s the Difference?"));
         assert!(html.contains(
-            r#"<link rel="canonical" href="https://finitefield.org/blog/legacy-of-the-hand">"#
+            r#"<link rel="canonical" href="https://finitefield.org/blog/hanko-vs-inkan">"#
         ));
+        assert!(!html.contains("slug = \"hanko-vs-inkan\""));
+    }
+
+    #[tokio::test]
+    async fn hanko_guide_article_uses_optimized_localized_metadata() {
+        let english_response = handle_blog_article(
+            State(mock_state()),
+            Path("what-is-a-hanko".to_owned()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+        assert_eq!(english_response.status(), StatusCode::OK);
+
+        let english_html = String::from_utf8(
+            to_bytes(english_response.into_body(), usize::MAX)
+                .await
+                .expect("blog body should be readable")
+                .to_vec(),
+        )
+        .expect("blog body should be utf-8");
+
+        assert!(english_html.contains(
+            r#"<title>What Is a Hanko? A Complete Guide to Japanese Personal Seals | STONE SIGNATURE</title>"#
+        ));
+        assert!(english_html.contains(
+            r#"<meta name="description" content="What is a hanko? Learn how Japanese personal seals differ from inkan, how hanko stamps are used, and why custom stone seals make meaningful gifts.">"#
+        ));
+        assert!(english_html.contains(
+            r#"<meta property="og:image" content="https://finitefield.org/static/blog/what-is-a-hanko.svg">"#
+        ));
+        assert!(
+            english_html
+                .contains(r#"<meta property="article:published_time" content="2026-05-07">"#)
+        );
+        assert!(!english_html.contains("meta_description ="));
+
+        let japanese_response = handle_localized_blog_article(
+            Path(("ja".to_owned(), "what-is-a-hanko".to_owned())),
+            State(mock_state()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+        assert_eq!(japanese_response.status(), StatusCode::OK);
+
+        let japanese_html = String::from_utf8(
+            to_bytes(japanese_response.into_body(), usize::MAX)
+                .await
+                .expect("blog body should be readable")
+                .to_vec(),
+        )
+        .expect("blog body should be utf-8");
+
+        assert!(japanese_html.contains(
+            r#"<title>ハンコとは？日本のパーソナルシール完全ガイド | STONE SIGNATURE</title>"#
+        ));
+        assert!(japanese_html.contains(
+            r#"<meta name="description" content="ハンコとは何かを解説。印鑑との違い、実印・銀行印・認印の用途、海外での使い方、天然石ハンコの魅力を紹介します。">"#
+        ));
+        assert!(japanese_html.contains(
+            r#"<meta property="og:image:alt" content="手漉き紙の赤い印影と朱肉のそばに置かれた石のハンコ。">"#
+        ));
+    }
+
+    #[tokio::test]
+    async fn localized_blog_pages_render_japanese_copy() {
+        let index_response = handle_localized_blog_index(
+            Path("ja".to_owned()),
+            State(mock_state()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+        assert_eq!(index_response.status(), StatusCode::OK);
+
+        let index_html = String::from_utf8(
+            to_bytes(index_response.into_body(), usize::MAX)
+                .await
+                .expect("blog index body should be readable")
+                .to_vec(),
+        )
+        .expect("blog index body should be utf-8");
+
+        assert!(index_html.contains(r#"<html lang="ja">"#));
+        assert!(index_html.contains("<title>ジャーナル | STONE SIGNATURE</title>"));
+        assert!(index_html.contains("ハンコとは？日本のパーソナルシール完全ガイド"));
+        assert!(index_html.contains("ハンコと印鑑の違いとは？"));
+        assert!(index_html.contains("パーソナルシールとは？歴史・意味・現代の使い方"));
+        assert!(
+            !index_html
+                .contains("The Art of Selection: Identifying the Finest Jadeite for Carving")
+        );
+
+        let article_response = handle_localized_blog_article(
+            Path(("ja".to_owned(), "hanko-vs-inkan".to_owned())),
+            State(mock_state()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+        assert_eq!(article_response.status(), StatusCode::OK);
+
+        let article_html = String::from_utf8(
+            to_bytes(article_response.into_body(), usize::MAX)
+                .await
+                .expect("blog article body should be readable")
+                .to_vec(),
+        )
+        .expect("blog article body should be utf-8");
+
+        assert!(article_html.contains("ハンコと印鑑の違いとは？"));
+        assert!(article_html.contains("2026年5月7日"));
+        assert!(article_html.contains("ジャーナル一覧へ"));
+        assert!(article_html.contains("Hanko vs Inkan: シンプルな違い"));
+        assert!(article_html.contains("ハンコはスタンプそのもの。印鑑は印影"));
+        assert!(article_html.contains(
+            r#"<link rel="canonical" href="https://finitefield.org/blog/hanko-vs-inkan">"#
+        ));
+        assert!(!article_html.contains("Hanko vs Inkan: The Simple Difference"));
+    }
+
+    #[tokio::test]
+    async fn unsupported_localized_page_prefix_returns_not_found() {
+        let response = handle_localized_about(
+            Path("fr".to_owned()),
+            State(mock_state()),
+            Query(LocaleQuery::default()),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
@@ -5223,7 +5598,7 @@ mod tests {
         );
         assert_eq!(
             top_url(TEST_SITE_BASE_URL, "fr"),
-            "https://finitefield.org/fr/"
+            "https://finitefield.org/"
         );
         assert_eq!(
             about_url(TEST_SITE_BASE_URL, "en"),
@@ -5243,19 +5618,19 @@ mod tests {
         );
         assert_eq!(
             design_url(TEST_SITE_BASE_URL, "zhtw"),
-            "https://finitefield.org/zhtw/design"
+            "https://finitefield.org/design"
         );
         assert_eq!(
             blog_index_url(TEST_ALT_SITE_BASE_URL, "en"),
             "https://inkanfield.org/blog"
         );
         assert_eq!(
-            blog_article_url(TEST_ALT_SITE_BASE_URL, "art-of-selection-jadeite", "en"),
-            "https://inkanfield.org/blog/art-of-selection-jadeite"
+            blog_article_url(TEST_ALT_SITE_BASE_URL, "hanko-vs-inkan", "en"),
+            "https://inkanfield.org/blog/hanko-vs-inkan"
         );
         assert_eq!(
-            blog_article_url(TEST_ALT_SITE_BASE_URL, "art-of-selection-jadeite", "ja"),
-            "https://inkanfield.org/ja/blog/art-of-selection-jadeite"
+            blog_article_url(TEST_ALT_SITE_BASE_URL, "hanko-vs-inkan", "ja"),
+            "https://inkanfield.org/ja/blog/hanko-vs-inkan"
         );
         assert_eq!(
             terms_url(TEST_SITE_BASE_URL, "en"),
@@ -5501,12 +5876,15 @@ mod tests {
             r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog" />"#
         ));
         assert!(
-            sitemap_xml
-                .contains("<loc>https://finitefield.org/blog/art-of-selection-jadeite</loc>")
+            sitemap_xml.contains("<loc>https://finitefield.org/blog/what-is-a-personal-seal</loc>")
         );
         assert!(sitemap_xml.contains(
-            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog/art-of-selection-jadeite" />"#
+            r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog/what-is-a-personal-seal" />"#
         ));
+        assert!(
+            !sitemap_xml
+                .contains("<loc>https://finitefield.org/blog/art-of-selection-jadeite</loc>")
+        );
         assert!(sitemap_xml.contains("<loc>https://finitefield.org/terms</loc>"));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/terms" />"#

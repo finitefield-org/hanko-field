@@ -33,16 +33,11 @@
           <img class="top-brand__logo" src="/static/site-logo.png" alt="" aria-hidden="true">
           <div class="top-brand__text">
             <h1 class="top-brand__title">STONE SIGNATURE</h1>
-            <span class="top-brand__subtitle">印鑑フィールド</span>
+            <span class="top-brand__subtitle">{% if selected_locale == "ja" %}印鑑フィールド{% else %}Seal Field{% endif %}</span>
           </div>
         </div>
       </a>
       <div class="top-header__action">
-        <nav class="top-nav" aria-label="Primary navigation">
-          <a class="top-nav__link" href="{{ top_url }}">Home</a>
-          <a class="top-nav__link" href="{{ design_url }}">Bespoke</a>
-          <a class="top-nav__link is-active" href="{{ blog_index_url }}">Journal</a>
-        </nav>
         <details class="top-language-switcher" data-language-switcher>
           <summary class="top-language-switcher__toggle" aria-label="Language selector">
             <span class="material-symbols-outlined top-brand__icon" aria-hidden="true">language</span>
@@ -61,29 +56,24 @@
     <section class="journal-section journal-section--index">
       <div class="journal-section__inner">
         <div class="journal-section__heading">
-          <h2 class="journal-section__title">Journal</h2>
+          <h2 class="journal-section__title">{% if selected_locale == "ja" %}ジャーナル{% else %}Journal{% endif %}</h2>
           <div class="journal-section__rule" aria-hidden="true"></div>
         </div>
 
-        <div class="journal-list">
+        <div class="journal-grid">
           {% for post in blog_posts %}
           <article class="journal-card">
-            <a class="journal-card__link" href="{{ post.post_url }}">
-              <div class="journal-card__grid">
-                <div class="journal-card__media{% if post.reverse_layout %} is-reversed{% endif %}">
-                  <img class="journal-card__image" src="{{ post.image_url }}" alt="{{ post.image_alt }}">
-                </div>
-                <div class="journal-card__body{% if post.reverse_layout %} is-reversed{% endif %}">
-                  <span class="journal-card__date">{{ post.date_display }}</span>
-                  <h3 class="journal-card__title">{{ post.title }}</h3>
-                  <p class="journal-card__excerpt">{{ post.excerpt }}</p>
-                  <span class="journal-card__read-more">
-                    Read More
-                    <span class="material-symbols-outlined journal-card__icon" aria-hidden="true">arrow_forward</span>
-                  </span>
-                </div>
-              </div>
+            <a class="journal-card__media" href="{{ post.post_url }}" aria-label="{{ post.title }}">
+              <img class="journal-card__image" src="{{ post.image_url }}" alt="{{ post.image_alt }}">
             </a>
+            <div class="journal-card__body">
+              <div class="journal-card__content">
+                <h3 class="journal-card__title">
+                  <a class="journal-card__title-link" href="{{ post.post_url }}">{{ post.title }}</a>
+                </h3>
+                <p class="journal-card__excerpt">{{ post.excerpt }}</p>
+              </div>
+            </div>
           </article>
           {% endfor %}
         </div>

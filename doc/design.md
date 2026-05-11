@@ -75,6 +75,11 @@
 - [x] 管理画面（`admin`）と Web を本番環境へデプロイする
 - [x] `web` に STONE SIGNATURE のブログセクションと `/blog/{slug}` の記事ページを追加する
 - [x] `web` の公開 URL を英語は言語コードなし、その他言語は `/{languageCode}/` 始まりに統一する
+- [x] `web` のジャーナルに「What Is a Hanko? A Complete Guide to Japanese Personal Seals」を追加する
+- [x] `web` のジャーナル記事メタデータを JSON から HTML front matter へ移管し、記事SEOメタを最適化する
+- [x] `web` のジャーナルに「Hanko vs Inkan: What's the Difference?」を追加する
+- [x] `web` のジャーナルに「What Is a Personal Seal? History, Meaning, and Modern Uses」を追加する
+- [x] `web` のジャーナルから初期サンプル記事3本を削除する
 - [ ] App Store Review Guideline 4.2 対応として、Flutterアプリの起動時初期ルートをDesign画面に変更し、起動直後から印影ライブプレビュー・文字入力・書体/形状選択を見せる
 - [ ] FlutterのDesign画面ヘッダーにブランド名と短いタグラインを追加し、ホーム画面として自然に見えるUIに調整する
 - [ ] 現在のFlutterトップページで使っているブランド画像・主要文言・世界観説明を流用して、About STONE SIGNATURE画面へ移管する

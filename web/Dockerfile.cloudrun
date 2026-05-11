@@ -30,6 +30,7 @@ WORKDIR /app
 # Use the debug binary to keep build memory usage lower on Cloud Build.
 COPY --from=builder /workspace/hanko-field/web/target/debug/hanko-field-web /usr/local/bin/hanko-field-web
 COPY --from=builder /workspace/hanko-field/web/static /workspace/hanko-field/web/static
+COPY --from=builder /workspace/hanko-field/web/blog /workspace/hanko-field/web/blog
 
 ENV RUST_LOG=info
 
