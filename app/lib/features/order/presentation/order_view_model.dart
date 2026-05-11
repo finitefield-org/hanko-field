@@ -9,6 +9,7 @@ import 'package:miniriverpod/miniriverpod.dart';
 import '../../../app/config/app_runtime_config.dart';
 import '../data/order_draft_storage.dart';
 import '../data/order_api_repository.dart';
+import '../data/saved_seal_design_storage.dart';
 import '../domain/order_models.dart';
 
 @immutable
@@ -57,6 +58,9 @@ class OrderScreenState {
   final bool isSubmittingPurchase;
   final PurchaseResultData? purchaseResult;
   final String purchaseError;
+  final List<SavedSealDesignData> savedSealDesigns;
+  final String savedSealDesignsMessage;
+  final String savedSealDesignsError;
 
   const OrderScreenState({
     required this.catalog,
@@ -93,6 +97,9 @@ class OrderScreenState {
     required this.isSubmittingPurchase,
     required this.purchaseResult,
     required this.purchaseError,
+    required this.savedSealDesigns,
+    required this.savedSealDesignsMessage,
+    required this.savedSealDesignsError,
   });
 
   OrderScreenState copyWith({
@@ -130,6 +137,9 @@ class OrderScreenState {
     bool? isSubmittingPurchase,
     Object? purchaseResult = _noChange,
     String? purchaseError,
+    List<SavedSealDesignData>? savedSealDesigns,
+    String? savedSealDesignsMessage,
+    String? savedSealDesignsError,
   }) {
     return OrderScreenState(
       catalog: catalog ?? this.catalog,
@@ -173,6 +183,11 @@ class OrderScreenState {
           ? this.purchaseResult
           : purchaseResult as PurchaseResultData?,
       purchaseError: purchaseError ?? this.purchaseError,
+      savedSealDesigns: savedSealDesigns ?? this.savedSealDesigns,
+      savedSealDesignsMessage:
+          savedSealDesignsMessage ?? this.savedSealDesignsMessage,
+      savedSealDesignsError:
+          savedSealDesignsError ?? this.savedSealDesignsError,
     );
   }
 
@@ -486,6 +501,9 @@ class OrderViewModel extends Provider<OrderScreenState> {
       isSubmittingPurchase: false,
       purchaseResult: null,
       purchaseError: '',
+      savedSealDesigns: const [],
+      savedSealDesignsMessage: '',
+      savedSealDesignsError: '',
     );
   }
 
@@ -518,6 +536,15 @@ class OrderViewModel extends Provider<OrderScreenState> {
   late final updateAddressLine1Mut = mutation<void>(#updateAddressLine1);
   late final updateAddressLine2Mut = mutation<void>(#updateAddressLine2);
   late final setTermsAgreedMut = mutation<void>(#setTermsAgreed);
+  late final saveCurrentSealDesignMut = mutation<void>(#saveCurrentSealDesign);
+  late final applySavedSealDesignMut = mutation<void>(#applySavedSealDesign);
+  late final continueWithSavedSealDesignMut = mutation<void>(
+    #continueWithSavedSealDesign,
+  );
+  late final setSavedSealDesignFavoriteMut = mutation<void>(
+    #setSavedSealDesignFavorite,
+  );
+  late final deleteSavedSealDesignMut = mutation<void>(#deleteSavedSealDesign);
   late final submitPurchaseMut = mutation<void>(#submitPurchase);
 
   Call<void, OrderScreenState> initialize() {
@@ -528,6 +555,16 @@ class OrderViewModel extends Provider<OrderScreenState> {
       }
 
       ref.state = current.copyWith(isLoadingCatalog: true, catalogError: '');
+
+      final savedSealStorage = ref.watch(savedSealDesignStorageProvider);
+      final savedSealDesigns = await savedSealStorage.load();
+      ref.state = ref
+          .watch(this)
+          .copyWith(
+            savedSealDesigns: savedSealDesigns,
+            savedSealDesignsMessage: '',
+            savedSealDesignsError: '',
+          );
 
       final runtime = ref.watch(appRuntimeConfigProvider);
       if (runtime.mode == AppMode.mock) {
@@ -1232,6 +1269,208 @@ class OrderViewModel extends Provider<OrderScreenState> {
     });
   }
 
+  Call<void, OrderScreenState> saveCurrentSealDesign() {
+    return mutate(saveCurrentSealDesignMut, (ref) async {
+      final current = ref.watch(this);
+      final (line1, line2) = _normalizedSealLines(
+        current.sealLine1,
+        current.sealLine2,
+      );
+      final sealError = _validateSealText(
+        locale: current.locale,
+        line1: line1,
+        line2: line2,
+      );
+      if (sealError.isNotEmpty) {
+        ref.state = current.copyWith(
+          sealLine1: line1,
+          sealLine2: line2,
+          sealTextError: sealError,
+          savedSealDesignsMessage: '',
+          savedSealDesignsError: sealError,
+        );
+        return;
+      }
+
+      final selectedSuggestion = _selectedSuggestionForSeal(
+        current,
+        line1: line1,
+        line2: line2,
+      );
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final design = SavedSealDesignData(
+        id: _newSavedSealDesignId(now),
+        sealLine1: line1,
+        sealLine2: line2,
+        kanjiStyleCode: current.kanjiStyle.code,
+        selectedFontKey: current.selectedFont.key,
+        fontLabel: current.selectedFont.label,
+        fontFamily: current.selectedFont.family,
+        shapeCode: current.shape.code,
+        reading: selectedSuggestion?.reading ?? '',
+        meaning: selectedSuggestion?.reason ?? '',
+        isFavorite: false,
+        createdAtMillis: now,
+        updatedAtMillis: now,
+      );
+
+      try {
+        final storage = ref.watch(savedSealDesignStorageProvider);
+        final savedDesigns = await storage.save(design);
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          sealLine1: line1,
+          sealLine2: line2,
+          sealTextError: '',
+          savedSealDesigns: savedDesigns,
+          savedSealDesignsMessage: localizedUiText(
+            latest.locale,
+            ja: '印影案を保存しました。',
+            en: 'Saved the seal idea.',
+          ),
+          savedSealDesignsError: '',
+        );
+      } catch (_) {
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          savedSealDesignsMessage: '',
+          savedSealDesignsError: localizedUiText(
+            latest.locale,
+            ja: '印影案を保存できませんでした。',
+            en: 'Could not save the seal idea.',
+          ),
+        );
+      }
+    });
+  }
+
+  Call<void, OrderScreenState> applySavedSealDesign(String id) {
+    return mutate(applySavedSealDesignMut, (ref) async {
+      final current = ref.watch(this);
+      final matches = current.savedSealDesigns.where((item) => item.id == id);
+      if (matches.isEmpty) {
+        return;
+      }
+
+      final nextState = _stateWithSavedSealDesign(current, matches.first);
+      ref.state = nextState.copyWith(
+        savedSealDesignsMessage: localizedUiText(
+          current.locale,
+          ja: '保存済み印影案を反映しました。',
+          en: 'Applied the saved seal idea.',
+        ),
+        savedSealDesignsError: '',
+      );
+    });
+  }
+
+  Call<void, OrderScreenState> continueWithSavedSealDesign(String id) {
+    return mutate(continueWithSavedSealDesignMut, (ref) async {
+      final current = ref.watch(this);
+      final matches = current.savedSealDesigns.where((item) => item.id == id);
+      if (matches.isEmpty) {
+        return;
+      }
+
+      final applied = _stateWithSavedSealDesign(current, matches.first);
+      if (applied.sealTextError.isNotEmpty) {
+        ref.state = applied.copyWith(
+          savedSealDesignsMessage: '',
+          savedSealDesignsError: applied.sealTextError,
+        );
+        return;
+      }
+
+      if (!applied.hasCatalog) {
+        ref.state = applied.copyWith(
+          savedSealDesignsMessage: localizedUiText(
+            current.locale,
+            ja: '保存済み印影案を反映しました。カタログ読み込み後に出品個体選びへ進めます。',
+            en: 'Applied the saved seal idea. You can continue to listing after the catalog loads.',
+          ),
+          savedSealDesignsError: '',
+        );
+        return;
+      }
+
+      ref.state = applied.copyWith(
+        step: OrderStep.listing,
+        savedSealDesignsMessage: localizedUiText(
+          current.locale,
+          ja: '保存済み印影案を反映し、出品個体選びへ進みました。',
+          en: 'Applied the saved seal idea and continued to listing.',
+        ),
+        savedSealDesignsError: '',
+      );
+    });
+  }
+
+  Call<void, OrderScreenState> setSavedSealDesignFavorite(
+    String id,
+    bool isFavorite,
+  ) {
+    return mutate(setSavedSealDesignFavoriteMut, (ref) async {
+      final current = ref.watch(this);
+      if (!current.savedSealDesigns.any((item) => item.id == id)) {
+        return;
+      }
+
+      try {
+        final storage = ref.watch(savedSealDesignStorageProvider);
+        final savedDesigns = await storage.setFavorite(id, isFavorite);
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          savedSealDesigns: savedDesigns,
+          savedSealDesignsMessage: localizedUiText(
+            latest.locale,
+            ja: isFavorite ? 'お気に入りに追加しました。' : 'お気に入りを解除しました。',
+            en: isFavorite ? 'Marked as favorite.' : 'Removed from favorites.',
+          ),
+          savedSealDesignsError: '',
+        );
+      } catch (_) {
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          savedSealDesignsMessage: '',
+          savedSealDesignsError: localizedUiText(
+            latest.locale,
+            ja: 'お気に入り状態を更新できませんでした。',
+            en: 'Could not update the favorite state.',
+          ),
+        );
+      }
+    });
+  }
+
+  Call<void, OrderScreenState> deleteSavedSealDesign(String id) {
+    return mutate(deleteSavedSealDesignMut, (ref) async {
+      try {
+        final storage = ref.watch(savedSealDesignStorageProvider);
+        final savedDesigns = await storage.delete(id);
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          savedSealDesigns: savedDesigns,
+          savedSealDesignsMessage: localizedUiText(
+            latest.locale,
+            ja: '保存済み印影案を削除しました。',
+            en: 'Deleted the saved seal idea.',
+          ),
+          savedSealDesignsError: '',
+        );
+      } catch (_) {
+        final latest = ref.watch(this);
+        ref.state = latest.copyWith(
+          savedSealDesignsMessage: '',
+          savedSealDesignsError: localizedUiText(
+            latest.locale,
+            ja: '保存済み印影案を削除できませんでした。',
+            en: 'Could not delete the saved seal idea.',
+          ),
+        );
+      }
+    });
+  }
+
   Call<void, OrderScreenState> submitPurchase() {
     return mutate(submitPurchaseMut, (ref) async {
       final current = ref.watch(this);
@@ -1557,6 +1796,71 @@ OrderScreenState _stateWithCatalog({
   );
 }
 
+OrderScreenState _stateWithSavedSealDesign(
+  OrderScreenState state,
+  SavedSealDesignData design,
+) {
+  final (sealLine1, sealLine2) = _normalizedSealLines(
+    design.sealLine1,
+    design.sealLine2,
+  );
+  var nextStyle = KanjiStyle.fromCode(design.kanjiStyleCode);
+  var nextFontKey = design.selectedFontKey;
+  var nextShape = SealShape.fromCode(design.shapeCode);
+  var nextListingKey = state.selectedStoneListingKey;
+
+  if (state.hasCatalog) {
+    var visibleFonts = _visibleFontsFor(
+      catalog: state.catalog,
+      style: nextStyle,
+    );
+    if (visibleFonts.isEmpty) {
+      nextStyle = state.catalog.fonts.first.kanjiStyle;
+      visibleFonts = _visibleFontsFor(catalog: state.catalog, style: nextStyle);
+    }
+    if (visibleFonts.isNotEmpty &&
+        !visibleFonts.any((font) => font.key == nextFontKey)) {
+      nextFontKey = visibleFonts.first.key;
+    }
+
+    final visibleListings = _visibleStoneListingsFor(
+      catalog: state.catalog,
+      shape: nextShape,
+      colorFamily: state.selectedColorFamily,
+      patternPrimary: state.selectedPatternPrimary,
+    );
+    final hasSelectedListing = visibleListings.any(
+      (listing) => listing.key == nextListingKey,
+    );
+    nextListingKey = hasSelectedListing
+        ? nextListingKey
+        : visibleListings.isNotEmpty
+        ? visibleListings.first.key
+        : '';
+  }
+
+  return state.copyWith(
+    step: OrderStep.design,
+    sealLine1: sealLine1,
+    sealLine2: sealLine2,
+    sealTextError: _validateSealText(
+      locale: state.locale,
+      line1: sealLine1,
+      line2: sealLine2,
+    ),
+    kanjiStyle: nextStyle,
+    selectedFontKey: nextFontKey,
+    shape: nextShape,
+    selectedStoneListingKey: nextListingKey,
+    suggestions: const [],
+    selectedSuggestionIndex: null,
+    suggestionsError: '',
+    isGeneratingSuggestions: false,
+    purchaseResult: null,
+    purchaseError: '',
+  );
+}
+
 OrderScreenState _stateWithMaterialFilters(OrderScreenState state) {
   final visibleListings = _visibleStoneListingsFor(
     catalog: state.catalog,
@@ -1749,6 +2053,34 @@ String _newIdempotencyKey() {
   final now = DateTime.now().millisecondsSinceEpoch;
   final randomPart = Random.secure().nextInt(0x7fffffff).toRadixString(16);
   return 'app_${now}_$randomPart';
+}
+
+String _newSavedSealDesignId(int millis) {
+  final randomPart = Random().nextInt(0x7fffffff).toRadixString(16);
+  return 'seal_${millis}_$randomPart';
+}
+
+KanjiCandidate? _selectedSuggestionForSeal(
+  OrderScreenState state, {
+  required String line1,
+  required String line2,
+}) {
+  final suggestion = state.selectedSuggestion;
+  if (suggestion == null) {
+    return null;
+  }
+
+  final sourceLine1 = suggestion.line1.isNotEmpty
+      ? suggestion.line1
+      : suggestion.kanji;
+  final (suggestionLine1, suggestionLine2) = _normalizedSealLines(
+    sourceLine1,
+    suggestion.line2,
+  );
+  if (suggestionLine1 == line1 && suggestionLine2 == line2) {
+    return suggestion;
+  }
+  return null;
 }
 
 String _catalogLoadErrorMessage(String locale) {

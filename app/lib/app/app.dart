@@ -67,14 +67,14 @@ class _AppRootState extends ConsumerState<_AppRoot> {
     AppLocale locale,
     bool showConfirmationLinks,
   ) {
-    final openAbout = () => ref.invoke(appNavViewModel.showAbout());
-    final openLegalNotice = () => ref.invoke(appNavViewModel.showLegalNotice());
-    final openTerms = () => ref.invoke(appNavViewModel.showTerms());
-    final popToRoot = () => ref.invoke(appNavViewModel.popToRoot());
-    final backToDesign = () {
+    void openAbout() => ref.invoke(appNavViewModel.showAbout());
+    void openLegalNotice() => ref.invoke(appNavViewModel.showLegalNotice());
+    void openTerms() => ref.invoke(appNavViewModel.showTerms());
+    void popToRoot() => ref.invoke(appNavViewModel.popToRoot());
+    void backToDesign() {
       ref.invoke(orderViewModel.resetToDesignStep());
       popToRoot();
-    };
+    }
 
     if (page.key == AppPageKey.about) {
       return AboutPage(

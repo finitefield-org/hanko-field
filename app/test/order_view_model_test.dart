@@ -78,6 +78,9 @@ OrderScreenState _state({
     isSubmittingPurchase: false,
     purchaseResult: null,
     purchaseError: '',
+    savedSealDesigns: const [],
+    savedSealDesignsMessage: '',
+    savedSealDesignsError: '',
   );
 }
 

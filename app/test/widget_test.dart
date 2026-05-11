@@ -59,6 +59,10 @@ class _FailingCatalogRepository extends OrderApiRepository {
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('app starts on design page with preview and controls', (
     tester,
   ) async {
@@ -90,6 +94,160 @@ void main() {
     expect(find.text('Square seal'), findsOneWidget);
     expect(find.text('Round seal'), findsOneWidget);
     expect(find.textContaining('Connection refused'), findsNothing);
+  });
+
+  testWidgets('design page saves, reapplies, and continues local seal ideas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appRuntimeConfigProvider.overrideWithValue(
+            const AppRuntimeConfig(
+              apiBaseUrl: 'http://localhost:3050',
+              preferredLocale: 'en',
+              mode: AppMode.mock,
+            ),
+          ),
+        ],
+        child: const HankoApp(),
+      ),
+    );
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('Name for the seal text'));
+
+    expect(
+      find.text(
+        'Saved only on this device. It is not transferred if you delete the app, use another device, or change phones.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'A');
+    await tester.pumpAndSettle();
+
+    final saveButton = find.widgetWithText(OutlinedButton, 'Save current');
+    await tester.ensureVisible(saveButton);
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved the seal idea.'), findsOneWidget);
+    expect(find.text('A'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField).first, 'B');
+    await tester.pumpAndSettle();
+
+    final editButton = find.widgetWithText(TextButton, 'Edit again');
+    await tester.ensureVisible(editButton);
+    await tester.pumpAndSettle();
+    await tester.tap(editButton);
+    await tester.pumpAndSettle();
+
+    final firstTextField = tester.widget<TextField>(
+      find.byType(TextField).first,
+    );
+    expect(firstTextField.controller?.text, 'A');
+
+    final deleteButton = find
+        .widgetWithIcon(IconButton, Icons.delete_outline_rounded)
+        .first;
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    await pumpUntilFound(
+      tester,
+      find.text('Saved seal ideas will appear here.'),
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'A');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(saveButton);
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    final continueButton = find.widgetWithText(
+      OutlinedButton,
+      'Continue order',
+    );
+    await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
+    await tester.tap(continueButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose listing'), findsOneWidget);
+  });
+
+  testWidgets('design page compares selected saved seal ideas', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appRuntimeConfigProvider.overrideWithValue(
+            const AppRuntimeConfig(
+              apiBaseUrl: 'http://localhost:3050',
+              preferredLocale: 'en',
+              mode: AppMode.mock,
+            ),
+          ),
+        ],
+        child: const HankoApp(),
+      ),
+    );
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('Name for the seal text'));
+
+    final saveButton = find.widgetWithText(OutlinedButton, 'Save current');
+
+    await tester.enterText(find.byType(TextField).first, 'A');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(saveButton);
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'B');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(saveButton);
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    final favoriteButton = find.byTooltip('Add favorite').first;
+    await tester.ensureVisible(favoriteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(favoriteButton);
+    await tester.pumpAndSettle();
+
+    final firstCheckbox = find.byType(Checkbox).first;
+    await tester.ensureVisible(firstCheckbox);
+    await tester.pumpAndSettle();
+    await tester.tap(firstCheckbox);
+    await tester.pumpAndSettle();
+
+    final secondCheckbox = find.byType(Checkbox).at(1);
+    await tester.ensureVisible(secondCheckbox);
+    await tester.pumpAndSettle();
+    await tester.tap(secondCheckbox);
+    await tester.pumpAndSettle();
+
+    final compareButton = find.widgetWithText(FilledButton, 'Compare selected');
+    await tester.ensureVisible(compareButton);
+    await tester.pumpAndSettle();
+    await tester.tap(compareButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Compare seal ideas'), findsOneWidget);
+    expect(find.text('Seal text'), findsOneWidget);
+    expect(find.text('Font'), findsOneWidget);
+    expect(find.text('Shape'), findsOneWidget);
+    expect(find.text('Reading / meaning'), findsOneWidget);
+    expect(find.text('Favorite'), findsWidgets);
+    expect(find.text('Not favorite'), findsOneWidget);
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget);
   });
 
   testWidgets('legal notice page returns to design', (tester) async {

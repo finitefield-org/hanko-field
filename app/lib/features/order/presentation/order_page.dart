@@ -46,9 +46,12 @@ class OrderPage extends ConsumerStatefulWidget {
 class _OrderPageState extends ConsumerState<OrderPage> {
   late final TextEditingController _sealLine1Controller;
   late final TextEditingController _sealLine2Controller;
+  late final ScrollController _pageScrollController;
   bool _syncingSealControllers = false;
   bool _initializedFromState = false;
   bool _bootstrapped = false;
+  bool _showSavedSealComparison = false;
+  final Set<String> _selectedSavedSealDesignIds = <String>{};
   ProviderSubscription<OrderScreenState>? _orderStateSubscription;
   String _lastAutoOpenedCheckoutToken = '';
 
@@ -57,6 +60,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     super.initState();
     _sealLine1Controller = TextEditingController();
     _sealLine2Controller = TextEditingController();
+    _pageScrollController = ScrollController();
 
     _sealLine1Controller.addListener(() {
       if (_syncingSealControllers) {
@@ -85,6 +89,24 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         final nextDraft = _draftJson(next);
         if (previousDraft != nextDraft) {
           unawaited(draftStorage.save(_draftFromState(next)));
+        }
+
+        final validSavedDesignIds = next.savedSealDesigns
+            .map((design) => design.id)
+            .toSet();
+        final selectedCountBefore = _selectedSavedSealDesignIds.length;
+        _selectedSavedSealDesignIds.removeWhere(
+          (id) => !validSavedDesignIds.contains(id),
+        );
+        final comparisonWasVisible = _showSavedSealComparison;
+        if (_showSavedSealComparison &&
+            _selectedSavedSealDesignIds.length < 2) {
+          _showSavedSealComparison = false;
+        }
+        if (mounted &&
+            (selectedCountBefore != _selectedSavedSealDesignIds.length ||
+                comparisonWasVisible != _showSavedSealComparison)) {
+          setState(() {});
         }
 
         final nextResult = next.purchaseResult;
@@ -131,6 +153,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   @override
   void dispose() {
     _orderStateSubscription?.close();
+    _pageScrollController.dispose();
     _sealLine1Controller.dispose();
     _sealLine2Controller.dispose();
     super.dispose();
@@ -237,6 +260,73 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     return jsonEncode(_draftFromState(state).toJson());
   }
 
+  void _scrollPageToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageScrollController.hasClients) {
+        return;
+      }
+      _pageScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  void _toggleSavedSealDesignSelection(String id, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedSavedSealDesignIds.add(id);
+      } else {
+        _selectedSavedSealDesignIds.remove(id);
+      }
+    });
+  }
+
+  void _clearSavedSealDesignSelection() {
+    setState(() {
+      _selectedSavedSealDesignIds.clear();
+      _showSavedSealComparison = false;
+    });
+  }
+
+  void _openSavedSealComparison() {
+    if (_selectedSavedSealDesignIds.length < 2) {
+      return;
+    }
+    setState(() {
+      _showSavedSealComparison = true;
+    });
+    _scrollPageToTop();
+  }
+
+  void _closeSavedSealComparison() {
+    setState(() {
+      _showSavedSealComparison = false;
+    });
+    _scrollPageToTop();
+  }
+
+  void _applySavedSealDesign(String id) {
+    ref.invoke(orderViewModel.applySavedSealDesign(id));
+    setState(() {
+      _showSavedSealComparison = false;
+    });
+    _scrollPageToTop();
+  }
+
+  void _continueWithSavedSealDesign(String id) {
+    ref.invoke(orderViewModel.continueWithSavedSealDesign(id));
+    setState(() {
+      _showSavedSealComparison = false;
+    });
+    _scrollPageToTop();
+  }
+
+  void _setSavedSealDesignFavorite(String id, bool isFavorite) {
+    ref.invoke(orderViewModel.setSavedSealDesignFavorite(id, isFavorite));
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(orderViewModel);
@@ -254,6 +344,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
             ),
             Expanded(
               child: SingleChildScrollView(
+                controller: _pageScrollController,
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -296,6 +387,19 @@ class _OrderPageState extends ConsumerState<OrderPage> {
     final designState = state.hasCatalog
         ? state
         : state.copyWith(step: OrderStep.design);
+
+    if (_showSavedSealComparison) {
+      return _SavedSealComparisonScreen(
+        locale: designState.locale,
+        state: designState,
+        selectedIds: _selectedSavedSealDesignIds,
+        onBack: _closeSavedSealComparison,
+        onClearSelection: _clearSavedSealDesignSelection,
+        onApply: _applySavedSealDesign,
+        onContinue: _continueWithSavedSealDesign,
+        onToggleFavorite: _setSavedSealDesignFavorite,
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,6 +453,17 @@ class _OrderPageState extends ConsumerState<OrderPage> {
             ref.invoke(orderViewModel.generateSuggestions()),
         onSelectSuggestion: (index) =>
             ref.invoke(orderViewModel.selectSuggestion(index)),
+        onSaveCurrentSealDesign: () =>
+            ref.invoke(orderViewModel.saveCurrentSealDesign()),
+        onApplySavedSealDesign: _applySavedSealDesign,
+        onContinueWithSavedSealDesign: _continueWithSavedSealDesign,
+        selectedSavedSealDesignIds: _selectedSavedSealDesignIds,
+        onToggleSavedSealDesignSelection: _toggleSavedSealDesignSelection,
+        onClearSavedSealDesignSelection: _clearSavedSealDesignSelection,
+        onCompareSavedSealDesigns: _openSavedSealComparison,
+        onToggleSavedSealDesignFavorite: _setSavedSealDesignFavorite,
+        onDeleteSavedSealDesign: (id) =>
+            ref.invoke(orderViewModel.deleteSavedSealDesign(id)),
         onNext: () => ref.invoke(orderViewModel.nextStep()),
       ),
       OrderStep.listing => _StoneListingStep(
@@ -789,6 +904,15 @@ class _DesignStep extends StatelessWidget {
     required this.onGenderChanged,
     required this.onGenerateSuggestions,
     required this.onSelectSuggestion,
+    required this.onSaveCurrentSealDesign,
+    required this.onApplySavedSealDesign,
+    required this.onContinueWithSavedSealDesign,
+    required this.selectedSavedSealDesignIds,
+    required this.onToggleSavedSealDesignSelection,
+    required this.onClearSavedSealDesignSelection,
+    required this.onCompareSavedSealDesigns,
+    required this.onToggleSavedSealDesignFavorite,
+    required this.onDeleteSavedSealDesign,
     required this.onNext,
   });
 
@@ -804,6 +928,17 @@ class _DesignStep extends StatelessWidget {
   final ValueChanged<CandidateGender> onGenderChanged;
   final VoidCallback onGenerateSuggestions;
   final ValueChanged<int> onSelectSuggestion;
+  final VoidCallback onSaveCurrentSealDesign;
+  final ValueChanged<String> onApplySavedSealDesign;
+  final ValueChanged<String> onContinueWithSavedSealDesign;
+  final Set<String> selectedSavedSealDesignIds;
+  final void Function(String id, bool selected)
+  onToggleSavedSealDesignSelection;
+  final VoidCallback onClearSavedSealDesignSelection;
+  final VoidCallback onCompareSavedSealDesigns;
+  final void Function(String id, bool isFavorite)
+  onToggleSavedSealDesignFavorite;
+  final ValueChanged<String> onDeleteSavedSealDesign;
   final VoidCallback onNext;
 
   @override
@@ -1017,6 +1152,20 @@ class _DesignStep extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildSuggestionPanel(),
+            const SizedBox(height: 12),
+            _SavedSealDesignsPanel(
+              locale: locale,
+              state: state,
+              onSave: onSaveCurrentSealDesign,
+              onApply: onApplySavedSealDesign,
+              onContinue: onContinueWithSavedSealDesign,
+              selectedIds: selectedSavedSealDesignIds,
+              onToggleSelection: onToggleSavedSealDesignSelection,
+              onClearSelection: onClearSavedSealDesignSelection,
+              onCompareSelected: onCompareSavedSealDesigns,
+              onToggleFavorite: onToggleSavedSealDesignFavorite,
+              onDelete: onDeleteSavedSealDesign,
+            ),
           ],
         ),
       ),
@@ -1887,6 +2036,1014 @@ class _SuggestionBox extends StatelessWidget {
         const SizedBox(height: 6),
         Text(tapHint, style: TextStyle(fontSize: 12, color: HfPalette.muted)),
       ],
+    );
+  }
+}
+
+class _SavedSealDesignsPanel extends StatelessWidget {
+  const _SavedSealDesignsPanel({
+    required this.locale,
+    required this.state,
+    required this.onSave,
+    required this.onApply,
+    required this.onContinue,
+    required this.selectedIds,
+    required this.onToggleSelection,
+    required this.onClearSelection,
+    required this.onCompareSelected,
+    required this.onToggleFavorite,
+    required this.onDelete,
+  });
+
+  final String locale;
+  final OrderScreenState state;
+  final VoidCallback onSave;
+  final ValueChanged<String> onApply;
+  final ValueChanged<String> onContinue;
+  final Set<String> selectedIds;
+  final void Function(String id, bool selected) onToggleSelection;
+  final VoidCallback onClearSelection;
+  final VoidCallback onCompareSelected;
+  final void Function(String id, bool isFavorite) onToggleFavorite;
+  final ValueChanged<String> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = localizedUiText(
+      locale,
+      ja: '保存済み印影案',
+      en: 'Saved seal ideas',
+    );
+    final saveLabel = localizedUiText(
+      locale,
+      ja: '現在の印影を保存',
+      en: 'Save current',
+    );
+    final compareLabel = localizedUiText(
+      locale,
+      ja: '選択した案を比較',
+      en: 'Compare selected',
+    );
+    final clearLabel = localizedUiText(locale, ja: '選択解除', en: 'Clear');
+    final emptyText = localizedUiText(
+      locale,
+      ja: '保存した印影案はここに表示されます。',
+      en: 'Saved seal ideas will appear here.',
+    );
+    final localStorageNotice = localizedUiText(
+      locale,
+      ja: '保存済み印影案は、この端末内にのみ保存されます。アプリ削除・別端末・機種変更では引き継がれません。',
+      en: 'Saved only on this device. It is not transferred if you delete the app, use another device, or change phones.',
+    );
+    final hasError = state.savedSealDesignsError.isNotEmpty;
+    final statusText = hasError
+        ? state.savedSealDesignsError
+        : state.savedSealDesignsMessage;
+    final selectedCount = state.savedSealDesigns
+        .where((design) => selectedIds.contains(design.id))
+        .length;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFCEB79F)),
+        color: const Color(0xFFFFFBF5),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onSave,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                      label: Text(saveLabel),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: HfPalette.line),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: selectedCount >= 2 ? onCompareSelected : null,
+                      icon: const Icon(Icons.compare_arrows_rounded, size: 18),
+                      label: Text(compareLabel),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            localStorageNotice,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: HfPalette.muted,
+            ),
+          ),
+          if (selectedCount > 0) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  localizedUiText(
+                    locale,
+                    ja: '$selectedCount件を比較対象に選択中',
+                    en: '$selectedCount selected for comparison',
+                  ),
+                  style: const TextStyle(fontSize: 12, color: HfPalette.muted),
+                ),
+                TextButton(
+                  onPressed: onClearSelection,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: const Size(0, 30),
+                  ),
+                  child: Text(clearLabel),
+                ),
+              ],
+            ),
+          ],
+          if (statusText.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _SavedSealDesignStatus(message: statusText, isError: hasError),
+          ],
+          const SizedBox(height: 10),
+          if (state.savedSealDesigns.isEmpty)
+            Text(
+              emptyText,
+              style: const TextStyle(fontSize: 13, color: HfPalette.muted),
+            )
+          else
+            Column(
+              children: state.savedSealDesigns
+                  .map(
+                    (design) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _SavedSealDesignTile(
+                        locale: locale,
+                        state: state,
+                        design: design,
+                        selected: selectedIds.contains(design.id),
+                        onSelectedChanged: (selected) =>
+                            onToggleSelection(design.id, selected),
+                        onApply: () => onApply(design.id),
+                        onContinue: () => onContinue(design.id),
+                        onToggleFavorite: (isFavorite) =>
+                            onToggleFavorite(design.id, isFavorite),
+                        onDelete: () => onDelete(design.id),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedSealDesignStatus extends StatelessWidget {
+  const _SavedSealDesignStatus({required this.message, required this.isError});
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isError ? const Color(0xFF8F2219) : const Color(0xFF0A564F);
+    final background = isError
+        ? const Color(0xFFFBF2F0)
+        : HfPalette.accent2.withValues(alpha: 0.08);
+    final border = isError
+        ? const Color(0xFFF1D1CE)
+        : HfPalette.accent2.withValues(alpha: 0.24);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+        color: background,
+      ),
+      child: Text(
+        message,
+        style: TextStyle(fontSize: 12.5, height: 1.35, color: color),
+      ),
+    );
+  }
+}
+
+class _SavedSealDesignTile extends StatelessWidget {
+  const _SavedSealDesignTile({
+    required this.locale,
+    required this.state,
+    required this.design,
+    required this.selected,
+    required this.onSelectedChanged,
+    required this.onApply,
+    required this.onContinue,
+    required this.onToggleFavorite,
+    required this.onDelete,
+  });
+
+  final String locale;
+  final OrderScreenState state;
+  final SavedSealDesignData design;
+  final bool selected;
+  final ValueChanged<bool> onSelectedChanged;
+  final VoidCallback onApply;
+  final VoidCallback onContinue;
+  final ValueChanged<bool> onToggleFavorite;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = SealShape.fromCode(design.shapeCode);
+    final fontLabel = _fontLabelForSavedDesign(state, design);
+    final reading = design.reading.trim();
+    final meaning = design.meaning.trim();
+    final savedAt = _formatSavedSealDesignDate(design.updatedAtMillis);
+    final applyLabel = localizedUiText(locale, ja: '編集を再開', en: 'Edit again');
+    final continueLabel = localizedUiText(
+      locale,
+      ja: '注文へ進む',
+      en: 'Continue order',
+    );
+    final deleteLabel = localizedUiText(locale, ja: '削除', en: 'Delete');
+    final selectLabel = localizedUiText(
+      locale,
+      ja: '比較対象に選択',
+      en: 'Select for comparison',
+    );
+    final favoriteLabel = localizedUiText(
+      locale,
+      ja: design.isFavorite ? 'お気に入りを解除' : 'お気に入りに追加',
+      en: design.isFavorite ? 'Remove favorite' : 'Add favorite',
+    );
+    final readingLabel = localizedUiText(locale, ja: '読み方', en: 'Reading');
+    final meaningLabel = localizedUiText(locale, ja: '提案理由', en: 'Reason');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: HfPalette.line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: selectLabel,
+            child: Checkbox(
+              value: selected,
+              onChanged: (value) => onSelectedChanged(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _SavedSealPreview(state: state, design: design),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  design.sealDisplay,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: HfPalette.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${shape.localizedLabel(locale)} / $fontLabel / $savedAt',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: HfPalette.muted),
+                ),
+                if (reading.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    '$readingLabel: $reading',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: HfPalette.muted,
+                    ),
+                  ),
+                ],
+                if (meaning.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    '$meaningLabel: $meaning',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: HfPalette.muted,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    TextButton.icon(
+                      onPressed: onApply,
+                      icon: const Icon(Icons.edit_outlined, size: 17),
+                      label: Text(applyLabel),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        minimumSize: const Size(0, 34),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onContinue,
+                      icon: const Icon(Icons.shopping_bag_outlined, size: 17),
+                      label: Text(continueLabel),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: HfPalette.accent,
+                        side: const BorderSide(color: HfPalette.accent),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        minimumSize: const Size(0, 34),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Tooltip(
+                message: favoriteLabel,
+                child: IconButton(
+                  onPressed: () => onToggleFavorite(!design.isFavorite),
+                  icon: Icon(
+                    design.isFavorite
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                  ),
+                  color: design.isFavorite
+                      ? const Color(0xFFB87912)
+                      : HfPalette.muted,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              Tooltip(
+                message: deleteLabel,
+                child: IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  color: HfPalette.muted,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedSealComparisonScreen extends StatelessWidget {
+  const _SavedSealComparisonScreen({
+    required this.locale,
+    required this.state,
+    required this.selectedIds,
+    required this.onBack,
+    required this.onClearSelection,
+    required this.onApply,
+    required this.onContinue,
+    required this.onToggleFavorite,
+  });
+
+  final String locale;
+  final OrderScreenState state;
+  final Set<String> selectedIds;
+  final VoidCallback onBack;
+  final VoidCallback onClearSelection;
+  final ValueChanged<String> onApply;
+  final ValueChanged<String> onContinue;
+  final void Function(String id, bool isFavorite) onToggleFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final designs = state.savedSealDesigns
+        .where((design) => selectedIds.contains(design.id))
+        .toList(growable: false);
+    final title = localizedUiText(
+      locale,
+      ja: '印影案を比較',
+      en: 'Compare seal ideas',
+    );
+    final subtitle = localizedUiText(
+      locale,
+      ja: '選択した保存済み印影案の文字・書体・形状・読み方/意味・お気に入り状態を見比べられます。',
+      en: 'Review the saved seal text, font, shape, reading, meaning, and favorite state side by side.',
+    );
+    final backLabel = localizedUiText(locale, ja: '保存済み案に戻る', en: 'Back');
+    final clearLabel = localizedUiText(locale, ja: '選択を解除', en: 'Clear');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                      color: HfPalette.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.55,
+                      color: HfPalette.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                    label: Text(backLabel),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: HfPalette.line),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onClearSelection,
+                    child: Text(clearLabel),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        if (designs.length < 2)
+          _SavedSealDesignStatus(
+            message: localizedUiText(
+              locale,
+              ja: '比較する印影案を2件以上選択してください。',
+              en: 'Select at least two seal ideas to compare.',
+            ),
+            isError: true,
+          )
+        else
+          _SavedSealComparisonTable(
+            locale: locale,
+            state: state,
+            designs: designs,
+            onApply: onApply,
+            onContinue: onContinue,
+            onToggleFavorite: onToggleFavorite,
+          ),
+      ],
+    );
+  }
+}
+
+class _SavedSealComparisonTable extends StatelessWidget {
+  const _SavedSealComparisonTable({
+    required this.locale,
+    required this.state,
+    required this.designs,
+    required this.onApply,
+    required this.onContinue,
+    required this.onToggleFavorite,
+  });
+
+  final String locale;
+  final OrderScreenState state;
+  final List<SavedSealDesignData> designs;
+  final ValueChanged<String> onApply;
+  final ValueChanged<String> onContinue;
+  final void Function(String id, bool isFavorite) onToggleFavorite;
+
+  static const _labelWidth = 150.0;
+  static const _minColumnWidth = 238.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final expandedColumnWidth = designs.isEmpty
+            ? _minColumnWidth
+            : (constraints.maxWidth - _labelWidth) / designs.length;
+        final columnWidth = expandedColumnWidth > _minColumnWidth
+            ? expandedColumnWidth
+            : _minColumnWidth;
+        final tableWidth = _labelWidth + columnWidth * designs.length;
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: SizedBox(
+              width: tableWidth,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: HfPalette.line),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _headerRow(columnWidth: columnWidth),
+                      _comparisonRow(
+                        label: localizedUiText(
+                          locale,
+                          ja: '印面テキスト',
+                          en: 'Seal text',
+                        ),
+                        values: designs
+                            .map((design) {
+                              return _ComparisonText(
+                                primary: design.sealDisplay,
+                                emphasize: true,
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                      ),
+                      _comparisonRow(
+                        label: localizedUiText(locale, ja: '書体', en: 'Font'),
+                        values: designs
+                            .map((design) {
+                              return _ComparisonText(
+                                primary: _fontLabelForSavedDesign(
+                                  state,
+                                  design,
+                                ),
+                                secondary: KanjiStyle.fromCode(
+                                  design.kanjiStyleCode,
+                                ).localizedLabel(locale),
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                      ),
+                      _comparisonRow(
+                        label: localizedUiText(locale, ja: '形状', en: 'Shape'),
+                        values: designs
+                            .map((design) {
+                              return _ComparisonText(
+                                primary: SealShape.fromCode(
+                                  design.shapeCode,
+                                ).localizedLabel(locale),
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                      ),
+                      _comparisonRow(
+                        label: localizedUiText(
+                          locale,
+                          ja: '読み方 / 意味',
+                          en: 'Reading / meaning',
+                        ),
+                        values: designs
+                            .map((design) {
+                              final reading = design.reading.trim();
+                              final meaning = design.meaning.trim();
+                              final fallback = localizedUiText(
+                                locale,
+                                ja: '保存された読み方・意味はありません。',
+                                en: 'No reading or reason saved.',
+                              );
+                              return _ComparisonText(
+                                primary: reading.isEmpty ? fallback : reading,
+                                secondary: meaning,
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                        minHeight: 96,
+                      ),
+                      _comparisonRow(
+                        label: localizedUiText(
+                          locale,
+                          ja: 'お気に入り',
+                          en: 'Favorite',
+                        ),
+                        values: designs
+                            .map((design) {
+                              return _FavoriteComparisonCell(
+                                locale: locale,
+                                design: design,
+                                onToggle: () => onToggleFavorite(
+                                  design.id,
+                                  !design.isFavorite,
+                                ),
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                      ),
+                      _comparisonRow(
+                        label: localizedUiText(locale, ja: '操作', en: 'Actions'),
+                        values: designs
+                            .map((design) {
+                              return _ComparisonActions(
+                                locale: locale,
+                                onApply: () => onApply(design.id),
+                                onContinue: () => onContinue(design.id),
+                              );
+                            })
+                            .toList(growable: false),
+                        columnWidth: columnWidth,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _headerRow({required double columnWidth}) {
+    return _comparisonRowShell(
+      columnWidth: columnWidth,
+      minHeight: 118,
+      isFirstRow: true,
+      isHeader: true,
+      label: Text(
+        localizedUiText(locale, ja: '比較項目', en: 'Compare'),
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: HfPalette.ink,
+        ),
+      ),
+      values: designs
+          .map((design) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SavedSealPreview(state: state, design: design),
+                const SizedBox(height: 8),
+                Text(
+                  _formatSavedSealDesignDate(design.updatedAtMillis),
+                  style: const TextStyle(fontSize: 12, color: HfPalette.muted),
+                ),
+              ],
+            );
+          })
+          .toList(growable: false),
+    );
+  }
+
+  Widget _comparisonRow({
+    required String label,
+    required List<Widget> values,
+    required double columnWidth,
+    double minHeight = 78,
+  }) {
+    return _comparisonRowShell(
+      columnWidth: columnWidth,
+      minHeight: minHeight,
+      label: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: HfPalette.ink,
+        ),
+      ),
+      values: values,
+    );
+  }
+
+  Widget _comparisonRowShell({
+    required Widget label,
+    required List<Widget> values,
+    required double columnWidth,
+    required double minHeight,
+    bool isFirstRow = false,
+    bool isHeader = false,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _comparisonCell(
+            label,
+            width: _labelWidth,
+            minHeight: minHeight,
+            isFirstRow: isFirstRow,
+            isLastColumn: values.isEmpty,
+            isHeader: isHeader,
+          ),
+          for (var index = 0; index < values.length; index++)
+            _comparisonCell(
+              values[index],
+              width: columnWidth,
+              minHeight: minHeight,
+              isFirstRow: isFirstRow,
+              isLastColumn: index == values.length - 1,
+              isHeader: isHeader,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _comparisonCell(
+    Widget child, {
+    required double width,
+    required double minHeight,
+    required bool isFirstRow,
+    required bool isLastColumn,
+    required bool isHeader,
+  }) {
+    return Container(
+      width: width,
+      constraints: BoxConstraints(minHeight: minHeight),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border(
+          top: isFirstRow
+              ? BorderSide.none
+              : const BorderSide(color: HfPalette.line),
+          right: isLastColumn
+              ? BorderSide.none
+              : const BorderSide(color: HfPalette.line),
+        ),
+        color: isHeader ? const Color(0xFFFFFBF5) : Colors.white,
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: child),
+    );
+  }
+}
+
+class _ComparisonText extends StatelessWidget {
+  const _ComparisonText({
+    required this.primary,
+    this.secondary = '',
+    this.emphasize = false,
+  });
+
+  final String primary;
+  final String secondary;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          primary,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: emphasize ? 16 : 13,
+            height: 1.35,
+            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+            color: HfPalette.ink,
+          ),
+        ),
+        if (secondary.trim().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            secondary.trim(),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: HfPalette.muted,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FavoriteComparisonCell extends StatelessWidget {
+  const _FavoriteComparisonCell({
+    required this.locale,
+    required this.design,
+    required this.onToggle,
+  });
+
+  final String locale;
+  final SavedSealDesignData design;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = localizedUiText(
+      locale,
+      ja: design.isFavorite ? 'お気に入り' : '未設定',
+      en: design.isFavorite ? 'Favorite' : 'Not favorite',
+    );
+    final tooltip = localizedUiText(
+      locale,
+      ja: design.isFavorite ? 'お気に入りを解除' : 'お気に入りに追加',
+      en: design.isFavorite ? 'Remove favorite' : 'Add favorite',
+    );
+
+    return Row(
+      children: [
+        Icon(
+          design.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+          size: 20,
+          color: design.isFavorite ? const Color(0xFFB87912) : HfPalette.muted,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: HfPalette.ink,
+            ),
+          ),
+        ),
+        Tooltip(
+          message: tooltip,
+          child: IconButton(
+            onPressed: onToggle,
+            icon: const Icon(Icons.swap_horiz_rounded),
+            iconSize: 18,
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ComparisonActions extends StatelessWidget {
+  const _ComparisonActions({
+    required this.locale,
+    required this.onApply,
+    required this.onContinue,
+  });
+
+  final String locale;
+  final VoidCallback onApply;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final applyLabel = localizedUiText(locale, ja: '編集', en: 'Edit');
+    final continueLabel = localizedUiText(locale, ja: '注文へ', en: 'Order');
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        TextButton.icon(
+          onPressed: onApply,
+          icon: const Icon(Icons.edit_outlined, size: 17),
+          label: Text(applyLabel),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 34),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: onContinue,
+          icon: const Icon(Icons.shopping_bag_outlined, size: 17),
+          label: Text(continueLabel),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: HfPalette.accent,
+            side: const BorderSide(color: HfPalette.accent),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 34),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SavedSealPreview extends StatelessWidget {
+  const _SavedSealPreview({required this.state, required this.design});
+
+  final OrderScreenState state;
+  final SavedSealDesignData design;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = SealShape.fromCode(design.shapeCode);
+    final line1 = design.sealLine1.isEmpty ? '印' : design.sealLine1;
+    final line2 = design.sealLine2;
+    final family = _fontFamilyForSavedDesign(state, design);
+
+    return Container(
+      width: 58,
+      height: 58,
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        shape: shape == SealShape.round ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: shape == SealShape.square
+            ? BorderRadius.circular(10)
+            : null,
+        border: Border.all(color: HfPalette.accent, width: 2),
+        color: const Color(0xFFFFF7F5),
+      ),
+      child: CustomPaint(
+        painter: _SealPreviewTextPainter(
+          line1: line1,
+          line2: line2,
+          line1Style: _stampFontStyle(
+            family: family,
+            size: line2.isEmpty ? 31 : 24,
+          ),
+          line2Style: _stampFontStyle(family: family, size: 24),
+          lineGap: 1,
+        ),
+      ),
     );
   }
 }
@@ -3272,6 +4429,47 @@ class _LabeledField extends StatelessWidget {
       ],
     );
   }
+}
+
+String _fontLabelForSavedDesign(
+  OrderScreenState state,
+  SavedSealDesignData design,
+) {
+  for (final font in state.catalog.fonts) {
+    if (font.key == design.selectedFontKey) {
+      return font.label;
+    }
+  }
+  if (design.fontLabel.trim().isNotEmpty) {
+    return design.fontLabel.trim();
+  }
+  return state.selectedFont.label;
+}
+
+String _fontFamilyForSavedDesign(
+  OrderScreenState state,
+  SavedSealDesignData design,
+) {
+  for (final font in state.catalog.fonts) {
+    if (font.key == design.selectedFontKey) {
+      return font.family;
+    }
+  }
+  if (design.fontFamily.trim().isNotEmpty) {
+    return design.fontFamily.trim();
+  }
+  return state.selectedFont.family;
+}
+
+String _formatSavedSealDesignDate(int millis) {
+  if (millis <= 0) {
+    return '';
+  }
+
+  final date = DateTime.fromMillisecondsSinceEpoch(millis);
+  String twoDigits(int value) => value.toString().padLeft(2, '0');
+  return '${date.year}-${twoDigits(date.month)}-${twoDigits(date.day)} '
+      '${twoDigits(date.hour)}:${twoDigits(date.minute)}';
 }
 
 TextStyle _stampFontStyle({
