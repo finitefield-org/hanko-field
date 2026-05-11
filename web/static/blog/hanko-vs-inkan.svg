@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Hanko and inkan comparison</title>
+  <desc id="desc">A Japanese seal beside a red impression on paper, showing the difference between the stamp and the mark.</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="0.62" stop-color="#e1d7c9"/>
+      <stop offset="1" stop-color="#b9ab99"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0.15" y1="0.04" x2="0.88" y2="0.96">
+      <stop offset="0" stop-color="#e6e4d2"/>
+      <stop offset="0.25" stop-color="#b2a982"/>
+      <stop offset="0.54" stop-color="#6e6647"/>
+      <stop offset="0.8" stop-color="#2e2c22"/>
+      <stop offset="1" stop-color="#10100d"/>
+    </linearGradient>
+    <linearGradient id="sealSide" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b8f67"/>
+      <stop offset="0.58" stop-color="#4d4733"/>
+      <stop offset="1" stop-color="#14130f"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.018 0.034" numOctaves="4" seed="73"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.16"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="#1b1714"/>
+  <path d="M0 198 1200 94v806H0Z" fill="#332b24"/>
+  <g filter="url(#grain)">
+    <path d="M126 196 1072 138 1115 760 178 824Z" fill="url(#paper)"/>
+    <path d="M252 292c0-56 68-101 153-101s153 45 153 101v312c0 56-68 101-153 101s-153-45-153-101Z" fill="url(#sealSide)"/>
+    <ellipse cx="405" cy="292" rx="153" ry="101" fill="url(#stone)"/>
+    <ellipse cx="405" cy="292" rx="112" ry="66" fill="#fff7e3" opacity="0.16"/>
+    <path d="M340 260h129M340 307h129M383 239v91M428 239v91" stroke="#1e1b15" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+    <path d="M287 378c77 38 158 39 243 3" fill="none" stroke="#ded4b9" stroke-width="7" stroke-linecap="round" opacity="0.18"/>
+    <path d="M287 505c78 38 159 39 243 2" fill="none" stroke="#ded4b9" stroke-width="6" stroke-linecap="round" opacity="0.13"/>
+    <rect x="677" y="334" width="252" height="252" fill="#96181a" opacity="0.92" transform="rotate(4 803 460)"/>
+    <path d="M723 388h160M723 448h160M723 508h160M777 369v166M838 369v166" stroke="#f7dfd8" stroke-width="8" stroke-linecap="round" opacity="0.47" transform="rotate(4 803 460)"/>
+    <path d="M564 277C611 235 667 215 735 218" fill="none" stroke="#7e1518" stroke-width="5" stroke-linecap="round" opacity="0.48"/>
+    <path d="M636 232l99-14-67 74" fill="none" stroke="#7e1518" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.48"/>
+    <text x="405" y="768" fill="#2a2722" font-family="Georgia, serif" font-size="42" text-anchor="middle" opacity="0.78">HANKO</text>
+    <text x="803" y="768" fill="#2a2722" font-family="Georgia, serif" font-size="42" text-anchor="middle" opacity="0.78">INKAN</text>
+  </g>
+</svg>

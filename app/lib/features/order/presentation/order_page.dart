@@ -1,5 +1,6 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -1014,6 +1015,8 @@ class _DesignStep extends StatelessWidget {
               styleHint,
               style: TextStyle(fontSize: 12, color: HfPalette.muted),
             ),
+            const SizedBox(height: 12),
+            _buildSuggestionPanel(),
           ],
         ),
       ),
@@ -1026,25 +1029,29 @@ class _DesignStep extends StatelessWidget {
     final hasLine2 = line2.isNotEmpty;
     final isSingleChar = !hasLine2 && line1.characters.length == 1;
     final isSingleLine = !hasLine2 && line1.characters.length > 1;
+    final isRound = state.shape == SealShape.round;
 
-    var line1Size = 140.0;
-    var line2Size = 106.0;
+    const rem = 16.0;
+    var line1Size = 8.8 * rem;
+    var line2Size = 5.6 * rem;
     if (hasLine2) {
-      line1Size = state.shape == SealShape.round ? 86 : 100;
-      line2Size = state.shape == SealShape.round ? 86 : 100;
+      line1Size = isRound ? 6.2 * rem : 6.8 * rem;
+      line2Size = isRound ? 6.2 * rem : 6.8 * rem;
     } else if (isSingleLine) {
-      line1Size = state.shape == SealShape.round ? 114 : 132;
+      line1Size = isRound ? 8.8 * rem : 9.4 * rem;
     } else if (isSingleChar) {
-      line1Size = state.shape == SealShape.round ? 154 : 168;
+      line1Size = isRound ? 10.8 * rem : 12.5 * rem;
     }
 
-    final previewPadding = isSingleChar ? 0.0 : 5.0;
-    final previewScale = isSingleChar ? 1.14 : 1.08;
-    final previewShiftY = hasLine2
-        ? -2.0
-        : isSingleChar
-        ? -12.0
-        : 0.0;
+    final previewPadding = isSingleChar
+        ? const EdgeInsets.fromLTRB(4, 2, 4, 8)
+        : const EdgeInsets.all(6);
+    final previewScale = isSingleChar ? (isRound ? 1.14 : 1.18) : 1.1;
+    final lineGap = hasLine2
+        ? isRound
+              ? 0.06 * rem
+              : 0.08 * rem
+        : 0.15 * rem;
     final previewTitle = localizedUiText(locale, ja: 'プレビュー', en: 'Preview');
     final shapeOptionsLabel = localizedUiText(locale, ja: '形状', en: 'Shape');
     final fontOptionsLabel = localizedUiText(
@@ -1074,7 +1081,7 @@ class _DesignStep extends StatelessWidget {
                       ? BoxShape.circle
                       : BoxShape.rectangle,
                   borderRadius: state.shape == SealShape.square
-                      ? BorderRadius.circular(18)
+                      ? BorderRadius.circular(16)
                       : null,
                   border: Border.all(color: HfPalette.accent, width: 4),
                   gradient: const LinearGradient(
@@ -1084,35 +1091,35 @@ class _DesignStep extends StatelessWidget {
                   ),
                 ),
                 child: Padding(
-                  padding: isSingleChar
-                      ? const EdgeInsets.fromLTRB(4, 2, 4, 8)
-                      : EdgeInsets.all(previewPadding),
-                  child: Transform.translate(
-                    offset: Offset(0, previewShiftY),
-                    child: Transform.scale(
-                      scale: previewScale,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            line1,
-                            style: _stampFontStyle(
-                              family: state.selectedFont.family,
-                              size: line1Size,
-                            ),
+                  padding: previewPadding,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CustomPaint(
+                        painter: _SealPreviewTextPainter(
+                          line1: line1,
+                          line2: hasLine2 ? line2 : '',
+                          line1Style: _stampFontStyle(
+                            family: state.selectedFont.family,
+                            size: line1Size * previewScale,
+                            height: 1,
                           ),
-                          if (hasLine2) const SizedBox(height: 2),
-                          if (hasLine2)
-                            Text(
-                              line2,
-                              style: _stampFontStyle(
-                                family: state.selectedFont.family,
-                                size: line2Size,
-                              ),
-                            ),
-                        ],
+                          line2Style: _stampFontStyle(
+                            family: state.selectedFont.family,
+                            size: line2Size * previewScale,
+                            height: 1,
+                          ),
+                          lineGap: lineGap * previewScale,
+                        ),
+                        child: const SizedBox.expand(),
                       ),
-                    ),
+                      ExcludeSemantics(
+                        child: Opacity(
+                          opacity: 0,
+                          child: Text(hasLine2 ? '$line1\n$line2' : line1),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1270,8 +1277,6 @@ class _DesignStep extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 12),
-            _buildSuggestionPanel(),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -1884,6 +1889,94 @@ class _SuggestionBox extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SealPreviewTextPainter extends CustomPainter {
+  const _SealPreviewTextPainter({
+    required this.line1,
+    required this.line2,
+    required this.line1Style,
+    required this.line2Style,
+    required this.lineGap,
+  });
+
+  final String line1;
+  final String line2;
+  final TextStyle line1Style;
+  final TextStyle line2Style;
+  final double lineGap;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final lines = <_MeasuredSealLine>[
+      _measureLine(line1, line1Style),
+      if (line2.trim().isNotEmpty) _measureLine(line2, line2Style),
+    ];
+    if (lines.isEmpty) {
+      return;
+    }
+
+    final blockWidth = lines.fold<double>(
+      0,
+      (maxWidth, line) =>
+          line.bounds.width > maxWidth ? line.bounds.width : maxWidth,
+    );
+    final blockHeight =
+        lines.fold<double>(0, (height, line) => height + line.bounds.height) +
+        lineGap * (lines.length - 1);
+
+    var y = (size.height - blockHeight) / 2;
+    for (final line in lines) {
+      final x =
+          (size.width - blockWidth) / 2 +
+          (blockWidth - line.bounds.width) / 2 -
+          line.bounds.left;
+      line.painter.paint(canvas, Offset(x, y - line.bounds.top));
+      y += line.bounds.height + lineGap;
+    }
+  }
+
+  _MeasuredSealLine _measureLine(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final boxes = painter.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: text.length),
+      boxHeightStyle: ui.BoxHeightStyle.tight,
+      boxWidthStyle: ui.BoxWidthStyle.tight,
+    );
+
+    Rect bounds;
+    if (boxes.isEmpty) {
+      bounds = Offset.zero & painter.size;
+    } else {
+      bounds = boxes.first.toRect();
+      for (final box in boxes.skip(1)) {
+        bounds = bounds.expandToInclude(box.toRect());
+      }
+    }
+
+    return _MeasuredSealLine(painter: painter, bounds: bounds);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SealPreviewTextPainter oldDelegate) {
+    return line1 != oldDelegate.line1 ||
+        line2 != oldDelegate.line2 ||
+        line1Style != oldDelegate.line1Style ||
+        line2Style != oldDelegate.line2Style ||
+        lineGap != oldDelegate.lineGap;
+  }
+}
+
+class _MeasuredSealLine {
+  const _MeasuredSealLine({required this.painter, required this.bounds});
+
+  final TextPainter painter;
+  final Rect bounds;
 }
 
 class _StoneListingStep extends StatelessWidget {
@@ -3185,12 +3278,13 @@ TextStyle _stampFontStyle({
   required String family,
   required double size,
   Color color = HfPalette.accent,
+  double height = 0.9,
 }) {
   final base = TextStyle(
     fontSize: size,
     color: color,
     fontWeight: FontWeight.w700,
-    height: 0.9,
+    height: height,
   );
 
   final primaryFont = _extractPrimaryFontName(family);

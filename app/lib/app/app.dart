@@ -71,12 +71,16 @@ class _AppRootState extends ConsumerState<_AppRoot> {
     final openLegalNotice = () => ref.invoke(appNavViewModel.showLegalNotice());
     final openTerms = () => ref.invoke(appNavViewModel.showTerms());
     final popToRoot = () => ref.invoke(appNavViewModel.popToRoot());
+    final backToDesign = () {
+      ref.invoke(orderViewModel.resetToDesignStep());
+      popToRoot();
+    };
 
     if (page.key == AppPageKey.about) {
       return AboutPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onBackToDesign: popToRoot,
+        onBackToDesign: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
@@ -87,9 +91,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
       return OrderPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onBackToTop: () {
-          popToRoot();
-        },
+        onBackToTop: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
@@ -112,7 +114,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
       return LegalNoticePage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onBack: popToRoot,
+        onBack: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
@@ -123,7 +125,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
       return TermsPage(
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
-        onBack: popToRoot,
+        onBack: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
@@ -139,9 +141,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         orderId: data?.orderId,
         sessionId: data?.sessionId,
-        onBackToTop: () {
-          popToRoot();
-        },
+        onBackToTop: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,
@@ -156,9 +156,7 @@ class _AppRootState extends ConsumerState<_AppRoot> {
         locale: locale,
         onSelectLocale: (nextLocale) => _selectLocale(ref, nextLocale),
         orderId: data?.orderId,
-        onBackToTop: () {
-          popToRoot();
-        },
+        onBackToTop: backToDesign,
         onOpenAbout: openAbout,
         onOpenLegalNotice: openLegalNotice,
         onOpenTerms: openTerms,

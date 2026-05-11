@@ -204,6 +204,42 @@ void main() {
     expect(find.textContaining('Connection refused'), findsNothing);
   });
 
+  testWidgets('about design action returns to the design step', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appRuntimeConfigProvider.overrideWithValue(
+            const AppRuntimeConfig(
+              apiBaseUrl: 'http://localhost:3050',
+              preferredLocale: 'en',
+              mode: AppMode.mock,
+            ),
+          ),
+        ],
+        child: const HankoApp(),
+      ),
+    );
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('Name for the seal text'));
+
+    await tester.enterText(find.byType(TextField).first, 'Alex');
+    await tester.pumpAndSettle();
+    final nextButton = find.widgetWithText(FilledButton, 'Next: Listing');
+    await tester.ensureVisible(nextButton);
+    await tester.pumpAndSettle();
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose listing'), findsOneWidget);
+
+    await tapInkWellWithText(tester, 'ABOUT STONE SIGNATURE');
+    await pumpUntilFound(tester, find.text('About STONE SIGNATURE'));
+    await tapInkWellWithText(tester, 'Design');
+
+    expect(find.text('Name for the seal text'), findsOneWidget);
+    expect(find.text('Choose listing'), findsNothing);
+  });
+
   testWidgets('about page shows Japanese service copy', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
