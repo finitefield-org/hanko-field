@@ -416,6 +416,138 @@ class OrderDraftData {
   }
 }
 
+@immutable
+class SavedSealDesignData {
+  static const int version = 1;
+  static const persistedJsonKeys = <String>{
+    'version',
+    'id',
+    'seal_line1',
+    'seal_line2',
+    'kanji_style',
+    'selected_font_key',
+    'shape',
+    'reading',
+    'meaning',
+    'is_favorite',
+    'created_at_ms',
+    'updated_at_ms',
+  };
+
+  final String id;
+  final String sealLine1;
+  final String sealLine2;
+  final String kanjiStyleCode;
+  final String selectedFontKey;
+  final String fontLabel;
+  final String fontFamily;
+  final String shapeCode;
+  final String reading;
+  final String meaning;
+  final bool isFavorite;
+  final int createdAtMillis;
+  final int updatedAtMillis;
+
+  const SavedSealDesignData({
+    required this.id,
+    required this.sealLine1,
+    required this.sealLine2,
+    required this.kanjiStyleCode,
+    required this.selectedFontKey,
+    required this.fontLabel,
+    required this.fontFamily,
+    required this.shapeCode,
+    this.reading = '',
+    this.meaning = '',
+    this.isFavorite = false,
+    required this.createdAtMillis,
+    required this.updatedAtMillis,
+  });
+
+  String get sealDisplay {
+    if (sealLine2.isEmpty) {
+      return sealLine1;
+    }
+    return '$sealLine1 / $sealLine2';
+  }
+
+  SavedSealDesignData copyWith({
+    String? id,
+    String? sealLine1,
+    String? sealLine2,
+    String? kanjiStyleCode,
+    String? selectedFontKey,
+    String? fontLabel,
+    String? fontFamily,
+    String? shapeCode,
+    String? reading,
+    String? meaning,
+    bool? isFavorite,
+    int? createdAtMillis,
+    int? updatedAtMillis,
+  }) {
+    return SavedSealDesignData(
+      id: id ?? this.id,
+      sealLine1: sealLine1 ?? this.sealLine1,
+      sealLine2: sealLine2 ?? this.sealLine2,
+      kanjiStyleCode: kanjiStyleCode ?? this.kanjiStyleCode,
+      selectedFontKey: selectedFontKey ?? this.selectedFontKey,
+      fontLabel: fontLabel ?? this.fontLabel,
+      fontFamily: fontFamily ?? this.fontFamily,
+      shapeCode: shapeCode ?? this.shapeCode,
+      reading: reading ?? this.reading,
+      meaning: meaning ?? this.meaning,
+      isFavorite: isFavorite ?? this.isFavorite,
+      createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+      updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+    );
+  }
+
+  bool hasSameDesignAs(SavedSealDesignData other) {
+    return sealLine1 == other.sealLine1 &&
+        sealLine2 == other.sealLine2 &&
+        kanjiStyleCode == other.kanjiStyleCode &&
+        selectedFontKey == other.selectedFontKey &&
+        shapeCode == other.shapeCode;
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'version': version,
+      'id': id,
+      'seal_line1': sealLine1,
+      'seal_line2': sealLine2,
+      'kanji_style': kanjiStyleCode,
+      'selected_font_key': selectedFontKey,
+      'shape': shapeCode,
+      'reading': reading,
+      'meaning': meaning,
+      'is_favorite': isFavorite,
+      'created_at_ms': createdAtMillis,
+      'updated_at_ms': updatedAtMillis,
+    };
+  }
+
+  factory SavedSealDesignData.fromJson(Map<String, Object?> json) {
+    final createdAtMillis = _asInt(json['created_at_ms']);
+    return SavedSealDesignData(
+      id: _asString(json['id']),
+      sealLine1: _asString(json['seal_line1']),
+      sealLine2: _asString(json['seal_line2']),
+      kanjiStyleCode: _asString(json['kanji_style']),
+      selectedFontKey: _asString(json['selected_font_key']),
+      fontLabel: '',
+      fontFamily: '',
+      shapeCode: _asString(json['shape']),
+      reading: _asString(json['reading']),
+      meaning: _asString(json['meaning']),
+      isFavorite: _asBool(json['is_favorite']),
+      createdAtMillis: createdAtMillis,
+      updatedAtMillis: _asInt(json['updated_at_ms'], fallback: createdAtMillis),
+    );
+  }
+}
+
 int _asInt(Object? value, {int fallback = 0}) {
   if (value is num) {
     return value.toInt();
