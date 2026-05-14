@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">English name kanji seal</title>
+  <desc id="desc">A natural stone name seal with alphabet letters, katakana, and Chinese characters on paper.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6f2e9"/>
+      <stop offset="0.46" stop-color="#c9d7d2"/>
+      <stop offset="1" stop-color="#314b55"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0.08" y1="0" x2="0.95" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="0.72" stop-color="#eee3d1"/>
+      <stop offset="1" stop-color="#d0bda5"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0.18" y1="0.06" x2="0.86" y2="1">
+      <stop offset="0" stop-color="#f0f4ef"/>
+      <stop offset="0.24" stop-color="#aac6b8"/>
+      <stop offset="0.58" stop-color="#49706d"/>
+      <stop offset="1" stop-color="#1f3337"/>
+    </linearGradient>
+    <linearGradient id="stoneSide" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fa09a"/>
+      <stop offset="0.58" stop-color="#31565a"/>
+      <stop offset="1" stop-color="#162a30"/>
+    </linearGradient>
+    <radialGradient id="sealInk" cx="48%" cy="42%" r="63%">
+      <stop offset="0" stop-color="#ff6751"/>
+      <stop offset="0.55" stop-color="#bd2323"/>
+      <stop offset="1" stop-color="#6c080d"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.019 0.032" numOctaves="4" seed="712"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.13"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#18242a" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#background)"/>
+  <path d="M0 210 1200 76v824H0Z" fill="#20343c" opacity="0.16"/>
+  <g filter="url(#grain)">
+    <path d="M126 158 850 104l56 612-724 72Z" fill="url(#paper)" filter="url(#shadow)"/>
+    <path d="M706 250 1040 316 974 760 636 704Z" fill="#e2d5c3" filter="url(#shadow)"/>
+    <g opacity="0.82">
+      <rect x="214" y="260" width="154" height="154" rx="8" fill="#f7efe3" stroke="#b69f83" stroke-width="5"/>
+      <text x="291" y="357" text-anchor="middle" font-family="Georgia, serif" font-size="62" font-weight="700" fill="#233f45">OB</text>
+      <rect x="418" y="244" width="178" height="178" rx="8" fill="#f7efe3" stroke="#b69f83" stroke-width="5"/>
+      <text x="507" y="350" text-anchor="middle" font-family="'Noto Serif JP', serif" font-size="48" font-weight="700" fill="#233f45">オリビア</text>
+      <rect x="648" y="264" width="154" height="154" rx="8" fill="#f7efe3" stroke="#b69f83" stroke-width="5"/>
+      <text x="725" y="358" text-anchor="middle" font-family="'Noto Serif JP', serif" font-size="68" font-weight="700" fill="#233f45">光</text>
+    </g>
+    <path d="M248 486h480M248 540h420M248 594h512" stroke="#6e5f50" stroke-width="12" stroke-linecap="round" opacity="0.16"/>
+    <g filter="url(#shadow)">
+      <path d="M430 502c0-58 70-104 158-104s158 46 158 104v170c0 58-70 104-158 104s-158-46-158-104Z" fill="url(#stoneSide)"/>
+      <ellipse cx="588" cy="502" rx="158" ry="104" fill="url(#stone)"/>
+      <ellipse cx="588" cy="502" rx="112" ry="66" fill="#ffffff" opacity="0.15"/>
+      <path d="M524 470h128M524 518h128M568 446v98M610 446v98" stroke="#102429" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+      <path d="M472 610c72 32 160 33 232 1" fill="none" stroke="#d6eee6" stroke-width="7" stroke-linecap="round" opacity="0.18"/>
+    </g>
+    <g transform="rotate(6 890 612)">
+      <rect x="812" y="534" width="156" height="156" rx="2" fill="url(#sealInk)" opacity="0.94"/>
+      <path d="M850 572h82M850 610h82M850 648h82M878 560v100M908 560v100" stroke="#f9ded8" stroke-width="6" stroke-linecap="round" opacity="0.48"/>
+    </g>
+    <path d="M832 212c72-32 158-12 218 44" fill="none" stroke="#f6eee1" stroke-width="14" stroke-linecap="round" opacity="0.28"/>
+    <path d="M170 686c84-38 184-44 300-18 98 22 198 18 302-10" fill="none" stroke="#9e2422" stroke-width="13" stroke-linecap="round" opacity="0.7"/>
+  </g>
+</svg>
