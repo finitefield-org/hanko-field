@@ -80,6 +80,19 @@
 - [x] `web` のジャーナルに「Hanko vs Inkan: What's the Difference?」を追加する
 - [x] `web` のジャーナルに「What Is a Personal Seal? History, Meaning, and Modern Uses」を追加する
 - [x] `web` のジャーナルから初期サンプル記事3本を削除する
+- [x] `web` のジャーナルに「Why a Custom Stone Seal Makes a Meaningful Gift」と日本語記事を追加する
+- [x] `web` のジャーナルに「Custom Jade Seal: Meaning, Materials, and How to Choose One」と日本語記事を追加する
+- [x] `web` のジャーナルに「Japanese Hanko as a Souvenir: A Personal Piece of Japan」と日本語記事を追加する
+- [x] `web` のジャーナルに「How to Choose the Right Stone for Your Personal Seal」と日本語記事を追加する
+- [x] `web` のジャーナルに「Jade, Agate, or Qingtian Stone: Which Seal Material Is Best?」と日本語記事を追加する
+- [x] `web` のジャーナルに「A Personal Seal as a Symbol of Identity」と日本語記事を追加する
+- [x] `web` のジャーナルに「Luxury Personal Seals: A New Way to Express Your Signature」と日本語記事を追加する
+- [x] `web` に追加した7本のジャーナル記事の sitemap 出力とSEOタグを検証・調整する
+- [x] `web` のジャーナルに「How to Turn Your English Name into a Japanese or Chinese Seal」と日本語記事を追加する
+- [x] `web` のジャーナルに「What to Engrave on a Custom Personal Seal」と日本語記事を追加する
+- [x] `web` のジャーナルに「Personal Seals for Artists, Writers, and Creators」と日本語記事を追加する
+- [x] `web` のジャーナルに「Chinese Chop Seal vs Japanese Hanko: Similarities and Differences」と日本語記事を追加する
+- [x] `web` のジャーナルに「The Beauty of One-of-a-Kind Stone Seals」と日本語記事を追加する
 - [x] App Store Review Guideline 4.2 対応として、Flutterアプリの起動時初期ルートをDesign画面に変更し、起動直後から印影ライブプレビュー・文字入力・書体/形状選択を見せる
 - [x] FlutterのDesign画面ヘッダーにブランド名と短いタグラインを追加し、ホーム画面として自然に見えるUIに調整する
 - [x] 現在のFlutterトップページで使っているブランド画像・主要文言・世界観説明を流用して、About STONE SIGNATURE画面へ移管する
@@ -95,3 +108,6 @@
 - [x] 保存済み印影案を複数選んで比較できる画面を追加し、印面テキスト・書体・形状・読み方/意味・お気に入り状態を見比べられるようにする
 - [x] 保存済み印影案は端末内保存のみとし、アプリ削除・別端末・機種変更では引き継がれないことをアプリ内で必要最小限に明示する
 - [x] App Review Notesに、保存済み印影案がFlutterネイティブUIで実装されたローカルデザインライブラリであり、WebView・会員登録・Firebase Authを使わずに複数案の保存/比較/注文継続ができることを追記する
+- [x] `web` の sitemap にページ別 `lastmod` を追加し、URL表記・hreflang・robots.txt の Sitemap 指定を確認する
+- [x] `web` を本番 `hanko-field-prod` プロジェクトの Cloud Run にデプロイする
+- [x] アカウント登録なしの Stone Signature アプリMVP画面デザイン設計を `doc/app-mvp-screen-design.md` に書き出す

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Personal seal as identity</title>
+  <desc id="desc">A natural stone personal seal leaving a red signature mark beside letters and stationery.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf8f0"/>
+      <stop offset="0.5" stop-color="#d7cab8"/>
+      <stop offset="1" stop-color="#74695f"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="0.62" stop-color="#ece1d1"/>
+      <stop offset="1" stop-color="#c8b69e"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0.18" y1="0.05" x2="0.9" y2="0.96">
+      <stop offset="0" stop-color="#eee5dd"/>
+      <stop offset="0.24" stop-color="#b99f8d"/>
+      <stop offset="0.52" stop-color="#645244"/>
+      <stop offset="0.78" stop-color="#2a241f"/>
+      <stop offset="1" stop-color="#11100f"/>
+    </linearGradient>
+    <linearGradient id="stone-side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#957f70"/>
+      <stop offset="0.55" stop-color="#4f4339"/>
+      <stop offset="1" stop-color="#171413"/>
+    </linearGradient>
+    <radialGradient id="vermilion" cx="49%" cy="44%" r="60%">
+      <stop offset="0" stop-color="#f0563d"/>
+      <stop offset="0.55" stop-color="#b51f1f"/>
+      <stop offset="1" stop-color="#62080b"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.018 0.031" numOctaves="4" seed="233"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.14"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="28" stdDeviation="24" flood-color="#201813" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#background)"/>
+  <path d="M0 188 1200 84v816H0Z" fill="#30261f" opacity="0.17"/>
+  <g filter="url(#grain)">
+    <path d="M118 214 800 144 858 728 174 802Z" fill="url(#paper)" filter="url(#shadow)"/>
+    <path d="M710 268 1064 322 1006 734 650 684Z" fill="#d5c4ad" filter="url(#shadow)"/>
+    <path d="M754 362h206M732 426h220M714 492h190" stroke="#6b5a48" stroke-width="10" stroke-linecap="round" opacity="0.17"/>
+    <path d="M230 320c60 26 114 26 166 0 58-28 112-28 164 0" fill="none" stroke="#756352" stroke-width="12" stroke-linecap="round" opacity="0.15"/>
+    <g filter="url(#shadow)">
+      <path d="M378 252c0-58 72-106 162-106s162 48 162 106v354c0 58-72 106-162 106s-162-48-162-106Z" fill="url(#stone-side)"/>
+      <ellipse cx="540" cy="252" rx="162" ry="106" fill="url(#stone)"/>
+      <ellipse cx="540" cy="252" rx="120" ry="70" fill="#fff2e8" opacity="0.15"/>
+      <path d="M472 218h136M472 268h136M518 196v96M564 196v96" stroke="#211814" stroke-width="8" stroke-linecap="round" opacity="0.43"/>
+      <path d="M416 360c82 40 168 41 250 1" fill="none" stroke="#ead7c9" stroke-width="8" stroke-linecap="round" opacity="0.17"/>
+      <path d="M416 512c82 38 168 39 250 1" fill="none" stroke="#ead7c9" stroke-width="7" stroke-linecap="round" opacity="0.12"/>
+    </g>
+    <g transform="rotate(5 820 608)">
+      <rect x="744" y="530" width="156" height="156" fill="url(#vermilion)" opacity="0.93"/>
+      <path d="M776 568h92M776 607h92M776 646h92M807 556v102M841 556v102" stroke="#f9dfd8" stroke-width="6" stroke-linecap="round" opacity="0.47"/>
+    </g>
+    <path d="M226 612c66 38 148 56 246 54 74-1 142 13 205 43" fill="none" stroke="#a92222" stroke-width="14" stroke-linecap="round" opacity="0.78"/>
+    <path d="M226 660h176M226 706h256" stroke="#8a7561" stroke-width="10" stroke-linecap="round" opacity="0.2"/>
+    <ellipse cx="944" cy="198" rx="122" ry="90" fill="#1e120d" opacity="0.3"/>
+    <ellipse cx="936" cy="184" rx="110" ry="78" fill="#f3eadf"/>
+    <ellipse cx="936" cy="184" rx="80" ry="53" fill="url(#vermilion)"/>
+    <path d="M886 170c29-23 67-30 108-21" fill="none" stroke="#ffc1b1" stroke-width="11" stroke-linecap="round" opacity="0.28"/>
+  </g>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Custom stone seal gift</title>
+  <desc id="desc">A natural stone seal gift with red seal impressions, stationery, and a wrapped box.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf8ef"/>
+      <stop offset="0.52" stop-color="#d6cab9"/>
+      <stop offset="1" stop-color="#817061"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="0.65" stop-color="#eee5d6"/>
+      <stop offset="1" stop-color="#cbbba7"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0.16" y1="0.05" x2="0.9" y2="0.95">
+      <stop offset="0" stop-color="#f0eadf"/>
+      <stop offset="0.25" stop-color="#b8a98e"/>
+      <stop offset="0.53" stop-color="#625744"/>
+      <stop offset="0.78" stop-color="#27241f"/>
+      <stop offset="1" stop-color="#100f0d"/>
+    </linearGradient>
+    <linearGradient id="stone-side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#93866e"/>
+      <stop offset="0.5" stop-color="#4d4638"/>
+      <stop offset="1" stop-color="#16140f"/>
+    </linearGradient>
+    <linearGradient id="gift" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efe4d4"/>
+      <stop offset="0.58" stop-color="#bba181"/>
+      <stop offset="1" stop-color="#6f5a43"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f66143"/>
+      <stop offset="0.5" stop-color="#b51e20"/>
+      <stop offset="1" stop-color="#65070b"/>
+    </linearGradient>
+    <radialGradient id="seal-red" cx="48%" cy="44%" r="60%">
+      <stop offset="0" stop-color="#ee513a"/>
+      <stop offset="0.55" stop-color="#af1d1d"/>
+      <stop offset="1" stop-color="#62080a"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.018 0.03" numOctaves="4" seed="117"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.14"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="28" stdDeviation="24" flood-color="#211914" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#background)"/>
+  <path d="M0 196 1200 90v810H0Z" fill="#302721" opacity="0.18"/>
+  <g filter="url(#grain)">
+    <path d="M124 216 760 148 824 726 174 800Z" fill="url(#paper)" filter="url(#shadow)"/>
+    <path d="M705 260 1058 318 996 734 642 681Z" fill="#d8c7af" filter="url(#shadow)"/>
+    <path d="M750 352h210M724 420h225M712 486h194" stroke="#6e5d4d" stroke-width="10" stroke-linecap="round" opacity="0.17"/>
+    <g transform="rotate(7 840 610)">
+      <rect x="762" y="532" width="156" height="156" fill="url(#seal-red)" opacity="0.94"/>
+      <path d="M794 570h92M794 609h92M794 648h92M825 558v102M859 558v102" stroke="#f9ded6" stroke-width="6" stroke-linecap="round" opacity="0.46"/>
+    </g>
+    <g transform="rotate(-6 300 604)">
+      <rect x="186" y="492" width="230" height="196" rx="8" fill="url(#gift)"/>
+      <path d="M294 492h42v196h-42z" fill="url(#ribbon)" opacity="0.88"/>
+      <path d="M186 568h230v38H186z" fill="url(#ribbon)" opacity="0.88"/>
+      <path d="M292 476c-46-44-94-26-82 12 12 36 66 23 103 11" fill="none" stroke="#b51e20" stroke-width="20" stroke-linecap="round"/>
+      <path d="M334 476c46-44 94-26 82 12-12 36-66 23-103 11" fill="none" stroke="#b51e20" stroke-width="20" stroke-linecap="round"/>
+    </g>
+    <g filter="url(#shadow)">
+      <path d="M476 256c0-58 72-105 160-105s160 47 160 105v354c0 58-72 105-160 105s-160-47-160-105Z" fill="url(#stone-side)"/>
+      <ellipse cx="636" cy="256" rx="160" ry="105" fill="url(#stone)"/>
+      <ellipse cx="636" cy="256" rx="118" ry="70" fill="#fff6e8" opacity="0.16"/>
+      <path d="M568 223h136M568 272h136M613 202v95M662 202v95" stroke="#252016" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+      <path d="M513 366c82 40 166 40 248 1" fill="none" stroke="#eadfce" stroke-width="8" stroke-linecap="round" opacity="0.17"/>
+      <path d="M513 514c82 38 166 39 248 1" fill="none" stroke="#eadfce" stroke-width="7" stroke-linecap="round" opacity="0.12"/>
+    </g>
+    <ellipse cx="954" cy="206" rx="128" ry="94" fill="#1d120f" opacity="0.28"/>
+    <ellipse cx="946" cy="190" rx="116" ry="82" fill="#f5ede2"/>
+    <ellipse cx="946" cy="190" rx="84" ry="56" fill="url(#seal-red)"/>
+    <path d="M892 176c31-23 70-31 112-22" fill="none" stroke="#ffc3b4" stroke-width="11" stroke-linecap="round" opacity="0.27"/>
+    <path d="M468 732h194M468 778h304" stroke="#8f7c67" stroke-width="10" stroke-linecap="round" opacity="0.2"/>
+  </g>
+</svg>

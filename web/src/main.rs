@@ -142,6 +142,7 @@ struct BlogPostCard {
 struct BlogPost {
     slug: String,
     published_date: String,
+    last_modified_date: String,
     date_display: String,
     date_display_ja: String,
     title: String,
@@ -164,6 +165,12 @@ struct BlogPostView {
     meta_description: String,
     image_url: String,
     image_alt: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SitemapPage {
+    path: &'static str,
+    lastmod: &'static str,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -584,6 +591,7 @@ struct BlogArticleTemplate {
     meta_description: String,
     robots_meta: String,
     canonical_url: String,
+    x_default_url: String,
     lang_ja_url: String,
     lang_en_url: String,
     og_image_url: String,
@@ -2132,9 +2140,19 @@ fn parse_blog_post_from_article(path: &FsPath, source: &str) -> Result<BlogPost>
 
     let excerpt = required_blog_metadata(&metadata, "excerpt")?;
     let excerpt_ja = required_blog_metadata(&metadata, "excerpt_ja")?;
+    let published_date = required_blog_metadata(&metadata, "date")?;
+    ensure_valid_sitemap_lastmod(&published_date)
+        .with_context(|| format!("invalid blog date in {}", path.display()))?;
+    let last_modified_date = metadata
+        .get("lastmod")
+        .cloned()
+        .unwrap_or_else(|| published_date.clone());
+    ensure_valid_sitemap_lastmod(&last_modified_date)
+        .with_context(|| format!("invalid blog lastmod in {}", path.display()))?;
     Ok(BlogPost {
         slug,
-        published_date: required_blog_metadata(&metadata, "date")?,
+        published_date,
+        last_modified_date,
         date_display: required_blog_metadata(&metadata, "date_display")?,
         date_display_ja: required_blog_metadata(&metadata, "date_display_ja")?,
         title: required_blog_metadata(&metadata, "title")?,
@@ -2711,7 +2729,8 @@ async fn render_blog_article_page(
         page_title: format!("{} | STONE SIGNATURE", &localized_post.title),
         meta_description: localized_post.meta_description.clone(),
         robots_meta: "index,follow".to_owned(),
-        canonical_url: blog_article_url(site_base_url, &post.slug, "en"),
+        canonical_url: blog_article_url(site_base_url, &post.slug, &selected_locale),
+        x_default_url: blog_article_url(site_base_url, &post.slug, "en"),
         lang_ja_url: blog_article_url(site_base_url, &post.slug, "ja"),
         lang_en_url: blog_article_url(site_base_url, &post.slug, "en"),
         og_image_url: absolute_content_url(site_base_url, &localized_post.image_url),
@@ -3880,6 +3899,31 @@ fn company_url(_base_url: &str) -> String {
     site_url(EXTERNAL_LEGAL_BASE_URL, "/company/")
 }
 
+const SITEMAP_STATIC_PAGES: &[SitemapPage] = &[
+    SitemapPage {
+        path: "/",
+        lastmod: "2026-05-11",
+    },
+    SitemapPage {
+        path: "/about",
+        lastmod: "2026-05-11",
+    },
+    SitemapPage {
+        path: "/design",
+        lastmod: "2026-05-11",
+    },
+    SitemapPage {
+        path: "/terms",
+        lastmod: "2026-05-11",
+    },
+    SitemapPage {
+        path: "/commercial-transactions",
+        lastmod: "2026-05-11",
+    },
+];
+
+const SITEMAP_BLOG_INDEX_FALLBACK_LASTMOD: &str = "2026-05-11";
+
 fn build_robots_txt(base_url: &str) -> String {
     let sitemap_url = site_url(base_url, "/sitemap.xml");
     format!(
@@ -3887,36 +3931,69 @@ fn build_robots_txt(base_url: &str) -> String {
     )
 }
 
-fn sitemap_url_entry(base_url: &str, path: &str) -> String {
+fn sitemap_url_entry(base_url: &str, path: &str, lastmod: &str) -> Result<String> {
+    ensure_canonical_sitemap_path(path)?;
+    ensure_valid_sitemap_lastmod(lastmod)?;
+
     let en_url = localized_page_url(base_url, path, "en");
     let ja_url = localized_page_url(base_url, path, "ja");
-    format!(
-        "  <url>\n    <loc>{en_url}</loc>\n    <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{en_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"ja\" href=\"{ja_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{en_url}\" />\n  </url>\n"
-    )
+    Ok(format!(
+        "  <url>\n    <loc>{en_url}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{en_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"ja\" href=\"{ja_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{en_url}\" />\n  </url>\n  <url>\n    <loc>{ja_url}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{en_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"ja\" href=\"{ja_url}\" />\n    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{en_url}\" />\n  </url>\n"
+    ))
 }
 
 fn build_sitemap_xml(base_url: &str) -> Result<String> {
     let mut sitemap = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n",
     );
-    for path in [
-        "/",
-        "/about",
-        "/design",
-        "/blog",
-        "/terms",
-        "/commercial-transactions",
-    ] {
-        sitemap.push_str(&sitemap_url_entry(base_url, path));
+
+    let posts = load_blog_posts()?;
+
+    for page in SITEMAP_STATIC_PAGES {
+        sitemap.push_str(&sitemap_url_entry(base_url, page.path, page.lastmod)?);
     }
-    for post in load_blog_posts()? {
+    let blog_index_lastmod = posts
+        .iter()
+        .map(|post| post.last_modified_date.as_str())
+        .max()
+        .unwrap_or(SITEMAP_BLOG_INDEX_FALLBACK_LASTMOD);
+    sitemap.push_str(&sitemap_url_entry(base_url, "/blog", blog_index_lastmod)?);
+    for post in posts {
         sitemap.push_str(&sitemap_url_entry(
             base_url,
             &format!("/blog/{}", post.slug),
-        ));
+            &post.last_modified_date,
+        )?);
     }
     sitemap.push_str("</urlset>\n");
     Ok(sitemap)
+}
+
+fn ensure_canonical_sitemap_path(path: &str) -> Result<()> {
+    if !path.starts_with('/') {
+        bail!("sitemap path must start with /: {path}");
+    }
+    if path.contains('?') || path.contains('#') {
+        bail!("sitemap path must not include query or fragment: {path}");
+    }
+    if path != "/" && path.ends_with('/') {
+        bail!("sitemap non-root paths must not end with /: {path}");
+    }
+    Ok(())
+}
+
+fn ensure_valid_sitemap_lastmod(lastmod: &str) -> Result<()> {
+    let bytes = lastmod.as_bytes();
+    if bytes.len() != 10
+        || !bytes[0..4].iter().all(u8::is_ascii_digit)
+        || bytes[4] != b'-'
+        || !bytes[5..7].iter().all(u8::is_ascii_digit)
+        || bytes[7] != b'-'
+        || !bytes[8..10].iter().all(u8::is_ascii_digit)
+    {
+        bail!("sitemap lastmod must use YYYY-MM-DD: {lastmod}");
+    }
+    Ok(())
 }
 
 fn localized_text(locale: &str, ja: &str, en: &str) -> String {
@@ -4764,6 +4841,20 @@ mod tests {
 
     const TEST_SITE_BASE_URL: &str = "https://finitefield.org";
     const TEST_ALT_SITE_BASE_URL: &str = "https://inkanfield.org";
+    const ADDED_BLOG_ARTICLE_SLUGS: [&str; 12] = [
+        "custom-stone-seal-gift",
+        "custom-jade-seal",
+        "japanese-hanko-souvenir",
+        "how-to-choose-stone-seal",
+        "jade-agate-qingtian-stone-seal",
+        "personal-seal-symbol-of-identity",
+        "luxury-personal-seal",
+        "english-name-kanji-seal",
+        "what-to-engrave-on-seal",
+        "personal-seals-for-artists",
+        "chinese-chop-seal-vs-japanese-hanko",
+        "one-of-a-kind-stone-seal",
+    ];
 
     fn mock_state() -> AppState {
         AppState {
@@ -4781,6 +4872,71 @@ mod tests {
             default_locale: "ja".to_owned(),
             site_base_url: TEST_SITE_BASE_URL.to_owned(),
         }
+    }
+
+    async fn render_blog_article_html_for_test(slug: &str, locale: &str) -> String {
+        let response = if is_japanese_locale(locale) {
+            handle_localized_blog_article(
+                Path(("ja".to_owned(), slug.to_owned())),
+                State(mock_state()),
+                Query(LocaleQuery::default()),
+            )
+            .await
+        } else {
+            handle_blog_article(
+                State(mock_state()),
+                Path(slug.to_owned()),
+                Query(LocaleQuery {
+                    lang: Some("en".to_owned()),
+                }),
+            )
+            .await
+        };
+
+        assert_eq!(response.status(), StatusCode::OK);
+        String::from_utf8(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("blog article body should be readable")
+                .to_vec(),
+        )
+        .expect("blog article body should be utf-8")
+    }
+
+    fn assert_sitemap_has_localized_article_entry(sitemap_xml: &str, slug: &str, lastmod: &str) {
+        let en_url = blog_article_url(TEST_SITE_BASE_URL, slug, "en");
+        let ja_url = blog_article_url(TEST_SITE_BASE_URL, slug, "ja");
+
+        assert!(
+            sitemap_xml.contains(&format!("<loc>{en_url}</loc>")),
+            "missing sitemap loc for {slug}"
+        );
+        assert!(
+            sitemap_xml.contains(&format!("<loc>{ja_url}</loc>")),
+            "missing localized sitemap loc for {slug}"
+        );
+        assert!(
+            sitemap_xml.contains(&format!("<lastmod>{lastmod}</lastmod>")),
+            "missing sitemap lastmod for {slug}"
+        );
+        assert!(
+            sitemap_xml.contains(&format!(
+                r#"<xhtml:link rel="alternate" hreflang="en" href="{en_url}" />"#
+            )),
+            "missing English alternate for {slug}"
+        );
+        assert!(
+            sitemap_xml.contains(&format!(
+                r#"<xhtml:link rel="alternate" hreflang="ja" href="{ja_url}" />"#
+            )),
+            "missing Japanese alternate for {slug}"
+        );
+        assert!(
+            sitemap_xml.contains(&format!(
+                r#"<xhtml:link rel="alternate" hreflang="x-default" href="{en_url}" />"#
+            )),
+            "missing x-default alternate for {slug}"
+        );
     }
 
     fn valid_purchase_form() -> HashMap<String, String> {
@@ -5217,9 +5373,58 @@ mod tests {
         assert!(html.contains("What Is a Hanko? A Complete Guide to Japanese Personal Seals"));
         assert!(html.contains("Hanko vs Inkan: What&#39;s the Difference?"));
         assert!(html.contains("What Is a Personal Seal? History, Meaning, and Modern Uses"));
+        assert!(html.contains("Why a Custom Stone Seal Makes a Meaningful Gift"));
+        assert!(html.contains("Custom Jade Seal: Meaning, Materials, and How to Choose One"));
+        assert!(html.contains("Japanese Hanko as a Souvenir: A Personal Piece of Japan"));
+        assert!(html.contains("How to Choose the Right Stone for Your Personal Seal"));
+        assert!(html.contains("Jade, Agate, or Qingtian Stone: Which Seal Material Is Best?"));
+        assert!(html.contains("A Personal Seal as a Symbol of Identity"));
+        assert!(html.contains("Luxury Personal Seals: A New Way to Express Your Signature"));
+        assert!(html.contains("How to Turn Your English Name into a Japanese or Chinese Seal"));
+        assert!(html.contains("What to Engrave on a Custom Personal Seal"));
+        assert!(html.contains("Personal Seals for Artists, Writers, and Creators"));
+        assert!(html.contains("Chinese Chop Seal vs Japanese Hanko: Similarities and Differences"));
+        assert!(html.contains("The Beauty of One-of-a-Kind Stone Seals"));
         assert!(html.contains(r#"href="https://finitefield.org/blog/what-is-a-hanko""#));
         assert!(html.contains(r#"href="https://finitefield.org/blog/hanko-vs-inkan""#));
         assert!(html.contains(r#"href="https://finitefield.org/blog/what-is-a-personal-seal""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/custom-stone-seal-gift""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/custom-jade-seal""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/japanese-hanko-souvenir""#));
+        assert!(html.contains(r#"href="https://finitefield.org/blog/how-to-choose-stone-seal""#));
+        assert!(
+            html.contains(r#"href="https://finitefield.org/blog/jade-agate-qingtian-stone-seal""#)
+        );
+        assert!(
+            html.contains(
+                r#"href="https://finitefield.org/blog/personal-seal-symbol-of-identity""#
+            )
+        );
+        assert!(html.contains(r#"href="https://finitefield.org/blog/luxury-personal-seal""#));
+        assert!(html.contains(&format!(
+            r#"href="{}""#,
+            blog_article_url(TEST_SITE_BASE_URL, "english-name-kanji-seal", "en")
+        )));
+        assert!(html.contains(&format!(
+            r#"href="{}""#,
+            blog_article_url(TEST_SITE_BASE_URL, "what-to-engrave-on-seal", "en")
+        )));
+        assert!(html.contains(&format!(
+            r#"href="{}""#,
+            blog_article_url(TEST_SITE_BASE_URL, "personal-seals-for-artists", "en")
+        )));
+        assert!(html.contains(&format!(
+            r#"href="{}""#,
+            blog_article_url(
+                TEST_SITE_BASE_URL,
+                "chinese-chop-seal-vs-japanese-hanko",
+                "en"
+            )
+        )));
+        assert!(html.contains(&format!(
+            r#"href="{}""#,
+            blog_article_url(TEST_SITE_BASE_URL, "one-of-a-kind-stone-seal", "en")
+        )));
         assert!(!html.contains("The Art of Selection: Identifying the Finest Jadeite for Carving"));
         assert!(!html.contains(r#"href="https://finitefield.org/blog/art-of-selection-jadeite""#));
         assert!(!html.contains("journal-card__category"));
@@ -5363,6 +5568,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn added_blog_articles_use_localized_seo_tags() {
+        let posts = load_blog_posts().expect("blog posts should load");
+        for slug in ADDED_BLOG_ARTICLE_SLUGS {
+            let post = find_blog_post(&posts, slug).expect("added blog article should load");
+            let en_url = blog_article_url(TEST_SITE_BASE_URL, slug, "en");
+            let ja_url = blog_article_url(TEST_SITE_BASE_URL, slug, "ja");
+
+            let english_html = render_blog_article_html_for_test(slug, "en").await;
+            assert!(english_html.contains(&format!(
+                r#"<meta name="description" content="{}">"#,
+                post.meta_description
+            )));
+            assert!(english_html.contains(&format!(r#"<link rel="canonical" href="{en_url}">"#)));
+            assert!(english_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="ja" href="{ja_url}">"#
+            )));
+            assert!(english_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="en" href="{en_url}">"#
+            )));
+            assert!(english_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="x-default" href="{en_url}">"#
+            )));
+            assert!(
+                english_html.contains(&format!(r#"<meta property="og:url" content="{en_url}">"#))
+            );
+            assert!(english_html.contains(&format!(r#"href="{ja_url}" hreflang="ja""#)));
+
+            let japanese_html = render_blog_article_html_for_test(slug, "ja").await;
+            assert!(japanese_html.contains(&format!(
+                r#"<meta name="description" content="{}">"#,
+                post.meta_description_ja
+            )));
+            assert!(japanese_html.contains(&format!(r#"<link rel="canonical" href="{ja_url}">"#)));
+            assert!(japanese_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="ja" href="{ja_url}">"#
+            )));
+            assert!(japanese_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="en" href="{en_url}">"#
+            )));
+            assert!(japanese_html.contains(&format!(
+                r#"<link rel="alternate" hreflang="x-default" href="{en_url}">"#
+            )));
+            assert!(
+                japanese_html.contains(&format!(r#"<meta property="og:url" content="{ja_url}">"#))
+            );
+            assert!(japanese_html.contains(&format!(r#"href="{en_url}" hreflang="en""#)));
+        }
+    }
+
+    #[tokio::test]
     async fn localized_blog_pages_render_japanese_copy() {
         let index_response = handle_localized_blog_index(
             Path("ja".to_owned()),
@@ -5385,6 +5640,18 @@ mod tests {
         assert!(index_html.contains("ハンコとは？日本のパーソナルシール完全ガイド"));
         assert!(index_html.contains("ハンコと印鑑の違いとは？"));
         assert!(index_html.contains("パーソナルシールとは？歴史・意味・現代の使い方"));
+        assert!(index_html.contains("カスタム石印が心に残るギフトになる理由"));
+        assert!(index_html.contains("カスタム翡翠印とは？意味・素材・選び方"));
+        assert!(index_html.contains("日本のハンコをお土産に: 日本を個人的に感じる一品"));
+        assert!(index_html.contains("パーソナルシールに合う石の選び方"));
+        assert!(index_html.contains("翡翠・瑪瑙・青田石: 印材はどれがよい？"));
+        assert!(index_html.contains("本人性の象徴としてのパーソナルシール"));
+        assert!(index_html.contains("ラグジュアリーパーソナルシール: 署名を表現する新しい方法"));
+        assert!(index_html.contains("英語の名前を日本語・中国語の印にする方法"));
+        assert!(index_html.contains("カスタムパーソナルシールには何を彫刻するべき？"));
+        assert!(index_html.contains("アーティスト・作家・クリエイターのためのパーソナルシール"));
+        assert!(index_html.contains("中国のチョップシールと日本のハンコ: 共通点と違い"));
+        assert!(index_html.contains("一点ものの天然石印の美しさ"));
         assert!(
             !index_html
                 .contains("The Art of Selection: Identifying the Finest Jadeite for Carving")
@@ -5412,7 +5679,10 @@ mod tests {
         assert!(article_html.contains("Hanko vs Inkan: シンプルな違い"));
         assert!(article_html.contains("ハンコはスタンプそのもの。印鑑は印影"));
         assert!(article_html.contains(
-            r#"<link rel="canonical" href="https://finitefield.org/blog/hanko-vs-inkan">"#
+            r#"<link rel="canonical" href="https://finitefield.org/ja/blog/hanko-vs-inkan">"#
+        ));
+        assert!(article_html.contains(
+            r#"<link rel="alternate" hreflang="x-default" href="https://finitefield.org/blog/hanko-vs-inkan">"#
         ));
         assert!(!article_html.contains("Hanko vs Inkan: The Simple Difference"));
     }
@@ -5821,6 +6091,10 @@ mod tests {
         assert!(robots_txt.contains("Disallow: /purchase"));
         assert!(robots_txt.contains("Disallow: /payment/"));
         assert!(robots_txt.contains("Sitemap: https://finitefield.org/sitemap.xml"));
+        assert!(
+            build_robots_txt(TEST_ALT_SITE_BASE_URL)
+                .contains("Sitemap: https://inkanfield.org/sitemap.xml")
+        );
     }
 
     #[tokio::test]
@@ -5842,6 +6116,7 @@ mod tests {
         let sitemap_xml = String::from_utf8(body.to_vec()).expect("response body should be utf-8");
 
         assert!(sitemap_xml.contains("<loc>https://finitefield.org/</loc>"));
+        assert!(sitemap_xml.contains("<lastmod>2026-05-11</lastmod>"));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/" />"#
         ));
@@ -5852,6 +6127,7 @@ mod tests {
             r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/" />"#
         ));
         assert!(sitemap_xml.contains("<loc>https://finitefield.org/about</loc>"));
+        assert!(!sitemap_xml.contains("https://finitefield.org/about/"));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="en" href="https://finitefield.org/about" />"#
         ));
@@ -5875,9 +6151,19 @@ mod tests {
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog" />"#
         ));
+        let posts = load_blog_posts().expect("blog posts should load");
+        for slug in ADDED_BLOG_ARTICLE_SLUGS {
+            let post = find_blog_post(&posts, slug).expect("blog post should load");
+            assert_sitemap_has_localized_article_entry(
+                &sitemap_xml,
+                slug,
+                &post.last_modified_date,
+            );
+        }
         assert!(
             sitemap_xml.contains("<loc>https://finitefield.org/blog/what-is-a-personal-seal</loc>")
         );
+        assert!(sitemap_xml.contains("<lastmod>2026-05-07</lastmod>"));
         assert!(sitemap_xml.contains(
             r#"<xhtml:link rel="alternate" hreflang="ja" href="https://finitefield.org/ja/blog/what-is-a-personal-seal" />"#
         ));
@@ -5908,5 +6194,9 @@ mod tests {
             sitemap_xml
                 .contains(r#"<xhtml:link rel="alternate" hreflang="x-default" href="https://finitefield.org/commercial-transactions" />"#)
         );
+        assert!(!sitemap_xml.contains("https://finitefield.org/payment/"));
+        assert!(!sitemap_xml.contains("https://finitefield.org/purchase"));
+        assert!(!sitemap_xml.contains("https://finitefield.org/kanji"));
+        assert!(!sitemap_xml.contains("https://finitefield.org/admin"));
     }
 }

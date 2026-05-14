@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Personal seals for artists</title>
+  <desc id="desc">A natural stone artist seal stamp beside art prints, ink, certificates, and creative packaging.</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fffaf1"/>
+      <stop offset="1" stop-color="#eadfc9"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#284b42"/>
+      <stop offset="0.52" stop-color="#6c8b77"/>
+      <stop offset="1" stop-color="#d8c7a3"/>
+    </linearGradient>
+    <linearGradient id="desk" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7efe0"/>
+      <stop offset="1" stop-color="#d8c7ad"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#2f241a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="900" fill="url(#desk)"/>
+  <path d="M0 719 C240 654 370 760 566 703 C740 652 862 562 1062 618 C1221 663 1328 654 1440 606 L1440 900 L0 900 Z" fill="#b96b55" opacity="0.16"/>
+  <g filter="url(#shadow)">
+    <rect x="142" y="126" width="470" height="612" rx="18" fill="url(#paper)" transform="rotate(-4 377 432)"/>
+    <rect x="195" y="178" width="360" height="250" rx="10" fill="#efe5d0" transform="rotate(-4 375 303)"/>
+    <path d="M237 344 C290 284 340 335 389 289 C435 246 485 270 528 214" fill="none" stroke="#355d57" stroke-width="8" stroke-linecap="round" transform="rotate(-4 382 279)"/>
+    <path d="M229 384 C295 333 350 405 414 346 C462 302 493 334 544 289" fill="none" stroke="#aa3f37" stroke-width="6" stroke-linecap="round" opacity="0.75" transform="rotate(-4 386 336)"/>
+    <rect x="223" y="489" width="246" height="14" rx="7" fill="#665247" opacity="0.42" transform="rotate(-4 346 496)"/>
+    <rect x="223" y="530" width="312" height="12" rx="6" fill="#665247" opacity="0.24" transform="rotate(-4 379 536)"/>
+    <rect x="224" y="570" width="276" height="12" rx="6" fill="#665247" opacity="0.24" transform="rotate(-4 362 576)"/>
+    <circle cx="522" cy="642" r="38" fill="none" stroke="#b3332d" stroke-width="9" transform="rotate(-4 522 642)"/>
+    <path d="M506 631 L537 653 M535 631 L507 653" stroke="#b3332d" stroke-width="8" stroke-linecap="round" transform="rotate(-4 522 642)"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="735" y="124" width="392" height="506" rx="16" fill="#fdf7eb" transform="rotate(5 931 377)"/>
+    <rect x="784" y="194" width="294" height="40" rx="20" fill="#324f48" opacity="0.8" transform="rotate(5 931 214)"/>
+    <rect x="787" y="282" width="256" height="12" rx="6" fill="#5d4d44" opacity="0.32" transform="rotate(5 915 288)"/>
+    <rect x="783" y="323" width="302" height="12" rx="6" fill="#5d4d44" opacity="0.22" transform="rotate(5 934 329)"/>
+    <rect x="780" y="364" width="244" height="12" rx="6" fill="#5d4d44" opacity="0.22" transform="rotate(5 902 370)"/>
+    <rect x="777" y="405" width="287" height="12" rx="6" fill="#5d4d44" opacity="0.22" transform="rotate(5 920 411)"/>
+    <circle cx="1022" cy="522" r="42" fill="none" stroke="#b3332d" stroke-width="10" transform="rotate(5 1022 522)"/>
+    <rect x="998" y="500" width="47" height="47" rx="7" fill="#b3332d" opacity="0.86" transform="rotate(5 1022 523)"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="882" y="608" width="300" height="144" rx="16" fill="#f5ecda" transform="rotate(-2 1032 680)"/>
+    <path d="M925 681 C976 629 1012 722 1060 667 C1088 635 1121 652 1141 620" fill="none" stroke="#355d57" stroke-width="8" stroke-linecap="round" transform="rotate(-2 1033 670)"/>
+    <circle cx="1131" cy="704" r="25" fill="#b3332d" opacity="0.88" transform="rotate(-2 1131 704)"/>
+  </g>
+  <g filter="url(#shadow)">
+    <ellipse cx="673" cy="699" rx="108" ry="30" fill="#806250" opacity="0.24"/>
+    <rect x="590" y="360" width="166" height="330" rx="28" fill="url(#stone)"/>
+    <path d="M620 399 C657 444 684 363 728 430 C748 460 720 520 752 561" fill="none" stroke="#d9d2ba" stroke-width="12" opacity="0.35"/>
+    <path d="M595 532 C638 492 687 558 753 512" fill="none" stroke="#1f3f38" stroke-width="10" opacity="0.28"/>
+    <rect x="568" y="672" width="210" height="58" rx="18" fill="#2b3632"/>
+    <rect x="597" y="688" width="151" height="24" rx="12" fill="#b3332d"/>
+    <path d="M645 690 L657 709 M692 689 L680 710" stroke="#f7d7c9" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.95">
+    <circle cx="337" cy="748" r="42" fill="#111111" opacity="0.18"/>
+    <circle cx="337" cy="740" r="38" fill="#171717"/>
+    <circle cx="337" cy="740" r="23" fill="#b3332d"/>
+    <path d="M316 808 L412 782" stroke="#2a211d" stroke-width="15" stroke-linecap="round"/>
+    <path d="M397 786 L437 742" stroke="#2a211d" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <g fill="#3e3129" opacity="0.45">
+    <rect x="1200" y="215" width="104" height="16" rx="8"/>
+    <rect x="1201" y="251" width="74" height="16" rx="8"/>
+    <rect x="1137" y="799" width="160" height="14" rx="7"/>
+    <rect x="1167" y="829" width="101" height="14" rx="7"/>
+  </g>
+</svg>

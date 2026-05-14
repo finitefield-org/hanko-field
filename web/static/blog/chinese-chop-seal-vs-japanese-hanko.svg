@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Chinese chop seal vs Japanese hanko</title>
+  <desc id="desc">A Chinese chop seal and Japanese hanko beside red seal paste, calligraphy paper, and stamped impressions.</desc>
+  <defs>
+    <linearGradient id="desk" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7efe2"/>
+      <stop offset="1" stop-color="#d7c6aa"/>
+    </linearGradient>
+    <linearGradient id="greenStone" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#1f443d"/>
+      <stop offset="0.55" stop-color="#6c8d77"/>
+      <stop offset="1" stop-color="#d9c89d"/>
+    </linearGradient>
+    <linearGradient id="darkStone" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2b2622"/>
+      <stop offset="0.55" stop-color="#5b4b42"/>
+      <stop offset="1" stop-color="#a58f74"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#eadfc8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#2e2117" flood-opacity="0.19"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="900" fill="url(#desk)"/>
+  <path d="M0 675 C210 612 352 672 548 620 C720 575 872 515 1048 571 C1222 626 1335 604 1440 560 L1440 900 L0 900 Z" fill="#b73a35" opacity="0.11"/>
+  <g filter="url(#shadow)">
+    <rect x="168" y="135" width="438" height="598" rx="18" fill="url(#paper)" transform="rotate(-4 387 434)"/>
+    <path d="M257 217 C287 246 305 278 285 312 C265 345 291 385 333 379 C371 374 384 333 353 306 C326 282 345 236 388 230 C432 224 461 254 456 293 C450 344 511 343 532 306" fill="none" stroke="#41342d" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" opacity="0.72" transform="rotate(-4 394 299)"/>
+    <rect x="234" y="454" width="292" height="13" rx="7" fill="#6c584c" opacity="0.28" transform="rotate(-4 380 461)"/>
+    <rect x="235" y="494" width="250" height="12" rx="6" fill="#6c584c" opacity="0.21" transform="rotate(-4 360 500)"/>
+    <circle cx="506" cy="612" r="44" fill="none" stroke="#b5362f" stroke-width="10" transform="rotate(-4 506 612)"/>
+    <path d="M483 591 L531 633 M530 591 L482 633" stroke="#b5362f" stroke-width="8" stroke-linecap="round" transform="rotate(-4 506 612)"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="831" y="132" width="392" height="548" rx="18" fill="#fbf4e6" transform="rotate(5 1027 406)"/>
+    <rect x="888" y="205" width="220" height="44" rx="22" fill="#344f48" opacity="0.82" transform="rotate(5 998 227)"/>
+    <rect x="891" y="296" width="260" height="12" rx="6" fill="#5e5048" opacity="0.27" transform="rotate(5 1021 302)"/>
+    <rect x="887" y="338" width="302" height="12" rx="6" fill="#5e5048" opacity="0.19" transform="rotate(5 1038 344)"/>
+    <rect x="884" y="380" width="244" height="12" rx="6" fill="#5e5048" opacity="0.19" transform="rotate(5 1006 386)"/>
+    <circle cx="1094" cy="534" r="49" fill="#b5362f" opacity="0.9" transform="rotate(5 1094 534)"/>
+    <path d="M1067 510 L1121 558 M1121 510 L1067 558" stroke="#f7d8cb" stroke-width="8" stroke-linecap="round" transform="rotate(5 1094 534)"/>
+  </g>
+  <g filter="url(#shadow)">
+    <ellipse cx="585" cy="739" rx="105" ry="30" fill="#6b5243" opacity="0.24"/>
+    <rect x="518" y="344" width="136" height="354" rx="26" fill="url(#darkStone)"/>
+    <path d="M539 384 C572 434 610 373 641 433" fill="none" stroke="#d8c7a2" stroke-width="10" opacity="0.25"/>
+    <path d="M523 548 C563 514 604 576 653 532" fill="none" stroke="#201b18" stroke-width="9" opacity="0.24"/>
+    <rect x="491" y="682" width="190" height="60" rx="18" fill="#2e2622"/>
+    <rect x="522" y="698" width="128" height="26" rx="7" fill="#b5362f"/>
+    <path d="M553 702 L569 721 M621 701 L603 722" stroke="#f2d8c9" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#shadow)">
+    <ellipse cx="812" cy="750" rx="109" ry="31" fill="#6b5243" opacity="0.23"/>
+    <rect x="740" y="324" width="146" height="382" rx="28" fill="url(#greenStone)"/>
+    <path d="M760 365 C798 416 841 353 875 424" fill="none" stroke="#e6dbc1" stroke-width="12" opacity="0.32"/>
+    <path d="M744 514 C787 475 836 554 887 503" fill="none" stroke="#183a33" stroke-width="9" opacity="0.26"/>
+    <rect x="713" y="689" width="200" height="64" rx="18" fill="#293831"/>
+    <circle cx="812" cy="720" r="22" fill="#b5362f"/>
+    <rect x="796" y="704" width="32" height="32" rx="5" fill="#f2d8c9" opacity="0.28"/>
+  </g>
+  <g filter="url(#shadow)">
+    <circle cx="700" cy="179" r="57" fill="#151312"/>
+    <circle cx="700" cy="179" r="37" fill="#b5362f"/>
+    <circle cx="700" cy="179" r="20" fill="#8d2825" opacity="0.72"/>
+  </g>
+  <g opacity="0.54">
+    <path d="M676 811 C705 791 739 798 765 817" fill="none" stroke="#3e3129" stroke-width="11" stroke-linecap="round"/>
+    <rect x="1193" y="744" width="126" height="14" rx="7" fill="#3e3129"/>
+    <rect x="1218" y="775" width="78" height="14" rx="7" fill="#3e3129"/>
+    <rect x="108" y="773" width="148" height="14" rx="7" fill="#3e3129"/>
+    <rect x="135" y="805" width="86" height="14" rx="7" fill="#3e3129"/>
+  </g>
+</svg>

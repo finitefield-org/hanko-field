@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">What to engrave on a seal</title>
+  <desc id="desc">A custom stone seal beside sketch cards showing name seal ideas, initials, symbols, and meaningful words.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8f3ea"/>
+      <stop offset="0.48" stop-color="#d7c6af"/>
+      <stop offset="1" stop-color="#4d4f46"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0.06" y1="0" x2="0.94" y2="1">
+      <stop offset="0" stop-color="#fffdfa"/>
+      <stop offset="0.68" stop-color="#eadfce"/>
+      <stop offset="1" stop-color="#c3ad91"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0.16" y1="0.04" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#f2efe8"/>
+      <stop offset="0.32" stop-color="#c2ad91"/>
+      <stop offset="0.64" stop-color="#75604b"/>
+      <stop offset="1" stop-color="#2a241f"/>
+    </linearGradient>
+    <linearGradient id="stoneSide" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78d72"/>
+      <stop offset="0.54" stop-color="#5c4a39"/>
+      <stop offset="1" stop-color="#211a16"/>
+    </linearGradient>
+    <radialGradient id="sealInk" cx="49%" cy="43%" r="62%">
+      <stop offset="0" stop-color="#f7624b"/>
+      <stop offset="0.55" stop-color="#b82222"/>
+      <stop offset="1" stop-color="#65070b"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.018 0.033" numOctaves="4" seed="421"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.13"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#211914" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#background)"/>
+  <path d="M0 200 1200 88v812H0Z" fill="#2c2a25" opacity="0.16"/>
+  <g filter="url(#grain)">
+    <path d="M126 160 842 112 896 740 180 804Z" fill="url(#paper)" filter="url(#shadow)"/>
+    <g opacity="0.86">
+      <rect x="212" y="232" width="210" height="144" rx="8" fill="#f9f1e5" stroke="#b7a184" stroke-width="5"/>
+      <text x="317" y="316" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="700" fill="#3e362e">Full Name</text>
+      <rect x="486" y="218" width="166" height="166" rx="8" fill="#f9f1e5" stroke="#b7a184" stroke-width="5"/>
+      <text x="569" y="319" text-anchor="middle" font-family="Georgia, serif" font-size="62" font-weight="700" fill="#3e362e">AK</text>
+      <rect x="716" y="244" width="140" height="140" rx="8" fill="#f9f1e5" stroke="#b7a184" stroke-width="5"/>
+      <path d="M786 284l14 44 46 1-38 26 14 44-36-28-37 28 14-44-38-26 46-1z" fill="#8a2421" opacity="0.82"/>
+    </g>
+    <path d="M230 448h420M230 500h512M230 552h470" stroke="#695845" stroke-width="12" stroke-linecap="round" opacity="0.18"/>
+    <path d="M730 464h210M730 516h170M730 568h230" stroke="#695845" stroke-width="11" stroke-linecap="round" opacity="0.15"/>
+    <g filter="url(#shadow)">
+      <path d="M406 516c0-62 74-112 166-112s166 50 166 112v164c0 62-74 112-166 112s-166-50-166-112Z" fill="url(#stoneSide)"/>
+      <ellipse cx="572" cy="516" rx="166" ry="112" fill="url(#stone)"/>
+      <ellipse cx="572" cy="516" rx="120" ry="70" fill="#ffffff" opacity="0.13"/>
+      <path d="M508 484h128M508 532h128M552 460v98M596 460v98" stroke="#251b15" stroke-width="8" stroke-linecap="round" opacity="0.44"/>
+      <path d="M450 632c82 35 162 36 244 1" fill="none" stroke="#edd8c4" stroke-width="7" stroke-linecap="round" opacity="0.17"/>
+    </g>
+    <g transform="rotate(-7 896 618)">
+      <rect x="816" y="540" width="156" height="156" rx="2" fill="url(#sealInk)" opacity="0.94"/>
+      <path d="M854 578h82M854 616h82M854 654h82M882 566v100M912 566v100" stroke="#f9ded8" stroke-width="6" stroke-linecap="round" opacity="0.47"/>
+    </g>
+    <path d="M188 690c90-42 198-48 326-18 104 25 206 18 306-22" fill="none" stroke="#972421" stroke-width="14" stroke-linecap="round" opacity="0.72"/>
+    <ellipse cx="986" cy="196" rx="108" ry="78" fill="#1f1814" opacity="0.27"/>
+    <ellipse cx="978" cy="184" rx="94" ry="66" fill="#f1e6d8"/>
+    <ellipse cx="978" cy="184" rx="68" ry="44" fill="url(#sealInk)"/>
+  </g>
+</svg>
