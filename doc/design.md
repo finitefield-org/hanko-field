@@ -111,3 +111,32 @@
 - [x] `web` の sitemap にページ別 `lastmod` を追加し、URL表記・hreflang・robots.txt の Sitemap 指定を確認する
 - [x] `web` を本番 `hanko-field-prod` プロジェクトの Cloud Run にデプロイする
 - [x] アカウント登録なしの Stone Signature アプリMVP画面デザイン設計を `doc/app-mvp-screen-design.md` に書き出す
+- [x] 初回ダウンロード直後のみ Guided Start を表示し、以後は Design Studio 起点に戻す設計を `doc/app-mvp-screen-design.md` に追記する
+- [x] アプリ全体の画面設計、Gen UI導入方針、AI/API/状態管理/デザインシステムの詳細を `doc/app-mvp-screen-design.md` に追記する
+- [x] Customize Seal の質問設計を4個の選択質問（角印/丸印の質問を含む）と短い自由入力フォームに更新する
+- [ ] Flutterアプリ刷新のDesign Token（Primary / Secondary / Tertiary / Neutral / Surface / Soft Pink）を既存テーマに反映する
+- [ ] `SealPreview` / `KanjiCard` / `StoneCard` / `ChoiceChip` / `PrimaryButton` / `SecondaryButton` / `StepHeader` / `BottomTabBar` / `ScreenHeader` を共通コンポーネントとして整理する
+- [ ] 初回ダウンロード直後のみ Guided Start を出す `FirstLaunchGate` と端末内 `hasSeenGuidedStart` フラグを追加する
+- [ ] Guided Start を通常Flutter UIで実装し、名前入力、性別印象、漢字候補生成、漢字選択、Customize Seal、Preview / Save / Select Stone まで進める
+- [ ] Create Your Seal の入力前プレビューとして、5種類程度の既存漢字サンプル印影が赤系インクのグラデーションで移り変わるアニメーションを実装する
+- [ ] Create Your Seal のサンプル印影は既存漢字だけを使い、ユーザー入力または漢字候補選択後は実際の印影プレビューへ切り替える
+- [ ] Guided Start の完了またはスキップ後に Design Studio へ戻し、作成中の印影状態を注文下書きと保存済み印影導線へ引き継ぐ
+- [ ] Design Studio を刷新し、ライブ印影プレビュー、入力、形状、書体、文字方向、保存、石選択、My Seals導線を一貫したレイアウトにする
+- [ ] `Customize Seal` の状態モデルと `customizeSealProvider` を追加し、4個の選択質問（角印/丸印/AIに任せるを含む）と短い自由入力フォームを通常Flutter UIで仮実装する
+- [ ] `sealProfile` の構造（summary / tags / layout / lineWeight / stylization / regenerateOptions）を定義し、Design Studio、Preview、My Seals、Stonesへ引き継げるようにする
+- [ ] Gen UI導入用のWidget Catalog（`SealQuestionCard` / `ChoiceChipGroup` / `MultiChoiceChipGroup` / `ShortPreferenceInput` / `SealStyleSummaryCard` など）とJSON DSL検証方針をアプリ側に実装する
+- [ ] Customize Seal だけをGen UIに置き換え、名前入力、漢字候補表示、価格、在庫、注文、決済にはGen UIを関与させない
+- [ ] Gen UIの回答から `sealProfile` と `renderStyle` を作り、AIは書体ムード、線の太さ、余白、かすれ、構図だけを提案し、文字そのものは選択済み文字から変更できない契約にする
+- [ ] 印影画像生成の入力文字を `selectedKanji` / `sealLine1` / `sealLine2` に固定し、既存フォント、既存グリフ、または検証済み文字アウトラインを元にレンダリングする仕組みを追加する
+- [ ] AI画像生成またはベクター生成を使う場合でも、生成結果が入力文字列と一致しない場合は破棄し、決定的なフォント描画へフォールバックする検証を追加する
+- [ ] My Seals と Compare Seals を刷新し、保存済み印影の一覧、編集再開、比較、ベスト案選択、石選択導線を新しい共通コンポーネントで統一する
+- [ ] Stones を刷新し、現在の印影プレビューを画面上部に残したまま、石一覧、色/模様/形状フィルタ、選択状態、注文確認導線を表示する
+- [ ] Stonesタブで開くStoneページに、提供スクリーンショットの `Select Stone` ヘッダー、右上設定アイコン、`Stone color` / `Pattern` フィルタチップ、縦型石カード、下部タブの構成を取り入れる
+- [ ] Stonesのフィルタチップは、選択中の `All` を淡い赤背景とチェックアイコンで示し、未選択チップは白背景と薄い枠線で表示する
+- [ ] Stonesの石カードは、角丸写真、濃い赤の商品名、小さなタグチップ、サイズ、説明、赤系価格、全幅アウトラインの `Select This Stone` CTAを持つデザインにする
+- [ ] Stonesの下部タブは `Design` / `My Seals` / `Stones` を維持し、Stones選択中は淡いピンクのピル背景で強調する
+- [ ] Stonesのスクリーンショット由来デザインを採用しても、価格、在庫、対応形状、素材情報はRust API由来のデータだけを表示し、AI/Gen UIでは生成しない
+- [ ] Order Review と Payment Result の表示を新デザインに合わせ、AI/Gen UIを介さずRust API、Firestore、Stripe Checkoutの責務を維持する
+- [ ] アプリ刷新後も `miniriverpod` と `declarative_nav` を維持し、`go_router` など他のナビゲーションライブラリを使わないことを確認する
+- [ ] Flutterアプリ刷新後に iPhone / iPad シミュレータで Guided Start、Design Studio、My Seals、Stones、Order Review、Payment Result の表示崩れを検証する
+- [ ] Flutterアプリ刷新後に既存テストを更新し、注文下書き、保存済み印影、漢字候補、初回表示フラグ、Customize Seal状態のテストを追加または調整する
