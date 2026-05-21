@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ERR-006 Checkout Return Error - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #172328;
+        --copy: #5b646b;
+        --wine: #951719;
+        --wine-dark: #841114;
+        --gold: #a86d26;
+        --line: #e3d5c8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: start center;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 44%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button,
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .stage {
+        width: min(100vw, 470.5px);
+        height: 836px;
+        overflow: hidden;
+      }
+
+      .phone {
+        position: relative;
+        width: 470.5px;
+        height: 836px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 23%, transparent 57%),
+          radial-gradient(circle at 50% 55%, rgba(255, 255, 255, 0.66) 0 25%, transparent 59%),
+          radial-gradient(circle at 52% 88%, rgba(255, 255, 255, 0.58) 0 25%, transparent 57%),
+          linear-gradient(139deg, #f4ece3 0%, #fffdf9 45%, #f7eee5 100%);
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 60px;
+        left: 30px;
+        z-index: 2;
+        margin: 0;
+        color: var(--wine-dark);
+        font-size: 43px;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 10px 16px rgba(112, 65, 41, 0.11);
+        white-space: nowrap;
+      }
+
+      .settings-button {
+        position: absolute;
+        top: 65px;
+        right: 31px;
+        z-index: 2;
+        display: grid;
+        width: 33px;
+        height: 33px;
+        place-items: center;
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .settings-button svg {
+        width: 33px;
+        height: 33px;
+        stroke-width: 1.65;
+      }
+
+      .error-card {
+        position: absolute;
+        top: 118px;
+        left: 28px;
+        z-index: 1;
+        width: 414px;
+        height: 489px;
+        overflow: hidden;
+        border: 1px solid rgba(229, 218, 207, 0.9);
+        border-radius: 14px;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.72), transparent 38%),
+          linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 251, 247, 0.9));
+        box-shadow:
+          0 13px 28px rgba(84, 56, 35, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        text-align: center;
+        backdrop-filter: blur(2px);
+      }
+
+      .hero {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        width: 250px;
+        height: 174px;
+        object-fit: cover;
+        object-position: center;
+        mask-image: radial-gradient(ellipse at center, #000 0 68%, rgba(0, 0, 0, 0.86) 79%, transparent 96%);
+        transform: translateX(-50%);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .card-ornament {
+        top: 181px;
+      }
+
+      .ornament-line {
+        width: 46px;
+        height: 1px;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .error-title {
+        position: absolute;
+        top: 200px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: #111a1d;
+        font-size: 38px;
+        font-weight: 500;
+        line-height: 1.05;
+        text-align: center;
+        text-shadow: 0 10px 18px rgba(83, 45, 35, 0.08);
+      }
+
+      .error-copy {
+        position: absolute;
+        top: 286px;
+        right: 50px;
+        left: 50px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 14.3px;
+        line-height: 1.56;
+        text-align: center;
+      }
+
+      .primary-action,
+      .secondary-action {
+        position: absolute;
+        left: 37px;
+        display: flex;
+        width: 340px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .primary-action {
+        top: 364px;
+        height: 45px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 10px 20px rgba(96, 31, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: #fffaf6;
+      }
+
+      .primary-action span,
+      .secondary-action span {
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .primary-action svg {
+        position: absolute;
+        top: 11px;
+        right: 18px;
+        width: 24px;
+        height: 24px;
+        stroke-width: 1.7;
+      }
+
+      .secondary-action {
+        top: 421px;
+        height: 47px;
+        border: 1px solid rgba(168, 109, 38, 0.88);
+        background: rgba(255, 255, 255, 0.38);
+        color: var(--gold);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      }
+
+      .tip-card {
+        position: absolute;
+        top: 622px;
+        left: 65px;
+        z-index: 1;
+        display: grid;
+        width: 340px;
+        height: 105px;
+        grid-template-columns: 82px 1px minmax(0, 1fr);
+        align-items: center;
+        column-gap: 18px;
+        border: 1px solid rgba(229, 218, 207, 0.86);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.63);
+        box-shadow:
+          0 12px 24px rgba(84, 56, 35, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(2px);
+      }
+
+      .tip-icon-wrap {
+        display: grid;
+        width: 61px;
+        height: 61px;
+        place-items: center;
+        justify-self: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 42% 40%, rgba(255, 255, 255, 0.86), rgba(244, 236, 227, 0.96));
+        color: var(--gold);
+      }
+
+      .tip-icon-wrap svg {
+        width: 38px;
+        height: 38px;
+        stroke-width: 1.45;
+      }
+
+      .tip-rule {
+        width: 1px;
+        height: 76px;
+        background: rgba(168, 109, 38, 0.88);
+      }
+
+      .tip-copy {
+        min-width: 0;
+      }
+
+      .tip-title {
+        margin: 0 0 14px;
+        color: #a76416;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .tip-text {
+        margin: 0;
+        color: var(--copy);
+        font-size: 13.5px;
+        line-height: 1.45;
+      }
+
+      .bottom-nav {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 2;
+        height: 94px;
+        border-top: 1px solid rgba(229, 214, 201, 0.75);
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow: 0 -10px 22px rgba(84, 56, 35, 0.05);
+        backdrop-filter: blur(8px);
+      }
+
+      .active-rail {
+        position: absolute;
+        top: -2px;
+        left: 68px;
+        width: 50px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--wine);
+      }
+
+      .nav-list {
+        display: grid;
+        height: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 0;
+        padding: 15px 34px 0;
+        list-style: none;
+      }
+
+      .nav-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: #172328;
+        text-decoration: none;
+      }
+
+      .nav-link svg {
+        width: 32px;
+        height: 32px;
+        stroke-width: 1.45;
+      }
+
+      .nav-link.active {
+        color: var(--wine);
+      }
+
+      .nav-label {
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      @media (max-width: 470.5px) {
+        .stage {
+          width: 100vw;
+          height: 100vh;
+          min-height: 780px;
+        }
+
+        .phone {
+          width: 100vw;
+          height: 100%;
+        }
+
+        .screen-title {
+          left: 28px;
+          font-size: 39px;
+        }
+
+        .settings-button {
+          right: 28px;
+        }
+
+        .error-card {
+          right: 23px;
+          left: 23px;
+          width: auto;
+        }
+
+        .hero {
+          width: 232px;
+          height: 162px;
+        }
+
+        .card-ornament {
+          top: 176px;
+        }
+
+        .error-title {
+          top: 198px;
+          font-size: 34px;
+        }
+
+        .error-copy {
+          top: 284px;
+          right: 22px;
+          left: 22px;
+          font-size: 12.6px;
+          line-height: 1.54;
+        }
+
+        .primary-action,
+        .secondary-action {
+          right: 37px;
+          left: 37px;
+          width: auto;
+        }
+
+        .primary-action {
+          top: 356px;
+        }
+
+        .secondary-action {
+          top: 413px;
+        }
+
+        .tip-card {
+          top: 625px;
+          right: 50px;
+          left: 50px;
+          width: auto;
+          grid-template-columns: 72px 1px minmax(0, 1fr);
+          column-gap: 14px;
+        }
+
+        .tip-icon-wrap {
+          width: 56px;
+          height: 56px;
+        }
+
+        .tip-title {
+          font-size: 16px;
+        }
+
+        .tip-text {
+          font-size: 12px;
+        }
+
+        .active-rail {
+          left: 56px;
+        }
+
+        .nav-list {
+          padding-right: 23px;
+          padding-left: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <main class="phone" aria-label="Checkout return error screen preview">
+        <h1 class="screen-title serif">Design</h1>
+        <a class="settings-button" href="#" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 8.1a3.9 3.9 0 1 0 0 7.8 3.9 3.9 0 0 0 0-7.8Z" stroke="currentColor" />
+            <path d="m13.5 2.7.6 2.3a7 7 0 0 1 1.7.7l2.1-1.2 1.6 1.6-1.2 2.1c.3.5.5 1.1.7 1.7l2.3.6v2.3l-2.3.6a7 7 0 0 1-.7 1.7l1.2 2.1-1.6 1.6-2.1-1.2c-.5.3-1.1.5-1.7.7l-.6 2.3h-2.3l-.6-2.3a7 7 0 0 1-1.7-.7l-2.1 1.2-1.6-1.6 1.2-2.1a7 7 0 0 1-.7-1.7l-2.3-.6v-2.3l2.3-.6c.2-.6.4-1.2.7-1.7L4.5 6.1l1.6-1.6 2.1 1.2c.5-.3 1.1-.5 1.7-.7l.6-2.3h2.3Z" stroke="currentColor" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <section class="error-card" aria-labelledby="error-title">
+          <img class="hero" src="assets/err-006-return-link.png" alt="" />
+          <div class="ornament card-ornament" aria-hidden="true">
+            <span class="ornament-line">&nbsp;</span>
+            <span class="ornament-diamond">&nbsp;</span>
+            <span class="ornament-line">&nbsp;</span>
+          </div>
+
+          <h2 class="error-title serif" id="error-title">
+            Couldn&rsquo;t Return<br />
+            to Your Order
+          </h2>
+          <p class="error-copy">
+            We couldn&rsquo;t process the checkout return link from Stripe. Your order may still be completed.
+            Please check your order status to confirm.
+          </p>
+
+          <a class="primary-action" href="#" aria-label="Check Order Status">
+            <span class="serif">Check Order Status</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+              <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+
+          <a class="secondary-action" href="#" aria-label="Back to Home">
+            <span class="serif">Back to Home</span>
+          </a>
+        </section>
+
+        <aside class="tip-card" aria-label="Payment status tip">
+          <span class="tip-icon-wrap">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <path d="M16 4.3 25 7.8v7.1c0 5.5-3.5 10.2-9 12.4-5.5-2.2-9-6.9-9-12.4V7.8Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="m11.5 16.1 3 3 6.1-7.1" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M24.6 5.1v4.1M22.6 7.2h4" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span class="tip-rule" aria-hidden="true">&nbsp;</span>
+          <div class="tip-copy">
+            <h2 class="tip-title serif">Good to know</h2>
+            <p class="tip-text">
+              Payments may still have completed successfully. You can confirm from your order status.
+            </p>
+          </div>
+        </aside>
+
+        <nav class="bottom-nav" aria-label="Primary">
+          <span class="active-rail" aria-hidden="true">&nbsp;</span>
+          <ul class="nav-list">
+            <li>
+              <a class="nav-link active" href="#" aria-label="Design">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4.2 20.1c4.5-.6 7-2.7 7.4-6.3l5.7-5.7a2.1 2.1 0 0 0-3-3L8.6 10.8c-3.6.4-5.7 2.9-6.3 7.4l1.9 1.9Z" stroke="currentColor" stroke-linejoin="round" />
+                  <path d="M8.6 10.8 13.5 15.7M13.9 6.7l3 3M3.7 17.7l2.6 2.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="nav-label">Design</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#" aria-label="My Seals">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+                  <path d="m12 8.4 1.15 2.7 2.9.25-2.18 1.92.65 2.83L12 14.62 9.48 16.1l.65-2.83-2.18-1.92 2.9-.25Z" fill="currentColor" />
+                </svg>
+                <span class="nav-label">My Seals</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link" href="#" aria-label="Stones">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 8.5 7.3 3.6h9.4L21 8.5 12 20.7 3 8.5Z" stroke="currentColor" stroke-linejoin="round" />
+                  <path d="M3 8.5h18M7.3 3.6l2.4 4.9L12 20.7M16.7 3.6l-2.4 4.9L12 20.7" stroke="currentColor" stroke-linejoin="round" />
+                </svg>
+                <span class="nav-label">Stones</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </main>
+    </div>
+  </body>
+</html>
