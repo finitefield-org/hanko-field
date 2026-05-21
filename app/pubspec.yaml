@@ -1,5 +1,5 @@
 name: hankofield
-description: "STONE SIGNATURE - Custom Japanese seal design and ordering app."
+description: "Hanko Field app."
 publish_to: 'none'
 
 version: 1.0.4+10
@@ -11,16 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  characters: ^1.4.0
   cupertino_icons: ^1.0.8
-  google_fonts: ^6.3.2
-  http: ^1.6.0
-  url_launcher: ^6.3.2
-  miniriverpod:
-    path: ../../miniriverpod/miniriverpod
   declarative_nav:
     path: ../../declarative-nav/declarative_nav
-  shared_preferences: ^2.5.4
+  miniriverpod:
+    path: ../../miniriverpod/miniriverpod
 
 dev_dependencies:
   flutter_test:
@@ -41,5 +36,6 @@ flutter:
       fonts:
         - asset: assets/fonts/NotoSerif.ttf
   assets:
-    - assets/site-logo.png
-    - assets/top-hero.png
+    - assets/design/com003_gemstones.png
+    - assets/design/com003_hero_seal.png
+    - assets/design/com003_saved_seal.png
