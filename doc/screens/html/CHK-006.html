@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-006 Order Confirmation - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #151a1f;
+        --copy: #3f4850;
+        --muted: #66707a;
+        --wine: #8c1216;
+        --gold: #b57b34;
+        --line: #e7d7c5;
+        --card: rgba(255, 255, 255, 0.64);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(25px, 5.4vw, 25px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 27%, transparent 60%),
+          radial-gradient(circle at 44% 47%, rgba(255, 255, 255, 0.78) 0 25%, transparent 62%),
+          radial-gradient(circle at 58% 84%, rgba(255, 255, 255, 0.7) 0 25%, transparent 63%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 180px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 73px;
+        left: 23px;
+        z-index: 2;
+        display: grid;
+        width: 31px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 28px;
+        height: 23px;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 67px;
+        color: #821115;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: clamp(38px, 10.2vw, 48px);
+        font-weight: 600;
+        line-height: 0.95;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        transform: scaleX(0.5);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        margin-top: 2px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 56px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        margin: 18px var(--side) 0;
+        color: #333d46;
+        font-size: 15.5px;
+        line-height: 1.25;
+        text-align: center;
+      }
+
+      .order-card,
+      .totals-card {
+        position: relative;
+        z-index: 1;
+        margin-right: var(--side);
+        margin-left: var(--side);
+        border: 1px solid rgba(231, 215, 197, 0.66);
+        border-radius: 13px;
+        background: var(--card);
+        box-shadow:
+          0 12px 26px rgba(84, 56, 35, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .order-card {
+        padding: 23px 19px 17px;
+      }
+
+      .product-row {
+        display: grid;
+        grid-template-columns: 139px minmax(0, 1fr);
+        align-items: center;
+        gap: 21px;
+      }
+
+      .media-frame {
+        display: block;
+        width: 139px;
+        height: 128px;
+        border-radius: 12px;
+        object-fit: cover;
+      }
+
+      .item-copy {
+        min-width: 0;
+        padding-top: 3px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--gold);
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .seal-name {
+        margin: 13px 0 0;
+        color: #1e252a;
+        font-family: "Hanko JP", "Hanko Serif", "Times New Roman", serif;
+        font-size: 30px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .seal-meaning {
+        margin: 14px 0 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .divider {
+        display: block;
+        height: 1px;
+        margin: 17px 0 13px;
+        background: rgba(188, 141, 85, 0.34);
+      }
+
+      .stone-title {
+        margin: 15px 0 0;
+        color: #182026;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 25.5px;
+        font-weight: 600;
+        line-height: 1.08;
+        white-space: nowrap;
+      }
+
+      .stock-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        height: 25px;
+        margin-top: 13px;
+        padding: 0 13px 0 9px;
+        border-radius: 7px;
+        background: rgba(230, 234, 221, 0.84);
+        color: #2f3941;
+        font-size: 12.5px;
+        line-height: 1;
+      }
+
+      .stock-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #4f8e50;
+        box-shadow: 0 0 0 2px rgba(79, 142, 80, 0.08);
+      }
+
+      .totals-card {
+        margin-top: 12px;
+        padding: 20px 20px 8px;
+      }
+
+      .cost-row,
+      .total-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .cost-row + .cost-row {
+        margin-top: 14px;
+      }
+
+      .cost-label,
+      .cost-value {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .cost-value {
+        letter-spacing: 0.03em;
+      }
+
+      .ornate-divider {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        margin: 17px 0 7px;
+        color: var(--gold);
+      }
+
+      .ornate-divider::before,
+      .ornate-divider::after {
+        content: "";
+        height: 1px;
+        flex: 1 1 auto;
+        background: currentColor;
+        opacity: 0.74;
+      }
+
+      .ornate-divider span {
+        width: 10px;
+        height: 10px;
+        flex: 0 0 auto;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .total-label,
+      .total-value {
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .total-label {
+        font-size: 28px;
+      }
+
+      .total-value {
+        font-size: 29px;
+        letter-spacing: 0.03em;
+      }
+
+      .secure-note,
+      .safe-note {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4b555e;
+      }
+
+      .secure-note {
+        gap: 15px;
+        margin: 18px var(--side) 0;
+        font-size: 13.5px;
+        line-height: 1.35;
+      }
+
+      .safe-note {
+        gap: 12px;
+        margin: 16px var(--side) 0;
+        font-size: 12.5px;
+        line-height: 1;
+      }
+
+      .shield-icon {
+        width: 31px;
+        height: 35px;
+        flex: 0 0 auto;
+        color: var(--gold);
+        stroke-width: 1.5;
+      }
+
+      .safe-note .shield-icon {
+        width: 24px;
+        height: 27px;
+      }
+
+      .pay-button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 55px;
+        margin: 18px var(--side) 0;
+        border-radius: 9px;
+        background:
+          radial-gradient(circle at 26% 22%, rgba(185, 30, 34, 0.48), transparent 45%),
+          linear-gradient(135deg, #9c1115 0%, #821013 100%);
+        color: #fff;
+        box-shadow:
+          0 9px 18px rgba(99, 46, 27, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .spark-icon {
+        position: absolute;
+        left: 78px;
+        width: 28px;
+        height: 28px;
+        color: #f1dfc6;
+      }
+
+      .pay-button .arrow-icon {
+        position: absolute;
+        right: 20px;
+        width: 24px;
+        height: 24px;
+        color: #fff;
+        stroke-width: 1.7;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 21px;
+        }
+
+        .hero {
+          height: 174px;
+        }
+
+        .back-button {
+          left: 20px;
+        }
+
+        .screen-title {
+          font-size: 35px;
+          transform: scaleX(0.64);
+        }
+
+        .ornament {
+          margin-top: 2px;
+        }
+
+        .ornament-line {
+          width: 45px;
+        }
+
+        .lede {
+          margin-top: 17px;
+          font-size: 14.2px;
+        }
+
+        .order-card {
+          padding: 22px 17px 16px;
+        }
+
+        .product-row {
+          grid-template-columns: 123px minmax(0, 1fr);
+          gap: 17px;
+        }
+
+        .media-frame {
+          width: 123px;
+          height: 116px;
+        }
+
+        .eyebrow {
+          font-size: 11.8px;
+        }
+
+        .seal-name {
+          margin-top: 12px;
+          font-size: 25px;
+        }
+
+        .seal-meaning {
+          margin-top: 12px;
+          font-size: 15.5px;
+        }
+
+        .divider {
+          margin: 15px 0 12px;
+        }
+
+        .stone-title {
+          margin-top: 12px;
+          font-size: 21.5px;
+          white-space: normal;
+        }
+
+        .stock-pill {
+          margin-top: 10px;
+        }
+
+        .totals-card {
+          padding: 18px 18px 8px;
+        }
+
+        .cost-row + .cost-row {
+          margin-top: 13px;
+        }
+
+        .cost-label,
+        .cost-value {
+          font-size: 17px;
+        }
+
+        .ornate-divider {
+          margin: 15px 0 7px;
+        }
+
+        .total-label,
+        .total-value {
+          font-size: 26px;
+        }
+
+        .secure-note {
+          gap: 13px;
+          margin-top: 17px;
+          font-size: 12.8px;
+        }
+
+        .pay-button {
+          height: 53px;
+          margin-top: 18px;
+          font-size: 18.5px;
+        }
+
+        .spark-icon {
+          left: 58px;
+          width: 25px;
+          height: 25px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4.4 12h14.8M13.5 5.6l6.4 6.4-6.4 6.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-shield-lock" viewBox="0 0 32 36">
+        <path d="M16 2.8 28 7.2v8.9c0 8.2-4.7 13.7-12 16.9C8.7 29.8 4 24.3 4 16.1V7.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M12 17.3h8v7.2h-8Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M13.8 17.1v-2.2a2.2 2.2 0 0 1 4.4 0v2.2" fill="none" stroke="currentColor" stroke-linecap="round" />
+        <path d="M16 20.2v1.4" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+      <symbol id="icon-shield-check" viewBox="0 0 32 36">
+        <path d="M16 2.8 28 7.2v8.9c0 8.2-4.7 13.7-12 16.9C8.7 29.8 4 24.3 4 16.1V7.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="m11.3 17.8 3.2 3.2 6.5-7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="icon-spark" viewBox="0 0 32 32">
+        <path d="M13.9 3.5c1.1 6.3 4.2 9.4 10.5 10.5-6.3 1.1-9.4 4.2-10.5 10.5C12.8 18.2 9.7 15.1 3.4 14c6.3-1.1 9.4-4.2 10.5-10.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6" />
+        <path d="M24.6 4.4c.5 2.5 1.8 3.8 4.1 4.2-2.3.5-3.6 1.8-4.1 4.2-.4-2.4-1.7-3.7-4.1-4.2 2.4-.4 3.7-1.7 4.1-4.2Z" fill="currentColor" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Order confirmation screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Order Confirmation</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="lede">Please review your order details before proceeding.</p>
+      </header>
+
+      <section class="order-card" aria-label="Selected seal and gemstone">
+        <article class="product-row">
+          <img class="media-frame" src="assets/chk-006-seal-frame.png" alt="Seal preview for Misora" />
+          <div class="item-copy">
+            <p class="eyebrow">Seal Preview</p>
+            <h2 class="seal-name">美空</h2>
+            <p class="seal-meaning">Beautiful sky</p>
+          </div>
+        </article>
+
+        <span class="divider" aria-hidden="true"></span>
+
+        <article class="product-row">
+          <img class="media-frame" src="assets/chk-006-stone-frame.png" alt="Soft pink rose quartz gemstone" />
+          <div class="item-copy">
+            <p class="eyebrow">Gemstone</p>
+            <h2 class="stone-title">Soft Pink Rose Quartz</h2>
+            <p class="stock-pill"><span class="stock-dot" aria-hidden="true"></span> In stock</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="totals-card" aria-label="Order total">
+        <div class="cost-row">
+          <span class="cost-label">Item</span>
+          <span class="cost-value">¥18,000</span>
+        </div>
+        <div class="cost-row">
+          <span class="cost-label">Shipping</span>
+          <span class="cost-value">¥3,000</span>
+        </div>
+        <div class="ornate-divider" aria-hidden="true"><span></span></div>
+        <div class="total-row">
+          <span class="total-label">Total</span>
+          <span class="total-value">¥21,000</span>
+        </div>
+      </section>
+
+      <p class="secure-note">
+        <svg class="shield-icon" aria-hidden="true"><use href="#icon-shield-lock" /></svg>
+        <span>You will be redirected to Stripe Checkout<br />for secure payment.</span>
+      </p>
+
+      <a class="pay-button" href="#" aria-label="Proceed to Secure Payment">
+        <svg class="spark-icon" aria-hidden="true"><use href="#icon-spark" /></svg>
+        <span>Proceed to Secure Payment</span>
+        <svg class="arrow-icon" aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+      </a>
+
+      <p class="safe-note">
+        <svg class="shield-icon" aria-hidden="true"><use href="#icon-shield-check" /></svg>
+        <span>Your information is safe and encrypted.</span>
+      </p>
+    </main>
+  </body>
+</html>
