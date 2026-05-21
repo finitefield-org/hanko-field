@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-015 Order Complete - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #151d22;
+        --copy: #3f4a54;
+        --wine: #8c1216;
+        --wine-deep: #861014;
+        --gold: #b77b35;
+        --line: #d4ad79;
+        --soft-line: #e7d4c1;
+        --card: rgba(255, 255, 255, 0.64);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.95) 0 25%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      button,
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .phone {
+        --side: clamp(24px, 5.1vw, 24px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        padding: 60px var(--side) 8px;
+        background:
+          radial-gradient(circle at 50% 9%, rgba(255, 255, 255, 0.96) 0 29%, transparent 61%),
+          radial-gradient(circle at 43% 47%, rgba(255, 255, 255, 0.72) 0 24%, transparent 60%),
+          radial-gradient(circle at 58% 92%, rgba(255, 255, 255, 0.68) 0 28%, transparent 64%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdfa 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+      }
+
+      .screen-title {
+        margin: 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 39px;
+        font-weight: 600;
+        line-height: 0.96;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        transform: scaleX(0.55);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 51px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .header-ornament {
+        margin-top: 14px;
+      }
+
+      .celebration {
+        position: relative;
+        display: grid;
+        width: 310px;
+        height: 88px;
+        margin: 8px auto 0;
+        place-items: center;
+      }
+
+      .celebration::before {
+        position: absolute;
+        inset: 6px 34px 0;
+        content: "";
+        background:
+          linear-gradient(77deg, transparent 0 47%, rgba(214, 179, 139, 0.28) 49%, transparent 51%) center / 100% 100%,
+          linear-gradient(103deg, transparent 0 47%, rgba(214, 179, 139, 0.18) 49%, transparent 51%) center / 100% 100%,
+          linear-gradient(61deg, transparent 0 48%, rgba(214, 179, 139, 0.13) 49%, transparent 51%) center / 100% 100%;
+        opacity: 0.78;
+        transform: scaleY(0.82);
+      }
+
+      .celebration-dot {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(191, 131, 55, 0.72);
+        transform: rotate(45deg);
+      }
+
+      .celebration-dot:nth-child(1) {
+        top: 18px;
+        left: 22px;
+      }
+
+      .celebration-dot:nth-child(2) {
+        top: 47px;
+        left: 10px;
+        opacity: 0.62;
+      }
+
+      .celebration-dot:nth-child(3) {
+        top: 66px;
+        left: 45px;
+      }
+
+      .celebration-dot:nth-child(4) {
+        top: 34px;
+        left: 74px;
+        opacity: 0.42;
+      }
+
+      .celebration-dot:nth-child(5) {
+        top: 82px;
+        left: 78px;
+        opacity: 0.5;
+      }
+
+      .celebration-dot:nth-child(6) {
+        top: 25px;
+        left: 104px;
+        opacity: 0.38;
+      }
+
+      .celebration-dot:nth-child(7) {
+        top: 21px;
+        right: 104px;
+        opacity: 0.42;
+      }
+
+      .celebration-dot:nth-child(8) {
+        top: 36px;
+        right: 73px;
+      }
+
+      .celebration-dot:nth-child(9) {
+        top: 63px;
+        right: 44px;
+        opacity: 0.62;
+      }
+
+      .celebration-dot:nth-child(10) {
+        top: 20px;
+        right: 23px;
+        opacity: 0.74;
+      }
+
+      .celebration-dot:nth-child(11) {
+        top: 82px;
+        right: 18px;
+        opacity: 0.34;
+      }
+
+      .celebration-dot:nth-child(12) {
+        top: 51px;
+        right: 103px;
+        opacity: 0.48;
+      }
+
+      .brand-seal {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: 84px;
+        height: 84px;
+        border-radius: 999px;
+        filter: drop-shadow(0 11px 14px rgba(83, 42, 22, 0.2));
+        object-fit: contain;
+      }
+
+      .thanks {
+        margin: 9px 0 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 43px;
+        font-weight: 600;
+        line-height: 0.88;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        transform: scaleX(0.56);
+        white-space: nowrap;
+      }
+
+      .success-copy {
+        margin: 10px 0 0;
+        color: #33404a;
+        font-size: 15.1px;
+        line-height: 1.42;
+        text-align: center;
+      }
+
+      .order-number {
+        display: grid;
+        grid-template-columns: 28px 79px 1px 116px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: min(265px, calc(100% - 108px));
+        height: 44px;
+        margin: 11px auto 0;
+        border: 1px solid rgba(224, 203, 181, 0.86);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.42);
+        color: #33404a;
+      }
+
+      .order-icon {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .order-icon svg {
+        width: 25px;
+        height: 25px;
+      }
+
+      .order-label {
+        font-size: 12.3px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .order-divider {
+        width: 1px;
+        height: 29px;
+        background: rgba(202, 157, 106, 0.5);
+      }
+
+      .order-id {
+        color: var(--wine);
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 17.4px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .center-diamond {
+        width: 10px;
+        height: 10px;
+        margin: 12px auto 0;
+        border: 2px solid var(--gold);
+        transform: rotate(45deg);
+      }
+
+      .production-copy {
+        margin: 12px auto 0;
+        max-width: 295px;
+        color: #35414b;
+        font-size: 13.1px;
+        line-height: 1.25;
+        text-align: center;
+      }
+
+      .selection-card {
+        display: grid;
+        grid-template-rows: 1fr 1px 1fr;
+        width: min(317px, calc(100% - 104px));
+        height: 197px;
+        margin: 10px auto 0;
+        padding: 12px 18px;
+        border: 1px solid rgba(226, 213, 199, 0.86);
+        border-radius: 13px;
+        background: var(--card);
+        box-shadow:
+          0 10px 24px rgba(82, 54, 33, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .selection-row {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        align-items: center;
+        gap: 20px;
+        min-width: 0;
+      }
+
+      .item-frame {
+        width: 96px;
+        height: 86px;
+        border: 1px solid rgba(227, 213, 198, 0.82);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.34);
+        object-fit: cover;
+      }
+
+      .selection-separator {
+        height: 1px;
+        margin: 7px 0;
+        background: rgba(201, 164, 119, 0.32);
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: #b36c2c;
+        font-size: 10.3px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .jp-name {
+        margin: 10px 0 0;
+        color: #142028;
+        font-family: "Hanko JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 28px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .english-name {
+        margin: 10px 0 0;
+        color: var(--wine);
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 13.5px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stone-name {
+        margin: 11px 0 0;
+        color: #151d22;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 1;
+        transform: scaleX(0.76);
+        transform-origin: left center;
+        white-space: nowrap;
+      }
+
+      .stock {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 13px 0 0;
+        color: #303c46;
+        font-size: 13.2px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .stock::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #5a9d61;
+        content: "";
+      }
+
+      .total-paid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        width: min(317px, calc(100% - 104px));
+        height: 43px;
+        margin: 10px auto 0;
+        padding: 0 17px;
+        border: 1px solid rgba(226, 213, 199, 0.86);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.66);
+        box-shadow:
+          0 8px 19px rgba(82, 54, 33, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .total-paid span {
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .total-paid span:first-child {
+        transform: scaleX(0.84);
+        transform-origin: left center;
+      }
+
+      .primary-action,
+      .secondary-action {
+        display: grid;
+        grid-template-columns: 44px minmax(0, auto) 44px;
+        align-items: center;
+        justify-content: center;
+        width: min(328px, calc(100% - 94px));
+        height: 45px;
+        margin: 10px auto 0;
+        border-radius: 8px;
+        text-decoration: none;
+      }
+
+      .primary-action {
+        border: 1px solid rgba(126, 13, 16, 0.95);
+        color: #fffdf9;
+        background:
+          radial-gradient(circle at 67% 42%, rgba(176, 48, 50, 0.42) 0 22%, transparent 45%),
+          linear-gradient(135deg, #911114 0%, #9e181a 48%, #880d12 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .primary-action svg {
+        width: 25px;
+        height: 25px;
+      }
+
+      .primary-action .arrow {
+        justify-self: end;
+      }
+
+      .action-label {
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 18.6px;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .secondary-action {
+        height: 44px;
+        border: 1px solid rgba(185, 124, 52, 0.88);
+        color: #21303a;
+        background: rgba(255, 255, 255, 0.38);
+      }
+
+      .secondary-action .action-label {
+        display: flex;
+        align-items: center;
+        gap: 17px;
+      }
+
+      .secondary-action svg {
+        width: 24px;
+        height: 24px;
+        color: var(--gold);
+      }
+
+      @media (max-width: 430px) {
+        .phone {
+          --side: 20px;
+          padding-top: 56px;
+        }
+
+        .screen-title {
+          font-size: 36px;
+          transform: scaleX(0.58);
+        }
+
+        .header-ornament {
+          margin-top: 12px;
+        }
+
+        .celebration {
+          width: 292px;
+          height: 84px;
+          margin-top: 8px;
+        }
+
+        .brand-seal {
+          width: 80px;
+          height: 80px;
+        }
+
+        .thanks {
+          margin-top: 8px;
+          font-size: 40px;
+          line-height: 0.88;
+          transform: scaleX(0.56);
+        }
+
+        .success-copy {
+          margin-top: 10px;
+          font-size: 14.4px;
+          line-height: 1.36;
+        }
+
+        .order-number {
+          grid-template-columns: 28px 76px 1px 108px;
+          width: calc(100% - 76px);
+          gap: 8px;
+        }
+
+        .order-label {
+          font-size: 11.8px;
+        }
+
+        .order-id {
+          font-size: 16.7px;
+        }
+
+        .center-diamond {
+          margin-top: 10px;
+        }
+
+        .production-copy {
+          margin-top: 12px;
+          max-width: 294px;
+          font-size: 12.7px;
+          line-height: 1.25;
+        }
+
+        .selection-card,
+        .total-paid {
+          width: calc(100% - 74px);
+        }
+
+        .selection-card {
+          height: 178px;
+          margin-top: 10px;
+          padding-right: 16px;
+          padding-left: 16px;
+        }
+
+        .selection-row {
+          grid-template-columns: 84px minmax(0, 1fr);
+          gap: 16px;
+        }
+
+        .item-frame {
+          width: 84px;
+          height: 74px;
+        }
+
+        .jp-name {
+          font-size: 25px;
+        }
+
+        .english-name {
+          font-size: 12.7px;
+        }
+
+        .stone-name {
+          font-size: 21px;
+          transform: scaleX(0.64);
+        }
+
+        .stock {
+          font-size: 12.6px;
+        }
+
+        .total-paid {
+          margin-top: 10px;
+        }
+
+        .total-paid span {
+          font-size: 20px;
+        }
+
+        .primary-action,
+        .secondary-action {
+          width: calc(100% - 64px);
+          margin-top: 9px;
+        }
+
+        .action-label {
+          font-size: 18.6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="phone" aria-label="Order Complete">
+      <h1 class="screen-title">Order Complete</h1>
+      <div class="ornament header-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <div class="celebration" aria-hidden="true">
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <span class="celebration-dot"></span>
+        <img class="brand-seal" src="assets/chk-007-brand-seal.png" alt="" />
+      </div>
+
+      <p class="thanks">Thank You</p>
+      <p class="success-copy">
+        Your custom gemstone seal has been<br />
+        successfully ordered.
+      </p>
+
+      <section class="order-number" aria-label="Order number">
+        <span class="order-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32">
+            <path
+              d="M16 3.8c3.9 2.7 7.8 3 10 2.9v7.9c0 5.8-4.1 10-10 12.7-5.9-2.7-10-6.9-10-12.7V6.7c2.2.1 6.1-.2 10-2.9Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+            />
+            <rect x="12.3" y="15" width="7.4" height="6.2" rx="1" fill="none" stroke="currentColor" stroke-width="1.6" />
+            <path d="M14 15v-2.3a2 2 0 0 1 4 0V15" fill="none" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </span>
+        <span class="order-label">Order Number</span>
+        <span class="order-divider" aria-hidden="true"></span>
+        <span class="order-id">SS-2025-0427</span>
+      </section>
+
+      <div class="center-diamond" aria-hidden="true"></div>
+      <p class="production-copy">
+        Your custom gemstone seal will now move<br />
+        into production. We&rsquo;ll notify you as soon as<br />
+        it&rsquo;s on its way.
+      </p>
+
+      <section class="selection-card" aria-label="Selected items">
+        <div class="selection-row">
+          <img class="item-frame" src="assets/chk-006-seal-frame.png" alt="" />
+          <div>
+            <p class="eyebrow">Selected Seal</p>
+            <p class="jp-name">&#32654;&#31354;</p>
+            <p class="english-name">Beautiful Sky</p>
+          </div>
+        </div>
+        <span class="selection-separator" aria-hidden="true"></span>
+        <div class="selection-row">
+          <img class="item-frame" src="assets/chk-006-stone-frame.png" alt="" />
+          <div>
+            <p class="eyebrow">Gemstone</p>
+            <p class="stone-name">Soft Pink Rose Quartz</p>
+            <p class="stock">In stock</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="total-paid" aria-label="Total paid">
+        <span>Total Paid</span>
+        <span>&yen;21,000</span>
+      </section>
+
+      <a class="primary-action" href="#" aria-label="View Order">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <path d="M17.8 3.2c1.1 8.3 4.9 12.2 13.1 13.2-8.2 1.1-12 4.9-13.1 13.2-1.1-8.3-4.9-12.1-13.2-13.2 8.3-1 12.1-4.9 13.2-13.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6" />
+          <path d="M27.4 3.5v6.2M24.3 6.6h6.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" />
+        </svg>
+        <span class="action-label">View Order</span>
+        <svg class="arrow" viewBox="0 0 36 36" aria-hidden="true">
+          <path d="M6 18h23M20.5 8.8 30 18l-9.5 9.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.1" />
+        </svg>
+      </a>
+
+      <a class="secondary-action" href="#" aria-label="Back to Home">
+        <span></span>
+        <span class="action-label">
+          <svg viewBox="0 0 36 36" aria-hidden="true">
+            <path d="m5.5 17 12.5-10.6L30.5 17M9.2 15.2v14.2h17.6V15.2" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+            <path d="M14.5 29.4v-8h7v8" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+          </svg>
+          Back to Home
+        </span>
+        <span></span>
+      </a>
+    </main>
+  </body>
+</html>
