@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-004 Choose Your Kanji - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --screen-h: 911px;
+        --screen-scale: 1;
+        --ink: #172126;
+        --copy: #59636c;
+        --wine: #941416;
+        --deep-wine: #811012;
+        --gold: #b8823c;
+        --line: #e7d8c9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: start center;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.94) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 43%, #f4ece3 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      h1,
+      h2,
+      h3,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background: #fffdf9;
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.97) 0 25%, transparent 57%),
+          radial-gradient(circle at 50% 43%, rgba(255, 255, 255, 0.7) 0 27%, transparent 61%),
+          radial-gradient(circle at 52% 86%, rgba(255, 255, 255, 0.62) 0 23%, transparent 59%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        box-shadow: inset 0 0 70px rgba(111, 78, 48, 0.07);
+      }
+
+      .serif {
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman",
+          serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 69px;
+        left: 24px;
+        display: grid;
+        width: 31px;
+        height: 31px;
+        place-items: center;
+        color: var(--deep-wine);
+        text-decoration: none;
+      }
+
+      .back-button svg {
+        width: 31px;
+        height: 31px;
+        stroke-width: 1.65;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 68px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: var(--deep-wine);
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .intro-ornament {
+        top: 113px;
+      }
+
+      .footer-ornament {
+        top: 843px;
+        gap: 10px;
+      }
+
+      .ornament-line {
+        width: 48px;
+        height: 1px;
+        background: currentColor;
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .footer-ornament .ornament-line {
+        width: 22px;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        font-size: 0;
+        line-height: 0;
+        transform: rotate(45deg);
+      }
+
+      .intro-copy {
+        position: absolute;
+        top: 135px;
+        left: 50%;
+        width: 296px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 12.6px;
+        font-weight: 400;
+        line-height: 1.62;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      .intro-copy strong {
+        color: var(--deep-wine);
+        font-weight: 500;
+      }
+
+      .kanji-card {
+        position: absolute;
+        left: 23.5px;
+        width: 384.5px;
+        height: 187px;
+        overflow: hidden;
+        border: 0.8px solid rgba(232, 219, 207, 0.95);
+        border-radius: 13px;
+        background:
+          radial-gradient(circle at 18% 38%, rgba(255, 255, 255, 0.64) 0 15%, transparent 36%),
+          linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 250, 245, 0.84));
+        box-shadow:
+          0 10px 20px rgba(92, 62, 37, 0.075),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .kanji-card:nth-of-type(1) {
+        top: 214px;
+      }
+
+      .kanji-card:nth-of-type(2) {
+        top: 416.5px;
+      }
+
+      .kanji-card:nth-of-type(3) {
+        top: 616.5px;
+      }
+
+      .mark-disc {
+        position: absolute;
+        top: 24px;
+        left: 12.5px;
+        display: grid;
+        width: 84px;
+        height: 84px;
+        place-items: center;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 40% 34%, rgba(255, 255, 255, 0.82) 0 18%, transparent 42%),
+          radial-gradient(circle at 51% 52%, rgba(255, 251, 244, 0.82), rgba(238, 219, 200, 0.34) 72%),
+          linear-gradient(136deg, rgba(255, 253, 249, 0.86), rgba(236, 215, 194, 0.52));
+      }
+
+      .kanji {
+        color: var(--deep-wine);
+        font-family: "Hanko Serif JP", "Hiragino Mincho ProN", serif;
+        font-size: 43px;
+        font-weight: 600;
+        line-height: 0.9;
+        text-align: center;
+        text-shadow: 0 8px 12px rgba(111, 33, 22, 0.1);
+      }
+
+      .kanji.two-line {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        font-size: 35px;
+        line-height: 0.92;
+      }
+
+      .sparkle {
+        position: absolute;
+        width: 11px;
+        height: 11px;
+        color: var(--gold);
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .sparkle::before,
+      .sparkle::after {
+        content: "";
+        position: absolute;
+        background: currentColor;
+        border-radius: 999px;
+      }
+
+      .sparkle::before {
+        top: 0;
+        left: 5px;
+        width: 1px;
+        height: 11px;
+      }
+
+      .sparkle::after {
+        top: 5px;
+        left: 0;
+        width: 11px;
+        height: 1px;
+      }
+
+      .sparkle.small {
+        width: 7px;
+        height: 7px;
+        opacity: 0.85;
+      }
+
+      .sparkle.small::before {
+        left: 3px;
+        height: 7px;
+      }
+
+      .sparkle.small::after {
+        top: 3px;
+        width: 7px;
+      }
+
+      .sparkle.one {
+        top: 53px;
+        left: 16px;
+        transform: rotate(45deg);
+      }
+
+      .sparkle.two {
+        top: 48px;
+        right: 30px;
+        transform: rotate(17deg);
+      }
+
+      .sparkle.three {
+        right: 26px;
+        bottom: 27px;
+        transform: rotate(45deg);
+      }
+
+      .details {
+        position: absolute;
+        top: 23.5px;
+        left: 114.5px;
+        width: 143px;
+      }
+
+      .label {
+        margin: 0;
+        color: #55606a;
+        font-size: 10.7px;
+        font-weight: 400;
+        line-height: 1.1;
+      }
+
+      .reading {
+        margin: 6px 0 0;
+        color: #171d20;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .detail-rule {
+        width: 82px;
+        height: 1px;
+        margin: 10px 0 11px;
+        background: rgba(184, 130, 60, 0.62);
+      }
+
+      .meaning {
+        margin: 7px 0 13px;
+        color: #151b1f;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 1.1;
+      }
+
+      .tags {
+        display: flex;
+        gap: 3px;
+        margin-top: 6px;
+      }
+
+      .tag {
+        display: inline-flex;
+        height: 20px;
+        align-items: center;
+        justify-content: center;
+        border: 0.8px solid rgba(224, 207, 190, 0.96);
+        border-radius: 999px;
+        background: rgba(249, 244, 238, 0.82);
+        color: #59626b;
+        font-size: 9.7px;
+        font-weight: 400;
+        line-height: 1;
+        padding: 0 5.5px;
+        white-space: nowrap;
+      }
+
+      .divider {
+        position: absolute;
+        top: 22px;
+        left: 258.5px;
+        width: 1px;
+        height: 148px;
+        background: rgba(184, 130, 60, 0.7);
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .suitability {
+        position: absolute;
+        top: 21px;
+        right: 15px;
+        width: 96px;
+        text-align: center;
+      }
+
+      .gem-wrap {
+        display: grid;
+        width: 37px;
+        height: 37px;
+        margin: 0 auto 10px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 45% 36%, rgba(255, 255, 255, 0.82), rgba(246, 238, 229, 0.94));
+        color: var(--gold);
+      }
+
+      .gem-wrap svg {
+        width: 25px;
+        height: 25px;
+        stroke-width: 1.35;
+      }
+
+      .suit-label {
+        margin: 0;
+        color: #58616a;
+        font-size: 10.6px;
+        font-weight: 400;
+        line-height: 1.18;
+      }
+
+      .suit-value {
+        margin: 9px 0 0;
+        color: var(--deep-wine);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .choose-button {
+        position: absolute;
+        right: 15px;
+        bottom: 20px;
+        display: flex;
+        width: 96px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        background:
+          radial-gradient(circle at 28% 27%, rgba(255, 255, 255, 0.1), transparent 25%),
+          linear-gradient(116deg, #a6191b 0%, #901316 48%, #7f0e12 100%);
+        box-shadow:
+          0 8px 16px rgba(100, 30, 25, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        color: #fffaf6;
+        text-decoration: none;
+      }
+
+      .choose-button span {
+        margin-right: 20px;
+        font-size: 17px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .choose-button svg {
+        position: absolute;
+        right: 10px;
+        width: 25px;
+        height: 22px;
+        stroke-width: 1.4;
+      }
+
+      .tagline {
+        position: absolute;
+        top: 858px;
+        right: 0;
+        left: 0;
+        margin: 0;
+        color: #1d2930;
+        font-size: 9.6px;
+        font-weight: 500;
+        letter-spacing: 2.1px;
+        line-height: 1;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Choose your kanji screen preview">
+      <div class="artboard">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 12H4.7" stroke="currentColor" stroke-linecap="round" />
+            <path d="m11 5.2-7 6.8 7 6.8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <h1 class="screen-title serif">Choose Your Kanji</h1>
+        <div class="ornament intro-ornament" aria-hidden="true">
+          <span class="ornament-line">&nbsp;</span>
+          <span class="ornament-diamond">&nbsp;</span>
+          <span class="ornament-line">&nbsp;</span>
+        </div>
+        <p class="intro-copy">
+          We&rsquo;ve curated kanji suggestions for the name<br />
+          <strong>Michael.</strong> Each one carries a unique meaning<br />
+          and impression.
+        </p>
+
+        <section class="kanji-card" aria-label="Hikari kanji option">
+          <div class="mark-disc" aria-hidden="true">
+            <span class="sparkle small one">&nbsp;</span>
+            <span class="kanji">光</span>
+            <span class="sparkle small two">&nbsp;</span>
+            <span class="sparkle small three">&nbsp;</span>
+          </div>
+          <div class="details">
+            <p class="label">Reading</p>
+            <h2 class="reading serif">Hikari</h2>
+            <div class="detail-rule" aria-hidden="true"></div>
+            <p class="label">Meaning</p>
+            <p class="meaning">Light</p>
+            <p class="label">Impression</p>
+            <div class="tags" aria-label="Bright Simple Refined">
+              <span class="tag">Bright</span>
+              <span class="tag">Simple</span>
+              <span class="tag">Refined</span>
+            </div>
+          </div>
+          <span class="divider" aria-hidden="true">&nbsp;</span>
+          <div class="suitability">
+            <span class="gem-wrap" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M6 10.5 11.2 5h9.6L26 10.5 16 27 6 10.5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M6 10.5h20M11.2 5l3.1 5.5L16 27M20.8 5l-3.1 5.5L16 27" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <p class="suit-label">Engraving<br />Suitability</p>
+            <p class="suit-value">High</p>
+          </div>
+          <a class="choose-button" href="#" aria-label="Choose Hikari">
+            <span class="serif">Choose</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+              <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </section>
+
+        <section class="kanji-card" aria-label="Misora kanji option">
+          <div class="mark-disc" aria-hidden="true">
+            <span class="sparkle small one">&nbsp;</span>
+            <span class="kanji two-line"><span>美</span><span>空</span></span>
+            <span class="sparkle small two">&nbsp;</span>
+            <span class="sparkle small three">&nbsp;</span>
+          </div>
+          <div class="details">
+            <p class="label">Reading</p>
+            <h2 class="reading serif">Misora</h2>
+            <div class="detail-rule" aria-hidden="true"></div>
+            <p class="label">Meaning</p>
+            <p class="meaning">Beautiful sky</p>
+            <p class="label">Impression</p>
+            <div class="tags" aria-label="Elegant Gentle Poetic">
+              <span class="tag">Elegant</span>
+              <span class="tag">Gentle</span>
+              <span class="tag">Poetic</span>
+            </div>
+          </div>
+          <span class="divider" aria-hidden="true">&nbsp;</span>
+          <div class="suitability">
+            <span class="gem-wrap" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M6 10.5 11.2 5h9.6L26 10.5 16 27 6 10.5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M6 10.5h20M11.2 5l3.1 5.5L16 27M20.8 5l-3.1 5.5L16 27" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <p class="suit-label">Engraving<br />Suitability</p>
+            <p class="suit-value">High</p>
+          </div>
+          <a class="choose-button" href="#" aria-label="Choose Misora">
+            <span class="serif">Choose</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+              <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </section>
+
+        <section class="kanji-card" aria-label="Ei kanji option">
+          <div class="mark-disc" aria-hidden="true">
+            <span class="sparkle small one">&nbsp;</span>
+            <span class="kanji">永</span>
+            <span class="sparkle small two">&nbsp;</span>
+            <span class="sparkle small three">&nbsp;</span>
+          </div>
+          <div class="details">
+            <p class="label">Reading</p>
+            <h2 class="reading serif">Ei</h2>
+            <div class="detail-rule" aria-hidden="true"></div>
+            <p class="label">Meaning</p>
+            <p class="meaning">Eternity</p>
+            <p class="label">Impression</p>
+            <div class="tags" aria-label="Calm Timeless Classic">
+              <span class="tag">Calm</span>
+              <span class="tag">Timeless</span>
+              <span class="tag">Classic</span>
+            </div>
+          </div>
+          <span class="divider" aria-hidden="true">&nbsp;</span>
+          <div class="suitability">
+            <span class="gem-wrap" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M6 10.5 11.2 5h9.6L26 10.5 16 27 6 10.5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M6 10.5h20M11.2 5l3.1 5.5L16 27M20.8 5l-3.1 5.5L16 27" stroke="currentColor" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <p class="suit-label">Engraving<br />Suitability</p>
+            <p class="suit-value">High</p>
+          </div>
+          <a class="choose-button" href="#" aria-label="Choose Ei">
+            <span class="serif">Choose</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+              <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </section>
+
+        <div class="ornament footer-ornament" aria-hidden="true">
+          <span class="ornament-line">&nbsp;</span>
+          <span class="ornament-diamond">&nbsp;</span>
+          <span class="ornament-line">&nbsp;</span>
+        </div>
+        <p class="tagline">YOUR NAME. YOUR STONE. YOUR SIGNATURE.</p>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        const screen = document.querySelector(".screen");
+        const setScale = () => {
+          document.documentElement.style.setProperty("--screen-scale", Math.min(screen.clientWidth / 431.5, 1));
+        };
+
+        setScale();
+        window.addEventListener("resize", setScale, { passive: true });
+      })();
+    </script>
+  </body>
+</html>
