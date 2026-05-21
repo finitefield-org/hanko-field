@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-002 Enter Your Name - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --ink: #151d22;
+        --copy: #596169;
+        --wine: #971719;
+        --deep-wine: #7f1013;
+        --gold: #ad7b3e;
+        --line: #eadfd4;
+        --paper: #fffdf9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button,
+      h1,
+      h2,
+      p,
+      span,
+      input {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            123deg,
+            transparent 0 38%,
+            rgba(170, 128, 82, 0.018) 38.25%,
+            transparent 39.45%
+          ),
+          linear-gradient(
+            143deg,
+            transparent 0 76%,
+            rgba(170, 128, 82, 0.025) 76.1%,
+            transparent 77.05%
+          ),
+          radial-gradient(
+            ellipse at 51% 8%,
+            rgba(255, 255, 255, 0.96),
+            transparent 37%
+          ),
+          radial-gradient(
+            ellipse at 50% 49%,
+            rgba(255, 255, 255, 0.64),
+            transparent 43%
+          ),
+          radial-gradient(
+            ellipse at 50% 92%,
+            rgba(255, 255, 255, 0.56),
+            transparent 36%
+          ),
+          linear-gradient(136deg, #f2e9df 0%, #fffdf9 45%, #f6eee5 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.12;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(176, 139, 94, 0.1) 18.12%,
+            transparent 18.84%
+          ),
+          linear-gradient(
+            35deg,
+            transparent 0 80%,
+            rgba(176, 139, 94, 0.09) 80.12%,
+            transparent 80.82%
+          );
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 8.4cqw rgba(122, 95, 65, 0.075);
+      }
+
+      .serif {
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia,
+          "Times New Roman", serif;
+      }
+
+      .back-button {
+        position: absolute;
+        z-index: 4;
+        top: 7.98%;
+        left: 7.08%;
+        display: grid;
+        width: 5.42cqw;
+        height: 5.42cqw;
+        place-items: center;
+        color: var(--deep-wine);
+        text-decoration: none;
+      }
+
+      .back-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 3;
+        top: 7.9%;
+        left: 50%;
+        margin: 0;
+        color: var(--deep-wine);
+        font-size: 7.25cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 0.8cqw 1.7cqw rgba(111, 62, 38, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .main-card {
+        position: absolute;
+        z-index: 2;
+        top: 14.44%;
+        left: 6.26%;
+        width: 87.25%;
+        height: 58.54%;
+        border: 0.1cqw solid rgba(224, 212, 199, 0.9);
+        border-radius: 2.78cqw;
+        background:
+          radial-gradient(
+            ellipse at 50% 19%,
+            rgba(255, 255, 255, 0.82),
+            transparent 45%
+          ),
+          rgba(255, 255, 255, 0.58);
+        box-shadow:
+          0 2.4cqw 5.6cqw rgba(90, 59, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(1.6px);
+      }
+
+      .seal-emblem {
+        position: absolute;
+        z-index: 3;
+        top: 18.7%;
+        left: 50%;
+        width: 20.86cqw;
+        height: 20.86cqw;
+        border-radius: 999px;
+        transform: translateX(-50%);
+      }
+
+      .divider {
+        position: absolute;
+        z-index: 3;
+        top: 30.82%;
+        left: 50%;
+        display: flex;
+        width: 28.9cqw;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .divider-line {
+        width: 11.12cqw;
+        height: 0.12cqw;
+        background: currentColor;
+      }
+
+      .divider-diamond {
+        width: 2cqw;
+        height: 2cqw;
+        border: 0.32cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .intro-copy {
+        position: absolute;
+        z-index: 3;
+        top: 34.25%;
+        left: 50%;
+        width: 72%;
+        margin: 0;
+        color: #152026;
+        font-size: 5.66cqw;
+        font-weight: 500;
+        line-height: 1.24;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      .form-panel {
+        position: absolute;
+        z-index: 3;
+        top: 44.04%;
+        left: 11.36%;
+        width: 77.05%;
+        height: 26%;
+        border: 0.1cqw solid rgba(226, 215, 203, 0.95);
+        border-radius: 2.62cqw;
+        background: rgba(255, 253, 249, 0.32);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+      }
+
+      .field-label {
+        position: absolute;
+        top: 10.1%;
+        left: 5.38%;
+        margin: 0;
+        color: #192328;
+        font-size: 3.36cqw;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .name-field {
+        position: absolute;
+        top: 20.8%;
+        left: 4.42%;
+        display: flex;
+        width: 91.1%;
+        height: 24.15%;
+        align-items: center;
+        justify-content: space-between;
+        border: 0.12cqw solid rgba(180, 128, 66, 0.78);
+        border-radius: 1.24cqw;
+        background: rgba(255, 253, 249, 0.35);
+        padding: 0 3.15cqw 0 3.65cqw;
+        color: #131d22;
+        font-size: 4.82cqw;
+        line-height: 1;
+      }
+
+      .person-icon {
+        width: 5.18cqw;
+        height: 5.18cqw;
+        color: var(--gold);
+      }
+
+      .helper-copy {
+        position: absolute;
+        top: 52.7%;
+        left: 5.38%;
+        margin: 0;
+        color: #60686f;
+        font-size: 2.96cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .suggest-button {
+        position: absolute;
+        right: 4.7%;
+        bottom: 7.7%;
+        left: 4.7%;
+        display: flex;
+        height: 24.05%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1.22cqw;
+        background:
+          radial-gradient(
+            ellipse at 52% 16%,
+            rgba(193, 45, 43, 0.24),
+            transparent 43%
+          ),
+          linear-gradient(120deg, #9d171a 0%, #a21518 48%, #8b1013 100%);
+        box-shadow:
+          0 2cqw 4.4cqw rgba(113, 25, 19, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        color: #fff8f1;
+        font-size: 4.22cqw;
+        font-weight: 500;
+        line-height: 1;
+        padding: 0;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .suggest-button svg {
+        position: absolute;
+        right: 3.35cqw;
+        width: 4.2cqw;
+        height: 4.2cqw;
+      }
+
+      .tip-card {
+        position: absolute;
+        z-index: 2;
+        top: 75.42%;
+        left: 6.26%;
+        display: grid;
+        width: 87.25%;
+        height: 14%;
+        grid-template-columns: 20.05cqw minmax(0, 1fr);
+        align-items: center;
+        border: 0.1cqw solid rgba(224, 212, 199, 0.9);
+        border-radius: 2.42cqw;
+        background: rgba(255, 253, 249, 0.64);
+        box-shadow:
+          0 1.6cqw 4.8cqw rgba(90, 59, 34, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .tip-icon {
+        width: 16.82cqw;
+        height: 16.82cqw;
+        justify-self: center;
+        border-radius: 999px;
+      }
+
+      .tip-copy {
+        padding-right: 4.2cqw;
+      }
+
+      .tip-title {
+        display: block;
+        margin-bottom: 1.9cqw;
+        color: #151d22;
+        font-size: 4cqw;
+        font-weight: 500;
+        line-height: 1.22;
+      }
+
+      .tip-text {
+        display: block;
+        color: var(--copy);
+        font-size: 2.83cqw;
+        font-weight: 400;
+        line-height: 1.72;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .screen-title {
+          font-size: 6.76cqw;
+        }
+
+        .intro-copy {
+          width: 76%;
+          font-size: 5.12cqw;
+        }
+
+        .helper-copy {
+          font-size: 2.72cqw;
+        }
+
+        .tip-title {
+          font-size: 3.66cqw;
+        }
+
+        .tip-text {
+          font-size: 2.58cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/40"
+      aria-label="Enter your name"
+    >
+      <a class="back-button" href="#" aria-label="Back">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.1 4.8 7 16l11.1 11.2M8.6 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.25"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title serif">Enter Your Name</h1>
+
+      <section class="main-card" aria-hidden="true"></section>
+
+      <img
+        class="seal-emblem"
+        src="assets/des-002-seal-emblem.png"
+        alt="Stone Signature seal emblem"
+      />
+
+      <div class="divider" aria-hidden="true">
+        <span class="divider-line"></span>
+        <span class="divider-diamond"></span>
+        <span class="divider-line"></span>
+      </div>
+
+      <p class="intro-copy serif">
+        We&rsquo;ll suggest engraving-friendly kanji for your personal seal.
+      </p>
+
+      <form class="form-panel" aria-label="Name form">
+        <label class="field-label serif" for="customer-name">Your name</label>
+        <div class="name-field serif">
+          <span>Michael</span>
+          <svg class="person-icon" viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              d="M16 15.1a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.55"
+            />
+            <path
+              d="M6.2 28.3c1.1-6.2 4.9-9.8 9.8-9.8s8.7 3.6 9.8 9.8"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.55"
+            />
+          </svg>
+        </div>
+        <p class="helper-copy">
+          1&ndash;2 kanji will be suggested for a small personal seal
+        </p>
+        <a class="suggest-button serif" href="#">
+          <span>Suggest Kanji</span>
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              d="M4.2 16h22.4M18 7.4 26.6 16 18 24.6"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.75"
+            />
+          </svg>
+        </a>
+      </form>
+
+      <aside class="tip-card" aria-label="Kanji engraving tip">
+        <img class="tip-icon" src="assets/des-002-tip-icon.png" alt="" />
+        <p class="tip-copy">
+          <span class="tip-title serif"
+            >Simple kanji work best<br />for gemstone engraving.</span
+          >
+          <span class="tip-text">
+            Clear, balanced characters create the most<br />
+            beautiful and timeless results.
+          </span>
+        </p>
+      </aside>
+    </main>
+  </body>
+</html>
