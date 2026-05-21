@@ -52,6 +52,27 @@ class HankoLocalizations {
   String get createCustomSeal => _strings.createCustomSeal;
   String get customSealDescription => _strings.customSealDescription;
   String get startDesigning => _strings.startDesigning;
+  String get designNameTitle => _strings.designNameTitle;
+  String get designNameIntro => _strings.designNameIntro;
+  String get designNameLabel => _strings.designNameLabel;
+  String get designNameHint => _strings.designNameHint;
+  String get designNameHelp => _strings.designNameHelp;
+  String get designGenderLabel => _strings.designGenderLabel;
+  String get designGenderUnspecified => _strings.designGenderUnspecified;
+  String get designGenderMale => _strings.designGenderMale;
+  String get designGenderFemale => _strings.designGenderFemale;
+  String get designKanjiStyleLabel => _strings.designKanjiStyleLabel;
+  String get designKanjiStyleJapanese => _strings.designKanjiStyleJapanese;
+  String get designKanjiStyleChinese => _strings.designKanjiStyleChinese;
+  String get designKanjiStyleTaiwanese => _strings.designKanjiStyleTaiwanese;
+  String get suggestKanji => _strings.suggestKanji;
+  String get designKanjiTipTitle => _strings.designKanjiTipTitle;
+  String get designKanjiTipMessage => _strings.designKanjiTipMessage;
+  String get designCandidateReadyTitle => _strings.designCandidateReadyTitle;
+  String get designCandidateReadyMessage =>
+      _strings.designCandidateReadyMessage;
+  String get designRequestDetails => _strings.designRequestDetails;
+  String get editName => _strings.editName;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -142,6 +163,26 @@ class _HankoStrings {
     required this.createCustomSeal,
     required this.customSealDescription,
     required this.startDesigning,
+    required this.designNameTitle,
+    required this.designNameIntro,
+    required this.designNameLabel,
+    required this.designNameHint,
+    required this.designNameHelp,
+    required this.designGenderLabel,
+    required this.designGenderUnspecified,
+    required this.designGenderMale,
+    required this.designGenderFemale,
+    required this.designKanjiStyleLabel,
+    required this.designKanjiStyleJapanese,
+    required this.designKanjiStyleChinese,
+    required this.designKanjiStyleTaiwanese,
+    required this.suggestKanji,
+    required this.designKanjiTipTitle,
+    required this.designKanjiTipMessage,
+    required this.designCandidateReadyTitle,
+    required this.designCandidateReadyMessage,
+    required this.designRequestDetails,
+    required this.editName,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -201,6 +242,26 @@ class _HankoStrings {
   final String createCustomSeal;
   final String customSealDescription;
   final String startDesigning;
+  final String designNameTitle;
+  final String designNameIntro;
+  final String designNameLabel;
+  final String designNameHint;
+  final String designNameHelp;
+  final String designGenderLabel;
+  final String designGenderUnspecified;
+  final String designGenderMale;
+  final String designGenderFemale;
+  final String designKanjiStyleLabel;
+  final String designKanjiStyleJapanese;
+  final String designKanjiStyleChinese;
+  final String designKanjiStyleTaiwanese;
+  final String suggestKanji;
+  final String designKanjiTipTitle;
+  final String designKanjiTipMessage;
+  final String designCandidateReadyTitle;
+  final String designCandidateReadyMessage;
+  final String designRequestDetails;
+  final String editName;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -269,6 +330,29 @@ const _localizedValues = {
       customSealDescription:
           'Turn your name into a\npersonalized gemstone seal.',
       startDesigning: 'Start Designing',
+      designNameTitle: 'Enter Your Name',
+      designNameIntro:
+          "We'll suggest engraving-friendly kanji for your personal seal.",
+      designNameLabel: 'Your name',
+      designNameHint: 'Michael Smith',
+      designNameHelp: '1-2 kanji will be suggested for a small personal seal.',
+      designGenderLabel: 'Gender preference',
+      designGenderUnspecified: 'No preference',
+      designGenderMale: 'Masculine',
+      designGenderFemale: 'Feminine',
+      designKanjiStyleLabel: 'Kanji style',
+      designKanjiStyleJapanese: 'Japanese style',
+      designKanjiStyleChinese: 'Chinese style',
+      designKanjiStyleTaiwanese: 'Taiwanese style',
+      suggestKanji: 'Suggest Kanji',
+      designKanjiTipTitle: 'Simple kanji work best for gemstone engraving.',
+      designKanjiTipMessage:
+          'Clear, balanced characters create the most beautiful and timeless results.',
+      designCandidateReadyTitle: 'Ready to Suggest Kanji',
+      designCandidateReadyMessage:
+          'Candidate generation can now use this name and preference set.',
+      designRequestDetails: 'Request details',
+      editName: 'Edit Name',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -336,6 +420,26 @@ const _localizedValues = {
       createCustomSeal: 'あなた専用の\n印影を作成',
       customSealDescription: '名前から、あなただけの\n天然石印鑑を作ります。',
       startDesigning: '作成をはじめる',
+      designNameTitle: '名前を入力',
+      designNameIntro: '印鑑に合う彫刻しやすい漢字を提案します。',
+      designNameLabel: 'お名前',
+      designNameHint: '山田 太郎',
+      designNameHelp: '小さな印鑑に合う1-2文字の漢字を提案します。',
+      designGenderLabel: '性別の希望',
+      designGenderUnspecified: '指定なし',
+      designGenderMale: '男性的',
+      designGenderFemale: '女性的',
+      designKanjiStyleLabel: '漢字スタイル',
+      designKanjiStyleJapanese: '日本スタイル',
+      designKanjiStyleChinese: '中国スタイル',
+      designKanjiStyleTaiwanese: '台湾スタイル',
+      suggestKanji: '漢字を提案',
+      designKanjiTipTitle: '天然石の彫刻にはシンプルな漢字が適しています。',
+      designKanjiTipMessage: '明快で整った文字が、美しく長く愛せる印影になります。',
+      designCandidateReadyTitle: '漢字候補の準備ができました',
+      designCandidateReadyMessage: 'この名前と希望条件で漢字候補生成へ進めます。',
+      designRequestDetails: '入力内容',
+      editName: '名前を修正',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

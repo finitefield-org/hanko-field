@@ -18,7 +18,12 @@ class HankoTabDefinition {
 }
 
 typedef HankoTabPageBuilder =
-    Widget Function(BuildContext context, HankoAppTab tab, PageEntry page);
+    Widget Function(
+      BuildContext context,
+      HankoAppTab tab,
+      PageEntry page,
+      HankoTabStackController stack,
+    );
 
 typedef HankoBottomNavigationBuilder =
     Widget Function(
@@ -26,6 +31,31 @@ typedef HankoBottomNavigationBuilder =
       int selectedIndex,
       ValueChanged<int> onSelected,
     );
+
+class HankoTabStackController {
+  const HankoTabStackController._({
+    required List<PageEntry> Function() readPages,
+    required void Function(PageEntry page) pushPage,
+    required VoidCallback popPage,
+    required VoidCallback popToRootPage,
+  }) : _readPages = readPages,
+       _pushPage = pushPage,
+       _popPage = popPage,
+       _popToRootPage = popToRootPage;
+
+  final List<PageEntry> Function() _readPages;
+  final void Function(PageEntry page) _pushPage;
+  final VoidCallback _popPage;
+  final VoidCallback _popToRootPage;
+
+  List<PageEntry> get pages => _readPages();
+
+  void push(PageEntry page) => _pushPage(page);
+
+  void pop() => _popPage();
+
+  void popToRoot() => _popToRootPage();
+}
 
 class HankoTabNavigationShell extends StatefulWidget {
   const HankoTabNavigationShell({
@@ -104,6 +134,37 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
     _setPagesForTab(_currentTab, pages.sublist(0, pages.length - 1));
   }
 
+  HankoTabStackController _stackControllerForTab(HankoTabDefinition tab) {
+    List<PageEntry> readPages() {
+      return _pagesByTab[tab.tab] ?? [tab.rootPage];
+    }
+
+    return HankoTabStackController._(
+      readPages: readPages,
+      pushPage: (page) {
+        final pages = readPages();
+        if (pages.isNotEmpty && pages.last.key == page.key) {
+          return;
+        }
+        _setPagesForTab(tab.tab, [...pages, page]);
+      },
+      popPage: () {
+        final pages = readPages();
+        if (pages.length <= 1) {
+          return;
+        }
+        _setPagesForTab(tab.tab, pages.sublist(0, pages.length - 1));
+      },
+      popToRootPage: () {
+        final pages = readPages();
+        if (pages.length <= 1) {
+          return;
+        }
+        _setPagesForTab(tab.tab, [pages.first]);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final safeIndex = _currentIndex;
@@ -140,9 +201,11 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
 
   Widget _buildNavigatorForTab(HankoTabDefinition tab) {
     final pages = _pagesByTab[tab.tab] ?? [tab.rootPage];
+    final stack = _stackControllerForTab(tab);
     return DeclarativePagesNavigator(
       pages: pages,
-      buildPage: (context, page) => widget.buildPage(context, tab.tab, page),
+      buildPage: (context, page) =>
+          widget.buildPage(context, tab.tab, page, stack),
       onPopTop: () {
         final currentPages = _pagesByTab[tab.tab] ?? const <PageEntry>[];
         if (currentPages.length <= 1) {

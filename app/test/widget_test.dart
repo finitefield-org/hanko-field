@@ -164,6 +164,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('DES-001 starts name input and prepares candidate request', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(tester);
+
+    await tester.tap(find.text('Start Designing'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NameInputScreen), findsOneWidget);
+    expect(find.text('Enter Your Name'), findsOneWidget);
+    expect(find.text('Your name'), findsOneWidget);
+    expect(find.text('Gender preference'), findsOneWidget);
+    expect(find.text('Kanji style'), findsOneWidget);
+
+    final submitButton = find.widgetWithText(TextButton, 'Suggest Kanji');
+    expect(submitButton, findsOneWidget);
+    expect(tester.widget<TextButton>(submitButton).onPressed, isNull);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Michael Smith');
+    await tester.pump();
+
+    expect(tester.widget<TextButton>(submitButton).onPressed, isNotNull);
+
+    await tester.ensureVisible(find.text('Suggest Kanji'));
+    await tester.pump();
+    await tester.tap(find.text('Suggest Kanji'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KanjiCandidateGenerationReadyScreen), findsOneWidget);
+    expect(find.text('Ready to Suggest Kanji'), findsOneWidget);
+    expect(find.text('Michael Smith'), findsWidgets);
+    expect(find.text('Japanese style'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NameInputScreen), findsOneWidget);
+    expect(find.text('Michael Smith'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('COM-004 opens settings from the design header', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;

@@ -136,6 +136,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       rootName: '/stones',
     ),
   ];
+  static const _designNameInputPage = PageEntry(
+    key: 'DES-002-name-input',
+    name: '/design/name',
+  );
+  static const _designCandidateRequestPageKey =
+      'DES-002-candidate-request-ready';
 
   var _pages = const <PageEntry>[_shellPage];
 
@@ -194,12 +200,49 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     );
   }
 
-  Widget _buildTabPage(BuildContext context, HankoAppTab tab, PageEntry _) {
+  Widget _buildTabPage(
+    BuildContext context,
+    HankoAppTab tab,
+    PageEntry page,
+    HankoTabStackController stack,
+  ) {
     return switch (tab) {
-      HankoAppTab.design => DesignHomeScreen(onOpenSettings: _openSettings),
+      HankoAppTab.design => _buildDesignPage(page, stack),
       HankoAppTab.mySeals => const MySealsHomeScreen(),
       HankoAppTab.stones => const StonesHomeScreen(),
     };
+  }
+
+  Widget _buildDesignPage(PageEntry page, HankoTabStackController stack) {
+    final pageData = page.data;
+    if (page.key == _designNameInputPage.key) {
+      return NameInputScreen(
+        onBack: stack.pop,
+        onSubmit: (request) {
+          stack.push(
+            PageEntry(
+              key: _designCandidateRequestPageKey,
+              name: '/design/name/request',
+              data: request,
+            ),
+          );
+        },
+      );
+    }
+
+    if (page.key == _designCandidateRequestPageKey &&
+        pageData is KanjiCandidatesRequest) {
+      return KanjiCandidateGenerationReadyScreen(
+        request: pageData,
+        onBack: stack.pop,
+        onEdit: stack.pop,
+      );
+    }
+
+    return DesignHomeScreen(
+      onOpenSettings: _openSettings,
+      onStartDesign: () => stack.push(_designNameInputPage),
+    );
   }
 
   void _openSettings() {
