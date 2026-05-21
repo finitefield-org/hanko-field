@@ -1,6 +1,7 @@
 import 'package:declarative_nav/declarative_nav.dart';
 import 'package:flutter/material.dart';
 
+import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
 import '../features/stones/stones.dart';
@@ -9,9 +10,16 @@ import 'navigation/app_navigation_shell.dart';
 import 'theme/app_theme.dart';
 
 class HankoApp extends StatelessWidget {
-  const HankoApp({super.key, this.locale});
+  const HankoApp({
+    super.key,
+    this.locale,
+    this.hasSeenOnboardingResolver = _defaultHasSeenOnboardingResolver,
+    this.splashMinimumDuration = const Duration(milliseconds: 700),
+  });
 
   final Locale? locale;
+  final HasSeenOnboardingResolver hasSeenOnboardingResolver;
+  final Duration splashMinimumDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +30,58 @@ class HankoApp extends StatelessWidget {
       supportedLocales: HankoLocalizations.supportedLocales,
       localizationsDelegates: HankoLocalizations.localizationsDelegates,
       theme: HankoTheme.light(),
-      home: const BottomNavigationShell(),
+      home: _AppLaunchGate(
+        hasSeenOnboardingResolver: hasSeenOnboardingResolver,
+        splashMinimumDuration: splashMinimumDuration,
+      ),
     );
+  }
+}
+
+Future<bool> _defaultHasSeenOnboardingResolver() async {
+  return const AppLaunchStore().hasSeenOnboarding();
+}
+
+enum _AppLaunchStage { splash, onboarding, shell }
+
+class _AppLaunchGate extends StatefulWidget {
+  const _AppLaunchGate({
+    required this.hasSeenOnboardingResolver,
+    required this.splashMinimumDuration,
+  });
+
+  final HasSeenOnboardingResolver hasSeenOnboardingResolver;
+  final Duration splashMinimumDuration;
+
+  @override
+  State<_AppLaunchGate> createState() => _AppLaunchGateState();
+}
+
+class _AppLaunchGateState extends State<_AppLaunchGate> {
+  var _stage = _AppLaunchStage.splash;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (_stage) {
+      _AppLaunchStage.splash => SplashScreen(
+        hasSeenOnboardingResolver: widget.hasSeenOnboardingResolver,
+        minimumDisplayDuration: widget.splashMinimumDuration,
+        onLaunchResolved: _showLaunchDestination,
+      ),
+      _AppLaunchStage.onboarding => OnboardingScreen(
+        onComplete: () => setState(() => _stage = _AppLaunchStage.shell),
+      ),
+      _AppLaunchStage.shell => const BottomNavigationShell(),
+    };
+  }
+
+  void _showLaunchDestination(AppLaunchDestination destination) {
+    setState(() {
+      _stage = switch (destination) {
+        AppLaunchDestination.onboarding => _AppLaunchStage.onboarding,
+        AppLaunchDestination.shell => _AppLaunchStage.shell,
+      };
+    });
   }
 }
 

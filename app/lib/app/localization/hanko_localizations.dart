@@ -29,6 +29,10 @@ class HankoLocalizations {
   }
 
   String get appTitle => _strings.appTitle;
+  String get splashPreparing => _strings.splashPreparing;
+  String get onboardingTitle => _strings.onboardingTitle;
+  String get onboardingIntroTitle => _strings.onboardingIntroTitle;
+  String get onboardingIntroMessage => _strings.onboardingIntroMessage;
   String get design => _strings.design;
   String get mySeals => _strings.mySeals;
   String get stones => _strings.stones;
@@ -90,6 +94,10 @@ class _HankoLocalizationsDelegate
 class _HankoStrings {
   const _HankoStrings({
     required this.appTitle,
+    required this.splashPreparing,
+    required this.onboardingTitle,
+    required this.onboardingIntroTitle,
+    required this.onboardingIntroMessage,
     required this.design,
     required this.mySeals,
     required this.stones,
@@ -125,6 +133,10 @@ class _HankoStrings {
   });
 
   final String appTitle;
+  final String splashPreparing;
+  final String onboardingTitle;
+  final String onboardingIntroTitle;
+  final String onboardingIntroMessage;
   final String design;
   final String mySeals;
   final String stones;
@@ -164,6 +176,11 @@ const _localizedValues = {
     Locale('en'),
     _HankoStrings(
       appTitle: 'STONE SIGNATURE',
+      splashPreparing: 'Preparing your design experience.',
+      onboardingTitle: 'Welcome',
+      onboardingIntroTitle: 'Make a seal that belongs to you',
+      onboardingIntroMessage:
+          'A short first-run guide will appear here before design starts.',
       design: 'Design',
       mySeals: 'My Seals',
       stones: 'Stones',
@@ -205,6 +222,10 @@ const _localizedValues = {
     Locale('ja'),
     _HankoStrings(
       appTitle: 'STONE SIGNATURE',
+      splashPreparing: 'デザイン体験を準備しています。',
+      onboardingTitle: 'ようこそ',
+      onboardingIntroTitle: 'あなただけの印影を作る',
+      onboardingIntroMessage: 'デザイン開始前の初回案内がここに表示されます。',
       design: 'デザイン',
       mySeals: 'マイ印影',
       stones: '石',

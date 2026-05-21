@@ -878,7 +878,7 @@ MVPで後回し可能:
 
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M03-T01 | `COM-001` | Splash画面 | `features/common/presentation/` | 初回判定後にOnboardingまたはShellへ遷移 |
+| M03-T01 | `COM-001` | [x] Splash画面 | `features/common/presentation/` | 初回判定後にOnboardingまたはShellへ遷移 |
 | M03-T02 | `COM-002` | Onboarding画面 | `features/common/presentation/` | 価値説明とローカル保存注意を表示し、完了状態を端末保存 |
 | M03-T03 | `COM-004` | Settings画面 | `features/settings/presentation/` | 言語、About、FAQ、Privacy、Terms、Contact、versionへ遷移 |
 | M03-T04 | `COM-005` `COM-007` `COM-009` `COM-010` | About、FAQ、Privacy、Terms | `features/settings/presentation/` | Web文言/法務リンクをアプリ向けに表示 |

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miniriverpod/miniriverpod.dart';
@@ -6,6 +8,7 @@ import 'package:hankofield/app/app.dart';
 import 'package:hankofield/app/localization/app_localization.dart';
 import 'package:hankofield/app/theme/app_theme.dart';
 import 'package:hankofield/core/widgets/core_widgets.dart';
+import 'package:hankofield/features/common/common.dart';
 import 'package:hankofield/features/design/design.dart';
 import 'package:hankofield/features/my_seals/my_seals.dart';
 import 'package:hankofield/features/order/order.dart';
@@ -14,13 +17,79 @@ import 'package:hankofield/features/settings/settings.dart';
 import 'package:hankofield/features/stones/stones.dart';
 
 void main() {
+  Future<void> pumpLaunchedApp(
+    WidgetTester tester, {
+    Locale? locale,
+    bool hasSeenOnboarding = true,
+  }) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: HankoApp(
+          locale: locale,
+          hasSeenOnboardingResolver: () async => hasSeenOnboarding,
+          splashMinimumDuration: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+  }
+
+  testWidgets('COM-001 routes returning users to the shell', (tester) async {
+    final launchCheck = Completer<bool>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: HankoApp(
+          hasSeenOnboardingResolver: () => launchCheck.future,
+          splashMinimumDuration: Duration.zero,
+        ),
+      ),
+    );
+
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.text('Preparing your design experience.'), findsOneWidget);
+
+    launchCheck.complete(true);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byType(BottomNavigationShell), findsOneWidget);
+    expect(find.byType(DesignHomeScreen, skipOffstage: false), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COM-001 routes first-time users to onboarding', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: HankoApp(
+          hasSeenOnboardingResolver: () async => false,
+          splashMinimumDuration: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.text('Welcome'), findsOneWidget);
+
+    await tester.tap(find.text('Start Designing'));
+    await tester.pump();
+
+    expect(find.byType(BottomNavigationShell), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('boots the COM-003 bottom navigation shell', (tester) async {
     tester.view.physicalSize = const Size(432, 912);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ProviderScope(child: HankoApp()));
+    await pumpLaunchedApp(tester);
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.byType(DesignHomeScreen, skipOffstage: false), findsOneWidget);
@@ -57,8 +126,16 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const ProviderScope(child: HankoApp(locale: Locale('ja'))),
+      ProviderScope(
+        child: HankoApp(
+          locale: const Locale('ja'),
+          hasSeenOnboardingResolver: () async => true,
+          splashMinimumDuration: Duration.zero,
+        ),
+      ),
     );
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
 
     expect(find.text('デザイン'), findsNWidgets(2));
     expect(find.text('あなた専用の\n印影を作成'), findsOneWidget);
