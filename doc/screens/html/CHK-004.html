@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-004 Order Note - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #12161a;
+        --copy: #3f4850;
+        --muted: #969a9e;
+        --wine: #8c1216;
+        --gold: #bd8543;
+        --soft-gold: #dcc09a;
+        --line: #e6c8a4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(29px, 6.2vw, 29px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 27%, transparent 60%),
+          radial-gradient(circle at 42% 49%, rgba(255, 255, 255, 0.72) 0 25%, transparent 63%),
+          radial-gradient(circle at 57% 88%, rgba(255, 255, 255, 0.66) 0 26%, transparent 62%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 166px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 73px;
+        left: 24px;
+        z-index: 2;
+        display: grid;
+        width: 30px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 27px;
+        height: 23px;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 68px;
+        color: #861116;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: clamp(39px, 10vw, 48px);
+        font-weight: 600;
+        line-height: 0.95;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        margin-top: 27px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 52px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        margin: 3px var(--side) 0;
+        color: #2f3941;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .note-wrap {
+        position: relative;
+        z-index: 1;
+        margin: 26px var(--side) 0;
+      }
+
+      .note-area {
+        display: block;
+        width: 100%;
+        height: 294px;
+        resize: none;
+        border: 1.2px solid var(--line);
+        border-radius: 14px;
+        outline: 0;
+        padding: 30px 20px;
+        background: rgba(255, 255, 255, 0.47);
+        color: #3d464e;
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 15.5px;
+        line-height: 1.45;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      }
+
+      .note-area::placeholder {
+        color: var(--muted);
+        opacity: 1;
+      }
+
+      .note-spark {
+        position: absolute;
+        right: 18px;
+        bottom: 22px;
+        color: rgba(187, 145, 95, 0.48);
+        font-family: "Hanko Serif", "Times New Roman", serif;
+        font-size: 30px;
+        line-height: 1;
+        pointer-events: none;
+      }
+
+      .counter {
+        margin: 13px 6px 0 0;
+        color: #5e6870;
+        font-size: 15.5px;
+        line-height: 1;
+        text-align: right;
+      }
+
+      .care-card {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        align-items: center;
+        gap: 17px;
+        min-height: 132px;
+        margin: 22px var(--side) 0;
+        padding: 23px 22px 22px 20px;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.74);
+        box-shadow:
+          0 13px 29px rgba(80, 53, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      }
+
+      .care-icon-wrap {
+        display: grid;
+        width: 72px;
+        height: 72px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 43% 36%, rgba(255, 255, 255, 0.66), rgba(241, 230, 218, 0.98));
+      }
+
+      .care-icon {
+        width: 48px;
+        height: 48px;
+        color: var(--gold);
+        stroke-width: 1.45;
+      }
+
+      .care-icon .spark {
+        color: var(--wine);
+      }
+
+      .care-title {
+        margin: 0;
+        color: #861116;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 1.1;
+      }
+
+      .care-text {
+        margin: 13px 0 0;
+        color: #4a535b;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .save-button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 67px;
+        margin: 43px 26px 30px;
+        border: 1px solid rgba(218, 173, 91, 0.94);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 17% 22%, rgba(187, 31, 34, 0.5), transparent 42%),
+          linear-gradient(135deg, #9b1115 0%, #821013 100%);
+        color: #fff;
+        box-shadow:
+          0 8px 16px rgba(99, 46, 27, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .save-button svg {
+        position: absolute;
+        right: 31px;
+        width: 23px;
+        height: 23px;
+        color: #e0b36b;
+        stroke-width: 2.2;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 24px;
+        }
+
+        .hero {
+          height: 154px;
+        }
+
+        .back-button {
+          top: 68px;
+          left: 20px;
+        }
+
+        .screen-title {
+          padding-top: 64px;
+          font-size: 40px;
+        }
+
+        .ornament {
+          margin-top: 24px;
+        }
+
+        .ornament-line {
+          width: 48px;
+        }
+
+        .lede {
+          margin-top: 5px;
+          font-size: 14.2px;
+        }
+
+        .note-wrap {
+          margin-top: 25px;
+        }
+
+        .note-area {
+          height: 292px;
+          padding: 28px 18px;
+          font-size: 13.7px;
+        }
+
+        .counter {
+          margin-top: 12px;
+          font-size: 14.2px;
+        }
+
+        .care-card {
+          grid-template-columns: 75px minmax(0, 1fr);
+          gap: 13px;
+          min-height: 126px;
+          margin-top: 21px;
+          padding: 20px 19px 20px 19px;
+        }
+
+        .care-icon-wrap {
+          width: 62px;
+          height: 62px;
+        }
+
+        .care-icon {
+          width: 42px;
+          height: 42px;
+        }
+
+        .care-title {
+          font-size: 19px;
+        }
+
+        .care-text {
+          margin-top: 10px;
+          font-size: 11.9px;
+          line-height: 1.48;
+        }
+
+        .save-button {
+          height: 60px;
+          margin: 38px 22px 28px;
+          font-size: 23px;
+        }
+
+        .save-button svg {
+          right: 28px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M4.4 12h14.8M13.5 5.6l6.4 6.4-6.4 6.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Order Note screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Order Note</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+      </header>
+
+      <p class="lede">Add any special note for your order (optional).</p>
+
+      <form aria-label="Order note form">
+        <div class="note-wrap">
+          <textarea class="note-area" maxlength="300" placeholder="Gift message, delivery note, or other request" aria-label="Order note"></textarea>
+          <span class="note-spark" aria-hidden="true">✧</span>
+          <p class="counter">0 / 300</p>
+        </div>
+
+        <aside class="care-card" aria-label="Custom-made care note">
+          <span class="care-icon-wrap" aria-hidden="true">
+            <svg class="care-icon" viewBox="0 0 64 64">
+              <path class="spark" d="M13 18.5h7M16.5 15v7" fill="none" stroke="currentColor" stroke-linecap="round" />
+              <path d="M21.3 47.5c12-2.5 23-11.4 30.2-30.1-16.8 4-27.1 13.9-31 27.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M20.5 44.9c6.8-5.6 13.2-10.8 21.1-16.6" fill="none" stroke="currentColor" stroke-linecap="round" />
+              <path d="M24.9 54.2H42M13.8 54.2h6.8M24.8 43.3l-6.6 11" fill="none" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <div>
+            <h2 class="care-title">Custom-made with care</h2>
+            <p class="care-text">Your order is custom-made just for you.<br />Notes help us ensure every detail is perfect.</p>
+          </div>
+        </aside>
+
+        <a class="save-button" href="#" aria-label="Save note">
+          <span>Save Note</span>
+          <svg aria-hidden="true"><use href="#icon-arrow-right" /></svg>
+        </a>
+      </form>
+    </main>
+  </body>
+</html>
