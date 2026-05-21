@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHK-009 Secure Payment - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #151b20;
+        --copy: #4d5861;
+        --muted: #7a8188;
+        --wine: #8c1216;
+        --gold: #b77b35;
+        --line: #e7d6c3;
+        --card: rgba(255, 255, 255, 0.64);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 13%, rgba(255, 255, 255, 0.94) 0 24%, transparent 57%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(49px, 10.42vw, 49px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        min-height: min(100vh, 836px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.96) 0 30%, transparent 62%),
+          radial-gradient(circle at 45% 48%, rgba(255, 255, 255, 0.76) 0 26%, transparent 63%),
+          radial-gradient(circle at 60% 88%, rgba(255, 255, 255, 0.68) 0 28%, transparent 63%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 44%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .topbar {
+        position: relative;
+        height: 135px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 73px;
+        left: 24px;
+        display: grid;
+        width: 31px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 28px;
+        height: 23px;
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 61px;
+        color: #861116;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 37px;
+        font-weight: 600;
+        line-height: 0.95;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 17px;
+        color: var(--gold);
+      }
+
+      .topbar .ornament {
+        margin-top: 25px;
+      }
+
+      .ornament-line {
+        width: 39px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .brand-seal {
+        display: block;
+        width: 91px;
+        height: 91px;
+        margin: 12px auto 0;
+        border-radius: 999px;
+        object-fit: contain;
+      }
+
+      .headline {
+        margin: 14px 0 0;
+        color: #161d22;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 33px;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .headline .accent {
+        display: inline-block;
+        margin-left: 0.12em;
+        color: var(--wine);
+      }
+
+      .headline-ornament {
+        margin-top: 15px;
+      }
+
+      .redirect-text {
+        margin: 19px var(--side) 0;
+        color: #313c45;
+        font-size: 14.5px;
+        line-height: 1.35;
+        text-align: center;
+      }
+
+      .loader {
+        display: block;
+        width: 49px;
+        height: 49px;
+        margin: 25px auto 0;
+        color: var(--gold);
+      }
+
+      .loader circle {
+        fill: none;
+        stroke-linecap: round;
+        stroke-width: 5.2;
+      }
+
+      .loader .track {
+        stroke: rgba(194, 158, 113, 0.18);
+      }
+
+      .loader .active {
+        stroke: currentColor;
+        stroke-dasharray: 108 180;
+        stroke-dashoffset: 16;
+      }
+
+      .status-text {
+        margin: 23px var(--side) 0;
+        color: #3f4a53;
+        font-size: 13.8px;
+        line-height: 1.3;
+        text-align: center;
+      }
+
+      .summary-card {
+        min-height: 229px;
+        margin: 23px var(--side) 0;
+        padding: 21px 22px 16px;
+        border: 1px solid rgba(231, 215, 197, 0.78);
+        border-radius: 13px;
+        background: var(--card);
+        box-shadow:
+          0 10px 24px rgba(82, 54, 33, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .summary-label {
+        margin: 0;
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .summary-row {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        align-items: center;
+        gap: 16px;
+      }
+
+      .seal-row {
+        margin-top: 6px;
+      }
+
+      .media-frame {
+        width: 86px;
+        height: 78px;
+        border-radius: 7px;
+        object-fit: cover;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--gold);
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .seal-name {
+        margin: 12px 0 0;
+        color: #1c2329;
+        font-family: "Hanko JP", "Hanko Serif", "Times New Roman", serif;
+        font-size: 24px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .seal-meaning {
+        margin: 12px 0 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .divider {
+        display: block;
+        height: 1px;
+        margin: 10px 0 10px;
+        background: rgba(188, 141, 85, 0.32);
+      }
+
+      .bottom-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 1px 86px;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .stone-row {
+        grid-template-columns: 78px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .stone-row .media-frame {
+        width: 78px;
+        height: 72px;
+      }
+
+      .stone-title {
+        margin: 12px 0 0;
+        color: #182026;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.08;
+        white-space: nowrap;
+      }
+
+      .stock-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        height: 18px;
+        margin-top: 9px;
+        padding: 0 9px 0 7px;
+        border-radius: 5px;
+        background: rgba(230, 234, 221, 0.84);
+        color: #3d454c;
+        font-size: 10.7px;
+        line-height: 1;
+      }
+
+      .stock-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #4f8e50;
+      }
+
+      .total-divider {
+        width: 1px;
+        height: 73px;
+        background: rgba(190, 135, 71, 0.26);
+      }
+
+      .total-label {
+        margin: 0;
+        color: var(--gold);
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .price {
+        margin: 16px 0 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman", serif;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.03em;
+        transform: scaleX(0.9);
+        transform-origin: left center;
+        white-space: nowrap;
+      }
+
+      .secure-block {
+        display: flex;
+        justify-content: center;
+        margin: 18px auto 0;
+        color: var(--gold);
+        text-align: center;
+      }
+
+      .shield-icon {
+        width: 31px;
+        height: 34px;
+        stroke-width: 1.55;
+      }
+
+      .secure-text {
+        margin: 14px var(--side) 0;
+        color: #3f4a53;
+        font-size: 12.9px;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      @media (max-width: 390px) {
+        .phone {
+          --side: 34px;
+        }
+
+        .topbar {
+          height: 132px;
+        }
+
+        .back-button {
+          left: 20px;
+        }
+
+        .screen-title {
+          font-size: 34px;
+        }
+
+        .brand-seal {
+          width: 84px;
+          height: 84px;
+        }
+
+        .headline {
+          margin-top: 14px;
+          font-size: 28px;
+        }
+
+        .redirect-text {
+          font-size: 13.2px;
+        }
+
+        .status-text {
+          font-size: 12.8px;
+        }
+
+        .summary-card {
+          min-height: 223px;
+          padding: 21px 18px 17px;
+        }
+
+        .summary-row,
+        .stone-row {
+          grid-template-columns: 76px minmax(0, 1fr);
+          gap: 14px;
+        }
+
+        .media-frame {
+          width: 76px;
+          height: 72px;
+        }
+
+        .seal-name {
+          font-size: 21px;
+        }
+
+        .stone-title {
+          font-size: 12.5px;
+          white-space: normal;
+        }
+
+        .bottom-row {
+          grid-template-columns: minmax(0, 1fr) 1px 77px;
+          gap: 10px;
+        }
+
+        .price {
+          font-size: 22px;
+        }
+
+        .secure-text {
+          font-size: 12.4px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <svg aria-hidden="true" class="hidden">
+      <symbol id="icon-arrow-left" viewBox="0 0 28 24">
+        <path d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+      </symbol>
+      <symbol id="icon-shield-lock" viewBox="0 0 32 36">
+        <path d="M16 2.8 28 7.2v8.9c0 8.2-4.7 13.7-12 16.9C8.7 29.8 4 24.3 4 16.1V7.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M12 17.3h8v7.2h-8Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+        <path d="M13.8 17.1v-2.2a2.2 2.2 0 0 1 4.4 0v2.2" fill="none" stroke="currentColor" stroke-linecap="round" />
+        <path d="M16 20.2v1.4" fill="none" stroke="currentColor" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Secure payment redirect screen preview">
+      <header class="topbar">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg aria-hidden="true"><use href="#icon-arrow-left" /></svg>
+        </a>
+        <h1 class="screen-title">Secure Payment</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+      </header>
+
+      <img class="brand-seal" src="assets/chk-007-brand-seal.png" alt="" />
+
+      <h2 class="headline">Preparing <span class="accent">secure payment</span></h2>
+
+      <div class="ornament headline-ornament" aria-hidden="true">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond"></span>
+        <span class="ornament-line"></span>
+      </div>
+
+      <p class="redirect-text">You will be redirected to Stripe Checkout.</p>
+
+      <svg class="loader" viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="track" cx="32" cy="32" r="25"></circle>
+        <circle class="active" cx="32" cy="32" r="25"></circle>
+      </svg>
+
+      <p class="status-text">Creating your secure checkout session...</p>
+
+      <section class="summary-card" aria-label="Order summary">
+        <p class="summary-label">Order Summary</p>
+
+        <div class="summary-row seal-row">
+          <img class="media-frame" src="assets/chk-006-seal-frame.png" alt="Misora seal preview" />
+          <div>
+            <p class="eyebrow">Seal Preview</p>
+            <h3 class="seal-name">美空</h3>
+            <p class="seal-meaning">Beautiful sky</p>
+          </div>
+        </div>
+
+        <span class="divider" aria-hidden="true"></span>
+
+        <div class="bottom-row">
+          <div class="summary-row stone-row">
+            <img class="media-frame" src="assets/chk-006-stone-frame.png" alt="Soft pink rose quartz gemstone" />
+            <div>
+              <p class="eyebrow">Gemstone</p>
+              <h3 class="stone-title">Soft Pink Rose Quartz</h3>
+              <p class="stock-pill"><span class="stock-dot" aria-hidden="true"></span> In stock</p>
+            </div>
+          </div>
+
+          <span class="total-divider" aria-hidden="true"></span>
+
+          <div class="total-copy">
+            <p class="total-label">Total</p>
+            <p class="price">¥21,000</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="secure-block" aria-hidden="true">
+        <svg class="shield-icon"><use href="#icon-shield-lock" /></svg>
+      </div>
+
+      <p class="secure-text">Your payment information is secure and encrypted.<br />Powered by Stripe.</p>
+    </main>
+  </body>
+</html>
