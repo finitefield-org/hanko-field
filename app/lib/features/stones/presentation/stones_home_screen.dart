@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/localization/app_localization.dart';
 import '../../../core/widgets/core_widgets.dart';
 
 class StonesHomeScreen extends StatelessWidget {
@@ -7,12 +8,14 @@ class StonesHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HankoFeaturePage(
-      title: 'Stones',
+    final l10n = context.l10n;
+
+    return HankoFeaturePage(
+      title: l10n.stones,
       children: [
         HankoStateView.empty(
-          title: 'No stones loaded',
-          message: 'Available one-of-a-kind stones will be shown here.',
+          title: l10n.noStonesLoaded,
+          message: l10n.noStonesLoadedMessage,
         ),
       ],
     );

@@ -4,17 +4,23 @@ import 'package:flutter/material.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
 import '../features/stones/stones.dart';
+import 'localization/app_localization.dart';
 import 'navigation/app_navigation_shell.dart';
 import 'theme/app_theme.dart';
 
 class HankoApp extends StatelessWidget {
-  const HankoApp({super.key});
+  const HankoApp({super.key, this.locale});
+
+  final Locale? locale;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'STONE SIGNATURE',
+      onGenerateTitle: (context) => context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      supportedLocales: HankoLocalizations.supportedLocales,
+      localizationsDelegates: HankoLocalizations.localizationsDelegates,
       theme: HankoTheme.light(),
       home: const BottomNavigationShell(),
     );
@@ -47,14 +53,15 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     ),
   ];
 
-  static const _tabItems = [
-    _TabItem('Design', _TabIcon.design),
-    _TabItem('My Seals', _TabIcon.mySeals),
-    _TabItem('Stones', _TabIcon.stones),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final tabItems = [
+      _TabItem(l10n.design, _TabIcon.design),
+      _TabItem(l10n.mySeals, _TabIcon.mySeals),
+      _TabItem(l10n.stones, _TabIcon.stones),
+    ];
+
     return Scaffold(
       backgroundColor: HankoColors.background,
       body: Center(
@@ -66,7 +73,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             buildBottomNavigation: (context, selectedIndex, onSelected) {
               return _BottomTabs(
                 selectedIndex: selectedIndex,
-                tabs: _tabItems,
+                tabs: tabItems,
                 onSelected: onSelected,
               );
             },

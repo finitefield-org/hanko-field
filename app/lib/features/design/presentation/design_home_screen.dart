@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
 
@@ -10,6 +11,8 @@ class DesignHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -40,8 +43,8 @@ class DesignHomeScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _FeatureCard(
-                          title: 'Saved Seals',
-                          body: 'View and manage your\nsaved seal designs.',
+                          title: l10n.savedSeals,
+                          body: l10n.savedSealsDescription,
                           assetPath: 'assets/design/com003_saved_seal.png',
                           icon: _FeatureIcon.saved,
                           imageTop: 31,
@@ -53,8 +56,8 @@ class DesignHomeScreen extends StatelessWidget {
                       SizedBox(width: cardGap),
                       Expanded(
                         child: _FeatureCard(
-                          title: 'Browse Stones',
-                          body: 'Explore our collection of\nnatural gemstones.',
+                          title: l10n.browseStones,
+                          body: l10n.browseStonesDescription,
                           assetPath: 'assets/design/com003_gemstones.png',
                           icon: _FeatureIcon.diamond,
                           imageTop: 26,
@@ -82,13 +85,15 @@ class _DesignHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Expanded(child: Text('Design', style: HankoTextStyles.pageTitle)),
+        Expanded(child: Text(l10n.design, style: HankoTextStyles.pageTitle)),
         IconButton(
           onPressed: onOpenSettings ?? () {},
-          tooltip: 'Settings',
+          tooltip: l10n.settings,
           icon: const Icon(Icons.settings_outlined),
           color: HankoColors.gold,
           iconSize: 34,
@@ -107,6 +112,8 @@ class _HeroDesignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return HankoSurfaceCard(
       height: height,
       child: Stack(
@@ -120,23 +127,23 @@ class _HeroDesignCard extends StatelessWidget {
               assetPath: 'assets/design/com003_hero_seal.png',
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 26,
             top: 67,
             width: 246,
             child: Text(
-              'Create your\ncustom seal',
+              l10n.createCustomSeal,
               softWrap: false,
               style: HankoTextStyles.heroTitle,
             ),
           ),
           const Positioned(left: 26, top: 174, child: _DividerMark()),
-          const Positioned(
+          Positioned(
             left: 27,
             top: 205,
             width: 215,
             child: Text(
-              'Turn your name into a\npersonalized gemstone seal.',
+              l10n.customSealDescription,
               style: HankoTextStyles.body,
             ),
           ),
@@ -146,7 +153,7 @@ class _HeroDesignCard extends StatelessWidget {
             width: 172,
             height: 52,
             child: HankoPrimaryButton(
-              label: 'Start Designing',
+              label: l10n.startDesigning,
               onPressed: () {},
             ),
           ),

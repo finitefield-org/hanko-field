@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/localization/app_localization.dart';
 import '../../../core/widgets/core_widgets.dart';
 
 class OrderFlowEntryScreen extends StatelessWidget {
@@ -7,13 +8,15 @@ class OrderFlowEntryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HankoFeaturePage(
-      title: 'Order',
+    final l10n = context.l10n;
+
+    return HankoFeaturePage(
+      title: l10n.order,
       children: [
         HankoStateView.empty(
-          title: 'No active draft',
-          message: 'Choose a saved seal and a stone before checkout.',
-          actionLabel: 'Review Selection',
+          title: l10n.noActiveDraft,
+          message: l10n.noActiveDraftMessage,
+          actionLabel: l10n.reviewSelection,
         ),
       ],
     );

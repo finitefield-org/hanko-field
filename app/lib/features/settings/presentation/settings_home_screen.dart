@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
 
@@ -8,21 +9,26 @@ class SettingsHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HankoFeaturePage(
-      title: 'Settings',
+    final l10n = context.l10n;
+
+    return HankoFeaturePage(
+      title: l10n.settings,
       children: [
         HankoSurfaceCard(
-          padding: EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           radius: HankoRadii.md,
           child: Column(
             children: [
-              _SettingsRow(label: 'Language', icon: Icons.language),
-              _SettingsRow(label: 'About', icon: Icons.info_outline),
-              _SettingsRow(label: 'FAQ', icon: Icons.help_outline),
-              _SettingsRow(label: 'Privacy', icon: Icons.privacy_tip_outlined),
-              _SettingsRow(label: 'Terms', icon: Icons.description_outlined),
-              _SettingsRow(label: 'Contact', icon: Icons.mail_outline),
-              _SettingsRow(label: 'Version', icon: Icons.tag_outlined),
+              _SettingsRow(label: l10n.language, icon: Icons.language),
+              _SettingsRow(label: l10n.about, icon: Icons.info_outline),
+              _SettingsRow(label: l10n.faq, icon: Icons.help_outline),
+              _SettingsRow(
+                label: l10n.privacy,
+                icon: Icons.privacy_tip_outlined,
+              ),
+              _SettingsRow(label: l10n.terms, icon: Icons.description_outlined),
+              _SettingsRow(label: l10n.contact, icon: Icons.mail_outline),
+              _SettingsRow(label: l10n.version, icon: Icons.tag_outlined),
             ],
           ),
         ),
