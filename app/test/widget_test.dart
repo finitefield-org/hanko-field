@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miniriverpod/miniriverpod.dart';
 
 import 'package:hankofield/app/app.dart';
+import 'package:hankofield/app/theme/app_theme.dart';
+import 'package:hankofield/core/widgets/core_widgets.dart';
 import 'package:hankofield/features/design/design.dart';
 import 'package:hankofield/features/my_seals/my_seals.dart';
 import 'package:hankofield/features/order/order.dart';
@@ -23,6 +25,9 @@ void main() {
     expect(find.byType(DesignHomeScreen, skipOffstage: false), findsOneWidget);
     expect(find.byType(MySealsHomeScreen, skipOffstage: false), findsOneWidget);
     expect(find.byType(StonesHomeScreen, skipOffstage: false), findsOneWidget);
+    expect(find.byType(HankoSurfaceCard, skipOffstage: false), findsWidgets);
+    expect(find.byType(HankoPrimaryButton, skipOffstage: false), findsWidgets);
+    expect(find.byType(HankoStateView, skipOffstage: false), findsWidgets);
     expect(find.text('Design'), findsNWidgets(2));
     expect(find.text('Create your\ncustom seal'), findsOneWidget);
     expect(find.text('Start Designing'), findsOneWidget);
@@ -50,25 +55,32 @@ void main() {
     Future<void> expectEntryScreen(
       Widget screen,
       String title,
-      String routeName,
+      Type expectedCommonWidget,
     ) async {
-      await tester.pumpWidget(MaterialApp(home: screen));
+      await tester.pumpWidget(
+        MaterialApp(theme: HankoTheme.light(), home: screen),
+      );
 
       expect(find.text(title), findsOneWidget);
-      expect(find.text(routeName), findsOneWidget);
+      expect(find.byType(expectedCommonWidget), findsWidgets);
       expect(tester.takeException(), isNull);
     }
 
-    await expectEntryScreen(const OrderFlowEntryScreen(), 'Order', '/order');
+    await expectEntryScreen(
+      const OrderFlowEntryScreen(),
+      'Order',
+      HankoStateView,
+    );
     await expectEntryScreen(
       const OrderLookupEntryScreen(),
       'Order Lookup',
-      '/order-lookup',
+      HankoTextField,
     );
+    expect(find.byType(HankoTextField), findsNWidgets(2));
     await expectEntryScreen(
       const SettingsHomeScreen(),
       'Settings',
-      '/settings',
+      HankoSurfaceCard,
     );
   });
 }

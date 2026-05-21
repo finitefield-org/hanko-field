@@ -5,6 +5,7 @@ import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
 import '../features/stones/stones.dart';
 import 'navigation/app_navigation_shell.dart';
+import 'theme/app_theme.dart';
 
 class HankoApp extends StatelessWidget {
   const HankoApp({super.key});
@@ -14,15 +15,7 @@ class HankoApp extends StatelessWidget {
     return MaterialApp(
       title: 'STONE SIGNATURE',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: _Com003Colors.background,
-        fontFamily: 'Manrope',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _Com003Colors.red,
-          surface: _Com003Colors.background,
-        ),
-      ),
+      theme: HankoTheme.light(),
       home: const BottomNavigationShell(),
     );
   }
@@ -63,7 +56,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _Com003Colors.background,
+      backgroundColor: HankoColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 432),
@@ -112,9 +105,9 @@ class _BottomTabs extends StatelessWidget {
           final tabWidth = constraints.maxWidth / tabs.length;
           return DecoratedBox(
             decoration: const BoxDecoration(
-              color: _Com003Colors.background,
+              color: HankoColors.background,
               border: Border(
-                top: BorderSide(color: _Com003Colors.navBorder, width: 0.7),
+                top: BorderSide(color: HankoColors.navBorder, width: 0.7),
               ),
             ),
             child: Stack(
@@ -128,7 +121,7 @@ class _BottomTabs extends StatelessWidget {
                   height: 4,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _Com003Colors.red,
+                      color: HankoColors.red,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -173,7 +166,7 @@ class _BottomTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? _Com003Colors.red : _Com003Colors.ink;
+    final color = isSelected ? HankoColors.red : HankoColors.ink;
     return InkResponse(
       onTap: onTap,
       containedInkWell: true,
@@ -384,10 +377,3 @@ class _TabItem {
 }
 
 enum _TabIcon { design, mySeals, stones }
-
-abstract final class _Com003Colors {
-  static const background = Color(0xFFFBF8F3);
-  static const navBorder = Color(0xFFE8DED3);
-  static const red = Color(0xFF9D1F22);
-  static const ink = Color(0xFF202629);
-}

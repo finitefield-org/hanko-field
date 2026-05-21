@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_theme.dart';
+import '../../../core/widgets/core_widgets.dart';
+
 class DesignHomeScreen extends StatelessWidget {
   const DesignHomeScreen({super.key, this.onOpenSettings});
 
@@ -82,24 +85,12 @@ class _DesignHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Expanded(
-          child: Text(
-            'Design',
-            style: TextStyle(
-              color: _DesignHomeColors.red,
-              fontFamily: 'Noto Serif',
-              fontSize: 38,
-              fontWeight: FontWeight.w500,
-              height: 1,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
+        const Expanded(child: Text('Design', style: HankoTextStyles.pageTitle)),
         IconButton(
           onPressed: onOpenSettings ?? () {},
           tooltip: 'Settings',
           icon: const Icon(Icons.settings_outlined),
-          color: _DesignHomeColors.gold,
+          color: HankoColors.gold,
           iconSize: 34,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 48, height: 48),
@@ -116,7 +107,7 @@ class _HeroDesignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceCard(
+    return HankoSurfaceCard(
       height: height,
       child: Stack(
         clipBehavior: Clip.hardEdge,
@@ -136,14 +127,7 @@ class _HeroDesignCard extends StatelessWidget {
             child: Text(
               'Create your\ncustom seal',
               softWrap: false,
-              style: TextStyle(
-                color: _DesignHomeColors.ink,
-                fontFamily: 'Noto Serif',
-                fontSize: 36,
-                fontWeight: FontWeight.w500,
-                height: 1.12,
-                letterSpacing: 0,
-              ),
+              style: HankoTextStyles.heroTitle,
             ),
           ),
           const Positioned(left: 26, top: 174, child: _DividerMark()),
@@ -153,13 +137,7 @@ class _HeroDesignCard extends StatelessWidget {
             width: 215,
             child: Text(
               'Turn your name into a\npersonalized gemstone seal.',
-              style: TextStyle(
-                color: _DesignHomeColors.body,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w500,
-                height: 1.95,
-                letterSpacing: 0,
-              ),
+              style: HankoTextStyles.body,
             ),
           ),
           Positioned(
@@ -167,50 +145,9 @@ class _HeroDesignCard extends StatelessWidget {
             top: 282,
             width: 172,
             height: 52,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _DesignHomeColors.red,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26961B1D),
-                    blurRadius: 18,
-                    offset: Offset(0, 9),
-                  ),
-                ],
-              ),
-              child: TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Start Designing',
-                          style: TextStyle(
-                            fontFamily: 'Noto Serif',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            height: 1,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward, size: 23),
-                  ],
-                ),
-              ),
+            child: HankoPrimaryButton(
+              label: 'Start Designing',
+              onPressed: () {},
             ),
           ),
         ],
@@ -242,7 +179,7 @@ class _GoldLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 58, height: 1, color: _DesignHomeColors.gold);
+    return Container(width: 58, height: 1, color: HankoColors.gold);
   }
 }
 
@@ -269,9 +206,9 @@ class _FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceCard(
+    return HankoSurfaceCard(
       height: height,
-      radius: 15,
+      radius: HankoRadii.md,
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
@@ -296,76 +233,21 @@ class _FeatureCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _DesignHomeColors.ink,
-                fontFamily: 'Noto Serif',
-                fontSize: 21.5,
-                fontWeight: FontWeight.w500,
-                height: 1.05,
-                letterSpacing: 0,
-              ),
+              style: HankoTextStyles.cardTitle,
             ),
           ),
           Positioned(
             left: 20,
             right: 17,
             top: 177,
-            child: Text(
-              body,
-              style: const TextStyle(
-                color: _DesignHomeColors.body,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                height: 1.62,
-                letterSpacing: 0,
-              ),
-            ),
+            child: Text(body, style: HankoTextStyles.compactBody),
           ),
           const Positioned(
             right: 24,
             bottom: 25,
-            child: Icon(
-              Icons.chevron_right,
-              size: 31,
-              color: _DesignHomeColors.gold,
-            ),
+            child: Icon(Icons.chevron_right, size: 31, color: HankoColors.gold),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SurfaceCard extends StatelessWidget {
-  const _SurfaceCard({
-    required this.child,
-    required this.height,
-    this.radius = 17,
-  });
-
-  final Widget child;
-  final double height;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: _DesignHomeColors.card,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: _DesignHomeColors.border, width: 0.7),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 22,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: child,
       ),
     );
   }
@@ -402,7 +284,7 @@ class _IconMedallion extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: _DesignHomeColors.medallion,
+        color: HankoColors.medallion,
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -428,7 +310,7 @@ class _OutlinedDiamond extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          border: Border.all(color: _DesignHomeColors.gold, width: 1.5),
+          border: Border.all(color: HankoColors.gold, width: 1.5),
         ),
       ),
     );
@@ -443,7 +325,7 @@ class _FeatureIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = _DesignHomeColors.gold
+      ..color = HankoColors.gold
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
@@ -515,13 +397,3 @@ class _FeatureIconPainter extends CustomPainter {
 }
 
 enum _FeatureIcon { saved, diamond }
-
-abstract final class _DesignHomeColors {
-  static const card = Color(0xFFFEFCF9);
-  static const border = Color(0xFFEDE3D7);
-  static const medallion = Color(0xFFF1EAE2);
-  static const red = Color(0xFF9D1F22);
-  static const gold = Color(0xFFB47B2C);
-  static const ink = Color(0xFF202629);
-  static const body = Color(0xFF64686B);
-}
