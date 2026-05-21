@@ -27,6 +27,7 @@ void main() {
         child: HankoApp(
           locale: locale,
           hasSeenOnboardingResolver: () async => hasSeenOnboarding,
+          markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
         ),
       ),
@@ -42,6 +43,7 @@ void main() {
       ProviderScope(
         child: HankoApp(
           hasSeenOnboardingResolver: () => launchCheck.future,
+          markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
         ),
       ),
@@ -61,10 +63,22 @@ void main() {
   });
 
   testWidgets('COM-001 routes first-time users to onboarding', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var savedOnboardingState = false;
+    final saveCompleter = Completer<void>();
+
     await tester.pumpWidget(
       ProviderScope(
         child: HankoApp(
           hasSeenOnboardingResolver: () async => false,
+          markOnboardingSeen: () {
+            savedOnboardingState = true;
+            return saveCompleter.future;
+          },
           splashMinimumDuration: Duration.zero,
         ),
       ),
@@ -74,12 +88,43 @@ void main() {
 
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text('Welcome'), findsOneWidget);
+    expect(find.text('Create your\nseal in minutes'), findsOneWidget);
+    expect(find.text('Choose kanji from your name'), findsOneWidget);
+    expect(find.text('Generate a seal design with AI'), findsOneWidget);
+    expect(find.text('Saved on this device'), findsOneWidget);
 
-    await tester.tap(find.text('Start Designing'));
+    await tester.ensureVisible(find.text('Get Started'));
+    await tester.pump();
+    await tester.tap(find.text('Get Started'));
+    await tester.pump();
+
+    expect(savedOnboardingState, isTrue);
+    expect(find.byType(BottomNavigationShell), findsNothing);
+
+    saveCompleter.complete();
     await tester.pump();
 
     expect(find.byType(BottomNavigationShell), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COM-001 treats launch read failures as first run', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: HankoApp(
+          hasSeenOnboardingResolver: () async => throw StateError('no storage'),
+          markOnboardingSeen: () async {},
+          splashMinimumDuration: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -130,6 +175,7 @@ void main() {
         child: HankoApp(
           locale: const Locale('ja'),
           hasSeenOnboardingResolver: () async => true,
+          markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
         ),
       ),

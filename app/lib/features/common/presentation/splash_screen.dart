@@ -33,7 +33,12 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _resolveLaunch() async {
     final hasSeenFuture = widget.hasSeenOnboardingResolver();
     final minimumDelay = Future<void>.delayed(widget.minimumDisplayDuration);
-    final hasSeenOnboarding = await hasSeenFuture;
+    bool hasSeenOnboarding;
+    try {
+      hasSeenOnboarding = await hasSeenFuture;
+    } catch (_) {
+      hasSeenOnboarding = false;
+    }
     await minimumDelay;
 
     if (!mounted) {

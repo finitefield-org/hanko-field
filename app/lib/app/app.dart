@@ -14,11 +14,13 @@ class HankoApp extends StatelessWidget {
     super.key,
     this.locale,
     this.hasSeenOnboardingResolver = _defaultHasSeenOnboardingResolver,
+    this.markOnboardingSeen = _defaultMarkOnboardingSeen,
     this.splashMinimumDuration = const Duration(milliseconds: 700),
   });
 
   final Locale? locale;
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
+  final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
 
   @override
@@ -32,6 +34,7 @@ class HankoApp extends StatelessWidget {
       theme: HankoTheme.light(),
       home: _AppLaunchGate(
         hasSeenOnboardingResolver: hasSeenOnboardingResolver,
+        markOnboardingSeen: markOnboardingSeen,
         splashMinimumDuration: splashMinimumDuration,
       ),
     );
@@ -42,15 +45,21 @@ Future<bool> _defaultHasSeenOnboardingResolver() async {
   return const AppLaunchStore().hasSeenOnboarding();
 }
 
+Future<void> _defaultMarkOnboardingSeen() {
+  return const AppLaunchStore().setHasSeenOnboarding(true);
+}
+
 enum _AppLaunchStage { splash, onboarding, shell }
 
 class _AppLaunchGate extends StatefulWidget {
   const _AppLaunchGate({
     required this.hasSeenOnboardingResolver,
+    required this.markOnboardingSeen,
     required this.splashMinimumDuration,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
+  final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
 
   @override
@@ -69,10 +78,18 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         onLaunchResolved: _showLaunchDestination,
       ),
       _AppLaunchStage.onboarding => OnboardingScreen(
-        onComplete: () => setState(() => _stage = _AppLaunchStage.shell),
+        onComplete: _completeOnboarding,
       ),
       _AppLaunchStage.shell => const BottomNavigationShell(),
     };
+  }
+
+  Future<void> _completeOnboarding() async {
+    await widget.markOnboardingSeen();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _stage = _AppLaunchStage.shell);
   }
 
   void _showLaunchDestination(AppLaunchDestination destination) {

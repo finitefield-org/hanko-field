@@ -31,8 +31,20 @@ class HankoLocalizations {
   String get appTitle => _strings.appTitle;
   String get splashPreparing => _strings.splashPreparing;
   String get onboardingTitle => _strings.onboardingTitle;
-  String get onboardingIntroTitle => _strings.onboardingIntroTitle;
-  String get onboardingIntroMessage => _strings.onboardingIntroMessage;
+  String get onboardingHeroTitle => _strings.onboardingHeroTitle;
+  String get onboardingTagline => _strings.onboardingTagline;
+  String get onboardingKanjiTitle => _strings.onboardingKanjiTitle;
+  String get onboardingKanjiMessage => _strings.onboardingKanjiMessage;
+  String get onboardingAiTitle => _strings.onboardingAiTitle;
+  String get onboardingAiMessage => _strings.onboardingAiMessage;
+  String get onboardingStoneTitle => _strings.onboardingStoneTitle;
+  String get onboardingStoneMessage => _strings.onboardingStoneMessage;
+  String get onboardingStorageTitle => _strings.onboardingStorageTitle;
+  String get onboardingStorageMessage => _strings.onboardingStorageMessage;
+  String get onboardingGetStarted => _strings.onboardingGetStarted;
+  String get onboardingSaving => _strings.onboardingSaving;
+  String get onboardingSkip => _strings.onboardingSkip;
+  String get onboardingSaveError => _strings.onboardingSaveError;
   String get design => _strings.design;
   String get mySeals => _strings.mySeals;
   String get stones => _strings.stones;
@@ -96,8 +108,20 @@ class _HankoStrings {
     required this.appTitle,
     required this.splashPreparing,
     required this.onboardingTitle,
-    required this.onboardingIntroTitle,
-    required this.onboardingIntroMessage,
+    required this.onboardingHeroTitle,
+    required this.onboardingTagline,
+    required this.onboardingKanjiTitle,
+    required this.onboardingKanjiMessage,
+    required this.onboardingAiTitle,
+    required this.onboardingAiMessage,
+    required this.onboardingStoneTitle,
+    required this.onboardingStoneMessage,
+    required this.onboardingStorageTitle,
+    required this.onboardingStorageMessage,
+    required this.onboardingGetStarted,
+    required this.onboardingSaving,
+    required this.onboardingSkip,
+    required this.onboardingSaveError,
     required this.design,
     required this.mySeals,
     required this.stones,
@@ -135,8 +159,20 @@ class _HankoStrings {
   final String appTitle;
   final String splashPreparing;
   final String onboardingTitle;
-  final String onboardingIntroTitle;
-  final String onboardingIntroMessage;
+  final String onboardingHeroTitle;
+  final String onboardingTagline;
+  final String onboardingKanjiTitle;
+  final String onboardingKanjiMessage;
+  final String onboardingAiTitle;
+  final String onboardingAiMessage;
+  final String onboardingStoneTitle;
+  final String onboardingStoneMessage;
+  final String onboardingStorageTitle;
+  final String onboardingStorageMessage;
+  final String onboardingGetStarted;
+  final String onboardingSaving;
+  final String onboardingSkip;
+  final String onboardingSaveError;
   final String design;
   final String mySeals;
   final String stones;
@@ -178,9 +214,24 @@ const _localizedValues = {
       appTitle: 'STONE SIGNATURE',
       splashPreparing: 'Preparing your design experience.',
       onboardingTitle: 'Welcome',
-      onboardingIntroTitle: 'Make a seal that belongs to you',
-      onboardingIntroMessage:
-          'A short first-run guide will appear here before design starts.',
+      onboardingHeroTitle: 'Create your\nseal in minutes',
+      onboardingTagline: 'Personalized. Timeless.\nUniquely yours.',
+      onboardingKanjiTitle: 'Choose kanji from your name',
+      onboardingKanjiMessage: 'We suggest meaningful kanji based on your name.',
+      onboardingAiTitle: 'Generate a seal design with AI',
+      onboardingAiMessage:
+          'Our AI creates beautiful, balanced seal designs just for you.',
+      onboardingStoneTitle: 'Select a gemstone and order',
+      onboardingStoneMessage:
+          'Pick your favorite gemstone and we will craft your seal with care.',
+      onboardingStorageTitle: 'Saved on this device',
+      onboardingStorageMessage:
+          'Saved seal designs and preview images stay on this device. Payment details and checkout secrets are never saved locally.',
+      onboardingGetStarted: 'Get Started',
+      onboardingSaving: 'Saving...',
+      onboardingSkip: 'Skip',
+      onboardingSaveError:
+          'Could not save onboarding status. Please try again.',
       design: 'Design',
       mySeals: 'My Seals',
       stones: 'Stones',
@@ -224,8 +275,21 @@ const _localizedValues = {
       appTitle: 'STONE SIGNATURE',
       splashPreparing: 'デザイン体験を準備しています。',
       onboardingTitle: 'ようこそ',
-      onboardingIntroTitle: 'あなただけの印影を作る',
-      onboardingIntroMessage: 'デザイン開始前の初回案内がここに表示されます。',
+      onboardingHeroTitle: '数分で\n印影を作成',
+      onboardingTagline: 'あなたらしく。時を超えて。\n唯一無二の印鑑へ。',
+      onboardingKanjiTitle: '名前から漢字を選ぶ',
+      onboardingKanjiMessage: '名前に合わせて意味のある漢字候補を提案します。',
+      onboardingAiTitle: 'AIで印影を生成',
+      onboardingAiMessage: '美しく整った印影デザインをAIが作成します。',
+      onboardingStoneTitle: '天然石を選んで注文',
+      onboardingStoneMessage: 'お気に入りの天然石を選び、職人が丁寧に制作します。',
+      onboardingStorageTitle: 'この端末に保存されます',
+      onboardingStorageMessage:
+          '保存済み印影とプレビュー画像はこの端末に保存されます。カード情報やCheckoutの秘密情報は端末に保存しません。',
+      onboardingGetStarted: 'はじめる',
+      onboardingSaving: '保存中...',
+      onboardingSkip: 'スキップ',
+      onboardingSaveError: '初回案内の完了状態を保存できませんでした。もう一度お試しください。',
       design: 'デザイン',
       mySeals: 'マイ印影',
       stones: '石',
