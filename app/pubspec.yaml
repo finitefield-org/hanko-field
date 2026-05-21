@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.4+10
 
 environment:
-  sdk: ^3.10.4
+  sdk: ^3.11.0
 
 dependencies:
   flutter:
@@ -18,6 +18,9 @@ dependencies:
     path: ../../declarative-nav/declarative_nav
   miniriverpod:
     path: ../../miniriverpod/miniriverpod
+  sqflite: ^2.4.2+1
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

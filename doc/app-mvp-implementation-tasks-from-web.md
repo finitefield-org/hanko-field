@@ -872,7 +872,7 @@ MVPで後回し可能:
 | M02-T03 | app data | [x] API client/Repository/DTOの境界を作る | `app/lib/core/api/`, `app/lib/features/*/data/` | APIレスポンスをdomain modelへ変換できる |
 | M02-T04 | app ui | [x] 共通テーマと共通Widgetを作る | `app/lib/core/widgets/`, `app/lib/app/theme/` | 主要画面が共通ボタン/カード/フォーム/状態表示を使う |
 | M02-T05 | app i18n | [x] `ja` / `en` 文言管理を用意する | `app/lib/app/localization/` | 主要文言がロケールで切り替わる |
-| M02-T06 | app storage | ローカル保存依存関係を追加 | `app/pubspec.yaml` | `sqflite`、`path_provider`、`path` を追加し、端末内メタデータ/画像保存の基盤を作る |
+| M02-T06 | app storage | [x] ローカル保存依存関係を追加 | `app/pubspec.yaml` | `sqflite`、`path_provider`、`path` を追加し、端末内メタデータ/画像保存の基盤を作る |
 
 ### M03: 共通・初回画面
 
