@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-006 How It Works - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171b1f;
+        --copy: #555d63;
+        --wine: #98191a;
+        --gold: #bd8847;
+        --line: #ebdfd2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.92) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.95) 0 25%, transparent 58%),
+          radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.65) 0 26%, transparent 61%),
+          radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.68) 0 24%, transparent 62%),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .hero {
+        position: relative;
+        height: 178px;
+        text-align: center;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 65px;
+        left: 24px;
+        display: grid;
+        width: 24px;
+        height: 20px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 62px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 34px;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 16px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 48px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .lede {
+        width: 300px;
+        margin: 13px auto 0;
+        color: var(--copy);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .steps {
+        position: relative;
+      }
+
+      .steps::before {
+        content: "";
+        position: absolute;
+        top: 54px;
+        bottom: 95px;
+        left: 46px;
+        width: 1px;
+        background: var(--gold);
+      }
+
+      .step {
+        position: relative;
+        margin: 0 37px 12px 46px;
+      }
+
+      .step-number {
+        position: absolute;
+        z-index: 3;
+        top: 32px;
+        left: 0;
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 1px solid var(--gold);
+        border-radius: 999px;
+        background: rgba(255, 253, 249, 0.96);
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 27px;
+        line-height: 1;
+        transform: translateX(-50%);
+      }
+
+      .step-card {
+        display: grid;
+        height: 150px;
+        grid-template-columns: minmax(0, 1fr) 132px;
+        align-items: center;
+        gap: 5px;
+        padding: 18px 14px 18px 44px;
+        border: 0.8px solid rgba(232, 219, 208, 0.95);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow:
+          0 9px 22px rgba(91, 60, 35, 0.05),
+          inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        backdrop-filter: blur(2px);
+      }
+
+      .step:nth-child(1) .step-card {
+        height: 159px;
+      }
+
+      .step:nth-child(3) .step-card {
+        height: 140px;
+      }
+
+      .step:nth-child(4) .step-card {
+        height: 132px;
+      }
+
+      .step-copy {
+        min-width: 0;
+      }
+
+      .step-title {
+        max-width: 155px;
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 21.2px;
+        font-weight: 500;
+        line-height: 1.16;
+      }
+
+      .step-text {
+        max-width: 155px;
+        margin-top: 13px;
+        color: var(--copy);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .step-art {
+        width: 132px;
+        height: 132px;
+        justify-self: center;
+        border-radius: 999px;
+        object-fit: cover;
+      }
+
+      .step:nth-child(2) .step-art {
+        width: 123px;
+        height: 123px;
+      }
+
+      .step:nth-child(4) .step-art {
+        width: 126px;
+        height: 126px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: 61px minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+        margin: 20px 38px 0 64px;
+      }
+
+      .summary-icon-wrap {
+        display: grid;
+        width: 61px;
+        height: 61px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 46% 44%, rgba(255, 255, 255, 0.72), rgba(246, 239, 231, 0.94));
+      }
+
+      .summary-icon {
+        width: 39px;
+        height: 39px;
+        color: var(--gold);
+        stroke-width: 1.65;
+      }
+
+      .summary-title {
+        color: #11161a;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 15.5px;
+        font-weight: 500;
+        line-height: 1.1;
+      }
+
+      .summary-text {
+        margin-top: 8px;
+        color: var(--copy);
+        font-size: 11.3px;
+        line-height: 1.47;
+      }
+
+      @media (max-width: 390px) {
+        .hero {
+          height: 158px;
+        }
+
+        .back-button {
+          top: 58px;
+          left: 23px;
+        }
+
+        .screen-title {
+          padding-top: 56px;
+          font-size: 31px;
+        }
+
+        .ornament {
+          margin-top: 13px;
+        }
+
+        .lede {
+          width: 280px;
+          margin-top: 10px;
+          font-size: 12.8px;
+          line-height: 1.4;
+        }
+
+        .steps::before {
+          top: 48px;
+          bottom: 82px;
+          left: 42px;
+        }
+
+        .step {
+          margin: 0 32px 10px 42px;
+        }
+
+        .step-number {
+          top: 30px;
+          width: 36px;
+          height: 36px;
+          font-size: 24px;
+        }
+
+        .step-card {
+          height: 140px;
+          grid-template-columns: minmax(0, 1fr) 116px;
+          gap: 5px;
+          padding: 15px 14px 15px 39px;
+        }
+
+        .step:nth-child(1) .step-card {
+          height: 148px;
+        }
+
+        .step:nth-child(3) .step-card {
+          height: 130px;
+        }
+
+        .step:nth-child(4) .step-card {
+          height: 124px;
+        }
+
+        .step-title {
+          max-width: 148px;
+          font-size: 19.2px;
+        }
+
+        .step-text {
+          max-width: 148px;
+          margin-top: 9px;
+          font-size: 11px;
+          line-height: 1.47;
+        }
+
+        .step-art {
+          width: 119px;
+          height: 119px;
+        }
+
+        .step:nth-child(2) .step-art {
+          width: 111px;
+          height: 111px;
+        }
+
+        .step:nth-child(4) .step-art {
+          width: 114px;
+          height: 114px;
+        }
+
+        .summary {
+          grid-template-columns: 55px minmax(0, 1fr);
+          gap: 15px;
+          margin: 14px 32px 0 57px;
+        }
+
+        .summary-icon-wrap {
+          width: 55px;
+          height: 55px;
+        }
+
+        .summary-icon {
+          width: 35px;
+          height: 35px;
+        }
+
+        .summary-title {
+          font-size: 14.2px;
+        }
+
+        .summary-text {
+          margin-top: 6px;
+          font-size: 10.4px;
+          line-height: 1.42;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="How It Works screen preview">
+      <header class="hero">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 28 24" aria-hidden="true">
+            <path
+              d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </a>
+        <h1 class="screen-title">How It Works</h1>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="lede">Create a one-of-a-kind seal that reflects your name and style.</p>
+      </header>
+
+      <section class="steps" aria-label="How the custom seal process works">
+        <article class="step">
+          <span class="step-number" aria-hidden="true">1</span>
+          <div class="step-card">
+            <div class="step-copy">
+              <h2 class="step-title">Choose your name<br />and kanji</h2>
+              <p class="step-text">Enter your name and select<br />the kanji characters that<br />represent you.</p>
+            </div>
+            <img class="step-art" src="assets/com-006-step-name.png" alt="" />
+          </div>
+        </article>
+
+        <article class="step">
+          <span class="step-number" aria-hidden="true">2</span>
+          <div class="step-card">
+            <div class="step-copy">
+              <h2 class="step-title">Generate your<br />seal design</h2>
+              <p class="step-text">Our artisans craft a unique<br />seal design based on your<br />selection.</p>
+            </div>
+            <img class="step-art" src="assets/com-006-step-seal.png" alt="" />
+          </div>
+        </article>
+
+        <article class="step">
+          <span class="step-number" aria-hidden="true">3</span>
+          <div class="step-card">
+            <div class="step-copy">
+              <h2 class="step-title">Select a<br />gemstone</h2>
+              <p class="step-text">Choose the gemstone<br />that will adorn the<br />top of your seal.</p>
+            </div>
+            <img class="step-art" src="assets/com-006-step-gemstones.png" alt="" />
+          </div>
+        </article>
+
+        <article class="step">
+          <span class="step-number" aria-hidden="true">4</span>
+          <div class="step-card">
+            <div class="step-copy">
+              <h2 class="step-title">Receive your<br />custom seal</h2>
+              <p class="step-text">We craft your seal by hand<br />and deliver it to you<br />with care.</p>
+            </div>
+            <img class="step-art" src="assets/com-006-step-stamp.png" alt="" />
+          </div>
+        </article>
+      </section>
+
+      <aside class="summary" aria-label="Production and delivery note">
+        <div class="summary-icon-wrap" aria-hidden="true">
+          <svg class="summary-icon" viewBox="0 0 64 64">
+            <path
+              d="M31.9 23.7c-4.9-6.3-13.1-3.1-13.1 4.3 0 6.4 8.4 12.2 13.1 16 4.8-3.8 13.2-9.6 13.2-16 0-7.4-8.2-10.6-13.2-4.3Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <path d="M12.5 39.2h9.7l8.9 5.2h7.1c3.6 0 6.1 2.2 6.1 4.7L30.4 52.7l-14-4.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9.2 36.1h7.2v16.2H9.2Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M44.3 48.2 54.5 42c2.6-1.5 5.3.5 4.1 3.1L44.8 55.4c-3.2 2.4-7.4 2.9-11 1.3l-17.4-7.8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="summary-title">Handcrafted with care, delivered to you.</h2>
+          <p class="summary-text">Each seal is handcrafted by skilled artisans.<br />Production takes 3&ndash;5 business days.<br />Shipping times vary by location.</p>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>
