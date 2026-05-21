@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
+import 'settings_content.dart';
 
 class SettingsHomeScreen extends StatelessWidget {
   const SettingsHomeScreen({super.key});
@@ -198,6 +199,7 @@ class _SettingsDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final content = SettingsContentBundle.forLanguage(l10n.locale.languageCode);
 
     return _SettingsPageFrame(
       title: destination.title(l10n),
@@ -208,15 +210,26 @@ class _SettingsDetailPage extends StatelessWidget {
         color: HankoColors.gold,
       ),
       children: [
-        if (destination == _SettingsDestination.language)
-          const _LanguageSettingsContent()
-        else if (destination == _SettingsDestination.version)
-          const _VersionSettingsContent()
-        else
-          HankoStateView.empty(
-            title: l10n.settingsContentPendingTitle,
-            message: destination.pendingMessage(l10n),
+        switch (destination) {
+          _SettingsDestination.language => const _LanguageSettingsContent(),
+          _SettingsDestination.about => _AboutSettingsContent(
+            content: content.about,
           ),
+          _SettingsDestination.faq => _FaqSettingsContent(content: content.faq),
+          _SettingsDestination.privacy => _LegalSettingsContent(
+            content: content.privacy,
+            icon: Icons.privacy_tip_outlined,
+          ),
+          _SettingsDestination.terms => _LegalSettingsContent(
+            content: content.terms,
+            icon: Icons.description_outlined,
+          ),
+          _SettingsDestination.contact => HankoStateView.empty(
+            title: l10n.settingsContentPendingTitle,
+            message: l10n.settingsContactPendingMessage,
+          ),
+          _SettingsDestination.version => const _VersionSettingsContent(),
+        },
       ],
     );
   }
@@ -302,6 +315,249 @@ class _VersionSettingsContent extends StatelessWidget {
             style: HankoTextStyles.body,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AboutSettingsContent extends StatelessWidget {
+  const _AboutSettingsContent({required this.content});
+
+  final SettingsAboutContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ContentIntroCard(
+          icon: Icons.auto_awesome,
+          title: content.heading,
+          body: content.body,
+        ),
+        for (final point in content.points) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SettingsTextCard(
+            icon: Icons.diamond_outlined,
+            title: point.title,
+            body: point.body,
+          ),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        _TaglineCard(text: content.tagline),
+      ],
+    );
+  }
+}
+
+class _FaqSettingsContent extends StatelessWidget {
+  const _FaqSettingsContent({required this.content});
+
+  final SettingsFaqContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ContentIntroCard(
+          icon: Icons.help_outline,
+          title: content.heading,
+          body: context.l10n.settingsFaqIntro,
+        ),
+        for (final item in content.items) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _FaqCard(item: item),
+        ],
+      ],
+    );
+  }
+}
+
+class _LegalSettingsContent extends StatelessWidget {
+  const _LegalSettingsContent({required this.content, required this.icon});
+
+  final SettingsLegalContent content;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ContentIntroCard(
+          icon: icon,
+          title: content.updated,
+          body: content.intro,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _LegalLinkCard(
+          label: content.officialLinkLabel,
+          url: content.officialUrl,
+        ),
+        for (final section in content.sections) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SettingsTextCard(
+            icon: Icons.article_outlined,
+            title: section.title,
+            body: section.body,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ContentIntroCard extends StatelessWidget {
+  const _ContentIntroCard({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(HankoSpacing.lg),
+      radius: HankoRadii.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: HankoColors.gold, size: 32),
+          const SizedBox(height: HankoSpacing.md),
+          Text(title, style: HankoTextStyles.sectionTitle),
+          const SizedBox(height: HankoSpacing.sm),
+          Text(body, style: HankoTextStyles.body),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTextCard extends StatelessWidget {
+  const _SettingsTextCard({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: HankoColors.gold, size: 24),
+          const SizedBox(width: HankoSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: HankoTextStyles.cardTitle),
+                const SizedBox(height: HankoSpacing.sm),
+                Text(body, style: HankoTextStyles.body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FaqCard extends StatelessWidget {
+  const _FaqCard({required this.item});
+
+  final SettingsFaqItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.question_answer_outlined,
+                color: HankoColors.gold,
+                size: 24,
+              ),
+              const SizedBox(width: HankoSpacing.md),
+              Expanded(
+                child: Text(item.question, style: HankoTextStyles.cardTitle),
+              ),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          Text(item.answer, style: HankoTextStyles.body),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegalLinkCard extends StatelessWidget {
+  const _LegalLinkCard({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.open_in_new, color: HankoColors.gold, size: 24),
+          const SizedBox(width: HankoSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: HankoTextStyles.cardTitle),
+                const SizedBox(height: HankoSpacing.sm),
+                SelectableText(url, style: HankoTextStyles.compactBody),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaglineCard extends StatelessWidget {
+  const _TaglineCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Center(
+        child: Text(
+          text,
+          style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -410,18 +666,6 @@ enum _SettingsDestination {
       _SettingsDestination.terms => l10n.terms,
       _SettingsDestination.contact => l10n.contact,
       _SettingsDestination.version => l10n.version,
-    };
-  }
-
-  String pendingMessage(HankoLocalizations l10n) {
-    return switch (this) {
-      _SettingsDestination.about => l10n.settingsAboutPendingMessage,
-      _SettingsDestination.faq => l10n.settingsFaqPendingMessage,
-      _SettingsDestination.privacy => l10n.settingsPrivacyPendingMessage,
-      _SettingsDestination.terms => l10n.settingsTermsPendingMessage,
-      _SettingsDestination.contact => l10n.settingsContactPendingMessage,
-      _SettingsDestination.language ||
-      _SettingsDestination.version => l10n.settingsContentPendingMessage,
     };
   }
 }

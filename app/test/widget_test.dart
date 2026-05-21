@@ -279,7 +279,7 @@ void main() {
 
     Future<void> openAndReturn(
       String rowLabel,
-      String expectedText, {
+      Finder expectedFinder, {
       bool useSystemBack = false,
     }) async {
       await tester.ensureVisible(find.text(rowLabel));
@@ -287,7 +287,7 @@ void main() {
       await tester.tap(find.text(rowLabel));
       await tester.pumpAndSettle();
 
-      expect(find.text(expectedText), findsOneWidget);
+      expect(expectedFinder, findsOneWidget);
 
       if (useSystemBack) {
         await tester.binding.handlePopRoute();
@@ -299,28 +299,23 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     }
 
-    await openAndReturn('Language', 'App language', useSystemBack: true);
     await openAndReturn(
-      'About',
-      'About content will be added in the next settings milestone.',
+      'Language',
+      find.text('App language'),
+      useSystemBack: true,
     );
-    await openAndReturn(
-      'FAQ',
-      'FAQ content will be added in the next settings milestone.',
-    );
+    await openAndReturn('About', find.text('Your seal, made from gemstone'));
+    await openAndReturn('FAQ', find.text('How is kanji selected?'));
     await openAndReturn(
       'Privacy',
-      'Privacy policy content will be added in the next settings milestone.',
+      find.textContaining('https://finitefield.org/en/privacy/'),
     );
-    await openAndReturn(
-      'Terms',
-      'Terms of service content will be added in the next settings milestone.',
-    );
+    await openAndReturn('Terms', find.text('Orders and contract formation'));
     await openAndReturn(
       'Contact',
-      'Contact guidance will be added in the contact milestone.',
+      find.text('Contact guidance will be added in the contact milestone.'),
     );
-    await openAndReturn('Version', 'Version 1.0.4+10');
+    await openAndReturn('Version', find.text('Version 1.0.4+10'));
 
     expect(tester.takeException(), isNull);
   });
@@ -350,6 +345,12 @@ void main() {
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('言語'), findsOneWidget);
     expect(find.text('利用規約'), findsOneWidget);
+
+    await tester.tap(find.text('このアプリについて'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('宝石でつくる、あなたの印鑑'), findsOneWidget);
+
     expect(tester.takeException(), isNull);
   });
 }
