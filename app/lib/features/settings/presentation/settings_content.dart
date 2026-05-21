@@ -1,15 +1,19 @@
 class SettingsContentBundle {
   const SettingsContentBundle({
     required this.about,
+    required this.howItWorks,
     required this.faq,
     required this.privacy,
     required this.terms,
+    required this.contact,
   });
 
   final SettingsAboutContent about;
+  final SettingsHowItWorksContent howItWorks;
   final SettingsFaqContent faq;
   final SettingsLegalContent privacy;
   final SettingsLegalContent terms;
+  final SettingsContactContent contact;
 
   static SettingsContentBundle forLanguage(String languageCode) {
     if (languageCode == 'ja') {
@@ -40,11 +44,53 @@ class SettingsFaqContent {
   final List<SettingsFaqItem> items;
 }
 
+class SettingsHowItWorksContent {
+  const SettingsHowItWorksContent({
+    required this.heading,
+    required this.intro,
+    required this.steps,
+    required this.summaryTitle,
+    required this.summaryBody,
+  });
+
+  final String heading;
+  final String intro;
+  final List<SettingsTextSection> steps;
+  final String summaryTitle;
+  final String summaryBody;
+}
+
 class SettingsFaqItem {
   const SettingsFaqItem({required this.question, required this.answer});
 
   final String question;
   final String answer;
+}
+
+class SettingsContactContent {
+  const SettingsContactContent({
+    required this.heading,
+    required this.intro,
+    required this.options,
+    required this.replyNote,
+  });
+
+  final String heading;
+  final String intro;
+  final List<SettingsContactOption> options;
+  final String replyNote;
+}
+
+class SettingsContactOption {
+  const SettingsContactOption({
+    required this.title,
+    required this.body,
+    required this.value,
+  });
+
+  final String title;
+  final String body;
+  final String value;
 }
 
 class SettingsLegalContent {
@@ -93,6 +139,36 @@ const _enContent = SettingsContentBundle(
       ),
     ],
     tagline: 'Your name. Your stone. Your signature.',
+  ),
+  howItWorks: SettingsHowItWorksContent(
+    heading: 'Create a one-of-a-kind seal',
+    intro:
+        'Move from name selection to a saved design, gemstone choice, checkout, and delivery without losing your place.',
+    steps: [
+      SettingsTextSection(
+        title: 'Choose your name and kanji',
+        body:
+            'Enter your name, review kanji candidates, and choose the characters that match your intention.',
+      ),
+      SettingsTextSection(
+        title: 'Generate your seal design',
+        body:
+            'Pick a seal style, generate design variants, and save the version you want to keep on this device.',
+      ),
+      SettingsTextSection(
+        title: 'Select a gemstone',
+        body:
+            'Browse one-of-a-kind stones, review details and availability, then pair a stone with your saved seal.',
+      ),
+      SettingsTextSection(
+        title: 'Checkout and receive your seal',
+        body:
+            'Confirm shipping details, agree to the terms, complete payment through Stripe Checkout, and track the order by order number and email.',
+      ),
+    ],
+    summaryTitle: 'Handcrafted with care, delivered to you.',
+    summaryBody:
+        'Each seal is made to order by our partner workshop after payment and design confirmation. Production usually takes 5-10 business days, and shipping usually takes about 7-14 days after dispatch.',
   ),
   faq: SettingsFaqContent(
     heading: 'Frequently asked questions',
@@ -202,6 +278,32 @@ const _enContent = SettingsContentBundle(
       ),
     ],
   ),
+  contact: SettingsContactContent(
+    heading: 'We are here to help.',
+    intro:
+        'For order, shipping, payment, or app questions, use the official inquiry form or email support guidance below. Include your order number when the question is about an order.',
+    options: [
+      SettingsContactOption(
+        title: 'Send an inquiry',
+        body:
+            'Use the official contact form for questions about orders, shipping, returns, privacy, or account support.',
+        value: 'https://finitefield.org/en/contact/',
+      ),
+      SettingsContactOption(
+        title: 'Email support',
+        body:
+            'If your mail app is easier, include your order number, email address used at checkout, and a short description.',
+        value: 'support@stonesignature.com',
+      ),
+      SettingsContactOption(
+        title: 'Before contacting us',
+        body:
+            'Order status can be checked from Order Lookup with your order number and email address.',
+        value: 'Order Lookup',
+      ),
+    ],
+    replyNote: 'We usually reply within 2 business days.',
+  ),
 );
 
 const _jaContent = SettingsContentBundle(
@@ -221,6 +323,30 @@ const _jaContent = SettingsContentBundle(
       SettingsTextSection(title: '一点ずつ製作', body: '支払いとデザイン確定後、提携工房で一本ずつ製作します。'),
     ],
     tagline: 'あなたの名前。あなたの石。あなたの印鑑。',
+  ),
+  howItWorks: SettingsHowItWorksContent(
+    heading: '一点物の印鑑を作る流れ',
+    intro: '名前の入力から印影保存、天然石の選択、Checkout、配送までをアプリ内で進められます。',
+    steps: [
+      SettingsTextSection(
+        title: '名前と漢字を選ぶ',
+        body: '名前を入力し、意味や雰囲気に合う漢字候補を確認して、印影に使う文字を選びます。',
+      ),
+      SettingsTextSection(
+        title: '印影デザインを生成する',
+        body: '印影スタイルを選び、生成された候補から気に入ったデザインをこの端末に保存します。',
+      ),
+      SettingsTextSection(
+        title: '天然石を選ぶ',
+        body: '一点物の石を一覧と詳細で確認し、保存済み印影と組み合わせて注文準備を進めます。',
+      ),
+      SettingsTextSection(
+        title: 'Checkoutして受け取る',
+        body: '配送先と同意事項を確認し、Stripe Checkoutで支払います。注文番号とメールアドレスで注文状態を確認できます。',
+      ),
+    ],
+    summaryTitle: '丁寧に製作し、お届けします。',
+    summaryBody: '支払いとデザイン確定後、提携工房で受注生産します。製作は通常5〜10営業日、発送後の配送は通常7〜14日程度です。',
   ),
   faq: SettingsFaqContent(
     heading: 'よくある質問',
@@ -316,5 +442,28 @@ const _jaContent = SettingsContentBundle(
         body: '本規約は日本法に準拠します。日本語以外の翻訳版がある場合でも、日本語による規約が優先されます。',
       ),
     ],
+  ),
+  contact: SettingsContactContent(
+    heading: 'お問い合わせ',
+    intro:
+        '注文、配送、決済、アプリの使い方については、公式問い合わせフォームまたはメール案内をご利用ください。注文に関する問い合わせでは注文番号を添えてください。',
+    options: [
+      SettingsContactOption(
+        title: '問い合わせフォーム',
+        body: '注文、配送、返品、プライバシー、アカウントサポートに関する質問は公式フォームからご連絡ください。',
+        value: 'https://finitefield.org/contact/',
+      ),
+      SettingsContactOption(
+        title: 'メールサポート',
+        body: 'メールアプリから連絡する場合は、注文番号、Checkoutで使用したメールアドレス、問い合わせ内容を記載してください。',
+        value: 'support@stonesignature.com',
+      ),
+      SettingsContactOption(
+        title: '問い合わせ前に',
+        body: '注文状態は、注文番号とメールアドレスを使って注文照会から確認できます。',
+        value: '注文照会',
+      ),
+    ],
+    replyNote: '通常2営業日以内に返信します。',
   ),
 );

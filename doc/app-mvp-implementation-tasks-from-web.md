@@ -882,7 +882,7 @@ MVPで後回し可能:
 | M03-T02 | `COM-002` | [x] Onboarding画面 | `features/common/presentation/` | 価値説明とローカル保存注意を表示し、完了状態を端末保存 |
 | M03-T03 | `COM-004` | [x] Settings画面 | `features/settings/presentation/` | 言語、About、FAQ、Privacy、Terms、Contact、versionへ遷移 |
 | M03-T04 | `COM-005` `COM-007` `COM-009` `COM-010` | [x] About、FAQ、Privacy、Terms | `features/settings/presentation/` | Web文言/法務リンクをアプリ向けに表示 |
-| M03-T05 | `COM-006` `COM-008` | How It Works、Contact | `features/settings/presentation/` | 後回しでもSettings導線が破綻しない |
+| M03-T05 | `COM-006` `COM-008` | [x] How It Works、Contact | `features/settings/presentation/` | 後回しでもSettings導線が破綻しない |
 
 ### M04: Designタブ - 漢字候補
 

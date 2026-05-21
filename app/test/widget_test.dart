@@ -178,6 +178,7 @@ void main() {
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
+    expect(find.text('How It Works'), findsOneWidget);
     expect(find.text('Terms'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Close'));
@@ -305,6 +306,10 @@ void main() {
       useSystemBack: true,
     );
     await openAndReturn('About', find.text('Your seal, made from gemstone'));
+    await openAndReturn(
+      'How It Works',
+      find.text('Choose your name and kanji'),
+    );
     await openAndReturn('FAQ', find.text('How is kanji selected?'));
     await openAndReturn(
       'Privacy',
@@ -313,7 +318,7 @@ void main() {
     await openAndReturn('Terms', find.text('Orders and contract formation'));
     await openAndReturn(
       'Contact',
-      find.text('Contact guidance will be added in the contact milestone.'),
+      find.textContaining('https://finitefield.org/en/contact/'),
     );
     await openAndReturn('Version', find.text('Version 1.0.4+10'));
 
@@ -344,6 +349,7 @@ void main() {
 
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('言語'), findsOneWidget);
+    expect(find.text('使い方'), findsOneWidget);
     expect(find.text('利用規約'), findsOneWidget);
 
     await tester.tap(find.text('このアプリについて'));

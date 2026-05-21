@@ -72,15 +72,12 @@ class HankoLocalizations {
   String get lookupOrder => _strings.lookupOrder;
   String get language => _strings.language;
   String get about => _strings.about;
+  String get howItWorks => _strings.howItWorks;
   String get faq => _strings.faq;
   String get privacy => _strings.privacy;
   String get terms => _strings.terms;
   String get contact => _strings.contact;
   String get version => _strings.version;
-  String get settingsContentPendingTitle =>
-      _strings.settingsContentPendingTitle;
-  String get settingsContactPendingMessage =>
-      _strings.settingsContactPendingMessage;
   String get settingsLanguageTitle => _strings.settingsLanguageTitle;
   String get settingsLanguageMessage => _strings.settingsLanguageMessage;
   String get settingsLanguageEnglish => _strings.settingsLanguageEnglish;
@@ -165,13 +162,12 @@ class _HankoStrings {
     required this.lookupOrder,
     required this.language,
     required this.about,
+    required this.howItWorks,
     required this.faq,
     required this.privacy,
     required this.terms,
     required this.contact,
     required this.version,
-    required this.settingsContentPendingTitle,
-    required this.settingsContactPendingMessage,
     required this.settingsLanguageTitle,
     required this.settingsLanguageMessage,
     required this.settingsLanguageEnglish,
@@ -225,13 +221,12 @@ class _HankoStrings {
   final String lookupOrder;
   final String language;
   final String about;
+  final String howItWorks;
   final String faq;
   final String privacy;
   final String terms;
   final String contact;
   final String version;
-  final String settingsContentPendingTitle;
-  final String settingsContactPendingMessage;
   final String settingsLanguageTitle;
   final String settingsLanguageMessage;
   final String settingsLanguageEnglish;
@@ -296,14 +291,12 @@ const _localizedValues = {
       lookupOrder: 'Lookup Order',
       language: 'Language',
       about: 'About',
+      howItWorks: 'How It Works',
       faq: 'FAQ',
       privacy: 'Privacy',
       terms: 'Terms',
       contact: 'Contact',
       version: 'Version',
-      settingsContentPendingTitle: 'Content coming soon',
-      settingsContactPendingMessage:
-          'Contact guidance will be added in the contact milestone.',
       settingsLanguageTitle: 'App language',
       settingsLanguageMessage:
           'Language destinations are available now. Locale switching will be connected after settings persistence is finalized.',
@@ -363,13 +356,12 @@ const _localizedValues = {
       lookupOrder: '注文を照会',
       language: '言語',
       about: 'このアプリについて',
+      howItWorks: '使い方',
       faq: 'FAQ',
       privacy: 'プライバシー',
       terms: '利用規約',
       contact: 'お問い合わせ',
       version: 'バージョン',
-      settingsContentPendingTitle: '準備中',
-      settingsContactPendingMessage: '問い合わせ案内はContactマイルストーンで追加します。',
       settingsLanguageTitle: 'アプリの言語',
       settingsLanguageMessage: '言語の遷移先を用意しています。ロケール切り替えは設定保存の確定後に接続します。',
       settingsLanguageEnglish: '英語',

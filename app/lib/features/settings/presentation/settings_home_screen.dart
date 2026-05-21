@@ -126,6 +126,10 @@ class _SettingsMenuPage extends StatelessWidget {
                 onTap: onOpenDestination,
               ),
               _SettingsRow(
+                destination: _SettingsDestination.howItWorks,
+                onTap: onOpenDestination,
+              ),
+              _SettingsRow(
                 destination: _SettingsDestination.faq,
                 onTap: onOpenDestination,
               ),
@@ -215,6 +219,9 @@ class _SettingsDetailPage extends StatelessWidget {
           _SettingsDestination.about => _AboutSettingsContent(
             content: content.about,
           ),
+          _SettingsDestination.howItWorks => _HowItWorksSettingsContent(
+            content: content.howItWorks,
+          ),
           _SettingsDestination.faq => _FaqSettingsContent(content: content.faq),
           _SettingsDestination.privacy => _LegalSettingsContent(
             content: content.privacy,
@@ -224,9 +231,8 @@ class _SettingsDetailPage extends StatelessWidget {
             content: content.terms,
             icon: Icons.description_outlined,
           ),
-          _SettingsDestination.contact => HankoStateView.empty(
-            title: l10n.settingsContentPendingTitle,
-            message: l10n.settingsContactPendingMessage,
+          _SettingsDestination.contact => _ContactSettingsContent(
+            content: content.contact,
           ),
           _SettingsDestination.version => const _VersionSettingsContent(),
         },
@@ -374,6 +380,40 @@ class _FaqSettingsContent extends StatelessWidget {
   }
 }
 
+class _HowItWorksSettingsContent extends StatelessWidget {
+  const _HowItWorksSettingsContent({required this.content});
+
+  final SettingsHowItWorksContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ContentIntroCard(
+          icon: Icons.route_outlined,
+          title: content.heading,
+          body: content.intro,
+        ),
+        for (var index = 0; index < content.steps.length; index++) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _NumberedStepCard(
+            number: index + 1,
+            title: content.steps[index].title,
+            body: content.steps[index].body,
+          ),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        _ContentIntroCard(
+          icon: Icons.volunteer_activism_outlined,
+          title: content.summaryTitle,
+          body: content.summaryBody,
+        ),
+      ],
+    );
+  }
+}
+
 class _LegalSettingsContent extends StatelessWidget {
   const _LegalSettingsContent({required this.content, required this.icon});
 
@@ -403,6 +443,32 @@ class _LegalSettingsContent extends StatelessWidget {
             body: section.body,
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _ContactSettingsContent extends StatelessWidget {
+  const _ContactSettingsContent({required this.content});
+
+  final SettingsContactContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ContentIntroCard(
+          icon: Icons.support_agent_outlined,
+          title: content.heading,
+          body: content.intro,
+        ),
+        for (final option in content.options) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _ContactOptionCard(option: option),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        _TaglineCard(text: content.replyNote),
       ],
     );
   }
@@ -438,6 +504,69 @@ class _ContentIntroCard extends StatelessWidget {
   }
 }
 
+class _NumberedStepCard extends StatelessWidget {
+  const _NumberedStepCard({
+    required this.number,
+    required this.title,
+    required this.body,
+  });
+
+  final int number;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StepBadge(number: number),
+          const SizedBox(width: HankoSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: HankoTextStyles.cardTitle),
+                const SizedBox(height: HankoSpacing.sm),
+                Text(body, style: HankoTextStyles.body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepBadge extends StatelessWidget {
+  const _StepBadge({required this.number});
+
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 32,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: HankoColors.medallion,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: HankoColors.surfaceBorder),
+        ),
+        child: Center(
+          child: Text(
+            '$number',
+            style: HankoTextStyles.label.copyWith(color: HankoColors.gold),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsTextCard extends StatelessWidget {
   const _SettingsTextCard({
     required this.icon,
@@ -466,6 +595,39 @@ class _SettingsTextCard extends StatelessWidget {
                 Text(title, style: HankoTextStyles.cardTitle),
                 const SizedBox(height: HankoSpacing.sm),
                 Text(body, style: HankoTextStyles.body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContactOptionCard extends StatelessWidget {
+  const _ContactOptionCard({required this.option});
+
+  final SettingsContactOption option;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      radius: HankoRadii.md,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.mail_outline, color: HankoColors.gold, size: 24),
+          const SizedBox(width: HankoSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(option.title, style: HankoTextStyles.cardTitle),
+                const SizedBox(height: HankoSpacing.sm),
+                Text(option.body, style: HankoTextStyles.body),
+                const SizedBox(height: HankoSpacing.sm),
+                SelectableText(option.value, style: HankoTextStyles.label),
               ],
             ),
           ),
@@ -615,6 +777,7 @@ class _SettingsPageFrame extends StatelessWidget {
 enum _SettingsDestination {
   language,
   about,
+  howItWorks,
   faq,
   privacy,
   terms,
@@ -625,6 +788,7 @@ enum _SettingsDestination {
     return switch (this) {
       _SettingsDestination.language => 'COM-004-language',
       _SettingsDestination.about => 'COM-005-about',
+      _SettingsDestination.howItWorks => 'COM-006-how-it-works',
       _SettingsDestination.faq => 'COM-007-faq',
       _SettingsDestination.privacy => 'COM-009-privacy',
       _SettingsDestination.terms => 'COM-010-terms',
@@ -637,6 +801,7 @@ enum _SettingsDestination {
     return switch (this) {
       _SettingsDestination.language => '/settings/language',
       _SettingsDestination.about => '/settings/about',
+      _SettingsDestination.howItWorks => '/settings/how-it-works',
       _SettingsDestination.faq => '/settings/faq',
       _SettingsDestination.privacy => '/settings/privacy',
       _SettingsDestination.terms => '/settings/terms',
@@ -649,6 +814,7 @@ enum _SettingsDestination {
     return switch (this) {
       _SettingsDestination.language => Icons.language,
       _SettingsDestination.about => Icons.info_outline,
+      _SettingsDestination.howItWorks => Icons.route_outlined,
       _SettingsDestination.faq => Icons.help_outline,
       _SettingsDestination.privacy => Icons.privacy_tip_outlined,
       _SettingsDestination.terms => Icons.description_outlined,
@@ -661,6 +827,7 @@ enum _SettingsDestination {
     return switch (this) {
       _SettingsDestination.language => l10n.language,
       _SettingsDestination.about => l10n.about,
+      _SettingsDestination.howItWorks => l10n.howItWorks,
       _SettingsDestination.faq => l10n.faq,
       _SettingsDestination.privacy => l10n.privacy,
       _SettingsDestination.terms => l10n.terms,
