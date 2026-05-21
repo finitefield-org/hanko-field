@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-010 Terms of Service - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #1b2228;
+        --copy: #62686e;
+        --wine: #971819;
+        --gold: #b98235;
+        --line: #dec08e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.93) 0 25%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 43%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 49% 9%, rgba(255, 255, 255, 0.96) 0 25%, transparent 57%),
+          radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.62) 0 24%, transparent 58%),
+          radial-gradient(circle at 50% 86%, rgba(255, 255, 255, 0.7) 0 25%, transparent 62%),
+          linear-gradient(136deg, #f4ebe2 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .topbar {
+        position: relative;
+        height: 89px;
+        border-bottom: 1px solid rgba(222, 208, 191, 0.86);
+      }
+
+      .back-button {
+        position: absolute;
+        top: 53px;
+        left: 24px;
+        display: grid;
+        width: 22px;
+        height: 18px;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .screen-title {
+        margin: 0;
+        padding-top: 52px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 23px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+      }
+
+      .masthead {
+        position: relative;
+        padding: 20px 43.5px 0;
+      }
+
+      .hero-shield {
+        display: grid;
+        width: 36px;
+        height: 39px;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .hero-title {
+        margin: 13px 0 0;
+        color: #1d2429;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 39px;
+        font-weight: 500;
+        line-height: 0.98;
+        white-space: nowrap;
+        text-shadow: 0 11px 18px rgba(70, 49, 39, 0.08);
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 18px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 56px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 6px;
+        height: 6px;
+        border: 1.5px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .updated {
+        margin: 15px 0 0;
+        color: #596168;
+        font-size: 12px;
+        line-height: 1;
+      }
+
+      .intro-copy {
+        margin: 18px 0 0;
+        color: #596168;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: nowrap;
+      }
+
+      .terms-list {
+        position: absolute;
+        top: 329px;
+        left: 43.5px;
+        right: 43.5px;
+      }
+
+      .term-row {
+        position: relative;
+        display: grid;
+        grid-template-columns: 41px minmax(0, 1fr) 20px;
+        min-height: var(--row-h);
+        border-top: 1px solid rgba(184, 133, 63, 0.55);
+      }
+
+      .term-row:nth-child(1) {
+        --row-h: 105px;
+      }
+
+      .term-row:nth-child(2) {
+        --row-h: 114px;
+      }
+
+      .term-row:nth-child(3) {
+        --row-h: 109px;
+      }
+
+      .term-row:nth-child(4) {
+        --row-h: 109px;
+      }
+
+      .term-row:nth-child(5) {
+        --row-h: 87px;
+      }
+
+      .term-row:nth-child(6) {
+        --row-h: 116px;
+      }
+
+      .term-number {
+        display: grid;
+        width: 23px;
+        height: 23px;
+        margin-top: 17px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(246, 239, 231, 0.94);
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1;
+        box-shadow: inset 0 0 0 0.7px rgba(227, 216, 204, 0.75);
+      }
+
+      .term-content {
+        min-width: 0;
+        padding-top: 17px;
+      }
+
+      .term-title {
+        margin: 0;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 16.7px;
+        font-weight: 500;
+        line-height: 1.05;
+        white-space: nowrap;
+      }
+
+      .term-copy {
+        margin: 11px 0 0;
+        color: #5b646b;
+        font-size: 11.25px;
+        line-height: 1.36;
+        white-space: nowrap;
+      }
+
+      .term-row:nth-child(5) .term-copy {
+        margin-top: 7px;
+        font-size: 10.6px;
+        line-height: 1.18;
+      }
+
+      .chevron {
+        align-self: center;
+        justify-self: end;
+        width: 12px;
+        height: 19px;
+        color: var(--gold);
+        stroke-width: 2.2;
+      }
+
+      @media (max-width: 390px) {
+        .topbar {
+          height: 82px;
+        }
+
+        .back-button {
+          top: 49px;
+          left: 22px;
+        }
+
+        .screen-title {
+          padding-top: 48px;
+          font-size: 21px;
+        }
+
+        .masthead {
+          padding: 18px 39px 0;
+        }
+
+        .hero-shield {
+          width: 32px;
+          height: 36px;
+        }
+
+        .hero-title {
+          margin-top: 12px;
+          font-size: 35px;
+        }
+
+        .ornament {
+          margin-top: 16px;
+        }
+
+        .updated {
+          margin-top: 14px;
+          font-size: 11px;
+        }
+
+        .intro-copy {
+          margin-top: 16px;
+          font-size: 10.55px;
+          line-height: 1.38;
+        }
+
+        .terms-list {
+          top: 302px;
+          left: 39px;
+          right: 39px;
+        }
+
+        .term-row {
+          grid-template-columns: 38px minmax(0, 1fr) 18px;
+        }
+
+        .term-row:nth-child(1) {
+          --row-h: 97px;
+        }
+
+        .term-row:nth-child(2) {
+          --row-h: 105px;
+        }
+
+        .term-row:nth-child(3) {
+          --row-h: 100px;
+        }
+
+        .term-row:nth-child(4) {
+          --row-h: 101px;
+        }
+
+        .term-row:nth-child(5) {
+          --row-h: 80px;
+        }
+
+        .term-number {
+          width: 22px;
+          height: 22px;
+          margin-top: 16px;
+          font-size: 14px;
+        }
+
+        .term-content {
+          padding-top: 16px;
+        }
+
+        .term-title {
+          font-size: 15.5px;
+        }
+
+        .term-copy {
+          margin-top: 9px;
+          font-size: 9.35px;
+          line-height: 1.24;
+        }
+
+        .term-row:nth-child(5) .term-copy {
+          margin-top: 6px;
+          font-size: 8.85px;
+          line-height: 1.12;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Terms of service screen preview">
+      <header class="topbar">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 28 24" aria-hidden="true">
+            <path
+              d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </a>
+        <h1 class="screen-title">Terms of Service</h1>
+      </header>
+
+      <section class="masthead" aria-labelledby="terms-heading">
+        <svg class="hero-shield" viewBox="0 0 40 44" aria-hidden="true">
+          <path
+            d="M20 3.2c4.8 3.7 10.3 5.2 15.8 5.9v11.7c0 9.2-5.8 16-15.8 20.6C10 36.8 4.2 30 4.2 20.8V9.1C9.7 8.4 15.2 6.9 20 3.2Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+          <path
+            d="M11.7 19h16.6L24.6 27h-9.2Zm0 0 4-5.3h8.6l4 5.3M15.7 13.7 20 27l4.3-13.3"
+            fill="none"
+            stroke="#98191a"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+
+        <h2 id="terms-heading" class="hero-title">Terms of Service</h2>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+        <p class="updated">Last updated: May 22, 2025</p>
+        <p class="intro-copy">
+          Welcome to Stone Signature. By accessing or using our app and<br />
+          services, you agree to be bound by these Terms of Service.<br />
+          Please read them carefully.
+        </p>
+      </section>
+
+      <section class="terms-list" aria-label="Terms sections">
+        <article class="term-row">
+          <div class="term-number">1</div>
+          <div class="term-content">
+            <h3 class="term-title">Overview</h3>
+            <p class="term-copy">
+              Stone Signature provides a platform for designing, ordering,<br />
+              and purchasing custom seals and natural gemstones. These<br />
+              Terms govern your use of our app, website, and services.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+
+        <article class="term-row">
+          <div class="term-number">2</div>
+          <div class="term-content">
+            <h3 class="term-title">Orders and Payment</h3>
+            <p class="term-copy">
+              All orders are subject to acceptance and availability. Prices<br />
+              are displayed in your local currency and include applicable<br />
+              taxes unless stated otherwise. Payment must be completed<br />
+              at the time of placing your order.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+
+        <article class="term-row">
+          <div class="term-number">3</div>
+          <div class="term-content">
+            <h3 class="term-title">Custom-made Items</h3>
+            <p class="term-copy">
+              Custom-made seals are crafted specifically for you based on<br />
+              your design and preferences. As these items are personalized,<br />
+              all sales are final and non-refundable unless the item is<br />
+              defective or damaged upon delivery.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+
+        <article class="term-row">
+          <div class="term-number">4</div>
+          <div class="term-content">
+            <h3 class="term-title">Shipping</h3>
+            <p class="term-copy">
+              We strive to process and ship orders promptly. Estimated<br />
+              delivery times are provided at checkout and may vary based<br />
+              on your location. Stone Signature is not responsible for delays<br />
+              caused by shipping carriers or customs.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+
+        <article class="term-row">
+          <div class="term-number">5</div>
+          <div class="term-content">
+            <h3 class="term-title">Returns</h3>
+            <p class="term-copy">
+              Non-custom items may be returned within 14 days of delivery<br />
+              if unused and in original condition. Please contact our support<br />
+              team to initiate a return.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+
+        <article class="term-row">
+          <div class="term-number">6</div>
+          <div class="term-content">
+            <h3 class="term-title">Limitation of Liability</h3>
+            <p class="term-copy">
+              To the fullest extent permitted by law, Stone Signature shall<br />
+              not be liable for any indirect, incidental, or consequential<br />
+              damages arising from your use of our services.
+            </p>
+          </div>
+          <svg class="chevron" viewBox="0 0 14 24" aria-hidden="true">
+            <path d="m2.5 3 8.8 9-8.8 9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
