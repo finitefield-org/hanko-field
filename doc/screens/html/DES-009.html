@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-009 Seal Preview - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --ink: #172126;
+        --copy: #59636b;
+        --wine: #8d1518;
+        --deep-wine: #7f1013;
+        --gold: #b98038;
+        --line: #eadccf;
+        --paper: #fffdf9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      h1,
+      h2,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            126deg,
+            transparent 0 39%,
+            rgba(177, 136, 91, 0.018) 39.15%,
+            transparent 40.15%
+          ),
+          linear-gradient(
+            141deg,
+            transparent 0 76%,
+            rgba(177, 136, 91, 0.025) 76.12%,
+            transparent 76.9%
+          ),
+          radial-gradient(
+            ellipse at 50% 12%,
+            rgba(255, 255, 255, 0.95),
+            transparent 37%
+          ),
+          radial-gradient(
+            ellipse at 50% 53%,
+            rgba(255, 255, 255, 0.7),
+            transparent 43%
+          ),
+          radial-gradient(
+            ellipse at 50% 89%,
+            rgba(255, 255, 255, 0.58),
+            transparent 36%
+          ),
+          linear-gradient(136deg, #f3eae1 0%, #fffdf9 45%, #f6eee5 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.13;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(180, 139, 92, 0.1) 18.14%,
+            transparent 18.82%
+          ),
+          linear-gradient(
+            35deg,
+            transparent 0 80%,
+            rgba(180, 139, 92, 0.09) 80.1%,
+            transparent 80.8%
+          );
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 8.5cqw rgba(107, 76, 47, 0.07);
+      }
+
+      .serif {
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia,
+          "Times New Roman", serif;
+      }
+
+      .jp {
+        font-family:
+          "Hanko Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .back-button {
+        position: absolute;
+        z-index: 4;
+        top: 7.45%;
+        left: 6%;
+        display: grid;
+        width: 5.55cqw;
+        height: 5.55cqw;
+        place-items: center;
+        color: var(--deep-wine);
+        text-decoration: none;
+      }
+
+      .back-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 3;
+        top: 7%;
+        left: 50%;
+        margin: 0;
+        color: var(--deep-wine);
+        font-size: 7.15cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 0.9cqw 1.7cqw rgba(83, 45, 35, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .top-divider {
+        position: absolute;
+        z-index: 3;
+        top: 10.95%;
+        left: 50%;
+        display: flex;
+        width: 22.4cqw;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .divider-line {
+        width: 7.92cqw;
+        height: 0.12cqw;
+        background: currentColor;
+      }
+
+      .divider-diamond {
+        width: 1.72cqw;
+        height: 1.72cqw;
+        border: 0.34cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .intro-copy {
+        position: absolute;
+        z-index: 3;
+        top: 13.13%;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        color: var(--copy);
+        font-size: 3.02cqw;
+        font-weight: 400;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .preview-card {
+        position: absolute;
+        z-index: 2;
+        top: 16.28%;
+        left: 7.92%;
+        width: 84.2%;
+        height: 27.45%;
+        overflow: hidden;
+        border: 0.1cqw solid rgba(224, 212, 199, 0.9);
+        border-radius: 2.45cqw;
+        background:
+          radial-gradient(
+            ellipse at 50% 37%,
+            rgba(255, 255, 255, 0.8),
+            transparent 48%
+          ),
+          rgba(255, 255, 255, 0.58);
+        box-shadow:
+          0 2.6cqw 5.7cqw rgba(90, 59, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.84);
+        backdrop-filter: blur(1.6px);
+      }
+
+      .seal-preview {
+        position: absolute;
+        z-index: 3;
+        top: 18.5%;
+        left: 50%;
+        width: 48cqw;
+        height: 48cqw;
+        border-radius: 999px;
+        object-fit: cover;
+        transform: translateX(-50%);
+      }
+
+      .sparkle {
+        position: absolute;
+        z-index: 3;
+        top: 39.78%;
+        right: 11%;
+        width: 5.42cqw;
+        height: 5.42cqw;
+        color: var(--gold);
+      }
+
+      .details {
+        position: absolute;
+        z-index: 3;
+        top: 45.9%;
+        left: 8.02%;
+        width: 84.05%;
+      }
+
+      .detail-row {
+        display: grid;
+        height: 6.12cqw;
+        min-height: 55.6px;
+        grid-template-columns: 12.18cqw 1fr auto 5.05cqw;
+        align-items: center;
+        border-bottom: 0.1cqw solid rgba(225, 215, 204, 0.9);
+      }
+
+      .detail-icon {
+        width: 10.98cqw;
+        height: 10.98cqw;
+        justify-self: start;
+        border-radius: 999px;
+      }
+
+      .detail-label {
+        color: var(--ink);
+        font-size: 4.18cqw;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .detail-value {
+        color: #63686e;
+        font-size: 3.18cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .detail-value.jp {
+        color: #3e454b;
+        font-size: 3.28cqw;
+      }
+
+      .chevron {
+        width: 3.35cqw;
+        height: 3.35cqw;
+        justify-self: end;
+        color: var(--gold);
+      }
+
+      .rules-note {
+        position: absolute;
+        z-index: 3;
+        top: 77.55%;
+        left: 8.02%;
+        display: grid;
+        width: 83.9%;
+        grid-template-columns: 12.1cqw minmax(0, 1fr);
+        align-items: center;
+      }
+
+      .rules-note img {
+        width: 8.7cqw;
+        height: 8.7cqw;
+        justify-self: center;
+        border-radius: 999px;
+      }
+
+      .rules-note p {
+        margin: 0;
+        color: var(--copy);
+        font-size: 2.82cqw;
+        font-weight: 400;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .save-button,
+      .stone-button {
+        position: absolute;
+        z-index: 4;
+        right: 7.92%;
+        left: 7.92%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 5.55%;
+        border-radius: 1.45cqw;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .save-button {
+        top: 84.15%;
+        background:
+          radial-gradient(
+            ellipse at 50% 16%,
+            rgba(193, 45, 43, 0.25),
+            transparent 44%
+          ),
+          linear-gradient(120deg, #9d171a 0%, #a21518 48%, #8b1013 100%);
+        box-shadow:
+          0 2.1cqw 4.5cqw rgba(113, 25, 19, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        color: #fff8f1;
+        font-size: 4.25cqw;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .save-button svg {
+        position: absolute;
+        right: 4.08cqw;
+        width: 5.3cqw;
+        height: 5.3cqw;
+      }
+
+      .stone-button {
+        top: 90.86%;
+        border: 0.14cqw solid var(--wine);
+        background: rgba(255, 253, 249, 0.36);
+        color: var(--wine);
+        font-size: 4.05cqw;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .screen-title {
+          font-size: 6.72cqw;
+        }
+
+        .intro-copy {
+          font-size: 2.85cqw;
+        }
+
+        .detail-row {
+          min-height: 50.2px;
+        }
+
+        .detail-label {
+          font-size: 3.88cqw;
+        }
+
+        .detail-value {
+          font-size: 2.95cqw;
+        }
+
+        .rules-note p {
+          font-size: 2.6cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/40"
+      aria-label="Seal preview"
+    >
+      <a class="back-button" href="#" aria-label="Back">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.1 4.8 7 16l11.1 11.2M8.6 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.25"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title serif">Seal Preview</h1>
+
+      <div class="top-divider" aria-hidden="true">
+        <span class="divider-line"></span>
+        <span class="divider-diamond"></span>
+        <span class="divider-line"></span>
+      </div>
+
+      <p class="intro-copy">Review your seal design before saving.</p>
+
+      <section class="preview-card" aria-hidden="true"></section>
+      <img
+        class="seal-preview"
+        src="assets/des-009-seal-preview.png"
+        alt="Red gemstone seal preview"
+      />
+      <svg class="sparkle" viewBox="0 0 32 32" aria-hidden="true">
+        <path
+          d="M16 3.5c1.8 7.2 5.3 10.7 12.5 12.5C21.3 17.8 17.8 21.3 16 28.5 14.2 21.3 10.7 17.8 3.5 16 10.7 14.2 14.2 10.7 16 3.5Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-linejoin="round"
+          stroke-width="1.55"
+        />
+      </svg>
+
+      <section class="details" aria-label="Seal design details">
+        <a class="detail-row" href="#">
+          <img class="detail-icon" src="assets/des-009-icon-kanji.png" alt="" />
+          <span class="detail-label serif">Kanji</span>
+          <span class="detail-value jp">美空</span>
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8.7 4.7 7.6 7.3-7.6 7.3"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.1"
+            />
+          </svg>
+        </a>
+        <a class="detail-row" href="#">
+          <img
+            class="detail-icon"
+            src="assets/des-009-icon-meaning.png"
+            alt=""
+          />
+          <span class="detail-label serif">Meaning</span>
+          <span class="detail-value">Beautiful sky</span>
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8.7 4.7 7.6 7.3-7.6 7.3"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.1"
+            />
+          </svg>
+        </a>
+        <a class="detail-row" href="#">
+          <img class="detail-icon" src="assets/des-009-icon-style.png" alt="" />
+          <span class="detail-label serif">Style</span>
+          <span class="detail-value">Elegant</span>
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8.7 4.7 7.6 7.3-7.6 7.3"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.1"
+            />
+          </svg>
+        </a>
+        <a class="detail-row" href="#">
+          <img
+            class="detail-icon"
+            src="assets/des-009-icon-stroke.png"
+            alt=""
+          />
+          <span class="detail-label serif">Stroke</span>
+          <span class="detail-value">Standard</span>
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8.7 4.7 7.6 7.3-7.6 7.3"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.1"
+            />
+          </svg>
+        </a>
+        <a class="detail-row" href="#">
+          <img
+            class="detail-icon"
+            src="assets/des-009-icon-balance.png"
+            alt=""
+          />
+          <span class="detail-label serif">Balance</span>
+          <span class="detail-value">Balanced</span>
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="m8.7 4.7 7.6 7.3-7.6 7.3"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.1"
+            />
+          </svg>
+        </a>
+      </section>
+
+      <aside class="rules-note" aria-label="Engraving rule note">
+        <img src="assets/des-009-icon-rules.png" alt="" />
+        <p>Created within engraving-friendly design rules.</p>
+      </aside>
+
+      <a class="save-button serif" href="#">
+        <span>Save Seal</span>
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M4.2 16h22.4M18 7.4 26.6 16 18 24.6"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+          />
+        </svg>
+      </a>
+
+      <a class="stone-button serif" href="#">Choose a Stone</a>
+    </main>
+  </body>
+</html>
