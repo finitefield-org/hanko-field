@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LKP-005 Unable to Load Order - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --screen-h: 836px;
+        --ink: #172328;
+        --copy: #344047;
+        --wine: #821719;
+        --gold: #b7782c;
+        --line: #e4d4c2;
+        --paper: #fbf8f3;
+        --screen-scale: 1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button,
+      h1,
+      h2,
+      h3,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.9) 0 23%, transparent 58%),
+          radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.72) 0 23%, transparent 60%),
+          radial-gradient(circle at 50% 82%, rgba(255, 255, 255, 0.72) 0 22%, transparent 60%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 44%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.36;
+        background:
+          linear-gradient(126deg, transparent 0 62%, rgba(181, 138, 91, 0.044) 62.1%, transparent 63.1%),
+          linear-gradient(143deg, transparent 0 15%, rgba(181, 138, 91, 0.046) 15.1%, transparent 16.3%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.5), transparent 31%),
+          radial-gradient(ellipse at 50% 78%, rgba(255, 255, 255, 0.48), transparent 30%);
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 86px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 38px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(83, 45, 35, 0.08);
+        transform: scaleX(0.82);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .top-ornament {
+        top: 136px;
+      }
+
+      .ornament-line {
+        width: 56px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .error-hero {
+        position: absolute;
+        top: 166px;
+        left: 56px;
+        z-index: 1;
+        width: 360px;
+        height: 154px;
+        object-fit: cover;
+        object-position: center;
+        mask-image: radial-gradient(ellipse at center, #000 0 59%, rgba(0, 0, 0, 0.92) 70%, transparent 90%);
+      }
+
+      .message {
+        position: absolute;
+        top: 335px;
+        left: 45px;
+        z-index: 2;
+        width: 381px;
+        margin: 0;
+        color: #344047;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 1.55;
+        text-align: center;
+      }
+
+      .connection-card {
+        position: absolute;
+        top: 422px;
+        left: 63px;
+        z-index: 2;
+        display: grid;
+        width: 345px;
+        height: 136px;
+        grid-template-columns: 100px minmax(0, 1fr);
+        align-items: center;
+        border: 1px solid rgba(229, 214, 201, 0.86);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow:
+          0 11px 24px rgba(84, 56, 35, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(2px);
+      }
+
+      .connection-icon {
+        width: 59px;
+        height: 59px;
+        justify-self: center;
+        color: var(--gold);
+        stroke-width: 1.5;
+      }
+
+      .connection-copy {
+        position: relative;
+        padding-left: 20px;
+      }
+
+      .connection-copy::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        left: 0;
+        width: 1px;
+        background: rgba(202, 167, 127, 0.76);
+      }
+
+      .connection-title {
+        margin: 0;
+        color: #a76416;
+        font-size: 15.5px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .connection-text {
+        margin: 15px 0 0;
+        color: #344047;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.62;
+      }
+
+      .primary-action,
+      .secondary-action {
+        position: absolute;
+        left: 62px;
+        z-index: 2;
+        display: block;
+        width: 346px;
+        text-decoration: none;
+      }
+
+      .primary-action {
+        top: 582px;
+        height: 57px;
+        border-radius: 10px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 10px 20px rgba(96, 31, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: #fffaf6;
+      }
+
+      .action-sparkle {
+        position: absolute;
+        top: 17px;
+        left: 121px;
+        width: 22px;
+        height: 22px;
+        color: #fffaf3;
+      }
+
+      .primary-text {
+        position: absolute;
+        top: 15px;
+        left: 0;
+        width: 100%;
+        color: #fffaf6;
+        font-size: 24px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .action-arrow {
+        position: absolute;
+        top: 17px;
+        right: 18px;
+        width: 25px;
+        height: 25px;
+        color: #fffaf3;
+        stroke-width: 1.65;
+      }
+
+      .secondary-action {
+        top: 653px;
+        height: 58px;
+        border: 1px solid rgba(183, 120, 44, 0.8);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.43);
+        color: #172328;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      }
+
+      .home-icon {
+        position: absolute;
+        top: 15px;
+        left: 116px;
+        width: 26px;
+        height: 26px;
+        color: var(--gold);
+        stroke-width: 1.55;
+      }
+
+      .secondary-text {
+        position: absolute;
+        top: 14px;
+        left: 0;
+        width: 100%;
+        color: #172328;
+        font-size: 24px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .footer-note {
+        position: absolute;
+        top: 746px;
+        left: 126px;
+        z-index: 2;
+        display: grid;
+        width: 284px;
+        grid-template-columns: 34px minmax(0, 1fr);
+        column-gap: 0;
+        align-items: center;
+      }
+
+      .footer-icon {
+        width: 34px;
+        height: 34px;
+        color: var(--gold);
+        stroke-width: 1.45;
+      }
+
+      .footer-text {
+        margin: 0;
+        color: #344047;
+        font-size: 12px;
+        line-height: 1.48;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Unable to load order screen">
+      <div class="artboard">
+        <h1 class="screen-title serif">Unable to Load Order</h1>
+        <div class="ornament top-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <img class="error-hero" src="assets/lkp-005-hero.png" alt="" />
+
+        <p class="message">
+          A connection error occurred while<br />
+          retrieving your order details.<br />
+          Please try again.
+        </p>
+
+        <section class="connection-card" aria-label="Connection guidance">
+          <svg class="connection-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M8.5 12.1a5 5 0 0 1 7 0M10.5 14.1a2.2 2.2 0 0 1 3 0M12 16.3h.1" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <div class="connection-copy">
+            <h2 class="connection-title">Stay Connected</h2>
+            <p class="connection-text">
+              Please check your internet connection<br />
+              and try again. If the issue persists,<br />
+              we&rsquo;re here to help.
+            </p>
+          </div>
+        </section>
+
+        <a class="primary-action" href="#">
+          <svg class="action-sparkle" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M13.7 1.8c1.4 7 5 10.5 12 12-7 1.5-10.6 5-12 12-1.5-7-5.1-10.5-12.1-12 7-1.5 10.6-5 12.1-12Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M23.3 1.7v7.1M19.8 5.2h7.1" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <span class="primary-text serif">Retry</span>
+          <svg class="action-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <a class="secondary-action" href="#">
+          <svg class="home-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m4 11.4 8-7 8 7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6.2 10.4v9h11.6v-9M10 19.4v-5h4v5" stroke="currentColor" stroke-linejoin="round" />
+          </svg>
+          <span class="secondary-text serif">Back</span>
+        </a>
+
+        <div class="footer-note" aria-label="Security information">
+          <svg class="footer-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M9 11.1h6v5.3H9v-5.3Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M10.4 11.1V9.8a1.6 1.6 0 0 1 3.2 0v1.3" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <p class="footer-text">
+            Your information is safe and encrypted.<br />
+            Powered by Stripe.
+          </p>
+        </div>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const screen = document.querySelector(".screen");
+        const setScale = () => {
+          document.documentElement.style.setProperty("--screen-scale", Math.min(screen.clientWidth / 470.5, 1));
+        };
+
+        setScale();
+        window.addEventListener("resize", setScale, { passive: true });
+      })();
+    </script>
+  </body>
+</html>
