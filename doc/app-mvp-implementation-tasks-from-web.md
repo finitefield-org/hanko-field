@@ -40,6 +40,23 @@
 | docs | 画面コードは `doc/app-mvp-screen-design.md` を正とする |
 | data | 既存Firestoreコレクション構成は維持し、必要なフィールドだけ追加する |
 
+### 3.1 Web/admin更新方式ポリシー
+
+Webとadminの画面更新は、ユーザー操作に応じた通常のHTTPリクエスト、フォーム送信、htmxリクエストで行う。以下はWeb/adminでは実装しない。
+
+- `setInterval` / timer / `hx-trigger="every ..."` などによる定期ポーリング。
+- SSE / `EventSource` / Server-Sent Events。
+- WebSocket。
+- 長時間接続やstreaming responseを使う画面更新。
+
+許可するもの:
+
+- ユーザーがクリック、入力、送信、戻る、再読み込みをした時の単発HTTPリクエスト。
+- htmxの明示的なユーザーイベントによる部分更新。
+- アプリのStripe戻り直後に限る短時間の注文状態再取得。これはFlutterアプリの前景画面だけで扱い、Web/adminには展開しない。
+
+マイルストーン実装時は、Web/admin関連TaskにSSE、WebSocket、streaming、定期ポーリングを追加しない。必要な最新状態確認は、ユーザー操作による再読み込み、詳細画面再表示、または通常のPOST/GET完了後のHTML再描画で解決する。
+
 ## 4. 現状実装の棚卸し
 
 ### 4.1 既存Web
@@ -844,7 +861,7 @@ MVPで後回し可能:
 | M01-T01 | docs | [x] 画面コードを実装/テスト/スクリーンショットの固定IDとして採用する | `doc/app-mvp-screen-design.md` | 全必須画面にコードがあり、実装名に対応できる |
 | M01-T02 | docs | [x] 既存Web機能を `流用` / `変更` / `新規` / `廃止` に分類する | この文書 | 比較サマリーが保守されている |
 | M01-T03 | docs | [x] MVP必須画面と後回し画面をタスクへ分解する | この文書 | M01からM13までのタスクがある |
-| M01-T04 | policy | Web/adminのポーリング/ストリーミング禁止を実装計画に反映する | `AGENTS.md`, この文書 | Web/adminタスクにSSE/WebSocket/定期ポーリングがない |
+| M01-T04 | policy | [x] Web/adminのポーリング/ストリーミング禁止を実装計画に反映する | `AGENTS.md`, この文書 | Web/adminタスクにSSE/WebSocket/定期ポーリングがない |
 
 ### M02: Flutterアプリ基盤
 
