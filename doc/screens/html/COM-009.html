@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COM-009 Privacy Policy - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171b1f;
+        --copy: #62686e;
+        --wine: #98191a;
+        --gold: #b98535;
+        --line: #d8ad73;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 50% 11%, rgba(255, 255, 255, 0.92) 0 26%, transparent 58%),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 42%, #f4ece3 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100vw, 431.5px);
+        min-height: min(100vh, 911px);
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 49% 9%, rgba(255, 255, 255, 0.96) 0 25%, transparent 57%),
+          radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.61) 0 24%, transparent 58%),
+          radial-gradient(circle at 50% 86%, rgba(255, 255, 255, 0.68) 0 25%, transparent 62%),
+          linear-gradient(136deg, #f4ebe2 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .topbar {
+        position: relative;
+        height: 82px;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 35px;
+        left: 28px;
+        display: grid;
+        width: 22px;
+        height: 20px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .screen-title {
+        margin: 0;
+        padding: 31px 0 0 78px;
+        color: var(--wine);
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 25px;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 8px 15px rgba(112, 65, 41, 0.08);
+      }
+
+      .intro {
+        text-align: center;
+      }
+
+      .shield {
+        display: grid;
+        width: 33px;
+        height: 37px;
+        margin: 5px auto 0;
+        place-items: center;
+        color: var(--gold);
+      }
+
+      .updated {
+        margin: 16px 0 0;
+        color: #424950;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .lede {
+        width: 337px;
+        margin: 20px auto 0;
+        color: #343b42;
+        font-size: 10.8px;
+        line-height: 1.38;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .policy-list {
+        margin: 0;
+        padding: 0;
+      }
+
+      .policy-section {
+        position: absolute;
+        left: 37px;
+        right: 37px;
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        column-gap: 10px;
+      }
+
+      .policy-section:nth-child(1) {
+        top: 247px;
+      }
+
+      .policy-section:nth-child(2) {
+        top: 378px;
+      }
+
+      .policy-section:nth-child(3) {
+        top: 530px;
+      }
+
+      .policy-section:nth-child(4) {
+        top: 676px;
+      }
+
+      .policy-section:nth-child(5) {
+        top: 791px;
+      }
+
+      .policy-section + .policy-section {
+        padding-top: 24px;
+      }
+
+      .policy-section + .policy-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(184, 133, 63, 0.7);
+      }
+
+      .policy-icon-wrap {
+        display: grid;
+        width: 43px;
+        height: 43px;
+        margin-top: 1px;
+        margin-left: 6px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(circle at 44% 42%, rgba(255, 255, 255, 0.7), rgba(245, 237, 229, 0.96));
+      }
+
+      .policy-icon {
+        width: 27px;
+        height: 27px;
+        color: var(--gold);
+        stroke-width: 1.65;
+      }
+
+      .policy-title {
+        margin: 0;
+        color: #0f1418;
+        font-family: "Bodoni 72", "Cormorant Garamond", "Times New Roman", serif;
+        font-size: 18.4px;
+        font-weight: 500;
+        line-height: 1.06;
+        white-space: nowrap;
+      }
+
+      .policy-copy {
+        margin: 11px 0 0;
+        color: var(--copy);
+        font-size: 10.8px;
+        line-height: 1.38;
+        white-space: nowrap;
+      }
+
+      .policy-copy p {
+        margin: 0;
+      }
+
+      .policy-copy p + p {
+        margin-top: 4px;
+      }
+
+      .policy-section:nth-child(5) .policy-copy {
+        margin-top: 7px;
+        font-size: 9.5px;
+        line-height: 1.25;
+      }
+
+      .policy-section:nth-child(5) .policy-copy p + p {
+        margin-top: 2px;
+      }
+
+      .email {
+        color: var(--wine);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      @media (max-width: 390px) {
+        .topbar {
+          height: 75px;
+        }
+
+        .back-button {
+          top: 32px;
+          left: 25px;
+        }
+
+        .screen-title {
+          padding: 28px 0 0 70px;
+          font-size: 23px;
+        }
+
+        .shield {
+          width: 30px;
+          height: 34px;
+          margin-top: 7px;
+        }
+
+        .updated {
+          margin-top: 14px;
+          font-size: 11px;
+        }
+
+        .lede {
+          width: calc(100% - 68px);
+          margin-top: 16px;
+          font-size: 9.75px;
+          line-height: 1.34;
+        }
+
+        .policy-list {
+          margin: 0;
+          padding: 0;
+        }
+
+        .policy-section {
+          left: 30px;
+          right: 30px;
+          grid-template-columns: 52px minmax(0, 1fr);
+          column-gap: 8px;
+        }
+
+        .policy-section:nth-child(1) {
+          top: 224px;
+        }
+
+        .policy-section:nth-child(2) {
+          top: 344px;
+        }
+
+        .policy-section:nth-child(3) {
+          top: 481px;
+        }
+
+        .policy-section:nth-child(4) {
+          top: 609px;
+        }
+
+        .policy-section:nth-child(5) {
+          top: 709px;
+        }
+
+        .policy-section + .policy-section {
+          padding-top: 19px;
+        }
+
+        .policy-icon-wrap {
+          width: 39px;
+          height: 39px;
+          margin-left: 5px;
+        }
+
+        .policy-icon {
+          width: 24px;
+          height: 24px;
+        }
+
+        .policy-title {
+          font-size: 17px;
+        }
+
+        .policy-copy {
+          margin-top: 8px;
+          font-size: 9.1px;
+          line-height: 1.26;
+        }
+
+        .policy-section:nth-child(5) .policy-copy {
+          margin-top: 6px;
+          font-size: 8.45px;
+          line-height: 1.16;
+        }
+
+        .policy-copy p + p {
+          margin-top: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen place-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30" aria-label="Privacy policy screen preview">
+      <header class="topbar">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 28 24" aria-hidden="true">
+            <path
+              d="M12.2 3.5 3.6 12l8.6 8.5M4.6 12H26"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </a>
+        <h1 class="screen-title">Privacy Policy</h1>
+      </header>
+
+      <section class="intro" aria-labelledby="privacy-title">
+        <svg class="shield" viewBox="0 0 36 40" aria-hidden="true">
+          <path
+            d="M18 2.6c4.2 3.4 9.2 4.8 14.1 5.4v10.8c0 8.3-5.1 14.4-14.1 18.6C9 33.2 3.9 27.1 3.9 18.8V8C8.8 7.4 13.8 6 18 2.6Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="2.15"
+          />
+          <path d="M18 13.7 20.4 20l6.2 2.4-6.2 2.3L18 31l-2.4-6.3-6.2-2.3 6.2-2.4L18 13.7Z" fill="currentColor" />
+        </svg>
+        <p class="updated">Last Updated: May 16, 2025</p>
+        <p id="privacy-title" class="lede">
+          Your privacy is important to us. This Privacy Policy explains how<br />
+          Stone Signature (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) collects, uses, shares, and<br />
+          protects your information when you use our app and services.
+        </p>
+      </section>
+
+      <section class="policy-list" aria-label="Privacy policy details">
+        <article class="policy-section">
+          <div class="policy-icon-wrap">
+            <svg class="policy-icon" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="10.5" r="5.4" fill="none" stroke="currentColor" />
+              <path d="M6.8 27.2c.8-6 4.3-9.6 9.2-9.6s8.4 3.6 9.2 9.6Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="policy-title">1. Information We Collect</h2>
+            <p class="policy-copy">
+              We collect information you provide directly, such as your<br />
+              name, email address, and payment details when you create<br />
+              an account or place an order. We may also collect information<br />
+              automatically, including device information, app usage, and<br />
+              analytics data to improve your experience.
+            </p>
+          </div>
+        </article>
+
+        <article class="policy-section">
+          <div class="policy-icon-wrap">
+            <svg class="policy-icon" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M11.2 5.6h9.6M12.5 3.4h7l1.2 4h-9.4Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M8.3 6.6H5.8v22.2h20.4V6.6h-2.5" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M10.3 14.4h3.7v3.7h-3.7Zm0 7.5h3.7v3.7h-3.7ZM17.4 15.7h5.2M17.4 23.2h5.2" fill="none" stroke="currentColor" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="policy-title">2. How We Use Information</h2>
+            <p class="policy-copy">
+              We use the information we collect to provide and maintain our<br />
+              services, process your orders, personalize your experience,<br />
+              communicate with you, and improve our app. We may also use<br />
+              your information to send important updates and promotional<br />
+              content, which you can opt out of at any time.
+            </p>
+          </div>
+        </article>
+
+        <article class="policy-section">
+          <div class="policy-icon-wrap">
+            <svg class="policy-icon" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="8.2" cy="17.3" r="3.1" fill="none" stroke="currentColor" />
+              <circle cx="23.8" cy="8.7" r="3.1" fill="none" stroke="currentColor" />
+              <circle cx="23.8" cy="23.3" r="3.1" fill="none" stroke="currentColor" />
+              <path d="m10.9 15.8 10.2-5.6M10.9 18.8l10.2 3" fill="none" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="policy-title">3. Sharing Your Information</h2>
+            <p class="policy-copy">
+              We do not sell your personal information. We may share your<br />
+              information with trusted service providers who assist us in<br />
+              operating our app and delivering our services, subject to strict<br />
+              confidentiality obligations. We may also share information<br />
+              when required by law or to protect our rights.
+            </p>
+          </div>
+        </article>
+
+        <article class="policy-section">
+          <div class="policy-icon-wrap">
+            <svg class="policy-icon" viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="16" r="10.3" fill="none" stroke="currentColor" />
+              <path d="M16 9.1v7.3l5 3.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="policy-title">4. Data Retention</h2>
+            <p class="policy-copy">
+              We retain your information for as long as necessary to fulfill the<br />
+              purposes outlined in this policy, unless a longer retention period<br />
+              is required or permitted by law. You may request deletion of your<br />
+              account and personal data at any time.
+            </p>
+          </div>
+        </article>
+
+        <article class="policy-section">
+          <div class="policy-icon-wrap">
+            <svg class="policy-icon" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M5.4 9.6h21.2v13.9H5.4Z" fill="none" stroke="currentColor" stroke-linejoin="round" />
+              <path d="m6.6 10.8 9.4 7.2 9.4-7.2" fill="none" stroke="currentColor" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="policy-title">5. Contact Us</h2>
+            <div class="policy-copy">
+              <p>
+                If you have any questions or concerns about this Privacy Policy<br />
+                or our data practices, please contact us at:
+              </p>
+              <p><a class="email" href="mailto:privacy@stonesignature.com">privacy@stonesignature.com</a></p>
+              <p>
+                We may update this Privacy Policy from time to time. Any<br />
+                changes will be posted on this page with an updated date.
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
