@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-007 Stone Detail - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #14191c;
+        --copy: #30383e;
+        --gold: #ad7b3e;
+        --line: #e5d8cb;
+        --button: #201f1b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse at 50% 8%,
+            rgba(255, 255, 255, 0.96),
+            transparent 35%
+          ),
+          radial-gradient(
+            ellipse at 49% 54%,
+            rgba(255, 255, 255, 0.62),
+            transparent 42%
+          ),
+          radial-gradient(
+            ellipse at 49% 91%,
+            rgba(255, 255, 255, 0.58),
+            transparent 38%
+          ),
+          linear-gradient(127deg, #f3ece4 0%, #fffdf9 43%, #f7efe7 100%);
+      }
+
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        opacity: 0.27;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(187, 153, 110, 0.15) 18.15%,
+            transparent 18.82%
+          ),
+          linear-gradient(
+            145deg,
+            transparent 0 75%,
+            rgba(194, 160, 117, 0.12) 75.1%,
+            transparent 75.82%
+          ),
+          linear-gradient(
+            31deg,
+            transparent 0 77%,
+            rgba(202, 166, 118, 0.1) 77.12%,
+            transparent 77.72%
+          );
+        filter: blur(0.7px);
+      }
+
+      .screen::after {
+        box-shadow: inset 0 0 66px rgba(125, 96, 68, 0.07);
+      }
+
+      .top-button {
+        position: absolute;
+        z-index: 3;
+        display: grid;
+        place-items: center;
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .back-button {
+        top: 8.28%;
+        left: 5.72%;
+        width: 5.65cqw;
+        height: 5.65cqw;
+      }
+
+      .favorite-button {
+        top: 8.08%;
+        right: 5.45%;
+        width: 5.9cqw;
+        height: 5.9cqw;
+      }
+
+      .top-button svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 2;
+        top: 8.28%;
+        left: 50%;
+        margin: 0;
+        color: #111518;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 4.78cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 9px 15px rgba(65, 43, 29, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .hero-stone {
+        position: absolute;
+        z-index: 1;
+        top: 17.15%;
+        left: 13.5%;
+        width: 73%;
+        height: auto;
+        mix-blend-mode: multiply;
+      }
+
+      .thumb-strip {
+        position: absolute;
+        z-index: 2;
+        top: 47.78%;
+        left: 4.68%;
+        display: grid;
+        width: 90.68%;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2.82cqw;
+      }
+
+      .thumb {
+        display: grid;
+        aspect-ratio: 1;
+        place-items: center;
+        overflow: hidden;
+        border: 0.12cqw solid rgba(194, 185, 176, 0.74);
+        border-radius: 0.8cqw;
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .thumb.selected {
+        border-color: var(--gold);
+        border-width: 0.18cqw;
+      }
+
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .product-meta {
+        position: absolute;
+        z-index: 2;
+        top: 60.32%;
+        left: 5.78%;
+        right: 5.78%;
+      }
+
+      .stone-name {
+        margin: 0;
+        color: #11161a;
+        font-size: 5.2cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 5px 12px rgba(55, 47, 42, 0.09);
+        white-space: nowrap;
+      }
+
+      .price-row {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        margin-top: 4.12cqw;
+      }
+
+      .stone-price {
+        margin: 0;
+        color: #11161a;
+        font-size: 4.45cqw;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .tax {
+        color: #22282d;
+        font-size: 3.35cqw;
+      }
+
+      .stock-pill {
+        display: inline-flex;
+        height: 5.82cqw;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.95cqw;
+        background: rgba(232, 224, 213, 0.9);
+        color: #252b30;
+        font-size: 3.2cqw;
+        line-height: 1;
+        padding: 0 2.6cqw;
+        white-space: nowrap;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 2.02cqw;
+        margin-top: 3.5cqw;
+        color: var(--gold);
+      }
+
+      .divider-line {
+        height: 0.1cqw;
+        flex: 1;
+        background: rgba(206, 159, 92, 0.42);
+        font-size: 0;
+      }
+
+      .divider-diamond {
+        width: 1.72cqw;
+        height: 1.72cqw;
+        border: 0.32cqw solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .description {
+        margin: 4.2cqw 0 0;
+        color: #283036;
+        font-size: 3.48cqw;
+        font-weight: 500;
+        line-height: 1.78;
+        text-align: left;
+      }
+
+      .cta {
+        position: absolute;
+        right: 5.68%;
+        bottom: 4.75%;
+        left: 5.68%;
+        z-index: 4;
+        display: flex;
+        height: 6.62%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #fffaf1;
+        font-size: 3.95cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.22);
+        background:
+          radial-gradient(
+            ellipse at 24% 28%,
+            rgba(255, 255, 255, 0.1),
+            transparent 40%
+          ),
+          linear-gradient(135deg, #282621, #181713 57%, #27251f);
+        box-shadow:
+          0 1.35cqw 3.6cqw rgba(30, 28, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .cta svg {
+        position: absolute;
+        right: 8.2%;
+        width: 2.75cqw;
+        height: 2.75cqw;
+        color: var(--gold);
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .stone-name {
+          font-size: 4.95cqw;
+        }
+
+        .description {
+          font-size: 3.05cqw;
+          line-height: 1.48;
+        }
+
+        .cta {
+          font-size: 3.74cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40"
+      aria-label="翡翠の詳細"
+    >
+      <a class="top-button back-button" href="#" aria-label="戻る">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M18.1 4.8 7 16l11.1 11.2M8.6 16H29"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.25"
+          />
+        </svg>
+      </a>
+
+      <h1 class="screen-title">Stone Detail</h1>
+
+      <a
+        class="top-button favorite-button"
+        href="#"
+        aria-label="お気に入りに追加"
+      >
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <path
+            d="M17 28.2S5.9 21.6 5.9 13.2c0-4.1 2.7-7 6.4-7 2.2 0 3.9 1.1 4.7 2.8.8-1.7 2.5-2.8 4.7-2.8 3.7 0 6.4 2.9 6.4 7 0 8.4-11.1 15-11.1 15Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </a>
+
+      <img
+        class="hero-stone"
+        src="assets/stn-007-hero-stone.png"
+        alt="翡翠の印材"
+      />
+
+      <section class="thumb-strip" aria-label="商品画像">
+        <button
+          class="thumb selected"
+          type="button"
+          aria-label="角度つき画像を表示"
+        >
+          <img src="assets/stn-007-thumb-angle.png" alt="" />
+        </button>
+        <button class="thumb" type="button" aria-label="正面画像を表示">
+          <img src="assets/stn-007-thumb-upright.png" alt="" />
+        </button>
+        <button class="thumb" type="button" aria-label="断面画像を表示">
+          <img src="assets/stn-007-thumb-front.png" alt="" />
+        </button>
+        <button class="thumb" type="button" aria-label="模様画像を表示">
+          <img src="assets/stn-007-thumb-texture.png" alt="" />
+        </button>
+        <button class="thumb" type="button" aria-label="箱画像を表示">
+          <img src="assets/stn-007-thumb-box.png" alt="" />
+        </button>
+      </section>
+
+      <section class="product-meta" aria-labelledby="stone-title">
+        <h2 id="stone-title" class="stone-name">翡翠（ひすい）</h2>
+        <div class="price-row">
+          <p class="stone-price">¥128,000 <span class="tax">（税込）</span></p>
+          <p class="stock-pill">在庫あり</p>
+        </div>
+        <div class="divider" aria-hidden="true">
+          <span class="divider-line"></span>
+          <span class="divider-diamond"></span>
+          <span class="divider-line"></span>
+        </div>
+        <p class="description">
+          深い緑色が美しい、上質な翡翠です。<br />
+          落ち着いた色合いの中に女性的な透明感があり、<br />
+          気品のある印象を与えます。<br />
+          癒しと調和の象徴とされ、長くご愛用いただける<br />
+          一点です。
+        </p>
+      </section>
+
+      <a class="cta" href="#" aria-label="この宝石材を選択する">
+        <span>この宝石材を選択する</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="m8.7 4.7 7.6 7.3-7.6 7.3"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.9"
+          />
+        </svg>
+      </a>
+    </main>
+  </body>
+</html>
