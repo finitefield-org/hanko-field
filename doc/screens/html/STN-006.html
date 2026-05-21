@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STN-006 Stones Sort - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Serif JP";
+        src: url("../../../app/assets/fonts/NotoSerifJP.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --ink: #14191c;
+        --copy: #565e64;
+        --gold: #ad7b3e;
+        --line: #e6d9cc;
+        --button: #201f1b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dc;
+        color: var(--ink);
+        font-family:
+          "Hanko Serif JP", "Hanko Serif", "Yu Mincho", "Hiragino Mincho ProN",
+          serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      a,
+      h1,
+      h2,
+      p {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        margin: 0 auto;
+        overflow: hidden;
+        background:
+          linear-gradient(
+            118deg,
+            transparent 0 39%,
+            rgba(164, 122, 77, 0.04) 39.2%,
+            transparent 40.5%
+          ),
+          radial-gradient(
+            ellipse at 50% 7%,
+            rgba(255, 255, 255, 0.92),
+            transparent 35%
+          ),
+          radial-gradient(
+            ellipse at 50% 54%,
+            rgba(255, 255, 255, 0.6),
+            transparent 42%
+          ),
+          linear-gradient(127deg, #f3ece4 0%, #fffdf9 43%, #f7efe7 100%);
+      }
+
+      .screen::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.28;
+        background:
+          linear-gradient(
+            151deg,
+            transparent 0 18%,
+            rgba(187, 153, 110, 0.16) 18.15%,
+            transparent 18.82%
+          ),
+          linear-gradient(
+            145deg,
+            transparent 0 76%,
+            rgba(194, 160, 117, 0.11) 76.1%,
+            transparent 76.82%
+          );
+        filter: blur(0.7px);
+        pointer-events: none;
+      }
+
+      .top-icon {
+        position: absolute;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--gold);
+        padding: 0;
+      }
+
+      .menu-button {
+        top: 7.62%;
+        left: 5.98%;
+        width: 5.28cqw;
+        height: 5.28cqw;
+      }
+
+      .filter-button {
+        top: 7.28%;
+        right: 5.7%;
+        width: 5.95cqw;
+        height: 5.95cqw;
+      }
+
+      .top-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen-title {
+        position: absolute;
+        z-index: 1;
+        top: 7.24%;
+        left: 50%;
+        margin: 0;
+        color: #111518;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, serif;
+        font-size: 7.85cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-shadow: 0 9px 15px rgba(65, 43, 29, 0.08);
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .tabs {
+        position: absolute;
+        z-index: 1;
+        top: 14.86%;
+        left: 5.72%;
+        display: grid;
+        width: 88.6%;
+        height: 4.03%;
+        grid-template-columns: 0.9fr 1.06fr 1fr 1fr 1.42fr;
+        align-items: start;
+        border-bottom: 0.1cqw solid rgba(210, 200, 188, 0.86);
+        color: #4c5358;
+      }
+
+      .tab {
+        position: relative;
+        color: inherit;
+        font-size: 3.25cqw;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .tab:first-child {
+        text-align: left;
+      }
+
+      .tab.active {
+        color: var(--gold);
+      }
+
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        top: 5.35cqw;
+        left: 0;
+        width: 7.82cqw;
+        height: 0.32cqw;
+        border-radius: 999px;
+        background: var(--gold);
+      }
+
+      .preview-card {
+        position: absolute;
+        z-index: 1;
+        top: 20.72%;
+        left: 5.72%;
+        width: 88.55%;
+        min-height: 30.1cqw;
+        border: 0.1cqw solid rgba(229, 219, 207, 0.95);
+        border-radius: 2.2cqw;
+        background: rgba(255, 255, 255, 0.74);
+        box-shadow:
+          0 1.25cqw 3.25cqw rgba(96, 67, 44, 0.068),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        overflow: hidden;
+      }
+
+      .preview-card img {
+        position: absolute;
+        top: 1.25cqw;
+        left: 1.9cqw;
+        width: 35.8cqw;
+        height: auto;
+        mix-blend-mode: multiply;
+      }
+
+      .preview-copy {
+        position: absolute;
+        top: 6.9cqw;
+        left: 40.3cqw;
+      }
+
+      .preview-name {
+        margin: 0 0 3.2cqw;
+        font-size: 4.35cqw;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .preview-price {
+        margin: 0;
+        font-size: 3.95cqw;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .preview-chevron {
+        position: absolute;
+        top: 50%;
+        right: 5.7cqw;
+        width: 4.45cqw;
+        height: 4.45cqw;
+        color: var(--gold);
+        transform: translateY(-50%);
+      }
+
+      .dim {
+        position: absolute;
+        z-index: 2;
+        inset: 0;
+        background: rgba(16, 15, 13, 0.64);
+      }
+
+      .sheet {
+        position: absolute;
+        z-index: 3;
+        top: 28.82%;
+        left: 0;
+        width: 100%;
+        min-height: 71.18%;
+        border-radius: 5.65cqw 5.65cqw 0 0;
+        background:
+          radial-gradient(
+            ellipse at 50% 8%,
+            rgba(255, 255, 255, 0.95),
+            transparent 38%
+          ),
+          radial-gradient(
+            ellipse at 50% 78%,
+            rgba(255, 255, 255, 0.48),
+            transparent 41%
+          ),
+          linear-gradient(128deg, #f8f1ea 0%, #fffdf9 46%, #f9f1e9 100%);
+        box-shadow:
+          0 -1.6cqw 4.8cqw rgba(14, 13, 12, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        overflow: hidden;
+      }
+
+      .sheet::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.22;
+        background:
+          linear-gradient(
+            139deg,
+            transparent 0 69%,
+            rgba(164, 122, 77, 0.08) 69.15%,
+            transparent 70.3%
+          ),
+          linear-gradient(
+            144deg,
+            transparent 0 78%,
+            rgba(188, 149, 103, 0.12) 78.12%,
+            transparent 78.62%
+          );
+        pointer-events: none;
+      }
+
+      .grabber {
+        position: absolute;
+        top: 3.75cqw;
+        left: 50%;
+        width: 15.45cqw;
+        height: 1.02cqw;
+        border-radius: 999px;
+        background: #d8cec4;
+        transform: translateX(-50%);
+      }
+
+      .sheet-title {
+        position: absolute;
+        top: 11.55cqw;
+        left: 50%;
+        margin: 0;
+        color: #14191c;
+        font-size: 5.75cqw;
+        font-weight: 500;
+        line-height: 1;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .ornament {
+        position: absolute;
+        top: 21.05cqw;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2.72cqw;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .ornament-line {
+        width: 10.05cqw;
+        height: 0.1cqw;
+        background: currentColor;
+        font-size: 0;
+      }
+
+      .ornament-diamond {
+        width: 1.86cqw;
+        height: 1.86cqw;
+        border: 0.35cqw solid currentColor;
+        font-size: 0;
+        transform: rotate(45deg);
+      }
+
+      .sort-options {
+        position: relative;
+        z-index: 1;
+        padding: 31.2cqw 9.42cqw 0;
+      }
+
+      .sort-row {
+        display: flex;
+        height: 14.55cqw;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 0.1cqw solid rgba(221, 211, 201, 0.95);
+        color: #14191c;
+        font-size: 4.22cqw;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .sort-row:last-child {
+        border-bottom: 0;
+      }
+
+      .radio {
+        position: relative;
+        width: 5.08cqw;
+        height: 5.08cqw;
+        border: 0.32cqw solid #bcb8b2;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .sort-row.selected .radio {
+        border-color: var(--gold);
+        border-width: 0.8cqw;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 0.4cqw 1.3cqw rgba(173, 123, 62, 0.14);
+      }
+
+      .sort-row.selected .radio::after {
+        content: "";
+        position: absolute;
+        inset: 0.76cqw;
+        border-radius: inherit;
+        background: var(--gold);
+      }
+
+      .apply-button {
+        position: absolute;
+        right: 9.42cqw;
+        bottom: 7.05cqw;
+        left: 9.42cqw;
+        display: flex;
+        height: 12.52cqw;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #fffaf1;
+        font-size: 4.28cqw;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        text-shadow: 0 2px 8px rgba(255, 244, 222, 0.22);
+        background:
+          radial-gradient(
+            ellipse at 24% 28%,
+            rgba(255, 255, 255, 0.1),
+            transparent 40%
+          ),
+          linear-gradient(135deg, #282621, #181713 57%, #27251f);
+        box-shadow:
+          0 1.35cqw 3.6cqw rgba(30, 28, 24, 0.19),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      @media (max-width: 390px) {
+        .screen {
+          width: 100vw;
+        }
+
+        .sort-row {
+          font-size: 4.02cqw;
+        }
+
+        .apply-button {
+          font-size: 4.08cqw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="screen shadow-2xl shadow-stone-300/30 md:shadow-stone-300/40"
+      aria-label="宝石材の並び替え"
+    >
+      <button
+        class="top-icon menu-button"
+        type="button"
+        aria-label="メニューを開く"
+      >
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <path
+            d="M2.9 6.2h22.2M2.9 14h22.2M2.9 21.8h22.2"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2.15"
+          />
+        </svg>
+      </button>
+
+      <h1 class="screen-title">Stones</h1>
+
+      <button
+        class="top-icon filter-button"
+        type="button"
+        aria-label="絞り込み"
+      >
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <path
+            d="M3.5 5.8h27L20.4 17.7v9.5l-6.7 3.7V17.7L3.5 5.8Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.95"
+          />
+        </svg>
+      </button>
+
+      <nav class="tabs" aria-label="宝石材カテゴリ">
+        <a class="tab active" href="#" aria-current="page">すべて</a>
+        <a class="tab" href="#">天然石</a>
+        <a class="tab" href="#">印材</a>
+        <a class="tab" href="#">特集</a>
+        <a class="tab" href="#">お気に入り</a>
+      </nav>
+
+      <article class="preview-card" aria-label="翡翠">
+        <img src="assets/cmb-005-stone-jade.png" alt="" />
+        <div class="preview-copy">
+          <h2 class="preview-name">翡翠（ひすい）</h2>
+          <p class="preview-price">¥128,000</p>
+        </div>
+        <svg class="preview-chevron" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="m8.7 4.7 7.6 7.3-7.6 7.3"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.85"
+          />
+        </svg>
+      </article>
+
+      <div class="dim" aria-hidden="true"></div>
+
+      <section class="sheet" aria-labelledby="sort-title">
+        <div class="grabber" aria-hidden="true"></div>
+        <h2 id="sort-title" class="sheet-title">並び替え</h2>
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <div class="sort-options">
+          <a class="sort-row selected" href="#" aria-current="true">
+            <span>おすすめ順</span>
+            <span class="radio" aria-hidden="true"></span>
+          </a>
+          <a class="sort-row" href="#">
+            <span>新着順</span>
+            <span class="radio" aria-hidden="true"></span>
+          </a>
+          <a class="sort-row" href="#">
+            <span>価格が安い順</span>
+            <span class="radio" aria-hidden="true"></span>
+          </a>
+          <a class="sort-row" href="#">
+            <span>価格が高い順</span>
+            <span class="radio" aria-hidden="true"></span>
+          </a>
+          <a class="sort-row" href="#">
+            <span>人気順</span>
+            <span class="radio" aria-hidden="true"></span>
+          </a>
+        </div>
+
+        <a class="apply-button" href="#">適用する</a>
+      </section>
+    </main>
+  </body>
+</html>
