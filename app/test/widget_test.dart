@@ -185,7 +185,17 @@ void main() {
 
     final submitButton = find.widgetWithText(TextButton, 'Suggest Kanji');
     expect(submitButton, findsOneWidget);
-    expect(tester.widget<TextButton>(submitButton).onPressed, isNull);
+
+    await tester.ensureVisible(find.text('Suggest Kanji'));
+    await tester.pump();
+    await tester.tap(find.text('Suggest Kanji'));
+    await tester.pump();
+
+    expect(find.text('Enter your name to continue.'), findsOneWidget);
+    expect(
+      find.text('Please enter a valid first name or short name.'),
+      findsOneWidget,
+    );
 
     await tester.enterText(find.byType(TextFormField).first, 'Michael Smith');
     await tester.pump();
@@ -195,18 +205,101 @@ void main() {
     await tester.ensureVisible(find.text('Suggest Kanji'));
     await tester.pump();
     await tester.tap(find.text('Suggest Kanji'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
 
-    expect(find.byType(KanjiCandidateGenerationReadyScreen), findsOneWidget);
-    expect(find.text('Ready to Suggest Kanji'), findsOneWidget);
+    expect(find.byType(KanjiSuggestionLoadingScreen), findsOneWidget);
+    expect(find.text('Finding Kanji'), findsOneWidget);
+    expect(
+      find.text('Creating engraving-friendly kanji suggestions...'),
+      findsOneWidget,
+    );
     expect(find.text('Michael Smith'), findsWidgets);
-    expect(find.text('Japanese style'), findsOneWidget);
+    expect(find.text('Japanese style'), findsWidgets);
 
-    await tester.tap(find.byTooltip('Back'));
+    await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();
 
     expect(find.byType(NameInputScreen), findsOneWidget);
     expect(find.text('Michael Smith'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-011 and DES-014 expose retry and edit actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const request = KanjiCandidatesRequest(realName: 'Michael Smith');
+    var retryCount = 0;
+    var backCount = 0;
+    var editCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: KanjiSuggestionErrorScreen(
+          request: request,
+          onRetry: () => retryCount += 1,
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text("We couldn't suggest kanji"), findsOneWidget);
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(find.text('Back'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Try Again'));
+    await tester.pump();
+    await tester.tap(find.text('Try Again'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Back'));
+    await tester.pump();
+    await tester.tap(find.text('Back'));
+    await tester.pump();
+
+    expect(retryCount, 1);
+    expect(backCount, 1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: UnsupportedKanjiResultScreen(
+          request: request,
+          onRetry: () => retryCount += 1,
+          onEditName: () => editCount += 1,
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text("We couldn't find a suitable kanji"), findsOneWidget);
+    expect(find.text('1-2 characters only'), findsOneWidget);
+    expect(find.text('Simple, common kanji'), findsOneWidget);
+    expect(find.text('Edit Name'), findsOneWidget);
+    expect(find.text('Try Again'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Edit Name'));
+    await tester.pump();
+    await tester.tap(find.text('Edit Name'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Try Again'));
+    await tester.pump();
+    await tester.tap(find.text('Try Again'));
+    await tester.pump();
+
+    expect(editCount, 1);
+    expect(retryCount, 2);
     expect(tester.takeException(), isNull);
   });
 

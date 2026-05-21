@@ -73,6 +73,24 @@ class HankoLocalizations {
       _strings.designCandidateReadyMessage;
   String get designRequestDetails => _strings.designRequestDetails;
   String get editName => _strings.editName;
+  String get designLoadingTitle => _strings.designLoadingTitle;
+  String get designLoadingMessage => _strings.designLoadingMessage;
+  String get designLoadingDetail => _strings.designLoadingDetail;
+  String get designInvalidNameSummary => _strings.designInvalidNameSummary;
+  String get designInvalidNameMessage => _strings.designInvalidNameMessage;
+  String get designSuggestionErrorTitle => _strings.designSuggestionErrorTitle;
+  String get designSuggestionErrorMessage =>
+      _strings.designSuggestionErrorMessage;
+  String get designNoKanjiTitle => _strings.designNoKanjiTitle;
+  String get designNoKanjiMessage => _strings.designNoKanjiMessage;
+  String get designNoKanjiRuleCharacters =>
+      _strings.designNoKanjiRuleCharacters;
+  String get designNoKanjiRuleCommon => _strings.designNoKanjiRuleCommon;
+  String get designNoKanjiRuleEngraving => _strings.designNoKanjiRuleEngraving;
+  String get designErrorTip => _strings.designErrorTip;
+  String get designNoKanjiTip => _strings.designNoKanjiTip;
+  String get tryAgain => _strings.tryAgain;
+  String get back => _strings.back;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -183,6 +201,22 @@ class _HankoStrings {
     required this.designCandidateReadyMessage,
     required this.designRequestDetails,
     required this.editName,
+    required this.designLoadingTitle,
+    required this.designLoadingMessage,
+    required this.designLoadingDetail,
+    required this.designInvalidNameSummary,
+    required this.designInvalidNameMessage,
+    required this.designSuggestionErrorTitle,
+    required this.designSuggestionErrorMessage,
+    required this.designNoKanjiTitle,
+    required this.designNoKanjiMessage,
+    required this.designNoKanjiRuleCharacters,
+    required this.designNoKanjiRuleCommon,
+    required this.designNoKanjiRuleEngraving,
+    required this.designErrorTip,
+    required this.designNoKanjiTip,
+    required this.tryAgain,
+    required this.back,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -262,6 +296,22 @@ class _HankoStrings {
   final String designCandidateReadyMessage;
   final String designRequestDetails;
   final String editName;
+  final String designLoadingTitle;
+  final String designLoadingMessage;
+  final String designLoadingDetail;
+  final String designInvalidNameSummary;
+  final String designInvalidNameMessage;
+  final String designSuggestionErrorTitle;
+  final String designSuggestionErrorMessage;
+  final String designNoKanjiTitle;
+  final String designNoKanjiMessage;
+  final String designNoKanjiRuleCharacters;
+  final String designNoKanjiRuleCommon;
+  final String designNoKanjiRuleEngraving;
+  final String designErrorTip;
+  final String designNoKanjiTip;
+  final String tryAgain;
+  final String back;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -353,6 +403,26 @@ const _localizedValues = {
           'Candidate generation can now use this name and preference set.',
       designRequestDetails: 'Request details',
       editName: 'Edit Name',
+      designLoadingTitle: 'Finding Kanji',
+      designLoadingMessage: 'Creating engraving-friendly kanji suggestions...',
+      designLoadingDetail:
+          'We are considering sound, meaning, and simplicity for seal engraving.',
+      designInvalidNameSummary: 'Enter your name to continue.',
+      designInvalidNameMessage:
+          'Please enter a valid first name or short name.',
+      designSuggestionErrorTitle: "We couldn't suggest kanji",
+      designSuggestionErrorMessage:
+          'Something went wrong while generating kanji suggestions for your name. Please try again.',
+      designNoKanjiTitle: "We couldn't find a suitable kanji",
+      designNoKanjiMessage:
+          'Your name did not return any kanji suggestions that fit our engraving rules.',
+      designNoKanjiRuleCharacters: '1-2 characters only',
+      designNoKanjiRuleCommon: 'Simple, common kanji',
+      designNoKanjiRuleEngraving: 'Suitable for seal engraving',
+      designErrorTip: 'Use a simple first name or short name.',
+      designNoKanjiTip: 'Try a shorter name or nickname.',
+      tryAgain: 'Try Again',
+      back: 'Back',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -440,6 +510,22 @@ const _localizedValues = {
       designCandidateReadyMessage: 'この名前と希望条件で漢字候補生成へ進めます。',
       designRequestDetails: '入力内容',
       editName: '名前を修正',
+      designLoadingTitle: '漢字を検索中',
+      designLoadingMessage: '彫刻しやすい漢字候補を作成しています...',
+      designLoadingDetail: '音、意味、字形の簡潔さを確認しています。',
+      designInvalidNameSummary: '名前を入力してください。',
+      designInvalidNameMessage: '短いお名前またはニックネームを入力してください。',
+      designSuggestionErrorTitle: '漢字候補を提案できませんでした',
+      designSuggestionErrorMessage: '漢字候補の生成中に問題が発生しました。もう一度お試しください。',
+      designNoKanjiTitle: '条件に合う漢字が見つかりませんでした',
+      designNoKanjiMessage: '入力された名前では、彫刻条件に合う漢字候補を出せませんでした。',
+      designNoKanjiRuleCharacters: '1-2文字のみ',
+      designNoKanjiRuleCommon: 'シンプルで一般的な漢字',
+      designNoKanjiRuleEngraving: '印鑑の彫刻に適している',
+      designErrorTip: '短い名またはニックネームをお試しください。',
+      designNoKanjiTip: 'より短い名前やニックネームをお試しください。',
+      tryAgain: 'もう一度試す',
+      back: '戻る',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

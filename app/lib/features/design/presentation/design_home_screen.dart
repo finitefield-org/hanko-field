@@ -117,6 +117,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
 
   var _gender = KanjiCandidateGender.unspecified;
   var _kanjiStyle = KanjiNameStyle.japanese;
+  var _showNameError = false;
 
   @override
   void initState() {
@@ -132,7 +133,10 @@ class _NameInputScreenState extends State<NameInputScreen> {
     super.dispose();
   }
 
-  bool get _canSubmit => _nameController.text.trim().isNotEmpty;
+  bool get _isNameValid {
+    final realName = _nameController.text.trim();
+    return realName.isNotEmpty && realName.length <= 80;
+  }
 
   void _handleNameChanged() {
     setState(() {});
@@ -140,7 +144,8 @@ class _NameInputScreenState extends State<NameInputScreen> {
 
   void _submit() {
     final realName = _nameController.text.trim();
-    if (realName.isEmpty) {
+    if (!_isNameValid) {
+      setState(() => _showNameError = true);
       return;
     }
 
@@ -176,12 +181,21 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.sectionTitle,
               ),
+              if (_showNameError && !_isNameValid) ...[
+                const SizedBox(height: 18),
+                _InlineAlert(message: l10n.designInvalidNameSummary),
+              ],
               const SizedBox(height: 26),
               HankoTextField(
                 label: l10n.designNameLabel,
                 hintText: l10n.designNameHint,
                 controller: _nameController,
                 keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                errorText: _showNameError && !_isNameValid
+                    ? l10n.designInvalidNameMessage
+                    : null,
               ),
               const SizedBox(height: 10),
               Text(l10n.designNameHelp, style: HankoTextStyles.compactBody),
@@ -226,10 +240,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              HankoPrimaryButton(
-                label: l10n.suggestKanji,
-                onPressed: _canSubmit ? _submit : null,
-              ),
+              HankoPrimaryButton(label: l10n.suggestKanji, onPressed: _submit),
             ],
           ),
         ),
@@ -265,24 +276,22 @@ class _NameInputScreenState extends State<NameInputScreen> {
   }
 }
 
-class KanjiCandidateGenerationReadyScreen extends StatelessWidget {
-  const KanjiCandidateGenerationReadyScreen({
+class KanjiSuggestionLoadingScreen extends StatelessWidget {
+  const KanjiSuggestionLoadingScreen({
     super.key,
     required this.request,
     required this.onBack,
-    required this.onEdit,
   });
 
   final KanjiCandidatesRequest request;
   final VoidCallback onBack;
-  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
     return _DesignStepScaffold(
-      title: l10n.designCandidateReadyTitle,
+      title: l10n.designLoadingTitle,
       onBack: onBack,
       children: [
         HankoSurfaceCard(
@@ -290,38 +299,395 @@ class KanjiCandidateGenerationReadyScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Center(child: _SealMedallion(icon: Icons.task_alt)),
+              const Center(child: _SealMedallion(icon: Icons.search)),
               const SizedBox(height: 24),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
               Text(
-                l10n.designCandidateReadyMessage,
+                l10n.designLoadingMessage,
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.sectionTitle,
               ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.designLoadingDetail,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
               const SizedBox(height: 26),
-              Text(l10n.designRequestDetails, style: HankoTextStyles.label),
-              const SizedBox(height: 14),
-              _RequestSummaryRow(
-                label: l10n.designNameLabel,
-                value: request.realName,
+              const Center(
+                child: SizedBox.square(
+                  dimension: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: HankoColors.gold,
+                  ),
+                ),
               ),
-              _RequestSummaryRow(
-                label: l10n.designGenderLabel,
-                value: _genderLabel(l10n, request.gender),
-              ),
-              _RequestSummaryRow(
-                label: l10n.designKanjiStyleLabel,
-                value: _kanjiStyleLabel(l10n, request.kanjiStyle),
-              ),
-              const SizedBox(height: 24),
-              HankoPrimaryButton(
-                label: l10n.editName,
-                icon: Icons.edit_outlined,
-                onPressed: onEdit,
-              ),
+              const SizedBox(height: 28),
+              _RequestSummaryCard(request: request),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class KanjiSuggestionErrorScreen extends StatelessWidget {
+  const KanjiSuggestionErrorScreen({
+    super.key,
+    required this.onRetry,
+    required this.onBack,
+    this.request,
+  });
+
+  final KanjiCandidatesRequest? request;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.design,
+      onBack: onBack,
+      children: [
+        _DesignStateCard(
+          icon: Icons.error_outline,
+          title: l10n.designSuggestionErrorTitle,
+          message: l10n.designSuggestionErrorMessage,
+          primaryLabel: l10n.tryAgain,
+          onPrimary: onRetry,
+          secondaryLabel: l10n.back,
+          onSecondary: onBack,
+          child: request == null
+              ? null
+              : _RequestSummaryCard(request: request!),
+        ),
+        const SizedBox(height: 22),
+        _StateTipCard(message: l10n.designErrorTip),
+      ],
+    );
+  }
+}
+
+class UnsupportedKanjiResultScreen extends StatelessWidget {
+  const UnsupportedKanjiResultScreen({
+    super.key,
+    required this.request,
+    required this.onRetry,
+    required this.onEditName,
+    required this.onBack,
+  });
+
+  final KanjiCandidatesRequest request;
+  final VoidCallback onRetry;
+  final VoidCallback onEditName;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.design,
+      onBack: onBack,
+      children: [
+        _DesignStateCard(
+          icon: Icons.search_off,
+          title: l10n.designNoKanjiTitle,
+          message: l10n.designNoKanjiMessage,
+          primaryLabel: l10n.editName,
+          onPrimary: onEditName,
+          secondaryLabel: l10n.tryAgain,
+          onSecondary: onRetry,
+          child: _KanjiRulesList(),
+        ),
+        const SizedBox(height: 22),
+        _StateTipCard(message: l10n.designNoKanjiTip),
+      ],
+    );
+  }
+}
+
+class _DesignStateCard extends StatelessWidget {
+  const _DesignStateCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.primaryLabel,
+    required this.onPrimary,
+    required this.secondaryLabel,
+    required this.onSecondary,
+    this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+  final String secondaryLabel;
+  final VoidCallback onSecondary;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(child: _SealMedallion(icon: icon)),
+          const SizedBox(height: 24),
+          const Center(child: _DividerMark()),
+          const SizedBox(height: 26),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: HankoTextStyles.sectionTitle,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: HankoTextStyles.body,
+          ),
+          if (child != null) ...[const SizedBox(height: 24), child!],
+          const SizedBox(height: 24),
+          HankoPrimaryButton(label: primaryLabel, onPressed: onPrimary),
+          const SizedBox(height: 12),
+          _SecondaryActionButton(label: secondaryLabel, onPressed: onSecondary),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestSummaryCard extends StatelessWidget {
+  const _RequestSummaryCard({required this.request});
+
+  final KanjiCandidatesRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.designRequestDetails, style: HankoTextStyles.label),
+                const SizedBox(height: 12),
+                _RequestSummaryRow(
+                  label: l10n.designNameLabel,
+                  value: request.realName,
+                ),
+                _RequestSummaryRow(
+                  label: l10n.designGenderLabel,
+                  value: _genderLabel(l10n, request.gender),
+                ),
+                _RequestSummaryRow(
+                  label: l10n.designKanjiStyleLabel,
+                  value: _kanjiStyleLabel(l10n, request.kanjiStyle),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KanjiRulesList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final rules = [
+      (icon: Icons.looks_two_outlined, label: l10n.designNoKanjiRuleCharacters),
+      (icon: Icons.auto_awesome, label: l10n.designNoKanjiRuleCommon),
+      (
+        icon: Icons.verified_user_outlined,
+        label: l10n.designNoKanjiRuleEngraving,
+      ),
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Column(
+        children: [
+          for (final rule in rules)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  _SmallBadge(icon: rule.icon),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(rule.label, style: HankoTextStyles.body),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineAlert extends StatelessWidget {
+  const _InlineAlert({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7F6),
+        border: Border.all(color: HankoColors.error),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: HankoColors.error, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: HankoTextStyles.label.copyWith(color: HankoColors.error),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StateTipCard extends StatelessWidget {
+  const _StateTipCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final tipPrefix = context.l10n.locale.languageCode == 'ja'
+        ? 'ヒント: '
+        : 'Tip: ';
+
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      child: Row(
+        children: [
+          const _SmallBadge(icon: Icons.tips_and_updates_outlined),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: tipPrefix,
+                    style: HankoTextStyles.label.copyWith(
+                      color: HankoColors.gold,
+                    ),
+                  ),
+                  TextSpan(text: message),
+                ],
+              ),
+              style: HankoTextStyles.body,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallBadge extends StatelessWidget {
+  const _SmallBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: HankoColors.medallion,
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox.square(
+        dimension: 48,
+        child: Icon(icon, color: HankoColors.gold, size: 24),
+      ),
+    );
+  }
+}
+
+class _SecondaryActionButton extends StatelessWidget {
+  const _SecondaryActionButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: HankoColors.gold,
+          side: const BorderSide(color: HankoColors.gold),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(HankoRadii.sm),
+          ),
+        ),
+        child: Text(label, style: HankoTextStyles.buttonLabel),
+      ),
+    );
+  }
+}
+
+class _RequestSummaryRow extends StatelessWidget {
+  const _RequestSummaryRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Text(label, style: HankoTextStyles.compactBody),
+          ),
+          Expanded(child: Text(value, style: HankoTextStyles.label)),
+        ],
+      ),
     );
   }
 }
@@ -441,30 +807,6 @@ class _TipBadge extends StatelessWidget {
       child: SizedBox.square(
         dimension: 76,
         child: Icon(Icons.auto_awesome, color: HankoColors.gold, size: 34),
-      ),
-    );
-  }
-}
-
-class _RequestSummaryRow extends StatelessWidget {
-  const _RequestSummaryRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 118,
-            child: Text(label, style: HankoTextStyles.compactBody),
-          ),
-          Expanded(child: Text(value, style: HankoTextStyles.label)),
-        ],
       ),
     );
   }

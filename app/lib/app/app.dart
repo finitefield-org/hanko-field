@@ -140,8 +140,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'DES-002-name-input',
     name: '/design/name',
   );
-  static const _designCandidateRequestPageKey =
-      'DES-002-candidate-request-ready';
+  static const _designKanjiLoadingPageKey = 'DES-003-kanji-suggestion-loading';
 
   var _pages = const <PageEntry>[_shellPage];
 
@@ -221,8 +220,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         onSubmit: (request) {
           stack.push(
             PageEntry(
-              key: _designCandidateRequestPageKey,
-              name: '/design/name/request',
+              key: _designKanjiLoadingPageKey,
+              name: '/design/kanji/loading',
               data: request,
             ),
           );
@@ -230,13 +229,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       );
     }
 
-    if (page.key == _designCandidateRequestPageKey &&
+    if (page.key == _designKanjiLoadingPageKey &&
         pageData is KanjiCandidatesRequest) {
-      return KanjiCandidateGenerationReadyScreen(
-        request: pageData,
-        onBack: stack.pop,
-        onEdit: stack.pop,
-      );
+      return KanjiSuggestionLoadingScreen(request: pageData, onBack: stack.pop);
     }
 
     return DesignHomeScreen(

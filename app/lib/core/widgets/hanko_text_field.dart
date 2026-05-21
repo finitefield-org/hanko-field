@@ -8,6 +8,9 @@ class HankoTextField extends StatelessWidget {
     this.controller,
     this.keyboardType,
     this.enabled = true,
+    this.errorText,
+    this.onFieldSubmitted,
+    this.textInputAction,
   });
 
   final String label;
@@ -15,6 +18,9 @@ class HankoTextField extends StatelessWidget {
   final TextEditingController? controller;
   final TextInputType? keyboardType;
   final bool enabled;
+  final String? errorText;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +28,13 @@ class HankoTextField extends StatelessWidget {
       controller: controller,
       enabled: enabled,
       keyboardType: keyboardType,
-      decoration: InputDecoration(labelText: label, hintText: hintText),
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        errorText: errorText,
+      ),
     );
   }
 }
