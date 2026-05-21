@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-005 Kanji Detail - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 431.5px;
+        --screen-h: 911px;
+        --ink: #172328;
+        --copy: #52616b;
+        --wine: #821719;
+        --gold: #b7782c;
+        --line: #e5d7c8;
+        --paper: #fbf8f3;
+        --screen-scale: 1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      h1,
+      h2,
+      h3,
+      p,
+      span {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 863 / 1822;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.96) 0 23%, transparent 58%),
+          radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0.72) 0 25%, transparent 63%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 45%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.36;
+        background:
+          linear-gradient(126deg, transparent 0 62%, rgba(181, 138, 91, 0.043) 62.1%, transparent 63.1%),
+          linear-gradient(144deg, transparent 0 17%, rgba(181, 138, 91, 0.045) 17.1%, transparent 18.3%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 49% 23%, rgba(255, 255, 255, 0.48), transparent 31%),
+          radial-gradient(ellipse at 50% 77%, rgba(255, 255, 255, 0.44), transparent 31%);
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 69px;
+        left: 20px;
+        z-index: 3;
+        display: grid;
+        width: 28px;
+        height: 25px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 27px;
+        height: 24px;
+        stroke-width: 1.65;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 65px;
+        left: 0;
+        z-index: 3;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 30px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 10px 17px rgba(83, 45, 35, 0.08);
+        transform: scaleX(0.86);
+      }
+
+      .favorite-button {
+        position: absolute;
+        top: 58px;
+        right: 20px;
+        z-index: 3;
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(246, 238, 226, 0.82);
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      .favorite-button svg {
+        width: 22px;
+        height: 22px;
+        stroke-width: 1.75;
+      }
+
+      .seal-image {
+        position: absolute;
+        top: 101px;
+        left: 112px;
+        z-index: 2;
+        width: 208px;
+        height: 208px;
+        border-radius: 999px;
+        object-fit: cover;
+        object-position: center;
+      }
+
+      .label {
+        position: absolute;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--gold);
+        font-size: 10.5px;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .reading-label {
+        top: 307px;
+      }
+
+      .reading {
+        position: absolute;
+        top: 321px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 31px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        transform: scaleX(0.86);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .reading-ornament {
+        top: 363px;
+      }
+
+      .ornament-line {
+        width: 48px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 8px;
+        height: 8px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .meaning-label {
+        top: 387px;
+      }
+
+      .meaning {
+        position: absolute;
+        top: 405px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #172328;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .description {
+        position: absolute;
+        top: 430px;
+        left: 91px;
+        z-index: 2;
+        width: 250px;
+        margin: 0;
+        color: #52616b;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 1.43;
+        text-align: center;
+      }
+
+      .impression-label {
+        top: 513px;
+      }
+
+      .chips {
+        position: absolute;
+        top: 531px;
+        left: 74px;
+        z-index: 2;
+        display: flex;
+        gap: 8px;
+      }
+
+      .chip {
+        display: inline-flex;
+        height: 31px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid rgba(226, 207, 187, 0.88);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.48);
+        color: #a76416;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .chip svg {
+        width: 15px;
+        height: 15px;
+        color: var(--gold);
+        stroke-width: 1.5;
+      }
+
+      .card {
+        position: absolute;
+        left: 29px;
+        z-index: 2;
+        width: 374px;
+        border: 1px solid rgba(229, 214, 201, 0.84);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.58);
+        box-shadow:
+          0 12px 24px rgba(84, 56, 35, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      }
+
+      .why-card {
+        top: 584px;
+        display: grid;
+        height: 115px;
+        grid-template-columns: 92px minmax(0, 1fr);
+        align-items: center;
+      }
+
+      .card-icon-wrap {
+        display: grid;
+        width: 73px;
+        height: 73px;
+        place-items: center;
+        justify-self: center;
+        border-radius: 999px;
+        background: rgba(244, 236, 225, 0.72);
+        color: var(--gold);
+      }
+
+      .card-icon-wrap svg {
+        width: 45px;
+        height: 45px;
+        stroke-width: 1.35;
+      }
+
+      .why-copy {
+        padding-top: 2px;
+      }
+
+      .why-title,
+      .suitability-title {
+        margin: 0;
+        color: var(--wine);
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1;
+        word-spacing: 2px;
+      }
+
+      .why-list {
+        display: grid;
+        gap: 8px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .why-list li {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #52616b;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .diamond-bullet {
+        width: 7px;
+        height: 7px;
+        border: 1.5px solid var(--gold);
+        transform: rotate(45deg);
+      }
+
+      .suitability-card {
+        top: 714px;
+        display: grid;
+        height: 81px;
+        grid-template-columns: 92px minmax(0, 1fr) 78px;
+        align-items: center;
+      }
+
+      .shield-icon svg {
+        width: 39px;
+        height: 39px;
+      }
+
+      .suitability-copy {
+        align-self: center;
+      }
+
+      .suitability-title {
+        color: #172328;
+      }
+
+      .suitability-text {
+        margin: 10px 0 0;
+        color: #52616b;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .score-pill {
+        display: inline-flex;
+        width: 70px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 999px;
+        background: #e8eee0;
+        color: #4d6d3f;
+        font-size: 18px;
+        font-weight: 500;
+      }
+
+      .score-pill svg {
+        width: 17px;
+        height: 17px;
+        stroke-width: 1.65;
+      }
+
+      .primary-action {
+        position: absolute;
+        top: 811px;
+        left: 29px;
+        z-index: 2;
+        display: flex;
+        width: 374px;
+        height: 59px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 10px 20px rgba(96, 31, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: #fffaf6;
+        text-decoration: none;
+      }
+
+      .primary-text {
+        display: block;
+        color: #fffaf6;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .action-arrow {
+        position: absolute;
+        top: 17px;
+        right: 19px;
+        width: 26px;
+        height: 26px;
+        color: #fffaf3;
+        stroke-width: 1.65;
+      }
+
+      .home-indicator {
+        position: absolute;
+        bottom: 7px;
+        left: 50%;
+        z-index: 2;
+        width: 139px;
+        height: 5px;
+        border-radius: 999px;
+        background: #000;
+        transform: translateX(-50%);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Kanji detail screen">
+      <div class="artboard">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15.5 4.5 8 12l7.5 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8.5 12h12" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </a>
+        <h1 class="screen-title serif">Kanji Detail</h1>
+        <a class="favorite-button" href="#" aria-label="Favorite">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 20.2s-7.5-4.6-7.5-10.4A4.1 4.1 0 0 1 12 7.5a4.1 4.1 0 0 1 7.5 2.3c0 5.8-7.5 10.4-7.5 10.4Z" stroke="currentColor" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <img class="seal-image" src="assets/des-005-kanji-seal.png" alt="" />
+
+        <p class="label reading-label">Reading</p>
+        <p class="reading serif">Misora</p>
+        <div class="ornament reading-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <p class="label meaning-label">Meaning</p>
+        <p class="meaning serif">Beautiful sky</p>
+        <p class="description">
+          This name combines natural beauty and<br />
+          serenity, evoking an open and graceful<br />
+          impression. It reflects calm, purity, and<br />
+          a sense of endless possibility.
+        </p>
+
+        <p class="label impression-label">Impression</p>
+        <div class="chips" aria-label="Impressions">
+          <span class="chip">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5c1.2 5.1 4.2 8.1 9.3 9.5-5.1 1.4-8.1 4.4-9.3 9.5-1.4-5.1-4.4-8.1-9.5-9.5 5.1-1.4 8.1-4.4 9.5-9.5Z" stroke="currentColor" stroke-linejoin="round" />
+            </svg>
+            Elegant
+          </span>
+          <span class="chip">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 4.8v7.1a5.8 5.8 0 0 0 8.6 5.1l2.6 2.8M6 8.8l9.3 9.3M18.2 5.4l-6.8 6.8M18.7 10.6l-4.6 4.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Gentle
+          </span>
+          <span class="chip">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6.2 4.6h11.6v14.8H6.2V4.6Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M9.2 8h5.6M9.2 12h5.6M9.2 16h3.2" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+            Poetic
+          </span>
+        </div>
+
+        <section class="card why-card" aria-label="Why this works">
+          <span class="card-icon-wrap">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <path d="M15.6 3c1.9 7 5.4 10.5 12.4 12.4-7 1.9-10.5 5.4-12.4 12.6C13.7 20.8 10.2 17.3 3 15.4 10.2 13.5 13.7 10 15.6 3Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="M25.4 2.8v6.6M22.1 6.1h6.6" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </span>
+          <div class="why-copy">
+            <h2 class="why-title serif">Why this works</h2>
+            <ul class="why-list">
+              <li><span class="diamond-bullet"></span>Easy to engrave</li>
+              <li><span class="diamond-bullet"></span>Balanced two-character composition</li>
+              <li><span class="diamond-bullet"></span>Soft and refined mood</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="card suitability-card" aria-label="Engraving suitability">
+          <span class="card-icon-wrap shield-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+              <path d="m8.7 12 2.2 2.2 4.6-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <div class="suitability-copy">
+            <h2 class="suitability-title serif">Engraving Suitability</h2>
+            <p class="suitability-text">Ideal for a clear, beautiful seal.</p>
+          </div>
+          <span class="score-pill">
+            High
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 20.3a8.3 8.3 0 1 0 0-16.6 8.3 8.3 0 0 0 0 16.6Z" stroke="currentColor" />
+              <path d="m8.5 12.3 2.3 2.3 4.8-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </section>
+
+        <a class="primary-action" href="#">
+          <span class="primary-text serif">Choose This Kanji</span>
+          <svg class="action-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <span class="home-indicator" aria-hidden="true"></span>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const screen = document.querySelector(".screen");
+        const setScale = () => {
+          document.documentElement.style.setProperty("--screen-scale", Math.min(screen.clientWidth / 431.5, 1));
+        };
+
+        setScale();
+        window.addEventListener("resize", setScale, { passive: true });
+      })();
+    </script>
+  </body>
+</html>
