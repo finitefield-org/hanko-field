@@ -150,7 +150,7 @@ void main() {
     expect(find.text('Browse Stones'), findsOneWidget);
     expect(find.text('My Seals'), findsOneWidget);
     expect(find.text('Stones'), findsOneWidget);
-    expect(find.byType(Navigator, skipOffstage: false), findsNWidgets(4));
+    expect(find.byType(Navigator, skipOffstage: false), findsNWidgets(5));
 
     await tester.tap(find.text('Stones').last);
     await tester.pumpAndSettle();
@@ -161,6 +161,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('My Seals'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('COM-004 opens settings from the design header', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(tester);
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
+    expect(find.text('Terms'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.byType(BottomNavigationShell), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -233,6 +257,72 @@ void main() {
       'Settings',
       HankoSurfaceCard,
     );
+  });
+
+  testWidgets('COM-004 settings rows navigate to destination screens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: const SettingsHomeScreen(),
+      ),
+    );
+
+    Future<void> openAndReturn(
+      String rowLabel,
+      String expectedText, {
+      bool useSystemBack = false,
+    }) async {
+      await tester.ensureVisible(find.text(rowLabel));
+      await tester.pump();
+      await tester.tap(find.text(rowLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(expectedText), findsOneWidget);
+
+      if (useSystemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Back'));
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+    }
+
+    await openAndReturn('Language', 'App language', useSystemBack: true);
+    await openAndReturn(
+      'About',
+      'About content will be added in the next settings milestone.',
+    );
+    await openAndReturn(
+      'FAQ',
+      'FAQ content will be added in the next settings milestone.',
+    );
+    await openAndReturn(
+      'Privacy',
+      'Privacy policy content will be added in the next settings milestone.',
+    );
+    await openAndReturn(
+      'Terms',
+      'Terms of service content will be added in the next settings milestone.',
+    );
+    await openAndReturn(
+      'Contact',
+      'Contact guidance will be added in the contact milestone.',
+    );
+    await openAndReturn('Version', 'Version 1.0.4+10');
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('localizes non-tab feature entry screens', (tester) async {

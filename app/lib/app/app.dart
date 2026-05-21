@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
+import '../features/settings/settings.dart';
 import '../features/stones/stones.dart';
 import 'localization/app_localization.dart';
 import 'navigation/app_navigation_shell.dart';
@@ -110,6 +111,14 @@ class BottomNavigationShell extends StatefulWidget {
 }
 
 class _BottomNavigationShellState extends State<BottomNavigationShell> {
+  static const _shellPage = PageEntry(
+    key: 'COM-003-bottom-navigation-shell',
+    name: '/shell',
+  );
+  static const _settingsPage = PageEntry(
+    key: 'COM-004-settings',
+    name: '/settings',
+  );
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -128,8 +137,23 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     ),
   ];
 
+  var _pages = const <PageEntry>[_shellPage];
+
   @override
   Widget build(BuildContext context) {
+    return DeclarativePagesNavigator(
+      pages: _pages,
+      buildPage: (context, page) {
+        if (page.key == _settingsPage.key) {
+          return _buildSettingsPage();
+        }
+        return _buildShellPage(context);
+      },
+      onPopTop: _closeSettings,
+    );
+  }
+
+  Widget _buildShellPage(BuildContext context) {
     final l10n = context.l10n;
     final tabItems = [
       _TabItem(l10n.design, _TabIcon.design),
@@ -158,12 +182,38 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     );
   }
 
+  Widget _buildSettingsPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: SettingsScreen(onClose: _closeSettings),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTabPage(BuildContext context, HankoAppTab tab, PageEntry _) {
     return switch (tab) {
-      HankoAppTab.design => const DesignHomeScreen(),
+      HankoAppTab.design => DesignHomeScreen(onOpenSettings: _openSettings),
       HankoAppTab.mySeals => const MySealsHomeScreen(),
       HankoAppTab.stones => const StonesHomeScreen(),
     };
+  }
+
+  void _openSettings() {
+    if (_pages.last.key == _settingsPage.key) {
+      return;
+    }
+    setState(() => _pages = const [_shellPage, _settingsPage]);
+  }
+
+  void _closeSettings() {
+    if (_pages.length <= 1) {
+      return;
+    }
+    setState(() => _pages = const [_shellPage]);
   }
 }
 

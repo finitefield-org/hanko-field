@@ -77,6 +77,30 @@ class HankoLocalizations {
   String get terms => _strings.terms;
   String get contact => _strings.contact;
   String get version => _strings.version;
+  String get settingsContentPendingTitle =>
+      _strings.settingsContentPendingTitle;
+  String get settingsContentPendingMessage =>
+      _strings.settingsContentPendingMessage;
+  String get settingsAboutPendingMessage =>
+      _strings.settingsAboutPendingMessage;
+  String get settingsFaqPendingMessage => _strings.settingsFaqPendingMessage;
+  String get settingsPrivacyPendingMessage =>
+      _strings.settingsPrivacyPendingMessage;
+  String get settingsTermsPendingMessage =>
+      _strings.settingsTermsPendingMessage;
+  String get settingsContactPendingMessage =>
+      _strings.settingsContactPendingMessage;
+  String get settingsLanguageTitle => _strings.settingsLanguageTitle;
+  String get settingsLanguageMessage => _strings.settingsLanguageMessage;
+  String get settingsLanguageEnglish => _strings.settingsLanguageEnglish;
+  String get settingsLanguageJapanese => _strings.settingsLanguageJapanese;
+  String get settingsVersionTitle => _strings.settingsVersionTitle;
+  String settingsVersionMessage(String version) {
+    return _strings.settingsVersionMessageTemplate.replaceAll(
+      '{version}',
+      version,
+    );
+  }
 }
 
 extension HankoLocalizationsBuildContext on BuildContext {
@@ -154,6 +178,19 @@ class _HankoStrings {
     required this.terms,
     required this.contact,
     required this.version,
+    required this.settingsContentPendingTitle,
+    required this.settingsContentPendingMessage,
+    required this.settingsAboutPendingMessage,
+    required this.settingsFaqPendingMessage,
+    required this.settingsPrivacyPendingMessage,
+    required this.settingsTermsPendingMessage,
+    required this.settingsContactPendingMessage,
+    required this.settingsLanguageTitle,
+    required this.settingsLanguageMessage,
+    required this.settingsLanguageEnglish,
+    required this.settingsLanguageJapanese,
+    required this.settingsVersionTitle,
+    required this.settingsVersionMessageTemplate,
   });
 
   final String appTitle;
@@ -205,6 +242,19 @@ class _HankoStrings {
   final String terms;
   final String contact;
   final String version;
+  final String settingsContentPendingTitle;
+  final String settingsContentPendingMessage;
+  final String settingsAboutPendingMessage;
+  final String settingsFaqPendingMessage;
+  final String settingsPrivacyPendingMessage;
+  final String settingsTermsPendingMessage;
+  final String settingsContactPendingMessage;
+  final String settingsLanguageTitle;
+  final String settingsLanguageMessage;
+  final String settingsLanguageEnglish;
+  final String settingsLanguageJapanese;
+  final String settingsVersionTitle;
+  final String settingsVersionMessageTemplate;
 }
 
 const _localizedValues = {
@@ -267,6 +317,26 @@ const _localizedValues = {
       terms: 'Terms',
       contact: 'Contact',
       version: 'Version',
+      settingsContentPendingTitle: 'Content coming soon',
+      settingsContentPendingMessage:
+          'This settings page is ready for app content.',
+      settingsAboutPendingMessage:
+          'About content will be added in the next settings milestone.',
+      settingsFaqPendingMessage:
+          'FAQ content will be added in the next settings milestone.',
+      settingsPrivacyPendingMessage:
+          'Privacy policy content will be added in the next settings milestone.',
+      settingsTermsPendingMessage:
+          'Terms of service content will be added in the next settings milestone.',
+      settingsContactPendingMessage:
+          'Contact guidance will be added in the contact milestone.',
+      settingsLanguageTitle: 'App language',
+      settingsLanguageMessage:
+          'Language destinations are available now. Locale switching will be connected after settings persistence is finalized.',
+      settingsLanguageEnglish: 'English',
+      settingsLanguageJapanese: 'Japanese',
+      settingsVersionTitle: 'Installed app version',
+      settingsVersionMessageTemplate: 'Version {version}',
     ),
   ),
   'ja': HankoLocalizations._(
@@ -322,6 +392,19 @@ const _localizedValues = {
       terms: '利用規約',
       contact: 'お問い合わせ',
       version: 'バージョン',
+      settingsContentPendingTitle: '準備中',
+      settingsContentPendingMessage: 'この設定画面はアプリ内表示用に準備されています。',
+      settingsAboutPendingMessage: 'アプリ紹介の本文は次のSettingsマイルストーンで追加します。',
+      settingsFaqPendingMessage: 'FAQの本文は次のSettingsマイルストーンで追加します。',
+      settingsPrivacyPendingMessage: 'プライバシーポリシーの本文は次のSettingsマイルストーンで追加します。',
+      settingsTermsPendingMessage: '利用規約の本文は次のSettingsマイルストーンで追加します。',
+      settingsContactPendingMessage: '問い合わせ案内はContactマイルストーンで追加します。',
+      settingsLanguageTitle: 'アプリの言語',
+      settingsLanguageMessage: '言語の遷移先を用意しています。ロケール切り替えは設定保存の確定後に接続します。',
+      settingsLanguageEnglish: '英語',
+      settingsLanguageJapanese: '日本語',
+      settingsVersionTitle: 'インストール済みアプリのバージョン',
+      settingsVersionMessageTemplate: 'バージョン {version}',
     ),
   ),
 };
