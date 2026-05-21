@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LKP-001 Track Order - Stone Signature</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --screen-w: 470.5px;
+        --screen-h: 836px;
+        --ink: #172328;
+        --copy: #344048;
+        --wine: #821719;
+        --wine-dark: #770f12;
+        --gold: #b7782c;
+        --line: #e1cdb9;
+        --paper: #fbf8f3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        align-items: start;
+        justify-items: center;
+        margin: 0;
+        background: #efe7dd;
+        color: var(--ink);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      h1,
+      h2,
+      p,
+      input,
+      label {
+        letter-spacing: 0;
+      }
+
+      .screen {
+        position: relative;
+        container-type: inline-size;
+        width: min(100vw, var(--screen-w));
+        aspect-ratio: 941 / 1672;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .artboard {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        overflow: hidden;
+        transform: scale(calc(100cqw / 470.5px));
+        transform-origin: top left;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.92) 0 23%, transparent 59%),
+          radial-gradient(circle at 51% 51%, rgba(255, 255, 255, 0.72) 0 24%, transparent 60%),
+          radial-gradient(circle at 49% 86%, rgba(255, 255, 255, 0.75) 0 20%, transparent 58%),
+          linear-gradient(135deg, #f2e9df 0%, #fffdf9 44%, #f6eee5 100%);
+        box-shadow: inset 0 0 64px rgba(122, 95, 65, 0.08);
+      }
+
+      .artboard::before,
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .artboard::before {
+        opacity: 0.4;
+        background:
+          linear-gradient(126deg, transparent 0 62%, rgba(181, 138, 91, 0.05) 62.15%, transparent 63.2%),
+          linear-gradient(143deg, transparent 0 16%, rgba(181, 138, 91, 0.055) 16.1%, transparent 17.3%);
+      }
+
+      .artboard::after {
+        background:
+          radial-gradient(ellipse at 50% 39%, rgba(255, 255, 255, 0.62), transparent 31%),
+          radial-gradient(ellipse at 50% 88%, rgba(255, 255, 255, 0.54), transparent 28%);
+      }
+
+      .back-button {
+        position: absolute;
+        top: 68px;
+        left: 24px;
+        z-index: 2;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        color: var(--wine);
+      }
+
+      .back-button svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 1.65;
+      }
+
+      .serif {
+        font-family: "Bodoni 72", "Cormorant Garamond", "Hanko Serif", Georgia, "Times New Roman", serif;
+      }
+
+      .screen-title {
+        position: absolute;
+        top: 64px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--wine);
+        font-size: 31px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 9px 16px rgba(87, 46, 36, 0.09);
+      }
+
+      .ornament {
+        position: absolute;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: var(--gold);
+        transform: translateX(-50%);
+      }
+
+      .header-ornament {
+        top: 113px;
+      }
+
+      .ornament-line {
+        width: 52px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 9px;
+        height: 9px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .hero-stage {
+        position: absolute;
+        top: 136px;
+        left: 106px;
+        z-index: 1;
+        width: 258px;
+        height: 115px;
+      }
+
+      .hero-stage::before,
+      .hero-stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .hero-stage::before {
+        opacity: 0.08;
+        background: repeating-conic-gradient(
+          from -9deg at 50% 50%,
+          rgba(183, 122, 45, 0.38) 0 1.5deg,
+          transparent 1.5deg 12deg
+        );
+        mask-image: radial-gradient(ellipse at center, #000 0 46%, transparent 70%);
+      }
+
+      .hero-stage::after {
+        opacity: 0.62;
+        background:
+          radial-gradient(circle at 2% 48%, #d9a468 0 2px, transparent 2.2px),
+          radial-gradient(circle at 7% 20%, #d9a468 0 1.8px, transparent 2px),
+          radial-gradient(circle at 9% 67%, #d9a468 0 1.6px, transparent 1.9px),
+          radial-gradient(circle at 19% 37%, #d9a468 0 2px, transparent 2.2px),
+          radial-gradient(circle at 24% 63%, #eed8be 0 1.6px, transparent 1.8px),
+          radial-gradient(circle at 79% 22%, #eed8be 0 1.6px, transparent 1.9px),
+          radial-gradient(circle at 83% 44%, #d9a468 0 2px, transparent 2.2px),
+          radial-gradient(circle at 90% 64%, #d9a468 0 1.8px, transparent 2px),
+          radial-gradient(circle at 96% 31%, #d9a468 0 1.6px, transparent 1.9px),
+          radial-gradient(circle at 98% 78%, #eed8be 0 1.6px, transparent 1.9px);
+      }
+
+      .hero-seal {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        z-index: 1;
+        width: 110px;
+        height: 110px;
+        object-fit: contain;
+        transform: translateX(-50%);
+      }
+
+      .lead {
+        position: absolute;
+        top: 257px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: var(--ink);
+        font-size: 29.5px;
+        font-weight: 500;
+        line-height: 1.17;
+        text-align: center;
+        text-shadow: 0 9px 16px rgba(80, 52, 39, 0.08);
+      }
+
+      .lead .wine {
+        color: var(--wine);
+      }
+
+      .lead > span {
+        display: block;
+      }
+
+      .lead .wine {
+        display: inline;
+      }
+
+      .intro {
+        position: absolute;
+        top: 337px;
+        left: 44px;
+        z-index: 2;
+        width: 382px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 15.5px;
+        font-weight: 400;
+        line-height: 1.56;
+        text-align: center;
+      }
+
+      .form-card {
+        position: absolute;
+        top: 395px;
+        left: 29.5px;
+        z-index: 2;
+        width: 411.5px;
+        height: 212.5px;
+        border: 1px solid rgba(232, 222, 212, 0.86);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow:
+          0 13px 28px rgba(89, 61, 41, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(2px);
+      }
+
+      .field {
+        position: absolute;
+        left: 23px;
+        width: 366px;
+      }
+
+      .field-order {
+        top: 29px;
+      }
+
+      .field-email {
+        top: 119px;
+      }
+
+      .field-label {
+        display: block;
+        margin: 0 0 17px 0;
+        color: #a76416;
+        font-size: 12.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .input-shell {
+        position: relative;
+        display: block;
+        width: 366px;
+        height: 43.5px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 250, 0.55);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+
+      .field-icon {
+        position: absolute;
+        top: 11px;
+        left: 13px;
+        width: 19px;
+        height: 21px;
+        color: var(--gold);
+        stroke-width: 1.8;
+      }
+
+      .input-shell::before {
+        content: "";
+        position: absolute;
+        top: 9px;
+        left: 40px;
+        width: 1px;
+        height: 25px;
+        background: rgba(225, 205, 185, 0.86);
+      }
+
+      .field-input {
+        position: absolute;
+        inset: 0 0 0 49px;
+        width: calc(100% - 57px);
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #8f969c;
+        font: 400 15.5px/43.5px "Hanko Sans", Inter, system-ui, sans-serif;
+      }
+
+      .field-input::placeholder {
+        color: #8e959b;
+        opacity: 1;
+      }
+
+      .submit-button {
+        position: absolute;
+        top: 622px;
+        left: 37.5px;
+        z-index: 2;
+        display: block;
+        width: 396px;
+        height: 58.5px;
+        border: 0;
+        border-radius: 12px;
+        background:
+          radial-gradient(circle at 27% 28%, rgba(255, 255, 255, 0.09), transparent 24%),
+          linear-gradient(120deg, #a21518 0%, #8f1014 47%, #7d0d10 100%);
+        box-shadow:
+          0 10px 20px rgba(96, 31, 24, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        color: #fffaf6;
+      }
+
+      .button-text {
+        position: absolute;
+        top: 16px;
+        left: 0;
+        width: 100%;
+        font-size: 20.5px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 3px 5px rgba(44, 5, 4, 0.25);
+      }
+
+      .button-sparkle {
+        position: absolute;
+        top: 16px;
+        left: 119px;
+        width: 24px;
+        height: 24px;
+        color: #fffaf3;
+      }
+
+      .button-arrow {
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        width: 24px;
+        height: 24px;
+        color: #fffaf3;
+        stroke-width: 1.7;
+      }
+
+      .secure-row {
+        position: absolute;
+        top: 699px;
+        left: 77px;
+        z-index: 2;
+        display: flex;
+        width: 316px;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        color: var(--gold);
+      }
+
+      .secure-row .line {
+        width: 134px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .secure-icon {
+        width: 31px;
+        height: 31px;
+        flex: 0 0 31px;
+        stroke-width: 1.45;
+      }
+
+      .safe-copy {
+        position: absolute;
+        top: 736px;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        margin: 0;
+        color: #414b52;
+        font-size: 13.7px;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .help-link {
+        position: absolute;
+        top: 771px;
+        left: 80px;
+        z-index: 2;
+        display: flex;
+        width: 314px;
+        height: 34px;
+        align-items: center;
+        color: var(--wine);
+        text-decoration: none;
+      }
+
+      .help-icon {
+        display: grid;
+        width: 25px;
+        height: 25px;
+        flex: 0 0 25px;
+        place-items: center;
+        border: 1.3px solid var(--gold);
+        border-radius: 999px;
+        color: var(--gold);
+        font: 500 18px/1 "Hanko Sans", Inter, system-ui, sans-serif;
+      }
+
+      .help-text {
+        margin-left: 14px;
+        color: var(--wine);
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .help-chevron {
+        width: 19px;
+        height: 19px;
+        margin-left: auto;
+        color: var(--wine);
+        stroke-width: 2.1;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Track your order screen">
+      <div class="artboard">
+        <a class="back-button" href="#" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15.5 4.5 8 12l7.5 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8.5 12h12" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </a>
+
+        <h1 class="screen-title serif">Track Your Order</h1>
+
+        <div class="ornament header-ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <div class="hero-stage" aria-hidden="true">
+          <img class="hero-seal" src="assets/lkp-001-seal.png" alt="" />
+        </div>
+
+        <h2 class="lead serif">
+          <span><span class="wine">Stay informed</span> every step</span>
+          <span>of the way.</span>
+        </h2>
+
+        <p class="intro">
+          Enter your order number and email address<br />
+          to view your order status and details.
+        </p>
+
+        <form class="form-card" aria-label="Order lookup form">
+          <div class="field field-order">
+            <label class="field-label" for="order-number">Order Number</label>
+            <span class="input-shell">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3.5 4.8 6.4v6.1c0 4.2 2.9 7.1 7.2 8 4.3-.9 7.2-3.8 7.2-8V6.4L12 3.5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M9 11h6v5H9v-5Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="M10.2 11V9.6a1.8 1.8 0 0 1 3.6 0V11" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+              <input id="order-number" class="field-input" type="text" placeholder="e.g., SS-2025-0427" aria-label="Order number" />
+            </span>
+          </div>
+
+          <div class="field field-email">
+            <label class="field-label" for="email-address">Email Address</label>
+            <span class="input-shell">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4.5 6.5h15v11h-15v-11Z" stroke="currentColor" stroke-linejoin="round" />
+                <path d="m5 7 7 6 7-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <input id="email-address" class="field-input" type="email" placeholder="e.g., name@example.com" aria-label="Email address" />
+            </span>
+          </div>
+        </form>
+
+        <button class="submit-button" type="button">
+          <svg class="button-sparkle" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M13.7 1.8c1.4 7 5 10.5 12 12-7 1.5-10.6 5-12 12-1.5-7-5.1-10.5-12.1-12 7-1.5 10.6-5 12.1-12Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M23.3 1.7v7.1M19.8 5.2h7.1" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <span class="button-text serif">View Order</span>
+          <svg class="button-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 12h15" stroke="currentColor" stroke-linecap="round" />
+            <path d="m13 5.5 7 6.5-7 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+
+        <div class="secure-row" aria-hidden="true">
+          <span class="line"></span>
+          <svg class="secure-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.8 4.9 5.9v5.8c0 4.4 2.9 7.8 7.1 9.5 4.2-1.7 7.1-5.1 7.1-9.5V5.9L12 2.8Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M9 11.1h6v5.3H9v-5.3Z" stroke="currentColor" stroke-linejoin="round" />
+            <path d="M10.4 11.1V9.8a1.6 1.6 0 0 1 3.2 0v1.3" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+          <span class="line"></span>
+        </div>
+
+        <p class="safe-copy">Your information is safe and encrypted.</p>
+
+        <a class="help-link" href="#">
+          <span class="help-icon" aria-hidden="true">?</span>
+          <span class="help-text serif">Need help finding your order number?</span>
+          <svg class="help-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m8.5 4.5 7 7.5-7 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>
