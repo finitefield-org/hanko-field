@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DES-013 Invalid Name Input - Stone Signature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: "Hanko Sans";
+        src: url("../../../app/assets/fonts/Manrope.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Hanko Serif";
+        src: url("../../../app/assets/fonts/NotoSerif.ttf") format("truetype");
+        font-weight: 400 700;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #171d20;
+        --copy: #59616a;
+        --wine: #971719;
+        --deep-wine: #7f1013;
+        --gold: #b7823d;
+        --line: #eadfd4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at 50% 13%,
+            rgba(255, 255, 255, 0.94) 0 25%,
+            transparent 58%
+          ),
+          linear-gradient(135deg, #f1e8de 0%, #fffdf9 43%, #f4ece3 100%);
+      }
+
+      .phone {
+        --side: clamp(20px, 5.2vw, 24.5px);
+        position: relative;
+        width: min(100vw, 470.5px);
+        height: 836px;
+        aspect-ratio: 941 / 1672;
+        overflow: hidden;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at 49% 7%,
+            rgba(255, 255, 255, 0.95) 0 26%,
+            transparent 57%
+          ),
+          radial-gradient(
+            circle at 48% 45%,
+            rgba(255, 255, 255, 0.68) 0 27%,
+            transparent 62%
+          ),
+          radial-gradient(
+            circle at 50% 88%,
+            rgba(255, 255, 255, 0.56) 0 24%,
+            transparent 59%
+          ),
+          linear-gradient(136deg, #f2e9df 0%, #fffdf9 45%, #f6eee5 100%);
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 63px 29px 0;
+      }
+
+      .screen-title,
+      .serif {
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman",
+          serif;
+      }
+
+      .screen-title {
+        margin: 0;
+        color: var(--deep-wine);
+        font-size: 43px;
+        font-weight: 600;
+        line-height: 1;
+        text-shadow: 0 8px 14px rgba(111, 62, 38, 0.08);
+        white-space: nowrap;
+      }
+
+      .settings-button {
+        display: grid;
+        width: 45px;
+        height: 45px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--gold);
+        padding: 0;
+      }
+
+      .settings-button svg {
+        width: 33px;
+        height: 33px;
+        stroke-width: 1.85;
+      }
+
+      .main-card {
+        height: 520px;
+        margin: 6px var(--side) 0;
+        border: 0.8px solid rgba(234, 223, 211, 0.95);
+        border-radius: 24px;
+        background:
+          radial-gradient(
+            circle at 50% 19%,
+            rgba(255, 255, 255, 0.78) 0 23%,
+            transparent 49%
+          ),
+          rgba(255, 255, 255, 0.55);
+        box-shadow:
+          0 16px 28px rgba(90, 59, 34, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        backdrop-filter: blur(2px);
+        text-align: center;
+      }
+
+      .seal-art {
+        position: relative;
+        width: min(310px, calc(100% - 64px));
+        height: 153px;
+        margin: 23px auto 0;
+      }
+
+      .sand-dust {
+        position: absolute;
+        inset: 3px 0 0;
+        border-radius: 999px;
+        background:
+          radial-gradient(
+            circle at 28% 24%,
+            rgba(201, 166, 123, 0.2) 0 2px,
+            transparent 3px
+          ),
+          radial-gradient(
+            circle at 77% 32%,
+            rgba(203, 170, 128, 0.22) 0 2px,
+            transparent 3px
+          ),
+          radial-gradient(
+            circle at 40% 76%,
+            rgba(202, 163, 116, 0.18) 0 2px,
+            transparent 3px
+          ),
+          radial-gradient(
+            ellipse at 50% 54%,
+            rgba(183, 134, 73, 0.16),
+            transparent 68%
+          );
+        filter: blur(0.2px);
+      }
+
+      .chip {
+        position: absolute;
+        width: 12px;
+        height: 10px;
+        border-radius: 3px 7px 3px 8px;
+        background: linear-gradient(139deg, #fbf4ec 0%, #d6bea2 82%);
+        box-shadow: 0 5px 8px rgba(128, 92, 58, 0.1);
+        opacity: 0.82;
+        transform: rotate(22deg);
+      }
+
+      .chip:nth-child(2) {
+        top: 28px;
+        left: 47px;
+        width: 16px;
+        height: 14px;
+        transform: rotate(-20deg);
+      }
+
+      .chip:nth-child(3) {
+        top: 61px;
+        left: 18px;
+        width: 18px;
+        height: 15px;
+        transform: rotate(20deg);
+      }
+
+      .chip:nth-child(4) {
+        top: 103px;
+        left: 31px;
+        width: 20px;
+        height: 17px;
+        transform: rotate(-25deg);
+      }
+
+      .chip:nth-child(5) {
+        top: 32px;
+        right: 53px;
+        width: 13px;
+        height: 12px;
+        transform: rotate(28deg);
+      }
+
+      .chip:nth-child(6) {
+        top: 72px;
+        right: 43px;
+        width: 9px;
+        height: 8px;
+        transform: rotate(-9deg);
+      }
+
+      .seal-disc {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        display: grid;
+        width: 154px;
+        height: 154px;
+        place-items: center;
+        border-radius: 999px;
+        background:
+          radial-gradient(
+            circle at 42% 31%,
+            rgba(255, 255, 255, 0.78) 0 19%,
+            transparent 43%
+          ),
+          radial-gradient(
+            circle at 52% 55%,
+            rgba(254, 249, 241, 0.7),
+            rgba(227, 202, 174, 0.2) 74%
+          ),
+          linear-gradient(136deg, #fbf4eb, rgba(228, 198, 165, 0.74));
+        box-shadow:
+          0 11px 18px rgba(98, 63, 31, 0.18),
+          inset 0 0 0 3px rgba(205, 150, 88, 0.25),
+          inset 0 0 0 8px rgba(255, 251, 245, 0.72),
+          inset 0 0 0 11px rgba(180, 126, 66, 0.25);
+        transform: translateX(-50%);
+      }
+
+      .seal-disc::before {
+        content: "";
+        position: absolute;
+        inset: 17px;
+        border: 1.6px solid rgba(186, 134, 75, 0.48);
+        border-radius: inherit;
+      }
+
+      .monogram {
+        position: relative;
+        z-index: 2;
+        width: 92px;
+        height: 92px;
+        overflow: visible;
+        color: #951819;
+        filter: drop-shadow(0 6px 8px rgba(100, 29, 19, 0.22));
+      }
+
+      .monogram text {
+        fill: currentColor;
+        font-family:
+          "Bodoni 72", "Cormorant Garamond", "Hanko Serif", "Times New Roman",
+          serif;
+        font-size: 93px;
+        font-weight: 600;
+      }
+
+      .monogram path {
+        fill: currentColor;
+        stroke: none;
+      }
+
+      .warning-badge {
+        position: absolute;
+        z-index: 4;
+        right: 63px;
+        bottom: 21px;
+        display: grid;
+        width: 55px;
+        height: 55px;
+        place-items: center;
+        border: 3px solid #edd1a2;
+        border-radius: 999px;
+        background:
+          radial-gradient(
+            circle at 34% 30%,
+            rgba(255, 255, 255, 0.15),
+            transparent 34%
+          ),
+          linear-gradient(135deg, #b31b1f 0%, #8e1416 78%);
+        box-shadow:
+          0 7px 12px rgba(83, 36, 21, 0.18),
+          inset 0 0 0 1px rgba(93, 8, 9, 0.35);
+        color: #fff5db;
+        font-size: 32px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        margin-top: 4px;
+        color: var(--gold);
+      }
+
+      .ornament-line {
+        width: 52px;
+        height: 1px;
+        background: currentColor;
+      }
+
+      .ornament-diamond {
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        transform: rotate(45deg);
+      }
+
+      .message-title {
+        margin: 18px 20px 0;
+        color: #182025;
+        font-size: 36px;
+        font-weight: 500;
+        line-height: 1.03;
+        white-space: nowrap;
+      }
+
+      .message-copy {
+        margin: 10px auto 0;
+        color: var(--copy);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.45;
+        white-space: nowrap;
+      }
+
+      .form-panel {
+        width: min(360px, calc(100% - 58px));
+        margin: 4px auto 0;
+        padding: 12px 14px 12px;
+        border: 0.8px solid rgba(234, 223, 211, 0.92);
+        border-radius: 10px;
+        background: rgba(255, 253, 250, 0.38);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        text-align: left;
+      }
+
+      .field-label {
+        display: block;
+        color: #11161a;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .field {
+        display: grid;
+        height: 46px;
+        grid-template-columns: minmax(0, 1fr) 42px;
+        align-items: center;
+        margin-top: 8px;
+        border: 1px solid var(--wine);
+        border-radius: 7px;
+        background: rgba(255, 253, 250, 0.36);
+        color: var(--wine);
+        padding-left: 13px;
+      }
+
+      .placeholder {
+        color: #6f7880;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+
+      .field svg {
+        width: 25px;
+        height: 25px;
+        justify-self: center;
+        stroke-width: 1.75;
+      }
+
+      .error-row {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        gap: 9px;
+        align-items: center;
+        margin-top: 8px;
+        color: var(--wine);
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .error-dot {
+        display: grid;
+        width: 16px;
+        height: 16px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--wine);
+        color: #fff9f2;
+        font-family: "Hanko Sans", Inter, system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .actions {
+        display: grid;
+        gap: 11px;
+        margin-top: 15px;
+      }
+
+      .action-button {
+        display: grid;
+        height: 47px;
+        grid-template-columns: 1fr 26px;
+        align-items: center;
+        border-radius: 7px;
+        font-size: 21px;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .action-button.primary {
+        padding: 0 17px 0 45px;
+        border: 1px solid rgba(136, 42, 43, 0.38);
+        background:
+          radial-gradient(
+            circle at 55% 22%,
+            rgba(213, 151, 151, 0.38),
+            transparent 42%
+          ),
+          linear-gradient(
+            135deg,
+            rgba(151, 23, 25, 0.56),
+            rgba(112, 34, 35, 0.58)
+          );
+        box-shadow:
+          0 10px 18px rgba(113, 25, 19, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        color: rgba(255, 249, 242, 0.58);
+        pointer-events: none;
+      }
+
+      .action-button.secondary {
+        display: flex;
+        height: 34px;
+        justify-content: center;
+        border: 1px solid var(--gold);
+        background: rgba(255, 253, 250, 0.28);
+        color: #a66e28;
+      }
+
+      .action-button svg {
+        width: 24px;
+        height: 24px;
+        justify-self: end;
+        stroke-width: 1.8;
+      }
+
+      .tip-card {
+        display: grid;
+        grid-template-columns: 66px 1px minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+        width: min(303px, calc(100% - 106px));
+        min-height: 64px;
+        margin: 16px auto 0;
+        padding: 10px 18px 10px 12px;
+        border: 0.8px solid rgba(234, 223, 211, 0.96);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow:
+          0 12px 22px rgba(90, 59, 34, 0.07),
+          inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(2px);
+      }
+
+      .tip-icon-wrap {
+        display: grid;
+        width: 55px;
+        height: 55px;
+        place-items: center;
+        border-radius: 999px;
+        background: radial-gradient(
+          circle at 45% 42%,
+          rgba(255, 255, 255, 0.75),
+          rgba(245, 237, 228, 0.94)
+        );
+      }
+
+      .tip-icon {
+        width: 35px;
+        height: 35px;
+        color: var(--gold);
+        stroke-width: 1.55;
+      }
+
+      .tip-rule {
+        width: 1px;
+        height: 44px;
+        background: var(--gold);
+      }
+
+      .tip-copy {
+        min-width: 0;
+        color: #59616a;
+        font-size: 12.5px;
+        font-weight: 500;
+        line-height: 1.45;
+      }
+
+      .tip-label {
+        display: block;
+        margin-bottom: 3px;
+        color: #a66e28;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .tabbar {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        height: 102px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: start;
+        border-top: 1px solid rgba(226, 214, 202, 0.94);
+        background: rgba(255, 252, 248, 0.72);
+        backdrop-filter: blur(6px);
+      }
+
+      .tabbar::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: 65px;
+        width: 51px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--wine);
+      }
+
+      .tab {
+        display: grid;
+        place-items: center;
+        padding-top: 19px;
+        color: #12191e;
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      .tab.active {
+        color: var(--wine);
+      }
+
+      .tab svg {
+        width: 37px;
+        height: 37px;
+        margin-bottom: 11px;
+        stroke-width: 1.8;
+      }
+
+      .tab:nth-child(2) svg {
+        width: 34px;
+        height: 34px;
+        margin-top: 1px;
+        margin-bottom: 13px;
+      }
+
+      .tab:nth-child(3) svg {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 10px;
+      }
+
+      @media (max-width: 420px) {
+        .header {
+          padding-right: 25px;
+          padding-left: 25px;
+        }
+
+        .screen-title {
+          font-size: 39px;
+        }
+
+        .main-card {
+          height: 510px;
+        }
+
+        .seal-art {
+          width: min(285px, calc(100% - 48px));
+        }
+
+        .warning-badge {
+          right: 49px;
+        }
+
+        .message-title {
+          margin-top: 18px;
+          font-size: 32px;
+        }
+
+        .message-copy {
+          font-size: 13.2px;
+        }
+
+        .form-panel {
+          width: calc(100% - 54px);
+        }
+
+        .tip-card {
+          width: calc(100% - 80px);
+          grid-template-columns: 55px 1px minmax(0, 1fr);
+          gap: 15px;
+        }
+
+        .tabbar::before {
+          left: 56px;
+        }
+      }
+
+      @media (max-width: 380px) {
+        .seal-art {
+          height: 156px;
+          transform: scale(0.92);
+          transform-origin: top center;
+          margin-bottom: -16px;
+        }
+
+        .message-title {
+          font-size: 28px;
+        }
+
+        .message-copy {
+          white-space: normal;
+        }
+
+        .form-panel {
+          padding-right: 12px;
+          padding-left: 12px;
+        }
+
+        .error-row {
+          font-size: 11.5px;
+        }
+
+        .tip-card {
+          width: calc(100% - 56px);
+          padding-right: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body class="grid min-h-screen justify-items-center">
+    <main class="phone shadow-2xl shadow-stone-300/30">
+      <header class="header">
+        <h1 class="screen-title">Design</h1>
+        <button class="settings-button" type="button" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M9.5 2.8h5l.7 3.1a7.7 7.7 0 0 1 1.9 1.1l3-.9 2.5 4.3-2.4 2.1a8.4 8.4 0 0 1 0 2.2l2.4 2.1-2.5 4.3-3-.9a7.7 7.7 0 0 1-1.9 1.1l-.7 3.1h-5l-.7-3.1a7.7 7.7 0 0 1-1.9-1.1l-3 .9-2.5-4.3 2.4-2.1a8.4 8.4 0 0 1 0-2.2L1.4 10.4l2.5-4.3 3 .9a7.7 7.7 0 0 1 1.9-1.1l.7-3.1Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <circle cx="12" cy="13.6" r="3.2" stroke="currentColor" />
+          </svg>
+        </button>
+      </header>
+
+      <section class="main-card" aria-labelledby="name-title">
+        <div class="seal-art" aria-hidden="true">
+          <div class="sand-dust"></div>
+          <span class="chip"></span>
+          <span class="chip"></span>
+          <span class="chip"></span>
+          <span class="chip"></span>
+          <span class="chip"></span>
+          <div class="seal-disc">
+            <svg class="monogram" viewBox="0 0 120 120">
+              <text x="58" y="88" text-anchor="middle">S</text>
+              <path d="M81 18 84 30 96 33 84 37 81 49 77 37 66 33 77 30Z" />
+            </svg>
+          </div>
+          <div class="warning-badge serif">!</div>
+        </div>
+
+        <div class="ornament" aria-hidden="true">
+          <span class="ornament-line"></span>
+          <span class="ornament-diamond"></span>
+          <span class="ornament-line"></span>
+        </div>
+
+        <h2 class="message-title serif" id="name-title">Enter your name</h2>
+        <p class="message-copy">
+          We use your name to suggest engraving-friendly kanji.
+        </p>
+
+        <form class="form-panel" aria-label="Name form">
+          <label class="field-label serif" for="name-input">Name</label>
+          <div class="field">
+            <span class="placeholder" id="name-input">e.g. Emma</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="7.6" r="3.6" stroke="currentColor" />
+              <path
+                d="M5.5 21c.5-4.1 3.1-6.3 6.5-6.3s6 2.2 6.5 6.3"
+                stroke="currentColor"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <p class="error-row">
+            <span class="error-dot">!</span>
+            <span>Please enter a valid first name or short name.</span>
+          </p>
+
+          <div class="actions">
+            <a
+              class="action-button primary serif"
+              href="#"
+              aria-disabled="true"
+            >
+              <span>Suggest Kanji</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M5 12h14"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="m13 6 6 6-6 6"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </a>
+            <a class="action-button secondary serif" href="#">Examples</a>
+          </div>
+        </form>
+      </section>
+
+      <aside class="tip-card" aria-label="Examples">
+        <div class="tip-icon-wrap" aria-hidden="true">
+          <svg class="tip-icon" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M9 18h6M10 22h4M8.2 14.4c-1.3-1.1-2.1-2.8-2.1-4.6a5.9 5.9 0 0 1 11.8 0c0 1.8-.8 3.5-2.1 4.6-.8.7-1.2 1.5-1.2 2.5H9.4c0-1-.4-1.8-1.2-2.5Z"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M12 7.5v4.2l-2 1.5M4 7l-1.5-1.2M20 7l1.5-1.2M12 3V1.4M6.2 3.7l-.9-1.4M17.8 3.7l.9-1.4"
+              stroke="currentColor"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+        <span class="tip-rule" aria-hidden="true"></span>
+        <p class="tip-copy">
+          <span class="tip-label serif">Examples:</span>
+          Emma, Michael, Hana, Leo
+        </p>
+      </aside>
+
+      <nav class="tabbar" aria-label="Primary">
+        <a class="tab active" href="#">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M5 19c4.5-1.2 6.5-3.3 6.8-8.2"
+              stroke="currentColor"
+              stroke-linecap="round"
+            />
+            <path
+              d="M10.9 10.4 18.2 3a1.9 1.9 0 0 1 2.7 2.7l-7.4 7.3-3.4.8.8-3.4Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M4.2 20.2c2.3 1.2 7.4.8 10.2-.9 2.4-1.4 2.4-3.4-.3-3.7-3.6-.4-8.4.9-10.2 2.6-.9.9-.8 1.5.3 2Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Design</span>
+        </a>
+        <a class="tab" href="#">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3.5 19.2 6v5.1c0 4.2-2.8 7.7-7.2 9.4-4.4-1.7-7.2-5.2-7.2-9.4V6L12 3.5Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <path
+              d="m12 8.6 1.1 2.3 2.5.3-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.3L12 8.6Z"
+              fill="currentColor"
+            />
+          </svg>
+          <span>My Seals</span>
+        </a>
+        <a class="tab" href="#">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M3.2 8.2 7 3.8h10l3.8 4.4L12 20.3 3.2 8.2Z"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M3.2 8.2h17.6M7 3.8l2.8 4.4L12 20.3l2.2-12.1L17 3.8"
+              stroke="currentColor"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Stones</span>
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>
