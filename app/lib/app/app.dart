@@ -18,6 +18,7 @@ class HankoApp extends StatelessWidget {
     this.markOnboardingSeen = _defaultMarkOnboardingSeen,
     this.splashMinimumDuration = const Duration(milliseconds: 700),
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
+    this.generateSealDesigns = generateSealDesignsWithDefaultApi,
   });
 
   final Locale? locale;
@@ -25,6 +26,7 @@ class HankoApp extends StatelessWidget {
   final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
+  final SealDesignsGenerator generateSealDesigns;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +42,7 @@ class HankoApp extends StatelessWidget {
         markOnboardingSeen: markOnboardingSeen,
         splashMinimumDuration: splashMinimumDuration,
         generateKanjiCandidates: generateKanjiCandidates,
+        generateSealDesigns: generateSealDesigns,
       ),
     );
   }
@@ -61,12 +64,14 @@ class _AppLaunchGate extends StatefulWidget {
     required this.markOnboardingSeen,
     required this.splashMinimumDuration,
     required this.generateKanjiCandidates,
+    required this.generateSealDesigns,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
   final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
+  final SealDesignsGenerator generateSealDesigns;
 
   @override
   State<_AppLaunchGate> createState() => _AppLaunchGateState();
@@ -88,6 +93,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
       ),
       _AppLaunchStage.shell => BottomNavigationShell(
         generateKanjiCandidates: widget.generateKanjiCandidates,
+        generateSealDesigns: widget.generateSealDesigns,
       ),
     };
   }
@@ -114,9 +120,11 @@ class BottomNavigationShell extends StatefulWidget {
   const BottomNavigationShell({
     super.key,
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
+    this.generateSealDesigns = generateSealDesignsWithDefaultApi,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
+  final SealDesignsGenerator generateSealDesigns;
 
   @override
   State<BottomNavigationShell> createState() => _BottomNavigationShellState();
@@ -126,6 +134,12 @@ class _KanjiSuggestionFailure {
   const _KanjiSuggestionFailure({required this.request});
 
   final KanjiCandidatesRequest request;
+}
+
+class _SealGenerationFailure {
+  const _SealGenerationFailure({required this.request});
+
+  final SealGenerationRequest request;
 }
 
 class _BottomNavigationShellState extends State<BottomNavigationShell> {
@@ -164,9 +178,15 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       'DES-005-kanji-candidate-detail';
   static const _designSealStyleSelectionPageKey =
       'DES-006-seal-style-selection';
+  static const _designSealGenerationLoadingPageKey =
+      'DES-007-seal-generation-loading';
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
+  static const _designSealGenerationErrorPageKey =
+      'DES-012-seal-generation-error';
   static const _designUnsupportedKanjiPageKey =
       'DES-014-unsupported-kanji-result';
+  static const _designSealGenerationLimitPageKey =
+      'DES-015-seal-generation-limit';
 
   var _pages = const <PageEntry>[_shellPage];
 
@@ -292,7 +312,34 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
 
     if (page.key == _designSealStyleSelectionPageKey &&
         pageData is KanjiCandidate) {
-      return SealStyleSelectionScreen(candidate: pageData, onBack: stack.pop);
+      return SealStyleSelectionScreen(
+        candidate: pageData,
+        onBack: stack.pop,
+        onGenerate: (selection) {
+          stack.push(
+            _sealGenerationLoadingPage(
+              SealGenerationRequest(candidate: pageData, style: selection),
+            ),
+          );
+        },
+      );
+    }
+
+    if (page.key == _designSealGenerationLoadingPageKey &&
+        pageData is SealGenerationRequest) {
+      return SealGenerationLoadingScreen(
+        request: pageData,
+        generateSealDesigns: widget.generateSealDesigns,
+        onGenerated: () {},
+        onError: (error) {
+          if (pageData.hasReachedLimit) {
+            stack.replaceTop(_sealGenerationLimitPage(pageData));
+            return;
+          }
+          stack.replaceTop(_sealGenerationErrorPage(pageData));
+        },
+        onBack: stack.pop,
+      );
     }
 
     if (page.key == _designKanjiErrorPageKey &&
@@ -304,12 +351,34 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       );
     }
 
+    if (page.key == _designSealGenerationErrorPageKey &&
+        pageData is _SealGenerationFailure) {
+      return SealGenerationErrorScreen(
+        request: pageData.request,
+        onRetry: () {
+          stack.replaceTop(
+            _sealGenerationLoadingPage(pageData.request.nextAttempt()),
+          );
+        },
+        onBack: stack.pop,
+      );
+    }
+
     if (page.key == _designUnsupportedKanjiPageKey &&
         pageData is KanjiCandidatesRequest) {
       return UnsupportedKanjiResultScreen(
         request: pageData,
         onRetry: () => stack.replaceTop(_kanjiLoadingPage(pageData)),
         onEditName: stack.pop,
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designSealGenerationLimitPageKey &&
+        pageData is SealGenerationRequest) {
+      return SealGenerationLimitScreen(
+        request: pageData,
+        onAdjustStyle: stack.pop,
         onBack: stack.pop,
       );
     }
@@ -352,6 +421,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     );
   }
 
+  PageEntry _sealGenerationLoadingPage(SealGenerationRequest request) {
+    return PageEntry(
+      key: _designSealGenerationLoadingPageKey,
+      name: '/design/seal/generating',
+      data: request,
+    );
+  }
+
   PageEntry _kanjiSuggestionErrorPage(KanjiCandidatesRequest request) {
     return PageEntry(
       key: _designKanjiErrorPageKey,
@@ -360,10 +437,26 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     );
   }
 
+  PageEntry _sealGenerationErrorPage(SealGenerationRequest request) {
+    return PageEntry(
+      key: _designSealGenerationErrorPageKey,
+      name: '/design/seal/error',
+      data: _SealGenerationFailure(request: request),
+    );
+  }
+
   PageEntry _unsupportedKanjiPage(KanjiCandidatesRequest request) {
     return PageEntry(
       key: _designUnsupportedKanjiPageKey,
       name: '/design/kanji/empty',
+      data: request,
+    );
+  }
+
+  PageEntry _sealGenerationLimitPage(SealGenerationRequest request) {
+    return PageEntry(
+      key: _designSealGenerationLimitPageKey,
+      name: '/design/seal/limit',
       data: request,
     );
   }

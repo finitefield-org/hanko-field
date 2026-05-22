@@ -22,6 +22,7 @@ void main() {
     Locale? locale,
     bool hasSeenOnboarding = true,
     KanjiCandidatesGenerator? generateKanjiCandidates,
+    SealDesignsGenerator? generateSealDesigns,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -32,6 +33,8 @@ void main() {
           splashMinimumDuration: Duration.zero,
           generateKanjiCandidates:
               generateKanjiCandidates ?? _successfulKanjiGenerator,
+          generateSealDesigns:
+              generateSealDesigns ?? generateSealDesignsWithDefaultApi,
         ),
       ),
     );
@@ -306,6 +309,7 @@ void main() {
       find.text('These style choices are ready for AI seal generation.'),
       findsOneWidget,
     );
+    expect(find.text('Generate Seal'), findsOneWidget);
 
     await tester.ensureVisible(find.byTooltip('Back').last);
     await tester.pump();
@@ -328,6 +332,129 @@ void main() {
 
     expect(find.byType(NameInputScreen), findsOneWidget);
     expect(find.text('Michael Smith'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-007 shows seal generation progress details', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final generation = Completer<void>();
+    var started = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealGenerationLoadingScreen(
+          request: _sealGenerationRequest(),
+          generateSealDesigns: (request) {
+            started = true;
+            expect(request.attemptNumber, 1);
+            return generation.future;
+          },
+          onGenerated: () {},
+          onError: (_) {},
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(started, isTrue);
+    expect(find.text('Generating Seal'), findsOneWidget);
+    expect(
+      find.text('Creating three AI seal design directions...'),
+      findsOneWidget,
+    );
+    expect(find.text('Generation details'), findsOneWidget);
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Attempts'), findsOneWidget);
+    expect(find.text('1/3'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    generation.complete();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-012 and DES-015 expose retry and limit actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var retryCount = 0;
+    var backCount = 0;
+    var adjustCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealGenerationErrorScreen(
+          request: _sealGenerationRequest(),
+          onRetry: () => retryCount += 1,
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text("We couldn't generate seal designs"), findsOneWidget);
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(find.text('Back'), findsOneWidget);
+    expect(find.text('1/3'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Try Again'));
+    await tester.pump();
+    await tester.tap(find.text('Try Again'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Back'));
+    await tester.pump();
+    await tester.tap(find.text('Back'));
+    await tester.pump();
+
+    expect(retryCount, 1);
+    expect(backCount, 1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealGenerationLimitScreen(
+          request: _sealGenerationRequest(attemptNumber: 3),
+          onAdjustStyle: () => adjustCount += 1,
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text('Generation limit reached'), findsOneWidget);
+    expect(find.text('3/3'), findsOneWidget);
+    expect(find.text('Adjust Style'), findsOneWidget);
+    expect(find.text('Back'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Adjust Style'));
+    await tester.pump();
+    await tester.tap(find.text('Adjust Style'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Back'));
+    await tester.pump();
+    await tester.tap(find.text('Back'));
+    await tester.pump();
+
+    expect(adjustCount, 1);
+    expect(backCount, 2);
     expect(tester.takeException(), isNull);
   });
 
@@ -610,6 +737,19 @@ Future<KanjiCandidatesResult> _successfulKanjiGenerator(
   KanjiCandidatesRequest request,
 ) async {
   return _kanjiResult(request);
+}
+
+SealGenerationRequest _sealGenerationRequest({int attemptNumber = 1}) {
+  return SealGenerationRequest(
+    candidate: const KanjiCandidate(
+      kanji: '美空',
+      reading: 'Misora',
+      meaning: 'Beautiful sky',
+      reason: 'A graceful two-character option.',
+    ),
+    style: const SealStyleSelection(),
+    attemptNumber: attemptNumber,
+  );
 }
 
 KanjiCandidatesResult _kanjiResult(KanjiCandidatesRequest request) {

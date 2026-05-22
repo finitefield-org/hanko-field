@@ -5,6 +5,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../data/kanji_candidates_repository.dart';
 import '../domain/kanji_candidate.dart';
+import '../domain/seal_generation.dart';
 import '../domain/seal_style_selection.dart';
 
 class DesignHomeScreen extends StatelessWidget {
@@ -560,12 +561,14 @@ class SealStyleSelectionScreen extends StatefulWidget {
     required this.onBack,
     this.initialSelection = const SealStyleSelection(),
     this.onConfirmed,
+    this.onGenerate,
   });
 
   final KanjiCandidate candidate;
   final VoidCallback onBack;
   final SealStyleSelection initialSelection;
   final ValueChanged<SealStyleSelection>? onConfirmed;
+  final ValueChanged<SealStyleSelection>? onGenerate;
 
   @override
   State<SealStyleSelectionScreen> createState() =>
@@ -586,6 +589,10 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
   void _confirmSelection() {
     setState(() => _isConfirmed = true);
     widget.onConfirmed?.call(_selection);
+  }
+
+  void _generateSeal() {
+    widget.onGenerate?.call(_selection);
   }
 
   @override
@@ -723,13 +730,179 @@ class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
               ],
               const SizedBox(height: 24),
               HankoPrimaryButton(
-                label: l10n.confirmStyle,
-                icon: Icons.check,
-                onPressed: _confirmSelection,
+                label: _isConfirmed ? l10n.generateSeal : l10n.confirmStyle,
+                icon: _isConfirmed ? Icons.auto_fix_high : Icons.check,
+                onPressed: _isConfirmed ? _generateSeal : _confirmSelection,
               ),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class SealGenerationLoadingScreen extends StatefulWidget {
+  const SealGenerationLoadingScreen({
+    super.key,
+    required this.request,
+    required this.generateSealDesigns,
+    required this.onGenerated,
+    required this.onError,
+    required this.onBack,
+  });
+
+  final SealGenerationRequest request;
+  final SealDesignsGenerator generateSealDesigns;
+  final VoidCallback onGenerated;
+  final ValueChanged<Object> onError;
+  final VoidCallback onBack;
+
+  @override
+  State<SealGenerationLoadingScreen> createState() =>
+      _SealGenerationLoadingScreenState();
+}
+
+class _SealGenerationLoadingScreenState
+    extends State<SealGenerationLoadingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _generateSealDesigns();
+  }
+
+  Future<void> _generateSealDesigns() async {
+    try {
+      await widget.generateSealDesigns(widget.request);
+      if (!mounted) {
+        return;
+      }
+      widget.onGenerated();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      widget.onError(error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.sealGenerationLoadingTitle,
+      onBack: widget.onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: _SealMedallion(icon: Icons.auto_fix_high)),
+              const SizedBox(height: 24),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
+              Text(
+                l10n.sealGenerationLoadingMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.sealGenerationLoadingDetail,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              const SizedBox(height: 26),
+              const Center(
+                child: SizedBox.square(
+                  dimension: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: HankoColors.gold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              _SealGenerationSummaryCard(request: widget.request),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class SealGenerationErrorScreen extends StatelessWidget {
+  const SealGenerationErrorScreen({
+    super.key,
+    required this.request,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  final SealGenerationRequest request;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.design,
+      onBack: onBack,
+      children: [
+        _DesignStateCard(
+          icon: Icons.broken_image_outlined,
+          title: l10n.sealGenerationErrorTitle,
+          message: l10n.sealGenerationErrorMessage,
+          primaryLabel: l10n.tryAgain,
+          onPrimary: onRetry,
+          secondaryLabel: l10n.back,
+          onSecondary: onBack,
+          child: _SealGenerationSummaryCard(request: request),
+        ),
+        const SizedBox(height: 22),
+        _StateTipCard(message: l10n.sealGenerationErrorTip),
+      ],
+    );
+  }
+}
+
+class SealGenerationLimitScreen extends StatelessWidget {
+  const SealGenerationLimitScreen({
+    super.key,
+    required this.request,
+    required this.onAdjustStyle,
+    required this.onBack,
+  });
+
+  final SealGenerationRequest request;
+  final VoidCallback onAdjustStyle;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.design,
+      onBack: onBack,
+      children: [
+        _DesignStateCard(
+          icon: Icons.hourglass_disabled_outlined,
+          title: l10n.sealGenerationLimitTitle,
+          message: l10n.sealGenerationLimitMessage,
+          primaryLabel: l10n.adjustStyle,
+          onPrimary: onAdjustStyle,
+          secondaryLabel: l10n.back,
+          onSecondary: onBack,
+          child: _SealGenerationSummaryCard(request: request),
+        ),
+        const SizedBox(height: 22),
+        _StateTipCard(message: l10n.sealGenerationLimitTip),
       ],
     );
   }
@@ -1188,6 +1361,65 @@ class _SealStyleSummaryCard extends StatelessWidget {
             _RequestSummaryRow(
               label: l10n.sealBalanceLabel,
               value: _sealBalanceLabel(l10n, selection.balance),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SealGenerationSummaryCard extends StatelessWidget {
+  const _SealGenerationSummaryCard({required this.request});
+
+  final SealGenerationRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final candidate = request.candidate;
+    final selection = request.style;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.sealGenerationStyleDetails, style: HankoTextStyles.label),
+            const SizedBox(height: 12),
+            _RequestSummaryRow(
+              label: l10n.sealStyleSelectedKanjiLabel,
+              value: candidate.kanji,
+            ),
+            _RequestSummaryRow(
+              label: l10n.kanjiReadingLabel,
+              value: candidate.reading,
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealShapeLabel,
+              value: _sealShapeLabel(l10n, selection.shape),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealStyleNameLabel,
+              value: _sealStyleNameLabel(l10n, selection.style),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealStrokeWeightLabel,
+              value: _sealStrokeWeightLabel(l10n, selection.strokeWeight),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealBalanceLabel,
+              value: _sealBalanceLabel(l10n, selection.balance),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealGenerationAttemptLabel,
+              value: '${request.attemptNumber}/${request.maxAttempts}',
             ),
           ],
         ),

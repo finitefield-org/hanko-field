@@ -130,6 +130,21 @@ class HankoLocalizations {
   String get confirmStyle => _strings.confirmStyle;
   String get sealStyleConfirmedTitle => _strings.sealStyleConfirmedTitle;
   String get sealStyleConfirmedMessage => _strings.sealStyleConfirmedMessage;
+  String get generateSeal => _strings.generateSeal;
+  String get sealGenerationLoadingTitle => _strings.sealGenerationLoadingTitle;
+  String get sealGenerationLoadingMessage =>
+      _strings.sealGenerationLoadingMessage;
+  String get sealGenerationLoadingDetail =>
+      _strings.sealGenerationLoadingDetail;
+  String get sealGenerationErrorTitle => _strings.sealGenerationErrorTitle;
+  String get sealGenerationErrorMessage => _strings.sealGenerationErrorMessage;
+  String get sealGenerationLimitTitle => _strings.sealGenerationLimitTitle;
+  String get sealGenerationLimitMessage => _strings.sealGenerationLimitMessage;
+  String get sealGenerationAttemptLabel => _strings.sealGenerationAttemptLabel;
+  String get sealGenerationStyleDetails => _strings.sealGenerationStyleDetails;
+  String get sealGenerationErrorTip => _strings.sealGenerationErrorTip;
+  String get sealGenerationLimitTip => _strings.sealGenerationLimitTip;
+  String get adjustStyle => _strings.adjustStyle;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -292,6 +307,19 @@ class _HankoStrings {
     required this.confirmStyle,
     required this.sealStyleConfirmedTitle,
     required this.sealStyleConfirmedMessage,
+    required this.generateSeal,
+    required this.sealGenerationLoadingTitle,
+    required this.sealGenerationLoadingMessage,
+    required this.sealGenerationLoadingDetail,
+    required this.sealGenerationErrorTitle,
+    required this.sealGenerationErrorMessage,
+    required this.sealGenerationLimitTitle,
+    required this.sealGenerationLimitMessage,
+    required this.sealGenerationAttemptLabel,
+    required this.sealGenerationStyleDetails,
+    required this.sealGenerationErrorTip,
+    required this.sealGenerationLimitTip,
+    required this.adjustStyle,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -423,6 +451,19 @@ class _HankoStrings {
   final String confirmStyle;
   final String sealStyleConfirmedTitle;
   final String sealStyleConfirmedMessage;
+  final String generateSeal;
+  final String sealGenerationLoadingTitle;
+  final String sealGenerationLoadingMessage;
+  final String sealGenerationLoadingDetail;
+  final String sealGenerationErrorTitle;
+  final String sealGenerationErrorMessage;
+  final String sealGenerationLimitTitle;
+  final String sealGenerationLimitMessage;
+  final String sealGenerationAttemptLabel;
+  final String sealGenerationStyleDetails;
+  final String sealGenerationErrorTip;
+  final String sealGenerationLimitTip;
+  final String adjustStyle;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -572,6 +613,25 @@ const _localizedValues = {
       sealStyleConfirmedTitle: 'Style selected',
       sealStyleConfirmedMessage:
           'These style choices are ready for AI seal generation.',
+      generateSeal: 'Generate Seal',
+      sealGenerationLoadingTitle: 'Generating Seal',
+      sealGenerationLoadingMessage:
+          'Creating three AI seal design directions...',
+      sealGenerationLoadingDetail:
+          'We are checking the kanji, style, and engraving safety before saving previews.',
+      sealGenerationErrorTitle: "We couldn't generate seal designs",
+      sealGenerationErrorMessage:
+          'Something went wrong while creating AI seal previews. Please try again.',
+      sealGenerationLimitTitle: 'Generation limit reached',
+      sealGenerationLimitMessage:
+          'You have used all generation attempts for this style set. Adjust the style before trying again.',
+      sealGenerationAttemptLabel: 'Attempts',
+      sealGenerationStyleDetails: 'Generation details',
+      sealGenerationErrorTip:
+          'Try again once. If it still fails, adjust the style or choose a simpler kanji.',
+      sealGenerationLimitTip:
+          'Choose a different balance, stroke weight, or kanji to start a fresh generation.',
+      adjustStyle: 'Adjust Style',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -711,6 +771,20 @@ const _localizedValues = {
       confirmStyle: 'スタイルを確定',
       sealStyleConfirmedTitle: 'スタイルを選択しました',
       sealStyleConfirmedMessage: 'このスタイルでAI印影生成へ進めます。',
+      generateSeal: '印影を生成',
+      sealGenerationLoadingTitle: '印影を生成中',
+      sealGenerationLoadingMessage: 'AI印影候補を3件作成しています...',
+      sealGenerationLoadingDetail: '漢字、スタイル、彫刻しやすさを確認しながらプレビューを保存しています。',
+      sealGenerationErrorTitle: '印影を生成できませんでした',
+      sealGenerationErrorMessage: 'AI印影候補の作成中に問題が発生しました。もう一度お試しください。',
+      sealGenerationLimitTitle: '再生成の上限に達しました',
+      sealGenerationLimitMessage:
+          'このスタイルで利用できる生成回数を使い切りました。スタイルを調整してから再度お試しください。',
+      sealGenerationAttemptLabel: '生成回数',
+      sealGenerationStyleDetails: '生成内容',
+      sealGenerationErrorTip: '一度再試行し、続けて失敗する場合はスタイルや漢字をよりシンプルにしてください。',
+      sealGenerationLimitTip: '余白感、線の太さ、または漢字を変えると新しく生成できます。',
+      adjustStyle: 'スタイルを調整',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

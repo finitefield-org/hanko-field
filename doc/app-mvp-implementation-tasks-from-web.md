@@ -901,7 +901,7 @@ MVPで後回し可能:
 | M05-T01 | `DES-006` | [x] スタイル選択固定UI | `features/design/presentation/` | Shape/Style/Stroke/Balanceを選べる |
 | M05-T02 | API | [x] AI印影生成API | `api/src/main.rs` | `POST /v1/seal-designs/generate` が3variantを返す |
 | M05-T03 | Storage | [x] 生成画像のStorage保存 | `api/src/main.rs` | `storage_path` と表示用URLを返す |
-| M05-T04 | `DES-007` `DES-012` `DES-015` | 生成中/失敗/上限状態 | `features/design/presentation/` | 再試行と上限表示がある |
+| M05-T04 | `DES-007` `DES-012` `DES-015` | [x] 生成中/失敗/上限状態 | `features/design/presentation/` | 再試行と上限表示がある |
 | M05-T05 | `DES-008` | 3候補選択 | `features/design/presentation/` | AI印影候補から1件選べる |
 | M05-T06 | `DES-009` | プレビュー詳細 | `features/design/presentation/` | 拡大確認後、保存または注文導線へ進める |
 
