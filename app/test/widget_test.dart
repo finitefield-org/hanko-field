@@ -21,6 +21,7 @@ void main() {
     WidgetTester tester, {
     Locale? locale,
     bool hasSeenOnboarding = true,
+    KanjiCandidatesGenerator? generateKanjiCandidates,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -29,6 +30,8 @@ void main() {
           hasSeenOnboardingResolver: () async => hasSeenOnboarding,
           markOnboardingSeen: () async {},
           splashMinimumDuration: Duration.zero,
+          generateKanjiCandidates:
+              generateKanjiCandidates ?? _successfulKanjiGenerator,
         ),
       ),
     );
@@ -164,7 +167,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('DES-001 starts name input and prepares candidate request', (
+  testWidgets('DES-004 calls kanji API and displays candidates', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(432, 912);
@@ -172,7 +175,16 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await pumpLaunchedApp(tester);
+    final apiCall = Completer<KanjiCandidatesResult>();
+    KanjiCandidatesRequest? capturedRequest;
+
+    await pumpLaunchedApp(
+      tester,
+      generateKanjiCandidates: (request) {
+        capturedRequest = request;
+        return apiCall.future;
+      },
+    );
 
     await tester.tap(find.text('Start Designing'));
     await tester.pumpAndSettle();
@@ -206,7 +218,6 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Suggest Kanji'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 260));
 
     expect(find.byType(KanjiSuggestionLoadingScreen), findsOneWidget);
     expect(find.text('Finding Kanji'), findsOneWidget);
@@ -216,6 +227,19 @@ void main() {
     );
     expect(find.text('Michael Smith'), findsWidgets);
     expect(find.text('Japanese style'), findsWidgets);
+    expect(capturedRequest?.realName, 'Michael Smith');
+    expect(capturedRequest?.reasonLanguage, 'en');
+    expect(capturedRequest?.kanjiStyle, KanjiNameStyle.japanese);
+
+    apiCall.complete(_kanjiResult(capturedRequest!));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KanjiSuggestionsScreen), findsOneWidget);
+    expect(find.text('Kanji Suggestions'), findsOneWidget);
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Misora'), findsOneWidget);
+    expect(find.text('A graceful two-character option.'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();
@@ -498,4 +522,31 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<KanjiCandidatesResult> _successfulKanjiGenerator(
+  KanjiCandidatesRequest request,
+) async {
+  return _kanjiResult(request);
+}
+
+KanjiCandidatesResult _kanjiResult(KanjiCandidatesRequest request) {
+  return KanjiCandidatesResult(
+    realName: request.realName,
+    reasonLanguage: request.reasonLanguage,
+    gender: request.gender,
+    kanjiStyle: request.kanjiStyle,
+    candidates: const [
+      KanjiCandidate(
+        kanji: '美空',
+        reading: 'Misora',
+        meaning: 'Beautiful sky',
+        impression: ['Elegant', 'Gentle'],
+        reason: 'A graceful two-character option.',
+        characterCount: 2,
+        strokeComplexity: 'medium',
+        engravingSuitability: 'high',
+      ),
+    ],
+  );
 }

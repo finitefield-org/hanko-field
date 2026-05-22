@@ -36,21 +36,26 @@ class HankoTabStackController {
   const HankoTabStackController._({
     required List<PageEntry> Function() readPages,
     required void Function(PageEntry page) pushPage,
+    required void Function(PageEntry page) replaceTopPage,
     required VoidCallback popPage,
     required VoidCallback popToRootPage,
   }) : _readPages = readPages,
        _pushPage = pushPage,
+       _replaceTopPage = replaceTopPage,
        _popPage = popPage,
        _popToRootPage = popToRootPage;
 
   final List<PageEntry> Function() _readPages;
   final void Function(PageEntry page) _pushPage;
+  final void Function(PageEntry page) _replaceTopPage;
   final VoidCallback _popPage;
   final VoidCallback _popToRootPage;
 
   List<PageEntry> get pages => _readPages();
 
   void push(PageEntry page) => _pushPage(page);
+
+  void replaceTop(PageEntry page) => _replaceTopPage(page);
 
   void pop() => _popPage();
 
@@ -147,6 +152,14 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
           return;
         }
         _setPagesForTab(tab.tab, [...pages, page]);
+      },
+      replaceTopPage: (page) {
+        final pages = readPages();
+        if (pages.isEmpty) {
+          _setPagesForTab(tab.tab, [page]);
+          return;
+        }
+        _setPagesForTab(tab.tab, [...pages.take(pages.length - 1), page]);
       },
       popPage: () {
         final pages = readPages();

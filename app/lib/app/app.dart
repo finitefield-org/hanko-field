@@ -17,12 +17,14 @@ class HankoApp extends StatelessWidget {
     this.hasSeenOnboardingResolver = _defaultHasSeenOnboardingResolver,
     this.markOnboardingSeen = _defaultMarkOnboardingSeen,
     this.splashMinimumDuration = const Duration(milliseconds: 700),
+    this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
   });
 
   final Locale? locale;
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
   final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
+  final KanjiCandidatesGenerator generateKanjiCandidates;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,7 @@ class HankoApp extends StatelessWidget {
         hasSeenOnboardingResolver: hasSeenOnboardingResolver,
         markOnboardingSeen: markOnboardingSeen,
         splashMinimumDuration: splashMinimumDuration,
+        generateKanjiCandidates: generateKanjiCandidates,
       ),
     );
   }
@@ -57,11 +60,13 @@ class _AppLaunchGate extends StatefulWidget {
     required this.hasSeenOnboardingResolver,
     required this.markOnboardingSeen,
     required this.splashMinimumDuration,
+    required this.generateKanjiCandidates,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
   final OnboardingCompletionWriter markOnboardingSeen;
   final Duration splashMinimumDuration;
+  final KanjiCandidatesGenerator generateKanjiCandidates;
 
   @override
   State<_AppLaunchGate> createState() => _AppLaunchGateState();
@@ -81,7 +86,9 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
       _AppLaunchStage.onboarding => OnboardingScreen(
         onComplete: _completeOnboarding,
       ),
-      _AppLaunchStage.shell => const BottomNavigationShell(),
+      _AppLaunchStage.shell => BottomNavigationShell(
+        generateKanjiCandidates: widget.generateKanjiCandidates,
+      ),
     };
   }
 
@@ -104,10 +111,21 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
 }
 
 class BottomNavigationShell extends StatefulWidget {
-  const BottomNavigationShell({super.key});
+  const BottomNavigationShell({
+    super.key,
+    this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
+  });
+
+  final KanjiCandidatesGenerator generateKanjiCandidates;
 
   @override
   State<BottomNavigationShell> createState() => _BottomNavigationShellState();
+}
+
+class _KanjiSuggestionFailure {
+  const _KanjiSuggestionFailure({required this.request});
+
+  final KanjiCandidatesRequest request;
 }
 
 class _BottomNavigationShellState extends State<BottomNavigationShell> {
@@ -141,6 +159,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     name: '/design/name',
   );
   static const _designKanjiLoadingPageKey = 'DES-003-kanji-suggestion-loading';
+  static const _designKanjiSuggestionsPageKey = 'DES-004-kanji-suggestions';
+  static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
+  static const _designUnsupportedKanjiPageKey =
+      'DES-014-unsupported-kanji-result';
 
   var _pages = const <PageEntry>[_shellPage];
 
@@ -218,25 +240,89 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return NameInputScreen(
         onBack: stack.pop,
         onSubmit: (request) {
-          stack.push(
-            PageEntry(
-              key: _designKanjiLoadingPageKey,
-              name: '/design/kanji/loading',
-              data: request,
-            ),
-          );
+          stack.push(_kanjiLoadingPage(request));
         },
       );
     }
 
     if (page.key == _designKanjiLoadingPageKey &&
         pageData is KanjiCandidatesRequest) {
-      return KanjiSuggestionLoadingScreen(request: pageData, onBack: stack.pop);
+      return KanjiSuggestionLoadingScreen(
+        request: pageData,
+        generateCandidates: widget.generateKanjiCandidates,
+        onLoaded: (result) {
+          if (result.candidates.isEmpty) {
+            stack.replaceTop(_unsupportedKanjiPage(pageData));
+            return;
+          }
+          stack.replaceTop(_kanjiSuggestionsPage(result));
+        },
+        onError: (error) {
+          stack.replaceTop(_kanjiSuggestionErrorPage(pageData));
+        },
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designKanjiSuggestionsPageKey &&
+        pageData is KanjiCandidatesResult) {
+      return KanjiSuggestionsScreen(result: pageData, onBack: stack.pop);
+    }
+
+    if (page.key == _designKanjiErrorPageKey &&
+        pageData is _KanjiSuggestionFailure) {
+      return KanjiSuggestionErrorScreen(
+        request: pageData.request,
+        onRetry: () => stack.replaceTop(_kanjiLoadingPage(pageData.request)),
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designUnsupportedKanjiPageKey &&
+        pageData is KanjiCandidatesRequest) {
+      return UnsupportedKanjiResultScreen(
+        request: pageData,
+        onRetry: () => stack.replaceTop(_kanjiLoadingPage(pageData)),
+        onEditName: stack.pop,
+        onBack: stack.pop,
+      );
     }
 
     return DesignHomeScreen(
       onOpenSettings: _openSettings,
       onStartDesign: () => stack.push(_designNameInputPage),
+    );
+  }
+
+  PageEntry _kanjiLoadingPage(KanjiCandidatesRequest request) {
+    return PageEntry(
+      key: _designKanjiLoadingPageKey,
+      name: '/design/kanji/loading',
+      data: request,
+    );
+  }
+
+  PageEntry _kanjiSuggestionsPage(KanjiCandidatesResult result) {
+    return PageEntry(
+      key: _designKanjiSuggestionsPageKey,
+      name: '/design/kanji/suggestions',
+      data: result,
+    );
+  }
+
+  PageEntry _kanjiSuggestionErrorPage(KanjiCandidatesRequest request) {
+    return PageEntry(
+      key: _designKanjiErrorPageKey,
+      name: '/design/kanji/error',
+      data: _KanjiSuggestionFailure(request: request),
+    );
+  }
+
+  PageEntry _unsupportedKanjiPage(KanjiCandidatesRequest request) {
+    return PageEntry(
+      key: _designUnsupportedKanjiPageKey,
+      name: '/design/kanji/empty',
+      data: request,
     );
   }
 

@@ -91,6 +91,10 @@ class HankoLocalizations {
   String get designNoKanjiTip => _strings.designNoKanjiTip;
   String get tryAgain => _strings.tryAgain;
   String get back => _strings.back;
+  String get kanjiSuggestionsTitle => _strings.kanjiSuggestionsTitle;
+  String get kanjiSuggestionsMessage => _strings.kanjiSuggestionsMessage;
+  String get kanjiReadingLabel => _strings.kanjiReadingLabel;
+  String get selectKanji => _strings.selectKanji;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -217,6 +221,10 @@ class _HankoStrings {
     required this.designNoKanjiTip,
     required this.tryAgain,
     required this.back,
+    required this.kanjiSuggestionsTitle,
+    required this.kanjiSuggestionsMessage,
+    required this.kanjiReadingLabel,
+    required this.selectKanji,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -312,6 +320,10 @@ class _HankoStrings {
   final String designNoKanjiTip;
   final String tryAgain;
   final String back;
+  final String kanjiSuggestionsTitle;
+  final String kanjiSuggestionsMessage;
+  final String kanjiReadingLabel;
+  final String selectKanji;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -423,6 +435,10 @@ const _localizedValues = {
       designNoKanjiTip: 'Try a shorter name or nickname.',
       tryAgain: 'Try Again',
       back: 'Back',
+      kanjiSuggestionsTitle: 'Kanji Suggestions',
+      kanjiSuggestionsMessage: 'Choose the kanji that best fits your seal.',
+      kanjiReadingLabel: 'Reading',
+      selectKanji: 'Select Kanji',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -526,6 +542,10 @@ const _localizedValues = {
       designNoKanjiTip: 'より短い名前やニックネームをお試しください。',
       tryAgain: 'もう一度試す',
       back: '戻る',
+      kanjiSuggestionsTitle: '漢字候補',
+      kanjiSuggestionsMessage: '印鑑に使う漢字を選んでください。',
+      kanjiReadingLabel: '読み',
+      selectKanji: '漢字を選択',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

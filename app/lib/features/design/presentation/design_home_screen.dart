@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
+import '../data/kanji_candidates_repository.dart';
 import '../domain/kanji_candidate.dart';
 
 class DesignHomeScreen extends StatelessWidget {
@@ -276,15 +277,49 @@ class _NameInputScreenState extends State<NameInputScreen> {
   }
 }
 
-class KanjiSuggestionLoadingScreen extends StatelessWidget {
+class KanjiSuggestionLoadingScreen extends StatefulWidget {
   const KanjiSuggestionLoadingScreen({
     super.key,
     required this.request,
+    required this.generateCandidates,
+    required this.onLoaded,
+    required this.onError,
     required this.onBack,
   });
 
   final KanjiCandidatesRequest request;
+  final KanjiCandidatesGenerator generateCandidates;
+  final ValueChanged<KanjiCandidatesResult> onLoaded;
+  final ValueChanged<Object> onError;
   final VoidCallback onBack;
+
+  @override
+  State<KanjiSuggestionLoadingScreen> createState() =>
+      _KanjiSuggestionLoadingScreenState();
+}
+
+class _KanjiSuggestionLoadingScreenState
+    extends State<KanjiSuggestionLoadingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _loadCandidates();
+  }
+
+  Future<void> _loadCandidates() async {
+    try {
+      final result = await widget.generateCandidates(widget.request);
+      if (!mounted) {
+        return;
+      }
+      widget.onLoaded(result);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      widget.onError(error);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +327,7 @@ class KanjiSuggestionLoadingScreen extends StatelessWidget {
 
     return _DesignStepScaffold(
       title: l10n.designLoadingTitle,
-      onBack: onBack,
+      onBack: widget.onBack,
       children: [
         HankoSurfaceCard(
           padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
@@ -325,7 +360,52 @@ class KanjiSuggestionLoadingScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              _RequestSummaryCard(request: request),
+              _RequestSummaryCard(request: widget.request),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class KanjiSuggestionsScreen extends StatelessWidget {
+  const KanjiSuggestionsScreen({
+    super.key,
+    required this.result,
+    required this.onBack,
+  });
+
+  final KanjiCandidatesResult result;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.kanjiSuggestionsTitle,
+      onBack: onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: _SealMedallion(icon: Icons.auto_awesome)),
+              const SizedBox(height: 22),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
+              Text(
+                l10n.kanjiSuggestionsMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: 24),
+              for (final candidate in result.candidates) ...[
+                _KanjiCandidateCard(candidate: candidate),
+                const SizedBox(height: 14),
+              ],
             ],
           ),
         ),
@@ -369,6 +449,72 @@ class KanjiSuggestionErrorScreen extends StatelessWidget {
         const SizedBox(height: 22),
         _StateTipCard(message: l10n.designErrorTip),
       ],
+    );
+  }
+}
+
+class _KanjiCandidateCard extends StatelessWidget {
+  const _KanjiCandidateCard({required this.candidate});
+
+  final KanjiCandidate candidate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                color: HankoColors.medallion,
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox.square(
+                dimension: 74,
+                child: Center(
+                  child: Text(
+                    candidate.kanji,
+                    textAlign: TextAlign.center,
+                    style: HankoTextStyles.sectionTitle.copyWith(
+                      color: HankoColors.red,
+                      fontSize: candidate.kanji.length <= 1 ? 36 : 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.kanjiReadingLabel,
+                    style: HankoTextStyles.compactBody,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(candidate.reading, style: HankoTextStyles.cardTitle),
+                  if (candidate.reason.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(candidate.reason, style: HankoTextStyles.compactBody),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(Icons.chevron_right, color: HankoColors.gold, size: 26),
+          ],
+        ),
+      ),
     );
   }
 }
