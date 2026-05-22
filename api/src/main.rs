@@ -279,6 +279,8 @@ struct CreateOrderInput {
     listing_id: Option<String>,
     shipping: ShippingInput,
     contact: ContactInput,
+    customer_confirmation: Option<CustomerConfirmationInput>,
+    order_note: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -287,6 +289,34 @@ struct SealInput {
     line2: String,
     shape: String,
     font_key: String,
+    ai_generation_id: Option<String>,
+    ai_variant_id: Option<String>,
+    preview_image: Option<SealPreviewImageInput>,
+    style: Option<SealStyleInput>,
+}
+
+#[derive(Debug, Clone)]
+struct SealPreviewImageInput {
+    storage_path: String,
+    download_url: Option<String>,
+    width: Option<i64>,
+    height: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+struct SealStyleInput {
+    name: String,
+    stroke_weight: String,
+    balance: String,
+    prompt_summary: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct CustomerConfirmationInput {
+    kanji_and_design: bool,
+    custom_made_policy: bool,
+    confirmed_at: DateTime<Utc>,
+    confirmed_seal_text: String,
 }
 
 #[derive(Debug, Clone)]
@@ -646,6 +676,8 @@ struct CreateOrderRequest {
     listing_id: Option<String>,
     shipping: CreateOrderShippingRequest,
     contact: CreateOrderContactRequest,
+    customer_confirmation: Option<CreateOrderCustomerConfirmationRequest>,
+    order_note: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -655,6 +687,37 @@ struct CreateOrderSealRequest {
     line2: String,
     shape: String,
     font_key: String,
+    ai_generation_id: Option<String>,
+    ai_variant_id: Option<String>,
+    preview_image: Option<CreateOrderSealPreviewImageRequest>,
+    style: Option<CreateOrderSealStyleRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateOrderSealPreviewImageRequest {
+    storage_path: String,
+    download_url: Option<String>,
+    width: Option<i64>,
+    height: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateOrderSealStyleRequest {
+    name: String,
+    stroke_weight: String,
+    balance: String,
+    prompt_summary: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateOrderCustomerConfirmationRequest {
+    kanji_and_design: bool,
+    custom_made_policy: bool,
+    confirmed_at: String,
+    confirmed_seal_text: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -3071,23 +3134,62 @@ fn build_order_fields(
     let pricing_currency =
         normalize_currency_code(currency).unwrap_or_else(|| DEFAULT_CURRENCY.to_owned());
 
-    btree_from_pairs(vec![
+    let mut seal_fields = btree_from_pairs(vec![
+        ("line1", fs_string(input.seal.line1.clone())),
+        ("line2", fs_string(input.seal.line2.clone())),
+        ("shape", fs_string(input.seal.shape.clone())),
+        ("font_key", fs_string(font.key.clone())),
+        ("font_label", fs_string(font.label.clone())),
+        ("font_version", fs_int(font.version)),
+    ]);
+
+    if let Some(ai_generation_id) = &input.seal.ai_generation_id {
+        seal_fields.insert(
+            "ai_generation_id".to_owned(),
+            fs_string(ai_generation_id.clone()),
+        );
+    }
+    if let Some(ai_variant_id) = &input.seal.ai_variant_id {
+        seal_fields.insert("ai_variant_id".to_owned(), fs_string(ai_variant_id.clone()));
+    }
+    if let Some(preview_image) = &input.seal.preview_image {
+        let mut preview_fields = btree_from_pairs(vec![(
+            "storage_path",
+            fs_string(preview_image.storage_path.clone()),
+        )]);
+        if let Some(download_url) = &preview_image.download_url {
+            preview_fields.insert("download_url".to_owned(), fs_string(download_url.clone()));
+        }
+        if let Some(width) = preview_image.width {
+            preview_fields.insert("width".to_owned(), fs_int(width));
+        }
+        if let Some(height) = preview_image.height {
+            preview_fields.insert("height".to_owned(), fs_int(height));
+        }
+        seal_fields.insert("preview_image".to_owned(), fs_map(preview_fields));
+    }
+    if let Some(style) = &input.seal.style {
+        let mut style_fields = btree_from_pairs(vec![
+            ("name", fs_string(style.name.clone())),
+            ("stroke_weight", fs_string(style.stroke_weight.clone())),
+            ("balance", fs_string(style.balance.clone())),
+        ]);
+        if let Some(prompt_summary) = &style.prompt_summary {
+            style_fields.insert(
+                "prompt_summary".to_owned(),
+                fs_string(prompt_summary.clone()),
+            );
+        }
+        seal_fields.insert("style".to_owned(), fs_map(style_fields));
+    }
+
+    let mut fields = btree_from_pairs(vec![
         ("order_no", fs_string(order_no)),
         ("channel", fs_string(input.channel.clone())),
         ("locale", fs_string(input.locale.clone())),
         ("status", fs_string("pending_payment")),
         ("status_updated_at", fs_timestamp(now)),
-        (
-            "seal",
-            fs_map(btree_from_pairs(vec![
-                ("line1", fs_string(input.seal.line1.clone())),
-                ("line2", fs_string(input.seal.line2.clone())),
-                ("shape", fs_string(input.seal.shape.clone())),
-                ("font_key", fs_string(font.key.clone())),
-                ("font_label", fs_string(font.label.clone())),
-                ("font_version", fs_int(font.version)),
-            ])),
-        ),
+        ("seal", fs_map(seal_fields)),
         (
             "listing",
             fs_map(stone_listing_snapshot_fields(listing, subtotal)),
@@ -3153,7 +3255,34 @@ fn build_order_fields(
         ("terms_agreed", fs_bool(input.terms_agreed)),
         ("created_at", fs_timestamp(now)),
         ("updated_at", fs_timestamp(now)),
-    ])
+    ]);
+
+    if let Some(customer_confirmation) = &input.customer_confirmation {
+        fields.insert(
+            "customer_confirmation".to_owned(),
+            fs_map(btree_from_pairs(vec![
+                (
+                    "kanji_and_design",
+                    fs_bool(customer_confirmation.kanji_and_design),
+                ),
+                (
+                    "custom_made_policy",
+                    fs_bool(customer_confirmation.custom_made_policy),
+                ),
+                ("confirmed_at", fs_timestamp(now)),
+                (
+                    "confirmed_seal_text",
+                    fs_string(customer_confirmation.confirmed_seal_text.clone()),
+                ),
+            ])),
+        );
+    }
+
+    if let Some(order_note) = &input.order_note {
+        fields.insert("order_note".to_owned(), fs_string(order_note.clone()));
+    }
+
+    fields
 }
 
 async fn upsert_named_document(
@@ -3382,6 +3511,7 @@ fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned);
+    let order_note = normalize_optional_string(input.order_note);
 
     CreateOrderInput {
         channel: input.channel.trim().to_lowercase(),
@@ -3393,6 +3523,23 @@ fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
             line2: input.seal.line2.trim().to_owned(),
             shape: input.seal.shape.trim().to_lowercase(),
             font_key: input.seal.font_key.trim().to_owned(),
+            ai_generation_id: normalize_optional_string(input.seal.ai_generation_id),
+            ai_variant_id: normalize_optional_string(input.seal.ai_variant_id),
+            preview_image: input
+                .seal
+                .preview_image
+                .map(|preview_image| SealPreviewImageInput {
+                    storage_path: preview_image.storage_path.trim().to_owned(),
+                    download_url: normalize_optional_string(preview_image.download_url),
+                    width: preview_image.width,
+                    height: preview_image.height,
+                }),
+            style: input.seal.style.map(|style| SealStyleInput {
+                name: style.name.trim().to_lowercase(),
+                stroke_weight: style.stroke_weight.trim().to_lowercase(),
+                balance: style.balance.trim().to_lowercase(),
+                prompt_summary: normalize_optional_string(style.prompt_summary),
+            }),
         },
         listing_id,
         shipping: ShippingInput {
@@ -3409,23 +3556,74 @@ fn normalize_create_order_input(input: CreateOrderInput) -> CreateOrderInput {
             email: input.contact.email.trim().to_owned(),
             preferred_locale: input.contact.preferred_locale.trim().to_lowercase(),
         },
+        customer_confirmation: input.customer_confirmation.map(|customer_confirmation| {
+            CustomerConfirmationInput {
+                kanji_and_design: customer_confirmation.kanji_and_design,
+                custom_made_policy: customer_confirmation.custom_made_policy,
+                confirmed_at: customer_confirmation.confirmed_at,
+                confirmed_seal_text: customer_confirmation.confirmed_seal_text.trim().to_owned(),
+            }
+        }),
+        order_note,
     }
 }
 
+fn normalize_optional_string(value: Option<String>) -> Option<String> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
 fn hash_order_request(input: &CreateOrderInput) -> Result<String> {
-    let payload = serde_json::to_vec(&json!({
-        "channel": input.channel,
-        "locale": input.locale,
-        "idempotency_key": input.idempotency_key,
-        "terms_agreed": input.terms_agreed,
-        "seal": {
-            "line1": input.seal.line1,
-            "line2": input.seal.line2,
-            "shape": input.seal.shape,
-            "font_key": input.seal.font_key,
-        },
-        "listing_id": input.listing_id.clone(),
-        "shipping": {
+    let mut seal = serde_json::Map::new();
+    seal.insert("line1".to_owned(), json!(input.seal.line1.clone()));
+    seal.insert("line2".to_owned(), json!(input.seal.line2.clone()));
+    seal.insert("shape".to_owned(), json!(input.seal.shape.clone()));
+    seal.insert("font_key".to_owned(), json!(input.seal.font_key.clone()));
+    if let Some(ai_generation_id) = &input.seal.ai_generation_id {
+        seal.insert("ai_generation_id".to_owned(), json!(ai_generation_id));
+    }
+    if let Some(ai_variant_id) = &input.seal.ai_variant_id {
+        seal.insert("ai_variant_id".to_owned(), json!(ai_variant_id));
+    }
+    if let Some(preview_image) = &input.seal.preview_image {
+        seal.insert(
+            "preview_image".to_owned(),
+            json!({
+                "storage_path": preview_image.storage_path,
+                "download_url": preview_image.download_url,
+                "width": preview_image.width,
+                "height": preview_image.height,
+            }),
+        );
+    }
+    if let Some(style) = &input.seal.style {
+        seal.insert(
+            "style".to_owned(),
+            json!({
+                "name": style.name,
+                "stroke_weight": style.stroke_weight,
+                "balance": style.balance,
+                "prompt_summary": style.prompt_summary,
+            }),
+        );
+    }
+
+    let mut payload = serde_json::Map::new();
+    payload.insert("channel".to_owned(), json!(input.channel.clone()));
+    payload.insert("locale".to_owned(), json!(input.locale.clone()));
+    payload.insert(
+        "idempotency_key".to_owned(),
+        json!(input.idempotency_key.clone()),
+    );
+    payload.insert("terms_agreed".to_owned(), json!(input.terms_agreed));
+    payload.insert("seal".to_owned(), JsonValue::Object(seal));
+    payload.insert("listing_id".to_owned(), json!(input.listing_id.clone()));
+    payload.insert(
+        "shipping".to_owned(),
+        json!({
             "country_code": input.shipping.country_code,
             "recipient_name": input.shipping.recipient_name,
             "phone": input.shipping.phone,
@@ -3434,12 +3632,33 @@ fn hash_order_request(input: &CreateOrderInput) -> Result<String> {
             "city": input.shipping.city,
             "address_line1": input.shipping.address_line1,
             "address_line2": input.shipping.address_line2,
-        },
-        "contact": {
+        }),
+    );
+    payload.insert(
+        "contact".to_owned(),
+        json!({
             "email": input.contact.email,
             "preferred_locale": input.contact.preferred_locale,
-        }
-    }))?;
+        }),
+    );
+    if let Some(customer_confirmation) = &input.customer_confirmation {
+        payload.insert(
+            "customer_confirmation".to_owned(),
+            json!({
+                "kanji_and_design": customer_confirmation.kanji_and_design,
+                "custom_made_policy": customer_confirmation.custom_made_policy,
+                "confirmed_at": customer_confirmation
+                    .confirmed_at
+                    .to_rfc3339_opts(SecondsFormat::Secs, true),
+                "confirmed_seal_text": customer_confirmation.confirmed_seal_text,
+            }),
+        );
+    }
+    if let Some(order_note) = &input.order_note {
+        payload.insert("order_note".to_owned(), json!(order_note));
+    }
+
+    let payload = serde_json::to_vec(&JsonValue::Object(payload))?;
 
     let mut hasher = Sha256::new();
     hasher.update(payload);
@@ -5047,6 +5266,32 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
         bail!("seal.font_key is required");
     }
 
+    let ai_generation_id = normalize_optional_string(request.seal.ai_generation_id);
+    if channel == "app" && ai_generation_id.is_none() {
+        bail!("seal.ai_generation_id is required for app channel");
+    }
+
+    let ai_variant_id = normalize_optional_string(request.seal.ai_variant_id);
+    if channel == "app" && ai_variant_id.is_none() {
+        bail!("seal.ai_variant_id is required for app channel");
+    }
+
+    let preview_image =
+        validate_create_order_seal_preview_image(request.seal.preview_image, channel.as_str())?;
+    let style = validate_create_order_seal_style(request.seal.style, channel.as_str())?;
+    let customer_confirmation = validate_create_order_customer_confirmation(
+        request.customer_confirmation,
+        channel.as_str(),
+        &format!("{line1}{line2}"),
+    )?;
+
+    let order_note = normalize_optional_string(request.order_note);
+    if let Some(order_note) = &order_note
+        && order_note.chars().count() > 1000
+    {
+        bail!("order_note must be 1000 characters or fewer");
+    }
+
     let listing_id = request.listing_id.unwrap_or_default().trim().to_owned();
     let listing_id = if listing_id.is_empty() {
         None
@@ -5093,6 +5338,10 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
             line2,
             shape,
             font_key,
+            ai_generation_id,
+            ai_variant_id,
+            preview_image,
+            style,
         },
         listing_id,
         shipping: ShippingInput {
@@ -5109,7 +5358,151 @@ fn validate_create_order_request(request: CreateOrderRequest) -> Result<CreateOr
             email,
             preferred_locale,
         },
+        customer_confirmation,
+        order_note,
     })
+}
+
+fn validate_create_order_seal_preview_image(
+    request: Option<CreateOrderSealPreviewImageRequest>,
+    channel: &str,
+) -> Result<Option<SealPreviewImageInput>> {
+    let Some(request) = request else {
+        if channel == "app" {
+            bail!("seal.preview_image is required for app channel");
+        }
+        return Ok(None);
+    };
+
+    let storage_path = request.storage_path.trim().to_owned();
+    validate_seal_preview_storage_path(&storage_path)?;
+
+    let download_url = normalize_optional_string(request.download_url);
+    if let Some(download_url) = &download_url
+        && download_url.chars().count() > 2048
+    {
+        bail!("seal.preview_image.download_url must be 2048 characters or fewer");
+    }
+
+    validate_optional_positive_dimension("seal.preview_image.width", request.width)?;
+    validate_optional_positive_dimension("seal.preview_image.height", request.height)?;
+
+    Ok(Some(SealPreviewImageInput {
+        storage_path,
+        download_url,
+        width: request.width,
+        height: request.height,
+    }))
+}
+
+fn validate_create_order_seal_style(
+    request: Option<CreateOrderSealStyleRequest>,
+    channel: &str,
+) -> Result<Option<SealStyleInput>> {
+    let Some(request) = request else {
+        if channel == "app" {
+            bail!("seal.style is required for app channel");
+        }
+        return Ok(None);
+    };
+
+    let name = request.name.trim().to_lowercase();
+    if !matches!(name.as_str(), "traditional" | "elegant" | "soft" | "bold") {
+        bail!("seal.style.name must be one of traditional, elegant, soft, or bold");
+    }
+
+    let stroke_weight = request.stroke_weight.trim().to_lowercase();
+    if !matches!(stroke_weight.as_str(), "standard" | "bold") {
+        bail!("seal.style.stroke_weight must be one of standard or bold");
+    }
+
+    let balance = request.balance.trim().to_lowercase();
+    if !matches!(balance.as_str(), "airy" | "balanced" | "dense") {
+        bail!("seal.style.balance must be one of airy, balanced, or dense");
+    }
+
+    let prompt_summary = normalize_optional_string(request.prompt_summary);
+    if let Some(prompt_summary) = &prompt_summary
+        && prompt_summary.chars().count() > 400
+    {
+        bail!("seal.style.prompt_summary must be 400 characters or fewer");
+    }
+
+    Ok(Some(SealStyleInput {
+        name,
+        stroke_weight,
+        balance,
+        prompt_summary,
+    }))
+}
+
+fn validate_create_order_customer_confirmation(
+    request: Option<CreateOrderCustomerConfirmationRequest>,
+    channel: &str,
+    expected_seal_text: &str,
+) -> Result<Option<CustomerConfirmationInput>> {
+    let Some(request) = request else {
+        if channel == "app" {
+            bail!("customer_confirmation is required for app channel");
+        }
+        return Ok(None);
+    };
+
+    if !request.kanji_and_design {
+        bail!("customer_confirmation.kanji_and_design must be true");
+    }
+    if !request.custom_made_policy {
+        bail!("customer_confirmation.custom_made_policy must be true");
+    }
+
+    let confirmed_at = DateTime::parse_from_rfc3339(request.confirmed_at.trim())
+        .map_err(|_| anyhow!("customer_confirmation.confirmed_at must be ISO 8601 timestamp"))?
+        .with_timezone(&Utc);
+
+    let confirmed_seal_text = request.confirmed_seal_text.trim().to_owned();
+    if confirmed_seal_text != expected_seal_text {
+        bail!("customer_confirmation.confirmed_seal_text must match seal.line1 + seal.line2");
+    }
+
+    Ok(Some(CustomerConfirmationInput {
+        kanji_and_design: request.kanji_and_design,
+        custom_made_policy: request.custom_made_policy,
+        confirmed_at,
+        confirmed_seal_text,
+    }))
+}
+
+fn validate_seal_preview_storage_path(storage_path: &str) -> Result<()> {
+    const ALLOWED_PREFIX: &str = "seal_designs/";
+
+    if storage_path.is_empty() {
+        bail!("seal.preview_image.storage_path is required");
+    }
+    if !storage_path.starts_with(ALLOWED_PREFIX) {
+        bail!("seal.preview_image.storage_path must be under seal_designs/");
+    }
+    if storage_path.len() == ALLOWED_PREFIX.len() {
+        bail!("seal.preview_image.storage_path must include an object name");
+    }
+    if storage_path.starts_with('/')
+        || storage_path.contains('\\')
+        || storage_path.contains("://")
+        || storage_path.contains('?')
+        || storage_path.contains('#')
+        || storage_path.split('/').any(|segment| segment == "..")
+    {
+        bail!("seal.preview_image.storage_path must be a relative Firebase Storage path");
+    }
+    Ok(())
+}
+
+fn validate_optional_positive_dimension(field_name: &str, value: Option<i64>) -> Result<()> {
+    if let Some(value) = value
+        && !(1..=4096).contains(&value)
+    {
+        bail!("{field_name} must be between 1 and 4096");
+    }
+    Ok(())
 }
 
 fn require_non_empty(field_name: &str, raw: &str) -> Result<()> {
@@ -6308,6 +6701,59 @@ mod tests {
         );
     }
 
+    fn valid_app_create_order_request() -> CreateOrderRequest {
+        CreateOrderRequest {
+            channel: "app".to_owned(),
+            locale: "en".to_owned(),
+            idempotency_key: "demo_key_123".to_owned(),
+            terms_agreed: true,
+            seal: CreateOrderSealRequest {
+                line1: "美".to_owned(),
+                line2: "空".to_owned(),
+                shape: "square".to_owned(),
+                font_key: "ai_generated_seal".to_owned(),
+                ai_generation_id: Some("seal_request_001".to_owned()),
+                ai_variant_id: Some("seal_variant_001".to_owned()),
+                preview_image: Some(CreateOrderSealPreviewImageRequest {
+                    storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
+                    download_url: Some(
+                        "https://firebasestorage.googleapis.com/v0/b/example/o/seal.png".to_owned(),
+                    ),
+                    width: Some(1024),
+                    height: Some(1024),
+                }),
+                style: Some(CreateOrderSealStyleRequest {
+                    name: "elegant".to_owned(),
+                    stroke_weight: "standard".to_owned(),
+                    balance: "balanced".to_owned(),
+                    prompt_summary: Some("Elegant, standard stroke, balanced spacing.".to_owned()),
+                }),
+            },
+            listing_id: Some("stone_listing_001".to_owned()),
+            shipping: CreateOrderShippingRequest {
+                country_code: "us".to_owned(),
+                recipient_name: "Michael Smith".to_owned(),
+                phone: "+1-000-000-0000".to_owned(),
+                postal_code: "10001".to_owned(),
+                state: "NY".to_owned(),
+                city: "New York".to_owned(),
+                address_line1: "123 Example Street".to_owned(),
+                address_line2: "Apt 1".to_owned(),
+            },
+            contact: CreateOrderContactRequest {
+                email: "customer@example.com".to_owned(),
+                preferred_locale: "en".to_owned(),
+            },
+            customer_confirmation: Some(CreateOrderCustomerConfirmationRequest {
+                kanji_and_design: true,
+                custom_made_policy: true,
+                confirmed_at: "2026-05-21T11:00:00Z".to_owned(),
+                confirmed_seal_text: "美空".to_owned(),
+            }),
+            order_note: Some("Optional note".to_owned()),
+        }
+    }
+
     #[test]
     fn validate_create_order_request_accepts_valid_payload() {
         let request = CreateOrderRequest {
@@ -6320,6 +6766,10 @@ mod tests {
                 line2: "太郎".to_owned(),
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
+                ai_generation_id: None,
+                ai_variant_id: None,
+                preview_image: None,
+                style: None,
             },
             listing_id: Some("rose_quartz_01".to_owned()),
             shipping: CreateOrderShippingRequest {
@@ -6336,10 +6786,149 @@ mod tests {
                 email: "taro@example.com".to_owned(),
                 preferred_locale: "ja".to_owned(),
             },
+            customer_confirmation: None,
+            order_note: None,
         };
 
         let input = validate_create_order_request(request).expect("request must be valid");
         assert_eq!(input.shipping.country_code, "JP");
+    }
+
+    #[test]
+    fn validate_create_order_request_accepts_app_payload_with_ai_metadata() {
+        let input =
+            validate_create_order_request(valid_app_create_order_request()).expect("request valid");
+
+        assert_eq!(input.channel, "app");
+        assert_eq!(input.seal.font_key, "ai_generated_seal");
+        assert_eq!(
+            input.seal.ai_generation_id.as_deref(),
+            Some("seal_request_001")
+        );
+        assert_eq!(
+            input.seal.ai_variant_id.as_deref(),
+            Some("seal_variant_001")
+        );
+        let preview_image = input.seal.preview_image.as_ref().expect("preview image");
+        assert_eq!(
+            preview_image.storage_path,
+            "seal_designs/seal_request_001/seal_variant_001.png"
+        );
+        let style = input.seal.style.as_ref().expect("style");
+        assert_eq!(style.name, "elegant");
+        assert_eq!(style.stroke_weight, "standard");
+        assert_eq!(style.balance, "balanced");
+        assert_eq!(
+            input
+                .customer_confirmation
+                .as_ref()
+                .map(|value| value.confirmed_seal_text.as_str()),
+            Some("美空")
+        );
+        assert_eq!(input.order_note.as_deref(), Some("Optional note"));
+    }
+
+    #[test]
+    fn validate_create_order_request_rejects_app_payload_without_customer_confirmation() {
+        let mut request = valid_app_create_order_request();
+        request.customer_confirmation = None;
+
+        assert!(validate_create_order_request(request).is_err());
+    }
+
+    #[test]
+    fn validate_create_order_request_rejects_app_payload_without_preview_storage_path_prefix() {
+        let mut request = valid_app_create_order_request();
+        request
+            .seal
+            .preview_image
+            .as_mut()
+            .expect("preview image")
+            .storage_path = "https://example.com/seal.png".to_owned();
+
+        assert!(validate_create_order_request(request).is_err());
+    }
+
+    #[test]
+    fn validate_create_order_request_rejects_app_payload_with_fine_stroke() {
+        let mut request = valid_app_create_order_request();
+        request.seal.style.as_mut().expect("style").stroke_weight = "fine".to_owned();
+
+        assert!(validate_create_order_request(request).is_err());
+    }
+
+    #[test]
+    fn build_order_fields_saves_app_ai_metadata_and_customer_confirmation() {
+        let input =
+            validate_create_order_request(valid_app_create_order_request()).expect("request valid");
+        let font = Font {
+            key: "ai_generated_seal".to_owned(),
+            label: "AI generated seal preview".to_owned(),
+            font_family: "system".to_owned(),
+            kanji_style: "japanese".to_owned(),
+            version: 1,
+        };
+        let country = Country {
+            code: "US".to_owned(),
+            label_i18n: HashMap::from([("en".to_owned(), "United States".to_owned())]),
+            shipping_fee_by_currency: HashMap::from([("USD".to_owned(), 600)]),
+            version: 1,
+        };
+        let now = DateTime::parse_from_rfc3339("2026-05-21T11:30:00Z")
+            .expect("timestamp")
+            .with_timezone(&Utc);
+
+        let fields = build_order_fields(
+            &input,
+            &font,
+            None,
+            &country,
+            "HF-20260521-0001",
+            12000,
+            600,
+            0,
+            0,
+            12600,
+            "USD",
+            now,
+        );
+
+        let seal = read_map_field(&fields, "seal");
+        assert_eq!(
+            read_string_field(&seal, "ai_generation_id"),
+            "seal_request_001"
+        );
+        assert_eq!(
+            read_string_field(&seal, "ai_variant_id"),
+            "seal_variant_001"
+        );
+        let preview_image = read_map_field(&seal, "preview_image");
+        assert_eq!(
+            read_string_field(&preview_image, "storage_path"),
+            "seal_designs/seal_request_001/seal_variant_001.png"
+        );
+        let style = read_map_field(&seal, "style");
+        assert_eq!(read_string_field(&style, "name"), "elegant");
+        assert_eq!(read_string_field(&style, "stroke_weight"), "standard");
+        assert_eq!(read_string_field(&style, "balance"), "balanced");
+        let customer_confirmation = read_map_field(&fields, "customer_confirmation");
+        assert_eq!(
+            read_bool_field(&customer_confirmation, "kanji_and_design"),
+            Some(true)
+        );
+        assert_eq!(
+            read_bool_field(&customer_confirmation, "custom_made_policy"),
+            Some(true)
+        );
+        assert_eq!(
+            read_timestamp_field(&customer_confirmation, "confirmed_at"),
+            Some(now)
+        );
+        assert_eq!(
+            read_string_field(&customer_confirmation, "confirmed_seal_text"),
+            "美空"
+        );
+        assert_eq!(read_string_field(&fields, "order_note"), "Optional note");
     }
 
     #[test]
@@ -6354,6 +6943,10 @@ mod tests {
                 line2: "太郎".to_owned(),
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
+                ai_generation_id: None,
+                ai_variant_id: None,
+                preview_image: None,
+                style: None,
             },
             listing_id: None,
             shipping: CreateOrderShippingRequest {
@@ -6370,6 +6963,8 @@ mod tests {
                 email: "taro@example.com".to_owned(),
                 preferred_locale: "ja".to_owned(),
             },
+            customer_confirmation: None,
+            order_note: None,
         };
 
         assert!(validate_create_order_request(request).is_err());
@@ -6387,6 +6982,10 @@ mod tests {
                 line2: "".to_owned(),
                 shape: "square".to_owned(),
                 font_key: "zen_maru_gothic".to_owned(),
+                ai_generation_id: None,
+                ai_variant_id: None,
+                preview_image: None,
+                style: None,
             },
             listing_id: Some("rose_quartz_01".to_owned()),
             shipping: CreateOrderShippingRequest {
@@ -6403,6 +7002,8 @@ mod tests {
                 email: "taro@example.com".to_owned(),
                 preferred_locale: "ja".to_owned(),
             },
+            customer_confirmation: None,
+            order_note: None,
         };
 
         assert!(validate_create_order_request(request).is_err());

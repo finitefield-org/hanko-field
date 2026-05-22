@@ -944,7 +944,7 @@ MVPで後回し可能:
 | M09-T01 | `CHK-001` `CHK-002` `CHK-003` `CHK-004` | [x] Checkout入力 | `features/order/presentation/` | 連絡先、配送先、注文メモを入力 |
 | M09-T02 | `CHK-005` | [x] 入力不備表示 | `features/order/presentation/` | 不備をまとめて表示し、該当入力へ戻れる |
 | M09-T03 | `CHK-006` `CHK-007` | [x] 注文前確認/同意 | `features/order/presentation/` | 漢字/印影確認とcustom-made確認が必須 |
-| M09-T04 | API | app注文用Request拡張 | `api/src/main.rs` | app注文でAI印影と顧客確認を保存 |
+| M09-T04 | API | [x] app注文用Request拡張 | `api/src/main.rs` | app注文でAI印影と顧客確認を保存 |
 | M09-T05 | API | web注文互換 | `api/src/main.rs`, `web/src/main.rs` | 既存Web注文が壊れない |
 | M09-T06 | seed/data | AI生成印影用font record追加 | `api/src/bin/seed_catalog.rs` または既存seed運用 | `fonts/ai_generated_seal` がactiveで作成され、APIの既存font lookupを通る |
 | M09-T07 | `CHK-008` | Checkout Session作成中 | `features/order/presentation/` | 注文作成とSession作成中を表示 |
