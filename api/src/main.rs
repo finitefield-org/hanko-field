@@ -15,6 +15,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use chrono::{DateTime, Duration, FixedOffset, SecondsFormat, Utc};
 use firebase_sdk_rust::firebase_firestore::{
     CommitRequest, CreateDocumentOptions, Document, FirebaseFirestoreClient,
@@ -40,7 +41,9 @@ const DEFAULT_STRIPE_CHECKOUT_SUCCESS_URL: &str =
 const DEFAULT_STRIPE_CHECKOUT_CANCEL_URL: &str = "http://127.0.0.1:3052/payment/failure";
 const STRIPE_CHECKOUT_SESSIONS_URL: &str = "https://api.stripe.com/v1/checkout/sessions";
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS: i64 = 5 * 60;
+const STORAGE_SCOPE: &str = "https://www.googleapis.com/auth/devstorage.read_write";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
+const DEFAULT_GEMINI_IMAGE_MODEL: &str = "gemini-2.5-flash-image";
 const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
@@ -58,6 +61,7 @@ struct AppConfig {
     stripe_checkout_cancel_url: String,
     gemini_api_key: String,
     gemini_model: String,
+    gemini_image_model: String,
     gemini_base_url: String,
     credentials_file: Option<String>,
 }
@@ -83,6 +87,7 @@ struct StripeCheckoutConfig {
 struct GeminiClientConfig {
     api_key: String,
     model: String,
+    image_model: String,
     base_url: String,
 }
 
@@ -624,6 +629,12 @@ struct SealDesignVariant {
     height: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GeneratedSealDesignImage {
+    content_type: String,
+    bytes: Vec<u8>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CreateOrderRequest {
@@ -752,6 +763,7 @@ async fn run() -> Result<()> {
         gemini: GeminiClientConfig {
             api_key: cfg.gemini_api_key,
             model: cfg.gemini_model,
+            image_model: cfg.gemini_image_model,
             base_url: cfg.gemini_base_url,
         },
         http_client,
@@ -841,6 +853,9 @@ fn load_config() -> Result<AppConfig> {
     let gemini_model = first_non_empty(&[std::env::var("API_GEMINI_MODEL").ok()])
         .unwrap_or_else(|| DEFAULT_GEMINI_MODEL.to_owned());
 
+    let gemini_image_model = first_non_empty(&[std::env::var("API_GEMINI_IMAGE_MODEL").ok()])
+        .unwrap_or_else(|| DEFAULT_GEMINI_IMAGE_MODEL.to_owned());
+
     let gemini_base_url = first_non_empty(&[std::env::var("API_GEMINI_BASE_URL").ok()])
         .unwrap_or_else(|| "https://generativelanguage.googleapis.com".to_owned());
 
@@ -859,6 +874,7 @@ fn load_config() -> Result<AppConfig> {
         stripe_checkout_cancel_url,
         gemini_api_key,
         gemini_model,
+        gemini_image_model,
         gemini_base_url,
         credentials_file,
     })
@@ -1322,6 +1338,27 @@ async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes
 
     let request_id = format!("seal_request_{}", Uuid::new_v4().simple());
     let variants = build_seal_design_variants(&state.storage_assets_bucket, &request_id, &labels);
+
+    let images = match generate_seal_design_images_with_gemini(&state, &input, &variants).await {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("failed to generate seal design images with gemini: {err:#}");
+            return error_response(
+                StatusCode::BAD_GATEWAY,
+                "gemini_generation_failed",
+                "failed to generate seal design images",
+            );
+        }
+    };
+
+    if let Err(err) = upload_seal_design_images_to_storage(&state, &variants, &images).await {
+        eprintln!("failed to upload seal design images to storage: {err:#}");
+        return error_response(
+            StatusCode::BAD_GATEWAY,
+            "storage_upload_failed",
+            "failed to save seal design images",
+        );
+    }
 
     json_response(
         StatusCode::OK,
@@ -3774,6 +3811,272 @@ fn build_seal_design_variants(
         .collect()
 }
 
+async fn generate_seal_design_images_with_gemini(
+    state: &AppState,
+    input: &GenerateSealDesignsInput,
+    variants: &[SealDesignVariant],
+) -> Result<Vec<GeneratedSealDesignImage>> {
+    let mut images = Vec::with_capacity(variants.len());
+    for variant in variants {
+        let image = generate_seal_design_image_with_gemini(state, input, variant)
+            .await
+            .with_context(|| format!("failed to generate image for {}", variant.id))?;
+        images.push(image);
+    }
+    Ok(images)
+}
+
+async fn generate_seal_design_image_with_gemini(
+    state: &AppState,
+    input: &GenerateSealDesignsInput,
+    variant: &SealDesignVariant,
+) -> Result<GeneratedSealDesignImage> {
+    let request_body = build_seal_design_image_request_body(input, variant);
+
+    let endpoint = format!(
+        "{}/v1beta/models/{}:generateContent",
+        state.gemini.base_url.trim_end_matches('/'),
+        state.gemini.image_model.trim()
+    );
+
+    let response = state
+        .http_client
+        .post(endpoint)
+        .query(&[("key", state.gemini.api_key.as_str())])
+        .json(&request_body)
+        .send()
+        .await
+        .context("failed to call gemini image generateContent")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+        bail!(
+            "gemini image request failed status={} body={}",
+            status,
+            body
+        );
+    }
+
+    let payload = response
+        .json::<JsonValue>()
+        .await
+        .context("failed to parse gemini image response payload")?;
+
+    let image = extract_gemini_inline_image(&payload)?;
+    validate_generated_seal_image(&image)?;
+    Ok(image)
+}
+
+fn build_seal_design_image_request_body(
+    input: &GenerateSealDesignsInput,
+    variant: &SealDesignVariant,
+) -> JsonValue {
+    json!({
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": build_seal_design_image_prompt(input, variant),
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+        }
+    })
+}
+
+fn build_seal_design_image_prompt(
+    input: &GenerateSealDesignsInput,
+    variant: &SealDesignVariant,
+) -> String {
+    format!(
+        "Create one finished PNG image for a Japanese hanko seal design.\n\
+Variant label: \"{}\"\n\
+Input name: \"{}\"\n\
+Render exactly this kanji and no other text: \"{}\"\n\
+Shape: {}\n\
+Style: {}\n\
+Stroke weight: {}\n\
+Balance: {}\n\
+{}\n\
+{}\n\
+{}\n\
+{}\n\
+Image requirements:\n\
+- Square image intended for {}x{} display.\n\
+- Plain light background, no texture, no shadow, no gradient, no watermark-like decoration.\n\
+- Engraving-friendly monochrome seal artwork with readable strokes.\n\
+- Avoid thin lines, tiny decorative details, overly complex stroke arrangements, and illegible forms.\n\
+- Output image data only as image/png.",
+        variant.label,
+        input.input_name,
+        input.kanji,
+        input.shape.as_str(),
+        input.style.as_str(),
+        input.stroke_weight.as_str(),
+        input.balance.as_str(),
+        input.shape.prompt_instruction(),
+        input.style.prompt_instruction(),
+        input.stroke_weight.prompt_instruction(),
+        input.balance.prompt_instruction(),
+        SEAL_DESIGN_IMAGE_SIZE,
+        SEAL_DESIGN_IMAGE_SIZE
+    )
+}
+
+fn extract_gemini_inline_image(payload: &JsonValue) -> Result<GeneratedSealDesignImage> {
+    let candidates = payload
+        .get("candidates")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| anyhow!("gemini image response JSON must contain candidates array"))?;
+
+    for candidate in candidates {
+        let Some(parts) = candidate
+            .get("content")
+            .and_then(|content| content.get("parts"))
+            .and_then(JsonValue::as_array)
+        else {
+            continue;
+        };
+
+        for part in parts {
+            let inline_data = part.get("inlineData").or_else(|| part.get("inline_data"));
+            let Some(inline_data) = inline_data else {
+                continue;
+            };
+
+            let content_type = read_json_string(inline_data, &["mimeType", "mime_type"]);
+            let data = read_json_string(inline_data, &["data"]);
+            if content_type.is_empty() || data.is_empty() {
+                continue;
+            }
+
+            let bytes = BASE64_STANDARD
+                .decode(data.as_bytes())
+                .context("failed to decode gemini inline image data")?;
+            return Ok(GeneratedSealDesignImage {
+                content_type,
+                bytes,
+            });
+        }
+    }
+
+    bail!("gemini image response did not include inline image data")
+}
+
+fn validate_generated_seal_image(image: &GeneratedSealDesignImage) -> Result<()> {
+    let content_type = image.content_type.trim().to_ascii_lowercase();
+    if content_type != "image/png" {
+        bail!("generated seal image must be image/png");
+    }
+
+    const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
+    if image.bytes.len() < PNG_SIGNATURE.len() || !image.bytes.starts_with(PNG_SIGNATURE) {
+        bail!("generated seal image payload is not a png");
+    }
+
+    Ok(())
+}
+
+async fn upload_seal_design_images_to_storage(
+    state: &AppState,
+    variants: &[SealDesignVariant],
+    images: &[GeneratedSealDesignImage],
+) -> Result<()> {
+    if variants.len() != images.len() {
+        bail!(
+            "seal design image count {} did not match variant count {}",
+            images.len(),
+            variants.len()
+        );
+    }
+
+    for (variant, image) in variants.iter().zip(images.iter()) {
+        upload_storage_object(
+            state,
+            &state.storage_assets_bucket,
+            &variant.storage_path,
+            &image.content_type,
+            &image.bytes,
+        )
+        .await
+        .with_context(|| format!("failed to upload {}", variant.storage_path))?;
+    }
+
+    Ok(())
+}
+
+async fn upload_storage_object(
+    state: &AppState,
+    bucket: &str,
+    storage_path: &str,
+    content_type: &str,
+    bytes: &[u8],
+) -> Result<()> {
+    let endpoint = storage_upload_endpoint(bucket)?;
+    let storage_path = normalize_storage_object_name(storage_path)?;
+    let token = state
+        .store
+        .token_provider
+        .token(&[STORAGE_SCOPE])
+        .await
+        .context("failed to obtain storage access token")?;
+
+    let response = state
+        .http_client
+        .post(endpoint)
+        .query(&[("uploadType", "media"), ("name", storage_path.as_str())])
+        .bearer_auth(token.as_str())
+        .header("Content-Type", content_type)
+        .body(bytes.to_vec())
+        .send()
+        .await
+        .context("failed to call storage upload API")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+        bail!("storage upload failed status={} body={}", status, body);
+    }
+
+    Ok(())
+}
+
+fn storage_upload_endpoint(bucket: &str) -> Result<String> {
+    let bucket = bucket.trim().trim_matches('/');
+    if bucket.is_empty() {
+        bail!("storage bucket is required");
+    }
+    if bucket.contains('/') {
+        bail!("storage bucket must not contain slash");
+    }
+
+    Ok(format!(
+        "https://storage.googleapis.com/upload/storage/v1/b/{bucket}/o"
+    ))
+}
+
+fn normalize_storage_object_name(storage_path: &str) -> Result<String> {
+    let storage_path = storage_path.trim().trim_start_matches('/');
+    if storage_path.is_empty() {
+        bail!("storage object name is required");
+    }
+    if storage_path.contains("..") {
+        bail!("storage object name must not contain parent traversal");
+    }
+    Ok(storage_path.to_owned())
+}
+
 async fn generate_kanji_candidates_with_gemini(
     state: &AppState,
     input: &GenerateKanjiCandidatesInput,
@@ -6011,6 +6314,86 @@ mod tests {
         );
         assert_eq!(variants[0].width, SEAL_DESIGN_IMAGE_SIZE);
         assert_eq!(variants[0].height, SEAL_DESIGN_IMAGE_SIZE);
+    }
+
+    #[test]
+    fn build_seal_design_image_request_body_requests_image_modality() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+        let variant = SealDesignVariant {
+            id: "seal_variant_001".to_owned(),
+            storage_path: "seal_designs/seal_request_001/seal_variant_001.png".to_owned(),
+            download_url: String::new(),
+            label: "Elegant and balanced".to_owned(),
+            width: SEAL_DESIGN_IMAGE_SIZE,
+            height: SEAL_DESIGN_IMAGE_SIZE,
+        };
+
+        let body = build_seal_design_image_request_body(&input, &variant);
+
+        assert_eq!(
+            body["generationConfig"]["responseModalities"],
+            json!(["TEXT", "IMAGE"])
+        );
+        let prompt = body["contents"][0]["parts"][0]["text"]
+            .as_str()
+            .expect("prompt must be text");
+        assert!(prompt.contains("Render exactly this kanji and no other text: \"美空\""));
+        assert!(prompt.contains("Output image data only as image/png"));
+        assert!(prompt.contains("Plain light background"));
+    }
+
+    #[test]
+    fn extract_gemini_inline_image_accepts_camel_case_payload() {
+        let png_signature = b"\x89PNG\r\n\x1a\n";
+        let payload = json!({
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "inlineData": {
+                                    "mimeType": "image/png",
+                                    "data": BASE64_STANDARD.encode(png_signature),
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        });
+
+        let image = extract_gemini_inline_image(&payload).expect("image must parse");
+        assert_eq!(image.content_type, "image/png");
+        assert_eq!(image.bytes, png_signature);
+        validate_generated_seal_image(&image).expect("image must validate");
+    }
+
+    #[test]
+    fn validate_generated_seal_image_rejects_non_png_payload() {
+        let image = GeneratedSealDesignImage {
+            content_type: "image/jpeg".to_owned(),
+            bytes: vec![0xff, 0xd8, 0xff],
+        };
+
+        let err = validate_generated_seal_image(&image).expect_err("jpeg must be rejected");
+        assert!(err.to_string().contains("image/png"));
+    }
+
+    #[test]
+    fn storage_upload_endpoint_rejects_empty_bucket() {
+        let err = storage_upload_endpoint("  ").expect_err("empty bucket must fail");
+        assert!(err.to_string().contains("storage bucket is required"));
+    }
+
+    #[test]
+    fn normalize_storage_object_name_rejects_parent_traversal() {
+        let err = normalize_storage_object_name("seal_designs/../x.png")
+            .expect_err("parent traversal must fail");
+        assert!(
+            err.to_string()
+                .contains("storage object name must not contain parent traversal")
+        );
     }
 
     #[test]

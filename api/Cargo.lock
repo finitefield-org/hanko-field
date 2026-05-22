@@ -434,6 +434,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64",
  "chrono",
  "firebase_sdk_rust",
  "gcp_auth",
