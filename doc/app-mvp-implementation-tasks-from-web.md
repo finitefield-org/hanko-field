@@ -926,7 +926,7 @@ MVPで後回し可能:
 | M07-T04 | `STN-006` | [x] ソート | `features/stones/presentation/` | 後回し可能。仕様は新着/価格順 |
 | M07-T05 | `STN-007` | [x] 詳細 | `features/stones/presentation/` | 画像、説明、サイズ、価格、在庫、注意事項を表示 |
 | M07-T06 | `STN-008` | [x] 画像ギャラリー | `features/stones/presentation/` | 複数画像を拡大表示 |
-| M07-T07 | `STN-009` `STN-010` | 選択確認/売り切れ | `features/stones/presentation/` | 売り切れ時は注文へ進めない |
+| M07-T07 | `STN-009` `STN-010` | [x] 選択確認/売り切れ | `features/stones/presentation/` | 売り切れ時は注文へ進めない |
 
 ### M08: 印影 + 宝石材 組み合わせ
 

@@ -255,6 +255,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   var _localSealDesignsLoaded = false;
   Object? _localSealDesignsLoadError;
   OrderDraftSealSelection? _orderDraftSealSelection;
+  StoneListing? _orderDraftStoneSelection;
   StoneListingsResult? _stoneListingsResult;
   var _stoneListingsLoaded = false;
   var _stoneListingsLoading = false;
@@ -364,6 +365,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             initialPhotoIndex: initialPhotoIndex,
           ),
         ),
+        isSelectedForOrder: _orderDraftStoneSelection?.id == pageData.id,
+        onSelectStone: _chooseStoneForOrder,
         onBack: stack.pop,
       );
     }
@@ -382,6 +385,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       loadError: _stoneListingsLoadError,
       onRetry: _retryStoneListings,
       onOpenStoneDetail: (listing) => stack.push(_stoneDetailPage(listing)),
+      selectedStoneId: _orderDraftStoneSelection?.id,
+      onSelectStone: _chooseStoneForOrder,
     );
   }
 
@@ -695,6 +700,13 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         design,
       );
     });
+  }
+
+  void _chooseStoneForOrder(StoneListing listing) {
+    if (!listing.isOrderable) {
+      return;
+    }
+    setState(() => _orderDraftStoneSelection = listing);
   }
 
   Future<void> _deleteLocalSealDesign(

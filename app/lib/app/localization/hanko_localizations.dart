@@ -235,6 +235,18 @@ class HankoLocalizations {
   String get stoneDetailTextureLabel => _strings.stoneDetailTextureLabel;
   String get stoneDetailStatusLabel => _strings.stoneDetailStatusLabel;
   String get selectStone => _strings.selectStone;
+  String get selectStoneConfirmationTitle =>
+      _strings.selectStoneConfirmationTitle;
+  String get selectStoneConfirmationMessage =>
+      _strings.selectStoneConfirmationMessage;
+  String get selectStoneConfirm => _strings.selectStoneConfirm;
+  String get stoneSelectedForOrderTitle => _strings.stoneSelectedForOrderTitle;
+  String get stoneSelectedForOrderMessage =>
+      _strings.stoneSelectedForOrderMessage;
+  String get stoneSelectedForOrderAction =>
+      _strings.stoneSelectedForOrderAction;
+  String get soldOutStoneTitle => _strings.soldOutStoneTitle;
+  String get soldOutStoneMessage => _strings.soldOutStoneMessage;
   String get stoneAvailable => _strings.stoneAvailable;
   String get stoneUnavailable => _strings.stoneUnavailable;
   String get order => _strings.order;
@@ -490,6 +502,14 @@ class _HankoStrings {
     required this.stoneDetailTextureLabel,
     required this.stoneDetailStatusLabel,
     required this.selectStone,
+    required this.selectStoneConfirmationTitle,
+    required this.selectStoneConfirmationMessage,
+    required this.selectStoneConfirm,
+    required this.stoneSelectedForOrderTitle,
+    required this.stoneSelectedForOrderMessage,
+    required this.stoneSelectedForOrderAction,
+    required this.soldOutStoneTitle,
+    required this.soldOutStoneMessage,
     required this.stoneAvailable,
     required this.stoneUnavailable,
     required this.order,
@@ -714,6 +734,14 @@ class _HankoStrings {
   final String stoneDetailTextureLabel;
   final String stoneDetailStatusLabel;
   final String selectStone;
+  final String selectStoneConfirmationTitle;
+  final String selectStoneConfirmationMessage;
+  final String selectStoneConfirm;
+  final String stoneSelectedForOrderTitle;
+  final String stoneSelectedForOrderMessage;
+  final String stoneSelectedForOrderAction;
+  final String soldOutStoneTitle;
+  final String soldOutStoneMessage;
   final String stoneAvailable;
   final String stoneUnavailable;
   final String order;
@@ -974,6 +1002,17 @@ const _localizedValues = {
       stoneDetailTextureLabel: 'Texture',
       stoneDetailStatusLabel: 'Status',
       selectStone: 'Select Stone',
+      selectStoneConfirmationTitle: 'Select this stone?',
+      selectStoneConfirmationMessage:
+          'Confirm this one-of-a-kind stone for your order draft. Availability will be checked again before checkout.',
+      selectStoneConfirm: 'Confirm Selection',
+      stoneSelectedForOrderTitle: 'Selected for order',
+      stoneSelectedForOrderMessage:
+          'This stone is now saved in the order draft.',
+      stoneSelectedForOrderAction: 'Selected for Order',
+      soldOutStoneTitle: 'Stone unavailable',
+      soldOutStoneMessage:
+          'This stone is no longer available. Choose another stone before ordering.',
       stoneAvailable: 'Available',
       stoneUnavailable: 'Unavailable',
       order: 'Order',
@@ -1207,6 +1246,14 @@ const _localizedValues = {
       stoneDetailTextureLabel: '質感',
       stoneDetailStatusLabel: '在庫',
       selectStone: '石を選択',
+      selectStoneConfirmationTitle: 'この石を選択しますか？',
+      selectStoneConfirmationMessage: 'この一点物の石を注文下書きに反映します。注文前に在庫をもう一度確認します。',
+      selectStoneConfirm: '選択を確定',
+      stoneSelectedForOrderTitle: '注文用に選択済み',
+      stoneSelectedForOrderMessage: 'この石を注文下書きに反映しました。',
+      stoneSelectedForOrderAction: '選択済み',
+      soldOutStoneTitle: 'この石は選択できません',
+      soldOutStoneMessage: 'この石は現在販売できません。注文前に別の石を選択してください。',
       stoneAvailable: '販売中',
       stoneUnavailable: '選択不可',
       order: '注文',

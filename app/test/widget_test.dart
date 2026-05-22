@@ -1040,6 +1040,12 @@ void main() {
     await tester.ensureVisible(find.text('Select Stone'));
     await tester.pump();
     await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select this stone?'), findsOneWidget);
+    expect(selectedStone, isNull);
+
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
     await tester.pump();
 
     expect(selectedStone?.id, 'stone_listing_001');
@@ -1338,6 +1344,86 @@ void main() {
 
     expect(find.byType(StoneImageGalleryScreen), findsNothing);
     expect(find.text('Stone Detail'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-009 confirms stone selection in the app shell', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select this stone?'), findsOneWidget);
+    expect(find.text('Confirm Selection'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for Order'), findsNothing);
+
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for Order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-010 blocks sold out stone selection from detail', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      getStoneListingDetail: (query) async {
+        return _stoneListing(
+          id: query.listingId,
+          status: 'sold',
+          isOrderable: false,
+        );
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('View Details'));
+    await tester.pump();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stone-sold-out-state')), findsOneWidget);
+    expect(find.text('Stone unavailable'), findsOneWidget);
+    expect(find.text('Unavailable'), findsWidgets);
+
+    await tester.ensureVisible(find.byKey(const Key('stone-sold-out-state')));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select this stone?'), findsNothing);
+    expect(find.text('Selected for Order'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

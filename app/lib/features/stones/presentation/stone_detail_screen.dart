@@ -8,6 +8,7 @@ import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../data/stone_listings_repository.dart';
 import '../domain/stone_listing.dart';
+import 'stone_selection_confirmation.dart';
 
 typedef StoneImageGalleryOpener =
     void Function(StoneListing listing, int initialPhotoIndex);
@@ -19,6 +20,8 @@ class StoneDetailScreen extends StatefulWidget {
     this.locale,
     this.loadStoneListing,
     this.onOpenImageGallery,
+    this.isSelectedForOrder = false,
+    this.onSelectStone,
     this.onBack,
   });
 
@@ -26,6 +29,8 @@ class StoneDetailScreen extends StatefulWidget {
   final String? locale;
   final StoneListingDetailLoader? loadStoneListing;
   final StoneImageGalleryOpener? onOpenImageGallery;
+  final bool isSelectedForOrder;
+  final ValueChanged<StoneListing>? onSelectStone;
   final VoidCallback? onBack;
 
   @override
@@ -117,6 +122,14 @@ class _StoneDetailScreenState extends State<StoneDetailScreen> {
               ),
               const SizedBox(height: HankoSpacing.lg),
               _StoneDetailSummary(listing: listing),
+              const SizedBox(height: HankoSpacing.lg),
+              _StoneOrderStateSection(
+                listing: listing,
+                isSelectedForOrder:
+                    widget.isSelectedForOrder && listing.isOrderable,
+                isRefreshing: _isRefreshing,
+                onSelectStone: widget.onSelectStone,
+              ),
               const SizedBox(height: HankoSpacing.lg),
               _StoneDetailTextSection(
                 title: l10n.stoneDetailDescriptionTitle,
@@ -613,6 +626,110 @@ class _StoneGalleryThumbnail extends StatelessWidget {
               ? _StoneDetailImageFallback(title: title)
               : _StoneDetailImage(photo: photo, title: title),
         ),
+      ),
+    );
+  }
+}
+
+class _StoneOrderStateSection extends StatelessWidget {
+  const _StoneOrderStateSection({
+    required this.listing,
+    required this.isSelectedForOrder,
+    required this.isRefreshing,
+    required this.onSelectStone,
+  });
+
+  final StoneListing listing;
+  final bool isSelectedForOrder;
+  final bool isRefreshing;
+  final ValueChanged<StoneListing>? onSelectStone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (!listing.isOrderable) {
+      return HankoSurfaceCard(
+        key: const Key('stone-sold-out-state'),
+        radius: HankoRadii.sm,
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.block, color: HankoColors.error, size: 22),
+                const SizedBox(width: HankoSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.soldOutStoneTitle,
+                        style: HankoTextStyles.label,
+                      ),
+                      const SizedBox(height: HankoSpacing.xs),
+                      Text(
+                        l10n.soldOutStoneMessage,
+                        style: HankoTextStyles.body,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            HankoPrimaryButton(
+              label: l10n.selectStone,
+              icon: Icons.block,
+              onPressed: null,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return HankoSurfaceCard(
+      key: const Key('stone-selection-state'),
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            isSelectedForOrder
+                ? l10n.stoneSelectedForOrderTitle
+                : l10n.selectStoneConfirmationTitle,
+            style: HankoTextStyles.label,
+          ),
+          const SizedBox(height: HankoSpacing.xs),
+          Text(
+            isSelectedForOrder
+                ? l10n.stoneSelectedForOrderMessage
+                : l10n.selectStoneConfirmationMessage,
+            style: HankoTextStyles.body,
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          HankoPrimaryButton(
+            key: const Key('stone-detail-select'),
+            label: isSelectedForOrder
+                ? l10n.stoneSelectedForOrderAction
+                : l10n.selectStone,
+            icon: isSelectedForOrder ? Icons.check : Icons.arrow_forward,
+            onPressed:
+                onSelectStone == null || isSelectedForOrder || isRefreshing
+                ? null
+                : () async {
+                    final confirmed = await confirmStoneSelection(
+                      context,
+                      listing,
+                    );
+                    if (confirmed) {
+                      onSelectStone?.call(listing);
+                    }
+                  },
+          ),
+        ],
       ),
     );
   }

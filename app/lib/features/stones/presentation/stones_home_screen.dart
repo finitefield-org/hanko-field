@@ -5,6 +5,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../domain/stone_listing.dart';
+import 'stone_selection_confirmation.dart';
 
 class StonesHomeScreen extends StatefulWidget {
   const StonesHomeScreen({
@@ -14,6 +15,7 @@ class StonesHomeScreen extends StatefulWidget {
     this.loadError,
     this.onRetry,
     this.onOpenStoneDetail,
+    this.selectedStoneId,
     this.onSelectStone,
   });
 
@@ -22,6 +24,7 @@ class StonesHomeScreen extends StatefulWidget {
   final Object? loadError;
   final VoidCallback? onRetry;
   final ValueChanged<StoneListing>? onOpenStoneDetail;
+  final String? selectedStoneId;
   final ValueChanged<StoneListing>? onSelectStone;
 
   @override
@@ -90,6 +93,8 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
               _StoneListingCard(
                 listing: sortedListings[index],
                 onOpenStoneDetail: widget.onOpenStoneDetail,
+                isSelectedForOrder:
+                    widget.selectedStoneId == sortedListings[index].id,
                 onSelectStone: widget.onSelectStone,
               ),
               if (index < sortedListings.length - 1)
@@ -647,11 +652,13 @@ class _StoneListingCard extends StatelessWidget {
   const _StoneListingCard({
     required this.listing,
     required this.onOpenStoneDetail,
+    required this.isSelectedForOrder,
     required this.onSelectStone,
   });
 
   final StoneListing listing;
   final ValueChanged<StoneListing>? onOpenStoneDetail;
+  final bool isSelectedForOrder;
   final ValueChanged<StoneListing>? onSelectStone;
 
   @override
@@ -721,10 +728,23 @@ class _StoneListingCard extends StatelessWidget {
           ),
           const SizedBox(height: HankoSpacing.sm),
           HankoPrimaryButton(
-            label: l10n.selectStone,
-            icon: Icons.arrow_forward,
-            onPressed: listing.isOrderable && onSelectStone != null
-                ? () => onSelectStone?.call(listing)
+            label: isSelectedForOrder
+                ? l10n.stoneSelectedForOrderAction
+                : l10n.selectStone,
+            icon: isSelectedForOrder ? Icons.check : Icons.arrow_forward,
+            onPressed:
+                listing.isOrderable &&
+                    onSelectStone != null &&
+                    !isSelectedForOrder
+                ? () async {
+                    final confirmed = await confirmStoneSelection(
+                      context,
+                      listing,
+                    );
+                    if (confirmed) {
+                      onSelectStone?.call(listing);
+                    }
+                  }
                 : null,
           ),
         ],
