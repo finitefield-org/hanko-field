@@ -1295,6 +1295,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('STN-008 opens image gallery from stone detail', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      getStoneListingDetail: (query) async {
+        return _stoneListing(id: query.listingId, photos: _stonePhotos());
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('View Details'));
+    await tester.pump();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('stone-detail-gallery-thumbnail-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StoneImageGalleryScreen), findsOneWidget);
+    expect(find.text('2 / 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stone-gallery-next')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 / 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stone-gallery-thumbnail-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 / 3'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StoneImageGalleryScreen), findsNothing);
+    expect(find.text('Stone Detail'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
@@ -1730,6 +1776,7 @@ StoneListing _stoneListing({
   bool? isOrderable,
   int priceAmount = 18000,
   int sortOrder = 0,
+  List<StoneListingPhoto> photos = const [],
 }) {
   return StoneListing(
     id: id,
@@ -1753,8 +1800,34 @@ StoneListing _stoneListing({
     isActive: isActive,
     isOrderable: isOrderable,
     sortOrder: sortOrder,
-    photos: const [],
+    photos: photos,
   );
+}
+
+List<StoneListingPhoto> _stonePhotos() {
+  return const [
+    StoneListingPhoto(
+      assetId: 'stone_photo_001',
+      assetUrl: '',
+      alt: 'Front view',
+      isPrimary: true,
+      sortOrder: 1,
+    ),
+    StoneListingPhoto(
+      assetId: 'stone_photo_002',
+      assetUrl: '',
+      alt: 'Side view',
+      isPrimary: false,
+      sortOrder: 2,
+    ),
+    StoneListingPhoto(
+      assetId: 'stone_photo_003',
+      assetUrl: '',
+      alt: 'Texture detail',
+      isPrimary: false,
+      sortOrder: 3,
+    ),
+  ];
 }
 
 LocalSealDesign _localSealDesign({

@@ -186,6 +186,16 @@ class _SealPreviewSelection {
   final SealDesignVariant variant;
 }
 
+class _StoneImageGallerySelection {
+  const _StoneImageGallerySelection({
+    required this.listing,
+    required this.initialPhotoIndex,
+  });
+
+  final StoneListing listing;
+  final int initialPhotoIndex;
+}
+
 class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _shellPage = PageEntry(
     key: 'COM-003-bottom-navigation-shell',
@@ -238,6 +248,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       'DES-015-seal-generation-limit';
   static const _mySealsDetailPageKey = 'MYS-003-seal-detail';
   static const _stoneDetailPageKey = 'STN-007-stone-detail';
+  static const _stoneImageGalleryPageKey = 'STN-008-stone-image-gallery';
 
   late final LocalSealDesignRepository _localSealDesignRepository;
   var _localSealDesigns = const <LocalSealDesign>[];
@@ -347,6 +358,20 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         listing: pageData,
         locale: _stoneListingsLocale ?? _stoneListingsResult?.locale,
         loadStoneListing: widget.getStoneListingDetail,
+        onOpenImageGallery: (listing, initialPhotoIndex) => stack.push(
+          _stoneImageGalleryPage(
+            listing: listing,
+            initialPhotoIndex: initialPhotoIndex,
+          ),
+        ),
+        onBack: stack.pop,
+      );
+    }
+    if (page.key == _stoneImageGalleryPageKey &&
+        pageData is _StoneImageGallerySelection) {
+      return StoneImageGalleryScreen(
+        listing: pageData.listing,
+        initialPhotoIndex: pageData.initialPhotoIndex,
         onBack: stack.pop,
       );
     }
@@ -830,6 +855,20 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _stoneDetailPageKey,
       name: '/stones/detail',
       data: listing,
+    );
+  }
+
+  PageEntry _stoneImageGalleryPage({
+    required StoneListing listing,
+    required int initialPhotoIndex,
+  }) {
+    return PageEntry(
+      key: _stoneImageGalleryPageKey,
+      name: '/stones/detail/gallery',
+      data: _StoneImageGallerySelection(
+        listing: listing,
+        initialPhotoIndex: initialPhotoIndex,
+      ),
     );
   }
 

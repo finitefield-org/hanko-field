@@ -9,18 +9,23 @@ import '../../../core/widgets/core_widgets.dart';
 import '../data/stone_listings_repository.dart';
 import '../domain/stone_listing.dart';
 
+typedef StoneImageGalleryOpener =
+    void Function(StoneListing listing, int initialPhotoIndex);
+
 class StoneDetailScreen extends StatefulWidget {
   const StoneDetailScreen({
     super.key,
     required this.listing,
     this.locale,
     this.loadStoneListing,
+    this.onOpenImageGallery,
     this.onBack,
   });
 
   final StoneListing listing;
   final String? locale;
   final StoneListingDetailLoader? loadStoneListing;
+  final StoneImageGalleryOpener? onOpenImageGallery;
   final VoidCallback? onBack;
 
   @override
@@ -106,7 +111,10 @@ class _StoneDetailScreenState extends State<StoneDetailScreen> {
                 const LinearProgressIndicator(minHeight: 2),
                 const SizedBox(height: HankoSpacing.md),
               ],
-              _StoneDetailHero(listing: listing),
+              _StoneDetailHero(
+                listing: listing,
+                onOpenGallery: widget.onOpenImageGallery,
+              ),
               const SizedBox(height: HankoSpacing.lg),
               _StoneDetailSummary(listing: listing),
               const SizedBox(height: HankoSpacing.lg),
@@ -165,25 +173,40 @@ class _StoneDetailHeader extends StatelessWidget {
 }
 
 class _StoneDetailHero extends StatelessWidget {
-  const _StoneDetailHero({required this.listing});
+  const _StoneDetailHero({required this.listing, required this.onOpenGallery});
 
   final StoneListing listing;
+  final StoneImageGalleryOpener? onOpenGallery;
 
   @override
   Widget build(BuildContext context) {
     final primaryPhoto = _primaryPhoto(listing.photos);
     final thumbnails = _sortedPhotos(listing.photos);
+    final primaryPhotoIndex = primaryPhoto == null
+        ? 0
+        : thumbnails.indexWhere(
+            (photo) => photo.assetId == primaryPhoto.assetId,
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AspectRatio(
           aspectRatio: 4 / 3,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(HankoRadii.sm),
-            child: primaryPhoto == null || primaryPhoto.assetUrl.trim().isEmpty
-                ? _StoneDetailImageFallback(title: listing.title)
-                : _StoneDetailImage(photo: primaryPhoto, title: listing.title),
+          child: _StoneDetailGalleryTrigger(
+            key: const Key('stone-detail-open-gallery'),
+            enabled: primaryPhoto != null && onOpenGallery != null,
+            onTap: () => onOpenGallery?.call(listing, primaryPhotoIndex),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(HankoRadii.sm),
+              child:
+                  primaryPhoto == null || primaryPhoto.assetUrl.trim().isEmpty
+                  ? _StoneDetailImageFallback(title: listing.title)
+                  : _StoneDetailImage(
+                      photo: primaryPhoto,
+                      title: listing.title,
+                    ),
+            ),
           ),
         ),
         if (thumbnails.length > 1) ...[
@@ -195,13 +218,21 @@ class _StoneDetailHero extends StatelessWidget {
               physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
                 final photo = thumbnails[index];
-                return AspectRatio(
-                  aspectRatio: 1,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(HankoRadii.sm),
-                    child: photo.assetUrl.trim().isEmpty
-                        ? _StoneDetailImageFallback(title: listing.title)
-                        : _StoneDetailImage(photo: photo, title: listing.title),
+                return _StoneDetailGalleryTrigger(
+                  key: Key('stone-detail-gallery-thumbnail-$index'),
+                  enabled: onOpenGallery != null,
+                  onTap: () => onOpenGallery?.call(listing, index),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(HankoRadii.sm),
+                      child: photo.assetUrl.trim().isEmpty
+                          ? _StoneDetailImageFallback(title: listing.title)
+                          : _StoneDetailImage(
+                              photo: photo,
+                              title: listing.title,
+                            ),
+                    ),
                   ),
                 );
               },
@@ -212,6 +243,31 @@ class _StoneDetailHero extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _StoneDetailGalleryTrigger extends StatelessWidget {
+  const _StoneDetailGalleryTrigger({
+    super.key,
+    required this.enabled,
+    required this.onTap,
+    required this.child,
+  });
+
+  final bool enabled;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) {
+      return child;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: child),
     );
   }
 }
@@ -255,6 +311,307 @@ class _StoneDetailImageFallback extends StatelessWidget {
           color: HankoColors.gold,
           size: 58,
           semanticLabel: title,
+        ),
+      ),
+    );
+  }
+}
+
+class StoneImageGalleryScreen extends StatefulWidget {
+  const StoneImageGalleryScreen({
+    super.key,
+    required this.listing,
+    this.initialPhotoIndex = 0,
+    this.onBack,
+  });
+
+  final StoneListing listing;
+  final int initialPhotoIndex;
+  final VoidCallback? onBack;
+
+  @override
+  State<StoneImageGalleryScreen> createState() =>
+      _StoneImageGalleryScreenState();
+}
+
+class _StoneImageGalleryScreenState extends State<StoneImageGalleryScreen> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  List<StoneListingPhoto> get _photos => _sortedPhotos(widget.listing.photos);
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = _clampPhotoIndex(widget.initialPhotoIndex, _photos.length);
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final materialL10n = MaterialLocalizations.of(context);
+    final photos = _photos;
+    final hasPhotos = photos.isNotEmpty;
+    final counter = hasPhotos ? '${_currentIndex + 1} / ${photos.length}' : '';
+
+    return Material(
+      color: HankoColors.ink,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 14, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: l10n.close,
+                    onPressed: widget.onBack,
+                    color: HankoColors.surface,
+                    icon: const Icon(Icons.close),
+                  ),
+                  Expanded(
+                    child: Text(
+                      widget.listing.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: HankoTextStyles.label.copyWith(
+                        color: HankoColors.surface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: HankoSpacing.sm),
+                  Text(
+                    counter,
+                    key: const Key('stone-gallery-counter'),
+                    style: HankoTextStyles.label.copyWith(
+                      color: HankoColors.surface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: hasPhotos
+                  ? Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        PageView.builder(
+                          controller: _pageController,
+                          itemCount: photos.length,
+                          onPageChanged: (index) =>
+                              setState(() => _currentIndex = index),
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: HankoSpacing.md,
+                                vertical: HankoSpacing.sm,
+                              ),
+                              child: InteractiveViewer(
+                                minScale: 1,
+                                maxScale: 4,
+                                child: Center(
+                                  child: _StoneGalleryImage(
+                                    photo: photos[index],
+                                    title: widget.listing.title,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          left: HankoSpacing.sm,
+                          child: _StoneGalleryStepButton(
+                            key: const Key('stone-gallery-previous'),
+                            icon: Icons.chevron_left,
+                            tooltip: materialL10n.previousPageTooltip,
+                            enabled: _currentIndex > 0,
+                            onPressed: () => _showPhoto(_currentIndex - 1),
+                          ),
+                        ),
+                        Positioned(
+                          right: HankoSpacing.sm,
+                          child: _StoneGalleryStepButton(
+                            key: const Key('stone-gallery-next'),
+                            icon: Icons.chevron_right,
+                            tooltip: materialL10n.nextPageTooltip,
+                            enabled: _currentIndex < photos.length - 1,
+                            onPressed: () => _showPhoto(_currentIndex + 1),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _StoneDetailImageFallback(title: widget.listing.title),
+            ),
+            if (photos.length > 1)
+              SizedBox(
+                height: 82,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    HankoSpacing.md,
+                    0,
+                    HankoSpacing.md,
+                    HankoSpacing.sm,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  itemBuilder: (context, index) {
+                    final selected = index == _currentIndex;
+                    return _StoneGalleryThumbnail(
+                      key: Key('stone-gallery-thumbnail-$index'),
+                      photo: photos[index],
+                      title: widget.listing.title,
+                      selected: selected,
+                      onTap: () => _showPhoto(index),
+                    );
+                  },
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: HankoSpacing.xs),
+                  itemCount: photos.length,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhoto(int index) {
+    final nextIndex = _clampPhotoIndex(index, _photos.length);
+    _pageController.animateToPage(
+      nextIndex,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+}
+
+class _StoneGalleryImage extends StatelessWidget {
+  const _StoneGalleryImage({required this.photo, required this.title});
+
+  final StoneListingPhoto photo;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = _StoneGalleryImageFallback(title: title);
+    if (photo.assetUrl.trim().isEmpty) {
+      return fallback;
+    }
+
+    return Image.network(
+      photo.assetUrl,
+      fit: BoxFit.contain,
+      semanticLabel: photo.alt,
+      errorBuilder: (context, error, stackTrace) => fallback,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+        return fallback;
+      },
+    );
+  }
+}
+
+class _StoneGalleryImageFallback extends StatelessWidget {
+  const _StoneGalleryImageFallback({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: HankoColors.medallion,
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.diamond_outlined,
+            color: HankoColors.gold,
+            size: 72,
+            semanticLabel: title,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoneGalleryStepButton extends StatelessWidget {
+  const _StoneGalleryStepButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton.filled(
+      tooltip: tooltip,
+      onPressed: enabled ? onPressed : null,
+      style: IconButton.styleFrom(
+        backgroundColor: HankoColors.surface.withValues(alpha: 0.92),
+        disabledBackgroundColor: HankoColors.surface.withValues(alpha: 0.36),
+        foregroundColor: HankoColors.ink,
+        disabledForegroundColor: HankoColors.body,
+      ),
+      icon: Icon(icon),
+    );
+  }
+}
+
+class _StoneGalleryThumbnail extends StatelessWidget {
+  const _StoneGalleryThumbnail({
+    super.key,
+    required this.photo,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final StoneListingPhoto photo;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(HankoRadii.sm),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 72,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+          border: Border.all(
+            color: selected ? HankoColors.gold : HankoColors.surfaceBorder,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.all(3),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(HankoRadii.sm),
+          child: photo.assetUrl.trim().isEmpty
+              ? _StoneDetailImageFallback(title: title)
+              : _StoneDetailImage(photo: photo, title: title),
         ),
       ),
     );
@@ -520,6 +877,16 @@ List<StoneListingPhoto> _sortedPhotos(List<StoneListingPhoto> photos) {
     final order = left.sortOrder.compareTo(right.sortOrder);
     return order == 0 ? left.assetId.compareTo(right.assetId) : order;
   });
+}
+
+int _clampPhotoIndex(int index, int photoCount) {
+  if (photoCount <= 0 || index < 0) {
+    return 0;
+  }
+  if (index >= photoCount) {
+    return photoCount - 1;
+  }
+  return index;
 }
 
 String _materialLabel(StoneListing listing) {
