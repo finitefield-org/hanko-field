@@ -57,6 +57,10 @@ void main() {
                 ),
                 orderNote: 'Please ship on a weekday.',
                 termsAgreed: true,
+                customerConfirmation: OrderDraftCustomerConfirmationInput(
+                  kanjiAndDesign: true,
+                  customMadePolicy: true,
+                ),
               ),
               updatedAt: DateTime.parse('2026-05-22T10:15:00+09:00'),
             );
@@ -75,6 +79,9 @@ void main() {
     expect(saved.input.shipping.city, 'Chiyoda');
     expect(saved.input.orderNote, 'Please ship on a weekday.');
     expect(saved.input.termsAgreed, isTrue);
+    expect(saved.input.customerConfirmation.kanjiAndDesign, isTrue);
+    expect(saved.input.customerConfirmation.customMadePolicy, isTrue);
+    expect(saved.input.customerConfirmation.isComplete, isTrue);
     expect(saved.hasCombinationSelections, isTrue);
   });
 
@@ -132,6 +139,8 @@ CREATE TABLE IF NOT EXISTS order_draft (
       expect(saved.input.contact.email, '');
       expect(saved.input.shipping.city, '');
       expect(saved.input.termsAgreed, isFalse);
+      expect(saved.input.customerConfirmation.kanjiAndDesign, isFalse);
+      expect(saved.input.customerConfirmation.customMadePolicy, isFalse);
     },
   );
 }

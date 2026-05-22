@@ -313,6 +313,27 @@ class HankoLocalizations {
       _strings.checkoutCityRequiredMessage;
   String get checkoutStateRequiredMessage =>
       _strings.checkoutStateRequiredMessage;
+  String get orderConfirmationTitle => _strings.orderConfirmationTitle;
+  String get orderConfirmationMessage => _strings.orderConfirmationMessage;
+  String get orderConfirmationMissingInputMessage =>
+      _strings.orderConfirmationMissingInputMessage;
+  String get orderConfirmationCheckoutTitle =>
+      _strings.orderConfirmationCheckoutTitle;
+  String get orderConfirmationNoOrderNote =>
+      _strings.orderConfirmationNoOrderNote;
+  String get editCheckoutInformation => _strings.editCheckoutInformation;
+  String get customMadeAgreementTitle => _strings.customMadeAgreementTitle;
+  String get customMadeAgreementMessage => _strings.customMadeAgreementMessage;
+  String get confirmKanjiAndDesignLabel => _strings.confirmKanjiAndDesignLabel;
+  String get confirmCustomMadePolicyLabel =>
+      _strings.confirmCustomMadePolicyLabel;
+  String get orderConfirmationSecurePaymentNote =>
+      _strings.orderConfirmationSecurePaymentNote;
+  String get orderConfirmationAgreementRequiredMessage =>
+      _strings.orderConfirmationAgreementRequiredMessage;
+  String get orderConfirmationSavedMessage =>
+      _strings.orderConfirmationSavedMessage;
+  String get proceedToSecurePayment => _strings.proceedToSecurePayment;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -628,6 +649,20 @@ class _HankoStrings {
     required this.checkoutAddressLine1RequiredMessage,
     required this.checkoutCityRequiredMessage,
     required this.checkoutStateRequiredMessage,
+    required this.orderConfirmationTitle,
+    required this.orderConfirmationMessage,
+    required this.orderConfirmationMissingInputMessage,
+    required this.orderConfirmationCheckoutTitle,
+    required this.orderConfirmationNoOrderNote,
+    required this.editCheckoutInformation,
+    required this.customMadeAgreementTitle,
+    required this.customMadeAgreementMessage,
+    required this.confirmKanjiAndDesignLabel,
+    required this.confirmCustomMadePolicyLabel,
+    required this.orderConfirmationSecurePaymentNote,
+    required this.orderConfirmationAgreementRequiredMessage,
+    required this.orderConfirmationSavedMessage,
+    required this.proceedToSecurePayment,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -912,6 +947,20 @@ class _HankoStrings {
   final String checkoutAddressLine1RequiredMessage;
   final String checkoutCityRequiredMessage;
   final String checkoutStateRequiredMessage;
+  final String orderConfirmationTitle;
+  final String orderConfirmationMessage;
+  final String orderConfirmationMissingInputMessage;
+  final String orderConfirmationCheckoutTitle;
+  final String orderConfirmationNoOrderNote;
+  final String editCheckoutInformation;
+  final String customMadeAgreementTitle;
+  final String customMadeAgreementMessage;
+  final String confirmKanjiAndDesignLabel;
+  final String confirmCustomMadePolicyLabel;
+  final String orderConfirmationSecurePaymentNote;
+  final String orderConfirmationAgreementRequiredMessage;
+  final String orderConfirmationSavedMessage;
+  final String proceedToSecurePayment;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1243,6 +1292,28 @@ const _localizedValues = {
       checkoutAddressLine1RequiredMessage: 'Address line 1 is required.',
       checkoutCityRequiredMessage: 'City is required.',
       checkoutStateRequiredMessage: 'State / Province is required.',
+      orderConfirmationTitle: 'Order Confirmation',
+      orderConfirmationMessage:
+          'Review the seal, gemstone, shipping details, and total before proceeding.',
+      orderConfirmationMissingInputMessage:
+          'Checkout information is incomplete. Return to the checkout form before confirming.',
+      orderConfirmationCheckoutTitle: 'Checkout details',
+      orderConfirmationNoOrderNote: 'No order note',
+      editCheckoutInformation: 'Edit Checkout Information',
+      customMadeAgreementTitle: 'Custom-made Agreement',
+      customMadeAgreementMessage:
+          'Each seal is handcrafted to order using natural gemstones. Please confirm the details before payment.',
+      confirmKanjiAndDesignLabel:
+          'I confirm that the selected kanji and seal design are correct.',
+      confirmCustomMadePolicyLabel:
+          'I understand that this is a custom-made item and cannot be changed after production begins.',
+      orderConfirmationSecurePaymentNote:
+          'You will be redirected to Stripe Checkout for secure payment.',
+      orderConfirmationAgreementRequiredMessage:
+          'Both confirmation checks are required before payment.',
+      orderConfirmationSavedMessage:
+          'Order confirmation was saved to this order draft.',
+      proceedToSecurePayment: 'Proceed to Secure Payment',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1536,6 +1607,21 @@ const _localizedValues = {
       checkoutAddressLine1RequiredMessage: '住所1を入力してください。',
       checkoutCityRequiredMessage: '市区町村を入力してください。',
       checkoutStateRequiredMessage: '都道府県 / 州を入力してください。',
+      orderConfirmationTitle: 'ご注文内容確認',
+      orderConfirmationMessage: '決済へ進む前に、印影、宝石材、配送先、合計金額を確認してください。',
+      orderConfirmationMissingInputMessage:
+          'Checkout情報に未入力があります。確認前に入力画面へ戻ってください。',
+      orderConfirmationCheckoutTitle: 'Checkout詳細',
+      orderConfirmationNoOrderNote: '注文メモなし',
+      editCheckoutInformation: 'Checkout情報を編集',
+      customMadeAgreementTitle: 'オーダーメイド確認',
+      customMadeAgreementMessage: '天然石を使い、お客様の印影に合わせて一点ずつ製作します。決済前に内容をご確認ください。',
+      confirmKanjiAndDesignLabel: '選択した漢字と印影デザインに間違いがないことを確認しました。',
+      confirmCustomMadePolicyLabel: '本商品がオーダーメイド品であり、製作開始後は変更できないことを理解しました。',
+      orderConfirmationSecurePaymentNote: '安全な決済のため、Stripe Checkoutへ移動します。',
+      orderConfirmationAgreementRequiredMessage: '決済へ進むには2つの確認チェックが必要です。',
+      orderConfirmationSavedMessage: '注文前確認を注文下書きに保存しました。',
+      proceedToSecurePayment: '安全な決済へ進む',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

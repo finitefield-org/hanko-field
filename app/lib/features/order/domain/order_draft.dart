@@ -140,30 +140,62 @@ class OrderDraftInput {
     required this.shipping,
     required this.orderNote,
     required this.termsAgreed,
+    this.customerConfirmation =
+        const OrderDraftCustomerConfirmationInput.empty(),
   });
 
   const OrderDraftInput.empty()
     : contact = const OrderDraftContactInput.empty(),
       shipping = const OrderDraftShippingInput.empty(),
       orderNote = '',
-      termsAgreed = false;
+      termsAgreed = false,
+      customerConfirmation = const OrderDraftCustomerConfirmationInput.empty();
 
   final OrderDraftContactInput contact;
   final OrderDraftShippingInput shipping;
   final String orderNote;
   final bool termsAgreed;
+  final OrderDraftCustomerConfirmationInput customerConfirmation;
 
   OrderDraftInput copyWith({
     OrderDraftContactInput? contact,
     OrderDraftShippingInput? shipping,
     String? orderNote,
     bool? termsAgreed,
+    OrderDraftCustomerConfirmationInput? customerConfirmation,
   }) {
     return OrderDraftInput(
       contact: contact ?? this.contact,
       shipping: shipping ?? this.shipping,
       orderNote: orderNote ?? this.orderNote,
       termsAgreed: termsAgreed ?? this.termsAgreed,
+      customerConfirmation: customerConfirmation ?? this.customerConfirmation,
+    );
+  }
+}
+
+class OrderDraftCustomerConfirmationInput {
+  const OrderDraftCustomerConfirmationInput({
+    required this.kanjiAndDesign,
+    required this.customMadePolicy,
+  });
+
+  const OrderDraftCustomerConfirmationInput.empty()
+    : kanjiAndDesign = false,
+      customMadePolicy = false;
+
+  final bool kanjiAndDesign;
+  final bool customMadePolicy;
+
+  bool get isComplete => kanjiAndDesign && customMadePolicy;
+
+  OrderDraftCustomerConfirmationInput copyWith({
+    bool? kanjiAndDesign,
+    bool? customMadePolicy,
+  }) {
+    return OrderDraftCustomerConfirmationInput(
+      kanjiAndDesign: kanjiAndDesign ?? this.kanjiAndDesign,
+      customMadePolicy: customMadePolicy ?? this.customMadePolicy,
     );
   }
 }

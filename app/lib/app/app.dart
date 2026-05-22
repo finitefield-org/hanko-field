@@ -221,6 +221,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'CHK-001-checkout-input',
     name: '/checkout/input',
   );
+  static const _orderConfirmationPage = PageEntry(
+    key: 'CHK-006-order-confirmation',
+    name: '/checkout/confirmation',
+  );
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -310,6 +314,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _orderConfirmationPage.key) {
+          return _buildOrderConfirmationPage();
+        }
         if (page.key == _checkoutInputPage.key) {
           return _buildCheckoutInputPage();
         }
@@ -395,6 +402,24 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             input: _orderDraft.input,
             onBack: _closeTopPage,
             onSave: _saveCheckoutInput,
+            onContinueToReview: _openOrderConfirmation,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderConfirmationPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: OrderConfirmationScreen(
+            draft: _orderDraft,
+            onBack: _closeTopPage,
+            onEditCheckout: _openCheckoutInput,
+            onConfirmAgreements: _confirmOrderAgreements,
           ),
         ),
       ),
@@ -1015,6 +1040,30 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   }
 
   Future<void> _saveCheckoutInput(OrderDraftInput input) {
+    return _applyOrderDraft(_orderDraft.withInput(input));
+  }
+
+  void _openOrderConfirmation() {
+    if (_pages.last.key == _orderConfirmationPage.key) {
+      return;
+    }
+    setState(
+      () => _pages = const [
+        _shellPage,
+        _orderReviewPage,
+        _checkoutInputPage,
+        _orderConfirmationPage,
+      ],
+    );
+  }
+
+  Future<void> _confirmOrderAgreements(
+    OrderDraftCustomerConfirmationInput confirmation,
+  ) {
+    final input = _orderDraft.input.copyWith(
+      termsAgreed: confirmation.isComplete,
+      customerConfirmation: confirmation,
+    );
     return _applyOrderDraft(_orderDraft.withInput(input));
   }
 

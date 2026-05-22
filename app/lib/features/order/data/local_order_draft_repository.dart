@@ -282,6 +282,10 @@ Map<String, Object?> _inputToJson(OrderDraftInput input) {
     },
     'order_note': input.orderNote,
     'terms_agreed': input.termsAgreed,
+    'customer_confirmation': {
+      'kanji_and_design': input.customerConfirmation.kanjiAndDesign,
+      'custom_made_policy': input.customerConfirmation.customMadePolicy,
+    },
   };
 }
 
@@ -292,6 +296,9 @@ OrderDraftInput _inputFromJson(Object? value) {
   final json = _readJsonMap(value);
   final contact = _readOptionalJsonMap(json['contact']);
   final shipping = _readOptionalJsonMap(json['shipping']);
+  final customerConfirmation = _readOptionalJsonMap(
+    json['customer_confirmation'],
+  );
   return OrderDraftInput(
     contact: OrderDraftContactInput(
       email: _readOptionalString(contact, 'email'),
@@ -309,6 +316,16 @@ OrderDraftInput _inputFromJson(Object? value) {
     ),
     orderNote: _readOptionalString(json, 'order_note'),
     termsAgreed: _readOptionalBool(json, 'terms_agreed'),
+    customerConfirmation: OrderDraftCustomerConfirmationInput(
+      kanjiAndDesign: _readOptionalBool(
+        customerConfirmation,
+        'kanji_and_design',
+      ),
+      customMadePolicy: _readOptionalBool(
+        customerConfirmation,
+        'custom_made_policy',
+      ),
+    ),
   );
 }
 

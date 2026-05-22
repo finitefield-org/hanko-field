@@ -233,11 +233,13 @@ class CheckoutInputScreen extends StatefulWidget {
     this.input = const OrderDraftInput.empty(),
     this.onBack,
     this.onSave,
+    this.onContinueToReview,
   });
 
   final OrderDraftInput input;
   final VoidCallback? onBack;
   final Future<void> Function(OrderDraftInput input)? onSave;
+  final VoidCallback? onContinueToReview;
 
   @override
   State<CheckoutInputScreen> createState() => _CheckoutInputScreenState();
@@ -342,6 +344,7 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
         return;
       }
       setState(() => _hasSaved = true);
+      widget.onContinueToReview?.call();
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -595,6 +598,305 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
           height: 58,
         ),
       ],
+    );
+  }
+}
+
+class OrderConfirmationScreen extends StatefulWidget {
+  const OrderConfirmationScreen({
+    super.key,
+    required this.draft,
+    this.onBack,
+    this.onEditCheckout,
+    this.onConfirmAgreements,
+  });
+
+  final OrderDraft draft;
+  final VoidCallback? onBack;
+  final VoidCallback? onEditCheckout;
+  final Future<void> Function(OrderDraftCustomerConfirmationInput confirmation)?
+  onConfirmAgreements;
+
+  @override
+  State<OrderConfirmationScreen> createState() =>
+      _OrderConfirmationScreenState();
+}
+
+class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
+  late bool _kanjiAndDesignConfirmed;
+  late bool _customMadePolicyConfirmed;
+  var _isSaving = false;
+  var _hasSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _applyConfirmation(widget.draft.input.customerConfirmation);
+  }
+
+  @override
+  void didUpdateWidget(covariant OrderConfirmationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.draft.input.customerConfirmation !=
+        widget.draft.input.customerConfirmation) {
+      _applyConfirmation(widget.draft.input.customerConfirmation);
+    }
+  }
+
+  void _applyConfirmation(OrderDraftCustomerConfirmationInput confirmation) {
+    _kanjiAndDesignConfirmed = confirmation.kanjiAndDesign;
+    _customMadePolicyConfirmed = confirmation.customMadePolicy;
+  }
+
+  Future<void> _confirmAgreements() async {
+    if (!_canContinue || _isSaving) {
+      return;
+    }
+    setState(() {
+      _isSaving = true;
+      _hasSaved = false;
+    });
+    final confirmation = OrderDraftCustomerConfirmationInput(
+      kanjiAndDesign: _kanjiAndDesignConfirmed,
+      customMadePolicy: _customMadePolicyConfirmed,
+    );
+    try {
+      await widget.onConfirmAgreements?.call(confirmation);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _hasSaved = true);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  bool get _canContinue =>
+      _kanjiAndDesignConfirmed && _customMadePolicyConfirmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final seal = widget.draft.sealSelection;
+    final stone = widget.draft.stoneSelection;
+
+    if (seal == null || stone == null) {
+      return OrderFlowEntryScreen(draft: widget.draft, onBack: widget.onBack);
+    }
+
+    final pricing = _OrderPricingSummary.fromDraft(widget.draft);
+    final validationErrors = _validateInput(context, widget.draft.input);
+
+    return _OrderScreenFrame(
+      title: l10n.orderConfirmationTitle,
+      onBack: widget.onBack,
+      children: [
+        Text(l10n.orderConfirmationMessage, style: HankoTextStyles.body),
+        if (validationErrors.isNotEmpty) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _OrderNotice(message: l10n.orderConfirmationMissingInputMessage),
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: l10n.editCheckoutInformation,
+            icon: Icons.edit_outlined,
+            onPressed: widget.onEditCheckout,
+          ),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        _SealSummaryCard(selection: seal),
+        const SizedBox(height: HankoSpacing.md),
+        _StoneSummaryCard(selection: stone),
+        const SizedBox(height: HankoSpacing.md),
+        _CheckoutInputSummaryCard(
+          input: widget.draft.input,
+          onEdit: widget.onEditCheckout,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderPricingCard(summary: pricing),
+        const SizedBox(height: HankoSpacing.md),
+        _CustomMadeAgreementCard(
+          kanjiAndDesignConfirmed: _kanjiAndDesignConfirmed,
+          customMadePolicyConfirmed: _customMadePolicyConfirmed,
+          onKanjiAndDesignChanged: validationErrors.isEmpty
+              ? (value) {
+                  setState(() {
+                    _kanjiAndDesignConfirmed = value;
+                    _hasSaved = false;
+                  });
+                }
+              : null,
+          onCustomMadePolicyChanged: validationErrors.isEmpty
+              ? (value) {
+                  setState(() {
+                    _customMadePolicyConfirmed = value;
+                    _hasSaved = false;
+                  });
+                }
+              : null,
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.orderConfirmationSecurePaymentNote),
+        if (!_canContinue || validationErrors.isNotEmpty) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _OrderNotice(message: l10n.orderConfirmationAgreementRequiredMessage),
+        ],
+        if (_hasSaved) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _OrderNotice(message: l10n.orderConfirmationSavedMessage),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        HankoPrimaryButton(
+          label: l10n.proceedToSecurePayment,
+          icon: Icons.arrow_forward,
+          onPressed: _canContinue && validationErrors.isEmpty && !_isSaving
+              ? _confirmAgreements
+              : null,
+          height: 58,
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckoutInputSummaryCard extends StatelessWidget {
+  const _CheckoutInputSummaryCard({required this.input, required this.onEdit});
+
+  final OrderDraftInput input;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final shipping = input.shipping;
+    final address = _shippingAddressSummary(shipping);
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.local_shipping_outlined,
+                color: HankoColors.gold,
+              ),
+              const SizedBox(width: HankoSpacing.sm),
+              Expanded(
+                child: Text(
+                  l10n.orderConfirmationCheckoutTitle,
+                  style: HankoTextStyles.sectionTitle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          _OrderDetailLine(label: l10n.email, value: input.contact.email),
+          _OrderDetailLine(
+            label: l10n.checkoutFullNameLabel,
+            value: shipping.recipientName,
+          ),
+          _OrderDetailLine(
+            label: l10n.checkoutPhoneLabel,
+            value: shipping.phone,
+          ),
+          _OrderDetailLine(
+            label: l10n.checkoutCountryLabel,
+            value: _countryMenuLabel(shipping.countryCode),
+          ),
+          _OrderDetailLine(
+            label: l10n.checkoutAddressLine1Label,
+            value: address,
+          ),
+          _OrderDetailLine(
+            label: l10n.checkoutOrderNoteLabel,
+            value: input.orderNote.trim().isEmpty
+                ? l10n.orderConfirmationNoOrderNote
+                : input.orderNote.trim(),
+            hasDivider: false,
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: l10n.editCheckoutInformation,
+            icon: Icons.edit_outlined,
+            onPressed: onEdit,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomMadeAgreementCard extends StatelessWidget {
+  const _CustomMadeAgreementCard({
+    required this.kanjiAndDesignConfirmed,
+    required this.customMadePolicyConfirmed,
+    required this.onKanjiAndDesignChanged,
+    required this.onCustomMadePolicyChanged,
+  });
+
+  final bool kanjiAndDesignConfirmed;
+  final bool customMadePolicyConfirmed;
+  final ValueChanged<bool>? onKanjiAndDesignChanged;
+  final ValueChanged<bool>? onCustomMadePolicyChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_outlined, color: HankoColors.gold),
+              const SizedBox(width: HankoSpacing.sm),
+              Expanded(
+                child: Text(
+                  l10n.customMadeAgreementTitle,
+                  style: HankoTextStyles.sectionTitle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          Text(l10n.customMadeAgreementMessage, style: HankoTextStyles.body),
+          const SizedBox(height: HankoSpacing.sm),
+          CheckboxListTile(
+            key: const Key('order-confirm-kanji-design-checkbox'),
+            value: kanjiAndDesignConfirmed,
+            onChanged: onKanjiAndDesignChanged == null
+                ? null
+                : (value) => onKanjiAndDesignChanged?.call(value ?? false),
+            activeColor: HankoColors.red,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(
+              l10n.confirmKanjiAndDesignLabel,
+              style: HankoTextStyles.body.copyWith(color: HankoColors.ink),
+            ),
+          ),
+          const Divider(color: HankoColors.surfaceBorder, height: 1),
+          CheckboxListTile(
+            key: const Key('order-confirm-custom-made-checkbox'),
+            value: customMadePolicyConfirmed,
+            onChanged: onCustomMadePolicyChanged == null
+                ? null
+                : (value) => onCustomMadePolicyChanged?.call(value ?? false),
+            activeColor: HankoColors.red,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(
+              l10n.confirmCustomMadePolicyLabel,
+              style: HankoTextStyles.body.copyWith(color: HankoColors.ink),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1632,6 +1934,24 @@ String _countryMenuLabel(String code) {
     'SG' => 'SG - Singapore',
     _ => code,
   };
+}
+
+String _shippingAddressSummary(OrderDraftShippingInput shipping) {
+  final parts =
+      [
+            shipping.addressLine1,
+            shipping.addressLine2,
+            shipping.city,
+            shipping.state,
+            shipping.postalCode,
+          ]
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toList(growable: false);
+  if (parts.isEmpty) {
+    return '-';
+  }
+  return parts.join(', ');
 }
 
 String _stoneSubtitle(OrderDraftStoneSelection selection) {

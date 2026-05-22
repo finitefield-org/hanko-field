@@ -1840,10 +1840,9 @@ void main() {
     await tester.tap(find.text('Save Checkout Information'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Checkout information was saved to this order draft.'),
-      findsOneWidget,
-    );
+    expect(find.byType(OrderConfirmationScreen), findsOneWidget);
+    expect(find.text('Order Confirmation'), findsOneWidget);
+    expect(find.text('Proceed to Secure Payment'), findsOneWidget);
 
     final savedDraft = await draftRepository.loadOrderDraft();
     expect(savedDraft.input.contact.email, 'customer@example.test');
@@ -1980,10 +1979,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Please review the highlighted fields.'), findsNothing);
-      expect(
-        find.text('Checkout information was saved to this order draft.'),
-        findsOneWidget,
-      );
+      expect(find.byType(OrderConfirmationScreen), findsOneWidget);
+      expect(find.text('Order Confirmation'), findsOneWidget);
 
       final savedDraft = await draftRepository.loadOrderDraft();
       expect(savedDraft.input.contact.email, 'customer@example.test');
@@ -1996,6 +1993,144 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('M09-T03 requires order confirmation agreement checks', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Continue to Shipping'));
+    await tester.pump();
+    await tester.tap(find.text('Continue to Shipping'));
+    await tester.pumpAndSettle();
+
+    Future<void> enterCheckoutField(String key, String text) async {
+      final field = find.byKey(Key(key));
+      await tester.ensureVisible(field);
+      await tester.pump();
+      await tester.enterText(
+        find.descendant(of: field, matching: find.byType(EditableText)),
+        text,
+      );
+      await tester.pump();
+    }
+
+    await enterCheckoutField('checkout-email-field', 'customer@example.test');
+    await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+    await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+    await enterCheckoutField('checkout-postal-code-field', '10001');
+    await enterCheckoutField(
+      'checkout-address-line1-field',
+      '123 Example Street',
+    );
+    await enterCheckoutField('checkout-city-field', 'New York');
+    await enterCheckoutField('checkout-state-field', 'NY');
+
+    await tester.ensureVisible(find.text('Save Checkout Information'));
+    await tester.pump();
+    await tester.tap(find.text('Save Checkout Information'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OrderConfirmationScreen), findsOneWidget);
+    expect(find.text('Order Confirmation'), findsOneWidget);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Michael Smith'), findsOneWidget);
+    expect(find.text('customer@example.test'), findsOneWidget);
+    expect(find.text('¥18,600'), findsOneWidget);
+    expect(
+      find.text(
+        'I confirm that the selected kanji and seal design are correct.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'I understand that this is a custom-made item and cannot be changed after production begins.',
+      ),
+      findsOneWidget,
+    );
+
+    final proceedButton = find.widgetWithText(
+      TextButton,
+      'Proceed to Secure Payment',
+    );
+    expect(tester.widget<TextButton>(proceedButton).onPressed, isNull);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextButton>(proceedButton).onPressed, isNull);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('order-confirm-custom-made-checkbox')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('order-confirm-custom-made-checkbox')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextButton>(proceedButton).onPressed, isNotNull);
+
+    await tester.ensureVisible(find.text('Proceed to Secure Payment'));
+    await tester.pump();
+    await tester.tap(find.text('Proceed to Secure Payment'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Order confirmation was saved to this order draft.'),
+      findsOneWidget,
+    );
+
+    final savedDraft = await draftRepository.loadOrderDraft();
+    expect(savedDraft.input.customerConfirmation.kanjiAndDesign, isTrue);
+    expect(savedDraft.input.customerConfirmation.customMadePolicy, isTrue);
+    expect(savedDraft.input.customerConfirmation.isComplete, isTrue);
+    expect(savedDraft.input.termsAgreed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
