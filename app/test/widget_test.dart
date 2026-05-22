@@ -1861,6 +1861,142 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'M09-T02 summarizes invalid checkout input and returns to fields',
+    (tester) async {
+      tester.view.physicalSize = const Size(432, 912);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final sealRepository = InMemoryLocalSealDesignRepository([
+        _localSealDesign(),
+      ]);
+      final draftRepository = InMemoryLocalOrderDraftRepository();
+
+      await pumpLaunchedApp(
+        tester,
+        listStoneListings: (query) async => _stoneListingsResult(),
+        localSealDesignRepository: sealRepository,
+        localOrderDraftRepository: draftRepository,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('My Seals').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('View Details'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Choose for Order'));
+      await tester.pump();
+      await tester.tap(find.text('Choose for Order'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Choose a Stone').last);
+      await tester.pump();
+      await tester.tap(find.text('Choose a Stone').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Select Stone'));
+      await tester.pump();
+      await tester.tap(find.text('Select Stone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Continue to Shipping'));
+      await tester.pump();
+      await tester.tap(find.text('Continue to Shipping'));
+      await tester.pumpAndSettle();
+
+      Future<void> enterCheckoutField(String key, String text) async {
+        final field = find.byKey(Key(key));
+        await tester.ensureVisible(field);
+        await tester.pump();
+        await tester.enterText(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+          text,
+        );
+        await tester.pump();
+      }
+
+      await enterCheckoutField('checkout-email-field', 'not-an-email');
+      await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+
+      await tester.ensureVisible(find.text('Save Checkout Information'));
+      await tester.pump();
+      await tester.tap(find.text('Save Checkout Information'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Please review the highlighted fields.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Some information is missing or invalid.'),
+        findsOneWidget,
+      );
+      expect(find.text('Please enter a valid email address.'), findsWidgets);
+      expect(find.text('Please enter a valid phone number.'), findsWidgets);
+      expect(find.text('Postal code is required.'), findsWidgets);
+      expect(find.text('Address line 1 is required.'), findsWidgets);
+      expect(find.text('City is required.'), findsWidgets);
+      expect(find.text('State / Province is required.'), findsWidgets);
+      expect(
+        find.text('State / Province: State / Province is required.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Checkout information was saved to this order draft.'),
+        findsNothing,
+      );
+
+      final invalidDraft = await draftRepository.loadOrderDraft();
+      expect(invalidDraft.input.contact.email, isEmpty);
+      expect(invalidDraft.input.shipping.recipientName, isEmpty);
+
+      await tester.tap(
+        find.text('State / Province: State / Province is required.'),
+      );
+      await tester.pumpAndSettle();
+
+      final stateFieldTop = tester
+          .getTopLeft(find.byKey(const Key('checkout-state-field')))
+          .dy;
+      expect(stateFieldTop, greaterThanOrEqualTo(0));
+      expect(stateFieldTop, lessThan(tester.view.physicalSize.height));
+
+      await enterCheckoutField('checkout-email-field', 'customer@example.test');
+      await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+      await enterCheckoutField('checkout-postal-code-field', '10001');
+      await enterCheckoutField(
+        'checkout-address-line1-field',
+        '123 Example Street',
+      );
+      await enterCheckoutField('checkout-city-field', 'New York');
+      await enterCheckoutField('checkout-state-field', 'NY');
+
+      await tester.ensureVisible(find.text('Save Checkout Information'));
+      await tester.pump();
+      await tester.tap(find.text('Save Checkout Information'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Please review the highlighted fields.'), findsNothing);
+      expect(
+        find.text('Checkout information was saved to this order draft.'),
+        findsOneWidget,
+      );
+
+      final savedDraft = await draftRepository.loadOrderDraft();
+      expect(savedDraft.input.contact.email, 'customer@example.test');
+      expect(savedDraft.input.shipping.recipientName, 'Michael Smith');
+      expect(savedDraft.input.shipping.phone, '+1 555 0100');
+      expect(savedDraft.input.shipping.postalCode, '10001');
+      expect(savedDraft.input.shipping.addressLine1, '123 Example Street');
+      expect(savedDraft.input.shipping.city, 'New York');
+      expect(savedDraft.input.shipping.state, 'NY');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {

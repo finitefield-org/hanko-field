@@ -295,6 +295,24 @@ class HankoLocalizations {
   String get checkoutInputSaveAction => _strings.checkoutInputSaveAction;
   String get checkoutInputSavingAction => _strings.checkoutInputSavingAction;
   String get checkoutInputSavedMessage => _strings.checkoutInputSavedMessage;
+  String get checkoutValidationTitle => _strings.checkoutValidationTitle;
+  String get checkoutValidationMessage => _strings.checkoutValidationMessage;
+  String get checkoutEmailInvalidMessage =>
+      _strings.checkoutEmailInvalidMessage;
+  String get checkoutFullNameRequiredMessage =>
+      _strings.checkoutFullNameRequiredMessage;
+  String get checkoutPhoneInvalidMessage =>
+      _strings.checkoutPhoneInvalidMessage;
+  String get checkoutCountryRequiredMessage =>
+      _strings.checkoutCountryRequiredMessage;
+  String get checkoutPostalCodeRequiredMessage =>
+      _strings.checkoutPostalCodeRequiredMessage;
+  String get checkoutAddressLine1RequiredMessage =>
+      _strings.checkoutAddressLine1RequiredMessage;
+  String get checkoutCityRequiredMessage =>
+      _strings.checkoutCityRequiredMessage;
+  String get checkoutStateRequiredMessage =>
+      _strings.checkoutStateRequiredMessage;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -600,6 +618,16 @@ class _HankoStrings {
     required this.checkoutInputSaveAction,
     required this.checkoutInputSavingAction,
     required this.checkoutInputSavedMessage,
+    required this.checkoutValidationTitle,
+    required this.checkoutValidationMessage,
+    required this.checkoutEmailInvalidMessage,
+    required this.checkoutFullNameRequiredMessage,
+    required this.checkoutPhoneInvalidMessage,
+    required this.checkoutCountryRequiredMessage,
+    required this.checkoutPostalCodeRequiredMessage,
+    required this.checkoutAddressLine1RequiredMessage,
+    required this.checkoutCityRequiredMessage,
+    required this.checkoutStateRequiredMessage,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -874,6 +902,16 @@ class _HankoStrings {
   final String checkoutInputSaveAction;
   final String checkoutInputSavingAction;
   final String checkoutInputSavedMessage;
+  final String checkoutValidationTitle;
+  final String checkoutValidationMessage;
+  final String checkoutEmailInvalidMessage;
+  final String checkoutFullNameRequiredMessage;
+  final String checkoutPhoneInvalidMessage;
+  final String checkoutCountryRequiredMessage;
+  final String checkoutPostalCodeRequiredMessage;
+  final String checkoutAddressLine1RequiredMessage;
+  final String checkoutCityRequiredMessage;
+  final String checkoutStateRequiredMessage;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1195,6 +1233,16 @@ const _localizedValues = {
       checkoutInputSavingAction: 'Saving...',
       checkoutInputSavedMessage:
           'Checkout information was saved to this order draft.',
+      checkoutValidationTitle: 'Please review the highlighted fields.',
+      checkoutValidationMessage: 'Some information is missing or invalid.',
+      checkoutEmailInvalidMessage: 'Please enter a valid email address.',
+      checkoutFullNameRequiredMessage: 'Full name is required.',
+      checkoutPhoneInvalidMessage: 'Please enter a valid phone number.',
+      checkoutCountryRequiredMessage: 'Country / Region is required.',
+      checkoutPostalCodeRequiredMessage: 'Postal code is required.',
+      checkoutAddressLine1RequiredMessage: 'Address line 1 is required.',
+      checkoutCityRequiredMessage: 'City is required.',
+      checkoutStateRequiredMessage: 'State / Province is required.',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1478,6 +1526,16 @@ const _localizedValues = {
       checkoutInputSaveAction: 'Checkout情報を保存',
       checkoutInputSavingAction: '保存中...',
       checkoutInputSavedMessage: 'Checkout情報を注文下書きに保存しました。',
+      checkoutValidationTitle: '入力内容を確認してください。',
+      checkoutValidationMessage: '未入力または形式が正しくない項目があります。',
+      checkoutEmailInvalidMessage: '有効なメールアドレスを入力してください。',
+      checkoutFullNameRequiredMessage: '氏名を入力してください。',
+      checkoutPhoneInvalidMessage: '有効な電話番号を入力してください。',
+      checkoutCountryRequiredMessage: '国 / 地域を選択してください。',
+      checkoutPostalCodeRequiredMessage: '郵便番号を入力してください。',
+      checkoutAddressLine1RequiredMessage: '住所1を入力してください。',
+      checkoutCityRequiredMessage: '市区町村を入力してください。',
+      checkoutStateRequiredMessage: '都道府県 / 州を入力してください。',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

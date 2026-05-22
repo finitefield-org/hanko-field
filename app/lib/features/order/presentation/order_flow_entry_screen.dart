@@ -247,6 +247,10 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
   static const _defaultCountryCode = 'JP';
   static const _knownCountryCodes = ['JP', 'US', 'CA', 'GB', 'AU', 'SG'];
 
+  final _validationSummaryKey = GlobalKey();
+  final _fieldKeys = {
+    for (final field in _CheckoutInputField.values) field: GlobalKey(),
+  };
   late final TextEditingController _emailController;
   late final TextEditingController _fullNameController;
   late final TextEditingController _phoneController;
@@ -257,6 +261,7 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
   late final TextEditingController _addressLine2Controller;
   late final TextEditingController _orderNoteController;
   late String _countryCode;
+  var _validationErrors = const <_CheckoutValidationError>[];
   var _isSaving = false;
   var _hasSaved = false;
 
@@ -315,25 +320,19 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
       return;
     }
     final locale = Localizations.localeOf(context).languageCode;
-    final input = widget.input.copyWith(
-      contact: OrderDraftContactInput(
-        email: _emailController.text.trim(),
-        preferredLocale: locale,
-      ),
-      shipping: OrderDraftShippingInput(
-        countryCode: _countryCode,
-        recipientName: _fullNameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        postalCode: _postalCodeController.text.trim(),
-        state: _stateController.text.trim(),
-        city: _cityController.text.trim(),
-        addressLine1: _addressLine1Controller.text.trim(),
-        addressLine2: _addressLine2Controller.text.trim(),
-      ),
-      orderNote: _orderNoteController.text.trim(),
-    );
+    final input = _inputFromControllers(locale: locale);
+    final errors = _validateInput(context, input);
+    if (errors.isNotEmpty) {
+      setState(() {
+        _validationErrors = errors;
+        _hasSaved = false;
+      });
+      _scrollToValidationSummary();
+      return;
+    }
 
     setState(() {
+      _validationErrors = const [];
       _isSaving = true;
       _hasSaved = false;
     });
@@ -350,6 +349,63 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
     }
   }
 
+  OrderDraftInput _inputFromControllers({required String locale}) {
+    return widget.input.copyWith(
+      contact: OrderDraftContactInput(
+        email: _emailController.text.trim(),
+        preferredLocale: locale,
+      ),
+      shipping: OrderDraftShippingInput(
+        countryCode: _countryCode.trim().toUpperCase(),
+        recipientName: _fullNameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        postalCode: _postalCodeController.text.trim(),
+        state: _stateController.text.trim(),
+        city: _cityController.text.trim(),
+        addressLine1: _addressLine1Controller.text.trim(),
+        addressLine2: _addressLine2Controller.text.trim(),
+      ),
+      orderNote: _orderNoteController.text.trim(),
+    );
+  }
+
+  void _scrollToValidationSummary() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final summaryContext = _validationSummaryKey.currentContext;
+      if (summaryContext == null) {
+        return;
+      }
+      Scrollable.ensureVisible(
+        summaryContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+    });
+  }
+
+  void _scrollToField(_CheckoutInputField field) {
+    final fieldContext = _fieldKeys[field]?.currentContext;
+    if (fieldContext == null) {
+      return;
+    }
+    Scrollable.ensureVisible(
+      fieldContext,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      alignment: 0.18,
+    );
+  }
+
+  String? _errorTextFor(_CheckoutInputField field) {
+    for (final error in _validationErrors) {
+      if (error.field == field) {
+        return error.message;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -361,35 +417,55 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
       children: [
         Text(l10n.checkoutInputMessage, style: HankoTextStyles.body),
         const SizedBox(height: HankoSpacing.md),
+        if (_validationErrors.isNotEmpty) ...[
+          _CheckoutValidationSummary(
+            key: _validationSummaryKey,
+            errors: _validationErrors,
+            onSelectField: _scrollToField,
+          ),
+          const SizedBox(height: HankoSpacing.md),
+        ],
         _CheckoutSectionCard(
           icon: Icons.alternate_email,
           title: l10n.checkoutContactTitle,
           children: [
-            HankoTextField(
-              key: const Key('checkout-email-field'),
-              label: l10n.email,
-              hintText: l10n.emailHint,
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.email],
+              child: HankoTextField(
+                key: const Key('checkout-email-field'),
+                label: l10n.email,
+                hintText: l10n.emailHint,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.email),
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-full-name-field'),
-              label: l10n.checkoutFullNameLabel,
-              hintText: l10n.checkoutFullNameHint,
-              controller: _fullNameController,
-              keyboardType: TextInputType.name,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.fullName],
+              child: HankoTextField(
+                key: const Key('checkout-full-name-field'),
+                label: l10n.checkoutFullNameLabel,
+                hintText: l10n.checkoutFullNameHint,
+                controller: _fullNameController,
+                keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.fullName),
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-phone-field'),
-              label: l10n.checkoutPhoneLabel,
-              hintText: l10n.checkoutPhoneHint,
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.phone],
+              child: HankoTextField(
+                key: const Key('checkout-phone-field'),
+                label: l10n.checkoutPhoneLabel,
+                hintText: l10n.checkoutPhoneHint,
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.phone),
+              ),
             ),
           ],
         ),
@@ -398,42 +474,56 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
           icon: Icons.local_shipping_outlined,
           title: l10n.checkoutShippingTitle,
           children: [
-            DropdownButtonFormField<String>(
-              key: const Key('checkout-country-field'),
-              initialValue: _countryCode,
-              isExpanded: true,
-              decoration: InputDecoration(labelText: l10n.checkoutCountryLabel),
-              items: [
-                for (final code in countryCodes)
-                  DropdownMenuItem(
-                    value: code,
-                    child: Text(_countryMenuLabel(code)),
-                  ),
-              ],
-              onChanged: (countryCode) {
-                if (countryCode == null) {
-                  return;
-                }
-                setState(() => _countryCode = countryCode);
-              },
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.country],
+              child: DropdownButtonFormField<String>(
+                key: const Key('checkout-country-field'),
+                initialValue: _countryCode,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.checkoutCountryLabel,
+                  errorText: _errorTextFor(_CheckoutInputField.country),
+                ),
+                items: [
+                  for (final code in countryCodes)
+                    DropdownMenuItem(
+                      value: code,
+                      child: Text(_countryMenuLabel(code)),
+                    ),
+                ],
+                onChanged: (countryCode) {
+                  if (countryCode == null) {
+                    return;
+                  }
+                  setState(() => _countryCode = countryCode);
+                },
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-postal-code-field'),
-              label: l10n.checkoutPostalCodeLabel,
-              hintText: l10n.checkoutPostalCodeHint,
-              controller: _postalCodeController,
-              keyboardType: TextInputType.streetAddress,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.postalCode],
+              child: HankoTextField(
+                key: const Key('checkout-postal-code-field'),
+                label: l10n.checkoutPostalCodeLabel,
+                hintText: l10n.checkoutPostalCodeHint,
+                controller: _postalCodeController,
+                keyboardType: TextInputType.streetAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.postalCode),
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-address-line1-field'),
-              label: l10n.checkoutAddressLine1Label,
-              hintText: l10n.checkoutAddressLine1Hint,
-              controller: _addressLine1Controller,
-              keyboardType: TextInputType.streetAddress,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.addressLine1],
+              child: HankoTextField(
+                key: const Key('checkout-address-line1-field'),
+                label: l10n.checkoutAddressLine1Label,
+                hintText: l10n.checkoutAddressLine1Hint,
+                controller: _addressLine1Controller,
+                keyboardType: TextInputType.streetAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.addressLine1),
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
             HankoTextField(
@@ -445,22 +535,30 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-city-field'),
-              label: l10n.checkoutCityLabel,
-              hintText: l10n.checkoutCityHint,
-              controller: _cityController,
-              keyboardType: TextInputType.streetAddress,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.city],
+              child: HankoTextField(
+                key: const Key('checkout-city-field'),
+                label: l10n.checkoutCityLabel,
+                hintText: l10n.checkoutCityHint,
+                controller: _cityController,
+                keyboardType: TextInputType.streetAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.city),
+              ),
             ),
             const SizedBox(height: HankoSpacing.md),
-            HankoTextField(
-              key: const Key('checkout-state-field'),
-              label: l10n.checkoutStateLabel,
-              hintText: l10n.checkoutStateHint,
-              controller: _stateController,
-              keyboardType: TextInputType.streetAddress,
-              textInputAction: TextInputAction.next,
+            _CheckoutFieldAnchor(
+              fieldKey: _fieldKeys[_CheckoutInputField.state],
+              child: HankoTextField(
+                key: const Key('checkout-state-field'),
+                label: l10n.checkoutStateLabel,
+                hintText: l10n.checkoutStateHint,
+                controller: _stateController,
+                keyboardType: TextInputType.streetAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _errorTextFor(_CheckoutInputField.state),
+              ),
             ),
           ],
         ),
@@ -498,6 +596,122 @@ class _CheckoutInputScreenState extends State<CheckoutInputScreen> {
         ),
       ],
     );
+  }
+}
+
+enum _CheckoutInputField {
+  email,
+  fullName,
+  phone,
+  country,
+  postalCode,
+  addressLine1,
+  city,
+  state,
+}
+
+class _CheckoutValidationError {
+  const _CheckoutValidationError({
+    required this.field,
+    required this.label,
+    required this.message,
+  });
+
+  final _CheckoutInputField field;
+  final String label;
+  final String message;
+}
+
+class _CheckoutValidationSummary extends StatelessWidget {
+  const _CheckoutValidationSummary({
+    super.key,
+    required this.errors,
+    required this.onSelectField,
+  });
+
+  final List<_CheckoutValidationError> errors;
+  final ValueChanged<_CheckoutInputField> onSelectField;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline, color: HankoColors.error),
+              const SizedBox(width: HankoSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.checkoutValidationTitle,
+                      style: HankoTextStyles.cardTitle.copyWith(
+                        color: HankoColors.error,
+                      ),
+                    ),
+                    const SizedBox(height: HankoSpacing.xs),
+                    Text(
+                      l10n.checkoutValidationMessage,
+                      style: HankoTextStyles.body,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          for (final error in errors) ...[
+            TextButton(
+              onPressed: () => onSelectField(error.field),
+              style: TextButton.styleFrom(
+                foregroundColor: HankoColors.error,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 3),
+                    child: Icon(Icons.arrow_downward, size: 18),
+                  ),
+                  const SizedBox(width: HankoSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '${error.label}: ${error.message}',
+                      style: HankoTextStyles.body.copyWith(
+                        color: HankoColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (error != errors.last)
+              const Divider(color: HankoColors.surfaceBorder, height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckoutFieldAnchor extends StatelessWidget {
+  const _CheckoutFieldAnchor({required this.fieldKey, required this.child});
+
+  final Key? fieldKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(key: fieldKey, child: child);
   }
 }
 
@@ -1301,6 +1515,95 @@ int _estimatedShippingAmount({
     'SG' => 1300,
     _ => 600,
   };
+}
+
+List<_CheckoutValidationError> _validateInput(
+  BuildContext context,
+  OrderDraftInput input,
+) {
+  final l10n = context.l10n;
+  final errors = <_CheckoutValidationError>[];
+  final email = input.contact.email.trim();
+  final phone = input.shipping.phone.trim();
+
+  void addError({
+    required _CheckoutInputField field,
+    required String label,
+    required String message,
+  }) {
+    errors.add(
+      _CheckoutValidationError(field: field, label: label, message: message),
+    );
+  }
+
+  if (!_isValidEmail(email)) {
+    addError(
+      field: _CheckoutInputField.email,
+      label: l10n.email,
+      message: l10n.checkoutEmailInvalidMessage,
+    );
+  }
+  if (input.shipping.recipientName.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.fullName,
+      label: l10n.checkoutFullNameLabel,
+      message: l10n.checkoutFullNameRequiredMessage,
+    );
+  }
+  if (!_isValidPhone(phone)) {
+    addError(
+      field: _CheckoutInputField.phone,
+      label: l10n.checkoutPhoneLabel,
+      message: l10n.checkoutPhoneInvalidMessage,
+    );
+  }
+  if (input.shipping.countryCode.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.country,
+      label: l10n.checkoutCountryLabel,
+      message: l10n.checkoutCountryRequiredMessage,
+    );
+  }
+  if (input.shipping.postalCode.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.postalCode,
+      label: l10n.checkoutPostalCodeLabel,
+      message: l10n.checkoutPostalCodeRequiredMessage,
+    );
+  }
+  if (input.shipping.addressLine1.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.addressLine1,
+      label: l10n.checkoutAddressLine1Label,
+      message: l10n.checkoutAddressLine1RequiredMessage,
+    );
+  }
+  if (input.shipping.city.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.city,
+      label: l10n.checkoutCityLabel,
+      message: l10n.checkoutCityRequiredMessage,
+    );
+  }
+  if (input.shipping.state.trim().isEmpty) {
+    addError(
+      field: _CheckoutInputField.state,
+      label: l10n.checkoutStateLabel,
+      message: l10n.checkoutStateRequiredMessage,
+    );
+  }
+
+  return errors;
+}
+
+bool _isValidEmail(String value) {
+  return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value);
+}
+
+bool _isValidPhone(String value) {
+  final digitCount = RegExp(r'\d').allMatches(value).length;
+  final hasOnlyPhoneCharacters = RegExp(r'^[0-9+()\-\s.]+$').hasMatch(value);
+  return digitCount >= 6 && hasOnlyPhoneCharacters;
 }
 
 String _normalizedCountryCode(String value) {
