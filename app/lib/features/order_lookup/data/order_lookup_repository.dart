@@ -2,6 +2,14 @@ import '../../../core/api/core_api.dart';
 import '../../../core/domain/money.dart';
 import '../domain/order_lookup_models.dart';
 
+typedef OrderStatusFetcher = Future<OrderStatus> Function(String orderId);
+
+Future<OrderStatus> fetchOrderStatusWithDefaultApi(String orderId) {
+  return OrderLookupRepository(
+    HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
+  ).fetchOrderStatus(orderId);
+}
+
 class OrderLookupRepository {
   const OrderLookupRepository(this._apiClient);
 
@@ -54,12 +62,27 @@ class OrderStatusDto {
   });
 
   factory OrderStatusDto.fromJson(JsonMap json) {
+    final payment = json['payment'] == null
+        ? const <String, Object?>{}
+        : asJsonMap(json['payment'], 'payment');
+    final fulfillment = json['fulfillment'] == null
+        ? const <String, Object?>{}
+        : asJsonMap(json['fulfillment'], 'fulfillment');
+
     return OrderStatusDto(
       orderId: readString(json, 'order_id'),
       orderNo: readString(json, 'order_no'),
       orderStatus: readString(json, 'order_status', fallbackKey: 'status'),
-      paymentStatus: readString(json, 'payment_status'),
-      fulfillmentStatus: readString(json, 'fulfillment_status'),
+      paymentStatus: readString(
+        json,
+        'payment_status',
+        defaultValue: readString(payment, 'status'),
+      ),
+      fulfillmentStatus: readString(
+        json,
+        'fulfillment_status',
+        defaultValue: readString(fulfillment, 'status'),
+      ),
       productionStatus: readString(
         json,
         'production_status',
@@ -73,7 +96,9 @@ class OrderStatusDto {
       pricing: OrderLookupPricingDto.fromJson(
         asJsonMap(json['pricing'], 'pricing'),
       ),
-      trackingNumber: readOptionalString(json, 'tracking_number'),
+      trackingNumber:
+          readOptionalString(json, 'tracking_number') ??
+          readOptionalString(fulfillment, 'tracking_no'),
     );
   }
 

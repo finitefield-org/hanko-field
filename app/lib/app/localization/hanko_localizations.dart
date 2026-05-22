@@ -376,6 +376,18 @@ class HankoLocalizations {
   String get stripeCheckoutSecureNote => _strings.stripeCheckoutSecureNote;
   String get stripeCheckoutReturnOrderIdLabel =>
       _strings.stripeCheckoutReturnOrderIdLabel;
+  String get paymentStatusTitle => _strings.paymentStatusTitle;
+  String get paymentStatusCheckingTitle => _strings.paymentStatusCheckingTitle;
+  String get paymentStatusCheckingMessage =>
+      _strings.paymentStatusCheckingMessage;
+  String get paymentStatusPaidTitle => _strings.paymentStatusPaidTitle;
+  String get paymentStatusPaidMessage => _strings.paymentStatusPaidMessage;
+  String get paymentStatusPendingTitle => _strings.paymentStatusPendingTitle;
+  String get paymentStatusPendingMessage =>
+      _strings.paymentStatusPendingMessage;
+  String get paymentStatusPendingNotice => _strings.paymentStatusPendingNotice;
+  String get paymentStatusFailedTitle => _strings.paymentStatusFailedTitle;
+  String get paymentStatusFailedMessage => _strings.paymentStatusFailedMessage;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -730,6 +742,16 @@ class _HankoStrings {
     required this.stripeCheckoutRetryAction,
     required this.stripeCheckoutSecureNote,
     required this.stripeCheckoutReturnOrderIdLabel,
+    required this.paymentStatusTitle,
+    required this.paymentStatusCheckingTitle,
+    required this.paymentStatusCheckingMessage,
+    required this.paymentStatusPaidTitle,
+    required this.paymentStatusPaidMessage,
+    required this.paymentStatusPendingTitle,
+    required this.paymentStatusPendingMessage,
+    required this.paymentStatusPendingNotice,
+    required this.paymentStatusFailedTitle,
+    required this.paymentStatusFailedMessage,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -1053,6 +1075,16 @@ class _HankoStrings {
   final String stripeCheckoutRetryAction;
   final String stripeCheckoutSecureNote;
   final String stripeCheckoutReturnOrderIdLabel;
+  final String paymentStatusTitle;
+  final String paymentStatusCheckingTitle;
+  final String paymentStatusCheckingMessage;
+  final String paymentStatusPaidTitle;
+  final String paymentStatusPaidMessage;
+  final String paymentStatusPendingTitle;
+  final String paymentStatusPendingMessage;
+  final String paymentStatusPendingNotice;
+  final String paymentStatusFailedTitle;
+  final String paymentStatusFailedMessage;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1439,6 +1471,21 @@ const _localizedValues = {
       stripeCheckoutSecureNote:
           'Your payment information is secure and encrypted. Powered by Stripe.',
       stripeCheckoutReturnOrderIdLabel: 'Return order ID',
+      paymentStatusTitle: 'Payment Status',
+      paymentStatusCheckingTitle: 'Checking payment status',
+      paymentStatusCheckingMessage:
+          'Confirming the latest order status after Stripe Checkout.',
+      paymentStatusPaidTitle: 'Payment confirmed',
+      paymentStatusPaidMessage:
+          'Your payment is confirmed. We are preparing the order summary.',
+      paymentStatusPendingTitle: 'Payment pending',
+      paymentStatusPendingMessage:
+          'Stripe returned successfully, but payment confirmation is still pending.',
+      paymentStatusPendingNotice:
+          'Webhook confirmation may take a moment. Use Order Lookup later if this screen does not update.',
+      paymentStatusFailedTitle: "Couldn't verify payment",
+      paymentStatusFailedMessage:
+          'Payment status could not be confirmed. Please check Order Lookup later.',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1772,6 +1819,17 @@ const _localizedValues = {
       stripeCheckoutRetryAction: 'もう一度試す',
       stripeCheckoutSecureNote: '決済情報は暗号化され、安全に処理されます。Powered by Stripe.',
       stripeCheckoutReturnOrderIdLabel: '戻り注文ID',
+      paymentStatusTitle: '決済状態',
+      paymentStatusCheckingTitle: '決済状態を確認しています',
+      paymentStatusCheckingMessage: 'Stripe Checkoutから戻った後の最新注文状態を確認しています。',
+      paymentStatusPaidTitle: '決済を確認しました',
+      paymentStatusPaidMessage: '決済が確認できました。注文完了画面を準備しています。',
+      paymentStatusPendingTitle: '決済確認待ち',
+      paymentStatusPendingMessage: 'Stripeから正常に戻りましたが、決済確定の反映がまだ完了していません。',
+      paymentStatusPendingNotice:
+          'Webhook反映に時間がかかる場合があります。画面が更新されない場合は後ほど注文照会をご確認ください。',
+      paymentStatusFailedTitle: '決済状態を確認できませんでした',
+      paymentStatusFailedMessage: '決済状態を確認できませんでした。後ほど注文照会をご確認ください。',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

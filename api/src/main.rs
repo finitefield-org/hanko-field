@@ -264,6 +264,24 @@ struct CreateOrderResult {
 }
 
 #[derive(Debug, Clone)]
+struct OrderStatusResult {
+    order_id: String,
+    order_no: String,
+    status: String,
+    payment_status: String,
+    checkout_session_id: String,
+    payment_intent_id: String,
+    fulfillment_status: String,
+    fulfillment_carrier: String,
+    fulfillment_tracking_no: String,
+    production_status: String,
+    shipping_status: String,
+    total: i64,
+    currency: String,
+    updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
 struct ProcessStripeWebhookResult {
     processed: bool,
     already_processed: bool,
@@ -850,6 +868,7 @@ async fn run() -> Result<()> {
             post(handle_generate_seal_designs),
         )
         .route("/v1/orders", post(handle_create_order))
+        .route("/v1/orders/{order_id}/status", get(handle_get_order_status))
         .route(
             "/v1/payments/stripe/checkout-session",
             post(handle_create_stripe_checkout_session),
@@ -1637,6 +1656,41 @@ async fn handle_create_order(State(state): State<AppState>, body: Bytes) -> Resp
     }
 }
 
+async fn handle_get_order_status(
+    State(state): State<AppState>,
+    Path(order_id): Path<String>,
+) -> Response {
+    let order_id = order_id.trim();
+    if order_id.is_empty() {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "validation_error",
+            "order_id is required",
+        );
+    }
+
+    match state.store.get_order_status(order_id).await {
+        Ok(Some(result)) => json_response(StatusCode::OK, order_status_response_json(&result)),
+        Ok(None) => error_response(StatusCode::NOT_FOUND, "order_not_found", "order not found"),
+        Err(StoreError::Internal(err)) => {
+            eprintln!("failed to load order status: {err:#}");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            )
+        }
+        Err(err) => {
+            eprintln!("failed to load order status: {err}");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            )
+        }
+    }
+}
+
 async fn handle_create_stripe_checkout_session(
     State(state): State<AppState>,
     body: Bytes,
@@ -1881,6 +1935,48 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> Response {
             }
         }),
     )
+}
+
+fn order_status_response_json(result: &OrderStatusResult) -> JsonValue {
+    json!({
+        "order_id": result.order_id,
+        "order_no": result.order_no,
+        "status": result.status,
+        "order_status": result.status,
+        "payment": {
+            "status": result.payment_status,
+            "checkout_session_id": nullable_string_json(&result.checkout_session_id),
+            "payment_intent_id": nullable_string_json(&result.payment_intent_id),
+        },
+        "payment_status": result.payment_status,
+        "fulfillment": {
+            "status": result.fulfillment_status,
+            "carrier": nullable_string_json(&result.fulfillment_carrier),
+            "tracking_no": nullable_string_json(&result.fulfillment_tracking_no),
+        },
+        "fulfillment_status": result.fulfillment_status,
+        "production_status": result.production_status,
+        "shipping_status": result.shipping_status,
+        "tracking_number": nullable_string_json(&result.fulfillment_tracking_no),
+        "pricing": {
+            "total": result.total,
+            "currency": result.currency,
+        },
+        "updated_at": result
+            .updated_at
+            .as_ref()
+            .map(|value| JsonValue::String(value.to_rfc3339_opts(SecondsFormat::Secs, true)))
+            .unwrap_or(JsonValue::Null),
+    })
+}
+
+fn nullable_string_json(value: &str) -> JsonValue {
+    let value = value.trim();
+    if value.is_empty() {
+        JsonValue::Null
+    } else {
+        JsonValue::String(value.to_owned())
+    }
 }
 
 fn firestore_client_from_access_token(access_token: &str) -> Result<FirebaseFirestoreClient> {
@@ -2470,6 +2566,65 @@ impl FirestoreStore {
             total: pricing_total(&pricing),
             currency: pricing_currency(&pricing),
             contact_email: read_string_field(&contact, "email"),
+        }))
+    }
+
+    async fn get_order_status(
+        &self,
+        order_id: &str,
+    ) -> Result<Option<OrderStatusResult>, StoreError> {
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let order_doc_name = format!("{}/orders/{}", self.parent, order_id);
+
+        let order_doc = match client
+            .get_document(&order_doc_name, &GetDocumentOptions::default())
+            .await
+        {
+            Ok(doc) => doc,
+            Err(err) if is_not_found(&err) => return Ok(None),
+            Err(err) => return Err(StoreError::Internal(anyhow!(err))),
+        };
+
+        let payment = read_map_field(&order_doc.fields, "payment");
+        let fulfillment = read_map_field(&order_doc.fields, "fulfillment");
+        let production = read_map_field(&order_doc.fields, "production");
+        let shipping = read_map_field(&order_doc.fields, "shipping");
+        let pricing = read_map_field(&order_doc.fields, "pricing");
+
+        Ok(Some(OrderStatusResult {
+            order_id: order_id.to_owned(),
+            order_no: read_string_field(&order_doc.fields, "order_no"),
+            status: read_string_field(&order_doc.fields, "status"),
+            payment_status: read_string_field(&payment, "status"),
+            checkout_session_id: read_string_field(&payment, "checkout_session_id"),
+            payment_intent_id: first_non_empty(&[
+                Some(read_string_field(&payment, "intent_id")),
+                Some(read_string_field(&payment, "payment_intent_id")),
+            ])
+            .unwrap_or_default(),
+            fulfillment_status: read_string_field(&fulfillment, "status"),
+            fulfillment_carrier: read_string_field(&fulfillment, "carrier"),
+            fulfillment_tracking_no: first_non_empty(&[
+                Some(read_string_field(&fulfillment, "tracking_no")),
+                Some(read_string_field(&fulfillment, "tracking_number")),
+            ])
+            .unwrap_or_default(),
+            production_status: first_non_empty(&[
+                Some(read_string_field(&production, "status")),
+                Some(read_string_field(&order_doc.fields, "production_status")),
+            ])
+            .unwrap_or_else(|| "not_started".to_owned()),
+            shipping_status: first_non_empty(&[
+                Some(read_string_field(&shipping, "status")),
+                Some(read_string_field(&order_doc.fields, "shipping_status")),
+            ])
+            .unwrap_or_else(|| "not_shipped".to_owned()),
+            total: pricing_total(&pricing),
+            currency: pricing_currency(&pricing),
+            updated_at: read_timestamp_field(&order_doc.fields, "updated_at"),
         }))
     }
 
@@ -7072,6 +7227,43 @@ mod tests {
         };
 
         assert!(validate_create_stripe_checkout_session_request(request).is_err());
+    }
+
+    #[test]
+    fn order_status_response_includes_nested_and_flat_fields() {
+        let updated_at = DateTime::parse_from_rfc3339("2026-05-21T11:15:00Z")
+            .expect("fixture timestamp")
+            .with_timezone(&Utc);
+        let response = order_status_response_json(&OrderStatusResult {
+            order_id: "order_001".to_owned(),
+            order_no: "HF-20260521-0001".to_owned(),
+            status: "paid".to_owned(),
+            payment_status: "paid".to_owned(),
+            checkout_session_id: "cs_test_xxx".to_owned(),
+            payment_intent_id: "pi_xxx".to_owned(),
+            fulfillment_status: "pending".to_owned(),
+            fulfillment_carrier: String::new(),
+            fulfillment_tracking_no: String::new(),
+            production_status: "not_started".to_owned(),
+            shipping_status: "not_shipped".to_owned(),
+            total: 18600,
+            currency: "JPY".to_owned(),
+            updated_at: Some(updated_at),
+        });
+
+        assert_eq!(response["order_id"], "order_001");
+        assert_eq!(response["status"], "paid");
+        assert_eq!(response["order_status"], "paid");
+        assert_eq!(response["payment"]["status"], "paid");
+        assert_eq!(response["payment_status"], "paid");
+        assert_eq!(response["payment"]["checkout_session_id"], "cs_test_xxx");
+        assert_eq!(response["payment"]["payment_intent_id"], "pi_xxx");
+        assert_eq!(response["fulfillment"]["status"], "pending");
+        assert!(response["fulfillment"]["carrier"].is_null());
+        assert!(response["fulfillment"]["tracking_no"].is_null());
+        assert_eq!(response["pricing"]["total"], 18600);
+        assert_eq!(response["pricing"]["currency"], "JPY");
+        assert_eq!(response["updated_at"], "2026-05-21T11:15:00Z");
     }
 
     #[test]

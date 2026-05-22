@@ -6,6 +6,7 @@ import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
+import '../../order_lookup/domain/order_lookup_models.dart';
 import '../domain/checkout_return.dart';
 import '../domain/order_draft.dart';
 import '../domain/order_models.dart';
@@ -13,6 +14,8 @@ import '../domain/order_models.dart';
 enum CheckoutProcessingStep { creatingOrder, creatingCheckoutSession, ready }
 
 enum StripeCheckoutExternalStep { opening, waitingForReturn, returned, failed }
+
+enum PaymentStatusStep { checking, paid, pending, failed }
 
 class OrderFlowEntryScreen extends StatelessWidget {
   const OrderFlowEntryScreen({
@@ -1053,6 +1056,181 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+class PaymentStatusScreen extends StatelessWidget {
+  const PaymentStatusScreen({
+    super.key,
+    required this.draft,
+    required this.step,
+    this.status,
+    this.createdOrder,
+    this.returnResult,
+    this.error,
+    this.onBack,
+  });
+
+  final OrderDraft draft;
+  final PaymentStatusStep step;
+  final OrderStatus? status;
+  final CreatedOrder? createdOrder;
+  final CheckoutReturnResult? returnResult;
+  final Object? error;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isChecking = step == PaymentStatusStep.checking;
+    final hasError = error != null || step == PaymentStatusStep.failed;
+    final title = _paymentStatusTitle(l10n, step, hasError);
+    final message = _paymentStatusMessage(l10n, step, hasError);
+    final orderNo = status?.orderNo.isNotEmpty == true
+        ? status!.orderNo
+        : createdOrder?.orderNo;
+    final orderId = status?.orderId.isNotEmpty == true
+        ? status!.orderId
+        : returnResult?.orderId ?? createdOrder?.orderId;
+    final seal = draft.sealSelection;
+    final stone = draft.stoneSelection;
+
+    return _OrderScreenFrame(
+      title: l10n.paymentStatusTitle,
+      onBack: isChecking ? null : onBack,
+      children: [
+        HankoSurfaceCard(
+          radius: HankoRadii.sm,
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: _PaymentStatusIcon(step: step, hasError: hasError),
+              ),
+              const SizedBox(height: HankoSpacing.md),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle.copyWith(
+                  color: hasError ? HankoColors.error : HankoColors.ink,
+                ),
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              if (orderNo != null && orderNo.isNotEmpty) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.orderNo,
+                  value: orderNo,
+                  hasDivider: orderId != null && orderId.isNotEmpty,
+                ),
+              ],
+              if (orderId != null && orderId.isNotEmpty) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.stripeCheckoutReturnOrderIdLabel,
+                  value: orderId,
+                  hasDivider: false,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(
+          message: step == PaymentStatusStep.pending
+              ? l10n.paymentStatusPendingNotice
+              : l10n.stripeCheckoutSecureNote,
+        ),
+        if (seal != null && stone != null) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SealSummaryCard(selection: seal),
+          const SizedBox(height: HankoSpacing.md),
+          _StoneSummaryCard(selection: stone),
+          const SizedBox(height: HankoSpacing.md),
+          _OrderPricingCard(summary: _OrderPricingSummary.fromDraft(draft)),
+        ],
+      ],
+    );
+  }
+}
+
+class _PaymentStatusIcon extends StatelessWidget {
+  const _PaymentStatusIcon({required this.step, required this.hasError});
+
+  final PaymentStatusStep step;
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) {
+    if (hasError) {
+      return const Icon(
+        Icons.error_outline,
+        color: HankoColors.error,
+        size: 42,
+      );
+    }
+    return switch (step) {
+      PaymentStatusStep.checking => const SizedBox.square(
+        dimension: 42,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          color: HankoColors.gold,
+        ),
+      ),
+      PaymentStatusStep.pending => const Icon(
+        Icons.hourglass_top_outlined,
+        color: HankoColors.gold,
+        size: 42,
+      ),
+      PaymentStatusStep.paid => const Icon(
+        Icons.check_circle_outline,
+        color: HankoColors.gold,
+        size: 42,
+      ),
+      PaymentStatusStep.failed => const Icon(
+        Icons.error_outline,
+        color: HankoColors.error,
+        size: 42,
+      ),
+    };
+  }
+}
+
+String _paymentStatusTitle(
+  HankoLocalizations l10n,
+  PaymentStatusStep step,
+  bool hasError,
+) {
+  if (hasError) {
+    return l10n.paymentStatusFailedTitle;
+  }
+  return switch (step) {
+    PaymentStatusStep.checking => l10n.paymentStatusCheckingTitle,
+    PaymentStatusStep.paid => l10n.paymentStatusPaidTitle,
+    PaymentStatusStep.pending => l10n.paymentStatusPendingTitle,
+    PaymentStatusStep.failed => l10n.paymentStatusFailedTitle,
+  };
+}
+
+String _paymentStatusMessage(
+  HankoLocalizations l10n,
+  PaymentStatusStep step,
+  bool hasError,
+) {
+  if (hasError) {
+    return l10n.paymentStatusFailedMessage;
+  }
+  return switch (step) {
+    PaymentStatusStep.checking => l10n.paymentStatusCheckingMessage,
+    PaymentStatusStep.paid => l10n.paymentStatusPaidMessage,
+    PaymentStatusStep.pending => l10n.paymentStatusPendingMessage,
+    PaymentStatusStep.failed => l10n.paymentStatusFailedMessage,
+  };
 }
 
 String _stripeCheckoutStatusTitle(

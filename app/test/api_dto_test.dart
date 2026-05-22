@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hankofield/core/api/core_api.dart';
 import 'package:hankofield/features/design/design.dart';
 import 'package:hankofield/features/order/order.dart';
+import 'package:hankofield/features/order_lookup/order_lookup.dart';
 import 'package:hankofield/features/settings/settings.dart';
 import 'package:hankofield/features/stones/stones.dart';
 
@@ -317,6 +318,43 @@ void main() {
       '/v1/payments/stripe/checkout-session',
     );
     expect(checkout.sessionId, 'cs_test_001');
+  });
+
+  test('OrderLookupRepository maps nested order status response', () async {
+    final transport = FakeTransport([
+      HankoApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'order_id': 'ord_001',
+          'order_no': 'HF-20260521-0001',
+          'status': 'paid',
+          'payment': {
+            'status': 'paid',
+            'checkout_session_id': 'cs_test_001',
+            'payment_intent_id': 'pi_test_001',
+          },
+          'fulfillment': {
+            'status': 'pending',
+            'carrier': null,
+            'tracking_no': 'TRACK123',
+          },
+          'pricing': {'total': 18600, 'currency': 'JPY'},
+          'updated_at': '2026-05-21T11:15:00Z',
+        }),
+      ),
+    ]);
+    final repo = OrderLookupRepository(_client(transport));
+
+    final status = await repo.fetchOrderStatus('ord_001');
+
+    expect(transport.singleRequest.method, 'GET');
+    expect(transport.singleRequest.uri.path, '/v1/orders/ord_001/status');
+    expect(status.orderStatus, 'paid');
+    expect(status.paymentStatus, 'paid');
+    expect(status.fulfillmentStatus, 'pending');
+    expect(status.trackingNumber, 'TRACK123');
+    expect(status.pricing.amount, 18600);
+    expect(status.pricing.currency, 'JPY');
   });
 
   test('PublicConfigDto maps public config response', () {

@@ -28,6 +28,8 @@ void main() {
     OrderCreator? createOrder,
     CheckoutSessionCreator? createCheckoutSession,
     CheckoutUrlLauncher? openCheckoutUrl,
+    OrderStatusFetcher? fetchOrderStatus,
+    Duration paymentStatusRetryDelay = Duration.zero,
     String? initialCheckoutRoute,
     LocalSealDesignRepository? localSealDesignRepository,
     LocalOrderDraftRepository? localOrderDraftRepository,
@@ -50,6 +52,8 @@ void main() {
           createCheckoutSession:
               createCheckoutSession ?? _successfulCreateCheckoutSession,
           openCheckoutUrl: openCheckoutUrl ?? _successfulOpenCheckoutUrl,
+          fetchOrderStatus: fetchOrderStatus ?? _successfulFetchOrderStatus,
+          paymentStatusRetryDelay: paymentStatusRetryDelay,
           initialCheckoutRoute: initialCheckoutRoute,
           localSealDesignRepository: localSealDesignRepository,
           localOrderDraftRepository: localOrderDraftRepository,
@@ -2338,10 +2342,118 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(find.text('Returned from Stripe Checkout'), findsOneWidget);
+    expect(find.text('Payment confirmed'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T09 confirms paid order status after Stripe return', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    final statusCompleter = Completer<OrderStatus>();
+    final checkedOrderIds = <String>[];
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      fetchOrderStatus: (orderId) {
+        checkedOrderIds.add(orderId);
+        return statusCompleter.future;
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/success?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pump();
+
+    expect(handled, isTrue);
+    expect(find.text('Checking payment status'), findsOneWidget);
+    expect(checkedOrderIds, ['ord_001']);
+
+    statusCompleter.complete(
+      const OrderStatus(
+        orderId: 'ord_001',
+        orderNo: 'HF-20260521-0001',
+        orderStatus: 'paid',
+        paymentStatus: 'paid',
+        fulfillmentStatus: 'pending',
+        productionStatus: 'not_started',
+        shippingStatus: 'not_shipped',
+        pricing: Money(amount: 18600, currency: 'JPY'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payment confirmed'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T09 shows pending when webhook status is not reflected', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    var checkCount = 0;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      fetchOrderStatus: (orderId) async {
+        checkCount++;
+        return const OrderStatus(
+          orderId: 'ord_001',
+          orderNo: 'HF-20260521-0001',
+          orderStatus: 'pending_payment',
+          paymentStatus: 'unpaid',
+          fulfillmentStatus: 'pending',
+          productionStatus: 'not_started',
+          shippingStatus: 'not_shipped',
+          pricing: Money(amount: 18600, currency: 'JPY'),
+        );
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/success?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(checkCount, 3);
+    expect(find.text('Payment pending'), findsOneWidget);
     expect(
       find.text(
-        'The return URL was received. Payment status will be verified next.',
+        'Stripe returned successfully, but payment confirmation is still pending.',
       ),
       findsOneWidget,
     );
@@ -2775,6 +2887,19 @@ Future<CheckoutSession> _successfulCreateCheckoutSession(
 }
 
 Future<void> _successfulOpenCheckoutUrl(CheckoutSession session) async {}
+
+Future<OrderStatus> _successfulFetchOrderStatus(String orderId) async {
+  return OrderStatus(
+    orderId: orderId,
+    orderNo: 'HF-20260521-0001',
+    orderStatus: 'paid',
+    paymentStatus: 'paid',
+    fulfillmentStatus: 'pending',
+    productionStatus: 'not_started',
+    shippingStatus: 'not_shipped',
+    pricing: const Money(amount: 18600, currency: 'JPY'),
+  );
+}
 
 Future<void> _completeCheckoutConfirmationFromSavedSeal(
   WidgetTester tester,

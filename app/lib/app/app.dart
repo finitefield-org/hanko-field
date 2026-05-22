@@ -8,6 +8,7 @@ import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
 import '../features/order/order.dart';
+import '../features/order_lookup/order_lookup.dart';
 import '../features/settings/settings.dart';
 import '../features/stones/stones.dart';
 import 'localization/app_localization.dart';
@@ -28,6 +29,8 @@ class HankoApp extends StatefulWidget {
     this.createOrder = createOrderWithDefaultApi,
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
+    this.fetchOrderStatus = fetchOrderStatusWithDefaultApi,
+    this.paymentStatusRetryDelay = const Duration(seconds: 2),
     this.initialCheckoutRoute,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
@@ -44,6 +47,8 @@ class HankoApp extends StatefulWidget {
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
+  final OrderStatusFetcher fetchOrderStatus;
+  final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
@@ -112,6 +117,8 @@ class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
         createOrder: widget.createOrder,
         createCheckoutSession: widget.createCheckoutSession,
         openCheckoutUrl: widget.openCheckoutUrl,
+        fetchOrderStatus: widget.fetchOrderStatus,
+        paymentStatusRetryDelay: widget.paymentStatusRetryDelay,
         initialCheckoutRoute: widget.initialCheckoutRoute,
         checkoutRouteListenable: _checkoutRouteNotifier,
         localSealDesignRepository: widget.localSealDesignRepository,
@@ -143,6 +150,8 @@ class _AppLaunchGate extends StatefulWidget {
     required this.createOrder,
     required this.createCheckoutSession,
     required this.openCheckoutUrl,
+    required this.fetchOrderStatus,
+    required this.paymentStatusRetryDelay,
     required this.initialCheckoutRoute,
     required this.checkoutRouteListenable,
     required this.localSealDesignRepository,
@@ -159,6 +168,8 @@ class _AppLaunchGate extends StatefulWidget {
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
+  final OrderStatusFetcher fetchOrderStatus;
+  final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final ValueListenable<String?> checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
@@ -190,6 +201,8 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         createOrder: widget.createOrder,
         createCheckoutSession: widget.createCheckoutSession,
         openCheckoutUrl: widget.openCheckoutUrl,
+        fetchOrderStatus: widget.fetchOrderStatus,
+        paymentStatusRetryDelay: widget.paymentStatusRetryDelay,
         initialCheckoutRoute: widget.initialCheckoutRoute,
         checkoutRouteListenable: widget.checkoutRouteListenable,
         localSealDesignRepository: widget.localSealDesignRepository,
@@ -226,6 +239,8 @@ class BottomNavigationShell extends StatefulWidget {
     this.createOrder = createOrderWithDefaultApi,
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
+    this.fetchOrderStatus = fetchOrderStatusWithDefaultApi,
+    this.paymentStatusRetryDelay = const Duration(seconds: 2),
     this.initialCheckoutRoute,
     this.checkoutRouteListenable,
     this.localSealDesignRepository,
@@ -239,6 +254,8 @@ class BottomNavigationShell extends StatefulWidget {
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
   final CheckoutUrlLauncher openCheckoutUrl;
+  final OrderStatusFetcher fetchOrderStatus;
+  final Duration paymentStatusRetryDelay;
   final String? initialCheckoutRoute;
   final ValueListenable<String?>? checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
@@ -316,6 +333,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   static const _stripeCheckoutTransitionPage = PageEntry(
     key: 'CHK-009-stripe-checkout-transition',
     name: '/checkout/stripe',
+  );
+  static const _paymentStatusPage = PageEntry(
+    key: 'CHK-011-payment-status',
+    name: '/checkout/payment-status',
   );
   static const _checkoutProcessingPages = [
     _shellPage,
@@ -397,6 +418,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
   var _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
   Object? _stripeCheckoutLaunchError;
   CheckoutReturnResult? _checkoutReturnResult;
+  var _paymentStatusStep = PaymentStatusStep.checking;
+  OrderStatus? _paymentStatus;
+  Object? _paymentStatusError;
+  int _paymentStatusRequestId = 0;
   String? _lastHandledCheckoutRoute;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
@@ -473,6 +498,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _paymentStatusPage.key) {
+          return _buildPaymentStatusPage();
+        }
         if (page.key == _stripeCheckoutTransitionPage.key) {
           return _buildStripeCheckoutTransitionPage();
         }
@@ -628,6 +656,26 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             onOpenCheckout: canOpenCheckout
                 ? () => unawaited(_openStripeCheckout(_checkoutSession!))
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentStatusPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: PaymentStatusScreen(
+            draft: _orderDraft,
+            step: _paymentStatusStep,
+            status: _paymentStatus,
+            createdOrder: _checkoutCreatedOrder,
+            returnResult: _checkoutReturnResult,
+            error: _paymentStatusError,
+            onBack: _closeTopPage,
           ),
         ),
       ),
@@ -1296,6 +1344,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
       _stripeCheckoutLaunchError = null;
       _checkoutReturnResult = null;
+      _paymentStatusStep = PaymentStatusStep.checking;
+      _paymentStatus = null;
+      _paymentStatusError = null;
+      _paymentStatusRequestId++;
       _pages = _checkoutProcessingPages;
     });
 
@@ -1347,6 +1399,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
       _stripeCheckoutLaunchError = null;
       _checkoutReturnResult = null;
+      _paymentStatusStep = PaymentStatusStep.checking;
+      _paymentStatus = null;
+      _paymentStatusError = null;
       _pages = _stripeCheckoutPages;
     });
 
@@ -1387,13 +1442,93 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     if (!mounted) {
       return true;
     }
+    if (result.outcome == CheckoutReturnOutcome.success) {
+      _beginPaymentStatusCheck(result);
+      return true;
+    }
     setState(() {
       _checkoutReturnResult = result;
       _stripeCheckoutLaunchError = null;
       _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
+      _paymentStatusRequestId++;
       _pages = const [_shellPage, _stripeCheckoutTransitionPage];
     });
     return true;
+  }
+
+  void _beginPaymentStatusCheck(CheckoutReturnResult result) {
+    final requestId = _paymentStatusRequestId + 1;
+    setState(() {
+      _paymentStatusRequestId = requestId;
+      _checkoutReturnResult = result;
+      _stripeCheckoutLaunchError = null;
+      _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
+      _paymentStatusStep = PaymentStatusStep.checking;
+      _paymentStatus = null;
+      _paymentStatusError = null;
+      _pages = const [_shellPage, _paymentStatusPage];
+    });
+    unawaited(_verifyPaymentStatus(result, requestId));
+  }
+
+  Future<void> _verifyPaymentStatus(
+    CheckoutReturnResult result,
+    int requestId,
+  ) async {
+    final orderId = (result.orderId ?? _checkoutCreatedOrder?.orderId ?? '')
+        .trim();
+    if (orderId.isEmpty) {
+      if (!mounted || _paymentStatusRequestId != requestId) {
+        return;
+      }
+      setState(() {
+        _paymentStatusStep = PaymentStatusStep.failed;
+        _paymentStatusError = StateError('checkout return is missing order_id');
+      });
+      return;
+    }
+
+    const maxAttempts = 3;
+    Object? lastError;
+    OrderStatus? lastStatus;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final status = await widget.fetchOrderStatus(orderId);
+        if (!mounted || _paymentStatusRequestId != requestId) {
+          return;
+        }
+        lastStatus = status;
+        lastError = null;
+        setState(() => _paymentStatus = status);
+        if (_isPaidOrderStatus(status)) {
+          setState(() {
+            _paymentStatusStep = PaymentStatusStep.paid;
+            _paymentStatusError = null;
+          });
+          return;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await Future<void>.delayed(widget.paymentStatusRetryDelay);
+        if (!mounted || _paymentStatusRequestId != requestId) {
+          return;
+        }
+      }
+    }
+
+    if (!mounted || _paymentStatusRequestId != requestId) {
+      return;
+    }
+    setState(() {
+      _paymentStatus = lastStatus;
+      _paymentStatusError = lastStatus == null ? lastError : null;
+      _paymentStatusStep = lastStatus == null
+          ? PaymentStatusStep.failed
+          : PaymentStatusStep.pending;
+    });
   }
 
   void _handleCheckoutRouteNotification() {
@@ -1465,6 +1600,11 @@ String _localSealDesignId(String requestId, String variantId, DateTime now) {
 
 String _checkoutIdempotencyKey(DateTime now) {
   return 'app_${now.microsecondsSinceEpoch}';
+}
+
+bool _isPaidOrderStatus(OrderStatus status) {
+  return status.paymentStatus.trim().toLowerCase() == 'paid' ||
+      status.orderStatus.trim().toLowerCase() == 'paid';
 }
 
 SealOrderDraft _sealOrderDraftFromOrderDraft(

@@ -949,7 +949,7 @@ MVPで後回し可能:
 | M09-T06 | seed/data | [x] AI生成印影用font record追加 | `api/src/bin/seed_catalog.rs` または既存seed運用 | `fonts/ai_generated_seal` がactiveで作成され、APIの既存font lookupを通る |
 | M09-T07 | `CHK-008` | [x] Checkout Session作成中 | `features/order/presentation/` | 注文作成とSession作成中を表示 |
 | M09-T08 | `CHK-009` `CHK-010` | [x] Stripe外部遷移 | `features/order/presentation/` | Checkout URLを開き、戻りURLを処理 |
-| M09-T09 | `CHK-011` `CHK-014` | 成功確認/Pending | `features/order/presentation/`, `api/src/main.rs` | 戻り後に注文状態を確認し、未反映ならPending |
+| M09-T09 | `CHK-011` `CHK-014` | [x] 成功確認/Pending | `features/order/presentation/`, `api/src/main.rs` | 戻り後に注文状態を確認し、未反映ならPending |
 | M09-T10 | `CHK-012` `CHK-013` | キャンセル/失敗 | `features/order/presentation/` | キャンセルと失敗を分ける |
 | M09-T11 | `CHK-015` | 注文完了 | `features/order/presentation/` | 注文番号、概要、メール案内、照会導線を表示 |
 
