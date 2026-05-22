@@ -1166,6 +1166,115 @@ class PaymentStatusScreen extends StatelessWidget {
   }
 }
 
+class OrderCompleteScreen extends StatelessWidget {
+  const OrderCompleteScreen({
+    super.key,
+    required this.draft,
+    required this.onOpenOrderLookup,
+    required this.onBackToDesign,
+    this.status,
+    this.createdOrder,
+  });
+
+  final OrderDraft draft;
+  final OrderStatus? status;
+  final CreatedOrder? createdOrder;
+  final VoidCallback onOpenOrderLookup;
+  final VoidCallback onBackToDesign;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final orderNo = status?.orderNo.isNotEmpty == true
+        ? status!.orderNo
+        : createdOrder?.orderNo;
+    final email = draft.input.contact.email.trim();
+    final seal = draft.sealSelection;
+    final stone = draft.stoneSelection;
+
+    return _OrderScreenFrame(
+      title: l10n.orderCompleteTitle,
+      children: [
+        HankoSurfaceCard(
+          radius: HankoRadii.sm,
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(
+                child: Icon(
+                  Icons.check_circle_outline,
+                  color: HankoColors.gold,
+                  size: 46,
+                ),
+              ),
+              const SizedBox(height: HankoSpacing.md),
+              Text(
+                l10n.orderCompleteStatusTitle,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Text(
+                l10n.orderCompleteMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              if (orderNo != null && orderNo.isNotEmpty) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.orderNo,
+                  value: orderNo,
+                  hasDivider: true,
+                ),
+              ],
+              _OrderDetailLine(
+                label: l10n.orderCompleteStatusLabel,
+                value: l10n.orderCompleteStatusValue,
+                hasDivider: email.isNotEmpty,
+              ),
+              if (email.isNotEmpty)
+                _OrderDetailLine(
+                  label: l10n.email,
+                  value: email,
+                  hasDivider: false,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.orderCompleteEmailMessage),
+        if (seal != null && stone != null) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _CheckoutSectionCard(
+            icon: Icons.receipt_long_outlined,
+            title: l10n.orderCompleteSummaryTitle,
+            children: [
+              _SealSummaryCard(selection: seal),
+              const SizedBox(height: HankoSpacing.md),
+              _StoneSummaryCard(selection: stone),
+              const SizedBox(height: HankoSpacing.md),
+              _OrderPricingCard(summary: _OrderPricingSummary.fromDraft(draft)),
+            ],
+          ),
+        ],
+        const SizedBox(height: HankoSpacing.md),
+        HankoPrimaryButton(
+          label: l10n.orderCompleteLookupAction,
+          icon: Icons.search,
+          onPressed: onOpenOrderLookup,
+        ),
+        const SizedBox(height: HankoSpacing.sm),
+        _SecondaryOrderAction(
+          label: l10n.orderCompleteBackToDesignAction,
+          icon: Icons.home_outlined,
+          onPressed: onBackToDesign,
+        ),
+      ],
+    );
+  }
+}
+
 class _PaymentStatusIcon extends StatelessWidget {
   const _PaymentStatusIcon({required this.step, required this.hasError});
 

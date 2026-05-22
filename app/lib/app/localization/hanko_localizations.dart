@@ -388,6 +388,16 @@ class HankoLocalizations {
   String get paymentStatusPendingNotice => _strings.paymentStatusPendingNotice;
   String get paymentStatusFailedTitle => _strings.paymentStatusFailedTitle;
   String get paymentStatusFailedMessage => _strings.paymentStatusFailedMessage;
+  String get orderCompleteTitle => _strings.orderCompleteTitle;
+  String get orderCompleteStatusTitle => _strings.orderCompleteStatusTitle;
+  String get orderCompleteMessage => _strings.orderCompleteMessage;
+  String get orderCompleteStatusLabel => _strings.orderCompleteStatusLabel;
+  String get orderCompleteStatusValue => _strings.orderCompleteStatusValue;
+  String get orderCompleteEmailMessage => _strings.orderCompleteEmailMessage;
+  String get orderCompleteSummaryTitle => _strings.orderCompleteSummaryTitle;
+  String get orderCompleteLookupAction => _strings.orderCompleteLookupAction;
+  String get orderCompleteBackToDesignAction =>
+      _strings.orderCompleteBackToDesignAction;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -752,6 +762,15 @@ class _HankoStrings {
     required this.paymentStatusPendingNotice,
     required this.paymentStatusFailedTitle,
     required this.paymentStatusFailedMessage,
+    required this.orderCompleteTitle,
+    required this.orderCompleteStatusTitle,
+    required this.orderCompleteMessage,
+    required this.orderCompleteStatusLabel,
+    required this.orderCompleteStatusValue,
+    required this.orderCompleteEmailMessage,
+    required this.orderCompleteSummaryTitle,
+    required this.orderCompleteLookupAction,
+    required this.orderCompleteBackToDesignAction,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -1085,6 +1104,15 @@ class _HankoStrings {
   final String paymentStatusPendingNotice;
   final String paymentStatusFailedTitle;
   final String paymentStatusFailedMessage;
+  final String orderCompleteTitle;
+  final String orderCompleteStatusTitle;
+  final String orderCompleteMessage;
+  final String orderCompleteStatusLabel;
+  final String orderCompleteStatusValue;
+  final String orderCompleteEmailMessage;
+  final String orderCompleteSummaryTitle;
+  final String orderCompleteLookupAction;
+  final String orderCompleteBackToDesignAction;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1486,6 +1514,17 @@ const _localizedValues = {
       paymentStatusFailedTitle: "Couldn't verify payment",
       paymentStatusFailedMessage:
           'Payment status could not be confirmed. Please check Order Lookup later.',
+      orderCompleteTitle: 'Order Complete',
+      orderCompleteStatusTitle: 'Thank you for your order',
+      orderCompleteMessage:
+          'Payment is confirmed. We will start production after the confirmation email is sent.',
+      orderCompleteStatusLabel: 'Status',
+      orderCompleteStatusValue: 'Payment received',
+      orderCompleteEmailMessage:
+          'Please check your confirmation email. Keep the order number for support and order lookup.',
+      orderCompleteSummaryTitle: 'Order summary',
+      orderCompleteLookupAction: 'Open Order Lookup',
+      orderCompleteBackToDesignAction: 'Back to Design',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1831,6 +1870,15 @@ const _localizedValues = {
           'Webhook反映に時間がかかる場合があります。画面が更新されない場合は後ほど注文照会をご確認ください。',
       paymentStatusFailedTitle: '決済状態を確認できませんでした',
       paymentStatusFailedMessage: '決済状態を確認できませんでした。後ほど注文照会をご確認ください。',
+      orderCompleteTitle: '注文完了',
+      orderCompleteStatusTitle: 'ご注文ありがとうございます',
+      orderCompleteMessage: '決済が確認できました。確認メール送信後、順次製作を開始します。',
+      orderCompleteStatusLabel: '状態',
+      orderCompleteStatusValue: '決済を受け付けました',
+      orderCompleteEmailMessage: '確認メールをご確認ください。注文番号はお問い合わせや注文照会で使用します。',
+      orderCompleteSummaryTitle: '注文概要',
+      orderCompleteLookupAction: '注文照会を開く',
+      orderCompleteBackToDesignAction: 'Designへ戻る',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

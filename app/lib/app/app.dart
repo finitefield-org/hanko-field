@@ -347,6 +347,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     key: 'CHK-011-payment-status',
     name: '/checkout/payment-status',
   );
+  static const _orderCompletePage = PageEntry(
+    key: 'CHK-015-order-complete',
+    name: '/checkout/complete',
+  );
+  static const _orderLookupPage = PageEntry(
+    key: 'LKP-001-order-lookup-input',
+    name: '/order-lookup',
+  );
   static const _checkoutProcessingPages = [
     _shellPage,
     _orderReviewPage,
@@ -509,6 +517,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       buildPage: (context, page) {
         if (page.key == _paymentStatusPage.key) {
           return _buildPaymentStatusPage();
+        }
+        if (page.key == _orderCompletePage.key) {
+          return _buildOrderCompletePage();
+        }
+        if (page.key == _orderLookupPage.key) {
+          return _buildOrderLookupPage();
         }
         if (page.key == _stripeCheckoutTransitionPage.key ||
             page.key == _stripeCheckoutCanceledPage.key ||
@@ -687,6 +701,41 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
             returnResult: _checkoutReturnResult,
             error: _paymentStatusError,
             onBack: _closeTopPage,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderCompletePage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: OrderCompleteScreen(
+            draft: _orderDraft,
+            status: _paymentStatus,
+            createdOrder: _checkoutCreatedOrder,
+            onOpenOrderLookup: _openOrderLookup,
+            onBackToDesign: () => _showTabFromOrder(HankoAppTab.design),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderLookupPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: OrderLookupEntryScreen(
+            onBack: _closeTopPage,
+            initialOrderNo:
+                _paymentStatus?.orderNo ?? _checkoutCreatedOrder?.orderNo,
+            initialEmail: _orderDraft.input.contact.email,
           ),
         ),
       ),
@@ -1533,6 +1582,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
           setState(() {
             _paymentStatusStep = PaymentStatusStep.paid;
             _paymentStatusError = null;
+            _pages = const [_shellPage, _orderCompletePage];
           });
           return;
         }
@@ -1579,6 +1629,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       }
       setState(() => _requestedTab = null);
     });
+  }
+
+  void _openOrderLookup() {
+    setState(
+      () => _pages = const [_shellPage, _orderCompletePage, _orderLookupPage],
+    );
   }
 
   void _closeTopPage() {

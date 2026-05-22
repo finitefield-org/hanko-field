@@ -2343,7 +2343,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(find.text('Payment confirmed'), findsOneWidget);
+    expect(find.text('Order Complete'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -2401,7 +2401,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Payment confirmed'), findsOneWidget);
+    expect(find.text('Order Complete'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -2458,6 +2458,60 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T11 shows order complete and order lookup route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/success?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(find.text('Order Complete'), findsOneWidget);
+    expect(find.text('Thank you for your order'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(find.text('Payment received'), findsOneWidget);
+    expect(find.text('Order summary'), findsOneWidget);
+    expect(
+      find.text(
+        'Please check your confirmation email. Keep the order number for support and order lookup.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Open Order Lookup'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Open Order Lookup'));
+    await tester.pump();
+    await tester.tap(find.text('Open Order Lookup'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Lookup'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(find.text('customer@example.test'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
