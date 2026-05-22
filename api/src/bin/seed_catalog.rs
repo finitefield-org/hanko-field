@@ -330,6 +330,14 @@ fn font_seeds() -> Vec<FontSeed> {
             kanji_style: "chinese",
             sort_order: 50,
         },
+        FontSeed {
+            key: "ai_generated_seal",
+            label: "AI generated seal preview",
+            font_family: "'Noto Sans JP', system-ui, sans-serif",
+            font_stylesheet_url: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap",
+            kanji_style: "japanese",
+            sort_order: 90,
+        },
     ]
 }
 
@@ -528,4 +536,50 @@ fn btree_from_pairs(pairs: Vec<(&str, JsonValue)>) -> BTreeMap<String, JsonValue
         .into_iter()
         .map(|(key, value)| (key.to_owned(), value))
         .collect::<BTreeMap<_, _>>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn font_seeds_include_active_ai_generated_seal_record() {
+        let font = font_seeds()
+            .into_iter()
+            .find(|font| font.key == "ai_generated_seal")
+            .expect("ai_generated_seal seed should exist");
+
+        assert_eq!(font.label, "AI generated seal preview");
+        assert!(!font.font_family.trim().is_empty());
+        assert!(!font.font_stylesheet_url.trim().is_empty());
+        assert_eq!(font.kanji_style, "japanese");
+    }
+
+    #[test]
+    fn ai_generated_seal_document_keeps_font_lookup_fields_active() {
+        let font = font_seeds()
+            .into_iter()
+            .find(|font| font.key == "ai_generated_seal")
+            .expect("ai_generated_seal seed should exist");
+        let now = DateTime::parse_from_rfc3339("2026-05-21T11:30:00Z")
+            .expect("timestamp")
+            .with_timezone(&Utc);
+
+        let document = font_document(&font, now);
+
+        assert_eq!(
+            document.fields.get("label"),
+            Some(&fs_string("AI generated seal preview"))
+        );
+        assert_eq!(
+            document.fields.get("font_family"),
+            Some(&fs_string("'Noto Sans JP', system-ui, sans-serif"))
+        );
+        assert_eq!(
+            document.fields.get("kanji_style"),
+            Some(&fs_string("japanese"))
+        );
+        assert_eq!(document.fields.get("is_active"), Some(&fs_bool(true)));
+        assert_eq!(document.fields.get("version"), Some(&fs_int(1)));
+    }
 }
