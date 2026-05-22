@@ -2653,6 +2653,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M10-T03 accepts order lookup input', (tester) async {
+    OrderLookupRequest? submittedRequest;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: OrderLookupEntryScreen(
+          onLookup: (request) => submittedRequest = request,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pump();
+
+    expect(submittedRequest, isNull);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Order No'),
+      '  HF-20260521-0001  ',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      '  customer@example.test  ',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lookup Order'));
+    await tester.pump();
+
+    expect(submittedRequest?.orderNo, 'HF-20260521-0001');
+    expect(submittedRequest?.email, 'customer@example.test');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
