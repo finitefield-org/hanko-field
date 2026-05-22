@@ -107,6 +107,29 @@ class HankoLocalizations {
   String get selectKanji => _strings.selectKanji;
   String get kanjiSelectedTitle => _strings.kanjiSelectedTitle;
   String get kanjiSelectedMessage => _strings.kanjiSelectedMessage;
+  String get sealStyleTitle => _strings.sealStyleTitle;
+  String get sealStyleMessage => _strings.sealStyleMessage;
+  String get sealStyleSelectedKanjiLabel =>
+      _strings.sealStyleSelectedKanjiLabel;
+  String get sealShapeLabel => _strings.sealShapeLabel;
+  String get sealShapeSquare => _strings.sealShapeSquare;
+  String get sealShapeRound => _strings.sealShapeRound;
+  String get sealStyleNameLabel => _strings.sealStyleNameLabel;
+  String get sealStyleTraditional => _strings.sealStyleTraditional;
+  String get sealStyleElegant => _strings.sealStyleElegant;
+  String get sealStyleSoft => _strings.sealStyleSoft;
+  String get sealStyleBold => _strings.sealStyleBold;
+  String get sealStrokeWeightLabel => _strings.sealStrokeWeightLabel;
+  String get sealStrokeStandard => _strings.sealStrokeStandard;
+  String get sealStrokeBold => _strings.sealStrokeBold;
+  String get sealBalanceLabel => _strings.sealBalanceLabel;
+  String get sealBalanceAiry => _strings.sealBalanceAiry;
+  String get sealBalanceBalanced => _strings.sealBalanceBalanced;
+  String get sealBalanceDense => _strings.sealBalanceDense;
+  String get sealStyleSummaryTitle => _strings.sealStyleSummaryTitle;
+  String get confirmStyle => _strings.confirmStyle;
+  String get sealStyleConfirmedTitle => _strings.sealStyleConfirmedTitle;
+  String get sealStyleConfirmedMessage => _strings.sealStyleConfirmedMessage;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -247,6 +270,28 @@ class _HankoStrings {
     required this.selectKanji,
     required this.kanjiSelectedTitle,
     required this.kanjiSelectedMessage,
+    required this.sealStyleTitle,
+    required this.sealStyleMessage,
+    required this.sealStyleSelectedKanjiLabel,
+    required this.sealShapeLabel,
+    required this.sealShapeSquare,
+    required this.sealShapeRound,
+    required this.sealStyleNameLabel,
+    required this.sealStyleTraditional,
+    required this.sealStyleElegant,
+    required this.sealStyleSoft,
+    required this.sealStyleBold,
+    required this.sealStrokeWeightLabel,
+    required this.sealStrokeStandard,
+    required this.sealStrokeBold,
+    required this.sealBalanceLabel,
+    required this.sealBalanceAiry,
+    required this.sealBalanceBalanced,
+    required this.sealBalanceDense,
+    required this.sealStyleSummaryTitle,
+    required this.confirmStyle,
+    required this.sealStyleConfirmedTitle,
+    required this.sealStyleConfirmedMessage,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -356,6 +401,28 @@ class _HankoStrings {
   final String selectKanji;
   final String kanjiSelectedTitle;
   final String kanjiSelectedMessage;
+  final String sealStyleTitle;
+  final String sealStyleMessage;
+  final String sealStyleSelectedKanjiLabel;
+  final String sealShapeLabel;
+  final String sealShapeSquare;
+  final String sealShapeRound;
+  final String sealStyleNameLabel;
+  final String sealStyleTraditional;
+  final String sealStyleElegant;
+  final String sealStyleSoft;
+  final String sealStyleBold;
+  final String sealStrokeWeightLabel;
+  final String sealStrokeStandard;
+  final String sealStrokeBold;
+  final String sealBalanceLabel;
+  final String sealBalanceAiry;
+  final String sealBalanceBalanced;
+  final String sealBalanceDense;
+  final String sealStyleSummaryTitle;
+  final String confirmStyle;
+  final String sealStyleConfirmedTitle;
+  final String sealStyleConfirmedMessage;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -482,6 +549,29 @@ const _localizedValues = {
       selectKanji: 'Select Kanji',
       kanjiSelectedTitle: 'Kanji selected',
       kanjiSelectedMessage: 'This kanji is ready for seal style selection.',
+      sealStyleTitle: 'Seal Style',
+      sealStyleMessage: 'Choose a fixed style set for AI seal generation.',
+      sealStyleSelectedKanjiLabel: 'Selected kanji',
+      sealShapeLabel: 'Shape',
+      sealShapeSquare: 'Square',
+      sealShapeRound: 'Round',
+      sealStyleNameLabel: 'Style',
+      sealStyleTraditional: 'Traditional',
+      sealStyleElegant: 'Elegant',
+      sealStyleSoft: 'Soft',
+      sealStyleBold: 'Bold',
+      sealStrokeWeightLabel: 'Stroke Weight',
+      sealStrokeStandard: 'Standard',
+      sealStrokeBold: 'Bold',
+      sealBalanceLabel: 'Balance',
+      sealBalanceAiry: 'Airy',
+      sealBalanceBalanced: 'Balanced',
+      sealBalanceDense: 'Dense',
+      sealStyleSummaryTitle: 'Current style',
+      confirmStyle: 'Confirm Style',
+      sealStyleConfirmedTitle: 'Style selected',
+      sealStyleConfirmedMessage:
+          'These style choices are ready for AI seal generation.',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -599,6 +689,28 @@ const _localizedValues = {
       selectKanji: '漢字を選択',
       kanjiSelectedTitle: '漢字を選択しました',
       kanjiSelectedMessage: 'この漢字で印影スタイル選択へ進めます。',
+      sealStyleTitle: '印影スタイル',
+      sealStyleMessage: 'AI印影生成に使う固定スタイルを選択してください。',
+      sealStyleSelectedKanjiLabel: '選択中の漢字',
+      sealShapeLabel: '形',
+      sealShapeSquare: '角印',
+      sealShapeRound: '丸印',
+      sealStyleNameLabel: '雰囲気',
+      sealStyleTraditional: '伝統的',
+      sealStyleElegant: '上品',
+      sealStyleSoft: 'やわらかい',
+      sealStyleBold: '力強い',
+      sealStrokeWeightLabel: '線の太さ',
+      sealStrokeStandard: '標準',
+      sealStrokeBold: '太め',
+      sealBalanceLabel: '余白感',
+      sealBalanceAiry: '余白多め',
+      sealBalanceBalanced: '標準',
+      sealBalanceDense: '密度高め',
+      sealStyleSummaryTitle: '現在のスタイル',
+      confirmStyle: 'スタイルを確定',
+      sealStyleConfirmedTitle: 'スタイルを選択しました',
+      sealStyleConfirmedMessage: 'このスタイルでAI印影生成へ進めます。',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',

@@ -269,9 +269,41 @@ void main() {
     await tester.tap(find.text('Select Kanji'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kanji selected'), findsWidgets);
+    expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
+    expect(find.text('Seal Style'), findsOneWidget);
     expect(
-      find.text('This kanji is ready for seal style selection.'),
+      find.text('Choose a fixed style set for AI seal generation.'),
+      findsOneWidget,
+    );
+    expect(find.text('Selected kanji'), findsOneWidget);
+    expect(find.text('Shape'), findsWidgets);
+    expect(find.text('Square'), findsWidgets);
+    expect(find.text('Round'), findsOneWidget);
+    expect(find.text('Style'), findsWidgets);
+    expect(find.text('Traditional'), findsOneWidget);
+    expect(find.text('Elegant'), findsWidgets);
+    expect(find.text('Soft'), findsOneWidget);
+    expect(find.text('Stroke Weight'), findsWidgets);
+    expect(find.text('Standard'), findsWidgets);
+    expect(find.text('Balance'), findsWidgets);
+    expect(find.text('Balanced'), findsWidgets);
+
+    await tester.tap(find.text('Round'));
+    await tester.pump();
+    await tester.tap(find.text('Traditional'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Airy'));
+    await tester.pump();
+    await tester.tap(find.text('Airy'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Confirm Style'));
+    await tester.pump();
+    await tester.tap(find.text('Confirm Style'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Style selected'), findsOneWidget);
+    expect(
+      find.text('These style choices are ready for AI seal generation.'),
       findsOneWidget,
     );
 
@@ -280,8 +312,17 @@ void main() {
     await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();
 
+    expect(find.byType(KanjiCandidateDetailScreen), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back').last);
+    await tester.pumpAndSettle();
+
     expect(find.byType(KanjiSuggestionsScreen), findsOneWidget);
 
+    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.pump();
     await tester.tap(find.byTooltip('Back').last);
     await tester.pumpAndSettle();
 

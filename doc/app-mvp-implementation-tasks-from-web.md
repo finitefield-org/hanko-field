@@ -898,7 +898,7 @@ MVPで後回し可能:
 
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
-| M05-T01 | `DES-006` | スタイル選択固定UI | `features/design/presentation/` | Shape/Style/Stroke/Balanceを選べる |
+| M05-T01 | `DES-006` | [x] スタイル選択固定UI | `features/design/presentation/` | Shape/Style/Stroke/Balanceを選べる |
 | M05-T02 | API | AI印影生成API | `api/src/main.rs` | `POST /v1/seal-designs/generate` が3variantを返す |
 | M05-T03 | Storage | 生成画像のStorage保存 | `api/src/main.rs` | `storage_path` と表示用URLを返す |
 | M05-T04 | `DES-007` `DES-012` `DES-015` | 生成中/失敗/上限状態 | `features/design/presentation/` | 再試行と上限表示がある |

@@ -5,6 +5,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../data/kanji_candidates_repository.dart';
 import '../domain/kanji_candidate.dart';
+import '../domain/seal_style_selection.dart';
 
 class DesignHomeScreen extends StatelessWidget {
   const DesignHomeScreen({super.key, this.onOpenSettings, this.onStartDesign});
@@ -441,8 +442,11 @@ class _KanjiCandidateDetailScreenState
   var _isSelected = false;
 
   void _selectCandidate() {
+    if (widget.onSelected != null) {
+      widget.onSelected!(widget.candidate);
+      return;
+    }
     setState(() => _isSelected = true);
-    widget.onSelected?.call(widget.candidate);
   }
 
   @override
@@ -540,6 +544,188 @@ class _KanjiCandidateDetailScreenState
                 label: _isSelected ? l10n.kanjiSelectedTitle : l10n.selectKanji,
                 icon: _isSelected ? Icons.check : Icons.arrow_forward,
                 onPressed: _selectCandidate,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class SealStyleSelectionScreen extends StatefulWidget {
+  const SealStyleSelectionScreen({
+    super.key,
+    required this.candidate,
+    required this.onBack,
+    this.initialSelection = const SealStyleSelection(),
+    this.onConfirmed,
+  });
+
+  final KanjiCandidate candidate;
+  final VoidCallback onBack;
+  final SealStyleSelection initialSelection;
+  final ValueChanged<SealStyleSelection>? onConfirmed;
+
+  @override
+  State<SealStyleSelectionScreen> createState() =>
+      _SealStyleSelectionScreenState();
+}
+
+class _SealStyleSelectionScreenState extends State<SealStyleSelectionScreen> {
+  late var _selection = widget.initialSelection;
+  var _isConfirmed = false;
+
+  void _updateSelection(SealStyleSelection selection) {
+    setState(() {
+      _selection = selection;
+      _isConfirmed = false;
+    });
+  }
+
+  void _confirmSelection() {
+    setState(() => _isConfirmed = true);
+    widget.onConfirmed?.call(_selection);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.sealStyleTitle,
+      onBack: widget.onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: _SealMedallion(icon: Icons.tune)),
+              const SizedBox(height: 22),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
+              Text(
+                l10n.sealStyleMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: 24),
+              _SelectedKanjiStyleCard(candidate: widget.candidate),
+              const SizedBox(height: 24),
+              _StyleOptionGroup<SealShape>(
+                label: l10n.sealShapeLabel,
+                selectedValue: _selection.shape,
+                options: [
+                  _StyleOption(
+                    value: SealShape.square,
+                    label: _sealShapeLabel(l10n, SealShape.square),
+                    icon: Icons.crop_square,
+                  ),
+                  _StyleOption(
+                    value: SealShape.round,
+                    label: _sealShapeLabel(l10n, SealShape.round),
+                    icon: Icons.circle_outlined,
+                  ),
+                ],
+                onChanged: (shape) {
+                  _updateSelection(_selection.copyWith(shape: shape));
+                },
+              ),
+              const SizedBox(height: 20),
+              _StyleOptionGroup<SealStyleName>(
+                label: l10n.sealStyleNameLabel,
+                selectedValue: _selection.style,
+                options: [
+                  _StyleOption(
+                    value: SealStyleName.traditional,
+                    label: _sealStyleNameLabel(l10n, SealStyleName.traditional),
+                    icon: Icons.temple_buddhist_outlined,
+                  ),
+                  _StyleOption(
+                    value: SealStyleName.elegant,
+                    label: _sealStyleNameLabel(l10n, SealStyleName.elegant),
+                    icon: Icons.auto_awesome,
+                  ),
+                  _StyleOption(
+                    value: SealStyleName.soft,
+                    label: _sealStyleNameLabel(l10n, SealStyleName.soft),
+                    icon: Icons.spa_outlined,
+                  ),
+                  _StyleOption(
+                    value: SealStyleName.bold,
+                    label: _sealStyleNameLabel(l10n, SealStyleName.bold),
+                    icon: Icons.format_bold,
+                  ),
+                ],
+                onChanged: (style) {
+                  _updateSelection(_selection.copyWith(style: style));
+                },
+              ),
+              const SizedBox(height: 20),
+              _StyleOptionGroup<SealStrokeWeight>(
+                label: l10n.sealStrokeWeightLabel,
+                selectedValue: _selection.strokeWeight,
+                options: [
+                  _StyleOption(
+                    value: SealStrokeWeight.standard,
+                    label: _sealStrokeWeightLabel(
+                      l10n,
+                      SealStrokeWeight.standard,
+                    ),
+                    icon: Icons.line_weight,
+                  ),
+                  _StyleOption(
+                    value: SealStrokeWeight.bold,
+                    label: _sealStrokeWeightLabel(l10n, SealStrokeWeight.bold),
+                    icon: Icons.format_bold,
+                  ),
+                ],
+                onChanged: (strokeWeight) {
+                  _updateSelection(
+                    _selection.copyWith(strokeWeight: strokeWeight),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              _StyleOptionGroup<SealBalance>(
+                label: l10n.sealBalanceLabel,
+                selectedValue: _selection.balance,
+                options: [
+                  _StyleOption(
+                    value: SealBalance.airy,
+                    label: _sealBalanceLabel(l10n, SealBalance.airy),
+                    icon: Icons.air,
+                  ),
+                  _StyleOption(
+                    value: SealBalance.balanced,
+                    label: _sealBalanceLabel(l10n, SealBalance.balanced),
+                    icon: Icons.balance,
+                  ),
+                  _StyleOption(
+                    value: SealBalance.dense,
+                    label: _sealBalanceLabel(l10n, SealBalance.dense),
+                    icon: Icons.density_medium,
+                  ),
+                ],
+                onChanged: (balance) {
+                  _updateSelection(_selection.copyWith(balance: balance));
+                },
+              ),
+              const SizedBox(height: 24),
+              _SealStyleSummaryCard(selection: _selection),
+              if (_isConfirmed) ...[
+                const SizedBox(height: 22),
+                _InlineConfirmation(
+                  title: l10n.sealStyleConfirmedTitle,
+                  message: l10n.sealStyleConfirmedMessage,
+                ),
+              ],
+              const SizedBox(height: 24),
+              HankoPrimaryButton(
+                label: l10n.confirmStyle,
+                icon: Icons.check,
+                onPressed: _confirmSelection,
               ),
             ],
           ),
@@ -794,6 +980,218 @@ class _CandidateMetrics extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _SelectedKanjiStyleCard extends StatelessWidget {
+  const _SelectedKanjiStyleCard({required this.candidate});
+
+  final KanjiCandidate candidate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final meaning = candidate.meaning?.trim();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                color: HankoColors.medallion,
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox.square(
+                dimension: 66,
+                child: Center(
+                  child: Text(
+                    candidate.kanji,
+                    textAlign: TextAlign.center,
+                    style: HankoTextStyles.sectionTitle.copyWith(
+                      color: HankoColors.red,
+                      fontSize: candidate.kanji.length <= 1 ? 32 : 25,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.sealStyleSelectedKanjiLabel,
+                    style: HankoTextStyles.compactBody,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(candidate.reading, style: HankoTextStyles.cardTitle),
+                  if (meaning != null && meaning.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(meaning, style: HankoTextStyles.compactBody),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StyleOption<T> {
+  const _StyleOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  final T value;
+  final String label;
+  final IconData icon;
+}
+
+class _StyleOptionGroup<T> extends StatelessWidget {
+  const _StyleOptionGroup({
+    required this.label,
+    required this.options,
+    required this.selectedValue,
+    required this.onChanged,
+  });
+
+  final String label;
+  final List<_StyleOption<T>> options;
+  final T selectedValue;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: HankoTextStyles.label),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final option in options)
+              _StyleChoiceChip(
+                label: option.label,
+                icon: option.icon,
+                selected: option.value == selectedValue,
+                onSelected: () => onChanged(option.value),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StyleChoiceChip extends StatelessWidget {
+  const _StyleChoiceChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? Colors.white : HankoColors.ink;
+
+    return ChoiceChip(
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: HankoColors.red,
+      backgroundColor: HankoColors.surface,
+      side: BorderSide(
+        color: selected ? HankoColors.red : HankoColors.surfaceBorder,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      labelPadding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      label: SizedBox(
+        width: 128,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: foreground),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: HankoTextStyles.label.copyWith(color: foreground),
+              ),
+            ),
+          ],
+        ),
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+}
+
+class _SealStyleSummaryCard extends StatelessWidget {
+  const _SealStyleSummaryCard({required this.selection});
+
+  final SealStyleSelection selection;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: HankoColors.background.withValues(alpha: 0.56),
+        border: Border.all(color: HankoColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.sealStyleSummaryTitle, style: HankoTextStyles.label),
+            const SizedBox(height: 12),
+            _RequestSummaryRow(
+              label: l10n.sealShapeLabel,
+              value: _sealShapeLabel(l10n, selection.shape),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealStyleNameLabel,
+              value: _sealStyleNameLabel(l10n, selection.style),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealStrokeWeightLabel,
+              value: _sealStrokeWeightLabel(l10n, selection.strokeWeight),
+            ),
+            _RequestSummaryRow(
+              label: l10n.sealBalanceLabel,
+              value: _sealBalanceLabel(l10n, selection.balance),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1293,6 +1691,40 @@ String _kanjiStyleLabel(HankoLocalizations l10n, KanjiNameStyle style) {
     KanjiNameStyle.japanese => l10n.designKanjiStyleJapanese,
     KanjiNameStyle.chinese => l10n.designKanjiStyleChinese,
     KanjiNameStyle.taiwanese => l10n.designKanjiStyleTaiwanese,
+  };
+}
+
+String _sealShapeLabel(HankoLocalizations l10n, SealShape shape) {
+  return switch (shape) {
+    SealShape.square => l10n.sealShapeSquare,
+    SealShape.round => l10n.sealShapeRound,
+  };
+}
+
+String _sealStyleNameLabel(HankoLocalizations l10n, SealStyleName style) {
+  return switch (style) {
+    SealStyleName.traditional => l10n.sealStyleTraditional,
+    SealStyleName.elegant => l10n.sealStyleElegant,
+    SealStyleName.soft => l10n.sealStyleSoft,
+    SealStyleName.bold => l10n.sealStyleBold,
+  };
+}
+
+String _sealStrokeWeightLabel(
+  HankoLocalizations l10n,
+  SealStrokeWeight strokeWeight,
+) {
+  return switch (strokeWeight) {
+    SealStrokeWeight.standard => l10n.sealStrokeStandard,
+    SealStrokeWeight.bold => l10n.sealStrokeBold,
+  };
+}
+
+String _sealBalanceLabel(HankoLocalizations l10n, SealBalance balance) {
+  return switch (balance) {
+    SealBalance.airy => l10n.sealBalanceAiry,
+    SealBalance.balanced => l10n.sealBalanceBalanced,
+    SealBalance.dense => l10n.sealBalanceDense,
   };
 }
 
