@@ -281,6 +281,30 @@ struct OrderStatusResult {
     updated_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LookupOrderRequest {
+    order_no: String,
+    email: String,
+}
+
+#[derive(Debug, Clone)]
+struct LookupOrderInput {
+    order_no: String,
+    email: String,
+}
+
+#[derive(Debug, Clone)]
+struct OrderLookupResult {
+    status: OrderStatusResult,
+    created_at: Option<DateTime<Utc>>,
+    seal_confirmed_text: String,
+    seal_preview_image_url: String,
+    listing_id: String,
+    listing_title: String,
+    shipped_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone)]
 struct ProcessStripeWebhookResult {
     processed: bool,
@@ -868,6 +892,7 @@ async fn run() -> Result<()> {
             post(handle_generate_seal_designs),
         )
         .route("/v1/orders", post(handle_create_order))
+        .route("/v1/orders/lookup", post(handle_lookup_order))
         .route("/v1/orders/{order_id}/status", get(handle_get_order_status))
         .route(
             "/v1/payments/stripe/checkout-session",
@@ -1691,6 +1716,51 @@ async fn handle_get_order_status(
     }
 }
 
+async fn handle_lookup_order(State(state): State<AppState>, body: Bytes) -> Response {
+    let request = match serde_json::from_slice::<LookupOrderRequest>(&body) {
+        Ok(v) => v,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_json",
+                &format!("invalid JSON: {err}"),
+            );
+        }
+    };
+
+    let input = match validate_lookup_order_request(request) {
+        Ok(v) => v,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "validation_error",
+                &err.to_string(),
+            );
+        }
+    };
+
+    match state.store.lookup_order(input).await {
+        Ok(Some(result)) => json_response(StatusCode::OK, order_lookup_response_json(&result)),
+        Ok(None) => error_response(StatusCode::NOT_FOUND, "order_not_found", "order not found"),
+        Err(StoreError::Internal(err)) => {
+            eprintln!("failed to lookup order: {err:#}");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            )
+        }
+        Err(err) => {
+            eprintln!("failed to lookup order: {err}");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            )
+        }
+    }
+}
+
 async fn handle_create_stripe_checkout_session(
     State(state): State<AppState>,
     body: Bytes,
@@ -1962,12 +2032,53 @@ fn order_status_response_json(result: &OrderStatusResult) -> JsonValue {
             "total": result.total,
             "currency": result.currency,
         },
-        "updated_at": result
-            .updated_at
-            .as_ref()
-            .map(|value| JsonValue::String(value.to_rfc3339_opts(SecondsFormat::Secs, true)))
-            .unwrap_or(JsonValue::Null),
+        "updated_at": timestamp_json(result.updated_at.as_ref()),
     })
+}
+
+fn order_lookup_response_json(result: &OrderLookupResult) -> JsonValue {
+    json!({
+        "order_id": result.status.order_id,
+        "order_no": result.status.order_no,
+        "created_at": timestamp_json(result.created_at.as_ref()),
+        "status": result.status.status,
+        "order_status": result.status.status,
+        "payment": {
+            "status": result.status.payment_status,
+            "checkout_session_id": nullable_string_json(&result.status.checkout_session_id),
+            "payment_intent_id": nullable_string_json(&result.status.payment_intent_id),
+        },
+        "payment_status": result.status.payment_status,
+        "fulfillment": {
+            "status": result.status.fulfillment_status,
+            "carrier": nullable_string_json(&result.status.fulfillment_carrier),
+            "tracking_no": nullable_string_json(&result.status.fulfillment_tracking_no),
+            "shipped_at": timestamp_json(result.shipped_at.as_ref()),
+        },
+        "fulfillment_status": result.status.fulfillment_status,
+        "production_status": result.status.production_status,
+        "shipping_status": result.status.shipping_status,
+        "tracking_number": nullable_string_json(&result.status.fulfillment_tracking_no),
+        "pricing": {
+            "total": result.status.total,
+            "currency": result.status.currency,
+        },
+        "seal": {
+            "confirmed_seal_text": result.seal_confirmed_text,
+            "preview_image_url": nullable_string_json(&result.seal_preview_image_url),
+        },
+        "listing": {
+            "id": nullable_string_json(&result.listing_id),
+            "title": nullable_string_json(&result.listing_title),
+        },
+        "updated_at": timestamp_json(result.status.updated_at.as_ref()),
+    })
+}
+
+fn timestamp_json(value: Option<&DateTime<Utc>>) -> JsonValue {
+    value
+        .map(|value| JsonValue::String(value.to_rfc3339_opts(SecondsFormat::Secs, true)))
+        .unwrap_or(JsonValue::Null)
 }
 
 fn nullable_string_json(value: &str) -> JsonValue {
@@ -1977,6 +2088,133 @@ fn nullable_string_json(value: &str) -> JsonValue {
     } else {
         JsonValue::String(value.to_owned())
     }
+}
+
+fn order_lookup_query_request(order_no: &str) -> RunQueryRequest {
+    RunQueryRequest {
+        structured_query: Some(json!({
+            "from": [
+                { "collectionId": "orders" }
+            ],
+            "where": {
+                "fieldFilter": {
+                    "field": { "fieldPath": "order_no" },
+                    "op": "EQUAL",
+                    "value": { "stringValue": order_no }
+                }
+            }
+        })),
+        ..RunQueryRequest::default()
+    }
+}
+
+fn order_status_result_from_fields(
+    order_id: &str,
+    fields: &BTreeMap<String, JsonValue>,
+) -> OrderStatusResult {
+    let payment = read_map_field(fields, "payment");
+    let fulfillment = read_map_field(fields, "fulfillment");
+    let production = read_map_field(fields, "production");
+    let shipping = read_map_field(fields, "shipping");
+    let pricing = read_map_field(fields, "pricing");
+
+    OrderStatusResult {
+        order_id: order_id.to_owned(),
+        order_no: read_string_field(fields, "order_no"),
+        status: read_string_field(fields, "status"),
+        payment_status: read_string_field(&payment, "status"),
+        checkout_session_id: read_string_field(&payment, "checkout_session_id"),
+        payment_intent_id: first_non_empty(&[
+            Some(read_string_field(&payment, "intent_id")),
+            Some(read_string_field(&payment, "payment_intent_id")),
+        ])
+        .unwrap_or_default(),
+        fulfillment_status: read_string_field(&fulfillment, "status"),
+        fulfillment_carrier: read_string_field(&fulfillment, "carrier"),
+        fulfillment_tracking_no: first_non_empty(&[
+            Some(read_string_field(&fulfillment, "tracking_no")),
+            Some(read_string_field(&fulfillment, "tracking_number")),
+        ])
+        .unwrap_or_default(),
+        production_status: first_non_empty(&[
+            Some(read_string_field(&production, "status")),
+            Some(read_string_field(fields, "production_status")),
+        ])
+        .unwrap_or_else(|| "not_started".to_owned()),
+        shipping_status: first_non_empty(&[
+            Some(read_string_field(&shipping, "status")),
+            Some(read_string_field(fields, "shipping_status")),
+        ])
+        .unwrap_or_else(|| "not_shipped".to_owned()),
+        total: pricing_total(&pricing),
+        currency: pricing_currency(&pricing),
+        updated_at: read_timestamp_field(fields, "updated_at"),
+    }
+}
+
+fn order_lookup_result_from_document(
+    document: &Document,
+    requested_email: &str,
+) -> Option<OrderLookupResult> {
+    let contact = read_map_field(&document.fields, "contact");
+    let stored_email = read_string_field(&contact, "email");
+    if !order_lookup_email_matches(&stored_email, requested_email) {
+        return None;
+    }
+
+    let order_id = document_id(document)?;
+    let status = order_status_result_from_fields(&order_id, &document.fields);
+    let seal = read_map_field(&document.fields, "seal");
+    let preview_image = read_map_field(&seal, "preview_image");
+    let customer_confirmation = read_map_field(&document.fields, "customer_confirmation");
+    let listing = read_map_field(&document.fields, "listing");
+    let fulfillment = read_map_field(&document.fields, "fulfillment");
+    let order_locale = first_non_empty(&[
+        Some(read_string_field(&document.fields, "locale")),
+        Some(DEFAULT_LOCALE.to_owned()),
+    ])
+    .unwrap_or_else(|| DEFAULT_LOCALE.to_owned());
+    let seal_text = first_non_empty(&[
+        Some(read_string_field(
+            &customer_confirmation,
+            "confirmed_seal_text",
+        )),
+        Some(format!(
+            "{}{}",
+            read_string_field(&seal, "line1"),
+            read_string_field(&seal, "line2")
+        )),
+    ])
+    .unwrap_or_default();
+    let listing_title = first_non_empty(&[
+        Some(resolve_localized(
+            &read_string_map_field(&listing, "title_i18n"),
+            &order_locale,
+            DEFAULT_LOCALE,
+        )),
+        Some(read_string_field(&listing, "title")),
+        Some(read_string_field(&listing, "listing_code")),
+    ])
+    .unwrap_or_default();
+
+    Some(OrderLookupResult {
+        status,
+        created_at: read_timestamp_field(&document.fields, "created_at"),
+        seal_confirmed_text: seal_text,
+        seal_preview_image_url: read_string_field(&preview_image, "download_url"),
+        listing_id: first_non_empty(&[
+            Some(read_string_field(&listing, "key")),
+            Some(read_string_field(&listing, "id")),
+        ])
+        .unwrap_or_default(),
+        listing_title,
+        shipped_at: read_timestamp_field(&fulfillment, "shipped_at"),
+    })
+}
+
+fn order_lookup_email_matches(stored_email: &str, requested_email: &str) -> bool {
+    let stored_email = stored_email.trim();
+    !stored_email.is_empty() && stored_email.eq_ignore_ascii_case(requested_email.trim())
 }
 
 fn firestore_client_from_access_token(access_token: &str) -> Result<FirebaseFirestoreClient> {
@@ -2588,44 +2826,33 @@ impl FirestoreStore {
             Err(err) => return Err(StoreError::Internal(anyhow!(err))),
         };
 
-        let payment = read_map_field(&order_doc.fields, "payment");
-        let fulfillment = read_map_field(&order_doc.fields, "fulfillment");
-        let production = read_map_field(&order_doc.fields, "production");
-        let shipping = read_map_field(&order_doc.fields, "shipping");
-        let pricing = read_map_field(&order_doc.fields, "pricing");
+        Ok(Some(order_status_result_from_fields(
+            order_id,
+            &order_doc.fields,
+        )))
+    }
 
-        Ok(Some(OrderStatusResult {
-            order_id: order_id.to_owned(),
-            order_no: read_string_field(&order_doc.fields, "order_no"),
-            status: read_string_field(&order_doc.fields, "status"),
-            payment_status: read_string_field(&payment, "status"),
-            checkout_session_id: read_string_field(&payment, "checkout_session_id"),
-            payment_intent_id: first_non_empty(&[
-                Some(read_string_field(&payment, "intent_id")),
-                Some(read_string_field(&payment, "payment_intent_id")),
-            ])
-            .unwrap_or_default(),
-            fulfillment_status: read_string_field(&fulfillment, "status"),
-            fulfillment_carrier: read_string_field(&fulfillment, "carrier"),
-            fulfillment_tracking_no: first_non_empty(&[
-                Some(read_string_field(&fulfillment, "tracking_no")),
-                Some(read_string_field(&fulfillment, "tracking_number")),
-            ])
-            .unwrap_or_default(),
-            production_status: first_non_empty(&[
-                Some(read_string_field(&production, "status")),
-                Some(read_string_field(&order_doc.fields, "production_status")),
-            ])
-            .unwrap_or_else(|| "not_started".to_owned()),
-            shipping_status: first_non_empty(&[
-                Some(read_string_field(&shipping, "status")),
-                Some(read_string_field(&order_doc.fields, "shipping_status")),
-            ])
-            .unwrap_or_else(|| "not_shipped".to_owned()),
-            total: pricing_total(&pricing),
-            currency: pricing_currency(&pricing),
-            updated_at: read_timestamp_field(&order_doc.fields, "updated_at"),
-        }))
+    async fn lookup_order(
+        &self,
+        input: LookupOrderInput,
+    ) -> Result<Option<OrderLookupResult>, StoreError> {
+        let client = self
+            .firestore_client()
+            .await
+            .map_err(StoreError::Internal)?;
+        let query = order_lookup_query_request(&input.order_no);
+        let rows = client
+            .run_query(&self.parent, &query)
+            .await
+            .map_err(|err| StoreError::Internal(anyhow!(err)))?;
+
+        for document in rows.into_iter().filter_map(|row| row.document) {
+            if let Some(result) = order_lookup_result_from_document(&document, &input.email) {
+                return Ok(Some(result));
+            }
+        }
+
+        Ok(None)
     }
 
     fn resolve_order_listing_fields(
@@ -5049,6 +5276,29 @@ fn validate_create_stripe_checkout_session_request(
     })
 }
 
+fn validate_lookup_order_request(request: LookupOrderRequest) -> Result<LookupOrderInput> {
+    let order_no = request.order_no.trim().to_ascii_uppercase();
+    if order_no.is_empty() {
+        bail!("order_no is required");
+    }
+    if order_no.chars().count() > 64 {
+        bail!("order_no must be 64 characters or fewer");
+    }
+
+    let email = request.email.trim().to_owned();
+    if email.is_empty() {
+        bail!("email is required");
+    }
+    if !is_valid_email(&email) {
+        bail!("email must be valid");
+    }
+    if email.chars().count() > 254 {
+        bail!("email must be 254 characters or fewer");
+    }
+
+    Ok(LookupOrderInput { order_no, email })
+}
+
 async fn create_stripe_checkout_session(
     state: &AppState,
     order: &OrderCheckoutContext,
@@ -7227,6 +7477,171 @@ mod tests {
         };
 
         assert!(validate_create_stripe_checkout_session_request(request).is_err());
+    }
+
+    #[test]
+    fn validate_lookup_order_request_normalizes_order_no_and_requires_email() {
+        let input = validate_lookup_order_request(LookupOrderRequest {
+            order_no: " hf-20260521-0001 ".to_owned(),
+            email: " customer@example.com ".to_owned(),
+        })
+        .expect("lookup request must be valid");
+
+        assert_eq!(input.order_no, "HF-20260521-0001");
+        assert_eq!(input.email, "customer@example.com");
+        assert!(
+            validate_lookup_order_request(LookupOrderRequest {
+                order_no: "HF-20260521-0001".to_owned(),
+                email: "invalid".to_owned(),
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn order_lookup_query_request_filters_by_order_no() {
+        let query = order_lookup_query_request("HF-20260521-0001");
+        let structured_query = query
+            .structured_query
+            .as_ref()
+            .expect("structured query must be present");
+
+        assert_eq!(structured_query["from"][0]["collectionId"], "orders");
+        assert_eq!(
+            structured_query["where"]["fieldFilter"]["field"]["fieldPath"],
+            "order_no"
+        );
+        assert_eq!(
+            structured_query["where"]["fieldFilter"]["value"]["stringValue"],
+            "HF-20260521-0001"
+        );
+    }
+
+    fn lookup_order_document() -> Document {
+        let created_at = DateTime::parse_from_rfc3339("2026-05-21T11:00:00Z")
+            .expect("created timestamp")
+            .with_timezone(&Utc);
+        let updated_at = DateTime::parse_from_rfc3339("2026-05-21T11:15:00Z")
+            .expect("updated timestamp")
+            .with_timezone(&Utc);
+        let shipped_at = DateTime::parse_from_rfc3339("2026-05-22T03:00:00Z")
+            .expect("shipped timestamp")
+            .with_timezone(&Utc);
+
+        Document {
+            name: Some("projects/demo/databases/(default)/documents/orders/order_001".to_owned()),
+            fields: btree_from_pairs(vec![
+                ("order_no", fs_string("HF-20260521-0001")),
+                ("locale", fs_string("en")),
+                ("status", fs_string("paid")),
+                (
+                    "contact",
+                    fs_map(btree_from_pairs(vec![(
+                        "email",
+                        fs_string("customer@example.com"),
+                    )])),
+                ),
+                (
+                    "payment",
+                    fs_map(btree_from_pairs(vec![
+                        ("status", fs_string("paid")),
+                        ("checkout_session_id", fs_string("cs_test_xxx")),
+                        ("intent_id", fs_string("pi_xxx")),
+                    ])),
+                ),
+                (
+                    "fulfillment",
+                    fs_map(btree_from_pairs(vec![
+                        ("status", fs_string("shipped")),
+                        ("carrier", fs_string("Yamato")),
+                        ("tracking_no", fs_string("1234567890")),
+                        ("shipped_at", fs_timestamp(shipped_at)),
+                    ])),
+                ),
+                (
+                    "pricing",
+                    fs_map(btree_from_pairs(vec![
+                        ("total", fs_int(18600)),
+                        ("currency", fs_string("JPY")),
+                    ])),
+                ),
+                (
+                    "seal",
+                    fs_map(btree_from_pairs(vec![
+                        ("line1", fs_string("美")),
+                        ("line2", fs_string("空")),
+                        (
+                            "preview_image",
+                            fs_map(btree_from_pairs(vec![(
+                                "download_url",
+                                fs_string("https://example.test/seal.png"),
+                            )])),
+                        ),
+                    ])),
+                ),
+                (
+                    "customer_confirmation",
+                    fs_map(btree_from_pairs(vec![(
+                        "confirmed_seal_text",
+                        fs_string("美空"),
+                    )])),
+                ),
+                (
+                    "listing",
+                    fs_map(btree_from_pairs(vec![
+                        ("key", fs_string("stone_listing_001")),
+                        (
+                            "title_i18n",
+                            fs_map(btree_from_pairs(vec![
+                                ("ja", fs_string("ソフトピンクローズクォーツ印材")),
+                                ("en", fs_string("Soft Pink Rose Quartz Seal Stone")),
+                            ])),
+                        ),
+                    ])),
+                ),
+                ("created_at", fs_timestamp(created_at)),
+                ("updated_at", fs_timestamp(updated_at)),
+            ]),
+            ..Document::default()
+        }
+    }
+
+    #[test]
+    fn order_lookup_result_matches_email_and_builds_limited_response() {
+        let document = lookup_order_document();
+
+        assert!(order_lookup_result_from_document(&document, "other@example.com").is_none());
+
+        let result = order_lookup_result_from_document(&document, "CUSTOMER@example.com")
+            .expect("matching email should return lookup result");
+        let response = order_lookup_response_json(&result);
+
+        assert_eq!(response["order_id"], "order_001");
+        assert_eq!(response["order_no"], "HF-20260521-0001");
+        assert_eq!(response["created_at"], "2026-05-21T11:00:00Z");
+        assert_eq!(response["status"], "paid");
+        assert_eq!(response["payment_status"], "paid");
+        assert_eq!(response["payment"]["checkout_session_id"], "cs_test_xxx");
+        assert_eq!(response["fulfillment_status"], "shipped");
+        assert_eq!(response["fulfillment"]["carrier"], "Yamato");
+        assert_eq!(response["fulfillment"]["tracking_no"], "1234567890");
+        assert_eq!(
+            response["fulfillment"]["shipped_at"],
+            "2026-05-22T03:00:00Z"
+        );
+        assert_eq!(response["tracking_number"], "1234567890");
+        assert_eq!(response["seal"]["confirmed_seal_text"], "美空");
+        assert_eq!(
+            response["seal"]["preview_image_url"],
+            "https://example.test/seal.png"
+        );
+        assert_eq!(response["listing"]["id"], "stone_listing_001");
+        assert_eq!(
+            response["listing"]["title"],
+            "Soft Pink Rose Quartz Seal Stone"
+        );
+        assert_eq!(response["pricing"]["total"], 18600);
+        assert_eq!(response["updated_at"], "2026-05-21T11:15:00Z");
     }
 
     #[test]

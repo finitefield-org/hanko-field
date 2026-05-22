@@ -958,7 +958,7 @@ MVPで後回し可能:
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
 | M10-T01 | API | [x] 注文状態取得 | `api/src/main.rs` | `GET /v1/orders/{order_id}/status` が状態を返す |
-| M10-T02 | API | 注文照会 | `api/src/main.rs` | `POST /v1/orders/lookup` が注文番号+メールで検索 |
+| M10-T02 | API | [x] 注文照会 | `api/src/main.rs` | `POST /v1/orders/lookup` が注文番号+メールで検索 |
 | M10-T03 | `LKP-001` | 照会入力 | `features/order_lookup/presentation/` | 注文番号とメールを入力 |
 | M10-T04 | `LKP-002` `LKP-004` `LKP-005` | Loading/Not found/Error | `features/order_lookup/presentation/` | 状態を区別して表示 |
 | M10-T05 | `LKP-003` | 照会結果 | `features/order_lookup/presentation/` | 注文、決済、制作、発送、追跡を表示 |
