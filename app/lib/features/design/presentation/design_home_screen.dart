@@ -1019,6 +1019,84 @@ class SealPreviewDetailScreen extends StatelessWidget {
   }
 }
 
+class SealSaveConfirmationScreen extends StatelessWidget {
+  const SealSaveConfirmationScreen({
+    super.key,
+    required this.result,
+    required this.variant,
+    required this.onOpenMySeals,
+    required this.onChooseStone,
+    required this.onCreateAnother,
+    required this.onBack,
+  });
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+  final VoidCallback onOpenMySeals;
+  final VoidCallback onChooseStone;
+  final VoidCallback onCreateAnother;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return _DesignStepScaffold(
+      title: l10n.sealSavedTitle,
+      onBack: onBack,
+      children: [
+        HankoSurfaceCard(
+          padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: _SealMedallion(icon: Icons.check)),
+              const SizedBox(height: 24),
+              const Center(child: _DividerMark()),
+              const SizedBox(height: 26),
+              Text(
+                l10n.sealSavedHeading,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.sealSavedMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SavedSealSummaryCard(result: result, variant: variant),
+        const SizedBox(height: 20),
+        HankoPrimaryButton(
+          label: l10n.chooseStone,
+          icon: Icons.diamond_outlined,
+          onPressed: onChooseStone,
+        ),
+        const SizedBox(height: 12),
+        _SecondaryActionButton(
+          label: l10n.goToMySeals,
+          onPressed: onOpenMySeals,
+        ),
+        const SizedBox(height: 18),
+        Center(
+          child: TextButton(
+            onPressed: onCreateAnother,
+            style: TextButton.styleFrom(
+              foregroundColor: HankoColors.red,
+              textStyle: HankoTextStyles.buttonLabel,
+            ),
+            child: Text(l10n.createAnotherSeal),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class SealGenerationErrorScreen extends StatelessWidget {
   const SealGenerationErrorScreen({
     super.key,
@@ -1878,6 +1956,84 @@ class _SealPreviewDetailRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: HankoTextStyles.compactBody,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedSealSummaryCard extends StatelessWidget {
+  const _SavedSealSummaryCard({required this.result, required this.variant});
+
+  final SealGenerationResult result;
+  final SealDesignVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final request = result.request;
+    final style = request.style;
+
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: 104,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(HankoRadii.sm),
+              child: _SealVariantImage(variant: variant),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(width: 1, height: 92, color: HankoColors.gold),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  request.candidate.kanji,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.sectionTitle.copyWith(
+                    fontFamily: HankoFonts.serif,
+                    color: HankoColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  [
+                    _sealStyleNameLabel(l10n, style.style),
+                    _sealStrokeWeightLabel(l10n, style.strokeWeight),
+                    _sealBalanceLabel(l10n, style.balance),
+                  ].join(' / '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.compactBody,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: HankoColors.gold,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        variant.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: HankoTextStyles.label,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -200,6 +200,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _designSealVariantSelectionPageKey =
       'DES-008-seal-variant-selection';
   static const _designSealPreviewDetailPageKey = 'DES-009-seal-preview-detail';
+  static const _designSealSaveConfirmationPageKey =
+      'DES-010-seal-save-confirmation';
   static const _designKanjiErrorPageKey = 'DES-011-kanji-suggestion-error';
   static const _designSealGenerationErrorPageKey =
       'DES-012-seal-generation-error';
@@ -384,8 +386,24 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       return SealPreviewDetailScreen(
         result: pageData.result,
         variant: pageData.variant,
-        onSave: () {},
+        onSave: () {
+          stack.push(
+            _sealSaveConfirmationPage(pageData.result, pageData.variant),
+          );
+        },
         onChooseStone: () => stack.selectTab(HankoAppTab.stones),
+        onBack: stack.pop,
+      );
+    }
+
+    if (page.key == _designSealSaveConfirmationPageKey &&
+        pageData is _SealPreviewSelection) {
+      return SealSaveConfirmationScreen(
+        result: pageData.result,
+        variant: pageData.variant,
+        onOpenMySeals: () => stack.selectTab(HankoAppTab.mySeals),
+        onChooseStone: () => stack.selectTab(HankoAppTab.stones),
+        onCreateAnother: stack.popToRoot,
         onBack: stack.pop,
       );
     }
@@ -495,6 +513,17 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return PageEntry(
       key: _designSealPreviewDetailPageKey,
       name: '/design/seal/preview',
+      data: _SealPreviewSelection(result: result, variant: variant),
+    );
+  }
+
+  PageEntry _sealSaveConfirmationPage(
+    SealGenerationResult result,
+    SealDesignVariant variant,
+  ) {
+    return PageEntry(
+      key: _designSealSaveConfirmationPageKey,
+      name: '/design/seal/saved',
       data: _SealPreviewSelection(result: result, variant: variant),
     );
   }

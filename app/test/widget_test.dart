@@ -356,6 +356,17 @@ void main() {
     expect(find.text('Save Seal'), findsOneWidget);
     expect(find.text('Choose a Stone'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Save Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Save Seal'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
+    expect(find.text('Seal Saved'), findsOneWidget);
+    expect(find.text('Seal saved to My Seals'), findsOneWidget);
+    expect(find.text('Go to My Seals'), findsOneWidget);
+    expect(find.text('Create Another Seal'), findsOneWidget);
+
     await tester.ensureVisible(find.text('Choose a Stone'));
     await tester.pump();
     await tester.tap(find.text('Choose a Stone'));
@@ -366,43 +377,28 @@ void main() {
     await tester.tap(find.text('Design').last);
     await tester.pumpAndSettle();
 
-    expect(find.byType(SealPreviewDetailScreen), findsOneWidget);
+    expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.ensureVisible(find.text('Go to My Seals'));
     await tester.pump();
-    await tester.tap(find.byTooltip('Back').last);
+    await tester.tap(find.text('Go to My Seals'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SealVariantSelectionScreen), findsOneWidget);
+    expect(find.text('No saved seals'), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Back').last);
-    await tester.pump();
-    await tester.tap(find.byTooltip('Back').last);
+    await tester.tap(find.text('Design').last);
     await tester.pumpAndSettle();
 
-    expect(find.byType(SealStyleSelectionScreen), findsOneWidget);
+    expect(find.byType(SealSaveConfirmationScreen), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Back').last);
+    await tester.ensureVisible(find.text('Create Another Seal'));
     await tester.pump();
-    await tester.tap(find.byTooltip('Back').last);
+    await tester.tap(find.text('Create Another Seal'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(KanjiCandidateDetailScreen), findsOneWidget);
+    expect(find.byType(DesignHomeScreen), findsOneWidget);
+    expect(find.text('Start Designing'), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Back').last);
-    await tester.pump();
-    await tester.tap(find.byTooltip('Back').last);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(KanjiSuggestionsScreen), findsOneWidget);
-
-    await tester.ensureVisible(find.byTooltip('Back').last);
-    await tester.pump();
-    await tester.tap(find.byTooltip('Back').last);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(NameInputScreen), findsOneWidget);
-    expect(find.text('Michael Smith'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -557,6 +553,73 @@ void main() {
 
     expect(saveCount, 1);
     expect(chooseStoneCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('DES-010 lets the user choose the next saved seal action', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var openMySealsCount = 0;
+    var chooseStoneCount = 0;
+    var createAnotherCount = 0;
+    var backCount = 0;
+    final result = _sealGenerationResult();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealSaveConfirmationScreen(
+          result: result,
+          variant: result.variants[1],
+          onOpenMySeals: () => openMySealsCount += 1,
+          onChooseStone: () => chooseStoneCount += 1,
+          onCreateAnother: () => createAnotherCount += 1,
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text('Seal Saved'), findsOneWidget);
+    expect(find.text('Seal saved to My Seals'), findsOneWidget);
+    expect(
+      find.text(
+        'Your custom seal design is ready for comparison and ordering.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('美空'), findsOneWidget);
+    expect(find.text('Soft spacing'), findsOneWidget);
+    expect(find.text('Choose a Stone'), findsOneWidget);
+    expect(find.text('Go to My Seals'), findsOneWidget);
+    expect(find.text('Create Another Seal'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Choose a Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Go to My Seals'));
+    await tester.pump();
+    await tester.tap(find.text('Go to My Seals'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Create Another Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Create Another Seal'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+
+    expect(chooseStoneCount, 1);
+    expect(openMySealsCount, 1);
+    expect(createAnotherCount, 1);
+    expect(backCount, 1);
     expect(tester.takeException(), isNull);
   });
 

@@ -159,6 +159,11 @@ class HankoLocalizations {
   String get sealPreviewStorageLabel => _strings.sealPreviewStorageLabel;
   String get saveSeal => _strings.saveSeal;
   String get chooseStone => _strings.chooseStone;
+  String get sealSavedTitle => _strings.sealSavedTitle;
+  String get sealSavedHeading => _strings.sealSavedHeading;
+  String get sealSavedMessage => _strings.sealSavedMessage;
+  String get goToMySeals => _strings.goToMySeals;
+  String get createAnotherSeal => _strings.createAnotherSeal;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
   String get browseStones => _strings.browseStones;
@@ -347,6 +352,11 @@ class _HankoStrings {
     required this.sealPreviewStorageLabel,
     required this.saveSeal,
     required this.chooseStone,
+    required this.sealSavedTitle,
+    required this.sealSavedHeading,
+    required this.sealSavedMessage,
+    required this.goToMySeals,
+    required this.createAnotherSeal,
     required this.savedSeals,
     required this.savedSealsDescription,
     required this.browseStones,
@@ -504,6 +514,11 @@ class _HankoStrings {
   final String sealPreviewStorageLabel;
   final String saveSeal;
   final String chooseStone;
+  final String sealSavedTitle;
+  final String sealSavedHeading;
+  final String sealSavedMessage;
+  final String goToMySeals;
+  final String createAnotherSeal;
   final String savedSeals;
   final String savedSealsDescription;
   final String browseStones;
@@ -687,6 +702,12 @@ const _localizedValues = {
       sealPreviewStorageLabel: 'Storage path',
       saveSeal: 'Save Seal',
       chooseStone: 'Choose a Stone',
+      sealSavedTitle: 'Seal Saved',
+      sealSavedHeading: 'Seal saved to My Seals',
+      sealSavedMessage:
+          'Your custom seal design is ready for comparison and ordering.',
+      goToMySeals: 'Go to My Seals',
+      createAnotherSeal: 'Create Another Seal',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
       browseStones: 'Browse Stones',
@@ -853,6 +874,11 @@ const _localizedValues = {
       sealPreviewStorageLabel: 'Storageパス',
       saveSeal: '印影を保存',
       chooseStone: '石を選ぶ',
+      sealSavedTitle: '保存完了',
+      sealSavedHeading: '印影を保存しました',
+      sealSavedMessage: '保存した印影は比較や注文に使えます。',
+      goToMySeals: 'マイ印影へ',
+      createAnotherSeal: '別の印影を作成',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
       browseStones: '石を探す',
