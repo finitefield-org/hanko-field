@@ -253,6 +253,14 @@ class HankoLocalizations {
   String get noActiveDraft => _strings.noActiveDraft;
   String get noActiveDraftMessage => _strings.noActiveDraftMessage;
   String get reviewSelection => _strings.reviewSelection;
+  String get orderReviewTitle => _strings.orderReviewTitle;
+  String get orderReviewMessage => _strings.orderReviewMessage;
+  String get orderItemPriceLabel => _strings.orderItemPriceLabel;
+  String get orderShippingFeeLabel => _strings.orderShippingFeeLabel;
+  String get orderShippingEstimateNote => _strings.orderShippingEstimateNote;
+  String get orderTotalLabel => _strings.orderTotalLabel;
+  String get orderCustomMadeNotice => _strings.orderCustomMadeNotice;
+  String get continueToShipping => _strings.continueToShipping;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -516,6 +524,14 @@ class _HankoStrings {
     required this.noActiveDraft,
     required this.noActiveDraftMessage,
     required this.reviewSelection,
+    required this.orderReviewTitle,
+    required this.orderReviewMessage,
+    required this.orderItemPriceLabel,
+    required this.orderShippingFeeLabel,
+    required this.orderShippingEstimateNote,
+    required this.orderTotalLabel,
+    required this.orderCustomMadeNotice,
+    required this.continueToShipping,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -748,6 +764,14 @@ class _HankoStrings {
   final String noActiveDraft;
   final String noActiveDraftMessage;
   final String reviewSelection;
+  final String orderReviewTitle;
+  final String orderReviewMessage;
+  final String orderItemPriceLabel;
+  final String orderShippingFeeLabel;
+  final String orderShippingEstimateNote;
+  final String orderTotalLabel;
+  final String orderCustomMadeNotice;
+  final String continueToShipping;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1019,6 +1043,17 @@ const _localizedValues = {
       noActiveDraft: 'No active draft',
       noActiveDraftMessage: 'Choose a saved seal and a stone before checkout.',
       reviewSelection: 'Review Selection',
+      orderReviewTitle: 'Order Review',
+      orderReviewMessage:
+          'Review the selected seal design and one-of-a-kind stone before entering shipping details.',
+      orderItemPriceLabel: 'Item price',
+      orderShippingFeeLabel: 'Shipping',
+      orderShippingEstimateNote:
+          'Shipping is an estimate and will be recalculated before payment.',
+      orderTotalLabel: 'Total',
+      orderCustomMadeNotice:
+          'This product is made by combining your seal design with the selected stone as a custom one-of-a-kind item.',
+      continueToShipping: 'Continue to Shipping',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1260,6 +1295,14 @@ const _localizedValues = {
       noActiveDraft: '進行中の下書きはありません',
       noActiveDraftMessage: '注文前に保存済み印影と石を選択してください。',
       reviewSelection: '選択内容を確認',
+      orderReviewTitle: 'ご注文内容確認',
+      orderReviewMessage: '配送先入力へ進む前に、選択した印影と一点物の石を確認してください。',
+      orderItemPriceLabel: '商品価格',
+      orderShippingFeeLabel: '送料',
+      orderShippingEstimateNote: '送料は概算です。決済前に配送先にもとづいて再計算されます。',
+      orderTotalLabel: '合計',
+      orderCustomMadeNotice: '本商品は、印影と石を組み合わせてお作りする、お客様だけの一点物の特注品です。',
+      continueToShipping: '配送先入力へ進む',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

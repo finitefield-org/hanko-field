@@ -1497,6 +1497,61 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M08-T02 opens combination review with pricing summary', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stones').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
+    expect(find.text('美空'), findsWidgets);
+    expect(find.text('Elegant'), findsOneWidget);
+    expect(find.text('Square'), findsOneWidget);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Rose Quartz / 24x24x60 mm'), findsOneWidget);
+    expect(find.text('Item price'), findsOneWidget);
+    expect(find.text('Shipping'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+    expect(find.text('¥18,000'), findsWidgets);
+    expect(find.text('¥600'), findsOneWidget);
+    expect(find.text('¥18,600'), findsOneWidget);
+    expect(find.text('Continue to Shipping'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {

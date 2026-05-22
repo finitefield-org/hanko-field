@@ -213,6 +213,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'COM-004-settings',
     name: '/settings',
   );
+  static const _orderReviewPage = PageEntry(
+    key: 'CMB-001-order-combination-review',
+    name: '/order/review',
+  );
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -301,12 +305,15 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _orderReviewPage.key) {
+          return _buildOrderReviewPage();
+        }
         if (page.key == _settingsPage.key) {
           return _buildSettingsPage();
         }
         return _buildShellPage(context);
       },
-      onPopTop: _closeSettings,
+      onPopTop: _closeTopPage,
     );
   }
 
@@ -345,7 +352,22 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 432),
-          child: SettingsScreen(onClose: _closeSettings),
+          child: SettingsScreen(onClose: _closeTopPage),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderReviewPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: OrderFlowEntryScreen(
+            draft: _orderDraft,
+            onBack: _closeTopPage,
+          ),
         ),
       ),
     );
@@ -729,26 +751,26 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   }
 
   void _chooseLocalSealForOrder(LocalSealDesign design) {
-    unawaited(
-      _applyOrderDraft(
-        _orderDraft.withSealSelection(
-          _orderDraftSealSelectionFromLocalSealDesign(design),
-        ),
-      ),
+    final nextDraft = _orderDraft.withSealSelection(
+      _orderDraftSealSelectionFromLocalSealDesign(design),
     );
+    unawaited(_applyOrderDraft(nextDraft));
+    if (nextDraft.hasCombinationSelections) {
+      _openOrderReview();
+    }
   }
 
   void _chooseStoneForOrder(StoneListing listing) {
     if (!listing.isOrderable) {
       return;
     }
-    unawaited(
-      _applyOrderDraft(
-        _orderDraft.withStoneSelection(
-          _orderDraftStoneSelectionFromStoneListing(listing),
-        ),
-      ),
+    final nextDraft = _orderDraft.withStoneSelection(
+      _orderDraftStoneSelectionFromStoneListing(listing),
     );
+    unawaited(_applyOrderDraft(nextDraft));
+    if (nextDraft.hasCombinationSelections) {
+      _openOrderReview();
+    }
   }
 
   Future<void> _applyOrderDraft(OrderDraft draft) async {
@@ -952,7 +974,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     setState(() => _pages = const [_shellPage, _settingsPage]);
   }
 
-  void _closeSettings() {
+  void _openOrderReview() {
+    if (_pages.last.key == _orderReviewPage.key) {
+      return;
+    }
+    setState(() => _pages = const [_shellPage, _orderReviewPage]);
+  }
+
+  void _closeTopPage() {
     if (_pages.length <= 1) {
       return;
     }
