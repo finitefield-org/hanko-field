@@ -295,6 +295,21 @@ void main() {
 
     expect(transport.requests.first.body?['idempotency_key'], 'idem_001');
     expect(transport.requests.first.body?['terms_agreed'], isTrue);
+    expect(transport.requests.first.body?['order_note'], 'Please pack safely.');
+    final seal = transport.requests.first.body?['seal'] as Map;
+    expect(seal['ai_generation_id'], 'seal_request_001');
+    expect(seal['ai_variant_id'], 'seal_variant_001');
+    expect(
+      (seal['preview_image'] as Map)['storage_path'],
+      'seal_designs/seal_request_001/seal_variant_001.png',
+    );
+    expect((seal['style'] as Map)['name'], 'elegant');
+    final confirmation =
+        transport.requests.first.body?['customer_confirmation'] as Map;
+    expect(confirmation['kanji_and_design'], isTrue);
+    expect(confirmation['custom_made_policy'], isTrue);
+    expect(confirmation['confirmed_at'], '2026-05-21T02:00:00.000Z');
+    expect(confirmation['confirmed_seal_text'], '美空');
     expect(created.orderNo, 'HF-0001');
     expect(created.pricing.amount, 22000);
     expect(
@@ -350,7 +365,7 @@ HankoApiClient _client(FakeTransport transport) {
 }
 
 SealOrderDraft _draft() {
-  return const SealOrderDraft(
+  return SealOrderDraft(
     channel: 'app',
     locale: 'en',
     idempotencyKey: 'idem_001',
@@ -361,6 +376,17 @@ SealOrderDraft _draft() {
       line2: '',
       shape: 'square',
       fontKey: 'ai_generated_seal',
+      aiGenerationId: 'seal_request_001',
+      aiVariantId: 'seal_variant_001',
+      previewImage: SealOrderPreviewImage(
+        storagePath: 'seal_designs/seal_request_001/seal_variant_001.png',
+        downloadUrl: 'https://storage.example.test/seal_variant_001.png',
+      ),
+      style: SealOrderStyle(
+        name: 'elegant',
+        strokeWeight: 'standard',
+        balance: 'balanced',
+      ),
     ),
     shipping: SealOrderShipping(
       countryCode: 'JP',
@@ -376,6 +402,13 @@ SealOrderDraft _draft() {
       email: 'michael@example.test',
       preferredLocale: 'en',
     ),
+    customerConfirmation: SealOrderCustomerConfirmation(
+      kanjiAndDesign: true,
+      customMadePolicy: true,
+      confirmedAt: DateTime.utc(2026, 5, 21, 2),
+      confirmedSealText: '美空',
+    ),
+    orderNote: 'Please pack safely.',
   );
 }
 

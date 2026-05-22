@@ -24,6 +24,8 @@ class HankoApp extends StatelessWidget {
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
     this.listStoneListings = listStoneListingsWithDefaultApi,
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
+    this.createOrder = createOrderWithDefaultApi,
+    this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
   });
@@ -36,6 +38,8 @@ class HankoApp extends StatelessWidget {
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
+  final OrderCreator createOrder;
+  final CheckoutSessionCreator createCheckoutSession;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
 
@@ -56,6 +60,8 @@ class HankoApp extends StatelessWidget {
         generateSealDesigns: generateSealDesigns,
         listStoneListings: listStoneListings,
         getStoneListingDetail: getStoneListingDetail,
+        createOrder: createOrder,
+        createCheckoutSession: createCheckoutSession,
         localSealDesignRepository: localSealDesignRepository,
         localOrderDraftRepository: localOrderDraftRepository,
       ),
@@ -82,6 +88,8 @@ class _AppLaunchGate extends StatefulWidget {
     required this.generateSealDesigns,
     required this.listStoneListings,
     required this.getStoneListingDetail,
+    required this.createOrder,
+    required this.createCheckoutSession,
     required this.localSealDesignRepository,
     required this.localOrderDraftRepository,
   });
@@ -93,6 +101,8 @@ class _AppLaunchGate extends StatefulWidget {
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
+  final OrderCreator createOrder;
+  final CheckoutSessionCreator createCheckoutSession;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
 
@@ -119,6 +129,8 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         generateSealDesigns: widget.generateSealDesigns,
         listStoneListings: widget.listStoneListings,
         getStoneListingDetail: widget.getStoneListingDetail,
+        createOrder: widget.createOrder,
+        createCheckoutSession: widget.createCheckoutSession,
         localSealDesignRepository: widget.localSealDesignRepository,
         localOrderDraftRepository: widget.localOrderDraftRepository,
       ),
@@ -150,6 +162,8 @@ class BottomNavigationShell extends StatefulWidget {
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
     this.listStoneListings = listStoneListingsWithDefaultApi,
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
+    this.createOrder = createOrderWithDefaultApi,
+    this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
   });
@@ -158,6 +172,8 @@ class BottomNavigationShell extends StatefulWidget {
   final SealDesignsGenerator generateSealDesigns;
   final StoneListingsLoader listStoneListings;
   final StoneListingDetailLoader getStoneListingDetail;
+  final OrderCreator createOrder;
+  final CheckoutSessionCreator createCheckoutSession;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
 
@@ -225,6 +241,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'CHK-006-order-confirmation',
     name: '/checkout/confirmation',
   );
+  static const _checkoutProcessingPage = PageEntry(
+    key: 'CHK-008-checkout-processing',
+    name: '/checkout/processing',
+  );
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -282,6 +302,11 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   var _stoneListingsLoading = false;
   Object? _stoneListingsLoadError;
   String? _stoneListingsLocale;
+  var _checkoutProcessingStep = CheckoutProcessingStep.creatingOrder;
+  var _checkoutProcessingInFlight = false;
+  Object? _checkoutProcessingError;
+  CreatedOrder? _checkoutCreatedOrder;
+  CheckoutSession? _checkoutSession;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
   HankoAppTab? _requestedTab;
@@ -314,6 +339,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _checkoutProcessingPage.key) {
+          return _buildCheckoutProcessingPage();
+        }
         if (page.key == _orderConfirmationPage.key) {
           return _buildOrderConfirmationPage();
         }
@@ -420,6 +448,24 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             onBack: _closeTopPage,
             onEditCheckout: _openCheckoutInput,
             onConfirmAgreements: _confirmOrderAgreements,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckoutProcessingPage() {
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: CheckoutProcessingScreen(
+            step: _checkoutProcessingStep,
+            createdOrder: _checkoutCreatedOrder,
+            checkoutSession: _checkoutSession,
+            error: _checkoutProcessingError,
+            onBack: _checkoutProcessingInFlight ? null : _closeTopPage,
           ),
         ),
       ),
@@ -1059,12 +1105,81 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
 
   Future<void> _confirmOrderAgreements(
     OrderDraftCustomerConfirmationInput confirmation,
-  ) {
+  ) async {
     final input = _orderDraft.input.copyWith(
       termsAgreed: confirmation.isComplete,
       customerConfirmation: confirmation,
     );
-    return _applyOrderDraft(_orderDraft.withInput(input));
+    final nextDraft = _orderDraft.withInput(input);
+    await _applyOrderDraft(nextDraft);
+    if (!mounted) {
+      return;
+    }
+    unawaited(_startCheckoutProcessing(nextDraft));
+  }
+
+  Future<void> _startCheckoutProcessing(OrderDraft draft) async {
+    if (_checkoutProcessingInFlight) {
+      return;
+    }
+
+    final idempotencyKey = _checkoutIdempotencyKey(DateTime.now());
+    final confirmedAt = DateTime.now().toUtc();
+    setState(() {
+      _checkoutProcessingStep = CheckoutProcessingStep.creatingOrder;
+      _checkoutProcessingInFlight = true;
+      _checkoutProcessingError = null;
+      _checkoutCreatedOrder = null;
+      _checkoutSession = null;
+      _pages = const [
+        _shellPage,
+        _orderReviewPage,
+        _checkoutInputPage,
+        _orderConfirmationPage,
+        _checkoutProcessingPage,
+      ];
+    });
+
+    try {
+      final orderDraft = _sealOrderDraftFromOrderDraft(
+        draft,
+        locale: Localizations.localeOf(context).languageCode,
+        idempotencyKey: idempotencyKey,
+        confirmedAt: confirmedAt,
+      );
+      final order = await widget.createOrder(orderDraft);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _checkoutCreatedOrder = order;
+        _checkoutProcessingStep =
+            CheckoutProcessingStep.creatingCheckoutSession;
+      });
+
+      final session = await widget.createCheckoutSession(
+        CheckoutSessionRequest(
+          orderId: order.orderId,
+          customerEmail: draft.input.contact.email.trim(),
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _checkoutSession = session;
+        _checkoutProcessingStep = CheckoutProcessingStep.ready;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _checkoutProcessingError = error);
+    } finally {
+      if (mounted) {
+        setState(() => _checkoutProcessingInFlight = false);
+      }
+    }
   }
 
   void _showTabFromOrder(HankoAppTab tab) {
@@ -1124,6 +1239,74 @@ LocalSealDesign _localSealDesignFromSelection(
 String _localSealDesignId(String requestId, String variantId, DateTime now) {
   final rawId = 'local_${requestId}_${variantId}_${now.microsecondsSinceEpoch}';
   return rawId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+}
+
+String _checkoutIdempotencyKey(DateTime now) {
+  return 'app_${now.microsecondsSinceEpoch}';
+}
+
+SealOrderDraft _sealOrderDraftFromOrderDraft(
+  OrderDraft draft, {
+  required String locale,
+  required String idempotencyKey,
+  required DateTime confirmedAt,
+}) {
+  final seal = draft.sealSelection;
+  final stone = draft.stoneSelection;
+  if (seal == null || stone == null) {
+    throw StateError('Order draft requires seal and stone selections');
+  }
+
+  final normalizedLocale = draft.input.contact.preferredLocale.trim().isEmpty
+      ? locale
+      : draft.input.contact.preferredLocale.trim();
+  final sealText = seal.selectedKanji.trim();
+
+  return SealOrderDraft(
+    channel: 'app',
+    locale: normalizedLocale,
+    idempotencyKey: idempotencyKey,
+    termsAgreed: draft.input.termsAgreed,
+    listingId: stone.listingId,
+    seal: SealOrderSeal(
+      line1: sealText,
+      line2: '',
+      shape: seal.shape,
+      fontKey: 'ai_generated_seal',
+      aiGenerationId: seal.aiGenerationId,
+      aiVariantId: seal.aiVariantId,
+      previewImage: SealOrderPreviewImage(
+        storagePath: seal.previewImageStoragePath,
+        downloadUrl: seal.previewImageDownloadUrl,
+      ),
+      style: SealOrderStyle(
+        name: seal.style,
+        strokeWeight: seal.strokeWeight,
+        balance: seal.balance,
+      ),
+    ),
+    shipping: SealOrderShipping(
+      countryCode: draft.input.shipping.countryCode,
+      recipientName: draft.input.shipping.recipientName,
+      phone: draft.input.shipping.phone,
+      postalCode: draft.input.shipping.postalCode,
+      state: draft.input.shipping.state,
+      city: draft.input.shipping.city,
+      addressLine1: draft.input.shipping.addressLine1,
+      addressLine2: draft.input.shipping.addressLine2,
+    ),
+    contact: SealOrderContact(
+      email: draft.input.contact.email,
+      preferredLocale: normalizedLocale,
+    ),
+    customerConfirmation: SealOrderCustomerConfirmation(
+      kanjiAndDesign: draft.input.customerConfirmation.kanjiAndDesign,
+      customMadePolicy: draft.input.customerConfirmation.customMadePolicy,
+      confirmedAt: confirmedAt,
+      confirmedSealText: sealText,
+    ),
+    orderNote: draft.input.orderNote,
+  );
 }
 
 OrderDraftSealSelection _orderDraftSealSelectionFromLocalSealDesign(

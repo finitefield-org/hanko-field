@@ -334,6 +334,20 @@ class HankoLocalizations {
   String get orderConfirmationSavedMessage =>
       _strings.orderConfirmationSavedMessage;
   String get proceedToSecurePayment => _strings.proceedToSecurePayment;
+  String get checkoutProcessingTitle => _strings.checkoutProcessingTitle;
+  String get checkoutProcessingMessage => _strings.checkoutProcessingMessage;
+  String get checkoutProcessingOrderStep =>
+      _strings.checkoutProcessingOrderStep;
+  String get checkoutProcessingSessionStep =>
+      _strings.checkoutProcessingSessionStep;
+  String get checkoutProcessingReadyTitle =>
+      _strings.checkoutProcessingReadyTitle;
+  String get checkoutProcessingReadyMessage =>
+      _strings.checkoutProcessingReadyMessage;
+  String get checkoutProcessingErrorTitle =>
+      _strings.checkoutProcessingErrorTitle;
+  String get checkoutProcessingErrorMessage =>
+      _strings.checkoutProcessingErrorMessage;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -663,6 +677,14 @@ class _HankoStrings {
     required this.orderConfirmationAgreementRequiredMessage,
     required this.orderConfirmationSavedMessage,
     required this.proceedToSecurePayment,
+    required this.checkoutProcessingTitle,
+    required this.checkoutProcessingMessage,
+    required this.checkoutProcessingOrderStep,
+    required this.checkoutProcessingSessionStep,
+    required this.checkoutProcessingReadyTitle,
+    required this.checkoutProcessingReadyMessage,
+    required this.checkoutProcessingErrorTitle,
+    required this.checkoutProcessingErrorMessage,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -961,6 +983,14 @@ class _HankoStrings {
   final String orderConfirmationAgreementRequiredMessage;
   final String orderConfirmationSavedMessage;
   final String proceedToSecurePayment;
+  final String checkoutProcessingTitle;
+  final String checkoutProcessingMessage;
+  final String checkoutProcessingOrderStep;
+  final String checkoutProcessingSessionStep;
+  final String checkoutProcessingReadyTitle;
+  final String checkoutProcessingReadyMessage;
+  final String checkoutProcessingErrorTitle;
+  final String checkoutProcessingErrorMessage;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1314,6 +1344,15 @@ const _localizedValues = {
       orderConfirmationSavedMessage:
           'Order confirmation was saved to this order draft.',
       proceedToSecurePayment: 'Proceed to Secure Payment',
+      checkoutProcessingTitle: 'Preparing Checkout',
+      checkoutProcessingMessage:
+          'Creating your order and secure Stripe Checkout session.',
+      checkoutProcessingOrderStep: 'Creating order',
+      checkoutProcessingSessionStep: 'Creating secure payment session',
+      checkoutProcessingReadyTitle: 'Checkout session ready',
+      checkoutProcessingReadyMessage: 'Stripe Checkout is ready to open.',
+      checkoutProcessingErrorTitle: "Couldn't prepare Checkout",
+      checkoutProcessingErrorMessage: 'Please go back and try again.',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1622,6 +1661,14 @@ const _localizedValues = {
       orderConfirmationAgreementRequiredMessage: '決済へ進むには2つの確認チェックが必要です。',
       orderConfirmationSavedMessage: '注文前確認を注文下書きに保存しました。',
       proceedToSecurePayment: '安全な決済へ進む',
+      checkoutProcessingTitle: 'Checkout準備中',
+      checkoutProcessingMessage: '注文を作成し、安全なStripe Checkout Sessionを準備しています。',
+      checkoutProcessingOrderStep: '注文を作成中',
+      checkoutProcessingSessionStep: '決済Sessionを作成中',
+      checkoutProcessingReadyTitle: 'Checkout Session準備完了',
+      checkoutProcessingReadyMessage: 'Stripe Checkoutを開く準備ができました。',
+      checkoutProcessingErrorTitle: 'Checkoutを準備できませんでした',
+      checkoutProcessingErrorMessage: '戻ってからもう一度お試しください。',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

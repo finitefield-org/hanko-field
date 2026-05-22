@@ -9,6 +9,8 @@ class SealOrderDraft {
     required this.seal,
     required this.shipping,
     required this.contact,
+    this.customerConfirmation,
+    this.orderNote,
     this.listingId,
   });
 
@@ -20,6 +22,8 @@ class SealOrderDraft {
   final String? listingId;
   final SealOrderShipping shipping;
   final SealOrderContact contact;
+  final SealOrderCustomerConfirmation? customerConfirmation;
+  final String? orderNote;
 }
 
 class SealOrderSeal {
@@ -28,12 +32,48 @@ class SealOrderSeal {
     required this.line2,
     required this.shape,
     required this.fontKey,
+    this.aiGenerationId,
+    this.aiVariantId,
+    this.previewImage,
+    this.style,
   });
 
   final String line1;
   final String line2;
   final String shape;
   final String fontKey;
+  final String? aiGenerationId;
+  final String? aiVariantId;
+  final SealOrderPreviewImage? previewImage;
+  final SealOrderStyle? style;
+}
+
+class SealOrderPreviewImage {
+  const SealOrderPreviewImage({
+    required this.storagePath,
+    this.downloadUrl,
+    this.width,
+    this.height,
+  });
+
+  final String storagePath;
+  final String? downloadUrl;
+  final int? width;
+  final int? height;
+}
+
+class SealOrderStyle {
+  const SealOrderStyle({
+    required this.name,
+    required this.strokeWeight,
+    required this.balance,
+    this.promptSummary,
+  });
+
+  final String name;
+  final String strokeWeight;
+  final String balance;
+  final String? promptSummary;
 }
 
 class SealOrderShipping {
@@ -63,6 +103,20 @@ class SealOrderContact {
 
   final String email;
   final String preferredLocale;
+}
+
+class SealOrderCustomerConfirmation {
+  const SealOrderCustomerConfirmation({
+    required this.kanjiAndDesign,
+    required this.customMadePolicy,
+    required this.confirmedAt,
+    required this.confirmedSealText,
+  });
+
+  final bool kanjiAndDesign;
+  final bool customMadePolicy;
+  final DateTime confirmedAt;
+  final String confirmedSealText;
 }
 
 class CreatedOrder {

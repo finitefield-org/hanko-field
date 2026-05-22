@@ -2,6 +2,24 @@ import '../../../core/api/core_api.dart';
 import '../../../core/domain/money.dart';
 import '../domain/order_models.dart';
 
+typedef OrderCreator = Future<CreatedOrder> Function(SealOrderDraft draft);
+typedef CheckoutSessionCreator =
+    Future<CheckoutSession> Function(CheckoutSessionRequest request);
+
+final _defaultOrderRepository = OrderRepository(
+  HankoApiClient(baseUri: Uri.parse(defaultHankoApiBaseUrl)),
+);
+
+Future<CreatedOrder> createOrderWithDefaultApi(SealOrderDraft draft) {
+  return _defaultOrderRepository.createOrder(draft);
+}
+
+Future<CheckoutSession> createCheckoutSessionWithDefaultApi(
+  CheckoutSessionRequest request,
+) {
+  return _defaultOrderRepository.createCheckoutSession(request);
+}
+
 class OrderRepository {
   const OrderRepository(this._apiClient);
 
@@ -36,6 +54,8 @@ class CreateOrderRequestDto {
     required this.listingId,
     required this.shipping,
     required this.contact,
+    this.customerConfirmation,
+    this.orderNote,
   });
 
   factory CreateOrderRequestDto.fromDomain(SealOrderDraft draft) {
@@ -48,6 +68,12 @@ class CreateOrderRequestDto {
       listingId: draft.listingId,
       shipping: CreateOrderShippingDto.fromDomain(draft.shipping),
       contact: CreateOrderContactDto.fromDomain(draft.contact),
+      customerConfirmation: draft.customerConfirmation == null
+          ? null
+          : CreateOrderCustomerConfirmationDto.fromDomain(
+              draft.customerConfirmation!,
+            ),
+      orderNote: draft.orderNote,
     );
   }
 
@@ -59,6 +85,8 @@ class CreateOrderRequestDto {
   final String? listingId;
   final CreateOrderShippingDto shipping;
   final CreateOrderContactDto contact;
+  final CreateOrderCustomerConfirmationDto? customerConfirmation;
+  final String? orderNote;
 
   JsonMap toJson() {
     return {
@@ -70,6 +98,10 @@ class CreateOrderRequestDto {
       if (listingId != null) 'listing_id': listingId,
       'shipping': shipping.toJson(),
       'contact': contact.toJson(),
+      if (customerConfirmation != null)
+        'customer_confirmation': customerConfirmation!.toJson(),
+      if (orderNote != null && orderNote!.trim().isNotEmpty)
+        'order_note': orderNote!.trim(),
     };
   }
 }
@@ -80,6 +112,10 @@ class CreateOrderSealDto {
     required this.line2,
     required this.shape,
     required this.fontKey,
+    this.aiGenerationId,
+    this.aiVariantId,
+    this.previewImage,
+    this.style,
   });
 
   factory CreateOrderSealDto.fromDomain(SealOrderSeal seal) {
@@ -88,6 +124,14 @@ class CreateOrderSealDto {
       line2: seal.line2,
       shape: seal.shape,
       fontKey: seal.fontKey,
+      aiGenerationId: seal.aiGenerationId,
+      aiVariantId: seal.aiVariantId,
+      previewImage: seal.previewImage == null
+          ? null
+          : CreateOrderPreviewImageDto.fromDomain(seal.previewImage!),
+      style: seal.style == null
+          ? null
+          : CreateOrderStyleDto.fromDomain(seal.style!),
     );
   }
 
@@ -95,6 +139,10 @@ class CreateOrderSealDto {
   final String line2;
   final String shape;
   final String fontKey;
+  final String? aiGenerationId;
+  final String? aiVariantId;
+  final CreateOrderPreviewImageDto? previewImage;
+  final CreateOrderStyleDto? style;
 
   JsonMap toJson() {
     return {
@@ -102,6 +150,76 @@ class CreateOrderSealDto {
       'line2': line2,
       'shape': shape,
       'font_key': fontKey,
+      if (aiGenerationId != null) 'ai_generation_id': aiGenerationId,
+      if (aiVariantId != null) 'ai_variant_id': aiVariantId,
+      if (previewImage != null) 'preview_image': previewImage!.toJson(),
+      if (style != null) 'style': style!.toJson(),
+    };
+  }
+}
+
+class CreateOrderPreviewImageDto {
+  const CreateOrderPreviewImageDto({
+    required this.storagePath,
+    this.downloadUrl,
+    this.width,
+    this.height,
+  });
+
+  factory CreateOrderPreviewImageDto.fromDomain(SealOrderPreviewImage image) {
+    return CreateOrderPreviewImageDto(
+      storagePath: image.storagePath,
+      downloadUrl: image.downloadUrl,
+      width: image.width,
+      height: image.height,
+    );
+  }
+
+  final String storagePath;
+  final String? downloadUrl;
+  final int? width;
+  final int? height;
+
+  JsonMap toJson() {
+    return {
+      'storage_path': storagePath,
+      if (downloadUrl != null && downloadUrl!.trim().isNotEmpty)
+        'download_url': downloadUrl,
+      if (width != null) 'width': width,
+      if (height != null) 'height': height,
+    };
+  }
+}
+
+class CreateOrderStyleDto {
+  const CreateOrderStyleDto({
+    required this.name,
+    required this.strokeWeight,
+    required this.balance,
+    this.promptSummary,
+  });
+
+  factory CreateOrderStyleDto.fromDomain(SealOrderStyle style) {
+    return CreateOrderStyleDto(
+      name: style.name,
+      strokeWeight: style.strokeWeight,
+      balance: style.balance,
+      promptSummary: style.promptSummary,
+    );
+  }
+
+  final String name;
+  final String strokeWeight;
+  final String balance;
+  final String? promptSummary;
+
+  JsonMap toJson() {
+    return {
+      'name': name,
+      'stroke_weight': strokeWeight,
+      'balance': balance,
+      if (promptSummary != null && promptSummary!.trim().isNotEmpty)
+        'prompt_summary': promptSummary,
     };
   }
 }
@@ -172,6 +290,40 @@ class CreateOrderContactDto {
 
   JsonMap toJson() {
     return {'email': email, 'preferred_locale': preferredLocale};
+  }
+}
+
+class CreateOrderCustomerConfirmationDto {
+  const CreateOrderCustomerConfirmationDto({
+    required this.kanjiAndDesign,
+    required this.customMadePolicy,
+    required this.confirmedAt,
+    required this.confirmedSealText,
+  });
+
+  factory CreateOrderCustomerConfirmationDto.fromDomain(
+    SealOrderCustomerConfirmation confirmation,
+  ) {
+    return CreateOrderCustomerConfirmationDto(
+      kanjiAndDesign: confirmation.kanjiAndDesign,
+      customMadePolicy: confirmation.customMadePolicy,
+      confirmedAt: confirmation.confirmedAt,
+      confirmedSealText: confirmation.confirmedSealText,
+    );
+  }
+
+  final bool kanjiAndDesign;
+  final bool customMadePolicy;
+  final DateTime confirmedAt;
+  final String confirmedSealText;
+
+  JsonMap toJson() {
+    return {
+      'kanji_and_design': kanjiAndDesign,
+      'custom_made_policy': customMadePolicy,
+      'confirmed_at': confirmedAt.toUtc().toIso8601String(),
+      'confirmed_seal_text': confirmedSealText,
+    };
   }
 }
 

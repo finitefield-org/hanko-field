@@ -7,6 +7,9 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../domain/order_draft.dart';
+import '../domain/order_models.dart';
+
+enum CheckoutProcessingStep { creatingOrder, creatingCheckoutSession, ready }
 
 class OrderFlowEntryScreen extends StatelessWidget {
   const OrderFlowEntryScreen({
@@ -754,6 +757,151 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
               ? _confirmAgreements
               : null,
           height: 58,
+        ),
+      ],
+    );
+  }
+}
+
+class CheckoutProcessingScreen extends StatelessWidget {
+  const CheckoutProcessingScreen({
+    super.key,
+    required this.step,
+    this.createdOrder,
+    this.checkoutSession,
+    this.error,
+    this.onBack,
+  });
+
+  final CheckoutProcessingStep step;
+  final CreatedOrder? createdOrder;
+  final CheckoutSession? checkoutSession;
+  final Object? error;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final hasError = error != null;
+    final isReady = !hasError && step == CheckoutProcessingStep.ready;
+
+    return _OrderScreenFrame(
+      title: l10n.checkoutProcessingTitle,
+      onBack: onBack,
+      children: [
+        HankoSurfaceCard(
+          radius: HankoRadii.sm,
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: hasError
+                    ? const Icon(
+                        Icons.error_outline,
+                        color: HankoColors.error,
+                        size: 42,
+                      )
+                    : isReady
+                    ? const Icon(
+                        Icons.check_circle_outline,
+                        color: HankoColors.gold,
+                        size: 42,
+                      )
+                    : const SizedBox.square(
+                        dimension: 42,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: HankoColors.gold,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: HankoSpacing.md),
+              Text(
+                hasError
+                    ? l10n.checkoutProcessingErrorTitle
+                    : isReady
+                    ? l10n.checkoutProcessingReadyTitle
+                    : l10n.checkoutProcessingMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle.copyWith(
+                  color: hasError ? HankoColors.error : HankoColors.ink,
+                ),
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Text(
+                hasError
+                    ? l10n.checkoutProcessingErrorMessage
+                    : isReady
+                    ? l10n.checkoutProcessingReadyMessage
+                    : l10n.orderConfirmationSecurePaymentNote,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              const SizedBox(height: HankoSpacing.lg),
+              _CheckoutProcessingStepRow(
+                label: l10n.checkoutProcessingOrderStep,
+                isActive: step == CheckoutProcessingStep.creatingOrder,
+                isComplete:
+                    step != CheckoutProcessingStep.creatingOrder && !hasError,
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              _CheckoutProcessingStepRow(
+                label: l10n.checkoutProcessingSessionStep,
+                isActive:
+                    step == CheckoutProcessingStep.creatingCheckoutSession,
+                isComplete: step == CheckoutProcessingStep.ready && !hasError,
+              ),
+              if (createdOrder != null) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.orderNo,
+                  value: createdOrder!.orderNo,
+                  hasDivider: false,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckoutProcessingStepRow extends StatelessWidget {
+  const _CheckoutProcessingStepRow({
+    required this.label,
+    required this.isActive,
+    required this.isComplete,
+  });
+
+  final String label;
+  final bool isActive;
+  final bool isComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = isComplete
+        ? Icons.check_circle
+        : isActive
+        ? Icons.sync
+        : Icons.radio_button_unchecked;
+    final color = isComplete || isActive ? HankoColors.gold : HankoColors.body;
+
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 22),
+        const SizedBox(width: HankoSpacing.sm),
+        Expanded(
+          child: Text(
+            label,
+            style: HankoTextStyles.body.copyWith(
+              color: isActive || isComplete
+                  ? HankoColors.ink
+                  : HankoColors.body,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
         ),
       ],
     );

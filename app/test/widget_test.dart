@@ -25,6 +25,8 @@ void main() {
     SealDesignsGenerator? generateSealDesigns,
     StoneListingsLoader? listStoneListings,
     StoneListingDetailLoader? getStoneListingDetail,
+    OrderCreator? createOrder,
+    CheckoutSessionCreator? createCheckoutSession,
     LocalSealDesignRepository? localSealDesignRepository,
     LocalOrderDraftRepository? localOrderDraftRepository,
   }) async {
@@ -42,6 +44,9 @@ void main() {
           listStoneListings: listStoneListings ?? _emptyStoneListingsLoader,
           getStoneListingDetail:
               getStoneListingDetail ?? _successfulStoneDetailLoader,
+          createOrder: createOrder ?? _successfulCreateOrder,
+          createCheckoutSession:
+              createCheckoutSession ?? _successfulCreateCheckoutSession,
           localSealDesignRepository: localSealDesignRepository,
           localOrderDraftRepository: localOrderDraftRepository,
         ),
@@ -2119,16 +2124,172 @@ void main() {
     await tester.tap(find.text('Proceed to Secure Payment'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Order confirmation was saved to this order draft.'),
-      findsOneWidget,
-    );
+    expect(find.text('Preparing Checkout'), findsOneWidget);
+    expect(find.text('Checkout session ready'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
 
     final savedDraft = await draftRepository.loadOrderDraft();
     expect(savedDraft.input.customerConfirmation.kanjiAndDesign, isTrue);
     expect(savedDraft.input.customerConfirmation.customMadePolicy, isTrue);
     expect(savedDraft.input.customerConfirmation.isComplete, isTrue);
     expect(savedDraft.input.termsAgreed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T07 shows order and checkout session creation progress', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    final orderCompleter = Completer<CreatedOrder>();
+    final sessionCompleter = Completer<CheckoutSession>();
+    SealOrderDraft? submittedOrderDraft;
+    CheckoutSessionRequest? submittedCheckoutRequest;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      createOrder: (draft) {
+        submittedOrderDraft = draft;
+        return orderCompleter.future;
+      },
+      createCheckoutSession: (request) {
+        submittedCheckoutRequest = request;
+        return sessionCompleter.future;
+      },
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Select Stone'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Continue to Shipping'));
+    await tester.pump();
+    await tester.tap(find.text('Continue to Shipping'));
+    await tester.pumpAndSettle();
+
+    Future<void> enterCheckoutField(String key, String text) async {
+      final field = find.byKey(Key(key));
+      await tester.ensureVisible(field);
+      await tester.pump();
+      await tester.enterText(
+        find.descendant(of: field, matching: find.byType(EditableText)),
+        text,
+      );
+      await tester.pump();
+    }
+
+    await enterCheckoutField('checkout-email-field', 'customer@example.test');
+    await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+    await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+    await enterCheckoutField('checkout-postal-code-field', '10001');
+    await enterCheckoutField(
+      'checkout-address-line1-field',
+      '123 Example Street',
+    );
+    await enterCheckoutField('checkout-city-field', 'New York');
+    await enterCheckoutField('checkout-state-field', 'NY');
+
+    await tester.ensureVisible(find.text('Save Checkout Information'));
+    await tester.pump();
+    await tester.tap(find.text('Save Checkout Information'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('order-confirm-custom-made-checkbox')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('order-confirm-custom-made-checkbox')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Proceed to Secure Payment'));
+    await tester.pump();
+    await tester.tap(find.text('Proceed to Secure Payment'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Preparing Checkout'), findsOneWidget);
+    expect(find.text('Creating order'), findsOneWidget);
+    expect(find.text('Creating secure payment session'), findsOneWidget);
+    expect(submittedOrderDraft?.channel, 'app');
+    expect(submittedOrderDraft?.seal.fontKey, 'ai_generated_seal');
+    expect(submittedOrderDraft?.seal.aiGenerationId, 'seal_request_001');
+    expect(submittedOrderDraft?.seal.aiVariantId, 'seal_variant_001');
+    expect(
+      submittedOrderDraft?.seal.previewImage?.storagePath,
+      'seal_designs/seal_request_001/seal_variant_001.png',
+    );
+    expect(submittedOrderDraft?.seal.style?.name, 'elegant');
+    expect(submittedOrderDraft?.customerConfirmation?.kanjiAndDesign, isTrue);
+    expect(submittedOrderDraft?.customerConfirmation?.customMadePolicy, isTrue);
+    expect(submittedOrderDraft?.customerConfirmation?.confirmedSealText, '美空');
+
+    orderCompleter.complete(
+      const CreatedOrder(
+        orderId: 'ord_001',
+        orderNo: 'HF-20260521-0001',
+        status: 'pending_payment',
+        paymentStatus: 'unpaid',
+        fulfillmentStatus: 'pending',
+        pricing: Money(amount: 18600, currency: 'JPY'),
+        idempotentReplay: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Creating secure payment session'), findsOneWidget);
+    expect(find.text('HF-20260521-0001'), findsOneWidget);
+    expect(submittedCheckoutRequest?.orderId, 'ord_001');
+    expect(submittedCheckoutRequest?.customerEmail, 'customer@example.test');
+
+    sessionCompleter.complete(
+      const CheckoutSession(
+        orderId: 'ord_001',
+        sessionId: 'cs_test_001',
+        checkoutUrl: 'https://checkout.stripe.test/session',
+        paymentIntentId: 'pi_test_001',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Checkout session ready'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -2533,6 +2694,29 @@ Future<StoneListing> _successfulStoneDetailLoader(
   StoneListingDetailQuery query,
 ) async {
   return _stoneListing(id: query.listingId);
+}
+
+Future<CreatedOrder> _successfulCreateOrder(SealOrderDraft draft) async {
+  return const CreatedOrder(
+    orderId: 'ord_001',
+    orderNo: 'HF-20260521-0001',
+    status: 'pending_payment',
+    paymentStatus: 'unpaid',
+    fulfillmentStatus: 'pending',
+    pricing: Money(amount: 18600, currency: 'JPY'),
+    idempotentReplay: false,
+  );
+}
+
+Future<CheckoutSession> _successfulCreateCheckoutSession(
+  CheckoutSessionRequest request,
+) async {
+  return CheckoutSession(
+    orderId: request.orderId,
+    sessionId: 'cs_test_001',
+    checkoutUrl: 'https://checkout.stripe.test/session',
+    paymentIntentId: 'pi_test_001',
+  );
 }
 
 StoneListingsResult _stoneListingsResult({List<StoneListing>? listings}) {
