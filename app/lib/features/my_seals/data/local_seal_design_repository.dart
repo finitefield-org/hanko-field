@@ -17,6 +17,46 @@ abstract interface class LocalSealDesignRepository {
   Future<void> deleteLocalSealDesign(String id);
 }
 
+class InMemoryLocalSealDesignRepository implements LocalSealDesignRepository {
+  InMemoryLocalSealDesignRepository([
+    Iterable<LocalSealDesign> designs = const [],
+  ]) : _designs = {for (final design in designs) design.id: design};
+
+  final Map<String, LocalSealDesign> _designs;
+
+  @override
+  Future<List<LocalSealDesign>> listLocalSealDesigns() async {
+    final designs = _designs.values.toList(growable: false)
+      ..sort((a, b) {
+        final updatedComparison = b.updatedAt.compareTo(a.updatedAt);
+        if (updatedComparison != 0) {
+          return updatedComparison;
+        }
+        final createdComparison = b.createdAt.compareTo(a.createdAt);
+        if (createdComparison != 0) {
+          return createdComparison;
+        }
+        return a.id.compareTo(b.id);
+      });
+    return designs;
+  }
+
+  @override
+  Future<LocalSealDesign?> getLocalSealDesign(String id) async {
+    return _designs[id];
+  }
+
+  @override
+  Future<void> saveLocalSealDesign(LocalSealDesign design) async {
+    _designs[design.id] = design;
+  }
+
+  @override
+  Future<void> deleteLocalSealDesign(String id) async {
+    _designs.remove(id);
+  }
+}
+
 class SqfliteLocalSealDesignRepository implements LocalSealDesignRepository {
   SqfliteLocalSealDesignRepository({
     sqflite.DatabaseFactory? databaseFactory,

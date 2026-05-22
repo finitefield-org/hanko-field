@@ -384,7 +384,10 @@ void main() {
     await tester.tap(find.text('Go to My Seals'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No saved seals'), findsOneWidget);
+    expect(find.text('Saved on this device'), findsOneWidget);
+    expect(find.text('美空'), findsWidgets);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('Choose'), findsOneWidget);
 
     await tester.tap(find.text('Design').last);
     await tester.pumpAndSettle();
@@ -620,6 +623,94 @@ void main() {
     expect(openMySealsCount, 1);
     expect(createAnotherCount, 1);
     expect(backCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-001 displays saved seal cards', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    LocalSealDesign? chosen;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: MySealsHomeScreen(
+          designs: [
+            _localSealDesign(),
+            _localSealDesign(
+              id: 'local_seal_002',
+              selectedKanji: '永愛',
+              meaning: 'Eternal love',
+              style: 'soft',
+              isFavorite: true,
+            ),
+          ],
+          onChooseSeal: (design) => chosen = design,
+        ),
+      ),
+    );
+
+    expect(find.text('My Seals'), findsOneWidget);
+    expect(find.text('Saved on this device'), findsOneWidget);
+    expect(find.text('美空'), findsWidgets);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('永愛'), findsWidgets);
+    expect(find.text('Eternal love'), findsOneWidget);
+    expect(find.text('Elegant'), findsOneWidget);
+    expect(find.text('Soft'), findsOneWidget);
+    expect(find.text('Standard'), findsWidgets);
+    expect(find.text('Balanced'), findsWidgets);
+
+    await tester.ensureVisible(find.text('Choose').first);
+    await tester.pump();
+    await tester.tap(find.text('Choose').first);
+    await tester.pump();
+
+    expect(chosen?.id, 'local_seal_001');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-002 shows empty saved seal actions', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var startDesignCount = 0;
+    var exploreStonesCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: MySealsHomeScreen(
+          onStartDesigning: () => startDesignCount += 1,
+          onExploreStones: () => exploreStonesCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text('No saved seals'), findsOneWidget);
+    expect(
+      find.text('Saved seal designs will appear here after you create one.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Start Designing'));
+    await tester.pump();
+    await tester.tap(find.text('Browse Stones'));
+    await tester.pump();
+
+    expect(startDesignCount, 1);
+    expect(exploreStonesCount, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -978,6 +1069,39 @@ Future<KanjiCandidatesResult> _successfulKanjiGenerator(
   KanjiCandidatesRequest request,
 ) async {
   return _kanjiResult(request);
+}
+
+LocalSealDesign _localSealDesign({
+  String id = 'local_seal_001',
+  String selectedKanji = '美空',
+  String? meaning = 'Beautiful sky',
+  String style = 'elegant',
+  bool isFavorite = false,
+}) {
+  return LocalSealDesign(
+    id: id,
+    inputName: 'Michael Smith',
+    selectedKanji: selectedKanji,
+    reading: 'Misora',
+    meaning: meaning,
+    impression: const ['Elegant', 'Gentle'],
+    characterCount: selectedKanji.runes.length,
+    strokeComplexity: 'medium',
+    engravingSuitability: 'high',
+    shape: 'square',
+    style: style,
+    strokeWeight: 'standard',
+    balance: 'balanced',
+    aiGenerationId: 'seal_request_001',
+    aiVariantId: 'seal_variant_001',
+    previewImageStoragePath:
+        'seal_designs/seal_request_001/seal_variant_001.png',
+    previewImageDownloadUrl: '',
+    localImagePath: '',
+    isFavorite: isFavorite,
+    createdAt: DateTime.parse('2026-05-21T11:00:00+09:00'),
+    updatedAt: DateTime.parse('2026-05-21T11:10:00+09:00'),
+  );
 }
 
 SealGenerationRequest _sealGenerationRequest({int attemptNumber = 1}) {

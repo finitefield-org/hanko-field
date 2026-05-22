@@ -166,6 +166,12 @@ class HankoLocalizations {
   String get createAnotherSeal => _strings.createAnotherSeal;
   String get savedSeals => _strings.savedSeals;
   String get savedSealsDescription => _strings.savedSealsDescription;
+  String get savedOnThisDevice => _strings.savedOnThisDevice;
+  String get savedSealsLoadingTitle => _strings.savedSealsLoadingTitle;
+  String get savedSealsLoadingMessage => _strings.savedSealsLoadingMessage;
+  String get savedSealsLoadErrorTitle => _strings.savedSealsLoadErrorTitle;
+  String get savedSealsLoadErrorMessage => _strings.savedSealsLoadErrorMessage;
+  String get chooseSavedSeal => _strings.chooseSavedSeal;
   String get browseStones => _strings.browseStones;
   String get browseStonesDescription => _strings.browseStonesDescription;
   String get noSavedSeals => _strings.noSavedSeals;
@@ -359,6 +365,12 @@ class _HankoStrings {
     required this.createAnotherSeal,
     required this.savedSeals,
     required this.savedSealsDescription,
+    required this.savedOnThisDevice,
+    required this.savedSealsLoadingTitle,
+    required this.savedSealsLoadingMessage,
+    required this.savedSealsLoadErrorTitle,
+    required this.savedSealsLoadErrorMessage,
+    required this.chooseSavedSeal,
     required this.browseStones,
     required this.browseStonesDescription,
     required this.noSavedSeals,
@@ -521,6 +533,12 @@ class _HankoStrings {
   final String createAnotherSeal;
   final String savedSeals;
   final String savedSealsDescription;
+  final String savedOnThisDevice;
+  final String savedSealsLoadingTitle;
+  final String savedSealsLoadingMessage;
+  final String savedSealsLoadErrorTitle;
+  final String savedSealsLoadErrorMessage;
+  final String chooseSavedSeal;
   final String browseStones;
   final String browseStonesDescription;
   final String noSavedSeals;
@@ -710,6 +728,13 @@ const _localizedValues = {
       createAnotherSeal: 'Create Another Seal',
       savedSeals: 'Saved Seals',
       savedSealsDescription: 'View and manage your\nsaved seal designs.',
+      savedOnThisDevice: 'Saved on this device',
+      savedSealsLoadingTitle: 'Loading saved seals',
+      savedSealsLoadingMessage: 'Checking seal designs saved on this device.',
+      savedSealsLoadErrorTitle: "Couldn't load saved seals",
+      savedSealsLoadErrorMessage:
+          'Open My Seals again, or create a new seal design.',
+      chooseSavedSeal: 'Choose',
       browseStones: 'Browse Stones',
       browseStonesDescription: 'Explore our collection of\nnatural gemstones.',
       noSavedSeals: 'No saved seals',
@@ -881,6 +906,12 @@ const _localizedValues = {
       createAnotherSeal: '別の印影を作成',
       savedSeals: '保存済み印影',
       savedSealsDescription: '保存した印影デザインを\n確認・管理できます。',
+      savedOnThisDevice: 'この端末に保存',
+      savedSealsLoadingTitle: '保存済み印影を読み込み中',
+      savedSealsLoadingMessage: 'この端末に保存された印影を確認しています。',
+      savedSealsLoadErrorTitle: '保存済み印影を読み込めません',
+      savedSealsLoadErrorMessage: 'マイ印影を開き直すか、新しい印影を作成してください。',
+      chooseSavedSeal: '選択',
       browseStones: '石を探す',
       browseStonesDescription: '天然石コレクションを\nご覧ください。',
       noSavedSeals: '保存済み印影はありません',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:declarative_nav/declarative_nav.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +21,7 @@ class HankoApp extends StatelessWidget {
     this.splashMinimumDuration = const Duration(milliseconds: 700),
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
+    this.localSealDesignRepository,
   });
 
   final Locale? locale;
@@ -27,6 +30,7 @@ class HankoApp extends StatelessWidget {
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +47,7 @@ class HankoApp extends StatelessWidget {
         splashMinimumDuration: splashMinimumDuration,
         generateKanjiCandidates: generateKanjiCandidates,
         generateSealDesigns: generateSealDesigns,
+        localSealDesignRepository: localSealDesignRepository,
       ),
     );
   }
@@ -65,6 +70,7 @@ class _AppLaunchGate extends StatefulWidget {
     required this.splashMinimumDuration,
     required this.generateKanjiCandidates,
     required this.generateSealDesigns,
+    required this.localSealDesignRepository,
   });
 
   final HasSeenOnboardingResolver hasSeenOnboardingResolver;
@@ -72,6 +78,7 @@ class _AppLaunchGate extends StatefulWidget {
   final Duration splashMinimumDuration;
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
   State<_AppLaunchGate> createState() => _AppLaunchGateState();
@@ -94,6 +101,7 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
       _AppLaunchStage.shell => BottomNavigationShell(
         generateKanjiCandidates: widget.generateKanjiCandidates,
         generateSealDesigns: widget.generateSealDesigns,
+        localSealDesignRepository: widget.localSealDesignRepository,
       ),
     };
   }
@@ -121,10 +129,12 @@ class BottomNavigationShell extends StatefulWidget {
     super.key,
     this.generateKanjiCandidates = generateKanjiCandidatesWithDefaultApi,
     this.generateSealDesigns = generateSealDesignsWithDefaultApi,
+    this.localSealDesignRepository,
   });
 
   final KanjiCandidatesGenerator generateKanjiCandidates;
   final SealDesignsGenerator generateSealDesigns;
+  final LocalSealDesignRepository? localSealDesignRepository;
 
   @override
   State<BottomNavigationShell> createState() => _BottomNavigationShellState();
@@ -210,7 +220,20 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   static const _designSealGenerationLimitPageKey =
       'DES-015-seal-generation-limit';
 
+  late final LocalSealDesignRepository _localSealDesignRepository;
+  var _localSealDesigns = const <LocalSealDesign>[];
+  var _localSealDesignsLoaded = false;
+  Object? _localSealDesignsLoadError;
+  final _savingLocalSealKeys = <String>{};
   var _pages = const <PageEntry>[_shellPage];
+
+  @override
+  void initState() {
+    super.initState();
+    _localSealDesignRepository =
+        widget.localSealDesignRepository ?? InMemoryLocalSealDesignRepository();
+    unawaited(_loadLocalSealDesigns());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +298,13 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   ) {
     return switch (tab) {
       HankoAppTab.design => _buildDesignPage(page, stack),
-      HankoAppTab.mySeals => const MySealsHomeScreen(),
+      HankoAppTab.mySeals => MySealsHomeScreen(
+        designs: _localSealDesigns,
+        isLoading: !_localSealDesignsLoaded,
+        loadError: _localSealDesignsLoadError,
+        onStartDesigning: () => stack.selectTab(HankoAppTab.design),
+        onExploreStones: () => stack.selectTab(HankoAppTab.stones),
+      ),
       HankoAppTab.stones => const StonesHomeScreen(),
     };
   }
@@ -387,8 +416,12 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         result: pageData.result,
         variant: pageData.variant,
         onSave: () {
-          stack.push(
-            _sealSaveConfirmationPage(pageData.result, pageData.variant),
+          unawaited(
+            _saveLocalSealDesign(
+              result: pageData.result,
+              variant: pageData.variant,
+              stack: stack,
+            ),
           );
         },
         onChooseStone: () => stack.selectTab(HankoAppTab.stones),
@@ -453,6 +486,69 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       onOpenSettings: _openSettings,
       onStartDesign: () => stack.push(_designNameInputPage),
     );
+  }
+
+  Future<void> _loadLocalSealDesigns() async {
+    try {
+      final designs = await _localSealDesignRepository.listLocalSealDesigns();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _localSealDesigns = List.unmodifiable(designs);
+        _localSealDesignsLoaded = true;
+        _localSealDesignsLoadError = null;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _localSealDesignsLoaded = true;
+        _localSealDesignsLoadError = error;
+      });
+    }
+  }
+
+  Future<void> _saveLocalSealDesign({
+    required SealGenerationResult result,
+    required SealDesignVariant variant,
+    required HankoTabStackController stack,
+  }) async {
+    final saveKey = '${result.requestId}:${variant.id}';
+    if (_savingLocalSealKeys.contains(saveKey)) {
+      return;
+    }
+    _savingLocalSealKeys.add(saveKey);
+    final design = _localSealDesignFromSelection(result, variant);
+    try {
+      await _localSealDesignRepository.saveLocalSealDesign(design);
+    } catch (error) {
+      if (!mounted) {
+        _savingLocalSealKeys.remove(saveKey);
+        return;
+      }
+      setState(() {
+        _localSealDesignsLoaded = true;
+        _localSealDesignsLoadError = error;
+      });
+      _savingLocalSealKeys.remove(saveKey);
+      return;
+    }
+    _savingLocalSealKeys.remove(saveKey);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      final remaining = _localSealDesigns
+          .where((savedDesign) => savedDesign.id != design.id)
+          .toList(growable: false);
+      _localSealDesigns = List.unmodifiable([design, ...remaining]);
+      _localSealDesignsLoaded = true;
+      _localSealDesignsLoadError = null;
+    });
+    stack.push(_sealSaveConfirmationPage(result, variant));
   }
 
   PageEntry _kanjiLoadingPage(KanjiCandidatesRequest request) {
@@ -573,6 +669,44 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     }
     setState(() => _pages = const [_shellPage]);
   }
+}
+
+LocalSealDesign _localSealDesignFromSelection(
+  SealGenerationResult result,
+  SealDesignVariant variant,
+) {
+  final now = DateTime.now();
+  final candidate = result.request.candidate;
+  final style = result.request.style;
+
+  return LocalSealDesign(
+    id: _localSealDesignId(result.requestId, variant.id, now),
+    inputName: result.request.inputName,
+    selectedKanji: candidate.kanji,
+    reading: candidate.reading,
+    meaning: candidate.meaning,
+    impression: candidate.impression,
+    characterCount: candidate.characterCount ?? candidate.kanji.runes.length,
+    strokeComplexity: candidate.strokeComplexity,
+    engravingSuitability: candidate.engravingSuitability,
+    shape: style.shape.apiValue,
+    style: style.style.apiValue,
+    strokeWeight: style.strokeWeight.apiValue,
+    balance: style.balance.apiValue,
+    aiGenerationId: result.requestId,
+    aiVariantId: variant.id,
+    previewImageStoragePath: variant.storagePath,
+    previewImageDownloadUrl: variant.downloadUrl,
+    localImagePath: '',
+    isFavorite: false,
+    createdAt: now,
+    updatedAt: now,
+  );
+}
+
+String _localSealDesignId(String requestId, String variantId, DateTime now) {
+  final rawId = 'local_${requestId}_${variantId}_${now.microsecondsSinceEpoch}';
+  return rawId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
 }
 
 class _BottomTabs extends StatelessWidget {
