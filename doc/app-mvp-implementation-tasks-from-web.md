@@ -921,7 +921,7 @@ MVPで後回し可能:
 | Task ID | 画面コード | タスク | 主要ファイル | 完了条件 |
 | --- | --- | --- | --- | --- |
 | M07-T01 | `STN-001` `STN-003` `STN-004` | [x] 石一覧取得と状態表示 | `features/stones/data/`, `features/stones/presentation/` | Loading/Error/Listが表示できる |
-| M07-T02 | API | 石一覧/詳細API | `api/src/main.rs` | `GET /v1/stone-listings` をアプリ一覧で使えるレスポンスにし、`GET /v1/stone-listings/{listing_id}` を追加する |
+| M07-T02 | API | [x] 石一覧/詳細API | `api/src/main.rs` | `GET /v1/stone-listings` をアプリ一覧で使えるレスポンスにし、`GET /v1/stone-listings/{listing_id}` を追加する |
 | M07-T03 | `STN-005` | フィルタ | `features/stones/presentation/` | Material/Color/Pattern/Availabilityで絞り込み |
 | M07-T04 | `STN-006` | ソート | `features/stones/presentation/` | 後回し可能。仕様は新着/価格順 |
 | M07-T05 | `STN-007` | 詳細 | `features/stones/presentation/` | 画像、説明、サイズ、価格、在庫、注意事項を表示 |

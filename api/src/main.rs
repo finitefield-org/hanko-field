@@ -10,7 +10,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use axum::{
     Router,
     body::Bytes,
-    extract::{DefaultBodyLimit, Query, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -775,6 +775,10 @@ async fn run() -> Result<()> {
         .route("/v1/catalog", get(handle_catalog))
         .route("/v1/stone-listings", get(handle_stone_listings))
         .route(
+            "/v1/stone-listings/{listing_id}",
+            get(handle_stone_listing_detail),
+        )
+        .route(
             "/v1/kanji-candidates",
             post(handle_generate_kanji_candidates),
         )
@@ -995,6 +999,8 @@ async fn handle_catalog(
             );
         }
     };
+    let material_labels =
+        material_labels_for_locale(&materials, &requested_locale, &cfg.default_locale);
     let material_filters = build_material_filters(&stone_listings, &facet_tag_labels);
     let stone_listing_resp = stone_listings
         .iter()
@@ -1006,6 +1012,7 @@ async fn handle_catalog(
                 &cfg.default_locale,
                 &pricing_currency,
                 &facet_tag_labels,
+                &material_labels,
                 listing,
             )
         })
@@ -1147,6 +1154,24 @@ async fn handle_stone_listings(
             );
         }
     };
+    let facet_tags = match state.store.list_active_facet_tags().await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load facet tags: {err:#}");
+            Vec::new()
+        }
+    };
+    let facet_tag_labels =
+        build_facet_tag_labels(&facet_tags, &requested_locale, &cfg.default_locale);
+    let materials = match state.store.list_active_materials().await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load material labels: {err:#}");
+            Vec::new()
+        }
+    };
+    let material_labels =
+        material_labels_for_locale(&materials, &requested_locale, &cfg.default_locale);
 
     let requested_material_key = query.material_key.unwrap_or_default().trim().to_owned();
     let requested_color_family = query.color_family.unwrap_or_default().trim().to_lowercase();
@@ -1195,7 +1220,8 @@ async fn handle_stone_listings(
                 &requested_locale,
                 &cfg.default_locale,
                 &pricing_currency,
-                &FacetTagLabels::default(),
+                &facet_tag_labels,
+                &material_labels,
                 listing,
             )
         })
@@ -1208,6 +1234,94 @@ async fn handle_stone_listings(
             "currency": pricing_currency,
             "stone_listings": stone_listings,
         }),
+    )
+}
+
+async fn handle_stone_listing_detail(
+    State(state): State<AppState>,
+    Path(listing_id): Path<String>,
+    Query(query): Query<QueryLocale>,
+) -> Response {
+    let cfg = match state.store.get_public_config().await {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            eprintln!("failed to load public config: {err:#}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            );
+        }
+    };
+
+    let requested_locale = query
+        .locale
+        .unwrap_or_else(|| cfg.default_locale.clone())
+        .trim()
+        .to_lowercase();
+    let pricing_currency = resolve_pricing_currency(&cfg, &requested_locale);
+
+    if !cfg
+        .supported_locales
+        .iter()
+        .any(|locale| locale == &requested_locale)
+    {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_locale",
+            "unsupported locale",
+        );
+    }
+
+    let listing = match state.store.get_app_visible_stone_listing(&listing_id).await {
+        Ok(Some(listing)) => listing,
+        Ok(None) => {
+            return error_response(
+                StatusCode::NOT_FOUND,
+                "stone_listing_not_found",
+                "stone listing not found",
+            );
+        }
+        Err(err) => {
+            eprintln!("failed to load stone listing {listing_id}: {err:#}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                "internal server error",
+            );
+        }
+    };
+
+    let facet_tags = match state.store.list_active_facet_tags().await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load facet tags: {err:#}");
+            Vec::new()
+        }
+    };
+    let facet_tag_labels =
+        build_facet_tag_labels(&facet_tags, &requested_locale, &cfg.default_locale);
+    let materials = match state.store.list_active_materials().await {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("failed to load material labels: {err:#}");
+            Vec::new()
+        }
+    };
+    let material_labels =
+        material_labels_for_locale(&materials, &requested_locale, &cfg.default_locale);
+
+    json_response(
+        StatusCode::OK,
+        stone_listing_response(
+            &state.storage_assets_bucket,
+            &requested_locale,
+            &cfg.default_locale,
+            &pricing_currency,
+            &facet_tag_labels,
+            &material_labels,
+            listing,
+        ),
     )
 }
 
@@ -1810,9 +1924,6 @@ impl FirestoreStore {
         let documents = self
             .run_documents_query(&client, "stone_listings", false, true)
             .await?;
-        if documents.is_empty() {
-            bail!("no stone_listings found in firestore");
-        }
         let mut listings = Vec::with_capacity(documents.len());
 
         for document in documents {
@@ -1833,6 +1944,34 @@ impl FirestoreStore {
         }
 
         Ok(listings)
+    }
+
+    async fn get_app_visible_stone_listing(&self, key: &str) -> Result<Option<StoneListing>> {
+        let key = key.trim();
+        if key.is_empty() || key.contains('/') {
+            return Ok(None);
+        }
+
+        let client = self.firestore_client().await?;
+        let doc_name = format!("{}/stone_listings/{}", self.parent, key);
+        let doc = match client
+            .get_document(&doc_name, &GetDocumentOptions::default())
+            .await
+        {
+            Ok(doc) => doc,
+            Err(err) if is_not_found(&err) => return Ok(None),
+            Err(err) => return Err(anyhow!(err)),
+        };
+
+        let listing = stone_listing_from_fields(key, &doc.fields);
+        if !stone_listing_is_app_visible(listing.is_active, &listing.status) {
+            return Ok(None);
+        }
+        if listing.price_by_currency.is_empty() {
+            bail!("stone_listings/{key} is missing price data");
+        }
+
+        Ok(Some(listing))
     }
 
     async fn list_active_countries(&self) -> Result<Vec<Country>> {
@@ -3164,6 +3303,16 @@ fn stone_listing_is_orderable(is_active: bool, status: &str) -> bool {
     is_active && stone_listing_is_published(status)
 }
 
+fn stone_listing_is_app_visible(is_active: bool, status: &str) -> bool {
+    if !is_active {
+        return false;
+    }
+    matches!(
+        status.trim().to_ascii_lowercase().as_str(),
+        "published" | "reserved" | "sold"
+    )
+}
+
 fn country_shipping_fee_for_currency(country: &Country, currency: &str) -> i64 {
     resolve_amount_for_currency(&country.shipping_fee_by_currency, currency)
 }
@@ -3546,15 +3695,22 @@ fn stone_listing_response(
     default_locale: &str,
     pricing_currency: &str,
     facet_tag_labels: &FacetTagLabels,
+    material_labels: &HashMap<String, String>,
     listing: StoneListing,
 ) -> JsonValue {
     let price = stone_listing_price_for_currency(&listing, pricing_currency);
+    let price_response = stone_listing_price_response(price, pricing_currency);
     let title = resolve_localized(&listing.title_i18n, requested_locale, default_locale);
     let description =
         resolve_localized(&listing.description_i18n, requested_locale, default_locale);
     let story = resolve_localized(&listing.story_i18n, requested_locale, default_locale);
+    let material_label = material_labels
+        .get(&listing.material_key)
+        .cloned()
+        .unwrap_or_else(|| listing.material_key.clone());
     let color_tag_labels = facet_tag_labels.resolve_list("color", &listing.facets.color_tags);
     let pattern_tag_labels = facet_tag_labels.resolve_list("pattern", &listing.facets.pattern_tags);
+    let is_orderable = stone_listing_is_orderable(listing.is_active, &listing.status);
     let photos = listing
         .photos
         .into_iter()
@@ -3573,9 +3729,12 @@ fn stone_listing_response(
         .collect::<Vec<_>>();
 
     json!({
+        "id": listing.key.clone(),
         "key": listing.key,
+        "code": listing.listing_code.clone(),
         "listing_code": listing.listing_code,
-        "material_key": listing.material_key,
+        "material_key": listing.material_key.clone(),
+        "material_label": material_label,
         "size": listing.size,
         "title": title,
         "description": description,
@@ -3588,16 +3747,56 @@ fn stone_listing_response(
             "stone_shape": listing.facets.stone_shape,
             "translucency": listing.facets.translucency,
         },
-        "price": price,
+        "price": price_response,
+        "price_amount": price,
+        "currency": pricing_currency,
         "price_by_currency": listing.price_by_currency,
         "color_tag_labels": color_tag_labels,
         "pattern_tag_labels": pattern_tag_labels,
         "status": listing.status,
         "is_active": listing.is_active,
+        "is_orderable": is_orderable,
         "sort_order": listing.sort_order,
         "version": listing.version,
         "photos": photos,
     })
+}
+
+fn stone_listing_price_response(amount: i64, currency: &str) -> JsonValue {
+    let currency = normalize_currency_code(currency).unwrap_or_else(|| DEFAULT_CURRENCY.to_owned());
+    let amount = amount.max(0);
+    let display = format_price_display(&currency, amount);
+    json!({
+        "amount": amount,
+        "currency": currency,
+        "display": display,
+    })
+}
+
+fn format_price_display(currency: &str, amount: i64) -> String {
+    let normalized = currency.trim().to_ascii_uppercase();
+    let amount = amount.max(0);
+    match normalized.as_str() {
+        "JPY" => format!("JPY {}", format_with_grouping(amount)),
+        "USD" => {
+            let dollars = amount / 100;
+            let cents = amount % 100;
+            format!("USD {}.{cents:02}", format_with_grouping(dollars))
+        }
+        _ => format!("{normalized} {}", format_with_grouping(amount)),
+    }
+}
+
+fn format_with_grouping(value: i64) -> String {
+    let digits = value.abs().to_string();
+    let mut output = String::new();
+    for (index, ch) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            output.push(',');
+        }
+        output.push(ch);
+    }
+    output
 }
 
 fn stone_listing_snapshot_fields(
@@ -5287,6 +5486,24 @@ fn collect_material_filter_options(
     options
 }
 
+fn material_labels_for_locale(
+    materials: &[Material],
+    requested_locale: &str,
+    default_locale: &str,
+) -> HashMap<String, String> {
+    let mut labels = HashMap::new();
+
+    for material in materials {
+        let label = resolve_localized(&material.label_i18n, requested_locale, default_locale);
+        if label.is_empty() {
+            continue;
+        }
+        labels.insert(material.key.clone(), label);
+    }
+
+    labels
+}
+
 fn material_filters_response(
     filters: &HashMap<&'static str, Vec<MaterialFilterOption>>,
 ) -> JsonValue {
@@ -5691,6 +5908,16 @@ mod tests {
     }
 
     #[test]
+    fn stone_listing_app_visibility_keeps_sold_out_details_private_drafts_hidden() {
+        assert!(stone_listing_is_app_visible(true, "published"));
+        assert!(stone_listing_is_app_visible(true, "reserved"));
+        assert!(stone_listing_is_app_visible(true, "sold"));
+        assert!(!stone_listing_is_app_visible(true, "draft"));
+        assert!(!stone_listing_is_app_visible(true, "archived"));
+        assert!(!stone_listing_is_app_visible(false, "published"));
+    }
+
+    #[test]
     fn stone_listing_status_follows_paid_and_canceled_orders() {
         assert_eq!(
             stone_listing_status_after_order_status("paid"),
@@ -5799,6 +6026,86 @@ mod tests {
         assert_eq!(
             stone_listing_price_by_currency_from_fields(&fields),
             HashMap::from([("USD".to_owned(), 88500), ("JPY".to_owned(), 150000),])
+        );
+    }
+
+    #[test]
+    fn stone_listing_response_includes_app_aliases_labels_and_price_object() {
+        let mut facet_tag_labels = FacetTagLabels::default();
+        facet_tag_labels.insert("color", "pink", "Pink", &[]);
+        facet_tag_labels.insert("pattern", "plain", "Plain", &[]);
+        let material_labels = HashMap::from([("rose_quartz".to_owned(), "Rose Quartz".to_owned())]);
+
+        let response = stone_listing_response(
+            "assets.example.test",
+            "en",
+            "ja",
+            "JPY",
+            &facet_tag_labels,
+            &material_labels,
+            StoneListing {
+                key: "stone_listing_001".to_owned(),
+                listing_code: "RQZ-0001".to_owned(),
+                material_key: "rose_quartz".to_owned(),
+                size: "24x24x60 mm".to_owned(),
+                title_i18n: HashMap::from([
+                    ("ja".to_owned(), "ソフトピンクローズクォーツ印材".to_owned()),
+                    (
+                        "en".to_owned(),
+                        "Soft Pink Rose Quartz Seal Stone".to_owned(),
+                    ),
+                ]),
+                description_i18n: HashMap::from([(
+                    "en".to_owned(),
+                    "A soft pink rose quartz seal stone.".to_owned(),
+                )]),
+                story_i18n: HashMap::from([("en".to_owned(), "A one-of-a-kind piece.".to_owned())]),
+                facets: StoneListingFacets {
+                    color_family: "pink".to_owned(),
+                    color_tags: vec!["pink".to_owned()],
+                    pattern_primary: "plain".to_owned(),
+                    pattern_tags: vec!["plain".to_owned()],
+                    stone_shape: "square".to_owned(),
+                    translucency: "semi_translucent".to_owned(),
+                },
+                photos: vec![MaterialPhoto {
+                    asset_id: "asset_001".to_owned(),
+                    storage_path: "stone_listings/rose_quartz/main.webp".to_owned(),
+                    alt_i18n: HashMap::from([("en".to_owned(), "Rose quartz photo".to_owned())]),
+                    sort_order: 1,
+                    is_primary: true,
+                    width: 1200,
+                    height: 900,
+                }],
+                price_by_currency: HashMap::from([
+                    ("JPY".to_owned(), 18000),
+                    ("USD".to_owned(), 12000),
+                ]),
+                status: "published".to_owned(),
+                is_active: true,
+                sort_order: 10,
+                version: 2,
+            },
+        );
+
+        assert_eq!(response["id"], json!("stone_listing_001"));
+        assert_eq!(response["key"], json!("stone_listing_001"));
+        assert_eq!(response["code"], json!("RQZ-0001"));
+        assert_eq!(response["listing_code"], json!("RQZ-0001"));
+        assert_eq!(response["material_label"], json!("Rose Quartz"));
+        assert_eq!(response["title"], json!("Soft Pink Rose Quartz Seal Stone"));
+        assert_eq!(response["price"]["amount"], json!(18000));
+        assert_eq!(response["price"]["currency"], json!("JPY"));
+        assert_eq!(response["price"]["display"], json!("JPY 18,000"));
+        assert_eq!(response["price_amount"], json!(18000));
+        assert_eq!(response["is_orderable"], json!(true));
+        assert_eq!(response["color_tag_labels"], json!(["Pink"]));
+        assert_eq!(response["pattern_tag_labels"], json!(["Plain"]));
+        assert_eq!(
+            response["photos"][0]["asset_url"],
+            json!(
+                "https://storage.googleapis.com/assets.example.test/stone_listings/rose_quartz/main.webp"
+            )
         );
     }
 
