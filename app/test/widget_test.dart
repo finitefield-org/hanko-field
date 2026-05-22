@@ -722,6 +722,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    var chooseCount = 0;
+    var deleteCount = 0;
     var backCount = 0;
 
     await tester.pumpWidget(
@@ -732,6 +734,10 @@ void main() {
         theme: HankoTheme.light(),
         home: SealDetailScreen(
           design: _localSealDesign(),
+          onChooseForOrder: (_) => chooseCount += 1,
+          onDelete: (_) async {
+            deleteCount += 1;
+          },
           onBack: () => backCount += 1,
         ),
       ),
@@ -754,7 +760,45 @@ void main() {
     expect(find.text('Balanced'), findsOneWidget);
     expect(find.text('Created'), findsOneWidget);
     expect(find.text('2026-05-21 11:00'), findsOneWidget);
+    expect(find.text('Choose for Order'), findsOneWidget);
+    expect(find.text('Delete Seal'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pump();
+
+    expect(chooseCount, 1);
+
+    await tester.ensureVisible(find.text('Delete Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Delete Seal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete saved seal?'), findsOneWidget);
+    expect(
+      find.text(
+        'This removes the seal design from this device. This action cannot be undone.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(deleteCount, 0);
+
+    await tester.ensureVisible(find.text('Delete Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Delete Seal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete').last);
+    await tester.pumpAndSettle();
+
+    expect(deleteCount, 1);
+
+    await tester.ensureVisible(find.byTooltip('Back'));
+    await tester.pump();
     await tester.tap(find.byTooltip('Back'));
     await tester.pump();
 
@@ -789,6 +833,86 @@ void main() {
 
     expect(find.byType(MySealsHomeScreen), findsOneWidget);
     expect(find.text('Saved on this device'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-008 keeps a saved seal selected for order draft', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      localSealDesignRepository: InMemoryLocalSealDesignRepository([
+        _localSealDesign(),
+      ]),
+    );
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for order'), findsOneWidget);
+    expect(
+      find.text('This seal is now saved in the order draft.'),
+      findsOneWidget,
+    );
+    expect(find.text('Selected for Order'), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected for order'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-007 confirms and deletes a saved seal', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = InMemoryLocalSealDesignRepository([_localSealDesign()]);
+
+    await pumpLaunchedApp(tester, localSealDesignRepository: repository);
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Delete Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Delete Seal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete saved seal?'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealDetailScreen), findsOneWidget);
+    expect(await repository.listLocalSealDesigns(), hasLength(1));
+
+    await tester.tap(find.text('Delete Seal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealDetailScreen), findsNothing);
+    expect(find.text('No saved seals'), findsOneWidget);
+    expect(await repository.listLocalSealDesigns(), isEmpty);
     expect(tester.takeException(), isNull);
   });
 

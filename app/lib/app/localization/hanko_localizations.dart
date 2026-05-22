@@ -176,6 +176,16 @@ class HankoLocalizations {
   String get sealDetailTitle => _strings.sealDetailTitle;
   String get kanjiLabel => _strings.kanjiLabel;
   String get createdAtLabel => _strings.createdAtLabel;
+  String get chooseSealForOrder => _strings.chooseSealForOrder;
+  String get sealSelectedForOrderTitle => _strings.sealSelectedForOrderTitle;
+  String get sealSelectedForOrderMessage =>
+      _strings.sealSelectedForOrderMessage;
+  String get sealSelectedForOrderAction => _strings.sealSelectedForOrderAction;
+  String get deleteSavedSeal => _strings.deleteSavedSeal;
+  String get deleteSealTitle => _strings.deleteSealTitle;
+  String get deleteSealMessage => _strings.deleteSealMessage;
+  String get deleteSealConfirm => _strings.deleteSealConfirm;
+  String get cancel => _strings.cancel;
   String get browseStones => _strings.browseStones;
   String get browseStonesDescription => _strings.browseStonesDescription;
   String get noSavedSeals => _strings.noSavedSeals;
@@ -379,6 +389,15 @@ class _HankoStrings {
     required this.sealDetailTitle,
     required this.kanjiLabel,
     required this.createdAtLabel,
+    required this.chooseSealForOrder,
+    required this.sealSelectedForOrderTitle,
+    required this.sealSelectedForOrderMessage,
+    required this.sealSelectedForOrderAction,
+    required this.deleteSavedSeal,
+    required this.deleteSealTitle,
+    required this.deleteSealMessage,
+    required this.deleteSealConfirm,
+    required this.cancel,
     required this.browseStones,
     required this.browseStonesDescription,
     required this.noSavedSeals,
@@ -551,6 +570,15 @@ class _HankoStrings {
   final String sealDetailTitle;
   final String kanjiLabel;
   final String createdAtLabel;
+  final String chooseSealForOrder;
+  final String sealSelectedForOrderTitle;
+  final String sealSelectedForOrderMessage;
+  final String sealSelectedForOrderAction;
+  final String deleteSavedSeal;
+  final String deleteSealTitle;
+  final String deleteSealMessage;
+  final String deleteSealConfirm;
+  final String cancel;
   final String browseStones;
   final String browseStonesDescription;
   final String noSavedSeals;
@@ -751,6 +779,16 @@ const _localizedValues = {
       sealDetailTitle: 'Seal Detail',
       kanjiLabel: 'Kanji',
       createdAtLabel: 'Created',
+      chooseSealForOrder: 'Choose for Order',
+      sealSelectedForOrderTitle: 'Selected for order',
+      sealSelectedForOrderMessage: 'This seal is now saved in the order draft.',
+      sealSelectedForOrderAction: 'Selected for Order',
+      deleteSavedSeal: 'Delete Seal',
+      deleteSealTitle: 'Delete saved seal?',
+      deleteSealMessage:
+          'This removes the seal design from this device. This action cannot be undone.',
+      deleteSealConfirm: 'Delete',
+      cancel: 'Cancel',
       browseStones: 'Browse Stones',
       browseStonesDescription: 'Explore our collection of\nnatural gemstones.',
       noSavedSeals: 'No saved seals',
@@ -932,6 +970,15 @@ const _localizedValues = {
       sealDetailTitle: '印影詳細',
       kanjiLabel: '漢字',
       createdAtLabel: '作成日',
+      chooseSealForOrder: '注文に使う',
+      sealSelectedForOrderTitle: '注文用に選択済み',
+      sealSelectedForOrderMessage: 'この印影を注文下書きに反映しました。',
+      sealSelectedForOrderAction: '選択済み',
+      deleteSavedSeal: '印影を削除',
+      deleteSealTitle: '保存済み印影を削除しますか？',
+      deleteSealMessage: 'この端末から印影デザインを削除します。この操作は元に戻せません。',
+      deleteSealConfirm: '削除',
+      cancel: 'キャンセル',
       browseStones: '石を探す',
       browseStonesDescription: '天然石コレクションを\nご覧ください。',
       noSavedSeals: '保存済み印影はありません',

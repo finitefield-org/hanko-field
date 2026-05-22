@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
+import '../features/order/order.dart';
 import '../features/settings/settings.dart';
 import '../features/stones/stones.dart';
 import 'localization/app_localization.dart';
@@ -225,7 +226,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   var _localSealDesigns = const <LocalSealDesign>[];
   var _localSealDesignsLoaded = false;
   Object? _localSealDesignsLoadError;
+  OrderDraftSealSelection? _orderDraftSealSelection;
   final _savingLocalSealKeys = <String>{};
+  final _deletingLocalSealIds = <String>{};
   var _pages = const <PageEntry>[_shellPage];
 
   @override
@@ -307,7 +310,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   Widget _buildMySealsPage(PageEntry page, HankoTabStackController stack) {
     final pageData = page.data;
     if (page.key == _mySealsDetailPageKey && pageData is LocalSealDesign) {
-      return SealDetailScreen(design: pageData, onBack: stack.pop);
+      return SealDetailScreen(
+        design: pageData,
+        isSelectedForOrder:
+            _orderDraftSealSelection?.localSealDesignId == pageData.id,
+        onChooseForOrder: _chooseLocalSealForOrder,
+        onDelete: (design) => _deleteLocalSealDesign(design, stack),
+        onBack: stack.pop,
+      );
     }
 
     return MySealsHomeScreen(
@@ -562,6 +572,54 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     stack.push(_sealSaveConfirmationPage(result, variant));
   }
 
+  void _chooseLocalSealForOrder(LocalSealDesign design) {
+    setState(() {
+      _orderDraftSealSelection = _orderDraftSealSelectionFromLocalSealDesign(
+        design,
+      );
+    });
+  }
+
+  Future<void> _deleteLocalSealDesign(
+    LocalSealDesign design,
+    HankoTabStackController stack,
+  ) async {
+    if (_deletingLocalSealIds.contains(design.id)) {
+      return;
+    }
+    _deletingLocalSealIds.add(design.id);
+    try {
+      await _localSealDesignRepository.deleteLocalSealDesign(design.id);
+    } catch (error) {
+      if (!mounted) {
+        _deletingLocalSealIds.remove(design.id);
+        return;
+      }
+      setState(() {
+        _localSealDesignsLoaded = true;
+        _localSealDesignsLoadError = error;
+      });
+      _deletingLocalSealIds.remove(design.id);
+      return;
+    }
+    _deletingLocalSealIds.remove(design.id);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _localSealDesigns = List.unmodifiable(
+        _localSealDesigns.where((savedDesign) => savedDesign.id != design.id),
+      );
+      if (_orderDraftSealSelection?.localSealDesignId == design.id) {
+        _orderDraftSealSelection = null;
+      }
+      _localSealDesignsLoaded = true;
+      _localSealDesignsLoadError = null;
+    });
+    stack.pop();
+  }
+
   PageEntry _kanjiLoadingPage(KanjiCandidatesRequest request) {
     return PageEntry(
       key: _designKanjiLoadingPageKey,
@@ -726,6 +784,25 @@ LocalSealDesign _localSealDesignFromSelection(
 String _localSealDesignId(String requestId, String variantId, DateTime now) {
   final rawId = 'local_${requestId}_${variantId}_${now.microsecondsSinceEpoch}';
   return rawId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+}
+
+OrderDraftSealSelection _orderDraftSealSelectionFromLocalSealDesign(
+  LocalSealDesign design,
+) {
+  return OrderDraftSealSelection(
+    localSealDesignId: design.id,
+    selectedKanji: design.selectedKanji,
+    reading: design.reading,
+    shape: design.shape,
+    style: design.style,
+    strokeWeight: design.strokeWeight,
+    balance: design.balance,
+    aiGenerationId: design.aiGenerationId,
+    aiVariantId: design.aiVariantId,
+    previewImageStoragePath: design.previewImageStoragePath,
+    previewImageDownloadUrl: design.previewImageDownloadUrl,
+    localImagePath: design.localImagePath,
+  );
 }
 
 class _BottomTabs extends StatelessWidget {

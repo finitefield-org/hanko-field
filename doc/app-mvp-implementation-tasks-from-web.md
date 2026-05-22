@@ -913,7 +913,7 @@ MVPで後回し可能:
 | M06-T02 | `DES-010` | [x] 保存完了画面 | `features/design/presentation/` | My Sealsへ移動、石選択へ移動、Designへ戻る導線 |
 | M06-T03 | `MYS-001` `MYS-002` | [x] 一覧/空状態 | `features/my_seals/presentation/` | 保存済み印影カードと空状態を表示 |
 | M06-T04 | `MYS-003` | [x] 詳細 | `features/my_seals/presentation/` | 印影画像、漢字、意味、スタイル、作成日を表示 |
-| M06-T05 | `MYS-007` `MYS-008` | 削除確認/注文用選択 | `features/my_seals/presentation/` | 削除とOrder Draft反映ができる |
+| M06-T05 | `MYS-007` `MYS-008` | [x] 削除確認/注文用選択 | `features/my_seals/presentation/` | 削除とOrder Draft反映ができる |
 | M06-T06 | `MYS-004` `MYS-005` `MYS-006` | 編集/比較 | `features/my_seals/presentation/` | MVP後回し可能。導線は破綻させない |
 
 ### M07: Stonesタブ

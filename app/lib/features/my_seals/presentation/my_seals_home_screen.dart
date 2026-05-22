@@ -229,9 +229,19 @@ class _SavedSealPreview extends StatelessWidget {
 }
 
 class SealDetailScreen extends StatelessWidget {
-  const SealDetailScreen({super.key, required this.design, this.onBack});
+  const SealDetailScreen({
+    super.key,
+    required this.design,
+    this.isSelectedForOrder = false,
+    this.onChooseForOrder,
+    this.onDelete,
+    this.onBack,
+  });
 
   final LocalSealDesign design;
+  final bool isSelectedForOrder;
+  final ValueChanged<LocalSealDesign>? onChooseForOrder;
+  final Future<void> Function(LocalSealDesign design)? onDelete;
   final VoidCallback? onBack;
 
   @override
@@ -254,11 +264,112 @@ class SealDetailScreen extends StatelessWidget {
               _SealDetailInfoRows(design: design),
               const SizedBox(height: HankoSpacing.lg),
               _SealDetailStyleGrid(design: design),
+              const SizedBox(height: HankoSpacing.lg),
+              if (isSelectedForOrder) ...[
+                HankoStateView(
+                  kind: HankoStateKind.success,
+                  title: l10n.sealSelectedForOrderTitle,
+                  message: l10n.sealSelectedForOrderMessage,
+                ),
+                const SizedBox(height: HankoSpacing.lg),
+              ],
+              _SealDetailActions(
+                design: design,
+                isSelectedForOrder: isSelectedForOrder,
+                onChooseForOrder: onChooseForOrder,
+                onDelete: onDelete,
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+class _SealDetailActions extends StatelessWidget {
+  const _SealDetailActions({
+    required this.design,
+    required this.isSelectedForOrder,
+    required this.onChooseForOrder,
+    required this.onDelete,
+  });
+
+  final LocalSealDesign design;
+  final bool isSelectedForOrder;
+  final ValueChanged<LocalSealDesign>? onChooseForOrder;
+  final Future<void> Function(LocalSealDesign design)? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HankoPrimaryButton(
+          label: isSelectedForOrder
+              ? l10n.sealSelectedForOrderAction
+              : l10n.chooseSealForOrder,
+          icon: isSelectedForOrder ? Icons.check : Icons.arrow_forward,
+          onPressed: onChooseForOrder == null || isSelectedForOrder
+              ? null
+              : () => onChooseForOrder?.call(design),
+        ),
+        const SizedBox(height: HankoSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: onDelete == null
+              ? null
+              : () => _confirmDelete(context, design, onDelete!),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: HankoColors.error,
+            minimumSize: const Size.fromHeight(52),
+            side: const BorderSide(color: HankoColors.error),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(HankoRadii.sm),
+            ),
+          ),
+          icon: const Icon(Icons.delete_outline),
+          label: Text(
+            l10n.deleteSavedSeal,
+            style: HankoTextStyles.label.copyWith(color: HankoColors.error),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    LocalSealDesign design,
+    Future<void> Function(LocalSealDesign design) deleteDesign,
+  ) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: HankoColors.surface,
+          title: Text(l10n.deleteSealTitle, style: HankoTextStyles.cardTitle),
+          content: Text(l10n.deleteSealMessage, style: HankoTextStyles.body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(foregroundColor: HankoColors.error),
+              child: Text(l10n.deleteSealConfirm),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) {
+      return;
+    }
+    await deleteDesign(design);
   }
 }
 
