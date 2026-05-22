@@ -4,6 +4,7 @@ import 'package:declarative_nav/declarative_nav.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/api/core_api.dart';
 import '../features/common/common.dart';
 import '../features/design/design.dart';
 import '../features/my_seals/my_seals.dart';
@@ -334,6 +335,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
     key: 'CHK-009-stripe-checkout-transition',
     name: '/checkout/stripe',
   );
+  static const _stripeCheckoutCanceledPage = PageEntry(
+    key: 'CHK-012-payment-canceled',
+    name: '/checkout/payment-canceled',
+  );
+  static const _stripeCheckoutFailedPage = PageEntry(
+    key: 'CHK-013-payment-failed',
+    name: '/checkout/payment-failed',
+  );
   static const _paymentStatusPage = PageEntry(
     key: 'CHK-011-payment-status',
     name: '/checkout/payment-status',
@@ -501,7 +510,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
         if (page.key == _paymentStatusPage.key) {
           return _buildPaymentStatusPage();
         }
-        if (page.key == _stripeCheckoutTransitionPage.key) {
+        if (page.key == _stripeCheckoutTransitionPage.key ||
+            page.key == _stripeCheckoutCanceledPage.key ||
+            page.key == _stripeCheckoutFailedPage.key) {
           return _buildStripeCheckoutTransitionPage();
         }
         if (page.key == _checkoutProcessingPage.key) {
@@ -1386,7 +1397,16 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       if (!mounted) {
         return;
       }
-      setState(() => _checkoutProcessingError = error);
+      setState(() {
+        _checkoutProcessingError = error;
+        if (_isStripeCheckoutPreparationError(error)) {
+          _stripeCheckoutStep = StripeCheckoutExternalStep.failed;
+          _stripeCheckoutLaunchError = error;
+          _checkoutReturnResult = null;
+          _paymentStatusRequestId++;
+          _pages = const [_shellPage, _stripeCheckoutFailedPage];
+        }
+      });
     } finally {
       if (mounted) {
         setState(() => _checkoutProcessingInFlight = false);
@@ -1426,6 +1446,8 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       setState(() {
         _stripeCheckoutStep = StripeCheckoutExternalStep.failed;
         _stripeCheckoutLaunchError = error;
+        _paymentStatusRequestId++;
+        _pages = const [_shellPage, _stripeCheckoutFailedPage];
       });
     }
   }
@@ -1451,7 +1473,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell>
       _stripeCheckoutLaunchError = null;
       _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
       _paymentStatusRequestId++;
-      _pages = const [_shellPage, _stripeCheckoutTransitionPage];
+      _pages = [
+        _shellPage,
+        switch (result.outcome) {
+          CheckoutReturnOutcome.canceled => _stripeCheckoutCanceledPage,
+          CheckoutReturnOutcome.failed => _stripeCheckoutFailedPage,
+          CheckoutReturnOutcome.success => _stripeCheckoutTransitionPage,
+        },
+      ];
     });
     return true;
   }
@@ -1605,6 +1634,12 @@ String _checkoutIdempotencyKey(DateTime now) {
 bool _isPaidOrderStatus(OrderStatus status) {
   return status.paymentStatus.trim().toLowerCase() == 'paid' ||
       status.orderStatus.trim().toLowerCase() == 'paid';
+}
+
+bool _isStripeCheckoutPreparationError(Object error) {
+  return error is HankoApiException &&
+      (error.code == 'stripe_not_configured' ||
+          error.code == 'stripe_checkout_failed');
 }
 
 SealOrderDraft _sealOrderDraftFromOrderDraft(

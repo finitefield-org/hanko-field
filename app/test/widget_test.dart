@@ -7,6 +7,7 @@ import 'package:miniriverpod/miniriverpod.dart';
 import 'package:hankofield/app/app.dart';
 import 'package:hankofield/app/localization/app_localization.dart';
 import 'package:hankofield/app/theme/app_theme.dart';
+import 'package:hankofield/core/api/core_api.dart';
 import 'package:hankofield/core/widgets/core_widgets.dart';
 import 'package:hankofield/features/common/common.dart';
 import 'package:hankofield/features/design/design.dart';
@@ -2457,6 +2458,144 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T10 separates Stripe cancel returns', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    var statusCheckCount = 0;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      fetchOrderStatus: (orderId) {
+        statusCheckCount++;
+        return _successfulFetchOrderStatus(orderId);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/cancel?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(statusCheckCount, 0);
+    expect(find.text('Checkout was canceled'), findsOneWidget);
+    expect(
+      find.text('Stripe returned without completing payment.'),
+      findsOneWidget,
+    );
+    expect(find.text('Payment failed'), findsNothing);
+    expect(find.text('Open Stripe Checkout'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T10 separates Stripe failure returns', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    var statusCheckCount = 0;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      fetchOrderStatus: (orderId) {
+        statusCheckCount++;
+        return _successfulFetchOrderStatus(orderId);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/failed?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(statusCheckCount, 0);
+    expect(find.text('Payment failed'), findsOneWidget);
+    expect(
+      find.text(
+        'Stripe Checkout could not be completed. You can try Checkout again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Checkout was canceled'), findsNothing);
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T10 maps Stripe checkout session API errors to failed', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    var didOpenCheckout = false;
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+      createCheckoutSession: (request) async {
+        throw const HankoApiException(
+          statusCode: 502,
+          code: 'stripe_checkout_failed',
+          message: 'Stripe checkout session creation failed',
+          payload: {},
+        );
+      },
+      openCheckoutUrl: (session) async {
+        didOpenCheckout = true;
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    expect(didOpenCheckout, isFalse);
+    expect(find.text('Payment failed'), findsOneWidget);
+    expect(
+      find.text(
+        'Stripe Checkout could not be completed. You can try Checkout again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Preparing Checkout'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

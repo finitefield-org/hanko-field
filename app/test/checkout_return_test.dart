@@ -22,6 +22,16 @@ void main() {
     expect(result?.orderId, 'ord_002');
   });
 
+  test('parses checkout failure returns', () {
+    final result = parseCheckoutReturnRoute(
+      'hankofield://checkout/failed?order_id=ord_003&checkout_session_id=cs_test_003',
+    );
+
+    expect(result?.outcome, CheckoutReturnOutcome.failed);
+    expect(result?.orderId, 'ord_003');
+    expect(result?.sessionId, 'cs_test_003');
+  });
+
   test('ignores unrelated app routes', () {
     expect(parseCheckoutReturnRoute('/design'), isNull);
     expect(parseCheckoutReturnRoute('/design?checkout=success'), isNull);

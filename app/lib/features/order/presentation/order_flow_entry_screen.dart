@@ -940,6 +940,11 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hasError = error != null || step == StripeCheckoutExternalStep.failed;
+    final isCanceledReturn =
+        returnResult?.outcome == CheckoutReturnOutcome.canceled;
+    final isFailedReturn =
+        returnResult?.outcome == CheckoutReturnOutcome.failed;
+    final isFailure = hasError || isFailedReturn;
     final hasReturn = returnResult != null;
     final isOpening = step == StripeCheckoutExternalStep.opening && !hasError;
     final statusTitle = _stripeCheckoutStatusTitle(
@@ -947,12 +952,14 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
       step,
       returnResult,
       hasError,
+      checkoutSession != null,
     );
     final statusMessage = _stripeCheckoutStatusMessage(
       l10n,
       step,
       returnResult,
       hasError,
+      checkoutSession != null,
     );
     final seal = draft.sealSelection;
     final stone = draft.stoneSelection;
@@ -968,12 +975,16 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
-                child:
-                    hasError ||
-                        returnResult?.outcome == CheckoutReturnOutcome.failed
+                child: isFailure
                     ? const Icon(
                         Icons.error_outline,
                         color: HankoColors.error,
+                        size: 42,
+                      )
+                    : isCanceledReturn
+                    ? const Icon(
+                        Icons.cancel_outlined,
+                        color: HankoColors.body,
                         size: 42,
                       )
                     : hasReturn
@@ -1001,11 +1012,7 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
                 statusTitle,
                 textAlign: TextAlign.center,
                 style: HankoTextStyles.sectionTitle.copyWith(
-                  color:
-                      hasError ||
-                          returnResult?.outcome == CheckoutReturnOutcome.failed
-                      ? HankoColors.error
-                      : HankoColors.ink,
+                  color: isFailure ? HankoColors.error : HankoColors.ink,
                 ),
               ),
               const SizedBox(height: HankoSpacing.sm),
@@ -1033,7 +1040,7 @@ class StripeCheckoutTransitionScreen extends StatelessWidget {
               if (onOpenCheckout != null && !isOpening) ...[
                 const SizedBox(height: HankoSpacing.lg),
                 HankoPrimaryButton(
-                  label: hasError
+                  label: isFailure
                       ? l10n.stripeCheckoutRetryAction
                       : l10n.stripeCheckoutOpenAction,
                   icon: Icons.open_in_new,
@@ -1238,9 +1245,12 @@ String _stripeCheckoutStatusTitle(
   StripeCheckoutExternalStep step,
   CheckoutReturnResult? returnResult,
   bool hasError,
+  bool hasCheckoutSession,
 ) {
   if (hasError) {
-    return l10n.stripeCheckoutLaunchFailedTitle;
+    return hasCheckoutSession
+        ? l10n.stripeCheckoutLaunchFailedTitle
+        : l10n.stripeCheckoutReturnFailedTitle;
   }
   if (returnResult?.outcome == CheckoutReturnOutcome.canceled) {
     return l10n.stripeCheckoutCanceledTitle;
@@ -1265,9 +1275,12 @@ String _stripeCheckoutStatusMessage(
   StripeCheckoutExternalStep step,
   CheckoutReturnResult? returnResult,
   bool hasError,
+  bool hasCheckoutSession,
 ) {
   if (hasError) {
-    return l10n.stripeCheckoutLaunchFailedMessage;
+    return hasCheckoutSession
+        ? l10n.stripeCheckoutLaunchFailedMessage
+        : l10n.stripeCheckoutReturnFailedMessage;
   }
   if (returnResult?.outcome == CheckoutReturnOutcome.canceled) {
     return l10n.stripeCheckoutCanceledMessage;

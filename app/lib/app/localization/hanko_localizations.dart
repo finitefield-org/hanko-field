@@ -1460,9 +1460,9 @@ const _localizedValues = {
       stripeCheckoutCanceledTitle: 'Checkout was canceled',
       stripeCheckoutCanceledMessage:
           'Stripe returned without completing payment.',
-      stripeCheckoutReturnFailedTitle: 'Checkout return failed',
+      stripeCheckoutReturnFailedTitle: 'Payment failed',
       stripeCheckoutReturnFailedMessage:
-          'We could not read the Stripe return URL.',
+          'Stripe Checkout could not be completed. You can try Checkout again.',
       stripeCheckoutLaunchFailedTitle: "Couldn't open Stripe Checkout",
       stripeCheckoutLaunchFailedMessage:
           'Check your browser settings and try again.',
@@ -1811,8 +1811,9 @@ const _localizedValues = {
       stripeCheckoutReturnedMessage: '戻りURLを受け取りました。次に注文状態を確認します。',
       stripeCheckoutCanceledTitle: 'Checkoutがキャンセルされました',
       stripeCheckoutCanceledMessage: 'Stripeから未決済の状態で戻りました。',
-      stripeCheckoutReturnFailedTitle: 'Checkout戻りURLを処理できませんでした',
-      stripeCheckoutReturnFailedMessage: 'Stripeの戻りURLを読み取れませんでした。',
+      stripeCheckoutReturnFailedTitle: '決済に失敗しました',
+      stripeCheckoutReturnFailedMessage:
+          'Stripe Checkoutを完了できませんでした。もう一度Checkoutをお試しください。',
       stripeCheckoutLaunchFailedTitle: 'Stripe Checkoutを開けませんでした',
       stripeCheckoutLaunchFailedMessage: 'ブラウザ設定を確認して、もう一度お試しください。',
       stripeCheckoutOpenAction: 'Stripe Checkoutを開く',
