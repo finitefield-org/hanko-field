@@ -7252,6 +7252,7 @@ mod tests {
         });
 
         assert_eq!(response["order_id"], "order_001");
+        assert_eq!(response["order_no"], "HF-20260521-0001");
         assert_eq!(response["status"], "paid");
         assert_eq!(response["order_status"], "paid");
         assert_eq!(response["payment"]["status"], "paid");
@@ -7263,7 +7264,38 @@ mod tests {
         assert!(response["fulfillment"]["tracking_no"].is_null());
         assert_eq!(response["pricing"]["total"], 18600);
         assert_eq!(response["pricing"]["currency"], "JPY");
+        assert_eq!(response["production_status"], "not_started");
+        assert_eq!(response["shipping_status"], "not_shipped");
+        assert!(response["tracking_number"].is_null());
         assert_eq!(response["updated_at"], "2026-05-21T11:15:00Z");
+    }
+
+    #[test]
+    fn order_status_response_serializes_pending_without_optional_payment_refs() {
+        let response = order_status_response_json(&OrderStatusResult {
+            order_id: "order_pending".to_owned(),
+            order_no: "HF-20260521-0002".to_owned(),
+            status: "pending_payment".to_owned(),
+            payment_status: "unpaid".to_owned(),
+            checkout_session_id: String::new(),
+            payment_intent_id: String::new(),
+            fulfillment_status: "pending".to_owned(),
+            fulfillment_carrier: String::new(),
+            fulfillment_tracking_no: String::new(),
+            production_status: "not_started".to_owned(),
+            shipping_status: "not_shipped".to_owned(),
+            total: 18600,
+            currency: "JPY".to_owned(),
+            updated_at: None,
+        });
+
+        assert_eq!(response["order_id"], "order_pending");
+        assert_eq!(response["order_status"], "pending_payment");
+        assert_eq!(response["payment"]["status"], "unpaid");
+        assert!(response["payment"]["checkout_session_id"].is_null());
+        assert!(response["payment"]["payment_intent_id"].is_null());
+        assert_eq!(response["fulfillment"]["status"], "pending");
+        assert!(response["updated_at"].is_null());
     }
 
     #[test]
