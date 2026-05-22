@@ -164,7 +164,7 @@ class _SavedSealCard extends StatelessWidget {
           const Divider(color: HankoColors.surfaceBorder, height: 1),
           const SizedBox(height: HankoSpacing.md),
           HankoPrimaryButton(
-            label: l10n.chooseSavedSeal,
+            label: l10n.viewSealDetails,
             icon: Icons.arrow_forward,
             onPressed: onChoose,
           ),
@@ -183,9 +183,10 @@ class _SavedSealCard extends StatelessWidget {
 }
 
 class _SavedSealPreview extends StatelessWidget {
-  const _SavedSealPreview({required this.design});
+  const _SavedSealPreview({required this.design, this.dimension = 104});
 
   final LocalSealDesign design;
+  final double dimension;
 
   @override
   Widget build(BuildContext context) {
@@ -218,10 +219,315 @@ class _SavedSealPreview extends StatelessWidget {
     }
 
     return SizedBox.square(
-      dimension: 104,
+      dimension: dimension,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(HankoRadii.sm),
         child: preview,
+      ),
+    );
+  }
+}
+
+class SealDetailScreen extends StatelessWidget {
+  const SealDetailScreen({super.key, required this.design, this.onBack});
+
+  final LocalSealDesign design;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Material(
+      color: HankoColors.background,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 36, 18, HankoSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SealDetailHeader(title: l10n.sealDetailTitle, onBack: onBack),
+              const SizedBox(height: HankoSpacing.lg),
+              _SealDetailHeroCard(design: design),
+              const SizedBox(height: HankoSpacing.lg),
+              _SealDetailInfoRows(design: design),
+              const SizedBox(height: HankoSpacing.lg),
+              _SealDetailStyleGrid(design: design),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SealDetailHeader extends StatelessWidget {
+  const _SealDetailHeader({required this.title, required this.onBack});
+
+  final String title;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              tooltip: context.l10n.back,
+              onPressed: onBack,
+              color: HankoColors.red,
+              icon: const Icon(Icons.arrow_back),
+            ),
+          ),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: HankoTextStyles.pageTitle.copyWith(fontSize: 31),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SealDetailHeroCard extends StatelessWidget {
+  const _SealDetailHeroCard({required this.design});
+
+  final LocalSealDesign design;
+
+  @override
+  Widget build(BuildContext context) {
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+      child: Center(child: _SavedSealPreview(design: design, dimension: 216)),
+    );
+  }
+}
+
+class _SealDetailInfoRows extends StatelessWidget {
+  const _SealDetailInfoRows({required this.design});
+
+  final LocalSealDesign design;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final meaning = design.meaning?.trim();
+    final rows = [
+      _DetailInfoRowData(
+        iconLabel: design.selectedKanji,
+        label: l10n.kanjiLabel,
+        value: design.selectedKanji,
+      ),
+      _DetailInfoRowData(
+        iconLabel: _leadingCharacter(design.reading),
+        label: l10n.kanjiReadingLabel,
+        value: design.reading,
+      ),
+      _DetailInfoRowData(
+        icon: Icons.auto_awesome,
+        label: l10n.kanjiMeaningLabel,
+        value: meaning == null || meaning.isEmpty ? design.reading : meaning,
+      ),
+      _DetailInfoRowData(
+        icon: Icons.event_outlined,
+        label: l10n.createdAtLabel,
+        value: _formatSavedSealDate(design.createdAt),
+      ),
+    ];
+
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+      child: Column(
+        children: [
+          for (var index = 0; index < rows.length; index++) ...[
+            _SealDetailInfoRow(data: rows[index]),
+            if (index < rows.length - 1)
+              const Divider(color: HankoColors.surfaceBorder, height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailInfoRowData {
+  const _DetailInfoRowData({
+    required this.label,
+    required this.value,
+    this.icon,
+    this.iconLabel,
+  });
+
+  final String label;
+  final String value;
+  final IconData? icon;
+  final String? iconLabel;
+}
+
+class _SealDetailInfoRow extends StatelessWidget {
+  const _SealDetailInfoRow({required this.data});
+
+  final _DetailInfoRowData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          _DetailBadge(icon: data.icon, label: data.iconLabel),
+          const SizedBox(width: HankoSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(data.label, style: HankoTextStyles.compactBody),
+                const SizedBox(height: 7),
+                Text(
+                  data.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.cardTitle,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SealDetailStyleGrid extends StatelessWidget {
+  const _SealDetailStyleGrid({required this.design});
+
+  final LocalSealDesign design;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final items = [
+      _StyleDetailTileData(
+        icon: Icons.crop_square,
+        label: l10n.sealShapeLabel,
+        value: _sealShapeLabel(l10n, design.shape),
+      ),
+      _StyleDetailTileData(
+        icon: Icons.auto_awesome_outlined,
+        label: l10n.sealStyleNameLabel,
+        value: _sealStyleNameLabel(l10n, design.style),
+      ),
+      _StyleDetailTileData(
+        icon: Icons.line_weight,
+        label: l10n.sealStrokeWeightLabel,
+        value: _sealStrokeWeightLabel(l10n, design.strokeWeight),
+      ),
+      _StyleDetailTileData(
+        icon: Icons.balance_outlined,
+        label: l10n.sealBalanceLabel,
+        value: _sealBalanceLabel(l10n, design.balance),
+      ),
+    ];
+
+    return HankoSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: HankoSpacing.md,
+        mainAxisSpacing: HankoSpacing.md,
+        childAspectRatio: 2.85,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [for (final item in items) _SealDetailStyleTile(data: item)],
+      ),
+    );
+  }
+}
+
+class _StyleDetailTileData {
+  const _StyleDetailTileData({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+}
+
+class _SealDetailStyleTile extends StatelessWidget {
+  const _SealDetailStyleTile({required this.data});
+
+  final _StyleDetailTileData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _DetailBadge(icon: data.icon),
+        const SizedBox(width: HankoSpacing.sm),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: HankoTextStyles.compactBody,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                data.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: HankoTextStyles.label.copyWith(fontSize: 15),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailBadge extends StatelessWidget {
+  const _DetailBadge({this.icon, this.label});
+
+  final IconData? icon;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: HankoColors.medallion,
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox.square(
+        dimension: 52,
+        child: Center(
+          child: icon == null
+              ? Text(
+                  label ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: HankoTextStyles.label.copyWith(
+                    color: HankoColors.red,
+                    fontFamily: HankoFonts.serif,
+                    fontSize: 17,
+                  ),
+                )
+              : Icon(icon, color: HankoColors.gold, size: 24),
+        ),
       ),
     );
   }
@@ -344,6 +650,14 @@ String _sealStyleNameLabel(HankoLocalizations l10n, String style) {
   };
 }
 
+String _sealShapeLabel(HankoLocalizations l10n, String shape) {
+  return switch (shape) {
+    'square' => l10n.sealShapeSquare,
+    'round' => l10n.sealShapeRound,
+    _ => shape,
+  };
+}
+
 String _sealStrokeWeightLabel(HankoLocalizations l10n, String strokeWeight) {
   return switch (strokeWeight) {
     'standard' => l10n.sealStrokeStandard,
@@ -359,4 +673,23 @@ String _sealBalanceLabel(HankoLocalizations l10n, String balance) {
     'dense' => l10n.sealBalanceDense,
     _ => balance,
   };
+}
+
+String _formatSavedSealDate(DateTime date) {
+  final local = date.toLocal();
+  final day = [
+    local.year.toString().padLeft(4, '0'),
+    local.month.toString().padLeft(2, '0'),
+    local.day.toString().padLeft(2, '0'),
+  ].join('-');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$day $hour:$minute';
+}
+
+String _leadingCharacter(String value) {
+  if (value.isEmpty) {
+    return '';
+  }
+  return String.fromCharCode(value.runes.first);
 }

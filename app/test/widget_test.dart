@@ -23,6 +23,7 @@ void main() {
     bool hasSeenOnboarding = true,
     KanjiCandidatesGenerator? generateKanjiCandidates,
     SealDesignsGenerator? generateSealDesigns,
+    LocalSealDesignRepository? localSealDesignRepository,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -35,6 +36,7 @@ void main() {
               generateKanjiCandidates ?? _successfulKanjiGenerator,
           generateSealDesigns:
               generateSealDesigns ?? generateSealDesignsWithDefaultApi,
+          localSealDesignRepository: localSealDesignRepository,
         ),
       ),
     );
@@ -387,7 +389,7 @@ void main() {
     expect(find.text('Saved on this device'), findsOneWidget);
     expect(find.text('美空'), findsWidgets);
     expect(find.text('Beautiful sky'), findsOneWidget);
-    expect(find.text('Choose'), findsOneWidget);
+    expect(find.text('View Details'), findsOneWidget);
 
     await tester.tap(find.text('Design').last);
     await tester.pumpAndSettle();
@@ -632,7 +634,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    LocalSealDesign? chosen;
+    LocalSealDesign? opened;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -651,7 +653,7 @@ void main() {
               isFavorite: true,
             ),
           ],
-          onChooseSeal: (design) => chosen = design,
+          onChooseSeal: (design) => opened = design,
         ),
       ),
     );
@@ -667,12 +669,12 @@ void main() {
     expect(find.text('Standard'), findsWidgets);
     expect(find.text('Balanced'), findsWidgets);
 
-    await tester.ensureVisible(find.text('Choose').first);
+    await tester.ensureVisible(find.text('View Details').first);
     await tester.pump();
-    await tester.tap(find.text('Choose').first);
+    await tester.tap(find.text('View Details').first);
     await tester.pump();
 
-    expect(chosen?.id, 'local_seal_001');
+    expect(opened?.id, 'local_seal_001');
     expect(tester.takeException(), isNull);
   });
 
@@ -711,6 +713,82 @@ void main() {
 
     expect(startDesignCount, 1);
     expect(exploreStonesCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-003 displays saved seal detail fields', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var backCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: SealDetailScreen(
+          design: _localSealDesign(),
+          onBack: () => backCount += 1,
+        ),
+      ),
+    );
+
+    expect(find.text('Seal Detail'), findsOneWidget);
+    expect(find.text('Kanji'), findsOneWidget);
+    expect(find.text('美空'), findsWidgets);
+    expect(find.text('Reading'), findsOneWidget);
+    expect(find.text('Misora'), findsOneWidget);
+    expect(find.text('Meaning'), findsOneWidget);
+    expect(find.text('Beautiful sky'), findsOneWidget);
+    expect(find.text('Shape'), findsOneWidget);
+    expect(find.text('Square'), findsOneWidget);
+    expect(find.text('Style'), findsOneWidget);
+    expect(find.text('Elegant'), findsOneWidget);
+    expect(find.text('Stroke Weight'), findsOneWidget);
+    expect(find.text('Standard'), findsOneWidget);
+    expect(find.text('Balance'), findsOneWidget);
+    expect(find.text('Balanced'), findsOneWidget);
+    expect(find.text('Created'), findsOneWidget);
+    expect(find.text('2026-05-21 11:00'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+
+    expect(backCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MYS-003 opens from the My Seals stack', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLaunchedApp(
+      tester,
+      localSealDesignRepository: InMemoryLocalSealDesignRepository([
+        _localSealDesign(),
+      ]),
+    );
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SealDetailScreen), findsOneWidget);
+    expect(find.text('Seal Detail'), findsOneWidget);
+    expect(find.text('2026-05-21 11:00'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MySealsHomeScreen), findsOneWidget);
+    expect(find.text('Saved on this device'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1099,8 +1177,8 @@ LocalSealDesign _localSealDesign({
     previewImageDownloadUrl: '',
     localImagePath: '',
     isFavorite: isFavorite,
-    createdAt: DateTime.parse('2026-05-21T11:00:00+09:00'),
-    updatedAt: DateTime.parse('2026-05-21T11:10:00+09:00'),
+    createdAt: DateTime(2026, 5, 21, 11),
+    updatedAt: DateTime(2026, 5, 21, 11, 10),
   );
 }
 

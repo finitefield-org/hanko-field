@@ -219,6 +219,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       'DES-014-unsupported-kanji-result';
   static const _designSealGenerationLimitPageKey =
       'DES-015-seal-generation-limit';
+  static const _mySealsDetailPageKey = 'MYS-003-seal-detail';
 
   late final LocalSealDesignRepository _localSealDesignRepository;
   var _localSealDesigns = const <LocalSealDesign>[];
@@ -298,15 +299,25 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   ) {
     return switch (tab) {
       HankoAppTab.design => _buildDesignPage(page, stack),
-      HankoAppTab.mySeals => MySealsHomeScreen(
-        designs: _localSealDesigns,
-        isLoading: !_localSealDesignsLoaded,
-        loadError: _localSealDesignsLoadError,
-        onStartDesigning: () => stack.selectTab(HankoAppTab.design),
-        onExploreStones: () => stack.selectTab(HankoAppTab.stones),
-      ),
+      HankoAppTab.mySeals => _buildMySealsPage(page, stack),
       HankoAppTab.stones => const StonesHomeScreen(),
     };
+  }
+
+  Widget _buildMySealsPage(PageEntry page, HankoTabStackController stack) {
+    final pageData = page.data;
+    if (page.key == _mySealsDetailPageKey && pageData is LocalSealDesign) {
+      return SealDetailScreen(design: pageData, onBack: stack.pop);
+    }
+
+    return MySealsHomeScreen(
+      designs: _localSealDesigns,
+      isLoading: !_localSealDesignsLoaded,
+      loadError: _localSealDesignsLoadError,
+      onStartDesigning: () => stack.selectTab(HankoAppTab.design),
+      onExploreStones: () => stack.selectTab(HankoAppTab.stones),
+      onChooseSeal: (design) => stack.push(_mySealsDetailPage(design)),
+    );
   }
 
   Widget _buildDesignPage(PageEntry page, HankoTabStackController stack) {
@@ -653,6 +664,14 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       key: _designSealGenerationLimitPageKey,
       name: '/design/seal/limit',
       data: request,
+    );
+  }
+
+  PageEntry _mySealsDetailPage(LocalSealDesign design) {
+    return PageEntry(
+      key: _mySealsDetailPageKey,
+      name: '/my-seals/detail',
+      data: design,
     );
   }
 

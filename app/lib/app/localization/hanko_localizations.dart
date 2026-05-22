@@ -172,6 +172,10 @@ class HankoLocalizations {
   String get savedSealsLoadErrorTitle => _strings.savedSealsLoadErrorTitle;
   String get savedSealsLoadErrorMessage => _strings.savedSealsLoadErrorMessage;
   String get chooseSavedSeal => _strings.chooseSavedSeal;
+  String get viewSealDetails => _strings.viewSealDetails;
+  String get sealDetailTitle => _strings.sealDetailTitle;
+  String get kanjiLabel => _strings.kanjiLabel;
+  String get createdAtLabel => _strings.createdAtLabel;
   String get browseStones => _strings.browseStones;
   String get browseStonesDescription => _strings.browseStonesDescription;
   String get noSavedSeals => _strings.noSavedSeals;
@@ -371,6 +375,10 @@ class _HankoStrings {
     required this.savedSealsLoadErrorTitle,
     required this.savedSealsLoadErrorMessage,
     required this.chooseSavedSeal,
+    required this.viewSealDetails,
+    required this.sealDetailTitle,
+    required this.kanjiLabel,
+    required this.createdAtLabel,
     required this.browseStones,
     required this.browseStonesDescription,
     required this.noSavedSeals,
@@ -539,6 +547,10 @@ class _HankoStrings {
   final String savedSealsLoadErrorTitle;
   final String savedSealsLoadErrorMessage;
   final String chooseSavedSeal;
+  final String viewSealDetails;
+  final String sealDetailTitle;
+  final String kanjiLabel;
+  final String createdAtLabel;
   final String browseStones;
   final String browseStonesDescription;
   final String noSavedSeals;
@@ -735,6 +747,10 @@ const _localizedValues = {
       savedSealsLoadErrorMessage:
           'Open My Seals again, or create a new seal design.',
       chooseSavedSeal: 'Choose',
+      viewSealDetails: 'View Details',
+      sealDetailTitle: 'Seal Detail',
+      kanjiLabel: 'Kanji',
+      createdAtLabel: 'Created',
       browseStones: 'Browse Stones',
       browseStonesDescription: 'Explore our collection of\nnatural gemstones.',
       noSavedSeals: 'No saved seals',
@@ -912,6 +928,10 @@ const _localizedValues = {
       savedSealsLoadErrorTitle: '保存済み印影を読み込めません',
       savedSealsLoadErrorMessage: 'マイ印影を開き直すか、新しい印影を作成してください。',
       chooseSavedSeal: '選択',
+      viewSealDetails: '詳細を見る',
+      sealDetailTitle: '印影詳細',
+      kanjiLabel: '漢字',
+      createdAtLabel: '作成日',
       browseStones: '石を探す',
       browseStonesDescription: '天然石コレクションを\nご覧ください。',
       noSavedSeals: '保存済み印影はありません',
