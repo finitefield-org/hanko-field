@@ -1026,12 +1026,12 @@ void main() {
     );
 
     expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
-    expect(find.text('Rose Quartz'), findsOneWidget);
+    expect(find.text('Rose Quartz'), findsWidgets);
     expect(find.text('¥18,000'), findsOneWidget);
-    expect(find.text('Pink'), findsOneWidget);
-    expect(find.text('Plain'), findsOneWidget);
+    expect(find.text('Pink'), findsWidgets);
+    expect(find.text('Plain'), findsWidgets);
     expect(find.text('24x24x60 mm'), findsOneWidget);
-    expect(find.text('Available'), findsOneWidget);
+    expect(find.text('Available'), findsWidgets);
     expect(find.text('Select Stone'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Select Stone'));
@@ -1040,6 +1040,84 @@ void main() {
     await tester.pump();
 
     expect(selectedStone?.id, 'stone_listing_001');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('STN-005 filters stones by material color pattern and stock', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(
+            listings: [
+              _stoneListing(),
+              _stoneListing(
+                id: 'stone_listing_002',
+                title: 'Green Jade Seal Stone',
+                materialKey: 'jade',
+                materialLabel: 'Jade',
+                colorFamily: 'green',
+                patternPrimary: 'cloudy',
+              ),
+              _stoneListing(
+                id: 'stone_listing_003',
+                title: 'Black Onyx Seal Stone',
+                materialKey: 'black_onyx',
+                materialLabel: 'Black Onyx',
+                colorFamily: 'black',
+                patternPrimary: 'banded',
+                status: 'sold',
+                isOrderable: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Green Jade Seal Stone'), findsOneWidget);
+    expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stone-filter-material-jade')));
+    await tester.pump();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsNothing);
+    expect(find.text('Green Jade Seal Stone'), findsOneWidget);
+    expect(find.text('Black Onyx Seal Stone'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('stone-filters-reset')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stone-filter-color-pink')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('stone-filter-pattern-plain')));
+    await tester.pump();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Green Jade Seal Stone'), findsNothing);
+    expect(find.text('Black Onyx Seal Stone'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('stone-filters-reset')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('stone-filter-availability-unavailable')),
+    );
+    await tester.pump();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsNothing);
+    expect(find.text('Green Jade Seal Stone'), findsNothing);
+    expect(find.text('Black Onyx Seal Stone'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1452,28 +1530,34 @@ StoneListing _stoneListing({
   String id = 'stone_listing_001',
   String title = 'Soft Pink Rose Quartz Seal Stone',
   String materialKey = 'rose_quartz',
+  String materialLabel = 'Rose Quartz',
+  String colorFamily = 'pink',
+  String patternPrimary = 'plain',
   String status = 'published',
   bool isActive = true,
+  bool? isOrderable,
 }) {
   return StoneListing(
     id: id,
     code: 'RQZ-0001',
     materialKey: materialKey,
+    materialLabel: materialLabel,
     sizeLabel: '24x24x60 mm',
     title: title,
     description: 'A soft pink rose quartz seal stone.',
     story: 'A one-of-a-kind piece.',
-    facets: const StoneListingFacets(
-      colorFamily: 'pink',
-      colorTags: ['soft'],
-      patternPrimary: 'plain',
-      patternTags: ['clear'],
+    facets: StoneListingFacets(
+      colorFamily: colorFamily,
+      colorTags: [colorFamily],
+      patternPrimary: patternPrimary,
+      patternTags: [patternPrimary],
       stoneShape: 'square',
       translucency: 'semi_translucent',
     ),
     price: const Money(amount: 18000, currency: 'JPY'),
     status: status,
     isActive: isActive,
+    isOrderable: isOrderable,
     photos: const [],
   );
 }

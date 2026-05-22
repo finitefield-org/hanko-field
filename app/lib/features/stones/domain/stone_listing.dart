@@ -35,6 +35,7 @@ class StoneListing {
     required this.id,
     required this.code,
     required this.materialKey,
+    this.materialLabel = '',
     required this.sizeLabel,
     required this.title,
     required this.description,
@@ -43,12 +44,14 @@ class StoneListing {
     required this.price,
     required this.status,
     required this.isActive,
+    bool? isOrderable,
     required this.photos,
-  });
+  }) : isOrderable = isOrderable ?? (isActive && status == 'published');
 
   final String id;
   final String code;
   final String materialKey;
+  final String materialLabel;
   final String sizeLabel;
   final String title;
   final String description;
@@ -57,9 +60,8 @@ class StoneListing {
   final Money price;
   final String status;
   final bool isActive;
+  final bool isOrderable;
   final List<StoneListingPhoto> photos;
-
-  bool get isOrderable => isActive && status == 'published';
 }
 
 class StoneListingFacets {

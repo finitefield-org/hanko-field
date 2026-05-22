@@ -203,6 +203,16 @@ class HankoLocalizations {
   String get stonesLoadErrorMessage => _strings.stonesLoadErrorMessage;
   String get noStonesLoaded => _strings.noStonesLoaded;
   String get noStonesLoadedMessage => _strings.noStonesLoadedMessage;
+  String get stoneFiltersTitle => _strings.stoneFiltersTitle;
+  String get stoneFilterAll => _strings.stoneFilterAll;
+  String get stoneFilterMaterial => _strings.stoneFilterMaterial;
+  String get stoneFilterColor => _strings.stoneFilterColor;
+  String get stoneFilterPattern => _strings.stoneFilterPattern;
+  String get stoneFilterAvailability => _strings.stoneFilterAvailability;
+  String get stoneFilterReset => _strings.stoneFilterReset;
+  String get noStonesMatchFilters => _strings.noStonesMatchFilters;
+  String get noStonesMatchFiltersMessage =>
+      _strings.noStonesMatchFiltersMessage;
   String get selectStone => _strings.selectStone;
   String get stoneAvailable => _strings.stoneAvailable;
   String get stoneUnavailable => _strings.stoneUnavailable;
@@ -429,6 +439,15 @@ class _HankoStrings {
     required this.stonesLoadErrorMessage,
     required this.noStonesLoaded,
     required this.noStonesLoadedMessage,
+    required this.stoneFiltersTitle,
+    required this.stoneFilterAll,
+    required this.stoneFilterMaterial,
+    required this.stoneFilterColor,
+    required this.stoneFilterPattern,
+    required this.stoneFilterAvailability,
+    required this.stoneFilterReset,
+    required this.noStonesMatchFilters,
+    required this.noStonesMatchFiltersMessage,
     required this.selectStone,
     required this.stoneAvailable,
     required this.stoneUnavailable,
@@ -624,6 +643,15 @@ class _HankoStrings {
   final String stonesLoadErrorMessage;
   final String noStonesLoaded;
   final String noStonesLoadedMessage;
+  final String stoneFiltersTitle;
+  final String stoneFilterAll;
+  final String stoneFilterMaterial;
+  final String stoneFilterColor;
+  final String stoneFilterPattern;
+  final String stoneFilterAvailability;
+  final String stoneFilterReset;
+  final String noStonesMatchFilters;
+  final String noStonesMatchFiltersMessage;
   final String selectStone;
   final String stoneAvailable;
   final String stoneUnavailable;
@@ -853,6 +881,16 @@ const _localizedValues = {
       noStonesLoaded: 'No stones loaded',
       noStonesLoadedMessage:
           'Available one-of-a-kind stones will be shown here.',
+      stoneFiltersTitle: 'Filters',
+      stoneFilterAll: 'All',
+      stoneFilterMaterial: 'Material',
+      stoneFilterColor: 'Color',
+      stoneFilterPattern: 'Pattern',
+      stoneFilterAvailability: 'Availability',
+      stoneFilterReset: 'Reset',
+      noStonesMatchFilters: 'No stones match filters',
+      noStonesMatchFiltersMessage:
+          'Clear or change filters to browse other stones.',
       selectStone: 'Select Stone',
       stoneAvailable: 'Available',
       stoneUnavailable: 'Unavailable',
@@ -1057,6 +1095,15 @@ const _localizedValues = {
       stonesLoadErrorMessage: '販売中の石一覧を再読み込みしてください。',
       noStonesLoaded: '石を読み込んでいません',
       noStonesLoadedMessage: '販売中の一点物の石がここに表示されます。',
+      stoneFiltersTitle: '絞り込み',
+      stoneFilterAll: 'すべて',
+      stoneFilterMaterial: '素材',
+      stoneFilterColor: '色',
+      stoneFilterPattern: '模様',
+      stoneFilterAvailability: '在庫',
+      stoneFilterReset: 'リセット',
+      noStonesMatchFilters: '条件に合う石がありません',
+      noStonesMatchFiltersMessage: '絞り込み条件を変更するか解除してください。',
       selectStone: '石を選択',
       stoneAvailable: '販売中',
       stoneUnavailable: '選択不可',

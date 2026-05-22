@@ -78,6 +78,7 @@ class StoneListingDto {
     required this.id,
     required this.code,
     required this.materialKey,
+    required this.materialLabel,
     required this.size,
     required this.title,
     required this.description,
@@ -86,14 +87,21 @@ class StoneListingDto {
     required this.price,
     required this.status,
     required this.isActive,
+    required this.isOrderable,
     required this.photos,
   });
 
   factory StoneListingDto.fromJson(JsonMap json) {
+    final materialKey = readString(json, 'material_key');
     return StoneListingDto(
       id: readString(json, 'key', fallbackKey: 'id'),
       code: readString(json, 'listing_code', fallbackKey: 'code'),
-      materialKey: readString(json, 'material_key'),
+      materialKey: materialKey,
+      materialLabel: readString(
+        json,
+        'material_label',
+        defaultValue: materialKey,
+      ),
       size: _readSizeLabel(json['size']),
       title: readString(json, 'title'),
       description: readString(json, 'description'),
@@ -104,6 +112,9 @@ class StoneListingDto {
       price: json['price'],
       status: readString(json, 'status'),
       isActive: readBool(json, 'is_active', defaultValue: true),
+      isOrderable: json.containsKey('is_orderable')
+          ? readBool(json, 'is_orderable')
+          : null,
       photos: readJsonList(json, 'photos')
           .map(
             (value) => StoneListingPhotoDto.fromJson(
@@ -117,6 +128,7 @@ class StoneListingDto {
   final String id;
   final String code;
   final String materialKey;
+  final String materialLabel;
   final String size;
   final String title;
   final String description;
@@ -125,6 +137,7 @@ class StoneListingDto {
   final Object? price;
   final String status;
   final bool isActive;
+  final bool? isOrderable;
   final List<StoneListingPhotoDto> photos;
 
   StoneListing toDomain({required String defaultCurrency}) {
@@ -132,6 +145,7 @@ class StoneListingDto {
       id: id,
       code: code,
       materialKey: materialKey,
+      materialLabel: materialLabel,
       sizeLabel: size,
       title: title,
       description: description,
@@ -140,6 +154,7 @@ class StoneListingDto {
       price: _readMoney(price, defaultCurrency),
       status: status,
       isActive: isActive,
+      isOrderable: isOrderable,
       photos: photos.map((photo) => photo.toDomain()).toList(growable: false),
     );
   }

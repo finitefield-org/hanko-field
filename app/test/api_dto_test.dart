@@ -142,6 +142,7 @@ void main() {
                 'key': 'stone_listing_001',
                 'listing_code': 'RQZ-0001',
                 'material_key': 'rose_quartz',
+                'material_label': 'Rose Quartz',
                 'size': '24x24x60 mm',
                 'title': 'Soft Pink Rose Quartz Seal Stone',
                 'description': 'A soft pink rose quartz seal stone.',
@@ -157,6 +158,7 @@ void main() {
                 'price': 18000,
                 'status': 'published',
                 'is_active': true,
+                'is_orderable': true,
                 'photos': [
                   {
                     'asset_id': 'asset_001',
@@ -187,6 +189,7 @@ void main() {
         'pink',
       );
       expect(result.listings.single.id, 'stone_listing_001');
+      expect(result.listings.single.materialLabel, 'Rose Quartz');
       expect(result.listings.single.price.amount, 18000);
       expect(result.listings.single.price.currency, 'JPY');
       expect(result.listings.single.isOrderable, isTrue);

@@ -6,7 +6,7 @@ import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
 import '../domain/stone_listing.dart';
 
-class StonesHomeScreen extends StatelessWidget {
+class StonesHomeScreen extends StatefulWidget {
   const StonesHomeScreen({
     super.key,
     this.result,
@@ -23,44 +23,424 @@ class StonesHomeScreen extends StatelessWidget {
   final ValueChanged<StoneListing>? onSelectStone;
 
   @override
+  State<StonesHomeScreen> createState() => _StonesHomeScreenState();
+}
+
+class _StonesHomeScreenState extends State<StonesHomeScreen> {
+  var _filters = const _StoneFilters();
+
+  @override
+  void didUpdateWidget(covariant StonesHomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.result != widget.result) {
+      _filters = _filters.constrainTo(
+        widget.result?.listings ?? const <StoneListing>[],
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final listings = result?.listings ?? const <StoneListing>[];
+    final listings = widget.result?.listings ?? const <StoneListing>[];
+    final filteredListings = _filters.apply(listings);
 
     return HankoFeaturePage(
       title: l10n.stones,
       children: [
         Text(l10n.browseStonesDescription, style: HankoTextStyles.body),
         const SizedBox(height: HankoSpacing.sm),
-        if (isLoading)
+        if (widget.isLoading)
           HankoStateView.loading(
             title: l10n.stonesLoadingTitle,
             message: l10n.stonesLoadingMessage,
           )
-        else if (loadError != null)
+        else if (widget.loadError != null)
           HankoStateView.error(
             title: l10n.stonesLoadErrorTitle,
             message: l10n.stonesLoadErrorMessage,
             actionLabel: l10n.tryAgain,
-            onAction: onRetry,
+            onAction: widget.onRetry,
           )
         else if (listings.isEmpty)
           HankoStateView.empty(
             title: l10n.noStonesLoaded,
             message: l10n.noStonesLoadedMessage,
           )
-        else
-          for (var index = 0; index < listings.length; index++) ...[
-            _StoneListingCard(
-              listing: listings[index],
-              onSelectStone: onSelectStone,
-            ),
-            if (index < listings.length - 1)
-              const SizedBox(height: HankoSpacing.md),
-          ],
+        else ...[
+          _StoneFiltersPanel(
+            listings: listings,
+            filters: _filters,
+            onChanged: (filters) => setState(() => _filters = filters),
+          ),
+          const SizedBox(height: HankoSpacing.md),
+          if (filteredListings.isEmpty)
+            HankoStateView.empty(
+              title: l10n.noStonesMatchFilters,
+              message: l10n.noStonesMatchFiltersMessage,
+            )
+          else
+            for (var index = 0; index < filteredListings.length; index++) ...[
+              _StoneListingCard(
+                listing: filteredListings[index],
+                onSelectStone: widget.onSelectStone,
+              ),
+              if (index < filteredListings.length - 1)
+                const SizedBox(height: HankoSpacing.md),
+            ],
+        ],
       ],
     );
   }
+}
+
+class _StoneFilters {
+  const _StoneFilters({
+    this.materialKey,
+    this.colorFamily,
+    this.patternPrimary,
+    this.availability,
+  });
+
+  final String? materialKey;
+  final String? colorFamily;
+  final String? patternPrimary;
+  final String? availability;
+
+  bool get hasActive =>
+      materialKey != null ||
+      colorFamily != null ||
+      patternPrimary != null ||
+      availability != null;
+
+  _StoneFilters withMaterialKey(String? value) {
+    return _StoneFilters(
+      materialKey: _normalizeFilterValue(value),
+      colorFamily: colorFamily,
+      patternPrimary: patternPrimary,
+      availability: availability,
+    );
+  }
+
+  _StoneFilters withColorFamily(String? value) {
+    return _StoneFilters(
+      materialKey: materialKey,
+      colorFamily: _normalizeFilterValue(value),
+      patternPrimary: patternPrimary,
+      availability: availability,
+    );
+  }
+
+  _StoneFilters withPatternPrimary(String? value) {
+    return _StoneFilters(
+      materialKey: materialKey,
+      colorFamily: colorFamily,
+      patternPrimary: _normalizeFilterValue(value),
+      availability: availability,
+    );
+  }
+
+  _StoneFilters withAvailability(String? value) {
+    return _StoneFilters(
+      materialKey: materialKey,
+      colorFamily: colorFamily,
+      patternPrimary: patternPrimary,
+      availability: _normalizeFilterValue(value),
+    );
+  }
+
+  _StoneFilters constrainTo(List<StoneListing> listings) {
+    final materialKeys = listings.map((listing) => listing.materialKey).toSet();
+    final colorFamilies = listings
+        .map((listing) => listing.facets.colorFamily)
+        .toSet();
+    final patternPrimaries = listings
+        .map((listing) => listing.facets.patternPrimary)
+        .toSet();
+
+    return _StoneFilters(
+      materialKey: materialKeys.contains(materialKey) ? materialKey : null,
+      colorFamily: colorFamilies.contains(colorFamily) ? colorFamily : null,
+      patternPrimary: patternPrimaries.contains(patternPrimary)
+          ? patternPrimary
+          : null,
+      availability: availability,
+    );
+  }
+
+  List<StoneListing> apply(List<StoneListing> listings) {
+    return listings
+        .where((listing) {
+          if (materialKey != null && listing.materialKey != materialKey) {
+            return false;
+          }
+          if (colorFamily != null &&
+              listing.facets.colorFamily != colorFamily) {
+            return false;
+          }
+          if (patternPrimary != null &&
+              listing.facets.patternPrimary != patternPrimary) {
+            return false;
+          }
+          if (availability == _availableFilterValue && !listing.isOrderable) {
+            return false;
+          }
+          if (availability == _unavailableFilterValue && listing.isOrderable) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
+  }
+}
+
+class _StoneFiltersPanel extends StatelessWidget {
+  const _StoneFiltersPanel({
+    required this.listings,
+    required this.filters,
+    required this.onChanged,
+  });
+
+  final List<StoneListing> listings;
+  final _StoneFilters filters;
+  final ValueChanged<_StoneFilters> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune, color: HankoColors.gold, size: 19),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.stoneFiltersTitle,
+                  style: HankoTextStyles.label,
+                ),
+              ),
+              if (filters.hasActive)
+                TextButton.icon(
+                  key: const Key('stone-filters-reset'),
+                  onPressed: () => onChanged(const _StoneFilters()),
+                  icon: const Icon(Icons.close, size: 16),
+                  label: Text(l10n.stoneFilterReset),
+                ),
+            ],
+          ),
+          const SizedBox(height: HankoSpacing.xs),
+          _StoneFilterGroup(
+            keyPrefix: 'material',
+            label: l10n.stoneFilterMaterial,
+            allLabel: l10n.stoneFilterAll,
+            selectedValue: filters.materialKey,
+            options: _materialOptions(listings),
+            onChanged: (value) => onChanged(filters.withMaterialKey(value)),
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          _StoneFilterGroup(
+            keyPrefix: 'color',
+            label: l10n.stoneFilterColor,
+            allLabel: l10n.stoneFilterAll,
+            selectedValue: filters.colorFamily,
+            options: _tokenOptions(
+              listings.map((listing) => listing.facets.colorFamily),
+            ),
+            onChanged: (value) => onChanged(filters.withColorFamily(value)),
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          _StoneFilterGroup(
+            keyPrefix: 'pattern',
+            label: l10n.stoneFilterPattern,
+            allLabel: l10n.stoneFilterAll,
+            selectedValue: filters.patternPrimary,
+            options: _tokenOptions(
+              listings.map((listing) => listing.facets.patternPrimary),
+            ),
+            onChanged: (value) => onChanged(filters.withPatternPrimary(value)),
+          ),
+          const SizedBox(height: HankoSpacing.sm),
+          _StoneFilterGroup(
+            keyPrefix: 'availability',
+            label: l10n.stoneFilterAvailability,
+            allLabel: l10n.stoneFilterAll,
+            selectedValue: filters.availability,
+            options: [
+              _StoneFilterOption(
+                value: _availableFilterValue,
+                label: l10n.stoneAvailable,
+              ),
+              _StoneFilterOption(
+                value: _unavailableFilterValue,
+                label: l10n.stoneUnavailable,
+              ),
+            ],
+            onChanged: (value) => onChanged(filters.withAvailability(value)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_StoneFilterOption> _materialOptions(List<StoneListing> listings) {
+    final labelsByKey = <String, String>{};
+    for (final listing in listings) {
+      final key = listing.materialKey.trim();
+      if (key.isEmpty || labelsByKey.containsKey(key)) {
+        continue;
+      }
+      labelsByKey[key] = _materialLabel(listing);
+    }
+    final options = labelsByKey.entries
+        .map(
+          (entry) => _StoneFilterOption(value: entry.key, label: entry.value),
+        )
+        .toList(growable: false);
+    options.sort((left, right) => left.label.compareTo(right.label));
+    return options;
+  }
+
+  List<_StoneFilterOption> _tokenOptions(Iterable<String> tokens) {
+    final seen = <String>{};
+    final options = <_StoneFilterOption>[];
+    for (final token in tokens) {
+      final value = token.trim();
+      if (value.isEmpty || !seen.add(value)) {
+        continue;
+      }
+      options.add(
+        _StoneFilterOption(value: value, label: _labelFromToken(value)),
+      );
+    }
+    options.sort((left, right) => left.label.compareTo(right.label));
+    return options;
+  }
+}
+
+class _StoneFilterGroup extends StatelessWidget {
+  const _StoneFilterGroup({
+    required this.keyPrefix,
+    required this.label,
+    required this.allLabel,
+    required this.selectedValue,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String keyPrefix;
+  final String label;
+  final String allLabel;
+  final String? selectedValue;
+  final List<_StoneFilterOption> options;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: HankoTextStyles.compactBody),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _StoneChoiceChip(
+              key: Key('stone-filter-$keyPrefix-all'),
+              label: allLabel,
+              selected: selectedValue == null,
+              onSelected: () => onChanged(null),
+            ),
+            for (final option in options)
+              _StoneChoiceChip(
+                key: Key(
+                  'stone-filter-$keyPrefix-${_filterKeyToken(option.value)}',
+                ),
+                label: option.label,
+                selected: selectedValue == option.value,
+                onSelected: () => onChanged(option.value),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StoneChoiceChip extends StatelessWidget {
+  const _StoneChoiceChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 220),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      selected: selected,
+      showCheckmark: false,
+      avatar: selected
+          ? const Icon(Icons.check, size: 16, color: HankoColors.red)
+          : null,
+      selectedColor: HankoColors.medallion,
+      backgroundColor: HankoColors.surface,
+      side: BorderSide(
+        color: selected ? HankoColors.gold : HankoColors.surfaceBorder,
+      ),
+      labelStyle: HankoTextStyles.compactBody.copyWith(
+        color: selected ? HankoColors.ink : HankoColors.body,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(HankoRadii.sm),
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+}
+
+class _StoneFilterOption {
+  const _StoneFilterOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+const _availableFilterValue = 'available';
+const _unavailableFilterValue = 'unavailable';
+
+String? _normalizeFilterValue(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return null;
+  }
+  return trimmed;
+}
+
+String _materialLabel(StoneListing listing) {
+  final label = listing.materialLabel.trim();
+  if (label.isNotEmpty) {
+    return label;
+  }
+  return _labelFromToken(listing.materialKey);
+}
+
+String _filterKeyToken(String value) {
+  return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]+'), '-');
 }
 
 class _StoneListingCard extends StatelessWidget {
@@ -81,7 +461,7 @@ class _StoneListingCard extends StatelessWidget {
           _StoneListingImage(listing: listing),
           const SizedBox(height: HankoSpacing.md),
           Text(
-            _labelFromToken(listing.materialKey),
+            _materialLabel(listing),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: HankoTextStyles.compactBody,
