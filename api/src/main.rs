@@ -44,6 +44,8 @@ const DEFAULT_GEMINI_MODEL: &str = "gemini-2.5-flash-lite";
 const DEFAULT_GEMINI_THINKING_BUDGET: i32 = 1024;
 const DEFAULT_KANJI_CANDIDATE_COUNT: usize = 6;
 const MAX_KANJI_CANDIDATE_COUNT: usize = 10;
+const DEFAULT_SEAL_DESIGN_VARIANT_COUNT: usize = 3;
+const SEAL_DESIGN_IMAGE_SIZE: usize = 1024;
 
 #[derive(Debug, Clone)]
 struct AppConfig {
@@ -458,6 +460,172 @@ struct KanjiNameCandidate {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct GenerateSealDesignsRequest {
+    input_name: String,
+    kanji: String,
+    shape: String,
+    style: String,
+    stroke_weight: String,
+    balance: String,
+    variant_count: Option<usize>,
+    generation_rules: Option<SealGenerationRulesRequest>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct SealGenerationRulesRequest {
+    max_characters: Option<usize>,
+    avoid_complex_characters: Option<bool>,
+    engraving_friendly: Option<bool>,
+    avoid_thin_lines: Option<bool>,
+    avoid_decorative_details: Option<bool>,
+    plain_background: Option<bool>,
+}
+
+#[derive(Debug, Clone)]
+struct GenerateSealDesignsInput {
+    input_name: String,
+    kanji: String,
+    shape: SealShape,
+    style: SealStyleName,
+    stroke_weight: SealStrokeWeight,
+    balance: SealBalance,
+    variant_count: usize,
+    generation_rules: SealGenerationRules,
+}
+
+#[derive(Debug, Clone)]
+struct SealGenerationRules {
+    max_characters: usize,
+    avoid_complex_characters: bool,
+    engraving_friendly: bool,
+    avoid_thin_lines: bool,
+    avoid_decorative_details: bool,
+    plain_background: bool,
+}
+
+impl Default for SealGenerationRules {
+    fn default() -> Self {
+        Self {
+            max_characters: 2,
+            avoid_complex_characters: true,
+            engraving_friendly: true,
+            avoid_thin_lines: true,
+            avoid_decorative_details: true,
+            plain_background: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealShape {
+    Square,
+    Round,
+}
+
+impl SealShape {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Square => "square",
+            Self::Round => "round",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Square => "Use a square outer seal frame with balanced inner margins.",
+            Self::Round => "Use a round outer seal frame with balanced inner margins.",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealStyleName {
+    Traditional,
+    Elegant,
+    Soft,
+    Bold,
+}
+
+impl SealStyleName {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Traditional => "traditional",
+            Self::Elegant => "elegant",
+            Self::Soft => "soft",
+            Self::Bold => "bold",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Traditional => "Style: traditional hanko composition with dignified spacing.",
+            Self::Elegant => "Style: elegant composition with refined, calm proportions.",
+            Self::Soft => "Style: soft composition with gentle curves and friendly balance.",
+            Self::Bold => "Style: bold composition with strong strokes and high legibility.",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealStrokeWeight {
+    Standard,
+    Bold,
+}
+
+impl SealStrokeWeight {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::Bold => "bold",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Standard => "Stroke weight: standard, with engraving-safe line thickness.",
+            Self::Bold => "Stroke weight: bold, with strong engraving-safe line thickness.",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SealBalance {
+    Airy,
+    Balanced,
+    Dense,
+}
+
+impl SealBalance {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Airy => "airy",
+            Self::Balanced => "balanced",
+            Self::Dense => "dense",
+        }
+    }
+
+    fn prompt_instruction(self) -> &'static str {
+        match self {
+            Self::Airy => "Balance: airy spacing with readable, uncluttered strokes.",
+            Self::Balanced => "Balance: balanced spacing and consistent visual weight.",
+            Self::Dense => "Balance: dense composition while preserving readability.",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SealDesignVariant {
+    id: String,
+    storage_path: String,
+    download_url: String,
+    label: String,
+    width: usize,
+    height: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateOrderRequest {
     channel: String,
     locale: String,
@@ -597,6 +765,10 @@ async fn run() -> Result<()> {
         .route(
             "/v1/kanji-candidates",
             post(handle_generate_kanji_candidates),
+        )
+        .route(
+            "/v1/seal-designs/generate",
+            post(handle_generate_seal_designs),
         )
         .route("/v1/orders", post(handle_create_order))
         .route(
@@ -1091,6 +1263,78 @@ async fn handle_generate_kanji_candidates(State(state): State<AppState>, body: B
                     "character_count": candidate.character_count,
                     "stroke_complexity": candidate.stroke_complexity,
                     "engraving_suitability": candidate.engraving_suitability,
+                })
+            }).collect::<Vec<_>>(),
+        }),
+    )
+}
+
+async fn handle_generate_seal_designs(State(state): State<AppState>, body: Bytes) -> Response {
+    if state.gemini.api_key.trim().is_empty() {
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "gemini_not_configured",
+            "gemini api key is not configured",
+        );
+    }
+
+    let request = match serde_json::from_slice::<GenerateSealDesignsRequest>(&body) {
+        Ok(value) => value,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_json",
+                &format!("invalid JSON: {err}"),
+            );
+        }
+    };
+
+    let input = match validate_generate_seal_designs_request(request) {
+        Ok(value) => value,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "validation_error",
+                &err.to_string(),
+            );
+        }
+    };
+
+    let labels = match generate_seal_design_labels_with_gemini(&state, &input).await {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("failed to generate seal design variants with gemini: {err:#}");
+            return error_response(
+                StatusCode::BAD_GATEWAY,
+                "gemini_generation_failed",
+                "failed to generate seal design variants",
+            );
+        }
+    };
+
+    if labels.len() != input.variant_count {
+        return error_response(
+            StatusCode::BAD_GATEWAY,
+            "gemini_generation_failed",
+            "gemini returned an unexpected number of seal design variants",
+        );
+    }
+
+    let request_id = format!("seal_request_{}", Uuid::new_v4().simple());
+    let variants = build_seal_design_variants(&state.storage_assets_bucket, &request_id, &labels);
+
+    json_response(
+        StatusCode::OK,
+        json!({
+            "request_id": request_id,
+            "variants": variants.into_iter().map(|variant| {
+                json!({
+                    "id": variant.id,
+                    "storage_path": variant.storage_path,
+                    "download_url": variant.download_url,
+                    "label": variant.label,
+                    "width": variant.width,
+                    "height": variant.height,
                 })
             }).collect::<Vec<_>>(),
         }),
@@ -3016,6 +3260,138 @@ fn hash_order_request(input: &CreateOrderInput) -> Result<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+fn validate_generate_seal_designs_request(
+    request: GenerateSealDesignsRequest,
+) -> Result<GenerateSealDesignsInput> {
+    let input_name = request.input_name.trim().to_owned();
+    if input_name.is_empty() {
+        bail!("input_name is required");
+    }
+    if input_name.chars().count() > 120 {
+        bail!("input_name must be 120 characters or fewer");
+    }
+
+    let rules = validate_seal_generation_rules(request.generation_rules.unwrap_or_default())?;
+
+    let kanji = request.kanji.trim().to_owned();
+    if kanji.is_empty() {
+        bail!("kanji is required");
+    }
+    let kanji_count = kanji.chars().count();
+    if kanji_count > rules.max_characters {
+        bail!("kanji must be {} characters or fewer", rules.max_characters);
+    }
+    if kanji.chars().any(char::is_whitespace) {
+        bail!("kanji must not contain whitespace");
+    }
+
+    let shape = parse_seal_shape(&request.shape)?;
+    let style = parse_seal_style_name(&request.style)?;
+    let stroke_weight = parse_seal_stroke_weight(&request.stroke_weight)?;
+    let balance = parse_seal_balance(&request.balance)?;
+
+    let variant_count = request
+        .variant_count
+        .unwrap_or(DEFAULT_SEAL_DESIGN_VARIANT_COUNT);
+    if variant_count != DEFAULT_SEAL_DESIGN_VARIANT_COUNT {
+        bail!(
+            "variant_count must be {}",
+            DEFAULT_SEAL_DESIGN_VARIANT_COUNT
+        );
+    }
+
+    Ok(GenerateSealDesignsInput {
+        input_name,
+        kanji,
+        shape,
+        style,
+        stroke_weight,
+        balance,
+        variant_count,
+        generation_rules: rules,
+    })
+}
+
+fn validate_seal_generation_rules(
+    request: SealGenerationRulesRequest,
+) -> Result<SealGenerationRules> {
+    let defaults = SealGenerationRules::default();
+    let rules = SealGenerationRules {
+        max_characters: request.max_characters.unwrap_or(defaults.max_characters),
+        avoid_complex_characters: request
+            .avoid_complex_characters
+            .unwrap_or(defaults.avoid_complex_characters),
+        engraving_friendly: request
+            .engraving_friendly
+            .unwrap_or(defaults.engraving_friendly),
+        avoid_thin_lines: request
+            .avoid_thin_lines
+            .unwrap_or(defaults.avoid_thin_lines),
+        avoid_decorative_details: request
+            .avoid_decorative_details
+            .unwrap_or(defaults.avoid_decorative_details),
+        plain_background: request
+            .plain_background
+            .unwrap_or(defaults.plain_background),
+    };
+
+    if rules.max_characters == 0 || rules.max_characters > 2 {
+        bail!("generation_rules.max_characters must be in range 1-2");
+    }
+    if !rules.avoid_complex_characters {
+        bail!("generation_rules.avoid_complex_characters must be true");
+    }
+    if !rules.engraving_friendly {
+        bail!("generation_rules.engraving_friendly must be true");
+    }
+    if !rules.avoid_thin_lines {
+        bail!("generation_rules.avoid_thin_lines must be true");
+    }
+    if !rules.avoid_decorative_details {
+        bail!("generation_rules.avoid_decorative_details must be true");
+    }
+    if !rules.plain_background {
+        bail!("generation_rules.plain_background must be true");
+    }
+
+    Ok(rules)
+}
+
+fn parse_seal_shape(raw: &str) -> Result<SealShape> {
+    match raw.trim().to_lowercase().as_str() {
+        "square" => Ok(SealShape::Square),
+        "round" => Ok(SealShape::Round),
+        _ => bail!("shape must be one of square, round"),
+    }
+}
+
+fn parse_seal_style_name(raw: &str) -> Result<SealStyleName> {
+    match raw.trim().to_lowercase().as_str() {
+        "traditional" => Ok(SealStyleName::Traditional),
+        "elegant" => Ok(SealStyleName::Elegant),
+        "soft" => Ok(SealStyleName::Soft),
+        "bold" => Ok(SealStyleName::Bold),
+        _ => bail!("style must be one of traditional, elegant, soft, bold"),
+    }
+}
+
+fn parse_seal_stroke_weight(raw: &str) -> Result<SealStrokeWeight> {
+    match raw.trim().to_lowercase().as_str() {
+        "standard" => Ok(SealStrokeWeight::Standard),
+        "bold" => Ok(SealStrokeWeight::Bold),
+        _ => bail!("stroke_weight must be one of standard, bold"),
+    }
+}
+
+fn parse_seal_balance(raw: &str) -> Result<SealBalance> {
+    match raw.trim().to_lowercase().as_str() {
+        "airy" => Ok(SealBalance::Airy),
+        "balanced" => Ok(SealBalance::Balanced),
+        "dense" => Ok(SealBalance::Dense),
+        _ => bail!("balance must be one of airy, balanced, dense"),
+    }
+}
+
 fn validate_generate_kanji_candidates_request(
     request: GenerateKanjiCandidatesRequest,
 ) -> Result<GenerateKanjiCandidatesInput> {
@@ -3242,6 +3618,162 @@ fn stone_listing_snapshot_fields(
     fields
 }
 
+async fn generate_seal_design_labels_with_gemini(
+    state: &AppState,
+    input: &GenerateSealDesignsInput,
+) -> Result<Vec<String>> {
+    let request_body = build_seal_designs_request_body(input);
+
+    let endpoint = format!(
+        "{}/v1beta/models/{}:generateContent",
+        state.gemini.base_url.trim_end_matches('/'),
+        state.gemini.model.trim()
+    );
+
+    let response = state
+        .http_client
+        .post(endpoint)
+        .query(&[("key", state.gemini.api_key.as_str())])
+        .json(&request_body)
+        .send()
+        .await
+        .context("failed to call gemini generateContent")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<unable to read response body>".to_owned());
+        bail!("gemini request failed status={} body={}", status, body);
+    }
+
+    let payload = response
+        .json::<JsonValue>()
+        .await
+        .context("failed to parse gemini response payload")?;
+
+    let text = extract_gemini_response_text(&payload)
+        .ok_or_else(|| anyhow!("gemini response did not include text"))?;
+
+    let labels = parse_seal_design_labels_from_gemini_text(&text, input.variant_count)?;
+    if labels.len() != input.variant_count {
+        bail!(
+            "gemini returned {} seal design labels, expected {}",
+            labels.len(),
+            input.variant_count
+        );
+    }
+    Ok(labels)
+}
+
+fn build_seal_designs_request_body(input: &GenerateSealDesignsInput) -> JsonValue {
+    json!({
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": build_seal_designs_prompt(input),
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.35,
+            "responseMimeType": "application/json",
+            "responseJsonSchema": build_seal_designs_response_schema(input.variant_count),
+            "thinkingConfig": {
+                "thinkingBudget": DEFAULT_GEMINI_THINKING_BUDGET,
+            }
+        }
+    })
+}
+
+fn build_seal_designs_response_schema(variant_count: usize) -> JsonValue {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "variants": {
+                "type": "array",
+                "minItems": variant_count,
+                "maxItems": variant_count,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "description": "A concise display label for one generated seal design variant.",
+                        },
+                    },
+                    "required": ["label"],
+                },
+            },
+        },
+        "required": ["variants"],
+    })
+}
+
+fn build_seal_designs_prompt(input: &GenerateSealDesignsInput) -> String {
+    format!(
+        "Generate exactly {} unique hanko seal design variants for image generation.\n\
+Input name: \"{}\"\n\
+Kanji to render exactly: \"{}\"\n\
+Shape: {}\n\
+Style: {}\n\
+Stroke weight: {}\n\
+Balance: {}\n\
+{}\n\
+{}\n\
+{}\n\
+{}\n\
+Rules:\n\
+- Render only the specified kanji, with no extra characters.\n\
+- The design must fit {} or fewer CJK Han characters.\n\
+- Avoid overly complex character treatments or stroke arrangements.\n\
+- Use engraving-friendly geometry with no thin lines, decorative details, background pattern, gradients, shadows, or texture.\n\
+- Use a plain background and keep the character shapes readable at small gemstone-seal size.\n\
+- Return only JSON in this exact shape: {{\"variants\":[{{\"label\":\"Elegant and balanced\"}}]}}",
+        input.variant_count,
+        input.input_name,
+        input.kanji,
+        input.shape.as_str(),
+        input.style.as_str(),
+        input.stroke_weight.as_str(),
+        input.balance.as_str(),
+        input.shape.prompt_instruction(),
+        input.style.prompt_instruction(),
+        input.stroke_weight.prompt_instruction(),
+        input.balance.prompt_instruction(),
+        input.generation_rules.max_characters
+    )
+}
+
+fn build_seal_design_variants(
+    storage_assets_bucket: &str,
+    request_id: &str,
+    labels: &[String],
+) -> Vec<SealDesignVariant> {
+    labels
+        .iter()
+        .enumerate()
+        .map(|(index, label)| {
+            let id = format!("seal_variant_{:03}", index + 1);
+            let storage_path = format!("seal_designs/{request_id}/{id}.png");
+            SealDesignVariant {
+                id,
+                download_url: make_asset_url(storage_assets_bucket, &storage_path),
+                storage_path,
+                label: label.clone(),
+                width: SEAL_DESIGN_IMAGE_SIZE,
+                height: SEAL_DESIGN_IMAGE_SIZE,
+            }
+        })
+        .collect()
+}
+
 async fn generate_kanji_candidates_with_gemini(
     state: &AppState,
     input: &GenerateKanjiCandidatesInput,
@@ -3437,6 +3969,48 @@ fn extract_gemini_response_text(payload: &JsonValue) -> Option<String> {
         }
     }
     None
+}
+
+fn parse_seal_design_labels_from_gemini_text(
+    raw_text: &str,
+    max_count: usize,
+) -> Result<Vec<String>> {
+    let parsed = parse_json_value_loose(raw_text)?;
+    let array = parsed
+        .get("variants")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| anyhow!("gemini response JSON must contain variants array"))?;
+
+    let mut labels = Vec::with_capacity(array.len());
+    let mut seen = HashSet::new();
+    for entry in array {
+        let Some(label) = normalize_seal_design_label(entry) else {
+            continue;
+        };
+        if !seen.insert(label.to_lowercase()) {
+            continue;
+        }
+        labels.push(label);
+        if labels.len() >= max_count {
+            break;
+        }
+    }
+
+    Ok(labels)
+}
+
+fn normalize_seal_design_label(value: &JsonValue) -> Option<String> {
+    let label = read_json_string(value, &["label", "title", "name"]);
+    if label.is_empty() {
+        return None;
+    }
+
+    let normalized = label.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        return None;
+    }
+
+    Some(normalized.chars().take(80).collect())
 }
 
 fn parse_kanji_candidates_from_gemini_text(
@@ -5294,6 +5868,149 @@ mod tests {
             stripe_transition("checkout.session.expired"),
             ("failed", "canceled", "payment_failed")
         );
+    }
+
+    fn valid_seal_designs_request() -> GenerateSealDesignsRequest {
+        GenerateSealDesignsRequest {
+            input_name: "Michael".to_owned(),
+            kanji: "美空".to_owned(),
+            shape: "square".to_owned(),
+            style: "elegant".to_owned(),
+            stroke_weight: "standard".to_owned(),
+            balance: "balanced".to_owned(),
+            variant_count: Some(3),
+            generation_rules: Some(SealGenerationRulesRequest {
+                max_characters: Some(2),
+                avoid_complex_characters: Some(true),
+                engraving_friendly: Some(true),
+                avoid_thin_lines: Some(true),
+                avoid_decorative_details: Some(true),
+                plain_background: Some(true),
+            }),
+        }
+    }
+
+    #[test]
+    fn validate_generate_seal_designs_request_accepts_contract_payload() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+
+        assert_eq!(input.input_name, "Michael");
+        assert_eq!(input.kanji, "美空");
+        assert_eq!(input.shape, SealShape::Square);
+        assert_eq!(input.style, SealStyleName::Elegant);
+        assert_eq!(input.stroke_weight, SealStrokeWeight::Standard);
+        assert_eq!(input.balance, SealBalance::Balanced);
+        assert_eq!(input.variant_count, DEFAULT_SEAL_DESIGN_VARIANT_COUNT);
+        assert_eq!(input.generation_rules.max_characters, 2);
+        assert!(input.generation_rules.engraving_friendly);
+    }
+
+    #[test]
+    fn validate_generate_seal_designs_request_rejects_non_three_variant_count() {
+        let mut request = valid_seal_designs_request();
+        request.variant_count = Some(2);
+
+        let err = validate_generate_seal_designs_request(request)
+            .expect_err("request must fail for non-MVP variant count");
+        assert!(err.to_string().contains("variant_count must be 3"));
+    }
+
+    #[test]
+    fn validate_generate_seal_designs_request_rejects_unsafe_generation_rules() {
+        let mut request = valid_seal_designs_request();
+        request.generation_rules = Some(SealGenerationRulesRequest {
+            max_characters: Some(2),
+            avoid_complex_characters: Some(true),
+            engraving_friendly: Some(true),
+            avoid_thin_lines: Some(false),
+            avoid_decorative_details: Some(true),
+            plain_background: Some(true),
+        });
+
+        let err = validate_generate_seal_designs_request(request)
+            .expect_err("request must fail when thin lines are allowed");
+        assert!(
+            err.to_string()
+                .contains("generation_rules.avoid_thin_lines must be true")
+        );
+    }
+
+    #[test]
+    fn parse_seal_design_labels_from_gemini_text_accepts_markdown_json() {
+        let payload = r#"
+```json
+{
+  "variants": [
+    { "label": "Elegant and balanced" },
+    { "label": "Soft spacing" },
+    { "label": "Bold readable seal" }
+  ]
+}
+```
+"#;
+
+        let labels =
+            parse_seal_design_labels_from_gemini_text(payload, 3).expect("payload must parse");
+        assert_eq!(
+            labels,
+            vec!["Elegant and balanced", "Soft spacing", "Bold readable seal"]
+        );
+    }
+
+    #[test]
+    fn build_seal_designs_request_body_enables_schema_for_three_variants() {
+        let input = validate_generate_seal_designs_request(valid_seal_designs_request())
+            .expect("request must be valid");
+
+        let body = build_seal_designs_request_body(&input);
+        assert_eq!(
+            body["generationConfig"]["thinkingConfig"]["thinkingBudget"],
+            json!(DEFAULT_GEMINI_THINKING_BUDGET)
+        );
+        assert_eq!(
+            body["generationConfig"]["responseMimeType"],
+            json!("application/json")
+        );
+        assert_eq!(body["generationConfig"]["temperature"], json!(0.35));
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["minItems"],
+            json!(3)
+        );
+        assert_eq!(
+            body["generationConfig"]["responseJsonSchema"]["properties"]["variants"]["maxItems"],
+            json!(3)
+        );
+        assert!(
+            body["contents"][0]["parts"][0]["text"]
+                .as_str()
+                .expect("prompt must be text")
+                .contains("no thin lines")
+        );
+    }
+
+    #[test]
+    fn build_seal_design_variants_returns_canonical_paths() {
+        let labels = vec![
+            "Elegant and balanced".to_owned(),
+            "Soft spacing".to_owned(),
+            "Bold readable seal".to_owned(),
+        ];
+
+        let variants = build_seal_design_variants("hanko-assets", "seal_request_001", &labels);
+
+        assert_eq!(variants.len(), 3);
+        assert_eq!(variants[0].id, "seal_variant_001");
+        assert_eq!(
+            variants[0].storage_path,
+            "seal_designs/seal_request_001/seal_variant_001.png"
+        );
+        assert_eq!(
+            variants[0].download_url,
+            "https://storage.googleapis.com/hanko-assets/seal_designs/seal_request_001/seal_variant_001.png"
+        );
+        assert_eq!(variants[0].width, SEAL_DESIGN_IMAGE_SIZE);
+        assert_eq!(variants[0].height, SEAL_DESIGN_IMAGE_SIZE);
     }
 
     #[test]
