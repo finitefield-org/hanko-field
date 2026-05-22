@@ -69,6 +69,8 @@ class OrderFlowEntryScreen extends StatelessWidget {
     return OrderCombinationReviewScreen(
       draft: orderDraft,
       onBack: onBack,
+      onChangeSeal: onChooseSeal,
+      onChangeStone: onChooseStone,
       onContinueToShipping: onContinueToShipping,
     );
   }
@@ -169,11 +171,15 @@ class OrderCombinationReviewScreen extends StatelessWidget {
     super.key,
     required this.draft,
     this.onBack,
+    this.onChangeSeal,
+    this.onChangeStone,
     this.onContinueToShipping,
   });
 
   final OrderDraft draft;
   final VoidCallback? onBack;
+  final VoidCallback? onChangeSeal;
+  final VoidCallback? onChangeStone;
   final VoidCallback? onContinueToShipping;
 
   @override
@@ -194,9 +200,17 @@ class OrderCombinationReviewScreen extends StatelessWidget {
       children: [
         Text(l10n.orderReviewMessage, style: HankoTextStyles.body),
         const SizedBox(height: HankoSpacing.md),
-        _SealSummaryCard(selection: seal),
+        _SealSummaryCard(
+          selection: seal,
+          actionLabel: l10n.orderChangeSealAction,
+          onAction: onChangeSeal,
+        ),
         const SizedBox(height: HankoSpacing.md),
-        _StoneSummaryCard(selection: stone),
+        _StoneSummaryCard(
+          selection: stone,
+          actionLabel: l10n.orderChangeStoneAction,
+          onAction: onChangeStone,
+        ),
         const SizedBox(height: HankoSpacing.md),
         _OrderPricingCard(summary: pricing),
         const SizedBox(height: HankoSpacing.md),
@@ -466,9 +480,15 @@ class _SecondaryOrderAction extends StatelessWidget {
 }
 
 class _SealSummaryCard extends StatelessWidget {
-  const _SealSummaryCard({required this.selection});
+  const _SealSummaryCard({
+    required this.selection,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final OrderDraftSealSelection selection;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -478,7 +498,11 @@ class _SealSummaryCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final preview = _OrderSealPreview(selection: selection);
-          final detail = _SealSummaryDetails(selection: selection);
+          final detail = _SealSummaryDetails(
+            selection: selection,
+            actionLabel: actionLabel,
+            onAction: onAction,
+          );
           if (constraints.maxWidth < 330) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -504,9 +528,15 @@ class _SealSummaryCard extends StatelessWidget {
 }
 
 class _SealSummaryDetails extends StatelessWidget {
-  const _SealSummaryDetails({required this.selection});
+  const _SealSummaryDetails({
+    required this.selection,
+    required this.actionLabel,
+    required this.onAction,
+  });
 
   final OrderDraftSealSelection selection;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +557,14 @@ class _SealSummaryDetails extends StatelessWidget {
           value: _sealShapeLabel(l10n, selection.shape),
           hasDivider: false,
         ),
+        if (actionLabel != null) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: actionLabel!,
+            icon: Icons.arrow_forward,
+            onPressed: onAction,
+          ),
+        ],
       ],
     );
   }
@@ -608,9 +646,15 @@ class _SealPreviewFallback extends StatelessWidget {
 }
 
 class _StoneSummaryCard extends StatelessWidget {
-  const _StoneSummaryCard({required this.selection});
+  const _StoneSummaryCard({
+    required this.selection,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final OrderDraftStoneSelection selection;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +666,13 @@ class _StoneSummaryCard extends StatelessWidget {
         children: [
           _OrderStonePreview(selection: selection),
           const SizedBox(width: HankoSpacing.lg),
-          Expanded(child: _StoneSummaryDetails(selection: selection)),
+          Expanded(
+            child: _StoneSummaryDetails(
+              selection: selection,
+              actionLabel: actionLabel,
+              onAction: onAction,
+            ),
+          ),
         ],
       ),
     );
@@ -678,9 +728,15 @@ class _StonePreviewFallback extends StatelessWidget {
 }
 
 class _StoneSummaryDetails extends StatelessWidget {
-  const _StoneSummaryDetails({required this.selection});
+  const _StoneSummaryDetails({
+    required this.selection,
+    required this.actionLabel,
+    required this.onAction,
+  });
 
   final OrderDraftStoneSelection selection;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -710,6 +766,14 @@ class _StoneSummaryDetails extends StatelessWidget {
               : l10n.stoneUnavailable,
           available: selection.isOrderable,
         ),
+        if (actionLabel != null) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SecondaryOrderAction(
+            label: actionLabel!,
+            icon: Icons.arrow_forward,
+            onPressed: onAction,
+          ),
+        ],
       ],
     );
   }

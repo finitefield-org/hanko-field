@@ -116,10 +116,17 @@ class _HankoTabNavigationShellState extends State<HankoTabNavigationShell> {
         selectedTab != _currentTab) {
       _currentTab = selectedTab;
     }
-    _pagesByTab = {
+    final pagesByTab = {
       for (final tab in widget.tabs)
         tab.tab: _pagesByTab[tab.tab] ?? [tab.rootPage],
     };
+    if (selectedTab != null && nextTabs.contains(selectedTab)) {
+      final selectedDefinition = widget.tabs.firstWhere(
+        (tab) => tab.tab == selectedTab,
+      );
+      pagesByTab[selectedTab] = [selectedDefinition.rootPage];
+    }
+    _pagesByTab = pagesByTab;
   }
 
   int get _currentIndex {

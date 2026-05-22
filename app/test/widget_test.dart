@@ -1649,6 +1649,104 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M08-T04 returns to My Seals and Stones to change choices', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+      _localSealDesign(id: 'local_seal_002', selectedKanji: '光', style: 'bold'),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    final stoneListings = [
+      _stoneListing(),
+      _stoneListing(
+        id: 'stone_listing_002',
+        title: 'Blue Lapis Seal Stone',
+        materialKey: 'lapis_lazuli',
+        materialLabel: 'Lapis Lazuli',
+        colorFamily: 'blue',
+        patternPrimary: 'flecked',
+        priceAmount: 24000,
+        sortOrder: 1,
+      ),
+    ];
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async =>
+          _stoneListingsResult(listings: stoneListings),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('My Seals').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View Details').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Choose a Stone').last);
+    await tester.pump();
+    await tester.tap(find.text('Choose a Stone').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Select Stone').first);
+    await tester.pump();
+    await tester.tap(find.text('Select Stone').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
+    expect(find.text('Change Seal'), findsOneWidget);
+    expect(find.text('Change Stone'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Change Seal'));
+    await tester.pump();
+    await tester.tap(find.text('Change Seal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved on this device'), findsOneWidget);
+
+    await tester.tap(find.text('View Details').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose for Order'));
+    await tester.pump();
+    await tester.tap(find.text('Choose for Order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
+    expect(find.text('光'), findsWidgets);
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Change Stone'));
+    await tester.pump();
+    await tester.tap(find.text('Change Stone'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Soft Pink Rose Quartz Seal Stone'), findsOneWidget);
+    expect(find.text('Blue Lapis Seal Stone'), findsOneWidget);
+
+    await tester.tap(find.text('Select Stone').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Order Review'), findsOneWidget);
+    expect(find.text('光'), findsWidgets);
+    expect(find.text('Blue Lapis Seal Stone'), findsOneWidget);
+    expect(find.text('¥24,000'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {

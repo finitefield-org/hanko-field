@@ -257,9 +257,11 @@ class HankoLocalizations {
   String get orderMissingSealMessage => _strings.orderMissingSealMessage;
   String get orderMissingSealNotice => _strings.orderMissingSealNotice;
   String get orderChooseSealAction => _strings.orderChooseSealAction;
+  String get orderChangeSealAction => _strings.orderChangeSealAction;
   String get orderMissingStoneTitle => _strings.orderMissingStoneTitle;
   String get orderMissingStoneMessage => _strings.orderMissingStoneMessage;
   String get orderChooseStoneAction => _strings.orderChooseStoneAction;
+  String get orderChangeStoneAction => _strings.orderChangeStoneAction;
   String get orderReviewTitle => _strings.orderReviewTitle;
   String get orderReviewMessage => _strings.orderReviewMessage;
   String get orderItemPriceLabel => _strings.orderItemPriceLabel;
@@ -535,9 +537,11 @@ class _HankoStrings {
     required this.orderMissingSealMessage,
     required this.orderMissingSealNotice,
     required this.orderChooseSealAction,
+    required this.orderChangeSealAction,
     required this.orderMissingStoneTitle,
     required this.orderMissingStoneMessage,
     required this.orderChooseStoneAction,
+    required this.orderChangeStoneAction,
     required this.orderReviewTitle,
     required this.orderReviewMessage,
     required this.orderItemPriceLabel,
@@ -782,9 +786,11 @@ class _HankoStrings {
   final String orderMissingSealMessage;
   final String orderMissingSealNotice;
   final String orderChooseSealAction;
+  final String orderChangeSealAction;
   final String orderMissingStoneTitle;
   final String orderMissingStoneMessage;
   final String orderChooseStoneAction;
+  final String orderChangeStoneAction;
   final String orderReviewTitle;
   final String orderReviewMessage;
   final String orderItemPriceLabel;
@@ -1070,10 +1076,12 @@ const _localizedValues = {
       orderMissingSealNotice:
           'A seal design is required to complete this custom order.',
       orderChooseSealAction: 'Choose a Seal',
+      orderChangeSealAction: 'Change Seal',
       orderMissingStoneTitle: 'Stone missing',
       orderMissingStoneMessage:
           'Choose a gemstone seal stone before continuing to checkout.',
       orderChooseStoneAction: 'Choose a Stone',
+      orderChangeStoneAction: 'Change Stone',
       orderReviewTitle: 'Order Review',
       orderReviewMessage:
           'Review the selected seal design and one-of-a-kind stone before entering shipping details.',
@@ -1330,9 +1338,11 @@ const _localizedValues = {
       orderMissingSealMessage: 'ご注文に進む前に、印影デザインを選択してください。',
       orderMissingSealNotice: '印影デザインは、ご注文を完了するために必要な項目です。必ずご選択ください。',
       orderChooseSealAction: '印影を選ぶ',
+      orderChangeSealAction: '印影を変更',
       orderMissingStoneTitle: '宝石材が未選択です',
       orderMissingStoneMessage: 'ご注文に進む前に、宝石材を選択してください。',
       orderChooseStoneAction: '宝石材を選ぶ',
+      orderChangeStoneAction: '宝石材を変更',
       orderReviewTitle: 'ご注文内容確認',
       orderReviewMessage: '配送先入力へ進む前に、選択した印影と一点物の石を確認してください。',
       orderItemPriceLabel: '商品価格',
