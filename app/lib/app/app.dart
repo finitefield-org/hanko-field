@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:declarative_nav/declarative_nav.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/common/common.dart';
@@ -13,7 +14,7 @@ import 'localization/app_localization.dart';
 import 'navigation/app_navigation_shell.dart';
 import 'theme/app_theme.dart';
 
-class HankoApp extends StatelessWidget {
+class HankoApp extends StatefulWidget {
   const HankoApp({
     super.key,
     this.locale,
@@ -26,6 +27,8 @@ class HankoApp extends StatelessWidget {
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.createOrder = createOrderWithDefaultApi,
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
+    this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
+    this.initialCheckoutRoute,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
   });
@@ -40,30 +43,79 @@ class HankoApp extends StatelessWidget {
   final StoneListingDetailLoader getStoneListingDetail;
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
+  final CheckoutUrlLauncher openCheckoutUrl;
+  final String? initialCheckoutRoute;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
+
+  @override
+  State<HankoApp> createState() => _HankoAppState();
+}
+
+class _HankoAppState extends State<HankoApp> with WidgetsBindingObserver {
+  final _checkoutRouteNotifier = ValueNotifier<String?>(null);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final route =
+          widget.initialCheckoutRoute ??
+          WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+      _publishCheckoutReturnRoute(route);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _checkoutRouteNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  Future<bool> didPushRouteInformation(
+    RouteInformation routeInformation,
+  ) async {
+    return _publishCheckoutReturnRoute(routeInformation.uri.toString());
+  }
+
+  bool _publishCheckoutReturnRoute(String route) {
+    if (parseCheckoutReturnRoute(route) == null) {
+      return false;
+    }
+    _checkoutRouteNotifier.value = route;
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       onGenerateTitle: (context) => context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
-      locale: locale,
+      locale: widget.locale,
       supportedLocales: HankoLocalizations.supportedLocales,
       localizationsDelegates: HankoLocalizations.localizationsDelegates,
       theme: HankoTheme.light(),
       home: _AppLaunchGate(
-        hasSeenOnboardingResolver: hasSeenOnboardingResolver,
-        markOnboardingSeen: markOnboardingSeen,
-        splashMinimumDuration: splashMinimumDuration,
-        generateKanjiCandidates: generateKanjiCandidates,
-        generateSealDesigns: generateSealDesigns,
-        listStoneListings: listStoneListings,
-        getStoneListingDetail: getStoneListingDetail,
-        createOrder: createOrder,
-        createCheckoutSession: createCheckoutSession,
-        localSealDesignRepository: localSealDesignRepository,
-        localOrderDraftRepository: localOrderDraftRepository,
+        hasSeenOnboardingResolver: widget.hasSeenOnboardingResolver,
+        markOnboardingSeen: widget.markOnboardingSeen,
+        splashMinimumDuration: widget.splashMinimumDuration,
+        generateKanjiCandidates: widget.generateKanjiCandidates,
+        generateSealDesigns: widget.generateSealDesigns,
+        listStoneListings: widget.listStoneListings,
+        getStoneListingDetail: widget.getStoneListingDetail,
+        createOrder: widget.createOrder,
+        createCheckoutSession: widget.createCheckoutSession,
+        openCheckoutUrl: widget.openCheckoutUrl,
+        initialCheckoutRoute: widget.initialCheckoutRoute,
+        checkoutRouteListenable: _checkoutRouteNotifier,
+        localSealDesignRepository: widget.localSealDesignRepository,
+        localOrderDraftRepository: widget.localOrderDraftRepository,
       ),
     );
   }
@@ -90,6 +142,9 @@ class _AppLaunchGate extends StatefulWidget {
     required this.getStoneListingDetail,
     required this.createOrder,
     required this.createCheckoutSession,
+    required this.openCheckoutUrl,
+    required this.initialCheckoutRoute,
+    required this.checkoutRouteListenable,
     required this.localSealDesignRepository,
     required this.localOrderDraftRepository,
   });
@@ -103,6 +158,9 @@ class _AppLaunchGate extends StatefulWidget {
   final StoneListingDetailLoader getStoneListingDetail;
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
+  final CheckoutUrlLauncher openCheckoutUrl;
+  final String? initialCheckoutRoute;
+  final ValueListenable<String?> checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
 
@@ -131,6 +189,9 @@ class _AppLaunchGateState extends State<_AppLaunchGate> {
         getStoneListingDetail: widget.getStoneListingDetail,
         createOrder: widget.createOrder,
         createCheckoutSession: widget.createCheckoutSession,
+        openCheckoutUrl: widget.openCheckoutUrl,
+        initialCheckoutRoute: widget.initialCheckoutRoute,
+        checkoutRouteListenable: widget.checkoutRouteListenable,
         localSealDesignRepository: widget.localSealDesignRepository,
         localOrderDraftRepository: widget.localOrderDraftRepository,
       ),
@@ -164,6 +225,9 @@ class BottomNavigationShell extends StatefulWidget {
     this.getStoneListingDetail = getStoneListingDetailWithDefaultApi,
     this.createOrder = createOrderWithDefaultApi,
     this.createCheckoutSession = createCheckoutSessionWithDefaultApi,
+    this.openCheckoutUrl = openCheckoutUrlWithDefaultLauncher,
+    this.initialCheckoutRoute,
+    this.checkoutRouteListenable,
     this.localSealDesignRepository,
     this.localOrderDraftRepository,
   });
@@ -174,6 +238,9 @@ class BottomNavigationShell extends StatefulWidget {
   final StoneListingDetailLoader getStoneListingDetail;
   final OrderCreator createOrder;
   final CheckoutSessionCreator createCheckoutSession;
+  final CheckoutUrlLauncher openCheckoutUrl;
+  final String? initialCheckoutRoute;
+  final ValueListenable<String?>? checkoutRouteListenable;
   final LocalSealDesignRepository? localSealDesignRepository;
   final LocalOrderDraftRepository? localOrderDraftRepository;
 
@@ -220,7 +287,8 @@ class _StoneImageGallerySelection {
   final int initialPhotoIndex;
 }
 
-class _BottomNavigationShellState extends State<BottomNavigationShell> {
+class _BottomNavigationShellState extends State<BottomNavigationShell>
+    with WidgetsBindingObserver {
   static const _shellPage = PageEntry(
     key: 'COM-003-bottom-navigation-shell',
     name: '/shell',
@@ -245,6 +313,25 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     key: 'CHK-008-checkout-processing',
     name: '/checkout/processing',
   );
+  static const _stripeCheckoutTransitionPage = PageEntry(
+    key: 'CHK-009-stripe-checkout-transition',
+    name: '/checkout/stripe',
+  );
+  static const _checkoutProcessingPages = [
+    _shellPage,
+    _orderReviewPage,
+    _checkoutInputPage,
+    _orderConfirmationPage,
+    _checkoutProcessingPage,
+  ];
+  static const _stripeCheckoutPages = [
+    _shellPage,
+    _orderReviewPage,
+    _checkoutInputPage,
+    _orderConfirmationPage,
+    _checkoutProcessingPage,
+    _stripeCheckoutTransitionPage,
+  ];
   static const _navigationTabs = [
     HankoTabDefinition(
       tab: HankoAppTab.design,
@@ -307,6 +394,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   Object? _checkoutProcessingError;
   CreatedOrder? _checkoutCreatedOrder;
   CheckoutSession? _checkoutSession;
+  var _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
+  Object? _stripeCheckoutLaunchError;
+  CheckoutReturnResult? _checkoutReturnResult;
+  String? _lastHandledCheckoutRoute;
   final _savingLocalSealKeys = <String>{};
   final _deletingLocalSealIds = <String>{};
   HankoAppTab? _requestedTab;
@@ -315,12 +406,55 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _localSealDesignRepository =
         widget.localSealDesignRepository ?? InMemoryLocalSealDesignRepository();
     _localOrderDraftRepository =
         widget.localOrderDraftRepository ?? InMemoryLocalOrderDraftRepository();
+    widget.checkoutRouteListenable?.addListener(
+      _handleCheckoutRouteNotification,
+    );
     unawaited(_loadLocalSealDesigns());
     unawaited(_loadOrderDraft());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final route =
+          widget.initialCheckoutRoute ??
+          WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+      unawaited(_handleIncomingCheckoutRoute(route));
+    });
+    _handleCheckoutRouteNotification();
+  }
+
+  @override
+  void dispose() {
+    widget.checkoutRouteListenable?.removeListener(
+      _handleCheckoutRouteNotification,
+    );
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant BottomNavigationShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.checkoutRouteListenable == widget.checkoutRouteListenable) {
+      return;
+    }
+    oldWidget.checkoutRouteListenable?.removeListener(
+      _handleCheckoutRouteNotification,
+    );
+    widget.checkoutRouteListenable?.addListener(
+      _handleCheckoutRouteNotification,
+    );
+    _handleCheckoutRouteNotification();
+  }
+
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation routeInformation) {
+    return _handleIncomingCheckoutRoute(routeInformation.uri.toString());
   }
 
   @override
@@ -339,6 +473,9 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
     return DeclarativePagesNavigator(
       pages: _pages,
       buildPage: (context, page) {
+        if (page.key == _stripeCheckoutTransitionPage.key) {
+          return _buildStripeCheckoutTransitionPage();
+        }
         if (page.key == _checkoutProcessingPage.key) {
           return _buildCheckoutProcessingPage();
         }
@@ -466,6 +603,31 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
             checkoutSession: _checkoutSession,
             error: _checkoutProcessingError,
             onBack: _checkoutProcessingInFlight ? null : _closeTopPage,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStripeCheckoutTransitionPage() {
+    final isOpening = _stripeCheckoutStep == StripeCheckoutExternalStep.opening;
+    final canOpenCheckout = _checkoutSession != null && !isOpening;
+    return Scaffold(
+      backgroundColor: HankoColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 432),
+          child: StripeCheckoutTransitionScreen(
+            draft: _orderDraft,
+            step: _stripeCheckoutStep,
+            createdOrder: _checkoutCreatedOrder,
+            checkoutSession: _checkoutSession,
+            returnResult: _checkoutReturnResult,
+            error: _stripeCheckoutLaunchError,
+            onBack: isOpening ? null : _closeTopPage,
+            onOpenCheckout: canOpenCheckout
+                ? () => unawaited(_openStripeCheckout(_checkoutSession!))
+                : null,
           ),
         ),
       ),
@@ -1131,13 +1293,10 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
       _checkoutProcessingError = null;
       _checkoutCreatedOrder = null;
       _checkoutSession = null;
-      _pages = const [
-        _shellPage,
-        _orderReviewPage,
-        _checkoutInputPage,
-        _orderConfirmationPage,
-        _checkoutProcessingPage,
-      ];
+      _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
+      _stripeCheckoutLaunchError = null;
+      _checkoutReturnResult = null;
+      _pages = _checkoutProcessingPages;
     });
 
     try {
@@ -1170,6 +1329,7 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         _checkoutSession = session;
         _checkoutProcessingStep = CheckoutProcessingStep.ready;
       });
+      await _openStripeCheckout(session);
     } catch (error) {
       if (!mounted) {
         return;
@@ -1180,6 +1340,68 @@ class _BottomNavigationShellState extends State<BottomNavigationShell> {
         setState(() => _checkoutProcessingInFlight = false);
       }
     }
+  }
+
+  Future<void> _openStripeCheckout(CheckoutSession session) async {
+    setState(() {
+      _stripeCheckoutStep = StripeCheckoutExternalStep.opening;
+      _stripeCheckoutLaunchError = null;
+      _checkoutReturnResult = null;
+      _pages = _stripeCheckoutPages;
+    });
+
+    try {
+      await widget.openCheckoutUrl(session);
+      if (!mounted) {
+        return;
+      }
+      if (_checkoutReturnResult != null) {
+        return;
+      }
+      setState(() {
+        _stripeCheckoutStep = StripeCheckoutExternalStep.waitingForReturn;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      if (_checkoutReturnResult != null) {
+        return;
+      }
+      setState(() {
+        _stripeCheckoutStep = StripeCheckoutExternalStep.failed;
+        _stripeCheckoutLaunchError = error;
+      });
+    }
+  }
+
+  Future<bool> _handleIncomingCheckoutRoute(String route) async {
+    if (route == _lastHandledCheckoutRoute) {
+      return true;
+    }
+    final result = parseCheckoutReturnRoute(route);
+    if (result == null) {
+      return false;
+    }
+    _lastHandledCheckoutRoute = route;
+    if (!mounted) {
+      return true;
+    }
+    setState(() {
+      _checkoutReturnResult = result;
+      _stripeCheckoutLaunchError = null;
+      _stripeCheckoutStep = StripeCheckoutExternalStep.returned;
+      _pages = const [_shellPage, _stripeCheckoutTransitionPage];
+    });
+    return true;
+  }
+
+  void _handleCheckoutRouteNotification() {
+    final route = widget.checkoutRouteListenable?.value;
+    if (route == null || route == _lastHandledCheckoutRoute) {
+      return;
+    }
+    unawaited(_handleIncomingCheckoutRoute(route));
   }
 
   void _showTabFromOrder(HankoAppTab tab) {

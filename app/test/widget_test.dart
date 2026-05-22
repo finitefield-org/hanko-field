@@ -27,6 +27,8 @@ void main() {
     StoneListingDetailLoader? getStoneListingDetail,
     OrderCreator? createOrder,
     CheckoutSessionCreator? createCheckoutSession,
+    CheckoutUrlLauncher? openCheckoutUrl,
+    String? initialCheckoutRoute,
     LocalSealDesignRepository? localSealDesignRepository,
     LocalOrderDraftRepository? localOrderDraftRepository,
   }) async {
@@ -47,6 +49,8 @@ void main() {
           createOrder: createOrder ?? _successfulCreateOrder,
           createCheckoutSession:
               createCheckoutSession ?? _successfulCreateCheckoutSession,
+          openCheckoutUrl: openCheckoutUrl ?? _successfulOpenCheckoutUrl,
+          initialCheckoutRoute: initialCheckoutRoute,
           localSealDesignRepository: localSealDesignRepository,
           localOrderDraftRepository: localOrderDraftRepository,
         ),
@@ -2124,8 +2128,8 @@ void main() {
     await tester.tap(find.text('Proceed to Secure Payment'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Preparing Checkout'), findsOneWidget);
-    expect(find.text('Checkout session ready'), findsOneWidget);
+    expect(find.text('Secure Payment'), findsOneWidget);
+    expect(find.text('Complete payment in Stripe Checkout'), findsOneWidget);
     expect(find.text('HF-20260521-0001'), findsOneWidget);
 
     final savedDraft = await draftRepository.loadOrderDraft();
@@ -2289,7 +2293,58 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Checkout session ready'), findsOneWidget);
+    expect(find.text('Secure Payment'), findsOneWidget);
+    expect(find.text('Complete payment in Stripe Checkout'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M09-T08 opens Stripe Checkout and handles return routes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sealRepository = InMemoryLocalSealDesignRepository([
+      _localSealDesign(),
+    ]);
+    final draftRepository = InMemoryLocalOrderDraftRepository();
+    final launchedSessions = <CheckoutSession>[];
+
+    await pumpLaunchedApp(
+      tester,
+      listStoneListings: (query) async => _stoneListingsResult(),
+      openCheckoutUrl: (session) async => launchedSessions.add(session),
+      localSealDesignRepository: sealRepository,
+      localOrderDraftRepository: draftRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await _completeCheckoutConfirmationFromSavedSeal(tester);
+    await tester.pumpAndSettle();
+
+    expect(launchedSessions, hasLength(1));
+    expect(
+      launchedSessions.single.checkoutUrl,
+      'https://checkout.stripe.test/session',
+    );
+    expect(find.text('Secure Payment'), findsOneWidget);
+    expect(find.text('Complete payment in Stripe Checkout'), findsOneWidget);
+
+    final handled = await tester.binding.handlePushRoute(
+      'hankofield://checkout/success?order_id=ord_001&session_id=cs_test_001&lang=en',
+    );
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(find.text('Returned from Stripe Checkout'), findsOneWidget);
+    expect(
+      find.text(
+        'The return URL was received. Payment status will be verified next.',
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -2717,6 +2772,83 @@ Future<CheckoutSession> _successfulCreateCheckoutSession(
     checkoutUrl: 'https://checkout.stripe.test/session',
     paymentIntentId: 'pi_test_001',
   );
+}
+
+Future<void> _successfulOpenCheckoutUrl(CheckoutSession session) async {}
+
+Future<void> _completeCheckoutConfirmationFromSavedSeal(
+  WidgetTester tester,
+) async {
+  await tester.tap(find.text('My Seals').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('View Details'));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.text('Choose for Order'));
+  await tester.pump();
+  await tester.tap(find.text('Choose for Order'));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.text('Choose a Stone').last);
+  await tester.pump();
+  await tester.tap(find.text('Choose a Stone').last);
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.text('Select Stone'));
+  await tester.pump();
+  await tester.tap(find.text('Select Stone'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('stone-selection-confirm')));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.text('Continue to Shipping'));
+  await tester.pump();
+  await tester.tap(find.text('Continue to Shipping'));
+  await tester.pumpAndSettle();
+
+  Future<void> enterCheckoutField(String key, String text) async {
+    final field = find.byKey(Key(key));
+    await tester.ensureVisible(field);
+    await tester.pump();
+    await tester.enterText(
+      find.descendant(of: field, matching: find.byType(EditableText)),
+      text,
+    );
+    await tester.pump();
+  }
+
+  await enterCheckoutField('checkout-email-field', 'customer@example.test');
+  await enterCheckoutField('checkout-full-name-field', 'Michael Smith');
+  await enterCheckoutField('checkout-phone-field', '+1 555 0100');
+  await enterCheckoutField('checkout-postal-code-field', '10001');
+  await enterCheckoutField(
+    'checkout-address-line1-field',
+    '123 Example Street',
+  );
+  await enterCheckoutField('checkout-city-field', 'New York');
+  await enterCheckoutField('checkout-state-field', 'NY');
+
+  await tester.ensureVisible(find.text('Save Checkout Information'));
+  await tester.pump();
+  await tester.tap(find.text('Save Checkout Information'));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(
+    find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+  );
+  await tester.pump();
+  await tester.tap(
+    find.byKey(const Key('order-confirm-kanji-design-checkbox')),
+  );
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(
+    find.byKey(const Key('order-confirm-custom-made-checkbox')),
+  );
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('order-confirm-custom-made-checkbox')));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.text('Proceed to Secure Payment'));
+  await tester.pump();
+  await tester.tap(find.text('Proceed to Secure Payment'));
 }
 
 StoneListingsResult _stoneListingsResult({List<StoneListing>? listings}) {

@@ -348,6 +348,34 @@ class HankoLocalizations {
       _strings.checkoutProcessingErrorTitle;
   String get checkoutProcessingErrorMessage =>
       _strings.checkoutProcessingErrorMessage;
+  String get stripeCheckoutTitle => _strings.stripeCheckoutTitle;
+  String get stripeCheckoutOpeningTitle => _strings.stripeCheckoutOpeningTitle;
+  String get stripeCheckoutOpeningMessage =>
+      _strings.stripeCheckoutOpeningMessage;
+  String get stripeCheckoutWaitingTitle => _strings.stripeCheckoutWaitingTitle;
+  String get stripeCheckoutWaitingMessage =>
+      _strings.stripeCheckoutWaitingMessage;
+  String get stripeCheckoutReturnedTitle =>
+      _strings.stripeCheckoutReturnedTitle;
+  String get stripeCheckoutReturnedMessage =>
+      _strings.stripeCheckoutReturnedMessage;
+  String get stripeCheckoutCanceledTitle =>
+      _strings.stripeCheckoutCanceledTitle;
+  String get stripeCheckoutCanceledMessage =>
+      _strings.stripeCheckoutCanceledMessage;
+  String get stripeCheckoutReturnFailedTitle =>
+      _strings.stripeCheckoutReturnFailedTitle;
+  String get stripeCheckoutReturnFailedMessage =>
+      _strings.stripeCheckoutReturnFailedMessage;
+  String get stripeCheckoutLaunchFailedTitle =>
+      _strings.stripeCheckoutLaunchFailedTitle;
+  String get stripeCheckoutLaunchFailedMessage =>
+      _strings.stripeCheckoutLaunchFailedMessage;
+  String get stripeCheckoutOpenAction => _strings.stripeCheckoutOpenAction;
+  String get stripeCheckoutRetryAction => _strings.stripeCheckoutRetryAction;
+  String get stripeCheckoutSecureNote => _strings.stripeCheckoutSecureNote;
+  String get stripeCheckoutReturnOrderIdLabel =>
+      _strings.stripeCheckoutReturnOrderIdLabel;
   String get orderLookup => _strings.orderLookup;
   String get orderNo => _strings.orderNo;
   String get orderNoHint => _strings.orderNoHint;
@@ -685,6 +713,23 @@ class _HankoStrings {
     required this.checkoutProcessingReadyMessage,
     required this.checkoutProcessingErrorTitle,
     required this.checkoutProcessingErrorMessage,
+    required this.stripeCheckoutTitle,
+    required this.stripeCheckoutOpeningTitle,
+    required this.stripeCheckoutOpeningMessage,
+    required this.stripeCheckoutWaitingTitle,
+    required this.stripeCheckoutWaitingMessage,
+    required this.stripeCheckoutReturnedTitle,
+    required this.stripeCheckoutReturnedMessage,
+    required this.stripeCheckoutCanceledTitle,
+    required this.stripeCheckoutCanceledMessage,
+    required this.stripeCheckoutReturnFailedTitle,
+    required this.stripeCheckoutReturnFailedMessage,
+    required this.stripeCheckoutLaunchFailedTitle,
+    required this.stripeCheckoutLaunchFailedMessage,
+    required this.stripeCheckoutOpenAction,
+    required this.stripeCheckoutRetryAction,
+    required this.stripeCheckoutSecureNote,
+    required this.stripeCheckoutReturnOrderIdLabel,
     required this.orderLookup,
     required this.orderNo,
     required this.orderNoHint,
@@ -991,6 +1036,23 @@ class _HankoStrings {
   final String checkoutProcessingReadyMessage;
   final String checkoutProcessingErrorTitle;
   final String checkoutProcessingErrorMessage;
+  final String stripeCheckoutTitle;
+  final String stripeCheckoutOpeningTitle;
+  final String stripeCheckoutOpeningMessage;
+  final String stripeCheckoutWaitingTitle;
+  final String stripeCheckoutWaitingMessage;
+  final String stripeCheckoutReturnedTitle;
+  final String stripeCheckoutReturnedMessage;
+  final String stripeCheckoutCanceledTitle;
+  final String stripeCheckoutCanceledMessage;
+  final String stripeCheckoutReturnFailedTitle;
+  final String stripeCheckoutReturnFailedMessage;
+  final String stripeCheckoutLaunchFailedTitle;
+  final String stripeCheckoutLaunchFailedMessage;
+  final String stripeCheckoutOpenAction;
+  final String stripeCheckoutRetryAction;
+  final String stripeCheckoutSecureNote;
+  final String stripeCheckoutReturnOrderIdLabel;
   final String orderLookup;
   final String orderNo;
   final String orderNoHint;
@@ -1353,6 +1415,30 @@ const _localizedValues = {
       checkoutProcessingReadyMessage: 'Stripe Checkout is ready to open.',
       checkoutProcessingErrorTitle: "Couldn't prepare Checkout",
       checkoutProcessingErrorMessage: 'Please go back and try again.',
+      stripeCheckoutTitle: 'Secure Payment',
+      stripeCheckoutOpeningTitle: 'Opening Stripe Checkout',
+      stripeCheckoutOpeningMessage:
+          'You will be redirected to Stripe Checkout.',
+      stripeCheckoutWaitingTitle: 'Complete payment in Stripe Checkout',
+      stripeCheckoutWaitingMessage:
+          'Return to this app after payment to continue.',
+      stripeCheckoutReturnedTitle: 'Returned from Stripe Checkout',
+      stripeCheckoutReturnedMessage:
+          'The return URL was received. Payment status will be verified next.',
+      stripeCheckoutCanceledTitle: 'Checkout was canceled',
+      stripeCheckoutCanceledMessage:
+          'Stripe returned without completing payment.',
+      stripeCheckoutReturnFailedTitle: 'Checkout return failed',
+      stripeCheckoutReturnFailedMessage:
+          'We could not read the Stripe return URL.',
+      stripeCheckoutLaunchFailedTitle: "Couldn't open Stripe Checkout",
+      stripeCheckoutLaunchFailedMessage:
+          'Check your browser settings and try again.',
+      stripeCheckoutOpenAction: 'Open Stripe Checkout',
+      stripeCheckoutRetryAction: 'Try Again',
+      stripeCheckoutSecureNote:
+          'Your payment information is secure and encrypted. Powered by Stripe.',
+      stripeCheckoutReturnOrderIdLabel: 'Return order ID',
       orderLookup: 'Order Lookup',
       orderNo: 'Order No',
       orderNoHint: 'HF-0001',
@@ -1669,6 +1755,23 @@ const _localizedValues = {
       checkoutProcessingReadyMessage: 'Stripe Checkoutを開く準備ができました。',
       checkoutProcessingErrorTitle: 'Checkoutを準備できませんでした',
       checkoutProcessingErrorMessage: '戻ってからもう一度お試しください。',
+      stripeCheckoutTitle: '安全な決済',
+      stripeCheckoutOpeningTitle: 'Stripe Checkoutを開いています',
+      stripeCheckoutOpeningMessage: 'Stripe Checkoutへ移動します。',
+      stripeCheckoutWaitingTitle: 'Stripe Checkoutで決済を完了してください',
+      stripeCheckoutWaitingMessage: '決済後、このアプリに戻ると続きへ進みます。',
+      stripeCheckoutReturnedTitle: 'Stripe Checkoutから戻りました',
+      stripeCheckoutReturnedMessage: '戻りURLを受け取りました。次に注文状態を確認します。',
+      stripeCheckoutCanceledTitle: 'Checkoutがキャンセルされました',
+      stripeCheckoutCanceledMessage: 'Stripeから未決済の状態で戻りました。',
+      stripeCheckoutReturnFailedTitle: 'Checkout戻りURLを処理できませんでした',
+      stripeCheckoutReturnFailedMessage: 'Stripeの戻りURLを読み取れませんでした。',
+      stripeCheckoutLaunchFailedTitle: 'Stripe Checkoutを開けませんでした',
+      stripeCheckoutLaunchFailedMessage: 'ブラウザ設定を確認して、もう一度お試しください。',
+      stripeCheckoutOpenAction: 'Stripe Checkoutを開く',
+      stripeCheckoutRetryAction: 'もう一度試す',
+      stripeCheckoutSecureNote: '決済情報は暗号化され、安全に処理されます。Powered by Stripe.',
+      stripeCheckoutReturnOrderIdLabel: '戻り注文ID',
       orderLookup: '注文照会',
       orderNo: '注文番号',
       orderNoHint: 'HF-0001',

@@ -6,10 +6,13 @@ import '../../../app/localization/app_localization.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/domain/money.dart';
 import '../../../core/widgets/core_widgets.dart';
+import '../domain/checkout_return.dart';
 import '../domain/order_draft.dart';
 import '../domain/order_models.dart';
 
 enum CheckoutProcessingStep { creatingOrder, creatingCheckoutSession, ready }
+
+enum StripeCheckoutExternalStep { opening, waitingForReturn, returned, failed }
 
 class OrderFlowEntryScreen extends StatelessWidget {
   const OrderFlowEntryScreen({
@@ -906,6 +909,204 @@ class _CheckoutProcessingStepRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class StripeCheckoutTransitionScreen extends StatelessWidget {
+  const StripeCheckoutTransitionScreen({
+    super.key,
+    required this.draft,
+    required this.step,
+    this.createdOrder,
+    this.checkoutSession,
+    this.returnResult,
+    this.error,
+    this.onBack,
+    this.onOpenCheckout,
+  });
+
+  final OrderDraft draft;
+  final StripeCheckoutExternalStep step;
+  final CreatedOrder? createdOrder;
+  final CheckoutSession? checkoutSession;
+  final CheckoutReturnResult? returnResult;
+  final Object? error;
+  final VoidCallback? onBack;
+  final VoidCallback? onOpenCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final hasError = error != null || step == StripeCheckoutExternalStep.failed;
+    final hasReturn = returnResult != null;
+    final isOpening = step == StripeCheckoutExternalStep.opening && !hasError;
+    final statusTitle = _stripeCheckoutStatusTitle(
+      l10n,
+      step,
+      returnResult,
+      hasError,
+    );
+    final statusMessage = _stripeCheckoutStatusMessage(
+      l10n,
+      step,
+      returnResult,
+      hasError,
+    );
+    final seal = draft.sealSelection;
+    final stone = draft.stoneSelection;
+
+    return _OrderScreenFrame(
+      title: l10n.stripeCheckoutTitle,
+      onBack: onBack,
+      children: [
+        HankoSurfaceCard(
+          radius: HankoRadii.sm,
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child:
+                    hasError ||
+                        returnResult?.outcome == CheckoutReturnOutcome.failed
+                    ? const Icon(
+                        Icons.error_outline,
+                        color: HankoColors.error,
+                        size: 42,
+                      )
+                    : hasReturn
+                    ? const Icon(
+                        Icons.check_circle_outline,
+                        color: HankoColors.gold,
+                        size: 42,
+                      )
+                    : isOpening
+                    ? const SizedBox.square(
+                        dimension: 42,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: HankoColors.gold,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.open_in_new,
+                        color: HankoColors.gold,
+                        size: 42,
+                      ),
+              ),
+              const SizedBox(height: HankoSpacing.md),
+              Text(
+                statusTitle,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.sectionTitle.copyWith(
+                  color:
+                      hasError ||
+                          returnResult?.outcome == CheckoutReturnOutcome.failed
+                      ? HankoColors.error
+                      : HankoColors.ink,
+                ),
+              ),
+              const SizedBox(height: HankoSpacing.sm),
+              Text(
+                statusMessage,
+                textAlign: TextAlign.center,
+                style: HankoTextStyles.body,
+              ),
+              if (createdOrder != null) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.orderNo,
+                  value: createdOrder!.orderNo,
+                  hasDivider: false,
+                ),
+              ],
+              if (returnResult?.orderId != null && createdOrder == null) ...[
+                const SizedBox(height: HankoSpacing.md),
+                _OrderDetailLine(
+                  label: l10n.stripeCheckoutReturnOrderIdLabel,
+                  value: returnResult!.orderId!,
+                  hasDivider: false,
+                ),
+              ],
+              if (onOpenCheckout != null && !isOpening) ...[
+                const SizedBox(height: HankoSpacing.lg),
+                HankoPrimaryButton(
+                  label: hasError
+                      ? l10n.stripeCheckoutRetryAction
+                      : l10n.stripeCheckoutOpenAction,
+                  icon: Icons.open_in_new,
+                  onPressed: onOpenCheckout,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: HankoSpacing.md),
+        _OrderNotice(message: l10n.stripeCheckoutSecureNote),
+        if (seal != null && stone != null) ...[
+          const SizedBox(height: HankoSpacing.md),
+          _SealSummaryCard(selection: seal),
+          const SizedBox(height: HankoSpacing.md),
+          _StoneSummaryCard(selection: stone),
+          const SizedBox(height: HankoSpacing.md),
+          _OrderPricingCard(summary: _OrderPricingSummary.fromDraft(draft)),
+        ],
+      ],
+    );
+  }
+}
+
+String _stripeCheckoutStatusTitle(
+  HankoLocalizations l10n,
+  StripeCheckoutExternalStep step,
+  CheckoutReturnResult? returnResult,
+  bool hasError,
+) {
+  if (hasError) {
+    return l10n.stripeCheckoutLaunchFailedTitle;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.canceled) {
+    return l10n.stripeCheckoutCanceledTitle;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.failed) {
+    return l10n.stripeCheckoutReturnFailedTitle;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.success) {
+    return l10n.stripeCheckoutReturnedTitle;
+  }
+  return switch (step) {
+    StripeCheckoutExternalStep.opening => l10n.stripeCheckoutOpeningTitle,
+    StripeCheckoutExternalStep.waitingForReturn =>
+      l10n.stripeCheckoutWaitingTitle,
+    StripeCheckoutExternalStep.returned => l10n.stripeCheckoutReturnedTitle,
+    StripeCheckoutExternalStep.failed => l10n.stripeCheckoutLaunchFailedTitle,
+  };
+}
+
+String _stripeCheckoutStatusMessage(
+  HankoLocalizations l10n,
+  StripeCheckoutExternalStep step,
+  CheckoutReturnResult? returnResult,
+  bool hasError,
+) {
+  if (hasError) {
+    return l10n.stripeCheckoutLaunchFailedMessage;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.canceled) {
+    return l10n.stripeCheckoutCanceledMessage;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.failed) {
+    return l10n.stripeCheckoutReturnFailedMessage;
+  }
+  if (returnResult?.outcome == CheckoutReturnOutcome.success) {
+    return l10n.stripeCheckoutReturnedMessage;
+  }
+  return switch (step) {
+    StripeCheckoutExternalStep.opening => l10n.stripeCheckoutOpeningMessage,
+    StripeCheckoutExternalStep.waitingForReturn =>
+      l10n.stripeCheckoutWaitingMessage,
+    StripeCheckoutExternalStep.returned => l10n.stripeCheckoutReturnedMessage,
+    StripeCheckoutExternalStep.failed => l10n.stripeCheckoutLaunchFailedMessage,
+  };
 }
 
 class _CheckoutInputSummaryCard extends StatelessWidget {
