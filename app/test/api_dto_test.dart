@@ -159,6 +159,7 @@ void main() {
                 'status': 'published',
                 'is_active': true,
                 'is_orderable': true,
+                'sort_order': 7,
                 'photos': [
                   {
                     'asset_id': 'asset_001',
@@ -193,6 +194,7 @@ void main() {
       expect(result.listings.single.price.amount, 18000);
       expect(result.listings.single.price.currency, 'JPY');
       expect(result.listings.single.isOrderable, isTrue);
+      expect(result.listings.single.sortOrder, 7);
     },
   );
 

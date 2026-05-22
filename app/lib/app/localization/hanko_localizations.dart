@@ -213,6 +213,12 @@ class HankoLocalizations {
   String get noStonesMatchFilters => _strings.noStonesMatchFilters;
   String get noStonesMatchFiltersMessage =>
       _strings.noStonesMatchFiltersMessage;
+  String get stoneSortTitle => _strings.stoneSortTitle;
+  String get stoneSortAction => _strings.stoneSortAction;
+  String get stoneSortRecommended => _strings.stoneSortRecommended;
+  String get stoneSortNewest => _strings.stoneSortNewest;
+  String get stoneSortPriceLowToHigh => _strings.stoneSortPriceLowToHigh;
+  String get stoneSortPriceHighToLow => _strings.stoneSortPriceHighToLow;
   String get selectStone => _strings.selectStone;
   String get stoneAvailable => _strings.stoneAvailable;
   String get stoneUnavailable => _strings.stoneUnavailable;
@@ -448,6 +454,12 @@ class _HankoStrings {
     required this.stoneFilterReset,
     required this.noStonesMatchFilters,
     required this.noStonesMatchFiltersMessage,
+    required this.stoneSortTitle,
+    required this.stoneSortAction,
+    required this.stoneSortRecommended,
+    required this.stoneSortNewest,
+    required this.stoneSortPriceLowToHigh,
+    required this.stoneSortPriceHighToLow,
     required this.selectStone,
     required this.stoneAvailable,
     required this.stoneUnavailable,
@@ -652,6 +664,12 @@ class _HankoStrings {
   final String stoneFilterReset;
   final String noStonesMatchFilters;
   final String noStonesMatchFiltersMessage;
+  final String stoneSortTitle;
+  final String stoneSortAction;
+  final String stoneSortRecommended;
+  final String stoneSortNewest;
+  final String stoneSortPriceLowToHigh;
+  final String stoneSortPriceHighToLow;
   final String selectStone;
   final String stoneAvailable;
   final String stoneUnavailable;
@@ -891,6 +909,12 @@ const _localizedValues = {
       noStonesMatchFilters: 'No stones match filters',
       noStonesMatchFiltersMessage:
           'Clear or change filters to browse other stones.',
+      stoneSortTitle: 'Sort',
+      stoneSortAction: 'Sort',
+      stoneSortRecommended: 'Recommended',
+      stoneSortNewest: 'Newest',
+      stoneSortPriceLowToHigh: 'Price: Low to High',
+      stoneSortPriceHighToLow: 'Price: High to Low',
       selectStone: 'Select Stone',
       stoneAvailable: 'Available',
       stoneUnavailable: 'Unavailable',
@@ -1104,6 +1128,12 @@ const _localizedValues = {
       stoneFilterReset: 'リセット',
       noStonesMatchFilters: '条件に合う石がありません',
       noStonesMatchFiltersMessage: '絞り込み条件を変更するか解除してください。',
+      stoneSortTitle: '並び替え',
+      stoneSortAction: '並び替え',
+      stoneSortRecommended: 'おすすめ順',
+      stoneSortNewest: '新着順',
+      stoneSortPriceLowToHigh: '価格が安い順',
+      stoneSortPriceHighToLow: '価格が高い順',
       selectStone: '石を選択',
       stoneAvailable: '販売中',
       stoneUnavailable: '選択不可',

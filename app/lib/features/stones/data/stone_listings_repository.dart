@@ -88,6 +88,7 @@ class StoneListingDto {
     required this.status,
     required this.isActive,
     required this.isOrderable,
+    required this.sortOrder,
     required this.photos,
   });
 
@@ -115,6 +116,7 @@ class StoneListingDto {
       isOrderable: json.containsKey('is_orderable')
           ? readBool(json, 'is_orderable')
           : null,
+      sortOrder: readInt(json, 'sort_order'),
       photos: readJsonList(json, 'photos')
           .map(
             (value) => StoneListingPhotoDto.fromJson(
@@ -138,6 +140,7 @@ class StoneListingDto {
   final String status;
   final bool isActive;
   final bool? isOrderable;
+  final int sortOrder;
   final List<StoneListingPhotoDto> photos;
 
   StoneListing toDomain({required String defaultCurrency}) {
@@ -155,6 +158,7 @@ class StoneListingDto {
       status: status,
       isActive: isActive,
       isOrderable: isOrderable,
+      sortOrder: sortOrder,
       photos: photos.map((photo) => photo.toDomain()).toList(growable: false),
     );
   }

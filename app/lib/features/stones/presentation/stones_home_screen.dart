@@ -28,6 +28,7 @@ class StonesHomeScreen extends StatefulWidget {
 
 class _StonesHomeScreenState extends State<StonesHomeScreen> {
   var _filters = const _StoneFilters();
+  var _sortOrder = _StoneSortOrder.recommended;
 
   @override
   void didUpdateWidget(covariant StonesHomeScreen oldWidget) {
@@ -44,6 +45,7 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
     final l10n = context.l10n;
     final listings = widget.result?.listings ?? const <StoneListing>[];
     final filteredListings = _filters.apply(listings);
+    final sortedListings = _sortOrder.apply(filteredListings);
 
     return HankoFeaturePage(
       title: l10n.stones,
@@ -68,28 +70,223 @@ class _StonesHomeScreenState extends State<StonesHomeScreen> {
             message: l10n.noStonesLoadedMessage,
           )
         else ...[
+          _StoneSortControl(sortOrder: _sortOrder, onPressed: _showSortSheet),
+          const SizedBox(height: HankoSpacing.md),
           _StoneFiltersPanel(
             listings: listings,
             filters: _filters,
             onChanged: (filters) => setState(() => _filters = filters),
           ),
           const SizedBox(height: HankoSpacing.md),
-          if (filteredListings.isEmpty)
+          if (sortedListings.isEmpty)
             HankoStateView.empty(
               title: l10n.noStonesMatchFilters,
               message: l10n.noStonesMatchFiltersMessage,
             )
           else
-            for (var index = 0; index < filteredListings.length; index++) ...[
+            for (var index = 0; index < sortedListings.length; index++) ...[
               _StoneListingCard(
-                listing: filteredListings[index],
+                listing: sortedListings[index],
                 onSelectStone: widget.onSelectStone,
               ),
-              if (index < filteredListings.length - 1)
+              if (index < sortedListings.length - 1)
                 const SizedBox(height: HankoSpacing.md),
             ],
         ],
       ],
+    );
+  }
+
+  Future<void> _showSortSheet() async {
+    final selected = await showModalBottomSheet<_StoneSortOrder>(
+      context: context,
+      backgroundColor: HankoColors.surface,
+      showDragHandle: true,
+      builder: (context) => _StoneSortSheet(selected: _sortOrder),
+    );
+    if (!mounted || selected == null || selected == _sortOrder) {
+      return;
+    }
+    setState(() => _sortOrder = selected);
+  }
+}
+
+enum _StoneSortOrder {
+  recommended,
+  newest,
+  priceLowToHigh,
+  priceHighToLow;
+
+  List<StoneListing> apply(List<StoneListing> listings) {
+    if (this == _StoneSortOrder.recommended) {
+      return List.of(listings, growable: false);
+    }
+
+    final sorted = [
+      for (var index = 0; index < listings.length; index++)
+        (index: index, listing: listings[index]),
+    ];
+    switch (this) {
+      case _StoneSortOrder.recommended:
+        break;
+      case _StoneSortOrder.newest:
+        sorted.sort((left, right) {
+          final order = right.listing.sortOrder.compareTo(
+            left.listing.sortOrder,
+          );
+          return order == 0 ? left.index.compareTo(right.index) : order;
+        });
+      case _StoneSortOrder.priceLowToHigh:
+        sorted.sort((left, right) {
+          final price = left.listing.price.amount.compareTo(
+            right.listing.price.amount,
+          );
+          return price == 0 ? left.index.compareTo(right.index) : price;
+        });
+      case _StoneSortOrder.priceHighToLow:
+        sorted.sort((left, right) {
+          final price = right.listing.price.amount.compareTo(
+            left.listing.price.amount,
+          );
+          return price == 0 ? left.index.compareTo(right.index) : price;
+        });
+    }
+    return sorted.map((entry) => entry.listing).toList(growable: false);
+  }
+}
+
+String _sortLabel(HankoLocalizations l10n, _StoneSortOrder sortOrder) {
+  return switch (sortOrder) {
+    _StoneSortOrder.recommended => l10n.stoneSortRecommended,
+    _StoneSortOrder.newest => l10n.stoneSortNewest,
+    _StoneSortOrder.priceLowToHigh => l10n.stoneSortPriceLowToHigh,
+    _StoneSortOrder.priceHighToLow => l10n.stoneSortPriceHighToLow,
+  };
+}
+
+String _sortKey(_StoneSortOrder sortOrder) {
+  return switch (sortOrder) {
+    _StoneSortOrder.recommended => 'recommended',
+    _StoneSortOrder.newest => 'newest',
+    _StoneSortOrder.priceLowToHigh => 'price-low-to-high',
+    _StoneSortOrder.priceHighToLow => 'price-high-to-low',
+  };
+}
+
+class _StoneSortControl extends StatelessWidget {
+  const _StoneSortControl({required this.sortOrder, required this.onPressed});
+
+  final _StoneSortOrder sortOrder;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return HankoSurfaceCard(
+      radius: HankoRadii.sm,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Row(
+        children: [
+          const Icon(Icons.sort, color: HankoColors.gold, size: 19),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _sortLabel(l10n, sortOrder),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: HankoTextStyles.label,
+            ),
+          ),
+          TextButton.icon(
+            key: const Key('stone-sort-open'),
+            onPressed: onPressed,
+            icon: const Icon(Icons.swap_vert, size: 18),
+            label: Text(l10n.stoneSortAction),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoneSortSheet extends StatelessWidget {
+  const _StoneSortSheet({required this.selected});
+
+  final _StoneSortOrder selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final options = _StoneSortOrder.values;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.stoneSortTitle,
+              textAlign: TextAlign.center,
+              style: HankoTextStyles.sectionTitle,
+            ),
+            const SizedBox(height: HankoSpacing.md),
+            for (final option in options)
+              _StoneSortOptionTile(
+                key: Key('stone-sort-${_sortKey(option)}'),
+                label: _sortLabel(l10n, option),
+                selected: option == selected,
+                onTap: () => Navigator.of(context).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StoneSortOptionTile extends StatelessWidget {
+  const _StoneSortOptionTile({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(HankoRadii.sm),
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 54),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: HankoColors.surfaceBorder, width: 0.7),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: HankoTextStyles.label,
+              ),
+            ),
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? HankoColors.gold : HankoColors.body,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

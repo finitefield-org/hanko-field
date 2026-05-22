@@ -45,6 +45,7 @@ class StoneListing {
     required this.status,
     required this.isActive,
     bool? isOrderable,
+    this.sortOrder = 0,
     required this.photos,
   }) : isOrderable = isOrderable ?? (isActive && status == 'published');
 
@@ -61,6 +62,7 @@ class StoneListing {
   final String status;
   final bool isActive;
   final bool isOrderable;
+  final int sortOrder;
   final List<StoneListingPhoto> photos;
 }
 

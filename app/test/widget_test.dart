@@ -1121,6 +1121,81 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('STN-006 sorts stones by newest and price', (tester) async {
+    tester.view.physicalSize = const Size(432, 912);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const highPriceTitle = 'High Price Stone';
+    const lowPriceTitle = 'Low Price Stone';
+    const newestTitle = 'Newest Stone';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: HankoLocalizations.supportedLocales,
+        localizationsDelegates: HankoLocalizations.localizationsDelegates,
+        theme: HankoTheme.light(),
+        home: StonesHomeScreen(
+          result: _stoneListingsResult(
+            listings: [
+              _stoneListing(
+                id: 'stone_listing_high_price',
+                title: highPriceTitle,
+                priceAmount: 32000,
+                sortOrder: 10,
+              ),
+              _stoneListing(
+                id: 'stone_listing_low_price',
+                title: lowPriceTitle,
+                priceAmount: 12000,
+                sortOrder: 20,
+              ),
+              _stoneListing(
+                id: 'stone_listing_newest',
+                title: newestTitle,
+                priceAmount: 22000,
+                sortOrder: 30,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final titles = [highPriceTitle, lowPriceTitle, newestTitle];
+
+    expect(_stoneTitleOrder(tester, titles), [
+      highPriceTitle,
+      lowPriceTitle,
+      newestTitle,
+    ]);
+
+    await tester.tap(find.byKey(const Key('stone-sort-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-sort-price-low-to-high')));
+    await tester.pumpAndSettle();
+
+    expect(_stoneTitleOrder(tester, titles), [
+      lowPriceTitle,
+      newestTitle,
+      highPriceTitle,
+    ]);
+
+    await tester.tap(find.byKey(const Key('stone-sort-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stone-sort-newest')));
+    await tester.pumpAndSettle();
+
+    expect(_stoneTitleOrder(tester, titles), [
+      newestTitle,
+      lowPriceTitle,
+      highPriceTitle,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('STN-001 loads stone listings from the app shell', (
     tester,
   ) async {
@@ -1526,6 +1601,16 @@ StoneListingsResult _stoneListingsResult({List<StoneListing>? listings}) {
   );
 }
 
+List<String> _stoneTitleOrder(WidgetTester tester, List<String> titles) {
+  final titleSet = titles.toSet();
+  return tester
+      .widgetList<Text>(find.byType(Text))
+      .map((widget) => widget.data)
+      .whereType<String>()
+      .where(titleSet.contains)
+      .toList(growable: false);
+}
+
 StoneListing _stoneListing({
   String id = 'stone_listing_001',
   String title = 'Soft Pink Rose Quartz Seal Stone',
@@ -1536,6 +1621,8 @@ StoneListing _stoneListing({
   String status = 'published',
   bool isActive = true,
   bool? isOrderable,
+  int priceAmount = 18000,
+  int sortOrder = 0,
 }) {
   return StoneListing(
     id: id,
@@ -1554,10 +1641,11 @@ StoneListing _stoneListing({
       stoneShape: 'square',
       translucency: 'semi_translucent',
     ),
-    price: const Money(amount: 18000, currency: 'JPY'),
+    price: Money(amount: priceAmount, currency: 'JPY'),
     status: status,
     isActive: isActive,
     isOrderable: isOrderable,
+    sortOrder: sortOrder,
     photos: const [],
   );
 }
